@@ -54,7 +54,7 @@ export function PlanViewer({ id }: { id: string }) {
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", color: "#fff", background: "linear-gradient(120deg,#16306e 0%,#274ba3 60%,#3f78d8 100%)" }}>
         <AosMark size={26} />
         <span style={{ fontWeight: 800, fontSize: 16 }}>Activity<span style={{ color: "#EE1F63" }}>OS</span></span>
-        <span style={{ marginLeft: 8, fontSize: 13, opacity: 0.9 }}>🧩 {name}</span>
+        <span style={{ marginInlineStart: 8, fontSize: 13, opacity: 0.9 }}>🧩 {name}</span>
       </div>
       {children}
     </div>

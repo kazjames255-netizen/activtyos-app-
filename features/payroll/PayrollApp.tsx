@@ -10,6 +10,7 @@
 // sync are the backend/integration piece (Amir). Pay details, adjustments and
 // every approved run live on the server (/api/payroll); the demo cast and the
 // browser stores are for the guided tour (demo mode) only.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
@@ -28,8 +29,8 @@ import {
 } from "./payCalc";
 export type { AdjItem, Adjust, Freq, Line } from "./payCalc";
 
-const gbp = (n: number) => "£" + (n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const gbp0 = (n: number) => "£" + Math.round(n || 0).toLocaleString("en-GB");
+const gbp = (n: number) => "£" + (n || 0).toLocaleString(dl(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const gbp0 = (n: number) => "£" + Math.round(n || 0).toLocaleString(dl());
 const escH = (s: unknown = "") => String(s ?? "").replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "no connection");
 const leaveLabel = (lv: LeaveSum) => Object.entries(lv.byKind).map(([k, d]) => `${d} day${d === 1 ? "" : "s"} ${(KIND_META[k as AbsenceKind]?.label ?? k).toLowerCase()}`).join(" · ");
@@ -66,7 +67,7 @@ export function openPayslip(l: Line, period: string, paidOn: string, provider: s
   const statNote = lv && (lv.sickDays || lv.statutoryDays) ? ` <b>This period includes ${escH([lv.sickDays ? `${plural(lv.sickDays)} sickness${l.sickPay === "ssp" ? " (deducted — SSP to be added by your payroll provider)" : l.sickPay === "full" ? " (paid in full)" : ""}` : "", lv.statutoryDays ? `${plural(lv.statutoryDays)} statutory-pay leave` : ""].filter(Boolean).join(" and "))} — Statutory Sick Pay / statutory family pay are NOT included in these figures.</b>` : "";
   const deds = row("PAYE tax (est.)", gbp(l.payeM)) + row("Employee NI (est.)", gbp(l.eeNiM)) + row("Pension — auto-enrolment", gbp(l.eePenM)) + (l.deductions || []).map((x) => row(x.label || "Deduction", gbp(x.amount))).join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Payslip — ${escH(l.name)}</title><style>body{font-family:-apple-system,'Segoe UI',Arial,sans-serif;color:#1a1c2b;max-width:660px;margin:0 auto;padding:40px}h1{font-size:20px;margin:0}.tag{display:inline-block;background:#fdf3e0;color:#8a5a09;border-radius:99px;padding:2px 9px;font-size:10.5px;font-weight:800;margin-bottom:6px}.sub{color:#6b7086;font-size:12px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px;font-size:12px;color:#4a4763;margin:14px 0;border-top:1px solid #e5e7f0;padding-top:12px}.meta b{color:#1a1c2b}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:16px 0}h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#3557b7;border-bottom:1px solid #e5e7f0;padding-bottom:4px}table{width:100%;border-collapse:collapse;font-size:13px}td{padding:5px 0;border-top:1px solid #eef1f7}.net{background:#eef4fd;border-radius:10px;padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center}.net b{font-size:22px;color:#1d3a8f}.est{font-size:11px;color:#8a92a8;margin-top:14px}@media print{body{padding:0}}</style></head><body>
-    <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><span class="tag">Estimated payslip · pay preview</span><h1>${escH(provider)}</h1><div class="sub">Payslip · ${escH(period)} · paid ${escH(paid.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }))}</div></div><div style="text-align:right"><div style="font-weight:800">${escH(l.name)}</div><div class="sub">${escH(l.role)} · ${escH(l.op)}</div></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><span class="tag">Estimated payslip · pay preview</span><h1>${escH(provider)}</h1><div class="sub">Payslip · ${escH(period)} · paid ${escH(paid.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }))}</div></div><div style="text-align:right"><div style="font-weight:800">${escH(l.name)}</div><div class="sub">${escH(l.role)} · ${escH(l.op)}</div></div></div>
     <div class="meta"><div>Tax code · <b>${escH(l.taxCode)}</b></div><div>NI category · <b>${escH(l.niCat)}</b></div><div>Tax period · <b>${escH(taxPeriod)}</b></div><div>Frequency · <b>${escH(freqLabel)}</b></div>${leaveMeta}</div>
     <div class="grid"><div><h3>Payments</h3><table>${pays}${(l.additions || []).length || ((unpaidM > 0 || sickM > 0) && l.basis === "year") ? row("Gross pay", gbp(l.grossM), true) : ""}</table></div><div><h3>Deductions</h3><table>${deds}</table></div></div>
     <div class="net"><span>Net pay · BACS</span><b>${gbp(l.netM)}</b></div>
@@ -168,7 +169,7 @@ function rotaHoursForRange(startISO: string, endISO: string, breakPaid = false):
 // LOCAL calendar date — toISOString() is UTC, which moved every window a day
 // early east of GMT (and in BST at midnight): September ran 31 Aug – 29 Sep.
 const isoD = isoDate;
-const fmtD = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const fmtD = (d: Date) => d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" });
 function periodWindow(anchor: Date, freq: Freq): { start: string; end: string; label: string; paidOn: string } {
   if (freq === "monthly") {
     const s = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
@@ -189,7 +190,7 @@ function stepAnchor(anchor: Date, freq: Freq, dir: number): Date {
   return d;
 }
 
-const monthLabel = (d: Date) => d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+const monthLabel = (d: Date) => d.toLocaleDateString(dl(), { month: "long", year: "numeric" });
 const INTEGRATIONS = [
   { id: "quickbooks", name: "QuickBooks", icon: "🟢", blurb: "Post each pay run as a journal to QuickBooks Online." },
   { id: "xero", name: "Xero", icon: "🔵", blurb: "Sync wages, PAYE/NI and pension to Xero." },
@@ -419,20 +420,20 @@ export function PayrollApp() {
         </div>
         </CollapsibleStats>
         <Card className="p-4">
-          <div className="flex flex-wrap items-center gap-2"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">Next pay day</div><div className="text-[12px] text-[var(--ink-3)]">{nextPay.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · {FREQ_LABEL[freq]} · {period}</div></div><Button variant="primary" className="ml-auto" onClick={() => setTab("run")}>▶ Run payroll</Button></div>
-          {runs.length > 0 && <div className="mt-3 border-t border-[var(--line)] pt-3"><div className="mb-1.5 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Recent runs</div>{runs.slice(0, 3).map((r) => <div key={r.id} className="flex items-center gap-2 py-1 text-[12.5px]"><span className="font-bold text-[var(--ink)]">{r.period}</span><span className="text-[var(--ink-3)]">{r.lines.length} payslips · {gbp0(r.lines.reduce((a, l) => a + l.netM, 0))} net</span><span className="ml-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">{r.publishedAt ? "published" : r.status}</span></div>)}</div>}
+          <div className="flex flex-wrap items-center gap-2"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">Next pay day</div><div className="text-[12px] text-[var(--ink-3)]">{nextPay.toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long" })} · {FREQ_LABEL[freq]} · {period}</div></div><Button variant="primary" className="ms-auto" onClick={() => setTab("run")}>▶ Run payroll</Button></div>
+          {runs.length > 0 && <div className="mt-3 border-t border-[var(--line)] pt-3"><div className="mb-1.5 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Recent runs</div>{runs.slice(0, 3).map((r) => <div key={r.id} className="flex items-center gap-2 py-1 text-[12.5px]"><span className="font-bold text-[var(--ink)]">{r.period}</span><span className="text-[var(--ink-3)]">{r.lines.length} payslips · {gbp0(r.lines.reduce((a, l) => a + l.netM, 0))} net</span><span className="ms-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">{r.publishedAt ? "published" : r.status}</span></div>)}</div>}
         </Card>
       </>)}
 
       {tab === "employees" && (
         <Card className="p-4">
-          <div className="mb-2 flex flex-wrap items-center gap-2"><div className="text-[12px] text-[var(--ink-3)]">{demo ? "Pay rate & hours pull from each person’s onboarding record — edit here to override." : "Everyone who has joined your team (Team & invites) is here — set each person’s pay once. Add someone who isn’t on the app (e.g. office staff) by hand."} Tax code &amp; NI category as advised by HMRC.</div><Button className="ml-auto" onClick={() => setEdit({ emp: { id: "", name: "", role: "", op: "", basis: "hour", rate: 0, hpw: 0, weeks: 52, taxCode: "1257L", niCat: "A", pension: true, paidFrom: "contracted", source: "manual" }, isNew: true })}>+ Add employee</Button></div>
+          <div className="mb-2 flex flex-wrap items-center gap-2"><div className="text-[12px] text-[var(--ink-3)]">{demo ? "Pay rate & hours pull from each person’s onboarding record — edit here to override." : "Everyone who has joined your team (Team & invites) is here — set each person’s pay once. Add someone who isn’t on the app (e.g. office staff) by hand."} Tax code &amp; NI category as advised by HMRC.</div><Button className="ms-auto" onClick={() => setEdit({ emp: { id: "", name: "", role: "", op: "", basis: "hour", rate: 0, hpw: 0, weeks: 52, taxCode: "1257L", niCat: "A", pension: true, paidFrom: "contracted", source: "manual" }, isNew: true })}>+ Add employee</Button></div>
           {!loaded && !loadErr && <div className="p-4 text-center text-[12.5px] text-[var(--ink-3)]">Loading payroll…</div>}
           {loaded && emps.length === 0 && <div className="rounded-xl bg-[var(--panel)] p-5 text-center text-[12.5px] text-[var(--ink-3)]">No staff on your team yet — invite them from <b>Team &amp; invites</b> (they appear here once they join), or <b>+ Add employee</b> by hand.</div>}
           {emps.length > 0 && <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-            <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 font-extrabold">Basis</th><th className="px-3 py-2.5 font-extrabold">Rate</th><th className="px-3 py-2.5 font-extrabold">Hrs/wk</th><th className="px-3 py-2.5 font-extrabold">Paid from</th><th className="px-3 py-2.5 font-extrabold">Gross/mo</th><th className="px-3 py-2.5 font-extrabold">Tax code</th><th className="px-3 py-2.5 font-extrabold">Pension</th><th className="px-3 py-2.5"></th></tr></thead>
+            <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 font-extrabold">Basis</th><th className="px-3 py-2.5 font-extrabold">Rate</th><th className="px-3 py-2.5 font-extrabold">Hrs/wk</th><th className="px-3 py-2.5 font-extrabold">Paid from</th><th className="px-3 py-2.5 font-extrabold">Gross/mo</th><th className="px-3 py-2.5 font-extrabold">Tax code</th><th className="px-3 py-2.5 font-extrabold">Pension</th><th className="px-3 py-2.5"></th></tr></thead>
               <tbody>{emps.map((e) => { const tag = tagOf(e); return (
-                <tr key={e.id} className="border-t border-[var(--line-2,#eef2f8)]"><td className="px-3 py-2.5 font-bold text-[var(--ink)]">{e.name}<span className="ml-1 text-[10.5px] font-normal text-[var(--ink-3)]">{e.role}</span>{tag && <span className="ml-1.5">{chip(tag, "bg-[#eef1f6] text-[#64748b]")}</span>}{!(e.rate > 0) && <span className="ml-1.5">{chip("needs pay details", "bg-[#fdf3e0] text-[#8a5a09]")}</span>}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{e.basis === "year" ? "Salary" : "Hourly"}</td><td className="px-3 py-2.5 tabular-nums text-[var(--ink-2)]">{e.basis === "year" ? gbp0(e.rate) + "/yr" : "£" + e.rate.toFixed(2) + "/hr"}</td><td className="px-3 py-2.5 tabular-nums text-[var(--ink-2)]">{e.basis === "year" ? "—" : e.hpw}</td><td className="px-3 py-2.5 text-[12px] text-[var(--ink-2)]">{e.basis === "year" ? "Salary" : empSource(e) === "timesheet" ? "Timesheets" : "Contract"}</td><td className="px-3 py-2.5 font-bold tabular-nums text-[var(--ink)]">{e.basis === "hour" && empSource(e) === "timesheet" ? <span className="font-normal text-[var(--ink-3)]">by hours</span> : gbp0(grossMonthly(e))}</td><td className="px-3 py-2.5 tabular-nums text-[var(--ink-2)]">{e.taxCode}</td><td className="px-3 py-2.5">{e.pension ? <span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">Enrolled</span> : <span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[10px] font-bold text-[#64748b]">Opted out</span>}</td><td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setEdit({ emp: e })} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Edit</button></td></tr>
+                <tr key={e.id} className="border-t border-[var(--line-2,#eef2f8)]"><td className="px-3 py-2.5 font-bold text-[var(--ink)]">{e.name}<span className="ms-1 text-[10.5px] font-normal text-[var(--ink-3)]">{e.role}</span>{tag && <span className="ms-1.5">{chip(tag, "bg-[#eef1f6] text-[#64748b]")}</span>}{!(e.rate > 0) && <span className="ms-1.5">{chip("needs pay details", "bg-[#fdf3e0] text-[#8a5a09]")}</span>}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{e.basis === "year" ? "Salary" : "Hourly"}</td><td className="px-3 py-2.5 tabular-nums text-[var(--ink-2)]">{e.basis === "year" ? gbp0(e.rate) + "/yr" : "£" + e.rate.toFixed(2) + "/hr"}</td><td className="px-3 py-2.5 tabular-nums text-[var(--ink-2)]">{e.basis === "year" ? "—" : e.hpw}</td><td className="px-3 py-2.5 text-[12px] text-[var(--ink-2)]">{e.basis === "year" ? "Salary" : empSource(e) === "timesheet" ? "Timesheets" : "Contract"}</td><td className="px-3 py-2.5 font-bold tabular-nums text-[var(--ink)]">{e.basis === "hour" && empSource(e) === "timesheet" ? <span className="font-normal text-[var(--ink-3)]">by hours</span> : gbp0(grossMonthly(e))}</td><td className="px-3 py-2.5 tabular-nums text-[var(--ink-2)]">{e.taxCode}</td><td className="px-3 py-2.5">{e.pension ? <span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">Enrolled</span> : <span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[10px] font-bold text-[#64748b]">Opted out</span>}</td><td className="px-3 py-2.5 text-end"><button type="button" onClick={() => setEdit({ emp: e })} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Edit</button></td></tr>
               ); })}</tbody>
             </table>
           </div>}
@@ -441,7 +442,7 @@ export function PayrollApp() {
 
       {tab === "run" && (
         <Card className="p-4">
-          <div className="mb-3 flex flex-wrap items-center gap-2"><div><div className="text-[14px] font-extrabold text-[var(--ink)]">Pay run</div><div className="text-[12px] text-[var(--ink-3)]">Review, then approve to generate payslips. Figures are estimates.</div></div><div className="ml-auto flex gap-2"><Button onClick={exportCsv}>⬇ Export CSV</Button><Button variant="primary" onClick={runPayroll} disabled={busy || !loaded}>{busy ? "Saving…" : "✓ Approve & generate payslips"}</Button></div></div>
+          <div className="mb-3 flex flex-wrap items-center gap-2"><div><div className="text-[14px] font-extrabold text-[var(--ink)]">Pay run</div><div className="text-[12px] text-[var(--ink-3)]">Review, then approve to generate payslips. Figures are estimates.</div></div><div className="ms-auto flex gap-2"><Button onClick={exportCsv}>⬇ Export CSV</Button><Button variant="primary" onClick={runPayroll} disabled={busy || !loaded}>{busy ? "Saving…" : "✓ Approve & generate payslips"}</Button></div></div>
 
           {/* Frequency + period picker */}
           <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
@@ -456,9 +457,9 @@ export function PayrollApp() {
               <button type="button" onClick={() => setAnchor(stepAnchor(anchor, freq, -1))} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[13px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">‹</button>
               <span className="min-w-[150px] text-center text-[12.5px] font-bold text-[var(--ink)]">{period}</span>
               <button type="button" onClick={() => setAnchor(stepAnchor(anchor, freq, 1))} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[13px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">›</button>
-              <button type="button" onClick={() => setAnchor(new Date())} className="ml-1 text-[11px] font-bold text-[#1d3a8f] hover:underline">Today</button>
+              <button type="button" onClick={() => setAnchor(new Date())} className="ms-1 text-[11px] font-bold text-[#1d3a8f] hover:underline">Today</button>
             </div>
-            <span className="text-[11px] text-[var(--ink-3)]">Paid {nextPay.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</span>
+            <span className="text-[11px] text-[var(--ink-3)]">Paid {nextPay.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" })}</span>
           </div>
 
           {/* Per-employee hours source — mix contracted (e.g. admin) and approved timesheets (clock in/out) */}
@@ -488,10 +489,10 @@ export function PayrollApp() {
 
           <div className="mb-2 text-[11.5px] text-[var(--ink-3)]">Everything is editable per person, per period — click <b>Edit</b> on a row to change hours, tax code, NI category, add overtime/bonus or deductions, or override PAYE/NI/pension. Net always recalculates. Nothing here changes the employee&rsquo;s master record. <b>Leave</b> comes from approved bookings in Leave &amp; absence: unpaid leave comes off contracted hours or salary; paid leave is paid at the normal rate (timesheet staff get it added); rolled-up staff are paid holiday as their 12.07% line instead.</div>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-            <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-right font-extrabold">Hours</th><th className="px-3 py-2.5 text-right font-extrabold">Gross</th><th className="px-3 py-2.5 text-right font-extrabold">PAYE</th><th className="px-3 py-2.5 text-right font-extrabold">NI</th><th className="px-3 py-2.5 text-right font-extrabold">Pension</th><th className="px-3 py-2.5 text-right font-extrabold">Net</th><th className="px-3 py-2.5 text-right font-extrabold">Er cost</th><th className="px-3 py-2.5 text-right font-extrabold"></th></tr></thead>
-              <tbody>{lines.map((l, i) => { const e = emps[i]; const ts = tsSum[e.id]; const lv = l.leave; const man = (on: boolean) => on ? <sup className="ml-0.5 text-[8px] font-black text-[#b45309]" title="Manual override">M</sup> : null; return (
+            <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-end font-extrabold">Hours</th><th className="px-3 py-2.5 text-end font-extrabold">Gross</th><th className="px-3 py-2.5 text-end font-extrabold">PAYE</th><th className="px-3 py-2.5 text-end font-extrabold">NI</th><th className="px-3 py-2.5 text-end font-extrabold">Pension</th><th className="px-3 py-2.5 text-end font-extrabold">Net</th><th className="px-3 py-2.5 text-end font-extrabold">Er cost</th><th className="px-3 py-2.5 text-end font-extrabold"></th></tr></thead>
+              <tbody>{lines.map((l, i) => { const e = emps[i]; const ts = tsSum[e.id]; const lv = l.leave; const man = (on: boolean) => on ? <sup className="ms-0.5 text-[8px] font-black text-[#b45309]" title="Manual override">M</sup> : null; return (
                 <tr key={l.id} className="border-t border-[var(--line-2,#eef2f8)]">
-                  <td className="px-3 py-2 font-bold text-[var(--ink)]">{l.name}{isAdjusted(e) && <span className="ml-1.5">{chip("adjusted", "bg-[#fdf3e0] text-[#8a5a09]")}</span>}{isRolledUp(e) && <span className="ml-1.5">{chip("holiday rolled-up", "bg-[#eef1f6] text-[#64748b]", "Holiday is included in pay at 12.07% — annual leave isn't paid again")}</span>}
+                  <td className="px-3 py-2 font-bold text-[var(--ink)]">{l.name}{isAdjusted(e) && <span className="ms-1.5">{chip("adjusted", "bg-[#fdf3e0] text-[#8a5a09]")}</span>}{isRolledUp(e) && <span className="ms-1.5">{chip("holiday rolled-up", "bg-[#eef1f6] text-[#64748b]", "Holiday is included in pay at 12.07% — annual leave isn't paid again")}</span>}
                     {(l.addM > 0 || l.dedM > 0) && <div className="mt-0.5 text-[10px] font-semibold text-[var(--ink-3)]">{l.addM > 0 && <span className="text-[#0f7a43]">+{gbp(l.addM)} additions</span>}{l.addM > 0 && l.dedM > 0 && " · "}{l.dedM > 0 && <span className="text-[#c0392b]">−{gbp(l.dedM)} deductions</span>}</div>}
                     {lv && <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] font-semibold">{Object.entries(lv.byKind).map(([k, d]) => <span key={k} className="rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[#1d3a8f]">{KIND_META[k as AbsenceKind]?.icon ?? "🗓️"} {d}d {(KIND_META[k as AbsenceKind]?.label ?? k).toLowerCase()}</span>)}{(l.unpaidLeaveM ?? 0) > 0 && <span className="text-[#c0392b]">−{gbp(l.unpaidLeaveM ?? 0)} unpaid leave</span>}{(l.sickLeaveM ?? 0) > 0 && <span className="text-[#c0392b]">−{gbp(l.sickLeaveM ?? 0)} sickness</span>}</div>}
                     {lv && lv.paidDays > 0 && l.hoursFrom === "timesheet" && !(e.hpw > 0) && !isRolledUp(e) && <div className="mt-0.5 text-[10px] font-bold text-[#b45309]">⚠ {lv.paidDays}d paid leave not valued — set their hours/week on the Employees tab (a day off is a fifth of it), or add holiday pay with Edit.</div>}
@@ -503,18 +504,18 @@ export function PayrollApp() {
                     {lv && lv.statutoryDays > 0 && <div className="mt-0.5 text-[10px] font-bold text-[#b45309]">⚠ {lv.statutoryDays}d statutory-pay leave: SMP / statutory pay not calculated — {l.hoursFrom === "timesheet" ? "nothing is paid for these days" : "pay is left unchanged"}. Adjust with Edit.</div>}
                     {ts && l.hoursFrom === "timesheet" && (ts.pendingH > 0 || ts.openDays > 0 || ts.overtimeUnpaidH > 0) && <div className="mt-0.5 text-[10px] font-semibold text-[#8a5a09]">{[ts.pendingH > 0 ? `⏳ ${ts.pendingH}h awaiting approval` : "", ts.openDays > 0 ? `🕒 ${ts.openDays} shift${ts.openDays === 1 ? "" : "s"} not clocked out` : "", ts.overtimeUnpaidH > 0 ? `+${ts.overtimeUnpaidH}h overtime unpaid` : ""].filter(Boolean).join(" · ")}</div>}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-2)]">{l.basis === "year" ? <span className="text-[var(--ink-3)]">Salary</span> : <div className="flex items-center justify-end gap-1.5">{adjOf(e.id)?.hours != null && <span className="rounded bg-[#fdf3e0] px-1 py-0.5 text-[9.5px] font-bold text-[#8a5a09]" title="Manual hours">manual</span>}<span>{l.hoursM}h</span><button type="button" onClick={() => setSource(e.id, empSource(e) === "timesheet" ? "contracted" : "timesheet")} title="Click to switch this person between contracted hours and approved timesheets" className={`rounded px-1 py-0.5 text-[9.5px] font-bold ${empSource(e) === "timesheet" ? "bg-[#e7edfb] text-[#1d3a8f]" : "bg-[#eef1f6] text-[#64748b]"}`}>{empSource(e) === "timesheet" ? "timesheet ⇄" : "contract ⇄"}</button></div>}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{gbp(l.grossM)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{gbp(l.payeM)}{man(l.manual.paye)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{gbp(l.eeNiM)}{man(l.manual.eeNi)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{gbp(l.eePenM)}{man(l.manual.eePen)}</td>
-                  <td className="px-3 py-2 text-right font-extrabold tabular-nums text-[#0f7a43]">{gbp(l.netM)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-3)]">{gbp(l.grossM + l.erNiM + l.erPenM)}</td>
-                  <td className="px-3 py-2 text-right"><button type="button" onClick={() => setAdjEmp(e)} className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">✏️ Edit</button></td>
+                  <td className="px-3 py-2 text-end tabular-nums text-[var(--ink-2)]">{l.basis === "year" ? <span className="text-[var(--ink-3)]">Salary</span> : <div className="flex items-center justify-end gap-1.5">{adjOf(e.id)?.hours != null && <span className="rounded bg-[#fdf3e0] px-1 py-0.5 text-[9.5px] font-bold text-[#8a5a09]" title="Manual hours">manual</span>}<span>{l.hoursM}h</span><button type="button" onClick={() => setSource(e.id, empSource(e) === "timesheet" ? "contracted" : "timesheet")} title="Click to switch this person between contracted hours and approved timesheets" className={`rounded px-1 py-0.5 text-[9.5px] font-bold ${empSource(e) === "timesheet" ? "bg-[#e7edfb] text-[#1d3a8f]" : "bg-[#eef1f6] text-[#64748b]"}`}>{empSource(e) === "timesheet" ? "timesheet ⇄" : "contract ⇄"}</button></div>}</td>
+                  <td className="px-3 py-2 text-end tabular-nums">{gbp(l.grossM)}</td>
+                  <td className="px-3 py-2 text-end tabular-nums text-[#c0392b]">{gbp(l.payeM)}{man(l.manual.paye)}</td>
+                  <td className="px-3 py-2 text-end tabular-nums text-[#c0392b]">{gbp(l.eeNiM)}{man(l.manual.eeNi)}</td>
+                  <td className="px-3 py-2 text-end tabular-nums text-[#c0392b]">{gbp(l.eePenM)}{man(l.manual.eePen)}</td>
+                  <td className="px-3 py-2 text-end font-extrabold tabular-nums text-[#0f7a43]">{gbp(l.netM)}</td>
+                  <td className="px-3 py-2 text-end tabular-nums text-[var(--ink-3)]">{gbp(l.grossM + l.erNiM + l.erPenM)}</td>
+                  <td className="px-3 py-2 text-end"><button type="button" onClick={() => setAdjEmp(e)} className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">✏️ Edit</button></td>
                 </tr>
               ); })}
               {lines.length === 0 && <tr><td colSpan={9} className="px-3 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{loaded ? "No employees yet — add them on the Employees tab." : "Loading…"}</td></tr>}
-              <tr className="border-t-2 border-[var(--line)] bg-[var(--panel)] font-extrabold"><td className="px-3 py-2.5">Totals</td><td className="px-3 py-2.5 text-right tabular-nums text-[var(--ink-3)]">{lines.filter((l) => l.basis === "hour").reduce((a, l) => a + l.hoursM, 0).toFixed(1)}h</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(totalGross)}</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(totalPaye)}</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(lines.reduce((a, l) => a + l.eeNiM, 0))}</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(lines.reduce((a, l) => a + l.eePenM, 0))}</td><td className="px-3 py-2.5 text-right tabular-nums text-[#0f7a43]">{gbp(totalNet)}</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(totalErCost)}</td><td></td></tr></tbody>
+              <tr className="border-t-2 border-[var(--line)] bg-[var(--panel)] font-extrabold"><td className="px-3 py-2.5">Totals</td><td className="px-3 py-2.5 text-end tabular-nums text-[var(--ink-3)]">{lines.filter((l) => l.basis === "hour").reduce((a, l) => a + l.hoursM, 0).toFixed(1)}h</td><td className="px-3 py-2.5 text-end tabular-nums">{gbp(totalGross)}</td><td className="px-3 py-2.5 text-end tabular-nums">{gbp(totalPaye)}</td><td className="px-3 py-2.5 text-end tabular-nums">{gbp(lines.reduce((a, l) => a + l.eeNiM, 0))}</td><td className="px-3 py-2.5 text-end tabular-nums">{gbp(lines.reduce((a, l) => a + l.eePenM, 0))}</td><td className="px-3 py-2.5 text-end tabular-nums text-[#0f7a43]">{gbp(totalNet)}</td><td className="px-3 py-2.5 text-end tabular-nums">{gbp(totalErCost)}</td><td></td></tr></tbody>
             </table>
           </div>
         </Card>
@@ -525,15 +526,15 @@ export function PayrollApp() {
           {runs.length === 0 ? <div className="p-6 text-center text-[13px] text-[var(--ink-3)]">No pay runs yet — approve one from the <b>Pay run</b> tab.</div> : (
             <div className="space-y-4">{runs.map((r) => (
               <div key={r.id}>
-                <div className="mb-1.5 flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{r.period}</span><span className="text-[11.5px] text-[var(--ink-3)]">paid {new Date(`${r.paidOn}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · {gbp0(r.lines.reduce((a, l) => a + l.netM, 0))} net</span>
+                <div className="mb-1.5 flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{r.period}</span><span className="text-[11.5px] text-[var(--ink-3)]">paid {new Date(`${r.paidOn}T12:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })} · {gbp0(r.lines.reduce((a, l) => a + l.netM, 0))} net</span>
                   {!demo && (r.status !== "approved"
-                    ? <button type="button" onClick={() => approveRun(r)} className="ml-auto rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold text-[#b9770e] hover:border-[#b9770e]">✅ Approve run</button>
+                    ? <button type="button" onClick={() => approveRun(r)} className="ms-auto rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold text-[#b9770e] hover:border-[#b9770e]">✅ Approve run</button>
                     : (r.publishedAt
-                      ? <span className="ml-auto flex items-center gap-2"><span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">📣 Published to staff</span><button type="button" onClick={() => publishRun(r, false)} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Unpublish</button></span>
-                      : <button type="button" onClick={() => publishRun(r, true)} className="ml-auto rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">📣 Publish to staff</button>))}
+                      ? <span className="ms-auto flex items-center gap-2"><span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">📣 Published to staff</span><button type="button" onClick={() => publishRun(r, false)} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Unpublish</button></span>
+                      : <button type="button" onClick={() => publishRun(r, true)} className="ms-auto rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">📣 Publish to staff</button>))}
                 </div>
                 <div className="grid gap-1.5 sm:grid-cols-2">{r.lines.map((l) => (
-                  <button key={l.id} type="button" onClick={() => showPayslip(l, r.period, r.paidOn)} className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2 text-left hover:border-[#1d3a8f]"><span className="text-[12.5px] font-bold text-[var(--ink)]">{l.name}</span><span className="text-[11px] text-[var(--ink-3)]">{l.role}</span><span className="ml-auto text-[12px] font-extrabold tabular-nums text-[#0f7a43]">{gbp(l.netM)}</span><span className="text-[11px] font-bold text-[#1d3a8f]">🧾 Payslip</span></button>
+                  <button key={l.id} type="button" onClick={() => showPayslip(l, r.period, r.paidOn)} className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2 text-start hover:border-[#1d3a8f]"><span className="text-[12.5px] font-bold text-[var(--ink)]">{l.name}</span><span className="text-[11px] text-[var(--ink-3)]">{l.role}</span><span className="ms-auto text-[12px] font-extrabold tabular-nums text-[#0f7a43]">{gbp(l.netM)}</span><span className="text-[11px] font-bold text-[#1d3a8f]">🧾 Payslip</span></button>
                 ))}</div>
               </div>
             ))}</div>
@@ -547,7 +548,7 @@ export function PayrollApp() {
           <div className="grid gap-2.5 sm:grid-cols-3">
             {INTEGRATIONS.map((i) => { const on = !!conn[i.id]; return (
               <div key={i.id} className="rounded-2xl border border-[var(--line)] p-4">
-                <div className="mb-1 flex items-center gap-2"><span className="text-[22px]">{i.icon}</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{i.name}</span>{on && <span className="ml-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">Connected</span>}</div>
+                <div className="mb-1 flex items-center gap-2"><span className="text-[22px]">{i.icon}</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{i.name}</span>{on && <span className="ms-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">Connected</span>}</div>
                 <div className="mb-3 text-[11.5px] leading-relaxed text-[var(--ink-3)]">{i.blurb}</div>
                 {on ? <div className="flex flex-wrap gap-2"><Button onClick={() => flash(`↗ Posted ${monthLabel(new Date())} wages journal to ${i.name}.`)}>Post journal</Button><button type="button" onClick={() => saveConn({ ...conn, [i.id]: false })} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Disconnect</button></div> : <Button variant="primary" onClick={() => { saveConn({ ...conn, [i.id]: true }); flash(`✓ ${i.name} connected (demo).`); }}>Connect {i.name}</Button>}
               </div>
@@ -583,7 +584,7 @@ function EmpEditor({ emp, isNew, canRemove, takenIds, onSave, onRemove, onClose 
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(ev) => ev.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{isNew ? "Add employee" : e.name}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{isNew ? "Add employee" : e.name}</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
           {isNew && <>
             <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-3)]">For someone who isn&rsquo;t on the app (e.g. office staff). Staff who join through <b>Team &amp; invites</b> appear here on their own. Use the name they clock in under, so timesheets and leave match.</div>
@@ -607,7 +608,7 @@ function EmpEditor({ emp, isNew, canRemove, takenIds, onSave, onRemove, onClose 
           <div className="rounded-lg bg-[#eef4fd] px-3 py-2 text-[12px] font-semibold text-[#1d3a8f]">{e.basis === "hour" && sourceOf(e) === "timesheet" ? `Paid for approved timesheet hours at £${(e.rate || 0).toFixed(2)}/hr` : `Estimated gross: ${gbp0(grossMonthly(e))}/month`}</div>
           {err && <div className="rounded-lg bg-[#fdecec] px-3 py-2 text-[12px] font-semibold text-[#c0392b]">{err}</div>}
         </div>
-        <div className="mt-3 flex items-center gap-2">{canRemove && <button type="button" onClick={onRemove} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Remove from payroll</button>}<div className="ml-auto flex gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={save}>{isNew ? "Add" : "Save"}</Button></div></div>
+        <div className="mt-3 flex items-center gap-2">{canRemove && <button type="button" onClick={onRemove} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Remove from payroll</button>}<div className="ms-auto flex gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={save}>{isNew ? "Add" : "Save"}</Button></div></div>
       </div>
     </div>
   );
@@ -661,7 +662,7 @@ function RunAdjust({ emp, period, freq, value, preview, ts, tsRows, hoursSource,
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" onClick={(ev) => ev.stopPropagation()}>
-        <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{emp.name}</h3><span className="text-[12px] text-[var(--ink-3)]">· {period} pay run</span><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{emp.name}</h3><span className="text-[12px] text-[var(--ink-3)]">· {period} pay run</span><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="mb-3 text-[11px] text-[var(--ink-3)]">Adjustments apply to this pay period only — the employee&rsquo;s master record is unchanged.</div>
         <div className="grid gap-3">
           {emp.basis === "hour" ? (
@@ -676,10 +677,10 @@ function RunAdjust({ emp, period, freq, value, preview, ts, tsRows, hoursSource,
               <div className="max-h-44 overflow-y-auto rounded-lg border border-[var(--line)]">
                 {tsRows.map(({ rec, payH, workedH, overtimeUnpaidH }) => (
                   <div key={rec.day} className="flex flex-wrap items-center gap-1.5 border-t border-[var(--line-2,#eef2f8)] px-2.5 py-1.5 text-[11.5px] first:border-t-0">
-                    <span className="w-[74px] font-bold text-[var(--ink)]">{new Date(`${rec.day}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</span>
+                    <span className="w-[74px] font-bold text-[var(--ink)]">{new Date(`${rec.day}T12:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" })}</span>
                     <span className="text-[var(--ink-3)]">{hhmm(rec.clockInAt)}–{rec.clockOutAt ? hhmm(rec.clockOutAt) : "…"}{rec.breakMs ? ` · break ${Math.round(rec.breakMs / 60000)}m` : ""} · worked {workedH}h</span>
                     <span className="font-bold tabular-nums text-[var(--ink)]">pay {payH}h</span>
-                    <span className="ml-auto flex items-center gap-1.5">
+                    <span className="ms-auto flex items-center gap-1.5">
                       {!rec.clockOutAt ? <span className="rounded-full bg-[#fdf3e0] px-1.5 py-0.5 text-[9.5px] font-bold text-[#8a5a09]">not clocked out</span>
                         : rec.approved ? <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9.5px] font-bold text-[#0f7a43]">approved</span>
                         : <button type="button" onClick={() => onTimesheet(rec, { approved: true }, `${rec.day}: ${payH}h approved for payroll.`)} className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">Approve</button>}
@@ -723,16 +724,16 @@ function RunAdjust({ emp, period, freq, value, preview, ts, tsRows, hoursSource,
           <div className="rounded-xl border border-[var(--line)] bg-[#f7f9fd] p-3 text-[12px]">
             <div className="mb-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">This pay run</div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-              <span className="text-[var(--ink-3)]">Gross</span><span className="text-right font-bold tabular-nums">{gbp(pl.grossM)}</span>
-              <span className="text-[var(--ink-3)]">PAYE</span><span className="text-right tabular-nums text-[#c0392b]">−{gbp(pl.payeM)}</span>
-              <span className="text-[var(--ink-3)]">Employee NI</span><span className="text-right tabular-nums text-[#c0392b]">−{gbp(pl.eeNiM)}</span>
-              <span className="text-[var(--ink-3)]">Pension</span><span className="text-right tabular-nums text-[#c0392b]">−{gbp(pl.eePenM)}</span>
-              {pl.dedM > 0 && <><span className="text-[var(--ink-3)]">Other deductions</span><span className="text-right tabular-nums text-[#c0392b]">−{gbp(pl.dedM)}</span></>}
-              <span className="font-extrabold text-[var(--ink)]">Net pay</span><span className="text-right font-extrabold tabular-nums text-[#0f7a43]">{gbp(pl.netM)}</span>
+              <span className="text-[var(--ink-3)]">Gross</span><span className="text-end font-bold tabular-nums">{gbp(pl.grossM)}</span>
+              <span className="text-[var(--ink-3)]">PAYE</span><span className="text-end tabular-nums text-[#c0392b]">−{gbp(pl.payeM)}</span>
+              <span className="text-[var(--ink-3)]">Employee NI</span><span className="text-end tabular-nums text-[#c0392b]">−{gbp(pl.eeNiM)}</span>
+              <span className="text-[var(--ink-3)]">Pension</span><span className="text-end tabular-nums text-[#c0392b]">−{gbp(pl.eePenM)}</span>
+              {pl.dedM > 0 && <><span className="text-[var(--ink-3)]">Other deductions</span><span className="text-end tabular-nums text-[#c0392b]">−{gbp(pl.dedM)}</span></>}
+              <span className="font-extrabold text-[var(--ink)]">Net pay</span><span className="text-end font-extrabold tabular-nums text-[#0f7a43]">{gbp(pl.netM)}</span>
             </div>
           </div>
         </div>
-        <div className="mt-3 flex items-center gap-2"><button type="button" onClick={() => onSave(null)} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Reset to default</button><div className="ml-auto flex gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={save}>Save adjustments</Button></div></div>
+        <div className="mt-3 flex items-center gap-2"><button type="button" onClick={() => onSave(null)} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Reset to default</button><div className="ms-auto flex gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={save}>Save adjustments</Button></div></div>
       </div>
     </div>
   );

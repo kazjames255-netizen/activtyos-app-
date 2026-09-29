@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost, put as apiPut, setActAs } from "@/lib/api";
@@ -42,7 +43,7 @@ const chipFor = (p: { tier: Tier; franchiseId: string | null }) => (p.tier === "
 const initials = (s: string) => (s.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
 const GRADS = ["linear-gradient(135deg,#2f5fd0,#2f5fd0)", "linear-gradient(135deg,#2f5fd0,#5aa0f0)", "linear-gradient(135deg,#274ba3,#2f5fd0)", "linear-gradient(135deg,#6d28d9,#5a3fd0)"];
 const grad = (s: string) => GRADS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
-const fmtWhen = (iso: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
+const fmtWhen = (iso: string) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "");
 const selCls = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] outline-none focus:border-[#C6D0E6]";
 
 interface Account { uid: string; email: string; role: string; portal: string; label: string }
@@ -153,7 +154,7 @@ export function SupportReviewApp() {
           <button type="button" onClick={() => { setStatusF("all"); setCatF("all"); setProvF("all"); }}
             className="rounded-full bg-[#FDE7EF] px-3.5 py-1.5 text-[12px] font-bold text-[#C81E5E] hover:bg-[#FDE7EF]">✕ Clear filters</button>
         )}
-        <a href="/platform/messages" className="ml-auto rounded-full bg-[#2f5fd0] px-3.5 py-1.5 text-[12.5px] font-bold text-white hover:bg-[#2f5fd0]">← Back to inbox</a>
+        <a href="/platform/messages" className="ms-auto rounded-full bg-[#2f5fd0] px-3.5 py-1.5 text-[12.5px] font-bold text-white hover:bg-[#2f5fd0]">← Back to inbox</a>
       </div>
 
       {/* Circular filter panel */}
@@ -209,7 +210,7 @@ export function SupportReviewApp() {
               const isOpen = open.has(g.categoryId);
               return (
                 <div key={g.categoryId} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-                  <button type="button" onClick={() => toggle(g.categoryId)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--panel)]">
+                  <button type="button" onClick={() => toggle(g.categoryId)} className="flex w-full items-center gap-3 px-4 py-3 text-start hover:bg-[var(--panel)]">
                     <span className="text-[18px]">{g.emoji ?? "🗂"}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">

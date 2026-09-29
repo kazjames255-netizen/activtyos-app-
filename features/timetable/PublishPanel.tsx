@@ -10,7 +10,7 @@ function Toggle({ on }: { on: boolean }) {
       }`}
     >
       <span
-        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${on ? "left-[18px]" : "left-0.5"}`}
+        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${on ? "start-[18px]" : "start-0.5"}`}
       />
     </span>
   );

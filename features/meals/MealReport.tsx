@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
@@ -20,7 +21,7 @@ interface Missing { listingId: string; listingName: string; date: string; child:
 interface MealReq { id: string; childName: string; date: string; listingId?: string; items?: { name: string }[]; changeRequest?: { name: string }; cancelRequest?: { at: string } }
 type View = "daily" | "weekly" | "total";
 
-const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
 export function MealReport() {
   const t = useT();
@@ -167,7 +168,7 @@ export function MealReport() {
             {allKids.map((k) => <option key={k} value={k}>{k}</option>)}
           </Select>
         )}
-        <div className="ml-auto flex gap-1 rounded-full p-0.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
+        <div className="ms-auto flex gap-1 rounded-full p-0.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
           {(["daily", "weekly", "total"] as View[]).map((v) => (
             <button key={v} type="button" onClick={() => setView(v)} className="rounded-full px-3 py-1 text-[12px] font-extrabold capitalize transition"
               style={view === v ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 10px -3px rgba(47,107,216,.6)" } : { color: "var(--ink-3)" }}>{({ daily: t("meals.viewDaily"), weekly: t("meals.viewWeekly"), total: t("meals.viewTotal") })[v]}</button>
@@ -190,7 +191,7 @@ export function MealReport() {
                   {r.cancelRequest
                     ? <span className="font-semibold text-[#c0392b]">{t("meals.wantsToCancel", { items: r.items?.map((i) => i.name).join(", ") ?? "" })}</span>
                     : <span className="font-semibold text-[#8a5300]">{t("meals.changePrefix", { items: r.items?.map((i) => i.name).join(", ") ?? "" })}<b>{r.changeRequest?.name}</b></span>}
-                  <div className="ml-auto flex gap-1.5">
+                  <div className="ms-auto flex gap-1.5">
                     <button type="button" onClick={() => act(r.id, "approve")} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#22c07a,#0e9a5a)" }}>{t("meals.approve")}</button>
                     <button type="button" onClick={() => act(r.id, "decline")} className="rounded-full border border-[var(--line)] px-3 py-1 text-[11.5px] font-extrabold text-[var(--ink-2)]">{t("meals.decline")}</button>
                   </div>
@@ -212,7 +213,7 @@ export function MealReport() {
           <div className="mt-4 overflow-hidden rounded-2xl border border-[#f2dcbb] bg-[#fffaf2]">
             <div className="flex items-center gap-2 px-3.5 py-2 text-[13px] font-extrabold text-[#96631a]" style={{ background: "linear-gradient(120deg,#fff3e0,#fdecd2)" }}>
               🕐 {t("meals.notYetChosen")} <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11.5px] font-extrabold">{miss.length}</span>
-              <span className="ml-auto text-[10.5px] font-semibold text-[#96631a]/80">{t("meals.notYetChosenSub")}</span>
+              <span className="ms-auto text-[10.5px] font-semibold text-[#96631a]/80">{t("meals.notYetChosenSub")}</span>
             </div>
             <div className="flex flex-col gap-1.5 p-3">
               {[...byDate.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([date, kids]) => (

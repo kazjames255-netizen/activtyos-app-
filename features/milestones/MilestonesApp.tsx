@@ -4,6 +4,7 @@
 //  • mode="franchise": work the roadmap — track dates & completion per action.
 //  • mode="ho": the SAME roadmap, fully editable — add/edit/reorder milestones
 //    and their actions (tasks) right on the map via popups. One surface, no form.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { get as apiGet, post as apiPost } from "@/lib/api";
@@ -104,7 +105,7 @@ function exportSeasonPlan(phases: MPhase[], prog: MProgress, provider: string) {
     const tasks = p.steps.map((s) => { const st = prog.steps[s.id]; const sp = stepPctEff(s, prog); return `<tr><td>${esc(s.title)}</td><td>${st?.start ? fmtShort(st.start) + " – " + fmtShort(st.end) : "—"}</td><td class="r">${sp}%</td></tr>`; }).join("");
     return `<section><h2><span class="dot" style="background:${tone}"></span>${esc(p.title)} <b>${pc}%</b></h2><div class="sub">${win ? fmtShort(isoDate(win.start)) + " – " + fmtShort(isoDate(win.end)) : ""}</div><table>${tasks}</table></section>`;
   }).join("");
-  const html = `<!doctype html><meta charset="utf8"><title>${esc(provider)} — Season plan</title><style>body{font:14px/1.5 -apple-system,system-ui,sans-serif;color:#15171e;max-width:720px;margin:32px auto;padding:0 20px}h1{font-size:26px;margin:0}.meta{color:#7a8095;font-size:12px;margin:2px 0 20px}section{break-inside:avoid;margin:18px 0;border:1px solid #e6e3dc;border-radius:12px;padding:12px 16px}h2{font-size:16px;margin:0;display:flex;align-items:center;gap:8px}h2 b{margin-left:auto;color:#4a4e59}.dot{width:10px;height:10px;border-radius:50%;display:inline-block}.sub{color:#868b97;font-size:11px;margin:2px 0 8px}table{width:100%;border-collapse:collapse;font-size:12.5px}td{padding:4px 0;border-top:1px solid #f0eee9}.r{text-align:right;font-variant-numeric:tabular-nums;color:#4a4e59}@media print{section{border-color:#ccc}}</style><h1>${esc(provider)}</h1><div class="meta">Season plan · ${esc(prog.season)} · ${overallPct(phases, prog)}% complete · generated ${new Date().toLocaleDateString("en-GB")}</div>${rows}<script>print()</script>`;
+  const html = `<!doctype html><meta charset="utf8"><title>${esc(provider)} — Season plan</title><style>body{font:14px/1.5 -apple-system,system-ui,sans-serif;color:#15171e;max-width:720px;margin:32px auto;padding:0 20px}h1{font-size:26px;margin:0}.meta{color:#7a8095;font-size:12px;margin:2px 0 20px}section{break-inside:avoid;margin:18px 0;border:1px solid #e6e3dc;border-radius:12px;padding:12px 16px}h2{font-size:16px;margin:0;display:flex;align-items:center;gap:8px}h2 b{margin-left:auto;color:#4a4e59}.dot{width:10px;height:10px;border-radius:50%;display:inline-block}.sub{color:#868b97;font-size:11px;margin:2px 0 8px}table{width:100%;border-collapse:collapse;font-size:12.5px}td{padding:4px 0;border-top:1px solid #f0eee9}.r{text-align:right;font-variant-numeric:tabular-nums;color:#4a4e59}@media print{section{border-color:#ccc}}</style><h1>${esc(provider)}</h1><div class="meta">Season plan · ${esc(prog.season)} · ${overallPct(phases, prog)}% complete · generated ${new Date().toLocaleDateString(dl())}</div>${rows}<script>print()</script>`;
   const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); }
 }
 
@@ -154,7 +155,7 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
   const span = Math.max(max.getTime() - min.getTime(), day);
   const xp = (d: Date) => Math.max(0, Math.min(100, ((d.getTime() - min.getTime()) / span) * 100));
   const ticks: Date[] = []; let c = new Date(min.getFullYear(), min.getMonth() + 1, 1); while (c < max) { ticks.push(new Date(c)); c = new Date(c.getFullYear(), c.getMonth() + 1, 1); }
-  const fmtMonth = (d: Date) => d.toLocaleDateString("en-GB", { month: "short" }) + (d.getMonth() === 0 ? ` ’${String(d.getFullYear()).slice(2)}` : "");
+  const fmtMonth = (d: Date) => d.toLocaleDateString(dl(), { month: "short" }) + (d.getMonth() === 0 ? ` ’${String(d.getFullYear()).slice(2)}` : "");
 
   const overall = overallPct(phases, prog);
   const totalSteps = phases.reduce((a, p) => a + p.steps.length, 0);
@@ -211,7 +212,7 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
             {!editable && lastSeason && <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: overall >= lastSeason.overall ? "#e6f4ea" : "#fdecec", color: overall >= lastSeason.overall ? "#0f7a43" : "#c0392b" }} title={`Last season (${lastSeason.season}) finished at ${lastSeason.overall}%`}>{overall >= lastSeason.overall ? "▲" : "▼"} {Math.abs(overall - lastSeason.overall)}% vs last</span>}
           </div>
         </div>
-        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+        <div className="ms-auto flex flex-wrap items-center gap-1.5">
           <div className="inline-flex rounded-lg bg-[var(--panel)] p-0.5">
             {([["slides", "🎞 Slides"], ["roadmap", "▦ Timeline"]] as const).map(([k, l]) => (
               <button key={k} type="button" onClick={() => setView(k)} className={`rounded-md px-2.5 py-1 text-[11.5px] font-bold ${view === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)]"}`}>{l}</button>
@@ -250,10 +251,10 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
             return (
               <div key={p.id} className="border-b border-[var(--line)] last:border-0">
                 <div className="flex items-stretch">
-                  <div className={`${LEFT} flex shrink-0 items-center gap-2 py-2.5 pr-2`}>
+                  <div className={`${LEFT} flex shrink-0 items-center gap-2 py-2.5 pe-2`}>
                     <button type="button" onClick={() => setOpen(isOpen ? null : p.id)} className="w-3 text-[10px] text-[var(--ink-3)]">{isOpen ? "▾" : "▸"}</button>
                     <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg" style={{ background: tone + "18", color: tone }}><PhaseIcon when={p.when} className="h-4 w-4" /></span>
-                    <button type="button" onClick={() => (editable ? setEditPhase(p) : setOpen(isOpen ? null : p.id))} className="min-w-0 flex-1 text-left"><span className="block truncate text-[12.5px] font-bold text-[var(--ink)]">{p.title}</span><span className="block text-[10px] text-[var(--ink-3)]">{win ? `${fmtShort(isoDate(win.start))} – ${fmtShort(isoDate(win.end))}` : "no dates yet"}</span></button>
+                    <button type="button" onClick={() => (editable ? setEditPhase(p) : setOpen(isOpen ? null : p.id))} className="min-w-0 flex-1 text-start"><span className="block truncate text-[12.5px] font-bold text-[var(--ink)]">{p.title}</span><span className="block text-[10px] text-[var(--ink-3)]">{win ? `${fmtShort(isoDate(win.start))} – ${fmtShort(isoDate(win.end))}` : "no dates yet"}</span></button>
                     <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-extrabold tabular-nums" style={{ background: done ? "#e6f4ea" : tone + "14", color: done ? "#0f7a43" : tone }}>{done ? "✓" : `${pc}%`}</span>
                   </div>
                   <div className="relative flex-1 py-2.5">
@@ -262,13 +263,13 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
                       <div className="absolute top-1/2 h-7 -translate-y-1/2 overflow-hidden rounded-lg" style={{ left: `${xp(win.start)}%`, width: `${Math.max(xp(win.end) - xp(win.start), 1.5)}%`, background: tone + "22", boxShadow: `inset 0 0 0 1px ${tone}44` }}>
                         <div className="h-full transition-[width] duration-500" style={{ width: `${pc}%`, background: gradBar(p.when) }} />
                       </div>
-                    ) : <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[10px] italic text-[var(--ink-3)]">— add dates to the tasks —</div>}
+                    ) : <div className="absolute start-0 top-1/2 -translate-y-1/2 text-[10px] italic text-[var(--ink-3)]">— add dates to the tasks —</div>}
                   </div>
                 </div>
                 {isOpen && p.steps.map((s) => { const st = prog.steps[s.id]; const sp = stepPctEff(s, prog); const a = dparse(st?.start), b = dparse(st?.end); const sdone = sp >= 100;
                   return (
                     <div key={s.id} className="flex items-stretch border-t border-dashed border-[var(--line)]">
-                      <button type="button" onClick={() => setEditAction({ p, s, mode: editable ? "meta" : "schedule" })} className={`${LEFT} flex shrink-0 items-center gap-1.5 py-2 pl-6 pr-2 text-left hover:bg-[var(--panel)]`}>
+                      <button type="button" onClick={() => setEditAction({ p, s, mode: editable ? "meta" : "schedule" })} className={`${LEFT} flex shrink-0 items-center gap-1.5 py-2 ps-6 pe-2 text-start hover:bg-[var(--panel)]`}>
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: sdone ? "#0f7a43" : tone }} />
                         <span className="min-w-0 flex-1 truncate text-[11.5px] text-[var(--ink-2)]">{s.title}</span>
                         <span className="shrink-0 text-[9.5px] font-bold tabular-nums text-[var(--ink-3)]">{sp}%</span>
@@ -279,12 +280,12 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
                           <button type="button" onClick={() => setEditAction({ p, s, mode: editable ? "meta" : "schedule" })} title={`${s.title} · ${fmtShort(st?.start)}–${fmtShort(st?.end)} · ${sp}%`} className="absolute top-1/2 flex h-5 -translate-y-1/2 items-center overflow-hidden rounded-md" style={{ left: `${xp(a)}%`, width: `${Math.max(xp(b) - xp(a), 1)}%`, background: tone + "24", boxShadow: `inset 0 0 0 1px ${tone}55` }}>
                             <div className="h-full transition-[width]" style={{ width: `${sp}%`, background: gradBar(p.when) }} />
                           </button>
-                        ) : <button type="button" onClick={() => setEditAction({ p, s, mode: editable ? "meta" : "schedule" })} className="absolute left-0 top-1/2 -translate-y-1/2 rounded-md bg-[var(--panel)] px-2 py-0.5 text-[9.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">＋ set dates</button>}
+                        ) : <button type="button" onClick={() => setEditAction({ p, s, mode: editable ? "meta" : "schedule" })} className="absolute start-0 top-1/2 -translate-y-1/2 rounded-md bg-[var(--panel)] px-2 py-0.5 text-[9.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">＋ set dates</button>}
                       </div>
                     </div>
                   );
                 })}
-                {isOpen && canEdit && <button type="button" onClick={() => addAction(p)} className="ml-6 py-1.5 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">＋ Add task</button>}
+                {isOpen && canEdit && <button type="button" onClick={() => addAction(p)} className="ms-6 py-1.5 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">＋ Add task</button>}
               </div>
             );
           })}
@@ -326,8 +327,8 @@ function Slides({ phases, prog, idx, setIdx, editable, canEdit, me, onAddPhase, 
       {/* item 15: sticky numbered traffic-light stepper */}
       <div className="sticky top-0 z-10 -mx-4 overflow-x-auto overflow-y-visible bg-white/95 px-4 pb-3 pt-7 backdrop-blur">
         <div className="relative flex min-w-full items-start gap-1" style={{ width: n > 6 ? n * 104 : undefined }}>
-          <div className="absolute left-[6%] right-[6%] top-[27px] h-[3px] rounded-full bg-[var(--line)]" />
-          <div className="absolute left-[6%] top-[27px] h-[3px] rounded-full transition-[width] duration-500" style={{ width: `${n > 1 ? (cur / (n - 1)) * 88 : 0}%`, background: "linear-gradient(90deg,#e5484d,#f2820c,#e8a300,#7cb342,#16a34a)" }} />
+          <div className="absolute start-[6%] end-[6%] top-[27px] h-[3px] rounded-full bg-[var(--line)]" />
+          <div className="absolute start-[6%] top-[27px] h-[3px] rounded-full transition-[width] duration-500" style={{ width: `${n > 1 ? (cur / (n - 1)) * 88 : 0}%`, background: "linear-gradient(90deg,#e5484d,#f2820c,#e8a300,#7cb342,#16a34a)" }} />
           {phases.map((ph, i) => { const rc = rampColor(i, n); const d = phaseComplete(ph, prog); const active = i === cur; const ppc = phasePct(ph, prog); const win = phaseWindow(ph, prog);
             return (
               <button key={ph.id} ref={active ? activeRef : undefined} type="button" onClick={() => setIdx(i)} className="relative z-10 flex flex-1 flex-col items-center gap-0.5" style={{ minWidth: 100 }}>
@@ -351,7 +352,7 @@ function Slides({ phases, prog, idx, setIdx, editable, canEdit, me, onAddPhase, 
           {([["all", "All"], ["mine", "My tasks"], ["overdue", "Overdue"], ["unassigned", "Unassigned"]] as [Filter, string][]).map(([k, l]) => (
             <button key={k} type="button" onClick={() => setFilter(k)} className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${filter === k ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-2)] hover:bg-[#e7ebf3]"}`}>{l}</button>
           ))}
-          <select value={cur} onChange={(e) => setIdx(Number(e.target.value))} className="ml-auto rounded-lg border border-[var(--line)] bg-white px-2 py-1 text-[11px] font-bold text-[var(--ink-2)]" aria-label="Jump to milestone">{phases.map((ph, i) => <option key={ph.id} value={i}>Jump: {ph.title}</option>)}</select>
+          <select value={cur} onChange={(e) => setIdx(Number(e.target.value))} className="ms-auto rounded-lg border border-[var(--line)] bg-white px-2 py-1 text-[11px] font-bold text-[var(--ink-2)]" aria-label="Jump to milestone">{phases.map((ph, i) => <option key={ph.id} value={i}>Jump: {ph.title}</option>)}</select>
         </div>
       )}
 
@@ -392,31 +393,31 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
     <div className="mt-3 overflow-hidden rounded-2xl border" style={{ borderColor: tone + "40", boxShadow: "0 1px 2px rgba(20,30,60,.05),0 14px 34px rgba(20,30,60,.08)" }}>
       <div className="relative flex flex-wrap items-center gap-3 px-4 py-3.5" style={{ background: `linear-gradient(115deg, ${tone}1f, ${tone}08 60%, transparent)` }}>
         {celebrate && <Confetti tone={p.when} />}
-        <span className="absolute inset-y-0 left-0 w-1.5" style={{ background: gGrad }} />
+        <span className="absolute inset-y-0 start-0 w-1.5" style={{ background: gGrad }} />
         <span className="grid h-12 w-12 place-items-center rounded-xl text-white shadow" style={{ background: gGrad }}><span className="text-[24px] font-bold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{cur + 1}</span></span>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</span><span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold tabular-nums text-white" style={{ background: gGrad }}>{done ? "Complete ✓" : `${pc}%`}</span>{canEdit && <button type="button" onClick={() => onEditPhase(p)} className="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-3)] hover:bg-white/70 hover:text-[var(--ink)]" title="Edit milestone">✎ Edit</button>}{canEdit && <button type="button" onClick={() => setConfirmDel(true)} className="rounded-md px-1.5 py-0.5 text-[13px] font-bold text-[var(--ink-3)] hover:bg-white/70 hover:text-[#c0392b]" title="Delete milestone">×</button>}</div>
           <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{p.subtitle || WHEN_LABEL[p.when]}</div>
           {win && <div className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] ring-1 ring-black/5"><span className="text-[var(--ink-3)]">From</span><span style={{ color: tone }}>{fmtShort(isoDate(win.start))}</span><span style={{ color: tone }}>→</span><span className="text-[var(--ink-3)]">to</span><span style={{ color: tone }}>{fmtShort(isoDate(win.end))}</span></div>}
         </div>
-        <span className="ml-auto text-[11px] font-bold text-[var(--ink-3)]">Milestone {cur + 1} of {n}</span>
+        <span className="ms-auto text-[11px] font-bold text-[var(--ink-3)]">Milestone {cur + 1} of {n}</span>
       </div>
       <div className="h-1.5 bg-[var(--panel)]"><div className="h-full transition-[width] duration-700" style={{ width: `${pc}%`, background: gBar }} /></div>
-      {confirmDel && <div className="flex flex-wrap items-center gap-2 border-b border-[#f3c9c9] bg-[#fdf2f2] px-4 py-2 text-[12px] font-bold text-[#c0392b]">Delete “{p.title}” and its tasks?<div className="ml-auto flex gap-2"><button type="button" onClick={() => setConfirmDel(false)} className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] ring-1 ring-black/5">Cancel</button><button type="button" onClick={() => { setConfirmDel(false); onDeletePhase(p); }} className="rounded-lg bg-[#c0392b] px-2.5 py-1 text-[11px] font-bold text-white hover:bg-[#a5301f]">Delete milestone</button></div></div>}
+      {confirmDel && <div className="flex flex-wrap items-center gap-2 border-b border-[#f3c9c9] bg-[#fdf2f2] px-4 py-2 text-[12px] font-bold text-[#c0392b]">Delete “{p.title}” and its tasks?<div className="ms-auto flex gap-2"><button type="button" onClick={() => setConfirmDel(false)} className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] ring-1 ring-black/5">Cancel</button><button type="button" onClick={() => { setConfirmDel(false); onDeletePhase(p); }} className="rounded-lg bg-[#c0392b] px-2.5 py-1 text-[11px] font-bold text-white hover:bg-[#a5301f]">Delete milestone</button></div></div>}
 
       {!editable && (overdue + dueSoon + unassigned > 0 || nextUp) && (
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-4 py-2">
           {overdue > 0 && <span className={chip} style={{ background: "#fdecec", color: "#c0392b" }}>⚠ {overdue} overdue</span>}
           {dueSoon > 0 && <span className={chip} style={{ background: "#fff4e5", color: "#b45309" }}>◷ {dueSoon} due ≤7d</span>}
           {unassigned > 0 && <span className={chip} style={{ background: "var(--panel)", color: "var(--ink-2)" }}>◔ {unassigned} unassigned</span>}
-          {nextUp && <span className="ml-auto truncate text-[11px] text-[var(--ink-3)]">Next up: <b className="text-[var(--ink-2)]">{nextUp.title}</b>{nextUp.due ? ` · ${dueMeta(nextUp.due)?.text}` : ""}</span>}
+          {nextUp && <span className="ms-auto truncate text-[11px] text-[var(--ink-3)]">Next up: <b className="text-[var(--ink-2)]">{nextUp.title}</b>{nextUp.due ? ` · ${dueMeta(nextUp.due)?.text}` : ""}</span>}
         </div>
       )}
 
-      {celebrate && <div className="mx-4 mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-extrabold text-white" style={{ background: gGrad }}>🎉 Milestone complete!{cur < n - 1 && <button type="button" onClick={onNext} className="ml-auto rounded-full bg-white/20 px-2.5 py-1 text-[11px] hover:bg-white/30">Next milestone →</button>}</div>}
+      {celebrate && <div className="mx-4 mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-extrabold text-white" style={{ background: gGrad }}>🎉 Milestone complete!{cur < n - 1 && <button type="button" onClick={onNext} className="ms-auto rounded-full bg-white/20 px-2.5 py-1 text-[11px] hover:bg-white/30">Next milestone →</button>}</div>}
 
       <div className="space-y-2 p-4">
-        <div className="flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Main actions ({phaseDone(p, prog)}/{p.steps.length} done)</div>{canEdit && <button type="button" onClick={() => onAddAction(p)} className="ml-auto rounded-lg bg-[var(--panel)] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#e6ecfa]">＋ Add main action</button>}</div>
+        <div className="flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Main actions ({phaseDone(p, prog)}/{p.steps.length} done)</div>{canEdit && <button type="button" onClick={() => onAddAction(p)} className="ms-auto rounded-lg bg-[var(--panel)] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#e6ecfa]">＋ Add main action</button>}</div>
         {shown.map((s) => { const st = prog.steps[s.id]; const sp = stepPctEff(s, prog); const sdone = sp >= 100; const acts = s.actions || [];
           const cMet = acts.filter((a) => actStatus(st?.actions?.[a.id]) === "done").length;
           const cProg = acts.filter((a) => actStatus(st?.actions?.[a.id]) === "prog").length;
@@ -429,24 +430,24 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
           let rows = acts.filter((a) => !actFilter || st?.actions?.[a.id]?.assignee === actFilter);
           if (actSort === "date") rows = [...rows].sort((a, b) => (st?.actions?.[a.id]?.due || "9999").localeCompare(st?.actions?.[b.id]?.due || "9999"));
           return (
-            <div key={s.id} className="rounded-xl border transition-shadow hover:shadow-sm" style={{ borderColor: sdone ? tone + "40" : isOverdue ? "#f3c9c9" : "var(--line)", background: sdone ? tone + "0a" : undefined, borderLeft: `3px solid ${stateColor}` }}>
+            <div key={s.id} className="rounded-xl border transition-shadow hover:shadow-sm" style={{ borderColor: sdone ? tone + "40" : isOverdue ? "#f3c9c9" : "var(--line)", background: sdone ? tone + "0a" : undefined, borderInlineStart: `3px solid ${stateColor}` }}>
               <div onClick={() => (editable ? onEditAction(p, s) : setOpenStep(expanded ? null : s.id))} className="cursor-pointer p-3">
                 <div className="flex items-center gap-2.5">
                   <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold" style={{ background: sdone ? tone : "var(--panel)", color: sdone ? "#fff" : "transparent" }}>✓</span>
                   <span className={`text-[13px] font-bold ${sdone ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{s.title}</span>
-                  {due ? <span className={`ml-auto ${chip}`} style={{ color: due.tone, background: due.tone + "18" }}>{due.text}</span> : <span className="ml-auto text-[10px] font-bold text-[var(--ink-3)]">date TBC</span>}
-                  {canEdit && <button type="button" onClick={(e) => { e.stopPropagation(); onEditAction(p, s); }} className="ml-1 rounded px-1 text-[11px] text-[var(--ink-3)] hover:text-[var(--ink)]" title="Edit task">✎</button>}
-                  {!editable && <span className="ml-0.5 text-[10px] text-[var(--ink-3)]">{expanded ? "▲" : "▾"}</span>}
+                  {due ? <span className={`ms-auto ${chip}`} style={{ color: due.tone, background: due.tone + "18" }}>{due.text}</span> : <span className="ms-auto text-[10px] font-bold text-[var(--ink-3)]">date TBC</span>}
+                  {canEdit && <button type="button" onClick={(e) => { e.stopPropagation(); onEditAction(p, s); }} className="ms-1 rounded px-1 text-[11px] text-[var(--ink-3)] hover:text-[var(--ink)]" title="Edit task">✎</button>}
+                  {!editable && <span className="ms-0.5 text-[10px] text-[var(--ink-3)]">{expanded ? "▲" : "▾"}</span>}
                 </div>
-                {s.detail && <div className="mt-0.5 pl-[30px] text-[11px] text-[var(--ink-3)]">{s.detail}</div>}
+                {s.detail && <div className="mt-0.5 ps-[30px] text-[11px] text-[var(--ink-3)]">{s.detail}</div>}
                 {/* met / in-progress / not-met segmented bar */}
-                <div className="mt-1.5 flex items-center gap-2 pl-[30px]">
+                <div className="mt-1.5 flex items-center gap-2 ps-[30px]">
                   <div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]">
                     {acts.length > 0 ? (<>{cMet > 0 && <div style={{ width: `${(cMet / acts.length) * 100}%`, background: "#16b364" }} />}{cProg > 0 && <div style={{ width: `${(cProg / acts.length) * 100}%`, background: "#f59e0b" }} />}</>) : <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${sp}%`, background: gBar }} />}
                   </div>
                   <span className="text-[10px] font-bold tabular-nums text-[var(--ink-3)]">{sp}%</span>
                 </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-[30px] text-[10px] font-bold">
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 ps-[30px] text-[10px] font-bold">
                   {acts.length > 0 ? <span className="text-[var(--ink-2)]"><span style={{ color: "#16b364" }}>{cMet} done</span> · <span style={{ color: "#f59e0b" }}>{cProg} in progress</span> · <span style={{ color: "#3b82f6" }}>{cTodo} to do</span></span>
                     : <span className="rounded-full px-2 py-0.5" style={{ color: taskStatus(sp).tone, background: taskStatus(sp).tone + "18" }}>{taskStatus(sp).label}</span>}
                   {pushed > 0 && <span className="text-[#0f7a43]">↗ {pushed} in Tasks</span>}
@@ -467,11 +468,11 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
                       <Select value={actSort} onChange={(e) => setActSort(e.target.value as "order" | "date")} className="text-[11px]" aria-label="Sort"><option value="order">Default order</option><option value="date">By due date</option></Select>
                     </div>
                     <div className="space-y-1.5">{rows.map((a) => { const x = st?.actions?.[a.id] || {}; const stt = actStatus(x); const met = ACT_STATUS[stt]; const pr = ACT_PRIO[x.priority || "med"]; return (
-                      <div key={a.id} className="rounded-lg border border-[var(--line)] p-2" style={{ borderLeft: `3px solid ${met.tone}` }}>
+                      <div key={a.id} className="rounded-lg border border-[var(--line)] p-2" style={{ borderInlineStart: `3px solid ${met.tone}` }}>
                         <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: met.tone }} /><span className={`flex-1 text-[12px] font-semibold ${stt === "done" ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{a.title}</span>{x.taskId ? <Link href="/franchise/tasks" className="text-[10.5px] font-bold text-[#0f7a43]">✓ In Task Manager ↗</Link> : <button type="button" onClick={() => onPush(s, a)} className="rounded-md bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f] hover:bg-[#e0eaff]">↗ Add to Task Manager</button>}</div>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pl-4">
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 ps-4">
                           <Select value={stt} onChange={(e) => onActState(s.id, a.id, { status: e.target.value as ActStatus })} className="text-[11px] font-bold" style={{ color: met.tone }}>{(Object.keys(ACT_STATUS) as ActStatus[]).map((k) => <option key={k} value={k}>{ACT_STATUS[k].label}</option>)}</Select>
-                          <span className="inline-flex items-center gap-1 rounded-lg border border-[var(--line)] pl-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: pr.tone }} /><Select value={x.priority || "med"} onChange={(e) => onActState(s.id, a.id, { priority: e.target.value as ActPrio })} className="border-0 bg-transparent px-1 text-[11px] font-bold" aria-label="Priority">{(Object.keys(ACT_PRIO) as ActPrio[]).map((k) => <option key={k} value={k}>{ACT_PRIO[k].label}</option>)}</Select></span>
+                          <span className="inline-flex items-center gap-1 rounded-lg border border-[var(--line)] ps-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: pr.tone }} /><Select value={x.priority || "med"} onChange={(e) => onActState(s.id, a.id, { priority: e.target.value as ActPrio })} className="border-0 bg-transparent px-1 text-[11px] font-bold" aria-label="Priority">{(Object.keys(ACT_PRIO) as ActPrio[]).map((k) => <option key={k} value={k}>{ACT_PRIO[k].label}</option>)}</Select></span>
                           <Select value={x.assignee || ""} onChange={(e) => onActState(s.id, a.id, { assignee: e.target.value || undefined })} className="text-[11px]"><option value="">Unassigned</option>{STAFF.map((nm) => <option key={nm} value={nm}>{nm}</option>)}</Select>
                           <Input type="date" value={x.due || ""} onChange={(e) => onActState(s.id, a.id, { due: e.target.value })} className="w-[128px] text-[11px]" />
                         </div>
@@ -519,7 +520,7 @@ function PhaseEditor({ phase, phases, onChange, onMove, onDelete, onClose }: { p
   return (
     <div className="fixed inset-0 z-[145] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[12vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl text-[18px] text-white" style={{ background: grad(phase.when) }}>{phase.icon}</span><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Edit milestone</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl text-[18px] text-white" style={{ background: grad(phase.when) }}>{phase.icon}</span><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Edit milestone</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
           <div className="flex gap-2"><label className="block w-16"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Icon</span><Input value={phase.icon} onChange={(e) => onChange({ icon: e.target.value })} className="w-full text-center text-[18px]" /></label><label className="block flex-1"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Title</span><Input value={phase.title} onChange={(e) => onChange({ title: e.target.value })} className="w-full font-bold" /></label></div>
           <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Description</span><Input value={phase.subtitle || ""} onChange={(e) => onChange({ subtitle: e.target.value })} placeholder="Short description" className="w-full text-[12.5px]" /></label>
@@ -530,7 +531,7 @@ function PhaseEditor({ phase, phases, onChange, onMove, onDelete, onClose }: { p
         </div>
         <div className="mt-4 flex items-center gap-2">
           <button type="button" onClick={onDelete} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Delete</button>
-          <div className="ml-auto flex gap-1.5">
+          <div className="ms-auto flex gap-1.5">
             <Button onClick={() => onMove(-1)} disabled={i <= 0}>← Move</Button>
             <Button onClick={() => onMove(1)} disabled={i >= phases.length - 1}>Move →</Button>
             <Button variant="primary" onClick={onClose}>Done</Button>
@@ -564,7 +565,7 @@ function ActionEditor({ phase, step, state, onMeta, onSchedule, onActState, onPu
     {addOpen && <CreateModal noAssignee={false} me={me} team={STAFF.map((nm) => ({ name: nm, email: "" }))} opts={TASK_LINKOPTS} onClose={() => setAddOpen(false)} onCreate={(f) => createTask(f)} />}
     <div className="fixed inset-0 z-[145] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-2 flex items-center gap-2"><span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-white" style={{ background: grad(phase.when) }}>{phase.title}</span><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-2 flex items-center gap-2"><span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-white" style={{ background: grad(phase.when) }}>{phase.title}</span><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
 
         {onMeta ? (<>
           <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Main action</span><Input value={step.title} onChange={(e) => onMeta({ title: e.target.value })} className="w-full text-[14px] font-bold" /></label>
@@ -603,7 +604,7 @@ function ActionEditor({ phase, step, state, onMeta, onSchedule, onActState, onPu
                     <button type="button" onClick={() => onActState?.(a.id, { done: !asx.done })} className="grid h-5 w-5 shrink-0 place-items-center rounded-md text-[11px] font-bold" style={{ background: asx.done ? tone : "var(--panel)", color: asx.done ? "#fff" : "transparent" }}>✓</button>
                     <span className={`flex-1 text-[12.5px] font-semibold ${asx.done ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{a.title}</span>
                   </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-7">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 ps-7">
                     <Select value={asx.assignee || ""} onChange={(e) => onActState?.(a.id, { assignee: e.target.value || undefined })} className="text-[11px]"><option value="">Unassigned</option>{STAFF.map((nm) => <option key={nm} value={nm}>{nm}</option>)}</Select>
                     <Input type="date" value={asx.due || ""} onChange={(e) => onActState?.(a.id, { due: e.target.value })} className="w-[130px] text-[11px]" />
                     {asx.taskId ? <Link href="/franchise/tasks" className="text-[10.5px] font-bold text-[#0f7a43]">✓ In Task Manager ↗</Link>
@@ -624,7 +625,7 @@ function ActionEditor({ phase, step, state, onMeta, onSchedule, onActState, onPu
 
         <div className="mt-4 flex items-center gap-2">
           {onDelete && <button type="button" onClick={onDelete} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Delete task</button>}
-          <div className="ml-auto flex gap-2">
+          <div className="ms-auto flex gap-2">
             {onSchedule && actions.length === 0 && <Button onClick={() => onSchedule({ pct: 100 })}>Mark done</Button>}
             <Button variant="primary" onClick={onClose}>Done</Button>
           </div>

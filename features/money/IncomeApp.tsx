@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
 import { useHoScope } from "@/components/franchise/HoScope";
@@ -54,7 +55,7 @@ function normaliseMethod(raw?: string): string {
 }
 const REPEAT_LABEL: Record<Repeat, string> = { weekly: "week", fortnightly: "2 weeks", monthly: "month" };
 
-const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
@@ -188,7 +189,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
         const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1 - i));
         const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
         const rows = allItems.filter((x) => (x.date || "") === key);
-        return { key, label: trendMode === "7d" ? d.toLocaleDateString("en-GB", { weekday: "short" }) : String(d.getDate()), total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length, current: key === todayKey };
+        return { key, label: trendMode === "7d" ? d.toLocaleDateString(dl(), { weekday: "short" }) : String(d.getDate()), total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length, current: key === todayKey };
       });
     }
     const months = trendMode === "6m" ? 6 : trendMode === "9m" ? 9 : 12;
@@ -196,7 +197,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
       const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1);
       const key = monthKeyOf(d);
       const rows = allItems.filter((x) => (x.date || "").slice(0, 7) === key);
-      return { key, label: d.toLocaleDateString("en-GB", { month: "short" }), total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length, current: key === thisMonthKey };
+      return { key, label: d.toLocaleDateString(dl(), { month: "short" }), total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length, current: key === thisMonthKey };
     });
   }, [allItems, trendMode, now, thisMonthKey]);
 
@@ -234,7 +235,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     const collected = rows.reduce((s, x) => s + x.amount, 0);
     return { collected, best: months[0] as [string, number] | undefined, activeMonths: months.length, avg: months.length ? collected / months.length : 0, largest: rows.reduce((m, x) => Math.max(m, x.amount), 0) };
   }, [allItems, thisYear]);
-  const monthLabel = (key: string) => key ? new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "";
+  const monthLabel = (key: string) => key ? new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1).toLocaleDateString(dl(), { month: "short", year: "numeric" }) : "";
 
   const ovSeasonObj = seasons.find((s) => s.id === ovSeason);
   // A season is a set of listings, so scoping to one = keeping only booking
@@ -334,7 +335,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     <div className={embedded ? "text-[var(--ink)]" : "-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]"} style={embedded ? undefined : LIGHT_PALETTE}>
       {!embedded && (
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(120deg,#16306e 0%,#3f78d8 100%)`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
-        <button type="button" onClick={openAdd} className="absolute right-4 top-4 z-10 rounded-full bg-[#16306e] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ Log income</button>
+        <button type="button" onClick={openAdd} className="absolute end-4 top-4 z-10 rounded-full bg-[#16306e] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ Log income</button>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💰</span>
           Income
@@ -502,7 +503,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
             <Card className="p-4">
               <div className="mb-0.5 flex items-baseline justify-between">
                 <div className="text-[13.5px] font-extrabold">Awaiting payment</div>
-                <div className="text-[12px] font-extrabold tabular-nums">{money(awaitingTotal)}{overdueCount > 0 && <span className="ml-1.5 rounded-full bg-[#fdebec] px-1.5 py-0.5 text-[10px] font-bold text-[#c02532]">{overdueCount} overdue</span>}</div>
+                <div className="text-[12px] font-extrabold tabular-nums">{money(awaitingTotal)}{overdueCount > 0 && <span className="ms-1.5 rounded-full bg-[#fdebec] px-1.5 py-0.5 text-[10px] font-bold text-[#c02532]">{overdueCount} overdue</span>}</div>
               </div>
               <div className="mb-2 text-[10.5px] text-[var(--ink-3)]">Customer invoices you’ve sent but not yet been paid. Excludes unpaid bookings — and isn’t counted in your income totals until paid.</div>
               {awaiting.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">You’re all paid up — no invoices outstanding. 🎉</div> : (
@@ -592,14 +593,14 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
           <Card className="flex flex-col gap-2.5 p-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
-                <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search source or note…" className="w-[210px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 pl-7 pr-3 text-[12px] text-[var(--ink)] outline-none focus:border-[#cdddf7]" />
+                <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search source or note…" className="w-[210px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 ps-7 pe-3 text-[12px] text-[var(--ink)] outline-none focus:border-[#cdddf7]" />
               </div>
               <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className={`${pill} rounded-full`}>
                 <option value="all">All categories</option>
                 {cats.map((c) => <option key={c.category} value={c.category}>{c.category}</option>)}
               </select>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ms-auto flex items-center gap-2">
                 <button type="button" onClick={exportCsv} className={btnGhost}>⬇ Export CSV</button>
                 <button type="button" onClick={openAdd} className={btnPrimary}>＋ Log income</button>
               </div>
@@ -651,7 +652,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
           {cats.map((c) => (
             <Card key={c.category} className="p-3.5">
               <div className="flex items-center justify-between gap-2">
-                <div className="text-[13.5px] font-extrabold">{icon(c.category)} {c.category}{c.category === INVOICE_CAT && <span className="ml-1.5 rounded-full bg-[#eaf0fc] px-1.5 py-0.5 text-[10px] font-bold text-[#16306e]">auto</span>}</div>
+                <div className="text-[13.5px] font-extrabold">{icon(c.category)} {c.category}{c.category === INVOICE_CAT && <span className="ms-1.5 rounded-full bg-[#eaf0fc] px-1.5 py-0.5 text-[10px] font-bold text-[#16306e]">auto</span>}</div>
                 <div className="text-[15px] font-extrabold tabular-nums">{money(c.total)}</div>
               </div>
               <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / (cats[0]?.total || 1)) * 100)}%`, background: `linear-gradient(90deg,#4f8bf5,${ACCENT_DK})` }} /></div>

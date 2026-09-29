@@ -24,6 +24,7 @@
 //                existed can't be dated, so they're left out rather than dumped
 //                on whichever bucket they were last edited in.
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
@@ -91,7 +92,7 @@ function buildBuckets(nowMs: number, period: PeriodId): Bucket[] {
       const to = new Date(from); to.setDate(to.getDate() + 1);
       out.push({
         from: from.getTime(), to: to.getTime(), current: back === 0,
-        label: back === 0 ? "Today" : back === 1 ? "Yest." : `${from.toLocaleDateString("en-GB", { weekday: "short" })} ${from.getDate()}`,
+        label: back === 0 ? "Today" : back === 1 ? "Yest." : `${from.toLocaleDateString(dl(), { weekday: "short" })} ${from.getDate()}`,
       });
     }
     return out;
@@ -103,7 +104,7 @@ function buildBuckets(nowMs: number, period: PeriodId): Bucket[] {
       const to = new Date(from); to.setDate(to.getDate() + 7);
       out.push({
         from: from.getTime(), to: to.getTime(), current: back === 0,
-        label: back === 0 ? "This week" : back === 1 ? "Last week" : `w/c ${from.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`,
+        label: back === 0 ? "This week" : back === 1 ? "Last week" : `w/c ${from.toLocaleDateString(dl(), { day: "numeric", month: "short" })}`,
       });
     }
     return out;
@@ -129,7 +130,7 @@ function buildBuckets(nowMs: number, period: PeriodId): Bucket[] {
     const crossesYear = months > 12 - now.getMonth();
     out.push({
       from: from.getTime(), to: to.getTime(), current: back === 0,
-      label: from.toLocaleDateString("en-GB", { month: "short" }) + (crossesYear ? ` ${`${from.getFullYear()}`.slice(2)}` : ""),
+      label: from.toLocaleDateString(dl(), { month: "short" }) + (crossesYear ? ` ${`${from.getFullYear()}`.slice(2)}` : ""),
     });
   }
   return out;
@@ -213,7 +214,7 @@ export function PipelineSummaryCard() {
           <table className="w-full border-collapse text-[12px]" style={{ minWidth: minW }}>
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 bg-[var(--surface)] px-4 py-2 text-left text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">&nbsp;</th>
+                <th className="sticky start-0 z-10 bg-[var(--surface)] px-4 py-2 text-start text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">&nbsp;</th>
                 {buckets.map((b) => (
                   <th
                     key={b.from}
@@ -232,7 +233,7 @@ export function PipelineSummaryCard() {
                 const peak = Math.max(1, ...row);
                 return (
                   <tr key={m.key} className="border-t border-[var(--line)]">
-                    <td className="sticky left-0 z-10 whitespace-nowrap bg-[var(--surface)] px-4 py-2">
+                    <td className="sticky start-0 z-10 whitespace-nowrap bg-[var(--surface)] px-4 py-2">
                       <span className="flex items-center gap-1.5 text-[12px] font-bold">
                         <span aria-hidden>{m.glyph}</span>
                         <span style={{ color: m.colour }}>{m.label}</span>
@@ -259,7 +260,7 @@ export function PipelineSummaryCard() {
               {/* Every bit of pipeline movement in that bucket — the single
                   number that answers "was today busier than yesterday". */}
               <tr className="border-t-2 border-[var(--line)] bg-[var(--panel)]">
-                <td className="sticky left-0 z-10 whitespace-nowrap bg-[var(--panel)] px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Total</td>
+                <td className="sticky start-0 z-10 whitespace-nowrap bg-[var(--panel)] px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Total</td>
                 {colTotals.map((n, i) => (
                   <td key={i} className="px-2 py-2 text-center" style={{ background: buckets[i].current ? "rgba(47,95,208,.06)" : undefined }}>
                     <span className="text-[14px] font-extrabold tabular-nums" style={{ color: n > 0 ? "var(--ink)" : "var(--ink-3)", opacity: n > 0 ? 1 : 0.45 }}>{n}</span>

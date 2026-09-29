@@ -77,7 +77,7 @@ export function PublishedDayGrid({ rows, groups, dayLabel }: { rows: PlanRow[]; 
         if (r.whole) {
           return (
             <div key={ri} style={{ display: "contents" }}>
-              <div className="flex items-center justify-end rounded bg-[var(--panel)] px-1.5 py-2 text-right text-[11px] font-bold text-[var(--ink-3)]">{r.time}</div>
+              <div className="flex items-center justify-end rounded bg-[var(--panel)] px-1.5 py-2 text-end text-[11px] font-bold text-[var(--ink-3)]">{r.time}</div>
               <div style={{ gridColumn: `span ${n}` }}>
                 <div className="flex flex-col justify-center rounded-lg px-2.5 py-2 text-[11.5px] font-bold text-white" style={{ background: r.whole.color || "#64748B", textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>
                   <span className="text-[9px] font-bold uppercase tracking-wide opacity-90">{r.whole.cat}</span>
@@ -91,7 +91,7 @@ export function PublishedDayGrid({ rows, groups, dayLabel }: { rows: PlanRow[]; 
         if (r.cells) {
           return (
             <div key={ri} style={{ display: "contents" }}>
-              <div className="flex items-center justify-end rounded bg-[var(--panel)] px-1.5 py-2 text-right text-[11px] font-bold text-[var(--ink-3)]">{r.time}</div>
+              <div className="flex items-center justify-end rounded bg-[var(--panel)] px-1.5 py-2 text-end text-[11px] font-bold text-[var(--ink-3)]">{r.time}</div>
               {r.cells.map((c, gi) =>
                 c.name ? (
                   <div key={gi} className="flex h-full min-h-[42px] flex-col justify-center rounded-lg px-2 py-1.5 text-[11.5px] font-bold leading-tight text-white" style={{ background: c.color || "#64748B", textShadow: "0 1px 2px rgba(0,0,0,.30)" }}>
@@ -168,7 +168,7 @@ export function StaffTimetableApp() {
             {week.dayList.map((d, i) => (
               <button key={i} onClick={() => setDi(i)} className={`rounded-lg border px-2.5 py-1.5 text-[12px] font-bold ${i === di ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]"}`}>
                 {localDayName(d, dateLoc)}
-                {d.d && <span className="ml-1 font-semibold opacity-70">{d.d.split(" ")[0]}</span>}
+                {d.d && <span className="ms-1 font-semibold opacity-70">{d.d.split(" ")[0]}</span>}
               </button>
             ))}
           </div>

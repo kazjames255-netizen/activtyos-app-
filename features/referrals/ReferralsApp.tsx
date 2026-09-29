@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -34,7 +35,7 @@ type Data = {
   recent: Row[];
 };
 
-const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
+const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "");
 const nameOf = (email: string) => email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 const fmtAmt = (v?: number, type?: "amount" | "percent") => (type === "percent" ? `${Math.round(v ?? 0)}%` : money(v ?? 0));
 
@@ -99,7 +100,7 @@ export function ReferralsApp() {
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Hero — kept compact: title + inline stats on the left, small leaderboard on the right */}
       <div className="relative mb-4 overflow-hidden rounded-2xl p-4 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "var(--hero-grad)" }}>
-        <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+        <div className="absolute end-4 top-4 z-10 flex items-center gap-2">
           <TourLauncher view="referrals" compact />
           <button type="button" onClick={() => setEditOpen((o) => !o)} className="rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-bold text-white backdrop-blur-sm transition-colors hover:bg-white/30">⚙️ Edit rewards</button>
         </div>
@@ -126,7 +127,7 @@ export function ReferralsApp() {
 
       {/* Reward settings — the inline dropdown editor (moved off Setup). */}
       <Card className="mb-3.5 overflow-hidden p-0">
-        <button type="button" onClick={() => setEditOpen((o) => !o)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--panel)]">
+        <button type="button" onClick={() => setEditOpen((o) => !o)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-start transition-colors hover:bg-[var(--panel)]">
           <div className="flex items-center gap-2.5">
             <span className="text-[17px]">🎁</span>
             <div>
@@ -171,7 +172,7 @@ export function ReferralsApp() {
               <div key={l.email} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
                 <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[11px] font-extrabold text-[#1d3a8f]">{i + 1}</span>
                 <div className="min-w-0 flex-1 truncate font-bold">{l.name || nameOf(l.email)}</div>
-                <div className="flex-none text-right"><span className="font-extrabold tabular-nums">{l.count}</span> <span className="text-[10.5px] text-[var(--ink-3)]">{d.type === "percent" ? `code${l.count === 1 ? "" : "s"}` : `· ${money(l.reward)}`}</span></div>
+                <div className="flex-none text-end"><span className="font-extrabold tabular-nums">{l.count}</span> <span className="text-[10.5px] text-[var(--ink-3)]">{d.type === "percent" ? `code${l.count === 1 ? "" : "s"}` : `· ${money(l.reward)}`}</span></div>
               </div>
             ))}
           </div>
@@ -225,8 +226,8 @@ export function ReferralsApp() {
               <div className="text-[13.5px] font-extrabold">Recent referrals</div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
-                  <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or booking…" className="w-[200px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 pl-7 pr-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]" />
+                  <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
+                  <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or booking…" className="w-[200px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 ps-7 pe-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]" />
                 </div>
                 <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
                   {([["recent", "Newest"], ["reward", "Top reward"], ["spend", "Top spend"]] as const).map(([k, label]) => (
@@ -250,7 +251,7 @@ export function ReferralsApp() {
                       <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${r.rewardRedeemed ? "bg-[#eaf0fc] text-[#1d3a8f]" : "bg-[var(--panel)] text-[var(--ink-3)]"}`}>{r.rewardRedeemed ? "✓ Reward redeemed" : "Reward not yet used"}</span>
                     </div>
                   </div>
-                  <div className="flex-none self-start text-right">
+                  <div className="flex-none self-start text-end">
                     <span className="rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11.5px] font-extrabold text-[#1d3a8f]">{fmtAmt(r.reward ?? 0, r.type ?? d.type)}{r.cap ? ` ≤${money(r.cap)}` : ""}</span>
                     <div className="mt-0.5 text-[10px] text-[var(--ink-3)]">referrer reward</div>
                   </div>

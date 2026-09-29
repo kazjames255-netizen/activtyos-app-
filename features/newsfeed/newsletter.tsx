@@ -251,7 +251,7 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
         </div>
       );
     case "quote":
-      return <div style={{ padding: "16px 26px" }}><div style={{ borderLeft: `4px solid ${p.accent2}`, paddingLeft: 14, fontSize: 17, fontStyle: "italic", color: p.ink, lineHeight: 1.5 }}>“{fill(b.body, c)}”</div>{b.heading && <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, color: p.muted }}>{b.heading}</div>}</div>;
+      return <div style={{ padding: "16px 26px" }}><div style={{ borderInlineStart: `4px solid ${p.accent2}`, paddingInlineStart: 14, fontSize: 17, fontStyle: "italic", color: p.ink, lineHeight: 1.5 }}>“{fill(b.body, c)}”</div>{b.heading && <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, color: p.muted }}>{b.heading}</div>}</div>;
     case "divider":
       return <div style={{ height: 1, background: p.band, margin: "6px 26px" }} />;
     case "eventbar":
@@ -334,7 +334,7 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandC
 
         <div className="grid min-h-0 flex-1 gap-0 overflow-hidden md:grid-cols-[1fr_420px]">
           {/* Editor */}
-          <div className="min-h-0 space-y-3 overflow-y-auto border-r border-[var(--line)] p-4">
+          <div className="min-h-0 space-y-3 overflow-y-auto border-e border-[var(--line)] p-4">
             <div>
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Save as (a name to find it later)</div>
               <input value={meta.name} onChange={(e) => setM({ name: e.target.value })} placeholder="e.g. July Family Update" className={inputCls} />
@@ -468,8 +468,8 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandC
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
           <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button>
-          <span className="mr-auto text-[11px] text-[var(--ink-3)]">Choose where it goes →</span>
-          <span className="mr-auto text-[11px] text-[var(--ink-3)]">Do one now — reopen to do another</span>
+          <span className="me-auto text-[11px] text-[var(--ink-3)]">Choose where it goes →</span>
+          <span className="me-auto text-[11px] text-[var(--ink-3)]">Do one now — reopen to do another</span>
           <button type="button" onClick={() => printNewsletter(nl)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⬇ PDF</button>
           <button type="button" onClick={() => onSave(nl, meta, "email")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">✉ Email</button>
           <button type="button" onClick={() => onSave(nl, meta, "page")} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white">{meta.when === "draft" ? "Save to library" : meta.when === "later" ? "Schedule" : "Post to Newsfeed"}</button>

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
@@ -45,7 +46,7 @@ const initials = (s: string) => (s.trim().split(/\s+/).map((w) => w[0]).join("")
 const grad = (s: string) => GRADS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
 const fmtWhen = (iso: string) => {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + " · " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString(dl(), { day: "numeric", month: "short" }) + " · " + d.toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" });
 };
 
 // The API's thread shape — identical to ours except the unread flag carries
@@ -151,7 +152,7 @@ export function SupportInboxApp() {
             </button>
           );
         })}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="ms-auto flex flex-wrap items-center gap-2">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, provider…"
             className="w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
           <button type="button" onClick={() => setComposing(true)}
@@ -170,7 +171,7 @@ export function SupportInboxApp() {
             const last = t.messages[t.messages.length - 1];
             return (
               <button key={t.id} type="button" onClick={() => openThread(t)}
-                className="rounded-2xl border bg-[var(--surface)] px-3.5 py-3 text-left transition-colors hover:bg-[var(--panel)]"
+                className="rounded-2xl border bg-[var(--surface)] px-3.5 py-3 text-start transition-colors hover:bg-[var(--panel)]"
                 style={{ borderColor: isSel ? "#1d3a8f" : "var(--line)", boxShadow: isSel ? "0 0 0 1px #1d3a8f inset" : "0 1px 2px rgba(16,24,40,.04)" }}>
                 <div className="flex items-center gap-2.5">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[12px] font-extrabold text-white" style={{ background: grad(t.name) }}>{initials(t.name)}</span>
@@ -256,7 +257,7 @@ function Conversation({ t, onReply, onToggleResolved }: { t: Thread; onReply: (b
         {t.messages.map((m) => (
           <div key={m.id} className={"max-w-[78%] " + (m.from === "hq" ? "self-end" : "self-start")}>
             <div className={"rounded-2xl px-3.5 py-2 text-[13px] " + (m.from === "hq" ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink)]")}>{m.body}</div>
-            <div className={"mt-0.5 text-[10.5px] text-[var(--ink-3)] " + (m.from === "hq" ? "text-right" : "")}>{m.from === "hq" ? "HQ" : t.name.split(" ")[0]} · {fmtWhen(m.at)}</div>
+            <div className={"mt-0.5 text-[10.5px] text-[var(--ink-3)] " + (m.from === "hq" ? "text-end" : "")}>{m.from === "hq" ? "HQ" : t.name.split(" ")[0]} · {fmtWhen(m.at)}</div>
           </div>
         ))}
       </div>
@@ -360,7 +361,7 @@ function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onC
                     <div className="px-3 py-4 text-center text-[12px] text-[var(--ink-3)]">{providers.length ? "No providers match." : "Loading…"}</div>
                   ) : list.map((p) => (
                     <button key={p.id} type="button" onClick={() => setProviderId(p.id)}
-                      className="flex w-full items-center gap-2 border-b border-[var(--line)] px-3 py-2 text-left last:border-0 hover:bg-[var(--panel)]">
+                      className="flex w-full items-center gap-2 border-b border-[var(--line)] px-3 py-2 text-start last:border-0 hover:bg-[var(--panel)]">
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-extrabold text-white" style={{ background: grad(p.name) }}>{initials(p.name)}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13px] font-semibold">{p.name}</span>
@@ -378,7 +379,7 @@ function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onC
           <Field label="Message"><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className={inputCls} /></Field>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] px-5 py-3">
-          {error && <span className="mr-auto text-[12px] font-bold text-[#c02636]">{error}</span>}
+          {error && <span className="me-auto text-[12px] font-bold text-[#c02636]">{error}</span>}
           <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-4 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button>
           <button type="button" onClick={submit} disabled={!canSend || sending} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">{sending ? "Sending…" : "Send message"}</button>
         </div>

@@ -177,7 +177,7 @@ function ContactPane({
     "flex items-center gap-2.5 rounded-xl border border-dashed border-[var(--line)] px-3 py-2 text-[12px] text-[var(--ink-3)]";
 
   return (
-    <div className="flex h-full flex-col p-4 pl-5">
+    <div className="flex h-full flex-col p-4 ps-5">
       <div className="mb-2.5 flex items-center gap-2">
         <button
           type="button"
@@ -641,7 +641,7 @@ export function CustomersApp() {
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#c4b5fd] bg-[#f5f3ff] px-3 py-2 text-[12.5px] text-[#4a2fb0]">
             <span className="text-[14px]">👁</span>
             <span>Viewing <b>{frName || "this franchise"}</b>’s families — a head-office view of just their families.</span>
-            <Link href="/company/dashboard" className="ml-auto rounded-full bg-[#4f46e5] px-3 py-1 text-[11.5px] font-extrabold text-white no-underline transition hover:brightness-110">← Head office</Link>
+            <Link href="/company/dashboard" className="ms-auto rounded-full bg-[#4f46e5] px-3 py-1 text-[11.5px] font-extrabold text-white no-underline transition hover:brightness-110">← Head office</Link>
           </div>
         )}
         <PageHero
@@ -774,7 +774,7 @@ export function CustomersApp() {
                       key={i}
                       type="button"
                       onClick={() => setKidIdx(i)}
-                      className={`flex min-w-[150px] items-center gap-2 rounded-xl px-3 py-2 text-left transition-all ${
+                      className={`flex min-w-[150px] items-center gap-2 rounded-xl px-3 py-2 text-start transition-all ${
                         on ? "border-2" : "border opacity-75 hover:opacity-100"
                       }`}
                       style={{ borderColor: on ? c2 : "var(--line)", background: "var(--surface)" }}
@@ -887,7 +887,7 @@ export function CustomersApp() {
                           {/* Worked out, not typed — see ageOf. */}
                           <div className="flex h-[34px] items-center rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 text-[12.5px] font-bold text-[var(--ink-2)]">
                             {ageOf({ dob: k.dob, age: k.age ? Number(k.age) : undefined }) ?? "—"}
-                            <span className="ml-1.5 text-[10.5px] font-normal text-[var(--ink-3)]">
+                            <span className="ms-1.5 text-[10.5px] font-normal text-[var(--ink-3)]">
                               {k.dob ? t("customers.fromDob") : t("customers.addDob")}
                             </span>
                           </div>
@@ -898,7 +898,7 @@ export function CustomersApp() {
                           different thing — because it is one. */}
                       <div
                         className="border-t px-3 py-2.5"
-                        style={{ borderColor: "var(--line)", borderLeft: `4px solid ${c2}`, background: `${c2}0d` }}
+                        style={{ borderColor: "var(--line)", borderInlineStart: `4px solid ${c2}`, background: `${c2}0d` }}
                       >
                         <div className="mb-1.5 flex flex-wrap items-baseline gap-1.5">
                           <b className="text-[11.5px]" style={{ color: c2 }}>
@@ -933,7 +933,7 @@ export function CustomersApp() {
                                       an empty box is noise. */}
                                   {left <= 25 && (
                                     <span
-                                      className="ml-1 font-normal"
+                                      className="ms-1 font-normal"
                                       style={{ color: left <= 0 ? "var(--red,#e21d27)" : "var(--ink-3)" }}
                                     >
                                       {t("customers.nLeft", { n: left })}
@@ -1153,7 +1153,7 @@ export function CustomersApp() {
       {customers && customers.length > 0 && (
         <CollapsibleStats id="customers">
         <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
-          <button type="button" title={t("customers.everyoneClearFilter")} onClick={() => setStage("")} className={"rounded-2xl px-4 py-3 text-left transition-all hover:-translate-y-px " + (stage === "" ? "text-white shadow-[0_10px_24px_-16px_rgba(9,20,44,.8)]" : "bg-[var(--surface)]")} style={stage === "" ? { background: "var(--hero-grad)" } : { border: "1px solid var(--line)", borderLeft: "5px solid var(--brand)" }}>
+          <button type="button" title={t("customers.everyoneClearFilter")} onClick={() => setStage("")} className={"rounded-2xl px-4 py-3 text-start transition-all hover:-translate-y-px " + (stage === "" ? "text-white shadow-[0_10px_24px_-16px_rgba(9,20,44,.8)]" : "bg-[var(--surface)]")} style={stage === "" ? { background: "var(--hero-grad)" } : { border: "1px solid var(--line)", borderInlineStart: "5px solid var(--brand)" }}>
             <div className="text-[10.5px] font-extrabold uppercase tracking-[0.07em]" style={{ color: stage === "" ? "rgba(255,255,255,.9)" : "var(--ink-3)" }}>{t("customers.allFamilies")}</div>
             <div className="text-[24px] font-extrabold leading-tight tabular-nums">{customers.length}</div>
             <div className="text-[10.5px] leading-[1.35]" style={{ color: stage === "" ? "rgba(255,255,255,.85)" : "var(--ink-3)" }}>{t("customers.everyoneOnList")}</div>
@@ -1168,13 +1168,13 @@ export function CustomersApp() {
                 title={t(`customers.stageHint_${st.key}`)}
                 onClick={() => setStage(on ? "" : st.key)}
                 className={
-                  "rounded-2xl px-4 py-3 text-left transition-all hover:-translate-y-px " +
+                  "rounded-2xl px-4 py-3 text-start transition-all hover:-translate-y-px " +
                   (on ? "text-white shadow-[0_10px_24px_-16px_rgba(9,20,44,.8)]" : "bg-[var(--surface)]")
                 }
                 style={
                   on
                     ? { background: st.colour }
-                    : { border: "1px solid var(--line)", borderLeft: `5px solid ${st.colour}` }
+                    : { border: "1px solid var(--line)", borderInlineStart: `5px solid ${st.colour}` }
                 }
               >
                 <div
@@ -1294,9 +1294,9 @@ export function CustomersApp() {
                   key={family.id}
                   className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition-all hover:shadow-[0_14px_30px_-20px_rgba(9,20,44,.6)]"
                 >
-                <span className="absolute inset-y-0 left-0 z-[1] w-1.5" style={{ background: st.colour }} />
+                <span className="absolute inset-y-0 start-0 z-[1] w-1.5" style={{ background: st.colour }} />
                 {/* Family header — siblings joined under one card, still opened individually. */}
-                <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2 pl-5">
+                <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2 ps-5">
                   <div className="flex min-w-0 items-center gap-2">
                     <span aria-hidden className="text-[14px]">👪</span>
                     <span className="truncate text-[13px] font-extrabold">{family.name}</span>
@@ -1308,7 +1308,7 @@ export function CustomersApp() {
                   const key = childKey(family.id, k.name);
                   return (
                 <div key={key} className={sibIdx > 0 ? "border-t border-[var(--line)]" : ""}>
-                <div className="flex items-center gap-3 px-4 py-3 pl-5">
+                <div className="flex items-center gap-3 px-4 py-3 ps-5">
                   {k.photo ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -1348,7 +1348,7 @@ export function CustomersApp() {
                 </div>
 
                 {key === openKid && (
-                  <div className="border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3 pl-5">
+                  <div className="border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3 ps-5">
                     <div className="grid gap-x-4 gap-y-2.5 sm:grid-cols-4">
                       <Row label={t("customers.dateOfBirth")} value={k.dob} />
                       <Row label={t("customers.age")} value={ageOf(k) !== null ? String(ageOf(k)) : ""} />
@@ -1438,7 +1438,7 @@ export function CustomersApp() {
                   <span className="truncate text-[12.5px] font-extrabold" title={t(`customers.stageHint_${stageDef.key}`)}>{c.name}</span>
                   <span className="flex-none whitespace-nowrap text-[9px] font-extrabold uppercase tracking-[0.04em] text-white/85">{t(`customers.stageLabel_${stageDef.key}`)} · {st.n} {st.n === 1 ? t("customers.bookingSingular") : t("customers.bookingPlural")}</span>
                 </div>
-                <div className="px-4 py-3 pl-5">
+                <div className="px-4 py-3 ps-5">
                   <div className="mb-1.5 truncate text-[11.5px] text-[var(--ink-3)]">
                     {[c.email, c.phone].filter(Boolean).join(" · ") || t("customers.noContactDetails")}
                   </div>
@@ -1480,7 +1480,7 @@ export function CustomersApp() {
 
                 {/* Actions sit on their own strip: reachable, but not shouting
                     over the family's name the way two buttons at the top did. */}
-                <div className="flex flex-wrap items-center gap-1.5 rounded-b-2xl border-t border-[var(--line)] bg-[var(--panel)] px-4 py-2 pl-5">
+                <div className="flex flex-wrap items-center gap-1.5 rounded-b-2xl border-t border-[var(--line)] bg-[var(--panel)] px-4 py-2 ps-5">
                   <button
                     type="button"
                     onClick={() => setContactId(c.id)}
@@ -1516,13 +1516,13 @@ export function CustomersApp() {
                         <button
                           type="button"
                           onClick={() => remove(c)}
-                          className="ml-auto rounded-full px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--ink-3)] transition-colors hover:text-[var(--red,#e21d27)]"
+                          className="ms-auto rounded-full px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--ink-3)] transition-colors hover:text-[var(--red,#e21d27)]"
                         >
                           {t("customers.remove")}
                         </button>
                       ) : (
                         <span
-                          className="ml-auto text-[10.5px] text-[var(--ink-3)]"
+                          className="ms-auto text-[10.5px] text-[var(--ink-3)]"
                           title={t("customers.hasBookingsFamilyTitle")}
                         >
                           {t("customers.hasBookings")}

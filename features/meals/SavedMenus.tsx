@@ -43,7 +43,7 @@ function MenuEditor({ initial, onSave, onCancel }: { initial: SavedMenu; onSave:
   }
 
   return (
-    <Card className="mb-2.5 border-l-[3px] border-l-[#2f6bd8] p-3.5">
+    <Card className="mb-2.5 border-s-[3px] border-s-[#2f6bd8] p-3.5">
       {err && <div className="mb-2.5 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{err}</div>}
       <div className="mb-3"><FieldLabel>{t("meals.menuName")}</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("meals.menuNamePlaceholder")} className="w-full max-w-[320px]" /></div>
       <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("meals.mealsOnThisMenu")}</div>
@@ -58,7 +58,7 @@ function MenuEditor({ initial, onSave, onCancel }: { initial: SavedMenu; onSave:
             </div>
             <div className="mt-2"><Input value={it.description ?? ""} onChange={(e) => upd(it.id, { description: e.target.value })} placeholder={t("meals.descPlaceholder")} className="w-full" /></div>
             <div className="mt-2 flex flex-wrap items-center gap-1">
-              <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("meals.typeLabel")}</span>
+              <span className="me-1 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("meals.typeLabel")}</span>
               {DIETS.map((d) => {
                 const on = it.diet === d.key;
                 return (
@@ -71,7 +71,7 @@ function MenuEditor({ initial, onSave, onCancel }: { initial: SavedMenu; onSave:
               })}
             </div>
             <div className="mt-2">
-              <span className="mr-1.5 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("meals.containsLabel")}</span>
+              <span className="me-1.5 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("meals.containsLabel")}</span>
               {UK_ALLERGENS.map((a) => (
                 <button key={a} type="button" onClick={() => toggleAllergen(it.id, a)}
                   className="m-0.5 rounded-full border px-2 py-[1px] text-[10.5px] font-bold capitalize transition-colors"
@@ -123,7 +123,7 @@ export function SavedMenus({ bare = false }: { bare?: boolean }) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[14px] font-extrabold">{m.name}</span>
                 <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>{m.items.length} meal{m.items.length === 1 ? "" : "s"}</Badge>
-                <div className="ml-auto flex gap-1.5">
+                <div className="ms-auto flex gap-1.5">
                   <Button sm onClick={() => setEditing(m.id)}>{t("meals.edit")}</Button>
                   <Button sm onClick={() => duplicate(m)}>{t("meals.duplicate")}</Button>
                   <Button sm variant="danger" onClick={() => remove(m)}>{t("meals.delete")}</Button>

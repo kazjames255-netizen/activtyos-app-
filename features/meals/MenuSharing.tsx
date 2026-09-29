@@ -13,7 +13,7 @@ export function MenuSharing() {
   const share = settings.meals?.menuShare ?? "booked";
   const set = (v: "booked" | "paid") => save({ settings: { ...settings, meals: { ...settings.meals, menuShare: v } } });
   const opt = (v: "booked" | "paid", label: string, sub: string) => (
-    <button type="button" onClick={() => set(v)} className="flex-1 rounded-xl border p-4 text-left transition"
+    <button type="button" onClick={() => set(v)} className="flex-1 rounded-xl border p-4 text-start transition"
       style={share === v ? { borderColor: "#2f6bd8", background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
       <div className="text-[14px] font-extrabold" style={{ color: share === v ? "#1d3a8f" : "var(--ink)" }}>{share === v ? "✓ " : ""}{label}</div>
       <div className="mt-1 text-[12px] text-[var(--ink-3)]">{sub}</div>
@@ -66,7 +66,7 @@ export function MenuSharing() {
           const mode = settings.meals?.changeApproval ?? "auto";
           const setMode = (v: "review" | "auto") => save({ settings: { ...settings, meals: { ...settings.meals, changeApproval: v } } });
           const card = (v: "review" | "auto", label: string, sub: string) => (
-            <button type="button" onClick={() => setMode(v)} className="flex-1 rounded-xl border p-4 text-left transition"
+            <button type="button" onClick={() => setMode(v)} className="flex-1 rounded-xl border p-4 text-start transition"
               style={mode === v ? { borderColor: "#2f6bd8", background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
               <div className="text-[14px] font-extrabold" style={{ color: mode === v ? "#1d3a8f" : "var(--ink)" }}>{mode === v ? "✓ " : ""}{label}</div>
               <div className="mt-1 text-[12px] text-[var(--ink-3)]">{sub}</div>

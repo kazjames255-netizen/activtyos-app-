@@ -9,6 +9,7 @@
 // its status and, when it ended, `canceledAt`. Same source as Providers &
 // billing, so the counts can't disagree with that page.
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
@@ -64,7 +65,7 @@ export function FalloffCard() {
     const now = new Date(nowMs);
     const months = Array.from({ length: MONTHS }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (MONTHS - 1 - i), 1);
-      return { key: monthKey(d), label: d.toLocaleDateString("en-GB", { month: "short" }), startMs: d.getTime(), count: 0, base: 0, pct: 0 };
+      return { key: monthKey(d), label: d.toLocaleDateString(dl(), { month: "short" }), startMs: d.getTime(), count: 0, base: 0, pct: 0 };
     });
     const byKey = new Map(months.map((m) => [m.key, m]));
     for (const p of list) {
@@ -136,7 +137,7 @@ export function FalloffCard() {
                   <span className="text-[12.5px] font-bold text-[var(--ink-3)]">of {total} · {retention}% retained</span>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-end">
                 <div className="text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Cancelled</div>
                 <span className="text-[27px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", color: "#c02636" }}>{gone}</span>
               </div>

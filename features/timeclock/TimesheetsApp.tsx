@@ -4,6 +4,7 @@
 // out / off), today's timesheet (actual clocked hours vs scheduled, lateness,
 // optional auto-deduction), and settings. Actual hours feed the pay run. Demo
 // store; real payroll posting + kiosk/geofence are Amir's (docs/timeclock-handoff.md).
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
@@ -13,7 +14,7 @@ import {
   offToday, workedMs, paidMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, shiftToday, lateMinutesToday, rateFor, setApproved, editRecord, payHours, clockOut, useClockRefresh
 } from "./data";
 
-const gbp = (n: number) => "£" + (n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const gbp = (n: number) => "£" + (n || 0).toLocaleString(dl(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 // e.g. 12 → "12m late", 230 → "3h 50m late"
 const fmtLate = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
@@ -105,7 +106,7 @@ export function TimesheetsApp() {
               return (
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                   {onClock && <button type="button" onClick={() => clockOutPerson(r)} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f] hover:bg-[#eef4ff]">Clock out</button>}
-                  <button type="button" onClick={() => nudge(r)} title={onClock ? "Remind them to clock out when they finish" : "Remind them to clock in"} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] transition-colors hover:border-[#f0b100] hover:bg-[#fdf6e3]">🔔 {nudges[r.id] ? `Remind again` : nudgeLabel}{nudges[r.id] ? <span className="ml-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-[#e88f1f] px-1 text-[9px] font-extrabold text-white">{nudges[r.id]}</span> : null}</button>
+                  <button type="button" onClick={() => nudge(r)} title={onClock ? "Remind them to clock out when they finish" : "Remind them to clock in"} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] transition-colors hover:border-[#f0b100] hover:bg-[#fdf6e3]">🔔 {nudges[r.id] ? `Remind again` : nudgeLabel}{nudges[r.id] ? <span className="ms-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-[#e88f1f] px-1 text-[9px] font-extrabold text-white">{nudges[r.id]}</span> : null}</button>
                 </div>
               );
             })()}
@@ -136,7 +137,7 @@ export function TimesheetsApp() {
                     <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#12b76a] opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-[#12b76a]" /></span>
                     <span className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">On site now · live</span>
                   </div>
-                  <div className="text-[40px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{onSite}<span className="ml-1 text-[16px] font-bold text-[var(--ink-3)]">on shift</span></div>
+                  <div className="text-[40px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{onSite}<span className="ms-1 text-[16px] font-bold text-[var(--ink-3)]">on shift</span></div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     <span className="inline-flex items-center gap-1 rounded-full bg-[#e6f4ea] px-2.5 py-1 text-[11.5px] font-bold text-[#0f7a43]">🟢 {inNow.length} clocked in</span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-[#fdf3e0] px-2.5 py-1 text-[11.5px] font-bold text-[#8a5a09]">⏸ {onBreak.length} on break</span>
@@ -146,17 +147,17 @@ export function TimesheetsApp() {
                 </div>
               </div>
               {/* running-total panel — mirrors the staff clock card */}
-              <div className="ml-auto flex items-center gap-5 rounded-2xl bg-[var(--panel)] px-5 py-4">
+              <div className="ms-auto flex items-center gap-5 rounded-2xl bg-[var(--panel)] px-5 py-4">
                 <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Hours clocked today</div><div className="text-[26px] font-extrabold tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{fmtDur(totalMs)}</div></div>
                 {tsPeople.length > 0 && <div className="hidden sm:block"><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">People</div><div className="text-[15px] font-extrabold text-[var(--ink-2)]">{tsPeople.length} today</div></div>}
               </div>
               {/* avatar cluster of who's on site */}
               {onSite > 0 && (
-                <div className="flex items-center pl-2">
+                <div className="flex items-center ps-2">
                   {[...inNow, ...onBreak].slice(0, 6).map((r) => (
-                    <span key={r.id} className="-ml-2 grid h-9 w-9 flex-none place-items-center rounded-full text-[11px] font-extrabold text-[#1d3a8f] ring-2 ring-white" style={{ background: r.status === "break" ? "#fdf3e0" : "#eef4fd" }} title={`${r.name} · ${r.status === "break" ? "on break" : "clocked in"}`}>{initials(r.name)}</span>
+                    <span key={r.id} className="-ms-2 grid h-9 w-9 flex-none place-items-center rounded-full text-[11px] font-extrabold text-[#1d3a8f] ring-2 ring-white" style={{ background: r.status === "break" ? "#fdf3e0" : "#eef4fd" }} title={`${r.name} · ${r.status === "break" ? "on break" : "clocked in"}`}>{initials(r.name)}</span>
                   ))}
-                  {onSite > 6 && <span className="-ml-2 grid h-9 w-9 flex-none place-items-center rounded-full bg-[var(--panel)] text-[11px] font-extrabold text-[var(--ink-3)] ring-2 ring-white">+{onSite - 6}</span>}
+                  {onSite > 6 && <span className="-ms-2 grid h-9 w-9 flex-none place-items-center rounded-full bg-[var(--panel)] text-[11px] font-extrabold text-[var(--ink-3)] ring-2 ring-white">+{onSite - 6}</span>}
                 </div>
               )}
             </div>
@@ -193,7 +194,7 @@ export function TimesheetsApp() {
         );
         return (
           <Card className="mt-4 p-4">
-            <div className="flex flex-wrap items-center gap-2"><div className="text-[13px] font-extrabold text-[var(--ink)]">Who&rsquo;s in — live</div><Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="ml-auto"><option value="all">All listings</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by employee…" className="w-52 rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-[12px] outline-none focus:border-[#1d3a8f]" /></div>
+            <div className="flex flex-wrap items-center gap-2"><div className="text-[13px] font-extrabold text-[var(--ink)]">Who&rsquo;s in — live</div><Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="ms-auto"><option value="all">All listings</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by employee…" className="w-52 rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-[12px] outline-none focus:border-[#1d3a8f]" /></div>
             {/* status filter pills */}
             <div className="mt-3 flex flex-wrap gap-1.5">
               {pills.map(([k, l, n, c]) => { const on = F === k; return (
@@ -220,22 +221,22 @@ export function TimesheetsApp() {
 
       {tab === "sheets" && (
         <Card className="mt-4 p-4">
-          <div className="mb-2 flex flex-wrap items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Timesheets · today</span><Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="ml-auto"><option value="all">All listings</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
+          <div className="mb-2 flex flex-wrap items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Timesheets · today</span><Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="ms-auto"><option value="all">All listings</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
           <div className="mb-2 text-[12px] text-[var(--ink-3)]">Today&rsquo;s clocked hours. Pay policy: <b>{settings.payPolicy === "scheduled" ? "scheduled hours" : settings.payPolicy === "scheduled-less-late" ? "scheduled, less lateness" : settings.autoPayOvertime ? "actual worked (overtime paid)" : "actual, capped at scheduled"}</b> · grace {settings.graceMin} min{settings.rounding ? ` · rounded to ${settings.rounding} min` : ""}. Overtime marked <b>*</b> is above scheduled and unpaid until approved. Approved hours flow to the pay run.</div>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-            <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-center font-extrabold">In</th><th className="px-3 py-2.5 text-center font-extrabold">Out</th><th className="px-3 py-2.5 text-center font-extrabold">Break</th><th className="px-3 py-2.5 text-right font-extrabold">Worked</th><th className="px-3 py-2.5 text-right font-extrabold">Sched.</th><th className="px-3 py-2.5 text-center font-extrabold">Late</th><th className="px-3 py-2.5 text-right font-extrabold">Overtime</th><th className="px-3 py-2.5 text-right font-extrabold">Pay hrs</th><th className="px-3 py-2.5"></th></tr></thead>
+            <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-center font-extrabold">In</th><th className="px-3 py-2.5 text-center font-extrabold">Out</th><th className="px-3 py-2.5 text-center font-extrabold">Break</th><th className="px-3 py-2.5 text-end font-extrabold">Worked</th><th className="px-3 py-2.5 text-end font-extrabold">Sched.</th><th className="px-3 py-2.5 text-center font-extrabold">Late</th><th className="px-3 py-2.5 text-end font-extrabold">Overtime</th><th className="px-3 py-2.5 text-end font-extrabold">Pay hrs</th><th className="px-3 py-2.5"></th></tr></thead>
               <tbody>{tsPeople.length === 0 ? <tr><td colSpan={10} className="p-6 text-center text-[13px] text-[var(--ink-3)]">No clock-ins today yet.</td></tr> : tsPeople.map((r) => { const s = sheet(r); return (
                 <tr key={r.id} className="border-t border-[var(--line-2,#eef2f8)]">
-                  <td className="px-3 py-2 font-bold text-[var(--ink)]">{r.name}{r.approved && <span className="ml-1.5 rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9.5px] font-bold text-[#0f7a43]">approved</span>}</td>
+                  <td className="px-3 py-2 font-bold text-[var(--ink)]">{r.name}{r.approved && <span className="ms-1.5 rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9.5px] font-bold text-[#0f7a43]">approved</span>}</td>
                   <td className="px-3 py-2 text-center tabular-nums">{hhmm(r.clockInAt)}</td>
                   <td className="px-3 py-2 text-center tabular-nums text-[var(--ink-2)]">{r.clockOutAt ? hhmm(r.clockOutAt) : r.status === "out" ? "—" : <span className="text-[#0f7a43]">in…</span>}</td>
                   <td className="px-3 py-2 text-center tabular-nums text-[var(--ink-3)]">{r.breakMs ? fmtDur(r.breakMs) : "—"}</td>
-                  <td className="px-3 py-2 text-right font-bold tabular-nums text-[var(--ink)]">{s.workedH.toFixed(2)}h</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-3)]">{s.schedH ? s.schedH.toFixed(2) + "h" : "—"}</td>
+                  <td className="px-3 py-2 text-end font-bold tabular-nums text-[var(--ink)]">{s.workedH.toFixed(2)}h</td>
+                  <td className="px-3 py-2 text-end tabular-nums text-[var(--ink-3)]">{s.schedH ? s.schedH.toFixed(2) + "h" : "—"}</td>
                   <td className="px-3 py-2 text-center tabular-nums">{s.late ? <span className={s.lateOver > 0 ? "font-bold text-[#c0392b]" : "text-[var(--ink-3)]"}>{s.late}m</span> : "—"}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{s.overtime > 0 ? <span className={s.otPaid ? "font-bold text-[#0f7a43]" : "font-bold text-[#8a5a09]"}>+{s.overtime.toFixed(2)}h{s.otUnpaid ? " *" : ""}</span> : "—"}</td>
-                  <td className="px-3 py-2 text-right font-extrabold tabular-nums text-[#0f7a43]">{s.payH.toFixed(2)}h{s.override && <span className="ml-1 rounded bg-[#eef4fd] px-1 py-0.5 text-[9px] font-bold text-[#1d3a8f] align-middle">{r.payBasis === "scheduled" ? "sched" : r.payBasis === "custom" ? "set" : "edit"}</span>}</td>
-                  <td className="px-3 py-2 text-right"><div className="inline-flex gap-1.5"><button type="button" onClick={() => setEdit(r)} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">✏️</button><button type="button" onClick={() => { setAll(setApproved(all, r.id, !r.approved)); flash(r.approved ? "Approval removed." : `${r.name.split(" ")[0]}'s hours approved.`); }} className={`rounded-lg border px-2.5 py-1 text-[11.5px] font-bold ${r.approved ? "border-[#0f7a43] text-[#0f7a43]" : "border-[var(--line)] text-[#1d3a8f] hover:border-[#1d3a8f]"}`}>{r.approved ? "✓ Approved" : "Approve"}</button></div></td>
+                  <td className="px-3 py-2 text-end tabular-nums">{s.overtime > 0 ? <span className={s.otPaid ? "font-bold text-[#0f7a43]" : "font-bold text-[#8a5a09]"}>+{s.overtime.toFixed(2)}h{s.otUnpaid ? " *" : ""}</span> : "—"}</td>
+                  <td className="px-3 py-2 text-end font-extrabold tabular-nums text-[#0f7a43]">{s.payH.toFixed(2)}h{s.override && <span className="ms-1 rounded bg-[#eef4fd] px-1 py-0.5 text-[9px] font-bold text-[#1d3a8f] align-middle">{r.payBasis === "scheduled" ? "sched" : r.payBasis === "custom" ? "set" : "edit"}</span>}</td>
+                  <td className="px-3 py-2 text-end"><div className="inline-flex gap-1.5"><button type="button" onClick={() => setEdit(r)} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">✏️</button><button type="button" onClick={() => { setAll(setApproved(all, r.id, !r.approved)); flash(r.approved ? "Approval removed." : `${r.name.split(" ")[0]}'s hours approved.`); }} className={`rounded-lg border px-2.5 py-1 text-[11.5px] font-bold ${r.approved ? "border-[#0f7a43] text-[#0f7a43]" : "border-[var(--line)] text-[#1d3a8f] hover:border-[#1d3a8f]"}`}>{r.approved ? "✓ Approved" : "Approve"}</button></div></td>
                 </tr>
               ); })}</tbody>
             </table>
@@ -296,7 +297,7 @@ function TimesheetEditor({ rec, onSave, onClose }: { rec: ClockRecord; onSave: (
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{rec.name}</h3><span className="text-[12px] text-[var(--ink-3)]">· edit timesheet</span><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{rec.name}</h3><span className="text-[12px] text-[var(--ink-3)]">· edit timesheet</span><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
           <div className="grid grid-cols-3 gap-2">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Clock in</span><Input type="time" value={inHm} onChange={(e) => setInHm(e.target.value)} className="w-full" /></label>

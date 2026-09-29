@@ -140,7 +140,7 @@ export function ParentWelcome() {
             type="button"
             onClick={markSeen}
             aria-label={t("parent.close")}
-            className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30"
+            className="absolute end-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30"
           >
             ×
           </button>
@@ -183,13 +183,13 @@ export function ParentWelcome() {
                   autoComplete="off"
                 />
                 {showHits && hits.length > 0 && (
-                  <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-[190px] overflow-y-auto rounded-lg border bg-white shadow-lg" style={{ borderColor: "var(--line,#ece6f1)" }}>
+                  <div className="absolute start-0 end-0 top-full z-10 mt-1 max-h-[190px] overflow-y-auto rounded-lg border bg-white shadow-lg" style={{ borderColor: "var(--line,#ece6f1)" }}>
                     {hits.map((h, i) => (
                       <button
                         key={`${h.label}-${i}`}
                         type="button"
                         onClick={() => pickAddress(h.label)}
-                        className="block w-full truncate px-3 py-2 text-left text-[12.5px] hover:bg-[#f2f6ff]"
+                        className="block w-full truncate px-3 py-2 text-start text-[12.5px] hover:bg-[#f2f6ff]"
                         style={{ color: "var(--ink-2,#4a4763)" }}
                         title={h.label}
                       >

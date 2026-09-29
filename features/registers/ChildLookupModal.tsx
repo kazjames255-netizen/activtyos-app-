@@ -180,7 +180,7 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
         ) : (
           <div className="overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl">
             <div className="op-hero flex items-center justify-between px-5 py-4 text-white" style={{ background: "var(--hero-grad)" }}>
-              <div className="text-[17px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>🔎 {t("registers.findAChild")}{isHoCombined && scope !== undefined ? <span className="ml-2 text-[12px] font-bold text-white/75">· {scopeLabel}</span> : null}</div>
+              <div className="text-[17px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>🔎 {t("registers.findAChild")}{isHoCombined && scope !== undefined ? <span className="ms-2 text-[12px] font-bold text-white/75">· {scopeLabel}</span> : null}</div>
               <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
             </div>
             {needsPicker ? (
@@ -200,7 +200,7 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
                     : <ul className="space-y-1">{shown.map((r) => (
                         <li key={r.childId}>
                           <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2 transition hover:border-[#1d3a8f] hover:bg-[#f7faff]">
-                            <button type="button" disabled={loadingCard} onClick={() => openChild(r.childId)} title="Open profile card" className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:opacity-50">
+                            <button type="button" disabled={loadingCard} onClick={() => openChild(r.childId)} title="Open profile card" className="flex min-w-0 flex-1 items-center gap-3 text-start disabled:opacity-50">
                               {r.photo
                                 ? <img src={r.photo} alt="" className="h-10 w-10 flex-none rounded-xl object-cover ring-1 ring-[var(--line)]" />
                                 : <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl text-[14px] font-extrabold text-[#1d3a8f]" style={{ background: "#eef4fd" }}>{r.name.slice(0, 1).toUpperCase()}</span>}

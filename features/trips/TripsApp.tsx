@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { usePathname } from "next/navigation";
@@ -78,9 +79,9 @@ const ITIN_ACTIONS = [
   "Count in and out of water", "Collect belongings", "Confirm collection / password", "Weather check", "Phone tree ready",
 ];
 
-const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
-const nowLabel = () => new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+const nowLabel = () => new Date().toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" });
 const ini = (n?: string) => (n ?? "").split(/\s+/).map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase() || "?";
 
 // ── domain (mirrors the manual's helpers) ─────────────────────────────────
@@ -176,7 +177,7 @@ function RatingGroup({ label, cur, on }: { label: string; cur?: RiskLevel; on: (
       <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{label}</span>
       <div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] shadow-[0_1px_2px_rgba(23,21,52,.04)]">
         {(["L", "M", "H"] as const).map((v) => (
-          <button key={v} type="button" onClick={() => on(v)} className="border-l border-[var(--line)] px-2.5 py-1 text-[11px] font-extrabold transition-colors first:border-l-0" style={cur === v ? { background: RISK[v].fg, color: "#fff" } : { background: "var(--surface)", color: RISK[v].fg }}>{RISK[v].lbl}</button>
+          <button key={v} type="button" onClick={() => on(v)} className="border-s border-[var(--line)] px-2.5 py-1 text-[11px] font-extrabold transition-colors first:border-s-0" style={cur === v ? { background: RISK[v].fg, color: "#fff" } : { background: "var(--surface)", color: RISK[v].fg }}>{RISK[v].lbl}</button>
         ))}
       </div>
     </div>
@@ -381,7 +382,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
         {STEP_NUMS.map((n) => {
           const dn = stepDone(t, n), cur = open === n;
           return (
-            <button key={n} type="button" onClick={() => setOpen(n)} title={`Step ${n} — ${TITLES[n]}`} className="flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left transition-colors" style={cur ? { borderColor: BLUE, background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+            <button key={n} type="button" onClick={() => setOpen(n)} title={`Step ${n} — ${TITLES[n]}`} className="flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-start transition-colors" style={cur ? { borderColor: BLUE, background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
               <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : cur ? { background: BLUE, color: "#fff" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{dn ? "✓" : n}</span>
               <span className="hidden text-[11.5px] font-bold sm:block" style={{ color: cur ? BLUE : "var(--ink-2)" }}>{TITLES[n]}</span>
             </button>
@@ -413,9 +414,9 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                         const matches = venues.filter((v) => !q || v.name.toLowerCase().includes(q) || (v.address ?? "").toLowerCase().includes(q)).slice(0, 8);
                         if (matches.length === 0) return null;
                         return (
-                          <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-[0_12px_28px_-12px_rgba(23,21,52,.4)]">
+                          <div className="absolute start-0 end-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-[0_12px_28px_-12px_rgba(23,21,52,.4)]">
                             {matches.map((v) => (
-                              <button key={v.name} type="button" onMouseDown={(e) => { e.preventDefault(); edit("destination", v.name, "Destination"); edit("address", v.address ?? "", "Address"); setVenueMenu(false); }} className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-3 py-2 text-left last:border-b-0 hover:bg-[#eef4fd]">
+                              <button key={v.name} type="button" onMouseDown={(e) => { e.preventDefault(); edit("destination", v.name, "Destination"); edit("address", v.address ?? "", "Address"); setVenueMenu(false); }} className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-3 py-2 text-start last:border-b-0 hover:bg-[#eef4fd]">
                                 <span className="text-[12.5px] font-bold">📍 {v.name}</span>
                                 {v.address && <span className="text-[11px] text-[var(--ink-3)]">{v.address}</span>}
                               </button>
@@ -541,7 +542,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                     </div>
                     );
                   })}</div>
-                  {t.raSigned ? <div className="flex items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Signed off by {t.raAssessor || me} ({fmtDate(t.raDate)}).<button type="button" onClick={() => mut((d) => { d.raSigned = false; })} className="ml-auto text-[11.5px] font-bold underline" style={{ color: GREEN }}>Re-open</button></div>
+                  {t.raSigned ? <div className="flex items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Signed off by {t.raAssessor || me} ({fmtDate(t.raDate)}).<button type="button" onClick={() => mut((d) => { d.raSigned = false; })} className="ms-auto text-[11.5px] font-bold underline" style={{ color: GREEN }}>Re-open</button></div>
                     : <div><Button variant="solid" disabled={!raReady(t.hazards ?? [])} onClick={() => mut((d) => { d.raSigned = true; d.raAssessor = d.raAssessor || me; d.raDate = d.raDate || todayIso(); })}>Sign off risk assessment</Button>{!raReady(t.hazards ?? []) && <div className="mt-1.5 rounded-lg bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold" style={{ color: AMBER }}>For every hazard: set a residual risk and tick “controls in place”.</div>}</div>}
                 </div>}
 
@@ -551,7 +552,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                     <span className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5"><b>{attendingOf(t).length}</b> children going</span>
                     <span className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5"><b>{(t.roster ?? []).length}</b> staff</span>
                     <span className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5">actual ratio <b>1:{(t.roster ?? []).length ? Math.ceil(attendingOf(t).length / Math.max(1, (t.roster ?? []).length)) : "—"}</b></span>
-                    <span className="ml-auto flex items-center gap-1.5 text-[var(--ink-2)]">Off-site policy 1 :<input type="number" min={1} value={ratioOf(t)} onChange={(e) => edit("offsiteRatio", Math.max(1, parseInt(e.target.value, 10) || 1), "Off-site ratio")} className="w-14 rounded-md border border-[var(--line)] px-1.5 py-1 text-center text-[13px] font-extrabold" /> · need <b>{needOf(t)}</b></span>
+                    <span className="ms-auto flex items-center gap-1.5 text-[var(--ink-2)]">Off-site policy 1 :<input type="number" min={1} value={ratioOf(t)} onChange={(e) => edit("offsiteRatio", Math.max(1, parseInt(e.target.value, 10) || 1), "Off-site ratio")} className="w-14 rounded-md border border-[var(--line)] px-1.5 py-1 text-center text-[13px] font-extrabold" /> · need <b>{needOf(t)}</b></span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-[var(--line)]"><div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, Math.round((t.roster ?? []).length / needOf(t) * 100))}%`, background: staffOk(t) ? GREEN : RED }} /></div>
                   {staffSuggest.length > 0 && <div><div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{listingStaff.length ? "Assigned to this listing / your team — tap to add" : "Your team — tap to add"}</div><div className="flex flex-wrap gap-1.5">{staffSuggest.map((s) => <button key={s} type="button" onClick={() => mut((d) => { (d.roster ??= []).push({ n: s, r: "Activity leader", fa: false }); })} className="rounded-full border-2 border-dashed px-2.5 py-1 text-[12px] font-bold" style={{ borderColor: "var(--line)", color: "var(--ink-2)" }}>＋ {s}</button>)}</div></div>}
@@ -639,7 +640,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                 {/* ── Step 7: Return & debrief ── */}
                 {n === 7 && <div className="flex flex-col gap-2.5">
                   <label className="flex flex-col gap-1.5">{fl("Debrief notes")}<textarea value={t.notes ?? ""} onChange={(e) => edit("notes", e.target.value, "Debrief notes")} placeholder="Debrief — what went well, any incidents, anything to change next time…" className={`${taCls} min-h-[72px]`} /></label>
-                  {t.returned ? <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Trip returned and closed — all children accounted for and handed back. You can still edit the debrief above.<button type="button" onClick={() => mut((d) => { d.returned = false; d.status = "planned"; })} className="ml-auto text-[11.5px] font-bold underline" style={{ color: GREEN }}>Re-open trip</button></div>
+                  {t.returned ? <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Trip returned and closed — all children accounted for and handed back. You can still edit the debrief above.<button type="button" onClick={() => mut((d) => { d.returned = false; d.status = "planned"; })} className="ms-auto text-[11.5px] font-bold underline" style={{ color: GREEN }}>Re-open trip</button></div>
                     : s6Ok(t) ? <Button variant="solid" onClick={() => mut((d) => { d.returned = true; d.status = "completed"; })}>Mark trip returned & complete</Button>
                     : <div className="rounded-lg bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold" style={{ color: AMBER }}>Complete every head-count checkpoint (Step 6) to close the trip — you can still write the debrief now.</div>}
                 </div>}
@@ -806,7 +807,7 @@ export function TripsApp() {
           {([["", "All"], ["planned", "Planned"], ["completed", "Completed"], ["cancelled", "Cancelled"]] as [string, string][]).map(([id, label]) => (
             <button key={label} type="button" onClick={() => setStatusFilter(id)} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors" style={statusFilter === id ? { borderColor: BLUE, background: BLUE, color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{label}</button>
           ))}
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search destination or child…" className="ml-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search destination or child…" className="ms-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
         </div>
       )}
 
@@ -857,8 +858,8 @@ export function TripsApp() {
                     <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] bg-[#eef4fd] px-4 py-2.5">
                       <span className="text-[12px] font-extrabold" style={{ color: BLUE }}>🧮 Head count</span>
                       <span className="text-[11.5px] text-[var(--ink-2)]">{go} on trip · {doneN}/{cps.length} checkpoints{last ? ` · last ${last.counted}/${go} at ${last.time}` : ""}</span>
-                      {allOk ? <span className="ml-auto rounded-full bg-[#e7f6ee] px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: GREEN }}>✓ all counted</span>
-                        : <button type="button" onClick={() => quickCount(t, go)} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-extrabold text-white shadow-sm" style={{ background: BLUE }}>✓ {nextCp!.n}: all {go} present</button>}
+                      {allOk ? <span className="ms-auto rounded-full bg-[#e7f6ee] px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: GREEN }}>✓ all counted</span>
+                        : <button type="button" onClick={() => quickCount(t, go)} className="ms-auto rounded-lg px-3 py-1.5 text-[12px] font-extrabold text-white shadow-sm" style={{ background: BLUE }}>✓ {nextCp!.n}: all {go} present</button>}
                     </div>
                   );
                 })()}

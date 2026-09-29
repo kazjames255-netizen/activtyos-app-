@@ -8,6 +8,7 @@
 // item can still be added to an individual. Front-end demo store; the real
 // sensitive-data storage + retention is Amir's (see handoff). Reuses the same
 // staff roster as the Staff-certificates area.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button, Input, Select } from "@/components/ui";
@@ -51,7 +52,7 @@ I understand that providing false information may lead to withdrawal of any offe
 Signed: ______________________________   Print name: ______________________________   Date: ____________`;
 export interface OnboardValue { v?: string; fileData?: string; fileId?: string; fileName?: string; status?: "todo" | "requested" | "received" | "verified"; at?: string }
 const nowIso = () => { try { return new Date().toISOString(); } catch { return ""; } };
-const fmtStamp = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
+const fmtStamp = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }); };
 // DBS certs don't legally "expire", but employers re-check on their own cycle
 // (commonly ~3 years). Show how old a certificate is from its issue date.
 const monthsSince = (iso?: string) => { if (!iso) return null; const d = new Date(iso + "T00:00:00"); if (isNaN(+d)) return null; const n = new Date(); return (n.getFullYear() - d.getFullYear()) * 12 + (n.getMonth() - d.getMonth()) - (n.getDate() < d.getDate() ? 1 : 0); };
@@ -61,7 +62,7 @@ const dbsAgeColor = (iso?: string) => { const m = monthsSince(iso); return m != 
 interface PayVal { basis: "hour" | "day" | "year"; amount: string; hpw: string; auto: boolean }
 const parsePay = (v?: string): PayVal => { try { const p = JSON.parse(v || "{}"); return { basis: p.basis || "hour", amount: p.amount || "", hpw: p.hpw || "", auto: p.auto !== false }; } catch { return { basis: "hour", amount: "", hpw: "", auto: true }; } };
 const payDerived = (p: PayVal) => { const a = parseFloat(p.amount) || 0; const h = parseFloat(p.hpw) || 0; const annual = p.basis === "year" ? a : p.basis === "hour" ? a * h * 52 : a * 260 /* ~working days/yr */; const hourly = p.basis === "hour" ? a : h ? annual / (h * 52) : 0; return { hourly, annual, monthly: annual / 12 }; };
-const gbp = (n: number) => n ? "£" + n.toLocaleString("en-GB", { maximumFractionDigits: n < 100 ? 2 : 0 }) : "£0";
+const gbp = (n: number) => n ? "£" + n.toLocaleString(dl(), { maximumFractionDigits: n < 100 ? 2 : 0 }) : "£0";
 export interface OnboardRecord { staff: string; values: Record<string, OnboardValue>; extra: string[]; submittedAt?: string; outstanding?: string[]; lastEditedAt?: string }
 
 export const SECTIONS: [string, string, string][] = [
@@ -317,7 +318,7 @@ function AddressList({ value, onChange }: { value?: string; onChange: (json: str
     <div className="space-y-2">
       {list.map((a, i) => (
         <div key={i} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
-          <div className="mb-1 flex items-center"><span className="text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.previousAddressN", { n: i + 1 })}</span><button type="button" onClick={() => write(list.filter((_, j) => j !== i))} className="ml-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">{t("team.remove")}</button></div>
+          <div className="mb-1 flex items-center"><span className="text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.previousAddressN", { n: i + 1 })}</span><button type="button" onClick={() => write(list.filter((_, j) => j !== i))} className="ms-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">{t("team.remove")}</button></div>
           <div className="grid grid-cols-2 gap-1.5">
             <Input value={a.line1} onChange={(e) => set(i, "line1", e.target.value)} placeholder={t("team.addressLine1")} className="col-span-2" />
             <Input value={a.line2} onChange={(e) => set(i, "line2", e.target.value)} placeholder={t("team.addressLine2")} className="col-span-2" />
@@ -389,7 +390,7 @@ export function OnboardingPanel() {
     const clr = cleared;
     const secs = SECTIONS.map(([sid, slabel]) => { const fs = appl.filter((f) => f.section === sid); if (!fs.length) return ""; const rows = fs.map((f) => { const v = rec.values[f.id]; const d = displayVal(f, v); const ok = satisfied(f, v); return `<tr><td class="k">${esc(f.label)}${f.required ? " *" : ""}</td><td class="v ${d ? (ok ? "ok" : "") : "miss"}">${d ? esc(d) : "—"}</td></tr>`; }).join(""); return `<h2>${esc(slabel)}</h2><table>${rows}</table>`; }).join("");
     const docs = appl.map((f) => { const v = rec.values[f.id]; if (!v?.fileData) return ""; const img = v.fileData.startsWith("data:image"); return `<div class="doc"><h2>${esc(f.label)} — ${esc(v.fileName || "file")}</h2>${img ? `<img src="${v.fileData}"/>` : `<object data="${v.fileData}" type="application/pdf"><iframe src="${v.fileData}"></iframe></object>`}</div>`; }).join("");
-    printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Onboarding — ${esc(sel)}</title><style>${PRINT_CSS}</style></head><body><h1>${esc(provider)} — Onboarding record</h1><div class="sub">${esc(sel)} · ${esc(staff?.role ?? "")} · ${esc(staff?.op ?? "")} · <span class="badge ${clr ? "cleared" : "hold"}">${clr ? "Cleared to start" : "Start on hold"}</span> · Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</div>${secs}${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
+    printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Onboarding — ${esc(sel)}</title><style>${PRINT_CSS}</style></head><body><h1>${esc(provider)} — Onboarding record</h1><div class="sub">${esc(sel)} · ${esc(staff?.role ?? "")} · ${esc(staff?.op ?? "")} · <span class="badge ${clr ? "cleared" : "hold"}">${clr ? "Cleared to start" : "Start on hold"}</span> · Generated ${new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" })}</div>${secs}${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
   };
 
   // ——— Single Central Record: one row per staff, the Ofsted checks ———
@@ -407,7 +408,7 @@ export function OnboardingPanel() {
     const cols = scrDetail ? [...SCR_COLS, ...METHOD_COLS] : SCR_COLS;
     const head = `<tr><td class="k">Staff</td><td class="k">Role</td><td class="k">Location</td>${cols.map(([, l]) => `<td class="k">${esc(l)}</td>`).join("")}<td class="k">DBS no.</td><td class="k">Cleared</td></tr>`;
     const body = TEAM.map((s) => { const r = ob.recordFor(s.name); const cells = SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id, scrDetail); return `<td class="v"><span class="${c.cls}">${esc(c.txt)}</span></td>`; }).join(""); const methods = scrDetail ? METHOD_COLS.map(([id]) => `<td>${esc(r.values[id]?.v || "—")}</td>`).join("") : ""; const dbsNo = r.values.dbsCert?.v || "—"; const clr = clearedOf(s.name); return `<tr><td class="v">${esc(s.name)}</td><td>${esc(s.role)}</td><td>${esc(s.op)}</td>${cells}${methods}<td>${esc(dbsNo)}</td><td><span class="badge ${clr ? "cleared" : "hold"}">${clr ? "Yes" : "On hold"}</span></td></tr>`; }).join("");
-    printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Single Central Record — ${esc(provider)}</title><style>${PRINT_CSS} td{font-size:11px} .k{color:#6b7086;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}</style></head><body><h1>${esc(provider)} — Single Central Record</h1><div class="sub">Safer-recruitment checks${scrDetail ? " · with verified dates & methods" : ""} · Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</div><table>${head}${body}</table><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
+    printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Single Central Record — ${esc(provider)}</title><style>${PRINT_CSS} td{font-size:11px} .k{color:#6b7086;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}</style></head><body><h1>${esc(provider)} — Single Central Record</h1><div class="sub">Safer-recruitment checks${scrDetail ? " · with verified dates & methods" : ""} · Generated ${new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" })}</div><table>${head}${body}</table><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
   };
 
   // ——— slideshow (one section per step) ———
@@ -435,7 +436,7 @@ export function OnboardingPanel() {
               <Select value={p.basis} onChange={(e) => write({ basis: e.target.value as PayVal["basis"] })} className="max-w-[130px]"><option value="hour">{t("team.perHour")}</option><option value="day">{t("team.perDay")}</option><option value="year">{t("team.annualSalary")}</option></Select>
               <div className="flex items-center gap-1"><span className="text-[13px] font-bold text-[var(--ink-3)]">£</span><Input inputMode="decimal" value={p.amount} onChange={(e) => write({ amount: e.target.value })} placeholder="0.00" className="w-[110px]" /></div>
               <div className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]"><Input inputMode="decimal" value={p.hpw} onChange={(e) => write({ hpw: e.target.value })} placeholder={t("team.hrsPlaceholder")} className="w-[64px]" />{t("team.hrsPerWeek")}</div>
-              <label className="flex cursor-pointer items-center gap-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"><span onClick={() => write({ auto: !p.auto })} className={"grid h-4 w-7 items-center rounded-full px-0.5 transition-colors " + (p.auto ? "bg-[#1d3a8f]" : "bg-[var(--line)]")}><span className={"h-3 w-3 rounded-full bg-white transition-transform " + (p.auto ? "translate-x-3" : "")} /></span>{t("team.autoCalc")}</label>
+              <label className="flex cursor-pointer items-center gap-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"><span onClick={() => write({ auto: !p.auto })} className={"grid h-4 w-7 items-center rounded-full px-0.5 transition-colors " + (p.auto ? "bg-[#1d3a8f]" : "bg-[var(--line)]")}><span className={"h-3 w-3 rounded-full bg-white transition-transform " + (p.auto ? "translate-x-3 rtl:-translate-x-3" : "")} /></span>{t("team.autoCalc")}</label>
             </div>
             {p.auto && p.amount && <div className="rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]">≈ {gbp(d.hourly)}/hour · {gbp(d.annual)}/year · {gbp(d.monthly)}/month</div>}
           </div>
@@ -457,7 +458,7 @@ export function OnboardingPanel() {
         // Long options (e.g. the HMRC employee statement) truncate when the native
         // select is collapsed — show the full chosen text wrapped underneath, with
         // any leading "A — " / "Plan 1 — " marker emphasised so it reads at a glance.
-        const readback = inList && v.length > 48 ? (() => { const m = v.match(/^(\S+)\s+—\s+([\s\S]+)/); return <div className="rounded-lg bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-snug text-[var(--ink-2)]">{m ? <><span className="mr-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[10px] font-extrabold text-white">{m[1]}</span>{m[2]}</> : v}</div>; })() : null;
+        const readback = inList && v.length > 48 ? (() => { const m = v.match(/^(\S+)\s+—\s+([\s\S]+)/); return <div className="rounded-lg bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-snug text-[var(--ink-2)]">{m ? <><span className="me-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[10px] font-extrabold text-white">{m[1]}</span>{m[2]}</> : v}</div>; })() : null;
         return (<div className="space-y-1.5"><Select value={selectVal} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">{t("team.chooseEllipsis")}</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</Select>{readback}{showOther && <Input value={v === "Other" ? "" : v} onChange={(e) => setVal(f.id, { v: e.target.value })} placeholder={t("team.typeItHere")} className="w-full" />}</div>);
       })() : f.type === "availability" ? (() => {
         const av = parseAvail(val?.v);
@@ -517,7 +518,7 @@ export function OnboardingPanel() {
             <button key={k} type="button" onClick={() => setMode(k)} className={"rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors " + (mode === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}</button>
           ))}
         </div>
-        <Button className="ml-auto" onClick={() => setCfg(true)}>{t("team.requirements")}</Button>
+        <Button className="ms-auto" onClick={() => setCfg(true)}>{t("team.requirements")}</Button>
       </div>
       {ob.error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c0392b]">{ob.error}</div>}
       {ob.backup.length > 0 && (
@@ -534,12 +535,12 @@ export function OnboardingPanel() {
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <div><div className="text-[14px] font-extrabold text-[var(--ink)]">{t("team.singleCentralRecord")}</div><div className="text-[12px] text-[var(--ink-3)]">{t("team.scrSubtitle")}</div></div>
-            <button type="button" onClick={() => setScrDetail((v) => !v)} className={"ml-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors " + (scrDetail ? "border-[#1d3a8f] bg-[#eaf1ff] text-[#1d3a8f]" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:border-[#1d3a8f]")}><span className={"grid h-4 w-7 items-center rounded-full px-0.5 transition-colors " + (scrDetail ? "bg-[#1d3a8f]" : "bg-[var(--line)]")}><span className={"h-3 w-3 rounded-full bg-white transition-transform " + (scrDetail ? "translate-x-3" : "")} /></span>{t("team.datesAndMethods")}</button>
+            <button type="button" onClick={() => setScrDetail((v) => !v)} className={"ms-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors " + (scrDetail ? "border-[#1d3a8f] bg-[#eaf1ff] text-[#1d3a8f]" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:border-[#1d3a8f]")}><span className={"grid h-4 w-7 items-center rounded-full px-0.5 transition-colors " + (scrDetail ? "bg-[#1d3a8f]" : "bg-[var(--line)]")}><span className={"h-3 w-3 rounded-full bg-white transition-transform " + (scrDetail ? "translate-x-3 rtl:-translate-x-3" : "")} /></span>{t("team.datesAndMethods")}</button>
             <Button variant="primary" onClick={exportSCR}>{t("team.printExport")}</Button>
           </div>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
             <table className="w-full text-[12.5px]">
-              <thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{t("team.staffCol")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.roleCol")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.locationCol")}</th>{SCR_COLS.map(([, l]) => <th key={l} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{l}</th>)}{scrDetail && METHOD_COLS.map(([, l]) => <th key={l} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{l}</th>)}<th className="px-3 py-2.5 font-extrabold">{t("team.dbsNo")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.clearedCol")}</th></tr></thead>
+              <thead><tr className="bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{t("team.staffCol")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.roleCol")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.locationCol")}</th>{SCR_COLS.map(([, l]) => <th key={l} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{l}</th>)}{scrDetail && METHOD_COLS.map(([, l]) => <th key={l} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{l}</th>)}<th className="px-3 py-2.5 font-extrabold">{t("team.dbsNo")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.clearedCol")}</th></tr></thead>
               <tbody>{TEAM.map((s) => { const r = ob.recordFor(s.name); const cl = clearedOf(s.name); return (
                 <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]">
                   <td className="px-3 py-2.5"><button type="button" onClick={() => { setSel(s.name); setMode("records"); }} className="font-bold text-[#1d3a8f] hover:underline">{s.name}</button></td>
@@ -572,8 +573,8 @@ export function OnboardingPanel() {
         {/* roster */}
         <div className="space-y-2">
           {TEAM.map((s) => { const p = progressOf(s.name); const cl = clearedOf(s.name); const on = s.name === sel; return (
-            <button key={s.name} type="button" onClick={() => setSel(s.name)} className={"block w-full rounded-xl border p-3 text-left transition-colors " + (on ? "border-[#1d3a8f] bg-[#eef4ff]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[#1d3a8f]")}>
-              <div className="flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">{s.name}</span>{cl ? <span className="ml-auto rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#0f7a43]">{t("team.clearedShort")}</span> : <span className="ml-auto rounded-full bg-[#fdf3e0] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#8a5a09]">{t("team.onHold")}</span>}</div>
+            <button key={s.name} type="button" onClick={() => setSel(s.name)} className={"block w-full rounded-xl border p-3 text-start transition-colors " + (on ? "border-[#1d3a8f] bg-[#eef4ff]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[#1d3a8f]")}>
+              <div className="flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">{s.name}</span>{cl ? <span className="ms-auto rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#0f7a43]">{t("team.clearedShort")}</span> : <span className="ms-auto rounded-full bg-[#fdf3e0] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#8a5a09]">{t("team.onHold")}</span>}</div>
               <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{s.role} · {s.op}</div>
               <div className="mt-1.5 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className={"h-full rounded-full " + (p.pct === 100 ? "bg-[#0f9d58]" : "bg-[#3f7ae0]")} style={{ width: `${p.pct}%` }} /></div><span className="text-[10.5px] font-bold tabular-nums text-[var(--ink-3)]">{p.pct}%</span></div>
             </button>
@@ -584,7 +585,7 @@ export function OnboardingPanel() {
         <div className="min-w-0 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
           <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-4 py-3">
             <div><div className="text-[16px] font-extrabold text-[var(--ink)]">{sel}</div><div className="text-[12px] text-[var(--ink-3)]">{staff?.role} · {staff?.op}</div></div>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ms-auto flex items-center gap-2">
               {cleared ? <span className="rounded-full bg-[#e6f4ea] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a43]">{t("team.clearedToStartCheck")}</span> : <span className="rounded-full bg-[#fdf3e0] px-2.5 py-1 text-[11.5px] font-extrabold text-[#8a5a09]">{t("team.startOnHoldWait")}</span>}
               <Button onClick={exportPack}>{t("team.exportPack")}</Button>
             </div>
@@ -614,7 +615,7 @@ export function OnboardingPanel() {
             <div className="relative flex items-center gap-3">
               <div className="grid h-14 w-14 flex-none place-items-center rounded-2xl bg-white/20 text-[28px] leading-none backdrop-blur">{curIcon}</div>
               <div className="min-w-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-white/80">Step {curStep + 1} of {activeSections.length}</div><div className="text-[20px] font-extrabold leading-tight" style={{ textWrap: "balance" } as React.CSSProperties}>{curLabel}</div></div>
-              <div className="ml-auto flex-none text-right"><div className="text-[24px] font-extrabold leading-none tabular-nums">{sectionDone(curSid).d}/{sectionDone(curSid).t}</div><div className="mt-0.5 text-[10px] text-white/80">completed</div></div>
+              <div className="ms-auto flex-none text-end"><div className="text-[24px] font-extrabold leading-none tabular-nums">{sectionDone(curSid).d}/{sectionDone(curSid).t}</div><div className="mt-0.5 text-[10px] text-white/80">completed</div></div>
             </div>
           </div>
 
@@ -638,13 +639,13 @@ export function OnboardingPanel() {
               <Button onClick={() => setAddOpen((v) => !v)}>{t("team.addItem")}</Button>
               {addOpen && (
                 <div className="absolute bottom-full z-20 mb-1 max-h-[260px] w-[280px] overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
-                  {hiddenFields.length ? hiddenFields.map((f) => <button key={f.id} type="button" onClick={() => { ob.upsertRecord({ ...rec, extra: [...rec.extra, f.id] }); setAddOpen(false); }} className="block w-full truncate rounded-lg px-3 py-1.5 text-left text-[12px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.label} <span className="text-[10px] text-[var(--ink-3)]">· {SECTIONS.find((s) => s[0] === f.section)?.[1]}</span></button>) : <div className="px-3 py-2 text-[12px] text-[var(--ink-3)]">{t("team.everyItemApplies", { name: sel.split(" ")[0] })}</div>}
+                  {hiddenFields.length ? hiddenFields.map((f) => <button key={f.id} type="button" onClick={() => { ob.upsertRecord({ ...rec, extra: [...rec.extra, f.id] }); setAddOpen(false); }} className="block w-full truncate rounded-lg px-3 py-1.5 text-start text-[12px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.label} <span className="text-[10px] text-[var(--ink-3)]">· {SECTIONS.find((s) => s[0] === f.section)?.[1]}</span></button>) : <div className="px-3 py-2 text-[12px] text-[var(--ink-3)]">{t("team.everyItemApplies", { name: sel.split(" ")[0] })}</div>}
                 </div>
               )}
             </div>
             {curStep < activeSections.length - 1
-              ? <Button variant="primary" className="ml-auto" onClick={() => setStep((s) => Math.min(activeSections.length - 1, s + 1))}>{t("team.nextColon")} {activeSections[curStep + 1][1]} →</Button>
-              : <span className="ml-auto text-[12px] font-bold text-[var(--ink-3)]">{t("team.finalStep")}</span>}
+              ? <Button variant="primary" className="ms-auto" onClick={() => setStep((s) => Math.min(activeSections.length - 1, s + 1))}>{t("team.nextColon")} {activeSections[curStep + 1][1]} →</Button>
+              : <span className="ms-auto text-[12px] font-bold text-[var(--ink-3)]">{t("team.finalStep")}</span>}
           </div>
           <p className="px-4 pb-4 text-[11px] text-[var(--ink-3)]">{t("team.certsTrackedPre")}<b>{t("team.teamStaffCerts")}</b>{t("team.certsTrackedPost")}</p>
         </div>
@@ -655,9 +656,9 @@ export function OnboardingPanel() {
       {showDecl && (
         <div className="fixed inset-0 z-[142] flex items-center justify-center bg-black/45 p-4" onClick={() => setShowDecl(false)}>
           <div className="flex max-h-[86vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("team.disqualExampleTitle")}</h3><button type="button" onClick={() => setShowDecl(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div><p className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{t("team.disqualPrintNote")}</p></div>
+            <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("team.disqualExampleTitle")}</h3><button type="button" onClick={() => setShowDecl(false)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div><p className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{t("team.disqualPrintNote")}</p></div>
             <div className="flex-1 overflow-y-auto px-5 py-4"><pre className="whitespace-pre-wrap font-sans text-[12.5px] leading-relaxed text-[var(--ink)]">{DISQUAL_DECLARATION}</pre></div>
-            <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><span className="text-[11px] text-[var(--ink-3)]">{provider}</span><Button className="ml-auto" onClick={() => setShowDecl(false)}>{t("team.close")}</Button><Button variant="primary" onClick={() => printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Disqualification declaration</title><style>body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:34px;max-width:720px;margin:0 auto}h1{font-size:16px}pre{white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.7}</style></head><body><h1>${esc(provider)}</h1><pre>${esc(DISQUAL_DECLARATION)}</pre><script>window.onload=function(){setTimeout(function(){window.print()},300)}</script></body></html>`)}>{t("team.print")}</Button></div>
+            <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><span className="text-[11px] text-[var(--ink-3)]">{provider}</span><Button className="ms-auto" onClick={() => setShowDecl(false)}>{t("team.close")}</Button><Button variant="primary" onClick={() => printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Disqualification declaration</title><style>body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:34px;max-width:720px;margin:0 auto}h1{font-size:16px}pre{white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.7}</style></head><body><h1>${esc(provider)}</h1><pre>${esc(DISQUAL_DECLARATION)}</pre><script>window.onload=function(){setTimeout(function(){window.print()},300)}</script></body></html>`)}>{t("team.print")}</Button></div>
           </div>
         </div>
       )}
@@ -680,7 +681,7 @@ function RequirementsModal({ team, fields, onSave, onClose, accessRoles, jobTitl
   return (
     <div className="fixed inset-0 z-[141] flex justify-center overflow-y-auto bg-black/45 p-4 pt-[4vh]" onClick={onClose}>
       <div className="flex max-h-[90vh] w-full max-w-2xl select-none flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("team.onboardingRequirements")}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div><p className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{t("team.requirementsHelpPre")}<b>{t("team.appliesToBold")}</b>{t("team.requirementsHelpPost")}</p></div>
+        <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("team.onboardingRequirements")}</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div><p className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{t("team.requirementsHelpPre")}<b>{t("team.appliesToBold")}</b>{t("team.requirementsHelpPost")}</p></div>
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {SECTIONS.map(([sid, slabel, sicon]) => { const fs = list.filter((f) => f.section === sid); if (!fs.length) return null; return (
             <div key={sid} className="mb-4">
@@ -689,16 +690,16 @@ function RequirementsModal({ team, fields, onSave, onClose, accessRoles, jobTitl
                 {fs.map((f) => (
                   <div key={f.id} className="rounded-lg border border-[var(--line)] p-2.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[12.5px] font-semibold text-[var(--ink)]">{f.label}{f.gate && <span title={t("team.gatesClearedTitle")} className="ml-1 text-[10px]">🚦</span>}</span>
-                      <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={f.required} onChange={(e) => patch(f.id, { required: e.target.checked })} className="h-3.5 w-3.5 accent-[#1d3a8f]" />{t("team.required")}</label>
+                      <span className="text-[12.5px] font-semibold text-[var(--ink)]">{f.label}{f.gate && <span title={t("team.gatesClearedTitle")} className="ms-1 text-[10px]">🚦</span>}</span>
+                      <label className="ms-auto flex cursor-pointer items-center gap-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={f.required} onChange={(e) => patch(f.id, { required: e.target.checked })} className="h-3.5 w-3.5 accent-[#1d3a8f]" />{t("team.required")}</label>
                       <Select value={f.applyKind} onChange={(e) => patch(f.id, { applyKind: e.target.value as OnboardField["applyKind"] })} className="max-w-[130px]"><option value="all">{t("team.allStaff")}</option><option value="roles">{t("team.certainRoles")}</option><option value="staff">{t("team.namedPeople")}</option></Select>
                       {f.custom && <button type="button" onClick={() => del(f.id)} title={t("team.deleteWord")} className="text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>}
                     </div>
                     {f.applyKind === "roles" && (
                       <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                        {accessRoles.length > 0 && <span className="mr-0.5 rounded bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#5b6577]">{t("team.accessBadge")}</span>}
+                        {accessRoles.length > 0 && <span className="me-0.5 rounded bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#5b6577]">{t("team.accessBadge")}</span>}
                         {accessRoles.map((r) => <button key={r} type="button" onClick={() => toggleRole(f.id, r)} className={"rounded-full border px-2 py-0.5 text-[10.5px] font-bold " + ((f.applyRoles ?? []).includes(r) ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)]")}>{r}</button>)}
-                        {jobTitles.length > 0 && <span className="ml-1 mr-0.5 rounded bg-[#eaf1ff] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#1d54c4]">{t("team.jobBadge")}</span>}
+                        {jobTitles.length > 0 && <span className="ms-1 me-0.5 rounded bg-[#eaf1ff] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#1d54c4]">{t("team.jobBadge")}</span>}
                         {jobTitles.map((r) => <button key={r} type="button" onClick={() => toggleRole(f.id, r)} className={"rounded-full border px-2 py-0.5 text-[10.5px] font-bold " + ((f.applyRoles ?? []).includes(r) ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)]")}>{r}</button>)}
                         {!accessRoles.length && !jobTitles.length && <span className="text-[11px] text-[var(--ink-3)]">{t("team.addRolesFirst")}</span>}
                       </div>
@@ -719,7 +720,7 @@ function RequirementsModal({ team, fields, onSave, onClose, accessRoles, jobTitl
             </div>
           </div>
         </div>
-        <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><span className="text-[11.5px] text-[var(--ink-3)]">{t("team.requiredItemsCount", { required: list.filter((f) => f.required).length, total: list.length })}</span><Button className="ml-auto" onClick={onClose}>{t("team.cancel")}</Button><Button variant="primary" onClick={() => { onSave(list); onClose(); }}>{t("team.saveRequirements")}</Button></div>
+        <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><span className="text-[11.5px] text-[var(--ink-3)]">{t("team.requiredItemsCount", { required: list.filter((f) => f.required).length, total: list.length })}</span><Button className="ms-auto" onClick={onClose}>{t("team.cancel")}</Button><Button variant="primary" onClick={() => { onSave(list); onClose(); }}>{t("team.saveRequirements")}</Button></div>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -36,7 +37,7 @@ interface PaymentRecord {
 }
 
 const when = (iso: string) =>
-  new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export function PaymentsApp() {
   const [status, setStatus] = useState<Status | null>(null);
@@ -93,7 +94,7 @@ export function PaymentsApp() {
                   ? "Stripe still needs some details before you can take payments — resume below."
                   : "A few minutes with Stripe: identity, business details and where payouts go."}
               {status?.platformFallback && !ready && (
-                <span className="ml-1 font-bold text-[#9a5a00]">
+                <span className="ms-1 font-bold text-[#9a5a00]">
                   (Dev mode: test payments still work meanwhile via the platform account.)
                 </span>
               )}

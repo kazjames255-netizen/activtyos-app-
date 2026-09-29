@@ -77,7 +77,7 @@ export function TourLauncher({ view, portal: portalProp, custom, compact }: { vi
               type="button"
               onClick={() => setOpen(false)}
               aria-label={t("common.closeWalkthrough")}
-              style={{ position: "absolute", top: 12, right: 12, zIndex: 5, width: 34, height: 34, borderRadius: 999, border: "1px solid #e6ebf5", background: "#fff", color: "#3a4a68", fontSize: 18, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}
+              style={{ position: "absolute", top: 12, insetInlineEnd: 12, zIndex: 5, width: 34, height: 34, borderRadius: 999, border: "1px solid #e6ebf5", background: "#fff", color: "#3a4a68", fontSize: 18, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}
             >
               ×
             </button>

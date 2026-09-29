@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiPublic } from "@/lib/api";
@@ -94,8 +95,8 @@ const TESTIMONIALS: { quote: string; initials: string; name: string; role: strin
 
 interface Slot { iso: string; durationMins: number }
 
-const dayFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" });
-const timeFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
+const dayFmt = new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" });
+const timeFmt = new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
 const ukDateKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" });
 
 // Site tokens (public/v2/activly.css :root) — kept as JS constants only
@@ -287,7 +288,7 @@ export default function DemoPage() {
                       ) : Object.keys(slotsByDay).length === 0 ? (
                         <div style={{ fontSize: 12.5, color: INK3, padding: "8px 0" }}>No open times right now — leave your details below and we&rsquo;ll reach out to find one.</div>
                       ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 220, overflowY: "auto", paddingRight: 2 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 220, overflowY: "auto", paddingInlineEnd: 2 }}>
                           {Object.entries(slotsByDay).map(([day, daySlots]) => (
                             <div key={day}>
                               <div style={{ fontSize: 11, fontWeight: 800, color: INK3, marginBottom: 5 }}>{dayFmt.format(new Date(daySlots[0].iso))}</div>
@@ -328,7 +329,7 @@ export default function DemoPage() {
                           const on = features.includes(c.label);
                           return (
                             <button key={c.label} type="button" onClick={() => toggleFeature(c.label)}
-                              style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left", background: on ? "#eaf0fc" : PANEL, border: `1px solid ${on ? BRAND : LINE}`, borderRadius: 10, padding: "9px 12px", cursor: "pointer" }}>
+                              style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "start", background: on ? "#eaf0fc" : PANEL, border: `1px solid ${on ? BRAND : LINE}`, borderRadius: 10, padding: "9px 12px", cursor: "pointer" }}>
                               <span aria-hidden style={{ width: 17, height: 17, borderRadius: 5, border: `1.5px solid ${on ? BRAND : INK3}`, background: on ? BRAND : "transparent", flex: "none", display: "grid", placeItems: "center", fontSize: 11, color: "#fff", fontWeight: 800 }}>{on ? "✓" : ""}</span>
                               <span style={{ fontSize: 13, fontWeight: 700, color: on ? INK : INK2 }}>{c.icon} {c.label}</span>
                             </button>

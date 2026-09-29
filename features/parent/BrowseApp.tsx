@@ -2,6 +2,7 @@
 // i18n + browse filters (age/season/date/distance), collapsible filter card,
 // price-basis, discount ribbon + payment chips. (touch to force clean recompile)
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
@@ -39,7 +40,7 @@ function liveCategories(listings: ListingSummary[] | null): string {
 }
 
 const fmtDay = (iso?: string) =>
-  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : null;
+  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" }) : null;
 
 // The age band a listing accepts, worded for either or both ends being open.
 function agesLabel(l: ListingSummary): string | null {
@@ -69,7 +70,7 @@ function runDatesByMonth(l: ListingSummary): { count: number; months: { label: s
   dates.forEach((d) => {
     const dt = new Date(`${d}T00:00:00Z`);
     if (Number.isNaN(dt.getTime())) return;
-    const key = dt.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+    const key = dt.toLocaleString(dl(), { month: "long", year: "numeric", timeZone: "UTC" });
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(dt.getUTCDate());
   });
@@ -416,11 +417,11 @@ export function BrowseApp() {
       <div className="mb-4 overflow-hidden rounded-2xl shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]">
         <div className="relative p-5 text-white" style={{ background: "linear-gradient(120deg,var(--brand) 0%,var(--brand-2) 100%)" }}>
           <button type="button" onClick={() => setFiltersOpen((v) => !v)} aria-expanded={filtersOpen}
-            className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold text-white transition hover:bg-white/25">
+            className="absolute end-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold text-white transition hover:bg-white/25">
             🔧 {filtersOpen ? t("parent.hideFilters") : t("parent.showFilters")}{!filtersOpen && filtersActive ? ` · ${activeCount}` : ""}
             <span className="text-[9px]" aria-hidden>{filtersOpen ? "▲" : "▼"}</span>
           </button>
-          <div className="flex items-center gap-2 pr-32 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+          <div className="flex items-center gap-2 pe-32 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🔎</span>{t("parent.browseActivitiesTitle")}
           </div>
           <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">
@@ -435,9 +436,9 @@ export function BrowseApp() {
       {visible.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <div className="relative min-w-[190px] flex-1">
-            <span aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
+            <span aria-hidden className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("parent.searchNameVenue")}
-              className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-3.5 text-[12.5px] shadow-[0_2px_8px_-4px_rgba(29,58,143,.25)] outline-none transition-colors focus:border-[var(--brand)]" />
+              className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-3.5 text-[12.5px] shadow-[0_2px_8px_-4px_rgba(29,58,143,.25)] outline-none transition-colors focus:border-[var(--brand)]" />
           </div>
           {allCats.length > 0 && (
             <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className={pill} aria-label={t("parent.filterByCategory")}>
@@ -520,7 +521,7 @@ export function BrowseApp() {
           <label className="inline-flex items-center gap-1.5 text-[12.5px] text-[var(--ink-2)]">
             <input type="checkbox" checked={availOnly} onChange={(e) => setAvailOnly(e.target.checked)} /> {t("parent.placesLeftOnly")}
           </label>
-          <span className="ml-auto flex items-center gap-1.5 text-[12px] text-[var(--ink-3)]">
+          <span className="ms-auto flex items-center gap-1.5 text-[12px] text-[var(--ink-3)]">
             {t("parent.sortLabel")}
             <select value={sort} onChange={(e) => setSort(e.target.value)} className={pill} aria-label={t("parent.sortBy")}>
               <option value="relevance">{myCoords ? t("parent.nearest") : t("parent.featured")}</option>
@@ -572,13 +573,13 @@ export function BrowseApp() {
                 )}
                 {/* Distance + opens-later, stacked top-left over the image. */}
                 {(dist != null || opensLater) && (
-                  <div className="absolute left-2.5 top-2.5 flex flex-col items-start gap-1.5">
+                  <div className="absolute start-2.5 top-2.5 flex flex-col items-start gap-1.5">
                     {dist != null && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-[4px] text-[11px] font-extrabold text-[var(--brand)] shadow-sm">🧭 {dist < 10 ? dist.toFixed(1) : Math.round(dist)} {t("parent.miAway")}</span>
                     )}
                     {opensLater && (
                       <span className="rounded-full bg-white/95 px-2.5 py-[4px] text-[11px] font-bold text-[#9a3412] shadow-sm">
-                        {t("parent.opensDate", { date: new Date(l.opensAt!).toLocaleString("en-GB", { day: "numeric", month: "short" }) })}
+                        {t("parent.opensDate", { date: new Date(l.opensAt!).toLocaleString(dl(), { day: "numeric", month: "short" }) })}
                       </span>
                     )}
                   </div>
@@ -589,7 +590,7 @@ export function BrowseApp() {
                     {t("parent.saveBadge", { n: l.bestOfferPercent })}
                   </span>
                 ) : null}
-                <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 px-3.5 py-2.5 text-left" style={{ background: "rgba(23,35,90,.62)" }}>
+                <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 px-3.5 py-2.5 text-start" style={{ background: "rgba(23,35,90,.62)" }}>
                   <div className="min-w-0">
                     <div className="truncate text-[15px] font-extrabold text-white">{l.title || l.name}</div>
                     <div className="truncate text-[11.5px] text-[#cdddf7]">{l.tenantName} · {t("parent.fromWord")} {money(from)} <span className="opacity-90">/ {priceBasis(l)}</span></div>
@@ -601,7 +602,7 @@ export function BrowseApp() {
                         <span className="group/date relative whitespace-nowrap rounded-full bg-[#c9f24a] px-2 py-0.5 text-[11px] font-extrabold text-[#2a3400] shadow-sm">
                           📅 {dateRange(l)}
                           {rd.count > 0 && (
-                            <span className="pointer-events-none absolute bottom-full right-0 z-40 mb-2 hidden w-[230px] max-w-[80vw] rounded-xl bg-white p-3 text-left text-[var(--ink)] shadow-[0_16px_40px_-8px_rgba(15,23,42,.5)] ring-1 ring-black/5 group-hover/date:block">
+                            <span className="pointer-events-none absolute bottom-full end-0 z-40 mb-2 hidden w-[230px] max-w-[80vw] rounded-xl bg-white p-3 text-start text-[var(--ink)] shadow-[0_16px_40px_-8px_rgba(15,23,42,.5)] ring-1 ring-black/5 group-hover/date:block">
                               <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-[var(--brand)]">{t("parent.datesItRuns", { n: rd.count })}</span>
                               {rd.months.map((m) => (
                                 <span key={m.label} className="mb-1.5 block last:mb-0">
@@ -611,7 +612,7 @@ export function BrowseApp() {
                                   </span>
                                 </span>
                               ))}
-                              <span className="absolute right-4 top-full block h-2 w-2 -translate-y-1 rotate-45 bg-white ring-1 ring-black/5" />
+                              <span className="absolute end-4 top-full block h-2 w-2 -translate-y-1 rotate-45 bg-white ring-1 ring-black/5" />
                             </span>
                           )}
                         </span>

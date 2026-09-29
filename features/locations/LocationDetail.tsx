@@ -41,7 +41,7 @@ export function LocationDetail({ venue, onBack }: { venue: Venue; venues: Venue[
           <div className="flex gap-1.5 overflow-x-auto lg:flex-col">
             {TABS.map(([t, lbl]) => (
               <button key={t} type="button" onClick={() => setTab(t)}
-                className={"whitespace-nowrap rounded-xl px-3.5 py-2.5 text-left text-[13.5px] font-bold transition-colors " + (tab === t ? "bg-[#eef4fd] text-[#1d3a8f]" : "text-[var(--ink-2)] hover:bg-[var(--panel)]")}
+                className={"whitespace-nowrap rounded-xl px-3.5 py-2.5 text-start text-[13.5px] font-bold transition-colors " + (tab === t ? "bg-[#eef4fd] text-[#1d3a8f]" : "text-[var(--ink-2)] hover:bg-[var(--panel)]")}
                 style={tab === t ? { boxShadow: "inset 3px 0 0 #2f6bd8" } : undefined}>{lbl}</button>
             ))}
           </div>

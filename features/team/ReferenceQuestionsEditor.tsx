@@ -76,7 +76,7 @@ export function ReferenceQuestionsEditor({ sections, onSave, onClose }: {
         <div className="flex-none border-b border-[var(--line)] px-5 py-3.5">
           <div className="flex items-center gap-2">
             <h3 className="text-[15px] font-extrabold text-[var(--ink)]">Reference questions</h3>
-            <button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button>
+            <button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button>
           </div>
           <p className="mt-0.5 text-[11.5px] leading-snug text-[var(--ink-3)]">
             What referees are asked. Changes apply to <b>new</b> requests — a reference already sent keeps the
@@ -88,7 +88,7 @@ export function ReferenceQuestionsEditor({ sections, onSave, onClose }: {
           {tried && problems.length > 0 && (
             <div className="rounded-xl border border-[#f3c2c2] bg-[#fdecec] px-3.5 py-2.5">
               <div className="text-[12px] font-extrabold text-[#a32020]">Can&rsquo;t save yet:</div>
-              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[11.5px] leading-snug text-[#8a2020]">
+              <ul className="mt-1 list-disc space-y-0.5 ps-4 text-[11.5px] leading-snug text-[#8a2020]">
                 {problems.map((p) => <li key={p}>{p}</li>)}
               </ul>
             </div>
@@ -136,7 +136,7 @@ export function ReferenceQuestionsEditor({ sections, onSave, onClose }: {
           <span className="text-[11.5px] text-[var(--ink-3)]">
             {list.reduce((a, s) => a + s.questions.length, 0)} questions · {LOCKED_IDS.length} safeguarding questions locked
           </span>
-          <Button className="ml-auto" onClick={onClose}>Cancel</Button>
+          <Button className="ms-auto" onClick={onClose}>Cancel</Button>
           <Button variant="primary" onClick={save}>Save questions</Button>
         </div>
       </div>
@@ -187,11 +187,11 @@ function QuestionRow({ q, open, onToggle, onPatch, onMove, onDelete }: {
   return (
     <div className={"rounded-lg border " + (q.locked ? "border-[#f3cfa6] bg-[#fffdfa]" : "border-[var(--line)]")}>
       <div className="flex flex-wrap items-center gap-2 px-2.5 py-2">
-        <button type="button" onClick={onToggle} className="min-w-0 flex-1 text-left">
+        <button type="button" onClick={onToggle} className="min-w-0 flex-1 text-start">
           <span className="text-[12.5px] font-semibold text-[var(--ink)]">{q.label || <i className="text-[var(--ink-3)]">Untitled question</i>}</span>
-          {q.locked && <span title="Safeguarding — can't be deleted" className="ml-1.5 text-[10px]">🔒</span>}
-          {q.required && <span className="ml-1 text-[#c0392b]">*</span>}
-          <span className="ml-1.5 text-[10px] text-[var(--ink-3)]">{KIND_LABEL[q.kind]}</span>
+          {q.locked && <span title="Safeguarding — can't be deleted" className="ms-1.5 text-[10px]">🔒</span>}
+          {q.required && <span className="ms-1 text-[#c0392b]">*</span>}
+          <span className="ms-1.5 text-[10px] text-[var(--ink-3)]">{KIND_LABEL[q.kind]}</span>
         </button>
         <div className="flex gap-1">
           <button type="button" title="Move up" onClick={() => onMove(-1)} className="rounded-md px-1.5 text-[12px] text-[var(--ink-3)] hover:text-[var(--ink)]">▲</button>

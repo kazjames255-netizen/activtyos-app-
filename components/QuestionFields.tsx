@@ -59,7 +59,7 @@ export function QuestionFields({
             <div key={q.id} className={q.type === "text" ? "sm:col-span-2" : undefined}>
               <FieldLabel>
                 {q.label}
-                {q.required && <span className="ml-1 text-[var(--red,#e21d27)]">*</span>}
+                {q.required && <span className="ms-1 text-[var(--red,#e21d27)]">*</span>}
               </FieldLabel>
 
               {q.type === "text" && (

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useSearchParams } from "next/navigation";
@@ -61,7 +62,7 @@ const COPY = {
 const SEV = { minor: { label: "Minor", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { label: "Moderate", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "Serious", bg: "#fdebec", fg: "#c02636" } } as const;
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const nowTime = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${p(t.getHours())}:${p(t.getMinutes())}`; };
-const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
+const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
 
 type Draft = Partial<Log> & { kind: Kind; date: string; childName: string; description: string };
 const emptyDraft = (kind: Kind): Draft => ({ kind, date: todayIso(), time: nowTime(), childName: "", description: "", severity: "minor", parentNotified: false });
@@ -282,7 +283,7 @@ function LogForm({ kind, notifies, existing, initialChild, onSaved, onCancel }: 
               <FieldLabel>Share with the parent?</FieldLabel>
               <div className="mt-1 grid gap-1.5 sm:grid-cols-2">
                 {([[true, "📤 Share with parent", "Emails + shows it in their area"], [false, "🔒 Keep internal", "Stays with the team only"]] as [boolean, string, string][]).map(([v, t, sub]) => (
-                  <button key={String(v)} type="button" onClick={() => set({ shareWithParent: v })} className="rounded-xl border-2 px-3 py-2.5 text-left transition-colors"
+                  <button key={String(v)} type="button" onClick={() => set({ shareWithParent: v })} className="rounded-xl border-2 px-3 py-2.5 text-start transition-colors"
                     style={!!d.shareWithParent === v ? { borderColor: "#1d3a8f", background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                     <div className="text-[12.5px] font-extrabold" style={{ color: !!d.shareWithParent === v ? "#1d3a8f" : "var(--ink-2)" }}>{t}</div>
                     <div className="text-[11px] text-[var(--ink-3)]">{sub}</div>
@@ -292,7 +293,7 @@ function LogForm({ kind, notifies, existing, initialChild, onSaved, onCancel }: 
               {d.shareWithParent && (
                 <div className="mt-2.5 rounded-lg border border-[#cfe0f7] bg-[#f5f9ff] p-2.5">
                   <FieldLabel>Attach a file for the parent (optional)</FieldLabel>
-                  <input type="file" accept="image/*" multiple onChange={(e) => attach(e.target.files)} className="mt-1 block w-full text-[12px] text-[var(--ink-2)] file:mr-2 file:rounded-md file:border-0 file:bg-[#eef4fd] file:px-2.5 file:py-1 file:text-[12px] file:font-bold file:text-[#1d3a8f]" />
+                  <input type="file" accept="image/*" multiple onChange={(e) => attach(e.target.files)} className="mt-1 block w-full text-[12px] text-[var(--ink-2)] file:me-2 file:rounded-md file:border-0 file:bg-[#eef4fd] file:px-2.5 file:py-1 file:text-[12px] file:font-bold file:text-[#1d3a8f]" />
                   {uploading && <div className="mt-1 text-[11px] text-[var(--ink-3)]">Uploading…</div>}
                   {(d.attachments?.length ?? 0) > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -310,7 +311,7 @@ function LogForm({ kind, notifies, existing, initialChild, onSaved, onCancel }: 
               <FieldLabel>This is an edit — how should the parent see it?</FieldLabel>
               <div className="mt-1 grid gap-1.5 sm:grid-cols-2">
                 {([[true, "🔔 Alert the parent", "Email + bell them about the change"], [false, "🙈 Just update their profile", "Change quietly, no alert sent"]] as [boolean, string, string][]).map(([v, t, sub]) => (
-                  <button key={String(v)} type="button" onClick={() => set({ notifyParentOfEdit: v })} className="rounded-xl border-2 px-3 py-2.5 text-left transition-colors"
+                  <button key={String(v)} type="button" onClick={() => set({ notifyParentOfEdit: v })} className="rounded-xl border-2 px-3 py-2.5 text-start transition-colors"
                     style={(d.notifyParentOfEdit ?? true) === v ? { borderColor: "#1d3a8f", background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                     <div className="text-[12.5px] font-extrabold" style={{ color: (d.notifyParentOfEdit ?? true) === v ? "#1d3a8f" : "var(--ink-2)" }}>{t}</div>
                     <div className="text-[11px] text-[var(--ink-3)]">{sub}</div>
@@ -460,7 +461,7 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
                 <button key={label} type="button" onClick={() => setSevFilter(id)} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
                   style={sevFilter === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{label}</button>
               ))}
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search child or details…" className="ml-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search child or details…" className="ms-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {kind === "accident" && injuries.length > 0 && (
@@ -475,7 +476,7 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
                   style={ackFilter === id ? { borderColor: "#0f7a43", background: "#e7f6ee", color: "#0f7a43" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{label}</button>
               ))}
               {anyFilter && <button type="button" onClick={() => { setSevFilter(""); setInjuryFilter(""); setDateFilter(""); setAckFilter(""); setQ(""); }} className="text-[12px] font-bold text-[#1d3a8f] underline">Clear filters</button>}
-              <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{shown.length} of {all.length}</span>
+              <span className="ms-auto text-[11.5px] text-[var(--ink-3)]">{shown.length} of {all.length}</span>
             </div>
           </div>
         );
@@ -508,7 +509,7 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
                         <span className="text-[11px] text-[var(--ink-3)]">{fmtDate(l.date)}{l.time ? ` · ${l.time}` : ""}</span>
                       </div>
                       <p className="mt-0.5 line-clamp-2 max-w-[640px] text-[12.5px] leading-snug text-[var(--ink-2)]">{l.description}</p>
-                      {l.followUp && <p className="mt-1 max-w-[640px] line-clamp-1 text-[11.5px] leading-snug"><span className="mr-1 rounded bg-[#fff6df] px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#9a5a00]">Follow-up</span><span className="text-[var(--ink-2)]">{l.followUp}</span></p>}
+                      {l.followUp && <p className="mt-1 max-w-[640px] line-clamp-1 text-[11.5px] leading-snug"><span className="me-1 rounded bg-[#fff6df] px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#9a5a00]">Follow-up</span><span className="text-[var(--ink-2)]">{l.followUp}</span></p>}
                     </div>
                     <div className="flex flex-wrap items-center gap-1 sm:max-w-[46%] sm:justify-end">
                       {l.restricted ? <Badge tone={{ bg: "#f3e8ff", fg: "#6d28d9" }}>🔒 {l.statusLabel ?? "With the safeguarding lead"}</Badge> : <Badge tone={{ bg: sev.bg, fg: sev.fg }}>{sev.label}</Badge>}
@@ -536,11 +537,11 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
                         {l.incidentType && <div><span className="text-[var(--ink-3)]">Type: </span><b>{l.incidentType}</b></div>}
                         {l.actionTaken && <div><span className="text-[var(--ink-3)]">Action: </span><b>{l.actionTaken}</b></div>}
                         {l.witnesses && <div><span className="text-[var(--ink-3)]">Witnesses: </span><b>{l.witnesses}</b></div>}
-                        {l.parentNotifiedAt && <div><span className="text-[var(--ink-3)]">Parent informed: </span><b>{new Date(l.parentNotifiedAt).toLocaleString("en-GB")}</b></div>}
-                        {l.acknowledgedAt && <div><span className="text-[var(--ink-3)]">Parent acknowledged: </span><b>{new Date(l.acknowledgedAt).toLocaleString("en-GB")}{l.acknowledgedBy ? ` · ${l.acknowledgedBy}` : ""}</b></div>}
+                        {l.parentNotifiedAt && <div><span className="text-[var(--ink-3)]">Parent informed: </span><b>{new Date(l.parentNotifiedAt).toLocaleString(dl())}</b></div>}
+                        {l.acknowledgedAt && <div><span className="text-[var(--ink-3)]">Parent acknowledged: </span><b>{new Date(l.acknowledgedAt).toLocaleString(dl())}{l.acknowledgedBy ? ` · ${l.acknowledgedBy}` : ""}</b></div>}
                         {l.recordedByName && <div><span className="text-[var(--ink-3)]">Recorded by: </span><b>{l.recordedByName}</b></div>}
                         {l.followUp && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Follow-up: </span><b>{l.followUp}</b></div>}
-                        {(l.attachments?.length ?? 0) > 0 && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Attachments: </span>{l.attachments!.map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer" className="mr-2 font-bold text-[#1d3a8f] underline">📎 file {i + 1}</a>)}</div>}
+                        {(l.attachments?.length ?? 0) > 0 && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Attachments: </span>{l.attachments!.map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer" className="me-2 font-bold text-[#1d3a8f] underline">📎 file {i + 1}</a>)}</div>}
                       </div>
                       <NotesThread id={l.id} notes={l.notes} side="staff" onAdded={refresh} />
                     </>

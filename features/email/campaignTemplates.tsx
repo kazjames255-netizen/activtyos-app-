@@ -12,6 +12,7 @@
 // background so any palette stays legible.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useRef, useState, type PointerEvent as RPE } from "react";
 import { post as apiPost, get as apiGet } from "@/lib/api";
 import { downscaleImage, type Company } from "@/features/newsfeed/newsletter";
@@ -219,7 +220,7 @@ function renderBlock(b: Block, t: Theme, c?: Partial<Company>, now = 0): string 
       const parts: [string, number][] = diff != null ? [["Days", Math.floor(diff / 86400000)], ["Hrs", Math.floor((diff % 86400000) / 3600000)], ["Mins", Math.floor((diff % 3600000) / 60000)], ["Secs", Math.floor((diff % 60000) / 1000)]] : [];
       const boxFg = readable(t.onA);
       const boxes = parts.map(([lab, v]) => `<td style="padding:0 6px"><div style="background:${t.onA};color:${boxFg};border-radius:16px;padding:16px 8px;min-width:82px"><div style="font-size:48px;font-weight:900;line-height:1;font-family:Arial,Helvetica,sans-serif">${String(v).padStart(2, "0")}</div><div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.72;margin-top:6px">${lab}</div></div></td>`).join("");
-      const dateStr = !isNaN(target) ? new Date(target).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+      const dateStr = !isNaN(target) ? new Date(target).toLocaleString(dl(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
       return row(`<div style="background:${t.a};background-image:linear-gradient(160deg,${t.a},${t.aDark});border-radius:22px;box-shadow:0 22px 44px -26px ${t.aDeep};padding:30px 22px 34px;text-align:center"><div style="font-size:20px;font-weight:800;letter-spacing:.5px;color:${t.onA}">${esc(b.heading || "Hurry — offer ends soon")}</div>${diff != null ? `<table role="presentation" align="center" style="margin:18px auto 4px;border-collapse:separate"><tr>${boxes}</tr></table>` : `<div style="margin-top:12px;font-size:13px;color:${t.onAMut}">Set the date &amp; start time in the editor to show the countdown.</div>`}${dateStr ? `<div style="margin-top:10px;font-size:13px;font-weight:600;color:${t.onAMut}">Ends ${esc(dateStr)}</div>` : ""}${b.label ? `<div style="margin-top:18px">${btn(t.onA, readable(t.onA), b.label, b.url)}</div>` : ""}</div>`, "padding:14px 22px");
     }
     case "graph": {
@@ -442,9 +443,9 @@ function CropBox({ url, ix = 50, iy = 50, iz = 1, onChange }: { url: string; ix?
     <div className="space-y-1.5">
       <div onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up} className="relative h-44 w-full cursor-move touch-none select-none overflow-hidden rounded-lg bg-[#0b1020]">
         <img src={url} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${ix}% ${iy}%`, transform: `scale(${iz})`, transformOrigin: `${ix}% ${iy}%` }} />
-        <span className="pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white">✥ drag to reposition</span>
+        <span className="pointer-events-none absolute bottom-1.5 start-1.5 rounded bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white">✥ drag to reposition</span>
       </div>
-      <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-[var(--ink-3)]">Zoom</span><input type="range" min={1} max={3} step={0.02} value={iz} onChange={(e) => onChange({ iz: Number(e.target.value) })} className="flex-1" /><span className="w-8 text-right text-[10px] tabular-nums text-[var(--ink-3)]">{iz.toFixed(1)}×</span></div>
+      <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-[var(--ink-3)]">Zoom</span><input type="range" min={1} max={3} step={0.02} value={iz} onChange={(e) => onChange({ iz: Number(e.target.value) })} className="flex-1" /><span className="w-8 text-end text-[10px] tabular-nums text-[var(--ink-3)]">{iz.toFixed(1)}×</span></div>
     </div>
   );
 }
@@ -526,7 +527,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave, 
   const blockEditor = (b: Block) => {
     const k = b.k!;
     const hd = (label: string, val?: string, key: keyof Block = "heading") => <div><div className={lbl}>{label}</div><input value={(val ?? "") as string} onChange={(e) => patch(k, { [key]: e.target.value })} className={inputCls} /></div>;
-    const ta = (label: string, key: keyof Block = "body") => <div><div className="mb-0.5 flex items-center gap-2"><span className={lbl.replace("mb-0.5 ", "")}>{label}</span><button type="button" onClick={() => aiWrite(k, key, b.heading)} className="ml-auto text-[10.5px] font-extrabold text-[#7c3aed] hover:underline">{aiBusy === `${k}-${String(key)}` ? "✨ Writing…" : "✨ Help me write"}</button></div><textarea rows={3} value={(b[key] ?? "") as string} onChange={(e) => patch(k, { [key]: e.target.value })} className={inputCls} /></div>;
+    const ta = (label: string, key: keyof Block = "body") => <div><div className="mb-0.5 flex items-center gap-2"><span className={lbl.replace("mb-0.5 ", "")}>{label}</span><button type="button" onClick={() => aiWrite(k, key, b.heading)} className="ms-auto text-[10.5px] font-extrabold text-[#7c3aed] hover:underline">{aiBusy === `${k}-${String(key)}` ? "✨ Writing…" : "✨ Help me write"}</button></div><textarea rows={3} value={(b[key] ?? "") as string} onChange={(e) => patch(k, { [key]: e.target.value })} className={inputCls} /></div>;
     const styleBar = (defSize: number, defAlign: "left" | "center" | "right", showBold: boolean) => <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2">
       <div className="flex flex-wrap items-center gap-1.5">
         <select value={b.font ?? ""} onChange={(e) => patch(k, { font: e.target.value })} className={`${inputCls} h-8 flex-1 py-0`}>{FONT_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
@@ -534,7 +535,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave, 
         {showBold && <button type="button" onClick={() => patch(k, { bold: !b.bold })} className={`h-8 w-8 rounded-md border text-[13px] font-black ${b.bold ? "border-[#16306e] bg-[#16306e] text-white" : "border-[var(--line)] text-[var(--ink-2)]"}`}>B</button>}
         <button type="button" onClick={() => patch(k, { italic: !b.italic })} className={`h-8 w-8 rounded-md border text-[13px] font-black italic ${b.italic ? "border-[#16306e] bg-[#16306e] text-white" : "border-[var(--line)] text-[var(--ink-2)]"}`}>I</button>
       </div>
-      <div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Size</span><input type="range" min={11} max={40} step={1} value={b.fontSize || defSize} onChange={(e) => patch(k, { fontSize: Number(e.target.value) })} className="flex-1 accent-[#2f6bd8]" /><span className="w-9 text-right text-[10.5px] font-extrabold text-[var(--ink-2)]">{b.fontSize || defSize}px</span></div>
+      <div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Size</span><input type="range" min={11} max={40} step={1} value={b.fontSize || defSize} onChange={(e) => patch(k, { fontSize: Number(e.target.value) })} className="flex-1 accent-[#2f6bd8]" /><span className="w-9 text-end text-[10.5px] font-extrabold text-[var(--ink-2)]">{b.fontSize || defSize}px</span></div>
     </div>;
     switch (b.t) {
       case "header": return <div className="space-y-1.5">{hd("Business name", b.heading)}{hd("Tagline (optional)", b.subheading, "subheading")}</div>;
@@ -628,7 +629,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave, 
             {design && <div className="flex items-center overflow-hidden rounded-lg bg-white/15"><button type="button" onClick={undo} disabled={!history.length} title="Undo" className="px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/20 disabled:opacity-40">↶ Undo</button><span className="h-4 w-px bg-white/25" /><button type="button" onClick={redo} disabled={!future.length} title="Redo" className="px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/20 disabled:opacity-40">Redo ↷</button></div>}
             {design && <div className="relative">
               <button type="button" onClick={() => setColourOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/25"><span className="h-4 w-4 rounded-full border border-white/70" style={{ background: accentHex(design.accent) }} />Colour <span className="text-[9px]">{colourOpen ? "▲" : "▼"}</span></button>
-              {colourOpen && <div className="absolute right-0 top-full z-[60] mt-2 grid w-[188px] grid-cols-5 gap-1.5 rounded-xl border border-[var(--line)] bg-white p-2.5 shadow-2xl">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => { snapshot(); setDesign((d) => (d ? { ...d, accent: a.id } : d)); setColourOpen(false); }} title={a.name} className={`h-6 w-6 rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow hover:scale-110"}`} style={{ background: a.hex }} />)}</div>}
+              {colourOpen && <div className="absolute end-0 top-full z-[60] mt-2 grid w-[188px] grid-cols-5 gap-1.5 rounded-xl border border-[var(--line)] bg-white p-2.5 shadow-2xl">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => { snapshot(); setDesign((d) => (d ? { ...d, accent: a.id } : d)); setColourOpen(false); }} title={a.name} className={`h-6 w-6 rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow hover:scale-110"}`} style={{ background: a.hex }} />)}</div>}
             </div>}
             {design && <button type="button" onClick={() => onSave(design)} className="rounded-lg bg-white px-5 py-2 text-[13px] font-extrabold text-[#1d3a8f]">{saveLabel || "✓ I'm ready to send"}</button>}
             <button type="button" onClick={onCancel} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px] font-bold">×</button>
@@ -638,22 +639,22 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave, 
         {!design ? (
           <>
             <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] px-5 py-3">
-              <div className="relative mr-1"><span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search templates…" className="w-[200px] rounded-full border border-[var(--line)] bg-white py-1.5 pl-8 pr-3 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div>
-              <button type="button" onClick={() => { setQ(""); setCat(MY_CAT); }} className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition ${!ql && cat === MY_CAT ? "bg-[#16306e] text-white" : "border border-[#f0d68a] bg-[#fffaf0] text-[#9a6b00] hover:bg-[#fff4d9]"}`}>{MY_CAT}<span className="ml-1 opacity-60">{myTpls.length}</span></button>
-              {CATEGORIES.map((k) => <button key={k} type="button" onClick={() => { setQ(""); setCat(k); }} className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition ${!ql && cat === k ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{k}<span className="ml-1 opacity-60">{TEMPLATES.filter((t) => t.category === k).length}</span></button>)}
+              <div className="relative me-1"><span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search templates…" className="w-[200px] rounded-full border border-[var(--line)] bg-white py-1.5 ps-8 pe-3 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-2 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div>
+              <button type="button" onClick={() => { setQ(""); setCat(MY_CAT); }} className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition ${!ql && cat === MY_CAT ? "bg-[#16306e] text-white" : "border border-[#f0d68a] bg-[#fffaf0] text-[#9a6b00] hover:bg-[#fff4d9]"}`}>{MY_CAT}<span className="ms-1 opacity-60">{myTpls.length}</span></button>
+              {CATEGORIES.map((k) => <button key={k} type="button" onClick={() => { setQ(""); setCat(k); }} className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition ${!ql && cat === k ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{k}<span className="ms-1 opacity-60">{TEMPLATES.filter((t) => t.category === k).length}</span></button>)}
             </div>
             <div className="grid min-h-0 flex-1 justify-center gap-4 aos-scroll overflow-y-auto p-5" style={{ gridTemplateColumns: "repeat(auto-fill, 300px)" }}>
               {shownMy.map((s) => (
-                <div key={s.id} className="group relative w-[300px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
-                  <button type="button" onClick={() => startSaved(s)} className="block w-full text-left">
+                <div key={s.id} className="group relative w-[300px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-start transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
+                  <button type="button" onClick={() => startSaved(s)} className="block w-full text-start">
                     <div className="h-52 w-full overflow-hidden bg-white"><div style={{ width: 640, transform: "scale(0.4625)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: s.accent, blocks: s.blocks }, company, nowMs) }} /></div>
                     <div className="flex items-center justify-between border-t border-[var(--line)] px-3.5 py-2.5"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{s.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">My template · {s.blocks.length} sections</div></div><span className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">Use →</span></div>
                   </button>
-                  <button type="button" onClick={() => delMyTemplate(s.id)} title="Delete this saved template" className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-extrabold text-[#c02636] opacity-0 shadow ring-1 ring-black/10 transition group-hover:opacity-100 hover:bg-white">🗑</button>
+                  <button type="button" onClick={() => delMyTemplate(s.id)} title="Delete this saved template" className="absolute end-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-extrabold text-[#c02636] opacity-0 shadow ring-1 ring-black/10 transition group-hover:opacity-100 hover:bg-white">🗑</button>
                 </div>
               ))}
               {(ql || cat !== MY_CAT) && shown.map((t) => (
-                <button key={t.id} type="button" onClick={() => start(t.id)} className="group w-[300px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
+                <button key={t.id} type="button" onClick={() => start(t.id)} className="group w-[300px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-start transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
                   <div className="h-52 w-full overflow-hidden bg-white"><div style={{ width: 640, transform: "scale(0.4625)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: t.accentId, blocks: t.blocks() }, company, nowMs) }} /></div>
                   <div className="flex items-center justify-between border-t border-[var(--line)] px-3.5 py-2.5"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{t.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{t.category} · {t.blocks().length} sections</div></div><span className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">Use →</span></div>
                 </button>
@@ -674,7 +675,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave, 
                           <div key={b.k} className="group relative min-w-0" style={{ flex: `0 0 ${fw}`, maxWidth: fw }} onClick={(e) => { e.stopPropagation(); setSelKey(b.k!); }}>
                             <div dangerouslySetInnerHTML={{ __html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlockFramed(b, t2, company, nowMs)}</table>` }} />
                             <div className={`pointer-events-none absolute inset-0 transition ${selKey === b.k ? "ring-[3px] ring-inset ring-[#2f6bd8]" : "ring-2 ring-inset ring-transparent group-hover:ring-[#2f6bd8]/45"}`} />
-                            <div className={`absolute right-2 top-2 z-20 flex items-center gap-0.5 rounded-lg bg-white px-1 py-0.5 shadow-lg ring-1 ring-black/15 transition ${selKey === b.k ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                            <div className={`absolute end-2 top-2 z-20 flex items-center gap-0.5 rounded-lg bg-white px-1 py-0.5 shadow-lg ring-1 ring-black/15 transition ${selKey === b.k ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
                               <span className="px-1 text-[10px] font-extrabold text-[#5b6472]">{BLOCK_LABEL[b.t]}</span>
                               {rowBlocks.length > 1 && <button type="button" title="Swap left / right" onClick={(e) => { e.stopPropagation(); move(b.k!, rowBlocks.indexOf(b) === 0 ? 1 : -1); }} className={`${ctrlBtn} text-[#1d3a8f]`}>↔</button>}
                               <button type="button" title="Move up" onClick={(e) => { e.stopPropagation(); move(b.k!, -1); }} disabled={i === 0} className={ctrlBtn}>↑</button>
@@ -698,21 +699,21 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave, 
             </div>
 
             {/* zoom control */}
-            <div className="absolute right-5 top-4 z-30 flex items-center gap-1 rounded-full border border-white/70 bg-white/90 px-1.5 py-1 shadow-lg backdrop-blur">
+            <div className="absolute end-5 top-4 z-30 flex items-center gap-1 rounded-full border border-white/70 bg-white/90 px-1.5 py-1 shadow-lg backdrop-blur">
               <button type="button" onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))} className="flex h-6 w-6 items-center justify-center rounded-full text-[15px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">−</button>
               <span className="w-10 text-center text-[11.5px] font-extrabold tabular-nums text-[var(--ink-2)]">{Math.round(zoom * 100)}%</span>
               <button type="button" onClick={() => setZoom((z) => Math.min(1.6, Math.round((z + 0.1) * 10) / 10))} className="flex h-6 w-6 items-center justify-center rounded-full text-[15px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">+</button>
             </div>
 
             {/* add palette — docked on the side, doesn't cover the email; inserts where you clicked */}
-            {addOpen && <div className="absolute bottom-4 right-4 top-16 z-40 flex w-[300px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-20px_rgba(20,30,60,.55)] ring-1 ring-black/10" onClick={(e) => e.stopPropagation()}>
+            {addOpen && <div className="absolute bottom-4 end-4 top-16 z-40 flex w-[300px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-20px_rgba(20,30,60,.55)] ring-1 ring-black/10" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2 px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
                 <span className="text-[13px] font-extrabold">✦ Add a section</span>
-                <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-[10.5px] font-bold">{addIndex != null && addIndex < design.blocks.length ? `at position ${addIndex + 1}` : "at the end"}</span>
+                <span className="ms-auto rounded-full bg-white/20 px-2 py-0.5 text-[10.5px] font-bold">{addIndex != null && addIndex < design.blocks.length ? `at position ${addIndex + 1}` : "at the end"}</span>
                 <button type="button" onClick={() => { setAddOpen(false); setAddIndex(null); }} className="flex h-6 w-6 items-center justify-center rounded text-[16px] text-white/85 hover:bg-white/20">×</button>
               </div>
               <div className="min-h-0 flex-1 space-y-1.5 aos-scroll overflow-y-auto p-2.5">
-                {ADDABLE.map((a) => <button key={a.label} type="button" onClick={() => addAt(a.make, addIndex ?? design.blocks.length)} className="flex w-full items-center gap-3 rounded-xl border border-[var(--line)] bg-white px-2.5 py-2 text-left shadow-sm transition hover:-translate-y-px hover:border-[#2f6bd8] hover:shadow-md">
+                {ADDABLE.map((a) => <button key={a.label} type="button" onClick={() => addAt(a.make, addIndex ?? design.blocks.length)} className="flex w-full items-center gap-3 rounded-xl border border-[var(--line)] bg-white px-2.5 py-2 text-start shadow-sm transition hover:-translate-y-px hover:border-[#2f6bd8] hover:shadow-md">
                   <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-gradient-to-br from-[#eef4fd] to-[#e2ecfb] text-[18px]">{a.icon}</span>
                   <span className="min-w-0"><span className="block text-[12.5px] font-extrabold text-[var(--ink)]">{a.label}</span><span className="block truncate text-[10.5px] text-[var(--ink-3)]">{a.hint}</span></span>
                 </button>)}
@@ -720,21 +721,21 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave, 
             </div>}
 
             {/* inspector for the selected section — floats over the preview */}
-            {selBlock && <div className="absolute bottom-4 right-4 top-16 z-30 flex w-[384px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-20px_rgba(20,30,60,.55)] ring-1 ring-black/10">
+            {selBlock && <div className="absolute bottom-4 end-4 top-16 z-30 flex w-[384px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-20px_rgba(20,30,60,.55)] ring-1 ring-black/10">
               <div className="flex items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
                 <span className="text-[13px] font-extrabold">✎ Editing: {BLOCK_LABEL[selBlock.t]}</span>
-                <div className="ml-auto flex items-center gap-1">
+                <div className="ms-auto flex items-center gap-1">
                   <button type="button" title="Move up" onClick={() => move(selBlock.k!, -1)} className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-[14px] font-extrabold text-[#1d3a8f] shadow-sm hover:bg-[#eef4fd]">↑</button>
                   <button type="button" title="Move down" onClick={() => move(selBlock.k!, 1)} className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-[14px] font-extrabold text-[#1d3a8f] shadow-sm hover:bg-[#eef4fd]">↓</button>
                   <button type="button" title="Duplicate" onClick={() => dup(selBlock.k!)} className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-[14px] font-extrabold text-[#1d3a8f] shadow-sm hover:bg-[#eef4fd]">⧉</button>
                   <button type="button" title="Delete section" onClick={() => del(selBlock.k!)} className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-[14px] font-extrabold text-[#c02636] shadow-sm hover:bg-[#fdecec]">🗑</button>
-                  <button type="button" onClick={() => setSelKey(null)} className="ml-1 rounded-md bg-white px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] shadow-sm hover:bg-[#eef4fd]">✓ Done</button>
+                  <button type="button" onClick={() => setSelKey(null)} className="ms-1 rounded-md bg-white px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] shadow-sm hover:bg-[#eef4fd]">✓ Done</button>
                 </div>
               </div>
               <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3.5 py-2">
                 <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Width</span>
                 {([["full", "Full"], ["half", "½ Half"]] as const).map(([w, l]) => <button key={w} type="button" onClick={() => patch(selBlock.k!, { span: w })} className={`rounded-md px-2.5 py-1 text-[11.5px] font-bold ${(selBlock.span === "half" ? "half" : "full") === w ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}
-                <span className="ml-auto text-[9.5px] text-[var(--ink-3)]">sits beside the next same-width section</span>
+                <span className="ms-auto text-[9.5px] text-[var(--ink-3)]">sits beside the next same-width section</span>
               </div>
               <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] bg-[var(--panel)] px-3.5 py-2">
                 <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Colour</span>
@@ -742,18 +743,18 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave, 
                 {TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => patch(selBlock.k!, { accent: a.id })} title={`Just this section: ${a.name}`} className={`h-5 w-5 flex-none rounded-full transition ${selBlock.accent === a.id ? "ring-2 ring-[#16306e] ring-offset-1" : "ring-1 ring-black/10 hover:ring-black/30"}`} style={{ background: a.hex }} />)}
               </div>
               <div className="border-b border-[var(--line)] bg-[var(--panel)]">
-                <button type="button" onClick={() => setFrameOpen((v) => !v)} className="flex w-full items-center gap-1.5 px-3.5 py-2 text-left hover:bg-white/60">
+                <button type="button" onClick={() => setFrameOpen((v) => !v)} className="flex w-full items-center gap-1.5 px-3.5 py-2 text-start hover:bg-white/60">
                   <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Frame</span>
                   {(BORDERS.find(([v]) => v === selBlock.border && v !== "none")) && <span className="rounded-full bg-[#e7eefb] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{BORDERS.find(([v]) => v === selBlock.border)![1]}</span>}
-                  <span className="ml-auto text-[9px] text-[var(--ink-3)]">{frameOpen ? "▲ hide" : "▼ show"}</span>
+                  <span className="ms-auto text-[9px] text-[var(--ink-3)]">{frameOpen ? "▲ hide" : "▼ show"}</span>
                 </button>
                 {frameOpen && <div className="flex flex-wrap items-center gap-1 px-3.5 pb-2.5">{BORDERS.map(([v, l]) => <button key={v} type="button" onClick={() => patch(selBlock.k!, { border: v })} className={`rounded-md px-2 py-1 text-[10.5px] font-bold ${(selBlock.border || "none") === v ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}</div>}
               </div>
               <div className="border-b border-[var(--line)] bg-[var(--panel)]">
-                <button type="button" onClick={() => setSeasonOpen((v) => !v)} className="flex w-full items-center gap-1.5 px-3.5 py-2 text-left hover:bg-white/60">
+                <button type="button" onClick={() => setSeasonOpen((v) => !v)} className="flex w-full items-center gap-1.5 px-3.5 py-2 text-start hover:bg-white/60">
                   <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Seasonal &amp; fun</span>
                   {(SEASONAL_BORDERS.find(([v]) => v === selBlock.border)) && <span className="rounded-full bg-[#e7eefb] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{SEASONAL_BORDERS.find(([v]) => v === selBlock.border)![1]}</span>}
-                  <span className="ml-auto text-[9px] text-[var(--ink-3)]">{seasonOpen ? "▲ hide" : "▼ show"}</span>
+                  <span className="ms-auto text-[9px] text-[var(--ink-3)]">{seasonOpen ? "▲ hide" : "▼ show"}</span>
                 </button>
                 {seasonOpen && <div className="flex flex-wrap items-center gap-1 px-3.5 pb-2.5">{SEASONAL_BORDERS.map(([v, l]) => <button key={v} type="button" onClick={() => patch(selBlock.k!, { border: v })} className={`rounded-md px-2 py-1 text-[10.5px] font-bold ${selBlock.border === v ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}</div>}
               </div>

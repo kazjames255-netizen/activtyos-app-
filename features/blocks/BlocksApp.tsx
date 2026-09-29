@@ -382,7 +382,7 @@ function PeriodsColumn({
   };
 
   return (
-    <Card className="p-3.5" style={{ borderLeftWidth: "4px", borderLeftColor: "var(--brand)" }}>
+    <Card className="p-3.5" style={{ borderInlineStartWidth: "4px", borderInlineStartColor: "var(--brand)" }}>
       <StepHead n={1} title="Make your periods" />
       <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">
         A period is a session time window. Title it anything — including extras like Early
@@ -521,7 +521,7 @@ function PassesColumn({
   };
 
   return (
-    <Card className="p-3.5" style={{ borderLeftWidth: "4px", borderLeftColor: "var(--brand)" }}>
+    <Card className="p-3.5" style={{ borderInlineStartWidth: "4px", borderInlineStartColor: "var(--brand)" }}>
       <StepHead n={2} title="Make your passes" />
       <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">
         A pass is simply the length of time a parent books — e.g. a single day or a full 5-day
@@ -658,7 +658,7 @@ function BuildColumn({
   }
 
   return (
-    <Card className="p-3.5" style={{ borderLeftWidth: "4px", borderLeftColor: "var(--brand)" }}>
+    <Card className="p-3.5" style={{ borderInlineStartWidth: "4px", borderInlineStartColor: "var(--brand)" }}>
       <StepHead n={3} title="Build your blocks" />
       <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">
         Click “+ Add to block” on the periods &amp; passes you want, name it, then reuse or
@@ -1023,7 +1023,7 @@ function LibraryCard({
             <button
               type="button"
               onClick={onToggle}
-              className="truncate text-left text-[14px] font-extrabold text-white"
+              className="truncate text-start text-[14px] font-extrabold text-white"
             >
               {block.name}
             </button>
@@ -1177,8 +1177,8 @@ function LibraryCard({
                     borderColor: "var(--brand-line, #cdddf7)",
                     background: "var(--brand-soft)",
                     color: "var(--brand-ink)",
-                    paddingLeft: 12,
-                    paddingRight: 10,
+                    paddingInlineStart: 12,
+                    paddingInlineEnd: 10,
                   }}
                 >
                   <option value="">📩  Send to a listing…</option>
@@ -1387,14 +1387,14 @@ function PricingCalculator({
                 <button
                   type="button"
                   onClick={() => setOpenPass(open ? null : q.id)}
-                  className="flex w-full items-center gap-2 bg-[var(--panel)] px-2.5 py-1.5 text-left"
+                  className="flex w-full items-center gap-2 bg-[var(--panel)] px-2.5 py-1.5 text-start"
                 >
                   <span className="text-[13px] font-extrabold">{q.name}</span>
                   <span className="text-[11px] text-[var(--ink-3)]">
                     {q.days} {q.days > 1 ? "days" : "day"}
                     {isM ? " · longest" : ""}
                   </span>
-                  <span className="ml-auto text-[13px] font-extrabold">{money(price || 0)}</span>
+                  <span className="ms-auto text-[13px] font-extrabold">{money(price || 0)}</span>
                   <span className="text-[var(--ink-3)]">{open ? "▲" : "▼"}</span>
                 </button>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { STAGES, type Lead, type Stage } from "./SalesApp";
@@ -14,8 +15,8 @@ import { STAGES, type Lead, type Stage } from "./SalesApp";
 // Availability itself (the weekly template, blocked-out dates) is managed on
 // the separate "Demo slots" tab — see DemoSlotsPanel.tsx.
 
-const dayFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" });
-const timeFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
+const dayFmt = new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" });
+const timeFmt = new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
 const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" });
 
 export function VideoCallsPanel({ leads, onOpen, onMove }: { leads: Lead[]; onOpen: (l: Lead) => void; onMove: (id: string, s: Stage) => void }) {

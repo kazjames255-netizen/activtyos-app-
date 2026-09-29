@@ -40,7 +40,7 @@ function newBlock(k: Block["k"]): Block {
 }
 
 const Field = ({ label, children, ai }: { label: string; children: React.ReactNode; ai?: React.ReactNode }) => (
-  <label className="block"><span className="mb-1 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{label}{ai && <span className="ml-auto normal-case">{ai}</span>}</span>{children}</label>
+  <label className="block"><span className="mb-1 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{label}{ai && <span className="ms-auto normal-case">{ai}</span>}</span>{children}</label>
 );
 
 // Reusable "✨ AI" helper — drafts or polishes a text field via the existing
@@ -288,14 +288,14 @@ export function CourseEditor({ course, onSave, onCancel }: { course: CourseDoc; 
         <div className="flex flex-none items-center gap-3 border-b border-[var(--line)] px-5 py-3">
           <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[18px]" style={{ background: pal.soft }}>{sectionPreview.icon}</span>
           <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{sectionPreview.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{sectionPreview.group} · previewing exactly as learners see it</div></div>
-          <button type="button" onClick={() => setSectionPreview(null)} className="ml-auto grid h-8 w-8 place-items-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">✕</button>
+          <button type="button" onClick={() => setSectionPreview(null)} className="ms-auto grid h-8 w-8 place-items-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">✕</button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto bg-[#fbfcfe] px-6 py-6">
           <article className="mx-auto max-w-[600px]">{previewBlocks.map((b, i) => <BlockView key={i} b={b} />)}</article>
         </div>
         <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3">
           <span className="text-[11.5px] text-[var(--ink-3)]">Adds {previewBlocks.length} block{previewBlocks.length === 1 ? "" : "s"} to the end of your lesson — stack as many sections as you like.</span>
-          <div className="ml-auto flex gap-2"><Button onClick={() => setSectionPreview(null)}>Close</Button><Button variant="primary" onClick={() => addSection(sectionPreview)}>+ Add to Lesson {li + 1}</Button></div>
+          <div className="ms-auto flex gap-2"><Button onClick={() => setSectionPreview(null)}>Close</Button><Button variant="primary" onClick={() => addSection(sectionPreview)}>+ Add to Lesson {li + 1}</Button></div>
         </div>
       </div>
     </div>,
@@ -307,7 +307,7 @@ export function CourseEditor({ course, onSave, onCancel }: { course: CourseDoc; 
       <div className="text-[14px] font-extrabold text-[var(--ink)]">🎨 Course builder</div>
       <div className="mx-auto flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
         {TABS.map(([k, l]) => (
-          <button key={k} type="button" onClick={() => { setTab(k); setAddOpen(false); }} className={"rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors " + (tab === k ? "bg-white text-[var(--accent)] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}{k === "quiz" && quiz.length > 0 && <span className="ml-1 rounded-full bg-[#f3effe] px-1.5 text-[10px] font-extrabold text-[#6d28d9]">{quiz.length}</span>}</button>
+          <button key={k} type="button" onClick={() => { setTab(k); setAddOpen(false); }} className={"rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors " + (tab === k ? "bg-white text-[var(--accent)] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}{k === "quiz" && quiz.length > 0 && <span className="ms-1 rounded-full bg-[#f3effe] px-1.5 text-[10px] font-extrabold text-[#6d28d9]">{quiz.length}</span>}</button>
         ))}
       </div>
       <div className="flex gap-2"><Button onClick={onCancel}>Cancel</Button><Button variant="primary" onClick={() => onSave(c)}>Save course</Button></div>
@@ -383,7 +383,7 @@ export function CourseEditor({ course, onSave, onCancel }: { course: CourseDoc; 
                         <div key={s.id} className="group flex items-start gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 transition-all hover:border-[var(--accent)] hover:shadow-md">
                           <button type="button" onClick={() => setSectionPreview(s)} className="grid h-9 w-9 flex-none place-items-center rounded-lg text-[18px]" style={{ background: pal.soft }} title="Preview this section">{s.icon}</button>
                           <div className="min-w-0 flex-1">
-                            <button type="button" onClick={() => setSectionPreview(s)} className="block w-full text-left"><span className="block text-[12.5px] font-extrabold text-[var(--ink)]">{s.name}</span><span className="block text-[11px] leading-snug text-[var(--ink-3)]">{s.desc}</span></button>
+                            <button type="button" onClick={() => setSectionPreview(s)} className="block w-full text-start"><span className="block text-[12.5px] font-extrabold text-[var(--ink)]">{s.name}</span><span className="block text-[11px] leading-snug text-[var(--ink-3)]">{s.desc}</span></button>
                             <div className="mt-1.5 flex gap-1.5">
                               <button type="button" onClick={() => setSectionPreview(s)} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:border-[var(--accent)]">👁 Preview</button>
                               <button type="button" onClick={() => addSection(s)} className="rounded-md px-2 py-0.5 text-[10.5px] font-bold text-white" style={{ background: pal.accent }}>+ Add</button>
@@ -403,11 +403,11 @@ export function CourseEditor({ course, onSave, onCancel }: { course: CourseDoc; 
       {/* ——— CONTENT ——— */}
       {tab === "content" && (
         <div className="flex min-h-0 flex-1">
-          <aside className="w-[248px] flex-none overflow-y-auto border-r border-[var(--line)] bg-white p-3">
-            <div className="mb-1.5 flex items-center px-1"><span className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Lessons</span><button type="button" onClick={addLesson} className="ml-auto text-[12px] font-extrabold text-[var(--accent)] hover:underline">+ Add</button></div>
+          <aside className="w-[248px] flex-none overflow-y-auto border-e border-[var(--line)] bg-white p-3">
+            <div className="mb-1.5 flex items-center px-1"><span className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Lessons</span><button type="button" onClick={addLesson} className="ms-auto text-[12px] font-extrabold text-[var(--accent)] hover:underline">+ Add</button></div>
             {c.lessons.map((l, i) => (
               <div key={l.id} className={"mb-1 flex items-center gap-1 rounded-lg px-1 " + (i === li ? "bg-[var(--accent-soft)]" : "")}>
-                <button type="button" onClick={() => setLi(i)} className={"flex-1 truncate px-2 py-2 text-left text-[12.5px] font-bold " + (l.hidden ? "text-[var(--ink-3)] line-through opacity-70" : i === li ? "text-[var(--accent)]" : "text-[var(--ink)]")}>{i + 1}. {l.title}{l.hidden && <span className="ml-1 rounded-full bg-[#eef1f6] px-1.5 py-px text-[9px] font-extrabold uppercase tracking-wide text-[#64748b] no-underline">Hidden</span>}</button>
+                <button type="button" onClick={() => setLi(i)} className={"flex-1 truncate px-2 py-2 text-start text-[12.5px] font-bold " + (l.hidden ? "text-[var(--ink-3)] line-through opacity-70" : i === li ? "text-[var(--accent)]" : "text-[var(--ink)]")}>{i + 1}. {l.title}{l.hidden && <span className="ms-1 rounded-full bg-[#eef1f6] px-1.5 py-px text-[9px] font-extrabold uppercase tracking-wide text-[#64748b] no-underline">Hidden</span>}</button>
                 <button type="button" title={l.hidden ? "Hidden from learners — click to show" : "Hide from learners (keeps the content, doesn't delete it)"} aria-label={l.hidden ? `Show lesson ${i + 1} to learners` : `Hide lesson ${i + 1} from learners`} aria-pressed={l.hidden} onClick={() => setC({ ...c, lessons: c.lessons.map((x, idx) => (idx === i ? { ...x, hidden: !x.hidden } : x)) })} className={"px-1.5 text-[13px] " + (l.hidden ? "text-[#c0392b] hover:text-[#0f7a43]" : "text-[var(--ink-3)] hover:text-[var(--accent)]")}>{l.hidden ? "🚫" : "👁"}</button>
               </div>
             ))}
@@ -421,10 +421,10 @@ export function CourseEditor({ course, onSave, onCancel }: { course: CourseDoc; 
               </div>
               <div className="flex flex-col gap-2.5">
                 {lesson.blocks.map((b, bi) => { const m = blockMeta(b.k); return (
-                  <div key={bi} className="rounded-xl border border-[var(--line)] bg-white p-3" style={{ borderLeft: `3px solid ${m.tint}` }}>
+                  <div key={bi} className="rounded-xl border border-[var(--line)] bg-white p-3" style={{ borderInlineStart: `3px solid ${m.tint}` }}>
                     <div className="mb-2 flex items-center gap-2">
                       <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide" style={{ background: m.tint + "18", color: m.tint }}>{m.icon} {m.label}</span>
-                      <div className="ml-auto flex gap-0.5">
+                      <div className="ms-auto flex gap-0.5">
                         <button type="button" title="Move up" onClick={() => moveBlock(bi, -1)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[var(--ink)]">↑</button>
                         <button type="button" title="Move down" onClick={() => moveBlock(bi, 1)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[var(--ink)]">↓</button>
                         <button type="button" title="Duplicate" onClick={() => dupBlock(bi)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[var(--accent)]">⧉</button>
@@ -464,7 +464,7 @@ export function CourseEditor({ course, onSave, onCancel }: { course: CourseDoc; 
                         <div className="mb-0.5 px-1 text-[9.5px] font-bold uppercase tracking-wide" style={{ color: g.tint }}>{g.group}</div>
                         <div className="grid grid-cols-2 gap-1">
                           {g.kinds.map((m) => (
-                            <button key={m.k} type="button" onClick={() => { setLesson((ls) => ({ ...ls, blocks: [...ls.blocks, newBlock(m.k)] })); setAddOpen(false); }} className="flex items-center gap-2 rounded-lg px-2 py-2 text-left text-[12.5px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">
+                            <button key={m.k} type="button" onClick={() => { setLesson((ls) => ({ ...ls, blocks: [...ls.blocks, newBlock(m.k)] })); setAddOpen(false); }} className="flex items-center gap-2 rounded-lg px-2 py-2 text-start text-[12.5px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">
                               <span className="grid h-6 w-6 flex-none place-items-center rounded-lg text-[13px]" style={{ background: g.tint + "18", color: g.tint }}>{m.icon}</span>{m.label}
                             </button>
                           ))}
@@ -486,12 +486,12 @@ export function CourseEditor({ course, onSave, onCancel }: { course: CourseDoc; 
             <div className="mb-4 flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-white p-4">
               <div className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[#f3effe] text-[20px]">🎓</div>
               <div><div className="text-[15px] font-extrabold text-[var(--ink)]">Final quiz</div><div className="text-[12px] text-[var(--ink-3)]">Learners take this after finishing the lessons.</div></div>
-              <div className="ml-auto"><Field label="Pass mark %"><Input type="number" min={1} max={100} value={c.pass ?? 80} onChange={(e) => setC({ ...c, pass: Number(e.target.value) })} className="w-[84px]" /></Field></div>
+              <div className="ms-auto"><Field label="Pass mark %"><Input type="number" min={1} max={100} value={c.pass ?? 80} onChange={(e) => setC({ ...c, pass: Number(e.target.value) })} className="w-[84px]" /></Field></div>
             </div>
             <div className="flex flex-col gap-2.5">
               {quiz.map((qq, qi) => (
                 <div key={qi} className="rounded-xl border border-[var(--line)] bg-white p-3">
-                  <div className="mb-2 flex items-center gap-2"><span className="rounded-full bg-[#f3effe] px-2 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#6d28d9]">Question {qi + 1}</span><button type="button" title="Remove question" onClick={() => delQ(qi)} className="ml-auto px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button></div>
+                  <div className="mb-2 flex items-center gap-2"><span className="rounded-full bg-[#f3effe] px-2 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#6d28d9]">Question {qi + 1}</span><button type="button" title="Remove question" onClick={() => delQ(qi)} className="ms-auto px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button></div>
                   <div className="grid gap-2">
                     <Field label="Question" ai={<AiBtn value={qq.q} hint="write a clear final-quiz question that tests the key learning of this course" onResult={(t) => setQ(qi, (x) => ({ ...x, q: t }))} />}><TA rows={2} value={qq.q} onChange={(e) => setQ(qi, (x) => ({ ...x, q: e.target.value }))} placeholder="Ask a question…" /></Field>
                     <div><Lbl>Options — select the correct answer</Lbl>

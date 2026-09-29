@@ -152,7 +152,7 @@ function DayGrid() {
         if (r.whole) {
           return (
             <div key={ri} style={{ display: "contents" }}>
-              <div className="flex items-center justify-end rounded bg-[var(--panel)] px-1.5 py-2 text-right text-[11px] font-bold text-[var(--ink-3)]">
+              <div className="flex items-center justify-end rounded bg-[var(--panel)] px-1.5 py-2 text-end text-[11px] font-bold text-[var(--ink-3)]">
                 {r.time}
               </div>
               <div style={{ gridColumn: `span ${n}` }}>
@@ -173,7 +173,7 @@ function DayGrid() {
         if (r.cells) {
           return (
             <div key={ri} style={{ display: "contents" }}>
-              <div className="flex items-center justify-end rounded bg-[var(--panel)] px-1.5 py-2 text-right text-[11px] font-bold text-[var(--ink-3)]">
+              <div className="flex items-center justify-end rounded bg-[var(--panel)] px-1.5 py-2 text-end text-[11px] font-bold text-[var(--ink-3)]">
                 {r.time}
               </div>
               {r.cells.map((c, gi) => {
@@ -260,7 +260,7 @@ function WeekGrid() {
           if (tr.whole || tr.cells) {
             return (
               <div key={ri} style={{ display: "contents" }}>
-                <div className="flex items-center justify-end pr-1 text-[10px] font-bold text-[var(--ink-3)]">{tr.time}</div>
+                <div className="flex items-center justify-end pe-1 text-[10px] font-bold text-[var(--ink-3)]">{tr.time}</div>
                 {wk.map((o, ci) => {
                   const row = (plan[o.di] || [])[ri] || {};
                   if (row.whole) {
@@ -278,7 +278,7 @@ function WeekGrid() {
                       <div key={ci} className="flex flex-col gap-0.5 p-0.5">
                         {row.cells.map((c, gi) => (
                           <div key={gi} className="rounded px-1 py-0.5 text-[9.5px] font-semibold text-white" style={{ background: cellBg(c, FAC) }}>
-                            <b className="mr-1">{gshort[gi] || ""}</b>
+                            <b className="me-1">{gshort[gi] || ""}</b>
                             {c.name}
                           </div>
                         ))}

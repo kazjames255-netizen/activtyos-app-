@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { get, post } from "@/lib/api";
@@ -44,7 +45,7 @@ const DAILY_THEME = {
   },
 };
 
-const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const fmtDay = (iso: string) => new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 const DEMO_PORTALS: { v: "freelancer" | "company" | "franchise" | "staff" | "custdash"; label: string }[] = [
   { v: "company", label: "Company / Head office" },
@@ -56,7 +57,7 @@ const DEMO_PORTALS: { v: "freelancer" | "company" | "franchise" | "staff" | "cus
 
 function CardHead({ title, open, onToggle }: { title: string; open: boolean; onToggle: () => void }) {
   return (
-    <button type="button" onClick={onToggle} className="mb-1.5 flex w-full items-center justify-between text-left">
+    <button type="button" onClick={onToggle} className="mb-1.5 flex w-full items-center justify-between text-start">
       <span className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">{title}</span>
       <span className={`text-[11px] text-[var(--ink-3)] transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
     </button>
@@ -215,13 +216,13 @@ export default function CallRoomPage() {
                   {!!lead.interestedFeatures?.length && (
                     <div className="mt-2.5">
                       <div className="text-[11.5px] font-bold text-[var(--ink-3)]">Wants to see (ticked on the demo page):</div>
-                      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[12.5px] text-[var(--ink)]">
+                      <ul className="mt-1 list-disc space-y-0.5 ps-4 text-[12.5px] text-[var(--ink)]">
                         {lead.interestedFeatures.map((x) => <li key={x}>{x}</li>)}
                       </ul>
                     </div>
                   )}
                   {lead.message && (
-                    <div className="mt-2.5 rounded-lg border-l-[3px] border-[#1d3a8f] bg-[var(--panel)] px-3 py-2 text-[12.5px] leading-relaxed text-[var(--ink)]">{lead.message}</div>
+                    <div className="mt-2.5 rounded-lg border-s-[3px] border-[#1d3a8f] bg-[var(--panel)] px-3 py-2 text-[12.5px] leading-relaxed text-[var(--ink)]">{lead.message}</div>
                   )}
                 </>
               )}
@@ -242,7 +243,7 @@ export default function CallRoomPage() {
                       </div>
                     )}
                     {thread.map((a) => (
-                      <div key={a.id} className={`max-w-[92%] rounded-xl px-3 py-2 text-[12.5px] leading-relaxed ${a.direction === "out" ? "ml-auto bg-[#1d3a8f] text-white" : "border border-[#bfe6cf] bg-[#eafaf0] text-[#0f5132]"}`}>
+                      <div key={a.id} className={`max-w-[92%] rounded-xl px-3 py-2 text-[12.5px] leading-relaxed ${a.direction === "out" ? "ms-auto bg-[#1d3a8f] text-white" : "border border-[#bfe6cf] bg-[#eafaf0] text-[#0f5132]"}`}>
                         <div className={`mb-0.5 text-[10.5px] font-bold uppercase tracking-wide ${a.direction === "out" ? "text-white/70" : "text-[#127a3e]"}`}>
                           {a.direction === "out" ? "You" : "Them"} · {fmtDay(a.at)}
                         </div>
@@ -276,7 +277,7 @@ export default function CallRoomPage() {
             <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Share with them?</span>
             <button type="button" onClick={() => setNoteShare(false)} className={`rounded-full border px-3 py-1 text-[11.5px] font-bold ${!noteShare ? "border-[#1d3a8f] bg-[#eaf0fc] text-[#1d3a8f]" : "border-[var(--line)] text-[var(--ink-2)]"}`}>No</button>
             <button type="button" onClick={() => setNoteShare(true)} className={`rounded-full border px-3 py-1 text-[11.5px] font-bold ${noteShare ? "border-[#127a3e] bg-[#eafaf0] text-[#127a3e]" : "border-[var(--line)] text-[var(--ink-2)]"}`}>Yes</button>
-            <button type="button" onClick={() => void saveCallNote()} disabled={!noteDraft.trim() || noteBusy} className="ml-auto rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">
+            <button type="button" onClick={() => void saveCallNote()} disabled={!noteDraft.trim() || noteBusy} className="ms-auto rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">
               {noteBusy ? "Saving…" : "Save note"}
             </button>
           </div>

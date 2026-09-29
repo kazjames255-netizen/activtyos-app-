@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, get as apiGet } from "@/lib/api";
@@ -38,7 +39,7 @@ interface Kid {
 const METHODS = ["Card", "Tax-Free Childcare"];
 
 const fmtDay = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
 export function BookingPanel({ listing, signedIn }: { listing: ServerListing; signedIn: boolean }) {
   const blocks = ((listing.blocks ?? []) as Block[]).filter((b) => b.open && (b.sessions?.length ?? 0) > 0);
@@ -379,7 +380,7 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
         </div>
         {opensLater ? (
           <span className="rounded-full bg-[#fff7ed] px-3 py-1.5 text-[12px] font-bold text-[#9a3412]">
-            ⏰ Booking opens {new Date(listing.opensAt!).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+            ⏰ Booking opens {new Date(listing.opensAt!).toLocaleString(dl(), { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
           </span>
         ) : !signedIn ? (
           <Link href={`/login?next=/book/${encodeURIComponent(listing.id)}`} className={S.cta + " inline-block"}>

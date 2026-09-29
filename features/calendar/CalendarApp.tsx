@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
@@ -112,7 +113,7 @@ export function CalendarApp() {
     if (showEvents) for (const ev of events) s.add(ev.date);
     return [...s].sort();
   }, [listings, events, hidden, showEvents]);
-  const fmtLong = (s: string) => fromIso(s).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  const fmtLong = (s: string) => fromIso(s).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
   const step = (dir: number) => setCursor((c) => { const x = new Date(c); if (mode === "month") x.setMonth(x.getMonth() + dir); else if (mode === "week") x.setDate(x.getDate() + 7 * dir); else x.setDate(x.getDate() + dir); return x; });
   const goToday = () => { const d = new Date(); setCursor(new Date(d.getFullYear(), d.getMonth(), d.getDate())); };
@@ -133,8 +134,8 @@ export function CalendarApp() {
     const sessStyle = { color: "#fff", background: it.color } as CSSProperties;
     // The chip opens the event; its 🔗 opens a link from the event's notes.
     const links = linksIn(it.event?.notes);
-    if (!links.length) return <div key={i} className="flex w-full"><button type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : (setMode("day"), setCursor(fromIso(it.date)))} className="flex min-w-0 flex-1 items-center gap-1 truncate rounded px-1 py-[1.5px] text-left text-[10px] font-bold leading-tight cursor-pointer" style={it.kind === "event" ? evStyle : sessStyle} title={`${it.kind === "event" ? "Event: " : ""}${it.title}${it.start ? ` · ${it.start}–${it.end}` : ""}`}><span className="truncate">{it.kind === "event" ? "📌 " : ""}{it.title}</span></button></div>;
-    return <div key={i} className="flex w-full items-center gap-0.5"><button type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : (setMode("day"), setCursor(fromIso(it.date)))} className="flex min-w-0 flex-1 items-center gap-1 truncate rounded px-1 py-[1.5px] text-left text-[10px] font-bold leading-tight cursor-pointer" style={it.kind === "event" ? evStyle : sessStyle} title={`${it.kind === "event" ? "Event: " : ""}${it.title}${it.start ? ` · ${it.start}–${it.end}` : ""}`}><span className="truncate">{it.kind === "event" ? "📌 " : ""}{it.title}</span></button><LinkBadge links={links} compact /></div>;
+    if (!links.length) return <div key={i} className="flex w-full"><button type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : (setMode("day"), setCursor(fromIso(it.date)))} className="flex min-w-0 flex-1 items-center gap-1 truncate rounded px-1 py-[1.5px] text-start text-[10px] font-bold leading-tight cursor-pointer" style={it.kind === "event" ? evStyle : sessStyle} title={`${it.kind === "event" ? "Event: " : ""}${it.title}${it.start ? ` · ${it.start}–${it.end}` : ""}`}><span className="truncate">{it.kind === "event" ? "📌 " : ""}{it.title}</span></button></div>;
+    return <div key={i} className="flex w-full items-center gap-0.5"><button type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : (setMode("day"), setCursor(fromIso(it.date)))} className="flex min-w-0 flex-1 items-center gap-1 truncate rounded px-1 py-[1.5px] text-start text-[10px] font-bold leading-tight cursor-pointer" style={it.kind === "event" ? evStyle : sessStyle} title={`${it.kind === "event" ? "Event: " : ""}${it.title}${it.start ? ` · ${it.start}–${it.end}` : ""}`}><span className="truncate">{it.kind === "event" ? "📌 " : ""}{it.title}</span></button><LinkBadge links={links} compact /></div>;
   }
 
   function monthView() {
@@ -157,7 +158,7 @@ export function CalendarApp() {
               <button type="button" onClick={() => { setMode("day"); setCursor(new Date(d)); }} className="self-start text-[11.5px] font-extrabold leading-none hover:underline" style={{ color: isToday ? BLUE : its.length ? "var(--ink)" : "var(--ink-3)" }} title="Open this day">{d.getDate()}</button>
               <div className="mt-0.5 flex flex-col gap-0.5">
                 {its.slice(0, cap).map((it, i) => itemChip(it, i))}
-                {its.length > cap && <button type="button" onClick={() => { setMode("day"); setCursor(new Date(d)); }} className="pl-0.5 text-left text-[9.5px] font-bold text-[#1d3a8f] hover:underline">+{its.length - cap} more</button>}
+                {its.length > cap && <button type="button" onClick={() => { setMode("day"); setCursor(new Date(d)); }} className="ps-0.5 text-start text-[9.5px] font-bold text-[#1d3a8f] hover:underline">+{its.length - cap} more</button>}
               </div>
             </div>
           );
@@ -180,8 +181,8 @@ export function CalendarApp() {
               <div className="flex flex-col gap-2">
                 {its.length ? its.map((it, i) => { const pct = it.cap ? Math.round((it.booked ?? 0) / it.cap * 100) : 0; return (
                   <div key={i} className="relative">
-                  {it.kind === "event" && linksIn(it.event?.notes).length > 0 && <span className="absolute right-1.5 top-1.5 z-[1]"><LinkBadge links={linksIn(it.event?.notes)} /></span>}
-                  <button type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : undefined} className={`w-full rounded-xl border bg-[var(--panel)] p-2.5 text-left ${it.kind === "event" ? "cursor-pointer" : "cursor-default"}`} style={{ borderColor: "var(--line)", borderLeft: `4px ${it.kind === "event" ? "dashed" : "solid"} ${it.color}` }}>
+                  {it.kind === "event" && linksIn(it.event?.notes).length > 0 && <span className="absolute end-1.5 top-1.5 z-[1]"><LinkBadge links={linksIn(it.event?.notes)} /></span>}
+                  <button type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : undefined} className={`w-full rounded-xl border bg-[var(--panel)] p-2.5 text-start ${it.kind === "event" ? "cursor-pointer" : "cursor-default"}`} style={{ borderColor: "var(--line)", borderInlineStart: `4px ${it.kind === "event" ? "dashed" : "solid"} ${it.color}` }}>
                     <div className="text-[12.5px] font-extrabold leading-tight">{it.kind === "event" ? "📌 " : ""}{it.title}</div>
                     {it.start && <div className="mt-1 text-[11.5px] text-[var(--ink-2)]">{it.start}–{it.end}</div>}
                     {it.kind === "session" && showBooking && <div className="mt-1 text-[11px] font-bold" style={{ color: it.color }}>{it.booked} / {it.cap} booked · {pct}%</div>}
@@ -200,8 +201,8 @@ export function CalendarApp() {
     const pct = it.cap ? Math.round((it.booked ?? 0) / it.cap * 100) : 0;
     return (
       <div key={i} className="relative">
-      {it.kind === "event" && linksIn(it.event?.notes).length > 0 && <span className="absolute right-2 top-2 z-[1]"><LinkBadge links={linksIn(it.event?.notes)} /></span>}
-      <button type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : undefined} className={`w-full rounded-xl border bg-[var(--surface)] p-2.5 text-left ${it.kind === "event" ? "cursor-pointer" : "cursor-default"}`} style={{ borderColor: "var(--line)", borderLeft: `4px ${it.kind === "event" ? "dashed" : "solid"} ${it.color}` }}>
+      {it.kind === "event" && linksIn(it.event?.notes).length > 0 && <span className="absolute end-2 top-2 z-[1]"><LinkBadge links={linksIn(it.event?.notes)} /></span>}
+      <button type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : undefined} className={`w-full rounded-xl border bg-[var(--surface)] p-2.5 text-start ${it.kind === "event" ? "cursor-pointer" : "cursor-default"}`} style={{ borderColor: "var(--line)", borderInlineStart: `4px ${it.kind === "event" ? "dashed" : "solid"} ${it.color}` }}>
         <div className="flex flex-wrap items-baseline gap-x-2">
           <span className="text-[13.5px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{it.kind === "event" ? "📌 " : ""}{it.title}</span>
           {it.start && <span className="text-[11.5px] font-bold" style={{ color: it.color }}>{it.start}–{it.end}</span>}
@@ -236,14 +237,14 @@ export function CalendarApp() {
       <div className="flex flex-col gap-2">
         {allDay.length > 0 && (
           <div className="flex gap-3">
-            <div className="w-12 flex-none pt-1 text-right text-[11px] font-bold uppercase tracking-[0.03em] text-[var(--ink-3)]">All day</div>
+            <div className="w-12 flex-none pt-1 text-end text-[11px] font-bold uppercase tracking-[0.03em] text-[var(--ink-3)]">All day</div>
             <div className="flex flex-1 flex-col gap-2">{allDay.map((it, i) => dayCard(it, i))}</div>
           </div>
         )}
         <div className="relative" style={{ height: (hi - lo) * rowH + 6 }}>
           {hours.map((h, idx) => (
-            <div key={h} className="absolute left-0 flex w-full items-start" style={{ top: idx * rowH }}>
-              <div className="w-12 flex-none -translate-y-[7px] pr-2 text-right text-[11.5px] font-extrabold tabular-nums text-[var(--ink-3)]">{pad(h)}:00</div>
+            <div key={h} className="absolute start-0 flex w-full items-start" style={{ top: idx * rowH }}>
+              <div className="w-12 flex-none -translate-y-[7px] pe-2 text-end text-[11.5px] font-extrabold tabular-nums text-[var(--ink-3)]">{pad(h)}:00</div>
               <div className="flex-1 border-t border-[var(--line)]" />
             </div>
           ))}
@@ -255,8 +256,8 @@ export function CalendarApp() {
               const pct = it.cap ? Math.round((it.booked ?? 0) / it.cap * 100) : 0;
               return (
                 <div key={i} className="absolute" style={{ top, height, left: `calc(${col * w}% + 2px)`, width: `calc(${w}% - 4px)` }}>
-                {isEv && linksIn(it.event?.notes).length > 0 && <span className="absolute right-1 top-1 z-[2]"><LinkBadge links={linksIn(it.event?.notes)} compact /></span>}
-                <button type="button" onClick={() => isEv && it.event ? setEditing(it.event) : undefined} className={`h-full w-full overflow-hidden rounded-lg border p-1.5 text-left ${isEv ? "cursor-pointer" : "cursor-default"}`} style={{ background: isEv ? "var(--surface)" : it.color, border: isEv ? `1.5px dashed ${it.color}` : "none", color: isEv ? it.color : "#fff" }} title={`${it.title} · ${it.start}–${it.end}`}>
+                {isEv && linksIn(it.event?.notes).length > 0 && <span className="absolute end-1 top-1 z-[2]"><LinkBadge links={linksIn(it.event?.notes)} compact /></span>}
+                <button type="button" onClick={() => isEv && it.event ? setEditing(it.event) : undefined} className={`h-full w-full overflow-hidden rounded-lg border p-1.5 text-start ${isEv ? "cursor-pointer" : "cursor-default"}`} style={{ background: isEv ? "var(--surface)" : it.color, border: isEv ? `1.5px dashed ${it.color}` : "none", color: isEv ? it.color : "#fff" }} title={`${it.title} · ${it.start}–${it.end}`}>
                   <div className="truncate text-[11.5px] font-extrabold leading-tight">{isEv ? "📌 " : ""}{it.title}</div>
                   <div className="truncate text-[10.5px] font-semibold" style={{ opacity: isEv ? 0.8 : 0.9 }}>{it.start}–{it.end}{it.kind === "session" && showBooking && it.cap ? ` · ${pct}%` : ""}</div>
                 </button>
@@ -341,7 +342,7 @@ export function CalendarApp() {
         return (
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[#eef4fd] px-3.5 py-2.5 text-[12.5px]" style={{ color: BLUE }}>
             <span>Nothing on this {mode} — the {next > re ? "next" : "first"} is <b>{fmtLong(next)}</b>.</span>
-            <button type="button" onClick={() => setCursor(fromIso(next))} className="ml-auto rounded-lg bg-[#1d3a8f] px-3 py-1 text-[12px] font-extrabold text-white">Jump to it →</button>
+            <button type="button" onClick={() => setCursor(fromIso(next))} className="ms-auto rounded-lg bg-[#1d3a8f] px-3 py-1 text-[12px] font-extrabold text-white">Jump to it →</button>
           </div>
         );
       })()}

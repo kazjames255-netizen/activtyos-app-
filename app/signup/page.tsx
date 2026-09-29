@@ -335,7 +335,7 @@ function SignupForm() {
   if (inviteToken) {
     if (inviteError) {
       return (
-        <Card className="w-full max-w-[460px] p-6" style={{ borderLeft: "4px solid #1d3a8f" }}>
+        <Card className="w-full max-w-[460px] p-6" style={{ borderInlineStart: "4px solid #1d3a8f" }}>
           <h1 className="mb-2 text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Invite problem</h1>
           <p className="text-[13px] text-[var(--red)]">{inviteError}</p>
           <p className="mt-3 text-[12.5px] text-[var(--ink-3)]">
@@ -433,7 +433,7 @@ function SignupForm() {
               const on = accountType === t.value;
               return (
                 <button key={t.value} type="button" onClick={() => { setAccountType(t.value); setStep(0); }}
-                  className="rounded-2xl border-2 p-4 text-left transition-all"
+                  className="rounded-2xl border-2 p-4 text-start transition-all"
                   style={on ? { borderColor: "#1d3a8f", background: "var(--brand-soft)", boxShadow: "0 8px 22px -12px rgba(29,58,143,.5)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                   <div className="text-[26px] leading-none">{t.icon}</div>
                   <div className="mt-2 text-[15px] font-extrabold" style={{ color: on ? "var(--brand-ink)" : "var(--ink)" }}>{t.label}</div>
@@ -443,7 +443,7 @@ function SignupForm() {
             })}
           </div>
           <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-[12px] leading-snug text-[var(--ink-2)]">
-            <span className="mr-1">🏬</span><b>Running a single franchise branch?</b> You don't sign up here — your <b>Head Office</b> sends you an invite link that sets up your franchise (with your area) for you.
+            <span className="me-1">🏬</span><b>Running a single franchise branch?</b> You don't sign up here — your <b>Head Office</b> sends you an invite link that sets up your franchise (with your area) for you.
           </div>
           </>
         )}
@@ -504,7 +504,7 @@ function SignupForm() {
                 {([["business", "My business name", businessName.trim() || "Your business name"], ["person", "My own name", name.trim() || "Your name"]] as const).map(([mode, heading, preview]) => {
                   const on = providerNameMode === mode;
                   return (
-                    <button key={mode} type="button" onClick={() => setProviderNameMode(mode)} className="rounded-xl border-2 p-3 text-left transition-colors"
+                    <button key={mode} type="button" onClick={() => setProviderNameMode(mode)} className="rounded-xl border-2 p-3 text-start transition-colors"
                       style={on ? { borderColor: "#1d3a8f", background: "var(--brand-soft)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                       <div className="text-[11px] font-bold" style={{ color: on ? "var(--brand-strong)" : "var(--ink-3)" }}>{heading}</div>
                       <div className="truncate text-[14.5px] font-extrabold" style={{ color: on ? "var(--brand-ink)" : "var(--ink)" }}>{preview}</div>

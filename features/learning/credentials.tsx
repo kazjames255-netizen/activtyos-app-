@@ -6,6 +6,7 @@
 // each staff member holds RECORDS against a type (file, dates, number, verify
 // state). Front-end demo store; real file storage + verification persistence are
 // Amir's (see handoff).
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useRef, useState } from "react";
 import { del as apiDel, fetchBlob, get as apiGet, isDemoMode, openFile, post as apiPost, put as apiPut } from "@/lib/api";
 import { typeOf } from "@/features/listings/planUpload";
@@ -68,7 +69,7 @@ export const DEFAULT_CRED_TYPES: CredType[] = [
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addMonths = (base: Date, m: number) => new Date(base.getFullYear(), base.getMonth() + m, base.getDate());
-export const fmtDate = (s?: string) => { if (!s) return "—"; const d = new Date(s + "T00:00:00"); return isNaN(d.getTime()) ? s : d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }); };
+export const fmtDate = (s?: string) => { if (!s) return "—"; const d = new Date(s + "T00:00:00"); return isNaN(d.getTime()) ? s : d.toLocaleDateString(dl(), { day: "2-digit", month: "short", year: "numeric" }); };
 export const daysUntil = (s?: string): number | null => { if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null; return Math.round((new Date(s + "T00:00:00").getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000); };
 
 export type CredStatus = "Valid" | "Expiring" | "Expired" | "Pending" | "Rejected" | "Missing";
@@ -129,7 +130,7 @@ export function exportCredsPdf(staff: { name: string; op: string }[], types: Cre
     .st{font-weight:700}.st .d{display:block;font-weight:400;font-size:10px;color:#8b93ad}.Valid{color:#0f7a43}.Expiring{color:#b45309}.Expired{color:#c0392b}.Rejected{color:#c0392b}.Pending{color:#1d54c4}.Missing{color:#94a3b8}
     .doc{page-break-before:always;padding-top:16px}.dh{font-weight:700;font-size:14px;margin-bottom:8px;border-bottom:1px solid #e5e7f0;padding-bottom:6px}.doc img{max-width:100%;max-height:880px;border:1px solid #e5e7f0;border-radius:6px}.pdfdoc{display:block;width:100%;height:960px;border:1px solid #e5e7f0;border-radius:6px}
     @media print{body{padding:0 6mm}}
-  </style></head><body><h1>${e(provider)} — Credential register</h1><div class="sub">Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}${withDocs ? " · with certificate documents" : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
+  </style></head><body><h1>${e(provider)} — Credential register</h1><div class="sub">Generated ${new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" })}${withDocs ? " · with certificate documents" : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
   w.document.open(); w.document.write(html); w.document.close();
   })();
 }
@@ -169,7 +170,7 @@ export function exportCredsPack(params: {
     .doc{page-break-before:always;padding-top:16px}.dh{font-weight:700;font-size:14px;margin-bottom:8px;border-bottom:1px solid #e5e7f0;padding-bottom:6px}.doc img{max-width:100%;max-height:880px;border:1px solid #e5e7f0;border-radius:6px}.pdfdoc{display:block;width:100%;height:960px;border:1px solid #e5e7f0;border-radius:6px}
     .certpage{page-break-before:always;transform:scale(.82);transform-origin:top center}
     @media print{body{padding:0 6mm}}
-  </style></head><body><h1>${e(provider)} — Credential pack</h1><div class="sub">Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · ${staff.length} staff · ${types.length} credential${types.length === 1 ? "" : "s"}${withDocs ? " · with documents" : ""}${courseCerts.length ? ` · ${courseCerts.length} course certificate${courseCerts.length === 1 ? "" : "s"}` : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}${certPages}<script>window.onload=function(){setTimeout(function(){window.print()},${courseCerts.length ? 650 : 400})}</script></body></html>`;
+  </style></head><body><h1>${e(provider)} — Credential pack</h1><div class="sub">Generated ${new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" })} · ${staff.length} staff · ${types.length} credential${types.length === 1 ? "" : "s"}${withDocs ? " · with documents" : ""}${courseCerts.length ? ` · ${courseCerts.length} course certificate${courseCerts.length === 1 ? "" : "s"}` : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}${certPages}<script>window.onload=function(){setTimeout(function(){window.print()},${courseCerts.length ? 650 : 400})}</script></body></html>`;
   w.document.open(); w.document.write(html); w.document.close();
   })();
 }
@@ -291,15 +292,15 @@ export function CredEditor({ rec, types, lockStaff, staffList, onSave, onClose }
   return createPortal(
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{rec.issue || files.length ? "Edit certificate" : "Add certificate"}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{rec.issue || files.length ? "Edit certificate" : "Add certificate"}</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
           {!lockStaff && (staffList && staffList.length ? (
             <div className="relative"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Staff member</span>
-              <button type="button" onClick={() => { setStaffOpen((v) => !v); setStaffQ(""); }} className="flex w-full items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left text-[13px] font-semibold text-[var(--ink)] hover:border-[#1d3a8f]">{r.staff || <span className="text-[var(--ink-3)]">Choose staff…</span>}<span className="text-[var(--ink-3)]">▾</span></button>
+              <button type="button" onClick={() => { setStaffOpen((v) => !v); setStaffQ(""); }} className="flex w-full items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-start text-[13px] font-semibold text-[var(--ink)] hover:border-[#1d3a8f]">{r.staff || <span className="text-[var(--ink-3)]">Choose staff…</span>}<span className="text-[var(--ink-3)]">▾</span></button>
               {staffOpen && (
                 <div className="absolute z-10 mt-1 max-h-[260px] w-full overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
                   <input autoFocus value={staffQ} onChange={(e) => setStaffQ(e.target.value)} placeholder="Search name…" className="mb-1 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[#1d3a8f]" />
-                  {opts.map((s) => <button key={s.name} type="button" onClick={() => { setR({ ...r, staff: s.name }); setStaffOpen(false); }} className={"block w-full truncate rounded-lg px-2.5 py-1.5 text-left text-[13px] font-semibold hover:bg-[var(--panel)] " + (s.name === r.staff ? "text-[#1d3a8f]" : "text-[var(--ink-2)]")}>{s.name === r.staff ? "✓ " : ""}{s.name}</button>)}
+                  {opts.map((s) => <button key={s.name} type="button" onClick={() => { setR({ ...r, staff: s.name }); setStaffOpen(false); }} className={"block w-full truncate rounded-lg px-2.5 py-1.5 text-start text-[13px] font-semibold hover:bg-[var(--panel)] " + (s.name === r.staff ? "text-[#1d3a8f]" : "text-[var(--ink-2)]")}>{s.name === r.staff ? "✓ " : ""}{s.name}</button>)}
                   {!opts.length && <div className="px-2.5 py-2 text-[12px] text-[var(--ink-3)]">No match.</div>}
                 </div>
               )}
@@ -332,7 +333,7 @@ export function CredEditor({ rec, types, lockStaff, staffList, onSave, onClose }
                     <span className="truncate text-[12px] font-semibold text-[var(--ink-2)]">📎 {f.name}</span>
                     {latest ? <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#0f7a43]">Current</span> : <span className="rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#64748b]">Older</span>}
                     {f.at && <span className="text-[10px] text-[var(--ink-3)]">{fmtDate(f.at.slice(0, 10))}</span>}
-                    <button type="button" onClick={() => openCredFile(f.data)} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">View</button>
+                    <button type="button" onClick={() => openCredFile(f.data)} className="ms-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">View</button>
                     <button type="button" title="Remove this version" onClick={() => removeFile(i)} className="text-[12px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
                   </div>
                 ); })}

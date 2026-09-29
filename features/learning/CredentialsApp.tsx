@@ -67,13 +67,13 @@ export function CredentialsApp() {
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <label className="text-[12px] font-bold text-[var(--ink-3)]">Location</label>
           <Select value={op} onChange={(e) => setOp(e.target.value)} className="max-w-[240px]">{OPS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select>
-          <button type="button" onClick={() => setShowCourses((v) => !v)} className={"ml-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition-colors " + (showCourses ? "border-[#1d3a8f] bg-[#eaf1ff] text-[#1d3a8f]" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:border-[#1d3a8f]")}><span className={"grid h-4 w-7 items-center rounded-full px-0.5 transition-colors " + (showCourses ? "bg-[#1d3a8f]" : "bg-[var(--line)]")}><span className={"h-3 w-3 rounded-full bg-white transition-transform " + (showCourses ? "translate-x-3" : "")} /></span>📚 Internal courses</button>
+          <button type="button" onClick={() => setShowCourses((v) => !v)} className={"ms-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition-colors " + (showCourses ? "border-[#1d3a8f] bg-[#eaf1ff] text-[#1d3a8f]" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:border-[#1d3a8f]")}><span className={"grid h-4 w-7 items-center rounded-full px-0.5 transition-colors " + (showCourses ? "bg-[#1d3a8f]" : "bg-[var(--line)]")}><span className={"h-3 w-3 rounded-full bg-white transition-transform " + (showCourses ? "translate-x-3 rtl:-translate-x-3" : "")} /></span>📚 Internal courses</button>
         </div>
 
         <CollapsibleStats id="credentials">
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {([["Expiring", "expiring soon", "#b45309", "#fdf3e0", "⏳"], ["Expired", "expired", "#c0392b", "#fdeceb", "⛔"], ["Pending", "to verify", "#1d54c4", "#eaf1ff", "🔎"], ["Missing", "required missing", "#5b6577", "#eef1f6", "➖"]] as const).map(([st, lbl, col, bg, icon]) => { const on = statusFilter === st; return (
-            <button key={st} type="button" onClick={() => setStatusFilter(on ? "all" : st)} className={"flex items-center gap-3 rounded-2xl border border-transparent px-3.5 py-3 text-left transition-all " + (on ? "ring-2 ring-offset-1" : "hover:-translate-y-0.5 hover:shadow-md")} style={{ background: bg, ...(on ? ({ "--tw-ring-color": col } as React.CSSProperties) : {}) }}><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/70 text-[17px]">{icon}</span><div><div className="text-[22px] font-extrabold leading-none tabular-nums" style={{ color: col }}>{cnt(st)}</div><div className="mt-0.5 text-[11px] font-semibold" style={{ color: col }}>{lbl}</div></div></button>
+            <button key={st} type="button" onClick={() => setStatusFilter(on ? "all" : st)} className={"flex items-center gap-3 rounded-2xl border border-transparent px-3.5 py-3 text-start transition-all " + (on ? "ring-2 ring-offset-1" : "hover:-translate-y-0.5 hover:shadow-md")} style={{ background: bg, ...(on ? ({ "--tw-ring-color": col } as React.CSSProperties) : {}) }}><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/70 text-[17px]">{icon}</span><div><div className="text-[22px] font-extrabold leading-none tabular-nums" style={{ color: col }}>{cnt(st)}</div><div className="mt-0.5 text-[11px] font-semibold" style={{ color: col }}>{lbl}</div></div></button>
           ); })}
         </div>
         </CollapsibleStats>
@@ -84,7 +84,7 @@ export function CredentialsApp() {
             {exportOpen && (
               <div className="absolute z-20 mt-1 w-[240px] rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
                 {([["CSV (spreadsheet)", () => csv()], ["PDF — register only", () => exportCredsPdf(staff, cred.types, cred.recordFor, providerName, false)], ["PDF — with docs / courses…", () => openPack()]] as const).map(([lbl, fn]) => (
-                  <button key={lbl} type="button" onClick={() => { fn(); setExportOpen(false); }} className="block w-full rounded-lg px-3 py-2 text-left text-[12.5px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{lbl}</button>
+                  <button key={lbl} type="button" onClick={() => { fn(); setExportOpen(false); }} className="block w-full rounded-lg px-3 py-2 text-start text-[12.5px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{lbl}</button>
                 ))}
               </div>
             )}
@@ -95,7 +95,7 @@ export function CredentialsApp() {
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-          <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-left text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Location</th>{visTypes.map((t) => <th key={t.id} title={t.required ? "Required for: " + targetLabel(t) : "Optional"} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{t.name}{t.required && <span className="ml-0.5 text-[#c0392b]">*</span>}</th>)}{showCourses && <th className="whitespace-nowrap px-3 py-2.5 font-extrabold" title="Only in-date course certificates are shown">📚 Internal courses <span className="font-semibold normal-case text-[#0f7a43]">· in date</span></th>}</tr></thead>
+          <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-start text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Location</th>{visTypes.map((t) => <th key={t.id} title={t.required ? "Required for: " + targetLabel(t) : "Optional"} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{t.name}{t.required && <span className="ms-0.5 text-[#c0392b]">*</span>}</th>)}{showCourses && <th className="whitespace-nowrap px-3 py-2.5 font-extrabold" title="Only in-date course certificates are shown">📚 Internal courses <span className="font-semibold normal-case text-[#0f7a43]">· in date</span></th>}</tr></thead>
             <tbody>{rows.map((s) => (
               <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]"><td className="px-3 py-2.5"><button type="button" onClick={() => setProfile({ name: s.name, role: s.role, op: s.op })} className="font-bold text-[#1d3a8f] hover:underline" title="Open full profile">{s.name}</button></td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.op}</td>{visTypes.map((t) => { const r = cred.recordFor(s.name, t.id); if (!appliesTo(t, s.name, s.role) && !r) return <td key={t.id} className="px-3 py-2 text-[var(--ink-3)]" title="Not required for this staff member">—</td>; return <td key={t.id} className="px-3 py-2"><button type="button" onClick={() => setCell({ staff: s.name, typeId: t.id })} className="transition-opacity hover:opacity-70"><CredBadge s={credStatus(r)} /></button></td>; })}{showCourses && (() => { const inDate = completionsFor(s.name).filter((d) => courseInDate(d, settings)); return <td className="px-3 py-2"><div className="flex max-w-[320px] flex-wrap gap-1">{inDate.length ? inDate.map((d) => { const exp = courseExpiry(d, settings); return <button key={d.courseId} type="button" onClick={() => downloadCourseCertificate(s.name, d, settings)} title={`In date${exp ? ` until ${fmtDate(exp.toISOString().slice(0, 10))}` : " · no expiry"} · ${d.score}% · completed ${fmtDate(d.date)} · click to download`} className="inline-flex max-w-[210px] items-center gap-1 truncate rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10.5px] font-bold text-[#0f7a43] hover:bg-[#d4ecdb]"><span className="text-[8px]">✓</span><span className="truncate">{d.title}</span></button>; }) : <span className="text-[11px] text-[var(--ink-3)]">None in date</span>}</div></td>; })()}</tr>
             ))}
@@ -117,12 +117,12 @@ export function CredentialsApp() {
                 <div className="mb-2 flex items-center gap-2">
                   <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{s.name}</span>
                   <span className="text-[11.5px] text-[var(--ink-3)]">{s.role} · {s.op}</span>
-                  <span className="ml-auto text-[11.5px] font-bold text-[var(--ink-2)]">{done.length} completed</span>
+                  <span className="ms-auto text-[11.5px] font-bold text-[var(--ink-2)]">{done.length} completed</span>
                 </div>
                 {done.length ? (
                   <div className="flex flex-wrap gap-2">
                     {done.map((d) => (
-                      <button key={d.courseId} type="button" onClick={() => downloadCourseCertificate(s.name, d, settings)} title="Download the completion certificate (PDF)" className="group inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-left hover:border-[#1d3a8f]">
+                      <button key={d.courseId} type="button" onClick={() => downloadCourseCertificate(s.name, d, settings)} title="Download the completion certificate (PDF)" className="group inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-start hover:border-[#1d3a8f]">
                         <span className="max-w-[220px] truncate text-[12px] font-bold text-[var(--ink)]">{d.title}</span>
                         <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-extrabold text-[#0f7a43] tabular-nums" title={d.selfReported ? "Self-reported: recorded from the staff member's own device" : undefined}>{d.score}%{d.selfReported ? " · self" : ""}</span>
                         <span className="text-[10.5px] text-[var(--ink-3)]">{fmtDate(d.date)}</span>
@@ -145,13 +145,13 @@ export function CredentialsApp() {
           <label key={key} className={"flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border px-2 py-1.5 transition-colors " + (checked ? "border-[#1d3a8f] bg-[#eef4ff]" : "border-[var(--line)] hover:bg-[var(--panel)]")}><input type="checkbox" checked={checked} onChange={onClick} className="h-3.5 w-3.5 flex-none accent-[#1d3a8f]" /><span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-semibold text-[var(--ink)]">{label}</span>{sub && <span className="block truncate text-[10px] text-[var(--ink-3)]">{sub}</span>}</span></label>
         );
         const secHead = (title: string, all: boolean, onToggle: () => void) => (
-          <div className="mb-1.5 flex items-center gap-2"><span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{title}</span><button type="button" onClick={onToggle} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{all ? "Clear all" : "Select all"}</button></div>
+          <div className="mb-1.5 flex items-center gap-2"><span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{title}</span><button type="button" onClick={onToggle} className="ms-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{all ? "Clear all" : "Select all"}</button></div>
         );
         return (
           <div className="fixed inset-0 z-[141] flex items-center justify-center bg-black/45 p-4" onClick={() => setPackCfg(false)}>
             <div className="flex max-h-[86vh] w-full max-w-lg select-none flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
               <div className="flex-none border-b border-[var(--line)] px-5 py-3.5">
-                <div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Build export pack</h3><button type="button" onClick={() => setPackCfg(false)} className="ml-auto text-[18px] text-[var(--ink-3)] hover:text-[var(--ink)]">×</button></div>
+                <div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Build export pack</h3><button type="button" onClick={() => setPackCfg(false)} className="ms-auto text-[18px] text-[var(--ink-3)] hover:text-[var(--ink)]">×</button></div>
                 <p className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">Pick exactly who and what goes into the PDF · {op !== "all" ? op : "All locations"}</p>
               </div>
 
@@ -181,7 +181,7 @@ export function CredentialsApp() {
 
               <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3">
                 <span className="text-[11.5px] text-[var(--ink-3)]">{xStaff.size} staff · {xTypes.size} cred{xTypes.size === 1 ? "" : "s"}{xCourses ? ` · ${nCerts} cert${nCerts === 1 ? "" : "s"}` : ""}</span>
-                <Button onClick={() => setPackCfg(false)} className="ml-auto">Cancel</Button>
+                <Button onClick={() => setPackCfg(false)} className="ms-auto">Cancel</Button>
                 <Button variant="primary" disabled={!xStaff.size || !xTypes.size} onClick={runPack}>⬇ Generate PDF</Button>
               </div>
             </div>
@@ -200,7 +200,7 @@ export function CredentialsApp() {
             <div className="h-full w-full max-w-lg overflow-y-auto bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
               <div className="mb-1 flex items-start gap-2">
                 <div><h3 className="text-[18px] font-extrabold text-[var(--ink)]">{profile.name}</h3><div className="text-[12.5px] text-[var(--ink-3)]">{profile.role} · {profile.op}</div></div>
-                <button type="button" onClick={() => setProfile(null)} className="ml-auto text-[20px] text-[var(--ink-3)] hover:text-[var(--ink)]">×</button>
+                <button type="button" onClick={() => setProfile(null)} className="ms-auto text-[20px] text-[var(--ink-3)] hover:text-[var(--ink)]">×</button>
               </div>
 
               <div className="my-3 rounded-xl border border-[var(--line)] p-3">
@@ -219,7 +219,7 @@ export function CredentialsApp() {
                     <div className="flex items-center gap-2">
                       <span className="text-[12.5px] font-bold text-[var(--ink)]">{t.name}</span>
                       {t.required && appliesTo(t, profile.name, profile.role) ? <span className="rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9px] font-bold text-[#c0392b]">Required</span> : <span className="rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-bold text-[#64748b]">Optional</span>}
-                      <span className="ml-auto"><CredBadge s={st} /></span>
+                      <span className="ms-auto"><CredBadge s={st} /></span>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11.5px] text-[var(--ink-3)]">
                       {r?.issue && <span>Issued <b className="text-[var(--ink-2)]">{fmtDate(r.issue)}</b></span>}
@@ -229,7 +229,7 @@ export function CredentialsApp() {
                     <div className="mt-1.5 flex flex-wrap items-center gap-2">
                       {fs.map((f, i) => <button key={i} type="button" onClick={() => openCredFile(f.data)} className="text-[11px] font-bold text-[#1d3a8f] hover:underline">📎 {i === fs.length - 1 ? "Current" : "Older"}</button>)}
                       {r && st === "Pending" && <button type="button" onClick={() => cred.upsertRecord({ ...r, verified: "verified" })} className="text-[11px] font-bold text-[#0f7a43] hover:underline">✓ Verify</button>}
-                      <button type="button" onClick={() => setEdit(r ?? blankRecord(profile.name, t.id))} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{r ? "Edit" : "Add"}</button>
+                      <button type="button" onClick={() => setEdit(r ?? blankRecord(profile.name, t.id))} className="ms-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{r ? "Edit" : "Add"}</button>
                     </div>
                   </div>
                 ); })}
@@ -244,7 +244,7 @@ export function CredentialsApp() {
                       <span className="truncate text-[12.5px] font-bold text-[var(--ink)]">{d.title}</span>
                       <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-extrabold text-[#0f7a43] tabular-nums" title={d.selfReported ? "Self-reported: recorded from the staff member's own device" : undefined}>{d.score}%{d.selfReported ? " · self" : ""}</span>
                       <span className="text-[10.5px] text-[var(--ink-3)]">{fmtDate(d.date)}</span>
-                      <button type="button" onClick={() => downloadCourseCertificate(profile.name, d, settings)} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">⬇ Certificate</button>
+                      <button type="button" onClick={() => downloadCourseCertificate(profile.name, d, settings)} className="ms-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">⬇ Certificate</button>
                     </div>
                   ))}
                 </div>
@@ -262,7 +262,7 @@ export function CredentialsApp() {
         return (
           <div className="fixed inset-0 z-[138] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={() => setCell(null)}>
             <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
-              <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t?.name ?? "Credential"}</h3><CredBadge s={st} /><button type="button" onClick={() => setCell(null)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+              <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t?.name ?? "Credential"}</h3><CredBadge s={st} /><button type="button" onClick={() => setCell(null)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
               <div className="mb-3 text-[12px] text-[var(--ink-3)]">{cell.staff}</div>
               {r ? (<>
                 <div className="grid grid-cols-2 gap-2 text-[12.5px]">
@@ -276,7 +276,7 @@ export function CredentialsApp() {
                   <div className="mt-2 space-y-1">
                     <div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Document{fs.length > 1 ? `s · ${fs.length} versions` : ""}</div>
                     {fs.slice().reverse().map((f, i) => { const latest = i === 0; return (
-                      <button key={i} type="button" onClick={() => openCredFile(f.data)} className="flex w-full items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-1.5 text-left text-[12px] font-semibold text-[#1d3a8f] hover:border-[#1d3a8f]">📎 <span className="truncate">{f.name}</span>{latest ? <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#0f7a43]">Current</span> : <span className="rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#64748b]">Older</span>}{f.at && <span className="ml-auto text-[10px] font-normal text-[var(--ink-3)]">{fmtDate(f.at.slice(0, 10))}</span>}</button>
+                      <button key={i} type="button" onClick={() => openCredFile(f.data)} className="flex w-full items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-1.5 text-start text-[12px] font-semibold text-[#1d3a8f] hover:border-[#1d3a8f]">📎 <span className="truncate">{f.name}</span>{latest ? <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#0f7a43]">Current</span> : <span className="rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#64748b]">Older</span>}{f.at && <span className="ms-auto text-[10px] font-normal text-[var(--ink-3)]">{fmtDate(f.at.slice(0, 10))}</span>}</button>
                     ); })}
                   </div>
                 ); })()}
@@ -284,7 +284,7 @@ export function CredentialsApp() {
                   {r.verified !== "verified" && <Button variant="primary" onClick={() => cred.upsertRecord({ ...r, verified: "verified" })}>✓ Verify</Button>}
                   {r.verified !== "rejected" && <Button onClick={() => cred.upsertRecord({ ...r, verified: "rejected" })}>Reject</Button>}
                   <Button onClick={() => { setEdit(r); setCell(null); }}>Edit</Button>
-                  <button type="button" title="Delete" onClick={() => { if (typeof window !== "undefined" && window.confirm("Delete this certificate record?")) { cred.deleteRecord(r.id); setCell(null); } }} className="ml-auto text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
+                  <button type="button" title="Delete" onClick={() => { if (typeof window !== "undefined" && window.confirm("Delete this certificate record?")) { cred.deleteRecord(r.id); setCell(null); } }} className="ms-auto text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
                 </div>
               </>) : (<>
                 <p className="rounded-lg bg-[#fdecec] px-3 py-2.5 text-[12.5px] font-semibold text-[#c0392b]">No {t?.name} on file for {cell.staff}.</p>

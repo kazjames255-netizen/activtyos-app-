@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
 import { useHoScope } from "@/components/franchise/HoScope";
@@ -43,7 +44,7 @@ const hueFor = (label: string) => HUES[[...(label || "?")].reduce((a, c) => a + 
 const initials = (name: string) => (name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "?").toUpperCase();
 const REPEAT_LABEL: Record<Repeat, string> = { weekly: "week", fortnightly: "2 weeks", monthly: "month" };
 
-const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
@@ -204,7 +205,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const monthly = useMemo(() => {
     const months = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      return { key: monthKeyOf(d), label: d.toLocaleDateString("en-GB", { month: "short" }) };
+      return { key: monthKeyOf(d), label: d.toLocaleDateString(dl(), { month: "short" }) };
     });
     return months.map((m) => {
       const rows = allItems.filter((x) => (x.date || "").slice(0, 7) === m.key);
@@ -362,7 +363,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
       {/* Hero */}
       {!embedded && (
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
-        <button type="button" onClick={openAdd} className="absolute right-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ Log expense</button>
+        <button type="button" onClick={openAdd} className="absolute end-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ Log expense</button>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🧾</span>
           Expenses
@@ -476,7 +477,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
                     <div key={s.supplier} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
                       <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[var(--brand-soft,#eaf0fc)] text-[11px] font-extrabold text-[var(--brand-strong,#16306e)]">{i + 1}</span>
                       <div className="min-w-0 flex-1 truncate font-bold">{s.supplier}</div>
-                      <div className="flex-none text-right"><div className="font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{s.count}×</div></div>
+                      <div className="flex-none text-end"><div className="font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{s.count}×</div></div>
                     </div>
                   ))}
                 </div>
@@ -519,8 +520,8 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
           <Card className="flex flex-col gap-2.5 p-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
-                <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search supplier or note…" className="w-[210px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 pl-7 pr-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]" />
+                <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search supplier or note…" className="w-[210px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 ps-7 pe-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]" />
               </div>
               <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className={`${pill} rounded-full`}>
                 <option value="all">All categories</option>
@@ -531,7 +532,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
                 <option value="with">📎 Has receipt</option>
                 <option value="without">Missing receipt</option>
               </select>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ms-auto flex items-center gap-2">
                 <button type="button" onClick={exportCsv} className={btnGhost}>⬇ Export CSV</button>
               </div>
             </div>
@@ -609,7 +610,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
             <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">From <input type="date" value={rFrom} onChange={(e) => setRFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
             <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">to <input type="date" value={rTo} onChange={(e) => setRTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
             {(rCat !== "all" || rFrom || rTo) && <button type="button" onClick={() => { setRCat("all"); setRFrom(""); setRTo(""); }} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Clear ✕</button>}
-            <span className="ml-auto text-[12px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{receiptsShown.length}</b> shown</span>
+            <span className="ms-auto text-[12px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{receiptsShown.length}</b> shown</span>
           </Card>
 
           {receiptsShown.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">{withReceipt.length === 0 ? "No receipts yet — open any expense and add one." : "No receipts match those filters."}</Card> : (
@@ -658,7 +659,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
                   </div>
                 ) : (
                   <>
-                    <div className="text-[13.5px] font-extrabold">{icon(c.category)} {c.category}{c.realCount === 0 && <span className="ml-1.5 rounded-full bg-[var(--panel)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink-3)]">unused</span>}</div>
+                    <div className="text-[13.5px] font-extrabold">{icon(c.category)} {c.category}{c.realCount === 0 && <span className="ms-1.5 rounded-full bg-[var(--panel)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink-3)]">unused</span>}</div>
                     <div className="flex items-center gap-2.5">
                       <div className="text-[15px] font-extrabold tabular-nums">{money(c.total)}</div>
                       <button type="button" onClick={() => setRenaming({ name: c.category, value: c.category })} className="text-[var(--ink-3)] hover:text-[#1d3a8f]" title="Rename category" aria-label="Rename">✎</button>

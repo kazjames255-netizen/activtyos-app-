@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
@@ -42,9 +43,9 @@ const ACT_C = ["#2f5fd0", "#0f7a43", "#C81E5E", "#5a3fd0", "#F5A524", "#0ea5a0",
 // Donut segments are marks on a dark card, so they take the light tones.
 const STATUS_C: Record<string, string> = { Confirmed: "#2f5fd0", "Approval needed": "#F5A524", Waitlisted: "#0f7a43", Offered: "#0e7a75", Cancelled: "#C81E5E", Declined: "#C81E5E" };
 const PAY_C: Record<string, string> = { Paid: "#0f7a43", Funded: "#0e7a75", Unpaid: "#F5A524", "Invoice sent": "#5a3fd0", Refunded: "#C81E5E", "Partially refunded": "#C81E5E" };
-const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" });
 const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 // Compact money for the narrow sparkline columns: £1.2k, £320, £0.
 const compactMoney = (n: number) => (n >= 1000 ? `£${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `£${Math.round(n)}`);
 
@@ -169,7 +170,7 @@ function Funnel({ stages }: { stages: { label: string; value: number; color: str
         const pct = Math.round((s.value / top) * 100);
         return (
           <div key={s.label} className="flex items-center gap-3">
-            <div className="w-20 flex-none text-right text-[12px] font-semibold text-[var(--ink-2)]">{s.label}</div>
+            <div className="w-20 flex-none text-end text-[12px] font-semibold text-[var(--ink-2)]">{s.label}</div>
             <div className="flex-1">
               <div className="mx-auto flex h-9 items-center justify-center rounded-md text-[13px] font-extrabold text-white shadow-[0_6px_16px_-10px_rgba(20,30,80,.6)]" style={{ width: `${w}%`, background: s.color }}>{s.value}</div>
             </div>
@@ -465,7 +466,7 @@ export function DashboardApp() {
 
     return {
       income, booked, weekly, weeklyIncome,
-      weeklyLabels: wkStarts.map((ms) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })),
+      weeklyLabels: wkStarts.map((ms) => new Date(ms).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" })),
       kpis: { collected: totalCollected, bookings: bookingsCount, families: [...families].filter(Boolean).length, avg: paidCount ? totalCollected / paidCount : 0 },
       // Full list (venue included) — the location filter + top-6 slice happen at
       // render, so filtering by location doesn't lose activities beyond the top 6.
@@ -512,7 +513,7 @@ export function DashboardApp() {
             )}
           </div>
           {/* On-site-today summary, on the right of the title banner. */}
-          <div className="rounded-2xl bg-white/12 px-4 py-3 text-right ring-1 ring-white/15">
+          <div className="rounded-2xl bg-white/12 px-4 py-3 text-end ring-1 ring-white/15">
             <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/75">{t("dashboard.onSiteToday")}</div>
             <div className="text-[30px] font-extrabold leading-none text-white" style={{ fontFamily: "var(--ff-display)" }}>{d.today.booked}</div>
             <div className="mt-1 text-[11.5px] font-semibold text-white/85">{d.today.sessions.length} session{d.today.sessions.length === 1 ? "" : "s"} running</div>
@@ -585,13 +586,13 @@ export function DashboardApp() {
                 const c = actColor(s.listing);
                 const pct = s.capacity ? Math.round((s.booked / s.capacity) * 100) : 0;
                 return (
-                  <button key={i} type="button" onClick={() => router.push(`/${portal}/registers`)} title={t("dashboard.openRegisters")} className="flex w-full items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-left transition-shadow hover:shadow-sm" style={{ borderLeft: `4px solid ${c}` }}>
+                  <button key={i} type="button" onClick={() => router.push(`/${portal}/registers`)} title={t("dashboard.openRegisters")} className="flex w-full items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-start transition-shadow hover:shadow-sm" style={{ borderInlineStart: `4px solid ${c}` }}>
                     <span className="rounded-lg px-2 py-1 text-[11.5px] font-extrabold tabular-nums text-white" style={{ background: c }}>{s.start}–{s.end}</span>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{s.listing}</div>
                       <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: c }} /></div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">{s.booked}/{s.capacity}</div>
                       <div className="text-[10px] font-bold text-[var(--ink-3)]">{t("dashboard.pctFull", { pct })}</div>
                     </div>
@@ -616,7 +617,7 @@ export function DashboardApp() {
                 const c = actColor(l.listing);
                 const tone = availTone(l.spotsLeft, l.capacity);
                 return (
-                  <button key={l.listingId} type="button" onClick={() => router.push(`/${portal}/listings`)} title={t("dashboard.manageListings")} className="flex w-full items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-left transition-shadow hover:shadow-sm" style={{ borderLeft: `4px solid ${c}` }}>
+                  <button key={l.listingId} type="button" onClick={() => router.push(`/${portal}/listings`)} title={t("dashboard.manageListings")} className="flex w-full items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-start transition-shadow hover:shadow-sm" style={{ borderInlineStart: `4px solid ${c}` }}>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{l.listing}</div>
                       <div className="mt-1.5 flex items-center gap-2">
@@ -624,7 +625,7 @@ export function DashboardApp() {
                         <span className="whitespace-nowrap text-[11px] font-bold text-[var(--ink-3)]">{t("dashboard.fromDate", { date: fmtDay(l.nextDate) })}</span>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">{l.booked}/{l.capacity}</div>
                       <div className="text-[10px] font-bold text-[var(--ink-3)]">{t("dashboard.pctFull", { pct: l.pct })}</div>
                     </div>
@@ -656,13 +657,13 @@ export function DashboardApp() {
                 const st = TASK_STATUS[task.status ?? "todo"] ?? TASK_STATUS.todo;
                 const go = () => router.push(task.link?.href ?? `/${portal}/tasks`);
                 return (
-                  <button key={task.id} type="button" onClick={go} className="flex flex-col gap-0.5 py-2 text-left text-[12.5px] hover:opacity-80">
+                  <button key={task.id} type="button" onClick={go} className="flex flex-col gap-0.5 py-2 text-start text-[12.5px] hover:opacity-80">
                     <span className="flex items-start gap-2.5">
                       <span className="mt-[5px] h-2 w-2 flex-none rounded-full" style={{ background: st.color }} title={st.label} />
                       <span className="min-w-0 flex-1 font-semibold">{task.t}</span>
                       <span className="shrink-0 whitespace-nowrap text-[11px] font-bold tabular-nums text-[var(--ink-3)]">{task.time ?? t("dashboard.today")}</span>
                     </span>
-                    {task.link?.v && <span className="truncate pl-[18px] text-[11px] text-[var(--ink-3)]">{task.link.v}</span>}
+                    {task.link?.v && <span className="truncate ps-[18px] text-[11px] text-[var(--ink-3)]">{task.link.v}</span>}
                   </button>
                 );
               })}
@@ -769,7 +770,7 @@ export function DashboardApp() {
                   <div className="mb-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t("dashboard.byStatus")}</div>
                   {statusTotal ? <Donut segments={a.byStatus} center={`${statusTotal}`} sub={t("dashboard.bookedLabel")} /> : <Empty>{t("dashboard.nothingYet")}</Empty>}
                 </div>
-                <div className="sm:border-l sm:border-[var(--line)] sm:pl-5">
+                <div className="sm:border-s sm:border-[var(--line)] sm:ps-5">
                   <div className="mb-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t("dashboard.paymentMix")}</div>
                   {payTotal ? <Donut segments={a.payMix} center={`${paidPct}%`} sub={t("dashboard.paid")} /> : <Empty>{t("dashboard.nothingYet")}</Empty>}
                 </div>
@@ -783,7 +784,7 @@ export function DashboardApp() {
                       key={`${b.tenantId}-${b.ref}`}
                       type="button"
                       onClick={() => router.push(`/${portal}/bookings?ref=${encodeURIComponent(b.ref)}`)}
-                      className="-mx-1 flex items-center gap-2 rounded-lg px-1 py-2 text-left text-[12.5px] transition-colors hover:bg-[var(--panel)]"
+                      className="-mx-1 flex items-center gap-2 rounded-lg px-1 py-2 text-start text-[12.5px] transition-colors hover:bg-[var(--panel)]"
                       title={t("dashboard.openThisBooking")}
                     >
                       <span className="min-w-0 flex-1 truncate"><b>{b.child || b.booker}</b> <span className="text-[var(--ink-3)]">· {b.listing}</span></span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
@@ -47,8 +48,8 @@ interface FranchiseBilling { count: number; base: number; perTotal: number; tota
 interface Payload { current: Current; plans: Plan[]; billingConfigured: boolean; trialDays?: number; franchiseCount?: number | null; franchise?: FranchiseBilling | null }
 
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
-const gbp = (n: number) => `£${n.toLocaleString("en-GB")}`;
-const fmtDay = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
+const gbp = (n: number) => `£${n.toLocaleString(dl())}`;
+const fmtDay = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "");
 const daysLeft = (iso?: string | null) => (iso ? Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000)) : 0);
 
 /** Stripe's PaymentElement + confirm + POST /start, inside <Elements>. The
@@ -222,7 +223,7 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
     return (
       <div key={p.id} className="relative flex flex-col overflow-hidden rounded-2xl border-2 bg-[var(--surface)] p-4" style={{ borderColor: recommended ? tier.c : "var(--line)", boxShadow: recommended ? "0 14px 34px -18px rgba(29,58,143,.35)" : undefined }}>
         <div className="-mx-4 -mt-4 mb-3 h-1.5" style={{ background: tier.grad }} />
-        {recommended && <div className="absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white" style={{ background: tier.c }}>{gate ? t("money.subYourPlan") : t("money.subCurrentPlan")}</div>}
+        {recommended && <div className="absolute end-3 top-3 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white" style={{ background: tier.c }}>{gate ? t("money.subYourPlan") : t("money.subCurrentPlan")}</div>}
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl text-[15px]" style={{ background: `${tier.c}1f` }}>{tier.icon}</span>
           <span className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{p.name}</span>
@@ -358,7 +359,7 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{c.details?.name}{c.band ? ` · ${c.band}` : ""}</span>
             <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: sm.bg, color: sm.fg }}>{statusLabel[c.status] ?? statusLabel.none}</span>
-            <span className="ml-auto text-[13px] font-bold">{/* The stored price is MONTHLY; annual is billed at ×10 (lib/billing.ts).
+            <span className="ms-auto text-[13px] font-bold">{/* The stored price is MONTHLY; annual is billed at ×10 (lib/billing.ts).
                 Showing the monthly figure with "/yr" understated the charge. */}
               {onFranchise && fb ? `${gbp(c.cadence === "year" ? fb.total * 10 : fb.total)}/${c.cadence === "year" ? "yr" : "mo"}` : c.price != null ? `${gbp(c.cadence === "year" ? c.price * 10 : c.price)}/${c.cadence === "year" ? "yr" : "mo"}` : ""}</span>
           </div>
@@ -396,7 +397,7 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
                 ? t("money.subPastDueGrace", { date: fmtDay(c.access?.graceEndsAt) })
                 : t("money.subPastDueReadOnly", { date: fmtDay(c.pastDueSince) })}
               {data.billingConfigured && (
-                <button type="button" className="ml-2 font-extrabold underline" onClick={() => setUpdatingCard(true)}>{t("money.subUpdateCard")}</button>
+                <button type="button" className="ms-2 font-extrabold underline" onClick={() => setUpdatingCard(true)}>{t("money.subUpdateCard")}</button>
               )}
             </div>
           )}
@@ -425,7 +426,7 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#ede9fe] text-[14px]">🌐</span>
             <span className="text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("money.subFranchiseNetwork")}</span>
             <span className="rounded-full bg-[#ede9fe] px-2.5 py-0.5 text-[11px] font-extrabold text-[#6d28d9]">{t("money.subFranchisesSignedUp", { count: fb.count, label: fb.count === 1 ? t("money.subFranchiseOne") : t("money.subFranchiseMany") })}</span>
-            {!onFranchise && <span className="ml-auto rounded-full bg-[#fdf0e3] px-2.5 py-0.5 text-[10.5px] font-bold text-[#a5670a]">{t("money.subPreviewYoureOn", { name: c.details?.name ?? "" })}</span>}
+            {!onFranchise && <span className="ms-auto rounded-full bg-[#fdf0e3] px-2.5 py-0.5 text-[10.5px] font-bold text-[#a5670a]">{t("money.subPreviewYoureOn", { name: c.details?.name ?? "" })}</span>}
           </div>
           <div className="p-4">
             <div className="text-[11.5px] text-[var(--ink-3)]">

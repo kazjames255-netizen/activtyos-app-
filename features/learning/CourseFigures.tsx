@@ -60,7 +60,7 @@ function InclusionSpectrum() {
   return <div>
     <H>The Inclusion Spectrum — choose the least change that includes everyone</H>
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {rungs.map((r, i) => <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, ...card({ padding: "9px 12px", borderLeft: `5px solid ${r.c}` }) }}>
+      {rungs.map((r, i) => <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, ...card({ padding: "9px 12px", borderInlineStart: `5px solid ${r.c}` }) }}>
         <span style={{ display: "grid", placeItems: "center", width: 24, height: 24, borderRadius: "50%", background: r.c, color: "#fff", fontWeight: 800, fontSize: 12, flex: "0 0 auto" }}>{i + 1}</span>
         <div><span style={{ fontWeight: 800, color: "var(--ink)", fontSize: 14 }}>{r.t}</span> <span style={{ color: "var(--ink-2)", fontSize: 13 }}>— {r.d}</span></div>
       </div>)}
@@ -75,7 +75,7 @@ function CoachingStyles() {
       <div style={{ height: 12, borderRadius: 99, background: "linear-gradient(90deg, var(--accent), #22b4a6)", marginBottom: 6 }} />
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 700, color: "var(--ink-2)" }}>
         <span>◀ Command<br /><span style={{ fontWeight: 500 }}>coach decides — good for safety &amp; new skills</span></span>
-        <span style={{ textAlign: "right" }}>Guided discovery ▶<br /><span style={{ fontWeight: 500 }}>child solves it — builds thinking &amp; ownership</span></span>
+        <span style={{ textAlign: "end" }}>Guided discovery ▶<br /><span style={{ fontWeight: 500 }}>child solves it — builds thinking &amp; ownership</span></span>
       </div>
     </div>
   </div>;

@@ -1,13 +1,14 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useState } from "react";
 import type { TenantSettings } from "@/lib/settings";
 
 export type LineItem = { description: string; qty: number; unitPrice: number };
 export type Billing = NonNullable<TenantSettings["billing"]>;
 
-const gbp = (n: number) => `£${(Math.round((n || 0) * 100) / 100).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fmtDay = (iso?: string) => (iso ? new Date(`${String(iso).slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const gbp = (n: number) => `£${(Math.round((n || 0) * 100) / 100).toLocaleString(dl(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtDay = (iso?: string) => (iso ? new Date(`${String(iso).slice(0, 10)}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
 export const lineTotal = (items: LineItem[]) => Math.round(items.reduce((s, li) => s + (li.qty || 0) * (li.unitPrice || 0), 0) * 100) / 100;
 
@@ -89,15 +90,15 @@ export function LineItemsEditor({ items, onChange }: { items: LineItem[]; onChan
   return (
     <div>
       <div className="mb-1 flex gap-2 px-1 text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-        <span className="flex-1">Description / service</span><span className="w-14 text-right">Qty</span><span className="w-24 text-right">Unit £</span><span className="w-20 text-right">Total</span><span className="w-5" />
+        <span className="flex-1">Description / service</span><span className="w-14 text-end">Qty</span><span className="w-24 text-end">Unit £</span><span className="w-20 text-end">Total</span><span className="w-5" />
       </div>
       <div className="flex flex-col gap-1.5">
         {items.map((it, i) => (
           <div key={i} className="flex items-center gap-2">
             <input value={it.description} onChange={(e) => set(i, { description: e.target.value })} placeholder="e.g. Coaching — 2 hrs" className={`${fieldCls} flex-1`} />
-            <input type="number" min="0" step="1" value={it.qty} onChange={(e) => set(i, { qty: num(e.target.value) })} className={`${fieldCls} w-14 text-right`} />
-            <input type="number" min="0" step="0.01" value={it.unitPrice} onChange={(e) => set(i, { unitPrice: num(e.target.value) })} className={`${fieldCls} w-24 text-right`} />
-            <span className="w-20 text-right text-[12.5px] font-bold tabular-nums">{gbp((it.qty || 0) * (it.unitPrice || 0))}</span>
+            <input type="number" min="0" step="1" value={it.qty} onChange={(e) => set(i, { qty: num(e.target.value) })} className={`${fieldCls} w-14 text-end`} />
+            <input type="number" min="0" step="0.01" value={it.unitPrice} onChange={(e) => set(i, { unitPrice: num(e.target.value) })} className={`${fieldCls} w-24 text-end`} />
+            <span className="w-20 text-end text-[12.5px] font-bold tabular-nums">{gbp((it.qty || 0) * (it.unitPrice || 0))}</span>
             <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} disabled={items.length === 1} className="w-5 text-[15px] leading-none text-[var(--ink-3)] enabled:hover:text-[var(--red)] disabled:opacity-30" aria-label="Remove line">×</button>
           </div>
         ))}
@@ -134,7 +135,7 @@ export function PrintableDoc({ kind, doc, billing, payUrl, actions, note, onClos
           <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink-3)]">✕ Close</button>
         </div>
         {note && <div className="mb-2 rounded-lg bg-[#eaf0fc] px-3 py-1.5 text-center text-[12px] font-bold text-[#1d3a8f]">{note}</div>}
-        <div className="mb-2 text-right text-[10.5px] text-white/85">💡 To save a PDF: click Print, then choose <b>“Save as PDF”</b> as the destination.</div>
+        <div className="mb-2 text-end text-[10.5px] text-white/85">💡 To save a PDF: click Print, then choose <b>“Save as PDF”</b> as the destination.</div>
         <div className="rounded-xl bg-white p-6 shadow-[0_16px_40px_-16px_rgba(29,58,143,.45)]" dangerouslySetInnerHTML={{ __html: html }} />
       </div>
     </div>

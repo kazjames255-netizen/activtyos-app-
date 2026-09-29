@@ -133,9 +133,9 @@ export function MyHolidayApp() {
         <div className="divide-y divide-[var(--line)]">{mine.map((a) => { const km = KIND_META[a.kind]; const tone = a.status === "approved" ? "bg-[#e6f4ea] text-[#0f7a43]" : a.status === "pending" ? "bg-[#fdf3e0] text-[#8a5a09]" : "bg-[#eef1f6] text-[#64748b]"; return (
           <div key={a.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
             <span className="grid h-8 w-8 place-items-center rounded-lg text-[14px]" style={{ background: km.tone + "1a" }}>{km.icon}</span>
-            <div className="min-w-[150px]"><div className="text-[12.5px] font-bold text-[var(--ink)]">{t(KIND_KEY[a.kind])}{a.paid === false && <span className="ml-1.5 rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9.5px] font-bold text-[#64748b]">{t("staffp.holUnpaidTag")}</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{fmtRange(a.start, a.end, locale)}{a.fromTime ? ` · ${a.fromTime}–${a.toTime}` : a.half ? ` · ${t(a.half === "am" ? "staffp.holHalfAm" : "staffp.holHalfPm")}` : ""} · {t("staffp.holDaysAbbr", { n: a.days })}</div></div>
+            <div className="min-w-[150px]"><div className="text-[12.5px] font-bold text-[var(--ink)]">{t(KIND_KEY[a.kind])}{a.paid === false && <span className="ms-1.5 rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9.5px] font-bold text-[#64748b]">{t("staffp.holUnpaidTag")}</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{fmtRange(a.start, a.end, locale)}{a.fromTime ? ` · ${a.fromTime}–${a.toTime}` : a.half ? ` · ${t(a.half === "am" ? "staffp.holHalfAm" : "staffp.holHalfPm")}` : ""} · {t("staffp.holDaysAbbr", { n: a.days })}</div></div>
             {a.note && <div className="text-[11.5px] italic text-[var(--ink-3)]">“{a.note}”</div>}
-            <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${tone}`}>{t(STATUS_KEY[a.status])}</span>
+            <span className={`ms-auto rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${tone}`}>{t(STATUS_KEY[a.status])}</span>
             {a.status === "pending" && <button type="button" onClick={() => cancel(a.id)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">{t("staffp.holCancel")}</button>}
           </div>
         ); })}</div>
@@ -163,7 +163,7 @@ export function MyHolidayApp() {
   );
 
   const counter = (kind: AbsenceKind, value: number) => { const km = KIND_META[kind]; const active = showHistory && histKind === kind; return (
-    <button type="button" onClick={() => pickCard(kind)} title={t("staffp.holFilterBy", { kind: t(KIND_KEY[kind]) })} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition ${active ? "border-[#1d3a8f] bg-[#f4f8ff] ring-2 ring-[#1d3a8f]/25" : "border-[var(--line)] hover:border-[var(--ink-3)] hover:bg-[var(--panel)]"}`}><span className="grid h-7 w-7 place-items-center rounded-lg text-[14px]" style={{ background: km.tone + "1a" }}>{km.icon}</span><div><div className="text-[15px] font-extrabold tabular-nums text-[var(--ink)]">{value}</div><div className="text-[10.5px] font-semibold text-[var(--ink-3)]">{t(KIND_KEY[kind])}</div></div>{active && <span className="ml-auto text-[13px] font-black text-[#1d3a8f]">✓</span>}</button>
+    <button type="button" onClick={() => pickCard(kind)} title={t("staffp.holFilterBy", { kind: t(KIND_KEY[kind]) })} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-start transition ${active ? "border-[#1d3a8f] bg-[#f4f8ff] ring-2 ring-[#1d3a8f]/25" : "border-[var(--line)] hover:border-[var(--ink-3)] hover:bg-[var(--panel)]"}`}><span className="grid h-7 w-7 place-items-center rounded-lg text-[14px]" style={{ background: km.tone + "1a" }}>{km.icon}</span><div><div className="text-[15px] font-extrabold tabular-nums text-[var(--ink)]">{value}</div><div className="text-[10.5px] font-semibold text-[var(--ink-3)]">{t(KIND_KEY[kind])}</div></div>{active && <span className="ms-auto text-[13px] font-black text-[#1d3a8f]">✓</span>}</button>
   ); };
 
   return (
@@ -219,11 +219,11 @@ export function MyHolidayApp() {
             </div>
           )}
           {ovTab === "status" && (
-            <div className="mt-4"><div className="flex items-center gap-2 rounded-xl bg-[var(--panel)] p-3"><span className="h-2.5 w-2.5 rounded-full" style={{ background: myClock?.status === "in" ? "#12b76a" : myClock?.status === "break" ? "#f59e0b" : "#94a3b8" }} /><span className="text-[13px] font-bold text-[var(--ink)]">{t("staffp.holYoureStatus", { status: myStatus })}</span>{myClock?.clockInAt && myClock.status !== "out" && <span className="text-[12px] text-[var(--ink-3)]">{t("staffp.holSince", { time: clockHhmm(myClock.clockInAt) })}</span>}<a href="schedule?tab=clock" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("staffp.holClockLink")}</a></div></div>
+            <div className="mt-4"><div className="flex items-center gap-2 rounded-xl bg-[var(--panel)] p-3"><span className="h-2.5 w-2.5 rounded-full" style={{ background: myClock?.status === "in" ? "#12b76a" : myClock?.status === "break" ? "#f59e0b" : "#94a3b8" }} /><span className="text-[13px] font-bold text-[var(--ink)]">{t("staffp.holYoureStatus", { status: myStatus })}</span>{myClock?.clockInAt && myClock.status !== "out" && <span className="text-[12px] text-[var(--ink-3)]">{t("staffp.holSince", { time: clockHhmm(myClock.clockInAt) })}</span>}<a href="schedule?tab=clock" className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("staffp.holClockLink")}</a></div></div>
           )}
           {ovTab === "clocked" && teamVisible && (
             <div className="mt-3 divide-y divide-[var(--line)]">{clockedIn.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">{t(vis === "team" ? "staffp.holNobodyInListings" : "staffp.holNobodyIn")}</div> : clockedIn.map((r) => (
-              <div key={r.id} className="flex items-center gap-2 py-2 text-[12.5px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-bold text-[var(--ink)]">{r.name}</span>{r.op && <span className="text-[var(--ink-3)]">· {r.op}</span>}<span className="ml-auto text-[var(--ink-3)]">{r.status === "break" ? t("staffp.holOnBreak") : sinceLabel(t, r.clockInAt)}</span></div>
+              <div key={r.id} className="flex items-center gap-2 py-2 text-[12.5px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-bold text-[var(--ink)]">{r.name}</span>{r.op && <span className="text-[var(--ink-3)]">· {r.op}</span>}<span className="ms-auto text-[var(--ink-3)]">{r.status === "break" ? t("staffp.holOnBreak") : sinceLabel(t, r.clockInAt)}</span></div>
             ))}</div>
           )}
         </Card>
@@ -261,7 +261,7 @@ export function MyHolidayApp() {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-3">
             <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("staffp.holHistory")}</div>
             <span className="text-[11px] font-semibold text-[var(--ink-3)]">{histFiltered.length !== mine.length ? t("staffp.holOfN", { a: histFiltered.length, b: mine.length }) : histFiltered.length}</span>
-            <div className="ml-auto flex flex-wrap items-center gap-2">
+            <div className="ms-auto flex flex-wrap items-center gap-2">
               {histKind !== "all" && <button type="button" onClick={() => setHistKind("all")} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">{`${KIND_META[histKind].icon} ${t(KIND_KEY[histKind])}`} <span className="text-[12px]">×</span></button>}
               <label className="flex items-center gap-1 text-[10.5px] font-bold text-[var(--ink-3)]">{t("staffp.holFrom")} <Input type="date" value={histFrom} onChange={(e) => setHistFrom(e.target.value)} className="h-8 w-[140px] text-[12px]" /></label>
               <label className="flex items-center gap-1 text-[10.5px] font-bold text-[var(--ink-3)]">{t("staffp.holTo")} <Input type="date" value={histTo} min={histFrom || undefined} onChange={(e) => setHistTo(e.target.value)} className="h-8 w-[140px] text-[12px]" /></label>
@@ -276,7 +276,7 @@ export function MyHolidayApp() {
                 <span className="grid h-8 w-8 place-items-center rounded-lg text-[14px]" style={{ background: km.tone + "1a" }}>{km.icon}</span>
                 <div className="min-w-[150px]"><div className="text-[12.5px] font-bold text-[var(--ink)]">{t(KIND_KEY[a.kind])}</div><div className="text-[11.5px] text-[var(--ink-3)]">{fmtRange(a.start, a.end, locale)}{a.fromTime ? ` · ${a.fromTime}–${a.toTime}` : a.half ? ` · ${t(a.half === "am" ? "staffp.holHalfAm" : "staffp.holHalfPm")}` : ""} · {t("staffp.holDaysAbbr", { n: a.days })}</div></div>
                 {(a.reason || a.note) && <div className="text-[11.5px] italic text-[var(--ink-3)]">“{a.reason || a.note}”</div>}
-                <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${tone}`}>{t(STATUS_KEY[a.status])}</span>
+                <span className={`ms-auto rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${tone}`}>{t(STATUS_KEY[a.status])}</span>
                 {a.status === "pending" && <button type="button" onClick={() => cancel(a.id)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">{t("staffp.holCancel")}</button>}
               </div>
             ); })}</div>
@@ -321,7 +321,7 @@ function RequestModal({ region, remaining, rolled, initialKind, sickOnly, onSubm
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className={`w-full max-w-md overflow-hidden rounded-2xl p-5 shadow-2xl ${sickOnly ? "bg-[#fffaf3] ring-2 ring-[#f59e0b]/45" : "bg-white"}`} onClick={(e) => e.stopPropagation()}>
         <div className={`-mx-5 -mt-5 mb-4 h-1.5 ${sickOnly ? "bg-[#f59e0b]" : "bg-[#e6007e]"}`} />
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{sickOnly ? t("staffp.holReportSick") : rolled ? t("staffp.holBookTitle") : t("staffp.holRequestBtn")}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{sickOnly ? t("staffp.holReportSick") : rolled ? t("staffp.holBookTitle") : t("staffp.holRequestBtn")}</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         {sickOnly && <p className="-mt-1.5 mb-3 text-[11.5px] leading-relaxed text-[#8a5a09]">{t("staffp.holSickIntro")}</p>}
         <div className="grid gap-2.5">
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("staffp.holType")}</span><Select value={kind} onChange={(e) => setKind(e.target.value as AbsenceKind)} disabled={sickOnly} className="w-full disabled:opacity-70">{kindOptions.map((k) => <option key={k} value={k}>{KIND_META[k].icon} {t(KIND_KEY[k])}</option>)}</Select></label>

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { useBookingsStore } from "./store";
 import type { Booking, Kid } from "./types";
@@ -486,7 +487,7 @@ function DateChangePanel({ booking }: { booking: Booking }) {
   const [picked, setPicked] = useState<number[]>(() => (req?.moves ?? []).map((_, i) => i));
   const [reason, setReason] = useState("");
   if (req?.status !== "pending") return null;
-  const fmt = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }); };
+  const fmt = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }); };
   const toggle = (i: number) => setPicked((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i]));
   const multiChild = new Set(req.moves.map((m) => m.childName).filter(Boolean)).size > 1;
   const approveN = picked.length;
@@ -509,10 +510,10 @@ function DateChangePanel({ booking }: { booking: Booking }) {
                 const on = picked.includes(i);
                 return (
                   <label key={i} className="flex cursor-pointer flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border bg-white px-3 py-2 text-[13px]" style={{ borderColor: on ? "#0f7a43" : "#f0d9a8", opacity: on ? 1 : 0.65 }}>
-                    <input type="checkbox" checked={on} onChange={() => toggle(i)} className="mr-1" />
+                    <input type="checkbox" checked={on} onChange={() => toggle(i)} className="me-1" />
                     <span className="text-[var(--ink-3)]">From</span> <b className="text-[var(--ink)]">{fmt(m.from)}</b>
                     <span className="text-[var(--ink-3)]">→ To</span> <b className="text-[#1d3a8f]">{fmt(m.to)}</b>
-                    {!on && <span className="ml-auto text-[11px] font-bold text-[#c0392b]">won&rsquo;t approve</span>}
+                    {!on && <span className="ms-auto text-[11px] font-bold text-[#c0392b]">won&rsquo;t approve</span>}
                   </label>
                 );
               })}
@@ -585,7 +586,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
       )}
       {b.status === "Offered" && (
         <>
-          <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>Held until {b.offerExpiresAt ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "…"}</Badge>
+          <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>Held until {b.offerExpiresAt ? new Date(b.offerExpiresAt).toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" }) : "…"}</Badge>
           <Button onClick={() => act(b.ref, "promote")} title="Confirm without waiting for the family">Confirm now</Button>
         </>
       )}
@@ -659,7 +660,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
               placeholder="e.g. Sorry, this week is now fully booked — try our August dates."
               className="w-full resize-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]"
             />
-            <div className="mt-1 text-right text-[11px] text-[var(--ink-3)]">{declineReason.length}/300</div>
+            <div className="mt-1 text-end text-[11px] text-[var(--ink-3)]">{declineReason.length}/300</div>
             <div className="mt-2 flex justify-end gap-2">
               <Button onClick={() => setDeclining(false)}>Cancel</Button>
               <Button
@@ -711,7 +712,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
                 <>
                   Booked{" "}
                   <b className="text-[var(--ink-2)]">
-                    {new Date(b.createdAt).toLocaleString("en-GB", {
+                    {new Date(b.createdAt).toLocaleString(dl(), {
                       weekday: "short",
                       day: "numeric",
                       month: "short",

@@ -62,7 +62,7 @@ const GRAD = {
 function Tile({ label, value, sub, grad, icon, aside }: { label: string; value: string; sub?: React.ReactNode; grad: string; icon?: string; aside?: React.ReactNode }) {
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-2xl p-4 text-white shadow-[0_12px_28px_-16px_rgba(20,30,80,.5)] sm:aspect-auto" style={{ background: grad }}>
-      <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
+      <div className="pointer-events-none absolute -end-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
       <div className="relative flex h-full flex-col">
         <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">
           {icon && <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-white/15 text-[11px]">{icon}</span>}
@@ -382,7 +382,7 @@ export function TeamApp() {
                     <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line-2,#eef2f8)] bg-white px-4 py-3">
                       <span className="rounded-full px-2.5 py-0.5 text-[11.5px] font-extrabold" style={roleStyle(roleId)}>{roleNm}</span>
                       <span className="rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[11.5px] font-bold text-[var(--ink-2)]">{jobTitle || t("team.noJobTitle")}</span>
-                      <span className="ml-auto text-[12px] font-semibold text-[var(--ink-2)]">📍 {assignTxt}</span>
+                      <span className="ms-auto text-[12px] font-semibold text-[var(--ink-2)]">📍 {assignTxt}</span>
                     </div>
                     <p className="bg-white px-4 py-2.5 text-[11.5px] leading-relaxed text-[var(--ink-3)]">{t("team.willEmailPre")}<b>{email.trim() || t("team.themWord")}</b>{t("team.willEmailMid")}<b>{t("team.pending")}</b>{t("team.willEmailPost")}</p>
                   </div>
@@ -422,12 +422,12 @@ export function TeamApp() {
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <div className="text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{t("team.invites")} · {rows.length}</div>
-            <div className="ml-1 inline-flex rounded-lg bg-[var(--panel)] p-0.5">
+            <div className="ms-1 inline-flex rounded-lg bg-[var(--panel)] p-0.5">
               {([["all", t("team.filterAll", { n: rows.length })], ["pending", t("team.filterPending", { n: pending.length })], ["activated", t("team.filterActivated", { n: active.length })]] as const).map(([f, lbl]) => (
                 <button key={f} type="button" onClick={() => setInvFilter(f)} className={"rounded-md px-3 py-1 text-[12px] font-bold transition-colors " + (invFilter === f ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)]")}>{lbl}</button>
               ))}
             </div>
-            <Input value={invQuery} onChange={(e) => setInvQuery(e.target.value)} placeholder={t("team.searchNameOrEmail")} className="ml-auto w-[220px] text-[12.5px]" />
+            <Input value={invQuery} onChange={(e) => setInvQuery(e.target.value)} placeholder={t("team.searchNameOrEmail")} className="ms-auto w-[220px] text-[12.5px]" />
           </div>
           <p className="mb-2 text-[11.5px] text-[var(--ink-3)]"><b>{t("team.copyLinkBold")}</b>{t("team.copyLinkHelpPre")}<b>{t("team.tabDeployment")}</b>.</p>
           {shownInv.length === 0 ? (

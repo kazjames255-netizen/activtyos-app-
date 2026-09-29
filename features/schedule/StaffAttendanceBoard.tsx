@@ -51,7 +51,7 @@ export function StaffAttendanceBoard() {
         <span className="text-[15px]">🗓️</span>
         <span className="text-[14px] font-extrabold text-[var(--ink)]">{t("schedule.staffAttendance")}</span>
         <span className="rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-bold text-[#1d3a8f]">{t("schedule.onSiteCount", { in: inRecs.length, total: shown.length, pct: pctIn(shown) })}</span>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="ms-auto flex flex-wrap items-center gap-2">
           <select value={site} onChange={(e) => setSite(e.target.value)} className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] font-semibold text-[var(--ink)]">
             <option value="all">{t("schedule.allSitesListings")}</option>
             {sites.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -66,10 +66,10 @@ export function StaffAttendanceBoard() {
         <div className="px-4 py-10 text-center text-[12.5px] text-[var(--ink-3)]">{site === "all" ? t("schedule.noStaffClockedIn") : t("schedule.noStaffClockedInAt", { where: site })}</div>
       ) : (
         <div className="p-4">
-          <div className="relative mb-2 hidden h-4 text-[10.5px] font-semibold text-[var(--ink-3)] sm:block" style={{ marginLeft: 176, marginRight: 128 }}>
-            <span className="absolute left-0">{hourLabel(ws)}</span>
+          <div className="relative mb-2 hidden h-4 text-[10.5px] font-semibold text-[var(--ink-3)] sm:block" style={{ marginInlineStart: 176, marginInlineEnd: 128 }}>
+            <span className="absolute start-0">{hourLabel(ws)}</span>
             <span className="absolute left-1/2 -translate-x-1/2">{hourLabel(Math.round((ws + we) / 2))}</span>
-            <span className="absolute right-0">{hourLabel(we)}</span>
+            <span className="absolute end-0">{hourLabel(we)}</span>
           </div>
           <div className="flex flex-col gap-4">
             {groups.map(([room, rs]) => (
@@ -95,7 +95,7 @@ export function StaffAttendanceBoard() {
                         <div className="relative h-2.5 rounded-full bg-[#eef1f6]">
                           {isIn && <div className="absolute top-0 h-2.5 rounded-full" style={{ left: left + "%", width: width + "%", background: r.status === "break" ? AMBER : live ? `linear-gradient(90deg,${GREEN},#5ad19a)` : GREEN }} />}
                         </div>
-                        <div className="text-right text-[10.5px] leading-tight">
+                        <div className="text-end text-[10.5px] leading-tight">
                           {isIn ? (
                             <>
                               <div className="font-extrabold tabular-nums text-[var(--ink-2)]">{hhmm(r.clockInAt)}–{r.clockOutAt ? hhmm(r.clockOutAt) : t("schedule.now")}</div>

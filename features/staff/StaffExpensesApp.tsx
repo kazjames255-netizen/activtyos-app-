@@ -4,6 +4,7 @@
 // been approved and reimbursed. Claims live on the server (/api/expense-claims),
 // scoped to the signed-in person; a manager approves them into Money out. They
 // used to stay on this phone only and never reach a manager (acceptance d24s8).
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet, post as apiPost, api } from "@/lib/api";
 import { Button, Card, Input, Select } from "@/components/ui";
@@ -14,7 +15,7 @@ const CATS = ["Travel & mileage", "Equipment", "Activity materials", "Food & cat
 type Status = "submitted" | "approved" | "paid" | "declined";
 interface Claim { id: string; staffName?: string; date: string; category: string; amount: number; note: string; receiptUrl?: string; receiptName?: string; status: Status; submittedAt: string }
 
-const gbp = (n: number) => "£" + (n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const gbp = (n: number) => "£" + (n || 0).toLocaleString(dl(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 // label = catalogue key (translated at render)
 const STATUS: Record<Status, { label: string; bg: string; ink: string }> = {
   submitted: { label: "staffp.expStatusSubmitted", bg: "#fff7e6", ink: "#b45309" },
@@ -99,7 +100,7 @@ export function StaffExpensesApp() {
                     <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: st.bg, color: st.ink }}>{t(st.label)}</span></div>
                   <div className="text-[12px] text-[var(--ink-3)]">{new Date(c.date + "T00:00:00").toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}{c.note ? ` · ${c.note}` : ""}{c.receiptUrl ? <> · <a href={c.receiptUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-[#1d3a8f] hover:underline">📎 {c.receiptName || "receipt"}</a></> : ""}</div>
                 </div>
-                <div className="text-right"><div className="text-[15px] font-extrabold tabular-nums text-[var(--ink)]">{gbp(c.amount)}</div>
+                <div className="text-end"><div className="text-[15px] font-extrabold tabular-nums text-[var(--ink)]">{gbp(c.amount)}</div>
                   {c.status === "submitted" && <button type="button" onClick={() => remove(c.id)} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">{t("staffp.expWithdraw")}</button>}</div>
               </li>
             ); })}

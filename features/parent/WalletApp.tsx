@@ -1,11 +1,13 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useT } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
+import { Rich } from "@/components/i18n/Rich";
 
 // ─────────────────────────────────────────────────────────────────────────
 // custdash/wallet — the parent's store credit.
@@ -50,7 +52,7 @@ const fmtWhen = (iso: string) => {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? iso
-    : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    : d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" });
 };
 
 export function WalletApp() {
@@ -97,8 +99,7 @@ export function WalletApp() {
           <div className="text-[30px]">👛</div>
           <div className="mt-1 text-[14px] font-extrabold">{tr("parent.noCreditYet")}</div>
           <p className="mx-auto mt-1 max-w-[420px] text-[12.5px] leading-[1.6] text-[var(--ink-3)]">
-            When a booking is cancelled and you choose <b>wallet credit</b> — or a provider gives you a credit note —
-            it lands here, ready to spend on your next booking with them.
+            <Rich text={tr("p7parent.noCredit")} />
           </p>
         </Card>
       ) : (
@@ -108,7 +109,7 @@ export function WalletApp() {
             <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#cdddf7]">{tr("parent.creditToSpend")}</div>
             <div className="text-[30px] font-extrabold leading-tight">{money(total)}</div>
             <div className="text-[11.5px] text-[#cdddf7]">
-              across {funded.length} provider{funded.length === 1 ? "" : "s"} · applied automatically at checkout
+              {funded.length === 1 ? tr("p7parent.acrossOne") : tr("p7parent.acrossMany", { n: funded.length })}
             </div>
           </div>
 
@@ -124,11 +125,11 @@ export function WalletApp() {
                     <div className="text-[14px] font-extrabold">{b.provider}</div>
                     {spent > 0 && (
                       <div className="mt-0.5 text-[11px] text-[var(--ink-3)] tabular-nums">
-                        {money(added)} added · {money(spent)} spent · <b className="text-[var(--ink-2)]">{money(b.balance)} left</b>
+                        {tr("p7parent.addedSpent", { added: money(added), spent: money(spent) })} <b className="text-[var(--ink-2)]">{tr("p7parent.amountLeft", { amount: money(b.balance) })}</b>
                       </div>
                     )}
                   </div>
-                  <div className="text-right">
+                  <div className="text-end">
                     <div className="text-[16px] font-extrabold text-[var(--brand)]">{money(b.balance)}</div>
                     <div className="text-[10.5px] text-[var(--ink-3)]">{tr("parent.toSpend")}</div>
                   </div>
@@ -139,10 +140,10 @@ export function WalletApp() {
                   <div className="border-b border-[var(--line)] bg-[#fff8e6] px-4 py-2.5">
                     <div className="text-[9.5px] font-bold uppercase tracking-[0.07em] text-[#b08600]">{tr("parent.yourPlan")}</div>
                     <div className="mt-0.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
-                      <span className="text-[12.5px] font-extrabold text-[#8a5b00]">⭐ {tierName(mem)} membership <span className="font-semibold text-[var(--ink-3)]">· {money(mem.current.priceMonthly)}/mo</span></span>
+                      <span className="text-[12.5px] font-extrabold text-[#8a5b00]">⭐ {tr("p7parent.membershipOf", { name: tierName(mem) })} <span className="font-semibold text-[var(--ink-3)]">· {tr("p7parent.perMo", { amount: money(mem.current.priceMonthly) })}</span></span>
                       <span className="text-[11.5px] font-semibold text-[var(--ink-2)]">
-                        {mem.current.benefitType === "credit" ? `+${money(mem.current.benefitValue)} credit each month` : `${mem.current.benefitValue}% off every booking`}
-                        {mem.current.renewsAt ? ` · renews ${fmtWhen(mem.current.renewsAt)}` : ""}
+                        {mem.current.benefitType === "credit" ? tr("p7parent.creditEachMonth", { amount: money(mem.current.benefitValue) }) : tr("p7parent.benPctShort", { pct: mem.current.benefitValue })}
+                        {mem.current.renewsAt ? ` · ${tr("p7parent.renews", { date: fmtWhen(mem.current.renewsAt) })}` : ""}
                       </span>
                     </div>
                   </div>
@@ -158,7 +159,7 @@ export function WalletApp() {
                           <span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[11px]" style={t.delta >= 0 ? { background: "#e8f7ee", color: "#0e7a45" } : { background: "#eef2f9", color: "#5b6b86" }}>{t.delta >= 0 ? "＋" : "−"}</span>
                           <div className="min-w-0">
                             <div className="truncate font-semibold">{t.reason}</div>
-                            <div className="text-[11px] text-[var(--ink-3)]">{fmtWhen(t.at)}{t.ref ? ` · Ref ${t.ref}` : ""}</div>
+                            <div className="text-[11px] text-[var(--ink-3)]">{fmtWhen(t.at)}{t.ref ? ` · ${tr("p7parent.refN", { ref: t.ref })}` : ""}</div>
                           </div>
                         </div>
                         <div className={`flex-none font-extrabold tabular-nums ${t.delta >= 0 ? "text-[#0e7a45]" : "text-[var(--ink-2)]"}`}>

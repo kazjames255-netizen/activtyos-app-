@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -91,12 +92,12 @@ const FLAGS = [
 
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const shiftDay = (iso: string, by: number) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + by); return d.toISOString().slice(0, 10); };
-const dow = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const dow = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const rel = (iso: string) => (iso === todayIso() ? "Today" : iso === shiftDay(todayIso(), 1) ? "Tomorrow" : dow(iso));
-const dayLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
-const timeOf = (ts?: string | null) => (ts ? new Date(ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "");
+const dayLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+const timeOf = (ts?: string | null) => (ts ? new Date(ts).toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" }) : "");
 // Date AND time, for note stamps — "20 Aug 2026 · 13:03".
-const stamp = (ts?: string | null) => (ts ? `${new Date(ts).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · ${timeOf(ts)}` : "");
+const stamp = (ts?: string | null) => (ts ? `${new Date(ts).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })} · ${timeOf(ts)}` : "");
 // "08:30" → "8:30am" for the start-time filter chips.
 const fmt12 = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); if (Number.isNaN(h)) return hhmm; const ap = h >= 12 ? "pm" : "am"; return `${h % 12 || 12}:${String(m ?? 0).padStart(2, "0")}${ap}`; };
 // UK-first number for wa.me (0… → 44…, strip non-digits).
@@ -252,12 +253,12 @@ function ListingPicker({ listings, venues, active, activeName, onPick }: { listi
       <button type="button" aria-label={t("registers.chooseListing")} onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-[var(--raised)] px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#2f5fd0]">{activeName || t("registers.chooseListing")} <span className="text-[9px]">▾</span></button>
       {open && (<>
         <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-        <div className="absolute left-0 z-20 mt-1 w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
+        <div className="absolute start-0 z-20 mt-1 w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
           <div className="px-1.5 pb-1 pt-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t("registers.chooseListing")}</div>
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("registers.searchListingsVenues")} className="mb-1 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
           <div className="max-h-[280px] overflow-y-auto">
             {shown.length === 0 ? <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">{t("registers.noListingMatches")}</div> : shown.map(([id, n]) => (
-              <button key={id} type="button" onClick={() => { onPick(id); setOpen(false); setQ(""); }} className="block w-full rounded-lg px-2.5 py-1.5 text-left" style={id === active ? { background: "#eef4fd" } : undefined}>
+              <button key={id} type="button" onClick={() => { onPick(id); setOpen(false); setQ(""); }} className="block w-full rounded-lg px-2.5 py-1.5 text-start" style={id === active ? { background: "#eef4fd" } : undefined}>
                 <span className="block truncate text-[12.5px] font-semibold" style={{ color: id === active ? "#1d3a8f" : "var(--ink-2)" }}>{n}</span>
                 <span className="mt-0.5 block truncate text-[11px] text-[var(--ink-3)]">📍 {venues[id] || t("registers.noVenueSet")}</span>
               </button>
@@ -491,7 +492,7 @@ function NoteChip({ note, onClick }: { note?: RegNote; onClick: () => void }) {
     <button type="button" onClick={onClick} title={active ? t("registers.importantNoteView") : t("registers.addImportantNote")} aria-label={t("registers.importantNote")}
       className={"relative grid h-7 w-7 place-items-center rounded-lg border transition " + (active ? "border-[#E4E9F5] bg-[#FCF1DC] text-[var(--ink-2)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-3)] hover:border-[#E4E9F5] hover:text-[#2f5fd0]")}>
       {NOTE_SVG}
-      {active && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#e11d48] ring-2 ring-white" />}
+      {active && <span className="absolute -end-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#e11d48] ring-2 ring-white" />}
     </button>
   );
 }
@@ -513,17 +514,17 @@ function NotePopup({ name, note, canDeleteForever, onSave, onArchive, onRestore,
       <div className="w-full max-w-[440px] overflow-hidden rounded-2xl bg-[var(--surface)] shadow-[0_30px_70px_-20px_rgba(0,0,0,.5)]" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 bg-gradient-to-r from-[#fff7e6] to-[#fdeede] px-4 py-3 text-[#b45309]">
           {NOTE_SVG}<span className="text-[14px] font-extrabold">{t("registers.importantNote")}</span>{name && <span className="text-[12px] font-semibold text-[#b45309]/70">· {name}</span>}
-          <button type="button" onClick={onClose} aria-label={t("registers.close")} className="ml-auto grid h-7 w-7 place-items-center rounded-full text-[#F5A524] hover:bg-white/10">✕</button>
+          <button type="button" onClick={onClose} aria-label={t("registers.close")} className="ms-auto grid h-7 w-7 place-items-center rounded-full text-[#F5A524] hover:bg-white/10">✕</button>
         </div>
         <div className="p-4">
           {/* The archive is a closed folder — click to look inside. It never
               blocks writing: the notepad below stays available either way. */}
           {archived && (
             <div className="mb-3 overflow-hidden rounded-lg border border-[var(--line)]">
-              <button type="button" onClick={() => setOpenArchive((v) => !v)} aria-expanded={openArchive} className="flex w-full items-center gap-2 bg-[#eef1f6] px-3 py-2 text-left text-[12px] font-bold text-[var(--ink-2)]">
+              <button type="button" onClick={() => setOpenArchive((v) => !v)} aria-expanded={openArchive} className="flex w-full items-center gap-2 bg-[#eef1f6] px-3 py-2 text-start text-[12px] font-bold text-[var(--ink-2)]">
                 <span>{openArchive ? "📂" : "🗄️"}</span>
                 <span>{t("registers.archivedNoteHidden")}</span>
-                <span className="ml-auto text-[10px] text-[var(--ink-3)]">{openArchive ? t("registers.hide") : t("registers.view")} ▾</span>
+                <span className="ms-auto text-[10px] text-[var(--ink-3)]">{openArchive ? t("registers.hide") : t("registers.view")} ▾</span>
               </button>
               {openArchive && (
                 <div className="border-t border-[var(--line)] p-3">
@@ -551,10 +552,10 @@ function NotePopup({ name, note, canDeleteForever, onSave, onArchive, onRestore,
                   <span className="h-2 w-2 rounded-full bg-[#d9c092] shadow-[inset_0_1px_1px_rgba(0,0,0,.18)]" />
                   <span className="h-2 w-2 rounded-full bg-[#d9c092] shadow-[inset_0_1px_1px_rgba(0,0,0,.18)]" />
                   <span className="h-2 w-2 rounded-full bg-[#d9c092] shadow-[inset_0_1px_1px_rgba(0,0,0,.18)]" />
-                  <span className="ml-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.14em] text-[#b45309]/60">{t("registers.notepad")}</span>
+                  <span className="ms-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.14em] text-[#b45309]/60">{t("registers.notepad")}</span>
                 </div>
                 <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} autoFocus placeholder={t("registers.notePlaceholder")}
-                  className="block w-full resize-y border-0 bg-transparent py-0 pl-11 pr-3 text-[13.5px] text-[var(--ink)] outline-none placeholder:text-[#bda981]"
+                  className="block w-full resize-y border-0 bg-transparent py-0 ps-11 pe-3 text-[13.5px] text-[var(--ink)] outline-none placeholder:text-[#bda981]"
                   style={{
                     lineHeight: "28px",
                     backgroundColor: "#fffdf4",
@@ -564,7 +565,7 @@ function NotePopup({ name, note, canDeleteForever, onSave, onArchive, onRestore,
               </div>
               <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
                 <div><div className="text-[12.5px] font-bold text-[var(--ink)]">👪 {t("registers.letParentSeeNote")}</div><div className="text-[11px] text-[var(--ink-3)]">{share ? t("registers.familyWillSee") : t("registers.staffOnlyHidden")}</div></div>
-                <button type="button" role="switch" aria-checked={share} onClick={() => setShare((s) => !s)} className={"relative h-6 w-11 flex-none rounded-full transition-colors " + (share ? "bg-[#0f9d58]" : "bg-[#E8EEFD]")}><span className={"absolute top-0.5 h-5 w-5 rounded-full bg-[var(--surface)] shadow transition-all " + (share ? "left-[22px]" : "left-0.5")} /></button>
+                <button type="button" role="switch" aria-checked={share} onClick={() => setShare((s) => !s)} className={"relative h-6 w-11 flex-none rounded-full transition-colors " + (share ? "bg-[#0f9d58]" : "bg-[#E8EEFD]")}><span className={"absolute top-0.5 h-5 w-5 rounded-full bg-[var(--surface)] shadow transition-all " + (share ? "start-[22px]" : "start-0.5")} /></button>
               </div>
               <div className="mt-3 flex items-center gap-3">
                 <button type="button" disabled={!text.trim()} onClick={() => { onSave(text.trim(), share); onClose(); }} className="rounded-full bg-[var(--brand)] px-5 py-2 text-[12.5px] font-extrabold text-white hover:bg-[var(--brand-strong)] disabled:opacity-40">{t("registers.saveNote")}</button>
@@ -600,10 +601,10 @@ function SafeguardingEditor({ child, edit, canEdit, onSave, onOpenFamilies }: { 
   );
   return (
     <div className="rounded-2xl border border-[#e0d3f5] bg-[#faf7ff] p-4 shadow-sm">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 text-left">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 text-start">
         <span className="text-[15px]">🛟</span>
         <span className="text-[13px] font-extrabold text-[#6d28d9]">{t("registers.sendAllergiesMedicalAmend")}</span>
-        <span className="ml-auto text-[12px] text-[var(--ink-3)]">{open ? "▲" : "▼"}</span>
+        <span className="ms-auto text-[12px] text-[var(--ink-3)]">{open ? "▲" : "▼"}</span>
       </button>
       {open && (<>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -648,7 +649,7 @@ function LikesChip({ likes, dislikes }: { likes?: string; dislikes?: string }) {
           event the way a JS mouseenter can. `pinned` (a tap) and focus-within
           (keyboard) add the paths CSS hover can't cover on touch. */}
       <span role="tooltip"
-        className={"absolute left-1/2 top-full z-30 mt-1.5 w-[248px] -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 text-left shadow-xl "
+        className={"absolute left-1/2 top-full z-30 mt-1.5 w-[248px] -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 text-start shadow-xl "
           + (pinned ? "block" : "hidden group-hover:block group-focus-within:block")}>
           {likes && <span className="block"><b className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#15803d]">{t("registers.likes")}</b><span className="mt-0.5 block text-[12.5px] font-semibold leading-snug text-[var(--ink)]">{likes}</span></span>}
           {dislikes && <span className={"block " + (likes ? "mt-2" : "")}><b className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#b45309]">{t("registers.dislikesAvoid")}</b><span className="mt-0.5 block text-[12.5px] font-semibold leading-snug text-[var(--ink)]">{dislikes}</span></span>}
@@ -676,7 +677,7 @@ function Menu({ label, on, badge, width = 250, dark, children }: { label: ReactN
       </button>
       {open && (<>
         <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-        <div className="absolute left-0 z-20 mt-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl" style={{ width }}>{children(() => setOpen(false))}</div>
+        <div className="absolute start-0 z-20 mt-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl" style={{ width }}>{children(() => setOpen(false))}</div>
       </>)}
     </div>
   );
@@ -684,7 +685,7 @@ function Menu({ label, on, badge, width = 250, dark, children }: { label: ReactN
 // One row inside a Menu — radio (pick one) or checkbox (toggle) styling.
 function MenuItem({ on, onClick, dot, children, hint }: { on: boolean; onClick: () => void; dot?: string; children: ReactNode; hint?: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-[var(--panel)]">
+    <button type="button" onClick={onClick} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-start hover:bg-[var(--panel)]">
       <span className="grid h-4 w-4 flex-none place-items-center rounded border text-[10px] font-extrabold"
         style={on ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)" }}>{on ? "✓" : ""}</span>
       {dot && <span className="h-2 w-2 flex-none rounded-full" style={{ background: dot }} />}
@@ -1303,11 +1304,11 @@ export function RegistersApp() {
               <div className="flex flex-wrap items-center gap-2">
                 {seasons.length > 0 && (
                   <span className="relative inline-flex items-center">
-                    <select value={regSeason} onChange={(e) => { setRegSeason(e.target.value); setActiveListing(""); }} title={t("registers.filterBySeason")} className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 pl-3 pr-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
+                    <select value={regSeason} onChange={(e) => { setRegSeason(e.target.value); setActiveListing(""); }} title={t("registers.filterBySeason")} className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 ps-3 pe-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
                       <option value="">📅 {t("registers.allSeasons")}</option>
                       {seasons.map((s) => <option key={s.id} value={s.id}>📅 {s.name}</option>)}
                     </select>
-                    <span aria-hidden className="pointer-events-none absolute right-2.5 text-[9px] text-white/70">▾</span>
+                    <span aria-hidden className="pointer-events-none absolute end-2.5 text-[9px] text-white/70">▾</span>
                   </span>
                 )}
                 {listingsAll.length > 1
@@ -1322,7 +1323,7 @@ export function RegistersApp() {
                     <input type="date" value={date} onChange={(e) => pickDate(e.target.value)} className="absolute inset-0 cursor-pointer opacity-0" />
                   </label>
                 </div>
-                <div className="ml-auto flex flex-wrap items-center gap-2">
+                <div className="ms-auto flex flex-wrap items-center gap-2">
                   <TourLauncher view="registers" compact />
                   <SettingsLink />
                   <button type="button" onClick={() => setDlOpen(true)} className={GHOST}>⬇ {t("registers.download")}</button>
@@ -1332,12 +1333,12 @@ export function RegistersApp() {
 
               {/* Collapsed: a slim one-line summary so the numbers stay visible. */}
               {!heroOpen && (
-                <button type="button" onClick={() => setHeroOpen(true)} className="mt-3 flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-left hover:bg-white/10">
+                <button type="button" onClick={() => setHeroOpen(true)} className="mt-3 flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-start hover:bg-white/10">
                   <span className="text-[15px] font-extrabold tracking-[-0.02em]" style={{ fontVariantNumeric: "tabular-nums" }}>{agg.present} {t("registers.ofWord")} {agg.expected} <span className="font-semibold text-white/55">{t("registers.signedInLower")}</span></span>
                   <span className="inline-flex items-center gap-1.5 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: "#ffb020" }} />{agg.notArrived} {t("registers.notArrivedLower")}</span>
                   <span className="inline-flex items-center gap-1.5 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: "#ff6b81" }} />{agg.absent} {t("registers.absentLower")}</span>
                   {agg.collectedCount > 0 && <span className="inline-flex items-center gap-1.5 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: "#3ddc84" }} />{agg.collectedCount} {t("registers.collectedLower")}</span>}
-                  <span className="ml-auto text-[11.5px] font-bold text-white/60">▾ {t("registers.expand")}</span>
+                  <span className="ms-auto text-[11.5px] font-bold text-white/60">▾ {t("registers.expand")}</span>
                 </button>
               )}
 
@@ -1365,20 +1366,20 @@ export function RegistersApp() {
                 <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-white/15 pt-4">
                   {passOpts.length > 1 && (
                     <span className="relative inline-flex items-center">
-                      <select value={pass} onChange={(e) => setPass(e.target.value)} aria-label={t("registers.filterDropoffCollection")} className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 pl-3 pr-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
+                      <select value={pass} onChange={(e) => setPass(e.target.value)} aria-label={t("registers.filterDropoffCollection")} className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 ps-3 pe-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
                         <option value="">🕒 {t("registers.allSessions")}</option>
                         {passOpts.map((o) => <option key={o.v} value={o.v}>🕒 {o.label}</option>)}
                       </select>
-                      <span aria-hidden className="pointer-events-none absolute right-2.5 text-[9px] text-white/70">▾</span>
+                      <span aria-hidden className="pointer-events-none absolute end-2.5 text-[9px] text-white/70">▾</span>
                     </span>
                   )}
                   {groupOpts.length > 0 && (
                     <span className="relative inline-flex items-center">
-                      <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} aria-label="Filter by group / room" className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 pl-3 pr-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
+                      <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} aria-label="Filter by group / room" className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 ps-3 pe-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
                         <option value="">🏷 All groups</option>
                         {groupOpts.map((o) => <option key={o.id} value={o.id}>🏷 {o.name}</option>)}
                       </select>
-                      <span aria-hidden className="pointer-events-none absolute right-2.5 text-[9px] text-white/70">▾</span>
+                      <span aria-hidden className="pointer-events-none absolute end-2.5 text-[9px] text-white/70">▾</span>
                     </span>
                   )}
                   <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("registers.searchThisRegister")} className="w-[210px] rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-[12.5px] text-white outline-none placeholder:text-white/55 focus:border-white/70" />
@@ -1406,7 +1407,7 @@ export function RegistersApp() {
                       </>)}
                       {(flag || addonsOnly || galFilter !== "all") && (<>
                         <div className="my-1 h-px bg-[var(--line)]" />
-                        <button type="button" onClick={() => { setFlag(""); setAddonsOnly(false); setGalFilter("all"); close(); }} className="w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] font-bold text-[#c02636] hover:bg-[var(--panel)]">{t("registers.clearFilters")}</button>
+                        <button type="button" onClick={() => { setFlag(""); setAddonsOnly(false); setGalFilter("all"); close(); }} className="w-full rounded-lg px-2.5 py-1.5 text-start text-[12px] font-bold text-[#c02636] hover:bg-[var(--panel)]">{t("registers.clearFilters")}</button>
                       </>)}
                       <p className="px-2.5 pb-1 pt-1.5 text-[11px] leading-snug text-[var(--ink-3)]">{t("registers.pickingOneShows")}</p>
                     </>)}
@@ -1427,7 +1428,7 @@ export function RegistersApp() {
                     </>)}
                   </Menu>
 
-                  <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <div className="ms-auto flex flex-wrap items-center gap-2">
                     <span className="inline-flex overflow-hidden rounded-lg border border-white/30">
                       {([["list", `☰ ${t("registers.listView")}`], ["gallery", `▦ ${t("registers.photosView")}`]] as const).map(([k, label]) => (
                         <button key={k} type="button" onClick={() => setView(k as "list" | "gallery")} className="px-3 py-1.5 text-[12.5px] font-bold" style={view === k ? { background: "#fff", color: AURORA_BG } : { background: "rgba(255,255,255,.08)", color: "rgba(255,255,255,.9)" }}>{label}</button>
@@ -1442,7 +1443,7 @@ export function RegistersApp() {
             </div>
           </div>
 
-          {pinRequired && <div className="mb-3 rounded-2xl border border-[#cfe0f7] bg-[#f5f9ff] px-4 py-3 text-[12.5px] text-[var(--ink-2)]"><span className="mr-1">🔒</span><b>{t("registers.collectionPinRequired")}</b> {t("registers.collectionPinAsk")}</div>}
+          {pinRequired && <div className="mb-3 rounded-2xl border border-[#cfe0f7] bg-[#f5f9ff] px-4 py-3 text-[12.5px] text-[var(--ink-2)]"><span className="me-1">🔒</span><b>{t("registers.collectionPinRequired")}</b> {t("registers.collectionPinAsk")}</div>}
 
           {daySessions.length === 0 ? (
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">{days[date] === undefined ? t("registers.loadingDay", { day: dayLabel(date) }) : t("registers.nothingRunsForListing", { listing: activeName, day: dayLabel(date) })}</div>
@@ -1492,7 +1493,7 @@ export function RegistersApp() {
                   </div>
                 ) : (<>
                 <div className="hidden grid-cols-[minmax(190px,1.3fr)_84px_minmax(200px,210px)_minmax(230px,1fr)] gap-3 border-b-2 border-[#dbe6fb] bg-[#eef4fd] px-4 py-2.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#1d3a8f] md:grid">
-                  <span>{t("registers.colChild")}</span><span>{t("registers.colAlerts")}</span><span>{t("registers.colAttendance")}</span><span className="md:text-right">{t("registers.colQuickActions")}</span>
+                  <span>{t("registers.colChild")}</span><span>{t("registers.colAlerts")}</span><span>{t("registers.colAttendance")}</span><span className="md:text-end">{t("registers.colQuickActions")}</span>
                 </div>
                 {flatShown.length === 0 ? <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("registers.noChildrenMatch")}</div> : flatShown.map(({ a, blockId, start, end }) => (
                   <Row key={`${blockId}-${a.ref}`} a={a} start={start} end={end} showTimes={showTimes} busy={busyRef === a.ref || readOnly} age={ageOf(a)} flag={flag} acts={acts} note={notes[noteKey(a.ref)]} showConsent={showConsent} selected={selected.has(a.ref)} showLikes={showLikes} late={visibleLate(a, start, end)} nudgedAt={nudges[`${date}|${a.ref}`]} nappy={needsNappies(questions, a.child?.answers)} nappyLog={nappies[`${date}|${a.ref}`] ?? []} readOnlyRow={readOnly} onLogNappy={() => logNappy(a.ref, date, meName)} onNudge={() => { const l = visibleLate(a, start, end); if (l) nudge(a, l); }} onSelect={() => toggleSel(a.ref)} onOpen={() => setOpenKid(a)} onOpenNote={() => setNoteFor({ ref: a.ref, name: a.children[0]?.name ?? "" })} onMark={(action) => mark(blockId, a.ref, action)} onMsg={() => messageOne(a)} onMed={() => medFor(a)} onAccident={() => accidentFor(a)} onIncident={() => incidentFor(a)} onMoments={() => momentsFor(a)} onEmail={() => emailFor(a)} onWhatsapp={() => whatsappFor(a)} />
@@ -1665,7 +1666,7 @@ function NudgeDialog({ kid, late, email, parentName, refId, subject: subject0, b
         <div className="flex items-center gap-2 bg-[#fdecec] px-4 py-3 text-[#c02636]">
           <span className="text-[14px] font-extrabold">🔔 {t("registers.nudgeParent", { parent: parentName || t("registers.parentWord") })}</span>
           <span className="text-[11.5px] font-semibold text-[#c02636]/75">· {kid} · {late.kind === "collect" ? t("registers.collectionLower") : t("registers.arrivalLower")} {t("registers.lateSuffix", { time: lateFor(late.mins) })}</span>
-          <button type="button" onClick={onClose} aria-label={t("registers.close")} className="ml-auto grid h-7 w-7 place-items-center rounded-full text-[#C81E5E] hover:bg-white/10">✕</button>
+          <button type="button" onClick={onClose} aria-label={t("registers.close")} className="ms-auto grid h-7 w-7 place-items-center rounded-full text-[#C81E5E] hover:bg-white/10">✕</button>
         </div>
         <div className="p-4">
           {others.length > 1 && (
@@ -1678,7 +1679,7 @@ function NudgeDialog({ kid, late, email, parentName, refId, subject: subject0, b
             <>
               <div className="mb-2 flex items-center gap-2 text-[11.5px] text-[var(--ink-3)]">
                 <span>{t("registers.oneMessagePerFamilyLead")}<b className="text-[var(--ink-2)]">{t("registers.theirWord")}</b>{t("registers.oneMessagePerFamilyTail")}</span>
-                <span className="ml-auto flex items-center gap-2">
+                <span className="ms-auto flex items-center gap-2">
                   <button type="button" onClick={() => setPicked(new Set(others.map((o) => o.a.ref)))} className="font-bold text-[#1d3a8f] underline">{t("registers.allLower")}</button>
                   <button type="button" onClick={() => setPicked(new Set())} className="font-bold text-[var(--ink-3)] underline">{t("registers.noneLower")}</button>
                 </span>
@@ -1695,10 +1696,10 @@ function NudgeDialog({ kid, late, email, parentName, refId, subject: subject0, b
                         {g.items.length > 1 && <span className="text-[10.5px] font-extrabold text-[#1d3a8f]">· {on === refs.length ? t("registers.childrenOneMessage", { n: refs.length }) : t("registers.nOfMSelected", { on, total: refs.length })}</span>}
                       </label>
                       {g.items.map((i) => (
-                        <label key={i.a.ref} className="flex cursor-pointer items-center gap-2 pl-5">
+                        <label key={i.a.ref} className="flex cursor-pointer items-center gap-2 ps-5">
                           <input type="checkbox" checked={picked.has(i.a.ref)} onChange={() => toggle(i.a.ref)} className="h-3.5 w-3.5 accent-[#c02636]" />
                           <span className="text-[var(--ink-3)]">{i.a.children[0]?.name ?? "—"}</span>
-                          <span className="ml-auto font-extrabold text-[#c02636]">{i.late.kind === "collect" ? t("registers.collectionLower") : t("registers.arrivalLower")} {t("registers.lateSuffix", { time: lateFor(i.late.mins) })}</span>
+                          <span className="ms-auto font-extrabold text-[#c02636]">{i.late.kind === "collect" ? t("registers.collectionLower") : t("registers.arrivalLower")} {t("registers.lateSuffix", { time: lateFor(i.late.mins) })}</span>
                         </label>
                       ))}
                     </div>
@@ -1740,7 +1741,7 @@ function QuickActionsMenu({ acts, onMsg, onMed, onAccident, onIncident, onMoment
   ].filter(Boolean);
   if (!links.length) return null;
   return (
-    <div className="md:text-right">
+    <div className="md:text-end">
       {/* Secondary, and now dressed like it. The gradient pill carried as much
           weight as the attendance buttons despite being the thing you reach for
           least — it's a ghost until you're on the row (or it's open). */}
@@ -1770,9 +1771,9 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, note, showConsen
     // know its state. Now the colour down the left says it before you do.
     // Selection still wins outright — it's a thing you're doing, not a state the
     // child is in. `group` lets Quick actions stay quiet until you're on the row.
-    <div data-ui="card" className="group relative grid grid-cols-1 items-center gap-3 border-b border-[var(--line)] py-3 pl-5 pr-4 transition-colors last:border-b-0 md:grid-cols-[minmax(190px,1.3fr)_84px_minmax(200px,210px)_minmax(230px,1fr)]"
+    <div data-ui="card" className="group relative grid grid-cols-1 items-center gap-3 border-b border-[var(--line)] py-3 ps-5 pe-4 transition-colors last:border-b-0 md:grid-cols-[minmax(190px,1.3fr)_84px_minmax(200px,210px)_minmax(230px,1fr)]"
       style={selected ? { background: "#eef4fd" } : { background: `color-mix(in srgb, ${tone.c} 4%, transparent)` }}>
-      <span aria-hidden className="absolute inset-y-0 left-0 w-[4px]" style={{ background: tone.c, opacity: tone.key === "notArrived" ? 0.35 : 0.9 }} />
+      <span aria-hidden className="absolute inset-y-0 start-0 w-[4px]" style={{ background: tone.c, opacity: tone.key === "notArrived" ? 0.35 : 0.9 }} />
       {/* Left cell is a COLUMN: the name button on the top line, the collection
           PIN on its own line beneath. The PIN is interactive (tap to reveal), so
           it cannot live inside the name button — nested buttons are invalid and
@@ -1782,7 +1783,7 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, note, showConsen
         <input type="checkbox" checked={selected} onChange={onSelect} aria-label={t("registers.selectChild", { name: kid?.name ?? "" })} className="mt-4 h-4 w-4 flex-none accent-[#1d3a8f]" />
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex min-w-0 items-center gap-2.5">
-            <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left">
+            <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-start">
               {c?.photo
                 // eslint-disable-next-line @next/next/no-img-element
                 // The ring carries the status colour too — at a glance the photo
@@ -1794,8 +1795,8 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, note, showConsen
                     so it was a second label for what the name itself does. */}
                 <div className="truncate text-[15px] font-extrabold leading-tight">
                   {a.children.map((k) => k.name).join(", ")}
-                  {nappy && <span className="ml-1.5 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold align-middle" style={{ background: "#f3e8ff", color: "#6d28d9" }} title={t("registers.notToiletTrainedNappy")}>🚼 {t("registers.nappies")}</span>}
-                  {a.cancelledOnSite && <span className="ml-1.5 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold align-middle" style={{ background: "#fdecea", color: "#c02636" }} title={t("registers.cancelledOnSiteTip")}>⚠ {t("registers.cancelledOnSite")}</span>}
+                  {nappy && <span className="ms-1.5 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold align-middle" style={{ background: "#f3e8ff", color: "#6d28d9" }} title={t("registers.notToiletTrainedNappy")}>🚼 {t("registers.nappies")}</span>}
+                  {a.cancelledOnSite && <span className="ms-1.5 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold align-middle" style={{ background: "#fdecea", color: "#c02636" }} title={t("registers.cancelledOnSiteTip")}>⚠ {t("registers.cancelledOnSite")}</span>}
                 </div>
                 <div className="mt-0.5 truncate text-[11.5px] text-[var(--ink-3)]">{age != null ? t("registers.ageDot", { age }) : ""}<span className="font-bold text-[var(--ink-2)]">🕒 {start}–{end}</span></div>
                 {nappy && (
@@ -1805,7 +1806,7 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, note, showConsen
                 )}
               </div>
             </button>
-            <span className="ml-auto flex flex-none items-center gap-1.5">
+            <span className="ms-auto flex flex-none items-center gap-1.5">
               {nappy && !readOnlyRow && (
                 <button type="button" onClick={onLogNappy} title={t("registers.logNappyChangeStamp")}
                   className="grid h-7 w-7 place-items-center rounded-lg border text-[13px]" style={{ borderColor: "#e2d3f7", background: "#faf5ff", color: "#6d28d9" }} aria-label={t("registers.logNappyChange")}>🚼</button>
@@ -1815,7 +1816,7 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, note, showConsen
               <NoteChip note={note} onClick={onOpenNote} />
             </span>
           </div>
-          {c?.collectionPassword && <div className="mt-1.5 min-w-0 pl-[60px]"><CollectPin pw={c.collectionPassword} /></div>}
+          {c?.collectionPassword && <div className="mt-1.5 min-w-0 ps-[60px]"><CollectPin pw={c.collectionPassword} /></div>}
         </div>
       </div>
       <div className="flex flex-wrap gap-1.5 md:justify-start">

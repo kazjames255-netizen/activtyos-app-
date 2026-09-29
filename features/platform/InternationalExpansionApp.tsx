@@ -30,7 +30,7 @@ const GRAD = {
 function Tile({ icon, value, label, sub, grad }: { icon: string; value: string; label: string; sub: string; grad: string }) {
   return (
     <div className="relative overflow-hidden rounded-2xl p-3.5 text-white shadow-[0_12px_28px_-16px_rgba(20,30,80,.5)]" style={{ background: grad }}>
-      <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
+      <div className="pointer-events-none absolute -end-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
       <div className="relative">
         <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">
           <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-white/15 text-[11px]">{icon}</span>
@@ -338,12 +338,12 @@ export function InternationalExpansionApp() {
     <div className="flex flex-col gap-3.5 p-4">
       <SectionHead>
         International Expansion
-        <span className="ml-2 font-normal text-[12px] text-[var(--ink-3)]">
+        <span className="ms-2 font-normal text-[12px] text-[var(--ink-3)]">
           Fix the UK funnel first — the case against international spend right now, and an honest verdict on the £10M target
         </span>
       </SectionHead>
 
-      <Card className="border-l-4 border-l-[var(--brand)] bg-[var(--surface-2,rgba(127,127,127,0.04))] p-4 text-[13px] leading-relaxed text-[var(--ink-2)]">
+      <Card className="border-s-4 border-s-[var(--brand)] bg-[var(--surface-2,rgba(127,127,127,0.04))] p-4 text-[13px] leading-relaxed text-[var(--ink-2)]">
         <div className="mx-auto max-w-[840px]">{renderMarkdown(RECOMMENDATION)}</div>
       </Card>
 

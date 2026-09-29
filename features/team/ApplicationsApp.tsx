@@ -6,6 +6,7 @@
 // we already have — and anything the applicant already gave that also lives in
 // onboarding (references, address, etc.) auto-carries over so they never repeat
 // it. Front-end demo stores; real submissions + email are Amir's.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
@@ -139,7 +140,7 @@ function seedApps(): Application[] {
   ];
 }
 
-const fmtDate = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
+const fmtDate = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }); };
 const STATUS_TONE: Record<string, string> = { new: "bg-[#e6efff] text-[#1d54c4]", accepted: "bg-[#e6f4ea] text-[#0f7a43]", rejected: "bg-[#fdecec] text-[#c0392b]" };
 
 // carry an accepted application's answers into the applicant's onboarding record
@@ -196,13 +197,13 @@ export function ApplicationsPanel() {
     <>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div><div className="text-[16px] font-extrabold text-[var(--ink)]">{app.name}</div><div className="text-[12px] text-[var(--ink-3)]">{app.email} · {t("team.appliedWord")} {fmtDate(app.submittedAt)}</div></div>
-        <span className={"ml-auto rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase " + STATUS_TONE[app.status]}>{app.status}</span>
+        <span className={"ms-auto rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase " + STATUS_TONE[app.status]}>{app.status}</span>
       </div>
       {(app.locations?.length ?? 0) > 0 && <div className="mb-3 flex flex-wrap items-center gap-1.5"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.locationsLabel")}</span>{app.locations!.map((l) => <span key={l} className="rounded-full bg-[#eaf1ff] px-2 py-0.5 text-[11px] font-bold text-[#1d54c4]">{l}</span>)}</div>}
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {f.fields.map((fl) => { const v = app.answers[fl.id]; const file = app.files?.[fl.id]; if (!v && !file) return null; return (
           <div key={fl.id} className={"rounded-lg bg-[var(--panel)] px-3 py-2 " + (fl.type === "textarea" ? "sm:col-span-2" : "")}>
-            <div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{fl.label}{fl.mapsTo && <span title="Carries into onboarding" className="ml-1 text-[#0f7a43]">↳</span>}</div>
+            <div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{fl.label}{fl.mapsTo && <span title="Carries into onboarding" className="ms-1 text-[#0f7a43]">↳</span>}</div>
             {file ? <button type="button" onClick={() => openFile(file.data)} className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">📎 {file.name} · View</button> : <div className="text-[12.5px] font-semibold text-[var(--ink)]">{v}</div>}
           </div>
         ); })}
@@ -249,7 +250,7 @@ export function ApplicationsPanel() {
             <button key={k} type="button" onClick={() => setTab(k)} className={"rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors " + (tab === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}</button>
           ))}
         </div>
-        <Button variant="primary" className="ml-auto" onClick={() => setSendOpen(true)}>{t("team.sendApplication")}</Button>
+        <Button variant="primary" className="ms-auto" onClick={() => setSendOpen(true)}>{t("team.sendApplication")}</Button>
       </div>
 
       {tab === "received" ? (<>
@@ -266,7 +267,7 @@ export function ApplicationsPanel() {
           <label className="text-[12px] font-bold text-[var(--ink-3)]">{t("team.locationLabel")}</label>
           <Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="max-w-[240px]"><option value="all">{t("team.allLocations")}</option>{APP_LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}</Select>
           <span className="text-[11.5px] text-[var(--ink-3)]">{filtered.length} {filtered.length === 1 ? t("team.applicationSingular") : t("team.applicationPlural")}</span>
-          <div className="ml-auto inline-flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
+          <div className="ms-auto inline-flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
             {([["cards", t("team.cardsView")], ["table", t("team.tableView")]] as const).map(([k, l]) => (
               <button key={k} type="button" onClick={() => setApplView(k)} className={"rounded-full px-3 py-1 text-[12px] font-bold transition-colors " + (applView === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}</button>
             ))}
@@ -276,7 +277,7 @@ export function ApplicationsPanel() {
         {applView === "table" ? (
           <div className="overflow-x-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
             <table className="w-full text-[13px]">
-              <thead><tr className="border-b border-[var(--line)] bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{t("team.thStatus")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thSubmitted")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thName")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thPosition")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thLocations")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thDocs")}</th><th className="px-3 py-2.5"></th></tr></thead>
+              <thead><tr className="border-b border-[var(--line)] bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{t("team.thStatus")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thSubmitted")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thName")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thPosition")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thLocations")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thDocs")}</th><th className="px-3 py-2.5"></th></tr></thead>
               <tbody>{filtered.map((a) => (
                 <tr key={a.id} className="cursor-pointer border-t border-[var(--line-2,#eef2f8)] hover:bg-[var(--panel)]" onClick={() => setRowOpen(a.id)}>
                   <td className="px-3 py-2.5"><span className={"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase " + STATUS_TONE[a.status]}>● {a.status}{a.onboardingSent ? " · sent" : ""}</span></td>
@@ -285,7 +286,7 @@ export function ApplicationsPanel() {
                   <td className="px-3 py-2.5 text-[var(--ink-2)]">{a.answers.position || "—"}</td>
                   <td className="px-3 py-2.5"><div className="flex flex-wrap gap-1">{(a.locations ?? []).map((l) => <span key={l} className="rounded-full bg-[#eaf1ff] px-1.5 py-0.5 text-[10px] font-bold text-[#1d54c4]">{l}</span>)}{!(a.locations ?? []).length && <span className="text-[var(--ink-3)]">—</span>}</div></td>
                   <td className="px-3 py-2.5 text-[var(--ink-3)]">{Object.keys(a.files ?? {}).length ? `📎 ${Object.keys(a.files ?? {}).length}` : "—"}</td>
-                  <td className="px-3 py-2.5 text-right"><span className="text-[12px] font-bold text-[#1d3a8f]">{t("team.openArrow")}</span></td>
+                  <td className="px-3 py-2.5 text-end"><span className="text-[12px] font-bold text-[#1d3a8f]">{t("team.openArrow")}</span></td>
                 </tr>
               ))}
               {filtered.length === 0 && <tr><td colSpan={7} className="px-3 py-8 text-center text-[12.5px] text-[var(--ink-3)]">{t("team.noApplicationsMatch")}</td></tr>}</tbody>
@@ -295,8 +296,8 @@ export function ApplicationsPanel() {
           <div className="grid gap-3 md:grid-cols-[280px_1fr]">
             <div className="space-y-2">
               {filtered.map((a) => (
-                <button key={a.id} type="button" onClick={() => setSel(a.id)} className={"block w-full rounded-xl border p-3 text-left transition-colors " + (sel === a.id ? "border-[#1d3a8f] bg-[#eef4ff]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[#1d3a8f]")}>
-                  <div className="flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">{a.name}</span><span className={"ml-auto rounded-full px-2 py-0.5 text-[9.5px] font-extrabold uppercase " + STATUS_TONE[a.status]}>{a.status}{a.onboardingSent ? " · sent" : ""}</span></div>
+                <button key={a.id} type="button" onClick={() => setSel(a.id)} className={"block w-full rounded-xl border p-3 text-start transition-colors " + (sel === a.id ? "border-[#1d3a8f] bg-[#eef4ff]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[#1d3a8f]")}>
+                  <div className="flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">{a.name}</span><span className={"ms-auto rounded-full px-2 py-0.5 text-[9.5px] font-extrabold uppercase " + STATUS_TONE[a.status]}>{a.status}{a.onboardingSent ? " · sent" : ""}</span></div>
                   <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{a.answers.position || "—"} · applied {fmtDate(a.submittedAt)}{(a.locations?.length ?? 0) ? ` · 📍 ${a.locations!.join(", ")}` : ""}</div>
                 </button>
               ))}
@@ -353,7 +354,7 @@ function SendModal({ forms, onSent, onClose }: { forms: AppForm[]; onSent: (m: s
   return (
     <div className="fixed inset-0 z-[141] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("team.sendAnApplication")}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("team.sendAnApplication")}</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <p className="mb-3 text-[12px] text-[var(--ink-3)]">{t("team.sendModalHelpPre")}<b>{t("team.applicationsWord")}</b>{t("team.sendModalHelpPost")}</p>
 
         <label className="mb-2 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.whichFormToSend")}</span><Select value={formId} onChange={(e) => setFormId(e.target.value)} className="w-full">{forms.map((f) => <option key={f.id} value={f.id}>{f.name} · {t("team.fieldsCount", { n: f.fields.length })}</option>)}</Select></label>
@@ -391,7 +392,7 @@ function FormEditor({ form, jobTitles, provider, onSave, onClose }: { form: AppF
   return (
     <div className="fixed inset-0 z-[141] flex justify-center overflow-y-auto bg-black/45 p-4 pt-[4vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("team.editApplicationForm")}</h3><Button className="ml-auto" onClick={() => previewForm(f, provider)}>{t("team.preview")}</Button><button type="button" onClick={onClose} className="text-[18px] text-[var(--ink-3)]">×</button></div></div>
+        <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("team.editApplicationForm")}</h3><Button className="ms-auto" onClick={() => previewForm(f, provider)}>{t("team.preview")}</Button><button type="button" onClick={onClose} className="text-[18px] text-[var(--ink-3)]">×</button></div></div>
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.formName")}</span><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="w-full" /></label>
           <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
@@ -425,7 +426,7 @@ function FormEditor({ form, jobTitles, provider, onSave, onClose }: { form: AppF
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-[var(--line)] p-3"><Input value={nl} onChange={(e) => setNl(e.target.value)} placeholder={t("team.newFieldLabel")} className="min-w-[180px] flex-1" /><Button variant="primary" onClick={add}>{t("team.addField")}</Button></div>
           <p className="text-[11px] text-[var(--ink-3)]">{t("team.formEditorHelpPre")}<b>{t("team.carriesIntoOnboardingBold")}</b>{t("team.formEditorHelpPost", { n: jobTitles.length })}</p>
         </div>
-        <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><Button className="ml-auto" onClick={onClose}>{t("team.cancel")}</Button><Button variant="primary" disabled={!f.name.trim()} onClick={() => onSave(f)}>{t("team.saveForm")}</Button></div>
+        <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><Button className="ms-auto" onClick={onClose}>{t("team.cancel")}</Button><Button variant="primary" disabled={!f.name.trim()} onClick={() => onSave(f)}>{t("team.saveForm")}</Button></div>
       </div>
     </div>
   );

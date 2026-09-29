@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
@@ -53,7 +54,7 @@ const TPL: Record<Tpl, { label: string; color: string; hint: string }> = {
 };
 const TPL_ORDER: Tpl[] = ["announce", "event", "reminder", "urgent", "celebrate", "booking"];
 
-const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const when = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 
 // Plain-text of a post — for the "email to parents" hand-off.
 function postToText(d: Draft): string {
@@ -376,7 +377,7 @@ export function NewsfeedApp() {
           </div>
           <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
             {TPL_ORDER.map((k) => (
-              <button key={k} type="button" onClick={() => setDraft({ ...draftFor(k, listings), frTarget: scopedFr })} className="flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-left transition hover:-translate-y-0.5 hover:shadow-md" style={{ borderColor: `${TPL[k].color}44`, background: `${TPL[k].color}0c` }}>
+              <button key={k} type="button" onClick={() => setDraft({ ...draftFor(k, listings), frTarget: scopedFr })} className="flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-start transition hover:-translate-y-0.5 hover:shadow-md" style={{ borderColor: `${TPL[k].color}44`, background: `${TPL[k].color}0c` }}>
                 <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: TPL[k].color, color: "#fff" }}>{TPL[k].label}</span>
                 <span className="text-[10.5px] text-[var(--ink-3)]">{TPL[k].hint}</span>
               </button>
@@ -390,10 +391,10 @@ export function NewsfeedApp() {
         {([["all", "All"], ...TPL_ORDER.map((k) => [k, TPL[k].label] as const), ["newsletter", "Newsletter"], ["draft", "Drafts"], ["scheduled", "Scheduled"], ["archived", "Archived"]] as [typeof filter, string][]).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setFilter(k)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={filter === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
         ))}
-        <div className="relative ml-auto">
-          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search posts…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1 pl-7 pr-7 text-[12px] text-[var(--ink)] outline-none focus:border-[color:var(--brand,#1d3a8f)]" />
-          {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">×</button>}
+        <div className="relative ms-auto">
+          <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search posts…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1 ps-7 pe-7 text-[12px] text-[var(--ink)] outline-none focus:border-[color:var(--brand,#1d3a8f)]" />
+          {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="absolute end-2 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">×</button>}
         </div>
       </div>
       {folders.length > 0 && (
@@ -402,14 +403,14 @@ export function NewsfeedApp() {
           <button type="button" onClick={() => { setFolderFilter(""); setFolderKind("all"); }} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={!folderFilter ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>All</button>
           {folders.map((f) => (
             <span key={f} className="inline-flex items-center overflow-hidden rounded-full border" style={folderFilter === f ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
-              <button type="button" onClick={() => { setFolderFilter(folderFilter === f ? "" : f); setFolderKind("all"); }} className="py-1 pl-2.5 pr-1.5 text-[11.5px] font-bold">📁 {f}</button>
-              {canManage && <button type="button" onClick={() => deleteFolder(f)} title={`Delete folder “${f}”`} aria-label={`Delete folder ${f}`} className="py-1 pl-1 pr-2 text-[11px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}
+              <button type="button" onClick={() => { setFolderFilter(folderFilter === f ? "" : f); setFolderKind("all"); }} className="py-1 ps-2.5 pe-1.5 text-[11.5px] font-bold">📁 {f}</button>
+              {canManage && <button type="button" onClick={() => deleteFolder(f)} title={`Delete folder “${f}”`} aria-label={`Delete folder ${f}`} className="py-1 ps-1 pe-2 text-[11px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}
             </span>
           ))}
         </div>
       )}
       {folderFilter && (
-        <div className="mb-3 -mt-1 flex flex-wrap items-center gap-1.5 pl-1">
+        <div className="mb-3 -mt-1 flex flex-wrap items-center gap-1.5 ps-1">
           <span className="text-[11px] font-bold text-[var(--ink-3)]">In “{folderFilter}”:</span>
           {([["all", "All"], ["post", "Posts"], ["newsletter", "Newsletters"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setFolderKind(k)} className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold" style={folderKind === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
         </div>
@@ -478,7 +479,7 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
     </span>
   ) : null;
   const manageBar = canManage && (
-    <span className="ml-auto flex flex-wrap items-center gap-1.5">
+    <span className="ms-auto flex flex-wrap items-center gap-1.5">
       <button type="button" onClick={onPin} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.pinned ? "Unpin" : "Pin"}</button>
       <button type="button" onClick={onEdit} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button>
       <button type="button" onClick={onDuplicate} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Duplicate</button>
@@ -528,7 +529,7 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
           {p.priority === "urgent" && <span className="rounded-full bg-[#fde2e4] px-2 py-0.5 text-[10.5px] font-extrabold text-[#c02636]">Urgent</span>}
           {p.ackRequired && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">Acknowledge</span>}
           {frBadge}
-          <span className="ml-auto">{sharedLine}</span>
+          <span className="ms-auto">{sharedLine}</span>
         </div>
         {p.title && <div className="text-[19px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</div>}
         <div className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-[var(--ink-2)]">{p.body}</div>
@@ -547,7 +548,7 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
             {p.rsvp && <span title="RSVPs">Going {p.rsvp.yes} · Maybe {p.rsvp.maybe} · No {p.rsvp.no}</span>}
           </span>
           {canManage && (
-            <span className="ml-auto flex flex-wrap items-center gap-1.5">
+            <span className="ms-auto flex flex-wrap items-center gap-1.5">
               {onMove && <label className="flex items-center gap-1">📁<select value={p.folder ?? ""} onChange={(e) => onMove(e.target.value)} className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] outline-none"><option value="">Unfiled</option>{folders.map((f) => <option key={f} value={f}>{f}</option>)}</select></label>}
               <button type="button" onClick={onPin} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.pinned ? "Unpin" : "Pin"}</button>
               <button type="button" onClick={onEdit} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button>
@@ -661,7 +662,7 @@ function Composer({ draft, setDraft, listings, folders = [], franchises = [], on
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)]">
                 {(["short", "medium", "long"] as const).map((l) => <button key={l} type="button" onClick={() => setAiLen(l)} className="px-2.5 py-1 text-[11px] font-bold capitalize transition-colors" style={aiLen === l ? { background: "#2f5fd0", color: "#fff" } : { color: "var(--ink-2)" }}>{l}</button>)}
               </div>
-              <button type="button" onClick={generate} disabled={aiBusy} className="ml-auto rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{aiBusy ? "Writing…" : "Write it for me"}</button>
+              <button type="button" onClick={generate} disabled={aiBusy} className="ms-auto rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{aiBusy ? "Writing…" : "Write it for me"}</button>
             </div>
             {aiErr && <div className="mt-1 text-[11px] font-bold text-[#c02636]">{aiErr}</div>}
           </div>
@@ -779,7 +780,7 @@ function Composer({ draft, setDraft, listings, folders = [], franchises = [], on
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
           <Button sm onClick={onClose}>Cancel</Button>
-          <span className="mr-auto text-[11px] text-[var(--ink-3)]">Do one now — reopen to do another</span>
+          <span className="me-auto text-[11px] text-[var(--ink-3)]">Do one now — reopen to do another</span>
           <button type="button" onClick={() => downloadPostImage(draft)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⬇ Image</button>
           <button type="button" onClick={() => onPublish(draft, "download")} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⬇ PDF</button>
           <button type="button" onClick={() => onPublish(draft, "email")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">✉ Email</button>

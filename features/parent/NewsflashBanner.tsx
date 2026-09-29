@@ -76,8 +76,8 @@ export function NewsflashBanner() {
         const headline = p.title || p.body.slice(0, 90);
         return (
           <div className="nf-bar relative overflow-hidden text-white shadow-md" style={{ background: `linear-gradient(120deg, ${color}, ${color}cc 55%, ${color}88)` }}>
-            <div className="nf-shine pointer-events-none absolute inset-y-0 left-0 w-1/3" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)" }} />
-            <button type="button" onClick={openPost} className="relative flex w-full items-center gap-3 px-4 py-2.5 text-left">
+            <div className="nf-shine pointer-events-none absolute inset-y-0 start-0 w-1/3" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)" }} />
+            <button type="button" onClick={openPost} className="relative flex w-full items-center gap-3 px-4 py-2.5 text-start">
               {thumb
                 ? <img src={thumb} alt="" className="h-10 w-14 flex-none rounded-lg object-cover ring-2 ring-white/60" />
                 : <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-white/20 text-[18px] font-black">📣</span>}
@@ -91,7 +91,7 @@ export function NewsflashBanner() {
               </span>
               <span className="flex-none rounded-full bg-white px-3 py-1 text-[12px] font-extrabold" style={{ color }}>{t("parent.viewArrow")}</span>
             </button>
-            <button type="button" onClick={dismissOne} aria-label={t("parent.dismiss")} className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full text-[15px] font-bold text-white/80 hover:bg-white/20">×</button>
+            <button type="button" onClick={dismissOne} aria-label={t("parent.dismiss")} className="absolute end-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full text-[15px] font-bold text-white/80 hover:bg-white/20">×</button>
           </div>
         );
       })()}
@@ -108,7 +108,7 @@ export function NewsflashBanner() {
               <div className="flex flex-none items-center gap-2 px-4 py-2.5 text-white" style={{ background: color }}>
                 <span className="text-[10px] font-black uppercase tracking-[0.14em]">{tag}</span>
                 {shown.tenantName && <span className="text-[11px] font-bold text-white/80">· {shown.tenantName}</span>}
-                <button type="button" onClick={() => setShown(null)} aria-label={t("parent.close")} className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] font-bold text-white/85 hover:bg-white/20">×</button>
+                <button type="button" onClick={() => setShown(null)} aria-label={t("parent.close")} className="ms-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] font-bold text-white/85 hover:bg-white/20">×</button>
               </div>
 
               {/* the actual post */}

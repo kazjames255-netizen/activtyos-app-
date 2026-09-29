@@ -64,7 +64,7 @@ export function LinkBadge({ links, compact, onDark }: { links: WebLink[]; compac
       {open && (
         <>
           <span className="fixed inset-0 z-[150]" onClick={() => setOpen(false)} />
-          <span className="absolute right-0 top-full z-[151] mt-1 block w-[240px] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 text-left shadow-[0_18px_44px_-16px_rgba(15,23,42,.45)]">
+          <span className="absolute end-0 top-full z-[151] mt-1 block w-[240px] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 text-start shadow-[0_18px_44px_-16px_rgba(15,23,42,.45)]">
             {links.map((u, i) => { const k = urlKind(u.url); return (
               <a key={i} href={u.url} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-[#f2f6ff]">
                 <span className="text-[14px]">{k.icon}</span>

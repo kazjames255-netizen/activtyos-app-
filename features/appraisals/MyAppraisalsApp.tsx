@@ -50,13 +50,13 @@ export function MyAppraisalsApp() {
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title={t("staffp.aprTitle")} icon="📋" lede={t("staffp.aprLede")} />
-      {loadErr && <Card className="mt-4 border-l-4 border-l-[#c0392b] p-3 text-[12.5px] font-semibold text-[#c0392b]">⚠ Couldn&rsquo;t load your appraisals — check your connection and reopen this page.</Card>}
+      {loadErr && <Card className="mt-4 border-s-4 border-s-[#c0392b] p-3 text-[12.5px] font-semibold text-[#c0392b]">⚠ Couldn&rsquo;t load your appraisals — check your connection and reopen this page.</Card>}
 
       {todo.length > 0 && (
-        <Card className="mt-4 border-l-4 border-l-[#1d3a8f] p-4">
+        <Card className="mt-4 border-s-4 border-s-[#1d3a8f] p-4">
           <div className="text-[13px] font-extrabold text-[var(--ink)]">{t("staffp.aprYourTurn")}</div>
           <div className="mt-2 space-y-2">{todo.map((r) => (
-            <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--panel)] p-2.5"><span className="text-[12.5px] font-bold text-[var(--ink)]">{t(KIND_KEY[r.kind])}</span><span className={`text-[11.5px] ${isOverdue(r) ? "font-bold text-[#c0392b]" : "text-[var(--ink-3)]"}`}>{t("staffp.aprDue", { date: fmtDate(r.due, locale) })} · {isOverdue(r) ? t("staffp.aprOverdue") : t("staffp.aprInDays", { n: daysUntil(r.due) })}</span><Button variant="primary" className="ml-auto" onClick={() => setSelf(r)}>{t("staffp.aprFillIn")}</Button></div>
+            <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--panel)] p-2.5"><span className="text-[12.5px] font-bold text-[var(--ink)]">{t(KIND_KEY[r.kind])}</span><span className={`text-[11.5px] ${isOverdue(r) ? "font-bold text-[#c0392b]" : "text-[var(--ink-3)]"}`}>{t("staffp.aprDue", { date: fmtDate(r.due, locale) })} · {isOverdue(r) ? t("staffp.aprOverdue") : t("staffp.aprInDays", { n: daysUntil(r.due) })}</span><Button variant="primary" className="ms-auto" onClick={() => setSelf(r)}>{t("staffp.aprFillIn")}</Button></div>
           ))}</div>
         </Card>
       )}
@@ -65,14 +65,14 @@ export function MyAppraisalsApp() {
         <Card className="p-4">
           <div className="mb-2 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("staffp.aprGoals")}</div>
           {goals.length === 0 ? <div className="text-[12.5px] text-[var(--ink-3)]">{t("staffp.aprNoGoals")}</div> : <div className="space-y-2">{goals.map((g) => (
-            <div key={g.id} className="rounded-xl border border-[var(--line)] p-2.5"><div className="flex items-center gap-2"><span className="text-[12.5px] font-bold text-[var(--ink)]">{g.title || t("staffp.aprUntitled")}</span><span className="ml-auto rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{t(GOAL_KEY[g.status])}</span></div>{g.detail && <div className="mt-0.5 text-[11px] text-[var(--ink-2)]">{g.detail}</div>}<div className="mt-0.5 text-[10.5px] text-[var(--ink-3)]">{g.from}{g.due ? ` · ${t("staffp.aprTarget", { date: fmtDate(g.due, locale) })}` : ""}</div>{(typeof g.progress === "number" || g.status === "done") && <div className="mt-1.5 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full bg-[#1d3a8f]" style={{ width: `${g.status === "done" ? 100 : g.progress}%` }} /></div><span className="text-[10px] font-bold tabular-nums text-[var(--ink-3)]">{g.status === "done" ? 100 : g.progress}%</span></div>}</div>
+            <div key={g.id} className="rounded-xl border border-[var(--line)] p-2.5"><div className="flex items-center gap-2"><span className="text-[12.5px] font-bold text-[var(--ink)]">{g.title || t("staffp.aprUntitled")}</span><span className="ms-auto rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{t(GOAL_KEY[g.status])}</span></div>{g.detail && <div className="mt-0.5 text-[11px] text-[var(--ink-2)]">{g.detail}</div>}<div className="mt-0.5 text-[10.5px] text-[var(--ink-3)]">{g.from}{g.due ? ` · ${t("staffp.aprTarget", { date: fmtDate(g.due, locale) })}` : ""}</div>{(typeof g.progress === "number" || g.status === "done") && <div className="mt-1.5 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full bg-[#1d3a8f]" style={{ width: `${g.status === "done" ? 100 : g.progress}%` }} /></div><span className="text-[10px] font-bold tabular-nums text-[var(--ink-3)]">{g.status === "done" ? 100 : g.progress}%</span></div>}</div>
           ))}</div>}
         </Card>
 
         <Card className="p-4">
           <div className="mb-2 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("staffp.aprUpcoming")}</div>
           {upcoming.length === 0 ? <div className="text-[12.5px] text-[var(--ink-3)]">{t("staffp.aprNothing")}</div> : <div className="space-y-1.5">{upcoming.map((r) => (
-            <div key={r.id} className="flex flex-wrap items-center gap-2 text-[12.5px]"><span className="font-bold text-[var(--ink)]">{t(KIND_KEY[r.kind])}</span><span className="text-[10.5px] text-[var(--ink-3)]">· {t("staffp.aprWith", { name: r.appraiser && r.appraiser !== "You" ? r.appraiser : t("staffp.aprYourManager") })}</span><span className="ml-auto text-[var(--ink-3)]">{fmtDate(r.due, locale)}</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{t(STATUS_KEY[r.status])}</span></div>
+            <div key={r.id} className="flex flex-wrap items-center gap-2 text-[12.5px]"><span className="font-bold text-[var(--ink)]">{t(KIND_KEY[r.kind])}</span><span className="text-[10.5px] text-[var(--ink-3)]">· {t("staffp.aprWith", { name: r.appraiser && r.appraiser !== "You" ? r.appraiser : t("staffp.aprYourManager") })}</span><span className="ms-auto text-[var(--ink-3)]">{fmtDate(r.due, locale)}</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{t(STATUS_KEY[r.status])}</span></div>
           ))}</div>}
         </Card>
       </div>
@@ -80,7 +80,7 @@ export function MyAppraisalsApp() {
       <Card className="mt-4 p-4">
         <div className="mb-2 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("staffp.aprPast")}</div>
         {past.length === 0 ? <div className="text-[12.5px] text-[var(--ink-3)]">{t("staffp.aprNoPast")}</div> : <div className="space-y-2">{past.map((r) => { const sc = overallScore(r); return (
-          <div key={r.id} className="rounded-xl border border-[var(--line)] p-3"><div className="flex items-center gap-2"><span className="text-[12.5px] font-bold text-[var(--ink)]">{t(KIND_KEY[r.kind])}</span><span className="text-[11px] text-[var(--ink-3)]">{fmtDate(r.due, locale)}</span>{sc != null && <span className="ml-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[11px] font-extrabold text-[#0f7a43]">{sc}/5</span>}</div>{r.manager.text && <p className="mt-1.5 text-[12px] text-[var(--ink-2)]">“{r.manager.text}”</p>}</div>
+          <div key={r.id} className="rounded-xl border border-[var(--line)] p-3"><div className="flex items-center gap-2"><span className="text-[12.5px] font-bold text-[var(--ink)]">{t(KIND_KEY[r.kind])}</span><span className="text-[11px] text-[var(--ink-3)]">{fmtDate(r.due, locale)}</span>{sc != null && <span className="ms-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[11px] font-extrabold text-[#0f7a43]">{sc}/5</span>}</div>{r.manager.text && <p className="mt-1.5 text-[12px] text-[var(--ink-2)]">“{r.manager.text}”</p>}</div>
         ); })}</div>}
       </Card>
 
@@ -98,7 +98,7 @@ function SelfAssess({ rev, onSave, onClose }: { rev: Review; onSave: (r: Review)
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("staffp.aprSelf")}</h3><span className="text-[12px] text-[var(--ink-3)]">· {t(KIND_KEY[r.kind])}</span><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("staffp.aprSelf")}</h3><span className="text-[12px] text-[var(--ink-3)]">· {t(KIND_KEY[r.kind])}</span><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <p className="mb-3 text-[12px] text-[var(--ink-3)]">{t("staffp.aprSelfIntro")}</p>
         <div className="space-y-1.5">{tpl.competencies.map((c) => { const cur = r.self.ratings.find((x) => x.id === c.id)?.rating; return (
           <div key={c.id} className="flex items-center gap-2"><div className="min-w-0 flex-1 text-[12.5px] font-semibold text-[var(--ink)]">{c.label}</div><div className="flex gap-1">{([1, 2, 3, 4, 5] as Rating[]).map((n) => (<button key={n} type="button" onClick={() => setRating(c.id, n)} title={t(RATING_KEY[n])} className={`h-7 w-7 rounded-lg text-[12px] font-bold ${cur === n ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-2)] hover:bg-[#e2e8f4]"}`}>{n}</button>))}</div></div>

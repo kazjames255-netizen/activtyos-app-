@@ -5,6 +5,7 @@
 // needs covering, manage each person's entitlement, and set the leave-year
 // policy. Statutory entitlement is computed to UK law (see lib/holiday.ts).
 // Demo store; backend + real notifications are Amir's (docs/holiday-planner-handoff.md).
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
@@ -19,7 +20,7 @@ import { loadPolicy, savePolicy, loadProfiles, saveProfiles, loadAbsences, saveA
 
 const KINDS = Object.keys(KIND_META) as AbsenceKind[];
 const mondayOf = (d: Date) => { const x = new Date(d); const k = (x.getDay() + 6) % 7; x.setDate(x.getDate() - k); return x; };
-const dayLabel = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric" });
+const dayLabel = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric" });
 
 // rostered staff names per date, read from the schedule (aos.rota.v5)
 function rosteredByDate(dates: string[]): Record<string, Set<string>> {
@@ -112,7 +113,7 @@ export function HolidayApp() {
               <div className="grid grid-cols-7 gap-1.5">
                 {week.map((iso) => { const n = teamOff(iso); const isToday = iso === today; const d = new Date(`${iso}T00:00:00`); return (
                   <div key={iso} className="text-center">
-                    <div className={`text-[10.5px] font-bold ${isToday ? "text-[#1d3a8f]" : "text-[var(--ink-3)]"}`}>{d.toLocaleDateString("en-GB", { weekday: "short" })} {d.getDate()}</div>
+                    <div className={`text-[10.5px] font-bold ${isToday ? "text-[#1d3a8f]" : "text-[var(--ink-3)]"}`}>{d.toLocaleDateString(dl(), { weekday: "short" })} {d.getDate()}</div>
                     <div className="mx-auto mt-1 grid h-11 w-11 place-items-center rounded-full text-[15px] font-extrabold tabular-nums text-white"
                       style={isToday ? { background: "linear-gradient(135deg,#16306e,#3f78d8)", boxShadow: "0 6px 14px -6px rgba(29,58,143,.6)" }
                         : n > 0 ? { background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 6px 14px -8px rgba(124,58,237,.6)" }
@@ -126,7 +127,7 @@ export function HolidayApp() {
               <CollapsibleStats id="holiday-overview">
               <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                 {cards.map((c) => (
-                  <button key={c.label} type="button" onClick={() => setTab(c.tab)} title={`Go to ${c.label}`} className="text-left transition-transform hover:-translate-y-0.5">
+                  <button key={c.label} type="button" onClick={() => setTab(c.tab)} title={`Go to ${c.label}`} className="text-start transition-transform hover:-translate-y-0.5">
                     <Tile label={c.label} icon={c.icon} grad={c.grad} value={String(c.value)} sub={c.sub} />
                   </button>
                 ))}
@@ -144,7 +145,7 @@ export function HolidayApp() {
             <button key={k} type="button" onClick={() => setTab(k)} className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-bold ${tab === k ? "bg-[#1d3a8f] text-white" : "text-[var(--ink-2)] hover:bg-[#f2f5fb]"}`}>{l}</button>
           ))}
         </div>
-        <Button variant="primary" className="ml-auto" onClick={() => setAdding(true)}>+ Add leave</Button>
+        <Button variant="primary" className="ms-auto" onClick={() => setAdding(true)}>+ Add leave</Button>
       </div>
 
       {/* ── REQUESTS ─────────────────────────────────────────────────────── */}
@@ -164,7 +165,7 @@ export function HolidayApp() {
                       <div className="min-w-[160px]">
                         <div className="text-[13.5px] font-extrabold text-[#1d3a8f]">{a.name}</div>
                         <div className="text-[12px] text-[var(--ink-2)]">{km.label}</div>
-                        <div className="text-[12.5px] font-semibold text-[var(--ink)]">{fmtRange(a.start, a.end)}{a.half ? ` · ${a.half} half-day` : ""} <span className="font-normal text-[var(--ink-3)]">({a.days} day{a.days === 1 ? "" : "s"})</span>{a.paid === false && <span className="ml-1.5 rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9.5px] font-bold text-[#64748b] align-middle">unpaid</span>}{a.kind === "sickness" && <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[9.5px] font-bold align-middle ${a.ssp === "withheld" ? "bg-[#fdecec] text-[#c0392b]" : "bg-[#e6f4ea] text-[#0f7a43]"}`}>SSP {a.ssp === "withheld" ? "withheld" : "eligible"}</span>}</div>
+                        <div className="text-[12.5px] font-semibold text-[var(--ink)]">{fmtRange(a.start, a.end)}{a.half ? ` · ${a.half} half-day` : ""} <span className="font-normal text-[var(--ink-3)]">({a.days} day{a.days === 1 ? "" : "s"})</span>{a.paid === false && <span className="ms-1.5 rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9.5px] font-bold text-[#64748b] align-middle">unpaid</span>}{a.kind === "sickness" && <span className={`ms-1.5 rounded-full px-1.5 py-0.5 text-[9.5px] font-bold align-middle ${a.ssp === "withheld" ? "bg-[#fdecec] text-[#c0392b]" : "bg-[#e6f4ea] text-[#0f7a43]"}`}>SSP {a.ssp === "withheld" ? "withheld" : "eligible"}</span>}</div>
                         {a.reason && <div className="mt-0.5 text-[11.5px] italic text-[var(--ink-3)]">“{a.reason}”</div>}
                       </div>
                       <div className="min-w-[190px] flex-1 rounded-xl bg-[#f2f7ff] p-2.5 text-[12px] text-[var(--ink-2)]">
@@ -184,7 +185,7 @@ export function HolidayApp() {
                           <div key={c.id} className="flex items-center gap-2 py-1 text-[12px]">
                             <span>{KIND_META[c.kind].icon}</span><span className="font-bold text-[var(--ink)]">{c.name}</span>
                             <span className="text-[var(--ink-3)]">{fmtRange(c.start, c.end)}</span>
-                            <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${c.status === "approved" ? "bg-[#e6f4ea] text-[#0f7a43]" : "bg-[#fdf3e0] text-[#8a5a09]"}`}>{KIND_META[c.kind].label} · {c.status}</span>
+                            <span className={`ms-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${c.status === "approved" ? "bg-[#e6f4ea] text-[#0f7a43]" : "bg-[#fdf3e0] text-[#8a5a09]"}`}>{KIND_META[c.kind].label} · {c.status}</span>
                           </div>
                         ))}
                         <div className="mt-2 flex gap-1.5"><Button variant="primary" onClick={() => { decide(a.id, "approved"); flash(`Approved despite ${cf.length} clash.`); }}>Approve anyway</Button><Button variant="danger" onClick={() => { const r = window.prompt("Decline — reason:", "Team already short-staffed"); if (r !== null) decide(a.id, "declined", r || undefined); }}>Decline</Button></div>
@@ -208,11 +209,11 @@ export function HolidayApp() {
           <Card className="mt-4 p-4">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <div className="text-[14px] font-extrabold text-[var(--ink)]">Who&rsquo;s off</div>
-              <div className="ml-auto flex items-center gap-1.5">
+              <div className="ms-auto flex items-center gap-1.5">
                 <button type="button" onClick={() => setAnchor(new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() - 7))} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[13px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">‹</button>
-                <span className="min-w-[150px] text-center text-[12.5px] font-bold text-[var(--ink)]">{new Date(`${dates[0]}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – {new Date(`${dates[6]}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                <span className="min-w-[150px] text-center text-[12.5px] font-bold text-[var(--ink)]">{new Date(`${dates[0]}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" })} – {new Date(`${dates[6]}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" })}</span>
                 <button type="button" onClick={() => setAnchor(new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() + 7))} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[13px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">›</button>
-                <button type="button" onClick={() => setAnchor(new Date())} className="ml-1 text-[11px] font-bold text-[#1d3a8f] hover:underline">This week</button>
+                <button type="button" onClick={() => setAnchor(new Date())} className="ms-1 text-[11px] font-bold text-[#1d3a8f] hover:underline">This week</button>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -258,21 +259,21 @@ export function HolidayApp() {
             <span className="text-[11px] text-[var(--ink-3)]">Included-in-pay suits casual / seasonal hourly staff. You can still override any one person on their row.</span>
           </div>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-            <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-center font-extrabold">Days/wk</th><th className="px-3 py-2.5 text-center font-extrabold">Basis</th><th className="px-3 py-2.5 text-center font-extrabold">Holiday pay</th><th className="px-3 py-2.5 text-right font-extrabold">Allowance</th><th className="px-3 py-2.5 text-right font-extrabold">Carried</th><th className="px-3 py-2.5 text-right font-extrabold">Taken</th><th className="px-3 py-2.5 text-right font-extrabold">Booked</th><th className="px-3 py-2.5 text-right font-extrabold">Remaining</th><th className="px-3 py-2.5"></th></tr></thead>
+            <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-center font-extrabold">Days/wk</th><th className="px-3 py-2.5 text-center font-extrabold">Basis</th><th className="px-3 py-2.5 text-center font-extrabold">Holiday pay</th><th className="px-3 py-2.5 text-end font-extrabold">Allowance</th><th className="px-3 py-2.5 text-end font-extrabold">Carried</th><th className="px-3 py-2.5 text-end font-extrabold">Taken</th><th className="px-3 py-2.5 text-end font-extrabold">Booked</th><th className="px-3 py-2.5 text-end font-extrabold">Remaining</th><th className="px-3 py-2.5"></th></tr></thead>
             <tbody>{profiles.map((p) => { const s = summaryOf(p.id); const dpw = p.daysPerWeek ?? policy.daysPerWeek; const custom = p.allowanceDays != null || policy.allowanceBasis === "custom"; const pct = s.total > 0 ? Math.round(((s.takenAnnual + s.bookedAnnual) / s.total) * 100) : 0; const rolled = p.holidayPay === "rolled-up"; return (
               <tr key={p.id} className="border-t border-[var(--line-2,#eef2f8)]">
-                <td className="px-3 py-2.5 font-bold text-[var(--ink)]">{p.name}<span className="ml-1 text-[10.5px] font-normal text-[var(--ink-3)]">{p.role}{p.op ? ` · ${p.op}` : ""}</span></td>
+                <td className="px-3 py-2.5 font-bold text-[var(--ink)]">{p.name}<span className="ms-1 text-[10.5px] font-normal text-[var(--ink-3)]">{p.role}{p.op ? ` · ${p.op}` : ""}</span></td>
                 <td className="px-3 py-2.5 text-center tabular-nums text-[var(--ink-2)]">{dpw}</td>
                 <td className="px-3 py-2.5 text-center">{rolled ? <span className="text-[var(--ink-3)]">—</span> : custom ? <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">Contractual</span> : <span className="rounded-full bg-[#eef7ee] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">Statutory</span>}</td>
                 <td className="px-3 py-2.5 text-center"><button type="button" onClick={() => persistProfiles(profiles.map((x) => (x.id === p.id ? { ...x, holidayPay: rolled ? "accrued" : "rolled-up" } : x)))} title="Switch between booking paid leave and holiday included in pay (rolled-up 12.07%)" className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${rolled ? "bg-[#fdf3e0] text-[#8a5a09]" : "bg-[#eef1f6] text-[#64748b]"}`}>{rolled ? "In pay 12.07% ⇄" : "Books leave ⇄"}</button></td>
                 {rolled ? <td colSpan={4} className="px-3 py-2.5 text-center text-[11.5px] font-semibold text-[#8a5a09]">Holiday paid as earned — 12.07% added to each payslip</td> : <>
-                  <td className="px-3 py-2.5 text-right font-bold tabular-nums text-[var(--ink)]">{s.allowance}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-[var(--ink-2)]">{s.carriedOver || "—"}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-[var(--ink-2)]">{s.takenAnnual}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-[var(--ink-2)]">{s.bookedAnnual}</td>
+                  <td className="px-3 py-2.5 text-end font-bold tabular-nums text-[var(--ink)]">{s.allowance}</td>
+                  <td className="px-3 py-2.5 text-end tabular-nums text-[var(--ink-2)]">{s.carriedOver || "—"}</td>
+                  <td className="px-3 py-2.5 text-end tabular-nums text-[var(--ink-2)]">{s.takenAnnual}</td>
+                  <td className="px-3 py-2.5 text-end tabular-nums text-[var(--ink-2)]">{s.bookedAnnual}</td>
                 </>}
-                {rolled ? <td className="px-3 py-2.5 text-right text-[var(--ink-3)]">—</td> : <td className="px-3 py-2.5 text-right"><div className="font-extrabold tabular-nums text-[#0f7a43]">{s.remaining}</div><div className="mt-0.5 h-1 w-14 overflow-hidden rounded-full bg-[#e6ebf3]"><div className="h-full rounded-full bg-[#1d3a8f]" style={{ width: `${Math.min(100, pct)}%` }} /></div></td>}
-                <td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setProfEdit(p)} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Edit</button></td>
+                {rolled ? <td className="px-3 py-2.5 text-end text-[var(--ink-3)]">—</td> : <td className="px-3 py-2.5 text-end"><div className="font-extrabold tabular-nums text-[#0f7a43]">{s.remaining}</div><div className="mt-0.5 h-1 w-14 overflow-hidden rounded-full bg-[#e6ebf3]"><div className="h-full rounded-full bg-[#1d3a8f]" style={{ width: `${Math.min(100, pct)}%` }} /></div></td>}
+                <td className="px-3 py-2.5 text-end"><button type="button" onClick={() => setProfEdit(p)} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Edit</button></td>
               </tr>
             ); })}</tbody>
             </table>
@@ -288,7 +289,7 @@ export function HolidayApp() {
             <div className="grid gap-3">
               <div className="grid grid-cols-2 gap-2">
                 <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Leave year starts</span>
-                  <div className="flex gap-1.5"><Select value={policy.leaveYearStartMonth} onChange={(e) => persistPolicy({ ...policy, leaveYearStartMonth: Number(e.target.value) })} className="w-full">{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleDateString("en-GB", { month: "long" })}</option>)}</Select>
+                  <div className="flex gap-1.5"><Select value={policy.leaveYearStartMonth} onChange={(e) => persistPolicy({ ...policy, leaveYearStartMonth: Number(e.target.value) })} className="w-full">{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleDateString(dl(), { month: "long" })}</option>)}</Select>
                   <Input inputMode="numeric" value={String(policy.leaveYearStartDay)} onChange={(e) => persistPolicy({ ...policy, leaveYearStartDay: Math.min(28, Math.max(1, parseInt(e.target.value) || 1)) })} className="w-16" /></div></label>
                 <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Default days / week</span><Input inputMode="decimal" value={String(policy.daysPerWeek)} onChange={(e) => persistPolicy({ ...policy, daysPerWeek: Math.min(7, Math.max(1, parseFloat(e.target.value) || 5)) })} className="w-full" /></label>
               </div>
@@ -355,7 +356,7 @@ function AbsenceEditor({ abs, region, sickRule, isNew, profiles, policy, absence
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{isNew ? "Add leave" : a.name}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{isNew ? "Add leave" : a.name}</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
           {isNew && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={a.staffId} onChange={(e) => { const p = (profiles || []).find((x) => x.id === e.target.value); set({ staffId: e.target.value, name: p?.name || "" }); }} className="w-full"><option value="">Choose a person…</option>{(profiles || []).map((p) => <option key={p.id} value={p.id}>{p.name}{p.role ? ` · ${p.role}` : ""}</option>)}</Select></label>}
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Type</span><Select value={a.kind} onChange={(e) => set({ kind: e.target.value as AbsenceKind, pay: undefined })} className="w-full">{KINDS.map((k) => <option key={k} value={k}>{KIND_META[k].icon} {KIND_META[k].label}</option>)}</Select></label>
@@ -400,7 +401,7 @@ function ProfileEditor({ prof, policy, onSave, onClose }: { prof: LeaveProfile; 
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{p.name}</h3><span className="text-[12px] text-[var(--ink-3)]">· entitlement</span><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{p.name}</h3><span className="text-[12px] text-[var(--ink-3)]">· entitlement</span><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="mt-3 grid gap-2.5">
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Holiday pay method</span><Select value={p.holidayPay || "accrued"} onChange={(e) => setP({ ...p, holidayPay: e.target.value as LeaveProfile["holidayPay"] })} className="w-full"><option value="accrued">Accrued — books paid time off</option><option value="rolled-up">Included in pay — rolled-up 12.07%</option></Select><span className="mt-1 block text-[10.5px] text-[var(--ink-3)]">Use <b>Included in pay</b> for irregular / part-year (seasonal) staff: they won&rsquo;t see the request-holiday flow, and payroll adds a separate 12.07% Holiday pay line to every payslip.</span></label>
           {p.holidayPay === "rolled-up" ? <div className="rounded-lg bg-[#fdf3e0] px-3 py-2 text-[12px] font-semibold text-[#8a5a09]">Holiday is paid as they earn it — no bookable allowance to set.</div> : <>

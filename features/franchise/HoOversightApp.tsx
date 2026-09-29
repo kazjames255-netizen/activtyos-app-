@@ -5,6 +5,7 @@
 // tagged with the franchise it belongs to. The head office watches the whole
 // network here; to act on a record it drills into that franchise.
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { Card } from "@/components/ui";
@@ -30,7 +31,7 @@ const KIND_TAG: Record<string, { label: string; bg: string; fg: string }> = {
   safeguarding: { label: "Safeguarding", bg: "#fdecec", fg: "#c0392b" },
   medication: { label: "Medication", bg: "#f3f0fb", fg: "#6d28d9" },
 };
-const fmtWhen = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—");
+const fmtWhen = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "—");
 
 export function HoOversightApp({ area }: { area: Area }) {
   const [d, setD] = useState<Payload | null>(null);
@@ -79,7 +80,7 @@ export function HoOversightApp({ area }: { area: Area }) {
                   const key = b.franchiseId ?? "__ho__";
                   const active = fFilter === key;
                   return (
-                    <button key={key} type="button" onClick={() => setFFilter(active ? "all" : key)} className={"flex items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors " + (active ? "border-[#171534] bg-[var(--panel)]" : "border-[var(--line)] hover:bg-[var(--panel)]")}>
+                    <button key={key} type="button" onClick={() => setFFilter(active ? "all" : key)} className={"flex items-center gap-3 rounded-xl border px-3 py-2 text-start transition-colors " + (active ? "border-[#171534] bg-[var(--panel)]" : "border-[var(--line)] hover:bg-[var(--panel)]")}>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 text-[12.5px] font-extrabold">
                           {b.franchiseId == null && <span className="rounded-full bg-[#17181c] px-1.5 py-0.5 text-[9px] font-black uppercase text-white">HO</span>}
@@ -88,7 +89,7 @@ export function HoOversightApp({ area }: { area: Area }) {
                         </div>
                         <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(b.total / maxTotal) * 100}%`, background: colorOf(b.franchiseId) }} /></div>
                       </div>
-                      <div className="flex-none text-right"><div className="text-[14px] font-black tabular-nums">{b.total}</div><div className="text-[10px] font-bold text-[var(--ink-3)]">{b.last30} in 30d</div></div>
+                      <div className="flex-none text-end"><div className="text-[14px] font-black tabular-nums">{b.total}</div><div className="text-[10px] font-bold text-[var(--ink-3)]">{b.last30} in 30d</div></div>
                     </button>
                   );
                 })}
@@ -113,7 +114,7 @@ export function HoOversightApp({ area }: { area: Area }) {
                           : r.summary && <span className="text-[var(--ink-2)]">{r.summary}{r.bodyPart ? ` (${r.bodyPart})` : ""}</span>}
                         <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${colorOf(r.franchiseId)}1a`, color: colorOf(r.franchiseId) }}><span className="h-1.5 w-1.5 rounded-full" style={{ background: colorOf(r.franchiseId) }} />{r.franchiseName}</span>
                         {r.open && area !== "medication" && <span className="rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9.5px] font-black text-[#c0392b]">Open</span>}
-                        <span className="ml-auto text-[11px] text-[var(--ink-3)]">{fmtWhen(r.when)}</span>
+                        <span className="ms-auto text-[11px] text-[var(--ink-3)]">{fmtWhen(r.when)}</span>
                         {r.franchiseId && <button type="button" onClick={() => setHoScopeId(r.franchiseId!)} className="text-[11px] font-extrabold text-[#2f6bd8] hover:underline">Open →</button>}
                       </div>
                     );

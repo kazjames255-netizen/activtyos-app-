@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -39,7 +40,7 @@ const randomCode = () => "SAVE" + rand(5);
 const surnameOf = (name: string) => (name.trim().split(/\s+/).pop() || "FAM").replace(/[^A-Za-z]/g, "").toUpperCase() || "FAMILY";
 // A friendly code from a family's surname + this year, e.g. "KHAN2026".
 const codeFromFamily = (name: string) => `${surnameOf(name)}${new Date().getFullYear()}`;
-const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const isExpired = (c: Code) => !!c.expiry && c.expiry < todayIso();
 const isSpent = (c: Code) => c.usageLimit != null && (c.usedCount ?? 0) >= c.usageLimit;
@@ -69,8 +70,8 @@ function GroupsManager({ families, groups, reload }: { families: Family[]; group
 
   return (
     <Card className="mb-3.5 p-4">
-      <button type="button" onClick={() => setPanelOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
-        <span className="text-[14px] font-extrabold">👥 Parent groups <span className="ml-1 font-normal text-[var(--ink-3)]">— save families together (e.g. “NHS parents”) to code them in one go</span></span>
+      <button type="button" onClick={() => setPanelOpen((o) => !o)} className="flex w-full items-center justify-between text-start">
+        <span className="text-[14px] font-extrabold">👥 Parent groups <span className="ms-1 font-normal text-[var(--ink-3)]">— save families together (e.g. “NHS parents”) to code them in one go</span></span>
         <span className="text-[var(--ink-3)]">{panelOpen ? "▲" : "▼"}</span>
       </button>
       {panelOpen && (

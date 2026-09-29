@@ -5,6 +5,7 @@
 // list, an onboarding pipeline, a network compliance strip and a franchise
 // league table with a drill-in to each. Black-themed via --hero-grad (HO flag).
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { get as apiGet } from "@/lib/api";
@@ -35,7 +36,7 @@ interface Overview {
 
 const PALETTE = ["#2f6bd8", "#e0483d", "#0f9d58", "#f5b81f", "#8e44ad", "#e67e22", "#16a085", "#c2185b", "#6d4c41", "#0097a7"];
 const GOLD = "#f5b81f";
-const monthLabel = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "short" });
+const monthLabel = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "short" });
 
 // Trend chip — green up / red down, semantic (not the data accent).
 function Trend({ pct, className = "" }: { pct: number; className?: string }) {
@@ -74,7 +75,7 @@ function RevenueChart({ series }: { series: { month: string; revenue: number }[]
           </g>
         ))}
       </svg>
-      <div className="pointer-events-none absolute right-2 top-0 rounded-lg bg-[#171534] px-2.5 py-1 text-right text-white">
+      <div className="pointer-events-none absolute end-2 top-0 rounded-lg bg-[#171534] px-2.5 py-1 text-end text-white">
         <div className="text-[9px] font-bold uppercase tracking-wide text-white/60">{monthLabel(series[active].month)}</div>
         <div className="text-[13px] font-extrabold tabular-nums">{money(series[active].revenue)}</div>
       </div>
@@ -142,7 +143,7 @@ function BookingsByFranchise({ series, legend }: { series: Series; legend: Legen
         </div>
         {hover != null && shown[hover] && (
           <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 rounded-xl bg-[#171534] px-3 py-2 text-white shadow-lg">
-            <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-white/60">{new Date(`${shown[hover].month}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</div>
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-white/60">{new Date(`${shown[hover].month}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "long", year: "numeric" })}</div>
             {active.map((l) => { const v = val(shown[hover].byFranchise[l.franchiseId]); if (!v) return null; return <div key={l.franchiseId} className="flex items-center gap-1.5 text-[11px]"><span className="h-2 w-2 rounded-full" style={{ background: colorOf(l.franchiseId) }} /><span className="flex-1">{nameOf(l.franchiseId)}</span><b className="tabular-nums">{fmtVal(v)}</b></div>; })}
             <div className="mt-1 border-t border-white/15 pt-1 text-[11px] font-extrabold">Total <span className="float-right tabular-nums">{fmtVal(totalOf(shown[hover]))}</span></div>
           </div>
@@ -246,7 +247,7 @@ export function HoDashboardApp() {
                 {d.attention.length === 0 ? (
                   <div className="flex flex-1 items-center justify-center py-6 text-center text-[12.5px] text-[var(--ink-3)]">✓ All clear across the network.</div>
                 ) : (
-                  <div className="flex max-h-[220px] flex-col gap-1.5 overflow-y-auto pr-1">
+                  <div className="flex max-h-[220px] flex-col gap-1.5 overflow-y-auto pe-1">
                     {d.attention.slice(0, 12).map((a, i) => {
                       const s = SEV[a.severity];
                       const inner = (
@@ -275,7 +276,7 @@ export function HoDashboardApp() {
               </Card>
               <Card className="p-4">
                 <div className="flex items-center justify-between"><div className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">🛡 Safeguarding (network)</div><Link href="/company/incidents" className="text-[11px] font-bold text-[#2f6bd8] hover:underline">View</Link></div>
-                <div className="mt-1 text-[20px] font-extrabold tabular-nums">{d.network.openIncidents}<span className="ml-1 text-[12px] font-bold text-[var(--ink-3)]">open</span></div>
+                <div className="mt-1 text-[20px] font-extrabold tabular-nums">{d.network.openIncidents}<span className="ms-1 text-[12px] font-bold text-[var(--ink-3)]">open</span></div>
                 <div className="text-[10.5px] text-[var(--ink-3)]">{Object.entries(d.network.incidentsByKind).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(" · ") || "no open incidents"}</div>
               </Card>
             </div>
@@ -301,9 +302,9 @@ export function HoDashboardApp() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2"><Bar v={r.revenue} color={r.color} /></div>
-                      <div className="text-right font-extrabold tabular-nums">{money(r.revenue)}<div className="text-[10px] font-semibold text-[var(--ink-3)]">{r.bookings} bkg · <Trend pct={r.trendPct} /></div></div>
-                      <div className="text-right tabular-nums text-[var(--ink-2)]">{money(r.collected)}<div className="text-[10px] text-[var(--ink-3)]">collected</div></div>
-                      <div className="text-right font-bold tabular-nums text-[#171534]">{money(r.royalty)}<div className="text-[10px] font-normal text-[var(--ink-3)]">royalty</div></div>
+                      <div className="text-end font-extrabold tabular-nums">{money(r.revenue)}<div className="text-[10px] font-semibold text-[var(--ink-3)]">{r.bookings} bkg · <Trend pct={r.trendPct} /></div></div>
+                      <div className="text-end tabular-nums text-[var(--ink-2)]">{money(r.collected)}<div className="text-[10px] text-[var(--ink-3)]">collected</div></div>
+                      <div className="text-end font-bold tabular-nums text-[#171534]">{money(r.royalty)}<div className="text-[10px] font-normal text-[var(--ink-3)]">royalty</div></div>
                       <div className="flex items-center gap-2 justify-self-end">{terrBadge(r.territory)}<button type="button" onClick={() => setHoScopeId(r.franchiseId)} className="rounded-full bg-[#171534] px-3 py-1 text-[11px] font-extrabold text-white hover:brightness-125">View →</button></div>
                     </div>
                   ))}
@@ -313,9 +314,9 @@ export function HoDashboardApp() {
                       <div className="w-4 text-center text-[13px]">🏢</div>
                       <div className="flex items-center gap-2"><span className="h-3 w-3 flex-none rounded-full bg-[#64748b]" /><div><div className="font-extrabold">Head office <span className="font-normal text-[var(--ink-3)]">· direct</span></div><div className="text-[10.5px] text-[var(--ink-3)]">{d.direct.families} families</div></div></div>
                       <div><Bar v={d.direct.revenue} color="#64748b" /></div>
-                      <div className="text-right font-extrabold tabular-nums">{money(d.direct.revenue)}<div className="text-[10px] font-semibold text-[var(--ink-3)]">{d.direct.bookings} bkg</div></div>
-                      <div className="text-right tabular-nums text-[var(--ink-2)]">{money(d.direct.collected)}<div className="text-[10px] text-[var(--ink-3)]">collected</div></div>
-                      <div className="text-right text-[var(--ink-3)]">—<div className="text-[10px]">no royalty</div></div>
+                      <div className="text-end font-extrabold tabular-nums">{money(d.direct.revenue)}<div className="text-[10px] font-semibold text-[var(--ink-3)]">{d.direct.bookings} bkg</div></div>
+                      <div className="text-end tabular-nums text-[var(--ink-2)]">{money(d.direct.collected)}<div className="text-[10px] text-[var(--ink-3)]">collected</div></div>
+                      <div className="text-end text-[var(--ink-3)]">—<div className="text-[10px]">no royalty</div></div>
                       <div className="justify-self-end"><button type="button" onClick={() => setHoScopeId("__ho__")} className="rounded-full bg-[#171534] px-3 py-1 text-[11px] font-extrabold text-white hover:brightness-125">View →</button></div>
                     </div>
                   )}
@@ -336,7 +337,7 @@ export function HoDashboardApp() {
                   <div>
                     <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Signed up, not trading yet · {d.onboarding.notLive.length}</div>
                     {d.onboarding.notLive.length === 0 ? <div className="text-[11.5px] text-[var(--ink-3)]">All franchises are trading.</div> :
-                      <div className="flex flex-col gap-1">{d.onboarding.notLive.map((p) => <div key={p.franchiseId} className="flex items-center gap-2 text-[12px]"><span className="h-1.5 w-1.5 rounded-full bg-[#6b7280]" /><b>{p.name}</b>{p.area && <span className="text-[var(--ink-3)]">· {p.area}</span>}<button type="button" onClick={() => setHoScopeId(p.franchiseId)} className="ml-auto text-[11px] font-bold text-[#2f6bd8] hover:underline">Help set up</button></div>)}</div>}
+                      <div className="flex flex-col gap-1">{d.onboarding.notLive.map((p) => <div key={p.franchiseId} className="flex items-center gap-2 text-[12px]"><span className="h-1.5 w-1.5 rounded-full bg-[#6b7280]" /><b>{p.name}</b>{p.area && <span className="text-[var(--ink-3)]">· {p.area}</span>}<button type="button" onClick={() => setHoScopeId(p.franchiseId)} className="ms-auto text-[11px] font-bold text-[#2f6bd8] hover:underline">Help set up</button></div>)}</div>}
                   </div>
                 </div>
               </Card>

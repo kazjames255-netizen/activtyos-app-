@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -69,7 +70,7 @@ function AvailabilityCalendar({ available, taken, value, onPick }: { available: 
   const step = (dir: number) => setYm((v) => { let m = v.m + dir, y = v.y; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } return { y, m }; });
   const daysIn = new Date(Date.UTC(ym.y, ym.m + 1, 0)).getUTCDate();
   const lead = (new Date(Date.UTC(ym.y, ym.m, 1)).getUTCDay() + 6) % 7; // Mon = 0
-  const label = new Date(Date.UTC(ym.y, ym.m, 1)).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  const label = new Date(Date.UTC(ym.y, ym.m, 1)).toLocaleDateString(dl(), { month: "long", year: "numeric", timeZone: "UTC" });
   const iso = (d: number) => `${ym.y}-${String(ym.m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   const cells: (number | null)[] = [...Array(lead).fill(null), ...Array.from({ length: daysIn }, (_, i) => i + 1)];
   return (
@@ -340,7 +341,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                         : o === "wallet" ? `${money(pickedWallet)} to your wallet — the full ${money(perSlotPaid)}/day, no notice deadline`
                         : moveDates.length ? "pick the replacement date for each day below" : "no other dates with space to move to";
                       return (
-                        <button key={o} type="button" onClick={() => setResolution(o)} disabled={o === "changedate" && moveDates.length === 0} className="rounded-lg border p-2 text-left disabled:opacity-50"
+                        <button key={o} type="button" onClick={() => setResolution(o)} disabled={o === "changedate" && moveDates.length === 0} className="rounded-lg border p-2 text-start disabled:opacity-50"
                           style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
                           <div className="text-[12.5px] font-extrabold" style={{ color: on ? "var(--brand-ink)" : "var(--ink)" }}>{on ? "◉ " : "○ "}{label}</div>
                           <div className="text-[11px] text-[var(--ink-3)]">{detail}</div>
@@ -493,7 +494,7 @@ const DATE_CHANGES_LIVE = true;
 const noticeLabel = (h: number) => (h % 24 === 0 && h >= 24 ? `${h / 24} day${h / 24 === 1 ? "" : "s"}` : `${h} hours`);
 const fmtIso = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" });
 };
 // Recover an ISO date from a session display string like
 // "Mon 27 Jul 2026 · 09:00 – 15:30" → "2026-07-27". Some bookings only carry
@@ -949,7 +950,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           <PCol label={t("parent.statusCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? t("parent.dateChangeStatus") : b.status}</span></PCol>
           {!cancelled && <PCol label={t("parent.paymentCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></PCol>}
           {attendLabel && <PCol label="Today" w="w-[130px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={attend?.status === "in" ? { background: "#dcfce7", color: "#166534" } : attend?.status === "absent" ? { background: "#fee2e2", color: "#991b1b" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{attendLabel}</span></PCol>}
-          <div className="ml-auto flex-none text-right">
+          <div className="ms-auto flex-none text-end">
             <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("parent.amountCol")}</div>
             <div className="text-[15px] font-extrabold text-[var(--ink)]">{money(b.amount)}</div>
             {mealRows.length > 0 && <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-[#fff3e0] px-2 py-[2px] text-[10.5px] font-extrabold text-[#96631a]">🍽 {mealRows.length} meal{mealRows.length === 1 ? "" : "s"} · {money(mealTotal)}</div>}
@@ -1064,7 +1065,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
       {b.status === "Offered" && (
         <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2.5 text-[12.5px] text-[#7a5200]">
           <b>{t("parent.placeOpenedUp")}</b> {t("parent.placeHeldFor")}
-          {b.offerExpiresAt ? ` ${t("parent.until", { time: new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) })}` : ""} —
+          {b.offerExpiresAt ? ` ${t("parent.until", { time: new Date(b.offerExpiresAt).toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" }) })}` : ""} —
           {t("parent.acceptOrPasses")}
           <div className="mt-2 flex gap-2">
             <Button sm variant="primary" disabled={offerBusy} onClick={() => answerOffer("accept-offer")}>
@@ -1122,9 +1123,9 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
               {mealRows.map((m, i) => (
                 <div key={i} className="flex items-baseline justify-between gap-2 border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">
                   <span>
-                    <span className="mr-1">🍽</span><b>{m.name}</b>
-                    <span className="text-[var(--ink-3)]"> · {new Date(`${m.date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}{m.child ? ` · ${m.child}` : ""}</span>
-                    {m.later && <span className="ml-1 rounded bg-[#eef4fd] px-1 py-[0.5px] text-[9.5px] font-bold uppercase tracking-[0.03em] text-[var(--brand-2)]">{t("parent.addedLater")}</span>}
+                    <span className="me-1">🍽</span><b>{m.name}</b>
+                    <span className="text-[var(--ink-3)]"> · {new Date(`${m.date}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}{m.child ? ` · ${m.child}` : ""}</span>
+                    {m.later && <span className="ms-1 rounded bg-[#eef4fd] px-1 py-[0.5px] text-[9.5px] font-bold uppercase tracking-[0.03em] text-[var(--brand-2)]">{t("parent.addedLater")}</span>}
                   </span>
                   {m.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(m.price)}</span>}
                 </div>
@@ -1398,7 +1399,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                 <button
                   type="button"
                   onClick={() => setWaitOpen((v) => !v)}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-white"
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-start text-white"
                   style={{ background: "radial-gradient(120% 140% at 12% -20%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,var(--brand-strong) 0%,var(--brand-2) 100%)" }}
                 >
                   <span className="flex items-center gap-2">
@@ -1477,7 +1478,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                           : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}
                       >
                         {t.label}
-                        <span className={active ? "ml-1.5 opacity-80" : "ml-1.5 text-[var(--ink-3)]"}>{counts[t.key]}</span>
+                        <span className={active ? "ms-1.5 opacity-80" : "ms-1.5 text-[var(--ink-3)]"}>{counts[t.key]}</span>
                       </button>
                     );
                   })}

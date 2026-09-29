@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 
@@ -88,13 +89,13 @@ export function PlatformEngagementApp() {
                       <span className="truncate font-extrabold">{pretty(r.view)}</span>
                       <span className="shrink-0 tabular-nums">
                         {metric === "visits"
-                          ? <><b>{r.views.toLocaleString("en-GB")}</b> <span className="text-[11px] font-normal text-[var(--ink-3)]">visits</span></>
+                          ? <><b>{r.views.toLocaleString(dl())}</b> <span className="text-[11px] font-normal text-[var(--ink-3)]">visits</span></>
                           : <><b>{dur(r.avgSeconds)}</b> <span className="text-[11px] font-normal text-[var(--ink-3)]">avg</span></>}
                       </span>
                     </div>
                     <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(val(r) / maxVal) * 100}%`, background: `linear-gradient(90deg,${BLUE},#3f78d8)` }} /></div>
                     <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-[var(--ink-3)]">
-                      <span>{metric === "visits" ? `${dur(r.avgSeconds)} avg time` : `${r.views.toLocaleString("en-GB")} visits`}</span>
+                      <span>{metric === "visits" ? `${dur(r.avgSeconds)} avg time` : `${r.views.toLocaleString(dl())} visits`}</span>
                       {totalSecs > 0 && (
                         <span className="rounded-full bg-[#eef2fb] px-1.5 py-0.5 font-bold text-[#1d3a8f]" title="Share of all time providers spent on the platform">
                           {Math.round((r.totalSeconds / totalSecs) * 100)}% of platform time

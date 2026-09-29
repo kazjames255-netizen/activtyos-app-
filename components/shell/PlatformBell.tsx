@@ -65,11 +65,11 @@ export function PlatformBell() {
     <div ref={ref} className="relative">
       <button type="button" onClick={toggleOpen} aria-label={t("chrome.notif")} className="relative inline-flex h-[34px] w-[34px] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
-        {unread > 0 && <span className="absolute -right-1 -top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none text-white" style={{ background: "#ef4444" }}>{unread > 9 ? "9+" : unread}</span>}
+        {unread > 0 && <span className="absolute -end-1 -top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none text-white" style={{ background: "#ef4444" }}>{unread > 9 ? "9+" : unread}</span>}
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-[340px] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-2xl">
+        <div className="absolute end-0 z-50 mt-2 w-[340px] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-2xl">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-3.5 py-2.5">
             <span className="text-[13px] font-extrabold">{t("chrome.notif")}</span>
             <button type="button" onClick={() => setSettings((s) => !s)} title="Notification settings" className="text-[13px] text-[var(--ink-3)] hover:text-[var(--ink)]">⚙</button>
@@ -90,7 +90,7 @@ export function PlatformBell() {
           <div className="max-h-[60vh] overflow-y-auto">
             {items.length === 0 ? <div className="px-4 py-10 text-center text-[12.5px] text-[var(--ink-3)]">You&rsquo;re all caught up.</div>
               : items.map((it) => (
-                <button key={it.id} type="button" onClick={() => go(it)} className="flex w-full items-start gap-2.5 border-b border-[var(--line)] px-3.5 py-2.5 text-left last:border-b-0 hover:bg-[#f7faff]">
+                <button key={it.id} type="button" onClick={() => go(it)} className="flex w-full items-start gap-2.5 border-b border-[var(--line)] px-3.5 py-2.5 text-start last:border-b-0 hover:bg-[#f7faff]">
                   <span className="mt-0.5 text-[15px]">{GLYPH[it.type]}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12.5px] font-bold text-[var(--ink)]">{it.title}</span>

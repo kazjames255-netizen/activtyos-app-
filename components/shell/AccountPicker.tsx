@@ -63,7 +63,7 @@ export function AccountPicker({ onClose }: { onClose: () => void }) {
                 const chip = ROLE_CHIP[a.role] ?? ROLE_CHIP.parent;
                 return (
                   <button key={a.uid} type="button" disabled={busy === a.uid} onClick={() => open(a)}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[var(--panel)] disabled:opacity-50">
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start transition-colors hover:bg-[var(--panel)] disabled:opacity-50">
                     <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#2f5fd0,#2f5fd0)" }}>{(a.label.trim()[0] ?? "?").toUpperCase()}</span>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13.5px] font-extrabold text-[var(--ink)]">{a.label}</div>

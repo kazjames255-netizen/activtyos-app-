@@ -42,7 +42,7 @@ export function LanguageSelector() {
         <span className="text-[8px] leading-none" aria-hidden>▼</span>
       </button>
       {open && (
-        <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-52 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_44px_-16px_rgba(15,23,42,.4)]">
+        <div className="absolute end-0 z-50 mt-2 max-h-[70vh] w-52 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_44px_-16px_rgba(15,23,42,.4)]">
           <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{t("common.language")}</div>
           {LOCALES.map((l) => {
             const on = l.code === locale;
@@ -56,7 +56,7 @@ export function LanguageSelector() {
                 style={on ? { background: "#eef4ff", color: "#1d3a8f" } : { color: "var(--ink)" }}
               >
                 <span className="flex-none text-[16px]" aria-hidden>{l.flag}</span>
-                <span className="min-w-0 flex-1 truncate text-left">{l.native}</span>
+                <span className="min-w-0 flex-1 truncate text-start">{l.native}</span>
                 {on && <span className="flex-none text-[#1d3a8f]" aria-hidden>✓</span>}
               </button>
             );

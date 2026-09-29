@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -184,7 +185,7 @@ function NotificationsTab() {
                 <div key={n.key} className={`flex items-center justify-between gap-3 px-4 py-2.5 ${i > 0 ? "border-t border-[var(--line)]" : ""}`}>
                   <div className="min-w-0 text-[13px] font-semibold text-[var(--ink)]">
                     {n.label}
-                    {NOTIFICATIONS_SAFETY.has(n.key) && <span className="ml-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#a5760a]">safety</span>}
+                    {NOTIFICATIONS_SAFETY.has(n.key) && <span className="ms-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#a5760a]">safety</span>}
                   </div>
                   {/* Three-way: bell + email · bell only · off. The old boolean
                       still reads correctly — true is "both", false is "off". */}
@@ -483,7 +484,7 @@ function PayMethodEditor({ items, onChange }: { items: string[]; onChange: (next
           <span className="text-[13px] font-semibold text-[var(--ink)]">{m.label}</span>
           {badge(m.tone, m.behaviour)}
           <span className="hidden text-[11px] text-[var(--ink-3)] lg:inline">· {m.note}</span>
-          <div className="ml-auto"><Toggle on={enabled.has(m.label)} onChange={(v) => toggle(m.label, v)} /></div>
+          <div className="ms-auto"><Toggle on={enabled.has(m.label)} onChange={(v) => toggle(m.label, v)} /></div>
         </div>
       ))}
       {customs.length > 0 && <div className="mt-2 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Your own methods</div>}
@@ -510,7 +511,7 @@ function SeasonsEditor({ items, onChange }: { items: Season[]; onChange: (next: 
   const reset = () => { if (confirm("Replace your seasons with the standard UK set?\n\nThe 6 term half-terms + all 6 holidays (Oct, Christmas, Feb, Easter, May, Summer) + Full year. Any listing already set to one of your current seasons will need re-picking its season.")) onChange(defaultSeasonNames()); };
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">📅 Just the <b>names</b> here — no dates. You pick a listing’s season <b>when you build the listing</b> (Basics step). Bookings, audiences and takings then group by it, so different holiday dates across towns don’t matter.</div>
+      <div className="rounded-lg border-s-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">📅 Just the <b>names</b> here — no dates. You pick a listing’s season <b>when you build the listing</b> (Basics step). Bookings, audiences and takings then group by it, so different holiday dates across towns don’t matter.</div>
       {items.map((s) => (
         <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
           <Input value={s.name} onChange={(e) => patch(s.id, (x) => ({ ...x, name: e.target.value }))} placeholder="Season name" className="min-w-[160px] flex-1 font-semibold" />
@@ -702,7 +703,7 @@ function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange
                         &#10005;
                       </button>
                       {SCOPED_VOUCHER_LABELS.test(d.label) && (
-                        <div className="flex w-full flex-wrap items-center gap-2 pl-1 text-[11px] text-[var(--ink-3)]">
+                        <div className="flex w-full flex-wrap items-center gap-2 ps-1 text-[11px] text-[var(--ink-3)]">
                           <span className="font-bold uppercase tracking-wide">Applies to</span>
                           <select value={d.listingId ?? ""} onChange={(e) => patch(i, (x) => ({ ...x, details: x.details.map((y, n) => (n === k ? { ...y, listingId: e.target.value || null, ...(e.target.value ? { locationId: null } : {}) } : y)) }))} className="max-w-[220px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px]">
                             <option value="">All listings</option>
@@ -776,11 +777,11 @@ function GroupsEditor({ groups, onChange }: { groups: RatioGroup[]; onChange: (g
       <table className="w-full border-collapse text-[12.5px]">
         <thead>
           <tr className="text-[10.5px] uppercase tracking-[0.04em] text-[var(--ink-3)]">
-            <th className="px-2 py-1.5 text-left font-extrabold">Colour</th>
-            <th className="px-2 py-1.5 text-left font-extrabold">Group</th>
-            <th className="px-2 py-1.5 text-left font-extrabold">Age</th>
-            <th className="px-2 py-1.5 text-left font-extrabold">Target ratio</th>
-            <th className="px-2 py-1.5 text-left font-extrabold">Room size</th>
+            <th className="px-2 py-1.5 text-start font-extrabold">Colour</th>
+            <th className="px-2 py-1.5 text-start font-extrabold">Group</th>
+            <th className="px-2 py-1.5 text-start font-extrabold">Age</th>
+            <th className="px-2 py-1.5 text-start font-extrabold">Target ratio</th>
+            <th className="px-2 py-1.5 text-start font-extrabold">Room size</th>
             <th className="px-2 py-1.5" />
           </tr>
         </thead>
@@ -807,7 +808,7 @@ function GroupsEditor({ groups, onChange }: { groups: RatioGroup[]; onChange: (g
               <td className="px-2 py-1.5">
                 <input type="number" min={0} value={g.maxSize || ""} placeholder="no cap" onChange={(e) => patch(i, (x) => ({ ...x, maxSize: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className={`${inp} w-[72px]`} />
               </td>
-              <td className="px-2 py-1.5 text-right">
+              <td className="px-2 py-1.5 text-end">
                 <button type="button" onClick={() => onChange(groups.filter((_, j) => j !== i))} aria-label={`Remove ${g.name}`} className="text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">×</button>
               </td>
             </tr>
@@ -931,8 +932,8 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
         <table className="w-full border-collapse text-[12.5px]">
           <thead>
             <tr className="text-[10.5px] uppercase tracking-[0.04em] text-[var(--ink-3)]">
-              <th className={`${cell} text-left font-extrabold`}>Notice the family gives</th>
-              <th className={`${cell} text-left font-extrabold`}>They get back</th>
+              <th className={`${cell} text-start font-extrabold`}>Notice the family gives</th>
+              <th className={`${cell} text-start font-extrabold`}>They get back</th>
               <th className={cell} />
             </tr>
           </thead>
@@ -965,7 +966,7 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
                     suffix="%"
                   />
                 </td>
-                <td className={`${cell} text-right`}>
+                <td className={`${cell} text-end`}>
                   <button
                     type="button"
                     aria-label="Remove this row"
@@ -980,7 +981,7 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
             <tr className="border-t border-[var(--line)] bg-[var(--panel)]">
               <td className={cell}>
                 <span className="font-semibold">{tiers.length ? `Less than ${shortestLabel}` : "Any notice at all"}</span>
-                <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">including after it has started</span>
+                <span className="ms-1.5 text-[11px] text-[var(--ink-3)]">including after it has started</span>
               </td>
               <td className={cell}>
                 <NumberBox value={floor.refundPercent} onChange={(n) => write(tiers, { hoursBefore: 0, refundPercent: n })} min={0} max={100} suffix="%" />
@@ -1401,12 +1402,12 @@ export function SetupApp() {
   }, [tab]);
   const set = <K extends keyof TenantSettings>(key: K, value: TenantSettings[K]) => {
     void save({ settings: { ...settings, [key]: value } }).then(() =>
-      setSavedAt(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })),
+      setSavedAt(new Date().toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" })),
     );
   };
   const setQuestions = (next: ChildQuestion[]) => {
     void save({ questions: next }).then(() =>
-      setSavedAt(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })),
+      setSavedAt(new Date().toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" })),
     );
   };
 
@@ -1518,7 +1519,7 @@ export function SetupApp() {
               // that name — the choice used to change only a label (d1s4).
               // (One save with both fields — two set() calls would overwrite each other.)
               const mode = e.target.value as "person" | "business";
-              const saveBoth = (name?: string) => void save({ settings: { ...settings, providerNameMode: mode, ...(name ? { providerName: name } : {}) } }).then(() => setSavedAt(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })));
+              const saveBoth = (name?: string) => void save({ settings: { ...settings, providerNameMode: mode, ...(name ? { providerName: name } : {}) } }).then(() => setSavedAt(new Date().toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" })));
               if (mode === "business") saveBoth((settings.billing as { businessName?: string } | undefined)?.businessName?.trim());
               else void apiGet<{ name?: string }>("/api/account").then((a) => saveBoth(a?.name?.trim())).catch(() => saveBoth());
             }} className="w-full"><option value="business">{t("setup.businessName")}</option><option value="person">{t("setup.myOwnName")}</option></Select></div>
@@ -1572,7 +1573,7 @@ export function SetupApp() {
               <span className="text-[12.5px] leading-relaxed text-[#7a5a12]">
                 <b>Looking for roles &amp; who-can-see-what?</b> Name your roles and set View / Edit per area — Dashboard, Listings, Bookings, Finances and the rest — in the <b>Roles &amp; permissions</b> tab.
               </span>
-              <button type="button" onClick={() => setTab("roles")} className="ml-auto flex-none rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white hover:bg-[#16306e]">{t("setup.openRolesPermissions")} →</button>
+              <button type="button" onClick={() => setTab("roles")} className="ms-auto flex-none rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white hover:bg-[#16306e]">{t("setup.openRolesPermissions")} →</button>
             </div>
           )}
           <Row label={t("setup.whoAssignsStaff")} hint={t("setup.whoAssignsStaffHint")}>
@@ -1644,11 +1645,11 @@ export function SetupApp() {
             ] as { k: "inhouse" | "external"; icon: string; title: string; tag: string; benefits: string[] }[]).map((o) => {
               const on = (rv.captureMode ?? "inhouse") === o.k;
               return (
-                <button key={o.k} type="button" onClick={() => set("reviews", { ...rv, captureMode: o.k })} className={"rounded-xl border-2 p-3.5 text-left transition " + (on ? "border-[#C6D0E6] bg-[#E8EEFD]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[#E4E9F5]")}>
+                <button key={o.k} type="button" onClick={() => set("reviews", { ...rv, captureMode: o.k })} className={"rounded-xl border-2 p-3.5 text-start transition " + (on ? "border-[#C6D0E6] bg-[#E8EEFD]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[#E4E9F5]")}>
                   <div className="flex items-center gap-2">
                     <span className="text-[18px]">{o.icon}</span>
                     <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{o.title}</span>
-                    <span className={"ml-auto rounded-full px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wide " + (on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")}>{on ? "Selected" : o.tag}</span>
+                    <span className={"ms-auto rounded-full px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wide " + (on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")}>{on ? "Selected" : o.tag}</span>
                   </div>
                   <ul className="mt-2 flex flex-col gap-1">
                     {o.benefits.map((b) => <li key={b} className="flex gap-1.5 text-[11.5px] leading-[1.4] text-[var(--ink-2)]"><span className="flex-none text-[#0f7a43]">✓</span>{b}</li>)}
@@ -1692,7 +1693,7 @@ export function SetupApp() {
                   <a href={FINDER} target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#ea4335] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition hover:brightness-110">🔎 Get my Place ID from Google ↗</a>
                   <span className="text-[12px] font-extrabold text-[#b3261e]">then copy your ChIJ… code</span>
                 </div>
-                <ol className="ml-4 list-decimal space-y-0.5 text-[12px] leading-relaxed text-[#7a2a22]">
+                <ol className="ms-4 list-decimal space-y-0.5 text-[12px] leading-relaxed text-[#7a2a22]">
                   <li>In the map&rsquo;s search box, type your business name <b>+ town</b>, spelled exactly (e.g. <b>Kings Camps Sheffield</b>), and pick it from the list.</li>
                   <li>A white box pops up on the pin. Copy the <b>ChIJ…</b> code shown after <b>Place ID:</b> — like the highlighted bit below.</li>
                   <li>Paste it into your location&rsquo;s box underneath.</li>
@@ -1700,7 +1701,7 @@ export function SetupApp() {
                 {/* Visual: a mock of Google's info window, with the Place ID highlighted. */}
                 <div className="mt-2.5 flex flex-wrap items-center gap-3">
                   <div className="relative w-[340px] max-w-full rounded-md border border-[#E4E9F5] bg-[var(--surface)] p-2.5 shadow-[0_4px_16px_rgba(0,0,0,.14)]">
-                    <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-sm text-[12px] text-[#70757a]">✕</div>
+                    <div className="absolute end-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-sm text-[12px] text-[#70757a]">✕</div>
                     <div className="text-[12.5px] font-bold text-[#3c4043]">Kings Camps - Sheffield</div>
                     <div className="mt-1 text-[11.5px] text-[#3c4043]"><span className="font-bold">Place ID:</span> <mark className="rounded bg-[#fff2a8] px-1 py-0.5 font-mono text-[11px] font-bold text-[#7a2a22] ring-1 ring-[#efcf3d]">ChIJSbBEmHOCeUgRTzxu9F_YMUg</mark></div>
                     <div className="mt-1 text-[10.5px] text-[#70757a]">High School, 10 Rutland Park, Broomhall, Sheffield S10 2PE, UK</div>
@@ -1749,7 +1750,7 @@ export function SetupApp() {
                 <a href="https://www.trustpilot.com/" target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#00b67a] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition hover:brightness-110">🔎 Open my Trustpilot page ↗</a>
                 <span className="text-[12px] font-extrabold text-[#05603a]">then grab your Business Unit ID</span>
               </div>
-              <ol className="ml-4 list-decimal space-y-0.5 text-[12px] leading-relaxed text-[#0b5a3f]">
+              <ol className="ms-4 list-decimal space-y-0.5 text-[12px] leading-relaxed text-[#0b5a3f]">
                 <li>Go to your own Trustpilot page — <b>trustpilot.com/review/yourwebsite.co.uk</b> (swap in your domain).</li>
                 <li>Press <b>Ctrl+U</b> (Mac: <b>⌥⌘U</b>) to view the page source, then <b>Ctrl/⌘+F</b> and search <b>businessUnitId</b>.</li>
                 <li>Copy the <b>24-character code</b> right after it (letters + numbers) and paste it below.</li>
@@ -1780,7 +1781,7 @@ export function SetupApp() {
       {activeTab === "roles" && (
         <Section title={t("setup.rolesPermissions")} lede={t("setup.rolesPermissionsLede")}>
           {/* Editing the matrix stamps rolesSetAt — from then on the API enforces it (lib/accessMap.ts). */}
-          <RolesPermissions roles={settings.roles ?? []} onChange={(roles) => { void save({ settings: { ...settings, roles, rolesSetAt: new Date().toISOString() } }).then(() => setSavedAt(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }))); }} areas={hoCombined ? HO_ROLE_AREAS : undefined} defaultRoles={hoCombined ? HO_DEFAULT_ROLES : undefined} />
+          <RolesPermissions roles={settings.roles ?? []} onChange={(roles) => { void save({ settings: { ...settings, roles, rolesSetAt: new Date().toISOString() } }).then(() => setSavedAt(new Date().toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" }))); }} areas={hoCombined ? HO_ROLE_AREAS : undefined} defaultRoles={hoCombined ? HO_DEFAULT_ROLES : undefined} />
         </Section>
       )}
 
@@ -1815,9 +1816,9 @@ export function SetupApp() {
           <p className="mb-2.5 text-[12px] text-[var(--ink-3)]">Pick the certificate staff receive when they pass a course. It auto-fills their name, the course, the score, the completion date and — if the course renews — the expiry date.</p>
           <div className="mb-3 flex flex-wrap gap-2.5">
             {CERT_TEMPLATES.map((t) => { const on = (settings.learning?.certTemplate ?? "gold") === t.id; return (
-              <button key={t.id} type="button" onClick={() => set("learning", { ...settings.learning, certTemplate: t.id })} className={"w-[196px] overflow-hidden rounded-xl border text-left transition-all " + (on ? "border-transparent ring-2 ring-[#1d3a8f] ring-offset-1" : "border-[var(--line)] hover:-translate-y-0.5 hover:shadow-md")}>
+              <button key={t.id} type="button" onClick={() => set("learning", { ...settings.learning, certTemplate: t.id })} className={"w-[196px] overflow-hidden rounded-xl border text-start transition-all " + (on ? "border-transparent ring-2 ring-[#1d3a8f] ring-offset-1" : "border-[var(--line)] hover:-translate-y-0.5 hover:shadow-md")}>
                 <div className="relative h-[139px] w-full overflow-hidden bg-[#eef1f6]"><iframe title={t.name} tabIndex={-1} scrolling="no" srcDoc={certificateDoc(certPreview, t.id, false)} className="pointer-events-none absolute left-0 top-0 origin-top-left" style={{ width: 1000, height: 710, transform: "scale(0.196)" }} /></div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5"><span className="truncate text-[11.5px] font-bold text-[var(--ink)]">{t.name}</span>{on && <span className="ml-auto text-[11px] font-extrabold text-[#1d3a8f]">✓ Chosen</span>}</div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5"><span className="truncate text-[11.5px] font-bold text-[var(--ink)]">{t.name}</span>{on && <span className="ms-auto text-[11px] font-extrabold text-[#1d3a8f]">✓ Chosen</span>}</div>
               </button>
             ); })}
           </div>
@@ -1860,7 +1861,7 @@ export function SetupApp() {
                   {t.dbs && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]" title="Captures DBS level + Update Service number">DBS extras</span>}
                   <label className="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={t.required} onChange={(e) => cred.upsertType({ ...t, required: e.target.checked })} /> Required</label>
                   <label className="flex items-center gap-1.5 text-[12px] text-[var(--ink-2)]">Renew every <Input type="number" min={0} value={t.renewMonths} onChange={(e) => cred.upsertType({ ...t, renewMonths: Number(e.target.value) })} className="w-[62px]" /> months <span className="text-[var(--ink-3)]">(0 = never)</span></label>
-                  <button type="button" title="Delete credential type" onClick={() => cred.deleteType(t.id)} className="ml-auto text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
+                  <button type="button" title="Delete credential type" onClick={() => cred.deleteType(t.id)} className="ms-auto text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
                 </div>
                 {t.required && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-[var(--line-2,#eef2f8)] pt-2">
@@ -1873,8 +1874,8 @@ export function SetupApp() {
                       const chip = (r: string) => { const on = (t.applyRoles ?? []).includes(r); return <button key={r} type="button" onClick={() => cred.upsertType({ ...t, applyRoles: toggleIn(t.applyRoles, r) })} className={"rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-colors " + (on ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{r}</button>; };
                       return (
                         <div className="w-full space-y-1.5">
-                          {access.length > 0 && <div className="flex flex-wrap items-center gap-1.5"><span className="mr-0.5 inline-flex items-center rounded bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#5b6577]" title="Access role / permission — what the person can do in ActivityOS">🔑 Access role</span>{access.map(chip)}</div>}
-                          {titles.length > 0 && <div className="flex flex-wrap items-center gap-1.5"><span className="mr-0.5 inline-flex items-center rounded bg-[#eaf1ff] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#1d54c4]" title="Job title — the person's role on the ground">🧑‍🏫 Job title</span>{titles.map(chip)}</div>}
+                          {access.length > 0 && <div className="flex flex-wrap items-center gap-1.5"><span className="me-0.5 inline-flex items-center rounded bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#5b6577]" title="Access role / permission — what the person can do in ActivityOS">🔑 Access role</span>{access.map(chip)}</div>}
+                          {titles.length > 0 && <div className="flex flex-wrap items-center gap-1.5"><span className="me-0.5 inline-flex items-center rounded bg-[#eaf1ff] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#1d54c4]" title="Job title — the person's role on the ground">🧑‍🏫 Job title</span>{titles.map(chip)}</div>}
                         </div>
                       );
                     })()}
@@ -2700,7 +2701,7 @@ export function SetupApp() {
                       <Toggle on={on} onChange={(v) => setFe(it.view, v)} labels={["On", "Off"]} />
                     </div>
                     {keys && on && (
-                      <div className="mt-2 ml-3 flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+                      <div className="mt-2 ms-3 flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
                         <span className="text-[11.5px] font-semibold text-[var(--ink-2)]">👪 Show to families{ca.simpleMode ? " — off in Simple mode" : ""}</span>
                         <Toggle on={shownToFamilies} disabled={ca.simpleMode} onChange={(v) => setCAkeys(keys, v)} labels={["Shown", "Hidden"]} />
                       </div>

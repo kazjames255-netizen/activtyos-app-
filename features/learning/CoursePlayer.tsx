@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import type { Block, CourseDoc, QuizQ } from "./courseContent";
@@ -69,7 +70,7 @@ function Scene({ art, caption }: { art: string; caption?: string }) {
           <circle cx="348" cy="150" r="42" fill="#fff" opacity="0.06" />
         </svg>
         <div className="relative grid h-16 w-16 flex-none place-items-center overflow-hidden rounded-full bg-white/20 text-[30px] leading-none shadow-inner backdrop-blur">{a.emoji}</div>
-        <div className="relative min-w-0 pl-1">
+        <div className="relative min-w-0 ps-1">
           <div className="text-[17px] font-extrabold leading-tight" style={{ textWrap: "balance" } as React.CSSProperties}>{caption || "Illustration"}</div>
         </div>
       </div>
@@ -146,8 +147,8 @@ function ScenarioBlock({ b, onDone }: { b: Extract<Block, { k: "scenario" }>; on
           const sel = picked === i;
           const tone = picked == null ? "border-[var(--line)] hover:border-[var(--accent)]" : c.ok ? "border-[#0f9d58] bg-[#eaf8f0]" : sel ? "border-[#c0392b] bg-[#fdecec]" : "border-[var(--line)] opacity-70";
           return (
-            <button key={i} type="button" disabled={picked != null} onClick={() => setPicked(i)} className={"rounded-xl border-2 px-3.5 py-2.5 text-left text-[13.5px] font-semibold text-[var(--ink)] transition-colors " + tone}>
-              <span className="mr-1.5">{picked != null ? (c.ok ? "✅" : sel ? "❌" : "○") : "○"}</span>{c.label}
+            <button key={i} type="button" disabled={picked != null} onClick={() => setPicked(i)} className={"rounded-xl border-2 px-3.5 py-2.5 text-start text-[13.5px] font-semibold text-[var(--ink)] transition-colors " + tone}>
+              <span className="me-1.5">{picked != null ? (c.ok ? "✅" : sel ? "❌" : "○") : "○"}</span>{c.label}
               {picked != null && (sel || c.ok) && <div className="mt-1 text-[12.5px] font-normal text-[var(--ink-2)]">{c.fb}</div>}
             </button>
           );
@@ -168,8 +169,8 @@ function CheckBlock({ b, onDone }: { b: Extract<Block, { k: "check" }>; onDone?:
           const sel = picked === i;
           const tone = picked == null ? "border-[var(--line)] bg-white hover:border-[var(--accent)]" : i === b.a ? "border-[#0f9d58] bg-[#eaf8f0]" : sel ? "border-[#c0392b] bg-[#fdecec]" : "border-[var(--line)] bg-white opacity-70";
           return (
-            <button key={i} type="button" disabled={picked != null} onClick={() => setPicked(i)} className={"rounded-xl border-2 px-3.5 py-2 text-left text-[13.5px] font-semibold text-[var(--ink)] transition-colors " + tone}>
-              <span className="mr-1.5">{picked != null ? (i === b.a ? "✅" : sel ? "❌" : "○") : "○"}</span>{o}
+            <button key={i} type="button" disabled={picked != null} onClick={() => setPicked(i)} className={"rounded-xl border-2 px-3.5 py-2 text-start text-[13.5px] font-semibold text-[var(--ink)] transition-colors " + tone}>
+              <span className="me-1.5">{picked != null ? (i === b.a ? "✅" : sel ? "❌" : "○") : "○"}</span>{o}
             </button>
           );
         })}
@@ -264,10 +265,10 @@ function MatchBlock({ b, onDone }: { b: Extract<Block, { k: "match" }>; onDone?:
       <p className="mb-3 text-[14px] font-semibold text-[var(--ink)]">{b.prompt}</p>
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">{b.pairs.map((p, li) => { const linked = links[li] != null; const ok = linked && links[li] === li; return (
-          <button key={li} type="button" onClick={() => pick(li)} className={"rounded-xl border-2 px-3 py-2 text-left text-[13px] font-semibold transition-colors " + (linked ? (ok ? "border-[#0f9d58] bg-[#eaf8f0]" : "border-[#c0392b] bg-[#fdecec]") : sel === li ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--line)] bg-white")}>{p.l}{linked && (ok ? " ✓" : " ✗")}</button>
+          <button key={li} type="button" onClick={() => pick(li)} className={"rounded-xl border-2 px-3 py-2 text-start text-[13px] font-semibold transition-colors " + (linked ? (ok ? "border-[#0f9d58] bg-[#eaf8f0]" : "border-[#c0392b] bg-[#fdecec]") : sel === li ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--line)] bg-white")}>{p.l}{linked && (ok ? " ✓" : " ✗")}</button>
         ); })}</div>
         <div className="flex flex-col gap-2">{rights.map((ri) => { const used = Object.values(links).includes(ri); return (
-          <button key={ri} type="button" disabled={used} onClick={() => connect(ri)} className={"rounded-xl border-2 px-3 py-2 text-left text-[13px] font-semibold transition-colors " + (used ? "border-[var(--line)] bg-[var(--panel)] opacity-45" : "border-[var(--line)] bg-white hover:border-[var(--accent)]")}>{b.pairs[ri].r}</button>
+          <button key={ri} type="button" disabled={used} onClick={() => connect(ri)} className={"rounded-xl border-2 px-3 py-2 text-start text-[13px] font-semibold transition-colors " + (used ? "border-[var(--line)] bg-[var(--panel)] opacity-45" : "border-[var(--line)] bg-white hover:border-[var(--accent)]")}>{b.pairs[ri].r}</button>
         ); })}</div>
       </div>
       {done && <button type="button" onClick={() => { setLinks({}); setSel(null); }} className="mt-3 rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Reset</button>}
@@ -285,7 +286,7 @@ function RevealBlock({ b, onDone }: { b: Extract<Block, { k: "reveal" }>; onDone
       {b.prompt && <p className="mb-3 text-[14px] font-semibold text-[var(--ink)]">{b.prompt}</p>}
       <div className="grid gap-2.5 sm:grid-cols-2">
         {b.cards.map((c, i) => (
-          <button key={i} type="button" onClick={() => setFlipped((f) => ({ ...f, [i]: !f[i] }))} style={flipped[i] ? undefined : { background: "var(--accent-grad)" }} className={"min-h-[76px] rounded-xl border-2 px-3.5 py-3 text-left transition-colors " + (flipped[i] ? "border-[var(--accent)] bg-white" : "border-transparent text-white")}>
+          <button key={i} type="button" onClick={() => setFlipped((f) => ({ ...f, [i]: !f[i] }))} style={flipped[i] ? undefined : { background: "var(--accent-grad)" }} className={"min-h-[76px] rounded-xl border-2 px-3.5 py-3 text-start transition-colors " + (flipped[i] ? "border-[var(--accent)] bg-white" : "border-transparent text-white")}>
             {flipped[i] ? <div className="text-[13px] leading-snug text-[var(--ink-2)]"><div className="mb-1 text-[12.5px] font-extrabold text-[var(--ink)]">{c.front}</div>{c.back}</div> : <div className="flex h-full items-center gap-2 text-[14px] font-extrabold">🔎 {c.front}</div>}
           </button>
         ))}
@@ -309,7 +310,7 @@ export function BlockView({ b, onDone }: { b: Block; onDone?: () => void }) {
       <ul className="flex flex-col gap-1.5">{b.items.map((it, i) => <li key={i} className="flex gap-2.5 text-[14.5px] leading-[1.6] text-[var(--ink-2)]"><span className="mt-2 h-1.5 w-1.5 flex-none rounded-full bg-[var(--accent)]" />{it}</li>)}</ul></div>
   );
   if (b.k === "callout") { const c = CALLOUT[b.tone]; return (
-    <div className="my-4 rounded-r-xl p-3.5 pl-4" style={{ background: c.bg, borderLeft: `4px solid ${c.bar}` }}>
+    <div className="my-4 rounded-e-xl p-3.5 ps-4" style={{ background: c.bg, borderInlineStart: `4px solid ${c.bar}` }}>
       <div className="mb-0.5 flex items-center gap-2 text-[13.5px] font-extrabold" style={{ color: c.ink }}>{c.icon} {b.title}</div>
       <p className="text-[13.5px] leading-[1.6] text-[var(--ink-2)]">{b.t}</p></div>
   ); }
@@ -326,11 +327,11 @@ export function BlockView({ b, onDone }: { b: Block; onDone?: () => void }) {
       <span className="text-[34px] font-extrabold leading-none tracking-tight text-[var(--accent)]">{b.value}</span><span className="text-[13px] font-semibold text-[var(--ink-3)]">{b.label}</span></div>
   );
   if (b.k === "quote") return (
-    <blockquote className="my-4 rounded-r-xl border-l-4 border-[#c084fc] bg-[#f7f2ff] p-4 text-[15px] italic leading-relaxed text-[var(--ink)]">“{b.t.replace(/^[“"]|[”"]$/g, "")}”{b.by && <footer className="mt-1.5 text-[12.5px] not-italic font-semibold text-[var(--ink-3)]">— {b.by}</footer>}</blockquote>
+    <blockquote className="my-4 rounded-e-xl border-s-4 border-[#c084fc] bg-[#f7f2ff] p-4 text-[15px] italic leading-relaxed text-[var(--ink)]">“{b.t.replace(/^[“"]|[”"]$/g, "")}”{b.by && <footer className="mt-1.5 text-[12.5px] not-italic font-semibold text-[var(--ink-3)]">— {b.by}</footer>}</blockquote>
   );
   if (b.k === "table") return (
     <div className="my-4 overflow-x-auto rounded-xl border border-[var(--line)]"><table className="w-full text-[13.5px]">
-      <thead><tr className="bg-[var(--panel)] text-left">{b.head.map((h, i) => <th key={i} className="px-3 py-2.5 font-extrabold text-[var(--ink)]">{h}</th>)}</tr></thead>
+      <thead><tr className="bg-[var(--panel)] text-start">{b.head.map((h, i) => <th key={i} className="px-3 py-2.5 font-extrabold text-[var(--ink)]">{h}</th>)}</tr></thead>
       <tbody>{b.rows.map((r, i) => <tr key={i} className="border-t border-[var(--line-2,#eef2f8)]">{r.map((c, j) => <td key={j} className="px-3 py-2.5 align-top leading-[1.5] text-[var(--ink-2)]">{c}</td>)}</tr>)}</tbody></table></div>
   );
   if (b.k === "image") return (
@@ -400,7 +401,7 @@ function QuizRunner({ qs, pass, versionLabel, courseTitle, onPass, makeCert }: {
               {q.opts.map((o, oi) => {
                 const sel = ans[i] === oi;
                 const tone = !submitted ? (sel ? "border-[#6d28d9] bg-[#efe9ff]" : "border-[var(--line)] bg-white hover:border-[#6d28d9]") : oi === q.a ? "border-[#0f9d58] bg-[#eaf8f0]" : sel ? "border-[#c0392b] bg-[#fdecec]" : "border-[var(--line)] bg-white opacity-70";
-                return <button key={oi} type="button" disabled={submitted} onClick={() => setAns((a) => ({ ...a, [i]: oi }))} className={"rounded-xl border-2 px-3.5 py-2 text-left text-[13.5px] font-semibold text-[var(--ink)] transition-colors " + tone}><span className="mr-1.5">{submitted ? (oi === q.a ? "✅" : sel ? "❌" : "○") : sel ? "●" : "○"}</span>{o}</button>;
+                return <button key={oi} type="button" disabled={submitted} onClick={() => setAns((a) => ({ ...a, [i]: oi }))} className={"rounded-xl border-2 px-3.5 py-2 text-start text-[13.5px] font-semibold text-[var(--ink)] transition-colors " + tone}><span className="me-1.5">{submitted ? (oi === q.a ? "✅" : sel ? "❌" : "○") : sel ? "●" : "○"}</span>{o}</button>;
               })}
             </div>
             {submitted && q.fb && <p className="mt-2 text-[12.5px] font-semibold" style={{ color: ans[i] === q.a ? "#0f7a43" : "#c0392b" }}>{q.fb}</p>}
@@ -429,7 +430,7 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
     const now = new Date();
     const rm = course.renewMonths ?? settings.learning?.renewMonths ?? 0;
     const exp = rm ? new Date(now.getFullYear(), now.getMonth() + rm, now.getDate()) : null;
-    const fmt = (dt: Date) => dt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    const fmt = (dt: Date) => dt.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" });
     openCertificate({
       name: name || "Team member", course: course.title, pct, date: fmt(now), expiry: exp ? fmt(exp) : undefined,
       provider: settings.providerName || settings.billing?.businessName || "Your organisation",
@@ -487,22 +488,22 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
         <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">‹ Exit</button>
         {course.logo && /* eslint-disable-next-line @next/next/no-img-element */ <img src={course.logo} alt="" className="h-8 w-auto flex-none rounded object-contain" />}
         <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{course.title}</div><div className="text-[11px] text-[var(--ink-3)]">{isQuiz ? "Final quiz" : `Lesson ${li + 1} of ${lessons.length} · ${lesson.mins} min read`}</div></div>
-        {!isQuiz && !lessonHasMotion && <button type="button" onClick={toggleVoice} title="Read this lesson aloud" aria-label={voice.speaking ? "Stop reading this lesson aloud" : "Read this lesson aloud"} aria-pressed={voice.speaking} className={"ml-auto inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-extrabold transition-colors " + (voice.speaking ? "bg-[var(--accent)] text-white" : "border border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]")}>{voice.speaking ? "⏹ Stop voice" : "🔊 Read aloud"}{voice.speaking && <span className="flex items-end gap-0.5">{[0, 1, 2].map((i) => <span key={i} className="w-[3px] animate-pulse rounded-full bg-white" style={{ height: 6 + i * 4, animationDelay: `${i * 120}ms` }} />)}</span>}</button>}
+        {!isQuiz && !lessonHasMotion && <button type="button" onClick={toggleVoice} title="Read this lesson aloud" aria-label={voice.speaking ? "Stop reading this lesson aloud" : "Read this lesson aloud"} aria-pressed={voice.speaking} className={"ms-auto inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-extrabold transition-colors " + (voice.speaking ? "bg-[var(--accent)] text-white" : "border border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]")}>{voice.speaking ? "⏹ Stop voice" : "🔊 Read aloud"}{voice.speaking && <span className="flex items-end gap-0.5">{[0, 1, 2].map((i) => <span key={i} className="w-[3px] animate-pulse rounded-full bg-white" style={{ height: 6 + i * 4, animationDelay: `${i * 120}ms` }} />)}</span>}</button>}
       </div>
       {/* progress */}
       <div className="h-1 flex-none bg-[var(--line)]"><div className="h-full bg-[#0f9d58] transition-all" style={{ width: `${pct}%` }} /></div>
 
       <div className="flex min-h-0 flex-1">
         {/* lesson rail */}
-        <aside className="hidden w-[248px] flex-none overflow-y-auto border-r border-[var(--line)] bg-white p-3 md:block">
+        <aside className="hidden w-[248px] flex-none overflow-y-auto border-e border-[var(--line)] bg-white p-3 md:block">
           {lessons.map((ls, i) => (
-            <button key={ls.id} type="button" onClick={() => setLi(i)} className={"mb-1 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors " + (i === li ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--panel)]")}>
+            <button key={ls.id} type="button" onClick={() => setLi(i)} className={"mb-1 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-start transition-colors " + (i === li ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--panel)]")}>
               <span className={"grid h-6 w-6 flex-none place-items-center rounded-full text-[11px] font-extrabold " + (done.has(i) ? "bg-[#0f9d58] text-white" : i === li ? "bg-[var(--accent)] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")}>{done.has(i) ? "✓" : i + 1}</span>
               <span className={"text-[12.5px] font-bold " + (i === li ? "text-[var(--accent)]" : "text-[var(--ink-2)]")}>{ls.title}</span>
             </button>
           ))}
           {hasQuiz && (
-            <button type="button" onClick={() => setLi(quizIdx)} className={"mt-1 flex w-full items-center gap-2.5 rounded-xl border-t border-[var(--line-2,#eef2f8)] px-3 py-2.5 pt-3 text-left transition-colors " + (isQuiz ? "bg-[#f3effe]" : "hover:bg-[var(--panel)]")}>
+            <button type="button" onClick={() => setLi(quizIdx)} className={"mt-1 flex w-full items-center gap-2.5 rounded-xl border-t border-[var(--line-2,#eef2f8)] px-3 py-2.5 pt-3 text-start transition-colors " + (isQuiz ? "bg-[#f3effe]" : "hover:bg-[var(--panel)]")}>
               <span className={"grid h-6 w-6 flex-none place-items-center rounded-full text-[11px] " + (done.has(quizIdx) ? "bg-[#0f9d58] text-white" : "bg-[#6d28d9] text-white")}>{done.has(quizIdx) ? "✓" : "🎓"}</span>
               <span className={"text-[12.5px] font-bold " + (isQuiz ? "text-[#6d28d9]" : "text-[var(--ink-2)]")}>Final quiz</span>
             </button>
@@ -523,7 +524,7 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
               )}
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setLi(Math.max(0, li - 1))} disabled={li === 0} className="rounded-full border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] disabled:opacity-40">‹ Previous</button>
-                <button type="button" onClick={complete} disabled={!canComplete} title={canComplete ? "" : "Finish the interactive activities first"} className={"ml-auto rounded-full px-6 py-2 text-[14px] font-extrabold text-white transition-all " + (canComplete ? "bg-[#0f7a43] hover:brightness-105" : "cursor-not-allowed bg-[var(--ink-3)] opacity-50")}>{li < lessons.length - 1 ? "Mark complete & continue ›" : hasQuiz ? "Take the final quiz ›" : done.has(li) ? "Finish ✓" : "Mark complete ✓"}</button>
+                <button type="button" onClick={complete} disabled={!canComplete} title={canComplete ? "" : "Finish the interactive activities first"} className={"ms-auto rounded-full px-6 py-2 text-[14px] font-extrabold text-white transition-all " + (canComplete ? "bg-[#0f7a43] hover:brightness-105" : "cursor-not-allowed bg-[var(--ink-3)] opacity-50")}>{li < lessons.length - 1 ? "Mark complete & continue ›" : hasQuiz ? "Take the final quiz ›" : done.has(li) ? "Finish ✓" : "Mark complete ✓"}</button>
               </div>
             </div>
           </article>

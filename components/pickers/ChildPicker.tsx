@@ -41,13 +41,13 @@ export function ChildPicker({ value, options, onPick, placeholder = "Search a bo
         <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg">
           {matches.map((o, i) => (
             <button key={i} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(o.name, o.childId); setQ(""); setOpen(false); }}
-              className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-[12.5px] hover:bg-[var(--panel)]">
+              className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-start text-[12.5px] hover:bg-[var(--panel)]">
               <span className="font-semibold">{o.name}</span>{o.sub && <span className="text-[11px] text-[var(--ink-3)]">{o.sub}</span>}
             </button>
           ))}
           {ql && !exact && (
             <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(q.trim(), undefined); setQ(""); setOpen(false); }}
-              className="flex w-full items-center gap-1.5 border-t border-[var(--line)] px-3 py-1.5 text-left text-[12px] text-[var(--ink-3)] hover:bg-[var(--panel)]">
+              className="flex w-full items-center gap-1.5 border-t border-[var(--line)] px-3 py-1.5 text-start text-[12px] text-[var(--ink-3)] hover:bg-[var(--panel)]">
               Use &ldquo;<b className="text-[var(--ink-2)]">{q.trim()}</b>&rdquo; — not a booked child
             </button>
           )}

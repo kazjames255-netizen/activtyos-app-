@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useBookingsStore } from "./store";
@@ -59,7 +60,7 @@ const heroTone = (s: string) => HERO_TONE[s] || { bg: "#e4e9fa", fg: "#2140a0" }
 // Short "Mon 27 Jul" for a date-change swap shown on the row.
 const fmtRowDate = (iso: string) => {
   const d = new Date(`${iso}T00:00:00Z`);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 };
 
 function prettyBookedOn(b: { createdAt?: string }): string {
@@ -70,7 +71,7 @@ function prettyBookedOn(b: { createdAt?: string }): string {
   y.setUTCDate(y.getUTCDate() - 1);
   if (d === today) return "today";
   if (d === y.toISOString().slice(0, 10)) return "yesterday";
-  return new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", {
+  return new Date(`${d}T00:00:00Z`).toLocaleDateString(dl(), {
     day: "numeric",
     month: "short",
     timeZone: "UTC",
@@ -370,7 +371,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   type="button"
                   onClick={() => open(b.ref)}
                   className={
-                    "rounded-[10px] px-2.5 py-2 text-left transition-colors " +
+                    "rounded-[10px] px-2.5 py-2 text-start transition-colors " +
                     (on ? "bg-[var(--brand)] text-white" : "text-[var(--ink)] hover:bg-[var(--panel)]")
                   }
                 >
@@ -447,7 +448,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     <div className="truncate text-[11.5px] text-[var(--ink-3)]">Ref {b.ref}{b.createdAt ? ` · booked ${prettyBookedOn(b)}` : ""}</div>
                   </div>
                   <span className="flex-none whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11.5px] font-extrabold" style={{ background: heroTone(b.status).bg, color: heroTone(b.status).fg }}>{b.status}</span>
-                  <div className="flex-none pl-1 text-right">
+                  <div className="flex-none ps-1 text-end">
                     <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Amount</div>
                     <b className="text-[18px] tabular-nums text-[var(--ink)]">{money(b.amount)}</b>
                   </div>
@@ -467,7 +468,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   </span>
 
                   {/* Contextual actions, pushed to the right */}
-                  <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+                  <span className="ms-auto flex flex-wrap items-center justify-end gap-1.5">
                     {b.pay === "Awaiting voucher payment" && !off && (
                       <button onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }} title="Confirm the voucher money has arrived — marks it paid and tells the family"
                         className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{pendingPayWords(b).action}</button>
@@ -498,7 +499,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                       <span className="text-[12.5px] text-[var(--ink)]">{moveReq.moves.length} date changes — <span className="font-semibold text-[var(--brand-2)]">open to view all</span></span>
                     )}
                     {denyingRef !== b.ref && (
-                      <span className="ml-auto flex items-center gap-1.5">
+                      <span className="ms-auto flex items-center gap-1.5">
                         <button onClick={(e) => { e.stopPropagation(); act(b.ref, "move-approve"); }} title="Approve all — dates move and the family is told"
                           className="whitespace-nowrap rounded-full bg-[#0f7a43] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">Approve{moveReq.moves.length > 1 ? " all" : ""}</button>
                         <button onClick={(e) => { e.stopPropagation(); setDenyingRef(b.ref); setDenyReason(""); }} title="Decline — the booking is unchanged and the family is told"

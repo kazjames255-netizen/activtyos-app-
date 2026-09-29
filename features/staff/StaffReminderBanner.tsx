@@ -54,7 +54,7 @@ export function StaffReminderBanner() {
             {i < parts.length - 1 ? <span className="text-[#b98a3c]"> · </span> : null}
           </span>
         ))}
-        {!anyGating && <span className="ml-1 hidden text-[#a9803a] sm:inline">— no rush, work through them over your first few shifts.</span>}
+        {!anyGating && <span className="ms-1 hidden text-[#a9803a] sm:inline">— no rush, work through them over your first few shifts.</span>}
       </div>
       <button type="button" onClick={dismiss} aria-label="Hide reminder" className="flex-none rounded-full px-2 py-0.5 text-[15px] leading-none text-[#a9803a] hover:bg-white/50 hover:text-[#7a4e00]">×</button>
     </div>

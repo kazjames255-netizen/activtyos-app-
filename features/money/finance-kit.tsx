@@ -3,6 +3,7 @@
 // Shared visual kit for the rich analytics look — gradient KPI tiles, ring
 // gauges, doughnuts, ranked gradient bars and an area trend chart. Lifted from
 // the freelancer Dashboard so Finance & Analytics reads as the same system.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useState, type ReactNode } from "react";
 
 // KPI accent colours. These were fully-saturated gradient slabs; four of them
@@ -26,7 +27,7 @@ export const ACT_C = ["#2f5fd0", "#0f7a43", "#C81E5E", "#5a3fd0", "#F5A524", "#0
 export const ON_ACT = "#FFFFFF";
 export const money = (n: number) => (n < 0 ? `−£${Math.abs(Math.round(n * 100) / 100).toFixed(2)}` : `£${(Math.round(n * 100) / 100).toFixed(2)}`);
 export const compactMoney = (n: number) => (Math.abs(n) >= 1000 ? `£${(n / 1000).toFixed(Math.abs(n) >= 10000 ? 0 : 1)}k` : `£${Math.round(n)}`);
-export const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+export const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" });
 export const colorFor = (s: string) => ACT_C[[...(s || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % ACT_C.length];
 
 // A KPI tile: plain card, colour carried by the numeral and a thin left rail.
@@ -35,16 +36,16 @@ export const colorFor = (s: string) => ACT_C[[...(s || "?")].reduce((a, c) => a 
 export function Tile({ label, value, sub, grad, icon, aside, children }: { label: string; value: string; sub?: ReactNode; grad: string; icon?: string; aside?: ReactNode; children?: ReactNode }) {
   return (
     <div
-      className="relative overflow-hidden rounded-2xl p-4 pl-[18px]"
+      className="relative overflow-hidden rounded-2xl p-4 ps-[18px]"
       style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
     >
       {/* the accent rail — the whole colour budget for this card */}
-      <div className="pointer-events-none absolute bottom-3 left-0 top-3 w-[3px] rounded-r" style={{ background: grad }} />
+      <div className="pointer-events-none absolute bottom-3 start-0 top-3 w-[3px] rounded-e" style={{ background: grad }} />
       {/* `aside` is the optional right-hand visual (a Ring, usually). It sits
           absolutely so a tile that has one stays the same height as one that
           doesn't — otherwise it stretches its whole grid row. */}
-      {aside && <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-90" style={{ color: grad }}>{aside}</div>}
-      <div className={`min-w-0 ${aside ? "pr-[68px]" : ""}`}>
+      {aside && <div className="absolute end-3 top-1/2 -translate-y-1/2 opacity-90" style={{ color: grad }}>{aside}</div>}
+      <div className={`min-w-0 ${aside ? "pe-[68px]" : ""}`}>
         <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">
           {icon && <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-[var(--panel)] text-[11px]">{icon}</span>}
           <span className="truncate">{label}</span>

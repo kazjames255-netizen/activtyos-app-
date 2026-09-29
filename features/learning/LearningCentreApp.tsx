@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { isDemoMode, post as apiPost, put as apiPut } from "@/lib/api";
 import { syncLearning, useLearnRefresh, completionsFor, rolesCover, withoutDemoAssignments } from "./courseCompletions";
 import { useTeam } from "@/features/team/useTeam";
@@ -172,7 +173,7 @@ interface PolicyDoc { id: string; title: string; category?: string; required: bo
 interface PolicyAck { docId: string; staff: string; date: string }
 const PKEY = "aos.learn.policies.v1";
 const todayISO = () => new Date().toISOString().slice(0, 10);
-const fmtDate = (iso: string) => { const d = new Date(iso + "T00:00:00"); return isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }); };
+const fmtDate = (iso: string) => { const d = new Date(iso + "T00:00:00"); return isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { day: "2-digit", month: "short", year: "numeric" }); };
 const blankPolicy = (): PolicyDoc => ({ id: "pol" + Date.now().toString(36), title: "", category: "", required: true, added: todayISO(), body: "" });
 const SEED_POLICIES: PolicyDoc[] = [
   { id: "pol1", title: "Safeguarding & Child Protection Policy", category: "Safeguarding", required: true, added: "2026-06-01", body: "Every member of staff and volunteer is responsible for keeping children safe.\n\n1. If a child discloses something that worries you, listen calmly, reassure them, and record the facts in their own words. Do not promise secrecy.\n2. Report any concern to the Designated Safeguarding Lead the same day.\n3. Never investigate a concern yourself.\n4. Follow safer-working practice at all times: stay visible, avoid being alone with a child where possible, and use appropriate language.\n\nBy confirming below you agree that you have read, understood and will follow this policy." },
@@ -430,12 +431,12 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
     const catLabel = !isPlatform(c.id) && c.category ? c.category : cat.label;
     return (
       <div key={c.id} className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition-all hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-24px_rgba(16,32,90,.5)]">
-        <button type="button" onClick={() => setPlayer(c)} title="Preview course" className="block w-full overflow-hidden text-left">
+        <button type="button" onClick={() => setPlayer(c)} title="Preview course" className="block w-full overflow-hidden text-start">
           <div className="transition-transform duration-300 group-hover:scale-[1.04]"><CourseHero cover={c.cover} grad={cat.grad} level={m.level} /></div>
         </button>
         <div className="flex min-w-0 flex-1 flex-col p-3.5">
           <div className="min-w-0 flex-1">
-            <button type="button" onClick={() => setPlayer(c)} className="min-w-0 text-left"><div className="text-[15px] font-extrabold leading-tight text-[var(--ink)]" style={{ textWrap: "balance" } as React.CSSProperties}>{c.title}</div></button>
+            <button type="button" onClick={() => setPlayer(c)} className="min-w-0 text-start"><div className="text-[15px] font-extrabold leading-tight text-[var(--ink)]" style={{ textWrap: "balance" } as React.CSSProperties}>{c.title}</div></button>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: cat.soft, color: cat.ink }}>{cat.icon} {catLabel}</span>
               <span className="text-[11px] text-[var(--ink-3)]">{c.lessons.length} lessons · ~{courseMins(c)} min{aq.qs.length > 0 ? ` · ${aq.qs.length}-Q quiz` : ""} · 🔊</span>
@@ -453,7 +454,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
               <Button onClick={() => openAssign(c.id)}>Assign</Button>
               <button type="button" onClick={() => setInsight(c)} title="Insights — scores, best-answered & topics to revisit" className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-3)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]">📊</button>
               {(isPlatform(c.id) || (c.quizzes?.length ?? 0) > 1) && (
-                <span className="ml-auto flex items-center gap-1 rounded-full bg-[var(--panel)] p-0.5" title="Live end-of-course quiz version — Assign lets you set a version per group">
+                <span className="ms-auto flex items-center gap-1 rounded-full bg-[var(--panel)] p-0.5" title="Live end-of-course quiz version — Assign lets you set a version per group">
                   {Array.from({ length: quizVersions(c).length }).map((_, v) => (
                     <button key={v} type="button" onClick={() => setQuizVersion(c.id, v)} className={"rounded-full px-2 py-0.5 text-[10.5px] font-extrabold transition-colors " + (aq.idx === v ? "bg-[#6d28d9] text-white" : "text-[var(--ink-3)] hover:text-[#6d28d9]")}>V{v + 1}</button>
                   ))}
@@ -479,8 +480,8 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
       <PageHero title="Learning Centre" icon="🎓" lede={`Courses, quizzes, assignments, completion & certificates — ${isCo ? "your company" : "your franchise"}`} />
 
       <Card className="mb-3 overflow-hidden">
-        <button type="button" onClick={() => setHelp((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-left"><span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--panel)] text-[12px]">ⓘ</span><span className="text-[14px] font-extrabold text-[var(--ink)]">How it works</span><span className="ml-auto text-[12px] text-[var(--ink-3)]">{help ? "▲" : "▼"}</span></button>
-        {help && <ul className="ml-9 list-disc space-y-1 px-4 pb-3.5 text-[13px] leading-relaxed text-[var(--ink-2)]"><li><b>Catalogue</b> — two folders: <b>Platform courses</b> (ready-made, in category sub-folders) and <b>{companyName} courses</b> (build your own). Preview, edit, set the live end-of-course quiz version (V1/V2/V3), and <b>Assign</b>.</li><li><b>Assign</b> — to <b>all staff</b>, to <b>job roles</b> (e.g. Lifeguard) or to <b>named staff</b> (tick several), with a Complete-by date, Required or Optional, and which quiz version that group gets. Staff and admins are notified until it's complete. Assigned courses show a <b>Start / Continue</b> button to the staff they're set for.</li><li><b>Completion</b> — a live picture of who's done their training, with quiz scores.</li><li><b>Certificates</b> (DBS / First-Aid) now live under <b>Team → Staff certificates</b>. Staff upload theirs in their own area; the manager keeps the single verified record there.</li>{isCo && <li>The <b>Location</b> dropdown scopes Completion across all your sites and franchises.</li>}</ul>}
+        <button type="button" onClick={() => setHelp((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-start"><span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--panel)] text-[12px]">ⓘ</span><span className="text-[14px] font-extrabold text-[var(--ink)]">How it works</span><span className="ms-auto text-[12px] text-[var(--ink-3)]">{help ? "▲" : "▼"}</span></button>
+        {help && <ul className="ms-9 list-disc space-y-1 px-4 pb-3.5 text-[13px] leading-relaxed text-[var(--ink-2)]"><li><b>Catalogue</b> — two folders: <b>Platform courses</b> (ready-made, in category sub-folders) and <b>{companyName} courses</b> (build your own). Preview, edit, set the live end-of-course quiz version (V1/V2/V3), and <b>Assign</b>.</li><li><b>Assign</b> — to <b>all staff</b>, to <b>job roles</b> (e.g. Lifeguard) or to <b>named staff</b> (tick several), with a Complete-by date, Required or Optional, and which quiz version that group gets. Staff and admins are notified until it's complete. Assigned courses show a <b>Start / Continue</b> button to the staff they're set for.</li><li><b>Completion</b> — a live picture of who's done their training, with quiz scores.</li><li><b>Certificates</b> (DBS / First-Aid) now live under <b>Team → Staff certificates</b>. Staff upload theirs in their own area; the manager keeps the single verified record there.</li>{isCo && <li>The <b>Location</b> dropdown scopes Completion across all your sites and franchises.</li>}</ul>}
       </Card>
 
       <Card className="p-0">
@@ -495,7 +496,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
             {/* Activity feed — collapsible, with a coloured accent per row */}
             {feed.length > 0 && (
               <div className="mb-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,32,90,.04)]">
-                <button type="button" onClick={() => setActivityOpen((v) => !v)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--panel)]">
+                <button type="button" onClick={() => setActivityOpen((v) => !v)} className="flex w-full items-center gap-3 px-4 py-3 text-start hover:bg-[var(--panel)]">
                   <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[#eef4fd] text-[16px]">📣</span>
                   <div className="min-w-0 flex-1">
                     <div className="text-[14.5px] font-extrabold text-[var(--ink)]">Recent activity</div>
@@ -507,7 +508,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                 {activityOpen && (
                   <div className="divide-y divide-[var(--line)] border-t border-[var(--line)]">
                     {feed.map((e, i) => (
-                      <div key={i} className="flex items-start gap-3 py-2.5 pl-4 pr-4 transition-colors hover:bg-[var(--panel)]" style={{ boxShadow: `inset 3px 0 0 ${e.tone}` }}>
+                      <div key={i} className="flex items-start gap-3 py-2.5 ps-4 pe-4 transition-colors hover:bg-[var(--panel)]" style={{ boxShadow: `inset 3px 0 0 ${e.tone}` }}>
                         <span className="grid h-8 w-8 flex-none place-items-center rounded-full text-[14px]" style={{ background: e.tone + "1a", color: e.tone }}>{e.icon}</span>
                         <div className="min-w-0"><div className="text-[13px] font-bold leading-snug text-[var(--ink)]">{e.head}</div><div className="text-[11.5px] text-[var(--ink-3)]">{e.meta}</div></div>
                       </div>
@@ -553,11 +554,11 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
               <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span className="text-[11px] font-extrabold uppercase tracking-wide text-[#0f7a43]">🎓 Your certificates</span>
-                  <input value={certName} onChange={(e) => { setCertName(e.target.value); try { localStorage.setItem("aos.learn.name", e.target.value); } catch { /* ignore */ } }} placeholder="Name on certificate" className="ml-auto w-[200px] rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
+                  <input value={certName} onChange={(e) => { setCertName(e.target.value); try { localStorage.setItem("aos.learn.name", e.target.value); } catch { /* ignore */ } }} placeholder="Name on certificate" className="ms-auto w-[200px] rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {courses.filter((c) => progress[c.id]?.passed).map((c) => (
-                    <button key={c.id} type="button" onClick={() => { const now = new Date(); const rm = c.renewMonths ?? settings.learning?.renewMonths ?? 0; const exp = rm ? new Date(now.getFullYear(), now.getMonth() + rm, now.getDate()) : null; const fmt = (dt: Date) => dt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }); openCertificate({ name: certName || "Team member", course: c.title, pct: progress[c.id]?.pct ?? 100, date: fmt(now), expiry: exp ? fmt(exp) : undefined, provider: companyName, logo: settings.learning?.certLogo === false ? undefined : c.logo, ref: makeRef(c.title + certName + fmt(now)), signImg: settings.learning?.certSignature, signName: settings.learning?.certSignatory, signRole: settings.learning?.certSignatoryRole, accent: settings.learning?.certColor, title: settings.learning?.certTitle || undefined, showScore: settings.learning?.certShowScore, showQr: settings.learning?.certShowQr }, settings.learning?.certTemplate); }} title="Download certificate (PDF)" className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#0f7a43] hover:text-[#0f7a43]">🖨️ {c.title}</button>
+                    <button key={c.id} type="button" onClick={() => { const now = new Date(); const rm = c.renewMonths ?? settings.learning?.renewMonths ?? 0; const exp = rm ? new Date(now.getFullYear(), now.getMonth() + rm, now.getDate()) : null; const fmt = (dt: Date) => dt.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }); openCertificate({ name: certName || "Team member", course: c.title, pct: progress[c.id]?.pct ?? 100, date: fmt(now), expiry: exp ? fmt(exp) : undefined, provider: companyName, logo: settings.learning?.certLogo === false ? undefined : c.logo, ref: makeRef(c.title + certName + fmt(now)), signImg: settings.learning?.certSignature, signName: settings.learning?.certSignatory, signRole: settings.learning?.certSignatoryRole, accent: settings.learning?.certColor, title: settings.learning?.certTitle || undefined, showScore: settings.learning?.certShowScore, showQr: settings.learning?.certShowQr }, settings.learning?.certTemplate); }} title="Download certificate (PDF)" className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#0f7a43] hover:text-[#0f7a43]">🖨️ {c.title}</button>
                   ))}
                 </div>
               </div>
@@ -566,7 +567,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
             {/* Create + search */}
             <div className="mb-2.5 flex flex-wrap items-center gap-2">
               <Button variant="primary" onClick={newCourse}>+ New {companyName} course</Button>
-              <div className="ml-auto flex items-center gap-1.5">
+              <div className="ms-auto flex items-center gap-1.5">
                 <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Search courses…" className="w-[210px]" />
                 <Select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value as Level | "all")} className="max-w-[130px]"><option value="all">All levels</option><option value="Intro">Intro</option><option value="Core">Core</option><option value="Advanced">Advanced</option></Select>
               </div>
@@ -595,12 +596,12 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                 const list = platformByCat.get(cat.key) ?? [];
                 if (list.length === 0) return null;
                 return (
-                  <div key={cat.key} className="mb-4 ml-1 border-l-2 pl-3" style={{ borderColor: cat.soft }}>
+                  <div key={cat.key} className="mb-4 ms-1 border-s-2 ps-3" style={{ borderColor: cat.soft }}>
                     <div className="mb-2 flex items-center gap-2">
                       <span className="grid h-6 w-6 flex-none place-items-center rounded-lg text-[13px]" style={{ background: cat.soft }}>{cat.icon}</span>
                       <h3 className="text-[12.5px] font-extrabold" style={{ color: cat.ink }}>{cat.label}</h3>
                       <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)]">{list.length}</span>
-                      <span className="ml-1 h-px flex-1 bg-[var(--line)]" />
+                      <span className="ms-1 h-px flex-1 bg-[var(--line)]" />
                     </div>
                     <div className="grid gap-2.5 lg:grid-cols-2">{list.map((c) => courseCard(c))}</div>
                   </div>
@@ -672,7 +673,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                   {([["courseDue", "Course due soon — remind the learner"], ["overdueChase", "Overdue — chase the learner + admin"], ["renewalDue", "Renewal due — annual refresher reminder"], ["unreadPolicy", "Unread policy — remind until confirmed"], ["weeklyDigest", "Weekly summary to the manager"]] as const).map(([k, l]) => (
                     <label key={k} className="flex items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={reminders[k]} onChange={(e) => setRem({ [k]: e.target.checked } as Partial<ReminderPrefs>)} /> {l}</label>
                   ))}
-                  <label className="flex items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] font-semibold text-[var(--ink-2)]">Digest day<Select value={reminders.digestDay} onChange={(e) => setRem({ digestDay: e.target.value })} className="ml-auto max-w-[130px]">{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((d) => <option key={d} value={d}>{d}</option>)}</Select></label>
+                  <label className="flex items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] font-semibold text-[var(--ink-2)]">Digest day<Select value={reminders.digestDay} onChange={(e) => setRem({ digestDay: e.target.value })} className="ms-auto max-w-[130px]">{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((d) => <option key={d} value={d}>{d}</option>)}</Select></label>
                 </div>
               </div>
             )}
@@ -693,7 +694,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                       <div key={c.id} className="flex items-center gap-2">
                         <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-[var(--ink)]">{c.title}</span>
                         <div className="h-1.5 w-16 flex-none overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${s}%`, background: col }} /></div>
-                        <span className="w-9 flex-none text-right text-[12px] font-extrabold tabular-nums" style={{ color: col }}>{s}%</span>
+                        <span className="w-9 flex-none text-end text-[12px] font-extrabold tabular-nums" style={{ color: col }}>{s}%</span>
                         <button type="button" onClick={() => setInsight(c)} title="View course insights" className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]">📊</button>
                       </div>
                     ))}
@@ -708,7 +709,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
               const list = focusQ.trim() ? staff.filter((s) => s.name.toLowerCase().includes(focusQ.trim().toLowerCase())) : staff;
               return (
                 <div className="mb-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,32,90,.04)]">
-                  <button type="button" onClick={() => setFocusOpen((v) => !v)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--panel)]">
+                  <button type="button" onClick={() => setFocusOpen((v) => !v)} className="flex w-full items-center gap-3 px-4 py-3 text-start hover:bg-[var(--panel)]">
                     <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[#f3effe] text-[16px]">🎯</span>
                     <div className="min-w-0 flex-1"><div className="text-[14.5px] font-extrabold text-[var(--ink)]">Individual focus</div><div className="text-[11.5px] text-[var(--ink-3)]">Strengths &amp; areas to practise · {staff.length} staff</div></div>
                     <span className={`grid h-7 w-7 flex-none place-items-center rounded-full bg-[var(--panel)] text-[13px] text-[var(--ink-3)] transition-transform ${focusOpen ? "rotate-180" : ""}`}>▾</span>
@@ -718,7 +719,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                       <div className="mb-3 flex flex-wrap items-center gap-2">
                         <input value={focusQ} onChange={(e) => setFocusQ(e.target.value)} placeholder="🔍 Filter by name…" className="h-9 w-full max-w-[260px] rounded-lg border border-[var(--line)] bg-white px-3 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
                         <span className="text-[11px] text-[var(--ink-3)]">{list.length} of {staff.length}</span>
-                        <span className="ml-auto text-[11px] text-[var(--ink-3)]">Illustrative from quiz scores — full per-question breakdown appears once answers are recorded (backend).</span>
+                        <span className="ms-auto text-[11px] text-[var(--ink-3)]">Illustrative from quiz scores — full per-question breakdown appears once answers are recorded (backend).</span>
                       </div>
                       {list.length === 0 ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No staff match &ldquo;{focusQ}&rdquo;.</div> : (
                         <div className="grid gap-2.5 sm:grid-cols-2">
@@ -742,7 +743,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
               );
             })()}
             <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-              <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-left text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Location</th><th className="px-3 py-2.5 font-extrabold">Role</th><th className="px-3 py-2.5 font-extrabold">Safeguarding</th><th className="px-3 py-2.5 font-extrabold">S/G quiz</th><th className="px-3 py-2.5 font-extrabold">First aid</th></tr></thead>
+              <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-start text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Location</th><th className="px-3 py-2.5 font-extrabold">Role</th><th className="px-3 py-2.5 font-extrabold">Safeguarding</th><th className="px-3 py-2.5 font-extrabold">S/G quiz</th><th className="px-3 py-2.5 font-extrabold">First aid</th></tr></thead>
                 <tbody>{staff.map((s) => (
                   <tr key={s.name} onClick={() => setRecordStaff(s)} className="cursor-pointer border-t border-[var(--line-2,#eef2f8)] hover:bg-[var(--panel)]"><td className="px-3 py-2.5 font-bold text-[#1d3a8f]">{s.name}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.op}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.role}</td><td className="px-3 py-2.5"><Badge text={s.sg} /></td><td className="px-3 py-2.5 tabular-nums text-[var(--ink-2)]">{s.sgq != null ? `${s.sgq}%` : "—"}</td><td className="px-3 py-2.5"><Badge text={s.fa} /></td></tr>
                 ))}</tbody>
@@ -764,7 +765,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                 <CollapsibleStats id="learning-certs">
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                   {([["Expiring", "expiring soon", "#b45309", "#fdf3e0", "⏳"], ["Expired", "expired", "#c0392b", "#fdeceb", "⛔"], ["Pending", "to verify", "#1d54c4", "#eaf1ff", "🔎"], ["Missing", "required missing", "#5b6577", "#eef1f6", "➖"]] as const).map(([st, lbl, col, bg, icon]) => { const on = credStatusFilter === st; return (
-                    <button key={st} type="button" onClick={() => setCredStatusFilter(on ? "all" : st)} className={"flex items-center gap-3 rounded-2xl border border-transparent px-3.5 py-3 text-left transition-all " + (on ? "ring-2 ring-offset-1" : "hover:-translate-y-0.5 hover:shadow-md")} style={{ background: bg, ...(on ? ({ "--tw-ring-color": col } as React.CSSProperties) : {}) }}><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/70 text-[17px]">{icon}</span><div><div className="text-[22px] font-extrabold leading-none tabular-nums" style={{ color: col }}>{cnt(st)}</div><div className="mt-0.5 text-[11px] font-semibold" style={{ color: col }}>{lbl}</div></div></button>
+                    <button key={st} type="button" onClick={() => setCredStatusFilter(on ? "all" : st)} className={"flex items-center gap-3 rounded-2xl border border-transparent px-3.5 py-3 text-start transition-all " + (on ? "ring-2 ring-offset-1" : "hover:-translate-y-0.5 hover:shadow-md")} style={{ background: bg, ...(on ? ({ "--tw-ring-color": col } as React.CSSProperties) : {}) }}><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/70 text-[17px]">{icon}</span><div><div className="text-[22px] font-extrabold leading-none tabular-nums" style={{ color: col }}>{cnt(st)}</div><div className="mt-0.5 text-[11px] font-semibold" style={{ color: col }}>{lbl}</div></div></button>
                   ); })}
                 </div>
                 </CollapsibleStats>
@@ -774,7 +775,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                     {certExportOpen && (
                       <div className="absolute z-20 mt-1 w-[240px] rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
                         {([["CSV (spreadsheet)", () => csv()], ["PDF — register only", () => exportCredsPdf(staff, cred.types, cred.recordFor, companyName, false)], ["PDF — with certificate docs", () => exportCredsPdf(staff, cred.types, cred.recordFor, companyName, true)]] as const).map(([lbl, fn]) => (
-                          <button key={lbl} type="button" onClick={() => { fn(); setCertExportOpen(false); }} className="block w-full rounded-lg px-3 py-2 text-left text-[12.5px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{lbl}</button>
+                          <button key={lbl} type="button" onClick={() => { fn(); setCertExportOpen(false); }} className="block w-full rounded-lg px-3 py-2 text-start text-[12.5px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{lbl}</button>
                         ))}
                       </div>
                     )}
@@ -784,7 +785,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                   {credStatusFilter !== "all" && <button type="button" onClick={() => setCredStatusFilter("all")} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Clear ✕</button>}
                 </div>
                 <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-                  <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-left text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Location</th>{visTypes.map((t) => <th key={t.id} title={t.required ? "Required for: " + credTargetLabel(t) : "Optional"} className="px-3 py-2.5 font-extrabold whitespace-nowrap">{t.name}{t.required && <span className="ml-0.5 text-[#c0392b]">*</span>}</th>)}</tr></thead>
+                  <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-start text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Location</th>{visTypes.map((t) => <th key={t.id} title={t.required ? "Required for: " + credTargetLabel(t) : "Optional"} className="px-3 py-2.5 font-extrabold whitespace-nowrap">{t.name}{t.required && <span className="ms-0.5 text-[#c0392b]">*</span>}</th>)}</tr></thead>
                     <tbody>{rows.map((s) => (
                       <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]"><td className="px-3 py-2.5 font-bold text-[var(--ink)]">{s.name}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.op}</td>{visTypes.map((t) => { const r = cred.recordFor(s.name, t.id); if (!appliesTo(t, s.name, s.role) && !r) return <td key={t.id} className="px-3 py-2 text-[var(--ink-3)]" title="Not required for this staff member">—</td>; return <td key={t.id} className="px-3 py-2"><button type="button" onClick={() => setCertCell({ staff: s.name, typeId: t.id })} className="transition-opacity hover:opacity-70"><CredBadge s={credStatus(r)} /></button></td>; })}</tr>
                     ))}
@@ -814,7 +815,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
               </div>
             )}
 
-            <div className="mb-2.5 flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">All policies &amp; documents</span><Button variant="primary" className="ml-auto" onClick={() => setPolicyForm(blankPolicy())}>+ Add policy</Button></div>
+            <div className="mb-2.5 flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">All policies &amp; documents</span><Button variant="primary" className="ms-auto" onClick={() => setPolicyForm(blankPolicy())}>+ Add policy</Button></div>
             <div className="flex flex-col gap-2">
               {policies.map((p) => {
                 const done = STAFF.filter((s) => acks.some((a) => a.docId === p.id && a.staff === s.name));
@@ -827,7 +828,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                         <div className="flex items-center gap-2"><span className="truncate text-[13.5px] font-extrabold text-[var(--ink)]">{p.title || "Untitled policy"}</span><Badge text={p.required ? "Required" : "Recommended"} /></div>
                         <div className="text-[11px] text-[var(--ink-3)]">{p.category ? p.category + " · " : ""}added {fmtDate(p.added)}</div>
                       </div>
-                      <div className="text-right"><div className="text-[14px] font-extrabold tabular-nums text-[var(--ink)]">{done.length}/{STAFF.length}</div><div className="text-[10.5px] text-[var(--ink-3)]">confirmed</div></div>
+                      <div className="text-end"><div className="text-[14px] font-extrabold tabular-nums text-[var(--ink)]">{done.length}/{STAFF.length}</div><div className="text-[10.5px] text-[var(--ink-3)]">confirmed</div></div>
                       <div className="flex gap-0.5">
                         <button type="button" title="Read" onClick={() => setReadingDoc(p)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]">👁</button>
                         <button type="button" title="Edit" onClick={() => setPolicyForm(p)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]">✏️</button>
@@ -856,7 +857,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
       {aOpen && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={() => setAOpen(false)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
-            <div className="mb-3 flex items-center gap-2"><div className="text-[15px] font-extrabold text-[var(--ink)]">Assign course</div><button type="button" onClick={() => setAOpen(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <div className="mb-3 flex items-center gap-2"><div className="text-[15px] font-extrabold text-[var(--ink)]">Assign course</div><button type="button" onClick={() => setAOpen(false)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <div className="flex flex-col gap-3">
               <div><label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Course</label><Select value={aCourse} onChange={(e) => { setACourse(e.target.value); setAVer(courses.find((c) => c.id === e.target.value)?.activeQuiz ?? 0); }} className="w-full">{courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</Select></div>
               <div>
@@ -879,7 +880,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
               )}
               {aKind === "staff" && (
                 <div className="rounded-xl border border-[var(--line)] p-2.5">
-                  <div className="mb-1.5 flex items-center gap-2"><span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Tick one or more staff</span><Input value={aStaffQ} onChange={(e) => setAStaffQ(e.target.value)} placeholder="🔍 Search names…" className="ml-auto w-[150px]" /></div>
+                  <div className="mb-1.5 flex items-center gap-2"><span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Tick one or more staff</span><Input value={aStaffQ} onChange={(e) => setAStaffQ(e.target.value)} placeholder="🔍 Search names…" className="ms-auto w-[150px]" /></div>
                   <div className="max-h-[180px] overflow-y-auto">
                     {STAFF.filter((s) => s.name.toLowerCase().includes(aStaffQ.trim().toLowerCase())).map((s) => { const on = aStaff.includes(s.name); return <label key={s.name} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12.5px] text-[var(--ink-2)] hover:bg-[var(--panel)]"><input type="checkbox" checked={on} onChange={() => setAStaff(toggle(aStaff, s.name))} /> <b className="font-semibold text-[var(--ink)]">{s.name}</b> <span className="text-[11px] text-[var(--ink-3)]">· {s.role} · {s.op}</span></label>; })}
                     {STAFF.filter((s) => s.name.toLowerCase().includes(aStaffQ.trim().toLowerCase())).length === 0 && <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">No staff match “{aStaffQ}”.</div>}
@@ -942,7 +943,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
             <div className="mb-1 flex items-start gap-2"><span className="text-[16px]">📄</span><h3 className="flex-1 text-[15px] font-extrabold leading-tight text-[var(--ink)]">{readingDoc.title}</h3><button type="button" onClick={() => setReadingDoc(null)} className="text-[18px] leading-none text-[var(--ink-3)]">×</button></div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="text-[11px] text-[var(--ink-3)]">{readingDoc.category ? readingDoc.category + " · " : ""}{readingDoc.required ? "Required" : "Recommended"} · added {fmtDate(readingDoc.added)}</span>
-              {readingDoc.body && <button type="button" onClick={speakPolicy} className={"ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-extrabold transition-colors " + (speaking ? "bg-[#1d3a8f] text-white" : "border border-[#bcd0f5] bg-[#eef4fd] text-[#1d3a8f]")}>{speaking ? "⏹ Stop" : "🔊 Read aloud"}</button>}
+              {readingDoc.body && <button type="button" onClick={speakPolicy} className={"ms-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-extrabold transition-colors " + (speaking ? "bg-[#1d3a8f] text-white" : "border border-[#bcd0f5] bg-[#eef4fd] text-[#1d3a8f]")}>{speaking ? "⏹ Stop" : "🔊 Read aloud"}</button>}
             </div>
             <div onScroll={(e) => { const el = e.currentTarget; if (el.scrollTop + el.clientHeight >= el.scrollHeight - 28) setReachedEnd(true); }} className="max-h-[54vh] overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
               {readingDoc.fileData && <iframe src={pdfUrl ?? undefined} title={readingDoc.title} className="mb-3 h-[440px] w-full rounded-lg border border-[var(--line)] bg-white" />}
@@ -964,7 +965,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
       {policyForm && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[137] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={() => setPolicyForm(null)}>
           <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
-            <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{policies.some((x) => x.id === policyForm.id) ? "Edit policy" : "Add policy"}</h3><button type="button" onClick={() => setPolicyForm(null)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{policies.some((x) => x.id === policyForm.id) ? "Edit policy" : "Add policy"}</h3><button type="button" onClick={() => setPolicyForm(null)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <div className="grid gap-2.5">
               <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Title</span><Input value={policyForm.title} onChange={(e) => setPolicyForm({ ...policyForm, title: e.target.value })} placeholder="e.g. Safeguarding Policy" className="w-full" /></label>
               <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -994,7 +995,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
         return (
           <div className="fixed inset-0 z-[138] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={() => setCertCell(null)}>
             <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
-              <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t?.name ?? "Credential"}</h3><CredBadge s={st} /><button type="button" onClick={() => setCertCell(null)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+              <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t?.name ?? "Credential"}</h3><CredBadge s={st} /><button type="button" onClick={() => setCertCell(null)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
               <div className="mb-3 text-[12px] text-[var(--ink-3)]">{certCell.staff}</div>
               {r ? (<>
                 <div className="grid grid-cols-2 gap-2 text-[12.5px]">
@@ -1009,7 +1010,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                   {r.verified !== "verified" && <Button variant="primary" onClick={() => { cred.upsertRecord({ ...r, verified: "verified" }); flash("✅ Verified"); }}>✓ Verify</Button>}
                   {r.verified !== "rejected" && <Button onClick={() => { cred.upsertRecord({ ...r, verified: "rejected" }); flash("Marked rejected"); }}>Reject</Button>}
                   <Button onClick={() => { setCertEdit(r); setCertCell(null); }}>Edit</Button>
-                  <button type="button" title="Delete" onClick={() => { if (typeof window !== "undefined" && window.confirm("Delete this certificate record?")) { cred.deleteRecord(r.id); setCertCell(null); flash("Deleted"); } }} className="ml-auto text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
+                  <button type="button" title="Delete" onClick={() => { if (typeof window !== "undefined" && window.confirm("Delete this certificate record?")) { cred.deleteRecord(r.id); setCertCell(null); flash("Deleted"); } }} className="ms-auto text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
                 </div>
               </>) : (<>
                 <p className="rounded-lg bg-[#fdecec] px-3 py-2.5 text-[12.5px] font-semibold text-[#c0392b]">No {t?.name} on file for {certCell.staff}.</p>
@@ -1026,7 +1027,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
       {insight && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[135] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={() => setInsight(null)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
-            <div className="mb-2 flex items-center gap-2"><div className="text-[15px] font-extrabold text-[var(--ink)]">📊 {insight.title}</div><button type="button" onClick={() => setInsight(null)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <div className="mb-2 flex items-center gap-2"><div className="text-[15px] font-extrabold text-[var(--ink)]">📊 {insight.title}</div><button type="button" onClick={() => setInsight(null)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <div className="mb-3 flex gap-2">
               {[[`${courseScore(insight.id)}%`, "team avg score"], [`${STAFF.length}`, "assigned"], [`${demo ? Math.round(STAFF.length * 0.7) : completedCount(insight.id)}`, "completed"]].map(([n, l], i) => (
                 <div key={i} className="flex-1 rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[18px] font-extrabold text-[#1d3a8f]">{n}</div><div className="text-[10.5px] text-[var(--ink-3)]">{l}</div></div>

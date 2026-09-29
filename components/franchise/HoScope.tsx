@@ -132,7 +132,7 @@ export function HoScopeSwitcher({ portal }: { portal: string }) {
       <select
         value={scope ?? ""}
         onChange={(e) => setHoScopeId(e.target.value || null)}
-        className="max-w-[210px] cursor-pointer appearance-none truncate border-0 bg-transparent pr-1 text-[12.5px] font-extrabold outline-none"
+        className="max-w-[210px] cursor-pointer appearance-none truncate border-0 bg-transparent pe-1 text-[12.5px] font-extrabold outline-none"
         style={{ color: accent }}
       >
         <option value="" className="text-[var(--ink)]">Head office — all franchises</option>
@@ -141,7 +141,7 @@ export function HoScopeSwitcher({ portal }: { portal: string }) {
           <option key={f.franchiseId} value={f.franchiseId} className="text-[var(--ink)]">{f.name}{f.area ? ` · ${f.area}` : ""}</option>
         ))}
       </select>
-      <span className="flex-none pr-1 text-[8px] leading-none" style={{ color: accent }} aria-hidden>▼</span>
+      <span className="flex-none pe-1 text-[8px] leading-none" style={{ color: accent }} aria-hidden>▼</span>
     </label>
   );
 }
@@ -180,11 +180,11 @@ export function HoScopeBar() {
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-4 py-2" style={{ background: drilled ? "#faf6ff" : "#f3f6fd", borderColor: drilled ? "#e6d8f6" : "#dbe6fb" }}>
       <span className="text-[9.5px] font-black uppercase tracking-[0.14em]" style={{ color: accent, opacity: 0.75 }}>Viewing</span>
       <div className="relative inline-flex items-center">
-        <span className="pointer-events-none absolute left-3 text-[13px] leading-none" aria-hidden>👁</span>
+        <span className="pointer-events-none absolute start-3 text-[13px] leading-none" aria-hidden>👁</span>
         <select
           value={scope ?? ""}
           onChange={(e) => setHoScopeId(e.target.value || null)}
-          className="cursor-pointer appearance-none truncate rounded-lg border bg-white py-1.5 pl-9 pr-8 text-[13.5px] font-extrabold shadow-sm outline-none"
+          className="cursor-pointer appearance-none truncate rounded-lg border bg-white py-1.5 ps-9 pe-8 text-[13.5px] font-extrabold shadow-sm outline-none"
           style={{ color: accent, borderColor: drilled ? "#d9cffb" : "#cddcf7", maxWidth: "min(66vw, 340px)" }}
         >
           <option value="" className="text-[var(--ink)]">Head office — all franchises</option>
@@ -193,15 +193,15 @@ export function HoScopeBar() {
             <option key={f.franchiseId} value={f.franchiseId} className="text-[var(--ink)]">{f.name}{f.area ? ` · ${f.area}` : ""}</option>
           ))}
         </select>
-        <span className="pointer-events-none absolute right-3 text-[9px] leading-none" style={{ color: accent }} aria-hidden>▼</span>
+        <span className="pointer-events-none absolute end-3 text-[9px] leading-none" style={{ color: accent }} aria-hidden>▼</span>
       </div>
       {drilled ? (
         <>
           <span className="hidden text-[12px] text-[var(--ink-3)] sm:inline">Showing <b style={{ color: accent }}>{label}</b> only — not your head-office view.</span>
-          <button type="button" onClick={() => setHoScopeId(null)} className="ml-auto rounded-full px-3 py-1 text-[11.5px] font-extrabold text-white transition hover:brightness-110" style={{ background: accent }}>← Back to all franchises</button>
+          <button type="button" onClick={() => setHoScopeId(null)} className="ms-auto rounded-full px-3 py-1 text-[11.5px] font-extrabold text-white transition hover:brightness-110" style={{ background: accent }}>← Back to all franchises</button>
         </>
       ) : (
-        <span className="ml-auto text-[12px] text-[var(--ink-3)]">Your whole network · {franchises.length} franchise{franchises.length === 1 ? "" : "s"}</span>
+        <span className="ms-auto text-[12px] text-[var(--ink-3)]">Your whole network · {franchises.length} franchise{franchises.length === 1 ? "" : "s"}</span>
       )}
     </div>
   );
@@ -219,7 +219,7 @@ export function HoScopeBanner() {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-[#e6d8f6] bg-[#faf6ff] px-4 py-1.5 text-[12px] font-bold text-[#7a3aa8]">
       <span>👁 Viewing as <b>{label}</b> — {own ? "you're seeing only your own directly-run locations, not your franchises." : "you're seeing this franchise's data, not your head-office view."}</span>
-      <button type="button" onClick={() => setHoScopeId(null)} className="ml-auto rounded-full bg-[#7a3aa8] px-3 py-0.5 text-[11px] font-extrabold text-white hover:brightness-110">Back to head office</button>
+      <button type="button" onClick={() => setHoScopeId(null)} className="ms-auto rounded-full bg-[#7a3aa8] px-3 py-0.5 text-[11px] font-extrabold text-white hover:brightness-110">Back to head office</button>
       <Link href="/company/territories" className="rounded-full border border-[#d9c4ee] px-3 py-0.5 text-[11px] font-extrabold text-[#7a3aa8] no-underline hover:bg-white">Territories</Link>
     </div>
   );

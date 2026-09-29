@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, ApiError, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -36,7 +37,7 @@ interface Recon {
 }
 interface ListingLite { id: string; title?: string; name?: string; seasonId?: string | null }
 
-const fmt = (iso?: string | null) => (iso ? new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—");
+const fmt = (iso?: string | null) => (iso ? new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—");
 
 // Bucket a booking's payment route into a tidy category for the tabs.
 const PREF_ORDER = ["Card", "Childcare vouchers", "Tax-Free Childcare", "Cash", "Bank transfer", "HAF / funded", "Other"];
@@ -189,7 +190,7 @@ export function ReconciliationApp() {
     finally { setBusy(null); }
   }
   const daysOverdue = (it: Item) => { const t = Date.parse(it.createdAt ?? ""); return Number.isNaN(t) ? 0 : Math.max(0, Math.floor((nowMs - t) / 86400000)); };
-  const stamp = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const stamp = (iso: string) => new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -211,7 +212,7 @@ export function ReconciliationApp() {
         {cats.map((c) => (
           <button key={c} type="button" onClick={() => { setCat(c); setVoucherSub(""); }} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-all duration-150 hover:-translate-y-px"
             style={cat === c ? { borderColor: "transparent", background: c === "All" ? "linear-gradient(180deg,#4f8bf5,#2f6bd8)" : (CAT_C[c] ?? "#1d3a8f"), color: "#fff", boxShadow: "0 3px 10px -2px rgba(47,107,216,.45)" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
-            {c}{c !== "All" && <span className={cat === c ? "ml-1 opacity-80" : "ml-1 text-[var(--ink-3)]"}>{catCounts.get(c) ?? 0}</span>}
+            {c}{c !== "All" && <span className={cat === c ? "ms-1 opacity-80" : "ms-1 text-[var(--ink-3)]"}>{catCounts.get(c) ?? 0}</span>}
           </button>
         ))}
       </div>
@@ -223,7 +224,7 @@ export function ReconciliationApp() {
           {["", ...voucherSchemes].map((v) => (
             <button key={v || "all"} type="button" onClick={() => setVoucherSub(v)} className="rounded-full border px-3 py-1 text-[12px] font-bold transition-colors"
               style={voucherSub === v ? { borderColor: "transparent", background: "#7c3aed", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
-              {v || "All providers"}{v && <span className={voucherSub === v ? "ml-1 opacity-80" : "ml-1 text-[var(--ink-3)]"}>{voucherCounts.get(v) ?? 0}</span>}
+              {v || "All providers"}{v && <span className={voucherSub === v ? "ms-1 opacity-80" : "ms-1 text-[var(--ink-3)]"}>{voucherCounts.get(v) ?? 0}</span>}
             </button>
           ))}
         </div>
@@ -241,7 +242,7 @@ export function ReconciliationApp() {
             <span className="text-[13.5px] font-extrabold text-white">🧾 {cat === "Tax-Free Childcare" ? "Tax-Free Childcare" : cat === "Childcare vouchers" ? "Childcare vouchers" : "Childcare payments"}</span>
             <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold text-white">{childcare.items.length} booking{childcare.items.length === 1 ? "" : "s"}</span>
             {cat !== "Childcare vouchers" && (
-              <button type="button" onClick={() => setCcSettings((v) => !v)} className="ml-auto rounded-full bg-white/20 px-2.5 py-1 text-[11.5px] font-bold text-white hover:bg-white/30">
+              <button type="button" onClick={() => setCcSettings((v) => !v)} className="ms-auto rounded-full bg-white/20 px-2.5 py-1 text-[11.5px] font-bold text-white hover:bg-white/30">
                 {ccSettings ? "Hide settings" : "⚙ Settings"}
               </button>
             )}
@@ -327,7 +328,7 @@ export function ReconciliationApp() {
         <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px]" /></label>
         <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">to <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px]" /></label>
         {anyFilter && <button type="button" onClick={() => { setCat("All"); setVoucherSub(""); setStatus("awaiting"); setListingId(""); setSeasonId(""); setFrom(""); setTo(""); }} className="text-[11.5px] font-bold text-[#2f6bd8]">Clear filters</button>}
-        <span className="ml-auto text-[12px] text-[var(--ink-3)]">{filtered.length} shown{shownOutstanding > 0 ? ` · ${money(shownOutstanding)} outstanding` : ""}</span>
+        <span className="ms-auto text-[12px] text-[var(--ink-3)]">{filtered.length} shown{shownOutstanding > 0 ? ` · ${money(shownOutstanding)} outstanding` : ""}</span>
       </div>
 
       {/* TFC explainer — a BANNER, not a replacement for the list. This used to
@@ -380,7 +381,7 @@ export function ReconciliationApp() {
               <div key={it.ref} className="overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-[0_1px_3px_rgba(20,30,60,.06)]" style={{ borderColor: it.overdue ? "#f6c9cc" : "var(--line)" }}>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3">
                   <span className="w-1.5 self-stretch rounded-full" style={{ background: tone }} />
-                  <button type="button" onClick={() => { const open = !isOpen; setExpanded(open ? it.ref : null); if (open) { setNotesDraft(""); setEditRef(null); } }} className="min-w-[160px] flex-1 text-left">
+                  <button type="button" onClick={() => { const open = !isOpen; setExpanded(open ? it.ref : null); if (open) { setNotesDraft(""); setEditRef(null); } }} className="min-w-[160px] flex-1 text-start">
                     <div className="flex flex-wrap items-center gap-2 text-[13px]">
                       <span className="text-[var(--ink-3)]">{isOpen ? "▾" : "▸"}</span>
                       <span className="font-extrabold" title="Our booking reference">#{it.ref}</span>
@@ -414,7 +415,7 @@ export function ReconciliationApp() {
                   {it.overdue && <span className="rounded-full bg-[#fdebec] px-2 py-0.5 text-[11px] font-bold text-[#c02636]">overdue{it.voucherReceiveBy ? ` since ${fmt(it.voucherReceiveBy)}` : ""}</span>}
                   {(it.overpaid ?? 0) > 0 && <span title="More has been logged than this booking costs — refund the difference or keep it as wallet credit" className="rounded-full bg-[#fdf6e3] px-2 py-0.5 text-[11px] font-bold text-[#7a5a12] ring-1 ring-[#f3d98a]">Overpaid {money(it.overpaid!)} — refund or credit</span>}
                   {(it.needsRefund ?? 0) > 0 && <span title="Money was logged after this booking was cancelled — it isn't paying for a place" className="rounded-full bg-[#fdebec] px-2 py-0.5 text-[11px] font-bold text-[#c02636]">{it.status ?? "Cancelled"} — {money(it.needsRefund!)} needs refund / credit</span>}
-                  <div className="text-right">
+                  <div className="text-end">
                     <div className="text-[14px] font-extrabold tabular-nums">{it.reconciled ? money(it.amount) : giveBack ? `${money((it.overpaid ?? 0) + (it.needsRefund ?? 0))} to give back` : `${money(due)} due`}</div>
                     {it.cardPaid > 0 && <div className="text-[10.5px] font-bold text-[#0b8446]">{money(it.cardPaid)} by card</div>}
                     {offReceived > 0 && <div className="text-[10.5px] font-bold text-[#0b8446]">{money(offReceived)} by {it.voucherScheme || it.method}</div>}
@@ -441,7 +442,7 @@ export function ReconciliationApp() {
                       <button type="button" disabled={busy === it.ref} onClick={() => reconcile(it, true)} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c02636] disabled:opacity-50">Undo</button>
                     </div>
                   ) : giveBack ? (
-                    <span className="max-w-[220px] text-right text-[11.5px] text-[var(--ink-3)]">Refund it or credit the family&rsquo;s wallet from the booking — it isn&rsquo;t owed to you.</span>
+                    <span className="max-w-[220px] text-end text-[11.5px] text-[var(--ink-3)]">Refund it or credit the family&rsquo;s wallet from the booking — it isn&rsquo;t owed to you.</span>
                   ) : (
                     <div className="flex items-center gap-2">
                       <button type="button"
@@ -450,8 +451,8 @@ export function ReconciliationApp() {
                         className="relative grid h-8 w-8 flex-none place-items-center rounded-full border text-[14px] transition-colors disabled:opacity-50"
                         style={partPaid ? { borderColor: "#e2225f", background: "#fdeef4" } : it.nudges > 0 ? { borderColor: "#f0b100", background: "#fdf6e3" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                         🔔
-                        {partPaid && it.nudges === 0 && <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-[#e2225f] text-[9px] font-extrabold text-white">!</span>}
-                        {it.nudges > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full px-1 text-[9px] font-extrabold text-white" style={{ background: partPaid ? "#e2225f" : "#e88f1f" }}>{it.nudges}</span>}
+                        {partPaid && it.nudges === 0 && <span className="absolute -end-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-[#e2225f] text-[9px] font-extrabold text-white">!</span>}
+                        {it.nudges > 0 && <span className="absolute -end-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full px-1 text-[9px] font-extrabold text-white" style={{ background: partPaid ? "#e2225f" : "#e88f1f" }}>{it.nudges}</span>}
                       </button>
                       <button type="button" onClick={() => setOpenRef(openRef === it.ref ? null : it.ref)} className="text-[11.5px] font-bold text-[#2f6bd8]" title="For when only part of the money has landed — e.g. a deposit, or one of two sibling vouchers">Log amount received</button>
                       <button type="button" disabled={busy === it.ref} onClick={() => reconcile(it)} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition-transform hover:-translate-y-px disabled:opacity-50" style={{ background: "linear-gradient(180deg,#22b06b,#0b8446)" }}>{busy === it.ref ? "Saving…" : "✓ Reconcile"}</button>
@@ -551,13 +552,13 @@ function RefundsPanel({ rows, from, to }: { rows: RefundRow[]; from: string; to:
         <span className="text-[13.5px] font-extrabold">↩️ Refunds</span>
         <span className="rounded-full bg-[#fdf1e2] px-2 py-0.5 text-[11px] font-bold text-[#b45309]">Today {money(todayRows.reduce((s, r) => s + r.amount, 0))} · {todayRows.length}</span>
         {!ranged && (
-          <div className="ml-auto inline-flex items-center gap-0.5 rounded-full border border-[var(--line)] p-0.5 text-[11.5px] font-bold">
+          <div className="ms-auto inline-flex items-center gap-0.5 rounded-full border border-[var(--line)] p-0.5 text-[11.5px] font-bold">
             {([[false, "Today"], [true, "All"]] as const).map(([v, l]) => (
               <button key={l} type="button" onClick={() => setAll(v)} className="rounded-full px-2.5 py-1 transition-colors" style={all === v ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>
             ))}
           </div>
         )}
-        {ranged && <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{fmt(from || null)} – {fmt(to || null)}</span>}
+        {ranged && <span className="ms-auto text-[11.5px] text-[var(--ink-3)]">{fmt(from || null)} – {fmt(to || null)}</span>}
       </div>
       {shown.length ? (
         <div className="flex flex-col divide-y divide-[var(--line)]">
@@ -566,7 +567,7 @@ function RefundsPanel({ rows, from, to }: { rows: RefundRow[]; from: string; to:
               <span className="w-[92px] text-[11.5px] text-[var(--ink-3)]">{r.date ? fmt(r.date) : "undated"}</span>
               <span className="min-w-0 flex-1 truncate"><b>#{r.ref}</b> <span className="text-[var(--ink-2)]">{r.booker}</span><span className="text-[var(--ink-3)]"> · {r.label}{r.listing ? ` · ${r.listing}` : ""}</span></span>
               <span className="text-[11px] text-[var(--ink-3)]">{r.method}{r.via ? ` → ${VIA_LABEL[r.via]}` : ""}</span>
-              <span className="w-20 text-right font-extrabold tabular-nums text-[#b45309]">−{money(r.amount)}</span>
+              <span className="w-20 text-end font-extrabold tabular-nums text-[#b45309]">−{money(r.amount)}</span>
             </div>
           ))}
           <div className="flex justify-between bg-[var(--panel)] px-4 py-2 text-[12.5px]">

@@ -7,6 +7,7 @@
 // emergency contacts, read-and-agree policies, uploads); employer-verified gates
 // (DBS cleared, references satisfactory) stay read-only here. Sensitive items are
 // stored locally in this demo; in production they go to secure storage (Amir).
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button, Input, Select } from "@/components/ui";
@@ -85,7 +86,7 @@ const historyCovered = (currentMovedIn?: string, entries: Addr[] = []) => {
   const froms = entries.filter(validAddr).map((a) => a.from).sort();
   return froms.length > 0 && froms[0] <= cut;
 };
-const prettyDate = (iso: string) => { try { return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }); } catch { return iso; } };
+const prettyDate = (iso: string) => { try { return new Date(iso + "T00:00:00").toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }); } catch { return iso; } };
 
 function AddressHistory({ value, onChange, currentMovedIn }: { value?: string; onChange: (json: string) => void; currentMovedIn?: string }) {
   const stored = parseAddr(value);
@@ -109,7 +110,7 @@ function AddressHistory({ value, onChange, currentMovedIn }: { value?: string; o
       </div>
       {list.map((a, i) => (
         <div key={i} className="rounded-xl border border-[var(--line)] bg-white p-3">
-          <div className="mb-1.5 flex items-center"><span className="text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">Previous address {i + 1}</span><button type="button" onClick={() => remove(i)} className="ml-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button></div>
+          <div className="mb-1.5 flex items-center"><span className="text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">Previous address {i + 1}</span><button type="button" onClick={() => remove(i)} className="ms-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button></div>
           <div className="grid grid-cols-2 gap-2">
             <Input value={a.line1} onChange={(e) => setField(i, "line1", e.target.value)} placeholder="Address line 1" className="col-span-2" style={FIELD_STYLE} />
             <Input value={a.line2} onChange={(e) => setField(i, "line2", e.target.value)} placeholder="Address line 2 (optional)" className="col-span-2" style={FIELD_STYLE} />
@@ -164,7 +165,7 @@ function RoleQualifications({ onUploaded }: { onUploaded: () => void }) {
       <div key={t.id} className="rounded-xl border border-[var(--line)] bg-white p-2.5">
         <div className="flex items-center gap-2">
           <span className="min-w-0 flex-1 text-[13px] font-bold text-[var(--ink)]">{t.name}
-            <span className="ml-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase" style={req ? { background: "#fdecec", color: "#c0392b" } : { background: "#eef1f6", color: "#64748b" }}>{req ? "Required" : "Optional"}</span>
+            <span className="ms-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase" style={req ? { background: "#fdecec", color: "#c0392b" } : { background: "#eef1f6", color: "#64748b" }}>{req ? "Required" : "Optional"}</span>
           </span>
           <CredBadge s={s} />
         </div>
@@ -174,7 +175,7 @@ function RoleQualifications({ onUploaded }: { onUploaded: () => void }) {
             <input type="date" value={r?.issue ?? ""} max={isoYearsAgo(0)} onChange={(e) => setIssue(t.id, e.target.value)} style={FIELD_STYLE} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
           </label>
           {r?.expiry && <span className="pb-1 text-[10.5px] font-semibold text-[var(--ink-3)]">Expires {fmtDate(r.expiry)}</span>}
-          <div className="ml-auto flex items-center gap-2 pb-0.5">
+          <div className="ms-auto flex items-center gap-2 pb-0.5">
             {has ? (<>
               <button type="button" onClick={() => openCredFile(r!.fileData)} className="max-w-[160px] truncate rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">📎 {r!.fileName || "View"}</button>
               <label className="cursor-pointer text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">Replace<input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(t.id, f); }} /></label>
@@ -398,7 +399,7 @@ export function StaffOnboardingApp() {
           </div>
         ) : f.type === "select" ? (
           <div>{labelEl}<Select value={v?.v ?? ""} onChange={(e) => set(f.id, { v: e.target.value })} className="w-full" style={FIELD_STYLE}><option value="">— choose —</option>{(f.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}{f.other && <option value={v?.v && !(f.options ?? []).includes(v.v) ? v.v : "Other"}>Other…</option>}</Select>
-            {v?.v && (f.options ?? []).includes(v.v) && v.v.length > 48 && (() => { const m = v.v.match(/^(\S+)\s+—\s+([\s\S]+)/); return <div className="mt-1.5 rounded-lg bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-snug text-[var(--ink-2)]">{m ? <><span className="mr-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[10px] font-extrabold text-white">{m[1]}</span>{m[2]}</> : v.v}</div>; })()}
+            {v?.v && (f.options ?? []).includes(v.v) && v.v.length > 48 && (() => { const m = v.v.match(/^(\S+)\s+—\s+([\s\S]+)/); return <div className="mt-1.5 rounded-lg bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-snug text-[var(--ink-2)]">{m ? <><span className="me-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[10px] font-extrabold text-white">{m[1]}</span>{m[2]}</> : v.v}</div>; })()}
           </div>
         ) : f.type === "textarea" ? (
           <div>{labelEl}<textarea value={v?.v ?? ""} onChange={(e) => set(f.id, { v: e.target.value })} rows={3} style={FIELD_STYLE} className="w-full rounded-xl border border-[var(--line)] p-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" /></div>
@@ -475,13 +476,13 @@ export function StaffOnboardingApp() {
         {visSections.map(([key, label], i) => {
           const s = secStatus(key); const active = i === step; const stl = secStyle(key);
           return (
-            <button key={key} type="button" onClick={() => goto(i)} style={active ? { background: stl.grad } : undefined} className={"flex flex-none items-center gap-1.5 rounded-full py-1.5 pl-1.5 pr-3 text-[11.5px] font-extrabold transition-colors " + (active ? "text-white shadow-sm" : "border border-[var(--line)] bg-white text-[var(--ink-2)] hover:bg-[var(--panel)]")}>
+            <button key={key} type="button" onClick={() => goto(i)} style={active ? { background: stl.grad } : undefined} className={"flex flex-none items-center gap-1.5 rounded-full py-1.5 ps-1.5 pe-3 text-[11.5px] font-extrabold transition-colors " + (active ? "text-white shadow-sm" : "border border-[var(--line)] bg-white text-[var(--ink-2)] hover:bg-[var(--panel)]")}>
               <span className={"grid h-5 w-5 flex-none place-items-center rounded-full text-[10.5px] tabular-nums " + (active ? "bg-white/25 text-white" : s.complete ? "bg-[#0f7a43] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")}>{s.complete ? "✓" : i + 1}</span>
               <span className="whitespace-nowrap">{label}</span>
             </button>
           );
         })}
-        <button type="button" onClick={() => goto(stepCount)} className={"flex flex-none items-center gap-1.5 rounded-full py-1.5 pl-1.5 pr-3 text-[11.5px] font-extrabold " + (step === stepCount ? "bg-[#0f7a43] text-white shadow-sm" : "border border-[var(--line)] bg-white text-[var(--ink-2)] hover:bg-[var(--panel)]")}>
+        <button type="button" onClick={() => goto(stepCount)} className={"flex flex-none items-center gap-1.5 rounded-full py-1.5 ps-1.5 pe-3 text-[11.5px] font-extrabold " + (step === stepCount ? "bg-[#0f7a43] text-white shadow-sm" : "border border-[var(--line)] bg-white text-[var(--ink-2)] hover:bg-[var(--panel)]")}>
           <span className={"grid h-5 w-5 flex-none place-items-center rounded-full text-[11px] " + (step === stepCount ? "bg-white/25 text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")}>✓</span><span className="whitespace-nowrap">Review &amp; submit</span>
         </button>
       </div>
@@ -498,7 +499,7 @@ export function StaffOnboardingApp() {
                 <div className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: st.ink, opacity: 0.7 }}>Step {step + 1} of {stepCount}</div>
                 <div className="text-[18px] font-extrabold leading-tight" style={{ color: st.ink }}>{label}</div>
               </div>
-              {reqN > 0 && <span className="ml-auto flex-none rounded-full px-2.5 py-1 text-[10.5px] font-extrabold" style={complete ? { background: "#0f7a43", color: "#fff" } : { background: "#fff", color: st.ink, boxShadow: "inset 0 0 0 1px " + st.ink + "33" }}>{complete ? "✓ Complete" : `${ok}/${reqN} done`}</span>}
+              {reqN > 0 && <span className="ms-auto flex-none rounded-full px-2.5 py-1 text-[10.5px] font-extrabold" style={complete ? { background: "#0f7a43", color: "#fff" } : { background: "#fff", color: st.ink, boxShadow: "inset 0 0 0 1px " + st.ink + "33" }}>{complete ? "✓ Complete" : `${ok}/${reqN} done`}</span>}
             </div>
             {key === "refs"
               ? renderRefs(fs, st)
@@ -530,7 +531,7 @@ export function StaffOnboardingApp() {
         </div>
       ) : rec.submittedAt ? (
         <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
-          <div className="text-[14px] font-extrabold text-[#0f7a43]">✓ Submitted {new Date(rec.submittedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}{rec.lastEditedAt ? ` · last updated ${new Date(rec.lastEditedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}</div>
+          <div className="text-[14px] font-extrabold text-[#0f7a43]">✓ Submitted {new Date(rec.submittedAt).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}{rec.lastEditedAt ? ` · last updated ${new Date(rec.lastEditedAt).toLocaleDateString(dl(), { day: "numeric", month: "short" })}` : ""}</div>
           <p className="mt-0.5 text-[12px] text-[var(--ink-3)]">You can change your details any time. When you save a change, your employer is notified so they can review it.</p>
           {!saved && <div className="mt-2 flex items-start gap-2 rounded-xl bg-[#fff4e5] p-3 text-[12px] text-[#9a3d00]"><span>✏️</span><span>You've changed your details — <b>Save</b> to send the update to your employer.</span></div>}
           <div className="mt-3 flex justify-end"><Button variant="primary" onClick={persist}>{saved ? "Saved &amp; notified ✓" : "Save changes"}</Button></div>

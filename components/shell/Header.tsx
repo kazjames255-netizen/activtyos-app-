@@ -234,7 +234,7 @@ export function Header({ portal }: { portal: PortalKey }) {
                 <span className={`hidden whitespace-nowrap sm:inline ${t.wide ? "max-w-[180px] truncate" : ""}`}>{t.label}</span>
                 {t.badge > 0 && (
                   <span
-                    className="ml-0.5 flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none"
+                    className="ms-0.5 flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none"
                     style={{ background: "var(--sem-crit, #ef4444)", color: "#fff" }}
                   >
                     {t.badge}
@@ -259,11 +259,11 @@ export function Header({ portal }: { portal: PortalKey }) {
                 <span className="hidden truncate sm:inline">{t("chrome.contact")}</span>
                 <span className="flex-none text-[9px] leading-none" aria-hidden>▼</span>
                 {unread > 0 && (
-                  <span className="ml-0.5 flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none" style={{ background: "var(--sem-crit, #ef4444)", color: "#fff" }}>{unread}</span>
+                  <span className="ms-0.5 flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none" style={{ background: "var(--sem-crit, #ef4444)", color: "#fff" }}>{unread}</span>
                 )}
               </button>
               {commOpen && (
-                <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_44px_-16px_rgba(15,23,42,.4)]">
+                <div className="absolute end-0 z-50 mt-2 w-56 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_44px_-16px_rgba(15,23,42,.4)]">
                   <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{t("chrome.contact")}</div>
                   {commItems.map((it) => {
                     const on = it.view === view;

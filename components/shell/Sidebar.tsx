@@ -53,7 +53,7 @@ function Badge({ value }: { value: string | null }) {
   if (!value) return null;
   return (
     <span
-      className="ml-auto flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold"
+      className="ms-auto flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold"
       style={{ background: "var(--side-ct-bg)", color: "var(--side-ct-ink)" }}
     >
       {value}
@@ -108,7 +108,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded, col
         }
       >
         <Icon icon={item.icon} />
-        {badge && <span className="absolute right-1 top-1 h-2 w-2 rounded-full" style={{ background: "var(--side-ct-bg)" }} />}
+        {badge && <span className="absolute end-1 top-1 h-2 w-2 rounded-full" style={{ background: "var(--side-ct-bg)" }} />}
       </Link>
     );
   }
@@ -126,7 +126,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded, col
       >
         <Icon icon={item.icon} />
         <span className="min-w-0 flex-1 truncate">{navText(item, pluralLabel(item.label, portal, multiChild))}</span>
-        <span className="ml-auto flex-none rounded-full border border-white/15 bg-white/[0.06] px-2 py-[1px] text-[8.5px] font-bold uppercase tracking-[0.06em] text-[var(--side-muted)]">{tag}</span>
+        <span className="ms-auto flex-none rounded-full border border-white/15 bg-white/[0.06] px-2 py-[1px] text-[8.5px] font-bold uppercase tracking-[0.06em] text-[var(--side-muted)]">{tag}</span>
       </Link>
     );
   }
@@ -176,7 +176,7 @@ function SignOutItem({ item, collapsed }: { item: NavItem; collapsed?: boolean }
     <button
       type="button"
       onClick={signOut}
-      className={`${itemCls} w-[calc(100%-16px)] text-left`}
+      className={`${itemCls} w-[calc(100%-16px)] text-start`}
       style={{ color: "var(--side-nav)" }}
     >
       <Icon icon={item.icon} />
@@ -499,7 +499,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
               type="button"
               onClick={() => window.dispatchEvent(new Event(ev))}
               title={label}
-              className={`flex items-center gap-2.5 rounded-lg text-left text-[13px] font-bold transition-colors hover:bg-[var(--side-hover)] ${collapsed ? "h-9 w-9 justify-center" : "px-2.5 py-2"}`}
+              className={`flex items-center gap-2.5 rounded-lg text-start text-[13px] font-bold transition-colors hover:bg-[var(--side-hover)] ${collapsed ? "h-9 w-9 justify-center" : "px-2.5 py-2"}`}
               style={{ color: "var(--side-ink)" }}
             >
               <span className="flex-none text-[15px] leading-none" aria-hidden>{icon}</span>
@@ -542,7 +542,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
             <button
               type="button"
               onClick={() => setOpenOverrides((s) => ({ ...s, [label]: !open }))}
-              className="flex w-full items-center justify-between px-4 py-2 text-left text-[11px] font-bold uppercase tracking-[0.08em]"
+              className="flex w-full items-center justify-between px-4 py-2 text-start text-[11px] font-bold uppercase tracking-[0.08em]"
               style={{ color: "var(--side-muted)" }}
             >
               <span>{groupText(group.label)}</span>

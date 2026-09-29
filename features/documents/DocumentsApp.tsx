@@ -9,6 +9,7 @@
 // (library, files and read receipts — features/documents/docStore.ts); the
 // sample documents are only a starting point until the first save. Feeds the
 // onboarding read-and-confirm docs.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { isDemoMode, get as apiGet } from "@/lib/api";
 import { chaseUnread, fetchLibrary, openDocFile, saveLibrary, uploadDataUrl, uploadDocFile, type DocRead, type TeamMember } from "./docStore";
@@ -45,7 +46,7 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 const plusMonths = (m: number) => { const d = new Date(); d.setMonth(d.getMonth() + m); return iso(d); };
 export const docDaysUntil = (d?: string) => { if (!d) return null; const t = new Date(d + "T00:00:00").getTime(); const now = new Date(); now.setHours(0, 0, 0, 0); return Math.round((t - now.getTime()) / 86400000); };
 const daysUntil = docDaysUntil;
-export const docFmt = (d?: string) => { if (!d) return "—"; const x = new Date(d + "T00:00:00"); return isNaN(+x) ? d : x.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
+export const docFmt = (d?: string) => { if (!d) return "—"; const x = new Date(d + "T00:00:00"); return isNaN(+x) ? d : x.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }); };
 const fmt = docFmt;
 const esc = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
 
@@ -185,14 +186,14 @@ export function DocumentsApp() {
             return (<>
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <div><div className="text-[14px] font-extrabold text-[var(--ink)]">Who has read what</div><div className="text-[12px] text-[var(--ink-3)]">{cells.length - unread} of {cells.length} confirmations across the team · <b className="text-[#c0392b]">{unread}</b> outstanding</div></div>
-                <Button variant="primary" className="ml-auto" disabled={!unread} onClick={() => { if (isDemoMode()) { flash("🔔 Reminder sent to staff with unread documents"); return; } chaseUnread().then((r) => flash(r.people ? `🔔 Reminder sent to ${r.people} ${r.people === 1 ? "person" : "people"}` : "Nobody with an account has anything unread")).catch((e) => flash(e instanceof Error ? e.message : "Couldn't send reminders")); }}>Chase unread</Button>
+                <Button variant="primary" className="ms-auto" disabled={!unread} onClick={() => { if (isDemoMode()) { flash("🔔 Reminder sent to staff with unread documents"); return; } chaseUnread().then((r) => flash(r.people ? `🔔 Reminder sent to ${r.people} ${r.people === 1 ? "person" : "people"}` : "Nobody with an account has anything unread")).catch((e) => flash(e instanceof Error ? e.message : "Couldn't send reminders")); }}>Chase unread</Button>
               </div>
               <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
                 <table className="w-full text-[12.5px]">
-                  <thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th>{docs.map((d) => <th key={d.id} title={d.title} className="px-2 py-2.5 font-extrabold"><div className="w-[64px] truncate">{d.title}</div></th>)}</tr></thead>
+                  <thead><tr className="bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th>{docs.map((d) => <th key={d.id} title={d.title} className="px-2 py-2.5 font-extrabold"><div className="w-[64px] truncate">{d.title}</div></th>)}</tr></thead>
                   <tbody>{people.map((s) => (
                     <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]">
-                      <td className="whitespace-nowrap px-3 py-2.5 font-bold text-[var(--ink)]">{s.name}<span className="ml-1 text-[10.5px] font-normal text-[var(--ink-3)]">{s.role}</span></td>
+                      <td className="whitespace-nowrap px-3 py-2.5 font-bold text-[var(--ink)]">{s.name}<span className="ms-1 text-[10.5px] font-normal text-[var(--ink-3)]">{s.role}</span></td>
                       {docs.map((d) => { const applies = docAppliesToStaff(d, s); const at = readAt(s.email, s.name, d); if (!applies) return <td key={d.id} className="px-2 py-2 text-center text-[var(--ink-3)]" title="Not assigned to this person">—</td>; return <td key={d.id} className="px-2 py-2 text-center">{at ? <span title={`Confirmed ${docFmt(at.slice(0, 10))}`} className="inline-block rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-bold text-[#0f7a43]">✓ {docFmt(at.slice(0, 10)).replace(/ \d{4}$/, "")}</span> : <span className="inline-block rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[10px] font-bold text-[#c0392b]">Unread</span>}</td>; })}
                     </tr>
                   ))}</tbody>
@@ -206,7 +207,7 @@ export function DocumentsApp() {
       <CollapsibleStats id="documents" className="mb-3">
       <div className="grid grid-cols-3 gap-2.5">
         {([["all", "documents", "#1d54c4", "#eaf1ff", "📁", docs.length], ["expiring", "review soon", "#b45309", "#fdf3e0", "⏳", expiring], ["expired", "out of date", "#c0392b", "#fdeceb", "⛔", expired]] as const).map(([k, lbl, col, bg, icon, n]) => { const on = statusFilter === k; return (
-          <button key={k} type="button" onClick={() => setStatusFilter(k === "all" ? "all" : on ? "all" : k)} className={"flex items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition-all " + (on ? "ring-2 ring-offset-1" : "hover:-translate-y-0.5 hover:shadow-md")} style={{ background: bg, ...(on ? ({ "--tw-ring-color": col } as React.CSSProperties) : {}) }}><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/70 text-[17px]">{icon}</span><div><div className="text-[22px] font-extrabold leading-none tabular-nums" style={{ color: col }}>{n}</div><div className="mt-0.5 text-[11px] font-semibold" style={{ color: col }}>{lbl}</div></div></button>
+          <button key={k} type="button" onClick={() => setStatusFilter(k === "all" ? "all" : on ? "all" : k)} className={"flex items-center gap-3 rounded-2xl px-3.5 py-3 text-start transition-all " + (on ? "ring-2 ring-offset-1" : "hover:-translate-y-0.5 hover:shadow-md")} style={{ background: bg, ...(on ? ({ "--tw-ring-color": col } as React.CSSProperties) : {}) }}><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/70 text-[17px]">{icon}</span><div><div className="text-[22px] font-extrabold leading-none tabular-nums" style={{ color: col }}>{n}</div><div className="mt-0.5 text-[11px] font-semibold" style={{ color: col }}>{lbl}</div></div></button>
         ); })}
       </div>
       </CollapsibleStats>
@@ -272,7 +273,7 @@ function DocEditor({ doc, roles, titles, listingTitles, onSave, onClose }: { doc
   return (
     <div className="fixed inset-0 z-[140] flex justify-center overflow-y-auto bg-black/45 p-4 pt-[4vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{doc.title ? "Edit document" : "Add document"}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div></div>
+        <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{doc.title ? "Edit document" : "Add document"}</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div></div>
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Title</span><Input value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} placeholder="e.g. Safeguarding Policy" className="w-full" /></label>
           <div className="grid grid-cols-2 gap-2">
@@ -306,7 +307,7 @@ function DocEditor({ doc, roles, titles, listingTitles, onSave, onClose }: { doc
             </div>
           </div>
         </div>
-        <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><Button className="ml-auto" onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!d.title.trim() || uploading} onClick={() => onSave(d)}>Save document</Button></div>
+        <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><Button className="ms-auto" onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!d.title.trim() || uploading} onClick={() => onSave(d)}>Save document</Button></div>
       </div>
     </div>
   );

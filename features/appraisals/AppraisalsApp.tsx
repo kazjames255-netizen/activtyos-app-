@@ -6,6 +6,7 @@
 // Embedded as a Team tab next to Deployment. On the server since 13 Sept
 // (/api/appraisals) — the people are the real team (useTeam); the demo cast
 // and its seeded reviews are the demo's only.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero, CollapsibleStats } from "@/components/OperatorPage";
@@ -95,8 +96,8 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
             <button key={k} type="button" onClick={() => setSub(k)} className={`rounded-full px-3 py-1.5 text-[12px] font-bold ${sub === k ? "bg-[#1d3a8f] text-white" : "text-[var(--ink-2)] hover:bg-[#f2f5fb]"}`}>{l}</button>
           ))}
         </div>
-        {sub === "reviews" && <Select value={apr} onChange={(e) => setApr(e.target.value)} className="ml-auto" title="Filter by appraiser"><option value="all">All appraisers</option>{appraiserOptions.map((a) => <option key={a} value={a}>{a === "You" ? "Assigned to me (You)" : a}</option>)}</Select>}
-        <Select value={op} onChange={(e) => setOp(e.target.value)} className={sub === "reviews" ? "" : "ml-auto"}><option value="all">All listings</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select>
+        {sub === "reviews" && <Select value={apr} onChange={(e) => setApr(e.target.value)} className="ms-auto" title="Filter by appraiser"><option value="all">All appraisers</option>{appraiserOptions.map((a) => <option key={a} value={a}>{a === "You" ? "Assigned to me (You)" : a}</option>)}</Select>}
+        <Select value={op} onChange={(e) => setOp(e.target.value)} className={sub === "reviews" ? "" : "ms-auto"}><option value="all">All listings</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select>
         {sub === "reviews" && <Button variant="primary" onClick={() => setNewRev(true)}>+ New review</Button>}
         {sub === "feedback" && <Button variant="primary" onClick={() => setFbAdd(true)}>+ Add note</Button>}
       </div>
@@ -105,15 +106,15 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
       {sub === "reviews" && (
         <Card className="mt-4 p-0">
           {visReviews.length === 0 ? <div className="p-8 text-center text-[13px] text-[var(--ink-3)]">No reviews yet — start one with “+ New review”.</div> : (
-            <div className="overflow-x-auto"><table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Review</th><th className="px-3 py-2.5 font-extrabold">Due</th><th className="px-3 py-2.5 font-extrabold">Status</th><th className="px-3 py-2.5 text-center font-extrabold">Score</th><th className="px-3 py-2.5"></th></tr></thead>
+            <div className="overflow-x-auto"><table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Review</th><th className="px-3 py-2.5 font-extrabold">Due</th><th className="px-3 py-2.5 font-extrabold">Status</th><th className="px-3 py-2.5 text-center font-extrabold">Score</th><th className="px-3 py-2.5"></th></tr></thead>
               <tbody>{[...visReviews].sort((a, b) => (a.due < b.due ? -1 : 1)).map((r) => { const sc = overallScore(r); const od = isOverdue(r); return (
                 <tr key={r.id} className="border-t border-[var(--line-2,#eef2f8)]">
-                  <td className="px-3 py-2.5"><div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--panel)] text-[10.5px] font-extrabold text-[var(--ink-2)]">{initials(r.name)}</span><div><div className="font-bold text-[var(--ink)]">{r.name}{flagged.has(r.staffId) && <span className="ml-1.5 rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9.5px] font-bold text-[#c0392b]">PIP</span>}</div><div className="text-[10.5px] text-[var(--ink-3)]">{r.role}{r.op ? ` · ${r.op}` : ""}</div></div></div></td>
+                  <td className="px-3 py-2.5"><div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--panel)] text-[10.5px] font-extrabold text-[var(--ink-2)]">{initials(r.name)}</span><div><div className="font-bold text-[var(--ink)]">{r.name}{flagged.has(r.staffId) && <span className="ms-1.5 rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9.5px] font-bold text-[#c0392b]">PIP</span>}</div><div className="text-[10.5px] text-[var(--ink-3)]">{r.role}{r.op ? ` · ${r.op}` : ""}</div></div></div></td>
                   <td className="px-3 py-2.5"><div className="text-[var(--ink-2)]">{KIND_LABEL[r.kind]}</div><div className="text-[10.5px] text-[var(--ink-3)]">Appraiser: {r.appraiser || "You"}</div></td>
                   <td className="px-3 py-2.5"><span className={od ? "font-bold text-[#c0392b]" : "text-[var(--ink-2)]"}>{fmtDate(r.due)}{od ? " · overdue" : ""}</span></td>
                   <td className="px-3 py-2.5"><span className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${r.status === "complete" ? "bg-[#e6f4ea] text-[#0f7a43]" : "bg-[#eef4fd] text-[#1d3a8f]"}`}>{STATUS_LABEL[r.status]}</span></td>
                   <td className="px-3 py-2.5 text-center font-extrabold tabular-nums text-[var(--ink)]">{sc != null ? `${sc}` : "—"}</td>
-                  <td className="px-3 py-2.5 text-right"><button type="button" onClick={() => setEdit(r)} className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">Open →</button></td>
+                  <td className="px-3 py-2.5 text-end"><button type="button" onClick={() => setEdit(r)} className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">Open →</button></td>
                 </tr>
               ); })}</tbody></table></div>
           )}
@@ -127,14 +128,14 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
         <Card className="mt-4 p-0">
           <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
             <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Ongoing feedback & supervision</span>
-            <div className="ml-auto inline-flex gap-1">
+            <div className="ms-auto inline-flex gap-1">
               {([["all", "All"], ["kudos", "🌟 Kudos"], ["concern", "⚠️ Concern"], ["supervision", "🗒️ Supervision"]] as [("all" | FeedbackKind), string][]).map(([k, l]) => (
                 <button key={k} type="button" onClick={() => setFbType(k)} className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${fbType === k ? "bg-[#1d3a8f] text-white" : "bg-white text-[var(--ink-2)] ring-1 ring-black/5 hover:bg-[#f2f5fb]"}`}>{l}</button>
               ))}
             </div>
           </div>
           <div className="divide-y divide-[var(--line)]">{rows.map((f) => { const m = FB_META[f.kind]; const editing = fbEditId === f.id; return (
-            <div key={f.id} className="group flex items-start gap-3 px-4 py-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[14px]" style={{ background: m.tone + "1a" }}>{m.icon}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><span className="text-[12.5px] font-bold text-[var(--ink)]">{f.name}</span><span className="rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: m.tone + "1a", color: m.tone }}>{m.label}</span><span className="ml-auto text-[10.5px] text-[var(--ink-3)]">{new Date(f.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+            <div key={f.id} className="group flex items-start gap-3 px-4 py-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[14px]" style={{ background: m.tone + "1a" }}>{m.icon}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><span className="text-[12.5px] font-bold text-[var(--ink)]">{f.name}</span><span className="rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: m.tone + "1a", color: m.tone }}>{m.label}</span><span className="ms-auto text-[10.5px] text-[var(--ink-3)]">{new Date(f.at).toLocaleDateString(dl(), { day: "numeric", month: "short" })}</span>
               {!editing && <><button type="button" onClick={() => { setFbEditId(f.id); setFbDraft(f.text); }} className="text-[11px] font-bold text-[#1d3a8f] opacity-0 hover:underline group-hover:opacity-100">Edit</button><button type="button" onClick={() => { persistF(feedback.filter((x) => x.id !== f.id)); flash("Note deleted."); }} className="text-[11px] font-bold text-[var(--ink-3)] opacity-0 hover:text-[#c0392b] group-hover:opacity-100">Delete</button></>}
             </div>
             {editing ? <div className="mt-1"><textarea value={fbDraft} onChange={(e) => setFbDraft(e.target.value)} rows={2} className="w-full rounded-lg border border-[var(--line)] p-2 text-[12px]" /><div className="mt-1 flex justify-end gap-2"><Button onClick={() => setFbEditId(null)}>Cancel</Button><Button variant="primary" onClick={() => { persistF(feedback.map((x) => x.id === f.id ? { ...x, text: fbDraft.trim() } : x)); setFbEditId(null); flash("Note updated."); }}>Save</Button></div></div>
@@ -159,7 +160,7 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
         <>
         <div className="mt-4 mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">
           <span>📌 The competency set a review uses is chosen by the staff member&rsquo;s <b>role</b> — so different roles get different appraisals.</span>
-          <Button variant="primary" className="ml-auto" onClick={() => persistTpl([...templates, { id: uid(), name: "New appraisal", role: roleNames.find((rn) => !templates.some((t) => t.role === rn)) || "", competencies: [{ id: uid(), label: "New competency" }] }])}>+ New template</Button>
+          <Button variant="primary" className="ms-auto" onClick={() => persistTpl([...templates, { id: uid(), name: "New appraisal", role: roleNames.find((rn) => !templates.some((t) => t.role === rn)) || "", competencies: [{ id: uid(), label: "New competency" }] }])}>+ New template</Button>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">{templates.map((tpl) => (
           <Card key={tpl.id} className="p-4">
@@ -176,14 +177,14 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
       {/* ── PIP ── */}
       {sub === "pip" && (
         <Card className="mt-4 p-4">
-          <div className="mb-3 flex items-center gap-2"><div><div className="text-[13px] font-extrabold text-[var(--ink)]">Performance improvement plans</div><div className="text-[11px] text-[var(--ink-3)]">Structured, time-bound plans with measurable targets, support and dated check-ins.</div></div><Button variant="primary" className="ml-auto" onClick={() => setPipEdit({ id: uid(), staffId: "", name: "", concern: "", support: "", consequence: "If targets aren't met by the review date, the plan may be extended once or escalated to a formal capability process.", owner: "", targets: [], checkIns: [], start: isoDate(new Date()), end: isoDate(new Date(Date.now() + 30 * 86400000)), status: "open" })}>+ New PIP</Button></div>
+          <div className="mb-3 flex items-center gap-2"><div><div className="text-[13px] font-extrabold text-[var(--ink)]">Performance improvement plans</div><div className="text-[11px] text-[var(--ink-3)]">Structured, time-bound plans with measurable targets, support and dated check-ins.</div></div><Button variant="primary" className="ms-auto" onClick={() => setPipEdit({ id: uid(), staffId: "", name: "", concern: "", support: "", consequence: "If targets aren't met by the review date, the plan may be extended once or escalated to a formal capability process.", owner: "", targets: [], checkIns: [], start: isoDate(new Date()), end: isoDate(new Date(Date.now() + 30 * 86400000)), status: "open" })}>+ New PIP</Button></div>
           {pips.length === 0 ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No PIPs — hopefully none needed. A PIP is a fair, documented way to turn performance around.</div> : <div className="space-y-2.5">{pips.filter((p) => inOp(staffOf(p.staffId)?.op) || !p.staffId).map((p) => { const pct = pipProgress(p); const left = daysUntil(p.end); return (
-            <button key={p.id} type="button" onClick={() => setPipEdit(p)} className="block w-full rounded-xl border border-[var(--line)] p-3 text-left hover:border-[#1d3a8f]">
+            <button key={p.id} type="button" onClick={() => setPipEdit(p)} className="block w-full rounded-xl border border-[var(--line)] p-3 text-start hover:border-[#1d3a8f]">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--panel)] text-[10.5px] font-extrabold text-[var(--ink-2)]">{p.name ? initials(p.name) : "—"}</span>
                 <div><div className="text-[13px] font-bold text-[var(--ink)]">{p.name || "Unassigned"}</div><div className="text-[10.5px] text-[var(--ink-3)]">{p.role || "—"}{p.op ? ` · ${p.op}` : ""}</div></div>
                 <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: PIP_STATUS_TONE[p.status] + "1a", color: PIP_STATUS_TONE[p.status] }}>{PIP_STATUS_LABEL[p.status]}</span>
-                <span className="ml-auto text-[11px] text-[var(--ink-3)]">{fmtDate(p.start)} → {fmtDate(p.end)}{p.status === "open" ? ` · ${left < 0 ? `${-left}d overdue` : `${left}d left`}` : ""}</span>
+                <span className="ms-auto text-[11px] text-[var(--ink-3)]">{fmtDate(p.start)} → {fmtDate(p.end)}{p.status === "open" ? ` · ${left < 0 ? `${-left}d overdue` : `${left}d left`}` : ""}</span>
               </div>
               {p.concern && <div className="mt-1.5 truncate text-[12px] text-[var(--ink-2)]">{p.concern}</div>}
               <div className="mt-2 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: PIP_STATUS_TONE[p.status] }} /></div><span className="text-[10.5px] font-bold tabular-nums text-[var(--ink-3)]">{p.targets.filter((t) => t.met).length}/{p.targets.length} targets</span></div>
@@ -207,7 +208,7 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
 
       {sub === "settings" && (
         <Card className="mt-4 p-4">
-          <div className="mb-1 flex items-center gap-2"><div className="text-[14px] font-extrabold text-[var(--ink)]">Talent-grid categories</div><button type="button" onClick={() => { resetBoxes(); setBoxes(loadBoxes()); flash("Categories reset to default."); }} className="ml-auto text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Reset to default</button></div>
+          <div className="mb-1 flex items-center gap-2"><div className="text-[14px] font-extrabold text-[var(--ink)]">Talent-grid categories</div><button type="button" onClick={() => { resetBoxes(); setBoxes(loadBoxes()); flash("Categories reset to default."); }} className="ms-auto text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Reset to default</button></div>
           <div className="mb-3 text-[11.5px] text-[var(--ink-3)]">Rename each box, reword its recommended action, and pick a colour. These are what appear on the 9-box grid.</div>
           <div className="grid gap-2 sm:grid-cols-3">
             {([3, 2, 1] as const).flatMap((pot) => ([1, 2, 3] as const).map((perf) => { const key = `${perf}-${pot}`; const b = boxes[key]; return (
@@ -266,14 +267,14 @@ function TalentGrid({ team, talent, reviews, boxes, onMove, onOpenReview, onLogN
     <Card className="mt-4 p-4">
       <div className="mb-3 flex flex-wrap items-center gap-2 text-[12px] text-[var(--ink-3)]">
         <span>Nine-box — <b>performance</b> → against <b>potential</b> ↑. <b>Drag</b> a card to move, or <b>click</b> it to place, add a note or open the review.</span>
-        <span className="ml-auto rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">⚑ review score suggests another box</span>
+        <span className="ms-auto rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">⚑ review score suggests another box</span>
       </div>
       <div className="overflow-x-auto">
         <div className="min-w-[620px]">
           <div className="grid gap-2" style={{ gridTemplateColumns: "64px repeat(3, minmax(0,1fr))" }}>
             {([3, 2, 1] as const).map((pot, ri) => (
               <Fragment key={pot}>
-                <div className="flex flex-col items-end justify-center pr-1 text-right">
+                <div className="flex flex-col items-end justify-center pe-1 text-end">
                   {ri === 0 && <div className="mb-1 text-[9px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Potential ↑</div>}
                   <div className="text-[11px] font-extrabold text-[var(--ink-2)]">{POT_LABEL[pot]}</div>
                 </div>
@@ -300,7 +301,7 @@ function TalentGrid({ team, talent, reviews, boxes, onMove, onOpenReview, onLogN
                             onDragStart={(e) => { setDrag(t.staffId); e.dataTransfer.setData("text/id", t.staffId); e.dataTransfer.effectAllowed = "move"; }}
                             onDragEnd={() => { setDrag(null); setOver(null); }}
                             onClick={() => setPlace(t.staffId)}
-                            className="flex w-full cursor-grab items-center gap-1.5 rounded-lg bg-white p-1.5 text-left shadow-sm ring-1 ring-black/5 hover:ring-[color:var(--ink-3)] active:cursor-grabbing">
+                            className="flex w-full cursor-grab items-center gap-1.5 rounded-lg bg-white p-1.5 text-start shadow-sm ring-1 ring-black/5 hover:ring-[color:var(--ink-3)] active:cursor-grabbing">
                             <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--panel)] text-[9px] font-extrabold text-[var(--ink-2)]">{s.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("")}</span>
                             <span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-bold text-[var(--ink)]">{s.name}</span><span className="block truncate text-[9px] text-[var(--ink-3)]">{s.role}{mismatch ? ` · ⚑ ${boxes[`${sug}-${pot}`].label}` : ""}</span></span>
                             {sc != null && <span className="shrink-0 rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[9.5px] font-extrabold text-[#1d3a8f]">{sc}</span>}
@@ -338,13 +339,13 @@ function PlacePopover({ name, role, perf, pot, score, suggest, boxes, onMove, on
   return (
     <div className="fixed inset-0 z-[145] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[14vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-2 flex items-center gap-2"><h3 className="text-[14px] font-extrabold text-[var(--ink)]">{name}</h3><span className="text-[11px] text-[var(--ink-3)]">{role}</span>{score != null && <span className="ml-auto rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">Review {score}/5</span>}<button type="button" onClick={onClose} className="text-[17px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-2 flex items-center gap-2"><h3 className="text-[14px] font-extrabold text-[var(--ink)]">{name}</h3><span className="text-[11px] text-[var(--ink-3)]">{role}</span>{score != null && <span className="ms-auto rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">Review {score}/5</span>}<button type="button" onClick={onClose} className="text-[17px] text-[var(--ink-3)]">×</button></div>
         <div className="space-y-2"><Row label="Performance" val={p} set={setP} hint={suggest} /><Row label="Potential" val={q} set={setQ} /></div>
         <div className="mt-2 rounded-lg p-2 text-[11px] font-semibold" style={{ background: cell.tone + "14", color: cell.tone }}>{cell.label} — <span className="font-normal text-[var(--ink-2)]">{cell.action}</span>{suggest != null && suggest !== p && <div className="mt-0.5 text-[10px] font-normal text-[var(--ink-3)]">⚑ Their latest review score suggests {({ 1: "Low", 2: "Medium", 3: "High" } as const)[suggest]} performance.</div>}</div>
         <label className="mt-2 block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Add a note (optional)</span><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Why this placement…" className="w-full rounded-lg border border-[var(--line)] p-2 text-[12px]" /></label>
         <div className="mt-3 flex items-center gap-2">
           <button type="button" onClick={onOpenReview} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Open review →</button>
-          <div className="ml-auto flex gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => { onMove(p, q); if (note.trim()) onLogNote(note.trim()); onClose(); }}>Save</Button></div>
+          <div className="ms-auto flex gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => { onMove(p, q); if (note.trim()) onLogNote(note.trim()); onClose(); }}>Save</Button></div>
         </div>
       </div>
     </div>
@@ -363,7 +364,7 @@ function PIPEditor({ pip, team, reviews, onSave, onDelete, onClose }: { pip: PIP
   return (
     <div className="fixed inset-0 z-[145] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[16px] font-extrabold text-[var(--ink)]">Performance improvement plan</h3><span className="ml-auto rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: PIP_STATUS_TONE[p.status] + "1a", color: PIP_STATUS_TONE[p.status] }}>{PIP_STATUS_LABEL[p.status]} · {pct}%</span><button type="button" onClick={onClose} className="text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[16px] font-extrabold text-[var(--ink)]">Performance improvement plan</h3><span className="ms-auto rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: PIP_STATUS_TONE[p.status] + "1a", color: PIP_STATUS_TONE[p.status] }}>{PIP_STATUS_LABEL[p.status]} · {pct}%</span><button type="button" onClick={onClose} className="text-[18px] text-[var(--ink-3)]">×</button></div>
 
         {/* who + dates + status */}
         <div className="grid gap-2 sm:grid-cols-2">
@@ -378,7 +379,7 @@ function PIPEditor({ pip, team, reviews, onSave, onDelete, onClose }: { pip: PIP
         <label className="mt-3 block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Concern — why the plan is needed</span><textarea value={p.concern} onChange={(e) => set({ concern: e.target.value })} rows={2} className="w-full rounded-lg border border-[var(--line)] p-2 text-[12.5px]" /></label>
 
         {/* targets */}
-        <div className="mt-3 flex items-center gap-2"><span className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🎯 Targets to meet</span><span className="text-[10.5px] text-[var(--ink-3)]">{p.targets.filter((t) => t.met).length}/{p.targets.length} met</span><button type="button" onClick={() => set({ targets: [...p.targets, { id: uid(), text: "", measure: "", met: false }] })} className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">+ Add target</button></div>
+        <div className="mt-3 flex items-center gap-2"><span className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🎯 Targets to meet</span><span className="text-[10.5px] text-[var(--ink-3)]">{p.targets.filter((t) => t.met).length}/{p.targets.length} met</span><button type="button" onClick={() => set({ targets: [...p.targets, { id: uid(), text: "", measure: "", met: false }] })} className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">+ Add target</button></div>
         <div className="mt-1 space-y-1.5">{p.targets.map((t) => (
           <div key={t.id} className="flex items-start gap-2 rounded-lg border border-[var(--line)] p-2">
             <button type="button" onClick={() => setTarget(t.id, { met: !t.met })} className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md text-[11px] font-bold ${t.met ? "bg-[#0f7a43] text-white" : "bg-[var(--panel)] text-transparent hover:text-[var(--ink-3)]"}`}>✓</button>
@@ -405,7 +406,7 @@ function PIPEditor({ pip, team, reviews, onSave, onDelete, onClose }: { pip: PIP
           <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Linked review</span><Select value={p.reviewId || ""} onChange={(e) => set({ reviewId: e.target.value || undefined })} className="w-full text-[12px]"><option value="">— none —</option>{staffReviews.map((r) => <option key={r.id} value={r.id}>{KIND_LABEL[r.kind]} · {fmtDate(r.due)}</option>)}</Select></label>
           <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Outcome / status</span><Select value={p.status} onChange={(e) => set({ status: e.target.value as PIP["status"] })} className="w-full text-[12px]">{(Object.keys(PIP_STATUS_LABEL) as PIP["status"][]).map((s) => <option key={s} value={s}>{PIP_STATUS_LABEL[s]}</option>)}</Select></label>
         </div>
-        <div className="mt-3 flex items-center gap-2"><button type="button" onClick={onDelete} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Delete plan</button><div className="ml-auto flex gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!p.staffId} onClick={() => onSave(p)}>Save PIP</Button></div></div>
+        <div className="mt-3 flex items-center gap-2"><button type="button" onClick={onDelete} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Delete plan</button><div className="ms-auto flex gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!p.staffId} onClick={() => onSave(p)}>Save PIP</Button></div></div>
       </div>
     </div>
   );
@@ -424,7 +425,7 @@ function ReviewEditor({ rev, appraisers, onSave, onClose }: { rev: Review; appra
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-1 flex items-center gap-2"><h3 className="text-[16px] font-extrabold text-[var(--ink)]">{r.name}</h3><span className="text-[12.5px] text-[var(--ink-3)]">· {KIND_LABEL[r.kind]} · due {fmtDate(r.due)}</span><span className="ml-auto rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">{STATUS_LABEL[r.status]}</span><button type="button" onClick={onClose} className="ml-1 text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-1 flex items-center gap-2"><h3 className="text-[16px] font-extrabold text-[var(--ink)]">{r.name}</h3><span className="text-[12.5px] text-[var(--ink-3)]">· {KIND_LABEL[r.kind]} · due {fmtDate(r.due)}</span><span className="ms-auto rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">{STATUS_LABEL[r.status]}</span><button type="button" onClick={onClose} className="ms-1 text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="mb-3 flex items-center gap-2"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Appraiser</span><Select value={r.appraiser || "You"} onChange={(e) => set({ appraiser: e.target.value })} className="w-56 text-[12px]">{[...new Set([r.appraiser || "You", ...appraisers])].filter((a) => slug(a) !== r.staffId).map((a) => <option key={a} value={a}>{a}</option>)}</Select><span className="text-[10.5px] text-[var(--ink-3)]">conducts &amp; edits this form</span></div>
 
         {/* data-informed signals */}
@@ -439,20 +440,20 @@ function ReviewEditor({ rev, appraisers, onSave, onClose }: { rev: Review; appra
         {r.self.done && <div className="mb-3 rounded-xl border border-[var(--line)] p-3"><div className="mb-1 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🧑 Self-assessment</div>{r.self.text && <p className="mb-1.5 text-[12.5px] italic text-[var(--ink-2)]">“{r.self.text}”</p>}<div className="flex flex-wrap gap-1.5">{tpl.competencies.map((c) => { const s = r.self.ratings.find((x) => x.id === c.id)?.rating; return <span key={c.id} className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-semibold text-[var(--ink-2)]">{c.label.split(" ")[0]}: {s ? `${s}` : "—"}</span>; })}</div></div>}
 
         {/* manager ratings */}
-        <div className="mb-1 flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">👤 {r.appraiser && r.appraiser !== "You" ? `${r.appraiser}'s review` : "Appraiser review"}</div>{overall != null && <span className="ml-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[11px] font-extrabold text-[#0f7a43]">Overall {overall}/5</span>}</div>
+        <div className="mb-1 flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">👤 {r.appraiser && r.appraiser !== "You" ? `${r.appraiser}'s review` : "Appraiser review"}</div>{overall != null && <span className="ms-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[11px] font-extrabold text-[#0f7a43]">Overall {overall}/5</span>}</div>
         <div className="space-y-1.5">{tpl.competencies.map((c) => { const cur = r.manager.ratings.find((x) => x.id === c.id)?.rating; return (
           <div key={c.id} className="flex items-center gap-2"><div className="min-w-0 flex-1"><div className="truncate text-[12.5px] font-semibold text-[var(--ink)]">{c.label}</div>{c.desc && <div className="truncate text-[10.5px] text-[var(--ink-3)]">{c.desc}</div>}</div><div className="flex gap-1">{([1, 2, 3, 4, 5] as Rating[]).map((n) => (<button key={n} type="button" onClick={() => setMgrRating(c.id, n)} title={RATING_LABEL[n]} className={`h-7 w-7 rounded-lg text-[12px] font-bold ${cur === n ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-2)] hover:bg-[#e2e8f4]"}`}>{n}</button>))}</div></div>
         ); })}</div>
         <label className="mt-2 block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Manager summary</span><textarea value={r.manager.text || ""} onChange={(e) => set({ manager: { ...r.manager, text: e.target.value } })} rows={2} placeholder="Strengths, areas to develop, overall comment…" className="w-full rounded-lg border border-[var(--line)] p-2 text-[12.5px]" /></label>
 
         {/* goals */}
-        <div className="mt-3 flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🎯 Goals & objectives</div><button type="button" onClick={addGoal} className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">+ Add goal</button></div>
+        <div className="mt-3 flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🎯 Goals & objectives</div><button type="button" onClick={addGoal} className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">+ Add goal</button></div>
         <div className="mt-1 space-y-2">{r.goals.map((g) => { const pct = g.status === "done" ? 100 : (g.progress ?? 0); return (
           <div key={g.id} className="rounded-xl border border-[var(--line)] p-2.5">
             <div className="flex items-center gap-2"><Input value={g.title} onChange={(e) => setGoal(g.id, { title: e.target.value })} placeholder="SMART objective — e.g. Mentor two new coaches by term end" className="flex-1 text-[12.5px] font-semibold" /><Select value={g.status} onChange={(e) => setGoal(g.id, { status: e.target.value as Goal["status"] })} className="w-32 text-[12px]">{(Object.keys(GOAL_STATUS_LABEL) as Goal["status"][]).map((s) => <option key={s} value={s}>{GOAL_STATUS_LABEL[s]}</option>)}</Select><button type="button" onClick={() => set({ goals: r.goals.filter((x) => x.id !== g.id) })} className="px-1 text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button></div>
             <textarea value={g.detail || ""} onChange={(e) => setGoal(g.id, { detail: e.target.value })} rows={2} placeholder="What good looks like, how it'll be measured, support needed…" className="mt-1.5 w-full rounded-lg border border-[var(--line)] p-2 text-[12px]" />
             <div className="mt-1.5 flex flex-wrap items-center gap-3">
-              <div className="flex min-w-[160px] flex-1 items-center gap-2"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Progress</span><input type="range" min={0} max={100} step={5} value={pct} disabled={g.status === "done"} onChange={(e) => setGoal(g.id, { progress: Number(e.target.value) })} className="flex-1 accent-[#1d3a8f]" /><span className="w-9 text-right text-[11px] font-bold tabular-nums text-[var(--ink-2)]">{pct}%</span></div>
+              <div className="flex min-w-[160px] flex-1 items-center gap-2"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Progress</span><input type="range" min={0} max={100} step={5} value={pct} disabled={g.status === "done"} onChange={(e) => setGoal(g.id, { progress: Number(e.target.value) })} className="flex-1 accent-[#1d3a8f]" /><span className="w-9 text-end text-[11px] font-bold tabular-nums text-[var(--ink-2)]">{pct}%</span></div>
               <label className="flex items-center gap-1 text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Links to<Select value={g.compId || ""} onChange={(e) => setGoal(g.id, { compId: e.target.value || undefined })} className="text-[11px] font-normal normal-case"><option value="">— competency —</option>{tpl.competencies.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</Select></label>
               <label className="flex items-center gap-1 text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Target<Input type="date" value={g.due || ""} onChange={(e) => setGoal(g.id, { due: e.target.value })} className="w-36 text-[11px]" /></label>
             </div>
@@ -466,7 +467,7 @@ function ReviewEditor({ rev, appraisers, onSave, onClose }: { rev: Review; appra
         {/* sign-off */}
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-3">
           <span className="text-[11px] text-[var(--ink-3)]">{r.signoff.managerAt ? `✓ Manager signed ${fmtDate(r.signoff.managerAt)}` : "Not signed"}{r.signoff.staffAt ? ` · Staff acknowledged ${fmtDate(r.signoff.staffAt)}` : ""}</span>
-          <div className="ml-auto flex gap-2">
+          <div className="ms-auto flex gap-2">
             <Button onClick={onClose}>Cancel</Button>
             <Button onClick={() => onSave({ ...r, status: "self", self: { ...r.self, done: false } })}>Save draft</Button>
             <Button variant="primary" onClick={() => onSave({ ...r, status: "complete", signoff: { managerAt: isoDate(new Date()), staffAt: r.signoff.staffAt || isoDate(new Date()) } })}>Sign off & complete</Button>
@@ -483,7 +484,7 @@ function NewReview({ team, appraisers, onCreate, onClose }: { team: TeamMember[]
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[10vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">New review</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">New review</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={name} onChange={(e) => setName(e.target.value)} className="w-full"><option value="">Choose…</option>{team.map((s) => <option key={s.name} value={slug(s.name)}>{s.name}{s.role ? ` · ${s.role}` : ""}</option>)}</Select>{!team.length && <span className="mt-1 block text-[11px] text-[var(--ink-3)]">No one on your team yet — invite staff under Team &amp; invites first.</span>}</label>
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Appraiser <span className="font-normal normal-case text-[var(--ink-3)]">— who conducts &amp; signs it off</span></span><Select value={appraiser} onChange={(e) => setAppraiser(e.target.value)} className="w-full">{appraisers.filter((a) => slug(a) !== name).map((a) => <option key={a} value={a}>{a}</option>)}</Select></label>
@@ -503,7 +504,7 @@ function AddFeedback({ team, onAdd, onClose }: { team: TeamMember[]; onAdd: (f: 
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[12vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Log feedback / 1:1</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Log feedback / 1:1</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={name} onChange={(e) => setName(e.target.value)} className="w-full"><option value="">Choose…</option>{team.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}</Select></label>

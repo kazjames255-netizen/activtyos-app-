@@ -9,6 +9,7 @@
 // else's pay. Nothing published yet = an honest empty state. The demo still
 // reads the demo store, filtered to the demo person. Statutory (RTI-backed)
 // payslips are the payroll provider's — docs/payroll-integrations-handoff.md.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui";
 import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
@@ -22,7 +23,7 @@ const rich = (s: string) => s.split("**").map((p, i) => (i % 2 ? <b key={i}>{p}<
 // demo "me" — matches the Staff certificates / documents areas
 const ME = "Marcus Bell";
 
-const gbp = (n: number) => "£" + (n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const gbp = (n: number) => "£" + (n || 0).toLocaleString(dl(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function StaffPayslipsApp() {
   const { t, locale: appLocale } = useI18n();
@@ -50,7 +51,7 @@ export function StaffPayslipsApp() {
       <PageHero title={t("staffp.payTitle")} icon="🧾" lede={t("staffp.payLede")} />
 
       {/* year-to-date summary */}
-      {loadErr && <Card className="mb-3 border-l-4 border-l-[#c0392b] p-3 text-[12.5px] font-semibold text-[#c0392b]">⚠ Couldn&rsquo;t load your payslips — check your connection and reopen this page.</Card>}
+      {loadErr && <Card className="mb-3 border-s-4 border-s-[#c0392b] p-3 text-[12.5px] font-semibold text-[#c0392b]">⚠ Couldn&rsquo;t load your payslips — check your connection and reopen this page.</Card>}
       {mine.length > 0 && <CollapsibleStats id="payslips">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
@@ -80,7 +81,7 @@ export function StaffPayslipsApp() {
                 <button
                   type="button"
                   onClick={() => openPayslip(line, run.period, run.paidOn, provider, runs)}
-                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  className="flex min-w-0 flex-1 items-center gap-3 text-start"
                 >
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#eef4fd] text-[15px]">🧾</span>
                   <span className="min-w-0">
@@ -90,7 +91,7 @@ export function StaffPayslipsApp() {
                     </span>
                   </span>
                 </button>
-                <span className="text-right">
+                <span className="text-end">
                   <span className="block text-[13px] font-extrabold tabular-nums text-[#0f7a43]">{gbp(line.netM)}</span>
                   <span className="block text-[11px] text-[var(--ink-3)]">{t("staffp.payNetView")}</span>
                 </span>
@@ -101,7 +102,7 @@ export function StaffPayslipsApp() {
                     type="button"
                     onClick={() => openFile(`/api/payroll/runs/${run.id}/payslip/${encodeURIComponent(line.staffKey ?? line.id)}/pdf`)}
                     title={t("staffp.payDownloadPdf")}
-                    className="ml-1 shrink-0 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--ink-3)] hover:bg-white"
+                    className="ms-1 shrink-0 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--ink-3)] hover:bg-white"
                   >
                     ⬇ {t("staffp.payDownloadPdf")}
                   </button>

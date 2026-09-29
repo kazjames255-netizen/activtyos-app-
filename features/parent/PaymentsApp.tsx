@@ -44,9 +44,9 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
           {b.child} · {bookingDateSummary(b)} · Ref {b.ref}
         </div>
       </div>
-      <span className="hidden w-[92px] text-right text-[11.5px] text-[var(--ink-3)] sm:inline">{methodOf(b)}</span>
+      <span className="hidden w-[92px] text-end text-[11.5px] text-[var(--ink-3)] sm:inline">{methodOf(b)}</span>
       <Badge tone={payTone(b.pay)}>{payLabelFor(b)}</Badge>
-      <span className="w-[72px] text-right text-[13.5px] font-extrabold">{money(b.amount)}</span>
+      <span className="w-[72px] text-end text-[13.5px] font-extrabold">{money(b.amount)}</span>
       {onPdf ? (
         <button
           onClick={onPdf}
@@ -56,7 +56,7 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
           {t("parent.pdfLabel")}
         </button>
       ) : (
-        <span className="w-[52px] text-right text-[10.5px] text-[var(--ink-3)]">{t("parent.receiptAfterPayment")}</span>
+        <span className="w-[52px] text-end text-[10.5px] text-[var(--ink-3)]">{t("parent.receiptAfterPayment")}</span>
       )}
       {action && (
         <Button sm variant="primary" onClick={onPay}>
@@ -230,7 +230,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
       </div>
 
       {owed.length > 0 && (
-        <Card className="mb-3 p-4" style={{ borderLeftWidth: "4px", borderLeftColor: "var(--red,#e21d27)" }}>
+        <Card className="mb-3 p-4" style={{ borderInlineStartWidth: "4px", borderInlineStartColor: "var(--red,#e21d27)" }}>
           <div className="mb-1.5 text-[13px] font-extrabold">{tr("parent.waitingOnPayment")}</div>
           {owed.map((b) => <Row key={b.ref} b={b} action onPay={() => { setPayingTenant(b.tenantId); setPaying([b.ref]); }} />)}
         </Card>

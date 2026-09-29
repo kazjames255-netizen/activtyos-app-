@@ -316,7 +316,7 @@ export function SetupWizard() {
                   s.generate(mode);
                   s.setTab(1);
                 }}
-                className={`flex max-w-[340px] flex-1 flex-col items-start gap-1.5 rounded-xl border-[1.5px] p-4 text-left ${
+                className={`flex max-w-[340px] flex-1 flex-col items-start gap-1.5 rounded-xl border-[1.5px] p-4 text-start ${
                   s.mode === mode ? "border-[var(--brand)] bg-[var(--brand-soft)]" : "border-[var(--line)] bg-[var(--surface)]"
                 }`}
               >

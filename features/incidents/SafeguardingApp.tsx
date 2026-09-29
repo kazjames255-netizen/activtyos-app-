@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -27,7 +28,7 @@ interface SgLog {
 const RISK ={ minor: { label: "Low", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { label: "Medium", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "High", bg: "#fdebec", fg: "#c02636" } } as const;
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const nowTime = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${p(t.getHours())}:${p(t.getMinutes())}`; };
-const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
+const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
 const readAsDataUrl = (f: File) => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("read")); r.readAsDataURL(f); });
 
 interface DslEntry { id: string; key: string; label: string; note?: string; reviewDate?: string; at: string; by?: string; done?: boolean; doneAt?: string }
@@ -140,7 +141,7 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
       <FieldLabel>This concern is about…</FieldLabel>
       <div className="mb-2.5 mt-1 grid gap-1.5 sm:grid-cols-2">
         {([["child", "🧒 A child", "A child on camp"], ["staff", "🧑‍🏫 A member of staff", "An allegation about staff / a volunteer"]] as [("child" | "staff"), string, string][]).map(([v, t, sub]) => (
-          <button key={v} type="button" onClick={() => set({ subject: v, ...(v === "staff" && !d.concernCategory ? { concernCategory: "Allegation against a member of staff / volunteer", severity: riskFor("allegation") } : {}) })} className="rounded-xl border-2 px-3 py-2 text-left transition-colors" style={(d.subject ?? "child") === v ? { borderColor: "#1d3a8f", background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+          <button key={v} type="button" onClick={() => set({ subject: v, ...(v === "staff" && !d.concernCategory ? { concernCategory: "Allegation against a member of staff / volunteer", severity: riskFor("allegation") } : {}) })} className="rounded-xl border-2 px-3 py-2 text-start transition-colors" style={(d.subject ?? "child") === v ? { borderColor: "#1d3a8f", background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
             <div className="text-[12.5px] font-extrabold" style={{ color: (d.subject ?? "child") === v ? "#1d3a8f" : "var(--ink-2)" }}>{t}</div>
             <div className="text-[11px] text-[var(--ink-3)]">{sub}</div>
           </button>
@@ -176,7 +177,7 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
         <div className="mt-2.5 rounded-xl border p-3" style={{ background: tone.bg, borderColor: tone.line }}>
           <div className="text-[12px] font-extrabold" style={{ color: tone.fg }}>What to do now</div>
           <div className="mt-0.5 text-[11.5px]" style={{ color: tone.fg }}><b>{proto.due}</b> · {proto.who} · <span className="opacity-80">{proto.ref}</span></div>
-          <ol className="mt-1.5 list-decimal space-y-0.5 pl-4 text-[11.5px] text-[var(--ink-2)]">{proto.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
+          <ol className="mt-1.5 list-decimal space-y-0.5 ps-4 text-[11.5px] text-[var(--ink-2)]">{proto.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
           <ContactsBlock c={sg.contacts} authorityName={d.localAuthority} />
         </div>
       )}
@@ -207,7 +208,7 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
 
       <div className="mt-2.5">
         <FieldLabel>Attach a file (optional)</FieldLabel>
-        <input type="file" accept="image/*" multiple onChange={(e) => attach(e.target.files)} className="block w-full text-[12px] text-[var(--ink-2)] file:mr-2 file:rounded-md file:border-0 file:bg-[#eef4fd] file:px-2.5 file:py-1 file:text-[12px] file:font-bold file:text-[#1d3a8f]" />
+        <input type="file" accept="image/*" multiple onChange={(e) => attach(e.target.files)} className="block w-full text-[12px] text-[var(--ink-2)] file:me-2 file:rounded-md file:border-0 file:bg-[#eef4fd] file:px-2.5 file:py-1 file:text-[12px] file:font-bold file:text-[#1d3a8f]" />
         {uploading && <div className="mt-1 text-[11px] text-[var(--ink-3)]">Uploading…</div>}
         {(d.attachments?.length ?? 0) > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -231,7 +232,7 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
 }
 
 const DTONE: Record<string, { c: string; bg: string }> = { red: { c: "#c02636", bg: "#fdebec" }, amber: { c: "#9a5a00", bg: "#fdf3d8" }, grey: { c: "#1d3a8f", bg: "#eef4fd" } };
-const stampTime = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const stampTime = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 
 // Build a print-friendly window of the whole concern + DSL decision → "Save as PDF".
 interface Dossier {
@@ -435,7 +436,7 @@ function DslActions({ rec, contacts, provider, onSaved }: { rec: SgLog; contacts
       <div className="mt-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Add an action</div>
       <div className="mt-1 grid gap-1.5 sm:grid-cols-2">
         {DSL_DECISIONS.map((o) => { const tc = DTONE[o.tone] ?? DTONE.grey; return (
-          <button key={o.key} type="button" onClick={() => add(o)} className="rounded-lg border-2 border-[var(--line)] bg-white p-2 text-left transition-colors hover:border-[#1d3a8f]">
+          <button key={o.key} type="button" onClick={() => add(o)} className="rounded-lg border-2 border-[var(--line)] bg-white p-2 text-start transition-colors hover:border-[#1d3a8f]">
             <div className="text-[12px] font-extrabold" style={{ color: tc.c }}>＋ {o.label}</div>
             <div className="mt-0.5 text-[10.5px] leading-snug text-[var(--ink-3)]">{o.when}</div>
           </button>
@@ -548,7 +549,7 @@ export function SafeguardingApp() {
           {([["", "All"], ["minor", "Low"], ["moderate", "Medium"], ["serious", "High"]] as [string, string][]).map(([id, label]) => (
             <button key={label} type="button" onClick={() => setRiskFilter(id)} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors" style={riskFilter === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{label}</button>
           ))}
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search child, category or details…" className="ml-auto w-60 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search child, category or details…" className="ms-auto w-60 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
         </div>
       )}
 
@@ -606,7 +607,7 @@ export function SafeguardingApp() {
                           {l.reportedTo && <div><span className="text-[var(--ink-3)]">Told: </span><b>{l.reportedTo}</b></div>}
                           {l.witnesses && <div><span className="text-[var(--ink-3)]">Witnesses: </span><b>{l.witnesses}</b></div>}
                           {l.recordedByName && <div><span className="text-[var(--ink-3)]">Recorded by: </span><b>{l.recordedByName}</b></div>}
-                          {(l.attachments?.length ?? 0) > 0 && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Attachments: </span>{l.attachments!.map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer" className="mr-2 font-bold text-[#1d3a8f] underline">📎 file {i + 1}</a>)}</div>}
+                          {(l.attachments?.length ?? 0) > 0 && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Attachments: </span>{l.attachments!.map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer" className="me-2 font-bold text-[#1d3a8f] underline">📎 file {i + 1}</a>)}</div>}
                         </div>
                         {(l.bodyMap?.length ?? 0) > 0 && <div className="mt-2.5"><BodyMap value={l.bodyMap ?? []} readOnly startOpen /></div>}
                         <div className="mt-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Action log &amp; notes</div>

@@ -550,7 +550,7 @@ export function MotionBlock({ b, onDone }: { b: { title?: string; voice?: boolea
             <div className="absolute inset-x-0 bottom-3 z-20 flex flex-col items-center gap-2 px-4">
               <div className="flex w-full max-w-[440px] flex-col gap-1.5">
                 {(scene.choices ?? []).map((c, ci) => (
-                  <button key={ci} type="button" onClick={() => answer(cur, c.ok, c.fb)} className="rounded-xl border px-3 py-2 text-left text-[12.5px] font-bold text-white transition-colors hover:bg-white/20" style={{ borderColor: "rgba(255,255,255,.35)", background: "rgba(255,255,255,.10)" }}>{c.label}</button>
+                  <button key={ci} type="button" onClick={() => answer(cur, c.ok, c.fb)} className="rounded-xl border px-3 py-2 text-start text-[12.5px] font-bold text-white transition-colors hover:bg-white/20" style={{ borderColor: "rgba(255,255,255,.35)", background: "rgba(255,255,255,.10)" }}>{c.label}</button>
                 ))}
               </div>
             </div>
@@ -572,7 +572,7 @@ export function MotionBlock({ b, onDone }: { b: { title?: string; voice?: boolea
           <button type="button" onClick={replay} className="grid h-8 w-8 place-items-center rounded-full bg-white/12 text-[13px] text-white" aria-label="Replay from start">↺</button>
           <input type="range" min={0} max={totalMs} value={elapsed.current} onChange={(e) => seek(Number(e.target.value))} className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full" style={{ background: `linear-gradient(90deg, ${WARM} ${pct}%, rgba(255,255,255,.22) ${pct}%)` }} aria-label="Scrub" />
           <span className="tabular-nums text-[11px] font-semibold text-white/80">{fmt(elapsed.current)} / {fmt(totalMs)}</span>
-          <button type="button" onClick={() => { narrator.stop(); spoken.current = -1; setMode((m) => (m === "voice" ? "text" : "voice")); }} className="ml-1 rounded-full px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: mode === "voice" ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.08)" }} aria-pressed={mode === "voice"} title={mode === "voice" ? "Narration on — switch to text only" : "Text only — switch narration on"}>{mode === "voice" ? "🔊 Voice" : "📝 Text"}</button>
+          <button type="button" onClick={() => { narrator.stop(); spoken.current = -1; setMode((m) => (m === "voice" ? "text" : "voice")); }} className="ms-1 rounded-full px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: mode === "voice" ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.08)" }} aria-pressed={mode === "voice"} title={mode === "voice" ? "Narration on — switch to text only" : "Text only — switch narration on"}>{mode === "voice" ? "🔊 Voice" : "📝 Text"}</button>
         </div>
       </div>
       {b.title && <figcaption className="mt-2 text-center text-[11.5px] font-semibold text-[var(--ink-3)]">{b.title}</figcaption>}

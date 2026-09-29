@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { get as apiGet, put as apiPut, openFile, isDemoMode } from "@/lib/api";
@@ -65,7 +66,7 @@ const dueChip = (due: string, today: string) => {
   if (due === today) return "Today";
   if (due === addDaysIso(today, 1)) return "Tomorrow";
   if (due < today) return "Overdue";
-  return new Date(`${due}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return new Date(`${due}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" });
 };
 function myShiftToday(day: string, ME: string): MyShift | null {
   try {
@@ -112,7 +113,7 @@ function Section({ id, icon, title, sub, tint, ink, badge, action, defaultOpen =
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-[0_1px_3px_rgba(20,30,60,.06)]">
       <div className="flex items-center gap-2 px-4 py-3" style={{ background: tint }}>
-        <button type="button" onClick={toggle} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+        <button type="button" onClick={toggle} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2.5 text-start">
           <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white text-[16px] shadow-sm" style={{ color: ink }}>{icon}</span>
           <div className="min-w-0">
             <div className="text-[14px] font-extrabold leading-tight" style={{ color: ink }}>{title}</div>
@@ -232,7 +233,7 @@ export function StaffDashApp() {
   // `status`, not `done` — the schema has no `done` field, so the old body was
   // stripped and the tick never saved.
   const tickTask = (task: Task) => { setTasks((list) => (list ?? []).map((x) => (x.id === task.id ? { ...x, status: "done" as const } : x))); void apiPut(`/api/tasks/${task.id}`, { status: "done" }).catch(() => refresh()); };
-  const dayLabel = new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const dayLabel = new Date(`${date}T00:00:00`).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long" });
   // Where I'm working today — match the shift's venue name to the library venue for its address.
   const myVenueName = shift?.site || shift?.listing || "";
   const myVenue = venues.find((v) => v.name === myVenueName);
@@ -278,7 +279,7 @@ export function StaffDashApp() {
     .filter((a) => a.date >= sinceIso && !annRead.includes(a.id))
     .sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || (Number(!!b.important) - Number(!!a.important)) || b.date.localeCompare(a.date));
   const curAnn = recentUnread[0] ?? null;
-  const annDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const annDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" });
   const markAnnRead = (id: string) => { const next = Array.from(new Set([...annRead, id])); setAnnRead(next); void markAnnouncementRead(id).catch(() => {}); setAnnOpen(false); };
 
   return (
@@ -297,7 +298,7 @@ export function StaffDashApp() {
         <div className="inline-flex items-center gap-0.5 rounded-xl border border-[var(--line)] bg-white p-1 shadow-sm">
           <button type="button" onClick={() => setDate(addDaysIso(date, -1))} aria-label={t("dashboard.previousDay")} className="grid h-7 w-7 place-items-center rounded-lg text-[16px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">‹</button>
           <label className="relative flex cursor-pointer items-center gap-1.5 px-2 text-[12.5px] font-bold text-[var(--ink)]">
-            <span>📅 {new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}{isToday ? ` · ${t("dashboard.today")}` : ""}</span>
+            <span>📅 {new Date(`${date}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" })}{isToday ? ` · ${t("dashboard.today")}` : ""}</span>
             <input type="date" value={date} onChange={(e) => { if (e.target.value) setDate(e.target.value); }} className="absolute inset-0 cursor-pointer opacity-0" aria-label={t("dashboard.pickADate")} />
           </label>
           <button type="button" onClick={() => setDate(addDaysIso(date, 1))} aria-label={t("dashboard.nextDay")} className="grid h-7 w-7 place-items-center rounded-lg text-[16px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">›</button>
@@ -315,7 +316,7 @@ export function StaffDashApp() {
               <span className="grid h-8 w-8 flex-none place-items-center rounded-xl bg-[#1d3a8f] text-[15px]">📣</span>
               <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">{t("dashboard.staffAnnouncement")}</div>
               {recentUnread.length > 1 && <span className="rounded-full bg-[#e21d27] px-2 py-0.5 text-[10px] font-black text-white">{t("dashboard.newCount", { count: recentUnread.length })}</span>}
-              <Link href="/staff/announcements" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("dashboard.viewAll")} ›</Link>
+              <Link href="/staff/announcements" className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("dashboard.viewAll")} ›</Link>
             </div>
             <div className="px-4 pb-3.5 pt-2.5">
               <div className="flex items-start gap-2.5">
@@ -333,17 +334,17 @@ export function StaffDashApp() {
               <div className="mt-3 flex items-center gap-2">
                 <button type="button" onClick={() => setAnnOpen(false)} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white transition hover:brightness-110">{t("dashboard.close")}</button>
                 <button type="button" onClick={() => markAnnRead(curAnn.id)} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">✓ {t("dashboard.markAsRead")}</button>
-                <Link href="/staff/announcements" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("dashboard.viewAllAnnouncements")} ›</Link>
+                <Link href="/staff/announcements" className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("dashboard.viewAllAnnouncements")} ›</Link>
               </div>
             </div>
           </div>
         ) : (
-          <button type="button" onClick={() => setAnnOpen(true)} className="mb-3 flex w-full items-center gap-2.5 rounded-2xl border border-[#e3ebff] bg-gradient-to-br from-[#f4f8ff] to-white px-3.5 py-2.5 text-left shadow-[0_1px_3px_rgba(20,30,60,.06)] transition hover:border-[#c9d6f5]">
+          <button type="button" onClick={() => setAnnOpen(true)} className="mb-3 flex w-full items-center gap-2.5 rounded-2xl border border-[#e3ebff] bg-gradient-to-br from-[#f4f8ff] to-white px-3.5 py-2.5 text-start shadow-[0_1px_3px_rgba(20,30,60,.06)] transition hover:border-[#c9d6f5]">
             <span className="grid h-7 w-7 flex-none place-items-center rounded-lg bg-[#1d3a8f] text-[13px]">📣</span>
             <span className="h-2 w-2 flex-none rounded-full" style={{ background: curAnn.important ? "#e21d27" : "#1d3a8f" }} />
             <span className="flex-none text-[13px] font-bold tracking-[-0.01em] text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{curAnn.title}</span>
             <span className="hidden min-w-0 truncate text-[12px] text-[var(--ink-3)] sm:inline">— {curAnn.body}</span>
-            <span className="ml-auto flex flex-none items-center gap-2">
+            <span className="ms-auto flex flex-none items-center gap-2">
               <span className="hidden text-[11px] font-semibold text-[var(--ink-3)] md:inline">{curAnn.author}</span>
               {recentUnread.length > 1 && <span className="rounded-full bg-[#e21d27] px-1.5 py-0.5 text-[9px] font-black text-white">{recentUnread.length}</span>}
               <span className="text-[11.5px] font-bold text-[#1d3a8f]">{t("dashboard.open")} ›</span>
@@ -384,10 +385,10 @@ export function StaffDashApp() {
                     <span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-white/20 text-[9.5px] font-extrabold text-white">{initials(c.name)}</span>
                     <span className="text-[12.5px] font-bold text-white">{c.name}</span>
                     {c.role && <span className="truncate text-[11px] text-white/70">{c.role}</span>}
-                    <span className="ml-auto flex-none tabular-nums text-[12px] font-semibold text-white/90">{to12(c.start)}–{to12(c.end)}</span>
+                    <span className="ms-auto flex-none tabular-nums text-[12px] font-semibold text-white/90">{to12(c.start)}–{to12(c.end)}</span>
                   </div>
                 ))}
-                {coworkers.length > 6 && <div className="pl-8 text-[11px] text-white/70">{t("dashboard.moreOnRota", { count: coworkers.length - 6 })}</div>}
+                {coworkers.length > 6 && <div className="ps-8 text-[11px] text-white/70">{t("dashboard.moreOnRota", { count: coworkers.length - 6 })}</div>}
               </div>
             </div>
           )}
@@ -416,7 +417,7 @@ export function StaffDashApp() {
                   <span className="text-[12px] font-bold text-[var(--ink-3)]">{s.start}–{s.end}</span>
                   <span className="text-[13px] font-extrabold">{s.listingName}</span>
                   <span className="text-[12px] text-[var(--ink-3)]">{s.blockName}</span>
-                  <span className="ml-auto flex items-center gap-1.5 text-[11.5px]">
+                  <span className="ms-auto flex items-center gap-1.5 text-[11.5px]">
                     <Badge tone={{ bg: "var(--brand-soft)", fg: "var(--brand-strong)" }}>{t("dashboard.childrenCount", { count: s.totalChildren })}</Badge>
                     {s.sendCount > 0 && <Badge tone={{ bg: "#f3e8ff", fg: "#7c3aed" }}>{s.sendCount} SEND</Badge>}
                     <Badge tone={s.met ? { bg: "#eaf0fc", fg: "#1d3a8f" } : { bg: "#fdf3d8", fg: "#9a5a00" }}>{s.staffAssigned}/{s.requiredStaff} {t("dashboard.staff")}</Badge>
@@ -431,13 +432,13 @@ export function StaffDashApp() {
       <GroupLabel>{t("dashboard.children")}</GroupLabel>
 
       {/* SEND at a glance — click to open the slideshow */}
-      <button type="button" onClick={() => { setSendIdx(0); setSendOpen(true); }} className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-[#e7e1fb] bg-white p-4 text-left shadow-[0_1px_3px_rgba(20,30,60,.06)] transition hover:bg-[#faf9ff]">
+      <button type="button" onClick={() => { setSendIdx(0); setSendOpen(true); }} className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-[#e7e1fb] bg-white p-4 text-start shadow-[0_1px_3px_rgba(20,30,60,.06)] transition hover:bg-[#faf9ff]">
         <span className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-[#efe9fe] text-[18px]">🧩</span>
         <div>
           <div className="text-[22px] font-extrabold leading-none tabular-nums text-[#6d28d9]" style={{ fontFamily: "var(--ff-display)" }}>{regs === null ? "…" : sendKids.length}</div>
           <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.07em] text-[var(--ink-3)]">{t("dashboard.childrenMarkedSend")}</div>
         </div>
-        <span className="ml-auto flex-none rounded-full bg-[#6d28d9] px-3.5 py-1.5 text-[12px] font-extrabold text-white transition hover:brightness-110">{t("dashboard.viewPlans")} ›</span>
+        <span className="ms-auto flex-none rounded-full bg-[#6d28d9] px-3.5 py-1.5 text-[12px] font-extrabold text-white transition hover:brightness-110">{t("dashboard.viewPlans")} ›</span>
       </button>
 
       <div className="mb-3 grid items-start gap-3 lg:grid-cols-2">
@@ -446,20 +447,20 @@ export function StaffDashApp() {
             : regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.loading")}</div>
             : watch.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.noFlaggedChildren")}</div>
               : watch.map((k) => (
-                <button type="button" key={k.key} onClick={() => setProfile(k)} title={t("dashboard.viewCareCard")} className="-mx-1 flex w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border-b border-dashed border-[var(--line)] px-1 py-2 text-left transition-colors last:border-b-0 hover:bg-[var(--panel)]">
+                <button type="button" key={k.key} onClick={() => setProfile(k)} title={t("dashboard.viewCareCard")} className="-mx-1 flex w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border-b border-dashed border-[var(--line)] px-1 py-2 text-start transition-colors last:border-b-0 hover:bg-[var(--panel)]">
                   <span className="text-[13px] font-extrabold">{k.name}</span>
                   <span className={"rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase " + (k.status === "in" ? "bg-[#d7f5e3] text-[#0f7a43]" : k.status === "absent" ? "bg-[#eef1f6] text-[#64748b]" : "bg-[#fef3d8] text-[#9a5a00]")}>{k.status === "in" ? t("dashboard.statusIn") : k.status === "absent" ? t("dashboard.statusAbsent") : t("dashboard.statusDue")}</span>
                   <span className="flex flex-wrap gap-1">
                     {k.flags.map((f, i) => (
                       <span key={i} className="group/flag relative inline-block" aria-label={f.detail ? `${f.k}: ${f.detail}` : f.k}>
                         <span className="cursor-help rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: f.bg, color: f.fg }}>{f.k}</span>
-                        <span className="pointer-events-none absolute left-0 top-full z-30 mt-1 hidden w-max max-w-[260px] rounded-lg bg-[#111634] px-2.5 py-1.5 text-[11px] font-semibold leading-snug text-white shadow-[0_8px_24px_-6px_rgba(0,0,0,.5)] group-hover/flag:block">
+                        <span className="pointer-events-none absolute start-0 top-full z-30 mt-1 hidden w-max max-w-[260px] rounded-lg bg-[#111634] px-2.5 py-1.5 text-[11px] font-semibold leading-snug text-white shadow-[0_8px_24px_-6px_rgba(0,0,0,.5)] group-hover/flag:block">
                           <b className="text-white">{f.k}</b>{f.detail ? <span className="font-normal text-white/85"> — {f.detail}</span> : <span className="font-normal text-white/70"> — {t("dashboard.noDetailRecorded")}</span>}
                         </span>
                       </span>
                     ))}
                   </span>
-                  <span className="ml-auto flex items-center gap-1.5 text-[11px] text-[var(--ink-3)]">{k.where}<span className="text-[var(--brand,#1d3a8f)]">›</span></span>
+                  <span className="ms-auto flex items-center gap-1.5 text-[11px] text-[var(--ink-3)]">{k.where}<span className="text-[var(--brand,#1d3a8f)]">›</span></span>
                 </button>
               ))}
       </Section>
@@ -565,7 +566,7 @@ export function StaffDashApp() {
                         <div className="text-[17px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{k.name}</div>
                         <div className="text-[12px] text-[var(--ink-3)]">{k.where}</div>
                       </div>
-                      <span className="ml-auto flex-none rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold tabular-nums text-[var(--ink-2)]">{idx + 1} / {n}</span>
+                      <span className="ms-auto flex-none rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold tabular-nums text-[var(--ink-2)]">{idx + 1} / {n}</span>
                     </div>
 
                     {/* The uploaded support-plan DOCUMENT — an EHCP/PDF the parent or provider added */}
@@ -576,7 +577,7 @@ export function StaffDashApp() {
                           <div className="text-[13px] font-extrabold text-[var(--ink)]">{k.c.sendPlanName || t("dashboard.sendSupportPlan")}</div>
                           <div className="text-[11px] text-[var(--ink-3)]">{k.c.sendPlanId ? t("dashboard.uploadedDocument") : t("dashboard.noDocumentUploaded")}</div>
                         </div>
-                        {k.c.sendPlanId && <button type="button" onClick={() => openFile(`/api/my/files/${k.c.sendPlanId}`).catch((e) => alert(e instanceof Error ? e.message : t("dashboard.couldntOpenPlan")))} className="ml-auto flex-none rounded-lg bg-[#6d28d9] px-3.5 py-2 text-[12px] font-extrabold text-white transition hover:brightness-110">📄 {t("dashboard.openPlan")} ›</button>}
+                        {k.c.sendPlanId && <button type="button" onClick={() => openFile(`/api/my/files/${k.c.sendPlanId}`).catch((e) => alert(e instanceof Error ? e.message : t("dashboard.couldntOpenPlan")))} className="ms-auto flex-none rounded-lg bg-[#6d28d9] px-3.5 py-2 text-[12px] font-extrabold text-white transition hover:brightness-110">📄 {t("dashboard.openPlan")} ›</button>}
                       </div>
                       {!k.c.sendPlanId && <p className="mt-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">{t("dashboard.noPlanAttached", { name: k.name.split(" ")[0] })}</p>}
                     </div>

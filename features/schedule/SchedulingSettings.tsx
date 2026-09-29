@@ -80,7 +80,7 @@ function SelRow({ label, desc, value, onChange, opts }: { label: string; desc: s
   return <RowShell label={label} desc={desc} control={<Select value={value} onChange={(e) => onChange(e.target.value)} className="min-w-[190px]">{opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>} />;
 }
 function NumRow({ label, desc, value, onChange, suffix, step }: { label: string; desc: string; value: number; onChange: (v: number) => void; suffix?: string; step?: string }) {
-  return <RowShell label={label} desc={desc} control={<span className="inline-flex items-center gap-1.5"><Input type="number" step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-[120px] text-right" />{suffix && <span className="text-[12.5px] font-bold text-[var(--ink-3)]">{suffix}</span>}</span>} />;
+  return <RowShell label={label} desc={desc} control={<span className="inline-flex items-center gap-1.5"><Input type="number" step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-[120px] text-end" />{suffix && <span className="text-[12.5px] font-bold text-[var(--ink-3)]">{suffix}</span>}</span>} />;
 }
 function TogRow({ label, desc, value, onChange }: { label: string; desc: string; value: boolean; onChange: (v: boolean) => void }) {
   const t = useT();

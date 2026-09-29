@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
@@ -30,8 +31,8 @@ const LIGHT_PALETTE = { "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#
 const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)";
 const BLUE = "#1d3a8f", GREEN = "#0f7a43", AMBER = "#9a5a00", RED = "#c02636";
 const inputCls = "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]";
-const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
-const fmtStamp = (iso?: string | null) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
+const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "");
+const fmtStamp = (iso?: string | null) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
 const dayssince = (iso?: string | null) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86400000) : Infinity);
 const isLow = (i: Item) => i.minQty != null && i.quantity <= i.minQty;
 
@@ -128,7 +129,7 @@ export function InventoryApp() {
       <details className="group mb-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
         <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-[13px] font-extrabold" style={{ color: BLUE }}><span className="text-[11px] transition-transform group-open:rotate-90">▸</span> How it works</summary>
         <div className="border-t border-[var(--line)] px-4 py-3 text-[12.5px] leading-[1.6] text-[var(--ink-2)]">
-          <ul className="ml-4 list-disc space-y-1.5">
+          <ul className="ms-4 list-disc space-y-1.5">
             <li><b>Add your kit</b> — each item has a category, where it&rsquo;s stored, how many, an optional reorder level and a season. Items are grouped by category (each colour-coded).</li>
             <li><b>Do a stock check</b> — <b>Start stock check</b> turns every count into an input; enter the real figure and <b>✓ Count</b> saves it and <b>auto-stamps the time + who</b>. The most-recent count sits on the card; click it to see the <b>last 5 counts</b>.</li>
             <li><b>Running low</b> — set a reorder level and an item shows <b>⚠ Low</b> when it drops to it. Anything not counted in a while is flagged <b>due a check</b> (set the window in Settings → Inventory).</li>
@@ -161,7 +162,7 @@ export function InventoryApp() {
           <select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className={inputCls}><option value="">All locations</option>{[...new Set(seasonItems.map((i) => i.location).filter(Boolean))].sort().map((l) => <option key={l} value={l!}>{l}</option>)}</select>
           {lowAlerts && <button type="button" onClick={() => setLowOnly((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={lowOnly ? { borderColor: RED, background: "#fdebec", color: RED } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{lowOnly ? "✓ " : ""}Low stock</button>}
           <button type="button" onClick={() => setUncheckedOnly((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={uncheckedOnly ? { borderColor: AMBER, background: "#FCF1DC", color: "var(--ink-2)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{uncheckedOnly ? "✓ " : ""}Needs a check</button>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search items…" className="ml-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search items…" className="ms-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
         </div>
       )}
 
@@ -198,7 +199,7 @@ export function InventoryApp() {
                             </div>
                           ) : (
                             // most recent count, inline in the header — click to see the last 5
-                            <button type="button" onClick={() => nChecks && setHistId(histId === i.id ? null : i.id)} className="text-right" title={nChecks ? "Count history" : undefined}>
+                            <button type="button" onClick={() => nChecks && setHistId(histId === i.id ? null : i.id)} className="text-end" title={nChecks ? "Count history" : undefined}>
                               <div className="text-[17px] font-extrabold leading-none tabular-nums" style={{ color: lowStock(i) ? RED : "var(--ink)" }}>{i.quantity}{i.unit ? <span className="text-[11px] font-semibold text-[var(--ink-3)]"> {i.unit}</span> : ""}</div>
                               <div className="mt-0.5 text-[10px]" style={stale || !i.lastCheckedAt ? { color: "var(--ink-2)", fontWeight: 700 } : { color: "var(--ink-3)" }}>{i.lastCheckedAt ? `✓ ${fmtDate(i.lastCheckedAt)}${i.lastCheckedBy ? ` · ${i.lastCheckedBy.split(" ")[0]}` : ""}${stale ? " · due" : ""}` : "never checked"}{i.minQty != null ? ` · min ${i.minQty}` : ""}{nChecks > 0 ? (histOpen ? " ▴" : " ▾") : ""}</div>
                             </button>

@@ -8,6 +8,7 @@
 // Deliberately far simpler than the per-site operator Finance hub. Shown for the
 // HO combined view via CompanyFinanceSwitch; the full ledgers stay reachable by
 // direct link for when detail is needed.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { get as apiGet, post as apiPost } from "@/lib/api";
@@ -16,8 +17,8 @@ import { withHoMoney } from "@/lib/ho-net";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import { Button, Card, Input } from "@/components/ui";
 
-const gbp = (n: number) => "£" + Math.round(n || 0).toLocaleString("en-GB");
-const shortDate = (d?: string) => (d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
+const gbp = (n: number) => "£" + Math.round(n || 0).toLocaleString(dl());
+const shortDate = (d?: string) => (d ? new Date(d).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "");
 
 interface FrRow { franchiseId: string; name: string; revenue: number; count: number; fee: number }
 interface SplitPayload { franchises: FrRow[]; totals: { franchises: number; revenue: number; fee: number } }
@@ -106,36 +107,36 @@ export function HoFinanceApp() {
           <div className="rounded-xl border border-dashed border-[var(--line)] p-6 text-center text-[12.5px] text-[var(--ink-3)]">No franchise revenue in this period yet.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-[12.5px]">
+            <table className="w-full border-collapse text-start text-[12.5px]">
               <thead>
                 <tr className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">
-                  <th className="py-1.5 pr-3">Franchise</th>
-                  <th className="py-1.5 pr-3 text-right">Bookings</th>
-                  <th className="py-1.5 pr-3">Revenue</th>
-                  <th className="py-1.5 text-right">Your royalty</th>
+                  <th className="py-1.5 pe-3">Franchise</th>
+                  <th className="py-1.5 pe-3 text-end">Bookings</th>
+                  <th className="py-1.5 pe-3">Revenue</th>
+                  <th className="py-1.5 text-end">Your royalty</th>
                 </tr>
               </thead>
               <tbody>
                 {franchises.map((f) => (
                   <tr key={f.franchiseId} className="border-t border-[var(--line)]">
-                    <td className="py-2 pr-3 font-bold text-[var(--ink)]">{f.name}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums text-[var(--ink-2)]">{f.count}</td>
-                    <td className="py-2 pr-3">
+                    <td className="py-2 pe-3 font-bold text-[var(--ink)]">{f.name}</td>
+                    <td className="py-2 pe-3 text-end tabular-nums text-[var(--ink-2)]">{f.count}</td>
+                    <td className="py-2 pe-3">
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-full max-w-[160px] overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (f.revenue / maxRev) * 100)}%`, background: "linear-gradient(90deg,#2f6bd8,#4f8bf5)" }} /></div>
                         <span className="tabular-nums font-semibold text-[var(--ink-2)]">{gbp(f.revenue)}</span>
                       </div>
                     </td>
-                    <td className="py-2 text-right font-extrabold tabular-nums text-[#1d3a8f]">{gbp(f.fee)}</td>
+                    <td className="py-2 text-end font-extrabold tabular-nums text-[#1d3a8f]">{gbp(f.fee)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-[var(--line)] text-[12.5px]">
-                  <td className="py-2 pr-3 font-extrabold text-[var(--ink)]">Total</td>
-                  <td className="py-2 pr-3" />
-                  <td className="py-2 pr-3 font-extrabold tabular-nums text-[var(--ink)]">{gbp(split?.totals.revenue ?? 0)}</td>
-                  <td className="py-2 text-right font-black tabular-nums text-[#1d3a8f]">{gbp(royalty)}</td>
+                  <td className="py-2 pe-3 font-extrabold text-[var(--ink)]">Total</td>
+                  <td className="py-2 pe-3" />
+                  <td className="py-2 pe-3 font-extrabold tabular-nums text-[var(--ink)]">{gbp(split?.totals.revenue ?? 0)}</td>
+                  <td className="py-2 text-end font-black tabular-nums text-[#1d3a8f]">{gbp(royalty)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -220,15 +221,15 @@ function SimpleLedger({ kind, items, onAdded }: { kind: "in" | "out"; items: MIt
           <div className="rounded-xl border border-dashed border-[var(--line)] p-8 text-center text-[12.5px] text-[var(--ink-3)]">Nothing logged yet — add your first entry on the left.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-[12.5px]">
-              <thead><tr className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><th className="py-1.5 pr-3">Date</th><th className="py-1.5 pr-3">Category</th><th className="py-1.5 pr-3">{kind === "in" ? "From" : "Paid to"}</th><th className="py-1.5 text-right">Amount</th></tr></thead>
+            <table className="w-full border-collapse text-start text-[12.5px]">
+              <thead><tr className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><th className="py-1.5 pe-3">Date</th><th className="py-1.5 pe-3">Category</th><th className="py-1.5 pe-3">{kind === "in" ? "From" : "Paid to"}</th><th className="py-1.5 text-end">Amount</th></tr></thead>
               <tbody>
                 {sorted.map((x, i) => (
                   <tr key={x.id ?? i} className="border-t border-[var(--line)]">
-                    <td className="py-2 pr-3 tabular-nums text-[var(--ink-2)]">{shortDate(x.date)}</td>
-                    <td className="py-2 pr-3 font-bold text-[var(--ink)]">{x.category || "—"}</td>
-                    <td className="py-2 pr-3 text-[var(--ink-3)]">{x.source || x.supplier || "—"}</td>
-                    <td className="py-2 text-right font-extrabold tabular-nums" style={{ color: tone }}>{gbp(x.amount || 0)}</td>
+                    <td className="py-2 pe-3 tabular-nums text-[var(--ink-2)]">{shortDate(x.date)}</td>
+                    <td className="py-2 pe-3 font-bold text-[var(--ink)]">{x.category || "—"}</td>
+                    <td className="py-2 pe-3 text-[var(--ink-3)]">{x.source || x.supplier || "—"}</td>
+                    <td className="py-2 text-end font-extrabold tabular-nums" style={{ color: tone }}>{gbp(x.amount || 0)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -300,15 +301,15 @@ function InvoiceList({ items, franchises, onCreated }: { items: Invoice[]; franc
         <div className="rounded-xl border border-dashed border-[var(--line)] p-8 text-center text-[12.5px] text-[var(--ink-3)]">No invoices yet. Raise one to bill a franchise their fees.</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-[12.5px]">
-            <thead><tr className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><th className="py-1.5 pr-3">Billed to</th><th className="py-1.5 pr-3">Due</th><th className="py-1.5 pr-3">Status</th><th className="py-1.5 text-right">Amount</th></tr></thead>
+          <table className="w-full border-collapse text-start text-[12.5px]">
+            <thead><tr className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><th className="py-1.5 pe-3">Billed to</th><th className="py-1.5 pe-3">Due</th><th className="py-1.5 pe-3">Status</th><th className="py-1.5 text-end">Amount</th></tr></thead>
             <tbody>
               {sorted.map((iv, i) => (
                 <tr key={iv.id ?? i} className="border-t border-[var(--line)]">
-                  <td className="py-2 pr-3 font-bold text-[var(--ink)]">{iv.billTo || iv.customer || iv.to || "—"}</td>
-                  <td className="py-2 pr-3 tabular-nums text-[var(--ink-2)]">{shortDate(iv.dueDate)}</td>
-                  <td className="py-2 pr-3"><span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={paid(iv.status) ? { background: "#e4f5eb", color: "#0f7a43" } : { background: "#fdecc8", color: "#8a5a00" }}>{paid(iv.status) ? "Paid" : "Outstanding"}</span></td>
-                  <td className="py-2 text-right font-extrabold tabular-nums text-[var(--ink)]">{gbp(iv.amount || 0)}</td>
+                  <td className="py-2 pe-3 font-bold text-[var(--ink)]">{iv.billTo || iv.customer || iv.to || "—"}</td>
+                  <td className="py-2 pe-3 tabular-nums text-[var(--ink-2)]">{shortDate(iv.dueDate)}</td>
+                  <td className="py-2 pe-3"><span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={paid(iv.status) ? { background: "#e4f5eb", color: "#0f7a43" } : { background: "#fdecc8", color: "#8a5a00" }}>{paid(iv.status) ? "Paid" : "Outstanding"}</span></td>
+                  <td className="py-2 text-end font-extrabold tabular-nums text-[var(--ink)]">{gbp(iv.amount || 0)}</td>
                 </tr>
               ))}
             </tbody>

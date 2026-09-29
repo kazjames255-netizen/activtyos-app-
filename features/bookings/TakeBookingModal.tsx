@@ -216,7 +216,7 @@ export function TakeBookingModal() {
         <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-[22px] py-3">
           <h3 className="m-0 font-[var(--ff-display)] text-[18px] font-extrabold">Take a booking</h3>
           <span className="text-[11.5px] text-[var(--ink-3)]">· phone / walk-in · we email a payment link (Invoice sent)</span>
-          <span onClick={dismiss} className="ml-auto cursor-pointer text-[22px] leading-none text-[var(--ink-3)]">×</span>
+          <span onClick={dismiss} className="ms-auto cursor-pointer text-[22px] leading-none text-[var(--ink-3)]">×</span>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-[22px] py-4">
 
@@ -227,11 +227,11 @@ export function TakeBookingModal() {
         {(listings?.length ?? 0) > 1 && (
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <div className="relative min-w-[160px] flex-1 sm:max-w-[240px]">
-              <svg viewBox="0 0 16 16" fill="none" className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-3)] opacity-60">
+              <svg viewBox="0 0 16 16" fill="none" className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-3)] opacity-60">
                 <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.7" /><path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
               </svg>
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search listings…"
-                className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] pl-[32px] pr-3 text-[12.5px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-2)] focus:border-[var(--brand-2)]" />
+                className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] ps-[32px] pe-3 text-[12.5px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-2)] focus:border-[var(--brand-2)]" />
             </div>
             {venueOpts.length > 0 && (
               <Pill active={!!venue} onClear={() => setVenue("")}>

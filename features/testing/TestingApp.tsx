@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { PLAN, PLAN_START, AMIR_DUE, PREREQS, type Day, type Step } from "@/lib/testing/plan";
 import { PLAN2, PLAN2_START, PREREQS2 } from "@/lib/testing/plan2";
@@ -24,18 +25,18 @@ function AgentLine({ a, onAdopt, adopted }: { a: AgentResult; onAdopt?: () => vo
   const [open, setOpen] = useState(a.verdict === "fail");
   return (
     <div className="mt-3 rounded-[12px] border px-3 py-2" style={{ borderColor: a.verdict === "fail" ? "#f3c1cc" : a.verdict === "blocked" ? "#f3dfb4" : "#bfe6cf", background: a.verdict === "fail" ? "#fff6f8" : a.verdict === "blocked" ? "#fffaf0" : "#f3fbf6" }}>
-      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full flex-wrap items-center gap-2 text-left">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full flex-wrap items-center gap-2 text-start">
         <span className="text-[12px] font-extrabold text-[var(--ink)]">🤖 Checked by Claude</span>
         <Chip bg={VERDICT[a.verdict].bg} fg={VERDICT[a.verdict].fg}>{VERDICT[a.verdict].label}</Chip>
         <span className="text-[11px] text-[var(--ink-3)]">{METHOD_LABEL[a.method] ?? a.method}</span>
-        <span className="ml-auto text-[11px] font-bold text-[var(--ink-3)]">{open ? "▲" : "▼ details"}</span>
+        <span className="ms-auto text-[11px] font-bold text-[var(--ink-3)]">{open ? "▲" : "▼ details"}</span>
       </button>
       {open && (
         <div className="mt-1.5 space-y-1 text-[12.5px] text-[var(--ink-2)]">
           <div><b>What actually happened:</b> {a.actual}</div>
           {a.notes && <div><b>Notes:</b> {a.notes}</div>}
           {a.evidence && <div className="break-all text-[11.5px] text-[var(--ink-3)]"><b>Evidence:</b> {a.evidence}</div>}
-          <div className="text-[11px] text-[var(--ink-3)]">{new Date(a.at).toLocaleString("en-GB")}{a.agent ? ` · agent ${a.agent}` : ""}</div>
+          <div className="text-[11px] text-[var(--ink-3)]">{new Date(a.at).toLocaleString(dl())}{a.agent ? ` · agent ${a.agent}` : ""}</div>
           {onAdopt && !adopted && <button type="button" onClick={onAdopt} className="mt-1 rounded-full bg-[#16306e] px-3 py-1 text-[11.5px] font-extrabold text-white">Copy into my run</button>}
         </div>
       )}
@@ -191,7 +192,7 @@ function HandoverPanel({ run, owner, title, lede }: { run: Run; owner: Owner; ti
                     <Chip bg={VERDICT[r.verdict].bg} fg={VERDICT[r.verdict].fg}>{VERDICT[r.verdict].label}</Chip>
                     {s && <span className="text-[12px] text-[var(--ink-3)]">Day {s.day} · {s.dayTitle}</span>}
                     <button type="button" onClick={() => saveResult({ ...r, resolved: true })}
-                      className="ml-auto rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Mark done</button>
+                      className="ms-auto rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Mark done</button>
                   </div>
                   {s && <div className="mt-2 text-[13.5px] font-extrabold text-[var(--ink)]">{s.step.action}</div>}
                   {s && <div className="mt-1 text-[12.5px] text-[var(--ink-2)]"><b>Expected:</b> {s.step.expect}</div>}
@@ -294,7 +295,7 @@ export function TestingApp() {
                     r = saveResult({ stepId: id, verdict: a.verdict, owner: st?.needsBackend ? "amir" : "triage", actual: a.actual, notes: `[Claude · ${a.method}] ${a.notes ?? ""}`.trim(), at: a.at });
                   }
                   setRun(r);
-                }} className="ml-auto rounded-full bg-[#f5b81f] px-3 py-1 text-[12px] font-extrabold text-[#12224e]">Copy into my run ({adoptable.length} not yet logged)</button>
+                }} className="ms-auto rounded-full bg-[#f5b81f] px-3 py-1 text-[12px] font-extrabold text-[#12224e]">Copy into my run ({adoptable.length} not yet logged)</button>
               )}
             </div>
           );

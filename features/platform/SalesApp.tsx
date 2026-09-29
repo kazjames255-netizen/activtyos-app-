@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { del, get, post, put } from "@/lib/api";
@@ -78,7 +79,7 @@ export interface Lead {
   // call, so rescheduling never breaks a link already sent.
   videoRoom?: string;
 }
-const slotFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const slotFmt = new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 // 5 clear steps left→right (a fresh Lead → a New customer who's signed up), plus
 // Lost held separately at the end. When a signup matches a lead's email/phone/
@@ -105,10 +106,10 @@ const ACT: { id: Activity["type"]; label: string }[] = [
 const PLAN_MRR: Record<Lead["plan"], number> = { freelancer: 29, company: 69, franchise: 86 };
 const OUTCOMES = ["Interested", "Booked a demo", "Sent info / pricing", "Call back later", "No answer", "Left voicemail", "Wants to think", "Not interested", "Wrong contact", "Signed up 🎉"];
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
-const money = (n: number) => `£${Math.round(n).toLocaleString("en-GB")}`;
+const money = (n: number) => `£${Math.round(n).toLocaleString(dl())}`;
 const uid = () => { try { return crypto.randomUUID(); } catch { return `${Date.now()}-${Math.round(Math.random() * 1e6)}`; } };
 const nowIso = () => new Date().toISOString();
-const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const fmtDay = (iso: string) => new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short" });
 
 // A touch logged in the modal but not yet saved to the server (the server
 // stamps `at`/`by` itself when it lands).
@@ -439,7 +440,7 @@ function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen
               value={l.stage}
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => onMove(l.id, e.target.value as Stage)}
-              className="ml-auto rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"
+              className="ms-auto rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"
             >
               {STAGES.map((s) => <option key={s.id} value={s.id}>Move to: {s.label}</option>)}
             </select>
@@ -457,8 +458,8 @@ function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen
 // picking one drives the lead through the identical stage+slotAt shape a
 // genuine demo submission would.
 interface DemoSlot { iso: string; durationMins: number }
-const slotDayFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" });
-const slotTimeFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
+const slotDayFmt = new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" });
+const slotTimeFmt = new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
 const slotDayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" });
 
 function BookDemoButton({ onBook }: { onBook: (iso: string) => void }) {
@@ -485,7 +486,7 @@ function BookDemoButton({ onBook }: { onBook: (iso: string) => void }) {
       {open && (
         <>
           <div className="fixed inset-0 z-[59]" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-[60] mt-1.5 max-h-72 w-72 overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-xl">
+          <div className="absolute end-0 top-full z-[60] mt-1.5 max-h-72 w-72 overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-xl">
             {slots === null ? (
               <div className="p-2 text-[12px] text-[var(--ink-3)]">Loading available times…</div>
             ) : Object.keys(byDay).length === 0 ? (
@@ -581,7 +582,7 @@ function Dashboard({ leads }: { leads: Lead[] }) {
         <Card title={`This ${pLabel} vs the previous ${pLabel}`}>
           <div className="overflow-x-auto">
             <table className="w-full text-[12.5px]">
-              <thead><tr className="text-left text-[10.5px] uppercase tracking-wide text-[var(--ink-3)]"><th className="pb-2">Metric</th><th className="pb-2 text-right">Previous</th><th className="pb-2 text-right">This {pLabel}</th><th className="pb-2 text-right">Change</th></tr></thead>
+              <thead><tr className="text-start text-[10.5px] uppercase tracking-wide text-[var(--ink-3)]"><th className="pb-2">Metric</th><th className="pb-2 text-end">Previous</th><th className="pb-2 text-end">This {pLabel}</th><th className="pb-2 text-end">Change</th></tr></thead>
               <tbody>
                 {COMPARE.map(([label, key]) => {
                   const c = cur[key], p = prev[key], delta = c - p;
@@ -589,9 +590,9 @@ function Dashboard({ leads }: { leads: Lead[] }) {
                   return (
                     <tr key={key} className="border-t border-[var(--line)]">
                       <td className="py-2 font-semibold">{label}</td>
-                      <td className="py-2 text-right tabular-nums text-[var(--ink-3)]">{p}</td>
-                      <td className="py-2 text-right text-[15px] font-extrabold tabular-nums">{c}</td>
-                      <td className="py-2 text-right font-bold tabular-nums" style={{ color: col }}>{delta > 0 ? "▲ +" : delta < 0 ? "▼ −" : "• "}{delta === 0 ? "0" : Math.abs(delta)}{p > 0 ? ` (${delta >= 0 ? "+" : "−"}${Math.round((Math.abs(delta) / p) * 100)}%)` : ""}</td>
+                      <td className="py-2 text-end tabular-nums text-[var(--ink-3)]">{p}</td>
+                      <td className="py-2 text-end text-[15px] font-extrabold tabular-nums">{c}</td>
+                      <td className="py-2 text-end font-bold tabular-nums" style={{ color: col }}>{delta > 0 ? "▲ +" : delta < 0 ? "▼ −" : "• "}{delta === 0 ? "0" : Math.abs(delta)}{p > 0 ? ` (${delta >= 0 ? "+" : "−"}${Math.round((Math.abs(delta) / p) * 100)}%)` : ""}</td>
                     </tr>
                   );
                 })}
@@ -735,7 +736,7 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
           // further down keeps the newest-first order it's always had.
           const thread = f.activities.filter((a) => a.type === "email" && a.direction).slice().reverse();
           const bubble = (dir: "in" | "out", text: string, who: string, at?: string) => (
-            <div key={`${dir}-${at ?? "orig"}-${who}`} className={`max-w-[88%] rounded-xl px-3.5 py-2.5 text-[13px] leading-relaxed ${dir === "out" ? "ml-auto bg-[#1d3a8f] text-white" : "border border-[#bfe6cf] bg-[#eafaf0] text-[#0f5132]"}`}>
+            <div key={`${dir}-${at ?? "orig"}-${who}`} className={`max-w-[88%] rounded-xl px-3.5 py-2.5 text-[13px] leading-relaxed ${dir === "out" ? "ms-auto bg-[#1d3a8f] text-white" : "border border-[#bfe6cf] bg-[#eafaf0] text-[#0f5132]"}`}>
               <div className={`mb-0.5 text-[10.5px] font-bold uppercase tracking-wide ${dir === "out" ? "text-white/70" : "text-[#127a3e]"}`}>{who}{at ? ` · ${fmtDay(at)}` : ""}</div>
               {text}
             </div>
@@ -765,7 +766,7 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
               {/* A real portal page (/platform/call/<id>), not a modal iframe
                   or an external tab — the call, and a place to take notes on
                   it, live inside the app the same as everything else. */}
-              <button type="button" onClick={() => { onClose(); router.push(`/platform/call/${f.id}`); }} className="ml-auto rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-bold text-white hover:brightness-110">
+              <button type="button" onClick={() => { onClose(); router.push(`/platform/call/${f.id}`); }} className="ms-auto rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-bold text-white hover:brightness-110">
                 Join call →
               </button>
             </div>
@@ -793,7 +794,7 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
             <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Share with them?</span>
             <button type="button" onClick={() => setNoteShare(false)} className={`rounded-full border px-3 py-1 text-[11.5px] font-bold ${!noteShare ? "border-[#1d3a8f] bg-[#eaf0fc] text-[#1d3a8f]" : "border-[var(--line)] text-[var(--ink-2)]"}`}>No — internal only</button>
             <button type="button" onClick={() => setNoteShare(true)} className={`rounded-full border px-3 py-1 text-[11.5px] font-bold ${noteShare ? "border-[#127a3e] bg-[#eafaf0] text-[#127a3e]" : "border-[var(--line)] text-[var(--ink-2)]"}`}>Yes — email it to them</button>
-            <button type="button" onClick={() => void saveCallNote()} disabled={!noteDraft.trim() || noteBusy} className="ml-auto rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">
+            <button type="button" onClick={() => void saveCallNote()} disabled={!noteDraft.trim() || noteBusy} className="ms-auto rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">
               {noteBusy ? "Saving…" : "Save note"}
             </button>
           </div>
@@ -824,7 +825,7 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
             {!!f.interestedFeatures?.length && (
               <div className="block sm:col-span-2">
                 <span className={lbl}>Wants to see (ticked on the demo page)</span>
-                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[13px] text-[var(--ink)]">
+                <ul className="mt-1 list-disc space-y-0.5 ps-4 text-[13px] text-[var(--ink)]">
                   {f.interestedFeatures.map((x) => <li key={x}>{x}</li>)}
                 </ul>
               </div>
@@ -867,8 +868,8 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
 function Tile({ label, value, sub, accent }: { label: string; value: string; sub: string; accent: string }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-      <div className="absolute left-0 top-0 h-full w-1" style={{ background: accent }} />
-      <div className="pl-1.5"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div><div className="mt-1 text-[24px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{value}</div><div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{sub}</div></div>
+      <div className="absolute start-0 top-0 h-full w-1" style={{ background: accent }} />
+      <div className="ps-1.5"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div><div className="mt-1 text-[24px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{value}</div><div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{sub}</div></div>
     </div>
   );
 }

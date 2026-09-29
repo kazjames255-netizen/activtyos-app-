@@ -215,10 +215,10 @@ export default function TerritoryMap({ value, onChange, editable = false, venues
                     ? <input value={a.name} onChange={(e) => rename(a.id, e.target.value)} className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 text-[12.5px] font-bold outline-none hover:border-[var(--line)] focus:border-[#3f78d8]" />
                     : <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold">{a.name}</span>}
                 </div>
-                <div className="mt-1 flex items-center gap-2 pl-[26px] text-[11px]">
+                <div className="mt-1 flex items-center gap-2 ps-[26px] text-[11px]">
                   <button type="button" onClick={() => focusArea(a.id)} className="font-bold text-[#1d3a8f] hover:underline">Zoom to</button>
                   {editable && <button type="button" onClick={() => remove(a.id)} className="font-bold text-[#c0392b] hover:underline">Remove</button>}
-                  <span className="ml-auto text-[var(--ink-3)]">{a.rings.length} pts</span>
+                  <span className="ms-auto text-[var(--ink-3)]">{a.rings.length} pts</span>
                 </div>
               </li>
             ))}

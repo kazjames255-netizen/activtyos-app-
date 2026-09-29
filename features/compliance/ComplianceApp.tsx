@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -16,7 +17,7 @@ const tone: Record<Cert["status"], { bg: string; fg: string }> = {
   valid: { bg: "#eaf0fc", fg: "#1d3a8f" },
 };
 const label: Record<Cert["status"], string> = { expired: "expired", expiring: "expiring soon", valid: "valid" };
-const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 
 export function ComplianceApp() {
   const [data, setData] = useState<Payload | null>(null);
@@ -84,7 +85,7 @@ export function ComplianceApp() {
                   <span className="text-[13px] font-bold">{c.staffName}</span>
                   <span className="text-[12px] text-[var(--ink-2)]">{c.type}</span>
                   {c.reference && <span className="text-[11px] text-[var(--ink-3)]">{c.reference}</span>}
-                  <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">expires {fmt(c.expiry)}</span>
+                  <span className="ms-auto text-[11.5px] text-[var(--ink-3)]">expires {fmt(c.expiry)}</span>
                   {canManage && <button type="button" onClick={() => remove(c)} className="text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>}
                 </Card>
               ))}

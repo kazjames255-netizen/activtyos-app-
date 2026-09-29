@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -83,11 +84,11 @@ const shiftDay = (iso: string, by: number) => {
   return d.toISOString().slice(0, 10);
 };
 const dayLabel = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 const shortDay = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 const compactDay = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
 /** Staff for one line: ceil(children / ratio), matching the manual's board. */
@@ -145,11 +146,11 @@ function PolicyTable({ groups }: { groups: RatioGroup[] }) {
         <table className="w-full border-collapse text-[12.5px]">
           <thead>
             <tr className="text-[10.5px] uppercase tracking-[0.04em] text-[var(--ink-3)]">
-              <th className="px-2 py-1.5 text-left font-extrabold">Colour</th>
-              <th className="px-2 py-1.5 text-left font-extrabold">Group</th>
-              <th className="px-2 py-1.5 text-left font-extrabold">Age</th>
-              <th className="px-2 py-1.5 text-left font-extrabold">Target ratio</th>
-              <th className="px-2 py-1.5 text-left font-extrabold">Room size</th>
+              <th className="px-2 py-1.5 text-start font-extrabold">Colour</th>
+              <th className="px-2 py-1.5 text-start font-extrabold">Group</th>
+              <th className="px-2 py-1.5 text-start font-extrabold">Age</th>
+              <th className="px-2 py-1.5 text-start font-extrabold">Target ratio</th>
+              <th className="px-2 py-1.5 text-start font-extrabold">Room size</th>
             </tr>
           </thead>
           <tbody>
@@ -202,11 +203,11 @@ function TeamManager({ staff, onChange, holderId }: { staff: StaffMember[]; onCh
       <div className="px-3.5 pb-3.5">
         <div className="mb-2.5 flex flex-wrap gap-1.5">
           {staff.map((m) => (
-            <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] py-1 pl-1.5 pr-1.5 text-[12px] font-semibold">
+            <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] py-1 ps-1.5 pe-1.5 text-[12px] font-semibold">
               <StaffAvatar m={m} size={20} />
               <span className="leading-tight">
                 {`${m.first} ${m.last}`.trim() || "Staff"}
-                <span className="ml-1 font-normal text-[var(--ink-3)]">{m.role ? `· ${m.role}` : ""}{m.id === holderId ? " · you" : ""}</span>
+                <span className="ms-1 font-normal text-[var(--ink-3)]">{m.role ? `· ${m.role}` : ""}{m.id === holderId ? " · you" : ""}</span>
               </span>
               <button type="button" aria-label={`Edit ${m.first}`} onClick={() => edit(m)} className="px-1 text-[var(--ink-3)] hover:text-[var(--brand-ink,#1d3a8f)]" title="Edit">✎</button>
               <button type="button" aria-label={`Remove ${m.first}`} onClick={() => onChange(staff.filter((x) => x.id !== m.id))} className="px-1 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
@@ -343,7 +344,7 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
       draggable={mode === "age"}
       onDragStart={mode === "age" ? () => setDragRef(c.childId ?? c.ref) : undefined}
       title={misfit}
-      className={`inline-flex items-center gap-1 rounded-full border py-[3px] pl-2.5 pr-1.5 text-[11.5px] font-bold ${mode === "age" ? "cursor-grab active:cursor-grabbing" : ""}`}
+      className={`inline-flex items-center gap-1 rounded-full border py-[3px] ps-2.5 pe-1.5 text-[11.5px] font-bold ${mode === "age" ? "cursor-grab active:cursor-grabbing" : ""}`}
       style={misfit
         ? { borderColor: "#e21d27", boxShadow: "0 0 0 1.5px #e21d27", background: "#fdebec", color: "#c0392b" }
         : { borderColor: colour ? `${colour}66` : "var(--line)", background: colour ? `${colour}12` : "var(--surface)", color: colour ?? "var(--ink)" }}
@@ -390,7 +391,7 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
             </div>
             <button type="button" onClick={() => onDay(1)} aria-label="Next day" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-[16px]">›</button>
             {listing && (
-              <div className="ml-1 flex flex-wrap items-center gap-1.5">
+              <div className="ms-1 flex flex-wrap items-center gap-1.5">
                 <span className="whitespace-nowrap rounded-full bg-white/20 px-2.5 py-1 text-[11.5px] font-extrabold" title={listing}>🎟 {listing}</span>
                 {seasonName && <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>📅 {seasonName}</span>}
               </div>
@@ -479,7 +480,7 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
                           <div className="mt-1.5 flex flex-wrap items-center gap-1">
                             {assignedTo.map((g) => (
                               <span key={g.id}
-                                className="inline-flex items-center gap-1 rounded-full py-[2px] pl-2 pr-1 text-[10px] font-bold text-white" style={{ background: g.colour }}>
+                                className="inline-flex items-center gap-1 rounded-full py-[2px] ps-2 pe-1 text-[10px] font-bold text-white" style={{ background: g.colour }}>
                                 {g.name}
                                 <button type="button" onClick={() => setStaffFor(g.id, m.id)} aria-label={`Unassign from ${g.name}`} className="text-[11px] leading-none opacity-80">×</button>
                               </span>
@@ -572,7 +573,7 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
                           const clash = (staffGroupCount[m.id] ?? 0) > 1;
                           return (
                             <span key={m.id} title={clash ? "Also assigned to another group — one adult can't cover two rooms at once" : undefined}
-                              className="inline-flex items-center gap-1 rounded-full py-[3px] pl-1 pr-1 text-[11px] font-bold text-white"
+                              className="inline-flex items-center gap-1 rounded-full py-[3px] ps-1 pe-1 text-[11px] font-bold text-white"
                               style={{ background: g.colour, boxShadow: clash ? "0 0 0 1.5px #c0392b" : undefined }}>
                               <StaffAvatar m={m} size={18} />
                               {`${m.first} ${m.last}`.trim() || "Staff"}
@@ -870,11 +871,11 @@ export function RatiosApp() {
               <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">📅 Season</span>
               <span className="relative inline-flex items-center">
                 <select value={season} onChange={(e) => setSeason(e.target.value)}
-                  className="appearance-none rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-4 pr-9 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_2px_rgba(20,30,60,.06)] transition-colors hover:border-[var(--brand-2,#2f6bd8)] focus:border-[var(--brand-2,#2f6bd8)] focus:outline-none">
+                  className="appearance-none rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-4 pe-9 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_2px_rgba(20,30,60,.06)] transition-colors hover:border-[var(--brand-2,#2f6bd8)] focus:border-[var(--brand-2,#2f6bd8)] focus:outline-none">
                   <option value="">All seasons</option>
                   {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
-                <span aria-hidden className="pointer-events-none absolute right-3.5 text-[10px] text-[var(--ink-3)]">▼</span>
+                <span aria-hidden className="pointer-events-none absolute end-3.5 text-[10px] text-[var(--ink-3)]">▼</span>
               </span>
             </label>
           )}
@@ -882,13 +883,13 @@ export function RatiosApp() {
             <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">🎟 Listing</span>
             <span className="relative inline-flex items-center">
               <select value={listing} onChange={(e) => setListing(e.target.value)}
-                className="appearance-none rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-4 pr-9 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_2px_rgba(20,30,60,.06)] transition-colors hover:border-[var(--brand-2,#2f6bd8)] focus:border-[var(--brand-2,#2f6bd8)] focus:outline-none">
+                className="appearance-none rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-4 pe-9 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_2px_rgba(20,30,60,.06)] transition-colors hover:border-[var(--brand-2,#2f6bd8)] focus:border-[var(--brand-2,#2f6bd8)] focus:outline-none">
                 {visibleListings.map((l) => {
                   const n = listingCounts.get(l)?.size ?? 0;
                   return <option key={l} value={l}>{l} · {n} {n === 1 ? "child" : "kids"}</option>;
                 })}
               </select>
-              <span aria-hidden className="pointer-events-none absolute right-3.5 text-[10px] text-[var(--ink-3)]">▼</span>
+              <span aria-hidden className="pointer-events-none absolute end-3.5 text-[10px] text-[var(--ink-3)]">▼</span>
             </span>
           </label>
         </div>
@@ -908,7 +909,7 @@ export function RatiosApp() {
             <input type="date" value={date} onClick={(e) => (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()} onChange={(e) => e.target.value && setDate(e.target.value)} className="absolute inset-0 cursor-pointer opacity-0" aria-label="Pick a date" />
           </label>
           <button type="button" onClick={() => setDate((d) => shiftDay(d, 1))} aria-label="Next day" className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-2)] transition-colors hover:bg-[var(--panel)]">›</button>
-          {!isToday && <button type="button" onClick={() => setDate(todayIso())} className="ml-0.5 rounded-full bg-[var(--brand-2,#2f6bd8)] px-2.5 py-1 text-[11.5px] font-bold text-white">Today</button>}
+          {!isToday && <button type="button" onClick={() => setDate(todayIso())} className="ms-0.5 rounded-full bg-[var(--brand-2,#2f6bd8)] px-2.5 py-1 text-[11.5px] font-bold text-white">Today</button>}
         </div>
       </div>
 
@@ -920,12 +921,12 @@ export function RatiosApp() {
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 font-bold text-[var(--ink-2)]">
             🕘 You have {periods[0].here} {periods[0].here === 1 ? "child" : "children"} in, {to12h(periods[0].start)}–{to12h(periods[0].end)}
           </span>
-          <span className="ml-auto text-[10.5px] text-[var(--ink-3)]">split buttons appear once children arrive or leave at different times</span>
+          <span className="ms-auto text-[10.5px] text-[var(--ink-3)]">split buttons appear once children arrive or leave at different times</span>
         </div>
       )}
       {ready && periods.length > 1 && (
         <div className="mb-3 flex flex-wrap items-center gap-1.5 rounded-xl bg-[var(--panel)] px-3.5 py-2 text-[12px]">
-          <span className="mr-0.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">By time</span>
+          <span className="me-0.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">By time</span>
           {[{ start: "", end: "", here: wholeDayCount, whole: true }, ...periods.map((p) => ({ ...p, whole: false }))].map((p) => {
             const k = p.whole ? "" : `${p.start}|${p.end}`;
             const on = activeKey === k;
@@ -938,7 +939,7 @@ export function RatiosApp() {
               </button>
             );
           })}
-          <span className="ml-auto text-[10.5px] text-[var(--ink-3)]">shows who&rsquo;s on site in that window — the board &amp; ratios recheck for it</span>
+          <span className="ms-auto text-[10.5px] text-[var(--ink-3)]">shows who&rsquo;s on site in that window — the board &amp; ratios recheck for it</span>
         </div>
       )}
 

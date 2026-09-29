@@ -108,7 +108,7 @@ export function ParentTimetableApp() {
                   }`}
                 >
                   {dayName(d, dateLoc)}
-                  {d.d && <span className="ml-1 font-semibold opacity-70">{d.d.split(" ")[0]}</span>}
+                  {d.d && <span className="ms-1 font-semibold opacity-70">{d.d.split(" ")[0]}</span>}
                 </button>
               ))}
             </div>

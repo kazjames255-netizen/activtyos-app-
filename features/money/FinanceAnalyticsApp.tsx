@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
@@ -207,7 +208,7 @@ export function FinanceAnalyticsApp() {
 
   const rangeLabel = useMemo(() => {
     const start = new Date(`${a.windowStart}T00:00:00Z`);
-    const fmt = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+    const fmt = (d: Date) => d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
     return `${fmt(start)} – ${fmt(new Date(nowMs))}`;
   }, [a.windowStart, nowMs]);
 
@@ -352,16 +353,16 @@ export function FinanceAnalyticsApp() {
             {payments.filter(isCardPayment).length ? (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] text-[12.5px]">
-                  <thead><tr className="border-b border-[var(--line)] text-left text-[10.5px] uppercase tracking-wide text-[var(--ink-3)]"><th className="py-2 font-bold">Date</th><th className="font-bold">Paid by</th><th className="font-bold">Method</th><th className="font-bold">Reference</th><th className="font-bold">Status</th><th className="py-2 text-right font-bold">Amount</th></tr></thead>
+                  <thead><tr className="border-b border-[var(--line)] text-start text-[10.5px] uppercase tracking-wide text-[var(--ink-3)]"><th className="py-2 font-bold">Date</th><th className="font-bold">Paid by</th><th className="font-bold">Method</th><th className="font-bold">Reference</th><th className="font-bold">Status</th><th className="py-2 text-end font-bold">Amount</th></tr></thead>
                   <tbody>
                     {payments.filter(isCardPayment).slice(0, 40).map((p) => (
                       <tr key={p.id} className="border-b border-[var(--line)]">
-                        <td className="py-2 text-[var(--ink-2)]">{new Date(p.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</td>
+                        <td className="py-2 text-[var(--ink-2)]">{new Date(p.createdAt).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}</td>
                         <td className="font-semibold text-[var(--ink)]">{payerName(p)}</td>
                         <td className="text-[var(--ink-2)]">{p.method || "Card"}</td>
                         <td className="text-[var(--ink-3)]">{p.refs?.join(", ") || "—"}</td>
                         <td><span className="rounded-full bg-[#e2f5ea] px-2 py-0.5 text-[10.5px] font-bold capitalize text-[#0b8446]">{p.status}</span></td>
-                        <td className="py-2 text-right font-extrabold tabular-nums">{money(p.amount)}</td>
+                        <td className="py-2 text-end font-extrabold tabular-nums">{money(p.amount)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -386,8 +387,8 @@ export function FinanceAnalyticsApp() {
                 {a.owing.slice(0, 30).map((o) => (
                   <div key={o.ref} className="flex items-center gap-3 py-2.5 text-[12.5px]">
                     <span className="min-w-0 flex-1 truncate"><b>{o.name}</b>{o.listing && <span className="text-[var(--ink-3)]"> · {o.listing}</span>}</span>
-                    <span className="hidden whitespace-nowrap text-[11px] text-[var(--ink-3)] sm:inline">{o.when ? new Date(o.when.length === 10 ? `${o.when}T00:00:00` : o.when).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : ""}</span>
-                    <span className="w-20 text-right font-extrabold tabular-nums text-[#c02636]">{money(o.owed)}</span>
+                    <span className="hidden whitespace-nowrap text-[11px] text-[var(--ink-3)] sm:inline">{o.when ? new Date(o.when.length === 10 ? `${o.when}T00:00:00` : o.when).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : ""}</span>
+                    <span className="w-20 text-end font-extrabold tabular-nums text-[#c02636]">{money(o.owed)}</span>
                     <button type="button" onClick={() => router.push(`/${portal}/bookings?ref=${encodeURIComponent(o.ref)}`)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]">Chase / view →</button>
                   </div>
                 ))}
@@ -402,8 +403,8 @@ export function FinanceAnalyticsApp() {
                   <div key={iv.id} className="flex items-center gap-3 py-2.5 text-[12.5px]">
                     <span className="min-w-0 flex-1 truncate font-semibold">{iv.customerName}</span>
                     {iv.overdue && <span className="rounded-full bg-[#fdebec] px-2 py-0.5 text-[10.5px] font-bold text-[#c02636]">Overdue</span>}
-                    <span className="text-[11px] text-[var(--ink-3)]">{iv.dueDate ? `due ${new Date(iv.dueDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}</span>
-                    <span className="w-20 text-right font-extrabold tabular-nums">{money(iv.amount)}</span>
+                    <span className="text-[11px] text-[var(--ink-3)]">{iv.dueDate ? `due ${new Date(iv.dueDate).toLocaleDateString(dl(), { day: "numeric", month: "short" })}` : ""}</span>
+                    <span className="w-20 text-end font-extrabold tabular-nums">{money(iv.amount)}</span>
                   </div>
                 ))}
               </div>
@@ -490,7 +491,7 @@ export function FinanceAnalyticsApp() {
 function Delta({ pct }: { pct: number | null }) {
   if (pct == null) return null;
   const up = pct >= 0;
-  return <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-white/20 px-1.5 py-[1px] text-[10.5px] font-extrabold text-white">{up ? "▲" : "▼"} {Math.abs(pct)}% <span className="font-semibold opacity-80">vs prev</span></span>;
+  return <span className="ms-1.5 inline-flex items-center gap-0.5 rounded-full bg-white/20 px-1.5 py-[1px] text-[10.5px] font-extrabold text-white">{up ? "▲" : "▼"} {Math.abs(pct)}% <span className="font-semibold opacity-80">vs prev</span></span>;
 }
 
 // A compact figure used inside light panels (not a gradient tile).
@@ -498,7 +499,7 @@ function MiniStat({ label, value, tone, isText }: { label: string; value: number
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
       <div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div>
-      <div className="mt-0.5 text-[20px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", color: tone }}>{isText ? value : Number(value).toLocaleString("en-GB")}</div>
+      <div className="mt-0.5 text-[20px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", color: tone }}>{isText ? value : Number(value).toLocaleString(dl())}</div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
@@ -25,9 +26,9 @@ interface Analytics {
 
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
 const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GOLD = "#f0b100", PINK = "#EE1F63";
-const money = (n: number) => (Math.abs(n) >= 1000 ? `£${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `£${Math.round(n).toLocaleString("en-GB")}`);
+const money = (n: number) => (Math.abs(n) >= 1000 ? `£${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `£${Math.round(n).toLocaleString(dl())}`);
 const pct = (n: number) => `${Math.round(n * 100)}%`;
-const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" });
 const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 const tenure = (d: number) => (d >= 365 ? `${(d / 365).toFixed(1)} yrs` : d >= 30 ? `${Math.round(d / 30)} mo` : `${d} days`);
 const PLAN_C: Record<string, string> = { freelancer: "#3f78d8", company: "#1d3a8f", franchise: "#7c3aed" };
@@ -44,7 +45,7 @@ function sinceLabel(iso: string | null, nowMs: number) {
   if (days <= 0) return "joined today";
   if (days === 1) return "joined yesterday";
   if (days < 30) return `joined ${days} days ago`;
-  return "since " + new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return "since " + new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" });
 }
 
 export function PlatformAnalyticsApp() {
@@ -56,13 +57,14 @@ export function PlatformAnalyticsApp() {
   const [nowMs] = useState(() => Date.now());
 
   const load = useCallback(() => {
-    Promise.all([
-      apiGet<Analytics>("/api/platform/analytics"),
-      apiGet<{ providers: RecentProv[] }>("/api/platform/providers"),
-    ]).then(([a, p]) => {
-      setD(a); setError(null);
-      setRecent([...p.providers].sort((x, y) => (y.createdAt ?? "").localeCompare(x.createdAt ?? "")).slice(0, 6));
-    }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    // Independent requests: /providers is the heavy one (every tenant, ~75 KB) and only feeds the
+    // "recently joined" strip, so it must not hold the whole page on "Loading analytics…".
+    apiGet<Analytics>("/api/platform/analytics")
+      .then((a) => { setD(a); setError(null); })
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<{ providers: RecentProv[] }>("/api/platform/providers")
+      .then((p) => setRecent([...p.providers].sort((x, y) => (y.createdAt ?? "").localeCompare(x.createdAt ?? "")).slice(0, 6)))
+      .catch(() => {});
   }, []);
   useEffect(load, [load]);
   useRealtime(["tenants", "bookings"], load);
@@ -210,7 +212,7 @@ export function PlatformAnalyticsApp() {
                   <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
                   <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[10.5px] font-bold capitalize text-[#1d3a8f]">{p.plan}{p.band ? ` · ${p.band}` : ""}</span>
                   <span className="text-[11px] text-[var(--ink-3)]">{tenure(p.tenureDays)}</span>
-                  <span className="w-16 text-right font-extrabold tabular-nums">{money(p.fee)}/mo</span>
+                  <span className="w-16 text-end font-extrabold tabular-nums">{money(p.fee)}/mo</span>
                 </div>
               ))}
             </div>
@@ -264,7 +266,7 @@ const GRAD = {
 function Tile({ label, value, sub, grad, icon, aside, children }: { label: string; value: string; sub?: React.ReactNode; grad: string; icon?: string; aside?: React.ReactNode; children?: React.ReactNode }) {
   return (
     <div className="relative overflow-hidden rounded-2xl p-4 text-white shadow-[0_12px_28px_-16px_rgba(20,30,80,.5)]" style={{ background: grad }}>
-      <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
+      <div className="pointer-events-none absolute -end-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
       <div className="relative flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">
@@ -375,7 +377,7 @@ function Projections({ lastMrr, avgDelta, mode }: { lastMrr: number; avgDelta: n
               <span className="text-[17px] font-extrabold tabular-nums" style={{ fontFamily: "var(--ff-display)", color: PINK }}>{money(r.mrr)}<span className="text-[11px] font-normal text-[var(--ink-3)]">/mo</span></span>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(r.mrr / max) * 100}%`, background: `linear-gradient(90deg,${PINK},#ff8ab6)`, boxShadow: "0 1px 6px rgba(238,31,99,.35)" }} /></div>
-            <div className="mt-0.5 text-right text-[10.5px] text-[var(--ink-3)]">{money(r.arr)}/yr</div>
+            <div className="mt-0.5 text-end text-[10.5px] text-[var(--ink-3)]">{money(r.arr)}/yr</div>
           </div>
         ))}
       </div>

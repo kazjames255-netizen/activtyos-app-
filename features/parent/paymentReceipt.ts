@@ -3,6 +3,7 @@
 // Coloured, invoice-style, one receipt per page. Includes the provider's logo
 // when available and always shows the method of payment.
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import type { Booking } from "@/features/bookings/types";
 import { bookingDateSummary, money, payLabelFor, refundedTotal } from "@/features/bookings/helpers";
 
@@ -20,7 +21,7 @@ export interface ReceiptCtx {
 const fmtDate = (iso?: string) => {
   if (!iso) return "";
   const d = new Date(iso);
-  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" });
 };
 
 const childrenOf = (b: Booking) =>

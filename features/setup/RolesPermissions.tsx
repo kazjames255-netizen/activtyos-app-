@@ -101,14 +101,14 @@ export function RolesPermissions({ roles, onChange, areas, defaultRoles }: { rol
 
       {/* Matrix */}
       <div className="overflow-x-auto rounded-2xl border border-[var(--line)] shadow-[0_12px_30px_-22px_rgba(20,35,90,.5)]">
-        <table className="w-full border-collapse text-left" style={{ minWidth: 300 + list.length * 176 }}>
+        <table className="w-full border-collapse text-start" style={{ minWidth: 300 + list.length * 176 }}>
           <thead>
             <tr>
-              <th className="sticky left-0 z-20 min-w-[240px] border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3 align-bottom shadow-[6px_0_10px_-8px_rgba(20,35,90,.25)]">
+              <th className="sticky start-0 z-20 min-w-[240px] border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3 align-bottom shadow-[6px_0_10px_-8px_rgba(20,35,90,.25)]">
                 <span className="text-[10px] font-extrabold uppercase tracking-[0.09em] text-[var(--ink-3)]">{t("setup.areaOfApp")}</span>
               </th>
               {list.map((r) => (
-                <th key={r.id} className="min-w-[176px] border-b border-l border-[var(--line)] bg-gradient-to-b from-[var(--panel)] to-[var(--surface)] px-3 py-2.5 align-bottom">
+                <th key={r.id} className="min-w-[176px] border-b border-s border-[var(--line)] bg-gradient-to-b from-[var(--panel)] to-[var(--surface)] px-3 py-2.5 align-bottom">
                   <div className="flex items-center justify-between gap-1">
                     <input
                       value={r.name}
@@ -147,24 +147,24 @@ export function RolesPermissions({ roles, onChange, areas, defaultRoles }: { rol
             {groups.map((group) => (
               <Fragment key={group}>
                 <tr>
-                  <td colSpan={1 + list.length} className="sticky left-0 border-t border-[var(--line)] bg-gradient-to-r from-[#eef3fb] to-transparent px-4 py-1.5">
+                  <td colSpan={1 + list.length} className="sticky start-0 border-t border-[var(--line)] bg-gradient-to-r from-[#eef3fb] to-transparent px-4 py-1.5">
                     <span className="text-[10.5px] font-extrabold uppercase tracking-[0.09em] text-[var(--ink-2)]">
-                      <span className="mr-1.5">{GROUP_ICON[group] ?? "•"}</span>{group}
+                      <span className="me-1.5">{GROUP_ICON[group] ?? "•"}</span>{group}
                     </span>
                   </td>
                 </tr>
                 {caps.filter((c) => c.group === group).map((cap) => (
                   <tr key={cap.key} className="group border-t border-[var(--line-2,#eef2f8)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand)_4%,transparent)]">
-                    <td className="sticky left-0 z-10 min-w-[240px] bg-[var(--surface)] px-4 py-2.5 shadow-[6px_0_10px_-8px_rgba(20,35,90,.18)] group-hover:bg-[color-mix(in_srgb,var(--brand)_4%,var(--surface))]">
+                    <td className="sticky start-0 z-10 min-w-[240px] bg-[var(--surface)] px-4 py-2.5 shadow-[6px_0_10px_-8px_rgba(20,35,90,.18)] group-hover:bg-[color-mix(in_srgb,var(--brand)_4%,var(--surface))]">
                       <div className="text-[13px] font-semibold text-[var(--ink)]">
-                        {cap.sensitive && <span title={t("setup.sensitiveData")} className="mr-1 text-[10.5px]">🔒</span>}
+                        {cap.sensitive && <span title={t("setup.sensitiveData")} className="me-1 text-[10.5px]">🔒</span>}
                         {cap.label}
-                        {cap.scoped && <span title={t("setup.honoursScope")} className="ml-1.5 text-[10px] text-[#2f6bd8]">◎</span>}
+                        {cap.scoped && <span title={t("setup.honoursScope")} className="ms-1.5 text-[10px] text-[#2f6bd8]">◎</span>}
                       </div>
                       {cap.note && <div className="mt-0.5 text-[10.5px] leading-tight text-[var(--ink-3)]">{cap.note}</div>}
                     </td>
                     {list.map((r) => (
-                      <td key={r.id} className="border-l border-[var(--line-2,#eef2f8)] px-3 py-2 text-center">
+                      <td key={r.id} className="border-s border-[var(--line-2,#eef2f8)] px-3 py-2 text-center">
                         <LevelPicker
                           value={r.owner ? "edit" : (r.caps[cap.key] ?? "none")}
                           disabled={r.owner}
@@ -190,7 +190,7 @@ export function RolesPermissions({ roles, onChange, areas, defaultRoles }: { rol
           className="w-[240px]"
         />
         <Button variant="primary" onClick={addRole} disabled={!newName.trim()}>＋ {t("setup.addRole")}</Button>
-        <button type="button" onClick={resetDefaults} className="ml-auto text-[12px] font-semibold text-[var(--ink-3)] underline hover:text-[var(--ink)]">
+        <button type="button" onClick={resetDefaults} className="ms-auto text-[12px] font-semibold text-[var(--ink-3)] underline hover:text-[var(--ink)]">
           {t("setup.resetToDefaults")}
         </button>
       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState, type ReactNode } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -26,13 +27,14 @@ interface Payload { enabled: boolean; provider?: string; tenantId?: string; tier
 
 const money = (n?: number) => `£${(n ?? 0) % 1 === 0 ? Math.round(n ?? 0) : (n ?? 0).toFixed(2)}`;
 /** The headline + supporting line for a tier's benefit — the star of the card. */
-const benefit = (t: { benefitType: "credit" | "percent"; benefitValue: number }) =>
+type Tr = (key: string, vars?: Record<string, string | number>) => string;
+const benefit = (tr: Tr, t: { benefitType: "credit" | "percent"; benefitValue: number }) =>
   t.benefitType === "credit"
-    ? { emoji: "👛", headline: `${money(t.benefitValue)} in your wallet`, sub: "topped up every month — yours to spend on any booking" }
-    : { emoji: "🎟️", headline: `${t.benefitValue}% off, every time`, sub: "applied automatically at checkout, stacking on top of any coupons" };
-const benefitShort = (t: { benefitType: "credit" | "percent"; benefitValue: number }) =>
-  t.benefitType === "credit" ? `${money(t.benefitValue)}/mo wallet credit` : `${t.benefitValue}% off every booking`;
-const fmtDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
+    ? { emoji: "👛", headline: tr("p7parent.benCreditHead", { amount: money(t.benefitValue) }), sub: tr("p7parent.benCreditSub") }
+    : { emoji: "🎟️", headline: tr("p7parent.benPctHead", { pct: t.benefitValue }), sub: tr("p7parent.benPctSub") };
+const benefitShort = (tr: Tr, t: { benefitType: "credit" | "percent"; benefitValue: number }) =>
+  t.benefitType === "credit" ? tr("p7parent.benCreditShort", { amount: money(t.benefitValue) }) : tr("p7parent.benPctShort", { pct: t.benefitValue });
+const fmtDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "");
 // The benefit (wallet credit / % off) is already the card's hero, so a perk that
 // merely restates it — "5% off every booking", "£70 credit every month" — is
 // noise (and often stale/contradictory). Only show genuine EXTRA perks.
@@ -48,7 +50,7 @@ export function MembershipTierCard({ tier, footer, highlight }: {
   highlight?: boolean;
 }) {
   const tr = useT();
-  const bn = benefit(tier);
+  const bn = benefit(tr, tier);
   const perks = (tier.perks ?? []).filter(extraPerk);
   return (
     <Card className={`flex flex-col px-5 py-5 ${highlight ? "ring-2 ring-[#15b364]" : ""}`}>
@@ -130,12 +132,12 @@ export function MembershipsApp() {
       {current && (() => {
         const t = tiers.find((x) => x.id === current.tierId);
         return (
-          <Card className="mb-4 border-l-4 border-[#15b364] px-5 py-4">
+          <Card className="mb-4 border-s-4 border-[#15b364] px-5 py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-[11px] font-extrabold uppercase tracking-wide text-[#0f7a43]">{tr("parent.yourMembership")}</div>
-                <div className="mt-0.5 text-[16px] font-extrabold text-[var(--ink)]">{t?.name ?? tr("parent.memberFallback")} · {money(current.priceMonthly)}/mo</div>
-                <div className="text-[12.5px] text-[var(--ink-2)]">{benefit(current).emoji} {benefitShort(current)}{current.renewsAt ? ` · renews ${fmtDate(current.renewsAt)}` : ""}</div>
+                <div className="mt-0.5 text-[16px] font-extrabold text-[var(--ink)]">{t?.name ?? tr("parent.memberFallback")} · {tr("p7parent.perMo", { amount: money(current.priceMonthly) })}</div>
+                <div className="text-[12.5px] text-[var(--ink-2)]">{benefit(tr, current).emoji} {benefitShort(tr, current)}{current.renewsAt ? ` · ${tr("p7parent.renews", { date: fmtDate(current.renewsAt) })}` : ""}</div>
               </div>
               <Button variant="ghost" sm onClick={() => cancel(tenantId)} disabled={busy === "cancel"}>{busy === "cancel" ? tr("parent.cancelling") : tr("parent.cancelMembership")}</Button>
             </div>

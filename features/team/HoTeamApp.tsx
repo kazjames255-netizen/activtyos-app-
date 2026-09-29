@@ -129,7 +129,7 @@ export function HoTeamApp() {
                     <div key={r.token} className="flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--line)] p-2.5">
                       <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{initials(r.meta.name || r.sentTo || "?")}</span>
                       <div className="min-w-0"><div className="truncate text-[13px] font-bold text-[var(--ink)]">{r.meta.name || r.sentTo || "New invite"}</div><div className="text-[11px] text-[var(--ink-3)]">{r.sentTo ? `Emailed · ${r.sentTo}` : "Link not sent yet"}</div></div>
-                      <span className="ml-auto">{roleChip(r.meta.staffRole)}</span>
+                      <span className="ms-auto">{roleChip(r.meta.staffRole)}</span>
                       <Button sm onClick={() => copy(r.token)}>{copied === r.token ? "Copied!" : "Copy link"}</Button>
                     </div>
                   ))}
@@ -146,7 +146,7 @@ export function HoTeamApp() {
                     <div key={r.token} className="flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--line)] p-2.5">
                       <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-[#eef4fd] text-[12px] font-extrabold text-[#1d3a8f]">{initials(r.meta.name || r.usedBy || "?")}</span>
                       <div className="min-w-0"><div className="truncate text-[13px] font-bold text-[var(--ink)]">{r.meta.name || r.usedBy}</div><div className="truncate text-[11px] text-[var(--ink-3)]">{r.usedBy}</div></div>
-                      <span className="ml-auto">{roleChip(r.meta.staffRole)}</span>
+                      <span className="ms-auto">{roleChip(r.meta.staffRole)}</span>
                     </div>
                   ))}
                 </div>
@@ -175,7 +175,7 @@ export function HoTeamApp() {
                             <div key={r.token} className="flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--line)] p-2.5">
                               <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{initials(r.meta.name || r.usedBy || "?")}</span>
                               <div className="min-w-0"><div className="truncate text-[13px] font-bold text-[var(--ink)]">{r.meta.name || r.usedBy}</div><div className="truncate text-[11px] text-[var(--ink-3)]">{r.usedBy}</div></div>
-                              <span className="ml-auto">{roleChip(r.meta.staffRole)}</span>
+                              <span className="ms-auto">{roleChip(r.meta.staffRole)}</span>
                             </div>
                           ))}
                         </div>

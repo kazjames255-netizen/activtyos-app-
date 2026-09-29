@@ -60,7 +60,7 @@ export function StaffWelcome() {
         {!allDone && (
           <div className="space-y-2 px-5 py-4">
             {STEPS.map(([num, icon, title, sub, view, , hint]) => (
-              <button key={view} type="button" onClick={() => go(view)} className="flex w-full items-center gap-3 rounded-xl border border-[var(--line)] p-3 text-left transition-colors hover:border-[#1d3a8f] hover:bg-[#f6f9ff]">
+              <button key={view} type="button" onClick={() => go(view)} className="flex w-full items-center gap-3 rounded-xl border border-[var(--line)] p-3 text-start transition-colors hover:border-[#1d3a8f] hover:bg-[#f6f9ff]">
                 <span className="grid h-9 w-9 flex-none place-items-center rounded-full bg-[#1d3a8f] text-[14px] font-extrabold text-white">{num}</span>
                 <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[#eef4ff] text-[17px]">{icon}</span>
                 <span className="min-w-0 flex-1"><span className="block text-[13.5px] font-extrabold text-[var(--ink)]">{title}</span><span className="block text-[11.5px] text-[var(--ink-3)]">{sub}</span></span>
@@ -78,7 +78,7 @@ export function StaffWelcome() {
 
         <div className="flex items-center gap-2 border-t border-[var(--line)] px-5 py-3">
           <button type="button" onClick={dismiss} className="text-[12.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink-2)]">{allDone ? "Close" : "Skip for now"}</button>
-          {!allDone && <button type="button" onClick={() => go(firstView)} className="ml-auto rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white hover:brightness-110">Start with step 1 →</button>}
+          {!allDone && <button type="button" onClick={() => go(firstView)} className="ms-auto rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white hover:brightness-110">Start with step 1 →</button>}
         </div>
       </div>
     </div>

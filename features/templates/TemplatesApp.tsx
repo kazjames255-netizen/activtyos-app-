@@ -76,7 +76,7 @@ function TemplateModal({ initial, onDone }: { initial?: Template; onDone: (chang
             <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Insert a merge field — click to add; each fills per recipient on send</div>
             <div className="flex flex-col gap-1">
               {MERGE_FIELDS.map((f) => (
-                <button key={f.token} type="button" onClick={() => insert(f.token)} className="flex items-baseline gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-left hover:bg-[var(--panel)]">
+                <button key={f.token} type="button" onClick={() => insert(f.token)} className="flex items-baseline gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-start hover:bg-[var(--panel)]">
                   <span className="w-[112px] flex-none text-[11.5px] font-bold text-[var(--brand-strong)]">{f.token}</span>
                   <span className="text-[11.5px] text-[var(--ink-3)]">{f.desc}{f.bookingScoped ? " · needs a booking" : ""}</span>
                 </button>

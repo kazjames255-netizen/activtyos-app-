@@ -90,7 +90,7 @@ export function StaffCertsApp() {
         <div className="mb-1.5 flex items-center gap-2">
           {r?.fileData ? <button type="button" onClick={() => openCredFile(r.fileData)} title={t("staffp.certViewUploaded")} className="text-[13.5px] font-extrabold text-[#1d3a8f] hover:underline">{ct.name} 📎</button> : <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{ct.name}</span>}
           {ct.required && appliesTo(ct, ME, ME_ROLE) ? <span className="rounded-full bg-[#fdecec] px-2 py-0.5 text-[10px] font-bold text-[#c0392b]">{t("staffp.certRequired")}</span> : <span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[10px] font-bold text-[#64748b]">{t("staffp.certOptional")}</span>}
-          <span className="ml-auto"><CredBadge s={st} label={t(CRED_KEY[st])} /></span>
+          <span className="ms-auto"><CredBadge s={st} label={t(CRED_KEY[st])} /></span>
         </div>
         {r ? (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[var(--ink-3)]">
@@ -215,7 +215,7 @@ export function StaffCertsApp() {
           <CollapsibleStats id="staff-certs">
           <div className="grid grid-cols-3 gap-3">
             {([[t("staffp.certStatCompleted"), String(myDone.length), t("staffp.certStatAllTime")], [t("staffp.certStatMyAvg"), myAvg == null ? "—" : `${myAvg}%`, t("staffp.certStatAcross")], [t("staffp.certStatTeamAvg"), teamAvg == null ? "—" : `${teamAvg}%`, t("staffp.certStatEveryone")]] as const).map(([label, value, sub]) => (
-              <div key={label} className="rounded-2xl border border-[var(--line)] bg-white p-3.5 text-center sm:text-left">
+              <div key={label} className="rounded-2xl border border-[var(--line)] bg-white p-3.5 text-center sm:text-start">
                 <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div>
                 <div className="mt-0.5 text-[22px] font-extrabold tabular-nums text-[var(--ink)]">{value}</div>
                 <div className="text-[10px] text-[var(--ink-3)]">{sub}</div>

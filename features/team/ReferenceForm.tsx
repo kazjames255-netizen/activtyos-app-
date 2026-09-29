@@ -179,7 +179,7 @@ export function ReferenceForm({ token }: { token: string }) {
                 {file ? "Replace file" : "Attach a file"}
                 <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => pickFile(e.target.files?.[0])} />
               </label>
-              {file && <span className="text-[12px] font-bold text-[#8a4b09]">📎 {file.fileName}<button type="button" onClick={() => setFile(null)} className="ml-2 text-[var(--ink-3)] hover:text-[#c0392b]">remove</button></span>}
+              {file && <span className="text-[12px] font-bold text-[#8a4b09]">📎 {file.fileName}<button type="button" onClick={() => setFile(null)} className="ms-2 text-[var(--ink-3)] hover:text-[#c0392b]">remove</button></span>}
             </div>
           </div>
           <label className="flex cursor-pointer items-start gap-2 text-[12.5px] leading-snug text-[var(--ink-2)] sm:col-span-2">
@@ -191,7 +191,7 @@ export function ReferenceForm({ token }: { token: string }) {
           <button type="button" onClick={() => setDeclining((v) => !v)} className="text-[12px] font-bold text-[var(--ink-3)] underline hover:text-[var(--ink-2)]">
             I can&rsquo;t give this reference
           </button>
-          <Button variant="primary" className="ml-auto" disabled={busy} onClick={submit}>{busy ? "Sending…" : "Send the reference"}</Button>
+          <Button variant="primary" className="ms-auto" disabled={busy} onClick={submit}>{busy ? "Sending…" : "Send the reference"}</Button>
         </div>
         {declining && (
           <div className="border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3.5">

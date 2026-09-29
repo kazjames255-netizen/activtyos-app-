@@ -96,7 +96,7 @@ export function VenueMap({
           </svg>
         </div>
         {onZoom && (
-          <div className="absolute right-1.5 top-1.5 flex flex-col overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] shadow-sm">
+          <div className="absolute end-1.5 top-1.5 flex flex-col overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] shadow-sm">
             <button type="button" onClick={() => onZoom(Math.min(MAX_Z, z + 1))} disabled={z >= MAX_Z}
               className="h-6 w-6 text-[14px] font-bold leading-none text-[var(--ink-2)] hover:bg-[var(--surface)] disabled:opacity-35" aria-label="Zoom in">+</button>
             <button type="button" onClick={() => onZoom(Math.max(MIN_Z, z - 1))} disabled={z <= MIN_Z}
@@ -104,7 +104,7 @@ export function VenueMap({
           </div>
         )}
       </div>
-      <div className="mt-1 text-right text-[9.5px] leading-none text-[var(--ink-3)]">
+      <div className="mt-1 text-end text-[9.5px] leading-none text-[var(--ink-3)]">
         Contains OS data © Crown copyright &amp; database rights
       </div>
     </div>

@@ -12,6 +12,7 @@
 // right.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { get as apiGet, api } from "@/lib/api";
@@ -338,7 +339,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="flex-1 text-[12.5px] font-bold" style={{ color: sexTint(c.sex, true).ink }}>
                     {c.name}
-                    {c.dob && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: "rgba(255,255,255,.8)" }}>age {ageOn(c.dob, d.runFrom) ?? "—"}</span>}
+                    {c.dob && <span className="ms-1.5 text-[11px] font-semibold" style={{ color: "rgba(255,255,255,.8)" }}>age {ageOn(c.dob, d.runFrom) ?? "—"}</span>}
                   </span>
                   {/* On the solid fill the muted greys vanish, so the actions
                       follow the row's state too. */}
@@ -885,7 +886,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   }
   const mealTotal = mealSlots.reduce((sum, { kid, date }) => { const sel = b.mealFor(kid, date); const it = sel ? mealItemAt(date, sel) : undefined; return it ? sum + it.price : sum; }, 0);
   const mealKids = [...new Set(mealSlots.map((s) => s.kid))];
-  const fmtMealDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  const fmtMealDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
   // Copy one child's picks to every sibling (same date → same dish, since a
   // day's menu is the same for all children) — one tap for a big family.
   const copyMealsToAll = (fromKid: string) => { for (const { kid, date } of mealSlots) { if (kid === fromKid) continue; const src = b.mealFor(fromKid, date); if (src && mealItemAt(date, src)) b.pickMeal(kid, date, src); } };
@@ -1180,7 +1181,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             );
           })}
           {parentMode && (
-            <span className="ml-auto flex items-center gap-3 text-[12px] font-extrabold">
+            <span className="ms-auto flex items-center gap-3 text-[12px] font-extrabold">
               <Link href="/custdash" className="underline" style={{ color: tk.accent }}>← My home page</Link>
               <Link href="/custdash/bookings" className="underline" style={{ color: tk.accent }}>My bookings</Link>
             </span>
@@ -1208,7 +1209,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 <span className="text-[11px]" style={{ color: tk.muted }}>£</span>
                 <input type="number" min={0} step="0.01" value={b.priceOf(x)}
                   onChange={(e) => b.setItemPrice(x.id, e.target.value === "" ? null : parseFloat(e.target.value))}
-                  className={`w-[74px] border px-2 py-1 text-right text-[12.5px] font-bold outline-none ${tk.round}`}
+                  className={`w-[74px] border px-2 py-1 text-end text-[12.5px] font-bold outline-none ${tk.round}`}
                   style={{ background: tk.inputBg, borderColor: b.priceEdit[x.id] !== undefined ? tk.accent : tk.line, color: tk.ink }} />
               </span>
             )}
@@ -1226,7 +1227,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         <div className={`mt-4 flex items-center gap-2 border px-3 py-2 ${tk.round}`} style={{ borderColor: tk.accent, background: `${tk.accent}1a` }}>
           <span className="flex-1 text-[12.5px] font-bold" style={{ color: tk.ink }}>
             {b.parent.name}
-            {b.parent.id === "new" && <span className="ml-1.5 text-[11px] font-normal" style={{ color: tk.muted }}>— new account</span>}
+            {b.parent.id === "new" && <span className="ms-1.5 text-[11px] font-normal" style={{ color: tk.muted }}>— new account</span>}
           </span>
           <button type="button" onClick={() => b.setParent(null)} className="text-[11.5px] font-bold" style={{ color: tk.muted }}>Change</button>
         </div>
@@ -1252,8 +1253,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               <div className="mt-1.5 flex flex-col gap-1">
                 {matches.map((p) => (
                   <button key={p.id} type="button" onClick={() => { b.setParent(p); setQ(""); }}
-                    className={`border px-3 py-2 text-left text-[12.5px] ${tk.round}`} style={{ borderColor: tk.line, color: tk.ink }}>
-                    <b>{p.name}</b>{p.email ? <span className="ml-1.5 text-[11px]" style={{ color: tk.muted }}>{p.email}</span> : null}
+                    className={`border px-3 py-2 text-start text-[12.5px] ${tk.round}`} style={{ borderColor: tk.line, color: tk.ink }}>
+                    <b>{p.name}</b>{p.email ? <span className="ms-1.5 text-[11px]" style={{ color: tk.muted }}>{p.email}</span> : null}
                   </button>
                 ))}
                 {matches.length === 0 && (
@@ -1341,7 +1342,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     {(() => {
                       const heads = b.childrenOn(x.id).length;
                       return (
-                        <span className="flex-none text-right text-[12px]">
+                        <span className="flex-none text-end text-[12px]">
                           <b style={{ color: tk.ink }}>{money(b.priceOf(x) * heads)}</b>
                           {heads > 1 && <span className="block text-[10.5px]" style={{ color: tk.muted }}>{money(b.priceOf(x))} × {heads}</span>}
                         </span>
@@ -1411,7 +1412,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                               <div key={sv.name} className="flex items-baseline justify-between gap-3 text-[11px]">
                                 <span className="min-w-0" style={{ color: tk.muted }}>
                                   {sv.name}
-                                  {sv.terms && <span className="ml-1 opacity-70">({sv.terms})</span>}
+                                  {sv.terms && <span className="ms-1 opacity-70">({sv.terms})</span>}
                                 </span>
                                 <span className="flex-none font-bold" style={{ color: tk.accent }}>−{money(sv.amount)}</span>
                               </div>
@@ -1455,11 +1456,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               const open = single || (openMealKid === null ? kid === mealKids[0] : openMealKid === kid);
               return (
                 <div key={kid} className="overflow-hidden rounded-xl" style={{ border: `2px solid ${chosen ? tk.accent : tk.line}` }}>
-                  <button type="button" onClick={() => !single && setOpenMealKid(open ? "" : kid)} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left" style={{ background: `${tk.accent}1f`, cursor: single ? "default" : "pointer" }}>
+                  <button type="button" onClick={() => !single && setOpenMealKid(open ? "" : kid)} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-start" style={{ background: `${tk.accent}1f`, cursor: single ? "default" : "pointer" }}>
                     <span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[12px] font-black" style={{ background: tk.accent, color: tk.accentInk }}>{ki + 1}</span>
                     <span className="text-[13.5px] font-extrabold" style={{ color: tk.ink }}>{kid}</span>
                     <span className="rounded-full px-2 py-[1px] text-[10.5px] font-extrabold" style={{ background: chosen ? tk.accent : "transparent", color: chosen ? tk.accentInk : tk.muted, border: chosen ? "none" : `1px solid ${tk.line}` }}>{chosen}/{slots.length} meals</span>
-                    {!single && <span className="ml-auto text-[13px]" style={{ color: tk.muted }}>{open ? "▲" : "▼"}</span>}
+                    {!single && <span className="ms-auto text-[13px]" style={{ color: tk.muted }}>{open ? "▲" : "▼"}</span>}
                   </button>
                   {open && (
                     <div className="px-3 pb-3 pt-2.5">
@@ -1470,7 +1471,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                           if (!menu) return null;
                           const sel = b.mealFor(kid, date);
                           const wd = new Date(`${date}T00:00:00Z`).getUTCDay();
-                          const wdLabel = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" });
+                          const wdLabel = new Date(`${date}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "long", timeZone: "UTC" });
                           const sameWdCount = slots.filter((s) => new Date(`${s.date}T00:00:00Z`).getUTCDay() === wd).length;
                           return (
                             <div key={date} className="rounded-lg p-2" style={{ border: `1px solid ${sel ? tk.accent : tk.line}`, background: sel ? `${tk.accent}14` : "transparent" }}>
@@ -1520,7 +1521,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         {b.discountLines.map((l, i) => (
           <div key={i} className="flex items-baseline justify-between gap-3 text-[11.5px]">
             <span className="min-w-0" style={{ color: tk.muted }}>
-              {l.name}{l.terms && <span className="ml-1 opacity-70">({l.terms})</span>}
+              {l.name}{l.terms && <span className="ms-1 opacity-70">({l.terms})</span>}
             </span>
             <b className="flex-none" style={{ color: tk.accent }}>−{money(l.amount)}</b>
           </div>
@@ -1631,7 +1632,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             <span className="text-[11px]" style={{ color: tk.muted }}>£</span>
             <input type="number" min={0} step="0.01" value={b.totalOverride ?? ""} placeholder={calculated.toFixed(2)}
               onChange={(e) => b.setTotalOverride(e.target.value === "" ? null : Math.max(0, parseFloat(e.target.value) || 0))}
-              className={`w-[86px] border px-2 py-1 text-right text-[12.5px] font-bold outline-none ${tk.round}`}
+              className={`w-[86px] border px-2 py-1 text-end text-[12.5px] font-bold outline-none ${tk.round}`}
               style={{ background: tk.inputBg, borderColor: b.totalOverride !== null ? tk.accent : tk.line, color: tk.ink }} />
             {b.totalOverride !== null && (
               <button type="button" onClick={() => b.setTotalOverride(null)} className="text-[11px] font-bold" style={{ color: tk.muted }}>Reset</button>
@@ -1663,7 +1664,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 style={{ borderColor: `${tk.muted}55`, background: tk.inputBg }}>
                 <span className="text-[12.5px] font-bold" style={{ color: tk.ink }}>
                   Booking so far
-                  <span className="ml-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>
+                  <span className="ms-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>
                     {b.basket.length} pass{b.basket.length === 1 ? "" : "es"}
                     {b.saved > 0 ? ` · ${money(b.saved)} saved` : ""}
                   </span>
@@ -1811,7 +1812,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       const rec = roster.find((r) => r.name.trim() === kid);
                       const kc = sexTint(rec?.sex, true);
                       return (
-                        <div key={kid} className={`mb-2.5 border-l-4 py-1 pl-3 last:mb-0 ${tk.round}`} style={{ borderColor: kc.bg }}>
+                        <div key={kid} className={`mb-2.5 border-s-4 py-1 ps-3 last:mb-0 ${tk.round}`} style={{ borderColor: kc.bg }}>
                           <div className="mb-2 flex flex-wrap items-center gap-2">
                             {rec?.photo ? (
                               // eslint-disable-next-line @next/next/no-img-element
@@ -1846,7 +1847,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                                     ? { borderColor: kc.bg, background: kc.bg, color: kc.ink, transform: "translateY(-1px)", boxShadow: `0 6px 14px -8px ${kc.bg}` }
                                     : { borderColor: tk.line, color: tk.muted }}>
                                   <span className="text-[8px] font-bold uppercase tracking-[0.06em] opacity-80">
-                                    {dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}
+                                    {dt.toLocaleDateString(dl(), { weekday: "short", timeZone: "UTC" })}
                                   </span>
                                   <span className="text-[12px] font-extrabold leading-none">{ordinal(dt.getUTCDate())}</span>
                                 </button>
@@ -1945,13 +1946,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   a way to undo it, and both at once is a choice with no answer. */}
               {anyPicked ? (
                 <button type="button" onClick={() => step(1)} disabled={unanswered.length > 0}
-                  className={`ml-auto px-5 py-2 text-[12.5px] font-extrabold disabled:opacity-50 ${tk.round}`}
+                  className={`ms-auto px-5 py-2 text-[12.5px] font-extrabold disabled:opacity-50 ${tk.round}`}
                   style={{ background: tk.accent, color: tk.accentInk, boxShadow: `0 10px 22px -12px ${tk.accent}` }}>
                   {unanswered.length ? `${unanswered[0].kid} needs ${unanswered[0].label.toLowerCase()}` : "Next →"}
                 </button>
               ) : (
                 <button type="button" onClick={() => { clearAll(); step(1); }}
-                  className={`ml-auto border-2 px-4 py-2 text-[12.5px] font-extrabold ${tk.round}`}
+                  className={`ms-auto border-2 px-4 py-2 text-[12.5px] font-extrabold ${tk.round}`}
                   style={{ borderColor: tk.muted, color: tk.ink }}>
                   Skip →
                 </button>
@@ -2048,7 +2049,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     <div className="text-[13px] font-extrabold leading-tight text-white">Pay from your HMRC account</div>
                     <div className="text-[10.5px] leading-tight" style={{ color: "rgba(255,255,255,.8)" }}>Tax-Free Childcare</div>
                   </div>
-                  <span className="ml-auto shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-extrabold"
+                  <span className="ms-auto shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-extrabold"
                     style={{ background: linkedAll ? "rgba(255,255,255,.95)" : "rgba(255,255,255,.2)", color: linkedAll ? "#065f3c" : "#fff" }}>
                     {linkedAll ? "✓ Linked" : `${linkedCount}/${roster.length} linked`}
                   </span>
@@ -2074,7 +2075,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                             : (
                               <button type="button"
                                 onClick={() => { setTfcFail(null); setTfcConnecting(c.name); }}
-                                className={`ml-auto border-2 px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
+                                className={`ms-auto border-2 px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
                                 style={{ borderColor: tk.accent, background: `${tk.accent}26`, color: tk.ink }}>
                                 Login with HMRC
                               </button>
@@ -2085,10 +2086,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                             onChange={(e) => { setVoucherRefs((m) => ({ ...m, [c.name]: e.target.value.toUpperCase() })); }}
                             placeholder={referenceHint(c.name)}
                             aria-label={`Payment reference for ${c.name}`}
-                            className={`w-full border px-2.5 py-1.5 pr-8 text-[12.5px] font-semibold tracking-wide ${tk.round}`}
+                            className={`w-full border px-2.5 py-1.5 pe-8 text-[12.5px] font-semibold tracking-wide ${tk.round}`}
                             style={{ borderColor: typed ? (looksRight ? `${TFC_GREEN}80` : "#e0a020") : `${tk.ink}33`, background: tk.inputBg, color: tk.ink }} />
                           {typed && looksRight && (
-                            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[12px] font-extrabold"
+                            <span className="pointer-events-none absolute end-2.5 top-1/2 -translate-y-1/2 text-[12px] font-extrabold"
                               style={{ color: TFC_GREEN }}>✓</span>
                           )}
                         </div>
@@ -2127,7 +2128,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                         Not added this provider to your HMRC account yet?
                       </summary>
                       <div className="border-t px-2.5 py-2" style={{ borderColor: `${tk.ink}1a` }}>
-                        <ol className="flex list-decimal flex-col gap-1 pl-4 text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
+                        <ol className="flex list-decimal flex-col gap-1 ps-4 text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
                           <li>Sign in at <b style={{ color: tk.ink }}>gov.uk/sign-in-childcare-account</b> and add a childcare provider.</li>
                           <li>Search for {settingName ? <b style={{ color: tk.ink }}>{settingName}</b> : "this provider"} and add them.</li>
                           <li>Come back here and pay.</li>
@@ -2168,12 +2169,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   <div className="mt-2 flex items-center gap-2">
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: TFC_BAR }} />
                     <span className="text-[12px] font-semibold" style={{ color: tk.ink }}>Tax-Free Childcare</span>
-                    <span className="ml-auto flex items-center gap-1">
+                    <span className="ms-auto flex items-center gap-1">
                       <span className="text-[12.5px] font-extrabold" style={{ color: tk.ink }}>£</span>
                       <input inputMode="decimal" value={tfcAmount} onChange={(e) => setTfcAmount(e.target.value.replace(/[^0-9.]/g, ""))}
                         placeholder={String(amountDue.toFixed(2))}
                         aria-label="Amount from Tax-Free Childcare"
-                        className={`w-[86px] border px-2 py-1 text-right text-[12.5px] font-extrabold ${tk.round}`}
+                        className={`w-[86px] border px-2 py-1 text-end text-[12.5px] font-extrabold ${tk.round}`}
                         style={{ borderColor: `${tk.ink}33`, background: tk.inputBg, color: tk.ink }} />
                     </span>
                   </div>
@@ -2181,7 +2182,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     <div className="mt-1.5 flex items-center gap-2">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: tk.accent }} />
                       <span className="text-[12px] font-semibold" style={{ color: tk.ink }}>{restLabel}</span>
-                      <span className="ml-auto text-[12.5px] font-extrabold" style={{ color: tk.ink }}>{money(remainder)}</span>
+                      <span className="ms-auto text-[12.5px] font-extrabold" style={{ color: tk.ink }}>{money(remainder)}</span>
                     </div>
                   )}
 
@@ -2204,7 +2205,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       </span>
                       <button type="button"
                         onClick={() => { setTfcAmount(available.toFixed(2)); if (restOpts[0]) setTfcRest(restOpts[0][0]); }}
-                        className={`ml-auto border-2 px-2.5 py-1 text-[11px] font-bold ${tk.round}`}
+                        className={`ms-auto border-2 px-2.5 py-1 text-[11px] font-bold ${tk.round}`}
                         style={{ borderColor: tk.accent, background: `${tk.accent}26`, color: tk.ink }}>
                         Split it
                       </button>

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useSearchParams } from "next/navigation";
@@ -38,8 +39,8 @@ const ACTS: Act[] = [
 const inputCls = "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]";
 const pad = (n: number) => String(n).padStart(2, "0");
 const todayIso = () => { const t = new Date(); return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`; };
-const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
-const fmtNice = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "");
+const when = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const fmtNice = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }) : "");
 const weekStartIso = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 
 const AICAP: Record<string, { o: string[]; m: string[] }> = {
@@ -150,7 +151,7 @@ function PostForm({ activities, settings, save, listings, initialChild, onPosted
         <div className="relative mb-2.5 w-[160px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={preview} alt="" className="aspect-square w-[160px] rounded-xl object-cover" />
-          <button type="button" onClick={() => setPreview(null)} className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-[11px] text-white">✕</button>
+          <button type="button" onClick={() => setPreview(null)} className="absolute end-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-[11px] text-white">✕</button>
         </div>
       ) : (
         <label className="mb-2.5 flex h-[110px] w-full cursor-pointer items-center justify-center rounded-xl border border-dashed border-[var(--line)] text-[12.5px] text-[var(--ink-3)]">📷 Choose a photo — you&rsquo;ll crop it to a square<input type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} /></label>
@@ -184,7 +185,7 @@ function PostForm({ activities, settings, save, listings, initialChild, onPosted
             <div className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-[0_12px_28px_-12px_rgba(23,21,52,.4)]">
               {rows.map((c) => { const on = tagged.includes(c.childId), allowed = canTag(c); return (
                 <button key={c.childId} type="button" disabled={!allowed} onMouseDown={(e) => { e.preventDefault(); if (allowed) setTagged((t) => t.includes(c.childId) ? t.filter((x) => x !== c.childId) : [...t, c.childId]); }}
-                  className="flex w-full items-center gap-2 border-b border-[var(--line)] px-3 py-2 text-left last:border-b-0 hover:bg-[#eef4fd] disabled:cursor-not-allowed disabled:opacity-55" style={on ? { background: "#eef4fd" } : undefined}>
+                  className="flex w-full items-center gap-2 border-b border-[var(--line)] px-3 py-2 text-start last:border-b-0 hover:bg-[#eef4fd] disabled:cursor-not-allowed disabled:opacity-55" style={on ? { background: "#eef4fd" } : undefined}>
                   <span className="flex-1 min-w-0"><span className="text-[12.5px] font-extrabold">{on ? "✓ " : ""}{c.name}</span><span className="block truncate text-[11px] text-[var(--ink-3)]">{[c.parentName, c.postcode, c.listing].filter(Boolean).join(" · ") || c.email || "—"}</span></span>
                   <span className="flex-none rounded-full px-1.5 py-0.5 text-[9px] font-extrabold text-white" style={{ background: c.photoConsent ? GREEN : RED }}>{c.photoConsent ? "consent ✓" : "no photos"}</span>
                 </button>
@@ -414,11 +415,11 @@ export function MomentsApp() {
           {galMode !== "all" && !openFolder ? (
             <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))" }}>
               {(galMode === "child" ? childFolders : listingFolders).map((f) => (
-                <button key={f.id} type="button" onClick={() => setGalFolder(f.id)} className="overflow-hidden rounded-xl border border-[var(--line)] text-left">
+                <button key={f.id} type="button" onClick={() => setGalFolder(f.id)} className="overflow-hidden rounded-xl border border-[var(--line)] text-start">
                   <div className="relative aspect-square bg-black">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={f.items[0].photoUrl} alt="" className="h-full w-full object-cover" />
-                    <span className="absolute bottom-1 right-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-extrabold text-white">{f.items.length}</span>
+                    <span className="absolute bottom-1 end-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-extrabold text-white">{f.items.length}</span>
                   </div>
                   <div className="truncate px-2 py-1.5 text-[12px] font-bold">📁 {f.label}</div>
                 </button>
@@ -433,7 +434,7 @@ export function MomentsApp() {
                   <button key={m.id} type="button" onClick={() => setLightbox(m.photoUrl!)} className="relative aspect-square overflow-hidden rounded-lg bg-black">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={m.photoUrl} alt={m.caption ?? ""} className="h-full w-full object-cover" />
-                    {m.photoType === "work" && <span className="absolute bottom-1 left-1 rounded-full px-1.5 py-0.5 text-[8.5px] font-extrabold text-white" style={{ background: "#0f7a43" }}>Work</span>}
+                    {m.photoType === "work" && <span className="absolute bottom-1 start-1 rounded-full px-1.5 py-0.5 text-[8.5px] font-extrabold text-white" style={{ background: "#0f7a43" }}>Work</span>}
                   </button>
                 ))}
               </div>
@@ -455,11 +456,11 @@ export function MomentsApp() {
                   <button type="button" onClick={() => setLightbox(m.photoUrl!)} className="relative block aspect-square w-full bg-black">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={m.photoUrl} alt={m.caption ?? ""} className="h-full w-full object-cover" />
-                    {a && <span className="absolute left-2.5 top-2.5 rounded-full bg-white/95 px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: col }}>{a.e} {a.n}</span>}
-                    {m.photoType === "work" && <span className="absolute bottom-2.5 left-2.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-white" style={{ background: "#0f7a43" }}>🎨 Their work</span>}
+                    {a && <span className="absolute start-2.5 top-2.5 rounded-full bg-white/95 px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: col }}>{a.e} {a.n}</span>}
+                    {m.photoType === "work" && <span className="absolute bottom-2.5 start-2.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-white" style={{ background: "#0f7a43" }}>🎨 Their work</span>}
                   </button>
                 ) : (
-                  <div className="relative flex h-[108px] items-center justify-center" style={{ background: `linear-gradient(135deg,${col},${col}cc)` }}><span className="text-[46px]">{a?.e ?? "✨"}</span>{a && <span className="absolute left-2.5 top-2.5 rounded-full bg-white/95 px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: col }}>{a.e} {a.n}</span>}</div>
+                  <div className="relative flex h-[108px] items-center justify-center" style={{ background: `linear-gradient(135deg,${col},${col}cc)` }}><span className="text-[46px]">{a?.e ?? "✨"}</span>{a && <span className="absolute start-2.5 top-2.5 rounded-full bg-white/95 px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: col }}>{a.e} {a.n}</span>}</div>
                 )}
                 <div className="p-3">
                   {m.childNames?.filter(Boolean).length > 0 && <div className="mb-1.5 text-[12.5px] font-extrabold">{m.childNames.filter(Boolean).join(", ")}</div>}

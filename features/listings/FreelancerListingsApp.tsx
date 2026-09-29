@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
@@ -108,7 +109,7 @@ export interface LocalState {
 }
 
 // Date-rail formatting for the listing card.
-const monthOf = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+const monthOf = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" });
 const dayOf = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDate();
 // Scheduled-open badge. Compared as local strings, matching the datetime-local
 // input the operator typed — no timezone shifting.
@@ -116,11 +117,11 @@ const nowLocal = () => { const t = new Date(); const p = (n: number) => String(n
 const openLabel = (v: string) => {
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return v;
-  const time = d.getMinutes() ? d.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit" }) : d.toLocaleTimeString("en-GB", { hour: "numeric" });
-  return `${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "short" })}, ${time.replace(/\s/g, "").toLowerCase()}`;
+  const time = d.getMinutes() ? d.toLocaleTimeString(dl(), { hour: "numeric", minute: "2-digit" }) : d.toLocaleTimeString(dl(), { hour: "numeric" });
+  return `${d.getDate()} ${d.toLocaleDateString(dl(), { month: "short" })}, ${time.replace(/\s/g, "").toLowerCase()}`;
 };
 const shortDate = (iso: string) =>
-  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : "TBC";
+  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" }) : "TBC";
 
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -529,12 +530,12 @@ export function FreelancerListingsApp() {
 // native select chevron is replaced — it can't be recoloured for the filled state.
 export function Pill({ active, onClear, children }: { active: boolean; onClear?: () => void; children: React.ReactNode }) {
   return (
-    <span className="flex h-8 items-center gap-1.5 rounded-full border pl-3 pr-1 transition-colors"
+    <span className="flex h-8 items-center gap-1.5 rounded-full border ps-3 pe-1 transition-colors"
       style={active ? { background: "var(--brand)", borderColor: "var(--brand)" } : { background: "var(--panel)", borderColor: "var(--line)" }}>
       {children}
       <button type="button" onClick={onClear} title={active ? "Clear" : undefined} aria-hidden={!active}
-        className="mr-1 text-[13px] leading-none transition-opacity"
-        style={active ? { color: "rgba(255,255,255,.75)" } : { opacity: 0, pointerEvents: "none", width: 0, marginRight: 0 }}>×</button>
+        className="me-1 text-[13px] leading-none transition-opacity"
+        style={active ? { color: "rgba(255,255,255,.75)" } : { opacity: 0, pointerEvents: "none", width: 0, marginInlineEnd: 0 }}>×</button>
     </span>
   );
 }
@@ -543,7 +544,7 @@ export function PillSelect({ active, value, onChange, options, title }: { active
   return (
     <span className="relative flex items-center">
       <select value={value} onChange={(e) => onChange(e.target.value)} title={title}
-        className="h-8 max-w-[165px] cursor-pointer appearance-none border-0 bg-transparent pr-4 text-[12.5px] font-semibold outline-none"
+        className="h-8 max-w-[165px] cursor-pointer appearance-none border-0 bg-transparent pe-4 text-[12.5px] font-semibold outline-none"
         style={{ color: active ? "#fff" : "var(--ink)" }}>
         {options.map(([v, label]) => (
           <option key={v} value={v} style={{ color: "var(--ink)" }}>
@@ -551,7 +552,7 @@ export function PillSelect({ active, value, onChange, options, title }: { active
           </option>
         ))}
       </select>
-      <span className="pointer-events-none absolute right-0 text-[9px]" style={{ color: active ? "rgba(255,255,255,.8)" : "var(--ink-2)" }}>▼</span>
+      <span className="pointer-events-none absolute end-0 text-[9px]" style={{ color: active ? "rgba(255,255,255,.8)" : "var(--ink-2)" }}>▼</span>
     </span>
   );
 }
@@ -804,11 +805,11 @@ function ListingsTab({
           actually narrowing the list, so the row reads as state, not chrome. */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[180px] flex-1 sm:max-w-[260px]">
-          <svg viewBox="0 0 16 16" fill="none" className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-3)] opacity-60">
+          <svg viewBox="0 0 16 16" fill="none" className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-3)] opacity-60">
             <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.7" /><path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
           </svg>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search listings…"
-            className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] pl-[32px] pr-3 text-[12.5px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-2)] focus:border-[var(--brand-2)]" />
+            className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] ps-[32px] pe-3 text-[12.5px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-2)] focus:border-[var(--brand-2)]" />
         </div>
 
         {venueOpts.length > 0 && (
@@ -853,7 +854,7 @@ function ListingsTab({
             className="h-8 px-1 text-[11.5px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline">Reset</button>
         )}
 
-        <span className="ml-auto flex h-8 items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5 text-[11.5px] font-semibold">
+        <span className="ms-auto flex h-8 items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5 text-[11.5px] font-semibold">
           {([["all", "All"], ["live", "Published"], ["draft", "Unpublished"], ["ended", "Ended"]] as const).map(([k, label]) => (
             <button key={k} type="button" onClick={() => setStatusFilter(k)} className="h-full rounded-full px-3 transition-colors"
               style={statusFilter === k ? { background: "var(--brand)", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
@@ -869,7 +870,7 @@ function ListingsTab({
             <Card key={l.id} className="overflow-visible p-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-20px_rgba(20,35,90,.35)]">
               <div className="flex flex-col sm:flex-row">
                 {/* date rail — when it runs, read first */}
-                <div className="flex flex-none flex-row items-center justify-center gap-3 px-4 py-3 text-white sm:w-[92px] sm:flex-col sm:gap-0 sm:rounded-l-xl sm:py-4" style={{ background: "var(--side-bg)" }}>
+                <div className="flex flex-none flex-row items-center justify-center gap-3 px-4 py-3 text-white sm:w-[92px] sm:flex-col sm:gap-0 sm:rounded-s-xl sm:py-4" style={{ background: "var(--side-bg)" }}>
                   {info?.from ? (
                     <>
                       <div className="text-[10px] font-bold uppercase tracking-[0.12em] opacity-75">{monthOf(info.from)}</div>
@@ -969,7 +970,7 @@ function ListingsTab({
                         )}
                       </div>
                     )}
-                    <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                    <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
                       {/* Take a phone/walk-in booking for a family, on the real
                           booking widget in operator mode. Only for listings that
                           can actually be booked (a draft has no dates/prices). */}
@@ -990,16 +991,16 @@ function ListingsTab({
                         {menuId === l.id && (
                           <>
                             <div className="fixed inset-0 z-10" onClick={() => setMenuId(null)} />
-                            <div className="absolute right-0 z-20 mt-1 w-[168px] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] py-1 shadow-lg">
+                            <div className="absolute end-0 z-20 mt-1 w-[168px] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] py-1 shadow-lg">
                               {[
                                 { label: "</> Embed on my website", fn: () => copyEmbed(l) },
                                 { label: "Duplicate", fn: () => duplicate(l) },
                                 { label: "Archive", fn: () => archive(l, true) },
                               ].map((a) => (
-                                <button key={a.label} type="button" onClick={() => { a.fn(); setMenuId(null); }} className="block w-full px-3.5 py-2 text-left text-[12.5px] font-medium text-[var(--ink-2)] hover:bg-[var(--surface)]">{a.label}</button>
+                                <button key={a.label} type="button" onClick={() => { a.fn(); setMenuId(null); }} className="block w-full px-3.5 py-2 text-start text-[12.5px] font-medium text-[var(--ink-2)] hover:bg-[var(--surface)]">{a.label}</button>
                               ))}
                               <div className="my-1 h-px bg-[var(--line)]" />
-                              <button type="button" onClick={() => { remove(l); setMenuId(null); }} className="block w-full px-3.5 py-2 text-left text-[12.5px] font-medium text-[#dc2626] hover:bg-[#fef2f2]">Delete</button>
+                              <button type="button" onClick={() => { remove(l); setMenuId(null); }} className="block w-full px-3.5 py-2 text-start text-[12.5px] font-medium text-[#dc2626] hover:bg-[#fef2f2]">Delete</button>
                             </div>
                           </>
                         )}
@@ -1014,7 +1015,7 @@ function ListingsTab({
                     hero stays framed here too, whatever layout/size they chose.
                     (It used to force dead-centre, which clipped off-centre
                     subjects like a child's face.) */}
-                <div className="order-first h-[150px] w-full flex-none overflow-hidden sm:order-last sm:h-auto sm:w-[230px] sm:self-stretch sm:rounded-r-xl">
+                <div className="order-first h-[150px] w-full flex-none overflow-hidden sm:order-last sm:h-auto sm:w-[230px] sm:self-stretch sm:rounded-e-xl">
                   {info?.cover ? (
                     <CroppedImage im={info.cover} className="h-full w-full" />
                   ) : (
@@ -1043,7 +1044,7 @@ function ListingsTab({
             <div className="w-full max-w-[360px] rounded-2xl bg-[var(--surface)] p-5 shadow-2xl">
               <div className="mb-3 flex items-center gap-2">
                 <span className="text-[14px] font-extrabold text-[var(--ink)]">📱 Scan to book</span>
-                <button type="button" onClick={() => setQrFor(null)} className="ml-auto text-[20px] leading-none text-[var(--ink-3)]">×</button>
+                <button type="button" onClick={() => setQrFor(null)} className="ms-auto text-[20px] leading-none text-[var(--ink-3)]">×</button>
               </div>
               <div className="truncate text-[12.5px] font-bold text-[var(--ink-2)]">{qrFor.name}</div>
               <img src={qr} alt={`QR code for ${qrFor.name}`} className="mx-auto mt-3 h-[240px] w-[240px] rounded-xl border border-[var(--line)]" />
@@ -1075,7 +1076,7 @@ function ListingsTab({
             <span className="grid h-6 w-6 place-items-center rounded-lg bg-[var(--surface)] text-[13px] ring-1 ring-[var(--line)]">📦</span>
             <span>Archived</span>
             <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#5b6478] px-1.5 text-[10.5px] font-extrabold text-white">{archivedList.length}</span>
-            <span className="ml-auto text-[11px] font-semibold text-[var(--ink-3)]">{showArchived ? "▾ hide" : "▸ show"}</span>
+            <span className="ms-auto text-[11px] font-semibold text-[var(--ink-3)]">{showArchived ? "▾ hide" : "▸ show"}</span>
           </button>
           {showArchived && (
             <div className="mt-2 flex flex-col gap-1.5">
@@ -1183,7 +1184,7 @@ function LocationsTab({
                 {/* Numbered so a row and its map pin are obviously the same thing. */}
                 <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-[12px] font-extrabold"
                   style={on ? { background: "var(--side-bg)", color: "#fff" } : { background: "var(--surface)", color: "var(--ink-3)" }}>{v.kind === "online" ? "💻" : i + 1}</span>
-                <button type="button" onClick={() => setSelId(v.id)} className="min-w-0 flex-1 text-left">
+                <button type="button" onClick={() => setSelId(v.id)} className="min-w-0 flex-1 text-start">
                   <div className="truncate text-[13px] font-bold">{v.name}</div>
                   <div className="truncate text-[11.5px] text-[var(--ink-3)]">
                     {v.kind === "online" ? "Runs online" : v.address || "No address yet"} · {n ? `${n} listing${n === 1 ? "" : "s"}` : "not used yet"}
@@ -1287,7 +1288,7 @@ function LocationsTab({
                 <FieldLabel>What&rsquo;s there</FieldLabel>
                 <div className="mb-1.5 flex flex-wrap gap-1.5">
                   {(sel.facilities ?? []).map((f) => (
-                    <span key={f} className="inline-flex items-center gap-1 rounded-full border border-[var(--brand-line)] bg-[var(--brand-soft)] py-1 pl-2.5 pr-1 text-[11.5px] font-semibold text-[var(--brand-ink)]">
+                    <span key={f} className="inline-flex items-center gap-1 rounded-full border border-[var(--brand-line)] bg-[var(--brand-soft)] py-1 ps-2.5 pe-1 text-[11.5px] font-semibold text-[var(--brand-ink)]">
                       {f}
                       <button type="button" onClick={() => setPin(sel.id, { facilities: (sel.facilities ?? []).filter((x) => x !== f) })}
                         aria-label={`Remove ${f}`} className="px-1 text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
@@ -1436,7 +1437,7 @@ function AddressFinder({ onPick }: { onPick: (hit: Hit) => void }) {
         <div className="mt-1.5 max-h-[132px] overflow-y-auto rounded-lg border border-[var(--line)]">
           {hits.map((h, i) => (
             <button key={i} type="button" onClick={() => { onPick(h); setHits(null); setQ(""); }}
-              className="block w-full border-b border-[var(--line)] px-2.5 py-1.5 text-left text-[11.5px] leading-[1.4] last:border-b-0 hover:bg-[var(--surface)]">
+              className="block w-full border-b border-[var(--line)] px-2.5 py-1.5 text-start text-[11.5px] leading-[1.4] last:border-b-0 hover:bg-[var(--surface)]">
               {h.label}
             </button>
           ))}

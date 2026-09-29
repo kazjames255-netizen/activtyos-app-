@@ -10,6 +10,7 @@
 // this module can be pulled in from anywhere without a runtime cycle.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { applyDiscounts } from "./discounts";
 import { blockOn, lowAt } from "./capacity";
@@ -38,7 +39,7 @@ export function useOpensAt(opensAt?: string) {
     return dd > 0 ? `${dd} day${dd === 1 ? "" : "s"} ${hh}h ${mm}m` : `${p2(hh)}:${p2(mm)}:${p2(s2)}`;
   })();
   const opensLabel = at && !Number.isNaN(openMs)
-    ? new Date(openMs).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })
+    ? new Date(openMs).toLocaleString(dl(), { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })
     : "";
   return { locked, countdown, opensLabel };
 }
@@ -304,7 +305,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     const byMonth = new Map<string, number[]>();
     for (const iso of [...isos].sort()) {
       const dt = new Date(`${iso}T00:00:00Z`);
-      const month = dt.toLocaleDateString("en-GB", { month: "long", timeZone: "UTC" });
+      const month = dt.toLocaleDateString(dl(), { month: "long", timeZone: "UTC" });
       const list = byMonth.get(month) ?? [];
       list.push(dt.getUTCDate());
       byMonth.set(month, list);

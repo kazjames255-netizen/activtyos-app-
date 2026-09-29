@@ -59,7 +59,7 @@ export function BodyMap({ value, onChange, readOnly = false, startOpen = false }
 
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-start">
         <span className="text-[12.5px] font-extrabold">⛑️ Body map{marks.length ? ` (${marks.length})` : readOnly ? "" : " (optional)"}</span>
         <span className="text-[16px] leading-none text-[var(--ink-3)]">{open ? "−" : "+"}</span>
       </button>

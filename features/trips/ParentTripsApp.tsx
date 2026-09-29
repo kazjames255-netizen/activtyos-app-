@@ -97,7 +97,7 @@ export function ParentTripsApp() {
                   <span className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{trip.destination}</span>
                   <span className="text-[12px] text-[var(--ink-3)]">{fmtDate(trip.date, loc)}</span>
                   {trip.status === "completed" && <span className="rounded-full bg-[#eef0f5] px-2 py-0.5 text-[10.5px] font-bold text-[#6b6880]">{t("care.tripCompleted")}</span>}
-                  <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{trip.provider}</span>
+                  <span className="ms-auto text-[11.5px] text-[var(--ink-3)]">{trip.provider}</span>
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-[var(--ink-2)]">
                   {trip.departTime && <span>{t("care.tripDeparts", { time: trip.departTime })}</span>}
@@ -116,7 +116,7 @@ export function ParentTripsApp() {
                         <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: meta.bg, color: meta.fg }}>{t(meta.labelKey)}</span>
                         {c.consentAt && <span className="text-[10.5px] text-[var(--ink-3)]">{new Date(c.consentAt).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>}
                         {trip.askConsent && upcoming && c.consent === "pending" && (
-                          <span className="ml-auto flex gap-1.5">
+                          <span className="ms-auto flex gap-1.5">
                             <button
                               onClick={() => void answer(trip, c, "granted")}
                               disabled={busy === key}

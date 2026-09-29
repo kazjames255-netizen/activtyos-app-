@@ -6,6 +6,7 @@
 // its territory status, and a drill-in. The single place a franchisor reviews
 // "who runs what and how they're doing".
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { money } from "@/features/bookings/helpers";
@@ -24,7 +25,7 @@ const PALETTE = ["#2f6bd8", "#e0483d", "#0f9d58", "#f5b81f", "#8e44ad", "#e67e22
 const fmtSince = (iso: string | null) => {
   if (!iso) return "—";
   const days = Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  return days <= 0 ? "today" : days === 1 ? "yesterday" : days < 30 ? `${days}d ago` : new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return days <= 0 ? "today" : days === 1 ? "yesterday" : days < 30 ? `${days}d ago` : new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short" });
 };
 const trendChip = (pct: number) => pct === 0 ? null : <span className={"text-[11px] font-extrabold " + (pct > 0 ? "text-[#0f7a43]" : "text-[#c0392b]")}>{pct > 0 ? "▲" : "▼"} {Math.abs(pct)}%</span>;
 
@@ -59,12 +60,12 @@ export function FranchiseOverviewApp() {
     const s = STAT_STYLE[k] ?? { tone: "#2f6bd8", icon: "" };
     return (
       <div className="relative overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 shadow-sm">
-        <span className="absolute inset-y-0 left-0 w-1" style={{ background: s.tone }} />
-        <div className="flex items-center gap-1.5 pl-1.5">
+        <span className="absolute inset-y-0 start-0 w-1" style={{ background: s.tone }} />
+        <div className="flex items-center gap-1.5 ps-1.5">
           <span className="text-[12px] leading-none" aria-hidden>{s.icon}</span>
           <span className="text-[9px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{k}</span>
         </div>
-        <div className="pl-1.5 text-[17px] font-black leading-tight tabular-nums" style={{ color: s.tone }}>{v}</div>
+        <div className="ps-1.5 text-[17px] font-black leading-tight tabular-nums" style={{ color: s.tone }}>{v}</div>
       </div>
     );
   };
@@ -121,7 +122,7 @@ export function FranchiseOverviewApp() {
                   {trendChip(f.trendPct)}
                   {f.openIncidents > 0 && <span className="rounded-full bg-[#fdecec] px-2 py-0.5 text-[10px] font-extrabold text-[#c0392b]">🛡 {f.openIncidents} open</span>}
                   {!f.live && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-3)]">not trading yet</span>}
-                  <button type="button" onClick={() => setHoScopeId(f.franchiseId)} className="ml-auto rounded-full bg-[#171534] px-3.5 py-1.5 text-[11.5px] font-extrabold text-white hover:brightness-125">Open franchise →</button>
+                  <button type="button" onClick={() => setHoScopeId(f.franchiseId)} className="ms-auto rounded-full bg-[#171534] px-3.5 py-1.5 text-[11.5px] font-extrabold text-white hover:brightness-125">Open franchise →</button>
                 </div>
                 <div className="mb-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
                   <Stat k="Revenue" v={money(f.revenue)} />
@@ -149,7 +150,7 @@ export function FranchiseOverviewApp() {
               <div className="mb-2.5 flex flex-wrap items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#64748b] text-[12px]">🏛</span>
                 <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Head office <span className="font-normal text-[var(--ink-3)]">· direct</span></div>
-                <button type="button" onClick={() => setHoScopeId("__ho__")} className="ml-auto rounded-full bg-[#171534] px-3.5 py-1.5 text-[11.5px] font-extrabold text-white hover:brightness-125">Open →</button>
+                <button type="button" onClick={() => setHoScopeId("__ho__")} className="ms-auto rounded-full bg-[#171534] px-3.5 py-1.5 text-[11.5px] font-extrabold text-white hover:brightness-125">Open →</button>
               </div>
               <div className="mb-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
                 <Stat k="Revenue" v={money(ov.direct.revenue)} />

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
 import { useHoScope } from "@/components/franchise/HoScope";
@@ -30,7 +31,7 @@ const STATUS_META: Record<Status, { label: string; bg: string; fg: string }> = {
 const OWED = new Set<Status>(["sent"]);
 const STATUS_ACCENT: Record<Status, string> = { draft: "#b7b3c9", sent: "#3f78d8", paid: "#3f78d8", cancelled: "#d0cdda" };
 
-const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const addDaysIso = (iso: string, n: number) => { const d = new Date(`${iso || todayIso()}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const DUE_PRESETS = [3, 5, 7, 10];
@@ -61,7 +62,7 @@ const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surfac
 const labelCls = "mb-1 block text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]";
 const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink)] outline-none";
 const iconBtn = "flex h-8 w-8 flex-none items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[14px] text-[var(--ink-2)] transition-colors hover:border-[#1d3a8f] hover:bg-[#eef4fd] hover:text-[#1d3a8f]";
-const menuItem = "flex w-full items-center gap-2 px-3 py-2 text-left text-[12.5px] font-bold text-[var(--ink)] transition-colors hover:bg-[var(--panel)]";
+const menuItem = "flex w-full items-center gap-2 px-3 py-2 text-start text-[12.5px] font-bold text-[var(--ink)] transition-colors hover:bg-[var(--panel)]";
 // Crisp line icons (currentColor) — much cleaner than emoji on the action buttons.
 const svgProps = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 const IcView = () => <svg {...svgProps}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>;
@@ -148,7 +149,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const collected = useMemo(() => items.filter((p) => p.status === "paid" && (p.date || "").slice(0, 4) === thisYear).reduce((s, p) => s + p.amount, 0), [items, thisYear]);
 
   const monthly = useMemo(() => {
-    const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1); return { key: monthKeyOf(d), label: d.toLocaleDateString("en-GB", { month: "short" }) }; });
+    const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1); return { key: monthKeyOf(d), label: d.toLocaleDateString(dl(), { month: "short" }) }; });
     return months.map((m) => { const rows = items.filter((p) => p.status !== "cancelled" && (p.date || "").slice(0, 7) === m.key); return { ...m, total: rows.reduce((s, p) => s + p.amount, 0), count: rows.length }; });
   }, [items, now]);
   const byStatus = useMemo(() => STATUSES.map((s) => { const rows = items.filter((p) => p.status === s); return { status: s, count: rows.length, total: rows.reduce((a, p) => a + p.amount, 0) }; }), [items]);
@@ -243,7 +244,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     <div className={embedded ? "text-[var(--ink)]" : "-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]"} style={embedded ? undefined : LIGHT_PALETTE}>
       {!embedded && (
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
-        <button type="button" onClick={openAdd} className="absolute right-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ New invoice</button>
+        <button type="button" onClick={openAdd} className="absolute end-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ New invoice</button>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">📨</span>
           Invoices
@@ -294,7 +295,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
             <div className="mb-2.5 text-[13.5px] font-extrabold">Pipeline</div>
             <div className="flex flex-wrap gap-2">
               {byStatus.map((s) => (
-                <button key={s.status} type="button" onClick={() => { setFlt(s.status); setTab("ledger"); }} className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2 text-left transition hover:border-[var(--ink-3)]">
+                <button key={s.status} type="button" onClick={() => { setFlt(s.status); setTab("ledger"); }} className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2 text-start transition hover:border-[var(--ink-3)]">
                   <StatusPill s={s.status} />
                   <div><div className="text-[14px] font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{s.count} invoice{s.count === 1 ? "" : "s"}</div></div>
                 </button>
@@ -338,7 +339,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                         {sendFor === p.id && (
                           <>
                             <div className="fixed inset-0 z-30" onClick={() => setSendFor(null)} />
-                            <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
+                            <div className="absolute end-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
                               <button type="button" onClick={() => { setSendFor(null); void emailDoc(p, "link"); }} className={menuItem}>✉️ Email + pay-link</button>
                               <button type="button" onClick={() => { setSendFor(null); void emailDoc(p, "bank"); }} className={menuItem}>🏦 Email (bank details only)</button>
                               <button type="button" onClick={() => { setSendFor(null); whatsApp(p); }} className={menuItem}>💬 WhatsApp</button>
@@ -360,8 +361,8 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
           <Card className="flex flex-col gap-2.5 p-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
-                <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search customer, booking or note…" className="w-[230px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 pl-7 pr-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]" />
+                <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search customer, booking or note…" className="w-[230px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 ps-7 pe-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]" />
               </div>
               <select value={flt} onChange={(e) => setFlt(e.target.value as Flt)} className={`${pill} rounded-full`}>
                 <option value="all">All invoices</option>
@@ -369,7 +370,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                 <option value="overdue">Overdue</option>
                 {STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
               </select>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ms-auto flex items-center gap-2">
                 <button type="button" onClick={exportCsv} className={btnGhost}>⬇ Export CSV</button>
               </div>
             </div>
@@ -398,7 +399,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
           {filtered.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">Nothing matches those filters.</Card> : (
             <div className="flex flex-col gap-1.5">
               {filtered.map((p) => (
-                <Card key={p.id} className="aos-print-avoid flex flex-wrap items-center gap-2.5 p-2.5 transition-shadow hover:shadow-[0_10px_24px_-12px_rgba(29,58,143,.45)]" style={{ borderLeftColor: isOverdue(p) ? "#e2643b" : STATUS_ACCENT[p.status], borderLeftWidth: "4px" }}>
+                <Card key={p.id} className="aos-print-avoid flex flex-wrap items-center gap-2.5 p-2.5 transition-shadow hover:shadow-[0_10px_24px_-12px_rgba(29,58,143,.45)]" style={{ borderInlineStartColor: isOverdue(p) ? "#e2643b" : STATUS_ACCENT[p.status], borderInlineStartWidth: "4px" }}>
                   <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[13px] font-extrabold text-white shadow-sm" style={{ background: isOverdue(p) ? "#e2643b" : STATUS_ACCENT[p.status] }}>{p.customerName.trim()[0]?.toUpperCase() || "?"}</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -406,7 +407,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                       {p.bookingRef && <span className="rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">🎟 {p.bookingRef}</span>}
                       {isOverdue(p) && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-2 py-0.5 text-[10px] font-bold text-[var(--red,#e21d27)]">overdue</span>}
                     </div>
-                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#1d3a8f]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}{p.status === "paid" ? <span className="ml-1 font-bold text-[#1d3a8f]">· ✅ Paid {p.paidVia === "link" ? "via link" : "manually"}{p.paidAt ? ` ${fmtDay(p.paidAt.slice(0, 10))}` : ""}</span> : ""}</div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}{p.emailedAt ? <span className="ms-1 font-bold text-[#1d3a8f]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}{p.status === "paid" ? <span className="ms-1 font-bold text-[#1d3a8f]">· ✅ Paid {p.paidVia === "link" ? "via link" : "manually"}{p.paidAt ? ` ${fmtDay(p.paidAt.slice(0, 10))}` : ""}</span> : ""}</div>
                   </div>
                   {p.payToken && p.status !== "paid" && p.status !== "cancelled" && <button type="button" onClick={() => copyLink(p)} className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:bg-[#dbe7fb]" title="Copy the customer's pay-link">{copied === p.id ? "✓ copied" : "🔗 pay-link"}</button>}
                   <span className="flex-none text-[14px] font-extrabold tabular-nums">{money(p.amount)}</span>
@@ -418,7 +419,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                       {sendFor === p.id && (
                         <>
                           <div className="fixed inset-0 z-30" onClick={() => setSendFor(null)} />
-                          <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
+                          <div className="absolute end-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
                             <button type="button" onClick={() => { setSendFor(null); void emailDoc(p, "link"); }} className={menuItem}>✉️ Email + pay-link</button>
                             <button type="button" onClick={() => { setSendFor(null); void emailDoc(p, "bank"); }} className={menuItem}>🏦 Email (bank details only)</button>
                             <button type="button" onClick={() => { setSendFor(null); whatsApp(p); }} className={menuItem}>💬 WhatsApp</button>
@@ -441,7 +442,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
             {sentLog.map((p) => (
               <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
                 <span className="w-[110px] flex-none text-[11.5px] font-bold text-[#1d3a8f]">✉ {fmtDay((p.emailedAt || "").slice(0, 10))}</span>
-                <div className="min-w-0 flex-1 truncate"><span className="text-[13px] font-bold">{p.customerName}</span>{p.reference ? <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">{p.reference}</span> : ""}{p.customerEmail ? <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">→ {p.customerEmail}</span> : ""}</div>
+                <div className="min-w-0 flex-1 truncate"><span className="text-[13px] font-bold">{p.customerName}</span>{p.reference ? <span className="ms-1.5 text-[11px] text-[var(--ink-3)]">{p.reference}</span> : ""}{p.customerEmail ? <span className="ms-1.5 text-[11px] text-[var(--ink-3)]">→ {p.customerEmail}</span> : ""}</div>
                 <span className="flex-none rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: STATUS_META[p.status].bg, color: STATUS_META[p.status].fg }}>{STATUS_META[p.status].label}</span>
                 <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
                 <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View"><IcView /></button>
@@ -453,7 +454,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
       ) : (
         <div className="flex flex-col gap-1.5">
           {customers.map((c) => (
-            <button key={c.customer} type="button" onClick={() => { setQ(c.customer); setTab("ledger"); }} className="block w-full text-left" title="View this customer’s invoices">
+            <button key={c.customer} type="button" onClick={() => { setQ(c.customer); setTab("ledger"); }} className="block w-full text-start" title="View this customer’s invoices">
               <Card className="p-3.5 transition hover:border-[#1d3a8f]">
                 <div className="flex items-center justify-between"><div className="text-[13.5px] font-extrabold">{c.customer}</div><div className="flex items-center gap-1.5 text-[15px] font-extrabold tabular-nums">{money(c.total)}<span className="text-[12px] font-bold text-[#1d3a8f]">›</span></div></div>
                 <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / (customers[0]?.total || 1)) * 100)}%`, background: "linear-gradient(90deg,#3f78d8,#1d3a8f)" }} /></div>
@@ -490,7 +491,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                     {custs === null ? <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">Loading…</div>
                     : custMatches.length === 0 ? <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">No matches.</div>
                     : custMatches.map((c) => (
-                      <button key={c.id} type="button" onClick={() => { setEditor({ ...editor, customerName: c.name, customerEmail: c.email ?? "" }); setFinder(false); setCq(""); }} className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-[12.5px] hover:bg-[var(--surface)]">
+                      <button key={c.id} type="button" onClick={() => { setEditor({ ...editor, customerName: c.name, customerEmail: c.email ?? "" }); setFinder(false); setCq(""); }} className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-start text-[12.5px] hover:bg-[var(--surface)]">
                         <span className="min-w-0 truncate"><b>{c.name}</b>{c.children?.length ? <span className="text-[var(--ink-3)]"> · {c.children.map((k) => k.name).filter(Boolean).join(", ")}</span> : ""}</span>
                         <span className="flex-none text-[11px] text-[var(--ink-3)]">{c.email}</span>
                       </button>

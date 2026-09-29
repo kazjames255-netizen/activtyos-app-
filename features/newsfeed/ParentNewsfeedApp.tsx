@@ -85,13 +85,13 @@ export function ParentNewsfeedApp() {
                   <div className="flex items-center gap-1.5 px-3 pt-2.5">
                     {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10px] font-extrabold text-[#8a6d1a]">{t("feed.pinned")}</span>}
                     <Badge tone={{ bg: "color-mix(in srgb, var(--brand) 14%, transparent)", fg: "var(--brand)" }}>{p.tenantName ?? t("feed.provider")}</Badge>
-                    <span className="ml-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt, dateLoc)}</span>
+                    <span className="ms-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt, dateLoc)}</span>
                   </div>
                   <div className="p-3 pt-2"><NewsletterView data={p.newsletter} /></div>
                   <div className="flex flex-wrap items-center gap-2 px-3 pb-3">
                     {p.ackRequired && <button type="button" onClick={() => ack(p)} disabled={m.acked} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold" style={m.acked ? { background: "#e7f6ee", color: "#0f8a4a" } : { background: "#1d3a8f", color: "#fff" }}>{m.acked ? t("feed.gotItDone") : t("feed.gotIt")}</button>}
                     {msgBtn(p)}
-                    {p.react !== false && <button type="button" onClick={() => react(p)} className="ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={m.reacted ? { borderColor: "#e22295", background: "#fdeaf4", color: "#e22295" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{m.reacted ? "♥" : "♡"} {p.reactions ?? 0}</button>}
+                    {p.react !== false && <button type="button" onClick={() => react(p)} className="ms-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={m.reacted ? { borderColor: "#e22295", background: "#fdeaf4", color: "#e22295" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{m.reacted ? "♥" : "♡"} {p.reactions ?? 0}</button>}
                   </div>
                 </Card>
               );
@@ -106,7 +106,7 @@ export function ParentNewsfeedApp() {
                     <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide" style={{ background: accent, color: "#fff" }}>{t(tp.label)}</span>
                     {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10.5px] font-extrabold text-[#8a6d1a]">{t("feed.pinned")}</span>}
                     <Badge tone={{ bg: "color-mix(in srgb, var(--brand) 14%, transparent)", fg: "var(--brand)" }}>{p.tenantName ?? t("feed.provider")}</Badge>
-                    <span className="ml-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt, dateLoc)}</span>
+                    <span className="ms-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt, dateLoc)}</span>
                   </div>
                   {p.title && <div className="text-[18px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</div>}
                   <div className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-[var(--ink-2)]">{p.body}</div>
@@ -132,7 +132,7 @@ export function ParentNewsfeedApp() {
                     )}
                     {msgBtn(p)}
                     {p.react !== false && (
-                      <button type="button" onClick={() => react(p)} className="ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={m.reacted ? { borderColor: "#e22295", background: "#fdeaf4", color: "#e22295" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{m.reacted ? "♥" : "♡"} {p.reactions ?? 0}</button>
+                      <button type="button" onClick={() => react(p)} className="ms-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={m.reacted ? { borderColor: "#e22295", background: "#fdeaf4", color: "#e22295" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{m.reacted ? "♥" : "♡"} {p.reactions ?? 0}</button>
                     )}
                   </div>
                 </div>

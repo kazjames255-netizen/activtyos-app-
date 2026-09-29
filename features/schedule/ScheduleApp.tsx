@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { ApiError, get as apiGet, put as apiPut, isDemoMode } from "@/lib/api";
 import { useTenantSettings } from "@/lib/settings";
@@ -297,9 +298,9 @@ export function ScheduleApp() {
     else setAnchor(addDays(iso(weekStartOf(dt(anchor))), dir * (span === "week" ? 7 : span === "2w" ? 14 : 28)));
   };
   const label = useMemo(() => {
-    if (span === "day") return dt(anchor).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-    if (span === "month") return dt(anchor).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
-    const f = (s: string) => dt(s).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+    if (span === "day") return dt(anchor).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+    if (span === "month") return dt(anchor).toLocaleDateString(dl(), { month: "short", year: "numeric", timeZone: "UTC" });
+    const f = (s: string) => dt(s).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" });
     return `${f(dates[0])} – ${f(dates[dates.length - 1])}`;
   }, [span, anchor, dates]);
 
@@ -357,7 +358,7 @@ export function ScheduleApp() {
     });
 
   // Columns: hours for Day, dates otherwise
-  const cols = useMemo(() => isDay ? HOURS.map((h) => ({ key: `h${h}`, hour: h, label: to12(`${h}:00`), date: anchor })) : dates.map((d) => ({ key: d, date: d, hour: null as number | null, label: dt(d).toLocaleDateString("en-GB", span === "week" ? { weekday: "short", day: "numeric", timeZone: "UTC" } : { day: "numeric", timeZone: "UTC" }) })), [isDay, dates, anchor, span]);
+  const cols = useMemo(() => isDay ? HOURS.map((h) => ({ key: `h${h}`, hour: h, label: to12(`${h}:00`), date: anchor })) : dates.map((d) => ({ key: d, date: d, hour: null as number | null, label: dt(d).toLocaleDateString(dl(), span === "week" ? { weekday: "short", day: "numeric", timeZone: "UTC" } : { day: "numeric", timeZone: "UTC" }) })), [isDay, dates, anchor, span]);
   const colW = isDay ? 66 : span === "week" ? 92 : span === "2w" ? 62 : span === "4w" ? 42 : 40;
   // Day view keeps fixed hour widths (scrolls if narrow); every dated span fills
   // the page width instead — columns share the space so nothing scrolls sideways.
@@ -503,7 +504,7 @@ export function ScheduleApp() {
       : { background: "#fff1f2", borderColor: "#f4a6ae", color: "#b91c1c" };
     return (
       <button type="button" onClick={() => canManage && openEditGroup(s)} disabled={!canManage}
-        className={"w-full rounded-lg border text-left shadow-sm transition enabled:hover:brightness-[1.04] enabled:hover:shadow-md " + (compact ? "px-1 py-1 text-[9.5px]" : "px-2 py-1.5 text-[11px]")}
+        className={"w-full rounded-lg border text-start shadow-sm transition enabled:hover:brightness-[1.04] enabled:hover:shadow-md " + (compact ? "px-1 py-1 text-[9.5px]" : "px-2 py-1.5 text-[11px]")}
         style={heat}>
         {!compact && <div className="flex items-start gap-1"><span className="min-w-0 flex-1 font-extrabold">{to12(s.start)} – {to12(s.end)}</span>{canManage && <span role="button" onClick={(e) => { e.stopPropagation(); removeShift(s.id); }} className="flex-none opacity-60 hover:opacity-100">×</span>}</div>}
         <div className="truncate font-bold">{st ? (compact ? st.name.split(" ")[0] : st.name) : (compact ? "—" : t("schedule.unfilled"))}</div>
@@ -519,7 +520,7 @@ export function ScheduleApp() {
   const CellRow = ({ rows, onAdd, compact }: { rows: Shift[]; onAdd: (c: { date: string; hour: number | null }) => void; compact?: boolean }) => (
     <div className="grid" style={{ gridTemplateColumns: gridTmpl }}>
       {cols.map((c) => { const has = cellShifts(rows, c).length > 0; return (
-        <div key={c.key} className="flex min-h-[54px] flex-col gap-1 border-r border-[var(--line-2,#eef2f8)] p-1 last:border-r-0">
+        <div key={c.key} className="flex min-h-[54px] flex-col gap-1 border-e border-[var(--line-2,#eef2f8)] p-1 last:border-e-0">
           {cellShifts(rows, c).map((s) => <ShiftBlock key={s.id} s={s} compact={compact} />)}
           {canManage && <button type="button" onClick={() => onAdd(c)} title={t("schedule.addAShift")} className={has
             ? "rounded-md border border-dashed border-[var(--line)] py-0.5 text-[12px] text-[var(--ink-3)] hover:border-[var(--brand)] hover:text-[#1d3a8f]"
@@ -598,8 +599,8 @@ export function ScheduleApp() {
 
       {/* Wages — always above the Rota/Settings tabs */}
       <div className="relative mb-3 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(22,48,110,0.55)]" style={{ background: "linear-gradient(125deg,#132a63 0%,#1d3a8f 46%,#2f6bd8 100%)" }}>
-        <div className="pointer-events-none absolute -right-10 -top-16 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-20 right-24 h-40 w-40 rounded-full bg-[#7fb0ff]/20 blur-2xl" />
+        <div className="pointer-events-none absolute -end-10 -top-16 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-20 end-24 h-40 w-40 rounded-full bg-[#7fb0ff]/20 blur-2xl" />
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div>
             <div className="mb-1 inline-flex items-center gap-2 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white/90 backdrop-blur">💷 {t("schedule.payrollForecast")}</div>
@@ -629,48 +630,48 @@ export function ScheduleApp() {
       <>
 
       <Card className="mb-3 overflow-hidden">
-        <button type="button" onClick={() => setHelp((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-left"><span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--panel)] text-[12px]">ⓘ</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{t("schedule.howAvailabilityWorks")}</span><span className="ml-auto text-[12px] text-[var(--ink-3)]">{help ? "▲" : "▼"}</span></button>
-        {help && <ol className="ml-9 list-decimal space-y-1 px-4 pb-3.5 text-[13px] leading-relaxed text-[var(--ink-2)]"><li><b>Request availability</b> — hit the red button in the staff panel. Everyone starts <b className="text-[#c0392b]">Not submitted</b>.</li><li>Staff set the days &amp; times they can work — their card turns <b className="text-[#0f7a43]">Confirmed</b>.</li><li>Still red? Tap the <b>gold bell</b> to send a reminder.</li><li>Then ✨ Auto-schedule fills open shifts and Publish locks them &amp; tells staff.</li></ol>}
+        <button type="button" onClick={() => setHelp((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-start"><span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--panel)] text-[12px]">ⓘ</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{t("schedule.howAvailabilityWorks")}</span><span className="ms-auto text-[12px] text-[var(--ink-3)]">{help ? "▲" : "▼"}</span></button>
+        {help && <ol className="ms-9 list-decimal space-y-1 px-4 pb-3.5 text-[13px] leading-relaxed text-[var(--ink-2)]"><li><b>Request availability</b> — hit the red button in the staff panel. Everyone starts <b className="text-[#c0392b]">Not submitted</b>.</li><li>Staff set the days &amp; times they can work — their card turns <b className="text-[#0f7a43]">Confirmed</b>.</li><li>Still red? Tap the <b>gold bell</b> to send a reminder.</li><li>Then ✨ Auto-schedule fills open shifts and Publish locks them &amp; tells staff.</li></ol>}
       </Card>
 
       {/* Toolbar — classy white pills, each with its own coloured icon badge */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* Season first — multi-select popup; it scopes the locations & listings below */}
-        <button type="button" onClick={() => setSeasonMenu(true)} className="group inline-flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3.5 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">
+        <button type="button" onClick={() => setSeasonMenu(true)} className="group inline-flex items-center gap-2 rounded-full bg-white py-1 ps-1 pe-3.5 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">
           <span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#eceaff", color: "#4f46e5" }}>📅</span>
           {seasonSel.length === 0 ? t("schedule.allSeasons") : t("schedule.nOfMSeasons", { n: seasonSel.length, m: seasonOpts.length })}<span className="text-[10px] text-[var(--ink-3)]">▾</span>
         </button>
         {seasonSel.map((sn) => (
           <span key={sn} className="inline-flex items-center gap-1 rounded-full bg-[#eef8f1] px-2.5 py-1.5 text-[12px] font-bold text-[#0f7a43] ring-1 ring-[#bfe3cd]">📅 {sn}<button type="button" onClick={() => { setSeasonSel((xs) => xs.filter((x) => x !== sn)); setSite("all"); setListingF("all"); }} className="text-[13px] text-[#0f7a43] hover:text-[#c0392b]">×</button></span>
         ))}
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]"><span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#ffe9ed", color: "#e11d48" }}>📍</span><Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none"><option value="all">{t("schedule.allLocations")}</option>{sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]"><span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#e5eefe", color: "#2563eb" }}>🎟</span><Select value={listingF} onChange={(e) => setListingF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none"><option value="all">{t("schedule.allListings")}</option>{listingOpts.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 ps-1 pe-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]"><span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#ffe9ed", color: "#e11d48" }}>📍</span><Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none"><option value="all">{t("schedule.allLocations")}</option>{sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 ps-1 pe-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]"><span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#e5eefe", color: "#2563eb" }}>🎟</span><Select value={listingF} onChange={(e) => setListingF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none"><option value="all">{t("schedule.allListings")}</option>{listingOpts.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1 rounded-full bg-white px-1 py-1 shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
           <button type="button" onClick={() => nav(-1)} className="grid h-7 w-7 place-items-center rounded-full text-[15px] text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[#1d3a8f]">‹</button>
           <span className="min-w-[116px] text-center text-[12.5px] font-extrabold text-[var(--ink)]">{label}</span>
           <button type="button" onClick={() => nav(1)} className="grid h-7 w-7 place-items-center rounded-full text-[15px] text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[#1d3a8f]">›</button>
         </div>
-        {checkinAutoAlert && <button type="button" onClick={() => setShowAlerts(true)} className="relative inline-flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3.5 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">
+        {checkinAutoAlert && <button type="button" onClick={() => setShowAlerts(true)} className="relative inline-flex items-center gap-2 rounded-full bg-white py-1 ps-1 pe-3.5 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">
           <span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#fdeecf", color: "#b45309" }}>🔔</span>{t("schedule.checkinAlerts")}{alerts.length > 0 && <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#c0392b] px-1 text-[10px] font-extrabold text-white">{alerts.length}</span>}</button>}
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 ps-1 pe-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
           <span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#dcf5e8", color: "#059669" }}>🗓</span>
           <Select value={`${span}:${group}`} onChange={(e) => { const [sp, gr] = e.target.value.split(":"); setSpan(sp as Span); setGroup(gr as Group); }} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none">
             {GROUPS.map(([g, gl]) => SPANS.map(([s, sl]) => <option key={`${s}:${g}`} value={`${s}:${g}`}>{sl} by {gl}</option>))}
           </Select>
         </div>
         {canManage && (
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-2">
             <div className="relative">
               <button type="button" onClick={() => setAutoMenu((v) => !v)} className="rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">✨ {t("schedule.autoSchedule")} ▾</button>
-              {autoMenu && <div className="absolute right-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg"><button type="button" onClick={autoFill} className="block w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">{t("schedule.fillOpenShifts")}</button><button type="button" onClick={clearPeriod} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[#c0392b] hover:bg-[#fdebec]">{t("schedule.clearAllShiftsShown")}</button></div>}
+              {autoMenu && <div className="absolute end-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg"><button type="button" onClick={autoFill} className="block w-full px-3.5 py-2.5 text-start text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">{t("schedule.fillOpenShifts")}</button><button type="button" onClick={clearPeriod} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-start text-[12.5px] font-semibold text-[#c0392b] hover:bg-[#fdebec]">{t("schedule.clearAllShiftsShown")}</button></div>}
             </div>
             <button type="button" onClick={() => { if (isDemoMode()) setStore(load()); else void loadServerRota(); flash(t("schedule.refreshed")); }} title={t("schedule.refresh")} className="grid h-[34px] w-[34px] place-items-center rounded-full bg-white text-[13px] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">↻</button>
             <div className="relative">
               <button type="button" onClick={() => setCopyMenu((v) => !v)} title={t("schedule.copyScheduleTemplates")} className="rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">⧉ {t("schedule.copy")} ▾</button>
-              {copyMenu && <div className="absolute right-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
-                <button type="button" onClick={copyForward} className="block w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">{t("schedule.copySchedule")} <span className="block text-[10.5px] font-normal text-[var(--ink-3)]">{t("schedule.copyScheduleSub")}</span></button>
-                <button type="button" onClick={() => { setCopyMenu(false); setTplName(""); setTplSaveOpen(true); }} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">{t("schedule.saveAsTemplate")} <span className="block text-[10.5px] font-normal text-[var(--ink-3)]">{t("schedule.saveAsTemplateSub")}</span></button>
-                <button type="button" onClick={() => { setCopyMenu(false); setTplListOpen(true); }} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">{t("schedule.templatesDots")} <span className="block text-[10.5px] font-normal text-[var(--ink-3)]">{t("schedule.nSaved", { n: templates.length })}</span></button>
+              {copyMenu && <div className="absolute end-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
+                <button type="button" onClick={copyForward} className="block w-full px-3.5 py-2.5 text-start text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">{t("schedule.copySchedule")} <span className="block text-[10.5px] font-normal text-[var(--ink-3)]">{t("schedule.copyScheduleSub")}</span></button>
+                <button type="button" onClick={() => { setCopyMenu(false); setTplName(""); setTplSaveOpen(true); }} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-start text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">{t("schedule.saveAsTemplate")} <span className="block text-[10.5px] font-normal text-[var(--ink-3)]">{t("schedule.saveAsTemplateSub")}</span></button>
+                <button type="button" onClick={() => { setCopyMenu(false); setTplListOpen(true); }} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-start text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">{t("schedule.templatesDots")} <span className="block text-[10.5px] font-normal text-[var(--ink-3)]">{t("schedule.nSaved", { n: templates.length })}</span></button>
               </div>}
             </div>
             <button type="button" onClick={publish} className="rounded-full bg-[#0f7a43] px-4 py-1.5 text-[13px] font-extrabold text-white hover:brightness-105">{t("schedule.publishToStaff", { count: assignedStaff.size })}</button>
@@ -685,7 +686,7 @@ export function ScheduleApp() {
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("schedule.searchPlaceholder")} className="mb-2 w-full text-[12px]" />
             <div className="mb-2 flex items-center gap-1">
               <span className="text-[9px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("schedule.sort")}</span>
-              <Select value={staffSort} onChange={(e) => setStaffSort(e.target.value as typeof staffSort)} className="ml-auto w-full max-w-[150px] text-[11px]">
+              <Select value={staffSort} onChange={(e) => setStaffSort(e.target.value as typeof staffSort)} className="ms-auto w-full max-w-[150px] text-[11px]">
                 <option value="name">{t("schedule.sortName")}</option>
                 <option value="availLow">{t("schedule.sortAvailLeast")}</option>
                 <option value="availHigh">{t("schedule.sortAvailMost")}</option>
@@ -740,7 +741,7 @@ export function ScheduleApp() {
             <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: "linear-gradient(160deg,#3a6fd8,#1d3a8f)" }} />{t("schedule.assigned")}</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: "#fff1f2", boxShadow: "inset 0 0 0 1px #f4a6ae" }} />{t("schedule.notAssigned")}</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-[var(--panel)] ring-1 ring-inset ring-[var(--line)]" />{t("schedule.noShift")}</span>
-            {canManage && <span className="ml-auto flex items-center gap-2">
+            {canManage && <span className="ms-auto flex items-center gap-2">
               {/* Made-up people are for the demo only — a real account rosters its real team. */}
               {isDemoMode() && <button type="button" onClick={seedDemo} className="rounded-full bg-[#eef4fd] px-3 py-1 text-[11.5px] font-extrabold text-[#1d3a8f] ring-1 ring-[#bcd0f5] hover:bg-[#e2ecfb]">🎨 {t("schedule.addSampleShifts")}</button>}
               {hasDemo && <button type="button" onClick={clearDemo} className="rounded-full px-2.5 py-1 text-[11.5px] font-bold text-[#c0392b] hover:bg-[#fdebec]">{t("schedule.clearSamples")}</button>}
@@ -756,11 +757,11 @@ export function ScheduleApp() {
                     // a bare number — with the full date on hover.
                     if (c.hour !== null) return <div key={c.key} className="px-2 py-2.5 text-[11.5px] font-extrabold">{c.label}</div>;
                     const d = dt(c.date);
-                    const wd = d.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
-                    const dm = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+                    const wd = d.toLocaleDateString(dl(), { weekday: "short", timeZone: "UTC" });
+                    const dm = d.toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" });
                     const isWknd = [0, 6].includes(d.getUTCDay());
                     return (
-                      <div key={c.key} title={d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })} className={"px-1.5 py-2 text-center leading-tight " + (isWknd ? "bg-white/10" : "")}>
+                      <div key={c.key} title={d.toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })} className={"px-1.5 py-2 text-center leading-tight " + (isWknd ? "bg-white/10" : "")}>
                         <div className={"font-bold uppercase tracking-wide text-white/70 " + (colW < 50 ? "text-[8.5px]" : "text-[9.5px]")}>{wd}</div>
                         <div className={"font-extrabold " + (colW < 50 ? "text-[10px]" : "text-[12px]")}>{dm}</div>
                       </div>
@@ -785,7 +786,7 @@ export function ScheduleApp() {
                       <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3 py-2">
                         <span className="text-[13px]">🎟</span>
                         <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{l.title}</div><div className="text-[10.5px] font-semibold text-[var(--ink-3)]">📍 {loc || t("schedule.noVenue")}{sn ? ` · 📅 ${sn}` : ""}</div></div>
-                        <span className="ml-auto flex items-center gap-1.5 text-[11.5px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{listingShifts.length}</b> {t("schedule.shifts")}{elsewhere > 0 && <span className="rounded-full bg-[#eef0ff] px-2 py-0.5 text-[10.5px] font-bold text-[#5b53d6]" title={t("schedule.otherDatesTitle")}>{t("schedule.otherDates", { count: elsewhere })}</span>}</span>
+                        <span className="ms-auto flex items-center gap-1.5 text-[11.5px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{listingShifts.length}</b> {t("schedule.shifts")}{elsewhere > 0 && <span className="rounded-full bg-[#eef0ff] px-2 py-0.5 text-[10.5px] font-bold text-[#5b53d6]" title={t("schedule.otherDatesTitle")}>{t("schedule.otherDates", { count: elsewhere })}</span>}</span>
                       </div>
                       {lRoles.map((role) => {
                         const rows = listingShifts.filter((s) => s.role === role);
@@ -825,7 +826,7 @@ export function ScheduleApp() {
       {showAlerts && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={() => setShowAlerts(false)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2"><span className="text-[16px]">🔔</span><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.checkinAlerts")}</div><button type="button" onClick={() => setShowAlerts(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <div className="flex items-center gap-2"><span className="text-[16px]">🔔</span><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.checkinAlerts")}</div><button type="button" onClick={() => setShowAlerts(false)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <p className="mt-1 text-[12px] text-[var(--ink-3)]">{t("schedule.checkinAlertsDesc", { min: CHECKIN_GRACE_MIN })}</p>
             {alerts.length === 0 ? <p className="mt-3 rounded-lg bg-[#e2f4ea] px-3 py-2.5 text-[12.5px] font-bold text-[#0f7a43]">✓ {t("schedule.noOneOverdue")}</p> : (() => {
               const shown = alerts.filter((s) => { const st = staffById[s.staffId!]; return !alertQ || (st?.name.toLowerCase().includes(alertQ.toLowerCase())); });
@@ -836,12 +837,12 @@ export function ScheduleApp() {
                   <div className="flex items-center gap-2">
                     <span className="text-[13px] font-extrabold text-[var(--ink)]">{st?.name}</span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-[#fdebec] px-2 py-0.5 text-[10px] font-extrabold text-[#c0392b]"><span className="h-1.5 w-1.5 rounded-full bg-[#c0392b]" />{t("schedule.notIn")}</span>
-                    <span className="ml-auto text-[11px] font-extrabold text-[#c0392b]">⏰ {overdueLabel(s)}</span>
+                    <span className="ms-auto text-[11px] font-extrabold text-[#c0392b]">⏰ {overdueLabel(s)}</span>
                   </div>
-                  <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{dt(s.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {to12(s.start)}–{to12(s.end)} · {s.site}</div>
+                  <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{dt(s.date).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {to12(s.start)}–{to12(s.end)} · {s.site}</div>
                   <div className="mt-1.5 flex items-center gap-2">
                     {pokes > 0 && <span className="text-[10.5px] font-bold text-[#b45309]">🔔 {t("schedule.remindedCount", { count: pokes })}</span>}
-                    <button type="button" onClick={() => pokeCheckin(s.id)} className="ml-auto rounded-full bg-[#f59e0b] px-3.5 py-1 text-[11px] font-extrabold text-white shadow-sm hover:brightness-105">{pokes > 0 ? t("schedule.remindAgain") : t("schedule.remindToCheckIn")}</button>
+                    <button type="button" onClick={() => pokeCheckin(s.id)} className="ms-auto rounded-full bg-[#f59e0b] px-3.5 py-1 text-[11px] font-extrabold text-white shadow-sm hover:brightness-105">{pokes > 0 ? t("schedule.remindAgain") : t("schedule.remindToCheckIn")}</button>
                   </div>
                 </div>
               ); })}
@@ -857,7 +858,7 @@ export function ScheduleApp() {
       {tplSaveOpen && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[10vh]" onClick={() => setTplSaveOpen(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2"><span className="text-[16px]">📋</span><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.saveAsTemplate")}</div><button type="button" onClick={() => setTplSaveOpen(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <div className="flex items-center gap-2"><span className="text-[16px]">📋</span><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.saveAsTemplate")}</div><button type="button" onClick={() => setTplSaveOpen(false)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <p className="mt-1 text-[12px] text-[var(--ink-3)]"><b>{periodShifts.length}</b> {t("schedule.saveTemplateDesc")}</p>
             <label className="mt-3 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.templateName")}</label>
             <Input autoFocus value={tplName} onChange={(e) => setTplName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") saveTemplate(); }} placeholder={t("schedule.templateNamePlaceholder")} className="mt-1 w-full" />
@@ -873,7 +874,7 @@ export function ScheduleApp() {
       {tplListOpen && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={() => setTplListOpen(false)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2"><span className="text-[16px]">📋</span><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.templates")}</div><button type="button" onClick={() => setTplListOpen(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <div className="flex items-center gap-2"><span className="text-[16px]">📋</span><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.templates")}</div><button type="button" onClick={() => setTplListOpen(false)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <p className="mt-1 text-[12px] text-[var(--ink-3)]">{t("schedule.applyTemplateInto")} <b>{label}</b>{t("schedule.applyTemplateIntoTail")}</p>
             {templates.length === 0 ? (
               <p className="mt-3 rounded-lg bg-[var(--panel)] px-3 py-3 text-center text-[12.5px] text-[var(--ink-3)]">{t("schedule.noTemplatesYet")}</p>
@@ -905,48 +906,48 @@ export function ScheduleApp() {
             <div className="flex items-center gap-3 border-b border-[var(--line)] px-5 py-3.5">
               <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{firstSt ? initials(firstSt.name) : "＋"}</span>
               <div className="min-w-0"><div className="truncate text-[16px] font-extrabold text-[var(--ink)]">{firstSt ? firstSt.name : (draft.groupIds.length ? t("schedule.shiftWord") : t("schedule.newShift"))}{filled > 1 && <span className="text-[var(--ink-3)]"> +{filled - 1}</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{draft.role} · {draft.site}</div></div>
-              <button type="button" onClick={() => { setDraft(null); setAssignOpen(false); setNoteOpen(false); }} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button>
+              <button type="button" onClick={() => { setDraft(null); setAssignOpen(false); setNoteOpen(false); }} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button>
             </div>
 
             {!assignOpen && !actionsOpen ? (
             <div className="px-5 py-4">
               {/* date */}
               <div className="flex items-center gap-2.5 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">📅</span>
-                {isDay ? <span className="text-[13.5px] font-bold text-[var(--ink)]">{dt(draft.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</span>
-                  : <Select value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} className="border border-[var(--line)] bg-[var(--panel)] px-2 py-1 text-[13.5px] font-bold text-[var(--ink)] rounded-lg">{(dates.includes(draft.date) ? dates : [draft.date, ...dates]).map((d) => <option key={d} value={d}>{dt(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</option>)}</Select>}</div>
+                {isDay ? <span className="text-[13.5px] font-bold text-[var(--ink)]">{dt(draft.date).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</span>
+                  : <Select value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} className="border border-[var(--line)] bg-[var(--panel)] px-2 py-1 text-[13.5px] font-bold text-[var(--ink)] rounded-lg">{(dates.includes(draft.date) ? dates : [draft.date, ...dates]).map((d) => <option key={d} value={d}>{dt(d).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</option>)}</Select>}</div>
               {/* time */}
               <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">🕐</span><TimeSel value={draft.start} onChange={(v) => setDraft({ ...draft, start: v })} /><span className="text-[var(--ink-3)]">—</span><TimeSel value={draft.end} onChange={(v) => setDraft({ ...draft, end: v })} /></div>
               {/* staff needed / day → opens assign */}
               <div className="flex flex-wrap items-center gap-2.5 border-b border-[var(--line-2,#eef2f8)] py-2.5">
                 <span className="text-[15px]">👤</span><span className="text-[13.5px] font-bold text-[var(--ink)]">{t("schedule.staffNeededPerDay")}</span>
-                <span className="ml-auto flex items-center gap-2">
+                <span className="ms-auto flex items-center gap-2">
                   <button type="button" onClick={() => setNeed(Math.max(1, need - 1))} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">−</button>
                   <span className="w-6 text-center text-[15px] font-extrabold tabular-nums text-[var(--ink)]">{need}</span>
                   <button type="button" onClick={() => setNeed(need + 1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">+</button>
                 </span>
               </div>
-              <button type="button" onClick={() => setAssignOpen(true)} className={"flex w-full items-center gap-2 py-2.5 text-left " + (assigned.length === 0 ? "border-b border-[var(--line-2,#eef2f8)]" : "")}>
+              <button type="button" onClick={() => setAssignOpen(true)} className={"flex w-full items-center gap-2 py-2.5 text-start " + (assigned.length === 0 ? "border-b border-[var(--line-2,#eef2f8)]" : "")}>
                 <span className="text-[15px]">🧑‍🤝‍🧑</span>
                 <span className="text-[13.5px] font-bold text-[#1d3a8f]">{t("schedule.assignStaff")}</span>
-                <span className="ml-auto flex items-center gap-1.5 text-[12px] font-bold" style={{ color: filled >= need ? "#0f7a43" : "var(--ink-3)" }}>{t("schedule.filledOfNeed", { filled, need })}<span className="text-[var(--ink-3)]">›</span></span>
+                <span className="ms-auto flex items-center gap-1.5 text-[12px] font-bold" style={{ color: filled >= need ? "#0f7a43" : "var(--ink-3)" }}>{t("schedule.filledOfNeed", { filled, need })}<span className="text-[var(--ink-3)]">›</span></span>
               </button>
               {/* assigned staff — remove one to unassign (frees the slot → open) */}
               {assigned.length > 0 && <div className="flex flex-wrap gap-1.5 border-b border-[var(--line-2,#eef2f8)] pb-2.5">
                 {assigned.map((sid) => { const s = staffById[sid]; return (
-                  <span key={sid} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] py-1 pl-2.5 pr-1.5 text-[12px] font-bold text-[#1d3a8f]">{s?.name ?? t("schedule.unknown")}<button type="button" onClick={() => toggleAssign(sid)} title={t("schedule.unassignName", { name: s?.name ?? "" })} className="grid h-4 w-4 place-items-center rounded-full text-[12px] text-[#1d3a8f] hover:bg-[#dbe6fb] hover:text-[#c0392b]">×</button></span>
+                  <span key={sid} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] py-1 ps-2.5 pe-1.5 text-[12px] font-bold text-[#1d3a8f]">{s?.name ?? t("schedule.unknown")}<button type="button" onClick={() => toggleAssign(sid)} title={t("schedule.unassignName", { name: s?.name ?? "" })} className="grid h-4 w-4 place-items-center rounded-full text-[12px] text-[#1d3a8f] hover:bg-[#dbe6fb] hover:text-[#c0392b]">×</button></span>
                 ); })}
               </div>}
               {/* break */}
               {draft.brk ? (
-                <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">☕</span><span className="text-[13px] font-bold text-[var(--ink)]">{t("schedule.breakLabel")}</span><TimeSel value={draft.brk.from} onChange={(v) => setDraft({ ...draft, brk: { ...draft.brk!, from: v } })} /><span className="text-[var(--ink-3)]">—</span><TimeSel value={draft.brk.to} onChange={(v) => setDraft({ ...draft, brk: { ...draft.brk!, to: v } })} /><button type="button" onClick={() => setDraft({ ...draft, brk: null })} className="ml-auto text-[16px] text-[var(--ink-3)]">×</button></div>
+                <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">☕</span><span className="text-[13px] font-bold text-[var(--ink)]">{t("schedule.breakLabel")}</span><TimeSel value={draft.brk.from} onChange={(v) => setDraft({ ...draft, brk: { ...draft.brk!, from: v } })} /><span className="text-[var(--ink-3)]">—</span><TimeSel value={draft.brk.to} onChange={(v) => setDraft({ ...draft, brk: { ...draft.brk!, to: v } })} /><button type="button" onClick={() => setDraft({ ...draft, brk: null })} className="ms-auto text-[16px] text-[var(--ink-3)]">×</button></div>
               ) : (
-                <button type="button" onClick={() => setDraft({ ...draft, brk: { from: "12:00", to: addMins("12:00", defBreakM) } })} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-left"><span className="text-[15px]">☕</span><span className="text-[13.5px] font-bold text-[#1d3a8f]">{t("schedule.addBreak")}</span></button>
+                <button type="button" onClick={() => setDraft({ ...draft, brk: { from: "12:00", to: addMins("12:00", defBreakM) } })} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-start"><span className="text-[15px]">☕</span><span className="text-[13.5px] font-bold text-[#1d3a8f]">{t("schedule.addBreak")}</span></button>
               )}
               {/* note */}
               {(noteOpen || draft.note.length > 0) ? (
                 <div className="flex items-start gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">💬</span><textarea autoFocus value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} rows={2} placeholder={t("schedule.shiftNotePlaceholder")} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" /></div>
               ) : (
-                <button type="button" onClick={() => setNoteOpen(true)} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-left"><span className="text-[15px]">💬</span><span className="text-[13.5px] font-bold text-[#1d3a8f]">{t("schedule.addShiftNote")}</span></button>
+                <button type="button" onClick={() => setNoteOpen(true)} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-start"><span className="text-[15px]">💬</span><span className="text-[13.5px] font-bold text-[#1d3a8f]">{t("schedule.addShiftNote")}</span></button>
               )}
               {/* role / location / listing / season */}
               <details className="border-b border-[var(--line-2,#eef2f8)] py-2.5"><summary className="cursor-pointer list-none text-[12.5px] font-bold text-[var(--ink-2)]">⚙️ {t("schedule.roleLocationListingSeason")}</summary>
@@ -960,7 +961,7 @@ export function ScheduleApp() {
               {/* footer */}
               <div className="mt-3 flex items-center gap-3">
                 <div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.total")}</div><div className="text-[15px] font-extrabold text-[var(--ink)]">{hLabel(shiftH)} · <span className="tabular-nums">{money(cost)}</span></div></div>
-                <div className="ml-auto flex items-center gap-2">
+                <div className="ms-auto flex items-center gap-2">
                   <button type="button" onClick={() => setActionsOpen(true)} title={t("schedule.shiftActions")} className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] text-[18px] font-extrabold leading-none text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[var(--ink)]">⋯</button>
                   <button type="button" onClick={saveDraft} className="rounded-xl bg-[#0f7a43] px-6 py-2 text-[14px] font-extrabold text-white hover:brightness-105">{t("schedule.save")}</button>
                 </div>
@@ -969,7 +970,7 @@ export function ScheduleApp() {
             ) : assignOpen ? (
             /* ── Assign staff sub-panel ── */
             <div className="px-5 py-4">
-              <div className="mb-3 flex items-center gap-2"><button type="button" onClick={() => setAssignOpen(false)} className="text-[16px] text-[var(--ink-3)] hover:text-[var(--ink)]">‹</button><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.assignStaff")}</div><div className="ml-auto text-[12.5px] font-bold" style={{ color: filled >= need ? "#0f7a43" : "var(--ink-3)" }}>{t("schedule.filledOfNeed", { filled, need })}</div></div>
+              <div className="mb-3 flex items-center gap-2"><button type="button" onClick={() => setAssignOpen(false)} className="text-[16px] text-[var(--ink-3)] hover:text-[var(--ink)]">‹</button><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.assignStaff")}</div><div className="ms-auto text-[12.5px] font-bold" style={{ color: filled >= need ? "#0f7a43" : "var(--ink-3)" }}>{t("schedule.filledOfNeed", { filled, need })}</div></div>
               <button type="button" onClick={autoFillDraft} className="mb-3 w-full rounded-xl bg-[#eef4fd] px-4 py-2.5 text-[13.5px] font-extrabold text-[#1d3a8f] hover:bg-[#e2edfb]">⚡ {t("schedule.autoFillAvailable")}</button>
               <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">{t("schedule.noDoubleBook")}</p>
               <div className="flex max-h-[46vh] flex-col divide-y divide-[var(--line-2,#eef2f8)] overflow-y-auto">
@@ -983,7 +984,7 @@ export function ScheduleApp() {
                     const sub = leave ? `🏖 ${t("schedule.onApprovedLeave")}` : busy ? t("schedule.onAnotherShift") : dep === false ? `📍 ${t("schedule.notDeployedHere")}` : av.label;
                     return (
                     <button key={st.id} type="button" disabled={blocked} onClick={() => toggleAssign(st.id)}
-                      className={"flex items-center gap-3 py-2.5 text-left transition-colors " + (on ? "bg-[#eef4fd]" : "enabled:hover:bg-[var(--panel)]") + (blocked ? " opacity-45" : "")}>
+                      className={"flex items-center gap-3 py-2.5 text-start transition-colors " + (on ? "bg-[#eef4fd]" : "enabled:hover:bg-[var(--panel)]") + (blocked ? " opacity-45" : "")}>
                       <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span>
                       <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{st.name}</div><div className="text-[12px] font-semibold" style={{ color: blocked ? (leave ? "#b45309" : "var(--ink-3)") : av.ok ? "#0f7a43" : "var(--ink-3)" }}>{sub} · £{(st.rate ?? 0).toFixed(2)}/hr</div></div>
                       {on && <span className="text-[16px] font-extrabold text-[#1d3a8f]">✓</span>}
@@ -1000,11 +1001,11 @@ export function ScheduleApp() {
             <div className="px-5 py-4">
               <div className="mb-3 flex items-center gap-2"><button type="button" onClick={() => setActionsOpen(false)} className="text-[16px] text-[var(--ink-3)] hover:text-[var(--ink)]">‹</button><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.shiftActions")}</div></div>
               <div className="flex flex-col gap-2">
-                <button type="button" onClick={() => { autoFillDraft(); setActionsOpen(false); }} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-left text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">⚡</span>{t("schedule.autoFillAvailable")}</button>
-                <button type="button" onClick={copyToAllDays} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-left text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">📋</span>{t("schedule.copyToAllDays")}</button>
-                <button type="button" onClick={duplicateShift} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-left text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">⧉</span>{t("schedule.duplicateShift")}</button>
-                <button type="button" onClick={clearOpen} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-left text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">↺</span>{t("schedule.clearUnassign")}</button>
-                <button type="button" onClick={deleteDraft} className="flex items-center gap-3 rounded-xl border border-[#f3c9cd] px-4 py-3 text-left text-[14px] font-extrabold text-[#c0392b] hover:bg-[#fdebec]"><span className="text-[16px]">🗑</span>{t("schedule.deleteShift")}</button>
+                <button type="button" onClick={() => { autoFillDraft(); setActionsOpen(false); }} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-start text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">⚡</span>{t("schedule.autoFillAvailable")}</button>
+                <button type="button" onClick={copyToAllDays} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-start text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">📋</span>{t("schedule.copyToAllDays")}</button>
+                <button type="button" onClick={duplicateShift} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-start text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">⧉</span>{t("schedule.duplicateShift")}</button>
+                <button type="button" onClick={clearOpen} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-start text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">↺</span>{t("schedule.clearUnassign")}</button>
+                <button type="button" onClick={deleteDraft} className="flex items-center gap-3 rounded-xl border border-[#f3c9cd] px-4 py-3 text-start text-[14px] font-extrabold text-[#c0392b] hover:bg-[#fdebec]"><span className="text-[16px]">🗑</span>{t("schedule.deleteShift")}</button>
               </div>
             </div>
             )}
@@ -1027,7 +1028,7 @@ export function ScheduleApp() {
                   <div key={k} className="flex items-center gap-3">
                     <span className="w-9 flex-none text-[12.5px] font-extrabold text-[var(--ink)]">{lbl}</span>
                     <div className="relative h-2 flex-1 rounded-full bg-[var(--panel)]">{w && <div className="absolute top-0 h-2 rounded-full" style={{ left: `${(mins(w.from) - WIN_A) / WIN * 100}%`, width: `${(mins(w.to) - mins(w.from)) / WIN * 100}%`, background: "#22b365" }} />}</div>
-                    <span className="w-[112px] flex-none text-right text-[12px] font-bold" style={{ color: w ? "#0f7a43" : "var(--ink-3)" }}>{w ? `${to12(w.from)}–${to12(w.to)}` : t("schedule.unavailable")}</span>
+                    <span className="w-[112px] flex-none text-end text-[12px] font-bold" style={{ color: w ? "#0f7a43" : "var(--ink-3)" }}>{w ? `${to12(w.from)}–${to12(w.to)}` : t("schedule.unavailable")}</span>
                   </div>
                 ); })}
               </div>
@@ -1040,7 +1041,7 @@ export function ScheduleApp() {
       {availEdit && (() => { const st = availEdit;
         const mondayIso = iso(mondayOf(dt(anchor)));
         const wkSun = addDays(mondayIso, 6);
-        const f = (s: string) => dt(s).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+        const f = (s: string) => dt(s).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" });
         const target: Week = availWeekMode === "all" ? (st.week ?? {}) : (st.weeks?.[mondayIso] ?? st.week ?? {});
         const daysOn = WDAYS.filter(([k]) => target[k]).length;
         const commit = (wk: Week) => {
@@ -1058,7 +1059,7 @@ export function ScheduleApp() {
               <div className="flex items-center gap-3 px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>
                 <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-white/20 text-[14px] font-extrabold">{initials(st.name)}</span>
                 <div><div className="text-[16px] font-extrabold">{st.name}</div><div className="text-[12px] text-white/85">{t("schedule.availableNof7", { n: daysOn })} · £{(st.rate ?? 0).toFixed(2)}/hr</div></div>
-                <button type="button" onClick={() => setAvailEdit(null)} className="ml-auto text-[20px] text-white/80 hover:text-white">×</button>
+                <button type="button" onClick={() => setAvailEdit(null)} className="ms-auto text-[20px] text-white/80 hover:text-white">×</button>
               </div>
               <div className="px-5 py-4">
                 {/* tabs */}
@@ -1100,14 +1101,14 @@ export function ScheduleApp() {
       {roleMenu && (() => { const si = roleMenu; const shown = [...new Set([...(shiftsByListing.get(si) ?? []).map((s) => s.role), ...(extraRoles[si] ?? [])])]; const avail = roleOptions.filter((r) => !shown.includes(r)); return (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[12vh]" onClick={() => setRoleMenu(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2"><span className="text-[16px]">➕</span><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.addARole")}</div><button type="button" onClick={() => setRoleMenu(null)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <div className="flex items-center gap-2"><span className="text-[16px]">➕</span><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.addARole")}</div><button type="button" onClick={() => setRoleMenu(null)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <p className="mt-1 text-[12px] text-[var(--ink-3)]">{t("schedule.addRoleDescPre")}<b>{si}</b>{t("schedule.addRoleDescPost")}</p>
             <div className="mt-3 flex flex-col gap-1.5">
               {avail.length === 0 && <p className="rounded-lg bg-[var(--panel)] px-3 py-2.5 text-center text-[12px] text-[var(--ink-3)]">{t("schedule.everyRoleAlready")}</p>}
               {avail.map((r) => (
-                <button key={r} type="button" onClick={() => addRole(si, r)} className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] px-3.5 py-2.5 text-left text-[13.5px] font-bold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="h-3 w-3 flex-none rounded-full" style={{ background: roleCol(r) }} />{r}</button>
+                <button key={r} type="button" onClick={() => addRole(si, r)} className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] px-3.5 py-2.5 text-start text-[13.5px] font-bold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="h-3 w-3 flex-none rounded-full" style={{ background: roleCol(r) }} />{r}</button>
               ))}
-              <button type="button" onClick={() => { const r = window.prompt(t("schedule.newRoleNamePrompt")); if (r && r.trim()) addRole(si, r.trim()); else setRoleMenu(null); }} className="mt-1 flex items-center gap-2.5 rounded-xl border border-dashed border-[var(--line)] px-3.5 py-2.5 text-left text-[13.5px] font-bold text-[#1d3a8f] hover:bg-[var(--panel)]"><span className="text-[15px]">＋</span>{t("schedule.customRole")}</button>
+              <button type="button" onClick={() => { const r = window.prompt(t("schedule.newRoleNamePrompt")); if (r && r.trim()) addRole(si, r.trim()); else setRoleMenu(null); }} className="mt-1 flex items-center gap-2.5 rounded-xl border border-dashed border-[var(--line)] px-3.5 py-2.5 text-start text-[13.5px] font-bold text-[#1d3a8f] hover:bg-[var(--panel)]"><span className="text-[15px]">＋</span>{t("schedule.customRole")}</button>
             </div>
           </div>
         </div>
@@ -1120,19 +1121,19 @@ export function ScheduleApp() {
       {seasonMenu && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[9vh]" onClick={() => setSeasonMenu(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2"><span className="text-[16px]">📅</span><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.filterBySeason")}</div><button type="button" onClick={() => setSeasonMenu(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <div className="flex items-center gap-2"><span className="text-[16px]">📅</span><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.filterBySeason")}</div><button type="button" onClick={() => setSeasonMenu(false)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <p className="mt-1 text-[12px] text-[var(--ink-3)]">{t("schedule.filterBySeasonDesc")}</p>
             <div className="mt-3 flex flex-wrap gap-1.5">
               <button type="button" onClick={() => { setSeasonSel(seasonOpts); setSite("all"); setListingF("all"); }} className="rounded-full border border-[#bfe3cd] bg-[#eef8f1] px-3 py-1 text-[12px] font-bold text-[#0f7a43]">✓ {t("schedule.selectAll")}</button>
               <button type="button" onClick={() => { setSeasonSel([]); setSite("all"); setListingF("all"); }} className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[12px] font-bold text-[var(--ink-2)]">{t("schedule.clearAllSeasons")}</button>
-              <span className="ml-auto self-center text-[11.5px] font-bold text-[var(--ink-3)]">{seasonSel.length}/{seasonOpts.length}</span>
+              <span className="ms-auto self-center text-[11.5px] font-bold text-[var(--ink-3)]">{seasonSel.length}/{seasonOpts.length}</span>
             </div>
             {seasonOpts.length === 0 ? (
               <p className="mt-3 rounded-lg bg-[var(--panel)] px-3 py-3 text-center text-[12.5px] text-[var(--ink-3)]">{t("schedule.noSeasonsYet")}</p>
             ) : (
               <div className="mt-3 flex max-h-[46vh] flex-col divide-y divide-[var(--line-2,#eef2f8)] overflow-y-auto">
                 {seasonOpts.map((sn) => { const on = seasonSel.includes(sn); return (
-                  <button key={sn} type="button" onClick={() => { setSeasonSel((xs) => (xs.includes(sn) ? xs.filter((x) => x !== sn) : [...xs, sn])); setSite("all"); setListingF("all"); }} className="flex items-center gap-2.5 py-2.5 text-left hover:bg-[var(--panel)]">
+                  <button key={sn} type="button" onClick={() => { setSeasonSel((xs) => (xs.includes(sn) ? xs.filter((x) => x !== sn) : [...xs, sn])); setSite("all"); setListingF("all"); }} className="flex items-center gap-2.5 py-2.5 text-start hover:bg-[var(--panel)]">
                     <span className="flex h-5 w-5 flex-none items-center justify-center rounded-md border-2 text-[11px] font-extrabold text-white" style={{ borderColor: on ? "#22b365" : "var(--line)", background: on ? "#22b365" : "white" }}>{on ? "✓" : ""}</span>
                     <span className="text-[13.5px] font-bold text-[var(--ink)]">{sn}</span>
                   </button>

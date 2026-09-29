@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { allergenHits } from "./allergens";
 import { get as apiGet, post as apiPost } from "@/lib/api";
@@ -27,7 +28,7 @@ interface Child { name: string; allergies?: string; dietary?: string }
 type Chosen = { name: string; price: number; qty: number; allergens?: string[]; description?: string; diet?: Diet; orderId?: string; canCancel?: boolean };
 type BasketLine = { tenantId: string; listingId: string; listingName: string; date: string; dishId: string; name: string; price: number; child: string };
 
-const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
+const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
 const WEEK_PAL: [string, string][] = [["#2f6bd8", "#5b9bff"], ["#0ea5a5", "#3fd0c9"], ["#7a5af8", "#a88bff"], ["#e2559a", "#ff86c0"], ["#f5872b", "#ffb166"], ["#16a34a", "#4ade80"]];
 const splitKids = (s?: string) => (s ?? "").split(/,|&/).map((x) => x.trim()).filter(Boolean);
 const lineKey = (l: { date: string; listingId: string; dishId: string; child: string }) => `${l.date}|${l.listingId}|${l.dishId}|${l.child}`;
@@ -303,7 +304,7 @@ export function ParentMealsApp() {
                                     <DietBadge diet={it.diet} />
                                     {it.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>}
                                     <Allergens list={it.allergens} />
-                                    {it.canCancel && it.orderId && <button type="button" onClick={() => cancelMeal(it.orderId!)} className="ml-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">{t("meals.remove")}</button>}
+                                    {it.canCancel && it.orderId && <button type="button" onClick={() => cancelMeal(it.orderId!)} className="ms-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">{t("meals.remove")}</button>}
                                   </div>
                                 </div>
                               ))}
@@ -329,7 +330,7 @@ export function ParentMealsApp() {
               <span className="text-[14px] font-extrabold">{t("meals.mealBasket")}</span>
               <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11.5px] font-extrabold">{basket.length} meal{basket.length === 1 ? "" : "s"} · {money(basketTotal)}</span>
               {basket.length > 0 && <button type="button" onClick={() => setBasketOpen((o) => !o)} className="flex items-center gap-1 rounded-full border border-white/40 bg-white/15 px-2.5 py-1 text-[11.5px] font-extrabold text-white transition hover:bg-white/25">{basketOpen ? `${t("meals.hideMeals")} ▴` : `${t("meals.seeMeals")} ▾`}</button>}
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ms-auto flex items-center gap-2">
                 {basket.length > 0 && <button type="button" onClick={() => { setBasket([]); setPayErr(null); }} className="text-[11.5px] font-semibold text-white/70 hover:text-white">{t("meals.clearBtn")}</button>}
                 <button type="button" disabled={busy || !basket.length} onClick={payAll} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-[#0e7a45] transition disabled:opacity-50" style={{ background: "#fff" }}>{busy ? t("meals.booking") : `💳 ${t("meals.pay")} ${money(basketTotal)}`}</button>
               </div>
@@ -376,7 +377,7 @@ export function ParentMealsApp() {
           <div className="overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-white">
             <div className="flex items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${weekPal[0]}, ${weekPal[1]})` }}>
               <button type="button" aria-label={t("meals.prevWeek")} disabled={weekIdx === 0} onClick={() => setWeekIdx((i) => Math.max(0, i - 1))} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/20 text-[13px] transition hover:bg-white/30 disabled:opacity-30">◀</button>
-              <div className="flex-1 text-center"><span className="text-[14px] font-extrabold">{t("meals.weekN", { n: week.n })}</span><span className="ml-1.5 text-[12px] font-semibold text-white/85">{t("meals.fromDate", { date: fmtDate(week.mon) })}</span></div>
+              <div className="flex-1 text-center"><span className="text-[14px] font-extrabold">{t("meals.weekN", { n: week.n })}</span><span className="ms-1.5 text-[12px] font-semibold text-white/85">{t("meals.fromDate", { date: fmtDate(week.mon) })}</span></div>
               <button type="button" aria-label={t("meals.nextWeek")} disabled={weekIdx >= menuWeeks.length - 1} onClick={() => setWeekIdx((i) => Math.min(menuWeeks.length - 1, i + 1))} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/20 text-[13px] transition hover:bg-white/30 disabled:opacity-30">▶</button>
             </div>
             {menuWeeks.length > 1 && (
@@ -388,7 +389,7 @@ export function ParentMealsApp() {
               <div style={{ minWidth: 140 + week.days.length * 160 }}>
                 {/* Header row — blue gradient */}
                 <div className="grid text-white" style={{ gridTemplateColumns: `120px repeat(${week.days.length}, minmax(148px,1fr))`, background: `linear-gradient(120deg, ${weekPal[0]}, ${weekPal[1]})` }}>
-                  <div className="sticky left-0 z-10 px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.05em] text-white/90" style={{ background: weekPal[0] }}>{t("meals.childCol")}</div>
+                  <div className="sticky start-0 z-10 px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.05em] text-white/90" style={{ background: weekPal[0] }}>{t("meals.childCol")}</div>
                   {week.days.map((iso) => {
                     const anyClose = (byDate.get(iso) ?? []).some((e) => e.closesToday);
                     const anyOpen = (byDate.get(iso) ?? []).some((e) => e.canOrder);
@@ -403,13 +404,13 @@ export function ParentMealsApp() {
                 {/* Child rows */}
                 {weekKids.map((child, ri) => (
                   <div key={child} className="grid border-b border-[var(--line)] last:border-0" style={{ gridTemplateColumns: `120px repeat(${week.days.length}, minmax(148px,1fr))`, background: ri % 2 ? "var(--surface)" : "#fff" }}>
-                    <div className="sticky left-0 z-10 flex items-center gap-2 px-3 py-2.5 text-[12.5px] font-extrabold text-[var(--ink)]" style={{ background: ri % 2 ? "var(--surface)" : "#fff" }}>
+                    <div className="sticky start-0 z-10 flex items-center gap-2 px-3 py-2.5 text-[12.5px] font-extrabold text-[var(--ink)]" style={{ background: ri % 2 ? "var(--surface)" : "#fff" }}>
                       {(() => { const a = avatarOf(child); return <span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[11px] font-extrabold text-white" style={{ background: a.c }}>{a.i}</span>; })()}
                       <span className="truncate">{child}</span>
                     </div>
                     {week.days.map((iso) => {
                       const e = entryFor(child, iso);
-                      if (!e) return <div key={iso} className="border-l border-[var(--line)] px-2.5 py-2.5 text-center text-[11px] text-[var(--ink-3)]">·</div>;
+                      if (!e) return <div key={iso} className="border-s border-[var(--line)] px-2.5 py-2.5 text-center text-[11px] text-[var(--ink-3)]">·</div>;
                       const booked = bookedByCell.get(`${e.listingId}|${e.date}|${child}`);
                       const line = basket.find((l) => l.child === child && l.listingId === e.listingId && l.date === e.date);
                       const c = childInfo.get(child);
@@ -419,7 +420,7 @@ export function ParentMealsApp() {
                         const pendChange = ord?.changeRequest; const pendCancel = ord?.cancelRequest;
                         const bookedDiet = e.menu.items.find((it) => it.name === booked.name)?.diet;
                         return (
-                          <div key={iso} className="border-l border-[var(--line)] p-2">
+                          <div key={iso} className="border-s border-[var(--line)] p-2">
                             <div className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11.5px] font-bold text-white" style={{ background: GRN }}><span className="truncate">✓ {booked.name}</span><DietLetter diet={bookedDiet} on /></div>
                             {pendChange ? (
                               <div className="mt-1 text-[10px] font-semibold text-[#8a5300]">{t("meals.changeToAwaiting", { name: pendChange.name })} <button type="button" onClick={() => withdrawReq(booked.orderId!)} className="font-bold underline">{t("meals.undo")}</button></div>
@@ -440,15 +441,15 @@ export function ParentMealsApp() {
                       const options = e.menu.items.filter((it) => !dietFilter || it.diet === dietFilter || line?.dishId === it.id);
                       const sel = line ? e.menu.items.find((it) => it.id === line.dishId) : undefined;
                       const clash = sel ? (allergenClash(sel.allergens, c?.allergies).length > 0 || !!dietClash(sel, c?.dietary)) : false;
-                      if (!e.canOrder && !line) return <div key={iso} className="border-l border-[var(--line)] px-2.5 py-2.5 text-center text-[10.5px] font-semibold text-[var(--ink-3)]">{t("meals.closedCell")}</div>;
+                      if (!e.canOrder && !line) return <div key={iso} className="border-s border-[var(--line)] px-2.5 py-2.5 text-center text-[10.5px] font-semibold text-[var(--ink-3)]">{t("meals.closedCell")}</div>;
                       return (
-                        <div key={iso} className="border-l border-[var(--line)] p-2">
+                        <div key={iso} className="border-s border-[var(--line)] p-2">
                           {line && sel ? (
                             // In your basket — clean chip + a Change dropdown + remove.
                             <>
                               <div className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11.5px] font-extrabold" style={{ background: "#fff6e9", color: "#96631a", border: "1px solid #f2dcbb" }}>
                                 <span>🧺</span><span className="truncate">{sel.name}</span><DietLetter diet={sel.diet} />
-                                {sel.price > 0 && <span className="ml-auto tabular-nums text-[10.5px]">{money(sel.price)}</span>}
+                                {sel.price > 0 && <span className="ms-auto tabular-nums text-[10.5px]">{money(sel.price)}</span>}
                               </div>
                               {clash && <div className="mt-1 text-[9.5px] font-bold text-[#c0392b]">⚠ {t("meals.checkSuitability")}</div>}
                               {sel.allergens?.length ? <div className="mt-0.5"><Allergens list={sel.allergens} /></div> : null}

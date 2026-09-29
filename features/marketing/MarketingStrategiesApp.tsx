@@ -7,6 +7,7 @@
 // deep-links to the tool that acts on it (usually the Email composer with the right
 // audience + a ready-made subject). Falls back to evergreen playbooks.
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -54,7 +55,7 @@ const HEALTH: Record<string, { label: string; bar: string; bg: string; fg: strin
   full: { label: "Nearly full", bar: "#16a34a", bg: "#E2F6EC", fg: "#0f7a43" },
 };
 const gbp = (n: number) => `£${Math.round(n).toLocaleString()}`;
-const niceDate = (iso: string | null) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
+const niceDate = (iso: string | null) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "");
 
 const PLAYBOOKS: { emoji: string; title: string; body: string; view: string; cta: string }[] = [
   { emoji: "⚡", title: "Launch an early-bird", body: "Open your next season early with a limited discount — the first weeks of bookings are your best forecast.", view: "marketing", cta: "Create a code" },
@@ -173,7 +174,7 @@ export function MarketingStrategiesApp() {
               <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Your families, your listings and your best next moves — read straight from your booking data. Every action opens the right tool, pre-filled.</p>
             </div>
             {data && data.stats.revenueWithinReach > 0 && (
-              <div className="rounded-2xl bg-white/12 px-4 py-3 text-right backdrop-blur-sm" title="A rough estimate of extra revenue if you act on the plays below — potential, not guaranteed or money owed.">
+              <div className="rounded-2xl bg-white/12 px-4 py-3 text-end backdrop-blur-sm" title="A rough estimate of extra revenue if you act on the plays below — potential, not guaranteed or money owed.">
                 <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/75">Revenue within reach <span className="font-normal">· estimate</span></div>
                 <div className="text-[28px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{gbp(data.stats.revenueWithinReach)}</div>
                 <div className="mt-0.5 text-[10.5px] text-white/70">potential if you act on the plays below</div>
@@ -206,7 +207,7 @@ export function MarketingStrategiesApp() {
               {options.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
             </select>
             {focusName
-              ? <span className="text-[12px] text-[var(--ink-3)]">Showing families &amp; advice for <b className="text-[var(--ink-2)]">{focusName}</b> only.<button type="button" onClick={() => setListingId("")} className="ml-2 font-bold text-[#2f5fd0] hover:underline">Clear ✕</button></span>
+              ? <span className="text-[12px] text-[var(--ink-3)]">Showing families &amp; advice for <b className="text-[var(--ink-2)]">{focusName}</b> only.<button type="button" onClick={() => setListingId("")} className="ms-2 font-bold text-[#2f5fd0] hover:underline">Clear ✕</button></span>
               : <span className="text-[12px] text-[var(--ink-3)]">Pick a listing to see who booked it, who lapsed from it, and email them specifically.</span>}
           </div>
         )}
@@ -280,7 +281,7 @@ export function MarketingStrategiesApp() {
                               {l.nextDate && <span className="text-[11.5px] text-[var(--ink-3)]">next {niceDate(l.nextDate)}</span>}
                             </div>
                           </div>
-                          <div className="text-right" title="What those empty seats are worth at your typical price — the most you'd make if every spare place sold. Not guaranteed money.">
+                          <div className="text-end" title="What those empty seats are worth at your typical price — the most you'd make if every spare place sold. Not guaranteed money.">
                             <div className="text-[16px] font-extrabold leading-none" style={{ color: h.fg }}>{gbp(l.revenueAtStake)}</div>
                             <div className="text-[10.5px] text-[var(--ink-3)]">empty seats, at your usual price</div>
                           </div>

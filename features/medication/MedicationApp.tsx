@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useSearchParams } from "next/navigation";
@@ -70,11 +71,11 @@ const todayIso = () => {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`;
 };
-const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 // The parent-approved day labels live in `schedule` ("On these days: Mon 27 Jul,
 // …"). A dose on a day not in that list is flagged but still allowed — the day
 // label here must match how the parent's form formats them.
-const dayLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const dayLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const BOOKED_SCHEDULE = "On every booked day"; // dynamic — approved = the child's current bookings
 // `booked` is the child's live set of booked ISO days (recomputed from bookings)
 // — only needed for the dynamic BOOKED_SCHEDULE. A fixed "On these days: …" list
@@ -297,12 +298,12 @@ function AdministerForm({ med, onDone, requireWitness, booked }: { med: Med; onD
     <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <span className="text-[12px] font-extrabold">Record a dose of {med.name}</span>
-        <span className="ml-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Given?</span>
+        <span className="ms-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Given?</span>
         <div className="inline-flex rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5">
           <button type="button" onClick={() => setGiven(true)} className="rounded-full px-3 py-1 text-[12px] font-bold" style={given ? { background: "#0f7a43", color: "#fff" } : { color: "var(--ink-3)" }}>✓ Yes</button>
           <button type="button" onClick={() => setGiven(false)} className="rounded-full px-3 py-1 text-[12px] font-bold" style={!given ? { background: "#c02636", color: "#fff" } : { color: "var(--ink-3)" }}>✕ No</button>
         </div>
-        <button type="button" onClick={stampNow} className="ml-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">🕒 Now</button>
+        <button type="button" onClick={stampNow} className="ms-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">🕒 Now</button>
       </div>
       <div className="grid gap-2 sm:grid-cols-5">
         <div><FieldLabel>Dose</FieldLabel><Input value={dose} onChange={(e) => setDose(e.target.value)} className="w-full" /></div>
@@ -462,13 +463,13 @@ export function MedicationApp() {
           ))}
           {allListings.length > 0 && (
             <select value={listingFilter} onChange={(e) => setListingFilter(e.target.value)}
-              className="ml-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-bold outline-none focus:border-[#1d3a8f]">
+              className="ms-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-bold outline-none focus:border-[#1d3a8f]">
               <option value="">All listings</option>
               {allListings.map((l) => <option key={l} value={l}>{l}</option>)}
             </select>
           )}
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search child or medicine…"
-            className={`${allListings.length > 0 ? "" : "ml-auto "}w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]`} />
+            className={`${allListings.length > 0 ? "" : "ms-auto "}w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]`} />
         </div>
       )}
 

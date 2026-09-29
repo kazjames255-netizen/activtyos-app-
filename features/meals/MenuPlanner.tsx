@@ -304,7 +304,7 @@ export function MenuPlanner() {
                     <div className="flex items-center gap-2 px-3.5 py-3 text-white" style={{ background: `linear-gradient(120deg, ${dark}, ${light})` }}>
                       <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-white/25 text-[15px]">🍽️</span>
                       <span className="truncate text-[15px] font-extrabold">{m.name}</span>
-                      <span className="ml-auto flex-none rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold">{sel ? "✓ " : ""}{m.items.length} dish{m.items.length === 1 ? "" : "es"}</span>
+                      <span className="ms-auto flex-none rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold">{sel ? "✓ " : ""}{m.items.length} dish{m.items.length === 1 ? "" : "es"}</span>
                     </div>
                     <div className="p-3" style={sel ? { background: tint } : undefined}>
                       {sel ? (
@@ -367,7 +367,7 @@ export function MenuPlanner() {
           <div className="min-h-[300px]">
             <div className="flex flex-wrap items-center gap-3">
               <div className="text-[18px] font-extrabold text-[var(--ink)]">{t("meals.dropOntoDays")}</div>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ms-auto flex items-center gap-2">
                 <span className="rounded-full bg-[#eef4fd] px-3 py-1 text-[12px] font-bold text-[#1d3a8f]">{t("meals.plannedOf", { planned, total: dates.length })}</span>
                 <button type="button" onClick={saveNow} className="rounded-lg px-4 py-2 text-[12.5px] font-extrabold text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>✓ {t("meals.save")}</button>
               </div>
@@ -404,7 +404,7 @@ export function MenuPlanner() {
                       <span className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/25 text-[13px]">📅</span>
                       <span className="text-[14px] font-extrabold">{t("meals.weekN", { n: w.n })}</span>
                       <span className="text-[12px] font-semibold text-white/85">· {t("meals.fromDate", { date: fmtDate(w.mon) })}</span>
-                      <span className="ml-auto flex-none rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold">{set}/{w.days.length}</span>
+                      <span className="ms-auto flex-none rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold">{set}/{w.days.length}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
                       {w.days.map((iso) => {
@@ -421,7 +421,7 @@ export function MenuPlanner() {
                           <div key={iso}
                             onDragOver={(e) => { if (brushMenuId) e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); applyTo(iso); }}
                             onClick={() => { if (erase || !has || brushMenuId) tapDay(iso); }}
-                            className={`flex min-h-[76px] flex-col items-start overflow-hidden rounded-xl border-2 p-2.5 text-left transition ${erase || !has ? "cursor-pointer hover:-translate-y-0.5" : ""}`}
+                            className={`flex min-h-[76px] flex-col items-start overflow-hidden rounded-xl border-2 p-2.5 text-start transition ${erase || !has ? "cursor-pointer hover:-translate-y-0.5" : ""}`}
                             style={has && col ? { borderColor: col[0], background: col[2], boxShadow: `0 10px 22px -16px ${col[0]}` } : { borderColor: "var(--line)", background: "#fff", borderStyle: "dashed" }}>
                             <span className="text-[11.5px] font-extrabold" style={{ color: has && col ? col[0] : "var(--ink-2)" }}>{fmtDate(iso)}</span>
                             {has && menu && col ? (
@@ -494,7 +494,7 @@ function SavedPlanCard({ listing, days, seasonName, current, defaultCutoff, onEd
           <div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{listing.title || listing.name}</div>
           <div className="text-[11.5px] text-[var(--ink-3)]">{days} day{days === 1 ? "" : "s"} {t("meals.plannedWord")}{seasonName ? ` · ${seasonName}` : ""}</div>
         </div>
-        <button type="button" onClick={() => setOpen((o) => !o)} className="ml-auto flex-none rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{t("meals.options")} {open ? "▲" : "▼"}</button>
+        <button type="button" onClick={() => setOpen((o) => !o)} className="ms-auto flex-none rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{t("meals.options")} {open ? "▲" : "▼"}</button>
         <button type="button" onClick={onEdit} className="flex-none rounded-lg border px-3 py-1.5 text-[12px] font-extrabold text-[#2f6bd8]" style={{ borderColor: "#bcd3f7", background: "#eef4fd" }}>{t("meals.editPlan")}</button>
       </div>
 

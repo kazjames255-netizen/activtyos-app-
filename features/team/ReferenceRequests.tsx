@@ -16,6 +16,7 @@
 // references live server-side. What a referee says is third-party personal data
 // about the candidate, so it can't sit in a browser store; the request/response
 // pair is the API's (server/src/routes/references.ts).
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { Button, Input } from "@/components/ui";
 import { del, get, openFile, post } from "@/lib/api";
@@ -68,7 +69,7 @@ const REF_GROUPS = [
 ];
 const REF_FIELD_IDS = new Set(REF_GROUPS.flatMap((g) => g.ids));
 
-const fmt = (iso?: string | null) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }); };
+const fmt = (iso?: string | null) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString(dl(), { day: "numeric", month: "short" }); };
 const daysSince = (iso?: string | null) => { if (!iso) return 0; const d = new Date(iso); return isNaN(+d) ? 0 : Math.floor((Date.now() - +d) / 86_400_000); };
 /** A reference only counts once any flagged concern has been dealt with. */
 const counts = (r: ReferenceRequest) => r.status === "received" && (!r.concern || !!r.concernResolved);
@@ -169,7 +170,7 @@ function RefereeStrip({ referee, ctl }: { referee: Referee; ctl: RefCtl }) {
       <div className="border-t border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Not requested yet</span>
-          <div className="ml-auto flex flex-wrap gap-1.5">
+          <div className="ms-auto flex flex-wrap gap-1.5">
             {referee.name && referee.email && (
               <Button sm variant="primary" disabled={sending} onClick={() => void ctl.request(referee, "email")}>
                 {sending ? "Sending…" : "✉️ Send request"}
@@ -201,7 +202,7 @@ function RefereeStrip({ referee, ctl }: { referee: Referee; ctl: RefCtl }) {
             {bad ? "⚠ Concern flagged" : "✓ Received"} {fmt(r.submittedAt)}
             {r.method === "phone" ? ` · taken by phone${r.recordedBy ? ` by ${r.recordedBy}` : ""}` : ""}
           </span>
-          <div className="ml-auto flex flex-wrap gap-1.5">
+          <div className="ms-auto flex flex-wrap gap-1.5">
             {r.hasFile && <Button sm onClick={() => void openFile(`/api/references/${r.token}/file`)}>📎 {r.fileName ?? "Document"}</Button>}
             <Button sm variant="primary" onClick={() => setViewing(true)}>Read the reference</Button>
           </div>
@@ -219,7 +220,7 @@ function RefereeStrip({ referee, ctl }: { referee: Referee; ctl: RefCtl }) {
   if (r.status === "declined") return (
     <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
       <span className="text-[11.5px] font-bold text-[var(--ink-2)]">Declined {fmt(r.declinedAt)}{r.declineReason ? ` — “${r.declineReason}”` : ""}</span>
-      <Button sm className="ml-auto" disabled={busy === `del-${r.token}`} onClick={() => void ctl.act(`del-${r.token}`, () => del(`/api/references/${r.token}`))}>Ask someone else</Button>
+      <Button sm className="ms-auto" disabled={busy === `del-${r.token}`} onClick={() => void ctl.act(`del-${r.token}`, () => del(`/api/references/${r.token}`))}>Ask someone else</Button>
     </div>
   );
 
@@ -241,7 +242,7 @@ function RefereeStrip({ referee, ctl }: { referee: Referee; ctl: RefCtl }) {
           {waited > 0 && <span className="font-semibold"> · {waited} day{waited === 1 ? "" : "s"} ago</span>}
           {r.chases > 0 && <span className="font-semibold"> · chased {r.chases}×</span>}
         </span>
-        <div className="ml-auto flex flex-wrap gap-1.5">
+        <div className="ms-auto flex flex-wrap gap-1.5">
           {r.refereeEmail && <Button sm disabled={busy === `chase-${r.token}`} onClick={() => void ctl.act(`chase-${r.token}`, () => post(`/api/references/${r.token}/resend`, {}))}>{busy === `chase-${r.token}` ? "Sending…" : "🔔 Chase"}</Button>}
           <Button sm onClick={() => copyLink(r.token)}>{copied ? "Copied ✓" : "🔗 Copy link"}</Button>
           <Button sm onClick={() => setRecording(true)}>☎️ Record what they said</Button>
@@ -262,7 +263,7 @@ const PULL_IDS = ["ref1Name", "ref1Org", "ref1Rel", "ref1Phone", "ref1Email", "r
 const APPS_KEY = "aos.team.applications.v1";
 interface PulledApp { id: string; name: string; submittedAt: string; status: string; answers: Record<string, string> }
 
-const appDate = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }); };
+const appDate = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString(dl(), { day: "numeric", month: "short" }); };
 
 /** Fill this person's referee fields from an application they submitted. The
  *  details are already sitting in the Applications tab — nobody should be
@@ -299,16 +300,16 @@ function PullFromApplication({ staffName, hasAny, onPull }: {
           ? <>📥 <b>{exact.name}</b> applied {appDate(exact.submittedAt)} and gave referee details on the form.</>
           : <>📥 Referee details can be pulled straight from an application.</>}
       </span>
-      <div className="relative ml-auto">
+      <div className="relative ms-auto">
         {exact ? (
           <Button sm onClick={() => pull(exact)}>Pull their referees</Button>
         ) : (
           <Button sm onClick={() => setPickOpen((v) => !v)}>Pull from an application…</Button>
         )}
         {pickOpen && (
-          <div className="absolute right-0 z-20 mt-1 max-h-[240px] w-[260px] overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
+          <div className="absolute end-0 z-20 mt-1 max-h-[240px] w-[260px] overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
             {withRefs.map((a) => (
-              <button key={a.id} type="button" onClick={() => pull(a)} className="block w-full truncate rounded-lg px-3 py-1.5 text-left text-[12px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">
+              <button key={a.id} type="button" onClick={() => pull(a)} className="block w-full truncate rounded-lg px-3 py-1.5 text-start text-[12px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">
                 {a.name} <span className="text-[10px] text-[var(--ink-3)]">· {a.status} · {appDate(a.submittedAt)}</span>
               </button>
             ))}
@@ -352,7 +353,7 @@ export function ApplicationReferences({ candidateName, jobTitle, answers, accept
           {named.length === 0 ? "No referees on this application" : `${done} of ${named.length} back`}
         </span>
         {!accepted && named.length > 0 && (
-          <span className="ml-auto text-[10.5px] font-bold text-[#96632a]">Ask now — before interview is the safer-recruitment norm</span>
+          <span className="ms-auto text-[10.5px] font-bold text-[#96632a]">Ask now — before interview is the safer-recruitment norm</span>
         )}
       </div>
       <div className="space-y-2 p-2.5">
@@ -436,7 +437,7 @@ export function ReferencesStep({ fields, staffName, jobTitle, values, setVal, se
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[11px] text-[var(--ink-3)]">Referees are emailed a short form — or you can send the link yourself, or take it by phone.</span>
-        <Button sm className="ml-auto" onClick={() => setEditing(true)}>⚙ Reference questions</Button>
+        <Button sm className="ms-auto" onClick={() => setEditing(true)}>⚙ Reference questions</Button>
       </div>
       {editing && (
         <ReferenceQuestionsEditor
@@ -534,7 +535,7 @@ function ViewReference({ r, staffName, onClose, onResolved }: { r: ReferenceRequ
         <div className="flex-none border-b border-[var(--line)] px-5 py-3.5">
           <div className="flex items-center gap-2">
             <h3 className="text-[15px] font-extrabold text-[var(--ink)]">Reference for {staffName}</h3>
-            <button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button>
+            <button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button>
           </div>
           <p className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">
             From {r.refereeName}{r.refereeOrg ? ` · ${r.refereeOrg}` : ""} · received {fmt(r.submittedAt)}
@@ -566,7 +567,7 @@ function ViewReference({ r, staffName, onClose, onResolved }: { r: ReferenceRequ
         </div>
         <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3">
           <span className="text-[11px] text-[var(--ink-3)]">Visible to your team only.</span>
-          <Button className="ml-auto" onClick={print}>Print</Button>
+          <Button className="ms-auto" onClick={print}>Print</Button>
           <Button variant="primary" onClick={onClose}>Close</Button>
         </div>
       </div>
@@ -597,7 +598,7 @@ function RecordByPhone({ r, staffName, onClose, onSaved }: { r: ReferenceRequest
         <div className="flex-none border-b border-[var(--line)] px-5 py-3.5">
           <div className="flex items-center gap-2">
             <h3 className="text-[15px] font-extrabold text-[var(--ink)]">Reference by phone — {staffName}</h3>
-            <button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button>
+            <button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button>
           </div>
           <p className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">
             The same questions the form asks, so a phoned reference records the same things. It&rsquo;s saved
@@ -614,7 +615,7 @@ function RecordByPhone({ r, staffName, onClose, onSaved }: { r: ReferenceRequest
         </div>
         <div className="flex flex-none flex-wrap items-center gap-2 border-t border-[var(--line)] px-5 py-3">
           {err && <span className="text-[11.5px] font-semibold text-[#a32020]">{err}</span>}
-          <Button className="ml-auto" onClick={onClose}>Cancel</Button>
+          <Button className="ms-auto" onClick={onClose}>Cancel</Button>
           <Button variant="primary" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save the reference"}</Button>
         </div>
       </div>

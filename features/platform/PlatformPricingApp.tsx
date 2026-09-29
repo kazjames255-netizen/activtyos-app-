@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet, api } from "@/lib/api";
 
@@ -9,7 +10,7 @@ interface Plan { id: string; name: string; price: number; cadence: string; blurb
 const fld = "rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--ink)] outline-none transition-colors focus:border-[#1d3a8f] focus:ring-2 focus:ring-[#1d3a8f]/15";
 const lbl = "text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]";
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
-const gbp = (n: number) => `£${(Number(n) || 0).toLocaleString("en-GB")}`;
+const gbp = (n: number) => `£${(Number(n) || 0).toLocaleString(dl())}`;
 const ICONS: Record<string, string> = { freelancer: "⭐", company: "🏛️", franchise: "🌐" };
 
 /**
@@ -61,7 +62,7 @@ export function PlatformPricingApp() {
             <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>💷 Pricing</h2>
             <p className="mt-1 max-w-[600px] text-[12.5px] leading-snug text-white/85">
               Edit prices, staff limits, franchise % and the descriptions customers read. Changes apply to <b className="text-white">new signups</b>; existing customers stay grandfathered.
-              <span className="text-white/60">{updatedAt ? ` · last edited ${new Date(updatedAt).toLocaleDateString("en-GB")}` : " · currently on defaults"}</span>
+              <span className="text-white/60">{updatedAt ? ` · last edited ${new Date(updatedAt).toLocaleDateString(dl())}` : " · currently on defaults"}</span>
             </p>
           </div>
           <div className="flex shrink-0 gap-2">

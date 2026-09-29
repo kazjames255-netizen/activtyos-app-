@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
@@ -211,7 +212,7 @@ function QuickLinks({ tasks, me, onOpen }: { tasks: Task[]; me: string; onOpen: 
       {open && (
         <>
           <div className="fixed inset-0 z-[150]" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-[151] mt-1.5 w-[min(420px,90vw)] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-[0_24px_60px_-20px_rgba(15,23,42,.5)]">
+          <div className="absolute end-0 top-full z-[151] mt-1.5 w-[min(420px,90vw)] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-[0_24px_60px_-20px_rgba(15,23,42,.5)]">
             <div className="mb-2 flex items-center gap-2">
               <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search links or tasks…" className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
               <label className="flex flex-none items-center gap-1 text-[11.5px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />Added by me</label>
@@ -228,7 +229,7 @@ function QuickLinks({ tasks, me, onOpen }: { tasks: Task[]; me: string; onOpen: 
                     <span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-bold text-[#1d3a8f]">{u.title || k.label}</span><span className="block truncate text-[10.5px] text-[var(--ink-3)]">{u.title ? k.label : u.url}{u.by ? ` · ${u.by}` : ""}</span></span>
                     <span className="text-[11px] text-[#1d3a8f]">↗</span>
                   </a>
-                  <button type="button" onClick={() => { onOpen(nt.id); setOpen(false); }} title="Open the task" className="block w-full truncate rounded px-1 pb-0.5 text-left text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">
+                  <button type="button" onClick={() => { onOpen(nt.id); setOpen(false); }} title="Open the task" className="block w-full truncate rounded px-1 pb-0.5 text-start text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">
                     📋 {names.slice(0, 2).join(", ")}{names.length > 2 ? ` +${names.length - 2}` : ""}{ts.length > 1 ? ` · ${ts.length} dates` : ""}{nt.due ? ` · next ${fmtDay(nt.due)}` : ""}
                   </button>
                 </div>
@@ -272,7 +273,7 @@ const initials = (n: string) => (n || "?").split(/\s+/).map((x) => x[0]).slice(0
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const shiftIso = (iso: string, by: number) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + by); return d.toISOString().slice(0, 10); };
 const daysBetween = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
-const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 // A colour-coded relative due label.
 function dueLabel(iso: string | null | undefined, today: string): { text: string; color: string } | null {
   if (!iso) return null;
@@ -611,7 +612,7 @@ export function TasksApp() {
     if (!qa.trim()) return;
     const p = parseQuick(qa, today);
     if (!p.t) return;
-    const at = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const at = new Date().toLocaleDateString(dl(), { day: "numeric", month: "short" });
     // @name → a real person on the team: exact name, else a unique first-name /
     // prefix match ("@Sam" → "Sam Taylor"), carrying their email so the task
     // reaches them. Someone not on the team is flagged before it's saved (d11s7).
@@ -702,7 +703,7 @@ export function TasksApp() {
             const on = kpiFilter === key;
             return (
               <button key={label} type="button" onClick={() => setKpiFilter(on ? "" : key)} title={`Show ${label.toLowerCase()}`}
-                className="rounded-xl px-4 py-2 text-left backdrop-blur-sm transition hover:-translate-y-0.5"
+                className="rounded-xl px-4 py-2 text-start backdrop-blur-sm transition hover:-translate-y-0.5"
                 style={on ? { background: "#fff", boxShadow: "0 6px 18px -8px rgba(0,0,0,.4)" } : { background: "rgba(255,255,255,.15)" }}>
                 {/* `on` renders a WHITE tile, so the ink has to be navy. This
                     number was #F4F6FC — white on white, 1.03:1, invisible. */}
@@ -733,7 +734,7 @@ export function TasksApp() {
         <div className="flex flex-wrap items-center gap-2">
           {/* The Quick add action sits INSIDE the field it submits, so the row
               isn't a line of buttons with no obvious relationship to the input. */}
-          <div className="flex min-w-[240px] flex-1 items-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] pr-1 focus-within:border-[#1d3a8f]">
+          <div className="flex min-w-[240px] flex-1 items-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] pe-1 focus-within:border-[#1d3a8f]">
             <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder={`Quick add…   try:  Brief coaches tomorrow ${noAssignee ? "" : "@Jess "}!high #Riverside`} className="min-w-0 flex-1 bg-transparent px-3 py-2 text-[13px] outline-none" />
             <button type="button" onClick={addQuick} disabled={!qa.trim()}
               className="shrink-0 rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white transition disabled:opacity-35">
@@ -765,7 +766,7 @@ export function TasksApp() {
       {/* Toolbar (tabs now live in the title card above) */}
       {!onMilestones && (
         <div className="mb-2.5 flex flex-wrap items-center gap-2">
-          <div className="relative ml-auto">
+          <div className="relative ms-auto">
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 px-3 text-[12px] outline-none focus:border-[#1d3a8f]" />
           </div>
         </div>
@@ -779,7 +780,7 @@ export function TasksApp() {
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
         <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Priority</span>
         {(["urgent", "high", "med", "low"] as Prio[]).map((p) => <button key={p} type="button" onClick={() => setPrioFilter(prioFilter === p ? "" : p)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={prioFilter === p ? { borderColor: PRIO[p].dot, background: `${PRIO[p].dot}1a`, color: PRIO[p].dot } : { borderColor: "var(--line)", color: "var(--ink-2)" }}><span className="h-2 w-2 rounded-full" style={{ background: PRIO[p].dot }} />{PRIO[p].label}</button>)}
-        {filtersActive && <><button type="button" onClick={clearFilters} className="ml-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)]">Clear ✕</button><span className="text-[11.5px] text-[var(--ink-3)]">{base.length} match{base.length === 1 ? "" : "es"}</span></>}
+        {filtersActive && <><button type="button" onClick={clearFilters} className="ms-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)]">Clear ✕</button><span className="text-[11.5px] text-[var(--ink-3)]">{base.length} match{base.length === 1 ? "" : "es"}</span></>}
       </div>
       </>}
 
@@ -897,7 +898,7 @@ function ArchiveView({ tasks, onOpen, onUnarchive, onDelete, canDelete }: { task
       {tasks.map((t) => (
         <div key={t.id} className="flex items-center gap-2.5 border-b border-[var(--line)] px-3 py-2.5 last:border-b-0">
           <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
-          <button type="button" onClick={() => onOpen(t.id)} className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[var(--ink-2)]">{t.t}</button>
+          <button type="button" onClick={() => onOpen(t.id)} className="min-w-0 flex-1 truncate text-start text-[13px] font-semibold text-[var(--ink-2)]">{t.t}</button>
           {t.link && <span className="flex-none"><LinkChip link={t.link} /></span>}<UrlsBadge t={t} />
           {t.due && <span className="flex-none text-[11px] text-[var(--ink-3)]">{fmtDay(t.due)}</span>}
           <button type="button" onClick={() => onUnarchive(t)} className="flex-none rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">↩ Unarchive</button>
@@ -951,12 +952,12 @@ function RepeatRows({ lead, rest, today, noAssignee, hideDone, onOpen, onStatus 
     <div className="space-y-2">
       {row(lead)}
       <button type="button" onClick={() => setOpen((v) => !v)}
-        className="ml-[58px] flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">
+        className="ms-[58px] flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">
         🔁 {lead.seriesFreq ? `${REPEAT_WORD[lead.seriesFreq] ?? lead.seriesFreq} · ` : ""}
         {open ? "hide the other dates" : `${rest.length} more date${rest.length === 1 ? "" : "s"}`}
         <span className="text-[9px]">{open ? "▲" : "▼"}</span>
       </button>
-      {open && <div className="ml-[58px] space-y-2 border-l-2 border-dashed border-[var(--line)] pl-2">{rest.map(row)}</div>}
+      {open && <div className="ms-[58px] space-y-2 border-s-2 border-dashed border-[var(--line)] ps-2">{rest.map(row)}</div>}
     </div>
   );
 }
@@ -1012,7 +1013,7 @@ function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task
   const sc = STATUS_C[t.status ?? "todo"];
   // Left date rail — the prominent, listing-card style block.
   const railBg = done ? "linear-gradient(160deg,#0f7a3d,#16b364)" : isOverdue ? "linear-gradient(160deg,#8f1420,#c02636)" : "linear-gradient(160deg,#16307a,#3f78d8)";
-  const mon = t.due ? new Date(`${t.due}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" }).toUpperCase() : "";
+  const mon = t.due ? new Date(`${t.due}T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" }).toUpperCase() : "";
   const rel = done ? "Done" : isOverdue ? "Overdue" : (dueLabel(t.due, today)?.text ?? "");
   return (
     // Was a fixed h-[52px] flex row. Now a column so the subtask list can drop
@@ -1032,7 +1033,7 @@ function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task
       <div className="flex min-w-0 flex-1 items-center gap-2 px-2.5">
         {!hideDone && <select value={t.status ?? "todo"} onClick={(e) => e.stopPropagation()} onChange={(e) => onStatus(t, e.target.value as Status)} aria-label="Status" className="flex-none cursor-pointer rounded-full border px-2 py-0.5 text-[10px] font-extrabold outline-none transition-colors" style={{ borderColor: `${sc}55`, background: `${sc}14`, color: sc }}>{COLS.map((c) => <option key={c.k} value={c.k} style={{ color: "var(--ink)" }}>{c.label}</option>)}</select>}
         <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
-        <button type="button" onClick={() => onOpen(t.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+        <button type="button" onClick={() => onOpen(t.id)} className="flex min-w-0 flex-1 items-center gap-2 text-start">
           <span className={`truncate text-[13px] ${done ? "text-[var(--ink-3)] line-through" : "font-extrabold"}`}>{t.t}</span>
           {t.co && <span className="flex-none rounded-full bg-[var(--panel)] px-2 text-[10px] font-bold text-[var(--ink-2)]">{t.co}</span>}
         </button>
@@ -1055,7 +1056,7 @@ function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task
       {openSubs && subs.length > 0 && (
         // Indented to clear the date rail so the subtasks read as belonging to
         // the task above rather than as siblings of it.
-        <div className="border-t border-[var(--line)] bg-[var(--panel)]/40 py-1.5 pl-[68px] pr-2.5">
+        <div className="border-t border-[var(--line)] bg-[var(--panel)]/40 py-1.5 ps-[68px] pe-2.5">
           {subs.map((s, i) => (
             <div key={i} className="flex items-center gap-2 py-0.5 text-[11.5px]">
               <span className={"grid h-3.5 w-3.5 flex-none place-items-center rounded border text-[9px] font-extrabold " + (s.done ? "border-[#16b364] bg-[#16b364] text-white" : "border-[var(--line)] text-transparent")}>✓</span>
@@ -1092,7 +1093,7 @@ function BoardColumn({ c, list, today, noAssignee, over, setOver, drag, setDrag,
   return (
     <div onDragOver={(e) => { e.preventDefault(); setOver(c.k); }} onDragLeave={() => setOver(null)} onDrop={() => { if (drag) onDrop(drag, c.k); setDrag(null); setOver(null); }}
       className="flex flex-col overflow-hidden rounded-2xl border shadow-sm transition-colors" style={{ borderColor: over ? c.color : "var(--line)" }}>
-      <div className="flex items-center gap-1.5 px-3 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${c.color}, ${c.color}c8)` }}><span className="h-2.5 w-2.5 rounded-full bg-white/85" /><span className="text-[11.5px] font-extrabold uppercase tracking-wide">{c.label}</span><span className="ml-auto rounded-full bg-white/25 px-2 text-[10.5px] font-extrabold">{list.length}</span></div>
+      <div className="flex items-center gap-1.5 px-3 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${c.color}, ${c.color}c8)` }}><span className="h-2.5 w-2.5 rounded-full bg-white/85" /><span className="text-[11.5px] font-extrabold uppercase tracking-wide">{c.label}</span><span className="ms-auto rounded-full bg-white/25 px-2 text-[10.5px] font-extrabold">{list.length}</span></div>
       {/* Neutral body — the coloured header already names the column, and a
           tint behind every card meant the cards themselves never sat on a
           steady ground. Still lights up in the column colour while dragging. */}
@@ -1111,7 +1112,7 @@ function BoardColumn({ c, list, today, noAssignee, over, setOver, drag, setDrag,
                 the title repeated this left border — six colour systems on one
                 card, so none of them read. Priority is the border; category is
                 the chip; status is the COLUMN. */}
-            <div className="border-l-[3px] p-2.5" style={{ borderColor: accent }}>
+            <div className="border-s-[3px] p-2.5" style={{ borderColor: accent }}>
               <span className={`block text-[12.5px] leading-snug ${t.status === "done" ? "text-[var(--ink-3)] line-through" : "font-extrabold"}`}>{t.t}</span>
               <div className="mt-1.5 flex flex-wrap items-center gap-1">
                 {t.link && <LinkChip link={t.link} size="xs" />}<UrlsBadge t={t} />
@@ -1122,7 +1123,7 @@ function BoardColumn({ c, list, today, noAssignee, over, setOver, drag, setDrag,
                   : <span className="text-[9.5px] font-bold text-[var(--ink-3)]">{dl.text}</span>)}
                 <SubProgress subs={t.subs ?? []} />
                 {!noAssignee && whoLabel(t) && <span className="text-[10px] font-semibold text-[var(--ink-3)]">{whoLabel(t)}</span>}
-                <div className="ml-auto flex items-center gap-1">
+                <div className="ms-auto flex items-center gap-1">
                   {t.status === "done" && <button type="button" onClick={(e) => { e.stopPropagation(); onArchive(t); }} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">Archive</button>}
                   {/* The same status dropdown the list view uses. A lone "Done"
                       button could only move a card one way — every other status
@@ -1173,14 +1174,14 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
   const weekStart = shiftIso(anchor, -dowMon(anchor));
   const step = view === "day" ? 1 : view === "week" ? 7 : 0;
   const stepBy = (dir: number) => { if (view === "month") { const [y, m] = anchor.split("-").map(Number); setAnchor(new Date(Date.UTC(y, m - 1 + dir, 1)).toISOString().slice(0, 10)); } else setAnchor(shiftIso(anchor, dir * step)); };
-  const title = view === "day" ? new Date(`${anchor}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+  const title = view === "day" ? new Date(`${anchor}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
     : view === "week" ? `Week of ${fmtDay(weekStart)}`
-    : new Date(`${anchor}T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+    : new Date(`${anchor}T00:00:00Z`).toLocaleDateString(dl(), { month: "long", year: "numeric", timeZone: "UTC" });
   // Compact chip (month/week) — done tasks read struck-through and dimmed.
   const chip = (t: Task) => { const done = t.status === "done"; const bg = done ? "#16b364" : PRIO[t.prio ?? "med"].dot; return (
     // The chip opens the task; its 🔗 opens the task's link (Drive, a page…).
-    <div key={t.id} className={`flex w-full items-center gap-0.5 rounded pr-0.5 ${done ? "opacity-60" : ""}`} style={{ background: bg, color: inkOn(bg) }}>
-      <button type="button" onClick={() => onOpen(t.id)} className={`block min-w-0 flex-1 truncate px-1.5 py-0.5 text-left text-[10.5px] font-bold ${done ? "line-through" : ""}`} title={t.t}>{t.time ? `${t.time} ` : ""}{t.t}</button>
+    <div key={t.id} className={`flex w-full items-center gap-0.5 rounded pe-0.5 ${done ? "opacity-60" : ""}`} style={{ background: bg, color: inkOn(bg) }}>
+      <button type="button" onClick={() => onOpen(t.id)} className={`block min-w-0 flex-1 truncate px-1.5 py-0.5 text-start text-[10.5px] font-bold ${done ? "line-through" : ""}`} title={t.t}>{t.time ? `${t.time} ` : ""}{t.t}</button>
       <UrlsBadge t={t} compact onDark />
     </div>
   ); };
@@ -1198,7 +1199,7 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
       <span>Category</span>
       <span>Progress</span>
       <span>{noAssignee ? "" : "Assigned to"}</span>
-      <span className="text-right">Status</span>
+      <span className="text-end">Status</span>
     </div>
   );
   const fullChip = (t: Task) => {
@@ -1206,7 +1207,7 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
     const sc = STATUS_C[t.status ?? "todo"];
     return (
       <div key={t.id} className={`grid w-full ${DAY_COLS} items-center gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12.5px] hover:bg-[#f7faff]`}>
-        <button type="button" onClick={() => onOpen(t.id)} className="flex min-w-0 items-center gap-2 text-left">
+        <button type="button" onClick={() => onOpen(t.id)} className="flex min-w-0 items-center gap-2 text-start">
           <span className="h-2 w-2 flex-none rounded-full" style={{ background: done ? "#16b364" : PRIO[t.prio ?? "med"].dot }} />
           {t.time ? <span className="flex-none font-black text-[var(--ink-3)]">{t.time}</span> : null}
           <span className={`truncate font-bold ${done ? "text-[var(--ink-3)] line-through" : ""}`}>{t.t}</span>
@@ -1235,12 +1236,12 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
       <div className="grid grid-cols-7 gap-1">{cells.map((iso, i) => (
         <div key={i} className="min-h-[78px] rounded-lg border p-1" style={{ borderColor: iso === today ? BLUE : "var(--line)", background: iso === today ? "#eef4fd" : iso ? "var(--surface)" : "transparent" }}>
           {iso && <>
-            <div className="text-right text-[10.5px] font-bold text-[var(--ink-3)]">{Number(iso.slice(-2))}</div>
+            <div className="text-end text-[10.5px] font-bold text-[var(--ink-3)]">{Number(iso.slice(-2))}</div>
             <div className="relative space-y-0.5">
               {on(iso).slice(0, 3).map(chip)}
               {on(iso).length > 3 && (
                 <button type="button" onClick={() => setMoreDay(moreDay === iso ? null : iso)}
-                  className="w-full rounded px-1 text-left text-[9.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">
+                  className="w-full rounded px-1 text-start text-[9.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">
                   +{on(iso).length - 3} more
                 </button>
               )}
@@ -1251,9 +1252,9 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
                   <div className="fixed inset-0 z-[150]" onClick={() => setMoreDay(null)} />
                   {/* Opens leftwards from the right-hand columns — from Fri–Sun it
                       ran off the edge of the page. */}
-                  <div className={`absolute ${i % 7 >= 4 ? "right-0" : "left-0"} top-full z-[151] mt-1 max-h-[260px] w-[min(240px,80vw)] overflow-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_44px_-16px_rgba(15,23,42,.45)]`}>
+                  <div className={`absolute ${i % 7 >= 4 ? "end-0" : "start-0"} top-full z-[151] mt-1 max-h-[260px] w-[min(240px,80vw)] overflow-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_44px_-16px_rgba(15,23,42,.45)]`}>
                     <div className="px-1 pb-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">
-                      {new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {on(iso).length}
+                      {new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {on(iso).length}
                     </div>
                     <div className="space-y-0.5">{on(iso).map(chip)}</div>
                   </div>
@@ -1268,7 +1269,7 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
     const days = Array.from({ length: 7 }, (_, i) => shiftIso(weekStart, i));
     body = <div className="grid grid-cols-7 gap-1">{days.map((iso) => (
       <div key={iso} className="min-h-[220px] rounded-lg border p-1.5" style={{ borderColor: iso === today ? BLUE : "var(--line)", background: iso === today ? "#eef4fd" : "var(--surface)" }}>
-        <div className="mb-1 text-[10.5px] font-extrabold text-[var(--ink-2)]">{new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", timeZone: "UTC" })}</div>
+        <div className="mb-1 text-[10.5px] font-extrabold text-[var(--ink-2)]">{new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", timeZone: "UTC" })}</div>
         <div className="space-y-1">{on(iso).map(chip)}{on(iso).length === 0 && <div className="text-[10px] text-[var(--ink-3)]">—</div>}</div>
       </div>
     ))}</div>;
@@ -1287,7 +1288,7 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
         {/* Segmented control. The selected pill was a pale tint on white, which
             at this size read as "slightly lighter", not "selected" — it takes a
             solid fill and white text to say which view you're in at a glance. */}
-        <div className="ml-auto flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-1">
+        <div className="ms-auto flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-1">
           {(["day", "week", "month"] as const).map((v) => (
             <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v}
               className="rounded-full px-3.5 py-1 text-[11.5px] font-extrabold capitalize transition-colors"
@@ -1316,11 +1317,11 @@ function SearchSelect({ value, placeholder, options, onPick, inputCls }: { value
     <div className="relative">
       <input value={open ? q : value} placeholder={value || `${placeholder} — type to search`} onFocus={() => { setOpen(true); setQ(""); }} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onBlur={() => setTimeout(() => setOpen(false), 160)} className={inputCls} />
       {open && (
-        <div className="absolute left-0 right-0 z-30 mt-1 max-h-60 overflow-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg">
-          {value && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(""); setOpen(false); }} className="w-full border-b border-[var(--line)] px-3 py-1.5 text-left text-[11.5px] font-bold text-[var(--ink-3)] hover:bg-[#f7faff]">Clear selection</button>}
+        <div className="absolute start-0 end-0 z-30 mt-1 max-h-60 overflow-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg">
+          {value && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(""); setOpen(false); }} className="w-full border-b border-[var(--line)] px-3 py-1.5 text-start text-[11.5px] font-bold text-[var(--ink-3)] hover:bg-[#f7faff]">Clear selection</button>}
           {filtered.length === 0 ? <div className="px-3 py-2 text-[12px] text-[var(--ink-3)]">No matches</div>
             : filtered.map((o) => (
-              <button type="button" key={o.v} onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(o.v); setOpen(false); }} className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-3 py-1.5 text-left last:border-b-0 hover:bg-[#eef4fd]">
+              <button type="button" key={o.v} onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(o.v); setOpen(false); }} className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-3 py-1.5 text-start last:border-b-0 hover:bg-[#eef4fd]">
                 <span className="text-[12.5px] font-bold text-[var(--ink)]">{o.v}</span>
                 {o.sub && <span className="text-[11px] text-[var(--ink-3)]">{o.sub}</span>}
               </button>
@@ -1380,7 +1381,7 @@ function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | nul
             const on = (link?.v ?? "").toLowerCase() === c.toLowerCase();
             const col = catCol(c);
             const inUse = (catsInUse ?? []).some((u) => u.trim().toLowerCase() === c.trim().toLowerCase());
-            return <span key={c} className="inline-flex items-center rounded-full border pr-1 text-[11px] font-bold"
+            return <span key={c} className="inline-flex items-center rounded-full border pe-1 text-[11px] font-bold"
               style={on ? { borderColor: col.fg, background: col.bg, color: col.fg } : { borderColor: "var(--line)", color: "var(--ink-2)", background: "var(--surface)" }}>
               <button type="button" onClick={() => onChange({ k: "gen", v: c })} className="inline-flex items-center gap-1.5 px-2 py-0.5">
                 <CatSwatch name={c} />{c}
@@ -1441,11 +1442,11 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
       <div className="@container flex max-h-[92vh] w-full max-w-[980px] flex-col overflow-hidden rounded-3xl bg-[#f4f7fc] shadow-2xl" onClick={(e) => e.stopPropagation()}>
 
         <div className="op-hero relative flex-none overflow-hidden px-5 pb-4 pt-3.5 text-white" style={{ background: STATUS_HERO[status] }}>
-          <div aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
+          <div aria-hidden className="pointer-events-none absolute -end-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
           <div className="relative flex items-center gap-2">
             <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-white/75">New task</span>
             {repeatOn && <span className="rounded-full bg-white/18 px-2 py-0.5 text-[10.5px] font-extrabold ring-1 ring-white/25">🔁 Repeats</span>}
-            <button type="button" onClick={onClose} aria-label="Close" className="ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px] font-bold text-white ring-1 ring-white/30 transition hover:bg-white/30">×</button>
+            <button type="button" onClick={onClose} aria-label="Close" className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px] font-bold text-white ring-1 ring-white/30 transition hover:bg-white/30">×</button>
           </div>
           <input autoFocus value={t} onChange={(e) => setT(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }} placeholder="What needs doing?" aria-label="Task title"
             className="relative mt-1 w-full rounded-lg bg-white/10 px-2.5 py-1.5 text-[20px] font-extrabold leading-tight text-white outline-none ring-1 ring-white/25 placeholder:text-white/60 focus:bg-white/15 focus:ring-white/60" style={{ fontFamily: "var(--ff-display)" }} />
@@ -1557,7 +1558,7 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
 
         <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] bg-white px-4 py-3">
           <span className="hidden text-[11px] text-[var(--ink-3)] @2xl:inline">Tip: ⌘/Ctrl + Enter in the title creates it.</span>
-          <div className="ml-auto flex gap-2">
+          <div className="ms-auto flex gap-2">
             <button type="button" onClick={onClose} className="rounded-xl border border-[var(--line)] bg-white px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Cancel</button>
             <button type="button" onClick={submit} disabled={!t.trim() || repeatBad} className="rounded-xl bg-[#1d3a8f] px-5 py-2 text-[12.5px] font-extrabold text-white shadow-[0_6px_16px_-8px_rgba(29,58,143,.8)] hover:brightness-110 disabled:opacity-40">Create task</button>
           </div>
@@ -1610,7 +1611,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
             shown, including at zero, so "is anything unclaimed?" is answerable
             without scrolling. */}
         <button type="button" onClick={() => setFilter("__unassigned")} className="rounded-full border px-3 py-1 text-[12px] font-bold" style={filter === "__unassigned" ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>Unassigned <span className="text-[var(--ink-3)]">{openCount("__unassigned")}</span></button>
-        <button type="button" onClick={() => setSort(sort === "up" ? "down" : "up")} className="ml-auto rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--ink-2)]">Due {sort === "up" ? "↑" : "↓"}</button>
+        <button type="button" onClick={() => setSort(sort === "up" ? "down" : "up")} className="ms-auto rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--ink-2)]">Due {sort === "up" ? "↑" : "↓"}</button>
       </div>
       <div className="space-y-4">
         {people.map((who) => {
@@ -1644,7 +1645,7 @@ function DSection({ icon, tint, title, meta, right, children }: { icon: string; 
         <span className="grid h-7 w-7 flex-none place-items-center rounded-lg text-[13px] shadow-sm" style={{ background: tint }}><span className="drop-shadow-[0_1px_1px_rgba(0,0,0,.25)]">{icon}</span></span>
         <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{title}</span>
         {meta && <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: `${tint}14`, color: tint }}>{meta}</span>}
-        {right && <span className="ml-auto">{right}</span>}
+        {right && <span className="ms-auto">{right}</span>}
       </header>
       <div className="px-3.5 py-3">{children}</div>
     </section>
@@ -1713,7 +1714,7 @@ function LinkAdder({ existing, me, onAdd }: { existing: TaskUrl[]; me: string; o
     if (n.error) { setErr(n.error); return; }
     if (!n.url) return;
     if (existing.some((x) => x.url === n.url)) { setErr("That link is already on this task."); return; }
-    onAdd({ url: n.url, ...(title.trim() ? { title: title.trim() } : {}), by: me, at: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" }) });
+    onAdd({ url: n.url, ...(title.trim() ? { title: title.trim() } : {}), by: me, at: new Date().toLocaleDateString(dl(), { day: "numeric", month: "short" }) });
     setUrlIn(""); setTitle(""); setErr(null);
   };
   return (
@@ -1738,7 +1739,7 @@ function StepsOnlyDrawer({ task, me, myEmail, comment, setComment, onAddComment,
       <div className="relative flex h-full w-full max-w-[560px] flex-col overflow-y-auto bg-[#f4f7fc] p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-[var(--ink-3)]">Your step on a task</span>
-          <button type="button" onClick={onClose} aria-label="Close" className="ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-white text-[17px] font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]">×</button>
+          <button type="button" onClick={onClose} aria-label="Close" className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white text-[17px] font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]">×</button>
         </div>
         <h2 className="mt-1 text-[19px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{task.t}</h2>
         <div className="mt-1 text-[12px] text-[var(--ink-3)]">
@@ -1804,7 +1805,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
     const body = comment.trim(); if (!body) return;
     // Date AND time — "12 Sept" on its own can't tell two comments that day apart.
     const at = new Date();
-    const when = `${at.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · ${at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+    const when = `${at.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" })} · ${at.toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" })}`;
     save({ comments: [...(task.comments ?? []), { who: me || "You", body, when }] });
     setComment("");
   };
@@ -1844,12 +1845,12 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
 
         {/* ── Header: title, the facts at a glance, status, complete ───────── */}
         <div className="relative flex-none overflow-hidden px-5 pb-4 pt-3.5 text-white" style={{ background: STATUS_HERO[status] }}>
-          <div aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
+          <div aria-hidden className="pointer-events-none absolute -end-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
           <div className="relative flex items-center gap-2">
             <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-white/75">Task</span>
             {task.seriesId && <span className="rounded-full bg-white/18 px-2 py-0.5 text-[10.5px] font-extrabold ring-1 ring-white/25">🔁 {FREQ_WORD[task.seriesFreq ?? ""] ?? "Repeats"}</span>}
             {task.spawn && <span className="rounded-full bg-[#fde68a] px-2 py-0.5 text-[10px] font-extrabold uppercase text-[#7c5a06]">auto</span>}
-            <button type="button" onClick={closeGuarded} aria-label="Close" className="ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px] font-bold text-white ring-1 ring-white/30 transition hover:bg-white/30">×</button>
+            <button type="button" onClick={closeGuarded} aria-label="Close" className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px] font-bold text-white ring-1 ring-white/30 transition hover:bg-white/30">×</button>
           </div>
           <input value={task.t} onChange={(e) => save({ t: e.target.value })} aria-label="Task title"
             className="relative mt-1 w-full rounded-lg bg-transparent px-1 py-0.5 text-[20px] font-extrabold leading-tight text-white outline-none placeholder:text-white/60 hover:bg-white/10 focus:bg-white/15" style={{ fontFamily: "var(--ff-display)" }} />
@@ -1915,7 +1916,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
               {scope && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]">
                   <span>Your edits apply to <b>{scope === "all" ? "all dates in the repeat" : "just this date"}</b>.</span>
-                  <button type="button" onClick={() => setScope(null)} className="ml-auto font-extrabold text-[#0e7490] underline">Change</button>
+                  <button type="button" onClick={() => setScope(null)} className="ms-auto font-extrabold text-[#0e7490] underline">Change</button>
                 </div>
               )}
             </DSection>
@@ -1947,7 +1948,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                         className="shrink-0 rounded-xl border border-[#c7d6f5] bg-[#eef4ff] px-3 py-2 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#e0ebff]">Me</button>
                     )}
                   </div>
-                  {(task.whoEmail ?? "").trim() && <div className="mt-1 pl-11 text-[11px] text-[var(--ink-3)]">{task.whoEmail}</div>}
+                  {(task.whoEmail ?? "").trim() && <div className="mt-1 ps-11 text-[11px] text-[var(--ink-3)]">{task.whoEmail}</div>}
                 </div>
               )}
               <div className="grid grid-cols-2 gap-2.5">
@@ -2081,7 +2082,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
           {task.seriesId && (
             <button type="button" onClick={onDeleteSeries} className="rounded-xl px-2.5 py-2 text-[12px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete whole repeat</button>
           )}
-          <div className="ml-auto flex gap-2">
+          <div className="ms-auto flex gap-2">
             <button type="button" onClick={onArchive} className="rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Archive</button>
             <button type="button" onClick={onClose} className="rounded-xl bg-[#1d3a8f] px-5 py-2 text-[12.5px] font-extrabold text-white shadow-[0_6px_16px_-8px_rgba(29,58,143,.8)] hover:brightness-110">Done</button>
           </div>
@@ -2102,11 +2103,11 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                 Apply this change to just <b>{task.due ? fmtDay(task.due) : "this date"}</b>, or to every date in the repeat?
               </p>
               <div className="mt-3 flex flex-col gap-2">
-                <button type="button" onClick={() => answer("one")} className="rounded-xl border border-[var(--line)] px-3 py-2.5 text-left">
+                <button type="button" onClick={() => answer("one")} className="rounded-xl border border-[var(--line)] px-3 py-2.5 text-start">
                   <div className="text-[13px] font-extrabold text-[var(--ink)]">Just this date</div>
                   <div className="text-[11.5px] text-[var(--ink-3)]">The other dates stay as they are.</div>
                 </button>
-                <button type="button" onClick={() => answer("all")} className="rounded-xl border border-[#1d3a8f] bg-[#eef4fd] px-3 py-2.5 text-left">
+                <button type="button" onClick={() => answer("all")} className="rounded-xl border border-[#1d3a8f] bg-[#eef4fd] px-3 py-2.5 text-start">
                   <div className="text-[13px] font-extrabold text-[#1d3a8f]">All dates in the repeat</div>
                   <div className="text-[11.5px] text-[var(--ink-2)]">Due dates, ticks and comments stay per-date — only what you changed travels.</div>
                 </button>

@@ -197,7 +197,7 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
           backgroundSize: "18px 18px, cover, cover, cover, cover",
           backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat",
         }}>
-        {onClose && <button type="button" onClick={onClose} aria-label={t("registers.close")} className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full text-[17px] font-bold leading-none text-white/70 transition hover:bg-white/15 hover:text-white md:hidden">×</button>}
+        {onClose && <button type="button" onClick={onClose} aria-label={t("registers.close")} className="absolute end-3 top-3 grid h-8 w-8 place-items-center rounded-full text-[17px] font-bold leading-none text-white/70 transition hover:bg-white/15 hover:text-white md:hidden">×</button>}
 
         {info.photo
           // eslint-disable-next-line @next/next/no-img-element
@@ -250,7 +250,7 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
       {/* ── Content column ── */}
       <div className={`flex min-w-0 flex-col ${inline ? "" : "max-h-[90vh]"}`}>
         <div className="relative flex-none border-b border-[var(--line)]">
-          {onClose && <button type="button" onClick={onClose} aria-label={t("registers.close")} className="absolute right-3 top-2.5 z-10 hidden h-8 w-8 place-items-center rounded-full text-[17px] font-bold leading-none text-[var(--ink-3)] transition hover:bg-[var(--line)] md:grid">×</button>}
+          {onClose && <button type="button" onClick={onClose} aria-label={t("registers.close")} className="absolute end-3 top-2.5 z-10 hidden h-8 w-8 place-items-center rounded-full text-[17px] font-bold leading-none text-[var(--ink-3)] transition hover:bg-[var(--line)] md:grid">×</button>}
       {/* Tabs — the card carries more than fits comfortably on one screen, and
           safeguarding needs gating anyway. Tabs build themselves from what this
           child actually has, so an empty one never appears. */}
@@ -262,7 +262,7 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
               <button key={t.id} type="button" role="tab" aria-selected={active} onClick={() => go(t.id)}
                 className={"relative whitespace-nowrap px-3.5 py-2.5 text-[14px] font-bold transition-colors " + (active ? "text-[#1d3a8f]" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>
                 {t.label}
-                {t.count ? <span className="ml-1.5 rounded-full bg-[var(--line)] px-1.5 py-0.5 text-[10.5px] font-extrabold text-[var(--ink-2)]">{t.count}</span> : null}
+                {t.count ? <span className="ms-1.5 rounded-full bg-[var(--line)] px-1.5 py-0.5 text-[10.5px] font-extrabold text-[var(--ink-2)]">{t.count}</span> : null}
                 {active && <span className="absolute inset-x-2 -bottom-px h-[3px] rounded-t-full bg-[#1d3a8f]" />}
               </button>
             );
@@ -384,7 +384,7 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
 
               {on("attending") && attend.length > 0 && <>
                 <SectionTitle dot={BLUE}>{t("registers.attending")}</SectionTitle>
-                <button type="button" onClick={() => setShowDays((v) => !v)} className="flex w-full items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-left">
+                <button type="button" onClick={() => setShowDays((v) => !v)} className="flex w-full items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-start">
                   <span className="text-[14px] font-extrabold text-[var(--ink-2)]">📅 {attend.length === 1 ? t("registers.oneSessionBooked", { n: attend.length }) : t("registers.manySessionsBooked", { n: attend.length })}</span>
                   <span className="text-[12.5px] font-bold text-[#1d3a8f]">{showDays ? `${t("registers.hide")} ▲` : `${t("registers.showAll")} ▼`}</span>
                 </button>

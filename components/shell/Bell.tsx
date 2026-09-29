@@ -105,7 +105,7 @@ export function Bell({ portal }: { portal: PortalKey }) {
         </svg>
         {unread > 0 && (
           <span
-            className="absolute -right-1 -top-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none"
+            className="absolute -end-1 -top-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none"
             style={{ background: "var(--sem-crit, #ef4444)", color: "#fff" }}
           >
             {unread > 99 ? "99+" : unread}
@@ -114,7 +114,7 @@ export function Bell({ portal }: { portal: PortalKey }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-[42px] z-50 w-[min(340px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
+        <div className="absolute end-0 top-[42px] z-50 w-[min(340px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
           <div className="border-b border-[var(--line)] px-4 py-2.5 text-[12px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">
             {t("chrome.notif")}
           </div>
@@ -132,7 +132,7 @@ export function Bell({ portal }: { portal: PortalKey }) {
                   if (!n.href) return;
                   router.push(notificationHref(n.href, portal));
                 }}
-                className="flex w-full cursor-pointer items-start gap-2.5 border-b border-[var(--line-2)] px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-[var(--panel)]"
+                className="flex w-full cursor-pointer items-start gap-2.5 border-b border-[var(--line-2)] px-4 py-3 text-start transition-colors last:border-b-0 hover:bg-[var(--panel)]"
               >
                 <span className="mt-0.5 flex-none text-[15px]" aria-hidden>
                   {CATEGORY_GLYPH[n.category] ?? "🔔"}

@@ -130,7 +130,7 @@ function ParentAuth() {
   return (
     <div
       className="relative w-full max-w-[520px] rounded-[22px] bg-[var(--surface)] p-9 shadow-[0_24px_70px_-24px_rgba(20,30,90,.28)]"
-      style={{ borderLeft: "4px solid #1d3a8f" }}
+      style={{ borderInlineStart: "4px solid #1d3a8f" }}
     >
       <div className="mb-5 flex items-center gap-2.5">
         <AosMark />
@@ -178,7 +178,7 @@ function ParentAuth() {
               <ul
                 id="provider-list"
                 role="listbox"
-                className="absolute left-0 right-0 top-full z-20 mt-1 max-h-[240px] overflow-auto rounded-[12px] bg-white py-1 shadow-[0_18px_40px_-16px_rgba(16,35,86,.4)]"
+                className="absolute start-0 end-0 top-full z-20 mt-1 max-h-[240px] overflow-auto rounded-[12px] bg-white py-1 shadow-[0_18px_40px_-16px_rgba(16,35,86,.4)]"
                 style={{ border: "1px solid var(--line)" }}
               >
                 {lookupDown ? (
@@ -193,7 +193,7 @@ function ParentAuth() {
                         type="button"
                         onMouseEnter={() => setHi(i)}
                         onClick={() => choose(p)}
-                        className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left"
+                        className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-start"
                         style={{ background: i === hi ? "var(--brand-soft)" : "transparent" }}
                       >
                         <span className="text-[13.5px] font-extrabold" style={{ color: "var(--ink)" }}>{p.name}</span>
@@ -230,9 +230,9 @@ function ParentAuth() {
           <div className="relative">
             <Input id="parent-password" type={showPw ? "text" : "password"} required
               autoComplete={tab === "in" ? "current-password" : "new-password"}
-              value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pr-14" />
+              value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pe-14" />
             <button type="button" onClick={() => setShowPw((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[12.5px] font-bold text-[var(--ink-2)]">
+              className="absolute end-3 top-1/2 -translate-y-1/2 text-[12.5px] font-bold text-[var(--ink-2)]">
               {showPw ? "Hide" : "Show"}
             </button>
           </div>

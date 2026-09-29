@@ -110,7 +110,7 @@ function FlagChip({ icon, label, detail, bg, fg }: { icon?: string; label: strin
       onClick={() => setOpen((o) => !o)}
       aria-expanded={open}
       title={open ? t("parent.hideDetails") : t("parent.clickToSeeDetails")}
-      className="inline-flex max-w-full items-center gap-1 rounded-lg px-2.5 py-[3px] text-left text-[10.5px] font-bold transition hover:brightness-95"
+      className="inline-flex max-w-full items-center gap-1 rounded-lg px-2.5 py-[3px] text-start text-[10.5px] font-bold transition hover:brightness-95"
       style={{ background: bg, color: fg }}
     >
       <span className="whitespace-nowrap">{icon ? `${icon} ` : ""}{label}</span>
@@ -426,7 +426,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
               <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
                 <span className="min-w-0 flex-1 text-[12.5px]">
                   <b>{emergencyName}</b>{emergencyPhone ? ` · ${emergencyPhone}` : ""}
-                  <span className="ml-1 text-[11px] text-[var(--ink-3)]">{t("parent.fromYourDetails")}</span>
+                  <span className="ms-1 text-[11px] text-[var(--ink-3)]">{t("parent.fromYourDetails")}</span>
                 </span>
                 <button type="button" onClick={() => setEditEmergency(true)} className="flex-none text-[11.5px] font-bold text-[var(--brand-ink,var(--brand))]">{t("parent.changeForThisChild")}</button>
               </div>
@@ -496,7 +496,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
                       { v: true, label: t("parent.photosAllowed"), desc: t("parent.photosAllowedDesc") },
                       { v: false, label: t("parent.noPhotos"), desc: t("parent.noPhotosDesc") },
                     ].map((opt) => (
-                      <button key={String(opt.v)} type="button" onClick={() => setPhotoConsent(opt.v)} className="rounded-xl border p-2.5 text-left"
+                      <button key={String(opt.v)} type="button" onClick={() => setPhotoConsent(opt.v)} className="rounded-xl border p-2.5 text-start"
                         style={photoConsent === opt.v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                         <div className="text-[12.5px] font-extrabold" style={{ color: photoConsent === opt.v ? "var(--brand-ink)" : "var(--ink)" }}>
                           {opt.v ? "📷 " : "🚫 "}{opt.label}
@@ -533,7 +533,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
         {/* Branded header + progress — matches the welcome onboarding card. */}
         <div className="relative px-6 py-5 text-white" style={{ background: "linear-gradient(120deg,var(--brand-strong) 0%,var(--brand-2) 70%,#5a93f0 100%)" }}>
           <button type="button" onClick={() => onDone(false)} aria-label={t("parent.close")}
-            className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
+            className="absolute end-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
           <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/70">
             {editing ? t("parent.editChild", { name: child!.name || t("parent.childWord") }) : t("parent.addAChild")} · {t("parent.stepXofY", { n: safeStep + 1, total: slides.length })}
           </div>
@@ -577,7 +577,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
                 {t("parent.backArrow")}
               </button>
             )}
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ms-auto flex items-center gap-2">
               {/* When EDITING an existing child, a quick save from any step —
                   no need to click through every page for a small change. */}
               {editing && safeStep < last && (

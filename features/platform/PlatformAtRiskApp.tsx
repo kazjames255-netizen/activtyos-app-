@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -7,7 +8,7 @@ import { useRealtime } from "@/lib/realtime";
 interface Row { id: string; name: string; type: string; fee: number; contactEmail: string | null; phone: string | null; reason: string; detail: string; contactedAt: string | null }
 
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
-const money = (n: number) => `£${n.toLocaleString("en-GB")}`;
+const money = (n: number) => `£${n.toLocaleString(dl())}`;
 const RISK: Record<string, { label: string; color: string; hint: string }> = {
   payment_failed: { label: "Payment failed", color: "#c02636", hint: "card declined — will lapse" },
   cancelling: { label: "Cancelling", color: "#e8590c", hint: "asked to cancel" },
@@ -80,14 +81,14 @@ export function PlatformAtRiskApp() {
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="min-w-0 flex-1 truncate text-[14px] font-extrabold">{p.name} <span className="text-[10.5px] font-normal capitalize text-[var(--ink-3)]">· {p.type}</span></span>
                 <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-bold text-white" style={{ background: r.color }}>{r.label}</span>
-                {p.fee > 0 && <span className="w-16 text-right text-[13px] font-extrabold tabular-nums">{money(p.fee)}/mo</span>}
+                {p.fee > 0 && <span className="w-16 text-end text-[13px] font-extrabold tabular-nums">{money(p.fee)}/mo</span>}
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px]">
                 <span className="font-semibold" style={{ color: r.color }}>{p.detail}</span>
                 {p.contactEmail && <a href={`mailto:${p.contactEmail}?subject=${encodeURIComponent("Your ActivityOS account")}`} className="font-semibold text-[#1d3a8f] hover:underline">✉ {p.contactEmail}</a>}
                 {p.phone && <a href={`tel:${p.phone}`} className="font-semibold text-[#1d3a8f] hover:underline">📞 {p.phone}</a>}
-                {p.contactedAt && <span className="text-[var(--ink-3)]">· contacted {new Date(p.contactedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>}
-                <span className="ml-auto">
+                {p.contactedAt && <span className="text-[var(--ink-3)]">· contacted {new Date(p.contactedAt).toLocaleDateString(dl(), { day: "numeric", month: "short" })}</span>}
+                <span className="ms-auto">
                   {tab === "todo"
                     ? <button type="button" onClick={() => mark(p.id, true)} disabled={busy === p.id} className="rounded-full bg-[#0f7a43] px-3 py-1 text-[11.5px] font-bold text-white hover:brightness-110 disabled:opacity-50">{busy === p.id ? "…" : "✓ Mark contacted"}</button>
                     : <button type="button" onClick={() => mark(p.id, false)} disabled={busy === p.id} className="rounded-full border border-[var(--line)] px-3 py-1 text-[11.5px] font-bold text-[var(--ink-3)] hover:border-[var(--ink-3)] disabled:opacity-50">{busy === p.id ? "…" : "↩ Reopen"}</button>}

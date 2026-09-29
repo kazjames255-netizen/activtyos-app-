@@ -102,7 +102,7 @@ export function MoneyOutApp() {
           <Kpi big={money(outMonth)} sub="Out this month" />
           <Kpi big={money(outYear)} sub={`Out in ${thisYear}`} />
           <Kpi big={money(pendingTotal)} sub="Pending to pay" />
-          <div className="ml-auto inline-flex items-center gap-1 rounded-2xl border border-white/70 bg-white/90 p-1 shadow-sm backdrop-blur-sm">
+          <div className="ms-auto inline-flex items-center gap-1 rounded-2xl border border-white/70 bg-white/90 p-1 shadow-sm backdrop-blur-sm">
             {([["cash", "Cash", "counts when paid"], ["accrual", "Accrual", "counts when logged"]] as const).map(([k, label, hint]) => (
               <button key={k} type="button" title={hint} onClick={() => void saveSettings({ settings: { ...settings, money: { ...(settings.money ?? {}), basis: k } } })} className="rounded-xl px-3 py-1.5 text-[11.5px] font-extrabold transition-colors" style={basis === k ? { background: "#1d3a8f", color: "#fff" } : { color: "#1d3a8f" }}>{label}</button>
             ))}

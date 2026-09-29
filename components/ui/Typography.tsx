@@ -26,7 +26,7 @@ export function DefRow({ label, value }: { label: ReactNode; value: ReactNode })
   return (
     <div className="flex justify-between gap-3 border-b border-dashed border-[var(--line)] py-[5px] text-[12.5px]">
       <span className="shrink-0 text-[var(--ink-3)]">{label}</span>
-      <span className="break-words text-right font-semibold text-[var(--ink)]">{value}</span>
+      <span className="break-words text-end font-semibold text-[var(--ink)]">{value}</span>
     </div>
   );
 }

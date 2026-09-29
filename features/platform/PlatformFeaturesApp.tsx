@@ -35,7 +35,7 @@ const PAGES: [string, string][] = [
   ["ai", "AI assistant"],
 ];
 
-interface Provider { id: string; name: string; type: string; features: Record<string, boolean> }
+interface Provider { id: string; name: string; type: string; features: Record<string, boolean>; subscription?: { plan?: string } | null }
 
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
 const BLUE = "#1d3a8f";
@@ -51,7 +51,7 @@ function Toggle({ on, busy, onClick }: { on: boolean; busy: boolean; onClick: ()
       className={`relative inline-block h-5 w-9 flex-none rounded-full transition-colors ${busy ? "opacity-60" : ""}`}
       style={{ background: on ? "#0f7a43" : "#c7ccd8" }}
     >
-      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${on ? "left-[18px]" : "left-0.5"}`} />
+      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${on ? "start-[18px]" : "start-0.5"}`} />
     </button>
   );
 }
@@ -67,7 +67,9 @@ export function PlatformFeaturesApp() {
 
   const load = useCallback(() => {
     apiGet<{ providers: Provider[] }>("/api/platform/providers")
-      .then((p) => { setProviders(p.providers ?? []); setError(null); })
+      // A franchise is a company tenant on the franchise plan (same rule as Providers & billing) — without
+      // this the franchise tab/colour below never appeared and franchises were counted as companies.
+      .then((p) => { setProviders((p.providers ?? []).map((x) => (x.subscription?.plan === "franchise" ? { ...x, type: "franchise" } : x))); setError(null); })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
   useEffect(load, [load]);
@@ -142,7 +144,7 @@ export function PlatformFeaturesApp() {
               const offCount = PAGES.filter(([v]) => !isOn(p.features, v)).length;
               return (
                 <div key={p.id} className="h-fit overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-                  <button type="button" onClick={() => toggleOpen(p.id)} className="flex w-full items-center justify-between gap-2 px-3.5 py-3 text-left transition hover:bg-[var(--panel)]" style={open.has(p.id) ? { background: "var(--panel)" } : undefined}>
+                  <button type="button" onClick={() => toggleOpen(p.id)} className="flex w-full items-center justify-between gap-2 px-3.5 py-3 text-start transition hover:bg-[var(--panel)]" style={open.has(p.id) ? { background: "var(--panel)" } : undefined}>
                     <div className="flex min-w-0 items-center gap-2.5">
                       <span className="grid h-8 w-8 flex-none place-items-center rounded-full text-[13px] font-extrabold text-white" style={{ background: p.type === "company" ? "#0ea5a5" : p.type === "franchise" ? "#7a5af8" : "#2f6bd8" }}>{(p.name.trim()[0] || "?").toUpperCase()}</span>
                       <div className="min-w-0">

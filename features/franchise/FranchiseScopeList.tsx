@@ -34,7 +34,7 @@ export function FranchiseScopeList({ onPick, noun = "children", hideAll = false 
   const sub = (c: Counts) => `${c.children} children · ${c.families} ${c.families === 1 ? "family" : "families"}`;
 
   const Card = ({ icon, iconBg, iconInk, title, area, subline, onClick }: { icon: string; iconBg: string; iconInk?: string; title: React.ReactNode; area?: string | null; subline: string; onClick: () => void }) => (
-    <button type="button" onClick={onClick} className="flex items-center gap-3 rounded-xl border border-[#e3e0ea] bg-white px-3.5 py-2.5 text-left text-[#171534] transition hover:border-[#171534] hover:bg-[#f7f6fb]">
+    <button type="button" onClick={onClick} className="flex items-center gap-3 rounded-xl border border-[#e3e0ea] bg-white px-3.5 py-2.5 text-start text-[#171534] transition hover:border-[#171534] hover:bg-[#f7f6fb]">
       <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg text-[14px] font-extrabold" style={{ background: iconBg, color: iconInk }}>{icon}</span>
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13.5px] font-extrabold text-[#171534]">{title}{area && <span className="font-semibold text-[#6b6880]"> · 📍 {area}</span>}</div>

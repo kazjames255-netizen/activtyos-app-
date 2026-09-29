@@ -319,13 +319,13 @@ export function VentureLakesApp() {
     <div className="flex flex-col gap-3.5 p-4">
       <SectionHead>
         Leads Lakes/Country Parks
-        <span className="ml-2 font-normal text-[12px] text-[var(--ink-3)]">
+        <span className="ms-2 font-normal text-[12px] text-[var(--ink-3)]">
           Lakes &amp; country parks ≥ 60 acres, within a {MAX_DRIVE_MINUTES}-minute (2.5hr) drive of Milton Keynes — cycle-hire feasibility list
           (Willen Lake, Milton Keynes = {WILLEN_ACRES} acres, 100%)
         </span>
       </SectionHead>
 
-      <Card className="border-l-4 border-l-[var(--brand)] bg-[var(--surface-2,rgba(127,127,127,0.04))] p-3 text-[13px] text-[var(--ink-2)]">
+      <Card className="border-s-4 border-s-[var(--brand)] bg-[var(--surface-2,rgba(127,127,127,0.04))] p-3 text-[13px] text-[var(--ink-2)]">
         <strong className="text-[var(--ink)]">Only the top 150 largest sites (by acreage) have been fully researched so far</strong> — owner, existing competition, cycle-hire status, pricing signals, path suitability, and contact details.
         The remaining ~1,100+ sites currently only have Phase 1 data (name, size, location, drive time) and show as &quot;Not researched&quot; below.
         Use the <strong>Researched only</strong> filter to see just the completed 150.
@@ -458,7 +458,7 @@ export function VentureLakesApp() {
           ⬇ Download CSV ({rows.length} row{rows.length === 1 ? "" : "s"}, all fields)
         </Button>
 
-        <span className="ml-auto text-[12px] text-[var(--ink-3)]">
+        <span className="ms-auto text-[12px] text-[var(--ink-3)]">
           {loading ? "Loading…" : `${rows.length} of ${items.length} sites match`}
         </span>
       </Card>
@@ -477,7 +477,7 @@ export function VentureLakesApp() {
         <div className="-m-4 overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse text-[13px]">
             <thead>
-              <tr className="border-b border-[var(--line)] text-left text-[11px] uppercase tracking-wide text-[var(--ink-3)]">
+              <tr className="border-b border-[var(--line)] text-start text-[11px] uppercase tracking-wide text-[var(--ink-3)]">
                 <th className="px-4 py-2 font-semibold">Name</th>
                 <th className="px-4 py-2 font-semibold">Location / postcode</th>
                 <th className="px-4 py-2 font-semibold">Acres</th>
@@ -502,7 +502,7 @@ export function VentureLakesApp() {
                       onClick={() => setExpanded(isOpen ? null : r.id)}
                     >
                       <td className="px-4 py-2 font-medium text-[var(--ink)]">
-                        <span className="mr-1.5 text-[var(--ink-3)]">{isOpen ? "▾" : "▸"}</span>
+                        <span className="me-1.5 text-[var(--ink-3)]">{isOpen ? "▾" : "▸"}</span>
                         {r.name}
                       </td>
                       <td className="px-4 py-2 text-[var(--ink-2)]">

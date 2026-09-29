@@ -1,3 +1,4 @@
+import { dateLocale as dl } from "../../lib/i18n/format"; // relative: the API server imports this file too (no "@/" alias there)
 import type { Booking, BookingFilter, Kid } from "./types";
 import { csvCell } from "../../lib/csv"; // relative: the API server imports this file too
 
@@ -165,7 +166,7 @@ export function bookingDateSummary(b: Booking): string {
     const d = new Date(`${iso}T00:00:00`);
     return Number.isNaN(d.getTime())
       ? iso
-      : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+      : d.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
   };
   return days.length > 1 ? `Starts ${fmt(days[0])}` : fmt(days[0]);
 }
@@ -225,7 +226,7 @@ export function runsOn(b: Booking, iso: string): boolean {
   const d = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return true;
   const label = d
-    .toLocaleDateString("en-GB", {
+    .toLocaleDateString(dl(), {
       weekday: "short",
       day: "2-digit",
       month: "short",
@@ -516,7 +517,7 @@ export const isMoneyIn = (p: { type?: string; status?: string }) =>
 
 export function nowStr(): string {
   return (
-    new Date().toLocaleDateString("en-GB") + ", " + new Date().toTimeString().slice(0, 5)
+    new Date().toLocaleDateString(dl()) + ", " + new Date().toTimeString().slice(0, 5)
   );
 }
 
@@ -531,7 +532,7 @@ export interface BlockAvail {
  * prefix, so it can be compared against legacy label-format kid dates. */
 export const sessionDayLabel = (iso: string) =>
   new Date(`${iso}T00:00:00Z`)
-    .toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })
+    .toLocaleDateString(dl(), { weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })
     .replace(/,/g, "");
 
 /** Real alternate dates for moving a child's day: the block's OTHER sessions,

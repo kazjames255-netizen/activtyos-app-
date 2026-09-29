@@ -142,7 +142,7 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
               {result.noEmail ? ` · ${result.noEmail} had no email (added, not invited)` : ""}
               {result.failed ? ` · ${result.failed} failed` : ""}.
             </div>
-            <div className="mt-3 text-right"><Button variant="primary" onClick={onClose}>{t("customers.close")}</Button></div>
+            <div className="mt-3 text-end"><Button variant="primary" onClick={onClose}>{t("customers.close")}</Button></div>
           </div>
         ) : (
           <>

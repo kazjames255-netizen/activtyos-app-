@@ -246,7 +246,7 @@ export function CollapsibleStats({
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          className="ml-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]"
+          className="ms-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]"
         >
           {open ? "▴ Hide" : "▾ Show"}
         </button>

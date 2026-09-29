@@ -4,6 +4,7 @@
 // availability (a week, or a camp assignment), see what they chose, and assign
 // them to specific days. Assigned days lock on the staffer's My availability
 // page (they can only request time off). Real store: /api/availability.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get, post, patch, del } from "@/lib/api";
 import { useT } from "@/lib/i18n/provider";
@@ -17,7 +18,7 @@ interface Pattern { grid?: Record<string, DayAvail>; days?: Record<string, DayAv
 interface Invite { token: string; role: string; sentTo?: string | null; usedBy?: string | null }
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
-const fmt = (s?: string) => (s ? new Date(`${s}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
+const fmt = (s?: string) => (s ? new Date(`${s}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "");
 const addDaysISO = (i: string, n: number) => { const d = new Date(`${i}T00:00:00`); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const wdShort = (i: string) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(`${i}T00:00:00`).getDay()];
 const dNum = (i: string) => new Date(`${i}T00:00:00`).getDate();
@@ -26,7 +27,7 @@ function weekFrom(offset: number): ReqWindow {
   const dow = (d.getDay() + 6) % 7;
   const mon = new Date(d); mon.setDate(d.getDate() - dow + offset * 7); mon.setHours(0, 0, 0, 0);
   const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-  return { kind: "week", label: `week of ${mon.toLocaleDateString("en-GB", { day: "numeric", month: "long" })}`, from: iso(mon), to: iso(sun) };
+  return { kind: "week", label: `week of ${mon.toLocaleDateString(dl(), { day: "numeric", month: "long" })}`, from: iso(mon), to: iso(sun) };
 }
 const WINDOWS: [string, () => ReqWindow][] = [
   ["This week", () => weekFrom(0)],
@@ -125,7 +126,7 @@ export function AvailabilityRequestsPanel() {
                     {r.staffName && <span className="text-[11.5px] text-[var(--ink-3)]">{r.staffEmail}</span>}
                     <span className="text-[12px] text-[var(--ink-2)]">· {r.window.label}{r.window.from ? ` (${fmt(r.window.from)}–${fmt(r.window.to)})` : ""}</span>
                     {assignedN > 0 && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">📌 {t("schedule.assignedCount", { count: assignedN })}</span>}
-                    <span className="ml-auto flex items-center gap-2">
+                    <span className="ms-auto flex items-center gap-2">
                       {r.status === "submitted"
                         ? <span className="rounded-full bg-[#e7f5ec] px-2.5 py-0.5 text-[11px] font-extrabold text-[#0f7a43]">✓ {t("schedule.submitted")}</span>
                         : <span className="rounded-full bg-[#fdf6e3] px-2.5 py-0.5 text-[11px] font-extrabold text-[#8a5a09]">{t("schedule.awaiting")}</span>}
@@ -200,7 +201,7 @@ function AssignPanel({ req, onSaved }: { req: AvailRequest; onSaved: () => void 
       <div className="mt-3 flex items-center gap-3">
         <Button variant="primary" disabled={busy} onClick={save} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">{busy ? t("schedule.saving") : t("schedule.saveAssignments")}</Button>
         {saved && <span className="text-[12px] font-bold text-[#0f7a43]">✓ {t("schedule.assignedLocked")}</span>}
-        <span className="ml-auto text-[11px] text-[var(--ink-3)]">{t("schedule.assignDaysHint")}</span>
+        <span className="ms-auto text-[11px] text-[var(--ink-3)]">{t("schedule.assignDaysHint")}</span>
       </div>
     </div>
   );

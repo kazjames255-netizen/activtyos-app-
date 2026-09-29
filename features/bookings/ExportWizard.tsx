@@ -149,7 +149,7 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
               Narrow them down, choose what goes in, pick a format.
             </div>
           </div>
-          <span onClick={onClose} className="ml-auto cursor-pointer text-[22px] text-[var(--ink-3)]">
+          <span onClick={onClose} className="ms-auto cursor-pointer text-[22px] text-[var(--ink-3)]">
             ×
           </span>
         </div>
@@ -330,7 +330,7 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
                     {ordered.map((c) => (
                       <th
                         key={c.key}
-                        className="whitespace-nowrap border-b border-[var(--line)] px-2.5 py-1.5 text-left text-[9.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]"
+                        className="whitespace-nowrap border-b border-[var(--line)] px-2.5 py-1.5 text-start text-[9.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]"
                       >
                         {c.label}
                       </th>
@@ -380,7 +380,7 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
             <b className="text-[var(--ink)]">{money(total)}</b>
           </div>
 
-          <div className="ml-auto flex gap-2">
+          <div className="ms-auto flex gap-2">
             <Button onClick={onClose}>Cancel</Button>
             <Button variant="primary" disabled={!rows.length || !keys.length} onClick={run}>
               {format === "csv" ? "⬇ Download CSV" : "🖨 Open print / PDF"}

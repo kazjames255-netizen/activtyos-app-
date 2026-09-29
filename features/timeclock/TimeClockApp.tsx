@@ -71,7 +71,7 @@ export function TimeClockApp() {
           <div className="mt-4 flex items-center gap-4 rounded-2xl bg-[var(--panel)] p-4">
             <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Worked today</div><div className="text-[26px] font-extrabold tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{fmtDur(worked)}</div></div>
             {me.breakMs > 0 && <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Break</div><div className="text-[15px] font-extrabold tabular-nums text-[#8a5a09]">{fmtDur(me.breakMs)}</div></div>}
-            {sh && <div className="ml-auto text-right"><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Scheduled</div><div className="text-[13px] font-bold text-[var(--ink-2)]">{sh.start}–{sh.end}</div></div>}
+            {sh && <div className="ms-auto text-end"><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Scheduled</div><div className="text-[13px] font-bold text-[var(--ink-2)]">{sh.start}–{sh.end}</div></div>}
           </div>
           {me.lateMin ? <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-1.5 text-[11.5px] font-semibold text-[#8a5a09]">Clocked in {me.lateMin} min after your {sh?.start} start.</div> : null}
 
@@ -99,7 +99,7 @@ export function TimeClockApp() {
                 <div key={i} className="flex items-center gap-2 py-1.5 text-[12.5px]">
                   <span>{e.kind === "in" ? "🟢" : e.kind === "out" ? "🔴" : e.kind === "break-start" ? "⏸" : "▶️"}</span>
                   <span className="font-semibold text-[var(--ink)]">{e.kind === "in" ? "Clocked in" : e.kind === "out" ? "Clocked out" : e.kind === "break-start" ? "Break started" : "Break ended"}</span>
-                  <span className="ml-auto tabular-nums text-[var(--ink-3)]">{hhmm(e.t)}</span>
+                  <span className="ms-auto tabular-nums text-[var(--ink-3)]">{hhmm(e.t)}</span>
                 </div>
               ))}</div>
             )}
@@ -108,7 +108,7 @@ export function TimeClockApp() {
             <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Who&rsquo;s in now</div>
             <div className="flex gap-4 text-[12.5px]"><span className="font-bold text-[#0f7a43]">🟢 {inNow} in</span><span className="font-bold text-[#8a5a09]">⏸ {onBreak} on break</span></div>
             <div className="mt-2 space-y-1">{others.filter((r) => r.status !== "out").slice(0, 5).map((r) => (
-              <div key={r.id} className="flex items-center gap-2 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-semibold text-[var(--ink)]">{r.name}</span>{r.op && <span className="text-[var(--ink-3)]">· {r.op}</span>}<span className="ml-auto text-[var(--ink-3)]">{r.status === "break" ? "on break" : sinceLabel(r.clockInAt)}</span></div>
+              <div key={r.id} className="flex items-center gap-2 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-semibold text-[var(--ink)]">{r.name}</span>{r.op && <span className="text-[var(--ink-3)]">· {r.op}</span>}<span className="ms-auto text-[var(--ink-3)]">{r.status === "break" ? "on break" : sinceLabel(r.clockInAt)}</span></div>
             ))}</div>
           </Card>
 
@@ -119,7 +119,7 @@ export function TimeClockApp() {
               <p className="mb-2 text-[11px] text-[var(--ink-3)]">As a <b>{leadLabel}</b> you can see everyone working at <b>{me.op || "your listing"}</b>.</p>
               {teamHere.length === 0 ? <div className="text-[12px] text-[var(--ink-3)]">No one from your listing is clocked in yet.</div> : (
                 <div className="divide-y divide-[var(--line)]">{teamHere.map((r) => (
-                  <div key={r.id} className="flex items-center gap-2 py-1.5 text-[12.5px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-bold text-[var(--ink)]">{r.name}</span><span className="text-[var(--ink-3)]">{r.role}</span><span className="ml-auto text-[var(--ink-3)]">{r.status === "break" ? "on break" : `in ${hhmm(r.clockInAt)}`}{r.lateMin ? <span className="ml-1 text-[#c0392b]">late</span> : ""}</span></div>
+                  <div key={r.id} className="flex items-center gap-2 py-1.5 text-[12.5px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-bold text-[var(--ink)]">{r.name}</span><span className="text-[var(--ink-3)]">{r.role}</span><span className="ms-auto text-[var(--ink-3)]">{r.status === "break" ? "on break" : `in ${hhmm(r.clockInAt)}`}{r.lateMin ? <span className="ms-1 text-[#c0392b]">late</span> : ""}</span></div>
                 ))}</div>
               )}
             </Card>

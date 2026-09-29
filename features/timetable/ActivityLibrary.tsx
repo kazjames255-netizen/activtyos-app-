@@ -57,7 +57,7 @@ export function ActivityLibrary() {
           <div
             key={c.id}
             className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]"
-            style={{ borderLeft: `4px solid ${c.color}` }}
+            style={{ borderInlineStart: `4px solid ${c.color}` }}
           >
             <div
               onClick={() => toggleCatOpen(c.id)}
@@ -65,7 +65,7 @@ export function ActivityLibrary() {
             >
               <span className="h-3 w-3 flex-none rounded" style={{ background: c.color }} />
               <b className="font-[var(--ff-display)] text-[14.5px] font-extrabold text-[var(--ink)]">{c.name}</b>
-              <span className="ml-auto text-[11px] font-bold text-[var(--ink-3)]">
+              <span className="ms-auto text-[11px] font-bold text-[var(--ink-3)]">
                 {onN}/{c.acts.length} on
               </span>
               <span className="text-[var(--ink-3)]">{open ? "▲" : "▼"}</span>
@@ -138,7 +138,7 @@ export function ActivityLibrary() {
                     <button
                       onClick={() => delAct(c.id, idx)}
                       title="Remove"
-                      className="ml-auto text-[15px] text-[var(--ink-3)] hover:text-[var(--red)]"
+                      className="ms-auto text-[15px] text-[var(--ink-3)] hover:text-[var(--red)]"
                     >
                       ×
                     </button>

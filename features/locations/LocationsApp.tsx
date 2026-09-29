@@ -134,7 +134,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
               <div key={v.id} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
                 <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
                   <span className="text-[14px]">📍</span><span className="text-[15px] font-extrabold text-[var(--ink)]">{v.name}</span>{v.city && <span className="text-[11.5px] text-[var(--ink-3)]">· {v.city}</span>}
-                  <span className="ml-auto flex items-center gap-2"><span className="rounded-full bg-white px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">{here.length} deployed</span><button type="button" onClick={() => open(v.id)} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Timesheets &amp; alerts ›</button></span>
+                  <span className="ms-auto flex items-center gap-2"><span className="rounded-full bg-white px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">{here.length} deployed</span><button type="button" onClick={() => open(v.id)} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Timesheets &amp; alerts ›</button></span>
                 </div>
                 <div className="grid gap-4 p-4 md:grid-cols-[1.3fr,1fr]">
                   <div>
@@ -154,11 +154,11 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                       {addFor === v.id && (() => {
                         const opts = notHere.filter((s) => !addQ.trim() || s.name.toLowerCase().includes(addQ.toLowerCase()) || (s.role ?? "").toLowerCase().includes(addQ.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name));
                         return (
-                          <div className="absolute left-0 right-0 top-[40px] z-30 max-h-[260px] overflow-y-auto rounded-xl border border-[var(--line)] bg-white shadow-lg">
+                          <div className="absolute start-0 end-0 top-[40px] z-30 max-h-[260px] overflow-y-auto rounded-xl border border-[var(--line)] bg-white shadow-lg">
                             {notHere.length === 0 ? <div className="px-3 py-2.5 text-[12px] text-[var(--ink-3)]">Everyone&rsquo;s already here.</div>
                               : opts.length === 0 ? <div className="px-3 py-2.5 text-[12px] text-[var(--ink-3)]">No staff match “{addQ}”.</div>
                               : opts.map((s) => (
-                                <button key={s.id} type="button" onMouseDown={(e) => { e.preventDefault(); addSite(s.id, v.id); setAddFor(null); setAddQ(""); }} className="flex w-full items-center gap-2.5 border-b border-[var(--line-2,#eef2f8)] px-3 py-2 text-left hover:bg-[var(--panel)] last:border-b-0">
+                                <button key={s.id} type="button" onMouseDown={(e) => { e.preventDefault(); addSite(s.id, v.id); setAddFor(null); setAddQ(""); }} className="flex w-full items-center gap-2.5 border-b border-[var(--line-2,#eef2f8)] px-3 py-2 text-start hover:bg-[var(--panel)] last:border-b-0">
                                   <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[10px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
                                   <span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-bold text-[var(--ink)]">{s.name}</span>{s.role && <span className="block text-[10.5px] text-[var(--ink-3)]">{s.role}</span>}</span>
                                   <span className="text-[12px] font-bold text-[#1d3a8f]">Add ›</span>
@@ -170,7 +170,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                     </div>
                   </div>
                   <div>
-                    <div className="mb-1.5 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Listings here · {vListings.length}<a href="/company/listings" className="ml-auto normal-case text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a></div>
+                    <div className="mb-1.5 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Listings here · {vListings.length}<a href="/company/listings" className="ms-auto normal-case text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a></div>
                     {vListings.length === 0 ? <p className="text-[12px] text-[var(--ink-3)]">No live listings run here yet.</p> : (
                       <div className="flex flex-col gap-1.5">{vListings.map((l) => { const sn = seasonName(l.seasonId); return (
                         <div key={l.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5"><span className="text-[13px]">🎟</span><span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-[var(--ink)]">{lTitle(l)}</span>{sn && <span className="flex-none rounded-full bg-white px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">📅 {sn}</span>}<Draft l={l} /></div>
@@ -243,7 +243,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                   <span className="text-[13px]">🎟</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{lTitle(l)}</span><Draft l={l} />
                   {sn && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">📅 {sn}</span>}
                   {venueName && <span className="text-[11.5px] text-[var(--ink-3)]">· 📍 {venueName}</span>}
-                  <a href="/company/listings" className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a>
+                  <a href="/company/listings" className="ms-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {on.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No one assigned to this listing yet.</span>}

@@ -5,6 +5,7 @@
 // every staff member on the chosen site sees it on their Announcements board (and,
 // in production, their bell). Demo-wired to the shared announcements store; real
 // per-site delivery + push is Amir's.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -60,7 +61,7 @@ export function StaffNotifyComposer({ listings, authorName }: { listings: { id: 
     setTimeout(() => setFlash(null), 4000);
   };
 
-  const fmtDate = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const fmtDate = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString(dl(), { day: "numeric", month: "short" });
 
   return (
     <div className="grid gap-4 md:grid-cols-[1.15fr_0.85fr]">
@@ -72,7 +73,7 @@ export function StaffNotifyComposer({ listings, authorName }: { listings: { id: 
             <div className="text-[14px] font-extrabold text-[var(--ink)]">Notify your staff</div>
             <div className="text-[11.5px] text-[var(--ink-3)]">Goes to their Announcements board and in-app bell — not to families.</div>
           </div>
-          <Link href={`/${portal}/setup?tab=announcements`} title="Announcement settings" className="ml-auto flex flex-none items-center gap-1 rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] transition hover:border-[#c9d6f5] hover:text-[#1d3a8f]">⚙ Settings</Link>
+          <Link href={`/${portal}/setup?tab=announcements`} title="Announcement settings" className="ms-auto flex flex-none items-center gap-1 rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] transition hover:border-[#c9d6f5] hover:text-[#1d3a8f]">⚙ Settings</Link>
         </div>
 
         {isHo && (

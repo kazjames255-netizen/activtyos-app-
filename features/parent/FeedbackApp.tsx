@@ -3,6 +3,7 @@
 // Parent feedback / review — reached from the "How did we do?" prompt. Pick the
 // provider (pre-filled from the notification link), leave a star rating and a
 // note. Stored via /api/my/feedback so the family can see what they've sent.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
@@ -16,7 +17,7 @@ const LIGHT_PALETTE = {
 
 interface Provider { tenantId: string; name: string }
 interface Feedback { id: string; tenantId: string; rating: number; comment?: string; listing?: string | null; createdAt: string }
-const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 const STARS = [1, 2, 3, 4, 5];
 const RATING_WORD = ["", "Poor", "Could be better", "Good", "Great", "Excellent"];
 
@@ -107,7 +108,7 @@ export function FeedbackApp() {
             {STARS.map((n) => (
               <button key={n} type="button" onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(0)} onClick={() => setRating(n)} aria-label={`${n} star${n === 1 ? "" : "s"}`} className="text-[30px] leading-none transition-transform hover:scale-110" style={{ color: (hover || rating) >= n ? "#f5b301" : "#d9d5e4" }}>★</button>
             ))}
-            <span className="ml-2 text-[12.5px] font-bold text-[var(--ink-2)]">{RATING_WORD[hover || rating]}</span>
+            <span className="ms-2 text-[12.5px] font-bold text-[var(--ink-2)]">{RATING_WORD[hover || rating]}</span>
           </div>
 
           <label className="mb-1 mt-4 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("parent.whichActivity")} <span className="font-normal normal-case">{t("parent.optionalSuffix")}</span></label>
@@ -134,7 +135,7 @@ export function FeedbackApp() {
                 <div className="flex items-center gap-2">
                   <span className="text-[14px]" style={{ color: "#f5b301" }}>{"★".repeat(f.rating)}<span className="text-[#d9d5e4]">{"★".repeat(5 - f.rating)}</span></span>
                   {f.listing && <span className="text-[12.5px] font-bold text-[var(--ink-2)]">{f.listing}</span>}
-                  <span className="ml-auto text-[11px] text-[var(--ink-3)]">{fmt(f.createdAt)}</span>
+                  <span className="ms-auto text-[11px] text-[var(--ink-3)]">{fmt(f.createdAt)}</span>
                 </div>
                 {f.comment && <p className="mt-1 text-[12.5px] leading-[1.5] text-[var(--ink-2)]">{f.comment}</p>}
               </li>

@@ -1,0 +1,38 @@
+// Canonical English data words shown verbatim by the UI (booking status, payment state, method). Looked up by lib/i18n/words.ts.
+// Row order: en, pl, ro, ur, pa, bn, ar, pt, es, fr, cy.
+import { fromRows } from "./_rows";
+
+export default fromRows({
+  confirmed: ["Confirmed", "Potwierdzona", "Confirmată", "تصدیق شدہ", "ਪੁਸ਼ਟੀ ਹੋਈ", "নিশ্চিত", "مؤكَّد", "Confirmada", "Confirmada", "Confirmée", "Wedi'i chadarnhau"],
+  waitlisted: ["Waitlisted", "Na liście oczekujących", "Pe lista de așteptare", "ویٹنگ لسٹ میں", "ਉਡੀਕ ਸੂਚੀ ਵਿੱਚ", "অপেক্ষমাণ তালিকায়", "في قائمة الانتظار", "Em lista de espera", "En lista de espera", "En liste d'attente", "Ar y rhestr aros"],
+  offered: ["Offered", "Zaoferowane", "Ofertă trimisă", "پیشکش کی گئی", "ਪੇਸ਼ਕਸ਼ ਕੀਤੀ", "প্রস্তাব দেওয়া হয়েছে", "عُرض المقعد", "Oferecida", "Ofrecida", "Proposée", "Wedi'i chynnig"],
+  cancelled: ["Cancelled", "Anulowana", "Anulată", "منسوخ", "ਰੱਦ", "বাতিল", "ملغاة", "Cancelada", "Cancelada", "Annulée", "Wedi'i ganslo"],
+  declined: ["Declined", "Odrzucona", "Refuzată", "مسترد", "ਅਸਵੀਕਾਰ", "প্রত্যাখ্যাত", "مرفوضة", "Recusada", "Rechazada", "Refusée", "Wedi'i wrthod"],
+  approval_needed: ["Approval needed", "Wymaga zatwierdzenia", "Necesită aprobare", "منظوری درکار", "ਮਨਜ਼ੂਰੀ ਲੋੜੀਂਦੀ", "অনুমোদন প্রয়োজন", "بانتظار الموافقة", "Requer aprovação", "Requiere aprobación", "Approbation requise", "Angen cymeradwyaeth"],
+  pending: ["Pending", "Oczekuje", "În așteptare", "زیرِ التوا", "ਬਕਾਇਆ", "মুলতুবি", "قيد الانتظار", "Pendente", "Pendiente", "En attente", "Yn yr arfaeth"],
+  unpaid: ["Unpaid", "Nieopłacona", "Neplătită", "غیر ادا شدہ", "ਅਦਾਇਗੀ ਨਹੀਂ ਹੋਈ", "অপরিশোধিত", "غير مدفوعة", "Por pagar", "Sin pagar", "Impayée", "Heb dalu"],
+  paid: ["Paid", "Opłacona", "Plătită", "ادا شدہ", "ਅਦਾ ਕੀਤੀ", "পরিশোধিত", "مدفوعة", "Paga", "Pagada", "Payée", "Wedi talu"],
+  invoice_sent: ["Invoice sent", "Faktura wysłana", "Factură trimisă", "انوائس بھیج دیا گیا", "ਇਨਵੌਇਸ ਭੇਜਿਆ ਗਿਆ", "ইনভয়েস পাঠানো হয়েছে", "أُرسلت الفاتورة", "Fatura enviada", "Factura enviada", "Facture envoyée", "Anfoneb wedi'i hanfon"],
+  awaiting_voucher_payment: ["Awaiting voucher payment", "Oczekiwanie na płatność bonem", "Se așteaptă plata prin voucher", "واؤچر ادائیگی کا انتظار", "ਵਾਊਚਰ ਭੁਗਤਾਨ ਦੀ ਉਡੀਕ", "ভাউচার পেমেন্টের অপেক্ষায়", "بانتظار الدفع بالقسيمة", "A aguardar pagamento por vale", "Esperando el pago con vale", "En attente du paiement par bon", "Yn aros am daliad taleb"],
+  refunded: ["Refunded", "Zwrócono", "Rambursată", "رقم واپس کر دی گئی", "ਰਿਫੰਡ ਕੀਤੀ ਗਈ", "ফেরত দেওয়া হয়েছে", "مُستردّة", "Reembolsada", "Reembolsada", "Remboursée", "Wedi'i had-dalu"],
+  partially_refunded: ["Partially refunded", "Częściowo zwrócono", "Rambursată parțial", "جزوی رقم واپس", "ਅੰਸ਼ਕ ਰਿਫੰਡ", "আংশিক ফেরত", "مُستردّة جزئيًا", "Parcialmente reembolsada", "Reembolsada parcialmente", "Remboursée en partie", "Wedi'i had-dalu'n rhannol"],
+  partially_paid: ["Partially paid", "Częściowo opłacona", "Plătită parțial", "جزوی ادا شدہ", "ਅੰਸ਼ਕ ਅਦਾਇਗੀ", "আংশিক পরিশোধিত", "مدفوعة جزئيًا", "Parcialmente paga", "Pagada parcialmente", "Payée en partie", "Wedi talu'n rhannol"],
+  funded: ["Funded", "Dofinansowana", "Finanțată", "فنڈ شدہ", "ਫੰਡ ਪ੍ਰਾਪਤ", "অর্থায়িত", "ممولة", "Financiada", "Financiada", "Financée", "Wedi'i ariannu"],
+  funded_0: ["Funded £0", "Dofinansowana £0", "Finanțată £0", "فنڈ شدہ £0", "ਫੰਡ ਪ੍ਰਾਪਤ £0", "অর্থায়িত £0", "ممولة £0", "Financiada £0", "Financiada £0", "Financée £0", "Wedi'i ariannu £0"],
+  voucher_pending: ["Voucher pending", "Bon oczekuje", "Voucher în așteptare", "واؤچر زیرِ التوا", "ਵਾਊਚਰ ਬਕਾਇਆ", "ভাউচার মুলতুবি", "القسيمة قيد الانتظار", "Vale pendente", "Vale pendiente", "Bon en attente", "Taleb yn yr arfaeth"],
+  tfc_pending: ["TFC pending", "TFC oczekuje", "TFC în așteptare", "TFC زیرِ التوا", "TFC ਬਕਾਇਆ", "TFC মুলতুবি", "TFC قيد الانتظار", "TFC pendente", "TFC pendiente", "TFC en attente", "TFC yn yr arfaeth"],
+  cash_pending: ["Cash pending", "Gotówka oczekuje", "Numerar în așteptare", "نقد زیرِ التوا", "ਨਕਦ ਬਕਾਇਆ", "নগদ মুলতুবি", "النقد قيد الانتظار", "Numerário pendente", "Efectivo pendiente", "Espèces en attente", "Arian parod yn yr arfaeth"],
+  transfer_pending: ["Transfer pending", "Przelew oczekuje", "Transfer în așteptare", "ٹرانسفر زیرِ التوا", "ਟ੍ਰਾਂਸਫਰ ਬਕਾਇਆ", "ট্রান্সফার মুলতুবি", "التحويل قيد الانتظار", "Transferência pendente", "Transferencia pendiente", "Virement en attente", "Trosglwyddiad yn yr arfaeth"],
+  named_pending: ["{name} pending", "{name} oczekuje", "{name} în așteptare", "{name} زیرِ التوا", "{name} ਬਕਾਇਆ", "{name} মুলতুবি", "{name} قيد الانتظار", "{name} pendente", "{name} pendiente", "{name} en attente", "{name} yn yr arfaeth"],
+  paid_tfc: ["Paid · TFC", "Opłacona · TFC", "Plătită · TFC", "ادا شدہ · TFC", "ਅਦਾ ਕੀਤੀ · TFC", "পরিশোধিত · TFC", "مدفوعة · TFC", "Paga · TFC", "Pagada · TFC", "Payée · TFC", "Wedi talu · TFC"],
+  paid_voucher: ["Paid · voucher", "Opłacona · bon", "Plătită · voucher", "ادا شدہ · واؤچر", "ਅਦਾ ਕੀਤੀ · ਵਾਊਚਰ", "পরিশোধিত · ভাউচার", "مدفوعة · قسيمة", "Paga · vale", "Pagada · vale", "Payée · bon", "Wedi talu · taleb"],
+  refunded_via_voucher: ["Refunded via voucher", "Zwrócono przez bon", "Rambursată prin voucher", "واؤچر کے ذریعے واپس", "ਵਾਊਚਰ ਰਾਹੀਂ ਰਿਫੰਡ", "ভাউচারের মাধ্যমে ফেরত", "مُستردّة عبر القسيمة", "Reembolsada por vale", "Reembolsada mediante vale", "Remboursée par bon", "Wedi'i had-dalu drwy daleb"],
+  partially_refunded_via_voucher: ["Partially refunded via voucher", "Częściowo zwrócono przez bon", "Rambursată parțial prin voucher", "واؤچر کے ذریعے جزوی واپسی", "ਵਾਊਚਰ ਰਾਹੀਂ ਅੰਸ਼ਕ ਰਿਫੰਡ", "ভাউচারের মাধ্যমে আংশিক ফেরত", "مُستردّة جزئيًا عبر القسيمة", "Parcialmente reembolsada por vale", "Reembolsada parcialmente mediante vale", "Remboursée en partie par bon", "Wedi'i had-dalu'n rhannol drwy daleb"],
+  refunded_via_hmrc: ["Refunded via HMRC", "Zwrócono przez HMRC", "Rambursată prin HMRC", "HMRC کے ذریعے واپس", "HMRC ਰਾਹੀਂ ਰਿਫੰਡ", "HMRC-এর মাধ্যমে ফেরত", "مُستردّة عبر HMRC", "Reembolsada via HMRC", "Reembolsada a través de HMRC", "Remboursée via HMRC", "Wedi'i had-dalu drwy CThEF"],
+  partially_refunded_via_hmrc: ["Partially refunded via HMRC", "Częściowo zwrócono przez HMRC", "Rambursată parțial prin HMRC", "HMRC کے ذریعے جزوی واپسی", "HMRC ਰਾਹੀਂ ਅੰਸ਼ਕ ਰਿਫੰਡ", "HMRC-এর মাধ্যমে আংশিক ফেরত", "مُستردّة جزئيًا عبر HMRC", "Parcialmente reembolsada via HMRC", "Reembolsada parcialmente a través de HMRC", "Remboursée en partie via HMRC", "Wedi'i had-dalu'n rhannol drwy CThEF"],
+  voucher: ["Voucher", "Bon", "Voucher", "واؤچر", "ਵਾਊਚਰ", "ভাউচার", "قسيمة", "Vale", "Vale", "Bon", "Taleb"],
+  cash: ["Cash", "Gotówka", "Numerar", "نقد", "ਨਕਦ", "নগদ", "نقدًا", "Numerário", "Efectivo", "Espèces", "Arian parod"],
+  bank_transfer: ["Bank transfer", "Przelew bankowy", "Transfer bancar", "بینک ٹرانسفر", "ਬੈਂਕ ਟ੍ਰਾਂਸਫਰ", "ব্যাংক ট্রান্সফার", "تحويل مصرفي", "Transferência bancária", "Transferencia bancaria", "Virement bancaire", "Trosglwyddiad banc"],
+  haf_funded: ["HAF / funded", "HAF / dofinansowane", "HAF / finanțat", "HAF / فنڈ شدہ", "HAF / ਫੰਡ ਪ੍ਰਾਪਤ", "HAF / অর্থায়িত", "HAF / ممول", "HAF / financiado", "HAF / financiado", "HAF / financé", "HAF / wedi'i ariannu"],
+  card: ["Card", "Karta", "Card", "کارڈ", "ਕਾਰਡ", "কার্ড", "بطاقة", "Cartão", "Tarjeta", "Carte", "Cerdyn"],
+});

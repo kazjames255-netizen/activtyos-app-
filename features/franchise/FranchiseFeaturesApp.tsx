@@ -130,7 +130,7 @@ export function FranchiseFeaturesApp() {
               <table className="w-auto border-collapse text-[12.5px]">
                 <thead>
                   <tr>
-                    <th className="sticky left-0 z-10 w-[240px] min-w-[220px] border-b border-[#E4E9F5] bg-[var(--surface)] px-4 py-3 text-left text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[#5F6A88] shadow-[6px_0_10px_-8px_rgba(20,35,90,.14)]">Feature</th>
+                    <th className="sticky start-0 z-10 w-[240px] min-w-[220px] border-b border-[#E4E9F5] bg-[var(--surface)] px-4 py-3 text-start text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[#5F6A88] shadow-[6px_0_10px_-8px_rgba(20,35,90,.14)]">Feature</th>
                     <th className="w-[104px] border-b border-[#eef1f6] bg-[#faf9fe] px-2 py-3 text-center text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[#8a7fbf]">All</th>
                     {rows.map((f) => <th key={f.franchiseId} className="w-[116px] border-b border-[#eef1f6] px-3 py-3 text-center text-[11px] font-extrabold text-[#4a4763]"><div className="mx-auto max-w-[100px] truncate" title={f.name}>{f.name}</div></th>)}
                   </tr>
@@ -138,7 +138,7 @@ export function FranchiseFeaturesApp() {
                 <tbody>
                   {features.map((ft) => (
                     <tr key={ft.view} className="group">
-                      <td className="sticky left-0 z-10 w-[240px] min-w-[220px] border-b border-[#E4E9F5] bg-[var(--surface)] px-4 py-3 font-bold text-[var(--ink)] shadow-[6px_0_10px_-8px_rgba(20,35,90,.12)] transition-colors group-hover:bg-[#E8EEFD]">
+                      <td className="sticky start-0 z-10 w-[240px] min-w-[220px] border-b border-[#E4E9F5] bg-[var(--surface)] px-4 py-3 font-bold text-[var(--ink)] shadow-[6px_0_10px_-8px_rgba(20,35,90,.12)] transition-colors group-hover:bg-[#E8EEFD]">
                         <span className="inline-flex items-center gap-1.5">
                           {ft.label}
                           <button type="button" aria-label={`What is ${ft.label}?`}

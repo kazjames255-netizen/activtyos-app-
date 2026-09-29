@@ -36,7 +36,7 @@ export function HowItWorks({
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[13px] font-bold text-[var(--brand)] [&::-webkit-details-marker]:hidden">
         <span className="inline-block transition-transform group-open:rotate-90">▸</span>
         <span>ℹ️ How it works</span>
-        <span className="ml-1 rounded-full bg-[var(--brand-soft,#eaf0fc)] px-2 py-[1px] text-[10px] font-extrabold">
+        <span className="ms-1 rounded-full bg-[var(--brand-soft,#eaf0fc)] px-2 py-[1px] text-[10px] font-extrabold">
           {tour ? "▶ walkthrough" : "▶ video"}
         </span>
       </summary>
@@ -44,7 +44,7 @@ export function HowItWorks({
       {tour ? (
         <div className="px-3.5 pb-3.5 pt-1">{tour}</div>
       ) : (
-      <div className="grid gap-4 px-3.5 pb-3.5 pl-8 md:grid-cols-[1fr_300px]">
+      <div className="grid gap-4 px-3.5 pb-3.5 ps-8 md:grid-cols-[1fr_300px]">
         <div className="max-w-[560px] text-[12.5px] leading-[1.6] text-[var(--ink-3)]">{children}</div>
 
         {/* Placeholder, and honest about it — a grey box saying "video" gets

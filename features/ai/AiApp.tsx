@@ -159,8 +159,8 @@ function RichText({ text }: { text: string }) {
     if (!list) return;
     const items = list.items.map((it, i) => <li key={i} dangerouslySetInnerHTML={{ __html: inlineHtml(it) }} />);
     blocks.push(list.ordered
-      ? <ol key={blocks.length} className="my-1 ml-4 list-decimal space-y-0.5">{items}</ol>
-      : <ul key={blocks.length} className="my-1 ml-4 list-disc space-y-0.5">{items}</ul>);
+      ? <ol key={blocks.length} className="my-1 ms-4 list-decimal space-y-0.5">{items}</ol>
+      : <ul key={blocks.length} className="my-1 ms-4 list-disc space-y-0.5">{items}</ul>);
     list = null;
   };
   for (const raw of lines) {
@@ -358,7 +358,7 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
               {sortedChats.length === 0 && <div className="px-2 py-3 text-[11.5px] text-[var(--ink-3)]">Your conversations will appear here.</div>}
               {sortedChats.map((c) => (
                 <div key={c.id} className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 ${c.id === chatId ? "bg-[var(--panel)] ring-1 ring-[var(--line)]" : "hover:bg-[var(--panel)]"}`}>
-                  <button type="button" onClick={() => loadChat(c)} className="min-w-0 flex-1 truncate text-left text-[12px] font-semibold text-[var(--ink-2)]">{c.pinned ? "📌 " : ""}{c.title}</button>
+                  <button type="button" onClick={() => loadChat(c)} className="min-w-0 flex-1 truncate text-start text-[12px] font-semibold text-[var(--ink-2)]">{c.pinned ? "📌 " : ""}{c.title}</button>
                   <button type="button" onClick={() => pinChat(c.id)} title="Pin" className="opacity-0 group-hover:opacity-100 text-[11px] text-[var(--ink-3)]">📌</button>
                   <button type="button" onClick={() => delChat(c.id)} title="Delete" className="opacity-0 group-hover:opacity-100 text-[12px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>
                 </div>

@@ -1,3 +1,4 @@
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type {
@@ -61,7 +62,7 @@ export interface SavedTimetable {
 const prettyRange = (from: string, to: string) => {
   const f = (iso: string) => {
     const d = new Date(iso + "T00:00:00");
-    return isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    return isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { day: "numeric", month: "short" });
   };
   return from === to ? f(from) : `${f(from)} – ${f(to)}`;
 };
@@ -421,7 +422,7 @@ export const useTimetableStore = create<TimetableState>()(
         s.curListing = L;
         s.timetableId = draft?.id ?? null;
         s.pubStatus = draft?.published
-          ? `Published ${new Date(draft.published.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+          ? `Published ${new Date(draft.published.at).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
           : null;
         s.share = draft?.published ? { staff: draft.published.staff, parents: draft.published.parents } : {};
         s.audience = draft?.published?.audience ?? "booked";
@@ -722,7 +723,7 @@ export const useTimetableStore = create<TimetableState>()(
         s.share = t.published ? { staff: t.published.staff, parents: t.published.parents } : {};
         s.audience = t.published?.audience ?? "booked";
         s.pubStatus = t.published
-          ? `Published ${new Date(t.published.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+          ? `Published ${new Date(t.published.at).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
           : null;
         s.wstep = 1;
         s.tab = 1;

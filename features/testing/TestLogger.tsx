@@ -64,12 +64,12 @@ export function TestLogger() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-[900] w-[min(360px,calc(100vw-2rem))] print:hidden">
+    <div className="fixed bottom-4 end-4 z-[900] w-[min(360px,calc(100vw-2rem))] print:hidden">
       {open && (
         <div className="mb-2 rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_24px_60px_-24px_rgba(16,35,86,.5)]">
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-extrabold uppercase tracking-[.1em] text-[#2f6bd8]">Day {day.day} · {doneToday}/{day.steps.length}</span>
-            <Link href="/platform/testing" className="ml-auto text-[12px] font-bold text-[var(--ink-3)] underline">Open plan</Link>
+            <Link href="/platform/testing" className="ms-auto text-[12px] font-bold text-[var(--ink-3)] underline">Open plan</Link>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-[16px] leading-none text-[var(--ink-3)]">×</button>
           </div>
 
@@ -103,7 +103,7 @@ export function TestLogger() {
       )}
 
       <button type="button" onClick={() => setOpen((o) => !o)}
-        className="ml-auto flex items-center gap-2 rounded-full px-4 py-3 text-[13px] font-extrabold text-white shadow-[0_18px_40px_-18px_rgba(16,35,86,.8)]"
+        className="ms-auto flex items-center gap-2 rounded-full px-4 py-3 text-[13px] font-extrabold text-white shadow-[0_18px_40px_-18px_rgba(16,35,86,.8)]"
         style={{ background: "linear-gradient(135deg,#16306e,#3f78d8)" }}>
         🧪 Day {day.day} · {doneToday}/{day.steps.length}
       </button>

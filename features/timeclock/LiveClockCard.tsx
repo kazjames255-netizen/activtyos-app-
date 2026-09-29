@@ -19,7 +19,7 @@ export function LiveClockCard() {
       <div className="mb-2 flex items-center gap-2">
         <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#12b76a] opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#12b76a]" /></span>
         <div className="text-[13px] font-extrabold text-[var(--ink)]">Who&rsquo;s in now</div>
-        <a href="timesheets" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Timesheets →</a>
+        <a href="timesheets" className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Timesheets →</a>
       </div>
       <div className="mb-2 flex flex-wrap gap-3 text-[12px]">
         <span className="font-bold text-[#0f7a43]">🟢 {inNow.length} in</span>
@@ -32,7 +32,7 @@ export function LiveClockCard() {
             <span className="h-2 w-2 flex-none rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} />
             <span className="truncate font-semibold text-[var(--ink)]">{r.name}</span>
             {r.op && <span className="truncate text-[var(--ink-3)]">· {r.op}</span>}
-            <span className="ml-auto flex-none text-[var(--ink-3)]">{r.status === "break" ? "on break" : sinceLabel(r.clockInAt)}{r.lateMin ? " · late" : ""}</span>
+            <span className="ms-auto flex-none text-[var(--ink-3)]">{r.status === "break" ? "on break" : sinceLabel(r.clockInAt)}{r.lateMin ? " · late" : ""}</span>
           </div>
         ))}</div>
       )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -18,7 +19,7 @@ import { CroppedImage, type ServerListing } from "@/features/listings/ListingWiz
 // ─────────────────────────────────────────────────────────────────────────
 
 const fmtDate = (iso?: string) =>
-  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : null;
+  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" }) : null;
 
 export function StorePage({ tenantId }: { tenantId: string }) {
   const [listings, setListings] = useState<ServerListing[] | null>(null);

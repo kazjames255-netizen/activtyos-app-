@@ -88,7 +88,7 @@ export function TimetableApp() {
       {tab !== 3 && !loading && loadError && (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 text-[13px]">
           <span className="font-bold text-[var(--red,#e21d27)]">{loadError}</span>
-          <Button className="ml-3" onClick={() => void useTimetableStore.getState().init()}>Try again</Button>
+          <Button className="ms-3" onClick={() => void useTimetableStore.getState().init()}>Try again</Button>
         </div>
       )}
       {tab !== 3 && !loading && !loadError && !listings.length && (
@@ -144,7 +144,7 @@ export function TimetableApp() {
                       }`}
                     >
                       {d.n}
-                      {d.d && <span className="ml-1 font-semibold opacity-70">{d.d.split(" ")[0]}</span>}
+                      {d.d && <span className="ms-1 font-semibold opacity-70">{d.d.split(" ")[0]}</span>}
                     </button>
                   ))}
                 </div>

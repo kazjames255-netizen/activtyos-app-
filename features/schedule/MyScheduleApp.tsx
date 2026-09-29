@@ -9,6 +9,7 @@
 // Reads the same demo rota the manager builds (aos.rota.v5), filtered to the
 // logged-in person. Demo "me" = Marcus Bell; in production this is scoped
 // server-side (per-user identity + deployment = Amir).
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet, isDemoMode } from "@/lib/api";
 import { getMe, peekMe } from "@/components/auth/PortalGuard";
@@ -49,7 +50,7 @@ const hLabel = (h: number) => `${Math.floor(h)}h ${String(Math.round((h % 1) * 6
 const localISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const mondayISO = (d: Date) => { const x = new Date(d); const day = (x.getDay() + 6) % 7; x.setDate(x.getDate() - day); return localISO(x); };
 const todayISO = () => localISO(new Date());
-const dayLabel = (d: string) => dt(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+const dayLabel = (d: string) => dt(d).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" });
 const addDaysISO = (iso: string, n: number) => { const d = dt(iso); d.setDate(d.getDate() + n); return localISO(d); };
 
 type Tab = "upcoming" | "clock" | "team" | "timesheet";
@@ -158,7 +159,7 @@ export function MyScheduleApp() {
     date: d,
     rows: teamAll.filter((s) => s.date === d && inScope(s)).sort((a, b) => a.start.localeCompare(b.start)),
   })), [weekDays, teamAll, vis, myListings]); // eslint-disable-line react-hooks/exhaustive-deps
-  const weekLabel = `${dt(weekStart).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${dt(addDaysISO(weekStart, 6)).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
+  const weekLabel = `${dt(weekStart).toLocaleDateString(dl(), { day: "numeric", month: "short" })} – ${dt(addDaysISO(weekStart, 6)).toLocaleDateString(dl(), { day: "numeric", month: "short" })}`;
   const teamCount = teamByDay.reduce((a, d) => a + d.rows.length, 0);
   const weekStats = useMemo(() => {
     const rows = teamByDay.flatMap((d) => d.rows);
@@ -228,7 +229,7 @@ export function MyScheduleApp() {
         ) : weeks.map(([wk, ss], wi) => (
           <div key={wk} className="mb-4">
             <div className="mb-2 flex items-center gap-2">
-              <span className="text-[11px] font-black uppercase tracking-wide text-[var(--ink-2)]">{wi === 0 ? t("schedule.thisWeek") : t("schedule.weekOf", { date: dt(wk).toLocaleDateString("en-GB", { day: "numeric", month: "long" }) })}</span>
+              <span className="text-[11px] font-black uppercase tracking-wide text-[var(--ink-2)]">{wi === 0 ? t("schedule.thisWeek") : t("schedule.weekOf", { date: dt(wk).toLocaleDateString(dl(), { day: "numeric", month: "long" }) })}</span>
               <span className="h-px flex-1 bg-[var(--line)]" />
               <span className="rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)]">{ss.length} {ss.length === 1 ? t("schedule.shift") : t("schedule.shifts")} · {hLabel(ss.reduce((a, s) => a + hrsOf(s.start, s.end), 0))}</span>
             </div>
@@ -240,19 +241,19 @@ export function MyScheduleApp() {
                 return (
                   <li key={s.id} className={"flex items-center gap-3 p-3.5 " + (isToday ? "bg-[#f5f8ff]" : "")}>
                     <div className="flex h-12 w-12 flex-none flex-col items-center justify-center rounded-xl text-center leading-none" style={{ background: col + "16", color: col }}>
-                      <span className="text-[9.5px] font-black uppercase tracking-wide">{dt(s.date).toLocaleDateString("en-GB", { weekday: "short" })}</span>
+                      <span className="text-[9.5px] font-black uppercase tracking-wide">{dt(s.date).toLocaleDateString(dl(), { weekday: "short" })}</span>
                       <span className="mt-0.5 text-[17px] font-black">{dt(s.date).getDate()}</span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{dt(s.date).toLocaleDateString("en-GB", { weekday: "long" })}</span>
+                        <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{dt(s.date).toLocaleDateString(dl(), { weekday: "long" })}</span>
                         {isToday && <span className="rounded-full bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">{t("schedule.today")}</span>}
-                        <span className="ml-auto tabular-nums text-[12.5px] font-bold text-[var(--ink)]">{to12(s.start)}–{to12(s.end)}</span>
+                        <span className="ms-auto tabular-nums text-[12.5px] font-bold text-[var(--ink)]">{to12(s.start)}–{to12(s.end)}</span>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
                         {s.role && <span className="inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: col + "1a", color: col }}>{s.role}</span>}
                         {s.listing && <span className="truncate text-[11.5px] font-bold text-[var(--ink-2)]">{s.listing}</span>}
-                        <span className="ml-auto flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums text-[var(--ink-2)]">{hLabel(hrsOf(s.start, s.end))}</span>
+                        <span className="ms-auto flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums text-[var(--ink-2)]">{hLabel(hrsOf(s.start, s.end))}</span>
                       </div>
                       {(s.site || s.address) && <div className="mt-1 flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]"><span className="flex-none">📍</span><span className="truncate">{[s.site, s.address].filter(Boolean).join(" · ")}</span></div>}
                       {s.rate != null && s.rate > 0 && (
@@ -295,7 +296,7 @@ export function MyScheduleApp() {
               <div className="mt-4 flex items-center gap-4 rounded-2xl bg-[var(--panel)] p-4">
                 <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.workedToday")}</div><div className="text-[26px] font-extrabold tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{status === "in" ? fmtDurSec(worked) : fmtDur(worked)}</div></div>
                 {rec && rec.breakMs > 0 && <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.breakLabel")}</div><div className="text-[15px] font-extrabold tabular-nums text-[#8a5a09]">{fmtDur(rec.breakMs)}</div></div>}
-                {todayShift && <div className="ml-auto text-right"><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.scheduled")}</div><div className="text-[13px] font-bold text-[var(--ink-2)]">{todayShift.start}–{todayShift.end}</div></div>}
+                {todayShift && <div className="ms-auto text-end"><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.scheduled")}</div><div className="text-[13px] font-bold text-[var(--ink-2)]">{todayShift.start}–{todayShift.end}</div></div>}
               </div>
             )}
             {rec?.lateMin ? <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-1.5 text-[11.5px] font-semibold text-[#8a5a09]">{t("schedule.clockedInLate", { min: rec.lateMin, start: todayShift?.start ?? "" })}</div> : null}
@@ -320,7 +321,7 @@ export function MyScheduleApp() {
                 <div key={i} className="flex items-center gap-2 py-1.5 text-[12.5px]">
                   <span>{e.kind === "in" ? "🟢" : e.kind === "out" ? "🔴" : e.kind === "break-start" ? "⏸" : "▶️"}</span>
                   <span className="font-semibold text-[var(--ink)]">{e.kind === "in" ? t("schedule.clockedIn") : e.kind === "out" ? t("schedule.clockedOut") : e.kind === "break-start" ? t("schedule.breakStarted") : t("schedule.breakEnded")}</span>
-                  <span className="ml-auto tabular-nums text-[var(--ink-3)]">{hhmm(e.t)}</span>
+                  <span className="ms-auto tabular-nums text-[var(--ink-3)]">{hhmm(e.t)}</span>
                 </div>
               ))}</div>
             )}
@@ -337,7 +338,7 @@ export function MyScheduleApp() {
               <button type="button" onClick={() => setWeekOff((w) => w - 1)} className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-[15px] text-[var(--ink-2)] shadow-sm transition hover:bg-[var(--panel)] hover:text-[var(--ink)]" aria-label={t("schedule.previousWeek")}>‹</button>
               <span className="min-w-[112px] px-2 text-center text-[13px] font-extrabold text-[var(--ink)]">{weekOff === 0 ? t("schedule.thisWeek") : weekLabel}</span>
               <button type="button" onClick={() => setWeekOff((w) => w + 1)} className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-[15px] text-[var(--ink-2)] shadow-sm transition hover:bg-[var(--panel)] hover:text-[var(--ink)]" aria-label={t("schedule.nextWeek")}>›</button>
-              {weekOff !== 0 && <button type="button" onClick={() => setWeekOff(0)} className="ml-1 rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-extrabold text-[#1d3a8f] hover:brightness-95">{t("schedule.jumpToToday")}</button>}
+              {weekOff !== 0 && <button type="button" onClick={() => setWeekOff(0)} className="ms-1 rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-extrabold text-[#1d3a8f] hover:brightness-95">{t("schedule.jumpToToday")}</button>}
             </div>
             <span className="rounded-full bg-[var(--panel)] px-3 py-1 text-[11px] font-bold text-[var(--ink-3)]">{vis === "team" ? t("schedule.yourListings") : t("schedule.wholeTeam")}</span>
           </div>
@@ -379,8 +380,8 @@ export function MyScheduleApp() {
                 <Card key={date} className={"overflow-hidden p-0 " + (isToday ? "ring-2 ring-[#1d3a8f]/25" : "")}>
                   <div className={"flex items-center justify-between px-4 py-2.5 " + (isToday ? "bg-gradient-to-r from-[#1d3a8f] to-[#3b63c9] text-white" : "border-b border-[var(--line)] bg-[var(--panel)]")}>
                     <div className="flex items-baseline gap-2">
-                      <span className={"text-[13px] font-black " + (isToday ? "text-white" : "text-[var(--ink)]")}>{dt(date).toLocaleDateString("en-GB", { weekday: "long" })}</span>
-                      <span className={"text-[11.5px] font-semibold " + (isToday ? "text-white/80" : "text-[var(--ink-3)]")}>{dt(date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                      <span className={"text-[13px] font-black " + (isToday ? "text-white" : "text-[var(--ink)]")}>{dt(date).toLocaleDateString(dl(), { weekday: "long" })}</span>
+                      <span className={"text-[11.5px] font-semibold " + (isToday ? "text-white/80" : "text-[var(--ink-3)]")}>{dt(date).toLocaleDateString(dl(), { day: "numeric", month: "short" })}</span>
                       {isToday && <span className="rounded-full bg-white/20 px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wide">{t("schedule.today")}</span>}
                     </div>
                     <span className={"text-[11px] font-bold " + (isToday ? "text-white/90" : "text-[var(--ink-3)]")}>{rows.length === 0 ? t("schedule.noOneOn") : t("schedule.nOn", { n: rows.length })}</span>
@@ -406,7 +407,7 @@ export function MyScheduleApp() {
                                 <span className={"truncate text-[13px] font-extrabold " + (isOpen ? "italic text-[#8a5a09]" : "text-[var(--ink)]")}>{name}</span>
                                 {isMe && <span className="rounded-full bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">{t("schedule.you")}</span>}
                                 {isOpen && <span className="rounded-full bg-[#fdf3e0] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#8a5a09]">Unfilled</span>}
-                                <span className="ml-auto tabular-nums text-[12px] font-bold text-[var(--ink-2)]">{to12(s.start)}–{to12(s.end)}</span>
+                                <span className="ms-auto tabular-nums text-[12px] font-bold text-[var(--ink-2)]">{to12(s.start)}–{to12(s.end)}</span>
                               </div>
                               <div className="mt-1 flex items-center gap-2">
                                 <span className="inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: col + "1a", color: col }}>{s.role}</span>
@@ -467,17 +468,17 @@ export function MyScheduleApp() {
                     return (
                       <li key={s.id} className="flex items-center gap-3 p-3.5">
                         <div className="flex h-11 w-11 flex-none flex-col items-center justify-center rounded-xl text-center leading-none" style={{ background: col + "16", color: col }}>
-                          <span className="text-[9px] font-black uppercase tracking-wide">{dt(s.date).toLocaleDateString("en-GB", { weekday: "short" })}</span>
+                          <span className="text-[9px] font-black uppercase tracking-wide">{dt(s.date).toLocaleDateString(dl(), { weekday: "short" })}</span>
                           <span className="mt-0.5 text-[16px] font-black">{dt(s.date).getDate()}</span>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="text-[13px] font-extrabold text-[var(--ink)]">{dt(s.date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}</div>
+                          <div className="text-[13px] font-extrabold text-[var(--ink)]">{dt(s.date).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "short" })}</div>
                           <div className="mt-0.5 flex items-center gap-1.5">
                             <span className="inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: col + "1a", color: col }}>{s.role}</span>
                             <span className="text-[11.5px] tabular-nums text-[var(--ink-3)]">{to12(s.start)}–{to12(s.end)}</span>
                           </div>
                         </div>
-                        <div className="flex-none text-right">
+                        <div className="flex-none text-end">
                           <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.sched")} <b className="text-[var(--ink-2)]">{hLabel(sched)}</b></div>
                           {clockH == null ? (
                             <span className="mt-1 inline-block rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)]">{t("schedule.notClocked")}</span>

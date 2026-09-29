@@ -34,6 +34,9 @@ import account from "./areas/account";
 import feed from "./areas/feed";
 import staffp from "./areas/staffp";
 import chrome from "./areas/chrome";
+import p7login from "./areas/p7login";
+import p7parent from "./areas/p7parent";
+import words from "./areas/words";
 
 type Dict = Record<string, string>;
 type ByLocale = Partial<Record<LocaleCode, Dict>>;
@@ -58,7 +61,7 @@ const BASE: Record<LocaleCode, Namespaces> = {
 // area namespace -> its per-locale dictionaries.
 // The Teaching Hub catalogues (hub*) are NOT here: they are ~half of all message text and only the hub needs them, so they live in ./hub
 // (served per-locale by app/i18n/hub/[locale]/route.ts and fetched by lib/i18n/hubMessages.ts). A NEW hub area: add it to ./hub.
-const AREAS: Record<string, ByLocale> = { common, dashboard, parent, customers, meals, setup, team, registers, schedule, tasks, money, marketing, comms, workforce, listings, care, franchise, account, feed, staffp, chrome };
+const AREAS: Record<string, ByLocale> = { common, dashboard, parent, customers, meals, setup, team, registers, schedule, tasks, money, marketing, comms, workforce, listings, care, franchise, account, feed, staffp, chrome, p7login, p7parent, words };
 
 const LOCALE_CODES: LocaleCode[] = ["en", "pl", "ro", "ur", "pa", "bn", "ar", "pt", "es", "fr", "cy"];
 

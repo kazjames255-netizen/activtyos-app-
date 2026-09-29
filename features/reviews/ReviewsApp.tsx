@@ -4,6 +4,7 @@
 // one score + one inbox. Reply to in-house reviews inline. Connect external
 // sources in Setup → Reviews. No review gating: the Google invite goes to every
 // customer (see the parent feedback page).
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,7 +26,7 @@ const SRC = {
 const Stars = ({ n, size = 14 }: { n: number; size?: number }) => (
   <span style={{ fontSize: size, letterSpacing: 1, color: "#f5b301" }}>{"★".repeat(Math.round(n))}<span style={{ color: "#d9d5e4" }}>{"★".repeat(5 - Math.round(n))}</span></span>
 );
-const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
+const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "");
 
 export function ReviewsApp() {
   const t = useT();
@@ -78,7 +79,7 @@ export function ReviewsApp() {
             <div className="mt-1"><Stars n={hub?.summary.rating ?? 0} size={16} /></div>
             <div className="mt-1 text-[11.5px] font-bold text-[var(--ink-3)]">{hub?.summary.count ?? 0} review{(hub?.summary.count ?? 0) === 1 ? "" : "s"}</div>
           </div>
-          <div className="flex-1 border-l border-[var(--line)] pl-4">
+          <div className="flex-1 border-s border-[var(--line)] ps-4">
             <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Blended rating</div>
             <p className="mt-1 text-[12px] text-[var(--ink-2)]">A weighted average across every connected source. Add Google or Trustpilot in Setup to raise your visible count.</p>
           </div>
@@ -119,7 +120,7 @@ export function ReviewsApp() {
               const active = fFilter === key;
               return (
                 <button key={key} type="button" onClick={() => setFFilter(active ? "all" : key)}
-                  className={"flex items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors " + (active ? "border-[#1d3a8f] bg-[#eef4fd]" : "border-[var(--line)] hover:bg-[var(--panel)]")}>
+                  className={"flex items-center gap-3 rounded-xl border px-3 py-2 text-start transition-colors " + (active ? "border-[#1d3a8f] bg-[#eef4fd]" : "border-[var(--line)] hover:bg-[var(--panel)]")}>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 text-[12.5px] font-extrabold text-[var(--ink)]">
                       {f.franchiseId == null && <span className="rounded-full bg-[#17181c] px-1.5 py-0.5 text-[9px] font-black uppercase text-white">HO</span>}
@@ -128,7 +129,7 @@ export function ReviewsApp() {
                     </div>
                     <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(f.count / maxCount) * 100}%`, background: active ? "#1d3a8f" : "#7aa0e0" }} /></div>
                   </div>
-                  <div className="flex-none text-right">
+                  <div className="flex-none text-end">
                     <div className="flex items-center justify-end gap-1"><Stars n={f.rating ?? 0} size={12} /><span className="text-[13px] font-black tabular-nums text-[var(--ink)]">{f.rating != null ? f.rating.toFixed(1) : "—"}</span></div>
                     <div className="text-[10.5px] font-bold text-[var(--ink-3)]">{f.count} review{f.count === 1 ? "" : "s"}</div>
                   </div>
@@ -169,10 +170,10 @@ export function ReviewsApp() {
                   {r.demo && <span className="rounded-full bg-[#f3f0fb] px-1.5 py-0.5 text-[9.5px] font-black uppercase text-[#6d28d9]">Demo</span>}
                   {byFranchise && <span className="rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{franchiseName(r.franchiseId)}</span>}
                   {r.listing && <span className="text-[11.5px] text-[var(--ink-3)]">· {r.listing}</span>}
-                  <span className="ml-auto text-[11px] text-[var(--ink-3)]">{fmt(r.postedAt)}</span>
+                  <span className="ms-auto text-[11px] text-[var(--ink-3)]">{fmt(r.postedAt)}</span>
                 </div>
                 {r.text && <p className="mt-1.5 text-[13px] leading-[1.55] text-[var(--ink-2)]">{r.text}</p>}
-                {r.reply && <div className="mt-2 rounded-lg border-l-2 border-[#1d3a8f] bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)]"><b className="text-[var(--ink)]">Your reply:</b> {r.reply.text}</div>}
+                {r.reply && <div className="mt-2 rounded-lg border-s-2 border-[#1d3a8f] bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)]"><b className="text-[var(--ink)]">Your reply:</b> {r.reply.text}</div>}
                 {r.source === "inhouse" && !r.reply && !r.demo && (
                   replyFor === r.id ? (
                     <div className="mt-2">

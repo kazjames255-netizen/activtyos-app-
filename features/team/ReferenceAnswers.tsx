@@ -58,7 +58,7 @@ export function QuestionField({ q, answers, set }: { q: RefQuestion; answers: Re
     <div className={"rounded-xl border border-[var(--line)] bg-[#fffdfa] p-3 " + (wide ? "sm:col-span-2" : "")}>
       <label className="mb-1.5 block text-[12.5px] font-bold leading-snug text-[var(--ink-2)]">
         {q.label}
-        {q.required && <span className="ml-1 text-[#c0392b]">*</span>}
+        {q.required && <span className="ms-1 text-[#c0392b]">*</span>}
       </label>
       {q.kind === "choice" ? (
         <Pills q={q} value={v} onPick={(x) => set(q.id, x)} />

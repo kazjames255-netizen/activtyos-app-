@@ -6,6 +6,7 @@
 // it. Same shape as the reference/pay public pages: a thin unauthenticated
 // fetch against /api/public/*, single fixed light layout regardless of the
 // viewer's own theme (they may have no account at all).
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -23,7 +24,7 @@ interface Result {
 const fmt = (iso?: string | null) => {
   if (!iso) return null;
   const d = new Date(`${iso}T00:00:00`);
-  return isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" });
 };
 
 // `certRef` (never `ref`) — React 19 treats a prop literally named `ref` as
@@ -94,11 +95,11 @@ function Details({ result }: { result: Result }) {
     ["Expiry", result.expiry ? fmt(result.expiry) : "No expiry on record"],
   ];
   return (
-    <div style={{ marginTop: 14, borderTop: "1px solid #eef1f7", paddingTop: 14, display: "grid", gap: 8, textAlign: "left" }}>
+    <div style={{ marginTop: 14, borderTop: "1px solid #eef1f7", paddingTop: 14, display: "grid", gap: 8, textAlign: "start" }}>
       {rows.map(([label, val]) => val && (
         <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 }}>
           <span style={{ color: "#8b93ad", fontWeight: 700 }}>{label}</span>
-          <span style={{ color: "#171534", fontWeight: 700, textAlign: "right" }}>{val}</span>
+          <span style={{ color: "#171534", fontWeight: 700, textAlign: "end" }}>{val}</span>
         </div>
       ))}
     </div>

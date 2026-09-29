@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -24,8 +25,8 @@ const SM: Record<string, { label: string; bg: string; fg: string }> = {
   past_due: { label: "Past due", bg: "#fdebec", fg: "#c02636" },
   none: { label: "Not started", bg: "#eef0f5", fg: "#6b6880" },
 };
-const gbp = (n: number) => `£${n.toLocaleString("en-GB")}`;
-const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—");
+const gbp = (n: number) => `£${n.toLocaleString(dl())}`;
+const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "—");
 
 const GRADS = ["linear-gradient(135deg,#1d3a8f,#3f78d8)", "linear-gradient(135deg,#3f78d8,#5aa0f0)", "linear-gradient(135deg,#274ba3,#4f8bf5)", "linear-gradient(135deg,#16306e,#2f6bd8)"];
 const initials = (s: string) => (s.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
@@ -116,13 +117,13 @@ export function ProvidersApp() {
           const isOpen = open === p.id;
           return (
             <div key={p.id} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,.04)]">
-              <button type="button" onClick={() => setOpen(isOpen ? null : p.id)} className="flex w-full flex-wrap items-center gap-3 px-3.5 py-3 text-left hover:bg-[var(--panel)]">
+              <button type="button" onClick={() => setOpen(isOpen ? null : p.id)} className="flex w-full flex-wrap items-center gap-3 px-3.5 py-3 text-start hover:bg-[var(--panel)]">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white shadow-sm" style={{ background: grad(p.name) }}>{initials(p.name)}</span>
                 <div className="min-w-0">
                   <div className="text-[14.5px] font-extrabold">{p.name}</div>
                   <div className="text-[11.5px] text-[var(--ink-3)]">{p.ownerEmail ?? "—"} · since {fmt(p.createdAt).replace(", 2026", "")}</div>
                 </div>
-                <div className="ml-auto flex items-center gap-2">
+                <div className="ms-auto flex items-center gap-2">
                   {feeLabel(sub) && <span className="rounded-full bg-[#f4f6fb] px-2.5 py-0.5 text-[11px] font-bold tabular-nums text-[var(--ink-2)]">{feeLabel(sub)}</span>}
                   <span className="rounded-full bg-[#eaf0fc] px-2.5 py-0.5 text-[11px] font-bold capitalize text-[#1d3a8f]">{kindOf(p)}</span>
                   <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: sm.bg, color: sm.fg }}>{sm.label}</span>

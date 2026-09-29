@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
 import { useHoScope } from "@/components/franchise/HoScope";
@@ -35,7 +36,7 @@ const REPEAT_LABEL: Record<Repeat, string> = { weekly: "week", fortnightly: "2 w
 // a matching category.
 const CATEGORIES = ["Equipment", "Venue hire", "Staff", "Travel", "Marketing", "Insurance", "Supplies", "Training", "Software", "Utilities", "Other"];
 
-const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const addDaysIso = (iso: string, n: number) => { const d = new Date(`${iso || todayIso()}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const DUE_PRESETS = [3, 5, 7, 10];
@@ -53,7 +54,7 @@ const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surfac
 const labelCls = "mb-1 block text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]";
 const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink)] outline-none";
 const iconBtn = "flex h-8 w-8 flex-none items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] transition-colors hover:border-[#1d3a8f] hover:bg-[#eef4fd] hover:text-[#1d3a8f]";
-const menuItem = "flex w-full items-center gap-2 px-3 py-2 text-left text-[12.5px] font-bold text-[var(--ink)] transition-colors hover:bg-[var(--panel)]";
+const menuItem = "flex w-full items-center gap-2 px-3 py-2 text-start text-[12.5px] font-bold text-[var(--ink)] transition-colors hover:bg-[var(--panel)]";
 const svgProps = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 const IcView = () => <svg {...svgProps}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>;
 const IcSend = () => <svg {...svgProps}><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>;
@@ -164,7 +165,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
   const monthly = useMemo(() => {
     const months = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      return { key: monthKeyOf(d), label: d.toLocaleDateString("en-GB", { month: "short" }) };
+      return { key: monthKeyOf(d), label: d.toLocaleDateString(dl(), { month: "short" }) };
     });
     return months.map((m) => {
       const rows = active.filter((p) => (p.date || "").slice(0, 7) === m.key);
@@ -303,7 +304,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
     <div className={embedded ? "text-[var(--ink)]" : "-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]"} style={embedded ? undefined : LIGHT_PALETTE}>
       {!embedded && (
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
-        <button type="button" onClick={openAdd} className="absolute right-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">{newLabel}</button>
+        <button type="button" onClick={openAdd} className="absolute end-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">{newLabel}</button>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🧾</span>
           Purchasing &amp; invoices
@@ -361,7 +362,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
             <div className="mb-2.5 text-[13.5px] font-extrabold">Pipeline</div>
             <div className="flex flex-wrap gap-2">
               {byStatus.map((s) => (
-                <button key={s.status} type="button" onClick={() => { setFlt(s.status); setTab("ledger"); }} className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2 text-left transition hover:border-[var(--ink-3)]">
+                <button key={s.status} type="button" onClick={() => { setFlt(s.status); setTab("ledger"); }} className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2 text-start transition hover:border-[var(--ink-3)]">
                   <StatusPill s={s.status} />
                   <div><div className="text-[14px] font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{s.count} order{s.count === 1 ? "" : "s"}</div></div>
                 </button>
@@ -397,7 +398,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
               {overdueItems.length + dueSoon.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Nothing overdue or due soon 🎉</div> : (
                 <div className="flex flex-col gap-0.5">
                   {[...overdueItems, ...dueSoon].slice(0, 7).map((p) => (
-                    <button key={p.id} type="button" onClick={() => openEdit(p)} className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] transition-colors hover:bg-[var(--panel)]">
+                    <button key={p.id} type="button" onClick={() => openEdit(p)} className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-start text-[12px] transition-colors hover:bg-[var(--panel)]">
                       <span className={`flex-none rounded-full px-2 py-0.5 text-[9.5px] font-bold ${isOverdue(p) ? "bg-[var(--red-soft,#fdebec)] text-[var(--red,#e21d27)]" : "bg-[#fff4e0] text-[#a86400]"}`}>{isOverdue(p) ? "overdue" : "due soon"}</span>
                       <div className="min-w-0 flex-1 truncate font-bold">{p.supplier}</div>
                       <span className="flex-none text-[11px] text-[var(--ink-3)]">{fmtDay(p.dueDate)}</span>
@@ -416,7 +417,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
                   <div key={s.supplier} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
                     <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[var(--brand-soft,#eaf0fc)] text-[11px] font-extrabold text-[var(--brand-strong,#16306e)]">{i + 1}</span>
                     <div className="min-w-0 flex-1 truncate font-bold">{s.supplier}</div>
-                    <div className="flex-none text-right"><div className="font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{s.count} order{s.count === 1 ? "" : "s"}{s.outstanding > 0 ? ` · ${money(s.outstanding)} due` : ""}</div></div>
+                    <div className="flex-none text-end"><div className="font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{s.count} order{s.count === 1 ? "" : "s"}{s.outstanding > 0 ? ` · ${money(s.outstanding)} due` : ""}</div></div>
                   </div>
                 ))}
               </div>
@@ -428,8 +429,8 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
           <Card className="flex flex-col gap-2.5 p-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
-                <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search supplier, ref or note…" className="w-[220px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 pl-7 pr-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]" />
+                <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search supplier, ref or note…" className="w-[220px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 ps-7 pe-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]" />
               </div>
               <select value={flt} onChange={(e) => setFlt(e.target.value as Flt)} className={`${pill} rounded-full`}>
                 <option value="all">All orders</option>
@@ -438,7 +439,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
                 <option value="duesoon">Due soon (14d)</option>
                 {visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
               </select>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ms-auto flex items-center gap-2">
                 <button type="button" onClick={exportCsv} className={btnGhost}>⬇ Export CSV</button>
                 <button type="button" onClick={openAdd} className={btnPrimary}>{newLabel}</button>
               </div>
@@ -478,7 +479,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
                       {p.seriesId && <span className="rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10px] font-bold text-[#1d3a8f]" title={p.repeatUntil ? `Repeats every ${p.repeat ? REPEAT_LABEL[p.repeat] : ""} until ${fmtDay(p.repeatUntil)}` : "Repeating"}>🔁 {p.repeat ? REPEAT_LABEL[p.repeat] : ""}</span>}
                       {isOverdue(p) && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-2 py-0.5 text-[10px] font-bold text-[var(--red,#e21d27)]">overdue</span>}
                     </div>
-                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.notes ? ` · ${p.notes}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#1d3a8f]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.notes ? ` · ${p.notes}` : ""}{p.emailedAt ? <span className="ms-1 font-bold text-[#1d3a8f]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
                   </div>
                   {p.attachmentUrl
                     ? <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 {isPo ? "supplier invoice" : "receipt"}</a>
@@ -499,7 +500,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
                           {sendFor === p.id && (
                             <>
                               <div className="fixed inset-0 z-30" onClick={() => setSendFor(null)} />
-                              <div className="absolute right-0 top-full z-40 mt-1 w-48 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
+                              <div className="absolute end-0 top-full z-40 mt-1 w-48 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
                                 <button type="button" onClick={() => { setSendFor(null); void emailDoc(p); }} className={menuItem}>✉️ Email to supplier</button>
                                 <button type="button" onClick={() => { setSendFor(null); whatsApp(p); }} className={menuItem}>💬 WhatsApp</button>
                               </div>
@@ -522,7 +523,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
             {paidItems.map((p) => (
               <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
                 <span className="flex-none rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">✓ Paid</span>
-                <div className="min-w-0 flex-1 truncate"><span className="text-[13px] font-bold">{p.supplier}</span>{p.reference ? <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">{p.reference}</span> : ""}<span className="ml-1.5 text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}</span></div>
+                <div className="min-w-0 flex-1 truncate"><span className="text-[13px] font-bold">{p.supplier}</span>{p.reference ? <span className="ms-1.5 text-[11px] text-[var(--ink-3)]">{p.reference}</span> : ""}<span className="ms-1.5 text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}</span></div>
                 {p.attachmentUrl && <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 {isPo ? "invoice" : "receipt"}</a>}
                 <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
                 <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
@@ -548,7 +549,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
             <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">From <input type="date" value={iFrom} onChange={(e) => setIFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
             <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">to <input type="date" value={iTo} onChange={(e) => setITo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
             {(iSup !== "all" || iFrom || iTo) && <button type="button" onClick={() => { setISup("all"); setIFrom(""); setITo(""); }} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Clear ✕</button>}
-            <span className="ml-auto text-[12px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{invoicesShown.length}</b> shown</span>
+            <span className="ms-auto text-[12px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{invoicesShown.length}</b> shown</span>
           </Card>
 
           {invoicesShown.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">{withDoc.length === 0 ? "No invoices attached yet — open any order and attach one." : "No invoices match those filters."}</Card> : (

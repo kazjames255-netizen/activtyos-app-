@@ -12,6 +12,7 @@
 // fetches, and Notifications reads the same feed as the bell — so no count can
 // disagree with the thing it summarises and nothing is fetched twice.
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet, isDemoMode } from "@/lib/api";
@@ -42,8 +43,8 @@ export function shortWhen(iso?: string): string {
   const now = new Date();
   const sameDay = d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   return sameDay
-    ? d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    ? d.toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleDateString(dl(), { day: "numeric", month: "short" });
 }
 
 // Plenty of real mail has no display name, so the sender reads
@@ -109,7 +110,7 @@ export function CommsCard({ glyph, title, tone, unread, rows, empty, emptyGlyph,
         <div className="mb-2.5 flex items-center gap-2">
           <button
             type="button" onClick={onOpen} disabled={!onOpen}
-            className="flex min-w-0 flex-1 items-center gap-2 text-left disabled:cursor-default"
+            className="flex min-w-0 flex-1 items-center gap-2 text-start disabled:cursor-default"
           >
             <span
               aria-hidden
@@ -144,10 +145,10 @@ export function CommsCard({ glyph, title, tone, unread, rows, empty, emptyGlyph,
                 type="button"
                 onClick={() => onRow(r)}
                 title={r.title ?? `${r.who} — ${r.what}`}
-                className="flex w-full items-center gap-2 overflow-hidden rounded-xl px-2 py-1.5 text-left transition-transform hover:translate-x-[2px]"
+                className="flex w-full items-center gap-2 overflow-hidden rounded-xl px-2 py-1.5 text-start transition-transform hover:translate-x-[2px]"
                 style={{
                   background: r.unread ? tone.tint : "transparent",
-                  borderLeft: `3px solid ${r.unread ? tone.solid : "var(--line)"}`,
+                  borderInlineStart: `3px solid ${r.unread ? tone.solid : "var(--line)"}`,
                 }}
               >
                 <span

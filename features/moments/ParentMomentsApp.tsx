@@ -60,7 +60,7 @@ export function ParentMomentsApp() {
                   <button type="button" onClick={() => setLightbox(m.photoUrl!)} className="relative block aspect-square w-full bg-black">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={m.photoUrl} alt={m.caption ?? ""} className="h-full w-full object-cover" />
-                    {m.photoType === "work" && <span className="absolute bottom-2.5 left-2.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-white" style={{ background: GREEN }}>{t("feed.workBadge")}</span>}
+                    {m.photoType === "work" && <span className="absolute bottom-2.5 start-2.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-white" style={{ background: GREEN }}>{t("feed.workBadge")}</span>}
                   </button>
                 )}
                 <div className="p-3">

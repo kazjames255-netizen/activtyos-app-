@@ -98,7 +98,7 @@ export function StaffAnnouncementsApp() {
               {p.pinned && <span className="text-[13px]">📌</span>}
               {p.important && <span className="rounded-full bg-[#fdedeb] px-2 py-0.5 text-[10.5px] font-extrabold uppercase text-[#c0392b]">{t("staffp.annImportant")}</span>}
               <span className="text-[15px] font-extrabold text-[var(--ink)]">{p.title}</span>
-              {!isRead && <span className="ml-auto inline-block h-2 w-2 rounded-full bg-[#1d3a8f]" />}
+              {!isRead && <span className="ms-auto inline-block h-2 w-2 rounded-full bg-[#1d3a8f]" />}
             </div>
             <div className="mb-2 text-[11.5px] font-semibold text-[var(--ink-3)]">{p.author} · {p.role}{p.audienceLabel ? ` · ${p.audienceLabel}` : ""} · {new Date(p.date + "T00:00:00").toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" })}</div>
             <p className="text-[13.5px] leading-[1.6] text-[var(--ink-2)] whitespace-pre-wrap">{p.body}</p>

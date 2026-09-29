@@ -3,12 +3,13 @@
 // Manager view of staff expense claims (/api/expense-claims): approve, decline,
 // or mark paid. Approving adds the claim to Money out as an expense, so the
 // Expenses list refreshes after. Only renders when there's something to show.
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet, api } from "@/lib/api";
 
 interface Claim { id: string; staffName?: string; date: string; category: string; amount: number; note?: string; receiptUrl?: string; receiptName?: string; status: "submitted" | "approved" | "paid" | "declined"; submittedAt: string }
 
-const gbp = (n: number) => "£" + (n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const gbp = (n: number) => "£" + (n || 0).toLocaleString(dl(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const TONE: Record<Claim["status"], { bg: string; ink: string; label: string }> = {
   submitted: { bg: "#fff7e6", ink: "#b45309", label: "Waiting" },
   approved: { bg: "#eaf4ff", ink: "#1d6fb8", label: "Approved — to pay" },
@@ -39,7 +40,7 @@ export function StaffClaimsPanel({ onChanged }: { onChanged?: () => void }) {
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <span className="text-[14px] font-extrabold text-[var(--ink)]">🧾 Staff expense claims</span>
         {open.length > 0 && <span className="rounded-full bg-[#fff7e6] px-2 py-0.5 text-[11px] font-extrabold text-[#b45309]">{open.length} to deal with · {gbp(open.reduce((n, c) => n + c.amount, 0))}</span>}
-        {done.length > 0 && <button type="button" onClick={() => setShowDone((v) => !v)} className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{showDone ? "Hide finished" : `Show finished (${done.length})`}</button>}
+        {done.length > 0 && <button type="button" onClick={() => setShowDone((v) => !v)} className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{showDone ? "Hide finished" : `Show finished (${done.length})`}</button>}
       </div>
       {rows.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Nothing waiting — all claims dealt with.</div> : (
         <ul className="divide-y divide-[var(--line)]">
@@ -48,7 +49,7 @@ export function StaffClaimsPanel({ onChanged }: { onChanged?: () => void }) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2"><b className="text-[13.5px] text-[var(--ink)]">{c.staffName ?? "Staff"}</b><span className="text-[12.5px] text-[var(--ink-2)]">{c.category}</span>
                   <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: tone.bg, color: tone.ink }}>{tone.label}</span></div>
-                <div className="text-[12px] text-[var(--ink-3)]">{new Date(c.date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}{c.note ? ` · ${c.note}` : ""}{c.receiptUrl ? <> · <a href={c.receiptUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-[#1d3a8f] hover:underline">📎 {c.receiptName || "receipt"}</a></> : " · no receipt"}</div>
+                <div className="text-[12px] text-[var(--ink-3)]">{new Date(c.date + "T00:00:00").toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}{c.note ? ` · ${c.note}` : ""}{c.receiptUrl ? <> · <a href={c.receiptUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-[#1d3a8f] hover:underline">📎 {c.receiptName || "receipt"}</a></> : " · no receipt"}</div>
               </div>
               <b className="text-[14px] tabular-nums text-[var(--ink)]">{gbp(c.amount)}</b>
               <div className="flex gap-1.5">

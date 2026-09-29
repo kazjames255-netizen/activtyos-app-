@@ -3,6 +3,7 @@
 // lib — a `document` reference there breaks the API's typecheck, not the web
 // app's, which is a confusing place to find the error.
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import type { Booking } from "./types";
 import { columnsFor, money, type Col } from "./helpers";
 
@@ -76,7 +77,7 @@ export function printRows<T>(
           : ""
       }
     </table>
-    <div class="foot">Generated ${new Date().toLocaleString("en-GB")} · ActivityOS</div>
+    <div class="foot">Generated ${new Date().toLocaleString(dl())} · ActivityOS</div>
   </body></html>`;
 
   // An iframe rather than window.open: popup blockers eat the latter, and a

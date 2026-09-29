@@ -345,6 +345,19 @@ html[data-ho-office="1"] .op-hero {
           mask-image: radial-gradient(circle var(--side-notch) at 0 100%, transparent 0 var(--side-notch), #000 calc(var(--side-notch) + 0.5px));
 }
 
+/* RTL (Arabic/Urdu): the rail sits on the right, so the notch flips to its LEFT edge. */
+[dir="rtl"] .side-active { border-radius: 0 999px 999px 0; }
+[dir="rtl"] .side-active::before,
+[dir="rtl"] .side-active::after { right: auto; left: 0; }
+[dir="rtl"] .side-active::before {
+  -webkit-mask-image: radial-gradient(circle var(--side-notch) at 100% 0, transparent 0 var(--side-notch), #000 calc(var(--side-notch) + 0.5px));
+          mask-image: radial-gradient(circle var(--side-notch) at 100% 0, transparent 0 var(--side-notch), #000 calc(var(--side-notch) + 0.5px));
+}
+[dir="rtl"] .side-active::after {
+  -webkit-mask-image: radial-gradient(circle var(--side-notch) at 100% 100%, transparent 0 var(--side-notch), #000 calc(var(--side-notch) + 0.5px));
+          mask-image: radial-gradient(circle var(--side-notch) at 100% 100%, transparent 0 var(--side-notch), #000 calc(var(--side-notch) + 0.5px));
+}
+
 /* Teaching Hub, family side. Anyone who asked the OS for reduced motion, and any child whose tutor set "Calm" (R-5),
    gets no animation or transitions; a large-text profile scales the family screens. */
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -39,7 +40,7 @@ function safetyLinks(portal: string): [string, string][] {
   ];
 }
 
-const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
+const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "");
 const daysSince = (iso?: string | null) => (iso ? Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)) : 0);
 const STILL = "Registers, children's details, incidents, first aid and medication still work.";
 
@@ -95,7 +96,7 @@ export function SubscriptionLock({ portal, children }: { portal: string; childre
   const subHref = `/${portal}/subscription`;
   const view = pathname.split("/")[2] ?? "";
   const cta = (label: string) => a.owner && view !== "subscription"
-    ? <Link href={subHref} className="ml-1.5 whitespace-nowrap underline">{label} →</Link>
+    ? <Link href={subHref} className="ms-1.5 whitespace-nowrap underline">{label} →</Link>
     : null;
 
   let text: string;

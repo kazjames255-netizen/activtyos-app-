@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { get as apiGet, api } from "@/lib/api";
 
@@ -288,7 +289,7 @@ const sameOrg = (a?: string, b?: string) => {
 
 function fmt(iso: string) {
   const d = new Date(iso);
-  return `${d.getDate()} ${d.toLocaleString("en-GB", { month: "short" })} · ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+  return `${d.getDate()} ${d.toLocaleString(dl(), { month: "short" })} · ${d.toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 // ── Filters ──────────────────────────────────────────────────────────────────
@@ -484,7 +485,7 @@ function FilterMenu({ dim, opts, value, onChange, countFor }: { dim: Dim; opts: 
                 return (<div key={o.value}>
                   {heading && o.group && (() => { const count = opts.filter((x) => x.group === o.group).length; const g = o.group; return (
                     <button type="button" onClick={() => toggleGroup(g)}
-                      className="mt-3 mb-1 flex w-full items-center justify-between border-b-2 border-[var(--brand)]/25 px-3 pb-1.5 pt-2 text-left text-[13px] font-extrabold uppercase tracking-wide text-[var(--brand)] first:mt-0.5">
+                      className="mt-3 mb-1 flex w-full items-center justify-between border-b-2 border-[var(--brand)]/25 px-3 pb-1.5 pt-2 text-start text-[13px] font-extrabold uppercase tracking-wide text-[var(--brand)] first:mt-0.5">
                       <span>{g} <span className="font-semibold text-[var(--ink-3)] normal-case">({count} option{count === 1 ? "" : "s"})</span></span>
                       {!term && <span aria-hidden className="text-[11px]">{groupOpen(g) ? "▾" : "▸"}</span>}
                     </button>
@@ -833,7 +834,7 @@ export function LeadsApp() {
       <div className="mb-2.5 flex flex-wrap gap-1 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1 shadow-sm">
         {VIEWS.map((v) => (
           <button key={v.key} type="button" title={v.hint} onClick={() => { setView(v.key); setLimit(60); }} aria-pressed={view === v.key}
-            className={`flex-none whitespace-nowrap rounded-xl px-4 py-2 text-[13px] font-extrabold transition-colors ${v.key === "research" ? "sm:ml-auto" : ""}`}
+            className={`flex-none whitespace-nowrap rounded-xl px-4 py-2 text-[13px] font-extrabold transition-colors ${v.key === "research" ? "sm:ms-auto" : ""}`}
             style={view === v.key ? { background: v.key === "research" ? "var(--ink-2)" : "var(--brand)", color: "#fff" } : { color: v.key === "research" ? "var(--ink-3)" : "var(--ink-2)" }}>
             {v.label} <span className="font-bold opacity-75">{(viewCounts[v.key] ?? 0).toLocaleString()}</span>
           </button>
@@ -888,7 +889,7 @@ export function LeadsApp() {
           <FilterMenu key={dim} dim={dim} opts={opts[dim]} value={f[dim]} onChange={(v) => setDim(dim, v)}
             countFor={(o) => dropdownCounts[dim].get(o.value) ?? 0} />
         ))}
-        {(active.length > 0 || q || f.plan.length > 0) && <button type="button" onClick={clearAll} className="ml-auto px-1.5 text-[12px] font-bold text-[var(--brand)] underline">Clear filters</button>}
+        {(active.length > 0 || q || f.plan.length > 0) && <button type="button" onClick={clearAll} className="ms-auto px-1.5 text-[12px] font-bold text-[var(--brand)] underline">Clear filters</button>}
       </div>
 
       {/* 3 · Exactly what's on screen, in words. */}
@@ -903,7 +904,7 @@ export function LeadsApp() {
         ))}
         {q && <button type="button" onClick={() => setQ("")} className="flex items-center gap-1 rounded-full bg-[#eaf0ff] px-2.5 py-0.5 text-[11.5px] font-bold text-[var(--brand)]">“{q}” ×</button>}
         <span className="text-[12px] text-[var(--ink-3)]">— {shown.filter((r) => r.l.email).length.toLocaleString()} with email ({shown.filter((r) => okToEmail(r.l)).length.toLocaleString()} OK to email) · {shown.filter((r) => r.l.phone).length.toLocaleString()} with phone</span>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ms-auto flex items-center gap-2">
           {hasLinkedSchoolInView && (
             <button type="button" onClick={() => setSchoolNameAsTitle((v) => !v)} aria-pressed={schoolNameAsTitle}
               title="For a club/nursery/committee linked to a host school, flip which name leads the card"
@@ -921,14 +922,14 @@ export function LeadsApp() {
             <button type="button" onClick={() => setExportOpen((o) => !o)} disabled={!shown.length} aria-expanded={exportOpen}
               className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-50">⬇ Export CSV <span aria-hidden className="text-[10px]">▾</span></button>
             {exportOpen && (
-              <div className="absolute right-0 top-[calc(100%+6px)] z-40 w-[560px] max-w-[92vw] overflow-hidden rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] shadow-[0_20px_50px_-16px_rgba(15,23,42,.5)]">
+              <div className="absolute end-0 top-[calc(100%+6px)] z-40 w-[560px] max-w-[92vw] overflow-hidden rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] shadow-[0_20px_50px_-16px_rgba(15,23,42,.5)]">
                 <button type="button" onClick={() => csvCols.size && exportCsv(shown, view)} disabled={!csvCols.size}
-                  className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-4 py-3 text-left hover:bg-[#eaf0ff] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent">
+                  className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-4 py-3 text-start hover:bg-[#eaf0ff] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent">
                   <span className="text-[13.5px] font-extrabold text-[var(--ink)]">⬇ Export as it is ({shown.length.toLocaleString()})</span>
                   <span className="text-[11.5px] font-medium text-[var(--ink-3)]">The filters you already have set{active.length || q || f.plan.length ? "" : " (none active)"}</span>
                 </button>
                 <button type="button" onClick={() => csvCols.size && exportCsv(rows, "all")} disabled={!csvCols.size}
-                  className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-4 py-3 text-left hover:bg-[#eaf0ff] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent">
+                  className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-4 py-3 text-start hover:bg-[#eaf0ff] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent">
                   <span className="text-[13.5px] font-extrabold text-[var(--ink)]">⬇ Export everything ({rows.length.toLocaleString()})</span>
                   <span className="text-[11.5px] font-medium text-[var(--ink-3)]">Ignore filters — the whole database</span>
                 </button>
@@ -978,7 +979,7 @@ export function LeadsApp() {
             const accent = providerAccent(l);
             return (
               <div key={l.id} className="rounded-2xl border p-4"
-                style={accent ? { background: accent.bg, borderColor: "var(--line)", borderLeft: `4px solid ${accent.stripe}` } : { background: "var(--surface)", borderColor: "var(--line)" }}>
+                style={accent ? { background: accent.bg, borderColor: "var(--line)", borderInlineStart: `4px solid ${accent.stripe}` } : { background: "var(--surface)", borderColor: "var(--line)" }}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -1050,7 +1051,7 @@ export function LeadsApp() {
                     {l.message && (
                       <details className="mt-2 max-w-[80ch] rounded-lg bg-[var(--panel)] p-2.5 [&_summary::-webkit-details-marker]:hidden">
                         <summary className="line-clamp-2 cursor-pointer list-none text-[12.5px] leading-[1.5] text-[var(--ink-2)]" title="Click to show the full text">
-                          {l.message} <span className="ml-1 font-bold text-[var(--brand)]">— show more</span>
+                          {l.message} <span className="ms-1 font-bold text-[var(--brand)]">— show more</span>
                         </summary>
                         <p className="mt-1.5 whitespace-pre-wrap text-[12.5px] leading-[1.5] text-[var(--ink-2)]">{l.message}</p>
                       </details>

@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, get as apiGet, post as apiPost, isDemoMode, ApiError } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
@@ -781,7 +782,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   if (done) {
     const venue = lib?.venue;
     const fmtDay = (iso?: string) =>
-      iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : null;
+      iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" }) : null;
     const when =
       done.firstDate && done.lastDate && done.lastDate !== done.firstDate
         ? `${fmtDay(done.firstDate)} – ${fmtDay(done.lastDate)}`
@@ -822,7 +823,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
             : "A confirmation email is on its way with everything below."}
         </p>
 
-        <div className="mt-4 overflow-hidden rounded-2xl border border-[#e6e9f2] bg-white text-left shadow-[0_10px_30px_-14px_rgba(20,30,80,.25)]">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-[#e6e9f2] bg-white text-start shadow-[0_10px_30px_-14px_rgba(20,30,80,.25)]">
           <div className="px-4 py-3" style={{ background: "linear-gradient(120deg,#1d3a8f,#2f6bd8)" }}>
             <div className="text-[15px] font-extrabold text-white">{listing.title || listing.name}</div>
             <div className="text-[11.5px] text-[#cdddf7]">{listing.tenantName}</div>
@@ -844,19 +845,19 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         </div>
 
         {scheme && (
-          <div className="mt-3 rounded-2xl border border-[#f3d98a] bg-[#fdf6e3] p-4 text-left text-[12.5px] leading-relaxed text-[#7a5a12]">
+          <div className="mt-3 rounded-2xl border border-[#f3d98a] bg-[#fdf6e3] p-4 text-start text-[12.5px] leading-relaxed text-[#7a5a12]">
             <b>Almost there — your place is held.</b> Head over to your <b>{scheme}</b> account to pay <b>{money(done.total)}</b>, quoting these details (we&rsquo;ve emailed them too). Your booking shows as <b>awaiting voucher payment</b> until the money reaches {listing.tenantName || "your provider"}.
             {vDetails.length > 0 && (
               <table className="mt-2.5" cellPadding={0}>
                 <tbody>
                   {vDetails.map((dt, di) => (
                     <tr key={di}>
-                      <td className="pr-4 align-top text-[#a5834a]">{dt.label}</td>
+                      <td className="pe-4 align-top text-[#a5834a]">{dt.label}</td>
                       <td className="align-top font-extrabold text-[#5a4410]">{isUrlD(dt) ? <a href={/^https?:\/\//i.test(dt.value) ? dt.value : `https://${dt.value}`} target="_blank" rel="noreferrer" className="underline" style={{ color: "#2f6bd8" }}>{dt.value} ↗</a> : dt.value}</td>
                     </tr>
                   ))}
-                  <tr><td className="pr-4 text-[#a5834a]">Booking ref</td><td className="font-extrabold text-[#5a4410]">{done.refs.join(", ")}</td></tr>
-                  <tr><td className="pr-4 text-[#a5834a]">Amount</td><td className="font-extrabold text-[#5a4410]">{money(done.total)}</td></tr>
+                  <tr><td className="pe-4 text-[#a5834a]">Booking ref</td><td className="font-extrabold text-[#5a4410]">{done.refs.join(", ")}</td></tr>
+                  <tr><td className="pe-4 text-[#a5834a]">Amount</td><td className="font-extrabold text-[#5a4410]">{money(done.total)}</td></tr>
                 </tbody>
               </table>
             )}
@@ -1143,14 +1144,14 @@ export function ListingWizard({
             <div className="truncate text-[12.5px] text-white/80">Step {step + 1} of {STEPS.length} · {STEPS[step].label}</div>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
-            {msg && <span className="mr-0.5 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white">{msg}</span>}
+            {msg && <span className="me-0.5 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white">{msg}</span>}
             {(() => {
               const label = { idle: "", dirty: "", saving: "Saving…", saved: "Saved", error: "" }[saveState];
-              return label ? <span className="mr-0.5 text-[11.5px] font-semibold text-white/85">{saveState === "saved" ? "✓ " : ""}{label}</span> : null;
+              return label ? <span className="me-0.5 text-[11.5px] font-semibold text-white/85">{saveState === "saved" ? "✓ " : ""}{label}</span> : null;
             })()}
             <button type="button" disabled={busy} onClick={saveDraftAction} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25 disabled:opacity-40">Save draft</button>
             <button type="button" onClick={() => setFullPreview(true)} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25">👁 Preview</button>
-            <button type="button" disabled={busy} onClick={publishAction} title={blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} left to do` : undefined} className="rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#16306e] shadow-sm hover:bg-white/90 disabled:opacity-60">Publish{blockers.length > 0 && <span className="ml-1 opacity-70">({blockers.length})</span>}</button>
+            <button type="button" disabled={busy} onClick={publishAction} title={blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} left to do` : undefined} className="rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#16306e] shadow-sm hover:bg-white/90 disabled:opacity-60">Publish{blockers.length > 0 && <span className="ms-1 opacity-70">({blockers.length})</span>}</button>
             <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px] font-bold hover:bg-white/30">×</button>
           </div>
         </div>
@@ -1206,7 +1207,7 @@ export function ListingWizard({
                       {blockers.map((bl, i) => (
                         <li key={i} className="flex items-start gap-2 text-[12px]" style={{ color: "#9a3412" }}>
                           <span className="mt-[2px]">•</span>
-                          <button type="button" onClick={() => setStep(bl.step)} className="text-left underline underline-offset-2">
+                          <button type="button" onClick={() => setStep(bl.step)} className="text-start underline underline-offset-2">
                             {bl.what} <span className="opacity-70">— step {bl.step + 1}</span>
                           </button>
                         </li>
@@ -1280,9 +1281,9 @@ function EditableChips({ options, sel, onToggle, onAdd, onDelete, emojis, showEm
         const em = showEmoji ? chipEmoji(o) : "";
         return (
           <span key={o} className="inline-flex items-center overflow-hidden rounded-full border" style={on ? { borderColor: "transparent", background: "linear-gradient(120deg,#3f78d8,#1b3f8f)", boxShadow: "0 4px 12px -3px rgba(31,84,163,.55)" } : { borderColor: "var(--line)", background: "#fff" }}>
-            <button type="button" onClick={() => onToggle(o)} className="py-1.5 pl-3 text-[12px] font-bold" style={{ color: on ? "#fff" : "var(--ink-2)" }}>{on && check ? "✓ " : ""}{em ? em + " " : ""}{o}</button>
+            <button type="button" onClick={() => onToggle(o)} className="py-1.5 ps-3 text-[12px] font-bold" style={{ color: on ? "#fff" : "var(--ink-2)" }}>{on && check ? "✓ " : ""}{em ? em + " " : ""}{o}</button>
             {onDelete && <button type="button" onClick={() => onDelete(o)} aria-label={`Delete ${o}`} className="px-2 text-[11px]" style={{ color: on ? "rgba(255,255,255,.7)" : "var(--ink-3)" }}>✕</button>}
-            {!onDelete && <span className="pr-3" />}
+            {!onDelete && <span className="pe-3" />}
           </span>
         );
       })}
@@ -1292,7 +1293,7 @@ function EditableChips({ options, sel, onToggle, onAdd, onDelete, emojis, showEm
           <Input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="New option" className="w-[150px]" autoFocus />
           <Button sm variant="primary" onClick={add}>Add</Button>
           {picker && (
-            <div className="absolute left-0 top-[36px] z-20 max-h-[190px] w-[248px] overflow-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-[0_12px_30px_rgba(0,0,0,.18)]">
+            <div className="absolute start-0 top-[36px] z-20 max-h-[190px] w-[248px] overflow-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-[0_12px_30px_rgba(0,0,0,.18)]">
               <div className="grid grid-cols-8 gap-0.5">
                 {EMOJI_BANK.map((e, i) => <button key={i} type="button" onClick={() => { setEmoji(e); setPicker(false); }} className="flex h-6 w-6 items-center justify-center rounded text-[15px] hover:bg-[var(--panel)]">{e}</button>)}
               </div>
@@ -1396,7 +1397,7 @@ function ImageManager({ images, onChange, addLabel, previewAspect = "16 / 9", co
               <div onClick={() => { if (!contain) setEditIdx(i); }} className={`rounded-lg border ${contain ? "" : "cursor-pointer"}`} style={{ borderColor: editIdx === i && !contain ? "var(--brand-2)" : "var(--line)" }}>
                 <CroppedImage im={x} className="h-[64px] w-[96px] rounded-lg" contain={contain} />
               </div>
-              <button type="button" onClick={() => { onChange(images.filter((_, j) => j !== i)); setEditIdx(null); }} className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/70 text-[10px] text-white">×</button>
+              <button type="button" onClick={() => { onChange(images.filter((_, j) => j !== i)); setEditIdx(null); }} className="absolute -end-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/70 text-[10px] text-white">×</button>
             </div>
           ))}
         </div>
@@ -1835,7 +1836,7 @@ function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
               <span className="w-[120px] text-[12px] font-semibold">{g.name}</span>
               <span className="text-[11px] text-[var(--ink-3)]">{g.ageFrom}–{g.ageTo} yrs</span>
               {g.maxSize > 0 && <span className="text-[10.5px] text-[var(--ink-3)]" title="Room capacity, set in Setup → Age groups & rooms">room holds {g.maxSize}</span>}
-              <span className="ml-auto inline-flex items-center gap-1.5">
+              <span className="ms-auto inline-flex items-center gap-1.5">
                 <input type="number" min={0} max={Number.isFinite(inputMax) ? inputMax : undefined} value={caps[g.id] ?? ""} placeholder="no limit"
                   onChange={(e) => setCap(g.id, e.target.value)}
                   className="w-[86px] rounded-lg border bg-[var(--surface)] px-2 py-1 text-[12.5px]"
@@ -2020,7 +2021,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
               Set the from/to dates (and pick weekdays) and the calendar builds itself here.
             </div>
           ) : (
-            <div className="flex max-h-[300px] flex-col gap-2 overflow-y-auto pr-1">
+            <div className="flex max-h-[300px] flex-col gap-2 overflow-y-auto pe-1">
               {weeks.map((w, i) => {
                 const col = WEEK_PAL[i % WEEK_PAL.length];
                 return (
@@ -2115,7 +2116,7 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
             );
             return (
               <button key={b.id} type="button" onClick={() => upd({ blockId: b.id })}
-                className="flex items-center justify-between gap-2 rounded-xl border p-3 text-left transition-colors hover:border-[var(--brand-2)] hover:bg-[var(--panel)]"
+                className="flex items-center justify-between gap-2 rounded-xl border p-3 text-start transition-colors hover:border-[var(--brand-2)] hover:bg-[var(--panel)]"
                 style={{ borderColor: "var(--line)" }}>
                 <div>
                   <div className="text-[13.5px] font-extrabold">▥ {b.name}</div>
@@ -2205,7 +2206,7 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                     const wasReset = !!stored && !okFor(stored);
                     return (
                       <div className="mt-2.5 border-t border-dashed border-[var(--line)] pt-2">
-                        <FieldLabel>🧭 How parents book it{wasReset && <span className="ml-1 font-bold text-[#c0392b]">· reset — please confirm</span>}</FieldLabel>
+                        <FieldLabel>🧭 How parents book it{wasReset && <span className="ms-1 font-bold text-[#c0392b]">· reset — please confirm</span>}</FieldLabel>
                         <div className="flex flex-wrap gap-1.5">
                           {BOOK_RULES.map((r) => {
                             const disabled = !okFor(r.key);
@@ -2284,12 +2285,12 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
             const on = form?.kind === k.kind;
             return (
               <button key={k.kind} type="button" onClick={() => { if (!(on && form)) openForm(emptyRule(k.kind), false); }}
-                className="rounded-xl border-2 p-3 text-left transition-all"
+                className="rounded-xl border-2 p-3 text-start transition-all"
                 style={on ? { borderColor: k.colour, background: `${k.colour}0f` } : { borderColor: "var(--line)" }}>
                 <div className="flex items-center gap-2">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg text-[16px]" style={{ background: `${k.colour}1a` }}>{k.icon}</span>
                   <span className="text-[12.5px] font-extrabold" style={{ color: on ? k.colour : "var(--ink)" }}>{k.title}</span>
-                  {on && <span className="ml-auto text-[13px]" style={{ color: k.colour }}>✓</span>}
+                  {on && <span className="ms-auto text-[13px]" style={{ color: k.colour }}>✓</span>}
                 </div>
                 <div className="mt-1.5 text-[11px] leading-[1.45] text-[var(--ink-3)]">{k.eg}</div>
               </button>
@@ -2354,7 +2355,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
               </div>
             </div>
 
-            <div className="mt-3.5 rounded-lg border-l-4 bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]" style={{ borderLeftColor: kindOf(form.kind).colour }}>
+            <div className="mt-3.5 rounded-lg border-s-4 bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]" style={{ borderInlineStartColor: kindOf(form.kind).colour }}>
               <b>Parents will see:</b> {form.name.trim() || ruleSummary(form)}
             </div>
 
@@ -2374,7 +2375,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
             {rules.map((r) => {
               const k = kindOf(r.kind);
               return (
-                <div key={r.id} className="flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3" style={{ borderLeft: `4px solid ${k.colour}`, opacity: r.enabled ? 1 : 0.55 }}>
+                <div key={r.id} className="flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3" style={{ borderInlineStart: `4px solid ${k.colour}`, opacity: r.enabled ? 1 : 0.55 }}>
                   <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-[15px]" style={{ background: `${k.colour}1a` }}>{k.icon}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12.5px] font-bold">{r.name.trim() || ruleSummary(r)}</span>
@@ -2418,10 +2419,10 @@ function HeadingsEditor({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDra
   const set = (k: string, v: string) => upd({ headings: { ...(d.headings ?? {}), [k]: v } });
   return (
     <Card className="mb-3 p-3.5">
-      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between text-left">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between text-start">
         <span>
           <span className="text-[13px] font-extrabold">Section headings</span>
-          <span className="ml-2 text-[11.5px] text-[var(--ink-3)]">Reword any heading parents see — leave blank for the default.</span>
+          <span className="ms-2 text-[11.5px] text-[var(--ink-3)]">Reword any heading parents see — leave blank for the default.</span>
         </span>
         <span className="text-[13px] text-[var(--ink-3)]">{open ? "▾" : "▸"}</span>
       </button>
@@ -2468,7 +2469,7 @@ function AddonIcon({ addon, patchLocal }: { addon: AddonTemplate; patchLocal: (f
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-30 mt-1 w-[290px] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-lg">
+          <div className="absolute end-0 z-30 mt-1 w-[290px] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-lg">
             <div className="mb-2 flex items-center gap-1.5">
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search emoji…" className="w-full text-[12px]" />
               <Button sm onClick={() => fileRef.current?.click()}>Image</Button>
@@ -2550,7 +2551,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
             const on = d.addonIds.includes(a.id);
             return (
               <div key={a.id} className="flex items-center gap-2 rounded-lg border p-2.5" style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)" }}>
-                <button type="button" onClick={() => upd({ addonIds: toggle(d.addonIds, a.id) })} className="flex flex-1 items-center gap-2 text-left">
+                <button type="button" onClick={() => upd({ addonIds: toggle(d.addonIds, a.id) })} className="flex flex-1 items-center gap-2 text-start">
                   <span className="text-[13px]">{on ? "☑" : "☐"}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[12.5px] font-bold">{a.name}</span>
@@ -2750,7 +2751,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
       <SectionHead icon="👁️">Who can see it</SectionHead>
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {vis.map(([k, label, desc]) => (
-          <button key={k} type="button" onClick={() => upd({ visibility: k })} className="rounded-xl border p-2.5 text-left" style={d.visibility === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)" }}>
+          <button key={k} type="button" onClick={() => upd({ visibility: k })} className="rounded-xl border p-2.5 text-start" style={d.visibility === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)" }}>
             <div className="text-[12.5px] font-extrabold">{d.visibility === k ? "● " : ""}{label}</div>
             <div className="text-[11px] text-[var(--ink-3)]">{desc}</div>
           </button>
@@ -2775,7 +2776,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
             ] as const).map(([k, label, desc]) => {
               const on = (d.waitlistMode ?? "manual") === k;
               return (
-                <button key={k} type="button" onClick={() => upd({ waitlistMode: k })} className="rounded-xl border p-3 text-left"
+                <button key={k} type="button" onClick={() => upd({ waitlistMode: k })} className="rounded-xl border p-3 text-start"
                   style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
                   <div className="text-[12.5px] font-extrabold">{on ? "● " : ""}{label}</div>
                   <div className="mt-1 text-[11px] leading-[1.5] text-[var(--ink-3)]">{desc}</div>
@@ -2874,7 +2875,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
     <div className="mt-3 rounded-2xl border p-3.5" style={box}>
       <div className="flex flex-wrap items-center gap-2">
         <b className="text-[12.5px]">{b.fullCount} day{b.fullCount === 1 ? " is" : "s are"} full</b>
-        <button type="button" onClick={b.waitAll} className="ml-auto text-[11.5px] font-bold underline underline-offset-2">
+        <button type="button" onClick={b.waitAll} className="ms-auto text-[11.5px] font-bold underline underline-offset-2">
           {b.waitSel.length === b.fullCount ? "Clear all" : `Join the waiting list for all ${b.fullCount}`}
         </button>
       </div>
@@ -3015,7 +3016,7 @@ function MealsAtCheckout({ d, dates, tone = "light" }: { d: WizardDraft; dates: 
   const sub = dark ? "#a9b7d4" : "#5b6478";
   return (
     <div className="mt-3 overflow-hidden rounded-2xl border" style={{ borderColor: line, background: cardBg }}>
-      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 px-3.5 py-2.5 text-start">
         <span className="text-[16px]">🍽️</span>
         <span className="min-w-0 flex-1">
           <span className="block text-[12.5px] font-extrabold" style={{ color: ink }}>Meals {chosen.length ? "on your days" : "available"}</span>
@@ -3099,12 +3100,12 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
         <>
           {step(1, "Choose your pass")}
           <div className="flex flex-wrap gap-2">
-            {b.passes.map((t) => { const closed = b.passClosed(t.id); const fits = b.passFits(t); const off = closed || !fits; return <button key={t.id} type="button" disabled={off} onClick={() => { if (!off) b.pickPass(t.id); }} title={closed ? "This pass is closed for this camp" : !fits ? `Not enough days left for a ${t.days}-day pass` : undefined} className="rounded-full border-2 px-4 py-2 text-[12.5px] font-bold disabled:cursor-not-allowed" style={off ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? { background: BLUE, color: "#fff", borderColor: BLUE } : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed ? <span className="ml-1.5 no-underline">· Closed</span> : !fits ? <span className="ml-1.5 no-underline">· Not enough days left</span> : null}</button>; })}
+            {b.passes.map((t) => { const closed = b.passClosed(t.id); const fits = b.passFits(t); const off = closed || !fits; return <button key={t.id} type="button" disabled={off} onClick={() => { if (!off) b.pickPass(t.id); }} title={closed ? "This pass is closed for this camp" : !fits ? `Not enough days left for a ${t.days}-day pass` : undefined} className="rounded-full border-2 px-4 py-2 text-[12.5px] font-bold disabled:cursor-not-allowed" style={off ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? { background: BLUE, color: "#fff", borderColor: BLUE } : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed ? <span className="ms-1.5 no-underline">· Closed</span> : !fits ? <span className="ms-1.5 no-underline">· Not enough days left</span> : null}</button>; })}
           </div>
           {b.periods.length > 0 && <>
             {step(2, "Choose a timing")}
             <div className="flex flex-wrap gap-2">
-              {b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="rounded-2xl border-2 px-3.5 py-2 text-left text-[12px] font-bold leading-tight" style={p.id === b.periodId ? { background: BLUE, color: "#fff", borderColor: BLUE } : idle}>{p.range}{b.pass ? <span className={p.id === b.periodId ? "block text-[10px] font-semibold opacity-90" : "block text-[10px] font-semibold text-[#7a8194]"}>{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}
+              {b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="rounded-2xl border-2 px-3.5 py-2 text-start text-[12px] font-bold leading-tight" style={p.id === b.periodId ? { background: BLUE, color: "#fff", borderColor: BLUE } : idle}>{p.range}{b.pass ? <span className={p.id === b.periodId ? "block text-[10px] font-semibold opacity-90" : "block text-[10px] font-semibold text-[#7a8194]"}>{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}
             </div>
           </>}
           {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? "Choose any dates" : "Choose your dates")}
@@ -3128,7 +3129,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
                     : dPast ? { borderColor: LINEp, color: "#cdd2db", background: "#f3f4f7", opacity: 0.6 }
                     : dOff || full ? { borderColor: LINEp, color: "#c8ccd4", background: "#fafbfd" }
                     : on ? { borderColor: BLUE, color: "#fff", background: BLUE } : { borderColor: LINEp, color: INKp, background: "#fff" }}>
-                  <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
+                  <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString(dl(), { weekday: "short", timeZone: "UTC" })}</span>
                   <span className="text-[14px] font-extrabold leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5 rounded-full" style={{ background: dot }} />}
                 </button>; })}</div>
@@ -3212,7 +3213,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
           <div className="mt-2 rounded-xl p-2" style={{ background: "#e4f8ee" }}>
             {b.discountLines.map((l, i) => (
               <div key={i} className="flex items-baseline justify-between text-[11.5px]" style={{ color: "#047857" }}>
-                <span className="pr-2">🎉 {l.name}</span><b>−{money(l.amount)}</b>
+                <span className="pe-2">🎉 {l.name}</span><b>−{money(l.amount)}</b>
               </div>
             ))}
           </div>
@@ -3293,10 +3294,10 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
         {b.passes.length === 0 ? <div className="text-[13px] text-[#8f9bb0]">Pick a block in Tickets &amp; pricing to enable booking.</div> : (
           <>
             {step(1, "Choose your pass")}
-            <div className="flex flex-wrap gap-2">{b.passes.map((t) => { const closed = b.passClosed(t.id); const fits = b.passFits(t); const off = closed || !fits; return <button key={t.id} type="button" disabled={off} onClick={() => { if (!off) b.pickPass(t.id); }} title={closed ? "This pass is closed for this camp" : !fits ? `Not enough days left for a ${t.days}-day pass` : undefined} className="border px-3 py-1.5 text-[12px] font-bold disabled:cursor-not-allowed" style={off ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? on : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed ? <span className="ml-1.5 no-underline">· Closed</span> : !fits ? <span className="ml-1.5 no-underline">· Not enough days left</span> : null}</button>; })}</div>
+            <div className="flex flex-wrap gap-2">{b.passes.map((t) => { const closed = b.passClosed(t.id); const fits = b.passFits(t); const off = closed || !fits; return <button key={t.id} type="button" disabled={off} onClick={() => { if (!off) b.pickPass(t.id); }} title={closed ? "This pass is closed for this camp" : !fits ? `Not enough days left for a ${t.days}-day pass` : undefined} className="border px-3 py-1.5 text-[12px] font-bold disabled:cursor-not-allowed" style={off ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? on : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed ? <span className="ms-1.5 no-underline">· Closed</span> : !fits ? <span className="ms-1.5 no-underline">· Not enough days left</span> : null}</button>; })}</div>
             {b.periods.length > 0 && <>
               {step(2, "Choose a timing")}
-              <div className="flex flex-wrap gap-2">{b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="border px-3 py-1.5 text-left text-[11.5px] font-bold leading-tight" style={p.id === b.periodId ? on : idle}>{p.range}{b.pass ? <span className="block text-[10px] font-semibold opacity-80">{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}</div>
+              <div className="flex flex-wrap gap-2">{b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="border px-3 py-1.5 text-start text-[11.5px] font-bold leading-tight" style={p.id === b.periodId ? on : idle}>{p.range}{b.pass ? <span className="block text-[10px] font-semibold opacity-80">{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}</div>
             </>}
             {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? "Choose any dates" : "Choose your dates")}
             {b.pass && cutoffNote(d, "#8f9bb0")}
@@ -3316,7 +3317,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                     : dPast ? { borderColor: LINEs, color: "#454d5e", background: CELLOFF, opacity: 0.5 }
                     : dOff || full ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF }
                     : sel ? { borderColor: LIME, color: INK, background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}>
-                  <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
+                  <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString(dl(), { weekday: "short", timeZone: "UTC" })}</span>
                   <span className="text-[13px] font-black leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5" style={{ background: dot }} />}
                 </button>; })}</div>
@@ -3361,7 +3362,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             </div>
             )}
             {b.addPreview && (
-              <div className="mt-2 border-l-[3px] p-3" style={{ borderLeftColor: LIME, background: CELL }}>
+              <div className="mt-2 border-s-[3px] p-3" style={{ borderInlineStartColor: LIME, background: CELL }}>
                 <div className="text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>
                   ⚡ {b.addPreview.lines.length === 1 ? "Discount applied" : `${b.addPreview.lines.length} discounts applied`}
                 </div>
@@ -3396,7 +3397,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             <div className="mt-2 border p-2" style={{ borderColor: LIME, background: "rgba(198,255,0,.08)" }}>
               {b.discountLines.map((l, i) => (
                 <div key={i} className="flex items-baseline justify-between text-[11.5px]" style={{ color: LIME }}>
-                  <span className="pr-2">{l.name}</span><b>−{money(l.amount)}</b>
+                  <span className="pe-2">{l.name}</span><b>−{money(l.amount)}</b>
                 </div>
               ))}
             </div>
@@ -3547,8 +3548,8 @@ function HeroImages({ imgs, fallback }: { imgs: ListingImage[]; fallback: string
       {imgs.map((im, idx) => <CroppedImage key={idx} im={im} className="absolute inset-0 h-full w-full transition-opacity duration-700" style={{ opacity: idx === cur ? 1 : 0 }} />)}
       {n > 1 && (
         <>
-          <button type="button" aria-label="Previous photo" onClick={() => setI((x) => (x - 1 + n) % n)} className="absolute left-2 top-1/2 z-[3] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-[18px] text-white backdrop-blur-sm hover:bg-black/55">‹</button>
-          <button type="button" aria-label="Next photo" onClick={() => setI((x) => (x + 1) % n)} className="absolute right-2 top-1/2 z-[3] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-[18px] text-white backdrop-blur-sm hover:bg-black/55">›</button>
+          <button type="button" aria-label="Previous photo" onClick={() => setI((x) => (x - 1 + n) % n)} className="absolute start-2 top-1/2 z-[3] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-[18px] text-white backdrop-blur-sm hover:bg-black/55">‹</button>
+          <button type="button" aria-label="Next photo" onClick={() => setI((x) => (x + 1) % n)} className="absolute end-2 top-1/2 z-[3] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-[18px] text-white backdrop-blur-sm hover:bg-black/55">›</button>
           <div className="absolute inset-x-0 bottom-3 z-[3] flex justify-center gap-1.5">
             {imgs.map((_, idx) => <button key={idx} type="button" aria-label={`Photo ${idx + 1}`} onClick={() => setI(idx)} className="h-1.5 rounded-full transition-all" style={{ width: idx === cur ? 18 : 6, background: idx === cur ? "#fff" : "rgba(255,255,255,.55)" }} />)}
           </div>
@@ -3562,14 +3563,14 @@ function PlayCard({ e, tint, title, sub, children }: { e: string; tint: string; 
   return (
     <div className="rounded-3xl bg-white p-5" style={{ boxShadow: "0 2px 0 #e8edf7" }}>
       <div className="mb-1 flex items-center gap-2.5"><span className="flex h-9 w-9 items-center justify-center rounded-2xl text-[17px]" style={{ background: tint }}>{e}</span><h2 className="text-[20px] font-extrabold tracking-[-0.02em] text-[#232842]">{title}</h2></div>
-      {sub && <p className="mb-3 ml-[46px] text-[12.5px] text-[#7a8194]">{sub}</p>}
+      {sub && <p className="mb-3 ms-[46px] text-[12.5px] text-[#7a8194]">{sub}</p>}
       <div className={sub ? "" : "mt-3"}>{children}</div>
     </div>
   );
 }
 // Bordered row + section header for the Sport page.
 function SportRow({ children }: { children: React.ReactNode }) {
-  return <div className="flex items-center gap-2.5 border border-l-[3px] px-3.5 py-3 text-[13.5px] font-bold text-white" style={{ borderColor: "#1e2430", borderLeftColor: "#c6ff00", background: "#12161f" }}>{children}</div>;
+  return <div className="flex items-center gap-2.5 border border-s-[3px] px-3.5 py-3 text-[13.5px] font-bold text-white" style={{ borderColor: "#1e2430", borderInlineStartColor: "#c6ff00", background: "#12161f" }}>{children}</div>;
 }
 function SportSec({ eye, title, children }: { eye: string; title: string; children: React.ReactNode }) {
   return (
@@ -3635,7 +3636,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
           <h1 className="mt-1 font-extrabold leading-[1.06] tracking-[-0.03em]" style={{ color: INKp, fontSize: full ? 27 : 21 }}>{d.title || "Your listing title"}</h1>
           </div>
           {opens.locked && (
-            <div className="flex-none rounded-2xl px-3.5 py-2 text-right" style={{ background: "#eef3ff", border: `1.5px solid ${BLUE}` }}>
+            <div className="flex-none rounded-2xl px-3.5 py-2 text-end" style={{ background: "#eef3ff", border: `1.5px solid ${BLUE}` }}>
               <div className="text-[9.5px] font-extrabold uppercase tracking-[0.1em]" style={{ color: BLUE }}>⏰ Booking opens in</div>
               <div className="text-[17px] font-extrabold leading-tight tabular-nums" style={{ color: BLUE }}>{opens.countdown}</div>
               <div className="text-[10px]" style={{ color: MUTp }}>{opens.opensLabel}</div>
@@ -3645,7 +3646,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
         {/* hero image (no text on it) */}
         <div className="relative overflow-hidden rounded-[28px]" style={{ aspectRatio: heroAspect }}>
           <HeroImages imgs={imgs} fallback={HERO_FALLBACK} />
-          {heroCat && <span className="absolute left-4 top-4 z-[2] rounded-full bg-white px-3.5 py-2 text-[12px] font-extrabold" style={{ color: BLUE, transform: "rotate(-3deg)" }}>🎉 {heroCat.name}</span>}
+          {heroCat && <span className="absolute start-4 top-4 z-[2] rounded-full bg-white px-3.5 py-2 text-[12px] font-extrabold" style={{ color: BLUE, transform: "rotate(-3deg)" }}>🎉 {heroCat.name}</span>}
         </div>
 
         {/* passes — fancy accordion, tap to open details */}
@@ -3658,7 +3659,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
                 const canOpen = !!(p.details || p.days);
                 return (
                   <div key={p.name} className="overflow-hidden rounded-xl bg-white" style={{ border: `1.5px solid ${isOpen ? BLUE : `${BLUE}22`}`, boxShadow: "0 3px 10px -8px rgba(30,50,90,.3)" }}>
-                    <button type="button" onClick={() => canOpen && setOpenPass(isOpen ? null : p.name)} className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left">
+                    <button type="button" onClick={() => canOpen && setOpenPass(isOpen ? null : p.name)} className="flex w-full items-center gap-2.5 px-2.5 py-2 text-start">
                       <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-[12px] font-black text-white" style={{ background: `linear-gradient(140deg,${BLUE},${DEEP})` }}>🎟</span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[11.5px] font-extrabold leading-tight" style={{ color: INKp }}>{p.name}</span>
@@ -3709,7 +3710,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
         {/* fancy fact strip (under the image) */}
         <div className="relative z-10 mx-2 -mt-6 flex flex-col overflow-hidden rounded-2xl bg-white sm:flex-row" style={{ boxShadow: "0 18px 34px -18px rgba(30,50,90,.35)" }}>
           {([["📍", "Where", venue?.name || town || "Venue TBC", "#eef4ff", venue?.address || null], ["📆", "When", runLabel, "#e4f8ee", null], ["👧👦", "Ages", d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo} years` : "All ages", "#fff0f5", null]] as [string, string, string, string, string | null][]).map(([e, k, v, tint, sub], i) => (
-            <div key={k} className={`flex flex-1 items-center gap-3 px-4 py-3.5 ${i ? "border-t border-[#eef2fb] sm:border-l sm:border-t-0" : ""}`}>
+            <div key={k} className={`flex flex-1 items-center gap-3 px-4 py-3.5 ${i ? "border-t border-[#eef2fb] sm:border-s sm:border-t-0" : ""}`}>
               <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[16px]" style={{ background: tint }}>{e}</span>
               <div className="min-w-0"><div className="text-[9.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">{k}</div><div className="truncate text-[13px] font-extrabold" style={{ color: DEEP }}>{v}</div>{sub && <div className="truncate text-[11px] font-medium text-[#7a8194]">{sub}</div>}</div>
             </div>
@@ -3728,7 +3729,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
             {d.send.length > 0 && <PlayCard e="🤝" tint="#e0f5ff" title={headingOf(d, "send", "title")} sub={headingOf(d, "send", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o, i) => chip(o, "♿", i))}</div></PlayCard>}
             {venue && (isOnlineVenue(venue) || venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
               <div className="rounded-3xl bg-white p-5" style={{ boxShadow: "0 2px 0 #e8edf7" }}>
-                <button type="button" onClick={() => setWhereOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
+                <button type="button" onClick={() => setWhereOpen((o) => !o)} className="flex w-full items-center justify-between text-start">
                   <div className="flex items-center gap-2.5">
                     <span className="flex h-9 w-9 items-center justify-center rounded-2xl text-[17px]" style={{ background: "#e7f0ff" }}>📍</span>
                     <div>
@@ -3769,7 +3770,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
             )}
             {staff.length > 0 && (
               <div className="rounded-3xl bg-white p-5" style={{ boxShadow: "0 2px 0 #e8edf7" }}>
-                <button type="button" onClick={() => setTeamOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
+                <button type="button" onClick={() => setTeamOpen((o) => !o)} className="flex w-full items-center justify-between text-start">
                   <div className="flex items-center gap-2.5"><span className="flex h-9 w-9 items-center justify-center rounded-2xl text-[17px]" style={{ background: "#e7f0ff" }}>👋</span><h2 className="text-[20px] font-extrabold tracking-[-0.02em] text-[#232842]">{headingOf(d, "team", "title")}</h2></div>
                   <span className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] font-extrabold text-white" style={{ background: BLUE }}>{teamOpen ? "–" : "+"}</span>
                 </button>
@@ -3851,7 +3852,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
         <h1 className={`mt-1.5 font-black ${cond}`} style={{ fontSize: full ? 38 : 26, lineHeight: .94, color: "#fff" }}>{d.title || "Your listing title"}</h1>
         </div>
         {opens.locked && (
-          <div className="flex-none border px-3.5 py-2 text-right" style={{ borderColor: LIME, background: PANEL }}>
+          <div className="flex-none border px-3.5 py-2 text-end" style={{ borderColor: LIME, background: PANEL }}>
             <div className="text-[9.5px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>⏰ Booking opens in</div>
             <div className="text-[17px] font-black leading-tight tabular-nums text-white">{opens.countdown}</div>
             <div className="text-[10px]" style={{ color: MUTs }}>{opens.opensLabel}</div>
@@ -3862,12 +3863,12 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
       <div className="relative overflow-hidden" style={{ aspectRatio: heroAspect }}>
         <HeroImages imgs={imgs} fallback={`linear-gradient(120deg,${EL},#00a3ff 70%,#003)`} />
         <div className="pointer-events-none absolute inset-0 z-[1]" style={{ backgroundImage: "repeating-linear-gradient(115deg,transparent 0 46px,rgba(255,255,255,.05) 46px 48px)" }} />
-        {heroCat && <span className="absolute left-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em]" style={{ background: LIME, color: INK, transform: "skewX(-8deg)" }}>{heroCat.name}</span>}
+        {heroCat && <span className="absolute start-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em]" style={{ background: LIME, color: INK, transform: "skewX(-8deg)" }}>{heroCat.name}</span>}
       </div>
       {/* fancy info strip (under the image) */}
       <div className="flex flex-col border-y sm:flex-row" style={{ borderColor: LINEs, background: PANEL }}>
         {([["📍", venue?.name || town || "Venue TBC", venue?.address || null], ["📆", runLabel, null], ["👧👦", d.ageFrom && d.ageTo ? `Ages ${d.ageFrom}–${d.ageTo}` : "All ages", null]] as [string, string, string | null][]).map(([e, v, sub], i) => (
-          <div key={i} className={`flex flex-1 items-center gap-2.5 px-5 py-3 ${i ? "border-t sm:border-l sm:border-t-0" : ""}`} style={i ? { borderColor: LINEs } : undefined}>
+          <div key={i} className={`flex flex-1 items-center gap-2.5 px-5 py-3 ${i ? "border-t sm:border-s sm:border-t-0" : ""}`} style={i ? { borderColor: LINEs } : undefined}>
             <span className="text-[15px]">{e}</span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[12px] font-bold uppercase tracking-[0.05em] text-white">{v}</span>
@@ -3879,7 +3880,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
       </div>
       {d.payMethods && d.payMethods.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 border-b px-5 py-2.5" style={{ borderColor: LINEs, background: PANEL }}>
-          <span className="mr-0.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white/60">Ways to pay</span>
+          <span className="me-0.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white/60">Ways to pay</span>
           <span className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: `${LIME}26`, border: `1px solid ${LIME}` }}>💳 Card</span>
           {d.payMethods.map((m) => <span key={m} className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: "rgba(255,255,255,.06)", border: `1px solid ${LINEs}` }}>{m}</span>)}
         </div>
@@ -3896,7 +3897,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
           // Flex, not a column count: tiles come and go (no staff, no
           // discounts, spaces hidden) and column maths silently wrapped the
           // last one onto its own row every time the mix changed.
-          const tile = "min-w-0 flex-1 border-b border-l px-4 py-3.5 first:border-l-0";
+          const tile = "min-w-0 flex-1 border-b border-s px-4 py-3.5 first:border-s-0";
           const wide = tile;
           const lab = "truncate text-[9.5px] font-bold uppercase tracking-[0.12em]";
           return (
@@ -3906,7 +3907,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   slot earns more as the team, names visible, bios on tap. */}
               {staff.length > 0 && (
                 <button type="button" onClick={() => setTeamOpen((o) => !o)}
-                  className={`${wide} flex flex-col text-left`} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
+                  className={`${wide} flex flex-col text-start`} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className={lab} style={{ color: MUTs }}>{headingOf(d, "team", "eyebrow")}</div>
@@ -4025,8 +4026,8 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                       const isOpen = openPass === pp.name;
                       const canOpen = !!(pp.details || pp.days);
                       return (
-                        <div key={pp.name} className="overflow-hidden rounded-md" style={{ background: surf.cell, borderLeft: `2px solid ${LIME}` }}>
-                          <button type="button" onClick={() => canOpen && setOpenPass(isOpen ? null : pp.name)} className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left">
+                        <div key={pp.name} className="overflow-hidden rounded-md" style={{ background: surf.cell, borderInlineStart: `2px solid ${LIME}` }}>
+                          <button type="button" onClick={() => canOpen && setOpenPass(isOpen ? null : pp.name)} className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-start">
                             <span className="min-w-0">
                               <span className={`block truncate text-[10.5px] font-bold text-white ${cond}`}>{pp.name}</span>
                               {pp.days ? <span className="block whitespace-nowrap text-[9px]" style={{ color: MUTs }}>{pp.days} day{pp.days === 1 ? "" : "s"}{canOpen ? " · details" : ""}</span> : null}
@@ -4109,7 +4110,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
             {d.send.length > 0 && <SportSec eye={headingOf(d, "send", "eyebrow")} title={headingOf(d, "send", "title")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o) => <SportRow key={o}><span>{emo(o, "♿")}</span>{o}</SportRow>)}</div></SportSec>}
             {venue && (isOnlineVenue(venue) || venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
               <div className="border-t pt-6" style={{ borderColor: LINEs }}>
-                <button type="button" onClick={() => setWhereOpen((o) => !o)} className="flex w-full items-center justify-between border px-4 py-3 text-left" style={{ borderColor: LINEs, background: PANEL }}>
+                <button type="button" onClick={() => setWhereOpen((o) => !o)} className="flex w-full items-center justify-between border px-4 py-3 text-start" style={{ borderColor: LINEs, background: PANEL }}>
                   <span className="flex items-baseline gap-2.5">
                     <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: LIME }}>{whereHead.eyebrow}</span>
                     <span className={`text-[16px] font-black ${cond} text-white`}>{whereHead.title}</span>
@@ -4181,7 +4182,7 @@ function SectionHead({ children, icon }: { children: React.ReactNode; icon?: str
     <div className="mb-1.5 mt-3 flex items-center gap-2 first:mt-0">
       {icon && <span className="flex h-6 w-6 flex-none items-center justify-center rounded-lg text-[12px] text-white shadow-[0_2px_6px_rgba(31,84,163,.3)]" style={{ background: "linear-gradient(135deg,#3f78d8,#16306e)" }}>{icon}</span>}
       <div className="text-[12.5px] font-extrabold tracking-[-0.01em] text-[#16306e]">{children}</div>
-      <div className="ml-1 h-px flex-1 rounded-full" style={{ background: "linear-gradient(90deg,var(--brand-line,#cdddf7),transparent)" }} />
+      <div className="ms-1 h-px flex-1 rounded-full" style={{ background: "linear-gradient(90deg,var(--brand-line,#cdddf7),transparent)" }} />
     </div>
   );
 }

@@ -157,7 +157,7 @@ export function FamiliesExport({
               {t("customers.exportSubtitle")}
             </div>
           </div>
-          <span onClick={onClose} className="ml-auto cursor-pointer text-[22px] text-[var(--ink-3)]">
+          <span onClick={onClose} className="ms-auto cursor-pointer text-[22px] text-[var(--ink-3)]">
             ×
           </span>
         </div>
@@ -260,7 +260,7 @@ export function FamiliesExport({
                 <thead>
                   <tr>
                     {cols.map((c) => (
-                      <th key={c.key} className="whitespace-nowrap border-b border-[var(--line)] px-2.5 py-1.5 text-left text-[9.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">
+                      <th key={c.key} className="whitespace-nowrap border-b border-[var(--line)] px-2.5 py-1.5 text-start text-[9.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">
                         {c.label}
                       </th>
                     ))}
@@ -304,7 +304,7 @@ export function FamiliesExport({
 
           <div className="text-[11.5px] text-[var(--ink-3)]">{subtitle}</div>
 
-          <div className="ml-auto flex gap-2">
+          <div className="ms-auto flex gap-2">
             <Button onClick={onClose}>{t("customers.cancel")}</Button>
             <Button variant="primary" disabled={!shown.length || !cols.length} onClick={run}>
               {format === "csv" ? t("customers.downloadCsvBtn") : t("customers.openPrintPdf")}

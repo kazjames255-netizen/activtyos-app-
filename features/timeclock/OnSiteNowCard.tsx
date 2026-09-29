@@ -214,7 +214,7 @@ export function OnSiteNowCard() {
         <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#12b76a] opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#12b76a]" /></span>
         <div className="text-[14px] font-extrabold text-[var(--ink)]">On site now</div>
         <span className="text-[11px] font-semibold text-[var(--ink-3)]">· updates live</span>
-        <a href="timesheets" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Timesheets →</a>
+        <a href="timesheets" className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Timesheets →</a>
       </div>
 
       {/* ── Location cards ──────────────────────────────────────────────────
@@ -235,11 +235,11 @@ export function OnSiteNowCard() {
                 key={l.key} type="button"
                 onClick={() => setLoc(on ? "" : l.key)}
                 title={on ? "Show every location" : `Show only ${l.name}`}
-                className="relative overflow-hidden rounded-2xl p-3.5 text-left transition hover:-translate-y-0.5"
+                className="relative overflow-hidden rounded-2xl p-3.5 text-start transition hover:-translate-y-0.5"
                 style={{ background: c.bg, color: c.ink, boxShadow: on ? `0 0 0 3px var(--surface), 0 0 0 5px ${c.ring}` : "0 6px 18px -10px rgba(16,35,86,.55)" }}
               >
                 {/* soft highlight, so a flat fill doesn't read as a button */}
-                <span aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full" style={{ background: "rgba(255,255,255,.16)" }} />
+                <span aria-hidden className="pointer-events-none absolute -end-8 -top-10 h-28 w-28 rounded-full" style={{ background: "rgba(255,255,255,.16)" }} />
                 <div className="relative flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="truncate text-[12px] font-bold opacity-90">📍 {l.name}</div>
@@ -307,7 +307,7 @@ export function OnSiteNowCard() {
                   const onBreak = s.status === "break";
                   return (
                     <div key={s.id} className="relative overflow-hidden rounded-2xl p-3 text-center" style={{ background: c.bg, color: c.ink, boxShadow: "0 6px 18px -10px rgba(16,35,86,.55)" }}>
-                      <span aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full" style={{ background: "rgba(255,255,255,.14)" }} />
+                      <span aria-hidden className="pointer-events-none absolute -end-8 -top-10 h-24 w-24 rounded-full" style={{ background: "rgba(255,255,255,.14)" }} />
                       {/* No photo field exists on a staff record yet, so this is
                           initials in the same treatment a photo would take. */}
                       <span className="relative mx-auto grid h-16 w-16 place-items-center rounded-full text-[18px] font-extrabold"
@@ -382,7 +382,7 @@ export function OnSiteNowCard() {
                   {r.venue
                     ? <span className="rounded-md bg-white/15 px-2 py-0.5 text-[11px] font-bold ring-1 ring-white/20">📍 {r.venue}</span>
                     : <span className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white/70">No venue set</span>}
-                  <span className="ml-auto text-[13px] font-extrabold tabular-nums">{r.present}/{r.expected} in{r.absent ? ` · ${r.absent} absent` : ""}</span>
+                  <span className="ms-auto text-[13px] font-extrabold tabular-nums">{r.present}/{r.expected} in{r.absent ? ` · ${r.absent} absent` : ""}</span>
                 </div>
 
                 {/* ── visual summary: completion ring + segmented bar + staff avatars ── */}
@@ -402,11 +402,11 @@ export function OnSiteNowCard() {
                       </div>
                     </div>
                   </div>
-                  <div className="sm:min-w-[150px] sm:border-l sm:border-[#eef1f6] sm:pl-4">
+                  <div className="sm:min-w-[150px] sm:border-s sm:border-[#eef1f6] sm:ps-4">
                     <div className="text-[10.5px] font-extrabold uppercase tracking-[0.09em] text-[var(--ink-3)]">Staff on site</div>
                     <div className="text-[22px] font-extrabold tabular-nums text-[#1d3a8f]">{staffIn}{staffBreak ? <span className="text-[13px] font-bold text-[#b45309]"> +{staffBreak} on break</span> : ""}</div>
                     {r.staff.length > 0
-                      ? <div className="mt-1.5 flex flex-wrap items-center pl-1.5">{r.staff.map((s) => <span key={s.id} className="-ml-1.5"><Avatar name={s.name} tone={staffTone(s)} sm /></span>)}</div>
+                      ? <div className="mt-1.5 flex flex-wrap items-center ps-1.5">{r.staff.map((s) => <span key={s.id} className="-ms-1.5"><Avatar name={s.name} tone={staffTone(s)} sm /></span>)}</div>
                       : <div className="mt-1 text-[11px] text-[var(--ink-3)]">{r.venue ? "None clocked in here" : "No venue → can’t match staff"}</div>}
                   </div>
                 </div>
@@ -421,7 +421,7 @@ export function OnSiteNowCard() {
                         <div key={s.blockId} className="flex items-center gap-3">
                           <span className="w-[104px] flex-none rounded-md bg-[var(--panel)] px-2 py-1 text-center text-[11.5px] font-bold tabular-nums text-[var(--ink-2)] ring-1 ring-[var(--line)]">{s.start}–{s.end}</span>
                           <div className="min-w-0 flex-1"><SegBar h={8} segs={[{ value: s.counts.present, color: GREEN }, { value: na, color: AMBER }, { value: s.counts.absent, color: RED }]} /></div>
-                          <span className="w-[118px] flex-none whitespace-nowrap text-right text-[11.5px] font-semibold tabular-nums text-[var(--ink-2)]"><b style={{ color: GREEN }}>{s.counts.present}</b>/{s.counts.expected} in{s.counts.absent ? ` · ${s.counts.absent} abs` : ""}</span>
+                          <span className="w-[118px] flex-none whitespace-nowrap text-end text-[11.5px] font-semibold tabular-nums text-[var(--ink-2)]"><b style={{ color: GREEN }}>{s.counts.present}</b>/{s.counts.expected} in{s.counts.absent ? ` · ${s.counts.absent} abs` : ""}</span>
                         </div>
                       );
                     })}

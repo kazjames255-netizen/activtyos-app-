@@ -130,7 +130,7 @@ export function DemoSlotsPanel() {
             <span className="w-[90px] flex-none text-[13px] font-extrabold text-[var(--ink)]">{WEEKDAYS[t.weekday]}</span>
             <span className="text-[13px] font-bold text-[var(--ink-2)]">{t.time}</span>
             <span className="text-[11.5px] text-[var(--ink-3)]">· {t.durationMins} mins</span>
-            <span className="ml-auto flex items-center gap-2">
+            <span className="ms-auto flex items-center gap-2">
               <button type="button" onClick={() => toggle(t)} className={`rounded-full px-3.5 py-1.5 text-[11.5px] font-extrabold ${t.active ? "bg-[#e7f6ee] text-[#0f7a43]" : "bg-[var(--panel)] text-[var(--ink-3)]"}`}>
                 {t.active ? "✓ On" : "Off"}
               </button>
@@ -177,7 +177,7 @@ export function DemoSlotsPanel() {
             <div key={b.id} data-ui="card" className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
               <span className="text-[13px] font-extrabold text-[var(--ink)]">{b.from === b.to ? b.from : `${b.from} → ${b.to}`}</span>
               {b.note && <span className="text-[11.5px] text-[var(--ink-3)]">· {b.note}</span>}
-              <button type="button" onClick={() => removeBlackout(b.id)} className="ml-auto rounded-full border border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[var(--red,#c0392b)] hover:bg-[#fdebec]">Remove</button>
+              <button type="button" onClick={() => removeBlackout(b.id)} className="ms-auto rounded-full border border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[var(--red,#c0392b)] hover:bg-[#fdebec]">Remove</button>
             </div>
           ))}
         </div>

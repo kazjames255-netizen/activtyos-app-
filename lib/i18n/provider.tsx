@@ -3,6 +3,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, isRTL, type LocaleCode } from "./config";
 import { CATALOGS } from "./messages";
+import { setDateLocale } from "./format";
+import { translateWord } from "./words";
 import { hubReady, isHubKey, loadHub, lookupHub, subscribeHub } from "./hubMessages";
 
 type Vars = Record<string, string | number>;
@@ -10,6 +12,8 @@ interface Ctx {
   locale: LocaleCode;
   setLocale: (l: LocaleCode) => void;
   t: (key: string, vars?: Vars) => string;
+  /** Translate a canonical English data word ("Confirmed", "Paid · voucher") — unknown text is returned unchanged. */
+  w: (s: string | null | undefined) => string;
 }
 
 const I18nContext = createContext<Ctx | null>(null);
@@ -59,19 +63,27 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     try { localStorage.setItem(LOCALE_STORAGE_KEY, l); } catch { /* ignore */ }
   };
 
+  // Keep the shared date/number tag in step with the picker during render, so every child formats with the same language.
+  setDateLocale(locale);
   const t = (key: string, vars?: Vars) => translate(locale, key, vars);
 
-  return <I18nContext.Provider value={{ locale, setLocale, t }}>{children}</I18nContext.Provider>;
+  const w = (s: string | null | undefined) => translateWord(t, s);
+  return <I18nContext.Provider value={{ locale, setLocale, t, w }}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n(): Ctx {
   const ctx = useContext(I18nContext);
   // Safe fallback if a component renders outside the provider (e.g. isolated tests).
-  if (!ctx) return { locale: DEFAULT_LOCALE, setLocale: () => {}, t: (k, v) => translate(DEFAULT_LOCALE, k, v) };
+  if (!ctx) { const t = (k: string, v?: Vars) => translate(DEFAULT_LOCALE, k, v); return { locale: DEFAULT_LOCALE, setLocale: () => {}, t, w: (s) => translateWord(t, s) }; }
   return ctx;
 }
 
 // Convenience: `const t = useT(); t("header.myBookings")`.
 export function useT() {
   return useI18n().t;
+}
+
+/** `const w = useWord(); w(b.status)` — see lib/i18n/words.ts. */
+export function useWord() {
+  return useI18n().w;
 }

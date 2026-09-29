@@ -1,5 +1,6 @@
 "use client";
 
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost, isDemoMode } from "@/lib/api";
@@ -171,7 +172,7 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(imgW - 5)} className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-[#E4E9F5] bg-[var(--surface)] text-[15px] font-extrabold text-[#2f5fd0] hover:bg-[#E8EEFD]">−</button>
           <input type="range" min={10} max={100} step={1} value={imgW} onChange={(e) => sizeImg(Number(e.target.value))} className="h-1.5 min-w-[120px] flex-1 accent-[#2f6bd8]" />
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(imgW + 5)} className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-[#E4E9F5] bg-[var(--surface)] text-[15px] font-extrabold text-[#2f5fd0] hover:bg-[#E8EEFD]">+</button>
-          <span className="w-10 flex-none text-right text-[12px] font-extrabold text-[var(--ink)]" style={{ fontVariantNumeric: "tabular-nums" }}>{imgW}%</span>
+          <span className="w-10 flex-none text-end text-[12px] font-extrabold text-[var(--ink)]" style={{ fontVariantNumeric: "tabular-nums" }}>{imgW}%</span>
           <div className="mx-1 h-4 w-px flex-none bg-[#dbe6fb]" />
           {([["S", 30], ["M", 60], ["L", 100]] as const).map(([l, w]) => <button key={l} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(w)} className="flex-none rounded-md border border-[#E4E9F5] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-bold text-[#2f5fd0] hover:bg-[#E8EEFD]">{l}</button>)}
         </div>
@@ -179,14 +180,14 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
       <div ref={ref} contentEditable suppressContentEditableWarning
         onInput={() => { if (ref.current) onChange(ref.current.innerHTML); }}
         onClick={pickImg}
-        className="min-h-[180px] px-3 py-2.5 text-[13px] leading-relaxed outline-none [&_a]:text-[#1d3a8f] [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--line)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--ink-3)] [&_h3]:mb-1 [&_h3]:text-[16px] [&_h3]:font-extrabold [&_img]:cursor-pointer [&_img]:rounded-lg [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" />
+        className="min-h-[180px] px-3 py-2.5 text-[13px] leading-relaxed outline-none [&_a]:text-[#1d3a8f] [&_a]:underline [&_blockquote]:border-s-2 [&_blockquote]:border-[var(--line)] [&_blockquote]:ps-3 [&_blockquote]:text-[var(--ink-3)] [&_h3]:mb-1 [&_h3]:text-[16px] [&_h3]:font-extrabold [&_img]:cursor-pointer [&_img]:rounded-lg [&_ol]:list-decimal [&_ol]:ps-5 [&_ul]:list-disc [&_ul]:ps-5" />
       {hasImg && <div className="rounded-b-lg border-t border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[10.5px] text-[var(--ink-3)]">💡 The slider above resizes your photo. With more than one, click the one you want first.</div>}
     </div>
   );
 }
 interface Sent { id: string; subject: string; audience: string; recipientCount: number; sentByName?: string; createdAt?: string; status?: "sending" | "sent"; delivered?: number; openedBy?: string[] }
 interface LiveMoment { id: string; caption?: string; comments?: { role?: string; text: string; byName?: string; marketing?: boolean }[] }
-const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const when = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 const BROWN = "#9a5a00", BLUE = "#1d3a8f", GREEN = "#047857";
 const SWATCHES = ["#171534", "#1d3a8f", "#be1259", "#047857", "#b45309"];
 const RATIO_AR: Record<string, string> = { square: "1 / 1", portrait: "4 / 5", story: "9 / 16" };
@@ -302,7 +303,7 @@ const toMail = (m: ServerMail): Mail => ({
   folder: (["inbox", "archive", "snoozed", "spam", "trash"].includes(m.folder ?? "") ? m.folder : "inbox") as MailFolder,
 });
 // "Sends Fri 1 Aug, 09:00" — sendAt is a local datetime string, not ISO+tz.
-const whenSched = (sendAt: string) => new Date(sendAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const whenSched = (sendAt: string) => new Date(sendAt).toLocaleString(dl(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const FOLDERS: [string, string][] = [
   ["inbox", "Inbox"], ["starred", "Starred"], ["snoozed", "Snoozed"], ["sent", "Sent"],
   ["drafts", "Drafts"], ["scheduled", "Scheduled"], ["archive", "Archive"], ["spam", "Spam"], ["trash", "Trash"], ["all", "All mail"],
@@ -419,7 +420,7 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
         <code data-ui="inbound-address" className="rounded-md bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-bold text-[var(--ink-2)]">{address}</code>
         <span className="text-[11.5px] text-[var(--ink-3)]">Last message {when(mb.lastAt ?? undefined)}</span>
         <button type="button" onClick={() => setWalk(true)} className="text-[11.5px] font-bold text-[#1d3a8f] underline">Gmail walkthrough</button>
-        <button type="button" onClick={() => setHost("outlook")} className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] underline">Change or re-check setup</button>
+        <button type="button" onClick={() => setHost("outlook")} className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] underline">Change or re-check setup</button>
         {walk && <GmailSetupWalkthrough address={address} onClose={() => setWalk(false)} />}
       </div>
     );
@@ -429,7 +430,7 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
     <div data-ui="mailbox-setup" className="overflow-hidden rounded-2xl border border-[#E4E9F5] bg-[var(--surface)]">
       {/* The dropdown header — always visible; a click reveals the steps. */}
       <div className="flex items-center gap-2 bg-[#f4f8ff] px-4 py-3">
-        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2.5 text-start">
           <span className="text-[16px]">📧</span>
           <span className="min-w-0 flex-1">
             <span className="block text-[14px] font-extrabold text-[#16306e]">Setting up your email</span>
@@ -486,7 +487,7 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
                 ))}
               </div>
             )}
-            <ol className="ml-4 list-decimal text-[12.5px] leading-relaxed text-[var(--ink-2)]">
+            <ol className="ms-4 list-decimal text-[12.5px] leading-relaxed text-[var(--ink-2)]">
               {chosen.steps.map((t) => <li key={t} className="mt-0.5">{t}</li>)}
             </ol>
             <div className="mt-2 text-[11.5px] leading-relaxed text-[var(--ink-3)]">{chosen.note}</div>
@@ -667,7 +668,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
           <button type="button" onClick={onCompose} className="mb-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white shadow" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>✎ Compose</button>
           <div className="flex flex-col">
             {FOLDERS.map(([k, label]) => { const n = count(k); return (
-              <button key={k} type="button" onClick={() => setFolder(k)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-semibold" style={folder === k ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 800 } : { color: "var(--ink-2)" }}>
+              <button key={k} type="button" onClick={() => setFolder(k)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-start text-[13px] font-semibold" style={folder === k ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 800 } : { color: "var(--ink-2)" }}>
                 <span className="flex-1">{label}</span>{n ? <span className="rounded-full bg-[var(--panel)] px-1.5 text-[11px] font-bold text-[var(--ink-2)]">{n}</span> : null}
               </button>
             ); })}
@@ -678,14 +679,14 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
         <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
           <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2">
             {([["all", "All"], ["unread", "Unread"], ["starred", "Starred"], ["files", "Has files"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setFilter(k)} className="rounded-full px-3 py-1 text-[12.5px] font-bold" style={filter === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)" }}>{l}</button>)}
-            <span className="ml-auto text-[12px] text-[var(--ink-3)]">{list.length ? `1–${list.length} of ${list.length}` : "0"}</span>
+            <span className="ms-auto text-[12px] text-[var(--ink-3)]">{list.length ? `1–${list.length} of ${list.length}` : "0"}</span>
           </div>
           {list.length === 0 ? <div className="px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">{folder === "inbox" && !items.length ? "No mail yet. Email sent to your connected address lands here — sends and replies still work from Compose." : "Nothing here."}</div>
           : list.map((m) => (
             <div key={m.id} className={`flex w-full items-center gap-3 border-b border-[var(--line)] px-3 last:border-0 hover:bg-[#f7faff] ${pad}`} style={m.unread ? { background: "#f2f7ff" } : undefined}>
               <span className="flex-none" style={{ width: 6 }}>{m.unread && <span className="block h-2 w-2 rounded-full" style={{ background: "#2f6bd8" }} />}</span>
               <button type="button" onClick={() => star(m)} className="flex-none text-[15px]" style={{ color: m.starred ? "#f4b400" : "var(--ink-3)" }} aria-label={m.starred ? "Unstar" : "Star"}>{m.starred ? "★" : "☆"}</button>
-              <button type="button" onClick={() => openMail(m)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+              <button type="button" onClick={() => openMail(m)} className="flex min-w-0 flex-1 items-center gap-3 text-start">
                 <span className={`w-[140px] flex-none truncate text-[13.5px] ${m.unread ? "font-extrabold text-[var(--ink)]" : "font-normal text-[var(--ink-2)]"}`}>{m.from}{m.thread && <span className="text-[var(--ink-3)]"> »</span>}</span>
                 <span className="min-w-0 flex-1 truncate text-[13.5px]"><span className={m.unread ? "font-extrabold text-[var(--ink)]" : "font-normal text-[var(--ink-2)]"}>{m.subject}</span> <span className="text-[var(--ink-3)]">— {m.preview}</span></span>
                 {m.labels?.map((l) => <span key={l} className="flex-none rounded-md px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}
@@ -716,7 +717,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
             <div className="px-6 py-4 text-white" style={{ background: "radial-gradient(120% 160% at 8% -30%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#2f6bd8 100%)" }}>
               <div className="flex items-start gap-2">
                 <span className="text-[19px] font-extrabold leading-snug" style={{ fontFamily: "var(--ff-display)" }}>{o.subject}</span>
-                <button type="button" onClick={() => setOpen(null)} className="ml-auto flex h-7 w-7 flex-none items-center justify-center rounded-full text-[16px] text-white/85 hover:bg-white/20">×</button>
+                <button type="button" onClick={() => setOpen(null)} className="ms-auto flex h-7 w-7 flex-none items-center justify-center rounded-full text-[16px] text-white/85 hover:bg-white/20">×</button>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">{o.labels?.map((l) => <span key={l} className="rounded-md px-2 py-0.5 text-[11px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}{o.tag && <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold text-white/90">🏷 {o.tag}</span>}</div>
             </div>
@@ -733,7 +734,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
                 <button type="button" onClick={() => spam(o)} className={toolBtn}>⊘ Spam</button>
                 <button type="button" onClick={() => del(o)} className="flex-none rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[#2f5fd0] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#C81E5E]">🗑 {o.folder === "trash" ? "Delete forever" : "Delete"}</button>
               </>}
-              <button type="button" onClick={() => setShowContact((v) => !v)} className={`${toolBtn} ml-auto`} title="Show this sender's contact card">◐ Contact</button>
+              <button type="button" onClick={() => setShowContact((v) => !v)} className={`${toolBtn} ms-auto`} title="Show this sender's contact card">◐ Contact</button>
             </div>
             {/* Reply / Forward / Mark as enquiry — also at the top so they're
                 reachable without scrolling past a long message. */}
@@ -741,7 +742,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
               <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(47,107,216,.5)]" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>↩ Reply</button>
               {(o.cc?.length ?? 0) > 0 && <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↩ Reply all</button>}
               <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↪ Forward</button>
-              <button type="button" onClick={() => { setEnqLocs([]); setEnqFor(o); }} className="ml-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title="Add this sender to your New enquiries list">➕ Mark as enquiry</button>
+              <button type="button" onClick={() => { setEnqLocs([]); setEnqFor(o); }} className="ms-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title="Add this sender to your New enquiries list">➕ Mark as enquiry</button>
             </div>}
             {/* message */}
             <div className="px-6 py-5">
@@ -759,7 +760,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
               <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(47,107,216,.5)]" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>↩ Reply</button>
               {(o.cc?.length ?? 0) > 0 && <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↩ Reply all</button>}
               <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↪ Forward</button>
-              <button type="button" onClick={() => { setEnqLocs([]); setEnqFor(o); }} className="ml-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title="Add this sender to your New enquiries list">➕ Mark as enquiry</button>
+              <button type="button" onClick={() => { setEnqLocs([]); setEnqFor(o); }} className="ms-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title="Add this sender to your New enquiries list">➕ Mark as enquiry</button>
             </div>}
           </div>
         </div>
@@ -772,7 +773,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
               <div className="text-[12.5px] text-white/80">{enqFor.from} — which location are they interested in?</div>
             </div>
             <div className="p-5">
-              <FieldLabel>Location{locations.length > 0 && <span className="ml-1 font-normal normal-case tracking-normal text-[var(--ink-3)]">— pick one or more</span>}</FieldLabel>
+              <FieldLabel>Location{locations.length > 0 && <span className="ms-1 font-normal normal-case tracking-normal text-[var(--ink-3)]">— pick one or more</span>}</FieldLabel>
               {locations.length === 0
                 ? <p className="text-[12.5px] text-[var(--ink-3)]">No venues on file yet — they&apos;ll be added with no specific location.</p>
                 : <div className="flex flex-wrap gap-2">
@@ -782,8 +783,8 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
                   </div>}
               <p className="mt-2.5 text-[11.5px] text-[var(--ink-3)]">{enqLocs.length === 0 ? "None selected — they’ll be added with no specific location." : `They’ll appear on ${enqLocs.length} location board${enqLocs.length === 1 ? "" : "s"}.`} Drops off automatically once they book.</p>
               <div className="mt-5 flex items-center gap-2">
-                {enqLocs.length > 0 && <button type="button" onClick={() => setEnqLocs([])} className="mr-auto text-[12px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">Clear</button>}
-                <button type="button" onClick={() => setEnqFor(null)} className="ml-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Cancel</button>
+                {enqLocs.length > 0 && <button type="button" onClick={() => setEnqLocs([])} className="me-auto text-[12px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">Clear</button>}
+                <button type="button" onClick={() => setEnqFor(null)} className="ms-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Cancel</button>
                 <button type="button" onClick={() => { onEnquiry(enqFor, enqLocs); setEnqFor(null); setOpen(null); }} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>➕ Add to enquiries</button>
               </div>
             </div>
@@ -845,7 +846,7 @@ const STATUS_PILL: Record<CampStatus, { bg: string; fg: string; label: string }>
 const parseDate = (s?: string) => { if (!s) return null; const t = Date.parse(s); return Number.isNaN(t) ? null : new Date(t); };
 const bookedDate = (b: Booking) => parseDate(b.createdAt);           // when the booking was MADE
 const sessionDate = (b: Booking) => parseDate(b.date || b.createdAt); // when the child ATTENDS
-const fmtD = (s?: string) => { const d = parseDate(s); return d ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : ""; };
+const fmtD = (s?: string) => { const d = parseDate(s); return d ? d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : ""; };
 function matchBooking(b: Booking, f: AudFilter): boolean {
   if (f.location && (b.locationName || "") !== f.location) return false;
   if (f.paymentMethod && (b.method || "") !== f.paymentMethod) return false;
@@ -897,7 +898,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   const runLabel = (l: { id: string; runFrom?: string; runTo?: string }) => {
     if (l.runFrom || l.runTo) return `${fmtD(l.runFrom) || "…"} – ${fmtD(l.runTo) || "…"}`;
     const ds = bookings.filter((b) => b.listingId === l.id).map((b) => sessionDate(b)).filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime());
-    return ds.length ? `${ds[0].toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${ds[ds.length - 1].toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : "dates n/a";
+    return ds.length ? `${ds[0].toLocaleDateString(dl(), { day: "numeric", month: "short" })} – ${ds[ds.length - 1].toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}` : "dates n/a";
   };
   const AGES = Array.from({ length: 19 }, (_, i) => i); // 0..18 (18 = 18+)
   const lo = f.ageMin ?? 0, hi = f.ageMax ?? 18;
@@ -911,7 +912,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
         <div className="flex items-center gap-2 border-b border-[var(--line)] px-5 py-3.5">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f9d58] text-white">●</span>
           <div><div className="text-[16px] font-extrabold text-[var(--ink)]">Build an audience</div><div className="text-[12px] text-[var(--ink-3)]">Filter your customers — the count updates live.</div></div>
-          <button type="button" onClick={onCancel} className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button>
+          <button type="button" onClick={onCancel} className="ms-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button>
         </div>
         <div className="max-h-[62vh] space-y-3.5 overflow-y-auto p-5">
           <div><FieldLabel>Location</FieldLabel><Select value={f.location ?? ""} onChange={(e) => set({ location: e.target.value || undefined, listingIds: [], listingTitles: [] })} className="w-full"><option value="">Any location</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
@@ -943,7 +944,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
             <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">More filters</div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[12.5px] text-[var(--ink-2)]">Sessions</span>{seg([["any", "Any"], ["upcoming", "Upcoming"], ["past", "Past"]], f.when ?? "any", (v) => set({ when: v as AudFilter["when"] }))}
-              <label className="ml-2 flex items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={!!f.repeatOnly} onChange={(e) => set({ repeatOnly: e.target.checked })} /> Repeat customers only (2+)</label>
+              <label className="ms-2 flex items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={!!f.repeatOnly} onChange={(e) => set({ repeatOnly: e.target.checked })} /> Repeat customers only (2+)</label>
             </div>
           </div>
           <div className="flex items-center gap-3 rounded-xl bg-[var(--panel)] p-3.5">
@@ -955,7 +956,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-5 py-3">
           <button type="button" onClick={() => onCreate(mk(), false)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>Create audience</button>
           <button type="button" onClick={() => onCreate(mk(), true)} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Create &amp; use in campaign</button>
-          <button type="button" onClick={onCancel} className="ml-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-3)]">Cancel</button>
+          <button type="button" onClick={onCancel} className="ms-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-3)]">Cancel</button>
         </div>
       </div>
     </div>
@@ -1116,7 +1117,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
                     <div className="mt-2 flex flex-wrap items-center gap-2"><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Preview email</button><p className="text-[11.5px] text-[var(--ink-3)]">Edit freely — this text becomes the email body. Merge fields resolve per family on send.</p></div>
                     {cdOn
                       ? <div className="mt-2 rounded-xl border border-[#bfe6cf] bg-[#eafaf0] p-3">
-                          <div className="mb-2 flex items-center gap-2"><span className="text-[12.5px] font-extrabold text-[#127a3e]">⏱ Countdown clock</span><button type="button" onClick={() => setCdOn(false)} className="ml-auto text-[11.5px] font-bold text-[#127a3e] hover:underline">Remove</button></div>
+                          <div className="mb-2 flex items-center gap-2"><span className="text-[12.5px] font-extrabold text-[#127a3e]">⏱ Countdown clock</span><button type="button" onClick={() => setCdOn(false)} className="ms-auto text-[11.5px] font-bold text-[#127a3e] hover:underline">Remove</button></div>
                           <div className="flex flex-wrap items-center gap-2">
                             <input type="date" value={cdDate} onChange={(e) => setCdDate(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none" />
                             <input type="time" value={cdTime} onChange={(e) => setCdTime(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none" />
@@ -1127,7 +1128,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
                   </div>
                 : design
                   ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">
-                      <div className="mb-2 flex flex-wrap items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Your design</span><button type="button" onClick={() => setDesigning(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
+                      <div className="mb-2 flex flex-wrap items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Your design</span><button type="button" onClick={() => setDesigning(true)} className="ms-auto rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
                       {designCd
                         ? <div className="mb-2 rounded-lg border border-[#bfe6cf] bg-[#eafaf0] px-3 py-2 text-[12.5px] font-bold text-[#127a3e]">⏱ Countdown clock is in this email — it&apos;ll send as a big ticking clock.</div>
                         : <button type="button" onClick={addCountdownToDesign} className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#bfe0c9] bg-[#f0faf3] px-4 py-3 text-[13.5px] font-extrabold text-[#127a3e] hover:bg-[#e3f6ea]">⏱ Add a big countdown clock to this email</button>}
@@ -1146,7 +1147,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
               <div className="rounded-xl border border-[#E4E9F5] bg-gradient-to-r from-[#FFFFFF] to-[#FFFFFF] px-4 py-3 text-[13.5px] font-semibold text-[#2f5fd0] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""}{selectedAuds.length > 1 ? ` · deduped across ${selectedAuds.length} audiences` : ""}.</div>
               {people.length > 0 && (
                 <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-                  <button type="button" onClick={() => setShowList((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-left"><span className="text-[13px] font-extrabold text-[var(--ink)]">Recipients</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f] tabular-nums">{included.length} of {people.length}</span><span className="ml-auto text-[12px] font-bold text-[var(--ink-3)]">{showList ? "▲ Hide" : "▼ Show"}</span></button>
+                  <button type="button" onClick={() => setShowList((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-start"><span className="text-[13px] font-extrabold text-[var(--ink)]">Recipients</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f] tabular-nums">{included.length} of {people.length}</span><span className="ms-auto text-[12px] font-bold text-[var(--ink-3)]">{showList ? "▲ Hide" : "▼ Show"}</span></button>
                   {showList && <div className="max-h-52 overflow-y-auto border-t border-[var(--line)]">
                     {people.map((p) => { const off = excluded.has(p.email.toLowerCase()); return (
                       <div key={p.email} className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-2 last:border-0">
@@ -1167,7 +1168,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
         {sendErr && <div className="mx-6 mt-3 flex items-start gap-2 rounded-lg border border-[#f2c4c9] bg-[#fdf0f1] px-3 py-2 text-[12.5px] font-semibold text-[#c02636]"><span>⚠</span><span>{sendErr}</span></div>}
         <div className="flex items-center gap-2 border-t border-[var(--line)] px-6 py-3.5">
           <button type="button" onClick={() => { if (step === 0) return onCancel(); if (step === lastStep && !chooseView) return setChooseView(true); setChooseView(false); setStep(step - 1); }} disabled={!!busy} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{step === 0 ? "Cancel" : "← Back"}</button>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-2">
             {step < lastStep
               ? <button type="button" onClick={() => setStep(step + 1)} disabled={nextDisabled} className="rounded-lg px-6 py-2 text-[13px] font-extrabold text-white shadow-sm disabled:opacity-40" style={{ background: "linear-gradient(180deg,#3f78d8,#1d3a8f)" }}>Next →</button>
               : <>
@@ -1180,7 +1181,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
     </div>
     {previewBig && (
       <div className="fixed inset-0 z-[140] flex flex-col bg-[#0b1730]/70 p-4 backdrop-blur-[2px]" onClick={() => setPreviewBig(false)}>
-        <div className="mx-auto flex w-full max-w-3xl items-center gap-2 py-2 text-white"><span className="text-[13px] font-extrabold">Email preview</span><span className="text-[12px] text-white/70">This is roughly how it lands in a parent&apos;s inbox.</span><button type="button" onClick={() => setPreviewBig(false)} className="ml-auto rounded-lg bg-white/15 px-3 py-1.5 text-[13px] font-bold hover:bg-white/25">✕ Close</button></div>
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-2 py-2 text-white"><span className="text-[13px] font-extrabold">Email preview</span><span className="text-[12px] text-white/70">This is roughly how it lands in a parent&apos;s inbox.</span><button type="button" onClick={() => setPreviewBig(false)} className="ms-auto rounded-lg bg-white/15 px-3 py-1.5 text-[13px] font-bold hover:bg-white/25">✕ Close</button></div>
         <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="mx-auto max-w-[600px]" dangerouslySetInnerHTML={{ __html: renderDesignHtml(useDesign && design ? design : wordedDesign(), company, nowMs) }} />
         </div>
@@ -1272,7 +1273,7 @@ function CampaignsView({ onSent, seedAudienceId, seedName, seedSubject, seedList
   const restrictLabel = seedListingId ? (listings.find((l) => l.id === seedListingId)?.title || "this listing") : undefined;
   const create = async (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string }, action: CampStatus) => {
     setErr(null);
-    const schedLabel = c.scheduledAt ? new Date(c.scheduledAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : undefined;
+    const schedLabel = c.scheduledAt ? new Date(c.scheduledAt).toLocaleString(dl(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : undefined;
     const row: Campaign = { id: `c${Date.now()}`, name: c.name, subtitle: c.template?.name ?? (c.html ? "Designed email" : undefined), audienceName: c.audience.name, recipients: c.audience.count, status: action, statusDate: action === "scheduled" ? schedLabel : action === "sent" ? "just now" : undefined, subject: c.subject, html: c.html, body: c.body, design: c.design, scheduledAt: c.scheduledAt, recipientEmails: c.audience.emails };
     if (action !== "draft" && !c.audience.emails.length) throw new Error("That audience has nobody in it yet — add recipients first.");
     // The send/queue is the server's; the local row keeps the design and
@@ -1316,7 +1317,7 @@ function CampaignsView({ onSent, seedAudienceId, seedName, seedSubject, seedList
   const rows = cq ? allRows.filter((c) => `${c.name} ${c.subtitle ?? ""} ${c.subject ?? ""} ${c.audienceName}`.toLowerCase().includes(cq)) : allRows;
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-2"><span className="text-[13px] font-bold text-[var(--ink-2)]">Campaigns</span><div className="relative ml-2 max-w-xs flex-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search campaigns…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div><button type="button" onClick={() => setModal("campaign")} className="ml-auto rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New campaign</button></div>
+      <div className="mb-3 flex flex-wrap items-center gap-2"><span className="text-[13px] font-bold text-[var(--ink-2)]">Campaigns</span><div className="relative ms-2 max-w-xs flex-1"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search campaigns…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div><button type="button" onClick={() => setModal("campaign")} className="ms-auto rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New campaign</button></div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
       <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
         <div className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_70px] gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span>Campaign</span><span>Audience</span><span>Status</span><span>Opens</span><span></span></div>
@@ -1327,7 +1328,7 @@ function CampaignsView({ onSent, seedAudienceId, seedName, seedSubject, seedList
             <div className="min-w-0"><div className="truncate text-[13px] text-[var(--ink-2)]">{c.audienceName}</div><div className="text-[12px] text-[var(--ink-3)]">{c.recipients} recipients</div></div>
             <div><span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-extrabold" style={{ background: p.bg, color: p.fg }}>● {p.label}</span>{c.statusDate && <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{c.statusDate}</div>}</div>
             <div>{c.opens != null ? <><div className="text-[15px] font-extrabold text-[var(--ink)]">{c.opens}%</div><div className="text-[12px] text-[var(--ink-3)]">{c.clicks ?? 0}% clicks</div></> : <span className="text-[var(--ink-3)]">—</span>}</div>
-            <div className="text-right"><button type="button" onClick={() => setDetail(c)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Open</button></div>
+            <div className="text-end"><button type="button" onClick={() => setDetail(c)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Open</button></div>
           </div>
         ); })}
       </div>
@@ -1353,7 +1354,7 @@ function CampaignDetail({ c, onClose }: { c: Campaign; onClose: () => void }) {
       <div className="w-full max-w-2xl rounded-2xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start gap-2 border-b border-[var(--line)] px-5 py-4">
           <div><div className="text-[20px] font-extrabold text-[var(--ink)]">{c.name}</div><div className="text-[12.5px] text-[var(--ink-3)]">{[c.subtitle, c.audienceName, `${c.recipients} recipients`].filter(Boolean).join(" · ")}</div></div>
-          <span className="ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-extrabold" style={{ background: p.bg, color: p.fg }}>● {p.label}</span>
+          <span className="ms-auto inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-extrabold" style={{ background: p.bg, color: p.fg }}>● {p.label}</span>
         </div>
         <div className="max-h-[66vh] overflow-y-auto p-5">
           <div className="grid grid-cols-3 gap-3"><StatCard label="Open rate" value={tracked && delivered ? `${Math.round((opened / delivered) * 100)}%` : "—"} sub={tracked ? `${opened} of ${delivered}` : undefined} tone="#16a34a" /><StatCard label="Delivered" value={tracked ? String(delivered) : "—"} sub={tracked ? `of ${sent} sent` : undefined} tone="#16306e" /><StatCard label="Not delivered" value={tracked ? String(bounces) : "—"} tone="#ea580c" /></div>
@@ -1442,11 +1443,11 @@ function SuppressionsPanel() {
   useRealtime(["emailSuppressions"], load);
   const ql = q.trim().toLowerCase();
   const shown = rows ? (ql ? rows.filter((r) => r.email.toLowerCase().includes(ql)) : rows) : null;
-  const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+  const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString(dl(), { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
   return (
     <div>
-      <div className="mb-3 rounded-lg border-l-4 border-[#c78a00] bg-[#fff8e8] px-3 py-2 text-[11.5px] text-[#7a5600]">⚖️ <b>Always excluded.</b> Anyone on this list is skipped on every marketing send, regardless of opt-in or booking status — added by the one-click unsubscribe link in an email footer, or by removing them from an audience card. This is a record, not an editor — there's no un-suppress action yet.</div>
-      <div className="relative mb-3 max-w-sm"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search suppressed emails…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
+      <div className="mb-3 rounded-lg border-s-4 border-[#c78a00] bg-[#fff8e8] px-3 py-2 text-[11.5px] text-[#7a5600]">⚖️ <b>Always excluded.</b> Anyone on this list is skipped on every marketing send, regardless of opt-in or booking status — added by the one-click unsubscribe link in an email footer, or by removing them from an audience card. This is a record, not an editor — there's no un-suppress action yet.</div>
+      <div className="relative mb-3 max-w-sm"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search suppressed emails…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
       {shown === null
         ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
         : shown.length === 0
@@ -1599,8 +1600,8 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
     : allAudience;
   return (
     <div>
-      <div className="mb-3 rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Audiences are live CRM segments</b> — membership is recomputed from booking &amp; enrolment data each send, and opt-outs are always excluded.</div>
-      <div className="relative mb-3 max-w-sm"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search audiences…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
+      <div className="mb-3 rounded-lg border-s-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Audiences are live CRM segments</b> — membership is recomputed from booking &amp; enrolment data each send, and opt-outs are always excluded.</div>
+      <div className="relative mb-3 max-w-sm"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search audiences…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
 
       {/* switch between the three audience areas */}
       <div className="mb-4 flex flex-wrap gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1">
@@ -1637,7 +1638,7 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
           </div>
         </div>
         <p className="mb-2 mt-1 text-[11.5px] text-[var(--ink-3)]">Filters this list by <b>how recently they first emailed you</b> — <b>Last 30d</b> shows only enquiries from the past month, <b>All time</b> shows everyone who ever enquired and still hasn&apos;t booked. Handy for chasing fresh leads vs. re-engaging old ones.</p>
-        <div className="mb-3 rounded-lg border-l-4 border-[#c78a00] bg-[#fff8e8] px-3 py-2 text-[11.5px] text-[#7a5600]">⚖️ <b>Law (UK PECR):</b> enquiries haven’t bought anything, so you can only <b>market</b> to them once they’ve <b>opted in</b> (the “yes to hearing about activities” tick on their family record). Anyone who hasn’t opted in is automatically skipped on a send. You can always reply to their enquiry directly — that’s not marketing.</div>
+        <div className="mb-3 rounded-lg border-s-4 border-[#c78a00] bg-[#fff8e8] px-3 py-2 text-[11.5px] text-[#7a5600]">⚖️ <b>Law (UK PECR):</b> enquiries haven’t bought anything, so you can only <b>market</b> to them once they’ve <b>opted in</b> (the “yes to hearing about activities” tick on their family record). Anyone who hasn’t opted in is automatically skipped on a send. You can always reply to their enquiry directly — that’s not marketing.</div>
         {!combinedNotBooked?.count
           ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Add a family under <b>New Family</b>, or open an email in the Inbox and hit <b>➕ Mark as enquiry</b>.</div>
           : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -1706,7 +1707,7 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
         <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[13px] font-bold shadow-sm">
           {([["worded", "✍️ Worded templates"], ["designed", `🎨 Builder templates${designs.length ? ` (${designs.length})` : ""}`]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setSub(k)} className="px-4 py-2.5" style={sub === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
         </div>
-        <div className="relative max-w-xs flex-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search templates…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
+        <div className="relative max-w-xs flex-1"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search templates…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
       </div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
 
@@ -1756,7 +1757,7 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
       {edit && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={() => setEdit(null)}>
           <div className="w-full max-w-xl rounded-2xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center border-b border-[var(--line)] px-5 py-3.5"><div className="text-[17px] font-extrabold text-[var(--ink)]">{edit.id ? "Edit template" : "New template"}</div><button type="button" onClick={() => setEdit(null)} className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button></div>
+            <div className="flex items-center border-b border-[var(--line)] px-5 py-3.5"><div className="text-[17px] font-extrabold text-[var(--ink)]">{edit.id ? "Edit template" : "New template"}</div><button type="button" onClick={() => setEdit(null)} className="ms-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button></div>
             <div className="max-h-[66vh] space-y-2.5 overflow-y-auto p-5">
               <div><FieldLabel>Name</FieldLabel><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="e.g. Booking confirmation" className="w-full" /></div>
               <div><FieldLabel>Subject (optional)</FieldLabel><Input value={edit.subject ?? ""} onChange={(e) => setEdit({ ...edit, subject: e.target.value })} placeholder="Subject line" className="w-full" /></div>
@@ -1787,7 +1788,7 @@ function AnalyticsView() {
   const bounces = sent - delivered;
   return (
     <div>
-      <div className="mb-3 rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Email analytics</b> — per send or across all. Delivery straight from the mail transport, opens from a once-per-recipient tracking pixel (image-blocking clients won’t count). Click tracking &amp; unsubscribes are still to come.</div>
+      <div className="mb-3 rounded-lg border-s-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Email analytics</b> — per send or across all. Delivery straight from the mail transport, opens from a once-per-recipient tracking pixel (image-blocking clients won’t count). Click tracking &amp; unsubscribes are still to come.</div>
       {/* campaign selector */}
       <div className="mb-4 flex items-center gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Campaign</span>
@@ -1796,7 +1797,7 @@ function AnalyticsView() {
           {rows.map((c) => <option key={c.id} value={c.id}>{c.subject} — {when(c.createdAt)}</option>)}
         </Select>
       </div>
-      {active && <div className="mb-3 flex items-baseline gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]">{active.subject}</span><span className="ml-auto text-[12px] text-[var(--ink-3)]">{when(active.createdAt)}</span></div>}
+      {active && <div className="mb-3 flex items-baseline gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]">{active.subject}</span><span className="ms-auto text-[12px] text-[var(--ink-3)]">{when(active.createdAt)}</span></div>}
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label="Sent" value={String(sent)} sub={`${base.length} send${base.length === 1 ? "" : "s"}`} />
         <StatCard label="Delivered" value={String(delivered)} sub={sent ? `${Math.round((delivered / sent) * 100)}% of sent` : undefined} />
@@ -1817,7 +1818,7 @@ function AnalyticsView() {
             <div className="mb-3 text-[15px] font-extrabold text-[var(--ink)]">Open rate by send <span className="text-[12px] font-normal text-[var(--ink-3)]">— tap one for its full breakdown</span></div>
             {rows.length === 0 ? <div className="py-4 text-center text-[13px] text-[var(--ink-3)]">No sends yet.</div>
             : rows.filter((c) => c.deliveredN > 0).slice(0, 10).map((c) => { const pct = Math.round((c.openedN / c.deliveredN) * 100); return (
-              <button key={c.id} type="button" onClick={() => setSel(c.id)} className="mb-3 block w-full text-left last:mb-0"><div className="flex justify-between text-[13px]"><span className="truncate pr-3 text-[var(--ink-2)] hover:text-[#1d3a8f]">{c.subject}</span><span className="flex-none font-bold text-[var(--ink)]">{pct}% open</span></div><div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#16306e" }} /></div></button>
+              <button key={c.id} type="button" onClick={() => setSel(c.id)} className="mb-3 block w-full text-start last:mb-0"><div className="flex justify-between text-[13px]"><span className="truncate pe-3 text-[var(--ink-2)] hover:text-[#1d3a8f]">{c.subject}</span><span className="flex-none font-bold text-[var(--ink)]">{pct}% open</span></div><div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#16306e" }} /></div></button>
             ); })}
           </div>}
     </div>
@@ -1838,14 +1839,14 @@ function SignatureManager({ settings, save, onClose }: { settings: TenantSetting
   return (
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onClose}>
       <div className="w-full max-w-xl rounded-2xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center border-b border-[var(--line)] px-5 py-3.5"><div className="text-[17px] font-extrabold text-[var(--ink)]">Manage signatures</div><button type="button" onClick={onClose} className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button></div>
+        <div className="flex items-center border-b border-[var(--line)] px-5 py-3.5"><div className="text-[17px] font-extrabold text-[var(--ink)]">Manage signatures</div><button type="button" onClick={onClose} className="ms-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button></div>
         <div className="max-h-[66vh] overflow-y-auto p-5">
           {!draft ? (
             <>
               {sigs.length === 0 ? <p className="mb-3 text-[13px] text-[var(--ink-3)]">No signatures yet. Create one — your logo, business name and contact details, appended to the bottom of an email.</p>
               : <div className="mb-3 flex flex-col gap-2">{sigs.map((s) => (
                   <div key={s.id} className="flex items-center gap-2 rounded-xl border border-[var(--line)] p-3">
-                    <div className="min-w-0 flex-1"><div className="text-[13.5px] font-bold text-[var(--ink)]">{s.name}{settings.defaultSignatureId === s.id && <span className="ml-2 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-extrabold text-[#1d3a8f]">Default</span>}</div><div className="mt-1 max-h-16 overflow-hidden text-[11.5px] text-[var(--ink-3)]" dangerouslySetInnerHTML={{ __html: s.html }} /></div>
+                    <div className="min-w-0 flex-1"><div className="text-[13.5px] font-bold text-[var(--ink)]">{s.name}{settings.defaultSignatureId === s.id && <span className="ms-2 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-extrabold text-[#1d3a8f]">Default</span>}</div><div className="mt-1 max-h-16 overflow-hidden text-[11.5px] text-[var(--ink-3)]" dangerouslySetInnerHTML={{ __html: s.html }} /></div>
                     <div className="flex flex-none flex-col gap-1">
                       <button type="button" onClick={() => setDraft(s)} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button>
                       <button type="button" onClick={() => persist(sigs, settings.defaultSignatureId === s.id ? "" : s.id)} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{settings.defaultSignatureId === s.id ? "Unset default" : "Default"}</button>
@@ -2280,7 +2281,7 @@ export function EmailApp() {
           <span className="text-[14px]">📡</span>
           <span>Sending within <b>{scopeLabel}</b>.</span>
           <span className="opacity-80">{hoScope === HO_OWN ? "Only your own directly-run families — no franchise customers." : hoScope ? "Only this franchise's families." : "Every family across all franchises will be in reach."}</span>
-          <span className="ml-auto opacity-70">Change with the Head office selector in the top bar.</span>
+          <span className="ms-auto opacity-70">Change with the Head office selector in the top bar.</span>
         </div>
       )}
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
@@ -2306,13 +2307,13 @@ export function EmailApp() {
       {tab === "settings" && <EmailPrefs settings={settings} save={save} />}
 
       {tab === "compose" && (<>
-      {undoSend && <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#E4E9F5] bg-[#E8EEFD] px-3 py-2 text-[12.5px] font-semibold text-[#2f5fd0]"><span>Sending to {undoSend.count} recipient{undoSend.count === 1 ? "" : "s"} in {undoLeft}s…</span><button type="button" onClick={() => { setUndoSend(null); setUndoLeft(0); setOk("Send cancelled — your draft is still here."); }} className="ml-auto rounded-md bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[#2f5fd0] shadow-sm">↩ Undo</button></div>}
+      {undoSend && <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#E4E9F5] bg-[#E8EEFD] px-3 py-2 text-[12.5px] font-semibold text-[#2f5fd0]"><span>Sending to {undoSend.count} recipient{undoSend.count === 1 ? "" : "s"} in {undoLeft}s…</span><button type="button" onClick={() => { setUndoSend(null); setUndoLeft(0); setOk("Send cancelled — your draft is still here."); }} className="ms-auto rounded-md bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[#2f5fd0] shadow-sm">↩ Undo</button></div>}
       {designedDoc && (
         <div className="mb-4 rounded-2xl border-2 border-[#2f6bd8] bg-[#f4f8ff] p-4">
           <div className="text-[14px] font-extrabold text-[#1d3a8f]">{docHtml ? "📰 A designed newsletter came from the Newsfeed — how should families get it?" : "🖼 This email has photos / formatting — how should families get it?"}</div>
           <div className="mt-2 flex flex-wrap gap-2">
             {([["embed", "📧 Embed it inside the email (HTML)"], ["attach", "📎 Attach it as a PDF"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setMode(k)} className="rounded-lg border-2 px-3.5 py-2 text-[13px] font-extrabold" style={mode === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{mode === k ? "✓ " : ""}{label}</button>)}
-            <button type="button" onClick={() => printDocHtml(designedDoc)} className="ml-auto rounded-lg border border-[#1d3a8f] px-3 py-2 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">⬇ Preview / download PDF</button>
+            <button type="button" onClick={() => printDocHtml(designedDoc)} className="ms-auto rounded-lg border border-[#1d3a8f] px-3 py-2 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">⬇ Preview / download PDF</button>
           </div>
           <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">{mode === "embed" ? "Families get the full layout (photos + formatting) in the email body." : <span>Families get a short covering email with it attached as a PDF. <b className="text-[#8a6d1a]">Auto-attach is a backend step — grab the PDF here for now.</b></span>}</div>
         </div>
@@ -2330,7 +2331,7 @@ export function EmailApp() {
               <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#3f78d8,#16306e)" }}>{replyTo.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</span>
               <span className="text-[13px] font-bold text-[var(--ink)]">↩ Reply to {replyTo.name}</span>
               {replyTo.email && <span className="text-[12px] text-[var(--ink-3)]">{replyTo.email}</span>}
-              <button type="button" onClick={() => setReplyTo(null)} className="ml-auto text-[11.5px] font-bold text-[#1d3a8f]">Send to more people →</button>
+              <button type="button" onClick={() => setReplyTo(null)} className="ms-auto text-[11.5px] font-bold text-[#1d3a8f]">Send to more people →</button>
             </div>
             <div className="mt-2"><FieldLabel>To</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>
           </div>
@@ -2369,7 +2370,7 @@ export function EmailApp() {
             <FieldLabel>Listings — everyone booked on the ones you pick ({listingEmails.length})</FieldLabel>
             <div className="mt-1 flex flex-wrap gap-1.5">
               {listingOpts.length === 0 ? <span className="text-[11.5px] text-[var(--ink-3)]">No listings yet.</span>
-                : listingOpts.map((l) => { const on = listingIds.includes(l.key); const n = listingCounts.get(l.key) ?? 0; return <button key={l.key} type="button" title={n ? `${n} famil${n === 1 ? "y" : "ies"} booked` : "Nobody has booked this one yet"} onClick={() => setListingIds((xs) => on ? xs.filter((x) => x !== l.key) : [...xs, l.key])} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)", opacity: n ? 1 : 0.45 }}>{on ? "✓ " : ""}{l.title}<span className="ml-1 text-[10px] font-semibold text-[var(--ink-3)]">· {n}</span>{!l.live && <span className="ml-1 text-[10px] font-semibold text-[var(--ink-3)]">· past</span>}</button>; })}
+                : listingOpts.map((l) => { const on = listingIds.includes(l.key); const n = listingCounts.get(l.key) ?? 0; return <button key={l.key} type="button" title={n ? `${n} famil${n === 1 ? "y" : "ies"} booked` : "Nobody has booked this one yet"} onClick={() => setListingIds((xs) => on ? xs.filter((x) => x !== l.key) : [...xs, l.key])} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)", opacity: n ? 1 : 0.45 }}>{on ? "✓ " : ""}{l.title}<span className="ms-1 text-[10px] font-semibold text-[var(--ink-3)]">· {n}</span>{!l.live && <span className="ms-1 text-[10px] font-semibold text-[var(--ink-3)]">· past</span>}</button>; })}
             </div>
             <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">Includes past listings still linked to bookings — so parents from a listing you’ve since duplicated aren’t missed. Repeat parents are only emailed once.</p>
           </div>
@@ -2437,10 +2438,10 @@ export function EmailApp() {
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <div className="relative inline-flex">
-            <button type="button" onClick={send} disabled={sending} className="rounded-l-lg bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-50">{sending ? "Sending…" : `Send to ${finalRecipients.length} recipient${finalRecipients.length === 1 ? "" : "s"}`}</button>
-            <button type="button" onClick={() => setSchedOpen((o) => !o)} disabled={sending} aria-label="Schedule send" className="rounded-r-lg border-l border-white/30 bg-[#1d3a8f] px-2.5 py-2 text-[12px] font-bold text-white disabled:opacity-50">▲</button>
+            <button type="button" onClick={send} disabled={sending} className="rounded-s-lg bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-50">{sending ? "Sending…" : `Send to ${finalRecipients.length} recipient${finalRecipients.length === 1 ? "" : "s"}`}</button>
+            <button type="button" onClick={() => setSchedOpen((o) => !o)} disabled={sending} aria-label="Schedule send" className="rounded-e-lg border-s border-white/30 bg-[#1d3a8f] px-2.5 py-2 text-[12px] font-bold text-white disabled:opacity-50">▲</button>
             {schedOpen && (
-              <div className="absolute bottom-full left-0 z-20 mb-1.5 w-72 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xl">
+              <div className="absolute bottom-full start-0 z-20 mb-1.5 w-72 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xl">
                 <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-extrabold text-[var(--ink)]">📣 Schedule send</div>
                 <input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px] outline-none focus:border-[#2f6bd8]" />
                 <div className="mt-2 flex gap-2"><button type="button" onClick={scheduleSend} className="flex-1 rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white">Schedule</button><button type="button" onClick={() => setSchedOpen(false)} className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button></div>
@@ -2455,7 +2456,7 @@ export function EmailApp() {
 
       {savedImages.length > 0 && (
         <div className="mb-4 rounded-2xl border border-[#f6e2a8] bg-[#fffdf3] p-3.5">
-          <button type="button" onClick={() => setAssetsOpen((v) => !v)} className="flex w-full items-center justify-between gap-2 text-left">
+          <button type="button" onClick={() => setAssetsOpen((v) => !v)} className="flex w-full items-center justify-between gap-2 text-start">
             <span className="flex items-center gap-2 text-[13px] font-extrabold" style={{ color: "var(--ink-2)", fontFamily: "var(--ff-display)" }}>{assetsOpen ? "📂" : "📁"} Photos from Moments <span className="rounded-full bg-[#FCF1DC] px-2 py-0.5 text-[11px] font-extrabold text-[var(--ink-2)]">{savedImages.length}</span>{assetsOpen && <span className="text-[11px] font-semibold text-[var(--ink-3)]">— type your message, add the quote, set size/crop/colour.</span>}</span>
             <span className="flex-none rounded-full border border-[#f0d488] px-2.5 py-0.5 text-[11.5px] font-bold text-[#8a5a00]">{assetsOpen ? "▲ Close folder" : "▼ Open folder"}</span>
           </button>
