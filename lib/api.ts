@@ -215,13 +215,26 @@ async function request<T>(path: string, token: string | null, init?: RequestInit
     try {
       const body = await res.json();
       parsed = body;
-      if (body?.error) message = typeof body.error === "string" ? body.error : JSON.stringify(body.error);
+      if (body?.error) message = typeof body.error === "string" ? body.error : readableIssues(body.error) ?? JSON.stringify(body.error);
     } catch {
       /* non-JSON error body */
     }
     throw new ApiError(res.status, message, parsed);
   }
   return res.json() as Promise<T>;
+}
+
+// The API answers a failed validation with the raw zod issue list ([{ message, path: ["date"] }, …]); showing that as JSON to a
+// provider ("[{\"code\":\"custom\",\"message\":\"Not a real calendar date\"…") is unreadable. "date: Not a real calendar date" instead.
+function readableIssues(err: unknown): string | null {
+  if (!Array.isArray(err) || !err.length) return null;
+  const parts = err.map((i) => {
+    if (!i || typeof i !== "object" || typeof (i as { message?: unknown }).message !== "string") return null;
+    const { message, path } = i as { message: string; path?: unknown };
+    const where = Array.isArray(path) ? path.filter((p) => typeof p === "string").join(" › ") : "";
+    return where ? `${where}: ${message}` : message;
+  });
+  return parts.every((x) => x) ? [...new Set(parts as string[])].join("; ") : null;
 }
 
 // A platform account's session-level 2FA verification (server: `attachRole`
