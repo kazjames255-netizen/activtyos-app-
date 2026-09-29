@@ -32,9 +32,6 @@ export async function staffPolicy(tenantId: string, franchiseId?: string | null)
  *  — only DBS is required to EXIST, via requireDBS). */
 const KEY_CERTS = ["first aid", "safeguarding"];
 
-/** Why this person can't be rostered right now — or null when they can.
- *  A tenant not using the compliance register (no certs at all, requireDBS
- *  off) is never blocked. */
 /** A returned reference that raised a safeguarding concern nobody has
  *  reviewed yet. Safer recruitment: until a named person has looked at it,
  *  the candidate can't be cleared to start or rostered — whatever the
@@ -47,6 +44,11 @@ export async function unresolvedReferenceConcern(tenantId: string, staffName: st
   return snap.docs.some((d) => String(d.get("staffName") ?? "").trim().toLowerCase() === name && d.get("concern") === true && !d.get("concernResolved"));
 }
 
+/** Why this person can't be rostered right now — or null when they can.
+ *  Enforcement is judged per staff member: a person with no certificate
+ *  record of their own is never blocked just because the tenant's register
+ *  has records for other staff (requireDBS/requireCompliance only bite once
+ *  THIS person has at least one record on file). */
 export async function staffRosterBlock(tenantId: string, staffName: string, franchiseId?: string | null): Promise<string | null> {
   // Someone whose account has been switched off has left the team — they
   // can't be put on new shifts (acceptance test d16s6).
@@ -61,13 +63,16 @@ export async function staffRosterBlock(tenantId: string, staffName: string, fran
 
   const name = staffName.trim().toLowerCase();
   const snap = await db.collection("certifications").where("tenantId", "==", tenantId).get();
-  // Nothing in the register at all = the tenant isn't tracking compliance
-  // here; the policy only bites once they've started recording certificates.
-  if (snap.empty) return null;
   const today = ukToday();
   const mine = snap.docs
     .map((d) => d.data() as { staffName?: string; type?: string; expiry?: string })
     .filter((c) => (c.staffName ?? "").trim().toLowerCase() === name);
+  // Nothing on file for THIS staff member = enforcement is judged per person,
+  // not tenant-wide — a colleague having certs on record doesn't switch
+  // blocking on for someone who has never had a certificate recorded. Once
+  // THIS person has even one record, they're checked against it exactly as
+  // before.
+  if (!mine.length) return null;
 
   if (policy.requireDBS) {
     const dbs = mine.filter((c) => /dbs/i.test(c.type ?? ""));
