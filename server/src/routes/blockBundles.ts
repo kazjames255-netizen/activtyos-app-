@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { isRealTime } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
@@ -33,8 +34,8 @@ const timeRe = /^\d{2}:\d{2}$/;
 const periodSchema = z
   .object({
     title: z.string().trim().min(2).max(120),
-    start: z.string().regex(timeRe),
-    finish: z.string().regex(timeRe),
+    start: z.string().regex(timeRe).refine(isRealTime, "Not a real time (HH:MM)"),
+    finish: z.string().regex(timeRe).refine(isRealTime, "Not a real time (HH:MM)"),
   })
   .refine((p) => p.start < p.finish, { message: "finish must be after start" });
 

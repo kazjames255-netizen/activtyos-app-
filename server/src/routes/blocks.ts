@@ -1,5 +1,5 @@
 import { Router, type Request } from "express";
-import { isRealDay } from "../lib/ukDate";
+import { isRealDay, isRealTime } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
@@ -31,19 +31,21 @@ const blockSchema = z
     open: z.boolean().optional().default(true),
     schedule: z
       .object({
-        startTime: z.string().regex(timeRe),
-        endTime: z.string().regex(timeRe),
+        startTime: z.string().regex(timeRe).refine(isRealTime, "Not a real time (HH:MM)"),
+        endTime: z.string().regex(timeRe).refine(isRealTime, "Not a real time (HH:MM)"),
         // 0=Sun … 6=Sat; defaults to Mon–Fri
         weekdays: z.array(z.number().int().min(0).max(6)).min(1).optional(),
       })
+      .refine((s) => s.startTime < s.endTime, { message: "endTime must be after startTime" })
       .optional(),
     sessions: z
       .array(
         z.object({
           date: z.string().regex(dateRe).refine(isRealDay, "Not a real calendar date"),
-          start: z.string().regex(timeRe),
-          end: z.string().regex(timeRe),
-        }),
+          start: z.string().regex(timeRe).refine(isRealTime, "Not a real time (HH:MM)"),
+          end: z.string().regex(timeRe).refine(isRealTime, "Not a real time (HH:MM)"),
+        })
+        .refine((x) => x.start < x.end, { message: "end must be after start" }),
       )
       .max(200)
       .optional(),

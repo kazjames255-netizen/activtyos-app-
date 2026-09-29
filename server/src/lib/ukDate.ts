@@ -39,3 +39,8 @@ export function isRealDay(s: string): boolean {
   const d = new Date(`${s}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
 }
+
+/** True only for a real 24h clock time in HH:MM form ("25:99" matches a bare \d{2}:\d{2}). */
+export function isRealTime(s: string): boolean {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
+}

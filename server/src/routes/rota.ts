@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isRealDay } from "../lib/ukDate";
+import { isRealDay, isRealTime } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
@@ -237,7 +237,7 @@ rota.put("/", async (req, res) => {
 // someone in from the board names them.
 const clockSchema = z.object({
   field: z.enum(["in", "out"]),
-  hm: z.string().regex(/^\d{2}:\d{2}$/),
+  hm: z.string().regex(/^\d{2}:\d{2}$/).refine(isRealTime, "Not a real time (HH:MM)"),
   // On clock-out: minutes actually spent on break, so payroll uses the real
   // break rather than the planned one (acceptance d16s3).
   breakMin: z.number().int().min(0).max(1440).optional(),
