@@ -1,7 +1,7 @@
 import { db } from "../firebase";
 import { esc } from "./html";
 import { fireOnce, sweep, toMinutes, ukNow } from "./scheduler";
-import { addDays } from "./ukDate";
+import { addDays, ukToday } from "./ukDate";
 import { notify, parentEmailForChild, channelFor, notifyTenantMember} from "./notify";
 import { expireOffers } from "./waitlist";
 import { stripe } from "./stripe";
@@ -670,6 +670,54 @@ async function scheduledEmailSends(): Promise<void> {
   }
 }
 
+// ── Listing auto-expire ───────────────────────────────────────────────────
+// Backend handoff doc #43: a listing whose every dated run (block) has ended
+// still reads "live" in Firestore forever — Browse already hides it (its own
+// hasUpcomingBlock gate in routes/listings.ts), so nothing leaks, but counts,
+// exports and HQ analytics all still count it as live. Flip status to "ended"
+// once nothing bookable is left, and let the provider know once, via a bell.
+export async function listingAutoExpire(): Promise<void> {
+  const today = ukToday();
+  // One project-wide scan of blocks' listingId + endDate, same shape as the
+  // browse feed's own hasUpcomingBlock check — a listing is still current if
+  // ANY of its blocks has endDate >= today.
+  const blockSnap = await db.collection("blocks").select("listingId", "endDate").get();
+  const everHadBlock = new Set<string>();
+  const hasUpcoming = new Set<string>();
+  for (const d of blockSnap.docs) {
+    const listingId = d.get("listingId") as string | undefined;
+    if (!listingId) continue;
+    everHadBlock.add(listingId);
+    if (((d.get("endDate") as string | undefined) ?? "") >= today) hasUpcoming.add(listingId);
+  }
+  const listingSnap = await db.collection("listings").get();
+  for (const d of listingSnap.docs) {
+    const l = d.data() as { tenantId?: string; franchiseId?: string | null; title?: string; name?: string; status?: string; archived?: boolean };
+    // Only a listing that was actually live and had at least one dated run —
+    // never a draft, never one that's simply not scheduled yet (no blocks at
+    // all isn't "expired", it's "not published"), never one already ended.
+    if ((l.status ?? "live") !== "live" || l.archived || !l.tenantId) continue;
+    if (!everHadBlock.has(d.id) || hasUpcoming.has(d.id)) continue;
+    try {
+      await d.ref.set({ status: "ended" }, { merge: true });
+      await fireOnce(`listing-ended_${d.id}`, { tenantId: l.tenantId }, () =>
+        notify({
+          tenantId: l.tenantId!,
+          to: { kind: "tenant" },
+          category: "listing",
+          key: "listing-ended",
+          franchiseId: l.franchiseId ?? null,
+          title: `${l.title ?? l.name ?? "A listing"} has ended`,
+          body: "Every date on this listing has now passed, so it's moved to Ended — republish it with new dates whenever you're ready.",
+          href: "/company/listings",
+        }),
+      );
+    } catch (e) {
+      console.error(`[sweeps] listing auto-expire ${d.id}:`, (e as Error).message);
+    }
+  }
+}
+
 // ── Subscription sync ─────────────────────────────────────────────────────
 // Backstop for the Stripe webhook: pull every billed tenant's subscription
 // and reconcile status/periods + metered quantities. Keeps dev (no public
@@ -783,6 +831,9 @@ export function startSweeps(): void {
   // unchanged behaviour, but now exactly one instance runs it per interval.
   sweep("waitlist-expiry", 5 * 60_000, expireOffers);
   sweep("subscription-sync", 6 * 60 * 60_000, subscriptionSync);
+  // Counts/exports/HQ analytics accuracy only — Browse already hides a listing
+  // with nothing bookable left, so this never affects what a parent can see.
+  sweep("listing-auto-expire", 60 * 60_000, listingAutoExpire);
   sweep("trip-consent-chase", 6 * 60 * 60_000, tripConsentChase);
   // Automatic emails (Setup → Email → Automatic emails).
   sweep("session-reminders", 30 * 60_000, sessionReminders);
