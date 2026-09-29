@@ -38,8 +38,8 @@ const OWED = new Set(["sent"]); // sent-but-unpaid is money still to collect
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").refine(isRealDay, "Not a real calendar date");
 const lineItemSchema = z.object({
   description: z.string().trim().max(200),
-  qty: z.number().nonnegative().default(1),
-  unitPrice: z.number().nonnegative().default(0),
+  qty: z.number().nonnegative().max(100_000).default(1),
+  unitPrice: z.number().nonnegative().max(1_000_000).default(0),
 });
 const invoiceSchema = z.object({
   customerName: z.string().trim().min(1).max(160),

@@ -23,8 +23,8 @@ const OUTSTANDING = new Set(["sent", "received"]); // committed money not yet pa
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").refine(isRealDay, "Not a real calendar date");
 const lineItemSchema = z.object({
   description: z.string().trim().max(200),
-  qty: z.number().nonnegative().default(1),
-  unitPrice: z.number().nonnegative().default(0),
+  qty: z.number().nonnegative().max(100_000).default(1),
+  unitPrice: z.number().nonnegative().max(1_000_000).default(0),
 });
 const poSchema = z.object({
   kind: z.enum(["bill", "po"]).default("bill"),   // a supplier bill you owe, or a PO you raise
