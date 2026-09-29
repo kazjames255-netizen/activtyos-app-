@@ -64,7 +64,7 @@ expenseClaims.post("/", async (req, res) => {
   const ref = await col.add(doc);
   res.status(201).json(sign({ id: ref.id, ...doc }));
   // Let the managers know there's a claim to look at.
-  void notify({ tenantId: auth.tenantId, to: { kind: "tenant" }, category: "billing", title: `Expense claim from ${name}`, body: `£${doc.amount.toFixed(2)} · ${doc.category}${doc.note ? ` — ${doc.note}` : ""}`, href: "/company/expenses", ref: ref.id }).catch(() => {});
+  void notify({ tenantId: auth.tenantId, to: { kind: "tenant" }, category: "billing", franchiseId: doc.franchiseId, title: `Expense claim from ${name}`, body: `£${doc.amount.toFixed(2)} · ${doc.category}${doc.note ? ` — ${doc.note}` : ""}`, href: "/company/expenses", ref: ref.id }).catch(() => {});
 });
 
 const statusSchema = z.object({ status: z.enum(["approved", "declined", "paid"]), reason: z.string().trim().max(300).optional() });
