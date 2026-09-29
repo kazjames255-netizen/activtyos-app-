@@ -224,7 +224,9 @@ const boardSchema = z.object({
   overrides: z.record(z.string().max(80), z.string().max(80)).default({}),
   groupStaff: z.record(z.string().max(80), z.array(z.string().max(80)).max(50)).default({}),
 });
-const boardId = (tenantId: string, date: string) => `${tenantId}_${date}`;
+// A franchise (and its staff) keep their OWN day board: the shared per-tenant doc would show them
+// head office's and sibling franchises' child → group moves, and their save would overwrite theirs.
+const boardId = (tenantId: string, date: string, franchiseId?: string | null) => (franchiseId ? `${tenantId}__fr__${franchiseId}_${date}` : `${tenantId}_${date}`);
 const validDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
 
 /** The board keys (child id, else the row key — see RatiosApp's CoverBoard) of
@@ -302,7 +304,7 @@ ratios.get("/board/:date", async (req, res) => {
     return;
   }
   if (!validDate(req.params.date)) { res.status(400).json({ error: "Bad date" }); return; }
-  const snap = await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date)).get();
+  const snap = await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date, auth.franchiseId)).get();
   const d = snap.data() ?? {};
   const site = await staffSiteScope(auth);
   const mine = site ? await siteBoardKeys(req.params.date, site) : null;
@@ -322,7 +324,7 @@ ratios.put("/board/:date", async (req, res) => {
   // Settings → Staff & workforce "assignByLeads": staff can still run the day
   // (child → group moves), but changing WHO COVERS a group is management's.
   if (isPlainStaff(auth) && (await staffPolicy(auth.tenantId, auth.franchiseId)).assignByLeads) {
-    const existing = (await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date)).get()).data();
+    const existing = (await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date, auth.franchiseId)).get()).data();
     if (JSON.stringify(parsed.data.groupStaff) !== JSON.stringify(existing?.groupStaff ?? {})) {
       res.status(403).json({ error: "Assigning staff to groups is limited to leads/managers (Settings → Staff & workforce)" });
       return;
@@ -334,10 +336,10 @@ ratios.put("/board/:date", async (req, res) => {
   const site = await staffSiteScope(auth);
   if (site) {
     const mine = await siteBoardKeys(req.params.date, site);
-    const existing = ((await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date)).get()).get("overrides") ?? {}) as Record<string, string>;
+    const existing = ((await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date, auth.franchiseId)).get()).get("overrides") ?? {}) as Record<string, string>;
     overrides = { ...pick(existing, (k) => !mine.has(k)), ...pick(overrides, (k) => mine.has(k)) };
   }
-  await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date)).set({
+  await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date, auth.franchiseId)).set({
     tenantId: auth.tenantId,
     date: req.params.date,
     overrides,
@@ -379,6 +381,11 @@ ratios.put("/:blockId/:date", async (req, res) => {
   const { blockId, date } = req.params;
   const blockSnap = await db.collection("blocks").doc(blockId).get();
   if (!blockSnap.exists || blockSnap.data()!.tenantId !== auth.tenantId) {
+    res.status(404).json({ error: "Block not found" });
+    return;
+  }
+  // A franchise groups only the sessions of ITS OWN listings.
+  if (auth.role === "franchise" && auth.franchiseId && !(await franchiseListingIds(auth.tenantId, auth.franchiseId)).has((blockSnap.data() as BlockDoc).listingId)) {
     res.status(404).json({ error: "Block not found" });
     return;
   }

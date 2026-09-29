@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import { librarySnap } from "../lib/tenantLibrary";
-import { franchiseListingIds, isFranchise } from "../lib/franchiseScope";
+import { franchiseListingIds, isFranchise, franchiseStamp, scopeRows, visibleToFranchise } from "../lib/franchiseScope";
 import { notify } from "../lib/notify";
 import type { Role } from "../middleware/role";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
@@ -103,7 +103,9 @@ mealOptions.get("/", async (req, res) => {
   const tenantId = auth.role === "platform" ? (typeof req.query.tenantId === "string" ? req.query.tenantId : null) : auth.tenantId;
   if (!tenantId || (auth.role !== "platform" && !canManage(auth.role))) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const snap = await optionsCol.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
+  const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string; franchiseId?: string | null })[];
+  // A franchise manages only its own meal options; head office sees the lot (optionally per network).
+  const list = auth.role === "platform" ? all : await scopeRows(auth, all, req.query.franchiseId);
   list.sort((a, b) => (`${a.name ?? ""}` < `${b.name ?? ""}` ? -1 : 1));
   res.json(list);
 });
@@ -113,7 +115,7 @@ mealOptions.post("/", async (req, res) => {
   if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const parsed = optionSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = { ...parsed.data, price: round2(parsed.data.price), tenantId: auth.tenantId, createdAt: new Date().toISOString() };
+  const doc = { ...parsed.data, price: round2(parsed.data.price), tenantId: auth.tenantId, franchiseId: franchiseStamp(auth), createdAt: new Date().toISOString() };
   const ref = await optionsCol.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -123,6 +125,7 @@ async function ownOption(req: Request, id: string) {
   if (!canManage(auth.role) || !auth.tenantId) return { status: 403 as const };
   const snap = await optionsCol.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (!(await visibleToFranchise(auth, snap.data()!))) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 
@@ -473,12 +476,19 @@ async function mealAlert(tenantId: string, title: string, body: string, listingI
     .catch((e) => console.error("[meals] alert:", (e as Error).message));
 }
 
+/** A franchise acts only on orders for its OWN listings (the same rule as its order list). */
+async function orderInMyScope(auth: { role: string; tenantId: string | null; franchiseId: string | null }, o: { listingId?: string; franchiseId?: string | null }): Promise<boolean> {
+  if (!isFranchise(auth as Parameters<typeof isFranchise>[0])) return true;
+  if (o.franchiseId && o.franchiseId === auth.franchiseId) return true;
+  return (await franchiseListingIds(auth.tenantId!, auth.franchiseId!)).has(String(o.listingId ?? ""));
+}
+
 // POST /api/meal-orders/:id/pay — the provider records payment (Paid).
 mealOrders.post("/:id/pay", async (req, res) => {
   const auth = req.auth!;
   if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const snap = await ordersCol.doc(req.params.id).get();
-  if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) { res.status(404).json({ error: "Order not found" }); return; }
+  if (!snap.exists || snap.data()!.tenantId !== auth.tenantId || !(await orderInMyScope(auth, snap.data()!))) { res.status(404).json({ error: "Order not found" }); return; }
   if (snap.data()!.status === "cancelled") { res.status(409).json({ error: "This order was cancelled" }); return; }
   await snap.ref.set({ pay: "Paid", amountPaid: snap.data()!.total ?? 0, paidAt: new Date().toISOString() }, { merge: true });
   const after = await snap.ref.get();
@@ -494,7 +504,7 @@ mealOrders.post("/:id/cancel", async (req, res) => {
   if (!snap.exists) { res.status(404).json({ error: "Order not found" }); return; }
   const o = snap.data() as { tenantId: string; parentEmail: string; pay: string };
   const email = req.user?.email?.toLowerCase();
-  const isOperator = canManage(auth.role) && auth.tenantId === o.tenantId;
+  const isOperator = canManage(auth.role) && auth.tenantId === o.tenantId && (await orderInMyScope(auth, snap.data()!));
   const isOwner = auth.role === "parent" && o.parentEmail === email;
   if (!isOperator && !isOwner) { res.status(404).json({ error: "Order not found" }); return; }
   if (isOwner) {
@@ -563,7 +573,7 @@ mealOrders.post("/:id/request", async (req, res) => {
   if (!snap.exists) { res.status(404).json({ error: "Order not found" }); return; }
   const o = snap.data() as { tenantId: string; parentEmail: string; listingId?: string; date: string; changeRequest?: { menuItemId: string }; cancelRequest?: unknown };
   const email = req.user?.email?.toLowerCase();
-  const isOperator = canManage(auth.role) && auth.tenantId === o.tenantId;
+  const isOperator = canManage(auth.role) && auth.tenantId === o.tenantId && (await orderInMyScope(auth, snap.data()!));
   const isOwner = auth.role === "parent" && o.parentEmail === email;
   if (!isOperator && !isOwner) { res.status(404).json({ error: "Order not found" }); return; }
   if (!isOperator && (await mealsOffForFamilies(o.tenantId, o.listingId))) { res.status(403).json(MEALS_OFF); return; }

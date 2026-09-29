@@ -99,13 +99,22 @@ availability.get("/requests", async (req, res) => {
   res.json(list);
 });
 
+/** Whether a franchise may open/change this request — the same rule as the list: sent by it, or to
+ *  one of its own people. Head office / freelancer: every request in the tenant. */
+async function requestInMyScope(auth: { role: string; tenantId: string | null; franchiseId: string | null }, d: FirebaseFirestore.DocumentSnapshot): Promise<boolean> {
+  if (auth.role !== "franchise" || !auth.franchiseId || !auth.tenantId) return true;
+  if (d.get("franchiseId") === auth.franchiseId) return true;
+  const team = await franchiseTeam(auth.tenantId, auth.franchiseId);
+  return team.emails.has(String(d.get("staffEmail") ?? "").toLowerCase()) || team.emails.has(String(d.get("createdBy") ?? "").toLowerCase());
+}
+
 // operator → the staff member's submitted availability for a request (so the
 // manager can see what they chose and assign specific days).
 availability.get("/requests/:id/submission", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
   const s = await reqs.doc(req.params.id).get();
-  if (!s.exists || s.data()!.tenantId !== auth.tenantId) { res.status(404).json({ error: "Not found" }); return; }
+  if (!s.exists || s.data()!.tenantId !== auth.tenantId || !(await requestInMyScope(auth, s))) { res.status(404).json({ error: "Not found" }); return; }
   const email = lc(`${s.data()!.staffEmail}`);
   const pat = await patterns.doc(`${auth.tenantId}_${email}`).get();
   res.json({ request: { id: s.id, ...(s.data() as Record<string, unknown>) }, pattern: pat.exists ? pat.data() : null });
@@ -120,7 +129,7 @@ availability.patch("/requests/:id/assign", async (req, res) => {
   if (!p.success) { res.status(400).json({ error: p.error.issues }); return; }
   const ref = reqs.doc(req.params.id);
   const s = await ref.get();
-  if (!s.exists || s.data()!.tenantId !== auth.tenantId) { res.status(404).json({ error: "Not found" }); return; }
+  if (!s.exists || s.data()!.tenantId !== auth.tenantId || !(await requestInMyScope(auth, s))) { res.status(404).json({ error: "Not found" }); return; }
   const camp = (s.data()!.camp ?? null) as Record<string, unknown> | null;
   if (!camp) { res.status(400).json({ error: "This request has no camp to assign against." }); return; }
   await ref.set({ camp: { ...camp, assignedDates: p.data.assignedDates } }, { merge: true });
@@ -132,7 +141,7 @@ availability.delete("/requests/:id", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
   const s = await reqs.doc(req.params.id).get();
-  if (!s.exists || s.data()!.tenantId !== auth.tenantId) { res.status(404).json({ error: "Not found" }); return; }
+  if (!s.exists || s.data()!.tenantId !== auth.tenantId || !(await requestInMyScope(auth, s))) { res.status(404).json({ error: "Not found" }); return; }
   await s.ref.delete();
   res.json({ ok: true });
 });

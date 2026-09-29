@@ -95,6 +95,13 @@ async function own(req: Request, id: string) {
   if (!canManage(auth.role) || !auth.tenantId) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  // Same rule as the list: a franchise handles only its OWN team's certificates (on its team
+  // or rota, or added by it) — not head office's staff or a sibling franchise's.
+  if (auth.role === "franchise" && auth.franchiseId) {
+    const team = await franchiseTeam(auth.tenantId, auth.franchiseId);
+    const c = snap.data() as { staffName?: string; createdBy?: string };
+    if (!team.names.has((c.staffName ?? "").trim().toLowerCase()) && !team.emails.has(String(c.createdBy ?? "").toLowerCase())) return { status: 404 as const };
+  }
   return { status: 200 as const, snap };
 }
 
