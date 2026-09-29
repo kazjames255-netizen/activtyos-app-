@@ -585,3 +585,13 @@ export const realPhone = (p?: string | null): string => {
   const v = (p ?? "").trim();
   return /^[—–-]*$/.test(v) ? "" : v;
 };
+
+/** Translated form of pendingPayWords(b).action ("Mark cash received"). `w` is useWord() for a scheme name. */
+export function pendingPayActionT(t: (k: string, v?: Record<string, string | number>) => string, w: (s: string) => string, b: { voucherScheme?: string; method?: string }): string {
+  const label = payMethodLabel(b);
+  if (/tax.?free/i.test(label)) return t("p7bkl.act_tfc");
+  if (/cash/i.test(label)) return t("p7bkl.act_cash");
+  if (/bank|transfer/i.test(label)) return t("p7bkl.act_transfer");
+  if (label === "Voucher" || label === "—") return t("p7bkl.act_voucher");
+  return t("p7bkl.act_named", { label: w(label) });
+}

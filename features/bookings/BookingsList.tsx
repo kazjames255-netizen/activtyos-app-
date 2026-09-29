@@ -2,6 +2,8 @@
 
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
+import { useI18n, useT, useWord } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
 import { get as apiGet } from "@/lib/api";
 import { useBookingsStore } from "./store";
 import {
@@ -13,7 +15,7 @@ import {
   money,
   payLabel,
   payLabelFor,
-  pendingPayWords,
+  pendingPayActionT,
   payMethodLabel,
   payTone,
   bookedOn,
@@ -63,14 +65,14 @@ const fmtRowDate = (iso: string) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 };
 
-function prettyBookedOn(b: { createdAt?: string }): string {
+function prettyBookedOn(b: { createdAt?: string }, t: (k: string) => string): string {
   const d = bookedOn(b as never);
   if (!d) return "";
   const today = new Date().toISOString().slice(0, 10);
   const y = new Date();
   y.setUTCDate(y.getUTCDate() - 1);
-  if (d === today) return "today";
-  if (d === y.toISOString().slice(0, 10)) return "yesterday";
+  if (d === today) return t("p7bkl.whenToday");
+  if (d === y.toISOString().slice(0, 10)) return t("p7bkl.whenYesterday");
   return new Date(`${d}T00:00:00Z`).toLocaleDateString(dl(), {
     day: "numeric",
     month: "short",
@@ -79,6 +81,9 @@ function prettyBookedOn(b: { createdAt?: string }): string {
 }
 
 export function BookingsList({ compact = false }: { compact?: boolean }) {
+  const t = useT();
+  const w = useWord();
+  const { locale } = useI18n();
   const bookings = useBookingsStore((s) => s.bookings);
   const filter = useBookingsStore((s) => s.filter);
   const query = useBookingsStore((s) => s.query);
@@ -175,19 +180,19 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
       {/* Header — the page title belongs to the page, not to a 264px rail. */}
       {!compact && (
       <PageHero
-        title="Bookings"
-        lede={`${bookings.length} bookings · newest first · approvals, waitlist, payments, refunds and manual bookings`}
+        title={t("p7nav.bookings")}
+        lede={t("p7bkl.lede", { n: bookings.length })}
         icon="🎟️"
         actions={<>
           <Button
             disabled={bookings.length === 0}
-            title={bookings.length ? "Choose bookings, columns and a format" : "Nothing to export"}
+            title={bookings.length ? t("p7bkl.exportTip") : t("p7bkl.nothingExport")}
             onClick={() => setExporting(true)}
           >
-            ⬇ Export
+            {t("p7bkl.export")}
           </Button>
           <Button variant="primary" onClick={() => openCreate()} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">
-            ＋ Take a booking
+            {t("p7bkl.takeBooking")}
           </Button>
         </>}
       />
@@ -209,7 +214,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--ink-3)]")
               }
             >
-              {label} <span className="opacity-60">{count}</span>
+              {t("p7bkl.tab_" + key)} <span className="opacity-60">{count}</span>
             </button>
           );
         })}
@@ -221,7 +226,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="🔍 Search booker, child, ref, booking ID, email, listing…"
+            placeholder={t("p7bkl.searchPh")}
             className="w-full border-0 bg-transparent text-[13px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-3)]"
           />
         </div>
@@ -236,9 +241,9 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
               active={!!listing}
               value={listing}
               onChange={setListing}
-              title="Filter by listing"
+              title={t("p7bkl.filterListing")}
               options={[
-                ["", "All listings"],
+                ["", t("p7bkl.allListings")],
                 ...listingOpts.map((l) => [l.name, `${l.name} (${l.n})`] as [string, string]),
               ]}
             />
@@ -250,9 +255,9 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 active={!!season}
                 value={season}
                 onChange={setSeason}
-                title="Filter by season"
+                title={t("p7bkl.filterSeason")}
                 options={[
-                  ["", "📅 All seasons"],
+                  ["", t("p7bkl.allSeasons")],
                   ...seasons.map((s) => [s.id, s.name] as [string, string]),
                 ]}
               />
@@ -263,13 +268,13 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
               what "anything come in yesterday?" means. Attendance by date is
               the "On this day" picker beside it, and the register. */}
           <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--ink-3)]">
-            Booked
+            {t("p7bkl.bookedLbl")}
           </span>
           {(
             [
-              ["today", "Today"],
-              ["yesterday", "Yesterday"],
-              ["week", "Last 7 days"],
+              ["today", t("p7bkl.today")],
+              ["yesterday", t("p7bkl.yesterday")],
+              ["week", t("p7bkl.last7")],
             ] as ["today" | "yesterday" | "week", string][]
           ).map(([k, label]) => (
             <button
@@ -292,7 +297,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
               className="whitespace-nowrap text-[12.5px] font-semibold"
               style={{ color: day ? "#fff" : "var(--ink)" }}
             >
-              On this day
+              {t("p7bkl.onThisDay")}
             </span>
             <input
               type="date"
@@ -306,9 +311,9 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
           {(listing || day || range || season) && (
             <>
               <span className="text-[11.5px] text-[var(--ink-3)]">
-                {list.length} of {inScope.length}
+                {t("p7bkl.ofN", { a: list.length, b: inScope.length })}
                 {range && undated > 0 && (
-                  <span title="Bookings taken before we started recording the date can't answer this">
+                  <span title={t("p7bkl.undatedTip")}>
                     {" "}· {undated} undated
                   </span>
                 )}
@@ -323,7 +328,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 }}
                 className="h-8 px-1 text-[11.5px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline"
               >
-                Reset
+                {t("p7bkl.reset")}
               </button>
             </>
           )}
@@ -333,24 +338,24 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
       {/* Bulk bar */}
       {selCount > 0 && (
         <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-[9px] border border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 py-[7px] text-[12px]">
-          <b className="text-[var(--ink)]">{selCount} selected</b>
+          <b className="text-[var(--ink)]">{t("p7bkl.selectedN", { n: selCount })}</b>
           <Button sm variant="primary" onClick={() => bulk("approve")}>
-            Approve
+            {t("p7bkl.bulkApprove")}
           </Button>
           <Button sm onClick={() => bulk("email")}>
-            Email
+            {t("p7bkl.bulkEmail")}
           </Button>
           <Button sm onClick={() => bulk("waitlist")}>
-            Waitlist
+            {t("p7bkl.bulkWaitlist")}
           </Button>
           <Button sm onClick={() => bulk("cancel")}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button sm onClick={() => bulk("export")}>
-            Export
+            {t("p7bkl.bulkExport")}
           </Button>
           <Button sm onClick={clearSel}>
-            Clear
+            {t("p7bkl.bulkClear")}
           </Button>
         </div>
       )}
@@ -358,7 +363,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
       {/* Table */}
       {list.length === 0 ? (
         <Card className="p-5 text-center text-[12.5px] text-[var(--ink-2)]">
-          No bookings match this view.
+          {t("p7bkl.noMatch")}
         </Card>
       ) : compact ? (
         <Card className="p-1.5">
@@ -384,7 +389,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                       "truncate text-[10.5px] " + (on ? "text-white/75" : "text-[var(--ink-3)]")
                     }
                   >
-                    {b.listing} · {payLabel(b.pay)}
+                    {b.listing} · {w(payLabel(b.pay))}
                   </div>
                 </button>
               );
@@ -407,7 +412,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   onClick={() => (allOn ? clearSel() : selectMany(list.map((b) => b.ref)))}
                   className={"flex h-4 w-4 flex-none items-center justify-center rounded border-[1.5px] text-[10px] text-white " + (allOn || someOn ? "border-[var(--brand-2)] bg-[var(--brand-2)]" : "border-[var(--line)]")}
                 >{allOn ? "✓" : someOn ? "–" : ""}</span>
-                {allOn ? `All ${list.length} selected` : someOn ? `${selCount} selected — tick to select all ${list.length}` : `Select all ${list.length}`}
+                {allOn ? t("p7bkl.allSelectedN", { n: list.length }) : someOn ? t("p7bkl.tickAllN", { sel: selCount, n: list.length }) : t("p7bkl.selectAllN", { n: list.length })}
               </label>
             );
           })()}
@@ -445,11 +450,11 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[14px] font-extrabold text-white ring-1 ring-black/5" style={{ background: heroGrad(b.status), textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>{lead.charAt(0).toUpperCase()}</span>
                   <div onClick={() => open(b.ref)} className="min-w-0 flex-1 cursor-pointer">
                     <div className="truncate text-[14.5px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }} title={kids.map((k) => k.name).filter(Boolean).join(" & ")}>{kids.map((k) => k.name).filter(Boolean).join(" & ") || b.child || "—"}</div>
-                    <div className="truncate text-[11.5px] text-[var(--ink-3)]">Ref {b.ref}{b.createdAt ? ` · booked ${prettyBookedOn(b)}` : ""}</div>
+                    <div className="truncate text-[11.5px] text-[var(--ink-3)]">{t("p7bkl.refN", { ref: b.ref })}{b.createdAt ? " · " + t("p7bkl.bookedWhen", { when: prettyBookedOn(b, t) }) : ""}</div>
                   </div>
-                  <span className="flex-none whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11.5px] font-extrabold" style={{ background: heroTone(b.status).bg, color: heroTone(b.status).fg }}>{b.status}</span>
+                  <span className="flex-none whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11.5px] font-extrabold" style={{ background: heroTone(b.status).bg, color: heroTone(b.status).fg }}>{w(b.status)}</span>
                   <div className="flex-none ps-1 text-end">
-                    <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Amount</div>
+                    <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("p7bkl.amountLbl")}</div>
                     <b className="text-[18px] tabular-nums text-[var(--ink)]">{money(b.amount)}</b>
                   </div>
                 </div>
@@ -461,25 +466,25 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>{seasonNameOf(b.listingId)}</span>
                   )}
                   <span className="text-[var(--ink-3)]">·</span>
-                  <span className="text-[12.5px] font-semibold text-[var(--ink-2)]"><span className="num font-extrabold text-[var(--ink)]">{bookingDateSummary(b)}</span> <span className="text-[var(--ink-3)]">· {sessionCount(b)} sessions · {att > 1 ? `${att} children` : "1 child"}</span></span>
+                  <span className="text-[12.5px] font-semibold text-[var(--ink-2)]"><span className="num font-extrabold text-[var(--ink)]">{bookingDateSummary(b)}</span> <span className="text-[var(--ink-3)]">· {pickPlural(t, locale, "p7bk.sessN", sessionCount(b))} · {pickPlural(t, locale, "p7bk.kidN", att)}</span></span>
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span>
-                    <span className="text-[11px] font-semibold text-[var(--ink-3)]">{payMethodLabel(b)}</span>
+                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{w(payLabelFor(b))}</span>
+                    <span className="text-[11px] font-semibold text-[var(--ink-3)]">{w(payMethodLabel(b))}</span>
                   </span>
 
                   {/* Contextual actions, pushed to the right */}
                   <span className="ms-auto flex flex-wrap items-center justify-end gap-1.5">
                     {b.pay === "Awaiting voucher payment" && !off && (
-                      <button onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }} title="Confirm the voucher money has arrived — marks it paid and tells the family"
-                        className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{pendingPayWords(b).action}</button>
+                      <button onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }} title={t("p7bkl.confirmVoucherTip")}
+                        className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{pendingPayActionT(t, w, b)}</button>
                     )}
                     {refundPending && (
-                      <button onClick={(e) => { e.stopPropagation(); act(b.ref, "refund-approve"); }} title={isVoucherBk ? "Send the refund back through the scheme, then confirm — the family is told" : "Approve and issue the refund"}
-                        className="flex-none whitespace-nowrap rounded-full bg-[var(--brand-2,#2f6bd8)] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{isVoucherBk ? "Mark refund sent" : "Approve refund"}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}</button>
+                      <button onClick={(e) => { e.stopPropagation(); act(b.ref, "refund-approve"); }} title={isVoucherBk ? t("p7bkl.refundSchemeTip") : t("p7bkl.approveIssueTip")}
+                        className="flex-none whitespace-nowrap rounded-full bg-[var(--brand-2,#2f6bd8)] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{isVoucherBk ? t("p7bkl.markSent") : t("p7bkl.approveRefund")}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}</button>
                     )}
                     {!refundPending && b.cancel?.amount != null && b.cancel.amount > 0 && b.cancel.refund !== "none" && (
                       <span title={b.amount > 0 ? `${money(b.cancel.amount)} — ${Math.round((b.cancel.amount / b.amount) * 100)}% of ${money(b.amount)}` : undefined}
-                        className="flex-none whitespace-nowrap rounded-full bg-[#fdebec] px-2.5 py-[3px] text-[11px] font-bold text-[#c0392b]">Refund {money(b.cancel.amount)}</span>
+                        className="flex-none whitespace-nowrap rounded-full bg-[#fdebec] px-2.5 py-[3px] text-[11px] font-bold text-[#c0392b]">{t("p7bkl.refundChip", { amt: money(b.cancel.amount) })}</span>
                     )}
                   </span>
                 </div>
@@ -490,20 +495,20 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
               {moveReq && (
                 <div className="border-t border-[#f5e2b8] bg-[#fffaf0] px-4 py-2.5">
                   <div onClick={() => open(b.ref)} className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2 hover:opacity-90">
-                    <span className="text-[12px] font-extrabold text-[#8a5300]">📅 Date change requested</span>
+                    <span className="text-[12px] font-extrabold text-[#8a5300]">{t("p7bkl.dateChangeReq")}</span>
                     {moveReq.moves.length === 1 ? (
                       <span className="text-[12.5px] text-[var(--ink)]">
-                        <span className="text-[var(--ink-3)]">From</span> <b>{fmtRowDate(moveReq.moves[0].from)}</b> <span className="text-[var(--ink-3)]">→ To</span> <b>{fmtRowDate(moveReq.moves[0].to)}</b>
+                        <span className="text-[var(--ink-3)]">{t("p7bkl.fromLbl")}</span> <b>{fmtRowDate(moveReq.moves[0].from)}</b> <span className="text-[var(--ink-3)]">{t("p7bkl.toLbl")}</span> <b>{fmtRowDate(moveReq.moves[0].to)}</b>
                       </span>
                     ) : (
-                      <span className="text-[12.5px] text-[var(--ink)]">{moveReq.moves.length} date changes — <span className="font-semibold text-[var(--brand-2)]">open to view all</span></span>
+                      <span className="text-[12.5px] text-[var(--ink)]">{moveReq.moves.length} date changes — <span className="font-semibold text-[var(--brand-2)]">{t("p7bkl.openViewAll")}</span></span>
                     )}
                     {denyingRef !== b.ref && (
                       <span className="ms-auto flex items-center gap-1.5">
-                        <button onClick={(e) => { e.stopPropagation(); act(b.ref, "move-approve"); }} title="Approve all — dates move and the family is told"
-                          className="whitespace-nowrap rounded-full bg-[#0f7a43] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">Approve{moveReq.moves.length > 1 ? " all" : ""}</button>
-                        <button onClick={(e) => { e.stopPropagation(); setDenyingRef(b.ref); setDenyReason(""); }} title="Decline — the booking is unchanged and the family is told"
-                          className="whitespace-nowrap rounded-full border border-[#e6b3b3] bg-white px-3.5 py-[6px] text-[11.5px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Deny</button>
+                        <button onClick={(e) => { e.stopPropagation(); act(b.ref, "move-approve"); }} title={t("p7bkl.approveAllTip")}
+                          className="whitespace-nowrap rounded-full bg-[#0f7a43] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">{moveReq.moves.length > 1 ? t("p7bkl.approveAll") : t("p7bkl.approveWord")}</button>
+                        <button onClick={(e) => { e.stopPropagation(); setDenyingRef(b.ref); setDenyReason(""); }} title={t("p7bkl.denyTip")}
+                          className="whitespace-nowrap rounded-full border border-[#e6b3b3] bg-white px-3.5 py-[6px] text-[11.5px] font-bold text-[#c0392b] hover:bg-[#fdebec]">{t("p7bkl.deny")}</button>
                       </span>
                     )}
                   </div>
@@ -514,11 +519,11 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                         value={denyReason}
                         onChange={(e) => setDenyReason(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") submitDeny(b.ref); if (e.key === "Escape") { setDenyingRef(null); setDenyReason(""); } }}
-                        placeholder="Reason for declining — the family will see this (optional)"
+                        placeholder={t("p7bkl.denyReasonPh")}
                         className="min-w-[220px] flex-1 rounded-lg border border-[#e6b3b3] bg-white px-3 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#c0392b]"
                       />
-                      <button onClick={() => submitDeny(b.ref)} className="whitespace-nowrap rounded-full bg-[#c0392b] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">Confirm decline</button>
-                      <button onClick={() => { setDenyingRef(null); setDenyReason(""); }} className="whitespace-nowrap rounded-full border border-[var(--line)] bg-white px-3 py-[6px] text-[11.5px] font-bold text-[var(--ink-3)]">Cancel</button>
+                      <button onClick={() => submitDeny(b.ref)} className="whitespace-nowrap rounded-full bg-[#c0392b] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">{t("p7bkl.confirmDecline")}</button>
+                      <button onClick={() => { setDenyingRef(null); setDenyReason(""); }} className="whitespace-nowrap rounded-full border border-[var(--line)] bg-white px-3 py-[6px] text-[11.5px] font-bold text-[var(--ink-3)]">{t("common.cancel")}</button>
                     </div>
                   )}
                 </div>

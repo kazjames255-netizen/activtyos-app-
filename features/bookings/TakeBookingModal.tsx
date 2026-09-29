@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useBookingsStore } from "./store";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { BookingOnly, type ServerListing } from "@/features/listings/ListingWizard";
@@ -180,8 +180,6 @@ export function TakeBookingModal() {
     return () => { alive = false; };
   }, [activeId]);
 
-  if (!show) return null;
-
   const dismiss = () => {
     setShow({ showCreate: false, createListingId: null });
     close();
@@ -190,6 +188,20 @@ export function TakeBookingModal() {
     setDone(null);
     setBookState({ busy: false, error: null });
   };
+
+  // Escape closes the modal like the × does (it was the one full-screen overlay a keyboard user couldn't leave).
+  // A ref keeps the listener on the latest dismiss without re-binding every render.
+  const dismissRef = useRef(dismiss);
+  dismissRef.current = dismiss;
+  const isShown = !!show;
+  useEffect(() => {
+    if (!isShown) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") dismissRef.current(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isShown]);
+
+  if (!show) return null;
 
   return (
     // The Bookings page runs the light palette its neighbours use; this modal
