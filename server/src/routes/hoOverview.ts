@@ -76,7 +76,9 @@ hoOverview.get("/oversight/:area", async (req, res) => {
 
   const snap = await db.collection(area === "medication" ? "medications" : "incidents").where("tenantId", "==", tenantId).get();
   const now = Date.now();
-  const attrib = (childId?: string, childName?: string): string | null => {
+  const attrib = (childId?: string, childName?: string, stamped?: string | null): string | null => {
+    // The franchise that logged the record (stamped on it) wins — it also covers walk-ins with no matching child.
+    if (stamped) return stamped;
     if (childId && childFr.has(childId)) return childFr.get(childId)!;
     if (childName && childFr.has(childName.trim().toLowerCase())) return childFr.get(childName.trim().toLowerCase())!;
     return null;
@@ -84,7 +86,7 @@ hoOverview.get("/oversight/:area", async (req, res) => {
 
   let records = snap.docs.map((d) => {
     const r = d.data() as Record<string, unknown> & { kind?: string; childId?: string; childName?: string; date?: string; time?: string; bodyPart?: string; injury?: string; name?: string; dose?: string; status?: string; createdAt?: string; resolvedAt?: string };
-    const fid = attrib(r.childId, r.childName);
+    const fid = attrib(r.childId, r.childName, (r as { franchiseId?: string | null }).franchiseId);
     const when = r.createdAt || (r.date ? `${r.date}${r.time ? `T${r.time}` : ""}` : null);
     const open = !(r.status === "closed" || r.status === "resolved" || r.resolvedAt);
     return {
@@ -209,6 +211,9 @@ hoOverview.get("/overview", async (req, res) => {
     // children on this booking (ids preferred, else names)
     const kidKeys = (raw.kids?.length ? raw.kids.map((k) => k.childId || k.name || "") : [raw.childId || b.child || ""]).filter(Boolean);
     for (const k of kidKeys) { bucket.children.add(k); childFr.set(k, fid && franchises.has(fid) ? fid : null); }
+    // An incident may name the child by NAME only (no childId) — index the names too so it still finds its franchise.
+    const nameKeys = (raw.kids?.length ? raw.kids.map((k) => k.name || "") : [b.child || ""]).map((n) => n.trim().toLowerCase()).filter(Boolean);
+    for (const k of nameKeys) if (!childFr.has(k) || (fid && franchises.has(fid))) childFr.set(k, fid && franchises.has(fid) ? fid : null);
     // Per-listing + per-season tallies (top listing / top season insights).
     if (raw.listingId) {
       const meta = listingMeta.get(raw.listingId);
@@ -244,7 +249,9 @@ hoOverview.get("/overview", async (req, res) => {
     if (!open) continue;
     networkOpenIncidents += 1;
     if (rec.kind && incidentsByKind[rec.kind] != null) incidentsByKind[rec.kind] += 1;
-    const fid = rec.childId ? childFr.get(rec.childId) : (rec.childName ? childFr.get(rec.childName) : undefined);
+    // The franchise that logged it (stamped on the record) wins; else the franchise the child is booked with (by id, then name).
+    const stamped = (rec as { franchiseId?: string | null }).franchiseId ?? undefined;
+    const fid = stamped ?? (rec.childId ? childFr.get(rec.childId) : undefined) ?? (rec.childName ? childFr.get(rec.childName.trim().toLowerCase()) : undefined);
     if (fid && franchises.has(fid)) franchises.get(fid)!.openIncidents += 1;
   }
 
@@ -307,7 +314,8 @@ hoOverview.get("/overview", async (req, res) => {
       families: netFamilies.size, children: netChildren.size,
       franchises: frList.length, liveFranchises: frList.filter((f) => f.live).length,
       pendingInvites: pendingInvites.length,
-      avgPerFranchise: frList.length ? round2(netRevenue / frList.length) : 0,
+      // Head office's own direct bookings aren't a franchise's revenue — leave them out of the per-franchise average.
+      avgPerFranchise: frList.length ? round2(frList.reduce((s, r) => s + r.revenue, 0) / frList.length) : 0,
       revenueTrendPct: pct(net30, netPrev30), rev30: round2(net30),
       openIncidents: networkOpenIncidents, incidentsByKind,
     },
