@@ -7,6 +7,7 @@ import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import type { PortalKey } from "@/lib/nav/config";
 import { notificationHref } from "@/lib/notification-href";
+import { agoLabel } from "@/lib/i18n/format";
 
 // ─────────────────────────────────────────────────────────────────────────
 // The notification bell — the in-app half of lib/notify.ts on the server.
@@ -40,16 +41,6 @@ const CATEGORY_GLYPH: Record<string, string> = {
   task: "✅",
   leave: "🏖️",
 };
-
-// "5m ago" / "3h ago" / "2d ago" — enough precision for a bell.
-function ago(iso: string): string {
-  const mins = Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 60_000));
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
 
 export function Bell({ portal }: { portal: PortalKey }) {
   const router = useRouter();
@@ -140,14 +131,14 @@ export function Bell({ portal }: { portal: PortalKey }) {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-2">
                     <span className="truncate text-[12.5px] font-bold text-[var(--ink)]">{n.title}</span>
-                    <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{ago(n.at)}</span>
+                    <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{agoLabel(t, n.at)}</span>
                   </span>
                   <span className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-[var(--ink-2)]">
                     {n.body}
                   </span>
                 </span>
                 {!n.readAt && (
-                  <span className="mt-1.5 h-[7px] w-[7px] flex-none rounded-full" style={{ background: "var(--brand-2, #2f6bd8)" }} aria-label="new" />
+                  <span className="mt-1.5 h-[7px] w-[7px] flex-none rounded-full" style={{ background: "var(--brand-2, #2f6bd8)" }} aria-label={t("p7shell.newDot")} />
                 )}
               </button>
             ))}

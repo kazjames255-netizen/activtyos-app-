@@ -14,6 +14,7 @@
 // server-side the day parents can cancel themselves.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { pickPlural } from "./i18n/plural";
 export interface RefundBand {
   /** Cancel at least this many hours before the first session starts. */
   hoursBefore: number;
@@ -148,6 +149,8 @@ export interface RefundAdvice {
   band: RefundBand | null;
   /** Plain-English reason, shown beside the figure. */
   reason: string;
+  /** True when the provider cancelled (full refund, notice bands ignored) — lets the UI re-word `reason` in the active language. */
+  byProvider?: boolean;
 }
 
 /**
@@ -187,6 +190,7 @@ export function refundFor(
       hoursNotice: 0,
       band: null,
       reason: "You cancelled this, so the full amount goes back — your notice periods don't apply.",
+      byProvider: true,
     };
   }
 
@@ -233,4 +237,40 @@ export function refundFor(
           ? `Cancelled ${notice} — your policy gives no refund.`
           : `Cancelled ${notice} — your policy gives ${percent}%.`,
   };
+}
+
+// ---- Translated wording -------------------------------------------------------------------------------------------------------------
+// The functions above build English sentences (used by emails / the API). The parent- and operator-facing screens call these instead so the
+// same policy reads in the active language. `t` is the caller's useT(), `locale` the active code (for plural forms).
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
+export function noticeLabelT(t: TFn, locale: string, hours: number): string {
+  if (hours <= 0) return t("p7pol.lessThanThat");
+  if (hours % HOURS.week === 0) return pickPlural(t, locale, "p7pol.wk", hours / HOURS.week);
+  if (hours % 24 === 0) return pickPlural(t, locale, "p7pol.dy", hours / 24);
+  return pickPlural(t, locale, "p7pol.hr", hours);
+}
+
+export function policyWordingT(t: TFn, locale: string, policy: CancellationPolicy): string {
+  if (policy.wording?.trim()) return policy.wording.trim(); // provider-typed text is shown as they wrote it
+  const bands = sortBands(policy.bands).filter((b) => b.hoursBefore > 0);
+  const floor = sortBands(policy.bands).find((b) => b.hoursBefore <= 0);
+  if (bands.length === 0) {
+    const pct = floor?.refundPercent ?? 0;
+    return pct >= 100 ? t("p7pol.allFull") : pct <= 0 ? t("p7pol.allNone") : t("p7pol.allPct", { pct });
+  }
+  const parts = bands.map((b) => {
+    const notice = noticeLabelT(t, locale, b.hoursBefore);
+    return b.refundPercent >= 100 ? t("p7pol.bandFull", { notice }) : b.refundPercent <= 0 ? t("p7pol.bandNone", { notice }) : t("p7pol.bandPct", { notice, pct: b.refundPercent });
+  });
+  const tail = floor && floor.refundPercent > 0 ? t("p7pol.tailPct", { pct: floor.refundPercent }) : t("p7pol.tailNone");
+  return `${parts.join("; ")}. ${tail}`;
+}
+
+export function adviceReasonT(t: TFn, locale: string, a: RefundAdvice): string {
+  if (a.byProvider) return t("p7pol.byProvider");
+  const notice = a.hoursNotice < 0 ? t("p7pol.afterStart")
+    : a.hoursNotice < 24 ? t("p7pol.beforeHours", { hours: pickPlural(t, locale, "p7pol.hr", Math.max(0, a.hoursNotice)) })
+    : t("p7pol.beforeDays", { days: pickPlural(t, locale, "p7pol.dy", Math.floor(a.hoursNotice / 24)) });
+  return a.percent >= 100 ? t("p7pol.reasonFull", { notice }) : a.percent <= 0 ? t("p7pol.reasonNone", { notice }) : t("p7pol.reasonPct", { notice, pct: a.percent });
 }

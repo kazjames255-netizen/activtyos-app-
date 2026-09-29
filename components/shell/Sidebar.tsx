@@ -1,5 +1,6 @@
 "use client";
 
+import { navLabel } from "@/lib/i18n/words";
 import { useLbl } from "@/features/learninghub/hubLabel";
 import { useT } from "@/lib/i18n/provider";
 import { useEffect, useState } from "react";
@@ -82,7 +83,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded, col
   const lbl = useLbl();
   const tt = useT();
   // Hub items carry a fixed English name; every other label is still passed through as authored.
-  const navText = (it: NavItem, text: string) => (it.view === "learninghub" ? lbl(text) : text);
+  const navText = (it: NavItem, text: string) => (it.view === "learninghub" ? lbl(text) : navLabel(tt, text));
   // The Messages badge is live: unread message count, not the config placeholder.
   // It grows as replies arrive and clears to nothing once the thread is opened
   // (the open marks messages read → realtime → this refetches). The Coupons badge
@@ -116,7 +117,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded, col
   // empty — dimmed, with a soft "no info" pill. Still tappable, so it fills in
   // the moment the provider adds something.
   if (faded) {
-    const tag = NO_RECORDS_VIEWS.has(item.view) ? "No records" : "No info";
+    const tag = NO_RECORDS_VIEWS.has(item.view) ? tt("p7shell.noRecords") : tt("p7shell.noInfo");
     return (
       <Link
         href={`/${portal}/${item.view}`}
@@ -160,6 +161,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded, col
 // are never rendered.
 function SignOutItem({ item, collapsed }: { item: NavItem; collapsed?: boolean }) {
   const router = useRouter();
+  const t = useT();
   const { signOutUser } = useAuth();
   const signOut = async () => {
     await signOutUser();
@@ -167,7 +169,7 @@ function SignOutItem({ item, collapsed }: { item: NavItem; collapsed?: boolean }
   };
   if (collapsed) {
     return (
-      <button type="button" onClick={signOut} title={item.label} className="mx-2 flex items-center justify-center rounded-lg py-2 hover:bg-[var(--side-hover)]" style={{ color: "var(--side-nav)" }}>
+      <button type="button" onClick={signOut} title={t("common.signOut")} className="mx-2 flex items-center justify-center rounded-lg py-2 hover:bg-[var(--side-hover)]" style={{ color: "var(--side-nav)" }}>
         <Icon icon={item.icon} />
       </button>
     );
@@ -180,7 +182,7 @@ function SignOutItem({ item, collapsed }: { item: NavItem; collapsed?: boolean }
       style={{ color: "var(--side-nav)" }}
     >
       <Icon icon={item.icon} />
-      <span className="truncate">{item.label}</span>
+      <span className="truncate">{t("common.signOut")}</span>
     </button>
   );
 }
@@ -228,7 +230,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   const { user } = useAuth();
   const groups = NAV_GROUPS[portal];
   const t = useT();
-  const groupText = (label: string | null) => { const k = label ? GROUP_KEY[label] : undefined; return k ? t(`chrome.g_${k}`) : pluralLabel(label, portal, multiChild); };
+  const groupText = (label: string | null) => { const k = label ? GROUP_KEY[label] : undefined; return k ? t(`chrome.g_${k}`) : navLabel(t, pluralLabel(label, portal, multiChild)); };
   const activeView = pathname.split("/")[2];
   const activeGroupLabel = groups.find((g) => g.items.some((i) => i.view === activeView))?.label;
 
@@ -451,9 +453,9 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
               <span
                 className="mt-1 inline-flex max-w-full items-center gap-1 truncate rounded-full px-2 py-[2px] text-[10px] font-extrabold uppercase tracking-wide"
                 style={{ background: "rgba(245,184,31,0.18)", color: "#f5b81f" }}
-                title={`${fr.area ? `${fr.area} ` : ""}franchise`}
+                title={fr.area ? t("p7shell.areaFranchise", { area: fr.area }) : t("p7shell.franchise")}
               >
-                🌐 {fr.area ? `${fr.area} franchise` : "Franchise"}
+                🌐 {fr.area ? t("p7shell.areaFranchise", { area: fr.area }) : t("p7shell.franchise")}
               </span>
             )}
           </span>
@@ -462,7 +464,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
           <button
             type="button"
             onClick={() => setCollapsed(true)}
-            title="Narrow menu"
+            title={t("p7shell.narrowMenu")}
             className="grid h-6 w-6 flex-none place-items-center rounded-md text-[13px] hover:bg-[var(--side-hover)]"
             style={{ color: "var(--side-muted)" }}
           >
@@ -474,7 +476,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
         <button
           type="button"
           onClick={() => setCollapsed(false)}
-          title="Expand menu"
+          title={t("p7shell.expandMenu")}
           className="mx-2 mb-2 grid place-items-center rounded-lg py-1.5 text-[14px] hover:bg-[var(--side-hover)]"
           style={{ color: "var(--side-muted)" }}
         >
@@ -493,7 +495,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
           Header listens for. */}
       {hoCombined && (
         <div className={`mb-2 flex flex-col gap-1 ${collapsed ? "items-center px-2" : "px-3"}`}>
-          {([["🔍", "Find a child", "aos:find-child"], ["👪", "Families", "aos:ho-families"]] as const).map(([icon, label, ev]) => (
+          {([["🔍", t("header.findChild"), "aos:find-child"], ["👪", t("header.families"), "aos:ho-families"]] as const).map(([icon, label, ev]) => (
             <button
               key={ev}
               type="button"

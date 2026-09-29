@@ -101,6 +101,7 @@ export function Header({ portal }: { portal: PortalKey }) {
   // Booking-area flags (approvals, change/cancel requests, failed cards; or
   // "to pay" for a parent) — badge + hover tooltip on the Bookings tab.
   const bookingFlags = useBookingFlags(portal);
+  const bookingTip = bookingFlags.tips.map((x) => t(x.key, { n: x.n })).join(" · ");
 
   // The parent gets three primary actions promoted into the top bar. Operators
   // get a single Messages tab (same promotion) so replies are reachable from
@@ -122,9 +123,9 @@ export function Header({ portal }: { portal: PortalKey }) {
   const tabs: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number; fancy?: boolean; accent?: string; accentLight?: string; tip?: string }[] =
     portal === "custdash"
       ? [
-          ...(customerArea.messaging && !customerArea.simpleMode ? [{ view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? `${unread} unread message${unread === 1 ? "" : "s"}` : messageLabel }] : []),
-          ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: t("header.browse"), icon: SEARCH, wide: false, badge: 0, accent: "#7a5af8", accentLight: "#a88bff", tip: "Find & book activities" }] : []),
-          { view: "bookings", href: "/custdash/bookings", label: t("header.myBookings"), icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Your bookings" },
+          ...(customerArea.messaging && !customerArea.simpleMode ? [{ view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? t("p7shell.unreadTip", { n: unread }) : messageLabel }] : []),
+          ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: t("header.browse"), icon: SEARCH, wide: false, badge: 0, accent: "#7a5af8", accentLight: "#a88bff", tip: t("p7shell.tipBrowse") }] : []),
+          { view: "bookings", href: "/custdash/bookings", label: t("header.myBookings"), icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingTip || t("p7shell.tipBookings") },
           // M9 (product review): a family enrolled in the Learning Hub lands on Browse, so the hub is one tap away in the top bar too
           // (it was sidebar-only, inside a collapsed group). Only when the family really has access (useCustomerArea).
           ...(customerArea.learninghub ? [{ view: "learninghub", href: "/custdash/learninghub", label: hubLbl("Learning Hub"), icon: BOOK, wide: false, badge: 0, accent: "#2f6bd8", accentLight: "#5b9bff", tip: hubLbl("Learning Hub") }] : []),
@@ -136,22 +137,22 @@ export function Header({ portal }: { portal: PortalKey }) {
           // Bookings promoted to the top bar (like the customer's My bookings),
           // out of the sidebar. Only where the portal has a bookings view — and
           // not in the head-office combined view (no single combined list).
-          ...(!hoCombined && findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: t("header.bookings"), icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Bookings — nothing needs attention" }] : []),
+          ...(!hoCombined && findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: t("header.bookings"), icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingTip || t("p7shell.tipBookingsOk") }] : []),
           // Staff get Announcements + Messages promoted to the top bar (out of the sidebar).
-          ...(portal === "staff" && findNavItem(portal, "announcements") ? [{ view: "announcements", href: `/${portal}/announcements`, label: t("header.announcements"), icon: MEGAPHONE, wide: false, badge: 0, accent: "#c2410c", accentLight: "#f59e0b", tip: "Announcements from your provider" }] : []),
-          ...(portal === "staff" && findNavItem(portal, "messages") ? [{ view: "messages", href: `/${portal}/messages`, label: t("header.messages"), icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? `${unread} unread message${unread === 1 ? "" : "s"}` : "Messages" }] : []),
+          ...(portal === "staff" && findNavItem(portal, "announcements") ? [{ view: "announcements", href: `/${portal}/announcements`, label: t("header.announcements"), icon: MEGAPHONE, wide: false, badge: 0, accent: "#c2410c", accentLight: "#f59e0b", tip: t("p7shell.tipAnnouncements") }] : []),
+          ...(portal === "staff" && findNavItem(portal, "messages") ? [{ view: "messages", href: `/${portal}/messages`, label: t("header.messages"), icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? t("p7shell.unreadTip", { n: unread }) : t("header.messages") }] : []),
           // Families promoted to the top bar — quick access to the family list.
           // Hidden in the head-office combined view (families are per-franchise).
-          ...(!hoCombined && findNavItem(portal, "customers") ? [{ view: "customers", href: `/${portal}/customers`, label: t("header.families"), icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: "Families" }] : []),
+          ...(!hoCombined && findNavItem(portal, "customers") ? [{ view: "customers", href: `/${portal}/customers`, label: t("header.families"), icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: t("header.families") }] : []),
         ];
 
   // The green "Communication" top-bar tab: a dropdown gathering the comms
   // views (Newsfeed, Messages, Email) so they're out of the sidebar.
   const commItems: { view: string; label: string; icon: ReactNode; href: string; badge: number }[] =
     portal === "custdash" || portal === "staff" ? [] : ([
-      findNavItem(portal, "newsfeed") && !featureOff(features, "newsfeed") ? { view: "newsfeed", label: "Newsfeed", icon: MEGAPHONE, href: `/${portal}/newsfeed`, badge: 0 } : null,
+      findNavItem(portal, "newsfeed") && !featureOff(features, "newsfeed") ? { view: "newsfeed", label: t("p7shell.newsfeed"), icon: MEGAPHONE, href: `/${portal}/newsfeed`, badge: 0 } : null,
       findNavItem(portal, "messages") && !featureOff(features, "messages") ? { view: "messages", label: t("header.messages"), icon: MAIL, href: `/${portal}/messages`, badge: unread } : null,
-      findNavItem(portal, "email") && !featureOff(features, "email") ? { view: "email", label: "Email", icon: MAIL, href: `/${portal}/email`, badge: 0 } : null,
+      findNavItem(portal, "email") && !featureOff(features, "email") ? { view: "email", label: t("p7shell.email"), icon: MAIL, href: `/${portal}/email`, badge: 0 } : null,
     ] as ({ view: string; label: string; icon: ReactNode; href: string; badge: number } | null)[]).filter((x) => x !== null) as { view: string; label: string; icon: ReactNode; href: string; badge: number }[];
   const commActive = commItems.some((c) => c.view === view);
 
@@ -174,7 +175,7 @@ export function Header({ portal }: { portal: PortalKey }) {
       {/* Hamburger — mobile only; the desktop rail is always visible. */}
       <button
         onClick={() => setMenuOpen(true)}
-        aria-label="Open menu"
+        aria-label={t("p7shell.openMenu")}
         className="inline-flex h-[34px] w-[34px] flex-none cursor-pointer items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] lg:hidden"
       >
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
@@ -288,7 +289,7 @@ export function Header({ portal }: { portal: PortalKey }) {
         <button
           type="button"
           onClick={() => setLookupOpen(true)}
-          title="Find a child — key info card"
+          title={t("p7shell.findChildTip")}
           className="inline-flex flex-none items-center gap-1.5 rounded-full px-3.5 py-[7px] text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:text-[var(--brand)] hover:shadow-[inset_0_0_0_1px_var(--brand)]"
           style={{ ...PILL, color: PILL_INK }}
         >
@@ -338,7 +339,7 @@ export function Header({ portal }: { portal: PortalKey }) {
               <button type="button" onClick={() => setFamOpen(false)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
             </div>
             <div className="p-4">
-              <div className="mb-2.5 text-[12.5px] font-bold text-[var(--ink-2)]">Choose a franchise to open its families:</div>
+              <div className="mb-2.5 text-[12.5px] font-bold text-[var(--ink-2)]">{t("p7shell.chooseFranchise")}</div>
               <FranchiseScopeList noun="families" hideAll onPick={(scope, label) => {
                 setFamOpen(false);
                 // Stay in the head-office view (don't change the global scope /
@@ -359,6 +360,7 @@ export function Header({ portal }: { portal: PortalKey }) {
 // captured automatically from the route and user agent; the reporter only
 // says what happened and how bad it felt.
 function BugReport() {
+  const t = useT();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [severity, setSeverity] = useState<"low" | "medium" | "high">("medium");
@@ -391,7 +393,7 @@ function BugReport() {
         setTimeout(close, 1500);
       })
       .catch((e) => {
-        setError(e instanceof Error ? e.message : "Couldn't send the report");
+        setError(e instanceof Error ? e.message : t("p7shell.bugFail"));
         setBusy(false);
       });
   };
@@ -403,8 +405,8 @@ function BugReport() {
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="Report a bug"
-        title="Report a bug"
+        aria-label={t("header.reportBug")}
+        title={t("header.reportBug")}
         className="relative inline-flex h-[34px] w-[34px] flex-none cursor-pointer items-center justify-center rounded-full transition-all hover:-translate-y-px hover:brightness-105"
         style={PILL}
       >
@@ -418,38 +420,38 @@ function BugReport() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
-              <span className="text-[13.5px] font-extrabold text-[var(--ink)]">🐞 Report a bug</span>
-              <button onClick={close} aria-label="Close" className="cursor-pointer text-[var(--ink-3)] hover:text-[var(--ink)]">✕</button>
+              <span className="text-[13.5px] font-extrabold text-[var(--ink)]">🐞 {t("header.reportBug")}</span>
+              <button onClick={close} aria-label={t("p7shell.close")} className="cursor-pointer text-[var(--ink-3)] hover:text-[var(--ink)]">✕</button>
             </div>
             {sent ? (
-              <p className="px-4 py-8 text-center text-[13px] font-bold text-[var(--ink)]">Thanks — we&apos;re on it.</p>
+              <p className="px-4 py-8 text-center text-[13px] font-bold text-[var(--ink)]">{t("p7shell.bugThanks")}</p>
             ) : (
               <div className="flex flex-col gap-3 px-4 py-4">
                 <label className="block">
-                  <span className="mb-1 block text-[11.5px] font-bold text-[var(--ink-3)]">How bad is it?</span>
+                  <span className="mb-1 block text-[11.5px] font-bold text-[var(--ink-3)]">{t("p7shell.bugHow")}</span>
                   <select value={severity} onChange={(e) => setSeverity(e.target.value as "low" | "medium" | "high")} className={inputCls}>
-                    <option value="low">Low — a niggle</option>
-                    <option value="medium">Medium — it&apos;s in the way</option>
-                    <option value="high">High — I&apos;m stuck</option>
+                    <option value="low">{t("p7shell.bugLow")}</option>
+                    <option value="medium">{t("p7shell.bugMed")}</option>
+                    <option value="high">{t("p7shell.bugHigh")}</option>
                   </select>
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-[11.5px] font-bold text-[var(--ink-3)]">What happened?</span>
+                  <span className="mb-1 block text-[11.5px] font-bold text-[var(--ink-3)]">{t("p7shell.bugWhat")}</span>
                   <textarea
                     value={steps}
                     onChange={(e) => setSteps(e.target.value)}
                     rows={4}
                     autoFocus
-                    placeholder="What were you doing, and what went wrong?"
+                    placeholder={t("p7shell.bugPlaceholder")}
                     className={`${inputCls} resize-none`}
                   />
                 </label>
-                <p className="m-0 text-[11px] text-[var(--ink-3)]">The page you&apos;re on and your device details are included automatically.</p>
+                <p className="m-0 text-[11px] text-[var(--ink-3)]">{t("p7shell.bugAuto")}</p>
                 {error && <p className="m-0 text-[12px] font-bold" style={{ color: "var(--sem-crit, #ef4444)" }}>{error}</p>}
                 <div className="flex justify-end gap-2">
-                  <Button sm onClick={close}>Cancel</Button>
+                  <Button sm onClick={close}>{t("common.cancel")}</Button>
                   <Button sm variant="primary" disabled={!steps.trim() || busy} onClick={submit}>
-                    {busy ? "Sending…" : "Send report"}
+                    {busy ? t("p7shell.bugSending") : t("p7shell.bugSend")}
                   </Button>
                 </div>
               </div>

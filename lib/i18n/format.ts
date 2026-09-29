@@ -18,3 +18,13 @@ export function setDateLocale(l: LocaleCode): void { current = TAG[l] ? l : DEFA
 
 /** The tag to pass to toLocaleDateString / toLocaleTimeString / toLocaleString / Intl.* for the active language. */
 export function dateLocale(): string { return TAG[current]; }
+
+/** "just now" / "5m ago" / "3h ago" / "2d ago" in the active language. `t` is the caller's useT(). */
+export function agoLabel(t: (key: string, vars?: Record<string, string | number>) => string, iso: string): string {
+  const mins = Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 60_000));
+  if (mins < 1) return t("p7shell.agoNow");
+  if (mins < 60) return t("p7shell.agoMin", { n: mins });
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return t("p7shell.agoHr", { n: hours });
+  return t("p7shell.agoDay", { n: Math.floor(hours / 24) });
+}

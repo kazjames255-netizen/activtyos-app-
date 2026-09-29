@@ -14,3 +14,11 @@ export function translateWord(t: T, s: string | null | undefined): string {
   if (m) return t("words.named_pending", { name: m[1] });
   return s;
 }
+
+/** Sidebar / page-name labels from lib/nav/config.ts ("Bookings", "Ratios & groups") -> `p7nav.<slug>`; unknown labels render as authored. */
+export function navLabel(t: T, label: string | null | undefined): string {
+  if (!label) return label ?? "";
+  const k = "p7nav." + label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  const r = t(k);
+  return r !== k ? r : label;
+}

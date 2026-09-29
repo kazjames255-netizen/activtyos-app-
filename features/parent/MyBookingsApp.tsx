@@ -6,12 +6,14 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, apiPublic } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n, useT, useWord } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
+import { Rich } from "@/components/i18n/Rich";
 import { bookingDateSummary, money, payLabelFor, payTone } from "@/features/bookings/helpers";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
-import { refundFor, policyById, policyWording, type NamedPolicy } from "@/lib/cancellation";
+import { refundFor, policyById, policyWordingT, adviceReasonT, type NamedPolicy } from "@/lib/cancellation";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 
 // Boy → blue, Girl → pink, unknown → house grey. Same convention as the
@@ -112,6 +114,7 @@ function AvailabilityCalendar({ available, taken, value, onPick }: { available: 
 
 function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: Booking; listing: AmendListing | null; hasPendingMove?: boolean; onDone: () => void }) {
   const t = useT();
+  const { locale } = useI18n();
   const [reason, setReason] = useState("");
   const [otherReason, setOtherReason] = useState("");
   const [msg, setMsg] = useState("");
@@ -301,9 +304,9 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
           </div>
           {partialMode && (
             <div className="mt-2">
-              <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Tick the day(s) to release{multiKid ? ", per child" : ""}.</div>
+              <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">{multiKid ? t("p7bk.tickDaysKid") : t("p7bk.tickDays")}</div>
               <div className="mb-1.5 rounded-md bg-[var(--panel)] px-2.5 py-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-                Each day is worth <b className="text-[var(--ink-2)]">{money(perSlotPaid)}</b> — that&rsquo;s 1⁄{totalPaidSlots} of the {money(booking.amount)} you paid ({totalPaidSlots} days). For a refund, each day then follows your provider&rsquo;s notice policy, so a day too close may come back as less or nothing.
+                <Rich text={t("p7bk.dayWorth", { each: money(perSlotPaid), n: totalPaidSlots, total: money(booking.amount) })} bClass="text-[var(--ink-2)]" />
               </div>
               {(multiKid ? kidsList!.map((k) => k.name) : [null]).map((childName) => {
                 const rows = slots.filter((s) => (childName === null ? true : s.childName === childName));
@@ -319,7 +322,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                           <label key={s.key} className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[12.5px]"
                             style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
                             <span className="flex items-center gap-2"><input type="checkbox" checked={on} onChange={() => togglePick(s.key)} /><b>{fmtIso(s.date)}</b></span>
-                            <span className="text-[11px] font-semibold" style={{ color: r > 0 ? "var(--brand)" : "var(--ink-3)" }}>{money(perSlotPaid)}{r === 0 ? " · no cash refund (too close)" : perSlotPaid - r > 0.005 ? ` · ${money(r)} if refunded` : ""}</span>
+                            <span className="text-[11px] font-semibold" style={{ color: r > 0 ? "var(--brand)" : "var(--ink-3)" }}>{money(perSlotPaid)}{r === 0 ? " · " + t("p7bk.noCashClose") : perSlotPaid - r > 0.005 ? " · " + t("p7bk.ifRefunded", { amt: money(r) }) : ""}</span>
                           </label>
                         );
                       })}
@@ -331,15 +334,15 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
               {/* What to do with the released day(s) — one choice for all. */}
               {pickedSlots.length > 0 && (
                 <div className="mt-2">
-                  <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">What would you like to do with {pickedSlots.length === 1 ? "this day" : "these days"}?</div>
+                  <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">{pickedSlots.length === 1 ? t("p7bk.whatToDo_one") : t("p7bk.whatToDo_other")}</div>
                   <div className="flex flex-col gap-1.5">
                     {resOptions.map((o) => {
                       const on = res === o;
                       const label = o === "refund" ? t("parent.refundOption") : o === "wallet" ? t("parent.walletCreditOption") : t("parent.moveToAnotherDate");
                       const detail = o === "refund"
-                        ? (pickedRefund > 0 ? `${money(pickedRefund)} back — the ${money(perSlotPaid)}/day pro-rata, less any day inside its notice window` : "no cash refund — every selected day is inside the no-refund window")
-                        : o === "wallet" ? `${money(pickedWallet)} to your wallet — the full ${money(perSlotPaid)}/day, no notice deadline`
-                        : moveDates.length ? "pick the replacement date for each day below" : "no other dates with space to move to";
+                        ? (pickedRefund > 0 ? t("p7bk.detailRefund", { amt: money(pickedRefund), each: money(perSlotPaid) }) : t("p7bk.detailNoCash"))
+                        : o === "wallet" ? t("p7bk.detailWallet", { amt: money(pickedWallet), each: money(perSlotPaid) })
+                        : moveDates.length ? t("p7bk.detailMovePick") : t("p7bk.detailMoveNone");
                       return (
                         <button key={o} type="button" onClick={() => setResolution(o)} disabled={o === "changedate" && moveDates.length === 0} className="rounded-lg border p-2 text-start disabled:opacity-50"
                           style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
@@ -355,7 +358,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                       text to interpret). */}
                   {res === "changedate" && (
                     <div className="mt-2 rounded-lg border border-[var(--line)] p-2">
-                      <div className="mb-1.5 text-[11px] font-bold text-[var(--ink-2)]">Pick the new date for each day — green days are running with space:</div>
+                      <div className="mb-1.5 text-[11px] font-bold text-[var(--ink-2)]">{t("p7bk.pickNewDate")}</div>
                       <div className="flex flex-col gap-2.5">
                         {pickedSlots.map((s) => {
                           const taken = pickedSlots.filter((ps) => ps.key !== s.key).map((ps) => moveTo[ps.key]).filter(Boolean) as string[];
@@ -364,16 +367,16 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                             <div key={s.key}>
                               <div className="mb-1 text-[12px] font-semibold">
                                 {multiKid && <span className="text-[var(--ink-3)]">{s.childName}: </span>}
-                                Move <b>{fmtIso(s.date)}</b>{chosen ? <> → <b className="text-[var(--brand)]">{fmtIso(chosen)}</b></> : <span className="text-[var(--ink-3)]"> → choose below</span>}
+                                {t("p7bk.moveWord")} <b>{fmtIso(s.date)}</b>{chosen ? <> → <b className="text-[var(--brand)]">{fmtIso(chosen)}</b></> : <span className="text-[var(--ink-3)]"> → {t("p7bk.chooseBelow")}</span>}
                               </div>
                               <AvailabilityCalendar available={moveDates} taken={taken} value={chosen} onPick={(iso) => setMoveTo((m) => ({ ...m, [s.key]: iso }))} />
                             </div>
                           );
                         })}
                       </div>
-                      {moveDates.length === 0 && <div className="mt-1.5 text-[11px] font-bold text-[#c0392b]">No other dates with space to move to right now.</div>}
-                      {!movesReady && moveDates.length > 0 && <div className="mt-1.5 text-[11px] font-bold text-[#c0392b]">Pick a new date for every day to continue.</div>}
-                      <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">✓ Once your provider approves, the swap is applied automatically.</div>
+                      {moveDates.length === 0 && <div className="mt-1.5 text-[11px] font-bold text-[#c0392b]">{t("p7bk.noOtherDates")}</div>}
+                      {!movesReady && moveDates.length > 0 && <div className="mt-1.5 text-[11px] font-bold text-[#c0392b]">{t("p7bk.pickEveryDay")}</div>}
+                      <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("p7bk.swapAuto")}</div>
                     </div>
                   )}
                 </div>
@@ -387,20 +390,20 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
       {!partialMode && advice && (
         <div className="mb-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12px]">
           {advice.percent >= 100 ? (
-            <div className="font-extrabold text-[var(--brand)]">✓ You&rsquo;re entitled to a full refund of {money(advice.amount)}.</div>
+            <div className="font-extrabold text-[var(--brand)]">{t("p7bk.entitledFull", { amt: money(advice.amount) })}</div>
           ) : advice.amount > 0 ? (
-            <div className="font-extrabold text-[var(--brand)]">✓ You&rsquo;re entitled to a {advice.percent}% refund — {money(advice.amount)}.</div>
+            <div className="font-extrabold text-[var(--brand)]">{t("p7bk.entitledPct", { pct: advice.percent, amt: money(advice.amount) })}</div>
           ) : (
-            <div className="font-extrabold text-[#c0392b]">✗ No refund is due — this is inside the provider&rsquo;s no-refund window.</div>
+            <div className="font-extrabold text-[#c0392b]">{t("p7bk.noRefundDue")}</div>
           )}
-          <div className="mt-0.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">{advice.reason}</div>
+          <div className="mt-0.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">{adviceReasonT(t, locale, advice)}</div>
           {policy && (
             <div className="mt-1.5 border-t border-[var(--line)] pt-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-              <span className="font-semibold text-[var(--ink-2)]">{policy.name} policy:</span> {policyWording(policy)}
+              <span className="font-semibold text-[var(--ink-2)]">{t("p7bk.policyName", { name: policy.name })}</span> {policyWordingT(t, locale, policy)}
             </div>
           )}
           {advice.amount === 0 && cfg?.noRefundCredit && (
-            <div className="mt-1 text-[11px] font-semibold text-[var(--brand)]">👛 This provider still gives you a full-value credit note to spend on a future booking.</div>
+            <div className="mt-1 text-[11px] font-semibold text-[var(--brand)]">{t("p7bk.creditNote")}</div>
           )}
         </div>
       )}
@@ -436,7 +439,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
             ];
         return (
           <div className="mt-2">
-            <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Send my {money(effRefund)} refund to</div>
+            <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">{t("p7bk.sendRefundTo", { amt: money(effRefund) })}</div>
             {options.length > 0 && (
               <div className={`grid ${options.length === 1 ? "grid-cols-1" : "grid-cols-2"} gap-2`}>
                 {options.map(([v, l]) => (
@@ -449,10 +452,10 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
             )}
             {noBankRefund && (
               <p className="mt-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-                💡 You paid by <b>{scheme ?? "childcare voucher / Tax-Free Childcare"}</b>, so a refund can&rsquo;t go back to a bank card.{" "}
+                <Rich text={t("p7bk.voucherNote", { scheme: scheme ?? t("p7bk.schemeDefault") })} />{" "}
                 {walletOn
-                  ? <>It&rsquo;s added to your <b>wallet as credit</b> — instant, and ready to spend on your next booking.</>
-                  : <>Your provider will arrange reimbursement through {scheme ?? "the scheme"}.</>}
+                  ? <>{t("p7bk.voucherWallet")}</>
+                  : <>{t("p7bk.voucherReimburse", { scheme: scheme ?? t("p7bk.schemeThe") })}</>}
               </p>
             )}
           </div>
@@ -462,15 +465,15 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
       {error && <div className="mt-1 text-[12px] text-[var(--red)]">{error}</div>}
       <div className="mt-2 flex gap-2">
         <Button variant="danger" sm onClick={submit} disabled={busy || (partialMode && (pickedSlots.length === 0 || !movesReady))}>
-          {busy ? "Sending…" : !partialMode ? "Send cancellation request"
-            : !pickedSlots.length ? "Choose days above"
-            : res === "changedate" ? `Request to move ${pickedSlots.length} day${pickedSlots.length === 1 ? "" : "s"}`
-            : res === "wallet" ? `Release ${pickedSlots.length} day${pickedSlots.length === 1 ? "" : "s"} to wallet`
-            : `Cancel ${pickedSlots.length} day${pickedSlots.length === 1 ? "" : "s"}`}
+          {busy ? t("parent.sending") : !partialMode ? t("p7bk.btnSendCancel")
+            : !pickedSlots.length ? t("p7bk.btnChooseDays")
+            : res === "changedate" ? t("p7bk.btnMoveDays", { days: pickPlural(t, locale, "p7bk.dayN", pickedSlots.length) })
+            : res === "wallet" ? t("p7bk.btnWalletDays", { days: pickPlural(t, locale, "p7bk.dayN", pickedSlots.length) })
+            : t("p7bk.btnCancelDays", { days: pickPlural(t, locale, "p7bk.dayN", pickedSlots.length) })}
         </Button>
       </div>
       <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">
-        Cancelling is a request your provider reviews. {advice ? "The refund above is what their policy gives — they confirm and issue it." : "They confirm the refund under their cancellation policy."}
+        {t("p7bk.reviewNote")} {advice ? t("p7bk.adviceYes") : t("p7bk.adviceNo")}
       </div>
     </div>
   );
@@ -491,7 +494,7 @@ const AMEND_FALLBACK: AmendPolicy = { allowDateChanges: true, amendSelfService: 
 // POST /api/my/bookings/:ref/amend is live — it records the request on the
 // booking so the operator sees it and can approve (applies the swap) or deny.
 const DATE_CHANGES_LIVE = true;
-const noticeLabel = (h: number) => (h % 24 === 0 && h >= 24 ? `${h / 24} day${h / 24 === 1 ? "" : "s"}` : `${h} hours`);
+
 const fmtIso = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" });
@@ -542,6 +545,7 @@ const weekKey = (iso: string) => {
 
 function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: AmendListing | null; onDone: (changed: boolean) => void }) {
   const t = useT();
+  const { locale } = useI18n();
   const [policy, setPolicy] = useState<AmendPolicy>(AMEND_FALLBACK);
   const [moves, setMoves] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState("");
@@ -609,8 +613,8 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
       // than surfacing a raw "404 Not Found".
       setError(
         /404|not found/i.test(m)
-          ? "Date changes aren’t switched on for this provider yet — nothing was changed."
-          : m || "Couldn’t submit — try again",
+          ? t("p7bk.errNotLive")
+          : m || t("p7bk.errSubmit"),
       );
       setBusy(false);
     }
@@ -661,8 +665,8 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
             <>
               <div className="rounded-xl border border-[#f0d9a8] bg-[#fdf6e6] px-3.5 py-3 text-[12.5px] leading-[1.6] text-[#7a5b06]">
                 {!policy.allowDateChanges
-                  ? <><b>{booking.listing}</b> doesn&rsquo;t offer date changes. To move your dates, please <b>message your provider</b> or cancel and rebook.</>
-                  : <>Date changes aren&rsquo;t available online for <b>{booking.listing}</b> yet. To move a date, please <b>message your provider</b> and they&rsquo;ll sort it.</>}
+                  ? <Rich text={t("p7bk.noDateChanges", { name: booking.listing })} />
+                  : <Rich text={t("p7bk.datesNotOnline", { name: booking.listing })} />}
               </div>
               <div className="flex justify-end">
                 <Button onClick={() => onDone(false)}>{t("parent.closeText")}</Button>
@@ -671,11 +675,11 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
           ) : (
           <>
           <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-[11.5px] leading-[1.6] text-[var(--ink-2)]">
-            <div>• A date can be moved up to <b>{noticeLabel(policy.amendNoticeHours)}</b> before it — closer than that it&rsquo;s locked.</div>
-            <div>• A move only goes to another running date with space.</div>
-            {policy.amendFee > 0 && <div>• A <b>£{policy.amendFee}</b> admin fee applies to each change.</div>}
-            {cheaper ? <div>• Moving to something cheaper: the difference is <b>{cheaper}</b>.</div> : <div>• Moves must be to the same price or higher.</div>}
-            {!selfService && <div className="mt-1 text-[var(--ink-3)]">Your provider reviews change requests before they&rsquo;re applied.</div>}
+            <div><Rich text={t("p7bk.ruleNotice", { notice: policy.amendNoticeHours % 24 === 0 && policy.amendNoticeHours >= 24 ? pickPlural(t, locale, "p7pol.dy", policy.amendNoticeHours / 24) : pickPlural(t, locale, "p7pol.hr", policy.amendNoticeHours) })} /></div>
+            <div>{t("p7bk.ruleSpace")}</div>
+            {policy.amendFee > 0 && <div><Rich text={t("p7bk.ruleFee", { fee: policy.amendFee })} /></div>}
+            {cheaper ? <div>• Moving to something cheaper: the difference is <b>{cheaper}</b>.</div> : <div>{t("p7bk.ruleSamePrice")}</div>}
+            {!selfService && <div className="mt-1 text-[var(--ink-3)]">{t("p7bk.providerReviews")}</div>}
           </div>
 
           {/* Whose booking to change — multi-child bookings can move just one. */}
@@ -694,7 +698,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
                   );
                 })}
               </div>
-              <div className="mt-1 text-[11px] text-[var(--ink-3)]">{who ? `Only ${who}'s dates/time will change.` : "Applies to every child on this booking."}</div>
+              <div className="mt-1 text-[11px] text-[var(--ink-3)]">{who ? t("p7bk.onlyChild", { name: who }) : t("p7bk.allChildren")}</div>
             </div>
           )}
 
@@ -703,10 +707,10 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("parent.yourDates")}</div>
               {fixed ? (
                 <div className="rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2.5 text-[11.5px] leading-[1.5] text-[#7a5b06]">
-                  This pass is a <b>fixed block</b> — its dates move together, not one at a time. To change them, cancel and rebook, or message your provider.
+                  {t("p7bk.fixedBlock")}
                 </div>
               ) : listing && available.length === 0 ? (
-                <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-[11.5px] text-[var(--ink-3)]">No other dates with a space to move to right now.</div>
+                <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-[11.5px] text-[var(--ink-3)]">{t("p7bk.noOtherDates")}</div>
               ) : (
                 <>
                   <div className="flex flex-col gap-1.5">
@@ -726,10 +730,10 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
                     })}
                   </div>
                   <div className="mt-1 text-[11px] text-[var(--ink-3)]">
-                    Only dates this listing runs with a space are shown.{" "}
-                    {rule === "week" ? "All of this child’s days must stay within one week." : "Pick from any week it runs."}
+                    {t("p7bk.onlyRunning")}{" "}
+                    {rule === "week" ? t("p7bk.weekOne") : t("p7bk.anyWeek")}
                   </div>
-                  {!weekOk && <div className="mt-1 text-[11px] font-bold text-[#c0392b]">Those dates span more than one week — this pass keeps every day inside a single week.</div>}
+                  {!weekOk && <div className="mt-1 text-[11px] font-bold text-[#c0392b]">{t("p7bk.weekSpan")}</div>}
                 </>
               )}
             </div>
@@ -746,7 +750,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
                 <input type="date" min={todayIso} value={preferredDate} onChange={(e) => setPreferredDate(e.target.value)}
                   className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)]" />
               )}
-              <div className="mt-1 text-[11px] text-[var(--ink-3)]">Pick the date you&rsquo;d like — your provider confirms it. {available.length > 0 ? "Only dates with a space are shown." : "This booking&rsquo;s dates aren&rsquo;t set yet, so pick your preferred day."}</div>
+              <div className="mt-1 text-[11px] text-[var(--ink-3)]">{t("p7bk.pickDateNote")} {available.length > 0 ? t("p7bk.onlySpace") : t("p7bk.datesNotSet")}</div>
             </div>
           )}
 
@@ -761,7 +765,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
                   <option key={p.id ?? p.title} value={p.title}>{p.title}{p.start && p.finish ? ` · ${p.start}–${p.finish}` : ""}</option>
                 ))}
               </select>
-              <div className="mt-1 text-[11px] text-[var(--ink-3)]">Only the timings this pass offers are shown — your provider confirms the switch.</div>
+              <div className="mt-1 text-[11px] text-[var(--ink-3)]">{t("p7bk.timingsNote")}</div>
             </div>
           )}
 
@@ -780,7 +784,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
                 ))}
               </div>
               {noBankRefund && (
-                <p className="mt-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">💡 Paid by {booking.voucherScheme ?? "voucher / Tax-Free Childcare"}, so any money back can&rsquo;t go to a bank card — it&rsquo;s added to your wallet as credit.</p>
+                <p className="mt-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]"><Rich text={t("p7bk.voucherAmend", { scheme: booking.voucherScheme ?? t("p7bk.schemeDefault") })} /></p>
               )}
             </div>
           )}
@@ -800,6 +804,8 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
 
 function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, clash, listingInfo, venue, mealOrders = [] }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; autoOpen?: boolean; clash?: boolean; listingInfo?: AmendListing | null; venue?: { location?: string | null; address?: string | null; city?: string | null }; mealOrders?: MealOrder[] }) {
   const t = useT();
+  const w = useWord();
+  const { locale } = useI18n();
   const [expanded, setExpanded] = useState(!!(autoAmend || autoCancel || autoPay || autoOpen));
   // Meals on this booking: those bought at checkout (b.mealItems) + any ordered
   // later from the Meals area (matched orders). "later" ones are tagged.
@@ -845,9 +851,9 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
     return () => { live = false; };
   }, [cancelledStatus, b.ref]);
   const attendLabel = attend?.status === "in"
-    ? (attend.collectedAt ? `Collected ${new Date(attend.collectedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : `Signed in${attend.inAt ? ` ${new Date(attend.inAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}`)
-    : attend?.status === "absent" ? "Marked absent"
-    : attend ? "Not signed in yet" : null;
+    ? (attend.collectedAt ? t("p7bk.collectedAt", { time: new Date(attend.collectedAt).toLocaleTimeString(dl(), { hour: "numeric", minute: "2-digit" }) }) : (attend.inAt ? t("p7bk.signedInAt", { time: new Date(attend.inAt).toLocaleTimeString(dl(), { hour: "numeric", minute: "2-digit" }) }) : t("p7bk.signedIn")))
+    : attend?.status === "absent" ? t("p7bk.markedAbsent")
+    : attend ? t("p7bk.notSignedIn") : null;
 
   // For a voucher booking, the scheme's reference details (Edenred account
   // number etc.) the provider entered — what the parent quotes to pay.
@@ -946,16 +952,16 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
               {(loc.address || loc.city) && <span className="block text-[10.5px] text-[var(--ink-3)]">{[loc.address, loc.city].filter(Boolean).join(", ")}</span>}
             </>)}
           </PCol>
-          <PCol label={t("parent.datesCol")} w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{bookingDateSummary(b)}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessCount} session{sessCount === 1 ? "" : "s"} · {childCount > 1 ? `${childCount} children` : "1 child"}{sessCount > 1 ? " · tap to view all" : ""}</span></PCol>
-          <PCol label={t("parent.statusCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? t("parent.dateChangeStatus") : b.status}</span></PCol>
-          {!cancelled && <PCol label={t("parent.paymentCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></PCol>}
-          {attendLabel && <PCol label="Today" w="w-[130px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={attend?.status === "in" ? { background: "#dcfce7", color: "#166534" } : attend?.status === "absent" ? { background: "#fee2e2", color: "#991b1b" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{attendLabel}</span></PCol>}
+          <PCol label={t("parent.datesCol")} w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{bookingDateSummary(b)}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{pickPlural(t, locale, "p7bk.sessN", sessCount)} · {pickPlural(t, locale, "p7bk.kidN", childCount)}{sessCount > 1 ? " · " + t("p7bk.tapViewAll") : ""}</span></PCol>
+          <PCol label={t("parent.statusCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? t("parent.dateChangeStatus") : w(b.status)}</span></PCol>
+          {!cancelled && <PCol label={t("parent.paymentCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{w(payLabelFor(b))}</span></PCol>}
+          {attendLabel && <PCol label={t("p7bk.todayCol")} w="w-[130px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={attend?.status === "in" ? { background: "#dcfce7", color: "#166534" } : attend?.status === "absent" ? { background: "#fee2e2", color: "#991b1b" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{attendLabel}</span></PCol>}
           <div className="ms-auto flex-none text-end">
             <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("parent.amountCol")}</div>
             <div className="text-[15px] font-extrabold text-[var(--ink)]">{money(b.amount)}</div>
-            {mealRows.length > 0 && <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-[#fff3e0] px-2 py-[2px] text-[10.5px] font-extrabold text-[#96631a]">🍽 {mealRows.length} meal{mealRows.length === 1 ? "" : "s"} · {money(mealTotal)}</div>}
+            {mealRows.length > 0 && <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-[#fff3e0] px-2 py-[2px] text-[10.5px] font-extrabold text-[#96631a]">🍽 {pickPlural(t, locale, "p7bk.mealN", mealRows.length)} · {money(mealTotal)}</div>}
           </div>
-          <span className={`flex-none text-[13px] text-[var(--ink-3)] transition-transform ${expanded ? "rotate-180" : ""}`} title={expanded ? "Close" : "Open"}>▾</span>
+          <span className={`flex-none text-[13px] text-[var(--ink-3)] transition-transform ${expanded ? "rotate-180" : ""}`} title={expanded ? t("parent.close") : t("p7bk.openWord")}>▾</span>
         </div>
       </div>
 
@@ -1019,13 +1025,13 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
         <div className="mt-2 flex items-start gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)]">
           <span aria-hidden className="text-[#c0392b]">✕</span>
           <span>
-            <b className="text-[var(--ink)]">Cancelled</b>{b.cancel?.on ? ` · requested ${b.cancel.on}` : ""}
+            <b className="text-[var(--ink)]">{w("Cancelled")}</b>{b.cancel?.on ? " · " + t("p7bk.requestedOn", { date: b.cancel.on }) : ""}
             {refundIssued ? (
-              <> — <b className="text-[var(--brand)]">{money(refundAmt || b.amount)} refunded{isVoucher ? " via voucher" : " to your original payment"}</b>.</>
+              <> — <b className="text-[var(--brand)]">{isVoucher ? t("p7bk.refundedVoucher", { amt: money(refundAmt || b.amount) }) : t("p7bk.refundedCard", { amt: money(refundAmt || b.amount) })}</b>.</>
             ) : refundOwed && refundAmt > 0 ? (
-              <> — a <b>{money(refundAmt)} refund</b> is due; your provider is processing it{isVoucher ? " back through your voucher scheme" : ""}.</>
+              <> — <Rich text={isVoucher ? t("p7bk.refundDueVoucher", { amt: money(refundAmt) }) : t("p7bk.refundDueCard", { amt: money(refundAmt) })} /></>
             ) : (
-              <> — no refund was due.</>
+              <> — {t("p7bk.noRefundWasDue")}</>
             )}
           </span>
         </div>
@@ -1249,7 +1255,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
   const refresh = useCallback(() => {
     apiGet<Booking[]>("/api/my/bookings")
       .then(setBookings)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load bookings"));
+      .catch((e) => setError(e instanceof Error ? e.message : tr("p7bk.errLoadBookings")));
     apiGet<MealOrder[]>("/api/meal-orders").then(setMealOrders).catch(() => {});
   }, []);
 

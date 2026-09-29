@@ -8,6 +8,7 @@ import { syncLearning } from "@/features/learning/courseCompletions";
 import { useRouter } from "next/navigation";
 import { ApiError, get as apiGet, getActAs, isTwoFaRequired } from "@/lib/api";
 import { PORTAL_ACCESS, ROLE_HOME, type Me } from "@/lib/roles";
+import { useT } from "@/lib/i18n/provider";
 
 // The signed-in account's /api/me, cached for the whole SPA session. Without
 // this the guard re-fetched /api/me — and blanked the screen with
@@ -103,6 +104,7 @@ function accessOk(me: Me, portal: string): boolean {
  * (cross-portal preview). UX only — the API enforces data access regardless.
  */
 export function PortalGuard({ portal, children }: { portal: string; children: ReactNode }) {
+  const t = useT();
   const router = useRouter();
   // Cache hit → decide synchronously so a revisited page renders with no
   // "Checking access…" flash. Cold (no cache) → null, and we show it once.
@@ -181,7 +183,7 @@ export function PortalGuard({ portal, children }: { portal: string; children: Re
     return (
       <div className="flex h-screen items-center justify-center p-6 text-center">
         <div className="max-w-sm">
-          <div className="text-[16px] font-extrabold text-[var(--ink)]">Your access has been switched off</div>
+          <div className="text-[16px] font-extrabold text-[var(--ink)]">{t("p7shell.accessOff")}</div>
           <p className="mt-2 text-[13px] text-[var(--ink-3)]">{switchedOff}</p>
         </div>
       </div>
@@ -190,7 +192,7 @@ export function PortalGuard({ portal, children }: { portal: string; children: Re
   if (!allowed) {
     return (
       <div className="flex h-screen items-center justify-center text-[13px] text-[var(--ink-3)]">
-        Checking access…
+        {t("p7shell.checkingAccess")}
       </div>
     );
   }

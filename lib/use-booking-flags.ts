@@ -9,11 +9,9 @@ import type { Booking } from "@/features/bookings/types";
 export interface BookingFlags {
   /** How many bookings need attention — the number on the Bookings tab. */
   count: number;
-  /** Human breakdown for the hover tooltip ("2 to approve · 1 to pay"). */
-  tip: string;
+  /** Breakdown for the hover tooltip: catalogue key (p7shell.tip*) + how many. The header joins them with " · " in the active language. */
+  tips: { key: string; n: number }[];
 }
-
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * Booking-area flags surfaced as a badge on the Bookings tab:
@@ -23,7 +21,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
  * Live: refreshes on the realtime `bookings` channel.
  */
 export function useBookingFlags(portal: PortalKey): BookingFlags {
-  const [flags, setFlags] = useState<BookingFlags>({ count: 0, tip: "" });
+  const [flags, setFlags] = useState<BookingFlags>({ count: 0, tips: [] });
 
   const load = useCallback(() => {
     const url = portal === "custdash" ? "/api/my/bookings" : "/api/bookings";
@@ -36,20 +34,20 @@ export function useBookingFlags(portal: PortalKey): BookingFlags {
           // one booking, because the other was queued, not booked.
           const NO_PLACE_YET = ["Waitlisted", "Offered", "Approval needed"];
           const toPay = live.filter((b) => !NO_PLACE_YET.includes(b.status) && b.pay !== "Paid" && (b.amount ?? 0) > 0).length;
-          setFlags(toPay ? { count: toPay, tip: `${plural(toPay, "booking")} to pay` } : { count: 0, tip: "" });
+          setFlags(toPay ? { count: toPay, tips: [{ key: "p7shell.tipToPay", n: toPay }] } : { count: 0, tips: [] });
           return;
         }
         const approve = bs.filter((b) => b.status === "Approval needed").length;
         const change = live.filter((b) => b.dateChangeRequest?.status === "pending").length;
         const cancel = bs.filter((b) => b.cancel?.refund === "pending").length;
         const card = live.filter((b) => b.cardFailed).length;
-        const parts = [
-          approve && `${plural(approve, "booking")} to approve`,
-          change && `${plural(change, "date/time change")} to review`,
-          cancel && `${plural(cancel, "cancellation")} to review`,
-          card && `${plural(card, "card payment")} failed`,
-        ].filter(Boolean).join(" · ");
-        setFlags({ count: approve + change + cancel + card, tip: parts });
+        const tips = [
+          { key: "p7shell.tipApprove", n: approve },
+          { key: "p7shell.tipChange", n: change },
+          { key: "p7shell.tipCancel", n: cancel },
+          { key: "p7shell.tipCard", n: card },
+        ].filter((x) => x.n > 0);
+        setFlags({ count: approve + change + cancel + card, tips });
       })
       .catch(() => {});
   }, [portal]);
