@@ -162,7 +162,11 @@ const CHASE_DAYS = 7;
 
 async function acknowledgementChase(): Promise<void> {
   const { date } = ukNow();
-  const snap = await db.collection("incidents").get();
+  // Only records still inside the chase window. This used to read EVERY
+  // incident of EVERY tenant every 30 minutes (a Firestore-reads bill that
+  // grows with history); a single-field range on createdAt needs no index.
+  const since = new Date(Date.now() - (CHASE_DAYS + 2) * 86_400_000).toISOString();
+  const snap = await db.collection("incidents").where("createdAt", ">=", since).get();
   if (snap.empty) return;
   const settingsFor = settingsLoader();
 
