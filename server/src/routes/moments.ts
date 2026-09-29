@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { esc } from "../lib/html";
 import { bareImageUrl, signImageUrl } from "../lib/signing";
-import { franchiseChildIds, isFranchise } from "../lib/franchiseScope";
+import { franchiseChildIds, isFranchise, franchiseTeam } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
@@ -65,6 +65,18 @@ async function resolveChildren(
 
 const todayIso = () => ukToday();
 
+/** A moment belongs to a franchise when it tags one of its children, it stamped its franchiseId,
+ *  or its own team posted it. Head office sees all. */
+function momentInFranchise(m: { childIds?: string[]; franchiseId?: string | null; postedBy?: string }, franchiseId: string, kids: Set<string>, teamEmails: Set<string>): boolean {
+  if ((m.childIds ?? []).some((cid) => kids.has(cid))) return true;
+  if (m.franchiseId) return m.franchiseId === franchiseId;
+  return !!m.postedBy && teamEmails.has(m.postedBy.toLowerCase());
+}
+async function momentInMyFranchise(auth: { tenantId: string | null; franchiseId: string | null; role: string }, m: FirebaseFirestore.DocumentData): Promise<boolean> {
+  if (!((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId && auth.tenantId)) return true;
+  return momentInFranchise(m, auth.franchiseId, await franchiseChildIds(auth.tenantId, auth.franchiseId), (await franchiseTeam(auth.tenantId, auth.franchiseId)).emails);
+}
+
 /** Staff assigned to certain sites (a site lead) see, tag and act on moments
  *  from those sites only — or ones they posted themselves. */
 const siteMomentFilter = (req: Request) => {
@@ -107,6 +119,9 @@ moments.post("/", async (req, res) => {
     date: parsed.data.date ?? todayIso(),
     childNames: parsed.data.childIds.map((id) => consent.names[id] ?? ""),
     tenantId: auth.tenantId,
+    // The franchise that posted it (null for head office / freelancer), so a moment with no
+    // tagged child ("their work") still belongs to someone.
+    franchiseId: isFranchise(auth) ? auth.franchiseId : null,
     postedBy: req.user?.email ?? req.user?.uid ?? "unknown",
     postedByName: req.user?.name ?? req.user?.email ?? "Staff",
     createdAt: new Date().toISOString(),
@@ -206,7 +221,8 @@ moments.get("/", async (req, res) => {
   // A franchise sees moments (child photos) only for ITS OWN children.
   if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) {
     const kids = await franchiseChildIds(tenantId, auth.franchiseId);
-    list = list.filter((m) => (m.childIds ?? []).some((cid) => kids.has(cid)));
+    const team = await franchiseTeam(tenantId, auth.franchiseId);
+    list = list.filter((m) => momentInFranchise(m, auth.franchiseId!, kids, team.emails));
   }
   const inSite = await siteMomentFilter(req);
   if (inSite) list = list.filter(inSite);
@@ -274,6 +290,7 @@ async function ownMoment(req: Request, id: string) {
   if (!auth.tenantId) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (!(await momentInMyFranchise(auth, snap.data()!))) return { status: 404 as const };
   const inSite = await siteMomentFilter(req);
   if (inSite && !inSite(snap.data()!)) return { status: 404 as const };
   return { status: 200 as const, snap };
@@ -351,7 +368,7 @@ moments.post("/:id/comment", async (req, res) => {
       return;
     }
   } else {
-    allowed = canPost(auth.role) && m.tenantId === auth.tenantId;
+    allowed = canPost(auth.role) && m.tenantId === auth.tenantId && (await momentInMyFranchise(auth, m));
     const inSite = allowed ? await siteMomentFilter(req) : null;
     if (inSite && !inSite(m)) allowed = false;
   }
