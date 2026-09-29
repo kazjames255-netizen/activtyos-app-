@@ -221,13 +221,30 @@ timetables.get("/published", async (req, res) => {
   const bookingSnap = await db.collection("bookings").where("email", "==", email).get();
   // Booked days per tenant — cancelled/declined bookings don't count.
   const daysByTenant = new Map<string, Set<string>>();
+  // Which franchises this family books with, per tenant — a franchise's timetable reaches ITS families only
+  // (head office's own reaches the whole network). Bookings carry franchiseId; older ones resolve via their listing.
+  const frByTenant = new Map<string, Set<string>>();
+  const directByTenant = new Set<string>();            // tenants where the family has a head-office-direct booking
+  const unstampedListings = new Map<string, string>(); // listingId → tenantId
   for (const d of bookingSnap.docs) {
-    const b = d.data() as { tenantId?: string; status?: string; days?: string[]; kids?: { dates?: string[] }[] };
+    const b = d.data() as { tenantId?: string; status?: string; days?: string[]; kids?: { dates?: string[] }[]; franchiseId?: string | null; listingId?: string };
     if (!b.tenantId || b.status === "Cancelled" || b.status === "Declined") continue;
+    if (b.franchiseId) { const f = frByTenant.get(b.tenantId) ?? new Set<string>(); f.add(b.franchiseId); frByTenant.set(b.tenantId, f); }
+    else if (b.listingId) unstampedListings.set(b.listingId, b.tenantId);
+    else directByTenant.add(b.tenantId);
     const set = daysByTenant.get(b.tenantId) ?? new Set<string>();
     for (const day of b.days ?? []) set.add(day);
     for (const k of b.kids ?? []) for (const day of k.dates ?? []) set.add(day);
     daysByTenant.set(b.tenantId, set);
+  }
+  if (unstampedListings.size) {
+    const docs = await db.getAll(...[...unstampedListings.keys()].map((id) => db.collection("listings").doc(id)));
+    for (const l of docs) {
+      const f = l.exists ? (l.data() as { franchiseId?: string | null }).franchiseId : null;
+      const tid = unstampedListings.get(l.id);
+      if (f && tid) { const set = frByTenant.get(tid) ?? new Set<string>(); set.add(f); frByTenant.set(tid, set); }
+      else if (tid) directByTenant.add(tid);
+    }
   }
   // Not from a provider that switched the timetable off (Setup → Features / Customer area).
   const onFlags = await Promise.all([...daysByTenant.keys()].map((t) => customerAreaOn(t, "timetable")));
@@ -244,6 +261,9 @@ timetables.get("/published", async (req, res) => {
     for (const doc of snap.docs) {
       const pub = doc.data().published as Published | null;
       if (!pub || !pub.parents) continue;
+      const owner = (doc.data().franchiseId as string | null | undefined) ?? null;
+      // A franchise's timetable reaches that franchise's families; head office's own reaches only families booked with head office directly.
+      if (owner ? !frByTenant.get(tid)?.has(owner) : frByTenant.get(tid)?.size ? !directByTenant.has(tid) : false) continue;
       let dayList = pub.dayList;
       let plan = planFromDoc(pub.plan);
       if (pub.audience === "booked") {
