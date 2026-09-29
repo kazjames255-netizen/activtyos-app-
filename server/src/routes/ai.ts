@@ -12,6 +12,7 @@ import { ukMonth, ukToday } from "../lib/ukDate";
 import { isFranchise, franchiseChildIds, franchiseFamilyEmails } from "../lib/franchiseScope";
 import { capsFor } from "../middleware/access";
 import { capLevel } from "../../../lib/accessMap";
+import { bookingInSite, recordInSite, staffSiteScope, type SiteScope } from "../lib/siteScope";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AI assistant — answers plain-English questions from the account's LIVE
@@ -151,7 +152,7 @@ const outstandingOf = (b: Booking) => owedNow(b);
 // Exported so plan2's p2H_day15 harness can assert franchise isolation
 // directly against seeded data, without needing a live GROQ_API_KEY (the
 // /chat route 503s before ever building a snapshot if that's unset). ──
-export async function tenantSnapshot(tenantId: string, forStaff = false, franchiseId: string | null = null) {
+export async function tenantSnapshot(tenantId: string, forStaff = false, franchiseId: string | null = null, site: SiteScope | null = null) {
   const [bookingsSnap, blocksSnap, listingsSnap, paymentsSnap, tasksSnap, childrenSnap, invitesSnap, incidentsSnap] = await Promise.all([
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
     db.collection("blocks").where("tenantId", "==", tenantId).get(),
@@ -171,16 +172,18 @@ export async function tenantSnapshot(tenantId: string, forStaff = false, franchi
   // of the tenant — the same isolation rule bookings/listings/tasks/income
   // etc. enforce at their own routes (server/src/lib/franchiseScope.ts). Head
   // office and freelancers pass franchiseId = null and see the whole tenant.
-  const scopedListingDocs = franchiseId
+  // A member of staff assigned to certain sites (`site`, lib/siteScope.ts) sees only those sites' listings, sessions, bookings, children and records —
+  // the same narrowing the bookings / registers / child-card routes apply. The co-pilot used to name every site's children expected today.
+  const scopedListingDocs = (franchiseId
     ? listingsSnap.docs.filter((d) => ((d.data() as { franchiseId?: string | null }).franchiseId ?? null) === franchiseId)
-    : listingsSnap.docs;
+    : listingsSnap.docs).filter((d) => !site || site.listings.has(d.id));
   const scopedListingIds = new Set(scopedListingDocs.map((d) => d.id));
   const title = new Map(scopedListingDocs.map((d) => [d.id, (d.data() as { title?: string }).title ?? "Untitled"]));
 
   type Sess = { date: string; start: string; end: string; capacity: number; booked: number; spotsLeft: number; listing: string; open: boolean };
   const sessions: Sess[] = [];
   let openCapacity = 0, openBooked = 0;
-  const scopedBlockDocs = franchiseId ? blocksSnap.docs.filter((d) => scopedListingIds.has((d.data() as BlockDoc).listingId)) : blocksSnap.docs;
+  const scopedBlockDocs = franchiseId || site ? blocksSnap.docs.filter((d) => scopedListingIds.has((d.data() as BlockDoc).listingId)) : blocksSnap.docs;
   for (const d of scopedBlockDocs) {
     const doc = d.data() as BlockDoc;
     const sum = blockSummary(d.id, doc);
@@ -192,6 +195,7 @@ export async function tenantSnapshot(tenantId: string, forStaff = false, franchi
 
   const bookings = bookingsSnap.docs
     .filter((d) => !franchiseId || ((d.data() as { franchiseId?: string | null }).franchiseId ?? null) === franchiseId)
+    .filter((d) => !site || bookingInSite(d.data() as { listingId?: string | null; blockId?: string | null }, site))
     .map((d) => {
       const b = fromDoc(d.data() as BookingDoc);
       return { ...b, createdAt: b.createdAt ?? d.createTime?.toDate().toISOString() ?? "" };
@@ -201,11 +205,12 @@ export async function tenantSnapshot(tenantId: string, forStaff = false, franchi
   // The children this franchise looks after (any child booked on ITS
   // bookings) — mirrors franchiseChildIds, computed locally to avoid a
   // second query since bookingsSnap is already in hand.
-  const scopedChildIds = franchiseId
+  const scopedChildIds = franchiseId || site
     ? new Set(
         bookingsSnap.docs.flatMap((d) => {
-          const b = d.data() as { franchiseId?: string | null; childId?: string; kids?: { childId?: string }[] };
-          if ((b.franchiseId ?? null) !== franchiseId) return [];
+          const b = d.data() as { franchiseId?: string | null; childId?: string; kids?: { childId?: string }[]; listingId?: string | null; blockId?: string | null };
+          if (franchiseId && (b.franchiseId ?? null) !== franchiseId) return [];
+          if (site && !bookingInSite(b, site)) return [];
           return [b.childId, ...(b.kids ?? []).map((k) => k.childId)].filter(Boolean) as string[];
         }),
       )
@@ -221,7 +226,7 @@ export async function tenantSnapshot(tenantId: string, forStaff = false, franchi
   // actually signed in from today's registers — so the assistant can answer
   // "any children with allergies in?", "who's not arrived?", "who has SEND?".
   type CDoc = { name?: string; send?: string; sendPlanId?: string; sendPlanName?: string; allergies?: string; medical?: string; dietary?: string };
-  const scopedChildDocs = franchiseId ? childrenSnap.docs.filter((d) => scopedChildIds!.has(d.id)) : childrenSnap.docs;
+  const scopedChildDocs = franchiseId || site ? childrenSnap.docs.filter((d) => scopedChildIds!.has(d.id)) : childrenSnap.docs;
   const childByName = new Map(scopedChildDocs.map((d) => [((d.data() as CDoc).name ?? "").trim().toLowerCase(), d.data() as CDoc]));
   const childById = new Map(scopedChildDocs.map((d) => [d.id, d.data() as CDoc]));
   const [registersSnap, menuDoc] = await Promise.all([
@@ -306,6 +311,7 @@ export async function tenantSnapshot(tenantId: string, forStaff = false, franchi
     // about a colleague on the log (routes/incidents.ts staffAccess) — nor here.
     .filter((r) => !forStaff || (r.kind !== "safeguarding" && r.confidential !== true && r.subject !== "staff"))
     .filter((r) => !franchiseId || r.franchiseId === franchiseId || (!!r.childId && scopedChildIds!.has(r.childId)))
+    .filter((r) => !site || recordInSite(r as Record<string, unknown>, site, scopedChildIds!))
     .sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? 1 : -1)).slice(0, 12)
     .map((r) => ({ kind: r.kind || "incident", child: r.childName, severity: r.severity, date: r.date, summary: (r.description || "").slice(0, 160) }));
 
@@ -751,7 +757,7 @@ ai.post("/chat", async (req, res) => {
     // Before this, the co-pilot handed a franchise the WHOLE company's
     // bookings, money and children — a real cross-franchise data leak.
     const fid = isFranchise(scope) ? scope.franchiseId : null;
-    snapshot = await tenantSnapshot(scope.tenantId, isStaff, fid);
+    snapshot = await tenantSnapshot(scope.tenantId, isStaff, fid, isStaff ? await staffSiteScope(auth) : null);
     if (isStaff) snapshot = restrictStaffSnapshot(snapshot as Record<string, unknown>, await capsFor(req));
     howtoKey = isStaff ? "staff" : "operator";
     who = isStaff
