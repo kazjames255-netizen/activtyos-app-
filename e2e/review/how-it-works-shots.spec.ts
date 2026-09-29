@@ -368,7 +368,14 @@ P("cap p-handover", async (page) => {
 const phone = { width: 390, height: 844 };
 async function asKid(page: Page, id: string) {
   await gotoHubPage(page, `/custdash/learninghub?tab=home&child=${id}`, X.fx); await noSplash(page); await settle(page); await healthy(page);
-  await handOver(page, id); await noSplash(page); await settle(page); await page.waitForTimeout(1500);
+  // Pass tenantId explicitly: handOver()'s default reads fixture.ts's module-scoped `lastFixtureTenant`, which is only set inside
+  // build() — and with fullyParallel:true + workers:4 (playwright.config.ts), each of this file's cap() tests (including "00
+  // fixture", which alone calls build()) can land on a DIFFERENT worker process, so that module var is "" in every worker that
+  // didn't happen to draw "00 fixture". handOver() then stores {t: "", c: id}, which never matches the real tenantId, so
+  // LearningHubApp's kidChildId stays null and its cleanup effect (kidRaw && !kidChildId && hub.providers.length) immediately
+  // wipes the flag back out — #learning-hub never gets data-kid="1" and handOver()'s waitFor times out. X.fx.tenantId comes from
+  // the cached fixture file (scratch/hiw-fx.json / HIW_FX), so it is correct in every worker regardless of which one built it.
+  await handOver(page, id, X.fx.tenantId); await noSplash(page); await settle(page); await page.waitForTimeout(1500);
 }
 const K = (name: string, fn: (page: Page) => Promise<void>, id = () => kid().id) => cap(name, "parent", async (page) => { await asKid(page, id()); await fn(page); }, { vp: phone, dsf: 2 });
 K("cap k-home", async (page) => { await shot(page, "k-home"); });
