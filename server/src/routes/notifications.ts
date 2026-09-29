@@ -6,6 +6,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { capsFor } from "../middleware/access";
 import { capLevel } from "../../../lib/accessMap";
+import { staffSiteScope } from "../lib/siteScope";
 import {
   getPrefs,
   markRead,
@@ -52,7 +53,12 @@ notifications.get("/", async (req, res) => {
   if (req.auth!.role === "staff") {
     const caps = await capsFor(req).catch(() => null);
     const AREA: Record<string, string> = { accident: "incidents", incident: "incidents", medication: "medication", trip: "trips", calendar: "calendar", moment: "moments", register: "registers", task: "tasks" };
-    shown = items.filter((n) => (n as { toEmail?: string }).toEmail || !AREA[n.category] || capLevel(caps, AREA[n.category]) !== "none");
+    // …and a member of staff assigned to certain sites must not read child alerts (accident / medication / trip / moment) from the other
+    // sites either — they name the child and the parent's email, and the records themselves are site-scoped everywhere else.
+    const siteScoped = !!(await staffSiteScope(req.auth!).catch(() => null));
+    const CHILD_ALERT = new Set(["accident", "incident", "medication", "trip", "moment"]);
+    shown = items.filter((n) => (n as { toEmail?: string }).toEmail
+      || ((!AREA[n.category] || capLevel(caps, AREA[n.category]) !== "none") && !(siteScoped && CHILD_ALERT.has(n.category))));
   }
   res.json({ notifications: shown, unread: shown.filter((n) => !n.readAt).length });
 });
