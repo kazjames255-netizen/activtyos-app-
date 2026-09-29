@@ -27,6 +27,8 @@ import { leave } from "./routes/leave";
 import { rota } from "./routes/rota";
 import { timeclock } from "./routes/timeclock";
 import { payroll } from "./routes/payroll";
+import { accounting, accountingCallback } from "./routes/accounting";
+import { payslips } from "./routes/payslips";
 import { onboarding } from "./routes/onboarding";
 import { credentials, credentialsPublic } from "./routes/credentials";
 import { images, uploads } from "./routes/uploads";
@@ -266,6 +268,10 @@ app.use("/api/auth/2fa", requireAuth, rateLimit("2fa", 20), twoFa);
 // single-use `state` is what ties it to the parent who started it
 // (routes/tfc.ts).
 app.use("/api/tfc/callback", rateLimit("tfc-callback", 30), tfcCallback);
+// QuickBooks/Xero/Sage's OAuth redirect after a manager authorises the
+// connection at the provider — same shape as the TFC callback above: no
+// Authorization header, the single-use `state` is the only proof (routes/accounting.ts).
+app.use("/api/accounting/callback", rateLimit("accounting-callback", 30), accountingCallback);
 
 app.use("/api", requireAuth, attachRole);
 // The subscription wall: a lapsed owner tenant (canceled / past_due / past
@@ -307,6 +313,8 @@ app.use("/api/shifts", shifts);
 app.use("/api/rota", rota);
 app.use("/api/timeclock", timeclock);
 app.use("/api/payroll", payroll);
+app.use("/api/accounting", accounting);
+app.use("/api/payroll", payslips); // routes/payslips.ts — real PDF payslips + email, a separate router (no path collisions with the one above)
 app.use("/api/onboarding", onboarding);
 app.use("/api/credentials", credentials);
 app.use("/api/staff-announcements", staffAnnouncements);
