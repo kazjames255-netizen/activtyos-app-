@@ -318,6 +318,22 @@ invites.patch("/:token/status", async (req, res) => {
       // Their future shifts go back to "needs staff" rather than sitting on a
       // rota under someone who's left (acceptance test d16s6).
       if (off) released = await releaseFutureShifts(req.auth!.tenantId!, String(u.get("name") ?? found.d.name ?? "")).catch(() => 0);
+      // Switching a FRANCHISE off switches off its whole team too — its staff carry the franchise's id and would
+      // otherwise keep full access to its children's records after head office has cut the franchise loose.
+      // Switching it back on re-enables only the staff that this cascade switched off (never one head office
+      // deactivated on purpose).
+      if (found.d.role === "franchise") {
+        const fid = (u.get("franchiseId") as string | undefined) ?? uid;
+        const team = await db.collection("users").where("tenantId", "==", req.auth!.tenantId).where("franchiseId", "==", fid).where("role", "==", "staff").get();
+        for (const m of team.docs) {
+          if (off && m.get("disabled") !== true) {
+            await m.ref.set({ disabled: true, disabledAt: at, disabledBy: req.user?.email ?? req.user?.uid ?? null, disabledByFranchiseOff: fid }, { merge: true });
+            await authAdmin.revokeRefreshTokens(m.id).catch((e) => console.error("[invites] revoke:", (e as Error).message)); forgetRevocation(m.id);
+          } else if (!off && m.get("disabledByFranchiseOff") === fid) {
+            await m.ref.set({ disabled: false, disabledAt: null, disabledBy: null, disabledByFranchiseOff: null }, { merge: true });
+          }
+        }
+      }
     }
   }
   res.json({ ok: true, status: parsed.data.status, account: uid ? (off ? "disabled" : "enabled") : "not joined yet", ...(released ? { shiftsReleased: released } : {}) });
