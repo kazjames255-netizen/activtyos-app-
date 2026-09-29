@@ -390,6 +390,11 @@ bookings.post("/", async (req, res) => {
       } else if (scope.role === "franchise") {
         listingFranchiseId = scope.franchiseId; // no block (dates-label) — attribute to the creating franchise
       }
+      // A franchise takes bookings on ITS OWN sessions only. Attribution above already keeps the booking out of its
+      // revenue, but it would still eat a place on head office's / a sibling's block, land on THEIR register and email
+      // the booker a payment link from the wrong brand.
+      if (scope.role === "franchise" && block && listingFranchiseId !== scope.franchiseId)
+        throw new BadRequest("Unknown block (must belong to your own listings)");
       const b: Booking = {
         ...buildBooking(
           { ...input, dates: block ? block.name : input.dates! },
