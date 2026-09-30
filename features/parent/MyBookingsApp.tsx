@@ -9,7 +9,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useI18n, useT, useWord } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
-import { bookingDateSummary, money, owedOf, payLabelFor, payTone } from "@/features/bookings/helpers";
+import { bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, refundableSoFar } from "@/features/bookings/helpers";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
@@ -168,7 +168,10 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const policy = cfg ? policyById(cfg.policies, listing?.cancellationPolicyId) ?? cfg.policies[0] ?? null : null;
   const allDays = [...(booking.days ?? [])].sort();
   const firstDay = allDays[0];
-  const advice = policy ? refundFor(policy, firstDay, booking.amount, new Date().toISOString(), "parent") : null;
+  // What could actually come back: the money RECEIVED (less anything already refunded) — the server values a refund the same way,
+  // never against the price. An unpaid booking used to be told "You're entitled to a full refund of £20.00".
+  const paidNow = refundableSoFar(booking);
+  const advice = policy ? refundFor(policy, firstDay, paidNow, new Date().toISOString(), "parent") : null;
 
   // Per-day (partial) cancellation. We work in SLOTS = one (child, day) pair, so
   // a booking with several children (each on their own dates) can be cancelled
@@ -180,7 +183,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const daysForKid = (k: { dates?: string[] }) => (k.dates && k.dates.length ? k.dates : booking.days ?? []);
   // Total booked child-days (the denominator for a fair per-slot share).
   const totalPaidSlots = kidsList ? kidsList.reduce((n, k) => n + daysForKid(k).length, 0) : allDays.length;
-  const perSlotPaid = totalPaidSlots ? (booking.amount ?? 0) / totalPaidSlots : 0;
+  const perSlotPaid = totalPaidSlots ? paidSoFar(booking) / totalPaidSlots : 0;
   // The cancellable (future, not-already-cancelled) slots.
   const slots: { key: string; childName: string; childId?: string; date: string }[] = [];
   const addSlots = (name: string, childId: string | undefined, dates: string[], cancelled: string[]) => {
@@ -306,7 +309,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
             <div className="mt-2">
               <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">{multiKid ? t("p7bk.tickDaysKid") : t("p7bk.tickDays")}</div>
               <div className="mb-1.5 rounded-md bg-[var(--panel)] px-2.5 py-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-                <Rich text={t("p7bk.dayWorth", { each: money(perSlotPaid), n: totalPaidSlots, total: money(booking.amount) })} bClass="text-[var(--ink-2)]" />
+                <Rich text={t("p7bk.dayWorth", { each: money(perSlotPaid), n: totalPaidSlots, total: money(paidSoFar(booking)) })} bClass="text-[var(--ink-2)]" />
               </div>
               {(multiKid ? kidsList!.map((k) => k.name) : [null]).map((childName) => {
                 const rows = slots.filter((s) => (childName === null ? true : s.childName === childName));
@@ -389,14 +392,16 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
       {/* Entitlement, stated plainly from the policy (whole booking). */}
       {!partialMode && advice && (
         <div className="mb-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12px]">
-          {advice.percent >= 100 ? (
+          {paidNow <= 0 ? (
+            <div className="font-extrabold text-[var(--ink-2)]">{t("p7bk.nothingPaid")}</div>
+          ) : advice.percent >= 100 ? (
             <div className="font-extrabold text-[var(--brand)]">{t("p7bk.entitledFull", { amt: money(advice.amount) })}</div>
           ) : advice.amount > 0 ? (
             <div className="font-extrabold text-[var(--brand)]">{t("p7bk.entitledPct", { pct: advice.percent, amt: money(advice.amount) })}</div>
           ) : (
             <div className="font-extrabold text-[#c0392b]">{t("p7bk.noRefundDue")}</div>
           )}
-          <div className="mt-0.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">{adviceReasonT(t, locale, advice)}</div>
+          {paidNow > 0 && <div className="mt-0.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">{adviceReasonT(t, locale, advice)}</div>}
           {policy && (
             <div className="mt-1.5 border-t border-[var(--line)] pt-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
               <span className="font-semibold text-[var(--ink-2)]">{t("p7bk.policyName", { name: policy.name })}</span> {policyWordingT(t, locale, policy)}
