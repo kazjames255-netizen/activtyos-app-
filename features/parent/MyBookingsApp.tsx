@@ -9,7 +9,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useI18n, useT, useWord } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
-import { bookingDateSummary, money, payLabelFor, payTone } from "@/features/bookings/helpers";
+import { bookingDateSummary, money, owedOf, payLabelFor, payTone } from "@/features/bookings/helpers";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
@@ -921,7 +921,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
   // marks the money in — so no in-app card "Pay" button for it.
   const payable =
     b.pay !== "Paid" && b.pay !== "Refunded" && b.pay !== "Awaiting voucher payment" &&
-    (b.status === "Confirmed" || b.pay === "Invoice sent") && b.amount > 0;
+    (b.status === "Confirmed" || b.pay === "Invoice sent") && owedOf(b) > 0.005;
 
   const kidNames = (b.kids && b.kids.length ? b.kids.map((k) => k.name) : [b.child]).filter(Boolean);
   const initials = kidNames.length ? kidNames.map((n) => (n || "?").charAt(0).toUpperCase()).join(" & ") : "?";
@@ -1040,7 +1040,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
       <div className="mt-2 flex flex-wrap gap-2">
         {payable && (
           <Button sm variant="primary" onClick={() => setPaying(true)}>
-            {t("parent.payAmount", { amount: money(b.amount) })}
+            {t("parent.payAmount", { amount: money(owedOf(b)) })}
           </Button>
         )}
         <Button sm onClick={() => setExpanded((x) => !x)}>

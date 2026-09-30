@@ -7,6 +7,7 @@ import { autoEmailOn } from "../lib/autoEmails";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { bookingDocId } from "./bookings";
 import { settlePaymentRecord } from "../lib/settlePayment";
+import { owedOf } from "../../../features/bookings/helpers";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Payments — Stripe Connect (build item 7).
@@ -51,6 +52,10 @@ const payable = (b: { status: string; pay: string }) =>
   b.pay !== "Paid" &&
   b.pay !== "Refunded" &&
   (b.status === "Confirmed" || b.pay === "Invoice sent");
+/** What a parent is asked for: the BALANCE (price − money already received), never the whole price again. A part-paid
+ *  booking, or a fully-paid one where the family released a day ("Partially refunded", status still Confirmed), used to be
+ *  charged its full price a second time. */
+const balanceOf = (b: Parameters<typeof owedOf>[0]) => Math.round(owedOf(b) * 100) / 100;
 
 // POST /api/payments/connect — create (or resume onboarding for) the
 // tenant's Express account; returns the hosted onboarding URL.
@@ -304,7 +309,12 @@ payments.post("/checkout", async (req, res) => {
     });
     return;
   }
-  const amount = Math.round(bookings.reduce((sum, b) => sum + b.amount, 0) * 100) / 100;
+  const settledAlready = bookings.find((b) => balanceOf(b) <= 0);
+  if (settledAlready) {
+    res.status(409).json({ error: `Booking ${settledAlready.ref} is already paid` });
+    return;
+  }
+  const amount = Math.round(bookings.reduce((sum, b) => sum + balanceOf(b), 0) * 100) / 100;
   if (amount <= 0) {
     res.status(409).json({ error: "Nothing to pay" });
     return;

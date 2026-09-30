@@ -6,7 +6,7 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useT } from "@/lib/i18n/provider";
 import { useSettings } from "@/lib/settings";
-import { bookingDateSummary, money, payLabelFor, payTone, refundedTotal } from "@/features/bookings/helpers";
+import { bookingDateSummary, money, owedOf, payLabelFor, payTone, refundedTotal } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { PayModal } from "@/features/payments/PayModal";
 import { downloadReceipts, type ReceiptCtx } from "./paymentReceipt";
@@ -20,7 +20,7 @@ import { Badge, Button, Card } from "@/components/ui";
 // (card paid, or a provider marked another method paid).
 // ─────────────────────────────────────────────────────────────────────────
 
-const OWED = new Set(["Unpaid", "Invoice sent"]);
+const OWED = new Set(["Unpaid", "Invoice sent", "Partially paid"]);
 const methodOf = (b: Booking) => (b.method && b.method !== "—" ? b.method : "Card");
 
 function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: {
@@ -46,7 +46,7 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
       </div>
       <span className="hidden w-[92px] text-end text-[11.5px] text-[var(--ink-3)] sm:inline">{methodOf(b)}</span>
       <Badge tone={payTone(b.pay)}>{payLabelFor(b)}</Badge>
-      <span className="w-[72px] text-end text-[13.5px] font-extrabold">{money(b.amount)}</span>
+      <span className="w-[72px] text-end text-[13.5px] font-extrabold">{money(action ? owedOf(b) : b.amount)}</span>
       {onPdf ? (
         <button
           onClick={onPdf}
@@ -141,15 +141,16 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
     const all = (bookings ?? []).filter((b) => b.status !== "Declined").filter(matchF);
     // Same rule as the server's payable() and My bookings' Pay button: a waitlisted / offered /
     // awaiting-approval booking holds no place yet, so nothing is owed (and Pay now would be refused).
-    const owed = all.filter((b) => b.status !== "Cancelled" && OWED.has(b.pay) && b.amount > 0 && (b.status === "Confirmed" || b.pay === "Invoice sent"));
-    const paid = all.filter((b) => b.pay === "Paid" || b.pay === "Funded")
+    const owed = all.filter((b) => b.status !== "Cancelled" && OWED.has(b.pay) && owedOf(b) > 0.005 && (b.status === "Confirmed" || b.pay === "Invoice sent"));
+    // "Partially refunded" (a released day on a paid booking) is still money paid — it needs its receipt (which nets off the refund).
+    const paid = all.filter((b) => b.pay === "Paid" || b.pay === "Funded" || b.pay === "Partially refunded")
       .sort((a, b) => ((a.createdAt ?? "") < (b.createdAt ?? "") ? 1 : -1));
     const refunds = all.flatMap((b) => (b.refundLog ?? []).map((r) => ({ ...r, ref: b.ref, listing: b.listing })));
     return {
       owed,
       paid,
       refunds,
-      owedTotal: owed.reduce((s, b) => s + b.amount, 0),
+      owedTotal: owed.reduce((s, b) => s + owedOf(b), 0),
       paidTotal: paid.reduce((s, b) => s + b.amount - refundedTotal(b), 0),
       refundTotal: refunds.reduce((s, r) => s + (r.amount || 0), 0),
     };
