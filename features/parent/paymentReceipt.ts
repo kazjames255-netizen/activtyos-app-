@@ -5,6 +5,7 @@
 
 import { tNow } from "@/lib/i18n/provider";
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { BRAND } from "@/lib/i18n/config";
 import type { Booking } from "@/features/bookings/types";
 import { bookingDateSummary, money, payLabelFor, refundedTotal } from "@/features/bookings/helpers";
 
@@ -166,7 +167,7 @@ function drawReceipt(doc: Doc, b: Booking, ctx: ReceiptCtx, logo: { dataUrl: str
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(138, 134, 163);
-  doc.text(`Keep this receipt as proof of purchase. Issued by ${provider} via ActivityOS.`, M, y + 22);
+  doc.text(`Keep this receipt as proof of purchase. Issued by ${provider} via ${BRAND}.`, M, y + 22);
 }
 
 /**
