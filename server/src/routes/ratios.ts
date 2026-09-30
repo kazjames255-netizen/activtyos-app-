@@ -9,7 +9,7 @@ import { franchiseListingIds } from "../lib/franchiseScope";
 import { staffSiteScope, type SiteScope } from "../lib/siteScope";
 import { DEFAULT_BANDS, bandFor, requiredStaff } from "../lib/ratios";
 import { staffPolicy } from "../lib/staffPolicy";
-import { ukToday } from "../lib/ukDate";
+import { ukToday, isRealDay } from "../lib/ukDate";
 import { loadSettings } from "../lib/tenantLibrary";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -227,7 +227,7 @@ const boardSchema = z.object({
 // A franchise (and its staff) keep their OWN day board: the shared per-tenant doc would show them
 // head office's and sibling franchises' child → group moves, and their save would overwrite theirs.
 const boardId = (tenantId: string, date: string, franchiseId?: string | null) => (franchiseId ? `${tenantId}__fr__${franchiseId}_${date}` : `${tenantId}_${date}`);
-const validDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+const validDate = isRealDay;
 
 /** The board keys (child id, else the row key — see RatiosApp's CoverBoard) of
  *  the children booked at a site-scoped member of staff's sites that day. The
