@@ -23,7 +23,12 @@ for (const cf of fs.readdirSync(chunkDir).filter((f) => /^c\d+\.json$/.test(f)).
   }
   for (const k of Object.keys(tr)) if (!(k in src)) console.log(cf, 'unknown key', k);
 }
-console.log(lang, 'valid translations:', Object.keys(res).length, 'of', Object.keys(en).length, 'problems:', problems);
+// hand-made deltas for keys added after the chunks were cut (scripts/i18n-v2/delta/<lang>.json)
+const df = new URL('./delta/' + lang + '.json', import.meta.url);
+if (fs.existsSync(df)) { const dj = JSON.parse(fs.readFileSync(df, 'utf8')); for (const k of Object.keys(dj)) if (k in en && sig(dj[k]) === sig(en[k])) res[k] = dj[k]; }
+// the source chunks predate the HTML-entity fix: decode the few entities that may appear in model output
+for (const k of Object.keys(res)) res[k] = res[k].replace(/&minus;/g, '\u2212').replace(/&pound;/g, '\u00a3').replace(/&rarr;/g, '\u2192').replace(/&larr;/g, '\u2190').replace(/&amp;/g, '&');
+console.log(lang, 'valid translations:', Object.keys(res).length, 'of', Object.keys(en).length, 'problems:', problems, 'missing vs en.json:', Object.keys(en).filter((k) => !(k in res)).length);
 if (!dry) {
   const outj = {};
   for (const k of Object.keys(en)) { if (k in res) outj[k] = res[k]; else if (fill) outj[k] = en[k]; }
