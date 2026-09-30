@@ -1,4 +1,5 @@
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { tNow } from "@/lib/i18n/provider";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type {
@@ -76,7 +77,7 @@ function toBuilderListing(l: ApiListing, venueName: string): Listing | null {
   const first = blocks.find((b) => b.startDate === from)!.sessions[0];
   return {
     id: l.id,
-    name: (l.title ?? l.name ?? "Untitled").trim() || "Untitled",
+    name: (l.title ?? l.name ?? "").trim() || tNow("p8set.lcUntitled"),
     venue: venueName,
     dates: prettyRange(from, to),
     from,
@@ -334,7 +335,7 @@ export const useTimetableStore = create<TimetableState>()(
       } catch (e) {
         set((s) => {
           s.loading = false;
-          s.loadError = e instanceof Error ? e.message : "Couldn’t load your listings";
+          s.loadError = e instanceof Error ? e.message : tNow("p8set.ttLoadListingsErr");
         });
       }
     },
@@ -370,7 +371,7 @@ export const useTimetableStore = create<TimetableState>()(
       set((s) => void (s.saveState = "saving"));
       const body = {
         listingId: s0.curListing?.id ?? null,
-        name: s0.curListing?.name ?? `Custom week (${s0.dateFrom || "?"})`,
+        name: s0.curListing?.name ?? tNow("p8set.ttCustomWeek", { date: s0.dateFrom || "?" }),
         dateFrom: s0.dateFrom,
         dateTo: s0.dateTo,
         excluded: Object.keys(s0.excluded).filter((k) => s0.excluded[k]),
@@ -422,7 +423,7 @@ export const useTimetableStore = create<TimetableState>()(
         s.curListing = L;
         s.timetableId = draft?.id ?? null;
         s.pubStatus = draft?.published
-          ? `Published ${new Date(draft.published.at).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+          ? tNow("p8set.ttPublishedAt", { when: new Date(draft.published.at).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })
           : null;
         s.share = draft?.published ? { staff: draft.published.staff, parents: draft.published.parents } : {};
         s.audience = draft?.published?.audience ?? "booked";
@@ -723,7 +724,7 @@ export const useTimetableStore = create<TimetableState>()(
         s.share = t.published ? { staff: t.published.staff, parents: t.published.parents } : {};
         s.audience = t.published?.audience ?? "booked";
         s.pubStatus = t.published
-          ? `Published ${new Date(t.published.at).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+          ? tNow("p8set.ttPublishedAt", { when: new Date(t.published.at).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })
           : null;
         s.wstep = 1;
         s.tab = 1;
@@ -753,7 +754,7 @@ export const useTimetableStore = create<TimetableState>()(
         }
         await get().saveDraft();
         const s0 = get();
-        if (!s0.timetableId) throw new Error("Couldn’t save the timetable first");
+        if (!s0.timetableId) throw new Error(tNow("p8set.ttSaveFirstErr"));
         const doc = await apiPost<SavedTimetable>(`/api/timetables/${s0.timetableId}/publish`, {
           staff: !!s0.share.staff,
           parents: !!s0.share.parents,
@@ -766,14 +767,14 @@ export const useTimetableStore = create<TimetableState>()(
           const i = s.saved.findIndex((t) => t.id === doc.id);
           if (i >= 0) s.saved[i] = doc;
           const who: string[] = [];
-          if (doc.published?.staff) who.push("Staff portal");
-          if (doc.published?.parents) who.push("Parents (" + doc.published.audience + ")");
+          if (doc.published?.staff) who.push(tNow("p8set.ttWhoStaff"));
+          if (doc.published?.parents) who.push(tNow("p8set.ttWhoParents", { aud: tNow(doc.published.audience === "booked" ? "p8set.ttAudBooked" : "p8set.ttAudEveryone") }));
           s.pubStatus = doc.published
-            ? "Published ✓ · Visible to: " + who.join(", ") + " · " + (s.dayList.length || 0) + " days · just now"
-            : "Unpublished — pick at least one audience to publish.";
+            ? tNow("p8set.ttPublishedNow", { who: who.join(", "), n: s.dayList.length || 0 })
+            : tNow("p8set.ttUnpublished");
         });
       } catch (e) {
-        set((s) => void (s.pubStatus = e instanceof Error ? e.message : "Couldn’t publish — try again"));
+        set((s) => void (s.pubStatus = e instanceof Error ? e.message : tNow("p8set.ttPublishFail")));
       }
       set((s) => void (s.publishing = false));
     },

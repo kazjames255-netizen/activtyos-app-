@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { groupsFrom, useTimetableStore } from "./store";
-import { shortGroup } from "./engine";
+import { shortGroup, ttName } from "./engine";
+import { useT } from "@/lib/i18n/provider";
 import { Input } from "@/components/ui";
 
 function AddRow({ cid }: { cid: string }) {
+  const t = useT();
   const addAct = useTimetableStore((s) => s.addAct);
   const [v, setV] = useState("");
   return (
@@ -19,7 +21,7 @@ function AddRow({ cid }: { cid: string }) {
             setV("");
           }
         }}
-        placeholder="Add activity…"
+        placeholder={t("p8set.alAddAct")}
         className="flex-1"
       />
       <button
@@ -29,13 +31,14 @@ function AddRow({ cid }: { cid: string }) {
         }}
         className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 text-[12px] font-bold text-[var(--ink)]"
       >
-        Add
+        {t("p8set.add")}
       </button>
     </div>
   );
 }
 
 export function ActivityLibrary() {
+  const t = useT();
   const CATS = useTimetableStore((s) => s.CATS);
   const FAC = useTimetableStore((s) => s.FAC);
   const openCat = useTimetableStore((s) => s.openCat);
@@ -64,9 +67,9 @@ export function ActivityLibrary() {
               className="flex cursor-pointer items-center gap-2 px-3 py-2.5"
             >
               <span className="h-3 w-3 flex-none rounded" style={{ background: c.color }} />
-              <b className="font-[var(--ff-display)] text-[14.5px] font-extrabold text-[var(--ink)]">{c.name}</b>
+              <b className="font-[var(--ff-display)] text-[14.5px] font-extrabold text-[var(--ink)]">{ttName(t, c.name)}</b>
               <span className="ms-auto text-[11px] font-bold text-[var(--ink-3)]">
-                {onN}/{c.acts.length} on
+                {t("p8set.alOnCount", { on: onN, total: c.acts.length })}
               </span>
               <span className="text-[var(--ink-3)]">{open ? "▲" : "▼"}</span>
             </div>
@@ -85,7 +88,7 @@ export function ActivityLibrary() {
                       className="cursor-grab rounded px-2 py-1 text-[11.5px] font-bold text-white"
                       style={{ background: c.color }}
                     >
-                      {a.name}
+                      {ttName(t, a.name)}
                     </span>
                     <button
                       onClick={() => toggleActOn(c.id, idx)}
@@ -95,28 +98,28 @@ export function ActivityLibrary() {
                           : "border-[var(--line)] text-[var(--ink-3)]"
                       }`}
                     >
-                      {a.on ? "On" : "Off"}
+                      {a.on ? t("p8set.on") : t("p8set.off")}
                     </button>
                     <select
                       value={a.place}
                       onChange={(e) => setActPlace(c.id, idx, e.target.value)}
-                      title="Where it runs"
+                      title={t("p8set.alWhereRuns")}
                       className="rounded border border-[var(--line)] bg-[var(--surface)] px-1 py-0.5 text-[10.5px] text-[var(--ink)]"
                     >
                       {FAC.map((f) => (
-                        <option key={f}>{f}</option>
+                        <option key={f} value={f}>{ttName(t, f)}</option>
                       ))}
                     </select>
                     <button
                       onClick={() => toggleActWhole(c.id, idx)}
-                      title="Whole camp"
+                      title={t("p8set.alWholeCampTip")}
                       className={`rounded-full border px-2 py-0.5 text-[10.5px] font-bold ${
                         a.whole
                           ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]"
                           : "border-[var(--line)] text-[var(--ink-3)]"
                       }`}
                     >
-                      Whole
+                      {t("p8set.alWhole")}
                     </button>
                     {groups.map((g, gi) => {
                       const ex = a.exclude.indexOf(gi) >= 0;
@@ -137,7 +140,7 @@ export function ActivityLibrary() {
                     })}
                     <button
                       onClick={() => delAct(c.id, idx)}
-                      title="Remove"
+                      title={t("p8set.lcRemove")}
                       className="ms-auto text-[15px] text-[var(--ink-3)] hover:text-[var(--red)]"
                     >
                       ×

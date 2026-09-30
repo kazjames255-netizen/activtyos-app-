@@ -6,17 +6,20 @@ import { buildAllDays } from "./engine";
 import { ActivityLibrary } from "./ActivityLibrary";
 import { FieldLabel, Panel, Button, Input, Select, inputCls } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
+import { useI18n, useT } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
+import { dayShort, dayDateText, ttName } from "./engine";
 
 // Step chrome follows the operator's brand theme (was a fixed rainbow that
 // clashed on non-blue themes). Activity-block colours stay varied — see engine.
 const PILLS: [number, string][] = [
-  [1, "Dates"],
-  [2, "The day"],
-  [3, "Arrivals"],
-  [4, "Spaces"],
-  [5, "Groups"],
-  [6, "Activities"],
-  [7, "Build"],
+  [1, "wzDates"],
+  [2, "wzDay"],
+  [3, "wzArrivals"],
+  [4, "wzSpaces"],
+  [5, "wzGroups"],
+  [6, "wzActivities"],
+  [7, "wzBuild"],
 ];
 
 function Chips({ times, onDel }: { times: string[]; onDel: (i: number) => void }) {
@@ -38,6 +41,7 @@ function Chips({ times, onDel }: { times: string[]; onDel: (i: number) => void }
 }
 
 function TimeAdder({ onAdd }: { onAdd: (t: string) => void }) {
+  const t = useT();
   const [v, setV] = useState("");
   return (
     <div className="flex gap-1.5">
@@ -50,20 +54,22 @@ function TimeAdder({ onAdd }: { onAdd: (t: string) => void }) {
           }
         }}
       >
-        + Add
+        + {t("p8set.add")}
       </Button>
     </div>
   );
 }
 
 function DayCalendar() {
+  const t = useT();
+  const { locale } = useI18n();
   const dateFrom = useTimetableStore((s) => s.dateFrom);
   const dateTo = useTimetableStore((s) => s.dateTo);
   const excluded = useTimetableStore((s) => s.excluded);
   const toggleDate = useTimetableStore((s) => s.toggleDate);
   const all = buildAllDays(dateFrom, dateTo);
   if (!all.length || !all[0].iso)
-    return <span className="text-[11.5px] text-[var(--ink-3)]">Pick a date range above.</span>;
+    return <span className="text-[11.5px] text-[var(--ink-3)]">{t("p8set.wzPickRange")}</span>;
   const inc = all.filter((x) => !excluded[x.iso]).length;
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -73,26 +79,28 @@ function DayCalendar() {
           <span
             key={x.iso}
             onClick={() => toggleDate(x.iso)}
-            title={ex ? "Excluded — tap to include" : "Included — tap to exclude"}
+            title={ex ? t("p8set.wzExcluded") : t("p8set.wzIncluded")}
             className={`flex min-w-[46px] cursor-pointer flex-col items-center gap-px rounded-lg border-[1.5px] px-2.5 py-1.5 ${
               ex ? "border-[var(--line)] bg-[var(--surface)] opacity-60" : "border-[var(--brand)] bg-[var(--brand-soft)]"
             }`}
           >
             <span className={`text-[10px] font-extrabold uppercase ${ex ? "text-[var(--ink-3)]" : "text-[var(--brand-strong)]"}`}>
-              {x.n}
+              {dayShort(x)}
             </span>
-            <span className={`text-[12.5px] font-bold text-[var(--ink)] ${ex ? "line-through" : ""}`}>{x.d}</span>
+            <span className={`text-[12.5px] font-bold text-[var(--ink)] ${ex ? "line-through" : ""}`}>{dayDateText(x)}</span>
           </span>
         );
       })}
       <div className="mt-1 w-full text-[11px] text-[var(--ink-3)]">
-        {inc} of {all.length} days included
+        {t("p8set.wzDaysIncluded", { n: inc, total: all.length })}
       </div>
     </div>
   );
 }
 
 export function SetupWizard() {
+  const t = useT();
+  const { locale } = useI18n();
   const s = useTimetableStore();
   const step = s.wstep;
   const { settings } = useSettings();
@@ -134,20 +142,20 @@ export function SetupWizard() {
               >
                 {n}
               </span>
-              {lbl}
+              {t(`p8set.${lbl}`)}
             </button>
           );
         })}
       </div>
 
       {step === 1 && (
-        <Panel title="1 · Listing & dates">
+        <Panel title={t("p8set.wzStep1")}>
           <div className="flex flex-wrap items-end gap-3">
             {seasons.length > 0 && (
               <div className="min-w-[160px]">
-                <FieldLabel>Season</FieldLabel>
+                <FieldLabel>{t("p8set.wzSeason")}</FieldLabel>
                 <Select value={seasonFilter} onChange={(e) => onSeason(e.target.value)} className="w-full">
-                  <option value="">All seasons</option>
+                  <option value="">{t("p8set.wzAllSeasons")}</option>
                   {seasons.map((x) => (
                     <option key={x.id} value={x.id}>
                       {x.name}
@@ -157,7 +165,7 @@ export function SetupWizard() {
               </div>
             )}
             <div className="min-w-[230px] flex-1">
-              <FieldLabel>Listing</FieldLabel>
+              <FieldLabel>{t("p8set.vListing")}</FieldLabel>
               <Select
                 value={s.listingIndex}
                 onChange={(e) => s.pickListing(+e.target.value)}
@@ -168,15 +176,15 @@ export function SetupWizard() {
                     {l.name}
                   </option>
                 ))}
-                {listingOpts.length === 0 && <option value={s.listingIndex}>No listings in this season</option>}
+                {listingOpts.length === 0 && <option value={s.listingIndex}>{t("p8set.wzNoListingsSeason")}</option>}
               </Select>
             </div>
             <div>
-              <FieldLabel>From</FieldLabel>
+              <FieldLabel>{t("p8set.wzFrom")}</FieldLabel>
               <Input type="date" value={s.dateFrom} onChange={(e) => s.setDates(e.target.value, s.dateTo)} />
             </div>
             <div>
-              <FieldLabel>To</FieldLabel>
+              <FieldLabel>{t("p8set.wzTo")}</FieldLabel>
               <Input type="date" value={s.dateTo} onChange={(e) => s.setDates(s.dateFrom, e.target.value)} />
             </div>
           </div>
@@ -188,30 +196,30 @@ export function SetupWizard() {
             )}
             <span>
               {s.curListing
-                ? `Pulled from listing: ${s.curListing.dates} · ${s.start}–${s.end} · ${s.curListing.venue} · ${s.dayList.length} days`
-                : `Dates edited · ${s.dayList.length} days · ${s.start}–${s.end}`}
+                ? t("p8set.wzPulled", { dates: s.curListing.dates, start: s.start, end: s.end, venue: s.curListing.venue, days: pickPlural(t, locale, "p8set.wzNDays", s.dayList.length) })
+                : t("p8set.wzEdited", { days: pickPlural(t, locale, "p8set.wzNDays", s.dayList.length), start: s.start, end: s.end })}
             </span>
           </div>
           <FieldLabel>
-            <span className="mt-3 inline-block">Dates in this camp</span>
+            <span className="mt-3 inline-block">{t("p8set.wzDatesInCamp")}</span>
           </FieldLabel>
           <DayCalendar />
         </Panel>
       )}
 
       {step === 2 && (
-        <Panel title="2 · The day">
+        <Panel title={t("p8set.wzStep2")}>
           <div className="flex flex-wrap gap-4">
             <label>
-              <FieldLabel>Day start</FieldLabel>
+              <FieldLabel>{t("p8set.wzDayStart")}</FieldLabel>
               <Input type="time" value={s.start} onChange={(e) => s.setField({ start: e.target.value })} />
             </label>
             <label>
-              <FieldLabel>Day end</FieldLabel>
+              <FieldLabel>{t("p8set.wzDayEnd")}</FieldLabel>
               <Input type="time" value={s.end} onChange={(e) => s.setField({ end: e.target.value })} />
             </label>
             <label>
-              <FieldLabel>Breaks / day</FieldLabel>
+              <FieldLabel>{t("p8set.wzBreaks")}</FieldLabel>
               <Select value={s.breaks} onChange={(e) => s.setField({ breaks: +e.target.value })}>
                 {[1, 2, 3].map((n) => (
                   <option key={n} value={n}>
@@ -221,11 +229,11 @@ export function SetupWizard() {
               </Select>
             </label>
             <label>
-              <FieldLabel>Lunch start</FieldLabel>
+              <FieldLabel>{t("p8set.wzLunchStart")}</FieldLabel>
               <Input type="time" value={s.lunch} onChange={(e) => s.setField({ lunch: e.target.value })} />
             </label>
             <label>
-              <FieldLabel>Activities per day</FieldLabel>
+              <FieldLabel>{t("p8set.wzActsPerDay")}</FieldLabel>
               <Select value={s.perDay} onChange={(e) => s.setField({ perDay: +e.target.value })}>
                 {[4, 5, 6, 7, 8].map((n) => (
                   <option key={n} value={n}>
@@ -235,7 +243,7 @@ export function SetupWizard() {
               </Select>
             </label>
             <div className="min-w-[210px]">
-              <FieldLabel>Whole-camp activities at</FieldLabel>
+              <FieldLabel>{t("p8set.wzWholeAt")}</FieldLabel>
               <Chips times={s.wholeTimes} onDel={s.delWhole} />
               <TimeAdder onAdd={s.addWhole} />
             </div>
@@ -244,15 +252,15 @@ export function SetupWizard() {
       )}
 
       {step === 3 && (
-        <Panel title="3 · Arrivals">
+        <Panel title={t("p8set.wzStep3")}>
           <div className="flex flex-wrap gap-8">
             <div className="min-w-[240px]">
-              <FieldLabel>Sign-in times</FieldLabel>
+              <FieldLabel>{t("p8set.wzSignIn")}</FieldLabel>
               <Chips times={s.signin} onDel={(i) => s.delSign("signin", i)} />
               <TimeAdder onAdd={(t) => s.addSign("signin", t)} />
             </div>
             <div className="min-w-[240px]">
-              <FieldLabel>Sign-out times</FieldLabel>
+              <FieldLabel>{t("p8set.wzSignOut")}</FieldLabel>
               <Chips times={s.signout} onDel={(i) => s.delSign("signout", i)} />
               <TimeAdder onAdd={(t) => s.addSign("signout", t)} />
             </div>
@@ -261,16 +269,16 @@ export function SetupWizard() {
       )}
 
       {step === 4 && (
-        <Panel title="4 · Facilities available">
+        <Panel title={t("p8set.wzStep4")}>
           <Facilities />
         </Panel>
       )}
 
       {step === 5 && (
-        <Panel title="5 · Groups & categories">
+        <Panel title={t("p8set.wzStep5")}>
           <GroupsEditor />
           <FieldLabel>
-            <span className="mt-3.5 inline-block">Categories in the rotation (tap to include)</span>
+            <span className="mt-3.5 inline-block">{t("p8set.wzCatsRotation")}</span>
           </FieldLabel>
           <div className="flex flex-wrap gap-2">
             {s.CATS.map((c) => {
@@ -287,7 +295,7 @@ export function SetupWizard() {
                   }}
                 >
                   <span className="h-2.5 w-2.5 rounded-sm" style={{ background: on ? "#fff" : c.color }} />
-                  {c.name}
+                  {ttName(t, c.name)}
                 </button>
               );
             })}
@@ -296,18 +304,18 @@ export function SetupWizard() {
       )}
 
       {step === 6 && (
-        <Panel title="6 · Activity bank">
+        <Panel title={t("p8set.wzStep6")}>
           <ActivityLibrary />
         </Panel>
       )}
 
       {step === 7 && (
-        <Panel title="7 · Build it">
+        <Panel title={t("p8set.wzStep7")}>
           <div className="flex flex-wrap gap-3.5">
             {(
               [
-                ["auto", "Automatic →", "We rotate your activities across the week — maximising variety, respecting facilities, whole-camp activities & age groups."],
-                ["manual", "Manual →", "Blank template with your dates, times, breaks & sign-in/out. Click any block to type the activity and pick its colour (or drag from the bank)."],
+                ["auto", t("p8set.wzAutoTitle"), t("p8set.wzAutoDesc")],
+                ["manual", t("p8set.wzManualTitle"), t("p8set.wzManualDesc")],
               ] as const
             ).map(([mode, title, desc]) => (
               <button
@@ -331,11 +339,11 @@ export function SetupWizard() {
       {/* Wizard nav */}
       <div className="mt-3 flex justify-between">
         <Button onClick={() => s.setWizStep(step - 1)} className={step <= 1 ? "invisible" : ""}>
-          ← Back
+          {t("p8set.wzBack")}
         </Button>
         {step < 7 && (
           <Button variant="solid" onClick={() => s.setWizStep(step + 1)}>
-            Next →
+            {t("p8set.wzNext")}
           </Button>
         )}
       </div>
@@ -344,6 +352,7 @@ export function SetupWizard() {
 }
 
 function Facilities() {
+  const t = useT();
   const FAC = useTimetableStore((s) => s.FAC);
   const facOn = useTimetableStore((s) => s.facOn);
   const toggleFac = useTimetableStore((s) => s.toggleFac);
@@ -366,7 +375,7 @@ function Facilities() {
               }}
             >
               <span className="h-2.5 w-2.5 rounded-sm" style={{ background: on ? "#fff" : "var(--brand)" }} />
-              {f}
+              {ttName(t, f)}
             </button>
           );
         })}
@@ -381,7 +390,7 @@ function Facilities() {
               setV("");
             }
           }}
-          placeholder="Add a space… (e.g. Tennis court)"
+          placeholder={t("p8set.wzAddSpacePh")}
           className={`${inputCls} max-w-[220px]`}
         />
         <Button
@@ -392,7 +401,7 @@ function Facilities() {
             }
           }}
         >
-          + Add
+          + {t("p8set.add")}
         </Button>
       </div>
     </div>
@@ -400,6 +409,7 @@ function Facilities() {
 }
 
 function GroupsEditor() {
+  const t = useT();
   const groupsList = useTimetableStore((s) => s.groupsList);
   const addGroup = useTimetableStore((s) => s.addGroup);
   const delGroup = useTimetableStore((s) => s.delGroup);
@@ -414,7 +424,7 @@ function GroupsEditor() {
   };
   return (
     <div>
-      <FieldLabel>Groups (add each group — age band optional)</FieldLabel>
+      <FieldLabel>{t("p8set.wzGroupsLbl")}</FieldLabel>
       <div className="mb-2 flex flex-wrap gap-2">
         {groupsList.map((g, i) => (
           <span
@@ -423,14 +433,14 @@ function GroupsEditor() {
           >
             <span className="flex items-center gap-1.5 text-[12.5px] font-extrabold text-[var(--ink)]">
               {g.name}
-              <button onClick={() => delGroup(i)} title="Remove" className="text-[15px] leading-none text-[var(--ink-3)]">
+              <button onClick={() => delGroup(i)} title={t("p8set.lcRemove")} className="text-[15px] leading-none text-[var(--ink-3)]">
                 ×
               </button>
             </span>
             {g.band ? (
               <span className="text-[10.5px] font-bold text-[var(--brand-strong)]">{g.band}</span>
             ) : (
-              <span className="text-[10px] text-[var(--ink-3)]">no age band</span>
+              <span className="text-[10px] text-[var(--ink-3)]">{t("p8set.wzNoBand")}</span>
             )}
           </span>
         ))}
@@ -440,17 +450,17 @@ function GroupsEditor() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
-          placeholder="Group name (e.g. Reds)"
+          placeholder={t("p8set.wzGroupNamePh")}
           className="max-w-[160px]"
         />
         <Input
           value={band}
           onChange={(e) => setBand(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
-          placeholder="Age band — optional"
+          placeholder={t("p8set.wzBandPh")}
           className="max-w-[150px]"
         />
-        <Button onClick={add}>+ Add group</Button>
+        <Button onClick={add}>+ {t("p8set.grpAdd")}</Button>
       </div>
     </div>
   );

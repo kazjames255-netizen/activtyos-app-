@@ -3,6 +3,7 @@
 // algorithmically identical so generated timetables match the original.
 
 import type { Activity, Category, Cell, DayInfo, GenConfig, Plan, PlanRow } from "./types";
+import { dateLocale as dl } from "@/lib/i18n/format";
 
 const FACPAL = [
   "#2563EB", "#15803D", "#C2410C", "#7C3AED", "#0E7490", "#B45309",
@@ -19,6 +20,37 @@ export function fmt(m: number): string {
   const h = Math.floor(m / 60);
   const mm = m % 60;
   return (h < 10 ? "0" : "") + h + ":" + (mm < 10 ? "0" : "") + mm;
+}
+
+const WD_EN_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/** The day as a Date: from its ISO date, else (undated plans) from the English short weekday it stores. */
+function dayAsDate(d: DayInfo): Date | null {
+  const dt = new Date((d.iso || "") + "T00:00:00");
+  if (!isNaN(dt.getTime())) return dt;
+  const i = WD_EN_SHORT.indexOf(d.n);
+  return i < 0 ? null : new Date(2024, 0, 7 + i); // 7 Jan 2024 was a Sunday
+}
+/** Short weekday ("Mon") in the active language. The stored `n` stays English. */
+export function dayShort(d: DayInfo): string {
+  const dt = dayAsDate(d);
+  return dt ? dt.toLocaleDateString(dl(), { weekday: "short" }) : d.n;
+}
+/** "28 Jul" in the active language (stored `d` stays English). */
+export function dayDateText(d: DayInfo): string {
+  const dt = d.iso ? dayAsDate(d) : null;
+  return dt ? dt.toLocaleDateString(dl(), { day: "numeric", month: "short" }) : d.d;
+}
+/** The day-of-month number shown on the day chips. */
+export function dayNum(d: DayInfo): string {
+  const dt = d.iso ? dayAsDate(d) : null;
+  return dt ? String(dt.getDate()) : (d.d || "").split(" ")[0];
+}
+/** Starter category / activity / facility names translate at display; anything the provider typed shows as typed. */
+export function ttName(t: (key: string) => string, s: string | undefined | null): string {
+  if (!s) return s ?? "";
+  const k = "p8set.tt_" + s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  const r = t(k);
+  return r === k ? s : r;
 }
 
 export function shortGroup(g: string): string {

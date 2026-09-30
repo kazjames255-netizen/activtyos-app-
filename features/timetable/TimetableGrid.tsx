@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { groupsFrom, useTimetableStore } from "./store";
-import { facColor, groupIntoWeeks } from "./engine";
+import { facColor, groupIntoWeeks, dayShort, dayDateText, dayNum, ttName } from "./engine";
+import { useT } from "@/lib/i18n/provider";
 import { SWATCHES } from "./data";
 import type { Cell, PlanRow } from "./types";
 
@@ -21,6 +22,7 @@ function ActivityBlock({
   onDragStart?: (e: React.DragEvent) => void;
   onClick?: () => void;
 }) {
+  const t = useT();
   return (
     <div
       draggable={draggable}
@@ -33,14 +35,15 @@ function ActivityBlock({
         cursor: draggable ? "grab" : "default",
       }}
     >
-      {cell.cat && <span className="text-[9px] font-bold uppercase tracking-wide opacity-90">{cell.cat}</span>}
-      <span>{cell.name}</span>
-      {cell.place && <span className="text-[9.5px] font-semibold opacity-90">@ {cell.place}</span>}
+      {cell.cat && <span className="text-[9px] font-bold uppercase tracking-wide opacity-90">{ttName(t, cell.cat)}</span>}
+      <span>{ttName(t, cell.name)}</span>
+      {cell.place && <span className="text-[9.5px] font-semibold opacity-90">@ {ttName(t, cell.place)}</span>}
     </div>
   );
 }
 
 function CellEditor({ initial }: { initial: string }) {
+  const t = useT();
   const cellColor = useTimetableStore((s) => s.cellColor);
   const cellSave = useTimetableStore((s) => s.cellSave);
   const cellClear = useTimetableStore((s) => s.cellClear);
@@ -54,7 +57,7 @@ function CellEditor({ initial }: { initial: string }) {
         value={name}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && cellSave(name)}
-        placeholder="Type activity…"
+        placeholder={t("p8set.tgTypeAct")}
         className="w-full rounded border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1 text-[11.5px] text-[var(--ink)] outline-none"
       />
       <div className="mt-1.5 flex flex-wrap gap-1">
@@ -72,13 +75,13 @@ function CellEditor({ initial }: { initial: string }) {
           onClick={() => cellSave(name)}
           className="rounded bg-[var(--brand)] px-2.5 py-1 text-[11px] font-bold text-white"
         >
-          Done
+          {t("p8set.done")}
         </button>
         <button
           onClick={cellClear}
           className="rounded border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink)]"
         >
-          Clear
+          {t("p8set.clear")}
         </button>
       </div>
     </div>
@@ -86,8 +89,9 @@ function CellEditor({ initial }: { initial: string }) {
 }
 
 function Banner({ row }: { row: PlanRow }) {
+  const t = useT();
   const lab =
-    row.type === "signin" ? "Sign-in" : row.type === "signout" ? "Sign-out" : row.type === "lunch" ? "Lunch" : "Break";
+    row.type === "signin" ? t("feed.signIn") : row.type === "signout" ? t("feed.signOut") : row.type === "lunch" ? t("feed.lunch") : t("feed.breakRow");
   const tm = row.times ? row.times.join("  ·  ") : row.time;
   const tone =
     row.type === "break"
@@ -105,6 +109,7 @@ function Banner({ row }: { row: PlanRow }) {
 }
 
 function DayGrid() {
+  const t = useT();
   const plan = useTimetableStore((s) => s.plan);
   const cur = useTimetableStore((s) => s.cur);
   const groupsList = useTimetableStore((s) => s.groupsList);
@@ -119,7 +124,7 @@ function DayGrid() {
   const rows = plan[cur] || [];
   const n = groups.length;
   const man = mode === "manual";
-  const d = dayList[cur] ? `${dayList[cur].n} ${(dayList[cur].d || "").split(" ")[0] || ""}` : "";
+  const d = dayList[cur] ? `${dayShort(dayList[cur])} ${dayNum(dayList[cur])}` : "";
 
   const drop = (e: React.DragEvent, r: number, g: number) => {
     e.preventDefault();
@@ -160,10 +165,10 @@ function DayGrid() {
                   className="flex flex-col justify-center rounded-lg px-2.5 py-2 text-[11.5px] font-bold text-white"
                   style={{ background: r.whole.color, textShadow: "0 1px 2px rgba(0,0,0,.3)" }}
                 >
-                  <span className="text-[9px] font-bold uppercase tracking-wide opacity-90">{r.whole.cat}</span>
-                  <span>{r.whole.name}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wide opacity-90">{ttName(t, r.whole.cat)}</span>
+                  <span>{ttName(t, r.whole.name)}</span>
                   <span className="text-[9.5px] font-semibold opacity-90">
-                    Whole camp · {r.whole.place || "all groups"}
+                    {t("feed.wholeCamp", { place: r.whole.place ? ttName(t, r.whole.place) : t("feed.allGroups") })}
                   </span>
                 </div>
               </div>
@@ -227,6 +232,7 @@ function DayGrid() {
 }
 
 function WeekGrid() {
+  const t = useT();
   const plan = useTimetableStore((s) => s.plan);
   const cur = useTimetableStore((s) => s.cur);
   const groupsList = useTimetableStore((s) => s.groupsList);
@@ -240,20 +246,20 @@ function WeekGrid() {
     if (wk.some((o) => o.di === cur)) wi = i;
   });
   const wk = weeks[wi] || [];
-  if (!wk.length) return <div className="text-[var(--ink-3)]">No days yet.</div>;
+  if (!wk.length) return <div className="text-[var(--ink-3)]">{t("p8set.tgNoDays")}</div>;
   const tmpl = plan[wk[0].di] || [];
   const cols = wk.length;
   const gshort = groups.map((g) => g.split("(")[0].trim());
 
   return (
     <div>
-      <div className="mb-2.5 text-[14px] font-extrabold text-[var(--ink-2)]">Week {wi + 1}</div>
+      <div className="mb-2.5 text-[14px] font-extrabold text-[var(--ink-2)]">{t("p8set.tgWeekN", { n: wi + 1 })}</div>
       <div className="grid gap-1" style={{ gridTemplateColumns: `56px repeat(${cols}, minmax(0,1fr))` }}>
         <div />
         {wk.map((o, i) => (
           <div key={i} className="rounded bg-[var(--panel)] p-1.5 text-center text-[11px] font-extrabold text-[var(--ink-2)]">
-            {o.day.n}
-            <small className="block text-[9.5px] font-semibold text-[var(--ink-3)]">{o.day.d}</small>
+            {dayShort(o.day)}
+            <small className="block text-[9.5px] font-semibold text-[var(--ink-3)]">{dayDateText(o.day)}</small>
           </div>
         ))}
         {tmpl.map((tr, ri) => {
@@ -267,8 +273,8 @@ function WeekGrid() {
                     return (
                       <div key={ci} className="p-0.5">
                         <div className="rounded p-1 text-[10px] font-bold text-white" style={{ background: row.whole.color }}>
-                          {row.whole.name}
-                          <small className="block opacity-80">whole camp</small>
+                          {ttName(t, row.whole.name)}
+                          <small className="block opacity-80">{t("p8set.tgWholeCampSm")}</small>
                         </div>
                       </div>
                     );
@@ -279,7 +285,7 @@ function WeekGrid() {
                         {row.cells.map((c, gi) => (
                           <div key={gi} className="rounded px-1 py-0.5 text-[9.5px] font-semibold text-white" style={{ background: cellBg(c, FAC) }}>
                             <b className="me-1">{gshort[gi] || ""}</b>
-                            {c.name}
+                            {ttName(t, c.name)}
                           </div>
                         ))}
                       </div>
@@ -290,7 +296,7 @@ function WeekGrid() {
               </div>
             );
           }
-          const lab = tr.type === "signin" ? "Sign-in" : tr.type === "signout" ? "Sign-out" : tr.type === "lunch" ? "Lunch" : "Break";
+          const lab = tr.type === "signin" ? t("feed.signIn") : tr.type === "signout" ? t("feed.signOut") : tr.type === "lunch" ? t("feed.lunch") : t("feed.breakRow");
           const tm = tr.times ? tr.times.join(" / ") : tr.time;
           return (
             <div key={ri} style={{ display: "contents" }}>
@@ -311,6 +317,7 @@ function WeekGrid() {
 }
 
 function MonthGrid() {
+  const t = useT();
   const plan = useTimetableStore((s) => s.plan);
   const dayList = useTimetableStore((s) => s.dayList);
   const FAC = useTimetableStore((s) => s.FAC);
@@ -318,13 +325,13 @@ function MonthGrid() {
   const showDay = useTimetableStore((s) => s.showDay);
 
   const weeks = groupIntoWeeks(dayList);
-  if (!weeks.length) return <div className="text-[var(--ink-3)]">No dates yet — pick a listing in Setup.</div>;
+  if (!weeks.length) return <div className="text-[var(--ink-3)]">{t("p8set.tgNoDates")}</div>;
 
   return (
     <div>
       {weeks.slice(0, 4).map((wk, wi) => (
         <div key={wi} className="mb-4">
-          <div className="mb-1.5 text-[13.5px] font-extrabold text-[var(--ink-2)]">Week {wi + 1}</div>
+          <div className="mb-1.5 text-[13.5px] font-extrabold text-[var(--ink-2)]">{t("p8set.tgWeekN", { n: wi + 1 })}</div>
           <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(1, wk.length)}, minmax(0,1fr))` }}>
             {wk.map((o, ci) => {
               const rows = plan[o.di] || [];
@@ -353,18 +360,18 @@ function MonthGrid() {
                   className="cursor-pointer rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 hover:border-[var(--brand)]"
                 >
                   <div className="mb-1.5 text-[13px] font-extrabold text-[var(--ink)]">
-                    {o.day.n} <span className="font-semibold text-[var(--ink-3)]">{o.day.d}</span>
+                    {dayShort(o.day)} <span className="font-semibold text-[var(--ink-3)]">{dayDateText(o.day)}</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {acts.length ? (
                       acts.map((a, i) => (
                         <span key={i} className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white" style={{ background: a.col }}>
                           {a.w ? "★ " : ""}
-                          {a.n}
+                          {ttName(t, a.n)}
                         </span>
                       ))
                     ) : (
-                      <span className="text-[11px] text-[var(--ink-3)]">no activities</span>
+                      <span className="text-[11px] text-[var(--ink-3)]">{t("p8set.tgNoActs")}</span>
                     )}
                   </div>
                 </div>
@@ -378,21 +385,22 @@ function MonthGrid() {
 }
 
 function Legend() {
+  const t = useT();
   const FAC = useTimetableStore((s) => s.FAC);
   const facOn = useTimetableStore((s) => s.facOn);
   const avail = (FAC || []).filter((f) => facOn[f] !== false);
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[var(--ink-3)]">
-      <span className="font-extrabold text-[var(--ink-2)]">Facilities available:</span>
+      <span className="font-extrabold text-[var(--ink-2)]">{t("p8set.tgFacAvail")}</span>
       {avail.length ? (
         avail.map((f) => (
           <span key={f} className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)]">
             <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: facColor(f, FAC) }} />
-            {f}
+            {ttName(t, f)}
           </span>
         ))
       ) : (
-        <span>none ticked — add spaces in Setup</span>
+        <span>{t("p8set.tgNoneTicked")}</span>
       )}
     </div>
   );

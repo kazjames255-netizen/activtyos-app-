@@ -11,10 +11,13 @@ import { useRealtime } from "@/lib/realtime";
 import { Button } from "@/components/ui";
 import { OperatorPage } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n/provider";
+import { dayShort, dayNum } from "./engine";
 
 let didInit = false;
 
 export function TimetableApp() {
+  const t = useT();
   const tab = useTimetableStore((s) => s.tab);
   const view = useTimetableStore((s) => s.view);
   const dayList = useTimetableStore((s) => s.dayList);
@@ -51,12 +54,12 @@ export function TimetableApp() {
   };
 
   const saveLabel =
-    saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved to your account" : saveState === "error" ? "Couldn’t save — retrying on next change" : "";
+    saveState === "saving" ? t("p8set.saving") : saveState === "saved" ? t("p8set.tmSaved") : saveState === "error" ? t("p8set.tmSaveErr") : "";
 
   return (
     <OperatorPage
-      title="Activity timetable builder"
-      lede="Build each day from your activity bank, then publish to staff & parents"
+      title={t("p8set.tmTitle")}
+      lede={t("p8set.tmLede")}
       icon="▦"
       actions={
         saveLabel ? (
@@ -72,29 +75,28 @@ export function TimetableApp() {
           onClick={() => { if (tab === 3) setTab(0); }}
           className={`rounded-full px-4 py-1.5 text-[12.5px] font-bold ${tab !== 3 ? "bg-[var(--brand)] text-white" : "text-[var(--ink-2)]"}`}
         >
-          Builder
+          {t("p8set.tmBuilder")}
         </button>
         <button
           onClick={() => setTab(3)}
           className={`rounded-full px-4 py-1.5 text-[12.5px] font-bold ${tab === 3 ? "bg-[var(--brand)] text-white" : "text-[var(--ink-2)]"}`}
         >
-          My timetables{saved.length ? ` (${saved.length})` : ""}
+          {t("p8set.tmMine")}{saved.length ? ` (${saved.length})` : ""}
         </button>
       </div>
 
       {tab === 3 && <SavedTimetables />}
 
-      {tab !== 3 && loading && <div className="text-[13px] text-[var(--ink-3)]">Loading your listings…</div>}
+      {tab !== 3 && loading && <div className="text-[13px] text-[var(--ink-3)]">{t("p8set.tmLoading")}</div>}
       {tab !== 3 && !loading && loadError && (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 text-[13px]">
           <span className="font-bold text-[var(--red,#e21d27)]">{loadError}</span>
-          <Button className="ms-3" onClick={() => void useTimetableStore.getState().init()}>Try again</Button>
+          <Button className="ms-3" onClick={() => void useTimetableStore.getState().init()}>{t("p8set.tmTryAgain")}</Button>
         </div>
       )}
       {tab !== 3 && !loading && !loadError && !listings.length && (
         <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3.5 py-2.5 text-[12.5px] text-[var(--ink-2)]">
-          No listings with dates yet — the picker fills in once you&rsquo;ve created one. You can still build a week over
-          custom dates below.
+          {t("p8set.tmNoListings")}
         </div>
       )}
 
@@ -105,12 +107,12 @@ export function TimetableApp() {
           {tab === 1 && (
             <div>
               <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2.5">
-                <Button onClick={() => setTab(0)}>← Back to setup</Button>
+                <Button onClick={() => setTab(0)}>{t("p8set.tmBackSetup")}</Button>
                 <div className="flex gap-2">
-                  <Button onClick={doDownload}>↓ Download</Button>
-                  <Button onClick={doPrint}>🖨 Print</Button>
+                  <Button onClick={doDownload}>{t("p8set.tmDownload")}</Button>
+                  <Button onClick={doPrint}>{t("p8set.tmPrint")}</Button>
                   <Button variant="solid" onClick={() => setTab(2)}>
-                    Publish →
+                    {t("p8set.tmPublish")}
                   </Button>
                 </div>
               </div>
@@ -125,7 +127,7 @@ export function TimetableApp() {
                       view === v ? "bg-[var(--brand)] text-white" : "text-[var(--ink-2)]"
                     }`}
                   >
-                    {v === "day" ? "Day" : v === "week" ? "Week" : "4 weeks"}
+                    {v === "day" ? t("p8set.clDay") : v === "week" ? t("p8set.clWeek") : t("p8set.tm4Weeks")}
                   </button>
                 ))}
               </div>
@@ -143,8 +145,8 @@ export function TimetableApp() {
                           : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]"
                       }`}
                     >
-                      {d.n}
-                      {d.d && <span className="ms-1 font-semibold opacity-70">{d.d.split(" ")[0]}</span>}
+                      {dayShort(d)}
+                      {d.d && <span className="ms-1 font-semibold opacity-70">{dayNum(d)}</span>}
                     </button>
                   ))}
                 </div>
@@ -152,11 +154,11 @@ export function TimetableApp() {
 
               {/* Generate controls */}
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <Button onClick={() => generate("auto")}>Auto-fill</Button>
-                <Button onClick={() => generate("manual")}>Blank template</Button>
-                <Button onClick={() => generate()}>↻ Rebuild</Button>
+                <Button onClick={() => generate("auto")}>{t("p8set.tmAutoFill")}</Button>
+                <Button onClick={() => generate("manual")}>{t("p8set.tmBlank")}</Button>
+                <Button onClick={() => generate()}>{t("p8set.tmRebuild")}</Button>
                 <span className="text-[11.5px] text-[var(--ink-3)]">
-                  Each day is different. Drag a block to swap it, or drag an activity from the bank onto a cell.
+                  {t("p8set.tmHint")}
                 </span>
               </div>
 
