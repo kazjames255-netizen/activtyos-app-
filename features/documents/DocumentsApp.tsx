@@ -10,6 +10,8 @@
 // sample documents are only a starting point until the first save. Feeds the
 // onboarding read-and-confirm docs.
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { tNow, useI18n } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
 import { useEffect, useState } from "react";
 import { isDemoMode, get as apiGet } from "@/lib/api";
 import { chaseUnread, fetchLibrary, openDocFile, saveLibrary, uploadDataUrl, uploadDocFile, type DocRead, type TeamMember } from "./docStore";
@@ -27,6 +29,9 @@ const READ_KEY = "aos.docs.read.v1";
 
 type DocCat = "Policy" | "Risk assessment" | "Handbook" | "Procedure" | "Insurance" | "Form" | "Certificate" | "Other";
 const CATS: DocCat[] = ["Policy", "Risk assessment", "Handbook", "Procedure", "Insurance", "Form", "Certificate", "Other"];
+const CAT_KEY: Record<DocCat, string> = { Policy: "staffp.docCatPolicy", "Risk assessment": "staffp.docCatRisk", Handbook: "staffp.docCatHandbook", Procedure: "staffp.docCatProcedure", Insurance: "staffp.docCatInsurance", Form: "staffp.docCatForm", Certificate: "staffp.docCatCertificate", Other: "staffp.docCatOther" };
+// Categories are stored in English; shown translated.
+const catLabel = (c: string) => (CAT_KEY[c as DocCat] ? tNow(CAT_KEY[c as DocCat]) : c);
 const CAT_ICON: Record<DocCat, string> = { Policy: "📘", "Risk assessment": "⚠️", Handbook: "📗", Procedure: "🧭", Insurance: "🛡️", Form: "🗒️", Certificate: "🎖️", Other: "📄" };
 
 export interface DocVersion { version: number; fileName?: string; fileData?: string; fileId?: string; at: string }
@@ -71,6 +76,7 @@ function seed(): DocItem[] {
 }
 
 function useDocs() {
+  const { t, locale } = useI18n();
   const [docs, setDocs] = useState<DocItem[]>(seed);
   const [reads, setReads] = useState<DocRead[]>([]);
   const [team, setTeam] = useState<TeamMember[] | null>(null);
@@ -88,7 +94,7 @@ function useDocs() {
     refresh().then((r) => {
       if (r.docs?.length) return;
       try { const s = JSON.parse(localStorage.getItem(DOCS_KEY) || "null"); if (Array.isArray(s) && s.length) setLocalOnly(s); } catch { /* ignore */ }
-    }).catch((e) => setError(e instanceof Error ? `Couldn't load your documents — ${e.message}. Changes are paused until they load.` : "Couldn't load documents"));
+    }).catch((e) => setError(e instanceof Error ? t("p8lrn.docErrLoad", { msg: e.message }) : t("p8lrn.docErrLoadShort")));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const importLocal = async () => {
@@ -102,17 +108,17 @@ function useDocs() {
       const history = await Promise.all(d.history.map(async (h) => ({ ...h, fileData: undefined, fileId: await up1(h.fileData, h.fileName, h.fileId) })));
       up.push({ ...d, fileData: undefined, fileId, history });
     }
-    try { await saveLibrary(up); } catch (e) { setError(e instanceof Error ? e.message : "Couldn't import"); return; }
+    try { await saveLibrary(up); } catch (e) { setError(e instanceof Error ? e.message : t("p8lrn.docErrImport")); return; }
     setDocs(up); setLocalOnly(null); setLoaded(true);
     // The browser copy is kept if any file didn't make it — nothing is lost.
     if (!failed) { try { localStorage.removeItem(DOCS_KEY); } catch { /* ignore */ } }
-    else setError(`${failed} file${failed === 1 ? "" : "s"} couldn't be uploaded (only PDFs and photos are accepted) — the copy in this browser has been kept.`);
+    else setError(pickPlural(t, locale, "p8lrn.docErrFiles", failed));
   };
   const save = (d: DocItem[]) => {
     if (isDemoMode()) { setDocs(d); try { localStorage.setItem(DOCS_KEY, JSON.stringify(d)); } catch { /* ignore */ } return; }
-    if (!loaded) { setError("Your documents haven't loaded yet — nothing was saved. Try again in a moment."); return; }
+    if (!loaded) { setError(t("p8lrn.docErrNotLoaded")); return; }
     setDocs(d);
-    saveLibrary(d).then(() => setError(null)).catch((e) => setError(e instanceof Error ? e.message : "Couldn't save the library"));
+    saveLibrary(d).then(() => setError(null)).catch((e) => setError(e instanceof Error ? e.message : t("p8lrn.docErrSave")));
   };
   const upsert = (d: DocItem) => save(docs.some((x) => x.id === d.id) ? docs.map((x) => (x.id === d.id ? d : x)) : [...docs, d]);
   const remove = (id: string) => save(docs.filter((x) => x.id !== id));
@@ -123,19 +129,20 @@ export const openDoc = (d: DocItem) => {
   if (typeof window === "undefined") return;
   if (d.fileId) { void openDocFile(d.fileId); return; }
   if (d.fileData) { const w = window.open(); if (w) w.document.write(`<iframe src="${d.fileData}" style="border:0;width:100vw;height:100vh"></iframe>`); return; }
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(d.title)}</title><style>body{font-family:'Times New Roman',Georgia,serif;color:#1a1c2b;max-width:720px;margin:0 auto;padding:54px 40px;line-height:1.6}.ey{font-family:-apple-system,Arial;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#3f7ae0;font-weight:800}h1{font-size:26px;margin:.1em 0 .1em}.meta{font-family:-apple-system,Arial;color:#6b7086;font-size:12px;border-bottom:1px solid #e5e7f0;padding-bottom:12px;margin-bottom:18px}pre{white-space:pre-wrap;font-family:inherit;font-size:15px}.wm{position:fixed;top:44%;left:0;right:0;text-align:center;font-family:-apple-system,Arial;font-size:60px;color:#eef1f6;font-weight:800;transform:rotate(-18deg);z-index:-1}</style></head><body><div class="wm">SAMPLE</div><div class="ey">${esc(d.category)}</div><h1>${esc(d.title)}</h1><div class="meta">Version ${d.version} · Uploaded ${fmt(d.uploadedAt)}${d.expiry ? " · Review by " + fmt(d.expiry) : ""}</div><pre>${esc(d.seededBody || "")}</pre><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(d.title)}</title><style>body{font-family:'Times New Roman',Georgia,serif;color:#1a1c2b;max-width:720px;margin:0 auto;padding:54px 40px;line-height:1.6}.ey{font-family:-apple-system,Arial;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#3f7ae0;font-weight:800}h1{font-size:26px;margin:.1em 0 .1em}.meta{font-family:-apple-system,Arial;color:#6b7086;font-size:12px;border-bottom:1px solid #e5e7f0;padding-bottom:12px;margin-bottom:18px}pre{white-space:pre-wrap;font-family:inherit;font-size:15px}.wm{position:fixed;top:44%;left:0;right:0;text-align:center;font-family:-apple-system,Arial;font-size:60px;color:#eef1f6;font-weight:800;transform:rotate(-18deg);z-index:-1}</style></head><body><div class="wm">${esc(tNow("p8lrn.docPrintSample"))}</div><div class="ey">${esc(catLabel(d.category))}</div><h1>${esc(d.title)}</h1><div class="meta">${esc(tNow("p8lrn.docPrintMeta", { v: d.version, date: fmt(d.uploadedAt) }))}${d.expiry ? esc(tNow("p8lrn.docPrintReview", { date: fmt(d.expiry) })) : ""}</div><pre>${esc(d.seededBody || "")}</pre><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
   const w = window.open(); if (w) { w.document.write(html); w.document.close(); }
 };
 
 export function statusOf(d: DocItem): { label: string; tone: string } {
   const dl = daysUntil(d.expiry);
-  if (dl == null) return { label: "No review date", tone: "bg-[#eef1f6] text-[#64748b]" };
-  if (dl < 0) return { label: "Expired", tone: "bg-[#fdecec] text-[#c0392b]" };
-  if (dl <= 60) return { label: `Review in ${dl}d`, tone: "bg-[#fdf3e0] text-[#8a5a09]" };
-  return { label: "In date", tone: "bg-[#e6f4ea] text-[#0f7a43]" };
+  if (dl == null) return { label: tNow("staffp.docStNoReview"), tone: "bg-[#eef1f6] text-[#64748b]" };
+  if (dl < 0) return { label: tNow("staffp.docStExpired"), tone: "bg-[#fdecec] text-[#c0392b]" };
+  if (dl <= 60) return { label: tNow("staffp.docStReviewIn", { n: dl }), tone: "bg-[#fdf3e0] text-[#8a5a09]" };
+  return { label: tNow("staffp.docStInDate"), tone: "bg-[#e6f4ea] text-[#0f7a43]" };
 }
 
 export function DocumentsApp() {
+  const { t, locale } = useI18n();
   const { settings } = useSettings();
   const { docs, upsert, remove, reads: serverReads, team, error: libError, localOnly, importLocal, dismissLocal } = useDocs();
   const roles = (settings.roles ?? []).map((r) => r.name).filter(Boolean);
@@ -159,21 +166,21 @@ export function DocumentsApp() {
   const expired = docs.filter((d) => { const dl = daysUntil(d.expiry); return dl != null && dl < 0; }).length;
   const rows = docs.filter((d) => (cat === "all" || d.category === cat) && (!q || d.title.toLowerCase().includes(q.toLowerCase())) && (statusFilter === "all" || (statusFilter === "expiring" && (() => { const dl = daysUntil(d.expiry); return dl != null && dl >= 0 && dl <= 60; })()) || (statusFilter === "expired" && (() => { const dl = daysUntil(d.expiry); return dl != null && dl < 0; })())));
   const blank = (): DocItem => ({ id: "doc_" + Math.abs([...`${docs.length}${q}`].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)).toString(36), title: "", category: "Policy", version: 1, uploadedAt: iso(new Date()), all: true, roles: [], titles: [], listings: [], history: [] });
-  const assignSummary = (d: DocItem) => d.all ? ["All staff"] : [...d.roles.map((r) => "🔑 " + r), ...d.titles.map((t) => "🧑‍🏫 " + t), ...d.listings.map((l) => "📋 " + l)];
+  const assignSummary = (d: DocItem) => d.all ? [t("p8lrn.docAllStaff")] : [...d.roles.map((r) => "🔑 " + r), ...d.titles.map((t) => "🧑‍🏫 " + t), ...d.listings.map((l) => "📋 " + l)];
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="Documents" icon="📁" lede="Your policies, risk assessments, handbooks and insurance — versioned, with review dates, assigned to roles, job titles or specific listings." />
+      <PageHero title={t("p8lrn.docTitle")} icon="📁" lede={t("p8lrn.docLede")} />
       {localOnly && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#f0d9a8] bg-[#fdf6e6] px-4 py-3 text-[12.5px] text-[#7a5b06]">
-          <span className="min-w-0 flex-1"><b>This browser has {localOnly.length} document{localOnly.length === 1 ? "" : "s"} that are not in your account</b> (from before documents were saved online). Import them only if they belong to <b>this</b> account.</span>
-          <Button variant="primary" onClick={() => void importLocal()}>Import</Button>
-          <Button onClick={dismissLocal}>Not now</Button>
+          <span className="min-w-0 flex-1"><b>{t("p8lrn.docLocalA", { n: localOnly.length })}</b> {t("p8lrn.docLocalB")}</span>
+          <Button variant="primary" onClick={() => void importLocal()}>{t("p8lrn.docImport")}</Button>
+          <Button onClick={dismissLocal}>{t("p8lrn.docNotNow")}</Button>
         </div>
       )}
 
       <div className="mb-3 inline-flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
-        {([["library", "📁 Library"], ["receipts", "✅ Read receipts"]] as const).map(([k, l]) => (
+        {([["library", t("p8lrn.docTabLibrary")], ["receipts", t("p8lrn.docTabReceipts")]] as const).map(([k, l]) => (
           <button key={k} type="button" onClick={() => setMode(k)} className={"rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors " + (mode === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}</button>
         ))}
       </div>
@@ -185,28 +192,28 @@ export function DocumentsApp() {
             const unread = cells.filter((c) => !c.read).length;
             return (<>
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <div><div className="text-[14px] font-extrabold text-[var(--ink)]">Who has read what</div><div className="text-[12px] text-[var(--ink-3)]">{cells.length - unread} of {cells.length} confirmations across the team · <b className="text-[#c0392b]">{unread}</b> outstanding</div></div>
-                <Button variant="primary" className="ms-auto" disabled={!unread} onClick={() => { if (isDemoMode()) { flash("🔔 Reminder sent to staff with unread documents"); return; } chaseUnread().then((r) => flash(r.people ? `🔔 Reminder sent to ${r.people} ${r.people === 1 ? "person" : "people"}` : "Nobody with an account has anything unread")).catch((e) => flash(e instanceof Error ? e.message : "Couldn't send reminders")); }}>Chase unread</Button>
+                <div><div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8lrn.docWhoRead")}</div><div className="text-[12px] text-[var(--ink-3)]">{t("p8lrn.docConfSummary", { a: cells.length - unread, b: cells.length })} <b className="text-[#c0392b]">{unread}</b> {t("p8lrn.docOutstanding")}</div></div>
+                <Button variant="primary" className="ms-auto" disabled={!unread} onClick={() => { if (isDemoMode()) { flash(t("p8lrn.docReminderDemo")); return; } chaseUnread().then((r) => flash(r.people ? (r.people === 1 ? t("p8lrn.docReminderOne") : t("p8lrn.docReminderMany", { n: r.people })) : t("p8lrn.docNobodyUnread"))).catch((e) => flash(e instanceof Error ? e.message : t("p8lrn.docReminderFail"))); }}>{t("p8lrn.docChase")}</Button>
               </div>
               <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
                 <table className="w-full text-[12.5px]">
-                  <thead><tr className="bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th>{docs.map((d) => <th key={d.id} title={d.title} className="px-2 py-2.5 font-extrabold"><div className="w-[64px] truncate">{d.title}</div></th>)}</tr></thead>
+                  <thead><tr className="bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{t("p8lrn.docColStaff")}</th>{docs.map((d) => <th key={d.id} title={d.title} className="px-2 py-2.5 font-extrabold"><div className="w-[64px] truncate">{d.title}</div></th>)}</tr></thead>
                   <tbody>{people.map((s) => (
                     <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]">
                       <td className="whitespace-nowrap px-3 py-2.5 font-bold text-[var(--ink)]">{s.name}<span className="ms-1 text-[10.5px] font-normal text-[var(--ink-3)]">{s.role}</span></td>
-                      {docs.map((d) => { const applies = docAppliesToStaff(d, s); const at = readAt(s.email, s.name, d); if (!applies) return <td key={d.id} className="px-2 py-2 text-center text-[var(--ink-3)]" title="Not assigned to this person">—</td>; return <td key={d.id} className="px-2 py-2 text-center">{at ? <span title={`Confirmed ${docFmt(at.slice(0, 10))}`} className="inline-block rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-bold text-[#0f7a43]">✓ {docFmt(at.slice(0, 10)).replace(/ \d{4}$/, "")}</span> : <span className="inline-block rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[10px] font-bold text-[#c0392b]">Unread</span>}</td>; })}
+                      {docs.map((d) => { const applies = docAppliesToStaff(d, s); const at = readAt(s.email, s.name, d); if (!applies) return <td key={d.id} className="px-2 py-2 text-center text-[var(--ink-3)]" title={t("p8lrn.docNotAssigned")}>—</td>; return <td key={d.id} className="px-2 py-2 text-center">{at ? <span title={t("p8lrn.docConfirmedOn", { date: docFmt(at.slice(0, 10)) })} className="inline-block rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-bold text-[#0f7a43]">✓ {docFmt(at.slice(0, 10)).replace(/ \d{4}$/, "")}</span> : <span className="inline-block rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[10px] font-bold text-[#c0392b]">{t("p8lrn.docUnread")}</span>}</td>; })}
                     </tr>
                   ))}</tbody>
                 </table>
               </div>
-              <p className="mt-2 text-[11px] text-[var(--ink-3)]"><b>—</b> = not assigned to that person (by role, job title or listing). Staff confirm reading in their own <b>Documents</b> area.</p>
+              <p className="mt-2 text-[11px] text-[var(--ink-3)]">{t("p8lrn.docLegend")}</p>
             </>);
           })()}
         </Card>
       ) : (<>
       <CollapsibleStats id="documents" className="mb-3">
       <div className="grid grid-cols-3 gap-2.5">
-        {([["all", "documents", "#1d54c4", "#eaf1ff", "📁", docs.length], ["expiring", "review soon", "#b45309", "#fdf3e0", "⏳", expiring], ["expired", "out of date", "#c0392b", "#fdeceb", "⛔", expired]] as const).map(([k, lbl, col, bg, icon, n]) => { const on = statusFilter === k; return (
+        {([["all", t("p8lrn.docStatDocs"), "#1d54c4", "#eaf1ff", "📁", docs.length], ["expiring", t("p8lrn.docStatSoon"), "#b45309", "#fdf3e0", "⏳", expiring], ["expired", t("p8lrn.docStatOut"), "#c0392b", "#fdeceb", "⛔", expired]] as const).map(([k, lbl, col, bg, icon, n]) => { const on = statusFilter === k; return (
           <button key={k} type="button" onClick={() => setStatusFilter(k === "all" ? "all" : on ? "all" : k)} className={"flex items-center gap-3 rounded-2xl px-3.5 py-3 text-start transition-all " + (on ? "ring-2 ring-offset-1" : "hover:-translate-y-0.5 hover:shadow-md")} style={{ background: bg, ...(on ? ({ "--tw-ring-color": col } as React.CSSProperties) : {}) }}><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/70 text-[17px]">{icon}</span><div><div className="text-[22px] font-extrabold leading-none tabular-nums" style={{ color: col }}>{n}</div><div className="mt-0.5 text-[11px] font-semibold" style={{ color: col }}>{lbl}</div></div></button>
         ); })}
       </div>
@@ -214,9 +221,9 @@ export function DocumentsApp() {
 
       <Card className="p-4">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <Button variant="primary" onClick={() => setEdit(blank())}>+ Add document</Button>
-          <Select value={cat} onChange={(e) => setCat(e.target.value as DocCat | "all")} className="max-w-[190px]"><option value="all">All categories</option>{CATS.map((c) => <option key={c} value={c}>{c}</option>)}</Select>
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="max-w-[200px]" />
+          <Button variant="primary" onClick={() => setEdit(blank())}>{t("p8lrn.docAdd")}</Button>
+          <Select value={cat} onChange={(e) => setCat(e.target.value as DocCat | "all")} className="max-w-[190px]"><option value="all">{t("p8lrn.docAllCats")}</option>{CATS.map((c) => <option key={c} value={c}>{catLabel(c)}</option>)}</Select>
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p8lrn.gSearch")} className="max-w-[200px]" />
         </div>
 
         <div className="space-y-2">
@@ -224,20 +231,20 @@ export function DocumentsApp() {
             <div key={d.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] p-3">
               <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--panel)] text-[19px]">{CAT_ICON[d.category]}</span>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{d.title}</span><span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[10px] font-bold text-[#5b6577]">{d.category}</span><span className={"rounded-full px-2 py-0.5 text-[10px] font-bold " + st.tone}>{st.label}</span></div>
-                <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">v{d.version} · updated {fmt(d.uploadedAt)}{d.expiry ? ` · review by ${fmt(d.expiry)}` : ""}{d.history.length ? ` · ${d.history.length} past version${d.history.length === 1 ? "" : "s"}` : ""}</div>
+                <div className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{d.title}</span><span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[10px] font-bold text-[#5b6577]">{catLabel(d.category)}</span><span className={"rounded-full px-2 py-0.5 text-[10px] font-bold " + st.tone}>{st.label}</span></div>
+                <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{t("staffp.docUpdated", { v: d.version, date: fmt(d.uploadedAt) })}{d.expiry ? ` · ${t("staffp.docReviewBy", { date: fmt(d.expiry) })}` : ""}{d.history.length ? ` · ${pickPlural(t, locale, "p8lrn.docPastN", d.history.length)}` : ""}</div>
                 <div className="mt-1 flex flex-wrap gap-1">{assignSummary(d).map((a, i) => <span key={i} className="rounded-full bg-[#eaf1ff] px-1.5 py-0.5 text-[10px] font-bold text-[#1d54c4]">{a}</span>)}</div>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
-                <Button onClick={() => openDoc(d)}>📄 View</Button>
-                <Button onClick={() => setEdit(d)}>Edit</Button>
-                <button type="button" title="Delete" onClick={() => { if (window.confirm(`Delete “${d.title}”?`)) remove(d.id); }} className="rounded-full border border-[var(--line)] px-2.5 py-1.5 text-[13px] text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>
+                <Button onClick={() => openDoc(d)}>{t("p8lrn.docView")}</Button>
+                <Button onClick={() => setEdit(d)}>{t("p8lrn.gEdit")}</Button>
+                <button type="button" title={t("p8lrn.gDelete")} onClick={() => { if (window.confirm(t("p8lrn.docConfirmDelete", { title: d.title }))) remove(d.id); }} className="rounded-full border border-[var(--line)] px-2.5 py-1.5 text-[13px] text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>
               </div>
             </div>
           ); })}
-          {rows.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] p-6 text-center text-[13px] text-[var(--ink-3)]">No documents match.</div>}
+          {rows.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] p-6 text-center text-[13px] text-[var(--ink-3)]">{t("p8lrn.docNoMatch")}</div>}
         </div>
-        <p className="mt-3 text-[11px] text-[var(--ink-3)]">Sample documents shown are placeholders — upload your own to replace them. A risk assessment specific to one activity? Assign it to that <b>listing</b> when adding it.</p>
+        <p className="mt-3 text-[11px] text-[var(--ink-3)]">{t("p8lrn.docSampleNote")}</p>
       </Card>
       </>)}
 
@@ -249,6 +256,7 @@ export function DocumentsApp() {
 }
 
 function DocEditor({ doc, roles, titles, listingTitles, onSave, onClose }: { doc: DocItem; roles: string[]; titles: string[]; listingTitles: string[]; onSave: (d: DocItem) => void; onClose: () => void }) {
+  const { t } = useI18n();
   const [d, setD] = useState<DocItem>(doc);
   const [uploading, setUploading] = useState(false);
   const [upErr, setUpErr] = useState<string | null>(null);
@@ -265,7 +273,7 @@ function DocEditor({ doc, roles, titles, listingTitles, onSave, onClose }: { doc
         const had = !!(p.fileId || p.fileData);
         return { ...p, history: had || p.version > 1 ? [...p.history, { version: p.version, fileName: p.fileName, fileId: p.fileId, at: p.uploadedAt }] : p.history, version: had ? p.version + 1 : p.version, fileId, fileData: dataUrl, fileName: file.name, uploadedAt: iso(new Date()) };
       });
-    } catch (e) { setUpErr(e instanceof Error ? e.message : "Upload failed"); }
+    } catch (e) { setUpErr(e instanceof Error ? e.message : t("p8lrn.docErrUpload")); }
     setUploading(false);
   };
   const chip = (on: boolean, onClick: () => void, label: string) => <button type="button" onClick={onClick} className={"rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-colors " + (on ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{label}</button>;
@@ -273,41 +281,41 @@ function DocEditor({ doc, roles, titles, listingTitles, onSave, onClose }: { doc
   return (
     <div className="fixed inset-0 z-[140] flex justify-center overflow-y-auto bg-black/45 p-4 pt-[4vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{doc.title ? "Edit document" : "Add document"}</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div></div>
+        <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{doc.title ? t("p8lrn.docEditTitle") : t("p8lrn.docAddTitle")}</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div></div>
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
-          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Title</span><Input value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} placeholder="e.g. Safeguarding Policy" className="w-full" /></label>
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("p8lrn.docFldTitle")}</span><Input value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} placeholder={t("p8lrn.docPhTitle")} className="w-full" /></label>
           <div className="grid grid-cols-2 gap-2">
-            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Category</span><Select value={d.category} onChange={(e) => setD({ ...d, category: e.target.value as DocCat })} className="w-full">{CATS.map((c) => <option key={c} value={c}>{c}</option>)}</Select></label>
-            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Review / expiry date</span><Input type="date" value={d.expiry ?? ""} onChange={(e) => setD({ ...d, expiry: e.target.value })} className="w-full" /></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("p8lrn.docFldCat")}</span><Select value={d.category} onChange={(e) => setD({ ...d, category: e.target.value as DocCat })} className="w-full">{CATS.map((c) => <option key={c} value={c}>{catLabel(c)}</option>)}</Select></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("p8lrn.docFldExpiry")}</span><Input type="date" value={d.expiry ?? ""} onChange={(e) => setD({ ...d, expiry: e.target.value })} className="w-full" /></label>
           </div>
 
           <div>
-            <span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Document file</span>
+            <span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("p8lrn.docFldFile")}</span>
             <div className="flex flex-wrap items-center gap-2">
-              <label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ {uploading ? "Uploading…" : d.fileData || d.fileId ? "Upload new version" : "Upload PDF"}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadNew(f); e.target.value = ""; }} /></label>
-              {d.fileName ? <span className="text-[12px] font-semibold text-[var(--ink-2)]">📎 {d.fileName} (v{d.version})</span> : <span className="text-[12px] text-[var(--ink-3)]">Sample placeholder in use</span>}
+              <label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ {uploading ? t("p8lrn.docUploading") : d.fileData || d.fileId ? t("p8lrn.docUploadNew") : t("p8lrn.docUploadPdf")}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadNew(f); e.target.value = ""; }} /></label>
+              {d.fileName ? <span className="text-[12px] font-semibold text-[var(--ink-2)]">📎 {d.fileName} (v{d.version})</span> : <span className="text-[12px] text-[var(--ink-3)]">{t("p8lrn.docSamplePlaceholder")}</span>}
             </div>
             {upErr && <div className="mt-1.5 text-[11px] font-semibold text-[#c02636]">{upErr}</div>}
-            {d.history.length > 0 && <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Past versions: {d.history.map((h) => `v${h.version}`).join(", ")} (kept)</div>}
+            {d.history.length > 0 && <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("p8lrn.docPastVersions", { list: d.history.map((h) => `v${h.version}`).join(", ") })}</div>}
           </div>
 
           <div>
-            <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2"><input type="checkbox" checked={d.all} onChange={(e) => setD({ ...d, all: e.target.checked })} className="h-4 w-4 accent-[#1d3a8f]" /><span className="text-[12.5px] font-bold text-[var(--ink)]">Applies to all staff</span></label>
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2"><input type="checkbox" checked={d.all} onChange={(e) => setD({ ...d, all: e.target.checked })} className="h-4 w-4 accent-[#1d3a8f]" /><span className="text-[12.5px] font-bold text-[var(--ink)]">{t("p8lrn.docAppliesAll")}</span></label>
             {!d.all && (
               <div className="mt-2 space-y-2">
-                <div><div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">🔑 Permission roles</div><div className="flex flex-wrap gap-1.5">{roles.length ? roles.map((r) => chip(d.roles.includes(r), () => toggle("roles", r), r)) : <span className="text-[11px] text-[var(--ink-3)]">Add roles in Setup → Roles &amp; permissions.</span>}</div></div>
-                <div><div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">🧑‍🏫 Job titles</div><div className="flex flex-wrap gap-1.5">{titles.length ? titles.map((t) => chip(d.titles.includes(t), () => toggle("titles", t), t)) : <span className="text-[11px] text-[var(--ink-3)]">Add job titles in Setup → Staff roles.</span>}</div></div>
-                <div><div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">📋 Specific listings</div><div className="flex flex-wrap gap-1.5">{listingTitles.map((l) => chip(d.listings.includes(l), () => toggle("listings", l), l))}</div><div className="mt-1 text-[10px] text-[var(--ink-3)]">Use this for a risk assessment that applies to one activity only.</div></div>
+                <div><div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">{t("p8lrn.docRolesHead")}</div><div className="flex flex-wrap gap-1.5">{roles.length ? roles.map((r) => chip(d.roles.includes(r), () => toggle("roles", r), r)) : <span className="text-[11px] text-[var(--ink-3)]">{t("p8lrn.docRolesEmpty")}</span>}</div></div>
+                <div><div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">{t("p8lrn.docTitlesHead")}</div><div className="flex flex-wrap gap-1.5">{titles.length ? titles.map((t) => chip(d.titles.includes(t), () => toggle("titles", t), t)) : <span className="text-[11px] text-[var(--ink-3)]">{t("p8lrn.docTitlesEmpty")}</span>}</div></div>
+                <div><div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">{t("p8lrn.docListingsHead")}</div><div className="flex flex-wrap gap-1.5">{listingTitles.map((l) => chip(d.listings.includes(l), () => toggle("listings", l), l))}</div><div className="mt-1 text-[10px] text-[var(--ink-3)]">{t("p8lrn.docListingsHint")}</div></div>
               </div>
             )}
             <div className="mt-2 rounded-lg border border-[#cfe0f5] bg-[#eef4fd] px-3 py-2 text-[11px] leading-relaxed text-[#1d3a8f]">
-              <b>⏱ When will staff see this?</b><br />
-              • Assigned to <b>all staff</b>, <b>🔑 permission roles</b> or <b>🧑‍🏫 job titles</b> → they read it during <b>onboarding, as soon as they first log in</b> (their role/title is set when you send the invite).<br />
-              • Assigned to a <b>📋 specific listing</b> → it appears <b>only once they&rsquo;re deployed to that listing</b> (deployment happens after they sign up), in their <b>Documents</b> area.
+              <b>{t("p8lrn.docWhenHead")}</b><br />
+              {t("p8lrn.docWhenAll")}<br />
+              {t("p8lrn.docWhenListing")}
             </div>
           </div>
         </div>
-        <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><Button className="ms-auto" onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!d.title.trim() || uploading} onClick={() => onSave(d)}>Save document</Button></div>
+        <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><Button className="ms-auto" onClick={onClose}>{t("p8lrn.gCancel")}</Button><Button variant="primary" disabled={!d.title.trim() || uploading} onClick={() => onSave(d)}>{t("p8lrn.docSaveBtn")}</Button></div>
       </div>
     </div>
   );

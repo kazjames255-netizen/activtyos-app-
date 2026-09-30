@@ -6,6 +6,7 @@
 
 import { typeOf } from "@/features/listings/planUpload";
 import { api, get as apiGet, openFile, post as apiPost, put as apiPut } from "@/lib/api";
+import { tNow } from "@/lib/i18n/provider";
 
 export interface DocRead { docId: string; version: number; staffEmail: string; staffName: string; at: string }
 export interface TeamMember { name: string; email: string; role: string; listings: string[] }
@@ -28,7 +29,7 @@ const toB64 = (blob: Blob) => new Promise<string>((res, rej) => {
 
 /** Upload a PDF/photo in chunks; returns its id. */
 export async function uploadDocFile(file: Blob & { name?: string }): Promise<string> {
-  if (file.size > DOC_FILE_MAX) throw new Error(`That file is ${Math.round(file.size / 1024 / 1024)}MB — the limit is 15MB.`);
+  if (file.size > DOC_FILE_MAX) throw new Error(tNow("p8lrn.docErrTooBig", { mb: Math.round(file.size / 1024 / 1024) }));
   const total = Math.max(1, Math.ceil(file.size / CHUNK));
   const { id } = await apiPost<{ id: string }>("/api/documents/files", { name: file.name || "document", contentType: typeOf(file), bytes: file.size, total });
   for (let i = 0; i < total; i += 1) {
@@ -46,4 +47,4 @@ export async function uploadDataUrl(dataUrl: string, name: string): Promise<stri
 
 /** Open a stored file in a new tab (the server only serves PDFs/photos inline). */
 export const openDocFile = (fileId: string) =>
-  openFile(`/api/documents/files/${encodeURIComponent(fileId)}`).catch((e) => alert(e instanceof Error ? e.message : "Couldn't open that document."));
+  openFile(`/api/documents/files/${encodeURIComponent(fileId)}`).catch((e) => alert(e instanceof Error ? e.message : tNow("p8lrn.docErrOpen")));
