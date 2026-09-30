@@ -2,7 +2,8 @@
 
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { portalOf } from "@/lib/portal-href";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
@@ -140,7 +141,7 @@ const STATUS_META: Record<string, { label: string; bg: string; fg: string }> = {
  *  - gated (`gate`): the full-screen wall a fresh signup hits — the chosen plan
  *    + card capture + Start 7-day free trial. Mirrors activityos.uk/pricing.
  */
-export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; onStarted?: () => void } = {}) {
+function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStarted?: () => void } = {}) {
   const t = useT();
   const router = useRouter();
   const { signOutUser } = useAuth();
@@ -525,4 +526,20 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
       )}
     </div>
   );
+}
+
+
+/** The plan belongs to the account holder. A franchise's team sits on head office's plan and the API refuses it the
+ *  subscription, so its (hidden) /franchise/subscription route explains that instead of showing a raw error. */
+export function SubscriptionApp(props: { gate?: boolean; onStarted?: () => void } = {}) {
+  const pathname = usePathname();
+  if (!props.gate && portalOf(pathname) === "franchise") {
+    return (
+      <div className="mx-auto max-w-[560px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 text-[13px] text-[var(--ink-2)]">
+        <div className="mb-1 text-[16px] font-extrabold text-[var(--ink)]">Your head office manages the plan</div>
+        Your franchise and its team run on your head office&rsquo;s ActivityOS plan, so there&rsquo;s no subscription to manage here.
+      </div>
+    );
+  }
+  return <SubscriptionInner {...props} />;
 }
