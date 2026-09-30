@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isRealDay } from "../lib/ukDate";
+import { isRealDay, ukTodayPlus } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { AuthContext, Role } from "../middleware/role";
@@ -129,6 +129,13 @@ timeclock.post("/event", async (req, res) => {
   const parsed = eventSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const p = parsed.data;
+  // The time is the server's, but the DAY the record files under was the client's word: a member of staff could hang today's real clocking on
+  // any date they weren't rostered (a pay row for a day they didn't work). Staff clock for today (±1 day for time zones / a shift over midnight);
+  // a manager or lead back-filling from the board is unrestricted.
+  if (auth.role === "staff" && !auth.lead && (p.day < ukTodayPlus(-1) || p.day > ukTodayPlus(1))) {
+    res.status(400).json({ error: "You can only clock in and out for today." });
+    return;
+  }
   const self = await ownName(req.user?.uid);
   const onBehalf = canManage(auth.role) || auth.lead === true;
   const name = (onBehalf && p.name ? p.name : self).trim();
