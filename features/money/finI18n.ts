@@ -4,6 +4,8 @@ type T = (key: string, vars?: Record<string, string | number>) => string;
 const CATS: Record<string, string> = {
   "Equipment": "p8fin.catEquipment", "Supplies": "p8fin.catSupplies", "Venue hire": "p8fin.catVenueHire", "Staff": "p8fin.catStaff", "Travel": "p8fin.catTravel",
   "Marketing": "p8fin.catMarketing", "Insurance": "p8fin.catInsurance", "Training": "p8fin.catTraining", "Software": "p8fin.catSoftware", "Utilities": "p8fin.catUtilities", "Other": "p8fin.catOther",
+  // staff expense-claim categories (Staff portal, existing staffp.* words)
+  "Travel & mileage": "staffp.expCatTravel", "Activity materials": "staffp.expCatMaterials", "Food & catering": "staffp.expCatFood",
 };
 
 /** Expense category display label; an unknown / custom category renders as typed. */

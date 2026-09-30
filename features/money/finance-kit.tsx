@@ -5,6 +5,7 @@
 // the freelancer Dashboard so Finance & Analytics reads as the same system.
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useState, type ReactNode } from "react";
+import { useT } from "@/lib/i18n/provider";
 
 // KPI accent colours. These were fully-saturated gradient slabs; four of them
 // side by side read as a carnival, and white text failed AA on every one (amber
@@ -110,8 +111,9 @@ export function Donut({ segments, center, sub, valueFmt = (n) => String(n), size
 
 // Ranked gradient horizontal bars.
 export function Breakdown({ entries }: { entries: { label: string; value: number; sub: string; color: string; meta?: string }[] }) {
+  const t = useT();
   const max = Math.max(1, ...entries.map((e) => e.value));
-  if (!entries.length) return <Empty>Nothing yet.</Empty>;
+  if (!entries.length) return <Empty>{t("p8fin.gNothingYet")}</Empty>;
   return (
     <div className="flex flex-col gap-3">
       {entries.map((e, i) => (

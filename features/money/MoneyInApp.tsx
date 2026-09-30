@@ -8,6 +8,8 @@ import { InvoicesApp } from "@/features/money/InvoicesApp";
 import { IncomeApp } from "@/features/money/IncomeApp";
 import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
+import { useT } from "@/lib/i18n/provider";
+import { rich } from "./rich";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -24,6 +26,7 @@ const sameLen = (a: unknown[], b: unknown[]) => { try { return a.length === b.le
 // the door, grants, ad-hoc takings). Paid invoices are money-in, so the hero
 // folds invoices + income into one headline; each tab keeps its own workspace.
 export function MoneyInApp() {
+  const t = useT();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -76,31 +79,31 @@ export function MoneyInApp() {
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💰</span>
-            Money in
+            {t("p8fin.miTitle")}
           </div>
           {/* In/out sub-view switch, on the hero */}
           <div className="flex flex-none flex-wrap items-center gap-2">
             <TourLauncher view="purchasing" compact />
             <SettingsLink />
             <div className="inline-flex flex-none gap-1 rounded-2xl border border-white/70 bg-white/90 p-1 shadow-sm backdrop-blur-sm">
-              {([["income", "💰 Income"], ["invoices", "📄 Invoices"]] as const).map(([k, label]) => (
+              {([["income", t("p8fin.miTabIncome")], ["invoices", t("p8fin.miTabInvoices")]] as const).map(([k, label]) => (
                 <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 text-[12.5px] font-bold transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "#1d3a8f" }}>{label}</button>
               ))}
             </div>
           </div>
         </div>
         <div className="mt-1.5 flex items-start justify-between gap-3">
-          <p className="max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Everything your business takes in — <b>bookings</b>, customer <b>invoices</b> and other <b>income</b>. Paid bookings &amp; invoices fold into your income totals below.</p>
-          <button type="button" onClick={toggleHero} aria-expanded={heroOpen} className="inline-flex flex-none items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
+          <p className="max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">{rich(t("p8fin.miIntro"))}</p>
+          <button type="button" onClick={toggleHero} aria-expanded={heroOpen} className="inline-flex flex-none items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? t("p8fin.gHide") : t("p8fin.gShow")}</button>
         </div>
         {heroOpen && (<>
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
-          <Kpi big={money(inMonth)} sub="In this month" />
-          <Kpi big={money(inYear)} sub={`In ${thisYear}`} />
-          <Kpi big={money(outstanding)} sub="Awaiting payment" />
+          <Kpi big={money(inMonth)} sub={t("p8fin.miInMonth")} />
+          <Kpi big={money(inYear)} sub={t("p8fin.miInYear", { year: thisYear })} />
+          <Kpi big={money(outstanding)} sub={t("p8fin.miAwaiting")} />
         </div>
-        <div className="mt-2 text-[11px] text-white/75">This month received: <b className="text-white">{money(bkMonth)}</b> bookings + <b className="text-white">{money(invMonth)}</b> invoices + <b className="text-white">{money(incMonth)}</b> other income</div>
-        <div className="mt-0.5 text-[10.5px] text-white/60">Awaiting payment = <b className="text-white/80">sent customer invoices not yet paid</b> (excludes unpaid bookings) — not counted in the totals above until paid.</div>
+        <div className="mt-2 text-[11px] text-white/75">{rich(t("p8fin.miReceivedLine", { bk: money(bkMonth), inv: money(invMonth), inc: money(incMonth) }))}</div>
+        <div className="mt-0.5 text-[10.5px] text-white/60">{rich(t("p8fin.miAwaitingNote"))}</div>
         </>)}
       </div>
 
