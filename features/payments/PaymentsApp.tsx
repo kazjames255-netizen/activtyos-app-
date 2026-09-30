@@ -1,5 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+import { portalOf } from "@/lib/portal-href";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
@@ -65,6 +67,9 @@ export function PaymentsApp() {
   }
 
   const ready = status?.connected && status.chargesEnabled;
+  // A franchise shares head office's payout (Stripe) account and can't connect its own (POST /api/payments/connect is
+  // refused for it) — so it sees who owns that account instead of a Connect button that can only fail.
+  const isFranchisePortal = portalOf(usePathname()) === "franchise";
 
   return (
     <div className="text-[var(--ink)]">
@@ -81,6 +86,12 @@ export function PaymentsApp() {
         </div>
       )}
 
+      {isFranchisePortal ? (
+        <Card className="mb-4 p-4 text-[12.5px] text-[var(--ink-2)]">
+          <div className="text-[14px] font-extrabold text-[var(--ink)]">Your head office manages the payout account</div>
+          <div className="mt-0.5">Card payments from your families are received into your head office&rsquo;s Stripe account, so there&rsquo;s nothing for you to connect. What you owe head office is on the Royalties page.</div>
+        </Card>
+      ) : (
       <Card className="mb-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -107,6 +118,7 @@ export function PaymentsApp() {
           )}
         </div>
       </Card>
+      )}
 
       <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
         Payments &amp; refunds
