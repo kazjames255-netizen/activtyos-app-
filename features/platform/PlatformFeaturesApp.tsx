@@ -2,37 +2,43 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { get as apiGet, patch as apiPatch } from "@/lib/api";
+import { useT, tNow } from "@/lib/i18n/provider";
+import { navLabel } from "@/lib/i18n/words";
+import { H, hq } from "./hqText";
+
+/** Page name in the active language: sidebar label catalogue first, then our own words. */
+const pageLabel = (l: string) => { const nl = navLabel(tNow, l); return nl !== l ? nl : hq(l); };
 
 // The operator pages HQ can switch on/off per provider. CORE pages (dashboard,
 // bookings, listings, setup…) are never toggleable, so they're not listed.
 // A page is OFF only when its flag is explicitly false (featureOff); anything
 // else is ON — matching lib/use-customer-area.
 const PAGES: [string, string][] = [
-  ["registers", "Registers"],
-  ["ratios", "Ratios & groups"],
-  ["timetable", "Activity timetable"],
-  ["trips", "Trips & visits"],
-  ["calendar", "Events calendar"],
-  ["tasks", "Task manager"],
-  ["schedule", "Staff rota"],
-  ["incidents", "Incidents"],
-  ["accidents", "Accidents"],
-  ["medication", "Medication"],
-  ["meals", "Meals"],
-  ["moments", "Moments"],
-  ["newsfeed", "Newsfeed"],
-  ["messages", "Messages"],
-  ["marketing", "Marketing"],
-  ["referrals", "Referrals"],
-  ["email", "Email"],
-  ["templates", "Templates"],
-  ["expenses", "Money out"],
-  ["purchasing", "Money in"],
-  ["reconciliation", "Reconciliation"],
-  ["inventory", "Inventory"],
-  ["compliance", "Compliance"],
-  ["memberships", "Memberships"],
-  ["ai", "AI assistant"],
+  ["registers", H("Registers")],
+  ["ratios", H("Ratios & groups")],
+  ["timetable", H("Activity timetable")],
+  ["trips", H("Trips & visits")],
+  ["calendar", H("Events calendar")],
+  ["tasks", H("Task manager")],
+  ["schedule", H("Staff rota")],
+  ["incidents", H("Incidents")],
+  ["accidents", H("Accidents")],
+  ["medication", H("Medication")],
+  ["meals", H("Meals")],
+  ["moments", H("Moments")],
+  ["newsfeed", H("Newsfeed")],
+  ["messages", H("Messages")],
+  ["marketing", H("Marketing")],
+  ["referrals", H("Referrals")],
+  ["email", H("Email")],
+  ["templates", H("Templates")],
+  ["expenses", H("Money out")],
+  ["purchasing", H("Money in")],
+  ["reconciliation", H("Reconciliation")],
+  ["inventory", H("Inventory")],
+  ["compliance", H("Compliance")],
+  ["memberships", H("Memberships")],
+  ["ai", H("AI assistant")],
 ];
 
 interface Provider { id: string; name: string; type: string; features: Record<string, boolean>; subscription?: { plan?: string } | null }
@@ -57,6 +63,7 @@ function Toggle({ on, busy, onClick }: { on: boolean; busy: boolean; onClick: ()
 }
 
 export function PlatformFeaturesApp() {
+  useT(); // re-render on language change (labels are translated at render time)
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -70,7 +77,7 @@ export function PlatformFeaturesApp() {
       // A franchise is a company tenant on the franchise plan (same rule as Providers & billing) — without
       // this the franchise tab/colour below never appeared and franchises were counted as companies.
       .then((p) => { setProviders((p.providers ?? []).map((x) => (x.subscription?.plan === "franchise" ? { ...x, type: "franchise" } : x))); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+      .catch((e) => setError(e instanceof Error ? e.message : hq("Failed to load")));
   }, []);
   useEffect(load, [load]);
 
@@ -84,7 +91,7 @@ export function PlatformFeaturesApp() {
     } catch (e) {
       // Roll back on failure.
       setProviders((list) => (list ?? []).map((x) => (x.id === p.id ? { ...x, features: { ...x.features, [view]: !next } } : x)));
-      alert(e instanceof Error ? e.message : "Couldn’t save — try again");
+      alert(e instanceof Error ? e.message : hq("Couldn’t save — try again"));
     } finally {
       setBusy(null);
     }
@@ -96,7 +103,7 @@ export function PlatformFeaturesApp() {
     for (const p of providers ?? []) counts.set(p.type, (counts.get(p.type) ?? 0) + 1);
     const order = ["freelancer", "company", "franchise"];
     const present = [...counts.keys()].sort((a, b) => order.indexOf(a) - order.indexOf(b));
-    return [["all", "All", providers?.length ?? 0] as const, ...present.map((t) => [t, t[0].toUpperCase() + t.slice(1), counts.get(t) ?? 0] as const)];
+    return [["all", H("All"), providers?.length ?? 0] as const, ...present.map((t) => [t, t[0].toUpperCase() + t.slice(1), counts.get(t) ?? 0] as const)];
   }, [providers]);
 
   const shown = useMemo(() => {
@@ -110,10 +117,10 @@ export function PlatformFeaturesApp() {
     <div className="text-[var(--ink)]">
       <div className="overflow-hidden rounded-2xl text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="px-6 py-5">
-          <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>Platform · Head office</div>
-          <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>🎛️ Provider features</h2>
+          <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>{hq("Platform · Head office")}</div>
+          <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>{hq("🎛️ Provider features")}</h2>
           <p className="mt-1 max-w-[640px] text-[12.5px] leading-snug text-white/85">
-            Turn pages on or off for each provider. Changes are live — a page switched off disappears from that provider&rsquo;s menu straight away.
+            {hq("Turn pages on or off for each provider. Changes are live — a page switched off disappears from that provider’s menu straight away.")}
           </p>
         </div>
       </div>
@@ -121,7 +128,7 @@ export function PlatformFeaturesApp() {
       {error && <div className="mt-3 text-[12.5px] text-[var(--red)]">{error}</div>}
 
       {!providers ? (
-        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading providers…</div>
+        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{hq("Loading providers…")}</div>
       ) : (
         <>
           <div className="mt-4 flex flex-wrap gap-1.5">
@@ -129,14 +136,14 @@ export function PlatformFeaturesApp() {
               <button key={v} type="button" onClick={() => setTypeTab(v)}
                 className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
                 style={typeTab === v ? { borderColor: "transparent", background: BLUE, color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
-                {label} <span className={typeTab === v ? "opacity-80" : "text-[var(--ink-3)]"}>{count}</span>
+                {hq(label)} <span className={typeTab === v ? "opacity-80" : "text-[var(--ink-3)]"}>{count}</span>
               </button>
             ))}
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search providers…"
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={hq("Search providers…")}
               className="w-[240px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[var(--brand)]" />
-            <span className="text-[11.5px] text-[var(--ink-3)]">{shown.length} provider{shown.length === 1 ? "" : "s"} · {PAGES.length} toggleable pages · core pages always on</span>
+            <span className="text-[11.5px] text-[var(--ink-3)]">{hq("Providers: {n} · toggleable pages: {p} · core pages always on", { n: shown.length, p: PAGES.length })}</span>
           </div>
 
           <div className="mt-3 grid gap-3 xl:grid-cols-2">
@@ -149,11 +156,11 @@ export function PlatformFeaturesApp() {
                       <span className="grid h-8 w-8 flex-none place-items-center rounded-full text-[13px] font-extrabold text-white" style={{ background: p.type === "company" ? "#0ea5a5" : p.type === "franchise" ? "#7a5af8" : "#2f6bd8" }}>{(p.name.trim()[0] || "?").toUpperCase()}</span>
                       <div className="min-w-0">
                         <div className="truncate text-[13.5px] font-extrabold text-[var(--ink)]">{p.name}</div>
-                        <div className="text-[11px] capitalize text-[var(--ink-3)]">{p.type}</div>
+                        <div className="text-[11px] text-[var(--ink-3)]">{hq(p.type.charAt(0).toUpperCase() + p.type.slice(1))}</div>
                       </div>
                     </div>
                     <span className="flex flex-none items-center gap-2">
-                      <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={offCount === 0 ? { background: "#eef4fd", color: "#1d3a8f" } : { background: "#fff3e0", color: "#96631a" }}>{PAGES.length - offCount}/{PAGES.length} on</span>
+                      <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={offCount === 0 ? { background: "#eef4fd", color: "#1d3a8f" } : { background: "#fff3e0", color: "#96631a" }}>{hq("{on}/{all} on", { on: PAGES.length - offCount, all: PAGES.length })}</span>
                       <span className={`text-[12px] text-[var(--ink-3)] transition-transform ${open.has(p.id) ? "rotate-180" : ""}`}>▾</span>
                     </span>
                   </button>
@@ -163,7 +170,7 @@ export function PlatformFeaturesApp() {
                         const on = isOn(p.features, view);
                         return (
                           <div key={view} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--panel)]">
-                            <span className={`text-[12.5px] font-semibold ${on ? "text-[var(--ink)]" : "text-[var(--ink-3)]"}`}>{label}</span>
+                            <span className={`text-[12.5px] font-semibold ${on ? "text-[var(--ink)]" : "text-[var(--ink-3)]"}`}>{pageLabel(label)}</span>
                             <Toggle on={on} busy={busy === `${p.id}:${view}`} onClick={() => toggle(p, view, !on)} />
                           </div>
                         );
@@ -175,7 +182,7 @@ export function PlatformFeaturesApp() {
             })}
           </div>
 
-          {shown.length === 0 && <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] py-10 text-center text-[12.5px] text-[var(--ink-3)]">No providers match “{q}”.</div>}
+          {shown.length === 0 && <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] py-10 text-center text-[12.5px] text-[var(--ink-3)]">{hq("No providers match “{q}”.", { q })}</div>}
         </>
       )}
     </div>
