@@ -64,7 +64,7 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [franchises, needsPicker, scope]);
 
-  const scopeLabel = scope === "__all__" ? "All franchises" : scope === "__ho__" ? "Head office" : (franchises?.find((f) => f.franchiseId === scope)?.name ?? "");
+  const scopeLabel = scope === "__all__" ? t("p8ops.rgAllFranchises") : scope === "__ho__" ? t("p8ops.rgHeadOffice") : (franchises?.find((f) => f.franchiseId === scope)?.name ?? "");
   const term = q.trim().toLowerCase();
   const shown = (rows ?? []).filter((r) => !term || r.name.toLowerCase().includes(term) || r.parentName.toLowerCase().includes(term) || r.postcode.toLowerCase().includes(term));
 
@@ -186,12 +186,12 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
             {needsPicker ? (
               /* Head office: pick a franchise (or its own locations / whole network) first. */
               <div className="p-4">
-                <div className="mb-2.5 text-[12.5px] font-bold text-[var(--ink-2)]">Choose a franchise to search its children:</div>
+                <div className="mb-2.5 text-[12.5px] font-bold text-[var(--ink-2)]">{t("p8ops.rgChooseFranchise")}</div>
                 <FranchiseScopeList noun="children" onPick={(s) => setScope(s)} />
               </div>
             ) : (
             <div className="p-4">
-              {isHoCombined && <button type="button" onClick={() => { setScope(undefined); setQ(""); }} className="mb-2 text-[11.5px] font-bold text-[#2f6bd8] hover:underline">‹ Change franchise ({scopeLabel})</button>}
+              {isHoCombined && <button type="button" onClick={() => { setScope(undefined); setQ(""); }} className="mb-2 text-[11.5px] font-bold text-[#2f6bd8] hover:underline">{t("p8ops.rgChangeFranchise", { name: scopeLabel })}</button>}
               <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("registers.searchByChildParent")} className="mb-2 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
               {err && <div className="mb-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
               <div className="max-h-[52vh] overflow-y-auto">
@@ -200,7 +200,7 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
                     : <ul className="space-y-1">{shown.map((r) => (
                         <li key={r.childId}>
                           <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2 transition hover:border-[#1d3a8f] hover:bg-[#f7faff]">
-                            <button type="button" disabled={loadingCard} onClick={() => openChild(r.childId)} title="Open profile card" className="flex min-w-0 flex-1 items-center gap-3 text-start disabled:opacity-50">
+                            <button type="button" disabled={loadingCard} onClick={() => openChild(r.childId)} title={t("p8ops.rgOpenProfile")} className="flex min-w-0 flex-1 items-center gap-3 text-start disabled:opacity-50">
                               {r.photo
                                 ? <img src={r.photo} alt="" className="h-10 w-10 flex-none rounded-xl object-cover ring-1 ring-[var(--line)]" />
                                 : <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl text-[14px] font-extrabold text-[#1d3a8f]" style={{ background: "#eef4fd" }}>{r.name.slice(0, 1).toUpperCase()}</span>}

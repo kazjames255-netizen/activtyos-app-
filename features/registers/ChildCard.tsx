@@ -17,7 +17,7 @@ const BLUE = "#2f5fd0";
 const AV = ["#FDE7EF", "#E2F6EC", "#E8EEFD", "#FCF1DC", "#DEF4F1", "#EDE9FD", "#FCF1DC", "#E8EEFD"];
 const avBg = (n: string) => AV[[...n].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
 
-export const SWIM_LABEL: Record<string, string> = { none: "Non-swimmer", weak: "Weak / needs support", confident: "Confident", strong: "Strong swimmer" };
+export const SWIM_LABEL: Record<string, string> = { none: "p8ops.rgSwimNone", weak: "p8ops.rgSwimWeak", confident: "p8ops.rgSwimConfident", strong: "p8ops.rgSwimStrong" };
 export type Tint = { bg: string; fg: string; grad?: string; ic?: string; glyph?: string };
 // Each category carries a soft wash, an icon-plate colour and a glyph, so a fact
 // reads as a designed object rather than a bordered box. `bg`/`fg` stay for the
@@ -284,7 +284,7 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
                 {on("medical") && <Fact label={t("registers.medical")} tint={T.medical} full value={info.medical} />}
                 {on("dietary") && <Fact label={t("registers.dietary")} tint={T.dietary} full value={info.dietary} />}
                 {on("send") && <Fact label={t("registers.sendNeeds")} tint={T.send} full value={(info.send || info.sendPlanName) && `${info.send ?? ""}${info.sendPlanName ? `${info.send ? " · " : ""}${t("registers.planOnFile")}` : ""}`} />}
-                {on("swimming") && <Fact label={t("registers.swimming")} tint={T.swim} value={info.swimming && (SWIM_LABEL[info.swimming] ?? info.swimming)} />}
+                {on("swimming") && <Fact label={t("registers.swimming")} tint={T.swim} value={info.swimming && (SWIM_LABEL[info.swimming] ? t(SWIM_LABEL[info.swimming]) : info.swimming)} />}
               </div>
             ) : <div className="rounded-lg border border-[#bbf7d0] bg-[#f0fdf4] px-3.5 py-2.5 text-[14px] font-semibold text-[#15803d]">✓ {t("registers.nothingFlagged")}</div>}
             {on("send") && info.sendPlanId && <PlanButton id={info.sendPlanId} name={info.sendPlanName} />}

@@ -366,10 +366,10 @@ export function DashboardApp() {
     const qs = new URLSearchParams();
     if (dashVenue) qs.set("venueId", dashVenue);
     if (scope) qs.set("franchiseId", scope);
-    apiGet<Dash>(`/api/dashboard${qs.toString() ? `?${qs}` : ""}`).then((x) => { setD(x); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Dash>(`/api/dashboard${qs.toString() ? `?${qs}` : ""}`).then((x) => { setD(x); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : t("p8ops.dbFailedLoad")));
     // On failure keep bookings null but record the error, so the analytics
     // section shows a retry instead of "Loading your figures…" forever.
-    apiGet<Booking[]>("/api/bookings").then((b) => { setBookings(b); setBookingsErr(null); }).catch((e) => setBookingsErr(e instanceof Error ? e.message : "Couldn’t load your figures"));
+    apiGet<Booking[]>("/api/bookings").then((b) => { setBookings(b); setBookingsErr(null); }).catch((e) => setBookingsErr(e instanceof Error ? e.message : t("p8ops.dbCouldntLoadFigures")));
     apiGet<DashTask[]>("/api/tasks").then((t) => setTasks(t ?? [])).catch(() => setTasks([]));
     // Listings carry the season + venue for each activity; the library names the
     // venues. Together they give the season grouping and the location line/lens.

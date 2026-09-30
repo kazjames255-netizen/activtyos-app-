@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { api, ApiError, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings, needsNappies, type ChildQuestion } from "@/lib/settings";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
 import { Button } from "@/components/ui";
 import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
@@ -93,13 +93,13 @@ const FLAGS = [
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const shiftDay = (iso: string, by: number) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + by); return d.toISOString().slice(0, 10); };
 const dow = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-const rel = (iso: string) => (iso === todayIso() ? "Today" : iso === shiftDay(todayIso(), 1) ? "Tomorrow" : dow(iso));
+const rel = (iso: string) => (iso === todayIso() ? tNow("p8ops.dbToday") : iso === shiftDay(todayIso(), 1) ? tNow("p8ops.dbTomorrow") : dow(iso));
 const dayLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 const timeOf = (ts?: string | null) => (ts ? new Date(ts).toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" }) : "");
 // Date AND time, for note stamps — "20 Aug 2026 · 13:03".
 const stamp = (ts?: string | null) => (ts ? `${new Date(ts).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })} · ${timeOf(ts)}` : "");
 // "08:30" → "8:30am" for the start-time filter chips.
-const fmt12 = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); if (Number.isNaN(h)) return hhmm; const ap = h >= 12 ? "pm" : "am"; return `${h % 12 || 12}:${String(m ?? 0).padStart(2, "0")}${ap}`; };
+const fmt12 = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); if (Number.isNaN(h)) return hhmm; if (!dl().startsWith("en")) return new Date(2000, 0, 1, h, m ?? 0).toLocaleTimeString(dl(), { hour: "numeric", minute: "2-digit" }); const ap = h >= 12 ? "pm" : "am"; return `${h % 12 || 12}:${String(m ?? 0).padStart(2, "0")}${ap}`; };
 // UK-first number for wa.me (0… → 44…, strip non-digits).
 const waNumber = (phone?: string) => { let n = (phone || "").replace(/\D/g, ""); if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "44" + n.slice(1); return n; };
 // Age from a date of birth vs a "today" string (yyyy-mm-dd) — pure, no Date.now
@@ -285,7 +285,7 @@ function ChildModal({ a, showTimes, fields, card, questions, ctx, edit, canEdit,
     collectionPassword: c?.collectionPassword, emergencyName: c?.emergencyName, emergencyPhone: c?.emergencyPhone, school: c?.school,
     contactName: a.booker, contactPhone: a.phone, contactEmail: a.email,
     bookingRef: a.bookingRef ?? a.ref, bookingNotes: a.note,
-    collected: a.attendance?.collectedAt ? `${showTimes ? timeOf(a.attendance.collectedAt) : "yes"}${a.attendance.collectedBy ? ` \u00b7 by ${a.attendance.collectedBy}` : ""}` : undefined,
+    collected: a.attendance?.collectedAt ? `${showTimes ? timeOf(a.attendance.collectedAt) : t("p8ops.qfYes").toLowerCase()}${a.attendance.collectedBy ? ` \u00b7 ${t("p8ops.rgByName", { name: a.attendance.collectedBy })}` : ""}` : undefined,
     siblings: ctx.siblings,
     statusChip,
     attending: ctx.attend.map((s) => ({ label: dow(s.date), start: s.start, end: s.end, listing: s.listing })),
@@ -303,28 +303,29 @@ function ChildModal({ a, showTimes, fields, card, questions, ctx, edit, canEdit,
 // ── Download picker ─────────────────────────────────────────────────────────
 type DlCol = { key: string; label: string; on: boolean; group: string };
 const DL_COLS: DlCol[] = [
-  { key: "age", label: "Age", on: true, group: "Attendance" }, { key: "time", label: "Timing", on: true, group: "Attendance" },
-  { key: "status", label: "Status", on: true, group: "Attendance" }, { key: "arrived", label: "Arrived", on: true, group: "Attendance" },
-  { key: "collected", label: "Collected", on: true, group: "Attendance" }, { key: "collectedby", label: "Collected by", on: false, group: "Attendance" },
-  { key: "seats", label: "Seats", on: false, group: "Attendance" },
-  { key: "allergies", label: "Allergies", on: true, group: "Safeguarding" }, { key: "medical", label: "Medical", on: true, group: "Safeguarding" },
-  { key: "needs", label: "SEND / needs", on: true, group: "Safeguarding" }, { key: "dietary", label: "Dietary", on: false, group: "Safeguarding" },
-  { key: "carenotes", label: "Care notes", on: false, group: "Safeguarding" }, { key: "photo", label: "Photo consent", on: false, group: "Safeguarding" },
-  { key: "emergency", label: "Emergency contact", on: true, group: "Contact" }, { key: "emphone", label: "Em. phone", on: true, group: "Contact" },
-  { key: "booker", label: "Parent / booker", on: false, group: "Contact" }, { key: "email", label: "Contact email", on: false, group: "Contact" },
-  { key: "password", label: "Collection password", on: false, group: "Sensitive" }, { key: "dob", label: "Date of birth", on: false, group: "Sensitive" },
-  { key: "school", label: "School", on: false, group: "Sensitive" },
+  { key: "age", label: "p8ops.rgColAge", on: true, group: "Attendance" }, { key: "time", label: "p8ops.rgColTiming", on: true, group: "Attendance" },
+  { key: "status", label: "p8ops.rgColStatus", on: true, group: "Attendance" }, { key: "arrived", label: "p8ops.rgColArrived", on: true, group: "Attendance" },
+  { key: "collected", label: "p8ops.rgColCollected", on: true, group: "Attendance" }, { key: "collectedby", label: "p8ops.rgColCollectedBy", on: false, group: "Attendance" },
+  { key: "seats", label: "p8ops.rgColSeats", on: false, group: "Attendance" },
+  { key: "allergies", label: "p8ops.rgColAllergies", on: true, group: "Safeguarding" }, { key: "medical", label: "p8ops.dbFlagMedical", on: true, group: "Safeguarding" },
+  { key: "needs", label: "registers.sendNeeds", on: true, group: "Safeguarding" }, { key: "dietary", label: "p8ops.dbFlagDietary", on: false, group: "Safeguarding" },
+  { key: "carenotes", label: "p8ops.rgColCareNotes", on: false, group: "Safeguarding" }, { key: "photo", label: "p8ops.rgColPhotoConsent", on: false, group: "Safeguarding" },
+  { key: "emergency", label: "p8ops.rgColEmergency", on: true, group: "Contact" }, { key: "emphone", label: "p8ops.rgColEmPhone", on: true, group: "Contact" },
+  { key: "booker", label: "p8ops.rgColBooker", on: false, group: "Contact" }, { key: "email", label: "p8ops.rgColEmail", on: false, group: "Contact" },
+  { key: "password", label: "p8ops.rgColPassword", on: false, group: "Sensitive" }, { key: "dob", label: "p8ops.rgColDob", on: false, group: "Sensitive" },
+  { key: "school", label: "p8ops.rgColSchool", on: false, group: "Sensitive" },
 ];
 const DL_GROUPS = ["Attendance", "Safeguarding", "Contact", "Sensitive"];
+const DL_GROUP_KEY: Record<string, string> = { Attendance: "p8ops.rgGrpAttendance", Safeguarding: "p8ops.rgGrpSafeguarding", Contact: "p8ops.rgGrpContact", Sensitive: "p8ops.rgGrpSensitive" };
 function cell(key: string, s: Session, a: Attendee): string {
   const c = a.child, k = a.children[0];
   switch (key) {
     case "age": return k?.age != null ? String(k.age) : ""; case "time": return `${s.start}-${s.end}`;
-    case "status": return st(a) === "present" ? "Present" : st(a) === "absent" ? "Absent" : "Not arrived";
+    case "status": return st(a) === "present" ? tNow("p8ops.rgPresent") : st(a) === "absent" ? tNow("p8ops.rgAbsent") : tNow("registers.notArrived");
     case "arrived": return timeOf(a.attendance?.inAt); case "collected": return a.attendance?.collectedAt ? timeOf(a.attendance.collectedAt) : "";
     case "collectedby": return a.attendance?.collectedBy ?? ""; case "seats": return String(a.seats ?? 1);
     case "allergies": return c?.allergies ?? ""; case "medical": return c?.medical ?? ""; case "needs": return c?.send || c?.sendPlanName ? "SEND" : "";
-    case "dietary": return c?.dietary ?? ""; case "carenotes": return c?.careNotes ?? ""; case "photo": return c?.photoConsent == null ? "" : c.photoConsent ? "Yes" : "No";
+    case "dietary": return c?.dietary ?? ""; case "carenotes": return c?.careNotes ?? ""; case "photo": return c?.photoConsent == null ? "" : c.photoConsent ? tNow("p8ops.qfYes") : tNow("p8ops.qfNo");
     case "emergency": return c?.emergencyName ?? ""; case "emphone": return c?.emergencyPhone ?? ""; case "booker": return a.booker ?? ""; case "email": return a.email ?? "";
     case "password": return c?.collectionPassword ?? "";
     case "dob": return c?.dob ?? ""; case "school": return c?.school ?? ""; default: return "";
@@ -350,7 +351,7 @@ function DownloadDialog({ sessions, date, allDates, listingName, sessionsForDate
   const csv = async () => {
     setBusy("csv");
     const bundle = await sessionsForDates(dates);
-    const rows = [[...(multi ? ["Date"] : []), "Listing", "Session", "Child", ...cols.map((c) => c.label)]];
+    const rows = [[...(multi ? [t("p8ops.rgHdrDate")] : []), t("p8ops.rgHdrListing"), t("p8ops.rgHdrSession"), t("p8ops.rgHdrChild"), ...cols.map((c) => t(c.label))]];
     for (const { date: d, sessions: ss } of bundle) for (const s of ss) for (const a of s.attendees) rows.push([...(multi ? [d] : []), s.listingName, s.blockName, a.children.map((k) => k.name).join(" / "), ...cols.map((c) => cell(c.key, s, a))]);
     const url = URL.createObjectURL(new Blob([csvText(rows)], { type: "text/csv" })); // formula-safe: names/notes are parent-typed
     const l = document.createElement("a"); l.href = url; l.download = `${fileStem}.csv`; l.click(); URL.revokeObjectURL(url);
@@ -359,11 +360,11 @@ function DownloadDialog({ sessions, date, allDates, listingName, sessionsForDate
   const pdf = async () => {
     setBusy("pdf");
     const bundle = await sessionsForDates(dates);
-    const body = bundle.map(({ date: d, sessions: ss }) => (multi ? `<h1 class="day">${esc(dayLabel(d))}</h1>` : "") + ss.map((s) => `<h2>${esc(s.listingName)} — ${esc(s.blockName)} · ${s.start}–${s.end}</h2><table><tr><th>Child</th>${cols.map((c) => `<th>${esc(c.label)}</th>`).join("")}</tr>${s.attendees.map((a) => `<tr><td>${esc(a.children.map((k) => k.name).join(", "))}</td>${cols.map((c) => `<td>${esc(cell(c.key, s, a))}</td>`).join("")}</tr>`).join("")}</table>`).join("")).join("");
+    const body = bundle.map(({ date: d, sessions: ss }) => (multi ? `<h1 class="day">${esc(dayLabel(d))}</h1>` : "") + ss.map((s) => `<h2>${esc(s.listingName)} — ${esc(s.blockName)} · ${s.start}–${s.end}</h2><table><tr><th>${esc(t("p8ops.rgHdrChild"))}</th>${cols.map((c) => `<th>${esc(t(c.label))}</th>`).join("")}</tr>${s.attendees.map((a) => `<tr><td>${esc(a.children.map((k) => k.name).join(", "))}</td>${cols.map((c) => `<td>${esc(cell(c.key, s, a))}</td>`).join("")}</tr>`).join("")}</table>`).join("")).join("");
     const w = window.open("", "_blank", "width=900,height=1000");
     setBusy("");
     if (!w) return;
-    const title = multi ? `${esc(listingName)} — ${dates.length} days` : `Register — ${dayLabel(date)}`;
+    const title = multi ? esc(t("p8ops.rgPdfTitleDays", { listing: listingName, n: dates.length })) : esc(t("p8ops.rgPdfTitleDay", { date: dayLabel(date) }));
     w.document.write(`<!doctype html><title>${esc(fileStem)}</title><style>body{font:12px/1.4 system-ui,sans-serif;color:#171534;padding:16px}h1.day{font-size:15px;margin:22px 0 2px;page-break-before:always}h1.day:first-of-type{page-break-before:auto}h2{font-size:13px;margin:16px 0 4px;border-top:1px solid #ddd;padding-top:8px}table{border-collapse:collapse;width:100%}th,td{text-align:left;border:1px solid #e5e5e5;padding:4px 6px;font-size:11px}th{background:#f5f5f5}</style><h1>${title}</h1>${body}`);
     w.document.close(); w.focus(); setTimeout(() => w.print(), 300); onClose();
   };
@@ -405,11 +406,11 @@ function DownloadDialog({ sessions, date, allDates, listingName, sessionsForDate
           {DL_GROUPS.map((g) => { const gc = DL_COLS.filter((c) => c.group === g); const allOn = gc.every((c) => on.has(c.key)); return (
             <div key={g}>
               <div className="mb-1 flex items-center gap-2">
-                <span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{g}</span>
+                <span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t(DL_GROUP_KEY[g] ?? g)}</span>
                 {g === "Sensitive" && <span className="rounded px-1.5 py-[1px] text-[9px] font-bold uppercase text-[#c02636]" style={{ background: "#fde2e4" }}>{t("registers.handleWithCare")}</span>}
                 <button type="button" onClick={() => setAll(gc.map((c) => c.key), !allOn)} className="text-[10.5px] font-bold text-[#1d3a8f]">{allOn ? t("registers.clearLower") : t("registers.allLower")}</button>
               </div>
-              <div className="flex flex-wrap gap-1.5">{gc.map((c) => { const s = on.has(c.key); return <button key={c.key} type="button" onClick={() => setOn((x) => { const n = new Set(x); if (n.has(c.key)) n.delete(c.key); else n.add(c.key); return n; })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={s ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{s ? "✓ " : ""}{c.label}</button>; })}</div>
+              <div className="flex flex-wrap gap-1.5">{gc.map((c) => { const s = on.has(c.key); return <button key={c.key} type="button" onClick={() => setOn((x) => { const n = new Set(x); if (n.has(c.key)) n.delete(c.key); else n.add(c.key); return n; })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={s ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{s ? "✓ " : ""}{t(c.label)}</button>; })}</div>
             </div>
           ); })}
         </div>
@@ -1048,7 +1049,7 @@ export function RegistersApp() {
       // revisited). Any other failure (validation, 403, 409…) reverts as before.
       if (e instanceof ApiError && (e.status === 0 || e.status === 408)) {
         queueMark({ blockId, date, ref, action: wire, from, collectedBy, queuedAt: now });
-        setError("No connection — this mark is queued and will send automatically once you're back online.");
+        setError(t("p8ops.rgNoConnection"));
       } else {
         if (before) setDays((prev) => ({ ...prev, [date]: before }));   // put the row back
         setError(e instanceof Error ? e.message : t("registers.couldntUpdate"));
@@ -1070,7 +1071,7 @@ export function RegistersApp() {
     }
     return skipped;
   }
-  const skippedMsg = (n: number) => (n ? `${n} ${n === 1 ? "child was" : "children were"} changed on another device and left as they are — the register has been refreshed.` : null);
+  const skippedMsg = (n: number) => (n ? t("p8ops.rgSkipped", { n }) : null);
   async function signAllIn(items: { blockId: string; a: Attendee }[]) {
     setBulkBusy("all"); setError(null);
     try { const skipped = await markMany(items, "in"); await refreshDay(date); setError(skippedMsg(skipped)); }
@@ -1226,7 +1227,7 @@ export function RegistersApp() {
     if (!items.length) return;
     setBulkBusy(action); setError(null);
     try { const skipped = await markMany(items, action); await refreshDay(date); setSelected(new Set()); setError(skippedMsg(skipped)); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t update the register"); void refreshDay(date).catch(() => {}); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p8ops.rgCouldntUpdate")); void refreshDay(date).catch(() => {}); }
     setBulkBusy(null);
   }
   // Counts for the filter tags (over the whole day / current pass, pre-search).
@@ -1375,8 +1376,8 @@ export function RegistersApp() {
                   )}
                   {groupOpts.length > 0 && (
                     <span className="relative inline-flex items-center">
-                      <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} aria-label="Filter by group / room" className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 ps-3 pe-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
-                        <option value="">🏷 All groups</option>
+                      <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} aria-label={t("p8ops.rgGroupFilter")} className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 ps-3 pe-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
+                        <option value="">{t("p8ops.rgAllGroups")}</option>
                         {groupOpts.map((o) => <option key={o.id} value={o.id}>🏷 {o.name}</option>)}
                       </select>
                       <span aria-hidden className="pointer-events-none absolute end-2.5 text-[9px] text-white/70">▾</span>
@@ -1828,7 +1829,7 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, note, showConsen
                   better said by the absence of chips than by a placeholder. */}
               {c?.allergies && <AlertSq kind="allergy" text={t("registers.allergyColon", { value: c.allergies })} />}
               {c?.medical && <AlertSq kind="medical" text={t("registers.medicalColon", { value: c.medical })} />}
-              {!!c?.medications?.length && <AlertSq kind="medicine" text={t("registers.medicineColon", { value: c.medications.map((m) => `${m.name} ${m.dose}${m.schedule ? ` (${m.schedule})` : m.asNeeded ? " (as needed)" : ""}`).join("; ") })} />}
+              {!!c?.medications?.length && <AlertSq kind="medicine" text={t("registers.medicineColon", { value: c.medications.map((m) => `${m.name} ${m.dose}${m.schedule ? ` (${m.schedule})` : m.asNeeded ? ` (${t("p8ops.rgAsNeeded")})` : ""}`).join("; ") })} />}
               {(c?.send || c?.sendPlanName) && <AlertSq kind="send" text={t("registers.sendNeeds")} />}
               {/* Allowed to leave on their own — the person signing them out
                   needs this on the row, not a tap away in the child card. */}

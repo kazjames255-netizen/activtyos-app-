@@ -11,7 +11,7 @@ import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDurSec, wo
 import { greeting } from "@/lib/greeting";
 import { useSettings } from "@/lib/settings";
 import { fetchAnnouncements, markAnnouncementRead, type Announcement } from "@/features/staff/announcements";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
 import { peekMe } from "@/components/auth/PortalGuard";
 import { capLevel } from "@/lib/accessMap";
 
@@ -47,6 +47,9 @@ interface RegSession { blockId: string; start: string; end: string; blockName: s
 interface WatchFlag { k: string; detail?: string; bg: string; fg: string }
 interface WatchKid { key: string; name: string; where: string; status: "in" | "absent" | "due"; flags: WatchFlag[] }
 
+// Display name for a flag chip (the stored key stays English).
+const FLAG_KEY: Record<string, string> = { Allergy: "p8ops.dbFlagAllergy", Medical: "p8ops.dbFlagMedical", Dietary: "p8ops.dbFlagDietary", "Care plan": "p8ops.dbFlagCare" };
+const flagName = (t: (k: string) => string, k: string) => (FLAG_KEY[k] ? t(FLAG_KEY[k]) : k);
 // Which safeguarding flags a child carries, as colour-coded chips.
 function flagsOf(c: ChildFlags): WatchFlag[] {
   const out: WatchFlag[] = [];
@@ -65,9 +68,9 @@ const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((
 // The API sends an ISO due date; this card used to print a pre-baked string
 // ("Today") that the API never sends. Relative where it matters, dated beyond.
 const dueChip = (due: string, today: string) => {
-  if (due === today) return "Today";
-  if (due === addDaysIso(today, 1)) return "Tomorrow";
-  if (due < today) return "Overdue";
+  if (due === today) return tNow("p8ops.dbToday");
+  if (due === addDaysIso(today, 1)) return tNow("p8ops.dbTomorrow");
+  if (due < today) return tNow("p8ops.dbOverdue");
   return new Date(`${due}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" });
 };
 function myShiftToday(day: string, ME: string): MyShift | null {
@@ -97,7 +100,7 @@ function coworkersToday(vis: "all" | "team" | "leads" | "none", day: string, ME:
     return shifts
       .filter((x) => x.date === day && x.staffId && !meIds.has(x.staffId))
       .filter((x) => (vis === "team" ? myScopes.has(x.listing || x.site) : true))
-      .map((x) => ({ name: nameById.get(x.staffId!) || "Colleague", start: x.start, end: x.end, role: x.role, where: x.listing || x.site }))
+      .map((x) => ({ name: nameById.get(x.staffId!) || tNow("p8ops.dbColleague"), start: x.start, end: x.end, role: x.role, where: x.listing || x.site }))
       .filter((c) => { const k = `${c.name}|${c.start}|${c.end}`; if (seen.has(k)) return false; seen.add(k); return true; })
       .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
   } catch { return []; }
@@ -462,10 +465,10 @@ export function StaffDashApp() {
                   <span className={"rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase " + (k.status === "in" ? "bg-[#d7f5e3] text-[#0f7a43]" : k.status === "absent" ? "bg-[#eef1f6] text-[#64748b]" : "bg-[#fef3d8] text-[#9a5a00]")}>{k.status === "in" ? t("dashboard.statusIn") : k.status === "absent" ? t("dashboard.statusAbsent") : t("dashboard.statusDue")}</span>
                   <span className="flex flex-wrap gap-1">
                     {k.flags.map((f, i) => (
-                      <span key={i} className="group/flag relative inline-block" aria-label={f.detail ? `${f.k}: ${f.detail}` : f.k}>
-                        <span className="cursor-help rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: f.bg, color: f.fg }}>{f.k}</span>
+                      <span key={i} className="group/flag relative inline-block" aria-label={f.detail ? `${flagName(t, f.k)}: ${f.detail}` : flagName(t, f.k)}>
+                        <span className="cursor-help rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: f.bg, color: f.fg }}>{flagName(t, f.k)}</span>
                         <span className="pointer-events-none absolute start-0 top-full z-30 mt-1 hidden w-max max-w-[260px] rounded-lg bg-[#111634] px-2.5 py-1.5 text-[11px] font-semibold leading-snug text-white shadow-[0_8px_24px_-6px_rgba(0,0,0,.5)] group-hover/flag:block">
-                          <b className="text-white">{f.k}</b>{f.detail ? <span className="font-normal text-white/85"> — {f.detail}</span> : <span className="font-normal text-white/70"> — {t("dashboard.noDetailRecorded")}</span>}
+                          <b className="text-white">{flagName(t, f.k)}</b>{f.detail ? <span className="font-normal text-white/85"> — {f.detail}</span> : <span className="font-normal text-white/70"> — {t("dashboard.noDetailRecorded")}</span>}
                         </span>
                       </span>
                     ))}
@@ -539,7 +542,7 @@ export function StaffDashApp() {
               : open.slice(0, 6).map((task) => (
                 <div key={task.id} className="flex items-center gap-2.5 border-b border-dashed border-[var(--line)] py-1.5 last:border-b-0">
                   {task.subtaskOnly
-                    ? <Link href="/staff/tasks" title="Your step on this task — open it to tick your step" className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border-[1.5px] border-dashed border-[var(--line)] text-[10px] hover:border-[var(--brand)]">↗</Link>
+                    ? <Link href="/staff/tasks" title={t("p8ops.dbStepTip")} className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border-[1.5px] border-dashed border-[var(--line)] text-[10px] hover:border-[var(--brand)]">↗</Link>
                     : <button type="button" onClick={() => tickTask(task)} aria-label={t("dashboard.markTaskDone", { title: task.t })} className="h-[18px] w-[18px] flex-none cursor-pointer rounded-md border-[1.5px] border-[var(--line)] hover:border-[var(--brand)]" />}
                   <span className="min-w-0 flex-1 truncate text-[12.5px]">{task.t}</span>
                   {(task.prio === "high" || task.prio === "urgent") && <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>{t(task.prio === "urgent" ? "dashboard.urgent" : "dashboard.high")}</Badge>}
@@ -646,7 +649,7 @@ export function StaffDashApp() {
               <div className="mt-2 flex flex-col gap-2">
                 {profile.flags.map((f, i) => (
                   <div key={i} className="rounded-xl border border-[var(--line)] p-3">
-                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: f.bg, color: f.fg }}>{f.k}</span>
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: f.bg, color: f.fg }}>{flagName(t, f.k)}</span>
                     <p className="mt-1.5 text-[12.5px] leading-[1.5] text-[var(--ink-2)]">{f.detail || t("dashboard.noDetailFull")}</p>
                   </div>
                 ))}
