@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { QuickBookModal } from "./QuickBookModal";
 import { useRealtime } from "@/lib/realtime";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import type { ListingSummary } from "./types";
@@ -25,18 +25,19 @@ const LIGHT_PALETTE = {
 // for the header — "Breakfast Clubs, Holiday Camps and After-School Clubs". So
 // the wording always reflects what's actually bookable rather than a fixed
 // "Camps and clubs", which it falls back to when nothing's tagged.
-function liveCategories(listings: ListingSummary[] | null): string {
+function liveCategories(listings: ListingSummary[] | null, t: (k: string, v?: Record<string, string | number>) => string): string {
   const seen: string[] = [];
   for (const l of listings ?? [])
     for (const c of l.categories ?? []) {
       const name = c.trim();
       if (name && !seen.some((s) => s.toLowerCase() === name.toLowerCase())) seen.push(name);
     }
-  if (!seen.length) return "Camps and clubs";
+  if (!seen.length) return t("p8par.brCats");
   const capped = seen.slice(0, 4);
   const extra = seen.length - capped.length;
-  const parts = extra > 0 ? [...capped, `${extra} more`] : capped;
-  return parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+  const parts = extra > 0 ? [...capped, t("p8par.brMore", { n: extra })] : capped;
+  if (parts.length === 1) return parts[0];
+  try { return new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(parts); } catch { return parts.join(", "); }
 }
 
 const fmtDay = (iso?: string) =>
@@ -195,7 +196,7 @@ export function BrowseApp() {
   const loadListings = useCallback(() => {
     apiGet<ListingSummary[]>("/api/listings")
       .then(setListings)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load activities"));
+      .catch((e) => setError(e instanceof Error ? e.message : tNow("p8par.brFailed")));
   }, []);
 
   useEffect(() => {
@@ -425,7 +426,7 @@ export function BrowseApp() {
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🔎</span>{t("parent.browseActivitiesTitle")}
           </div>
           <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">
-            {providerName ? `${providerName} — ` : ""}{liveCategories(visible)}{t("parent.withPlacesAvailable")}
+            {providerName ? `${providerName} — ` : ""}{liveCategories(visible, t)}{t("parent.withPlacesAvailable")}
           </p>
         </div>
         {filtersOpen && (

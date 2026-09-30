@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n, useT } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
+import { Rich } from "@/components/i18n/Rich";
 import { Card } from "@/components/ui";
 
 // custdash/refer — "Refer a friend". The family shares a personal link; a friend
@@ -30,6 +32,7 @@ const money = (n?: number) => `£${Math.round(n ?? 0)}`;
 
 export function ReferApp() {
   const t = useT();
+  const { locale } = useI18n();
   const [r, setR] = useState<Referral | null>(null);
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
 
@@ -42,9 +45,9 @@ export function ReferApp() {
   };
   const share = async () => {
     if (!r?.link) return;
-    const off = r.type === "percent" ? `${Math.round(r.friendOff ?? 0)}% off` : `${money(r.friendOff)} off`;
-    const text = `Come to ${r.provider} and get ${off} your first booking! Use code ${r.code} at checkout: ${r.link}`;
-    if (typeof navigator !== "undefined" && navigator.share) { try { await navigator.share({ title: "Refer a friend", text, url: r.link }); return; } catch { /* cancelled → fall through to copy */ } }
+    const off = r.type === "percent" ? t("p8par.cpPct", { v: Math.round(r.friendOff ?? 0) }) : t("p8par.cpAmt", { amt: money(r.friendOff) });
+    const text = t("p8par.rfShare", { provider: r.provider ?? "", off, code: r.code ?? "", link: r.link });
+    if (typeof navigator !== "undefined" && navigator.share) { try { await navigator.share({ title: t("parent.referTitle"), text, url: r.link }); return; } catch { /* cancelled → fall through to copy */ } }
     void copy("link", r.link);
   };
 
@@ -75,8 +78,9 @@ export function ReferApp() {
       <div className="overflow-hidden rounded-2xl p-6 text-white shadow-[0_12px_34px_-14px_rgba(29,58,143,.6)]" style={{ background: "linear-gradient(120deg,var(--brand) 0%,var(--brand-2) 55%,#7c4dd6 100%)" }}>
         <div className="text-[26px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{t("parent.referGiveGet", { give: fmt(r.friendOff), get: fmt(r.referrerReward) })}</div>
         <p className="mt-1.5 max-w-[520px] text-[13px] leading-[1.5] text-white/85">
-          Share your link. Your friend gets <b>{fmt(r.friendOff)} off</b> their first booking with {r.provider}
-          {r.minSpend ? ` (on ${money(r.minSpend)}+)` : ""}, and you get <b>{fmt(r.referrerReward)}</b> in your Coupons the moment they book.
+          <Rich text={r.minSpend
+            ? t("p8par.rfBodyMin", { off: isPct ? t("p8par.cpPct", { v: Math.round(r.friendOff ?? 0) }) : t("p8par.cpAmt", { amt: money(r.friendOff) }), provider: r.provider ?? "", min: money(r.minSpend), reward: fmt(r.referrerReward) })
+            : t("p8par.rfBody", { off: isPct ? t("p8par.cpPct", { v: Math.round(r.friendOff ?? 0) }) : t("p8par.cpAmt", { amt: money(r.friendOff) }), provider: r.provider ?? "", reward: fmt(r.referrerReward) })} />
         </p>
 
         {/* Code + actions */}
@@ -94,7 +98,7 @@ export function ReferApp() {
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <Card className="flex items-center gap-3 p-4">
           <div className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[var(--brand-soft,#eaf0fc)] text-[20px]">👥</div>
-          <div><div className="text-[22px] font-extrabold leading-none">{r.booked ?? 0}</div><div className="text-[11.5px] text-[var(--ink-3)]">friend{(r.booked ?? 0) === 1 ? "" : "s"} booked with your link</div></div>
+          <div><div className="text-[22px] font-extrabold leading-none">{r.booked ?? 0}</div><div className="text-[11.5px] text-[var(--ink-3)]">{pickPlural(t, locale, "p8par.rfBooked", r.booked ?? 0)}</div></div>
         </Card>
         <Card className="flex items-center gap-3 p-4">
           <div className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[20px]">🎉</div>

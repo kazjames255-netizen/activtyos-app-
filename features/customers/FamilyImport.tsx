@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import { post as apiPost } from "@/lib/api";
 import { Button, Card } from "@/components/ui";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n, useT } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
+import { Rich } from "@/components/i18n/Rich";
 
 // Bulk-add families from a spreadsheet: paste rows (straight from Excel / Google
 // Sheets) or upload a CSV/TSV file, we detect the columns, create each family
@@ -77,6 +79,7 @@ type Result = { created: number; invited: number; noEmail: number; failed: numbe
 
 export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const t = useT();
+  const { locale } = useI18n();
   const [text, setText] = useState("");
   const [sendInvite, setSendInvite] = useState(true);
   const [running, setRunning] = useState(false);
@@ -128,23 +131,23 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
       <Card className="w-full max-w-[620px] px-5 py-[18px]">
         <h3 className="m-0 font-[var(--ff-display)] text-[19px] leading-tight text-[var(--ink)]">{t("customers.importFamiliesTitle")}</h3>
         <p className="mt-1 mb-2 text-[12.5px] leading-[1.5] text-[var(--ink-3)]">
-          Paste rows straight from <b>Excel or Google Sheets</b>, or upload a <b>CSV / TSV</b> file. We detect the columns
-          (first name, surname, email, phone) — a header row helps but isn’t needed. Each becomes a family, and you can email
-          them all a sign-up invite in one go.
+          <Rich text={t("p8par.impIntro")} />
         </p>
         <p className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
-          📞 <b>Phone is optional.</b> Add it and it’s saved on the family’s record; leave it blank and you (or the family) can
-          add it any time.
+          <Rich text={t("p8par.impPhone")} />
         </p>
 
         {result ? (
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-[13px]">
             <div className="font-extrabold text-[#0f7a43]">{t("customers.doneCheck")}</div>
             <div className="mt-1 text-[var(--ink-2)]">
-              {result.created} famil{result.created === 1 ? "y" : "ies"} added{result.invited ? ` · ${result.invited} sign-up invite${result.invited === 1 ? "" : "s"} sent` : ""}
-              {result.noEmail ? ` · ${result.noEmail} had no email (added, not invited)` : ""}
-              {result.skipped ? ` · ${result.skipped} already on your list (skipped)` : ""}
-              {result.failed ? ` · ${result.failed} failed` : ""}.
+              {[
+                pickPlural(t, locale, "p8par.impAdded", result.created),
+                result.invited ? pickPlural(t, locale, "p8par.impInvited", result.invited) : "",
+                result.noEmail ? t("p8par.impNoEmail", { n: result.noEmail }) : "",
+                result.skipped ? t("p8par.impSkipped", { n: result.skipped }) : "",
+                result.failed ? t("p8par.impFailed", { n: result.failed }) : "",
+              ].filter(Boolean).join(" · ")}
             </div>
             <div className="mt-3 text-end"><Button variant="primary" onClick={onClose}>{t("customers.close")}</Button></div>
           </div>
@@ -169,7 +172,7 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
             {rows.length > 0 && (
               <div className="mt-3 rounded-lg border border-[var(--line)] overflow-hidden">
                 <div className="bg-[var(--panel)] px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)]">
-                  {rows.length} famil{rows.length === 1 ? "y" : "ies"} found · {withEmail} with an email
+                  {pickPlural(t, locale, "p8par.impFound", rows.length)} · {t("p8par.impWithEmail", { n: withEmail })}
                 </div>
                 <div className="max-h-[180px] overflow-auto">
                   <table className="w-full text-[12px]">

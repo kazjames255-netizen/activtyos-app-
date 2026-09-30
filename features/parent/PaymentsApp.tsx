@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { useT, tNow } from "@/lib/i18n/provider";
+import { useT, useWord, tNow } from "@/lib/i18n/provider";
 import { useSettings } from "@/lib/settings";
 import { bookingDateSummary, money, owedOf, payLabelFor, payTone, refundedTotal } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
@@ -36,6 +36,7 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
   onToggleSelect?: () => void;
 }) {
   const t = useT();
+  const w = useWord();
   return (
     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
       {selectable && (
@@ -44,10 +45,10 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] font-bold">{b.listing}</div>
         <div className="text-[11.5px] text-[var(--ink-3)]">
-          {b.child} · {bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))} · Ref {b.ref}
+          {b.child} · {bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))} · {t("p8par.mbRef", { ref: b.ref })}
         </div>
       </div>
-      <span className="hidden w-[92px] text-end text-[11.5px] text-[var(--ink-3)] sm:inline">{methodOf(b)}</span>
+      <span className="hidden w-[92px] text-end text-[11.5px] text-[var(--ink-3)] sm:inline">{w(methodOf(b))}</span>
       <Badge tone={payTone(b.pay)}>{payLabelFor(b)}</Badge>
       <span className="w-[72px] text-end text-[13.5px] font-extrabold">{money(action ? owedOf(b) : b.amount)}</span>
       {onPdf ? (
@@ -89,7 +90,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
   const refresh = useCallback(() => {
     apiGet<Booking[]>("/api/my/bookings")
       .then(setBookings)
-      .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t load your payments"));
+      .catch((e) => setError(e instanceof Error ? e.message : tNow("p8par.pyFailed")));
   }, []);
   useEffect(refresh, [refresh]);
   useRealtime(["bookings"], refresh);
@@ -285,7 +286,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
             <div key={i} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[12.5px] font-bold">{r.label}</div>
-                <div className="text-[11.5px] text-[var(--ink-3)]">{r.listing} · Ref {r.ref} · {r.on}</div>
+                <div className="text-[11.5px] text-[var(--ink-3)]">{r.listing} · {tr("p8par.mbRef", { ref: r.ref })} · {r.on}</div>
               </div>
               <span className="text-[13px] font-extrabold text-[var(--brand-2)]">+{money(r.amount || 0)}</span>
             </div>

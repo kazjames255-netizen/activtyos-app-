@@ -590,10 +590,10 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   const letChoose = policy.amendAllowCheaper && policy.allowCardRefund && policy.refundLetCustomerChoose;
   const cheaper = policy.amendAllowCheaper
     ? !policy.allowCardRefund
-      ? "credited to your wallet"
+      ? t("p8par.mbCheaperWallet")
       : policy.refundLetCustomerChoose
-        ? "yours to take as a card refund or wallet credit"
-        : "refunded to your card"
+        ? t("p8par.mbCheaperChoice")
+        : t("p8par.mbCheaperCard")
     : null;
 
   async function submit() {
@@ -683,7 +683,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
             <div><Rich text={t("p7bk.ruleNotice", { notice: policy.amendNoticeHours % 24 === 0 && policy.amendNoticeHours >= 24 ? pickPlural(t, locale, "p7pol.dy", policy.amendNoticeHours / 24) : pickPlural(t, locale, "p7pol.hr", policy.amendNoticeHours) })} /></div>
             <div>{t("p7bk.ruleSpace")}</div>
             {policy.amendFee > 0 && <div><Rich text={t("p7bk.ruleFee", { fee: policy.amendFee })} /></div>}
-            {cheaper ? <div>• Moving to something cheaper: the difference is <b>{cheaper}</b>.</div> : <div>{t("p7bk.ruleSamePrice")}</div>}
+            {cheaper ? <div><Rich text={t("p7bk.ruleCheaper", { diff: cheaper })} /></div> : <div>{t("p7bk.ruleSamePrice")}</div>}
             {!selfService && <div className="mt-1 text-[var(--ink-3)]">{t("p7bk.providerReviews")}</div>}
           </div>
 
@@ -944,14 +944,14 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           </span>
           <div className="min-w-0">
             <div className="text-[13.5px] font-extrabold leading-[1.15] [overflow-wrap:anywhere]" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 3px rgba(0,0,0,.3)" }}>{kidNames.join(" & ") || "—"}</div>
-            <div className="truncate text-[10px] text-white/85" style={{ textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>Ref {b.ref}</div>
+            <div className="truncate text-[10px] text-white/85" style={{ textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{t("p8par.mbRef", { ref: b.ref })}</div>
           </div>
         </div>
         <div onClick={() => setExpanded((x) => !x)} className="flex flex-1 cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 overflow-hidden px-4 py-2 hover:bg-[var(--panel)]">
           <PCol label={t("parent.listingCol")} w="min-w-[120px] flex-1">
             <span className="block text-[12.5px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere]" title={b.listing}>{b.listing || "—"}</span>
             {b.serviceAddress?.address || b.serviceAddress?.postcode ? (
-              <span className="block text-[11px] font-semibold text-[var(--ink-2)]">🚗 We&rsquo;ll come to you at {[b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ")}</span>
+              <span className="block text-[11px] font-semibold text-[var(--ink-2)]">{t("p8par.mbComeToYou", { addr: [b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ") })}</span>
             ) : (<>
               {loc.location && <span className="block text-[11px] font-semibold text-[var(--ink-2)]">📍 {loc.location}</span>}
               {(loc.address || loc.city) && <span className="block text-[10.5px] text-[var(--ink-3)]">{[loc.address, loc.city].filter(Boolean).join(", ")}</span>}
@@ -984,11 +984,11 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           {dateChange.moves.length > 0 && (
             <ul className="mt-1 flex flex-col gap-0.5">
               {dateChange.moves.map((m, i) => (
-                <li key={i} className="font-semibold">{dcMultiChild && m.childName ? `${m.childName}: ` : ""}From {fmtIso(m.from)} → To <b>{fmtIso(m.to)}</b></li>
+                <li key={i} className="font-semibold">{dcMultiChild && m.childName ? `${m.childName}: ` : ""}<Rich text={t("p8par.mbMoveFromTo", { from: fmtIso(m.from), to: fmtIso(m.to) })} /></li>
               ))}
             </ul>
           )}
-          <div className="mt-1 text-[11px] text-[#8a5300]/80">Once they approve, the new date{dateChange.moves.length > 1 ? "s are" : " is"} applied automatically.</div>
+          <div className="mt-1 text-[11px] text-[#8a5300]/80">{pickPlural(t, locale, "p8par.mbOnceApprove", dateChange.moves.length)}</div>
         </div>
       )}
 
@@ -1010,9 +1010,9 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
               <div className="mt-1.5 border-t border-[#cfe9d8] pt-1.5 text-[#8a5300]">
                 <div className="font-bold">{t("parent.notMoved")}</div>
                 <ul className="flex flex-col gap-0.5">
-                  {declined.map((m, i) => <li key={i} className="font-semibold">{dcMultiChild && m.childName ? `${m.childName}: ` : ""}{fmtIso(m.from)} (kept)</li>)}
+                  {declined.map((m, i) => <li key={i} className="font-semibold">{dcMultiChild && m.childName ? `${m.childName}: ` : ""}{t("p8par.mbKept", { date: fmtIso(m.from) })}</li>)}
                 </ul>
-                {dateChange.reason && <div className="mt-0.5 text-[11.5px]">Reason: {dateChange.reason}</div>}
+                {dateChange.reason && <div className="mt-0.5 text-[11.5px]">{t("p8par.mbReason", { reason: dateChange.reason })}</div>}
               </div>
             )}
           </div>
@@ -1022,7 +1022,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
       {dateChange?.status === "denied" && (
         <div className="mt-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] text-[#c0392b]">
           <div className="font-bold">{t("parent.dateChangeDeclined")}</div>
-          {dateChange.reason && <div className="mt-0.5 text-[11.5px] text-[#8a3a3a]">Reason: {dateChange.reason}</div>}
+          {dateChange.reason && <div className="mt-0.5 text-[11.5px] text-[#8a3a3a]">{t("p8par.mbReason", { reason: dateChange.reason })}</div>}
         </div>
       )}
 
@@ -1101,7 +1101,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
             <>
               <SectionHead>{t("parent.whereWhen")}</SectionHead>
               {b.serviceAddress?.address || b.serviceAddress?.postcode ? (
-                <div className="py-[4px] text-[12.5px] font-semibold">🚗 We&rsquo;ll come to you at {[b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ")}</div>
+                <div className="py-[4px] text-[12.5px] font-semibold">{t("p8par.mbComeToYou", { addr: [b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ") })}</div>
               ) : (<>
                 {info?.location && <div className="py-[4px] text-[12.5px] font-semibold">📍 {info.location}</div>}
                 {(info?.address || info?.city) && (
@@ -1149,15 +1149,15 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           {/* Voucher payment received — the provider reconciled the money. */}
           {!cancelled && isVoucher && b.pay === "Paid" && (
             <div className="mt-2 rounded-lg border border-[#bfe6cd] bg-[#eaf0fc] px-3 py-2.5 text-[12.5px] font-semibold text-[var(--brand)]">
-              ✓ Voucher payment received{vScheme ? ` via ${vScheme.name}` : ""} — your booking is paid in full.
+              {vScheme ? t("p8par.mbVoucherPaidVia", { scheme: vScheme.name }) : t("p8par.mbVoucherPaid")}
             </div>
           )}
           {/* Still awaiting the voucher money — how to pay it. */}
           {!cancelled && b.pay === "Awaiting voucher payment" && vScheme && filledDetails(vScheme).length > 0 && (
             <div className="mt-2 rounded-lg border border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] p-3">
-              <div className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--brand-ink,var(--brand))]">Pay by {vScheme.name}</div>
+              <div className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--brand-ink,var(--brand))]">{t("p8par.mbPayBy", { scheme: vScheme.name })}</div>
               <div className="mt-0.5 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
-                Send <b>{money(b.amount)}</b> through {vScheme.name} using the details below — there&rsquo;s no card payment here. Your place is confirmed; it shows as <b>paid</b> once your provider receives the money.
+                <Rich text={t("p8par.mbVoucherSend", { amount: money(b.amount), scheme: vScheme.name })} />
               </div>
               <div className="mt-1.5 flex flex-col gap-1">
                 {filledDetails(vScheme).map((d) => (

@@ -21,8 +21,8 @@ type Coupon = {
 
 const DISMISS_KEY = "aos.couponTicker.hidden";
 const PAUSE_KEY = "aos.couponTicker.paused";
-const valueLabel = (c: Coupon) =>
-  c.type === "percent" ? `${c.value}% off` : c.type === "perAttendee" ? `${money(c.value)} off/child` : `${money(c.value)} off`;
+const valueLabel = (c: Coupon, t: (k: string, v?: Record<string, string | number>) => string) =>
+  c.type === "percent" ? t("p8par.cpPct", { v: c.value }) : c.type === "perAttendee" ? t("p8par.cpPerChild", { amt: money(c.value) }) : t("p8par.cpAmt", { amt: money(c.value) });
 
 export function CouponTicker() {
   const t = useT();
@@ -100,7 +100,7 @@ export function CouponTicker() {
           {items.map((c, i) => (
             <span key={`${c.id}-${i}`} className="inline-flex items-center gap-2 px-5 text-[12.5px] font-semibold">
               <span className="font-mono font-extrabold tracking-wider" style={{ color: "var(--brand-strong)" }}>{c.code}</span>
-              <span style={{ color: "var(--ink-3)" }}>{valueLabel(c)} · {c.listingName ? c.listingName : t("parent.allListingsLower")}</span>
+              <span style={{ color: "var(--ink-3)" }}>{valueLabel(c, t)} · {c.listingName ? c.listingName : t("parent.allListingsLower")}</span>
               {c.reserved && <span>🎁</span>}
               <span className="px-1 text-[8px]" style={{ color: "#cdddf7" }}>◆</span>
             </span>

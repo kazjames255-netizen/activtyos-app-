@@ -15,6 +15,7 @@ import { CHILD_LIMITS, ageOn } from "@/features/listings/checkout";
 import { useTenantSettings, questionsFor, dobRequired, limitFor } from "@/lib/settings";
 import { QuestionFields } from "@/components/QuestionFields";
 import { useT } from "@/lib/i18n/provider";
+import { Rich } from "@/components/i18n/Rich";
 
 /**
  * A child's age, worked out from their date of birth rather than stored.
@@ -642,8 +643,8 @@ export function CustomersApp() {
         {frScope && (
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#c4b5fd] bg-[#f5f3ff] px-3 py-2 text-[12.5px] text-[#4a2fb0]">
             <span className="text-[14px]">👁</span>
-            <span>Viewing <b>{frName || "this franchise"}</b>’s families — a head-office view of just their families.</span>
-            <Link href="/company/dashboard" className="ms-auto rounded-full bg-[#4f46e5] px-3 py-1 text-[11.5px] font-extrabold text-white no-underline transition hover:brightness-110">← Head office</Link>
+            <span><Rich text={t("p8par.cuViewing", { name: frName || t("p8par.cuThisFranchise") })} /></span>
+            <Link href="/company/dashboard" className="ms-auto rounded-full bg-[#4f46e5] px-3 py-1 text-[11.5px] font-extrabold text-white no-underline transition hover:brightness-110"><span className="inline-block rtl:-scale-x-100">←</span> {t("p8par.cuHeadOffice")}</Link>
           </div>
         )}
         <PageHero
@@ -918,10 +919,10 @@ export function CustomersApp() {
                               ["allergies", t("customers.allergies"), t("customers.allergiesPh"), 2],
                               ["medical", t("customers.medical"), t("customers.medicalPh"), 2],
                               ["send", t("customers.sendNeeds"), t("customers.sendPh"), 2],
-                              ["collectionPassword", t("customers.collectionPassword"), "e.g. Bluebell", 1],
+                              ["collectionPassword", t("customers.collectionPassword"), t("p8par.cuEgWord"), 1],
                               ["likes", t("customers.likes"), t("customers.likesPh"), 1],
                               ["dislikes", t("customers.dislikes"), t("customers.dislikesPh"), 1],
-                              ["emergencyName", t("customers.emergencyName"), "Aunt Priya", 1],
+                              ["emergencyName", t("customers.emergencyName"), t("p8par.cuEgAunt"), 1],
                               ["emergencyPhone", t("customers.andNumber"), "07700 900123", 1],
                             ] as [keyof typeof CHILD_LIMITS, string, string, number][]
                           ).map(([f, label, ph, span]) => {
@@ -1074,10 +1075,7 @@ export function CustomersApp() {
               )}
 
               <div className="mt-1.5 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
-                Your list of children is built from their bookings. <b>Anything you type here
-                saves to the family&rsquo;s own record too</b>, so you and the parent are looking at
-                the same details — and either of you can fill any of it in. They need an account
-                for that: send a sign-up link if they haven&rsquo;t got one.
+                <Rich text={t("p8par.cuChildNote")} />
               </div>
             </div>
           )}
@@ -1375,8 +1373,7 @@ export function CustomersApp() {
                           <div className="mt-2.5 rounded-lg border border-dashed border-[var(--line)] bg-[var(--surface)] px-3 py-2">
                             <div className="text-[11px] font-extrabold text-[var(--ink-2)]">{t("customers.notFilledIn")}</div>
                             <div className="mt-0.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-                              Allergies · Medical · SEND · Collection password · Emergency contact — the
-                              family hasn&rsquo;t added these to this child yet. A blank line does <b>not</b> mean a child has none.
+                              <Rich text={t("p8par.cuNoCare")} />
                             </div>
                           </div>
                         );

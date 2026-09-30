@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { apiPublic } from "@/lib/api";
 import { CustomerPage, type ServerListing } from "@/features/listings/ListingWizard";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
 
 export function QuickBookModal({ id, onClose }: { id: string; onClose: () => void }) {
   const t = useT();
@@ -18,7 +18,7 @@ export function QuickBookModal({ id, onClose }: { id: string; onClose: () => voi
   useEffect(() => {
     apiPublic<ServerListing>(`/api/listings/${encodeURIComponent(id)}`)
       .then(setListing)
-      .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t load this listing"));
+      .catch((e) => setError(e instanceof Error ? e.message : tNow("p8par.qbFailed")));
   }, [id]);
 
   // Trigger the slide once mounted; Esc closes.

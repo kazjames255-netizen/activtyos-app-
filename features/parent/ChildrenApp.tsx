@@ -4,8 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
+import { Rich } from "@/components/i18n/Rich";
 import { QuestionFields, unansweredRequired } from "@/components/QuestionFields";
 import { uploadPlan, PLAN_MAX_BYTES } from "@/features/listings/planUpload";
 import { squareAvatar, CHILD_LIMITS, ageOn } from "@/features/listings/checkout";
@@ -290,7 +291,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
       title: t("parent.aboutChildTitle"),
       sub: t("parent.aboutChildSub"),
       ok: canLeaveAbout,
-      hint: "A name" + (needDob ? ", date of birth" : "") + (settings.collectGender ? " and boy or girl" : "") + " are needed to continue.",
+      hint: t(needDob ? (settings.collectGender ? "p8par.chNeedNameDobGender" : "p8par.chNeedNameDob") : (settings.collectGender ? "p8par.chNeedNameGender" : "p8par.chNeedName")),
       body: (
         <>
           {settings.collectPhoto && (
@@ -475,15 +476,14 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
                 <div>
                   <FieldLabel>{pinMode ? t("parent.collectionPin") : t("parent.collectionPassword")}</FieldLabel>
                   <div className="mb-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">
-                    Pick {pinMode ? "a number" : "a word"} only your family knows. If <b className="text-[var(--ink-2)]">anyone other than you</b>{" "}
-                    comes to collect them, staff will ask for it and won&rsquo;t hand over without it. Staff can see this {pinMode ? "PIN" : "word"}, so don&rsquo;t reuse a password from anywhere else.
+                    <Rich text={t(pinMode ? "p8par.chPinHintPin" : "p8par.chPinHintWord")} bClass="text-[var(--ink-2)]" />
                   </div>
                   <Input value={collectionPassword} onChange={(e) => setCollectionPassword(e.target.value)}
                     maxLength={CHILD_LIMITS.collectionPassword} inputMode={pinMode ? "numeric" : undefined}
                     placeholder={pinMode ? t("parent.pinPlaceholder") : t("parent.wordPlaceholder")} className="w-full" />
                   {pinPrefilled && (
                     <div className="mt-1 text-[10.5px] font-semibold text-[var(--brand-ink,var(--brand))]">
-                      ✓ Same {pinMode ? "PIN" : "word"} as your other children — change it if this one&rsquo;s different.
+                      {t(pinMode ? "p8par.chSamePin" : "p8par.chSameWord")}
                     </div>
                   )}
                 </div>
@@ -629,7 +629,7 @@ export function ChildrenApp() {
   const refresh = useCallback(() => {
     apiGet<Child[]>("/api/my/children")
       .then(setChildren)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load children"));
+      .catch((e) => setError(e instanceof Error ? e.message : tNow("p8par.chFailed")));
     apiGet<{ child?: string; childId?: string }[]>("/api/my/bookings")
       .then((bs) => {
         setBookedIds(new Set(bs.map((b) => b.childId).filter((x): x is string => !!x)));

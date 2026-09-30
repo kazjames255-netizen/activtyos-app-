@@ -4,7 +4,8 @@ import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n, useT, tNow } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
 import type { Booking } from "@/features/bookings/types";
 
 // Boy → blue, Girl → pink, unknown → grey (matches the bookings pills).
@@ -31,6 +32,7 @@ interface Detail { location?: string | null; staff: { name: string }[]; periods:
  */
 export function MyTimetableApp() {
   const t = useT();
+  const { locale } = useI18n();
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [details, setDetails] = useState<Record<string, Detail>>({});
@@ -40,7 +42,7 @@ export function MyTimetableApp() {
   const refresh = useCallback(() => {
     apiGet<Booking[]>("/api/my/bookings")
       .then(setBookings)
-      .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t load your timetable"));
+      .catch((e) => setError(e instanceof Error ? e.message : tNow("p8par.ttFailed")));
   }, []);
   useEffect(refresh, [refresh]);
   useRealtime(["bookings"], refresh);
@@ -135,7 +137,7 @@ export function MyTimetableApp() {
                 <div className="mb-2 flex items-center gap-2">
                   {rel && <span className="rounded-md px-2 py-[2px] text-[11px] font-extrabold uppercase tracking-[0.04em] text-white" style={{ background: "var(--brand)" }}>{rel}</span>}
                   <span className="text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{fmtLongDay(date)}</span>
-                  <span className="text-[12px] text-[var(--ink-3)]">{sessions.length} session{sessions.length === 1 ? "" : "s"}</span>
+                  <span className="text-[12px] text-[var(--ink-3)]">{pickPlural(t, locale, "p8par.sessN", sessions.length)}</span>
                 </div>
                 <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
                   {[...sessions].sort((a, b) => timesFor(a).localeCompare(timesFor(b))).map((s, i) => {

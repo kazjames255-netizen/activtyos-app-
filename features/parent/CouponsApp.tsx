@@ -34,8 +34,8 @@ type Coupon = {
 const fmt = (iso?: string | null) =>
   iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "";
 
-const valueLabel = (c: Coupon) =>
-  c.type === "percent" ? `${c.value}% off` : c.type === "perAttendee" ? `${money(c.value)} off per child` : `${money(c.value)} off`;
+const valueLabel = (c: Coupon, t: (k: string, v?: Record<string, string | number>) => string) =>
+  c.type === "percent" ? t("p8par.cpPct", { v: c.value }) : c.type === "perAttendee" ? t("p8par.cpPerChild", { amt: money(c.value) }) : t("p8par.cpAmt", { amt: money(c.value) });
 
 export function CouponsApp() {
   const t = useT();
@@ -69,13 +69,13 @@ export function CouponsApp() {
               <span className="rounded-lg border border-dashed border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 font-mono text-[15px] font-extrabold tracking-wider text-[var(--brand-strong,var(--brand-strong))]">
                 {c.code}
               </span>
-              <span className="rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[12.5px] font-extrabold text-[var(--brand)]">{valueLabel(c)}</span>
+              <span className="rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[12.5px] font-extrabold text-[var(--brand)]">{valueLabel(c, t)}</span>
               {c.reserved && <span className="rounded-full bg-[#fdeefb] px-2.5 py-1 text-[11.5px] font-bold text-[#a3238e]">{t("parent.justForYou")}</span>}
               <div className="min-w-[160px] flex-1">
                 <div className="text-[11.5px] text-[var(--ink-3)]">
                   {c.listingName ? t("parent.listingOnly", { name: c.listingName }) : t("parent.allListings")}
-                  {c.minSpend ? ` · min ${money(c.minSpend)}` : ""}
-                  {c.expiry ? ` · until ${fmt(c.expiry)}` : " · no end date"}
+                  {c.minSpend ? ` · ${t("p8par.cpMin", { amt: money(c.minSpend) })}` : ""}
+                  {c.expiry ? ` · ${t("p8par.cpUntil", { date: fmt(c.expiry) })}` : ` · ${t("p8par.cpNoEnd")}`}
                 </div>
               </div>
               <span className="flex-none rounded-full bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 text-[11.5px] font-bold text-[var(--brand-strong,var(--brand-strong))]">{t("parent.appliedAtCheckout")}</span>
