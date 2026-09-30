@@ -312,8 +312,10 @@ export function Header({ portal }: { portal: PortalKey }) {
         {/* A person, not an address. displayName falls back to a name-shaped
             reading of the email's local part rather than printing the whole
             thing; the full address stays in the tooltip. */}
+        {/* min-[1440px], not xl: on a 1280–1439 laptop this name took the ~140px the top-bar tabs (Bookings / Families) needed, and with a
+            franchise picked they were squeezed into a 28px scroll box — clipped to an unreadable sliver. */}
         {portal !== "custdash" && (meName || user?.displayName || user?.email) && (
-          <span className="hidden max-w-[180px] truncate text-[12px] font-semibold text-[var(--ink-2)] xl:inline" title={user?.email ?? undefined}>
+          <span className="hidden max-w-[180px] truncate text-[12px] font-semibold text-[var(--ink-2)] min-[1440px]:inline" title={user?.email ?? undefined}>
             {displayName(meName || user?.displayName, user?.email)}
           </span>
         )}

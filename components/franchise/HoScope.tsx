@@ -132,7 +132,7 @@ export function HoScopeSwitcher({ portal }: { portal: string }) {
       <select
         value={scope ?? ""}
         onChange={(e) => setHoScopeId(e.target.value || null)}
-        className="max-w-[210px] cursor-pointer appearance-none truncate border-0 bg-transparent pe-1 text-[12.5px] font-extrabold outline-none"
+        className="max-w-[160px] cursor-pointer appearance-none truncate border-0 bg-transparent pe-1 text-[12.5px] font-extrabold outline-none min-[1440px]:max-w-[210px]"
         style={{ color: accent }}
       >
         <option value="" className="text-[var(--ink)]">Head office — all franchises</option>
