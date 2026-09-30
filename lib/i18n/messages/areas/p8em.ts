@@ -4,10 +4,12 @@ import common from "./p8em-parts/common";
 import templates from "./p8em-parts/templates";
 import staffnotify from "./p8em-parts/staffnotify";
 import newsfeed from "./p8em-parts/newsfeed";
+import newsletter from "./p8em-parts/newsletter";
 
 export default fromRows({
   ...common,
   ...templates,
   ...staffnotify,
   ...newsfeed,
+  ...newsletter,
 });

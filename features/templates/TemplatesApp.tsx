@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { MERGE_FIELDS } from "@/lib/merge-fields";
 import { Button, Card, Input } from "@/components/ui";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
 import { RichB } from "@/features/common/richB";
 
 const LIGHT_PALETTE = {
@@ -106,8 +106,8 @@ export function TemplatesApp() {
   const portalSeg = usePathname().split("/")[1] || "freelancer";
 
   const load = useCallback(() => {
-    apiGet<Template[]>("/api/messages/templates").then(setTemplates).catch((e) => setError(e instanceof Error ? e.message : t("p8em.cLoadFailed")));
-  }, [t]);
+    apiGet<Template[]>("/api/messages/templates").then(setTemplates).catch((e) => setError(e instanceof Error ? e.message : tNow("p8em.cLoadFailed")));
+  }, []);
   useEffect(() => { load(); }, [load]);
 
   async function duplicate(tp: Template) {

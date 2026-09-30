@@ -3,6 +3,7 @@
 
 import { useRef, useState, type CSSProperties, type PointerEvent as RPE } from "react";
 import { post as apiPost } from "@/lib/api";
+import { useT, tNow } from "@/lib/i18n/provider";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Newsletter builder — a rich, email-style post. The operator picks one of ten
@@ -56,16 +57,16 @@ export const paletteOf = (id: string, brandHex?: string) =>
 const B = (t: BlockType, extra: Partial<Block> = {}): Block => ({ t, ...extra });
 export interface Layout { id: string; name: string; blocks: () => Block[] }
 export const LAYOUTS: Layout[] = [
-  { id: "classic", name: "Classic newsletter", blocks: () => [B("banner"), B("hero", { image: "", heading: "This month at {company}", body: "A short welcome line to set the scene." }), B("heading", { heading: "What's on" }), B("text", { body: "Write your main update here — news, dates, and anything families should know." }), B("imageSmall", { image: "" }), B("button", { label: "Book now" }), B("footer")] },
-  { id: "announce", name: "Simple announcement", blocks: () => [B("banner"), B("heading", { heading: "An update for our families" }), B("text", { body: "Your announcement goes here." }), B("footer")] },
-  { id: "event", name: "Event invite", blocks: () => [B("banner"), B("hero", { heading: "You're invited!", body: "Join us for a special day." }), B("eventbar", { date: "", time: "", location: "" }), B("text", { body: "Tell families what to expect and what to bring." }), B("imageSmall", { image: "" }), B("button", { label: "Let us know you're coming" }), B("footer")] },
-  { id: "offer", name: "Offer / discount", blocks: () => [B("banner"), B("heading", { heading: "A treat for our families" }), B("discount", { code: "SUMMER10", codeDesc: "10% off your next booking — this week only." }), B("text", { body: "How to use it and when it ends." }), B("imageSmall", { image: "" }), B("button", { label: "Book & save" }), B("footer")] },
-  { id: "twocol", name: "Two columns", blocks: () => [B("banner"), B("hero", { image: "", heading: "News in brief" }), B("columns", { left: "First thing families should know.", right: "Second thing families should know." }), B("imageSmall", { image: "" }), B("button", { label: "Read more" }), B("footer")] },
-  { id: "photostory", name: "Photo story", blocks: () => [B("banner"), B("image", { image: "" }), B("heading", { heading: "A brilliant week" }), B("text", { body: "A few words about what the children got up to." }), B("image", { image: "" }), B("footer")] },
-  { id: "welcome", name: "Welcome pack", blocks: () => [B("banner"), B("hero", { heading: "Welcome to {company}!", body: "We're so pleased to have you with us." }), B("text", { body: "Everything you need for your first day." }), B("columns", { left: "What to bring", right: "Drop-off & pick-up" }), B("imageSmall", { image: "" }), B("footer")] },
-  { id: "roundup", name: "Monthly round-up", blocks: () => [B("banner"), B("heading", { heading: "This month's round-up" }), B("text", { body: "Highlight one." }), B("divider"), B("text", { body: "Highlight two." }), B("divider"), B("text", { body: "Highlight three." }), B("footer")] },
-  { id: "bigcta", name: "Big image + button", blocks: () => [B("hero", { image: "", heading: "Summer camp is open" }), B("heading", { heading: "Spaces are limited" }), B("button", { label: "Book your place" }), B("footer")] },
-  { id: "quote", name: "Shout-out & quote", blocks: () => [B("banner"), B("heading", { heading: "Star of the month" }), B("quote", { body: "A lovely thing to celebrate.", heading: "— the team" }), B("text", { body: "A few more words." }), B("footer")] },
+  { id: "classic", name: "Classic newsletter", blocks: () => [B("banner"), B("hero", { image: "", heading: tNow("p8em.nlSeedCompanyHeroH"), body: tNow("p8em.nlSeedWelcomeLine") }), B("heading", { heading: tNow("p8em.nlSeedWhatsOn") }), B("text", { body: tNow("p8em.nlSeedMainUpdate") }), B("imageSmall", { image: "" }), B("button", { label: tNow("p8em.nlSeedBookNow") }), B("footer")] },
+  { id: "announce", name: "Simple announcement", blocks: () => [B("banner"), B("heading", { heading: tNow("p8em.nlSeedAnnounceH") }), B("text", { body: tNow("p8em.nlSeedAnnounceBody") }), B("footer")] },
+  { id: "event", name: "Event invite", blocks: () => [B("banner"), B("hero", { heading: tNow("p8em.nlSeedInvited"), body: tNow("p8em.nlSeedJoinDay") }), B("eventbar", { date: "", time: "", location: "" }), B("text", { body: tNow("p8em.nlSeedExpect") }), B("imageSmall", { image: "" }), B("button", { label: tNow("p8em.nlSeedComing") }), B("footer")] },
+  { id: "offer", name: "Offer / discount", blocks: () => [B("banner"), B("heading", { heading: tNow("p8em.nlSeedTreat") }), B("discount", { code: "SUMMER10", codeDesc: tNow("p8em.nlSeedCodeDesc") }), B("text", { body: tNow("p8em.nlSeedHowUse") }), B("imageSmall", { image: "" }), B("button", { label: tNow("p8em.nlSeedBookSave") }), B("footer")] },
+  { id: "twocol", name: "Two columns", blocks: () => [B("banner"), B("hero", { image: "", heading: tNow("p8em.nlSeedNewsBrief") }), B("columns", { left: tNow("p8em.nlSeedFirstThing"), right: tNow("p8em.nlSeedSecondThing") }), B("imageSmall", { image: "" }), B("button", { label: tNow("p8em.nlSeedReadMore") }), B("footer")] },
+  { id: "photostory", name: "Photo story", blocks: () => [B("banner"), B("image", { image: "" }), B("heading", { heading: tNow("p8em.nlSeedBrilliantWeek") }), B("text", { body: tNow("p8em.nlSeedFewWords") }), B("image", { image: "" }), B("footer")] },
+  { id: "welcome", name: "Welcome pack", blocks: () => [B("banner"), B("hero", { heading: tNow("p8em.nlSeedWelcomeTo"), body: tNow("p8em.nlSeedPleased") }), B("text", { body: tNow("p8em.nlSeedFirstDay") }), B("columns", { left: tNow("p8em.nlSeedWhatToBring"), right: tNow("p8em.nlSeedDropPick") }), B("imageSmall", { image: "" }), B("footer")] },
+  { id: "roundup", name: "Monthly round-up", blocks: () => [B("banner"), B("heading", { heading: tNow("p8em.nlSeedRoundup") }), B("text", { body: tNow("p8em.nlSeedHighlight1") }), B("divider"), B("text", { body: tNow("p8em.nlSeedHighlight2") }), B("divider"), B("text", { body: tNow("p8em.nlSeedHighlight3") }), B("footer")] },
+  { id: "bigcta", name: "Big image + button", blocks: () => [B("hero", { image: "", heading: tNow("p8em.nlSeedSummerOpen") }), B("heading", { heading: tNow("p8em.nlSeedLimited") }), B("button", { label: tNow("p8em.nlSeedBookPlace") }), B("footer")] },
+  { id: "quote", name: "Shout-out & quote", blocks: () => [B("banner"), B("heading", { heading: tNow("p8em.nlSeedStar") }), B("quote", { body: tNow("p8em.nlSeedLovely"), heading: tNow("p8em.nlSeedTeam") }), B("text", { body: tNow("p8em.nlSeedMoreWords") }), B("footer")] },
 ];
 export const layoutOf = (id: string) => LAYOUTS.find((l) => l.id === id) ?? LAYOUTS[0];
 
@@ -83,16 +84,16 @@ export function downscaleImage(file: File, max = 1600): Promise<string> {
   const bytesOf = (dataUrl: string) => Math.floor(((dataUrl.length - dataUrl.indexOf(",") - 1) * 3) / 4);
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Couldn’t read that file."));
+    reader.onerror = () => reject(new Error(tNow("p8em.nlErrRead")));
     reader.onload = () => {
       const img = new Image();
-      img.onerror = () => reject(new Error("That file doesn’t look like an image."));
+      img.onerror = () => reject(new Error(tNow("p8em.nlErrNotImage")));
       img.onload = () => {
         let width = img.width, height = img.height;
         if (Math.max(width, height) > max) { const s = max / Math.max(width, height); width = Math.round(width * s); height = Math.round(height * s); }
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
-        if (!ctx) { reject(new Error("Couldn’t process the image.")); return; }
+        if (!ctx) { reject(new Error(tNow("p8em.nlErrProcess"))); return; }
         const draw = (w: number, h: number, q: number) => { canvas.width = w; canvas.height = h; ctx.clearRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h); return canvas.toDataURL("image/jpeg", q); };
         let quality = 0.85, out = draw(width, height, quality), guard = 0;
         // The route rejects images over ~900 KB decoded — keep re-encoding until it fits.
@@ -198,19 +199,20 @@ export function NewsletterView({ data, scale }: { data: Newsletter; scale?: numb
 }
 
 function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
+  const t = useT();
   const pad = "22px 26px";
   switch (b.t) {
     case "banner":
       return (
         <div style={{ background: p.accent, color: p.onAccent, padding: "16px 26px", display: "flex", alignItems: "center", gap: 12 }}>
           {c.logo && <img src={c.logo} alt="" style={{ height: 34, borderRadius: 6, objectFit: "contain", background: "#fff" }} />}
-          <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: .2 }}>{c.name || "Your company"}</div>
+          <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: .2 }}>{c.name || t("p8em.nlYourCompany")}</div>
         </div>
       );
     case "hero":
       return (
         <div>
-          {b.image ? <div style={{ height: 340, overflow: "hidden" }}><img src={b.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: `translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1})`, transformOrigin: "center" }} /></div> : <div style={{ height: 220, background: `linear-gradient(120deg, ${p.accent}, ${p.accent2})`, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.85)", fontSize: 13, fontWeight: 700 }}>Add a big photo here</div>}
+          {b.image ? <div style={{ height: 340, overflow: "hidden" }}><img src={b.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: `translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1})`, transformOrigin: "center" }} /></div> : <div style={{ height: 220, background: `linear-gradient(120deg, ${p.accent}, ${p.accent2})`, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.85)", fontSize: 13, fontWeight: 700 }}>{t("p8em.nlAddBigPhoto")}</div>}
           {(b.heading || b.body) && (
             <div style={{ padding: pad, background: p.band }}>
               {b.heading && <div style={{ fontSize: 24, fontWeight: 800, color: p.ink, lineHeight: 1.15 }}>{fill(b.heading, c)}</div>}
@@ -224,7 +226,7 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
     case "text":
       return <div style={{ padding: "12px 26px", fontSize: 14, color: p.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{fill(b.body, c)}</div>;
     case "image":
-      return b.image ? <div style={{ height: 300, overflow: "hidden" }}><img src={b.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: `translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1})`, transformOrigin: "center" }} /></div> : <div style={{ height: 200, margin: "12px 26px", borderRadius: 10, background: p.band, display: "flex", alignItems: "center", justifyContent: "center", color: p.muted, fontSize: 12, fontWeight: 700 }}>Add a photo</div>;
+      return b.image ? <div style={{ height: 300, overflow: "hidden" }}><img src={b.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: `translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1})`, transformOrigin: "center" }} /></div> : <div style={{ height: 200, margin: "12px 26px", borderRadius: 10, background: p.band, display: "flex", alignItems: "center", justifyContent: "center", color: p.muted, fontSize: 12, fontWeight: 700 }}>{t("p8em.nlAddPhoto")}</div>;
     case "imageSmall":
       // Optional secondary photo, half the main image's size, centred. Renders
       // nothing at all when left empty, so it never disturbs the layout.
@@ -233,7 +235,7 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
       return (
         <div style={{ padding: "14px 26px" }}>
           <div style={{ border: `2px dashed ${p.accent}`, borderRadius: 12, padding: "14px 16px", textAlign: "center", background: p.band }}>
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: p.muted, textTransform: "uppercase" }}>Your code</div>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: p.muted, textTransform: "uppercase" }}>{t("p8em.nlYourCode")}</div>
             <div style={{ fontSize: 26, fontWeight: 900, color: p.accent, letterSpacing: 2, margin: "2px 0 4px" }}>{b.code || "CODE"}</div>
             <div style={{ fontSize: 13, color: p.ink }}>{fill(b.codeDesc, c)}</div>
           </div>
@@ -242,7 +244,7 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
     case "button": {
       const href = b.listingId ? `/book/${b.listingId}` : (b.url || "");
       const bStyle = { display: "inline-block", background: p.accent, color: p.onAccent, fontWeight: 800, fontSize: 14, padding: "11px 22px", borderRadius: 999, textDecoration: "none" } as CSSProperties;
-      return <div style={{ padding: "14px 26px", textAlign: "center" }}>{href ? <a href={href} style={bStyle}>{b.label || "Learn more"}</a> : <span style={bStyle}>{b.label || "Learn more"}</span>}</div>;
+      return <div style={{ padding: "14px 26px", textAlign: "center" }}>{href ? <a href={href} style={bStyle}>{b.label || t("p8em.nlLearnMore")}</a> : <span style={bStyle}>{b.label || t("p8em.nlLearnMore")}</span>}</div>;
     }
     case "columns":
       return (
@@ -255,11 +257,11 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
     case "divider":
       return <div style={{ height: 1, background: p.band, margin: "6px 26px" }} />;
     case "eventbar":
-      return <div style={{ margin: "12px 26px", background: p.accent, color: p.onAccent, borderRadius: 10, padding: "12px 16px", display: "flex", flexWrap: "wrap", gap: 16, fontWeight: 700, fontSize: 14 }}>{[b.date, b.time, b.location].filter(Boolean).join("   •   ") || "Add a date, time & place"}</div>;
+      return <div style={{ margin: "12px 26px", background: p.accent, color: p.onAccent, borderRadius: 10, padding: "12px 16px", display: "flex", flexWrap: "wrap", gap: 16, fontWeight: 700, fontSize: 14 }}>{[b.date, b.time, b.location].filter(Boolean).join("   •   ") || t("p8em.nlAddDatePlace")}</div>;
     case "footer":
       return (
         <div style={{ background: p.accent, color: "#fff", padding: "18px 26px", fontSize: 12.5, lineHeight: 1.7 }}>
-          <div style={{ fontWeight: 800, fontSize: 14 }}>{c.name || "Your company"}</div>
+          <div style={{ fontWeight: 800, fontSize: 14 }}>{c.name || t("p8em.nlYourCompany")}</div>
           {c.address && <div style={{ opacity: .85 }}>{c.address}</div>}
           <div style={{ opacity: .85 }}>{[c.phone, c.email].filter(Boolean).join("  ·  ")}</div>
         </div>
@@ -272,6 +274,7 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
 // ── Builder — layout gallery, palette swatches, company details, per-block
 // editors, live preview. Calls onSave with the finished Newsletter.
 export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandColor, listings = [], coupons = [], folders = [], onCancel, onSave }: { initial?: Newsletter; initialCompany?: Partial<Company>; initialMeta?: NlMeta; brandColor?: string; listings?: { id: string; title: string }[]; coupons?: { code: string; desc: string }[]; folders?: string[]; onCancel: () => void; onSave: (n: Newsletter, meta: NlMeta, channel: "page" | "email" | "both") => void }) {
+  const t = useT();
   const [nl, setNl] = useState<Newsletter>(initial ?? newNewsletter("classic", initialCompany, brandColor));
   const [meta, setMeta] = useState<NlMeta>(initialMeta ?? newMeta());
   const setM = (f: Partial<NlMeta>) => setMeta((m) => ({ ...m, ...f }));
@@ -297,7 +300,7 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandC
 
   // One-click: describe the newsletter, and the AI fills every text section.
   async function writeAll() {
-    if (!aiBrief.trim()) { setAiErr("Tell the AI what the newsletter is about first."); return; }
+    if (!aiBrief.trim()) { setAiErr(t("p8em.nlAiNeedBrief")); return; }
     setAiBusy(true); setAiErr("");
     const wanted = new Set<BlockType>(["hero", "heading", "text", "columns", "quote", "discount"]);
     const blocks = nl.blocks.map((b, i) => ({ i, t: b.t })).filter((x) => wanted.has(x.t));
@@ -305,7 +308,7 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandC
       const r = await apiPost<{ blocks: Record<string, Record<string, string>> }>("/api/ai/compose-newsletter", { brief: aiBrief.trim(), company: nl.company.name || undefined, blocks });
       const allow = ["heading", "body", "left", "right", "code", "codeDesc"] as const;
       setNl((n) => ({ ...n, blocks: n.blocks.map((b, i) => { const f = r.blocks?.[String(i)]; if (!f) return b; const upd: Partial<Block> = {}; for (const k of allow) if (typeof f[k] === "string") upd[k] = f[k]; return { ...b, ...upd }; }) }));
-    } catch (e) { setAiErr(e instanceof Error ? e.message : "Couldn’t write it — try again."); }
+    } catch (e) { setAiErr(e instanceof Error ? e.message : t("p8em.nlAiFail")); }
     finally { setAiBusy(false); }
   }
 
@@ -320,7 +323,7 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandC
   const inputCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]";
   const imgBtn = (apply: (url: string) => void) => (
     <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">
-      {busy ? "Uploading…" : "Upload image"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f, apply); }} />
+      {busy ? t("p8em.nfUploading") : t("p8em.nfUploadImage")}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f, apply); }} />
     </label>
   );
 
@@ -328,7 +331,7 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandC
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-3 pt-[3vh]" onClick={onCancel}>
       <div className="flex w-full max-w-[960px] flex-col overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()} style={{ maxHeight: "94vh" }}>
         <div className="flex items-center justify-between px-5 py-3.5 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f,#3f78d8)" }}>
-          <div className="text-[16px] font-extrabold">Design a newsletter</div>
+          <div className="text-[16px] font-extrabold">{t("p8em.nlDesign")}</div>
           <button type="button" onClick={onCancel} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold">×</button>
         </div>
 
@@ -336,49 +339,49 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandC
           {/* Editor */}
           <div className="min-h-0 space-y-3 overflow-y-auto border-e border-[var(--line)] p-4">
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Save as (a name to find it later)</div>
-              <input value={meta.name} onChange={(e) => setM({ name: e.target.value })} placeholder="e.g. July Family Update" className={inputCls} />
-              <span className="mt-1 block text-[10px] text-[var(--ink-3)]">Just for your search — set it now and it’s saved even if you send by email.</span>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.nfSaveAs")}</div>
+              <input value={meta.name} onChange={(e) => setM({ name: e.target.value })} placeholder={t("p8em.nlNamePh")} className={inputCls} />
+              <span className="mt-1 block text-[10px] text-[var(--ink-3)]">{t("p8em.nlNameHint")}</span>
             </div>
             <div className="rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] p-2.5">
-              <div className="mb-1 text-[11.5px] font-extrabold text-[#1d3a8f]">✨ Let AI write it for you</div>
-              <textarea value={aiBrief} onChange={(e) => setAiBrief(e.target.value)} rows={2} placeholder="Describe your newsletter — e.g. “July update: Sports Day Fri 25th 10am on the main field, summer camp now open (early-bird ends Sunday), reminder to bring sun cream.”" className={inputCls} />
+              <div className="mb-1 text-[11.5px] font-extrabold text-[#1d3a8f]">{t("p8em.nlAiTitle")}</div>
+              <textarea value={aiBrief} onChange={(e) => setAiBrief(e.target.value)} rows={2} placeholder={t("p8em.nlAiPh")} className={inputCls} />
               <div className="mt-1.5 flex items-center gap-2">
-                <button type="button" onClick={writeAll} disabled={aiBusy} className="rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{aiBusy ? "Writing…" : "Write it all"}</button>
-                <span className="text-[11px] text-[var(--ink-3)]">Fills every text section — tweak anything after.</span>
+                <button type="button" onClick={writeAll} disabled={aiBusy} className="rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{aiBusy ? t("p8em.nfWriting") : t("p8em.nlWriteAll")}</button>
+                <span className="text-[11px] text-[var(--ink-3)]">{t("p8em.nlFillsAll")}</span>
               </div>
               {aiErr && <div className="mt-1 text-[11px] font-bold text-[#c02636]">{aiErr}</div>}
             </div>
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Layout</div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.nlLayout")}</div>
               <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
-                {LAYOUTS.map((l) => <button key={l.id} type="button" onClick={() => pickLayout(l.id)} className="rounded-lg border p-1.5 text-[10px] font-bold leading-tight" style={nl.layout === l.id ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{l.name}</button>)}
+                {LAYOUTS.map((l) => <button key={l.id} type="button" onClick={() => pickLayout(l.id)} className="rounded-lg border p-1.5 text-[10px] font-bold leading-tight" style={nl.layout === l.id ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t("p8em.nlLay_" + l.id)}</button>)}
               </div>
             </div>
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Colour</div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.nfColour")}</div>
               <div className="flex flex-wrap items-center gap-1.5">
-                {nl.brand && <button type="button" title="Your brand colour" onClick={() => setNl((n) => ({ ...n, palette: BRAND_PALETTE_ID }))} className="relative h-7 w-7 rounded-full ring-1 ring-black/10" style={{ background: nl.brand, boxShadow: nl.palette === BRAND_PALETTE_ID ? "0 0 0 2px #fff, 0 0 0 4px #111" : "none" }} />}
-                {NL_PALETTES.map((pl) => <button key={pl.id} type="button" title={pl.name} onClick={() => setNl((n) => ({ ...n, palette: pl.id }))} className="h-7 w-7 rounded-full" style={{ background: pl.accent, boxShadow: nl.palette === pl.id ? "0 0 0 2px #fff, 0 0 0 4px #111" : "none" }} />)}
+                {nl.brand && <button type="button" title={t("p8em.nlBrandColour")} onClick={() => setNl((n) => ({ ...n, palette: BRAND_PALETTE_ID }))} className="relative h-7 w-7 rounded-full ring-1 ring-black/10" style={{ background: nl.brand, boxShadow: nl.palette === BRAND_PALETTE_ID ? "0 0 0 2px #fff, 0 0 0 4px #111" : "none" }} />}
+                {NL_PALETTES.map((pl) => <button key={pl.id} type="button" title={t("p8em.nlCol_" + pl.id)} onClick={() => setNl((n) => ({ ...n, palette: pl.id }))} className="h-7 w-7 rounded-full" style={{ background: pl.accent, boxShadow: nl.palette === pl.id ? "0 0 0 2px #fff, 0 0 0 4px #111" : "none" }} />)}
               </div>
             </div>
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Your details</div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.nlYourDetails")}</div>
               <div className="grid grid-cols-2 gap-1.5">
-                <input value={nl.company.name} onChange={(e) => setCompany({ name: e.target.value })} placeholder="Company name" className={inputCls} />
-                <input value={nl.company.phone} onChange={(e) => setCompany({ phone: e.target.value })} placeholder="Phone" className={inputCls} />
-                <input value={nl.company.email} onChange={(e) => setCompany({ email: e.target.value })} placeholder="Email" className={inputCls} />
-                <input value={nl.company.address} onChange={(e) => setCompany({ address: e.target.value })} placeholder="Address" className={inputCls} />
+                <input value={nl.company.name} onChange={(e) => setCompany({ name: e.target.value })} placeholder={t("p8em.nlCompanyName")} className={inputCls} />
+                <input value={nl.company.phone} onChange={(e) => setCompany({ phone: e.target.value })} placeholder={t("p8em.nlPhone")} className={inputCls} />
+                <input value={nl.company.email} onChange={(e) => setCompany({ email: e.target.value })} placeholder={t("p8em.nlEmail")} className={inputCls} />
+                <input value={nl.company.address} onChange={(e) => setCompany({ address: e.target.value })} placeholder={t("p8em.nlAddress")} className={inputCls} />
               </div>
               <div className="mt-1.5 flex items-center gap-2">
                 {nl.company.logo && <img src={nl.company.logo} alt="" className="h-7 w-7 rounded object-cover" />}
                 {imgBtn((url) => setCompany({ logo: url }))}
-                {nl.company.logo ? <button type="button" onClick={() => setCompany({ logo: undefined })} className="text-[11px] font-bold text-[#c02636]">Remove</button> : <span className="text-[11px] text-[var(--ink-3)]">Logo (optional)</span>}
+                {nl.company.logo ? <button type="button" onClick={() => setCompany({ logo: undefined })} className="text-[11px] font-bold text-[#c02636]">{t("p8em.cRemove")}</button> : <span className="text-[11px] text-[var(--ink-3)]">{t("p8em.nlLogoOpt")}</span>}
               </div>
             </div>
 
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Content</div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.nlContent")}</div>
               <div className="space-y-2">
                 {nl.blocks.map((b, i) => {
                   const has = (k: keyof Block) => b[k] !== undefined;
@@ -386,10 +389,10 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandC
                   return (
                     <div key={i} className="rounded-lg border border-[var(--line)] p-2">
                       <div className="mb-1 flex items-center justify-between">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wide" style={{ color: p.accent }}>{b.t === "imageSmall" ? "Extra photo (optional)" : b.t}</span>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wide" style={{ color: p.accent }}>{["hero","heading","text","image","imageSmall","discount","button","columns","quote","eventbar"].includes(b.t) ? t("p8em.nlBlk_" + b.t) : b.t}</span>
                         <span className="flex items-center gap-2">
-                          <button type="button" onClick={() => dupBlock(i)} className="text-[11px] font-bold text-[var(--ink-2)] hover:text-[#1d3a8f]">Duplicate</button>
-                          <button type="button" onClick={() => delBlock(i)} className="text-[11px] font-bold text-[#c02636]">Remove</button>
+                          <button type="button" onClick={() => dupBlock(i)} className="text-[11px] font-bold text-[var(--ink-2)] hover:text-[#1d3a8f]">{t("p8em.cDuplicate")}</button>
+                          <button type="button" onClick={() => delBlock(i)} className="text-[11px] font-bold text-[#c02636]">{t("p8em.cRemove")}</button>
                         </span>
                       </div>
                       <div className="space-y-1.5">
@@ -399,30 +402,30 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandC
                               <img src={b.image} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", transform: `translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1})`, transformOrigin: "center" }} />
                             </div>
                             <div className="mt-1 flex items-center gap-2">
-                              <span className="text-[10.5px] font-bold text-[var(--ink-3)]">Zoom</span>
+                              <span className="text-[10.5px] font-bold text-[var(--ink-3)]">{t("p8em.nfZoom")}</span>
                               <input type="range" min={1} max={4} step={0.02} value={b.iz ?? 1} onChange={(e) => bZoom(i, parseFloat(e.target.value))} className="h-1 flex-1 accent-[#1d3a8f]" />
                               {imgBtn((url) => setBlock(i, { image: url, ix: 0, iy: 0, iz: 1 }))}
-                              <button type="button" onClick={() => setBlock(i, { image: "", ix: 0, iy: 0, iz: 1 })} className="text-[11px] font-bold text-[#c02636]">Remove</button>
+                              <button type="button" onClick={() => setBlock(i, { image: "", ix: 0, iy: 0, iz: 1 })} className="text-[11px] font-bold text-[#c02636]">{t("p8em.cRemove")}</button>
                             </div>
-                            <div className="text-[10px] text-[var(--ink-3)]">Drag to move · zoom to crop.</div>
+                            <div className="text-[10px] text-[var(--ink-3)]">{t("p8em.nlDragCrop")}</div>
                           </div>
-                        ) : <div className="flex items-center gap-2">{imgBtn((url) => setBlock(i, { image: url }))}{b.t === "imageSmall" && <span className="text-[10.5px] text-[var(--ink-3)]">Optional — a smaller second photo. Leave empty and it won’t show.</span>}</div>)}
-                        {has("heading") && <input value={b.heading ?? ""} onChange={(e) => setBlock(i, { heading: e.target.value })} placeholder="Heading" className={inputCls} />}
-                        {(has("body") || b.t === "heading") && <textarea value={b.body ?? ""} onChange={(e) => setBlock(i, { body: e.target.value })} rows={2} placeholder={b.t === "heading" ? "Text under this heading (optional)" : "Text"} className={inputCls} />}
-                        {b.t === "columns" && <><input value={b.left ?? ""} onChange={(e) => setBlock(i, { left: e.target.value })} placeholder="Left column" className={inputCls} /><input value={b.right ?? ""} onChange={(e) => setBlock(i, { right: e.target.value })} placeholder="Right column" className={inputCls} /></>}
-                        {b.t === "discount" && <div className="grid gap-1.5">{coupons.length > 0 && <select value={coupons.some((c) => c.code === b.code) ? b.code : ""} onChange={(e) => { const c = coupons.find((x) => x.code === e.target.value); if (c) setBlock(i, { code: c.code, codeDesc: c.desc }); }} className={inputCls}><option value="">Pull in a discount code…</option>{coupons.map((c) => <option key={c.code} value={c.code}>{c.code} — {c.desc}</option>)}</select>}<div className="grid grid-cols-2 gap-1.5"><input value={b.code ?? ""} onChange={(e) => setBlock(i, { code: e.target.value.toUpperCase() })} placeholder="CODE" className={inputCls} /><input value={b.codeDesc ?? ""} onChange={(e) => setBlock(i, { codeDesc: e.target.value })} placeholder="What it gives" className={inputCls} /></div></div>}
+                        ) : <div className="flex items-center gap-2">{imgBtn((url) => setBlock(i, { image: url }))}{b.t === "imageSmall" && <span className="text-[10.5px] text-[var(--ink-3)]">{t("p8em.nlExtraPhotoHint")}</span>}</div>)}
+                        {has("heading") && <input value={b.heading ?? ""} onChange={(e) => setBlock(i, { heading: e.target.value })} placeholder={t("p8em.nlHeadingPh")} className={inputCls} />}
+                        {(has("body") || b.t === "heading") && <textarea value={b.body ?? ""} onChange={(e) => setBlock(i, { body: e.target.value })} rows={2} placeholder={b.t === "heading" ? t("p8em.nlTextUnderHeading") : t("p8em.nlTextPh")} className={inputCls} />}
+                        {b.t === "columns" && <><input value={b.left ?? ""} onChange={(e) => setBlock(i, { left: e.target.value })} placeholder={t("p8em.nlLeftCol")} className={inputCls} /><input value={b.right ?? ""} onChange={(e) => setBlock(i, { right: e.target.value })} placeholder={t("p8em.nlRightCol")} className={inputCls} /></>}
+                        {b.t === "discount" && <div className="grid gap-1.5">{coupons.length > 0 && <select value={coupons.some((c) => c.code === b.code) ? b.code : ""} onChange={(e) => { const c = coupons.find((x) => x.code === e.target.value); if (c) setBlock(i, { code: c.code, codeDesc: c.desc }); }} className={inputCls}><option value="">{t("p8em.nlPullCode")}</option>{coupons.map((c) => <option key={c.code} value={c.code}>{c.code} — {c.desc}</option>)}</select>}<div className="grid grid-cols-2 gap-1.5"><input value={b.code ?? ""} onChange={(e) => setBlock(i, { code: e.target.value.toUpperCase() })} placeholder="CODE" className={inputCls} /><input value={b.codeDesc ?? ""} onChange={(e) => setBlock(i, { codeDesc: e.target.value })} placeholder={t("p8em.nlWhatItGives")} className={inputCls} /></div></div>}
                         {b.t === "button" && (() => { const kind = b.url ? "url" : "listing"; return (
                           <div className="space-y-1.5">
-                            <input value={b.label ?? ""} onChange={(e) => setBlock(i, { label: e.target.value })} placeholder="Button label (e.g. Book now)" className={inputCls} />
+                            <input value={b.label ?? ""} onChange={(e) => setBlock(i, { label: e.target.value })} placeholder={t("p8em.nlButtonLabelEg")} className={inputCls} />
                             <div className="flex flex-wrap gap-1.5">
-                              {([["listing", "To a listing"], ["url", "To a web link"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => (k === "listing" ? setBlock(i, { url: "" }) : setBlock(i, { listingId: "", listingTitle: "" }))} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={kind === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+                              {([["listing", t("p8em.nfLinkListing")], ["url", t("p8em.nfLinkWeb")]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => (k === "listing" ? setBlock(i, { url: "" }) : setBlock(i, { listingId: "", listingTitle: "" }))} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={kind === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
                             </div>
                             {kind === "listing"
-                              ? <select value={b.listingId ?? ""} onChange={(e) => { const l = listings.find((x) => x.id === e.target.value); setBlock(i, { listingId: e.target.value, listingTitle: l?.title ?? "", url: "" }); }} className={inputCls}><option value="">Choose a listing…</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select>
+                              ? <select value={b.listingId ?? ""} onChange={(e) => { const l = listings.find((x) => x.id === e.target.value); setBlock(i, { listingId: e.target.value, listingTitle: l?.title ?? "", url: "" }); }} className={inputCls}><option value="">{t("p8em.nfChooseListing")}</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select>
                               : <input value={b.url ?? ""} onChange={(e) => setBlock(i, { url: e.target.value, listingId: "", listingTitle: "" })} placeholder="https://…" className={inputCls} />}
                           </div>
                         ); })()}
-                        {b.t === "eventbar" && <div className="grid grid-cols-3 gap-1.5"><input type="date" value={b.date ?? ""} onChange={(e) => setBlock(i, { date: e.target.value })} className={inputCls} /><input type="time" value={b.time ?? ""} onChange={(e) => setBlock(i, { time: e.target.value })} className={inputCls} /><input value={b.location ?? ""} onChange={(e) => setBlock(i, { location: e.target.value })} placeholder="Place" className={inputCls} /></div>}
+                        {b.t === "eventbar" && <div className="grid grid-cols-3 gap-1.5"><input type="date" value={b.date ?? ""} onChange={(e) => setBlock(i, { date: e.target.value })} className={inputCls} /><input type="time" value={b.time ?? ""} onChange={(e) => setBlock(i, { time: e.target.value })} className={inputCls} /><input value={b.location ?? ""} onChange={(e) => setBlock(i, { location: e.target.value })} placeholder={t("p8em.nlPlace")} className={inputCls} /></div>}
                       </div>
                     </div>
                   );
@@ -431,26 +434,26 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandC
             </div>
 
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Publish</div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.nlPublish")}</div>
               <div className="space-y-2 rounded-xl border border-[var(--line)] p-2.5">
                 <div>
-                  <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-3)]">Folder</div>
-                  <input list="nl-folders" value={meta.folder} onChange={(e) => setM({ folder: e.target.value })} placeholder="Unfiled — type a new folder or pick one" className={inputCls} />
+                  <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-3)]">{t("p8em.nlFolder")}</div>
+                  <input list="nl-folders" value={meta.folder} onChange={(e) => setM({ folder: e.target.value })} placeholder={t("p8em.nlFolderPh")} className={inputCls} />
                   <datalist id="nl-folders">{folders.map((f) => <option key={f} value={f} />)}</datalist>
                 </div>
                 <div>
-                  <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-3)]">Who sees it</div>
+                  <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-3)]">{t("p8em.nfWhoSees")}</div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {([["all", "All families"], ["listing", "Chosen listings’ families"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setM({ audScope: k, audIds: [] })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta.audScope === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+                    {([["all", t("p8em.nfAudAll")], ["listing", t("p8em.nfChosenFamilies")]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setM({ audScope: k, audIds: [] })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta.audScope === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
                   </div>
-                  {meta.audScope === "listing" && <div className="mt-1.5 flex flex-wrap gap-1.5">{listings.length === 0 ? <span className="text-[11px] text-[var(--ink-3)]">No listings yet.</span> : listings.map((l) => { const on = meta.audIds.includes(l.id); return <button key={l.id} type="button" onClick={() => setM({ audIds: on ? meta.audIds.filter((x) => x !== l.id) : [...meta.audIds, l.id] })} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{l.title}</button>; })}</div>}
+                  {meta.audScope === "listing" && <div className="mt-1.5 flex flex-wrap gap-1.5">{listings.length === 0 ? <span className="text-[11px] text-[var(--ink-3)]">{t("p8em.nfNoListings")}</span> : listings.map((l) => { const on = meta.audIds.includes(l.id); return <button key={l.id} type="button" onClick={() => setM({ audIds: on ? meta.audIds.filter((x) => x !== l.id) : [...meta.audIds, l.id] })} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{l.title}</button>; })}</div>}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {([["pinned", "Pin to top"], ["ackRequired", "Ask to acknowledge"], ["react", "Allow reactions"]] as const).map(([f, label]) => <button key={f} type="button" onClick={() => setM({ [f]: !meta[f] } as Partial<NlMeta>)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta[f] ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{meta[f] ? "✓ " : ""}{label}</button>)}
-                  <button type="button" onClick={() => setM({ priority: meta.priority === "urgent" ? "normal" : "urgent" })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta.priority === "urgent" ? { borderColor: "#c02636", background: "#fde2e4", color: "#c02636" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{meta.priority === "urgent" ? "✓ " : ""}High priority</button>
+                  {([["pinned", t("p8em.nfTogglePin")], ["ackRequired", t("p8em.nfToggleAck")], ["react", t("p8em.nfToggleReact")]] as const).map(([f, label]) => <button key={f} type="button" onClick={() => setM({ [f]: !meta[f] } as Partial<NlMeta>)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta[f] ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{meta[f] ? "✓ " : ""}{label}</button>)}
+                  <button type="button" onClick={() => setM({ priority: meta.priority === "urgent" ? "normal" : "urgent" })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta.priority === "urgent" ? { borderColor: "#c02636", background: "#fde2e4", color: "#c02636" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{meta.priority === "urgent" ? "✓ " : ""}{t("p8em.nfHighPriority")}</button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {([["now", "Publish now"], ["later", "Schedule"], ["draft", "Save as draft"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setM({ when: k })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta.when === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+                  {([["now", t("p8em.nfPublishNow")], ["later", t("p8em.nfSchedule")], ["draft", t("p8em.nfSaveDraftOpt")]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setM({ when: k })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta.when === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
                   {meta.when === "later" && <input type="datetime-local" value={meta.publishAt} onChange={(e) => setM({ publishAt: e.target.value })} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[12px] outline-none" />}
                 </div>
               </div>
@@ -459,20 +462,20 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandC
 
           {/* Preview */}
           <div className="min-h-0 overflow-y-auto bg-[var(--panel)] p-3">
-            <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Preview</div>
+            <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.cPreview")}</div>
             <NewsletterView data={nl} />
-            <div className="mt-2 flex justify-center"><span className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">💬 Message us for more info</span></div>
-            <div className="mt-1 text-center text-[10px] text-[var(--ink-3)]">Families get a “Message us” button on every post — opens a message to you, subject pre-filled.</div>
+            <div className="mt-2 flex justify-center"><span className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">{t("p8em.nfMsgUs")}</span></div>
+            <div className="mt-1 text-center text-[10px] text-[var(--ink-3)]">{t("p8em.nlMessageUsHint")}</div>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
-          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button>
-          <span className="me-auto text-[11px] text-[var(--ink-3)]">Choose where it goes →</span>
-          <span className="me-auto text-[11px] text-[var(--ink-3)]">Do one now — reopen to do another</span>
+          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">{t("p8em.cCancel")}</button>
+          <span className="me-auto text-[11px] text-[var(--ink-3)]">{t("p8em.nlChooseWhere")}</span>
+          <span className="me-auto text-[11px] text-[var(--ink-3)]">{t("p8em.nfDoOne")}</span>
           <button type="button" onClick={() => printNewsletter(nl)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⬇ PDF</button>
-          <button type="button" onClick={() => onSave(nl, meta, "email")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">✉ Email</button>
-          <button type="button" onClick={() => onSave(nl, meta, "page")} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white">{meta.when === "draft" ? "Save to library" : meta.when === "later" ? "Schedule" : "Post to Newsfeed"}</button>
+          <button type="button" onClick={() => onSave(nl, meta, "email")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">{t("p8em.nfBtnEmail")}</button>
+          <button type="button" onClick={() => onSave(nl, meta, "page")} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white">{meta.when === "draft" ? t("p8em.nlSaveToLibrary") : meta.when === "later" ? t("p8em.nfSchedule") : t("p8em.nfPostToFeed")}</button>
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Button } from "@/components/ui";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
 import { RichB } from "@/features/common/richB";
 import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
@@ -175,8 +175,8 @@ export function NewsfeedApp() {
   const scopedFr = hoScope && hoScope !== HO_OWN ? hoScope : "";
 
   const refresh = useCallback(() => {
-    apiGet<Post[]>("/api/posts").then((p) => { setPosts(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : t("p8em.cLoadFailed")));
-  }, [t]);
+    apiGet<Post[]>("/api/posts").then((p) => { setPosts(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : tNow("p8em.cLoadFailed")));
+  }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing" })))).catch(() => {}); }, []);
