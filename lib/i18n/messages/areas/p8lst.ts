@@ -7,8 +7,9 @@ import lst from "./p8lst-parts/lst";
 import ck from "./p8lst-parts/ck";
 import wiz1 from "./p8lst-parts/wiz1";
 import wiz2 from "./p8lst-parts/wiz2";
+import wiz3 from "./p8lst-parts/wiz3";
 
 const LOCALES = ["en", "pl", "ro", "ur", "pa", "bn", "ar", "pt", "es", "fr", "cy"] as const;
 const p8lst = {} as Record<(typeof LOCALES)[number], Record<string, string>>;
-for (const l of LOCALES) p8lst[l] = { ...core[l], ...blocks[l], ...lst[l], ...ck[l], ...wiz1[l], ...wiz2[l] };
+for (const l of LOCALES) p8lst[l] = { ...core[l], ...blocks[l], ...lst[l], ...ck[l], ...wiz1[l], ...wiz2[l], ...wiz3[l] };
 export default p8lst;
