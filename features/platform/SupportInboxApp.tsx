@@ -162,7 +162,7 @@ export function SupportInboxApp() {
 
       {err && <div className="mt-3 rounded-xl border px-3.5 py-2 text-[12.5px] font-bold" style={{ borderColor: "#c02636", background: "#fdebec", color: "#c02636" }}>{err}</div>}
 
-      <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,360px)_1fr]">
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,360px)_1fr]">
         {/* Thread list */}
         <div className="flex flex-col gap-2">
           {filtered.length === 0 && <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-8 text-center text-[12.5px] text-[var(--ink-3)]">No conversations here.</div>}

@@ -52,6 +52,8 @@ export function SupportReviewApp() {
   const router = useRouter();
   const [data, setData] = useState<Review | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  // The manager copies `categories` when it opens — opening it before they arrive showed an empty list, and Save would then wipe every category.
+  const [catsLoaded, setCatsLoaded] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [managing, setManaging] = useState(false);
@@ -65,7 +67,7 @@ export function SupportReviewApp() {
       .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
   }, []);
   const loadCats = useCallback(() => {
-    apiGet<{ categories: Category[] }>("/api/platform/support/categories").then((d) => setCategories(d.categories ?? [])).catch(() => {});
+    apiGet<{ categories: Category[] }>("/api/platform/support/categories").then((d) => { setCategories(d.categories ?? []); setCatsLoaded(true); }).catch(() => {});
   }, []);
   useEffect(() => { load(); loadCats(); }, [load, loadCats]);
   useEffect(() => { apiGet<{ accounts: Account[] }>("/api/platform/accounts").then((d) => setAccounts(d.accounts ?? [])).catch(() => {}); }, []);
@@ -146,8 +148,8 @@ export function SupportReviewApp() {
 
       {/* Action row */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setManaging(true)}
-          className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:border-[#C6D0E6]">⚙︎ Manage categories</button>
+        <button type="button" onClick={() => setManaging(true)} disabled={!catsLoaded}
+          className="rounded-full border disabled:opacity-50 border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:border-[#C6D0E6]">⚙︎ Manage categories</button>
         <button type="button" onClick={load}
           className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:border-[#C6D0E6]">↻ Refresh</button>
         {(statusF !== "all" || catF !== "all" || provF !== "all") && (
