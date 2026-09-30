@@ -45,7 +45,8 @@ const absenceSchema = z.object({
   pay: z.string().max(40).optional(),
   ssp: z.enum(["eligible", "withheld"]).optional(),
   awe: z.number().nonnegative().max(100_000).optional(),
-}).refine((a) => a.end >= a.start, { message: "End date is before the start date" });
+}).refine((a) => a.end >= a.start, { message: "End date is before the start date" })
+  .refine((a) => a.days <= (Math.round((Date.parse(`${a.end}T00:00:00Z`) - Date.parse(`${a.start}T00:00:00Z`)) / 86_400_000) + 1), { message: "More days than the dates cover", path: ["days"] });
 
 type AbsenceDoc = z.infer<typeof absenceSchema> & { rotaKey: string; tenantId: string; staffEmail?: string | null; requestedAt: string; requestedBy?: string | null; decidedBy?: string; decidedAt?: string };
 
