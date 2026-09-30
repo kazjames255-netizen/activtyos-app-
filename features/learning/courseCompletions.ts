@@ -5,6 +5,7 @@
 // the staff view. Certificate download reuses the same openCertificate() the
 // course player uses, so a manager-issued cert is identical to the staff's own.
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { tNow } from "@/lib/i18n/provider";
 import { SEED_LIBRARY } from "./courseContent";
 import { openCertificate, makeRef, type CertData } from "./certificates";
 import type { TenantSettings } from "@/lib/settings";
@@ -125,9 +126,9 @@ export function courseCertData(staffName: string, done: CourseDone, settings: Te
   const exp = rm ? new Date(issued.getFullYear(), issued.getMonth() + rm, issued.getDate()) : null;
   const l = settings.learning;
   return {
-    name: staffName || "Team member", course: done.title, pct: done.score,
+    name: staffName || tNow("p8lrn.lcTeamMember"), course: done.title, pct: done.score,
     date: fmtLong(done.date), expiry: exp ? exp.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }) : undefined,
-    provider: settings.providerName || settings.billing?.businessName || "Your organisation",
+    provider: settings.providerName || settings.billing?.businessName || tNow("p8lrn.cpYourOrganisation"),
     logo: l?.certLogo === false ? undefined : course?.logo,
     ref: makeRef(done.title + staffName + done.date),
     signImg: l?.certSignature, signName: l?.certSignatory, signRole: l?.certSignatoryRole,

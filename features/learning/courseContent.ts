@@ -3,6 +3,8 @@
 // them richly (with read-aloud voice) and the editor edits them. Content is
 // grounded in KCSIE 2025, NSPCC / county-lines and safer-recruitment guidance.
 
+import { tNow } from "@/lib/i18n/provider";
+
 export type Block =
   | { k: "text"; t: string }
   | { k: "points"; title?: string; items: string[] }
@@ -1325,6 +1327,6 @@ const _rest = GENERATED_COURSES.filter((c) => c.id !== "c11" && c.id !== "c12");
 export const SEED_LIBRARY: CourseDoc[] = [_L1, safeguarding, _L3, kcsie2026, ..._rest, ...NEW_COURSES].filter(Boolean) as CourseDoc[];
 
 export const blankCourse = (id: string): CourseDoc => ({
-  id, title: "Untitled course", cat: "Recommended", cover: "shield", blurb: "",
-  lessons: [{ id: "l1", title: "Lesson 1", mins: 3, blocks: [{ k: "text", t: "Start writing your lesson…" }] }],
+  id, title: tNow("p8lrn.nbUntitledCourse"), cat: "Recommended", cover: "shield", blurb: "",
+  lessons: [{ id: "l1", title: tNow("p8lrn.ceLessonN", { n: 1 }), mins: 3, blocks: [{ k: "text", t: tNow("p8lrn.nbStartWriting") }] }],
 });

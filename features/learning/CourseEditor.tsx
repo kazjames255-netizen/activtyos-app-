@@ -21,22 +21,22 @@ const TOPIC_CATS: [string, string][] = [["saf", "Safeguarding & child protection
 
 function newBlock(k: Block["k"]): Block {
   switch (k) {
-    case "points": return { k, title: "Key points", items: ["First point", "Second point"] };
-    case "callout": return { k, tone: "info", title: "Note", t: "Something important." };
-    case "steps": return { k, title: "Steps", items: [{ h: "Step one", t: "What to do." }] };
-    case "scenario": return { k, t: "Describe the situation…", choices: [{ label: "Option A", ok: true, fb: "Why it's right." }, { label: "Option B", ok: false, fb: "Why it's wrong." }] };
-    case "check": return { k, q: "Your question?", opts: ["Right answer", "Wrong answer"], a: 0, fb: "Explanation." };
-    case "stat": return { k, value: "100%", label: "of the time" };
-    case "quote": return { k, t: "A memorable quote.", by: "Source" };
-    case "art": return { k, art: "shield", caption: "Caption" };
-    case "table": return { k, head: ["Column A", "Column B"], rows: [["a1", "b1"], ["a2", "b2"]] };
-    case "sort": return { k, prompt: "Drag each into the right group.", buckets: ["Group A", "Group B"], items: [{ text: "Item 1", bucket: 0 }, { text: "Item 2", bucket: 1 }] };
-    case "order": return { k, prompt: "Put these in order.", items: ["First", "Second", "Third"] };
-    case "match": return { k, prompt: "Match the pairs.", pairs: [{ l: "Term", r: "Definition" }] };
-    case "reveal": return { k, prompt: "Tap to reveal.", cards: [{ front: "Front", back: "Back" }] };
+    case "points": return { k, title: tNow("p8lrn.ctKindPoints"), items: [tNow("p8lrn.nbFirstPoint"), tNow("p8lrn.nbSecondPoint")] };
+    case "callout": return { k, tone: "info", title: tNow("p8lrn.nbNote"), t: tNow("p8lrn.nbSomethingImportant") };
+    case "steps": return { k, title: tNow("p8lrn.ceSteps"), items: [{ h: tNow("p8lrn.nbStepOne"), t: tNow("p8lrn.nbWhatToDo") }] };
+    case "scenario": return { k, t: tNow("p8lrn.nbDescribeSituation"), choices: [{ label: tNow("p8lrn.cePhOptionN", { n: "A" }), ok: true, fb: tNow("p8lrn.nbWhyRight") }, { label: tNow("p8lrn.cePhOptionN", { n: "B" }), ok: false, fb: tNow("p8lrn.nbWhyWrong") }] };
+    case "check": return { k, q: tNow("p8lrn.nbYourQuestion"), opts: [tNow("p8lrn.nbRightAnswer"), tNow("p8lrn.nbWrongAnswer")], a: 0, fb: tNow("p8lrn.nbExplanation") };
+    case "stat": return { k, value: "100%", label: tNow("p8lrn.nbOfTheTime") };
+    case "quote": return { k, t: tNow("p8lrn.nbMemorableQuote"), by: tNow("p8lrn.nbSource") };
+    case "art": return { k, art: "shield", caption: tNow("p8lrn.ceCaption") };
+    case "table": return { k, head: [tNow("p8lrn.cePhColumnN", { n: "A" }), tNow("p8lrn.cePhColumnN", { n: "B" })], rows: [["a1", "b1"], ["a2", "b2"]] };
+    case "sort": return { k, prompt: tNow("p8lrn.nbDragGroup"), buckets: [tNow("p8lrn.ceGroupN", { n: "A" }), tNow("p8lrn.ceGroupN", { n: "B" })], items: [{ text: tNow("p8lrn.cePhItem") + " 1", bucket: 0 }, { text: tNow("p8lrn.cePhItem") + " 2", bucket: 1 }] };
+    case "order": return { k, prompt: tNow("p8lrn.nbPutOrder"), items: [tNow("p8lrn.nbFirst"), tNow("p8lrn.nbSecond"), tNow("p8lrn.nbThird")] };
+    case "match": return { k, prompt: tNow("p8lrn.nbMatchPairs"), pairs: [{ l: tNow("p8lrn.nbTerm"), r: tNow("p8lrn.nbDefinition") }] };
+    case "reveal": return { k, prompt: tNow("p8lrn.nbTapReveal"), cards: [{ front: tNow("p8lrn.ceFront"), back: tNow("p8lrn.ceBack") }] };
     case "image": return { k, src: "", caption: "" };
     case "video": return { k, src: "", caption: "" };
-    default: return { k: "text", t: "New paragraph." };
+    default: return { k: "text", t: tNow("p8lrn.nbNewParagraph") };
   }
 }
 
