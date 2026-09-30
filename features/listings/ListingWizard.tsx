@@ -60,6 +60,8 @@ const LAYOUTS = [
   { key: "wide", label: "Wide banner · 1920×640px" },
 ];
 const SECTION_TYPES = ["Summary", "What we'll do", "When you arrive", "Our curriculum"];
+// Display keys for the stored (English) section names above.
+const SECTION_TYPE_KEY: Record<string, string> = { "Summary": "waSec_summary", "What we'll do": "waSec_do", "When you arrive": "waSec_arrive", "Our curriculum": "waSec_curriculum" };
 const WEEKDAYS: [number, string][] = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"]];
 // Exact cancellation-policy wording from the build manual.
 const CANCELLATION_POLICIES = [
@@ -394,7 +396,11 @@ export function headingOf(d: WizardDraft, key: string, field: "eyebrow" | "title
   const def = SECTION_KEYS.find((s) => s.key === key);
   const custom = d.headings?.[`${key}.${field}`]?.trim();
   if (custom) return custom;
-  if (key === "about" && field === "title" && d.descriptionSection.trim()) return d.descriptionSection.trim();
+  if (key === "about" && field === "title" && d.descriptionSection.trim()) {
+    // The four preset names are stored in English; show them in the reader's language (an operator's own wording is shown as typed).
+    const presetKey = SECTION_TYPE_KEY[d.descriptionSection.trim()];
+    return presetKey ? tNow("p8lst." + presetKey) : d.descriptionSection.trim();
+  }
   if (!def) return "";
   const k = `p7pg.h_${key}_${field}`; const tv = tNow(k);
   return tv !== k ? tv : def[field];
@@ -1536,6 +1542,9 @@ function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
 function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
   // Categories are created right here now (no separate Categories tab): type a
   // new one, it's added to the tenant library and selected on this listing.
+  const tr = useT();
+  const w = useWord();
+  const { locale } = useI18n();
   const [newCat, setNewCat] = useState("");
   const addCat = () => {
     const name = newCat.trim();
@@ -1559,17 +1568,17 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
   const accepted = d.payMethods ?? nonCard; // undefined = accept everything (legacy)
   return (
     <div className="max-w-[1120px]">
-      <StepHead n={2} kicker="STEP 2 · DETAILS" title="Where, who & how many" lede="The venue, the ages it's for, the season, and how many can come." />
+      <StepHead n={2} kicker={tr("p8lst.waKickDetails")} title={tr("p8lst.waDetailsTitle")} lede={tr("p8lst.waDetailsLede")} />
       <div className="grid items-start gap-4 md:grid-cols-2">
-      <RichCard icon="📍" title="Where & when" subtitle="Venue, ages, season & contact">
+      <RichCard icon="📍" title={tr("p8lst.waWhereWhen")} subtitle={tr("p8lst.waWhereWhenSub")}>
       <div className="mb-3 flex gap-3">
-        <div className="w-[110px]"><FieldLabel>Age from</FieldLabel><Input type="number" min={0} value={d.ageFrom} onChange={(e) => upd({ ageFrom: e.target.value })} className="w-full" /></div>
-        <div className="w-[110px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={d.ageTo} onChange={(e) => upd({ ageTo: e.target.value })} className="w-full" /></div>
+        <div className="w-[110px]"><FieldLabel>{tr("p8lst.waAgeFrom")}</FieldLabel><Input type="number" min={0} value={d.ageFrom} onChange={(e) => upd({ ageFrom: e.target.value })} className="w-full" /></div>
+        <div className="w-[110px]"><FieldLabel>{tr("p8lst.waAgeTo")}</FieldLabel><Input type="number" min={0} value={d.ageTo} onChange={(e) => upd({ ageTo: e.target.value })} className="w-full" /></div>
       </div>
 
-      <SectionHead icon="🚗">How sessions are delivered</SectionHead>
+      <SectionHead icon="🚗">{tr("p8lst.waDeliver")}</SectionHead>
       <div className="mb-2 flex flex-wrap gap-1.5">
-        {([["venue", "At a venue"], ["home-visit", "Home visits"], ["both", "Both"]] as [NonNullable<WizardDraft["deliveryMode"]>, string][]).map(([mode, label]) => {
+        {([["venue", tr("p8lst.waDel_venue")], ["home-visit", tr("p8lst.waDel_home")], ["both", tr("p8lst.waDel_both")]] as [NonNullable<WizardDraft["deliveryMode"]>, string][]).map(([mode, label]) => {
           const on = (d.deliveryMode ?? "venue") === mode;
           return (
             <button key={mode} type="button" onClick={() => upd({ deliveryMode: mode, ...(mode === "home-visit" && !d.coverageArea ? { coverageArea: { mode: "postcodePrefixes", postcodePrefixes: [] } } : {}) })}
@@ -1580,22 +1589,22 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
           );
         })}
       </div>
-      <div className="mb-3 text-[11px] text-[var(--ink-3)]">Home visits: you travel to the family instead of (or as well as) running at a fixed venue.</div>
+      <div className="mb-3 text-[11px] text-[var(--ink-3)]">{tr("p8lst.waHomeHint")}</div>
 
       {(d.deliveryMode ?? "venue") !== "home-visit" && (<>
-        <SectionHead icon="📍">Venue</SectionHead>
+        <SectionHead icon="📍">{tr("p8lst.waVenue")}</SectionHead>
         <Select value={d.venueId ?? ""} onChange={(e) => upd({ venueId: e.target.value || null })} className="mb-1 w-full max-w-[360px]">
-          <option value="">Select a venue…</option>
+          <option value="">{tr("p8lst.waSelectVenue")}</option>
           {local.venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
         </Select>
-        <div className="mb-3 text-[11px] text-[var(--ink-3)]">Address &amp; map pin are set per venue in <b>Locations</b>.</div>
+        <div className="mb-3 text-[11px] text-[var(--ink-3)]"><Rich text={tr("p8lst.waVenueHint")} /></div>
       </>)}
 
       {(d.deliveryMode === "home-visit" || d.deliveryMode === "both") && (
         <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <div className="mb-2 text-[11.5px] font-bold">Coverage area — where you&rsquo;ll travel to</div>
+          <div className="mb-2 text-[11.5px] font-bold">{tr("p8lst.waCoverage")}</div>
           <div className="mb-2 flex gap-1.5">
-            {([["postcodePrefixes", "Postcode list"], ["radius", "Radius from base"]] as [NonNullable<WizardDraft["coverageArea"]>["mode"], string][]).map(([mode, label]) => {
+            {([["postcodePrefixes", tr("p8lst.waCov_postcodePrefixes")], ["radius", tr("p8lst.waCov_radius")]] as [NonNullable<WizardDraft["coverageArea"]>["mode"], string][]).map(([mode, label]) => {
               const on = (d.coverageArea?.mode ?? "postcodePrefixes") === mode;
               return (
                 <button key={mode} type="button" onClick={() => upd({ coverageArea: { ...d.coverageArea, mode } })} className="rounded-full border px-3 py-1 text-[11.5px] font-bold"
@@ -1610,48 +1619,48 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
               <Input
                 value={(d.coverageArea?.postcodePrefixes ?? []).join(", ")}
                 onChange={(e) => upd({ coverageArea: { ...(d.coverageArea ?? { mode: "postcodePrefixes" }), mode: "postcodePrefixes", postcodePrefixes: e.target.value.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean) } })}
-                placeholder="e.g. SW1, SW2, TW9"
+                placeholder={tr("p8lst.waPcPh")}
                 className="mb-1 w-full max-w-[360px]"
               />
-              <div className="text-[11px] text-[var(--ink-3)]">Comma-separated postcode areas/districts you&rsquo;ll visit (e.g. &ldquo;SW1, SW2, TW9 1&rdquo;). A booking&rsquo;s postcode must start with one of these.</div>
+              <div className="text-[11px] text-[var(--ink-3)]">{tr("p8lst.waPcHint")}</div>
             </>
           ) : (
             <div className="flex flex-wrap items-end gap-3">
               <div>
-                <FieldLabel>Base postcode</FieldLabel>
-                <Input value={d.coverageArea?.basePostcode ?? ""} onChange={(e) => upd({ coverageArea: { ...(d.coverageArea ?? { mode: "radius" }), mode: "radius", basePostcode: e.target.value } })} placeholder="e.g. SW1A 1AA" className="w-[160px]" />
+                <FieldLabel>{tr("p8lst.waBasePc")}</FieldLabel>
+                <Input value={d.coverageArea?.basePostcode ?? ""} onChange={(e) => upd({ coverageArea: { ...(d.coverageArea ?? { mode: "radius" }), mode: "radius", basePostcode: e.target.value } })} placeholder={tr("p8lst.waBasePcPh")} className="w-[160px]" />
               </div>
               <div>
-                <FieldLabel>Radius (miles)</FieldLabel>
+                <FieldLabel>{tr("p8lst.waRadius")}</FieldLabel>
                 <Input type="number" min={1} value={d.coverageArea?.radiusMiles ?? ""} onChange={(e) => upd({ coverageArea: { ...(d.coverageArea ?? { mode: "radius" }), mode: "radius", radiusMiles: e.target.value ? Number(e.target.value) : undefined } })} className="w-[100px]" />
               </div>
             </div>
           )}
-          <div className="mt-2 text-[11px] text-[var(--ink-3)]">Minimum gap between sessions</div>
+          <div className="mt-2 text-[11px] text-[var(--ink-3)]">{tr("p8lst.waMinGap")}</div>
           <div className="mt-1 flex items-center gap-2">
             <Input type="number" min={0} max={480} value={d.minGapMinutes ?? 30} onChange={(e) => upd({ minGapMinutes: e.target.value ? Number(e.target.value) : 0 })} className="w-[100px]" />
-            <span className="text-[11.5px] text-[var(--ink-3)]">minutes — a plain scheduling gap (not travel-time), so back-to-back home visits leave you room to get there.</span>
+            <span className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.waMinGapNote")}</span>
           </div>
         </div>
       )}
 
       {seasons.length > 0 && (<>
-        <SectionHead icon="📅">Season</SectionHead>
+        <SectionHead icon="📅">{tr("p8lst.waSeason")}</SectionHead>
         <Select value={d.seasonId ?? ""} onChange={(e) => upd({ seasonId: e.target.value || null })} className="mb-1 w-full max-w-[360px]">
-          <option value="">No season</option>
+          <option value="">{tr("p8lst.waNoSeason")}</option>
           {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </Select>
-        <div className="mb-3 text-[11px] text-[var(--ink-3)]">Groups this in Bookings, Audiences &amp; money. Rename in <b>Setup → Seasons</b>.</div>
+        <div className="mb-3 text-[11px] text-[var(--ink-3)]"><Rich text={tr("p8lst.waSeasonHint")} /></div>
       </>)}
 
-      <FieldLabel>On-the-day contact number <span className="font-normal text-[var(--ink-3)]">— optional</span></FieldLabel>
-      <Input value={d.sitePhone ?? ""} onChange={(e) => upd({ sitePhone: e.target.value })} placeholder="e.g. 07700 900123" className="mb-1 w-full max-w-[280px]" inputMode="tel" />
-      <div className="text-[11px] leading-[1.4] text-[var(--ink-3)]">Shown to parents <b>only while the camp is running</b> — hidden before and after.</div>
+      <FieldLabel>{tr("p8lst.waSitePhone")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.waOptional")}</span></FieldLabel>
+      <Input value={d.sitePhone ?? ""} onChange={(e) => upd({ sitePhone: e.target.value })} placeholder={tr("p8lst.waSitePh")} className="mb-1 w-full max-w-[280px]" inputMode="tel" />
+      <div className="text-[11px] leading-[1.4] text-[var(--ink-3)]"><Rich text={tr("p8lst.waSiteHint")} /></div>
 
       </RichCard>
-      <RichCard icon="🏷️" title="Categories" subtitle="What describes this listing" tint="teal">
+      <RichCard icon="🏷️" title={tr("p8lst.waCategories")} subtitle={tr("p8lst.waCategoriesSub")} tint="teal">
       <div>
-      <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">Tap the ones that fit — or type a new category to add it. Parents use these to filter your storefront; your list grows as you go.</div>
+      <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.waCatHint")}</div>
       <div className="mb-2 flex flex-wrap gap-1.5">
         {local.categories.map((c) => (
           <button key={c.id} type="button" onClick={() => upd({ categoryIds: toggle(d.categoryIds, c.id) })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold"
@@ -1660,7 +1669,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
           </button>
         ))}
         {local.categories.length === 0 && (
-          <span className="py-1.5 text-[12px] text-[var(--ink-3)]">No categories yet — add your first below.</span>
+          <span className="py-1.5 text-[12px] text-[var(--ink-3)]">{tr("p8lst.waNoCats")}</span>
         )}
       </div>
       {/* Add a new category inline — no separate Categories tab. */}
@@ -1669,13 +1678,13 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
           value={newCat}
           onChange={(e) => setNewCat(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCat(); } }}
-          placeholder="Add a category (e.g. Football)"
+          placeholder={tr("p8lst.waCatAddPh")}
           className="h-9 w-[220px] max-w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-[12.5px] text-[var(--ink)] outline-none focus:border-[var(--brand-2)]"
         />
         <button type="button" onClick={addCat} disabled={newCat.trim().length < 2}
           className="h-9 rounded-lg px-3.5 text-[12.5px] font-bold text-white transition-opacity disabled:opacity-40"
           style={{ background: "var(--brand-2)" }}>
-          ＋ Add
+          {tr("p8lst.waCatAddBtn")}
         </button>
       </div>
       {/* Orphaned tags: category ids saved earlier that no longer exist in the
@@ -1683,17 +1692,15 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
           fix is re-picking — say so plainly rather than dropping them silently. */}
       {d.categoryIds.some((id) => !local.categories.some((c) => c.id === id)) && (
         <div className="mb-3 rounded-xl border border-[#f0d9a8] bg-[#fdf6e6] p-3 text-[11.5px] leading-[1.5] text-[#7a5b06]">
-          <b>{d.categoryIds.filter((id) => !local.categories.some((c) => c.id === id)).length} earlier{" "}
-          {d.categoryIds.filter((id) => !local.categories.some((c) => c.id === id)).length === 1 ? "category is" : "categories are"} no longer in your library</b>{" "}
-          and won&rsquo;t show to parents — pick the ones you want above to fix it, then save.
+          <Rich text={pickPlural(tr, locale, "p8lst.waOrphan", d.categoryIds.filter((id) => !local.categories.some((c) => c.id === id)).length)} />
         </div>
       )}
       {/* Every chosen type is listed on the page, but only one fits the hero
           image badge — let the operator say which. */}
       {d.categoryIds.length > 1 && (
         <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <div className="text-[11.5px] font-bold">Which type shows on the main image?</div>
-          <div className="mb-2 text-[11px] text-[var(--ink-3)]">All {d.categoryIds.length} appear above the title — this one gets the badge on the photo.</div>
+          <div className="text-[11.5px] font-bold">{tr("p8lst.waHeroCat")}</div>
+          <div className="mb-2 text-[11px] text-[var(--ink-3)]">{tr("p8lst.waHeroCatSub", { n: d.categoryIds.length })}</div>
           <div className="flex flex-wrap gap-1.5">
             {local.categories.filter((c) => d.categoryIds.includes(c.id)).map((c) => {
               const on = (d.heroCategoryId ?? d.categoryIds[0]) === c.id;
@@ -1713,20 +1720,20 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
       </div>
 
       <div className="mt-4">
-        <RichCard icon="💳" title="How can parents pay?" subtitle="Card is always accepted — turn other methods on or off" tint="teal">
-          <div className="mb-2.5 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">Set each scheme&rsquo;s details once in <b>Setup → Payment methods</b>; here you just pick which apply to <b>this</b> listing. Parents always see <b>card</b>; whatever you switch on also shows in their checkout and at the top of the booking page.</div>
+        <RichCard icon="💳" title={tr("p8lst.waPayTitle")} subtitle={tr("p8lst.waPaySub")} tint="teal">
+          <div className="mb-2.5 text-[11.5px] leading-[1.5] text-[var(--ink-3)]"><Rich text={tr("p8lst.waPayHint")} /></div>
           <div className="flex flex-wrap gap-1.5">
-            <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[12px] font-bold" style={{ borderColor: "var(--line)", background: "var(--panel)", color: "var(--ink-2)" }}>Card <span className="font-normal text-[var(--ink-3)]">· always on</span></span>
+            <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[12px] font-bold" style={{ borderColor: "var(--line)", background: "var(--panel)", color: "var(--ink-2)" }}>{tr("p8lst.waCard")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.waAlwaysOn")}</span></span>
             {nonCard.map((m) => {
               const on = accepted.includes(m);
               return (
                 <button key={m} type="button" onClick={() => upd({ payMethods: toggle(accepted, m) })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors"
                   style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
-                  {on ? "✓ " : ""}{m}
+                  {on ? "✓ " : ""}{w(m)}
                 </button>
               );
             })}
-            {nonCard.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No other methods set up yet — add vouchers, Tax-Free Childcare, cash etc. in Setup → Payment methods.</span>}
+            {nonCard.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">{tr("p8lst.waNoOtherMethods")}</span>}
           </div>
         </RichCard>
       </div>
@@ -1736,31 +1743,32 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
 
 // ── Step: Capacity (its own page — the age-caps make it tall) ─────────────────
 function CapacityStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
+  const tr = useT();
   return (
     <div className="mx-auto max-w-[1120px]">
-      <StepHead n={3} kicker="STEP · CAPACITY" title="How many can come" lede="The size, whether out-of-range children can request a place, and any per-age caps." />
+      <StepHead n={3} kicker={tr("p8lst.waKickCapacity")} title={tr("p8lst.waCapacityTitle")} lede={tr("p8lst.waCapacityLede")} />
       <div className="grid items-start gap-4 md:grid-cols-2">
-        <RichCard icon="👧👦" title="Places & spaces">
-          <YesNo label="Allow children outside this age range to attend?" value={d.allowOutOfRange} onChange={(v) => upd({ allowOutOfRange: v })} help="If No, out-of-range parents can't book at all. If Yes, they can book — but it always comes to you as a request to approve or decline, even on an auto-confirm listing." />
+        <RichCard icon="👧👦" title={tr("p8lst.waPlacesSpaces")}>
+          <YesNo label={tr("p8lst.waAllowOOR")} value={d.allowOutOfRange} onChange={(v) => upd({ allowOutOfRange: v })} help={tr("p8lst.waAllowOORHelp")} />
           {d.allowOutOfRange && (
             <div className="mb-2 flex items-start gap-2 rounded-lg border border-[#f0d9b5] bg-[#fdf6ea] px-3 py-2 text-[11.5px] leading-[1.5] text-[#8a5a09]">
               <span>ℹ️</span>
-              <span>Out-of-range bookings won&rsquo;t auto-confirm — each one lands in <b>Bookings → needs approval</b> for you to approve or decline. In-range children book as normal.</span>
+              <span><Rich text={tr("p8lst.waOORNote")} /></span>
             </div>
           )}
           <div className="my-2 flex flex-wrap items-end gap-2">
-            <div className="w-[160px]"><FieldLabel>Maximum attendees</FieldLabel><Input type="number" min={1} value={d.maxAttendees} onChange={(e) => upd({ maxAttendees: e.target.value })} className="w-full" /></div>
+            <div className="w-[160px]"><FieldLabel>{tr("p8lst.waMaxAtt")}</FieldLabel><Input type="number" min={1} value={d.maxAttendees} onChange={(e) => upd({ maxAttendees: e.target.value })} className="w-full" /></div>
             <div className="flex gap-1 pb-[3px]">
-              {[["day", "Per day"], ["listing", "Whole listing"]].map(([k, l]) => (
+              {[["day", tr("p8lst.waPerDay")], ["listing", tr("p8lst.waWholeListing")]].map(([k, l]) => (
                 <button key={k} type="button" onClick={() => upd({ capacityScope: k as "day" | "listing" })} className="rounded-full border px-2.5 py-1 text-[11px] font-bold"
                   style={d.capacityScope === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)" }}>{l}</button>
               ))}
             </div>
           </div>
-          <YesNo label="Show remaining spaces to parents?" value={d.showSpaces} onChange={(v) => upd({ showSpaces: v })} help="Displays “X spaces left” on the listing." />
-          <div className="mt-2 text-[11px] text-[var(--ink-3)]">ⓘ These are defaults — each ticket can amend its own age &amp; capacity in <b>Tickets &amp; pricing</b>.</div>
+          <YesNo label={tr("p8lst.waShowSpaces")} value={d.showSpaces} onChange={(v) => upd({ showSpaces: v })} help={tr("p8lst.waShowSpacesHelp")} />
+          <div className="mt-2 text-[11px] text-[var(--ink-3)]"><Rich text={tr("p8lst.waCapDefaults")} /></div>
         </RichCard>
-        <RichCard icon="🎚️" title="Per-age caps" subtitle="Optional — limit places by age group" tint="violet">
+        <RichCard icon="🎚️" title={tr("p8lst.waPerAgeCaps")} subtitle={tr("p8lst.waPerAgeCapsSub")} tint="violet">
           <AgeCaps d={d} upd={upd} />
         </RichCard>
       </div>
@@ -1778,6 +1786,7 @@ function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
   // policy, defined once in Setup → Age groups & rooms. Here you only set this
   // listing's per-day cap for each group. That keeps a listing from ever
   // contradicting the group config — you can go below the room size, never above.
+  const tr = useT();
   const { settings } = useSettings();
   const from = parseInt(d.ageFrom, 10);
   const to = parseInt(d.ageTo, 10);
@@ -1823,15 +1832,15 @@ function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
     <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel,#fbf8fc)] p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-[12.5px] font-bold">Limit places by age group <span className="font-normal text-[var(--ink-3)]">— optional, most listings skip this</span></div>
+          <div className="text-[12.5px] font-bold">{tr("p8lst.waLimitByAge")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.waOptionalSkip")}</span></div>
           <div className="text-[11px] leading-[1.5] text-[var(--ink-3)]">
-            Set a daily cap for any age group — <b>blank = no limit, 0 = closed</b>. {Number.isFinite(ceiling) ? `The day’s ${ceiling} places still apply.` : "Your daily total still applies."} Groups &amp; room sizes come from <b>Setup → Age groups &amp; rooms</b>.
+            <Rich text={Number.isFinite(ceiling) ? tr("p8lst.waCapsHintTotal", { n: ceiling }) : tr("p8lst.waCapsHintNoTotal")} />
           </div>
         </div>
         {!on && (
           <button type="button" onClick={() => upd({ ageCapsOn: true })}
             className="rounded-full border border-[var(--line)] px-3 py-1 text-[11.5px] font-bold text-[var(--brand-ink,#1d3a8f)]">
-            Set age caps
+            {tr("p8lst.waSetAgeCaps")}
           </button>
         )}
       </div>
@@ -1847,15 +1856,15 @@ function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
               {/* Name + age + room size are the shared group — read-only here,
                   defined in Setup → Age groups & rooms. */}
               <span className="w-[120px] text-[12px] font-semibold">{g.name}</span>
-              <span className="text-[11px] text-[var(--ink-3)]">{g.ageFrom}–{g.ageTo} yrs</span>
-              {g.maxSize > 0 && <span className="text-[10.5px] text-[var(--ink-3)]" title="Room capacity, set in Setup → Age groups & rooms">room holds {g.maxSize}</span>}
+              <span className="text-[11px] text-[var(--ink-3)]">{tr("p8lst.waYrs", { from: g.ageFrom, to: g.ageTo })}</span>
+              {g.maxSize > 0 && <span className="text-[10.5px] text-[var(--ink-3)]" title={tr("p8lst.waRoomTitle")}>{tr("p8lst.waRoomHolds", { n: g.maxSize })}</span>}
               <span className="ms-auto inline-flex items-center gap-1.5">
-                <input type="number" min={0} max={Number.isFinite(inputMax) ? inputMax : undefined} value={caps[g.id] ?? ""} placeholder="no limit"
+                <input type="number" min={0} max={Number.isFinite(inputMax) ? inputMax : undefined} value={caps[g.id] ?? ""} placeholder={tr("p8lst.waNoLimit")}
                   onChange={(e) => setCap(g.id, e.target.value)}
                   className="w-[86px] rounded-lg border bg-[var(--surface)] px-2 py-1 text-[12.5px]"
                   style={{ borderColor: caps[g.id] === 0 ? "#f0b8b8" : "var(--line)" }} />
                 <span className="text-[11px] font-bold" style={{ color: caps[g.id] === 0 ? "#c0392b" : "var(--ink-3)" }}>
-                  {caps[g.id] === 0 ? "closed" : "a day"}
+                  {caps[g.id] === 0 ? tr("p8lst.waClosed") : tr("p8lst.waADay")}
                 </span>
               </span>
             </div>
@@ -1870,9 +1879,9 @@ function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
             const diff = ceiling - capSum;
             let tone: [string, string] = ["var(--surface)", "var(--ink-2)"];
             let msg: React.ReactNode;
-            if (diff === 0) { tone = ["#eaf0fc", "#1d3a8f"]; msg = <>✓ All <b>{ceiling}</b> places allocated by age.</>; }
-            else if (allCapped) { tone = ["#fff8ec", "#8a5300"]; msg = <><b>{capSum}</b> of <b>{ceiling}</b> allocated — and every age is capped, so the last {diff} can never fill. Raise a limit or leave an age uncapped for the rest.</>; }
-            else { msg = <><b>{capSum}</b> of <b>{ceiling}</b> allocated — the other {diff} stay open to the uncapped ages.</>; }
+            if (diff === 0) { tone = ["#eaf0fc", "#1d3a8f"]; msg = <Rich text={tr("p8lst.waAllocAll", { n: ceiling })} />; }
+            else if (allCapped) { tone = ["#fff8ec", "#8a5300"]; msg = <Rich text={tr("p8lst.waAllocAllCapped", { sum: capSum, n: ceiling, diff })} />; }
+            else { msg = <Rich text={tr("p8lst.waAllocPartial", { sum: capSum, n: ceiling, diff })} />; }
             return <div className="rounded-lg px-2.5 py-1.5 text-[11px] font-semibold leading-[1.5]" style={{ background: tone[0], color: tone[1] }}>{msg}</div>;
           })()}
           <div className="mt-2 flex flex-wrap items-center gap-2.5 border-t border-[var(--line)] pt-2.5">
@@ -1881,14 +1890,13 @@ function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
               onClick={() => upd({ ageCapsOn: false, ageCaps: {} })}
               className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]"
             >
-              ✕ Turn off age caps
+              {tr("p8lst.waTurnOffCaps")}
             </button>
-            <span className="text-[11px] text-[var(--ink-3)]">Saves with the listing — use <b>Save draft</b> or <b>Publish</b> below.</span>
-            <span className="rounded-full bg-[#fff3e0] px-2 py-[2px] text-[10.5px] font-extrabold text-[#8a5300]">Enforced once the backend is built (§S)</span>
+            <span className="text-[11px] text-[var(--ink-3)]"><Rich text={tr("p8lst.waSavesWith")} /></span>
+            <span className="rounded-full bg-[#fff3e0] px-2 py-[2px] text-[10.5px] font-extrabold text-[#8a5300]">{tr("p8lst.waEnforced")}</span>
           </div>
           <div className="mt-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-            👪 When an age is full, parents of that age will see &ldquo;<b>full for this age</b>&rdquo; on the listing before they start —
-            so nobody adds their child at checkout only to be turned away.
+            <Rich text={tr("p8lst.waFullForAge")} />
           </div>
         </div>
       )}
@@ -1898,6 +1906,7 @@ function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
 
 // ── Step: Content ──────────────────────────────────────────────────────────
 function ContentStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
+  const tr = useT();
   const [aiN, setAiN] = useState(0);
   function writeAI() {
     const cats = local.categories.filter((c) => d.categoryIds.includes(c.id)).map((c) => c.name);
@@ -1907,42 +1916,42 @@ function ContentStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
   }
   return (
     <div className="max-w-[1120px]">
-      <StepHead n={2} kicker="STEP 2 · CONTENT" title="Describe your activity" lede="A clear description helps parents choose. Add sections and learning outcomes." />
+      <StepHead n={2} kicker={tr("p8lst.waKickContent")} title={tr("p8lst.waContentTitle")} lede={tr("p8lst.waContentLede")} />
       <div className="grid items-start gap-4 md:grid-cols-2">
-        <RichCard icon="📝" title="Main description" subtitle="The intro parents read first">
+        <RichCard icon="📝" title={tr("p8lst.waMainDesc")} subtitle={tr("p8lst.waMainDescSub")}>
           <div className="mb-1.5 flex flex-wrap items-end gap-2">
-            <div className="flex-1"><FieldLabel>Section title — editable</FieldLabel>
-              <Input value={d.descriptionSection} onChange={(e) => upd({ descriptionSection: e.target.value })} placeholder="e.g. Summary" className="w-full" />
+            <div className="flex-1"><FieldLabel>{tr("p8lst.waSectionTitleEd")}</FieldLabel>
+              <Input value={d.descriptionSection} onChange={(e) => upd({ descriptionSection: e.target.value })} placeholder={tr("p8lst.waSectionPh")} className="w-full" />
             </div>
-            <Button sm variant="primary" onClick={writeAI} className="mb-[1px]">✨ Write with AI</Button>
+            <Button sm variant="primary" onClick={writeAI} className="mb-[1px]">{tr("p8lst.waWriteAI")}</Button>
           </div>
           <div className="mb-1.5 flex flex-wrap gap-1">
-            {SECTION_TYPES.map((t) => <button key={t} type="button" onClick={() => upd({ descriptionSection: t })} className="rounded-full border border-[var(--line)] bg-white px-2 py-[2px] text-[10.5px] font-bold text-[var(--ink-3)] hover:border-[var(--brand)]">{t}</button>)}
+            {SECTION_TYPES.map((t) => <button key={t} type="button" onClick={() => upd({ descriptionSection: t })} className="rounded-full border border-[var(--line)] bg-white px-2 py-[2px] text-[10.5px] font-bold text-[var(--ink-3)] hover:border-[var(--brand)]">{tr("p8lst." + SECTION_TYPE_KEY[t])}</button>)}
           </div>
           <textarea value={d.description} maxLength={300} onChange={(e) => upd({ description: e.target.value })}
-            placeholder="Type a few words (e.g. dodgeball, arts, new friends) then ✨ Write with AI…"
+            placeholder={tr("p8lst.waDescPh")}
             className="h-[120px] w-full rounded-lg border border-[var(--line)] bg-white p-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
-          <div className="mt-1 text-[11px] text-[var(--ink-3)]">{d.description.length}/300 · “Write with AI” turns your words into a paragraph for the <b>{d.descriptionSection || "section"}</b> — press again for a fresh version.</div>
+          <div className="mt-1 text-[11px] text-[var(--ink-3)]"><Rich text={tr("p8lst.waDescHint", { n: d.description.length, section: d.descriptionSection || tr("p8lst.waSectionWord") })} /></div>
         </RichCard>
         <div className="flex flex-col gap-4">
-          <RichCard icon="➕" title="Additional sections" subtitle="Optional extra blurbs" tint="violet">
+          <RichCard icon="➕" title={tr("p8lst.waAddSections")} subtitle={tr("p8lst.waAddSectionsSub")} tint="violet">
             <div className="mb-2 flex flex-col gap-1.5">
               {d.sections.map((s) => (
                 <div key={s.id} className="rounded-lg border border-[var(--line)] bg-white p-2.5">
                   <div className="mb-1 flex items-center gap-2">
-                    <Input value={s.type} onChange={(e) => upd({ sections: d.sections.map((x) => x.id === s.id ? { ...x, type: e.target.value } : x) })} placeholder="Section title (e.g. When you arrive)" className="flex-1 font-bold" />
+                    <Input value={s.type} onChange={(e) => upd({ sections: d.sections.map((x) => x.id === s.id ? { ...x, type: e.target.value } : x) })} placeholder={tr("p8lst.waSecTitlePh")} className="flex-1 font-bold" />
                     <button type="button" onClick={() => upd({ sections: d.sections.filter((x) => x.id !== s.id) })} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
                   </div>
-                  <Input value={s.text} onChange={(e) => upd({ sections: d.sections.map((x) => x.id === s.id ? { ...x, text: e.target.value } : x) })} placeholder="Section text…" className="w-full" />
+                  <Input value={s.text} onChange={(e) => upd({ sections: d.sections.map((x) => x.id === s.id ? { ...x, text: e.target.value } : x) })} placeholder={tr("p8lst.waSecTextPh")} className="w-full" />
                 </div>
               ))}
             </div>
             <Select value="" onChange={(e) => e.target.value && upd({ sections: [...d.sections, { id: uid(), type: e.target.value, text: "" }] })} className="w-full">
-              <option value="">＋ Add a section…</option>
-              {SECTION_TYPES.map((s) => <option key={s}>{s}</option>)}
+              <option value="">{tr("p8lst.waAddASection")}</option>
+              {SECTION_TYPES.map((s) => <option key={s} value={s}>{tr("p8lst." + SECTION_TYPE_KEY[s])}</option>)}
             </Select>
           </RichCard>
-          <RichCard icon="🌟" title="Learning outcomes" subtitle="What children gain" tint="teal">
+          <RichCard icon="🌟" title={tr("p8lst.waOutcomes")} subtitle={tr("p8lst.waOutcomesSub")} tint="teal">
             <EditableChips options={local.outcomes} sel={d.outcomes} emojis={local.emojis} showEmoji onToggle={(v) => upd({ outcomes: toggle(d.outcomes, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, outcomes: [...s.outcomes, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ outcomes: [...d.outcomes, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, outcomes: s.outcomes.filter((x) => x !== v) })); upd({ outcomes: d.outcomes.filter((x) => x !== v) }); }} check />
           </RichCard>
         </div>
@@ -1973,18 +1982,19 @@ function RichCard({ icon, title, subtitle, tint = "blue", children, className = 
 }
 
 function SafetyStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
+  const tr = useT();
   return (
     <div className="max-w-[1120px]">
-      <StepHead n={4} kicker="STEP 4 · SAFETY & SEND" title="Safety & inclusion" lede="Show your safety features and the SEND support you offer." />
+      <StepHead n={4} kicker={tr("p8lst.waKickSafety")} title={tr("p8lst.waSafetyTitle")} lede={tr("p8lst.waSafetyLede")} />
       <div className="grid gap-4 md:grid-cols-2">
-        <RichCard icon="🛡️" title="Safety features">
+        <RichCard icon="🛡️" title={tr("p8lst.waSafetyFeatures")}>
           <EditableChips options={local.safety} sel={d.safety} emojis={local.emojis} showEmoji onToggle={(v) => upd({ safety: toggle(d.safety, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, safety: [...s.safety, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ safety: [...d.safety, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, safety: s.safety.filter((x) => x !== v) })); upd({ safety: d.safety.filter((x) => x !== v) }); }} check />
         </RichCard>
-        <RichCard icon="🤝" title="SEND & accessibility" tint="teal">
+        <RichCard icon="🤝" title={tr("p8lst.waSendAccess")} tint="teal">
           <EditableChips options={local.send} sel={d.send} emojis={local.emojis} showEmoji onToggle={(v) => upd({ send: toggle(d.send, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, send: [...s.send, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ send: [...d.send, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, send: s.send.filter((x) => x !== v) })); upd({ send: d.send.filter((x) => x !== v) }); }} check />
         </RichCard>
       </div>
-      <div className="mt-2 text-[11px] text-[var(--ink-3)]">New options you add here are saved and offered on every listing.</div>
+      <div className="mt-2 text-[11px] text-[var(--ink-3)]">{tr("p8lst.waNewOptionsNote")}</div>
     </div>
   );
 }
@@ -2758,12 +2768,13 @@ function cutoffNote(d: WizardDraft, color: string, tr: (k: string, v?: Record<st
 }
 
 function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
+  const tr = useT();
   const { settings: wizSettings } = useTenantSettings();
   const vis: [WizardDraft["visibility"], string, string][] = [
-    ["public", "Public", "Visible in search & browse"],
-    ["hidden", "Hidden link", "Not searchable — anyone with the link can book · schools, HAF, private groups"],
+    ["public", tr("p8lst.wbVisPublic"), tr("p8lst.wbVisPublicDesc")],
+    ["hidden", tr("p8lst.wbVisHidden"), tr("p8lst.wbVisHiddenDesc")],
   ];
-  const book: [WizardDraft["bookingType"], string][] = [["auto", "Automatic approval"], ["manual", "Manual approval"]];
+  const book: [WizardDraft["bookingType"], string][] = [["auto", tr("p8lst.wbBookAuto")], ["manual", tr("p8lst.wbBookManual")]];
   // The provider's own policies, written in Setup & features. Picking one here
   // sets both the id (what the refund is worked out from) and the wording
   // (what a parent reads) — they can't be chosen separately any more, because
@@ -2771,10 +2782,10 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
   const ownPolicies = wizSettings.cancellationPolicies;
   return (
     <div className="mx-auto max-w-[1120px]">
-      <StepHead n={11} kicker="STEP 11 · POLICY & PUBLISH" title="Set clear expectations & publish" lede="Booking style, who can see it, cancellation policy — then publish." />
-      <RichCard icon="📋" title="Policy & publish" subtitle="Booking style, visibility & cancellation — then hit Publish">
+      <StepHead n={11} kicker={tr("p8lst.wbKickPolicy")} title={tr("p8lst.wbPolicyTitle")} lede={tr("p8lst.wbPolicyLede")} />
+      <RichCard icon="📋" title={tr("p8lst.wbPolicyCard")} subtitle={tr("p8lst.wbPolicyCardSub")}>
         <div>
-      <SectionHead icon="👁️">Who can see it</SectionHead>
+      <SectionHead icon="👁️">{tr("p8lst.wbWhoSees")}</SectionHead>
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {vis.map(([k, label, desc]) => (
           <button key={k} type="button" onClick={() => upd({ visibility: k })} className="rounded-xl border p-2.5 text-start" style={d.visibility === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)" }}>
@@ -2785,20 +2796,20 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
       </div>
       <BookingOpens value={d.opensAt ?? ""} onChange={(v) => upd({ opensAt: v })} />
       <BookingCutoff value={d.bookingCutoffHours ?? ""} onChange={(v) => upd({ bookingCutoffHours: v })} />
-      <SectionHead icon="📋">Booking &amp; waiting list</SectionHead>
+      <SectionHead icon="📋">{tr("p8lst.wbBookWaitHead")}</SectionHead>
       <div className="mb-2 flex flex-wrap gap-1.5">
         {book.map(([k, label]) => (
           <button key={k} type="button" onClick={() => upd({ bookingType: k })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold" style={d.bookingType === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{d.bookingType === k ? "✓ " : ""}{label}</button>
         ))}
       </div>
-      <YesNo label="Waiting list" value={d.waitlist} onChange={(v) => upd({ waitlist: v })} help="Let parents queue for dates that are already full." />
+      <YesNo label={tr("p8lst.wbWaitlistLabel")} value={d.waitlist} onChange={(v) => upd({ waitlist: v })} help={tr("p8lst.wbWaitlistHelp")} />
       {d.waitlist && (
         <div className="mt-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-          <div className="mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">When a place frees up</div>
+          <div className="mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{tr("p8lst.wbWhenFrees")}</div>
           <div className="grid gap-2 sm:grid-cols-2">
             {([
-              ["manual", "You choose", "Nothing happens automatically. You see who's waiting for each date and offer the place to whoever you pick. Best when you know your families, or want to keep siblings together."],
-              ["auto", "First in the queue", "The place is offered to whoever joined first, by email, and held for them for 2 hours. If they don't take it, it passes to the next person. Fairest, and you don't have to do anything."],
+              ["manual", tr("p8lst.wbWaitManualTitle"), tr("p8lst.wbWaitManualDesc")],
+              ["auto", tr("p8lst.wbWaitAutoTitle"), tr("p8lst.wbWaitAutoDesc")],
             ] as const).map(([k, label, desc]) => {
               const on = (d.waitlistMode ?? "manual") === k;
               return (
@@ -2811,12 +2822,12 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
             })}
           </div>
           <div className="mt-2.5 w-[150px]">
-            <FieldLabel>Max people waiting</FieldLabel>
-            <Input type="number" min={0} value={d.waitlistSize} onChange={(e) => upd({ waitlistSize: e.target.value })} placeholder="No limit" className="w-full" />
+            <FieldLabel>{tr("p8lst.wbMaxWaiting")}</FieldLabel>
+            <Input type="number" min={0} value={d.waitlistSize} onChange={(e) => upd({ waitlistSize: e.target.value })} placeholder={tr("p8lst.wbNoLimit")} className="w-full" />
           </div>
         </div>
       )}
-      <SectionHead icon="📄">Cancellation policy</SectionHead>
+      <SectionHead icon="📄">{tr("p8lst.wbCancelPolicy")}</SectionHead>
       <Select
         value={d.cancellationPolicyId ?? ownPolicies[0]?.id ?? ""}
         onChange={(e) => {
@@ -2829,15 +2840,14 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
         className="w-full text-[12px]"
       >
         {ownPolicies.map((p) => (
-          <option key={p.id} value={p.id}>{p.name || "Untitled policy"}</option>
+          <option key={p.id} value={p.id}>{p.name || tr("p8lst.wbUntitledPolicy")}</option>
         ))}
       </Select>
       <div className="mt-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
-        {d.cancellation || "Pick a policy above."}
+        {d.cancellation || tr("p8lst.wbPickPolicy")}
       </div>
       <div className="mt-1 text-[11px] text-[var(--ink-3)]">
-        Written from the rules in <b>Setup &amp; features → Bookings &amp; payments</b>. Change it
-        there and every listing using this policy follows.
+        <Rich text={tr("p8lst.wbPolicyFrom")} />
       </div>
       <div className="mt-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]">{d.cancellation}</div>
         </div>
@@ -4225,11 +4235,12 @@ function SectionHead({ children, icon }: { children: React.ReactNode; icon?: str
   );
 }
 function YesNo({ label, value, onChange, help }: { label: string; value: boolean; onChange: (v: boolean) => void; help?: string }) {
+  const tr = useT();
   return (
     <div>
       <div className="text-[12.5px] font-semibold">{label}</div>
       <div className="mt-1 flex gap-1.5">
-        {[["Yes", true], ["No", false]].map(([l, v]) => (
+        {[[tr("p8lst.wbYes"), true], [tr("p8lst.wbNo"), false]].map(([l, v]) => (
           <button key={l as string} type="button" onClick={() => onChange(v as boolean)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={value === v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{l as string}</button>
         ))}
       </div>
