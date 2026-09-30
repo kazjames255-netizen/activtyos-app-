@@ -17,7 +17,32 @@ export const stripe: Stripe | null = key ? new Stripe(key) : null;
 // payment testing. With the flag, such payments are created on the
 // PLATFORM account instead (flagged on the payment record). Remove the
 // flag in production: unfinished providers must not take money.
-export const platformFallback = process.env.STRIPE_PLATFORM_FALLBACK === "1";
+//
+// PRODUCTION GUARD: in production this is FORCED OFF whatever the env says —
+// a live parent's card must never be charged on the ActivityOS platform
+// account. The flag is truthy if it is "1" / "true" / "yes" / "on".
+type Env = Record<string, string | undefined>;
+const truthy = (v: string | undefined) => /^(1|true|yes|on)$/i.test((v ?? "").trim());
+
+export function resolvePlatformFallback(env: Env, logError: (m: string) => void = console.error): boolean {
+  const wanted = truthy(env.STRIPE_PLATFORM_FALLBACK);
+  if (wanted && env.NODE_ENV === "production") {
+    logError("[stripe] FATAL CONFIG: STRIPE_PLATFORM_FALLBACK is set in production. It is IGNORED (forced off): live payments must never be charged to the platform account. Unset it on Railway.");
+    return false;
+  }
+  return env.STRIPE_PLATFORM_FALLBACK === "1";
+}
+
+/** Boot-time warning (never a crash) when production lacks the URLs used in emailed links and OAuth callbacks. */
+export function checkProductionUrls(env: Env, logError: (m: string) => void = console.error): string[] {
+  if (env.NODE_ENV !== "production") return [];
+  const missing = ["WEB_URL", "API_URL"].filter((k) => !env[k]?.trim());
+  for (const k of missing) logError(`[config] ${k} is not set in production: emailed links, Stripe return URLs and accounting/TFC OAuth callbacks will point at localhost. Set it on Railway.`);
+  return missing;
+}
+
+export const platformFallback = resolvePlatformFallback(process.env);
+checkProductionUrls(process.env);
 
 /** The web app origin for Stripe redirect URLs (onboarding return). */
 export const webUrl = process.env.WEB_URL || "http://localhost:3000";
