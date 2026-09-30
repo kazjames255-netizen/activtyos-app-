@@ -253,6 +253,10 @@ accounting.post("/post/:runId", async (req, res) => {
   // would defeat that entirely — found in review while integrating this
   // route with the approval work landing the same night.
   if (run.status !== "approved") { res.status(409).json({ error: "This pay run hasn't been approved yet — approve it before posting to accounting" }); return; }
+  // Idempotent re-post: a run already posted to THIS provider returns its stored result rather than creating a second journal
+  // (Xero's Idempotency-Key only replays for a limited window, and QBO/Sage differ — the run doc is the durable record).
+  const prior = run.accounting as { provider?: string; status?: string; journalId?: string } | undefined;
+  if (prior?.status === "posted" && prior.provider === provider && prior.journalId) { res.json({ ok: true, ...prior, alreadyPosted: true }); return; }
   const lines = (run.lines ?? []) as PayLine[];
   if (!lines.length) { res.status(400).json({ error: "This pay run has no lines to post" }); return; }
   const totals = computeTotals(lines);
