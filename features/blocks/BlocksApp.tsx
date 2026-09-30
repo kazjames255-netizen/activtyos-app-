@@ -6,6 +6,10 @@ import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { TourLauncher } from "@/features/common/TourLauncher";
 import { PageHero } from "@/components/OperatorPage";
+import { useT, useI18n, tNow } from "@/lib/i18n/provider";
+import { Rich } from "@/components/i18n/Rich";
+import { isRTL } from "@/lib/i18n/config";
+import { pickPlural } from "@/lib/i18n/plural";
 import * as blocksApi from "./blocksApi";
 import type { ApiBundle, BundleInput } from "./blocksApi";
 
@@ -136,6 +140,7 @@ function PaletteCard({
   added?: boolean;
   onUndo?: () => void;
 }) {
+  const t = useT();
   return (
     <div
       draggable
@@ -149,13 +154,13 @@ function PaletteCard({
       <div className="flex flex-none items-center gap-1">
         {added ? (
           <>
-            <span className="rounded-full bg-[#d8f3e1] px-2 py-[2px] text-[10.5px] font-extrabold text-[#127a3e]">✓ In block</span>
+            <span className="rounded-full bg-[#d8f3e1] px-2 py-[2px] text-[10.5px] font-extrabold text-[#127a3e]">{t("p8lst.blkInBlock")}</span>
             <button
               type="button"
               onClick={onUndo}
               className="px-1 text-[10.5px] font-bold text-[var(--ink-3)] underline hover:text-[var(--red)]"
             >
-              Undo
+              {t("p8lst.blkUndo")}
             </button>
           </>
         ) : (
@@ -164,13 +169,13 @@ function PaletteCard({
             onClick={onAdd}
             className="rounded-full border border-[var(--line)] px-2 py-[2px] text-[10.5px] font-bold text-[var(--brand-ink,#1d3a8f)] hover:border-[var(--brand)]"
           >
-            + Add to block
+            {t("p8lst.blkAddToBlock")}
           </button>
         )}
         <button
           type="button"
           onClick={onEdit}
-          aria-label="Edit"
+          aria-label={t("p8lst.blkEdit")}
           className="px-1 text-[12px] leading-none text-[var(--ink-3)] hover:text-[var(--brand)]"
         >
           ✎
@@ -178,7 +183,7 @@ function PaletteCard({
         <button
           type="button"
           onClick={onRemove}
-          aria-label="Delete"
+          aria-label={t("p8lst.blkDelete")}
           className="px-1 text-[13px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]"
         >
           ×
@@ -188,14 +193,19 @@ function PaletteCard({
   );
 }
 
-const ARROW = (
-  <div className="hidden select-none items-center justify-center px-1 text-[20px] text-[var(--ink-3)] lg:flex">
-    →
-  </div>
-);
+function Arrow() {
+  const { locale } = useI18n();
+  const rtl = isRTL(locale);
+  return (
+    <div className="hidden select-none items-center justify-center px-1 text-[20px] text-[var(--ink-3)] lg:flex">
+      {rtl ? "←" : "→"}
+    </div>
+  );
+}
 
 /** Blocks (freelancer) — the manual's reusable scheduling-pattern builder. */
 export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
+  const t = useT();
   const [periods, setPeriods] = useState<Period[] | null>(null);
   const [passes, setPasses] = useState<Pass[] | null>(null);
   const [bundles, setBundles] = useState<Bundle[] | null>(null);
@@ -217,7 +227,7 @@ export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
         setListings(l.map((x) => ({ id: x.id, name: x.name })));
         setError(null);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load blocks"));
+      .catch((e) => setError(e instanceof Error ? e.message : tNow("p8lst.blkLoadFail")));
   }, []);
 
   useEffect(refresh, [refresh]);
@@ -232,7 +242,7 @@ export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
         refresh();
         return true;
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Something went wrong");
+        setError(e instanceof Error ? e.message : tNow("p8lst.blkWentWrong"));
         return false;
       }
     },
@@ -263,7 +273,7 @@ export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
         } as React.CSSProperties
       }
     >
-      {!embedded && <PageHero title="Sessions & blocks" lede="Reusable scheduling patterns" icon="🗓️" actions={<TourLauncher view="blocks" compact />} />}
+      {!embedded && <PageHero title={t("p8lst.blkHeroTitle")} lede={t("p8lst.blkHeroLede")} icon="🗓️" actions={<TourLauncher view="blocks" compact />} />}
 
       {error && (
         <div className="mb-3 rounded-lg border border-[var(--red)] bg-[color-mix(in_srgb,var(--red)_8%,#ffffff)] px-3 py-2 text-[12.5px] text-[var(--red)]">
@@ -273,15 +283,15 @@ export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
 
 
       {loading ? (
-        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8lst.blkLoading")}</div>
       ) : (
         <>
           {/* .blkFlow — 3 columns */}
           <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1fr]">
             <PeriodsColumn periods={periods} draft={draft} setDraft={setDraft} act={act} />
-            {ARROW}
+            <Arrow />
             <PassesColumn passes={passes} draft={draft} setDraft={setDraft} act={act} />
-            {ARROW}
+            <Arrow />
             <BuildColumn
               periods={periods}
               passes={passes}
@@ -318,6 +328,7 @@ function PeriodsColumn({
   setDraft: React.Dispatch<React.SetStateAction<Draft>>;
   act: Act;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("09am–3:30pm");
@@ -375,7 +386,7 @@ function PeriodsColumn({
   const removeFromDraft = (id: string) =>
     setDraft((d) => ({ ...d, periodIds: d.periodIds.filter((x) => x !== id) }));
   const removePeriod = (id: string) => {
-    if (!confirm("Delete this period? It’s removed from any blocks using it. This can’t be undone."))
+    if (!confirm(t("p8lst.blkDelPeriodConfirm")))
       return;
     setDraft((d) => ({ ...d, periodIds: d.periodIds.filter((x) => x !== id) }));
     void act(() => apiCall(`/api/periods/${encodeURIComponent(id)}`, { method: "DELETE" }));
@@ -383,37 +394,36 @@ function PeriodsColumn({
 
   return (
     <Card className="p-3.5" style={{ borderInlineStartWidth: "4px", borderInlineStartColor: "var(--brand)" }}>
-      <StepHead n={1} title="Make your periods" />
+      <StepHead n={1} title={t("p8lst.blkStep1")} />
       <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">
-        A period is a session time window. Title it anything — including extras like Early
-        drop-off or Late pick-up. Timings drive the pricing calculator.
+        {t("p8lst.blkPeriodHelp")}
       </p>
 
       {open ? (
         <div className="mb-2.5 flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
           <div className="text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-            {editingId ? "Edit period" : "New period"}
+            {editingId ? t("p8lst.blkEditPeriod") : t("p8lst.blkNewPeriod")}
           </div>
-          <Input value={title} onChange={(e) => { const v = e.target.value; if (v.trim() === "") { setTitle(presetTitle(start, finish)); setTitleEdited(false); } else { setTitle(v); setTitleEdited(true); } }} placeholder="Period title" className="w-full" />
+          <Input value={title} onChange={(e) => { const v = e.target.value; if (v.trim() === "") { setTitle(presetTitle(start, finish)); setTitleEdited(false); } else { setTitle(v); setTitleEdited(true); } }} placeholder={t("p8lst.blkPeriodTitlePh")} className="w-full" />
           {triedSave && title.trim().length < 2 && (
-            <div className="text-[11px] text-[var(--red)]">Give the period a title before saving.</div>
+            <div className="text-[11px] text-[var(--red)]">{t("p8lst.blkPeriodTitleReq")}</div>
           )}
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <FieldLabel>Start</FieldLabel>
+              <FieldLabel>{t("p8lst.blkStart")}</FieldLabel>
               <Input type="time" value={start} onChange={(e) => { const v = e.target.value; setStart(v); if (!titleEdited) setTitle(presetTitle(v, finish)); }} className="w-full" />
             </div>
             <div className="flex-1">
-              <FieldLabel>Finish</FieldLabel>
+              <FieldLabel>{t("p8lst.blkFinish")}</FieldLabel>
               <Input type="time" value={finish} onChange={(e) => { const v = e.target.value; setFinish(v); if (!titleEdited) setTitle(presetTitle(start, v)); }} className="w-full" />
             </div>
           </div>
           {start >= finish && (
-            <div className="text-[11px] text-[var(--red)]">Finish must be after start.</div>
+            <div className="text-[11px] text-[var(--red)]">{t("p8lst.blkFinishAfter")}</div>
           )}
           <div className="flex gap-2">
             <Button sm variant="primary" disabled={busy} onClick={saveForm}>
-              {busy ? "Saving…" : editingId ? "Save period" : "Add period"}
+              {busy ? t("p8lst.blkSaving") : editingId ? t("p8lst.blkSavePeriod") : t("p8lst.blkAddPeriod")}
             </Button>
             <Button
               sm
@@ -422,7 +432,7 @@ function PeriodsColumn({
                 setOpen(false);
               }}
             >
-              Cancel
+              {t("p8lst.blkCancel")}
             </Button>
           </div>
         </div>
@@ -435,7 +445,7 @@ function PeriodsColumn({
           }}
           className="mb-2.5"
         >
-          + Add a period
+          {t("p8lst.blkAddAPeriod")}
         </Button>
       )}
 
@@ -470,6 +480,8 @@ function PassesColumn({
   setDraft: React.Dispatch<React.SetStateAction<Draft>>;
   act: Act;
 }) {
+  const t = useT();
+  const { locale } = useI18n();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -514,7 +526,7 @@ function PassesColumn({
   const removeFromDraft = (id: string) =>
     setDraft((d) => ({ ...d, passIds: d.passIds.filter((x) => x !== id) }));
   const removePass = (id: string) => {
-    if (!confirm("Delete this pass? It’s removed from any blocks using it. This can’t be undone."))
+    if (!confirm(t("p8lst.blkDelPassConfirm")))
       return;
     setDraft((d) => ({ ...d, passIds: d.passIds.filter((x) => x !== id) }));
     void act(() => apiCall(`/api/passes/${encodeURIComponent(id)}`, { method: "DELETE" }));
@@ -522,41 +534,40 @@ function PassesColumn({
 
   return (
     <Card className="p-3.5" style={{ borderInlineStartWidth: "4px", borderInlineStartColor: "var(--brand)" }}>
-      <StepHead n={2} title="Make your passes" />
+      <StepHead n={2} title={t("p8lst.blkStep2")} />
       <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">
-        A pass is simply the length of time a parent books — e.g. a single day or a full 5-day
-        week. Pricing is worked out by the calculator.
+        {t("p8lst.blkPassHelp")}
       </p>
 
       {open ? (
         <div className="mb-2.5 flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
           <div className="text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-            {editingId ? "Edit pass" : "New pass"}
+            {editingId ? t("p8lst.blkEditPass") : t("p8lst.blkNewPass")}
           </div>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Pass name (e.g. 5-day week pass)"
+            placeholder={t("p8lst.blkPassNamePh")}
             className="w-full"
           />
           <div>
-            <FieldLabel>Details for customers <span className="font-normal text-[var(--ink-3)]">— optional, shown under the name</span></FieldLabel>
+            <FieldLabel>{t("p8lst.blkDetailsLabel")} <span className="font-normal text-[var(--ink-3)]">{t("p8lst.blkDetailsOpt")}</span></FieldLabel>
             <textarea
               value={details}
               onChange={(e) => setDetails(e.target.value)}
-              placeholder="What's included, who it suits, anything a parent should know before booking this pass…"
+              placeholder={t("p8lst.blkDetailsPh")}
               rows={2}
               maxLength={500}
               className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none"
             />
           </div>
           <div className="w-[120px]">
-            <FieldLabel>Days</FieldLabel>
+            <FieldLabel>{t("p8lst.blkDaysLabel")}</FieldLabel>
             <Input type="number" min={1} value={days} onChange={(e) => setDays(e.target.value)} className="w-full" />
           </div>
           <div className="flex gap-2">
             <Button sm variant="primary" disabled={busy} onClick={saveForm}>
-              {busy ? "Saving…" : editingId ? "Save pass" : "Add pass"}
+              {busy ? t("p8lst.blkSaving") : editingId ? t("p8lst.blkSavePass") : t("p8lst.blkAddPass")}
             </Button>
             <Button
               sm
@@ -565,7 +576,7 @@ function PassesColumn({
                 setOpen(false);
               }}
             >
-              Cancel
+              {t("p8lst.blkCancel")}
             </Button>
           </div>
         </div>
@@ -578,7 +589,7 @@ function PassesColumn({
           }}
           className="mb-2.5"
         >
-          + Add a pass
+          {t("p8lst.blkAddAPass")}
         </Button>
       )}
 
@@ -587,7 +598,7 @@ function PassesColumn({
           <PaletteCard
             key={p.id}
             title={p.name}
-            meta={`${p.days} day${p.days === 1 ? "" : "s"}${p.details ? " · has details" : ""}`}
+            meta={`${pickPlural(t, locale, "p8lst.blkDays", p.days)}${p.details ? ` · ${t("p8lst.blkHasDetails")}` : ""}`}
             added={draft.passIds.includes(p.id)}
             onAdd={() => addToDraft(p.id)}
             onUndo={() => removeFromDraft(p.id)}
@@ -615,6 +626,7 @@ function BuildColumn({
   setDraft: React.Dispatch<React.SetStateAction<Draft>>;
   act: Act;
 }) {
+  const t = useT();
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(false);
   const draftPeriods = draft.periodIds
@@ -659,10 +671,9 @@ function BuildColumn({
 
   return (
     <Card className="p-3.5" style={{ borderInlineStartWidth: "4px", borderInlineStartColor: "var(--brand)" }}>
-      <StepHead n={3} title="Build your blocks" />
+      <StepHead n={3} title={t("p8lst.blkStep3")} />
       <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">
-        Click “+ Add to block” on the periods &amp; passes you want, name it, then reuse or
-        duplicate it across every listing.
+        {t("p8lst.blkBuildHelp")}
       </p>
 
       <div
@@ -680,13 +691,13 @@ function BuildColumn({
       >
         {empty ? (
           <div className="py-4 text-center text-[12px] text-[var(--ink-3)]">
-            Add periods &amp; passes here
-            <div className="text-[11px]">tap “+ Add to block” on any card</div>
+            {t("p8lst.blkDropEmpty")}
+            <div className="text-[11px]">{t("p8lst.blkDropTap")}</div>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
             {draftPeriods.length > 0 && (
-              <ChipRow label="Periods">
+              <ChipRow label={t("p8lst.blkPeriods")}>
                 {draftPeriods.map((p) => (
                   <Chip key={p.id} onRemove={() => dropPeriod(p.id)}>
                     {p.title} <span className="text-[var(--ink-3)]">{periodRange(p)}</span>
@@ -695,7 +706,7 @@ function BuildColumn({
               </ChipRow>
             )}
             {draftPasses.length > 0 && (
-              <ChipRow label="Passes">
+              <ChipRow label={t("p8lst.blkPasses")}>
                 {draftPasses.map((p) => (
                   <Chip key={p.id} onRemove={() => dropPass(p.id)}>
                     {p.name}
@@ -707,16 +718,16 @@ function BuildColumn({
         )}
       </div>
 
-      <FieldLabel>Name your block</FieldLabel>
+      <FieldLabel>{t("p8lst.blkNameBlock")}</FieldLabel>
       <Input
         value={draft.name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="e.g. Summer Multi Activity Camp — Loughton"
+        placeholder={t("p8lst.blkNamePh")}
         className="mb-2.5 w-full"
       />
 
       <Button sm variant="primary" disabled={empty || busy} onClick={moveToLibrary}>
-        {busy ? "Saving…" : "Move to Block Library →"}
+        {busy ? t("p8lst.blkSaving") : t("p8lst.blkMoveToLib")}
       </Button>
     </Card>
   );
@@ -748,6 +759,7 @@ function BlockLibrary({
   listings: Listing[];
   act: Act;
 }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false);
@@ -783,7 +795,7 @@ function BlockLibrary({
   const unarchive = (id: string) =>
     void act(() => apiPost(`/api/block-bundles/${encodeURIComponent(id)}/archive`, { archived: false }));
   const deleteBlock = (id: string, name: string) => {
-    if (!confirm(`Delete “${name}”? This can’t be undone.`)) return;
+    if (!confirm(t("p8lst.blkDeleteBlockConfirm", { name }))) return;
     void act(() => apiCall(`/api/block-bundles/${encodeURIComponent(id)}`, { method: "DELETE" }));
   };
 
@@ -791,28 +803,27 @@ function BlockLibrary({
     <div className="mt-4">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
         <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          Block Library
+          {t("p8lst.blkLibrary")}
         </div>
         {active.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
             <Button sm onClick={expandAll}>
-              ⊞ Expand all
+              {t("p8lst.blkExpandAll")}
             </Button>
             <Button sm onClick={collapseAll}>
-              ⊟ Collapse all
+              {t("p8lst.blkCollapseAll")}
             </Button>
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="🔍  Search blocks…"
+              placeholder={t("p8lst.blkSearchPh")}
               className="w-[200px]"
             />
           </div>
         )}
       </div>
       <p className="mb-2.5 text-[12px] text-[var(--ink-3)]">
-        Your finished blocks — drag the ⠿ handle to reorder. Sort out pricing with the calculator,
-        then send a block to one or more of your listings.
+        {t("p8lst.blkLibHelp")}
       </p>
 
       {(() => {
@@ -821,7 +832,7 @@ function BlockLibrary({
         return (
           <div className="mb-2.5 flex items-start gap-2 rounded-lg border border-[#f0c98a] bg-[#fdf6ea] px-3 py-2.5 text-[12px] leading-[1.5] text-[#8a5a09]">
             <span className="text-[14px]">⚠️</span>
-            <span><b>{unpriced.length} block{unpriced.length === 1 ? "" : "s"} still {unpriced.length === 1 ? "needs" : "need"} pricing.</b> A block can&rsquo;t be booked until you set its prices — open it and press <b>Set prices</b>. {unpriced.slice(0, 3).map((b) => b.name).join(", ")}{unpriced.length > 3 ? "…" : ""}</span>
+            <span><Rich text={t("p8lst.blkUnpricedWarn", { n: unpriced.length, names: `${unpriced.slice(0, 3).map((b) => b.name).join(", ")}${unpriced.length > 3 ? "…" : ""}` })} /></span>
           </div>
         );
       })()}
@@ -829,12 +840,12 @@ function BlockLibrary({
       {active.length === 0 ? (
         <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">
           {bundles.length === 0
-            ? "No blocks yet — build one above and it lands here."
-            : "No active blocks — they’re all archived (see below)."}
+            ? t("p8lst.blkNoBlocks")
+            : t("p8lst.blkAllArchived")}
         </Card>
       ) : filtered.length === 0 ? (
         <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">
-          No blocks match “{query}”.
+          {t("p8lst.blkNoMatch", { q: query })}
         </Card>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
@@ -862,7 +873,7 @@ function BlockLibrary({
             onClick={() => setShowArchived((v) => !v)}
             className="flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]"
           >
-            <span>{showArchived ? "▾" : "▸"}</span> Archived ({archived.length})
+            <span>{showArchived ? "▾" : "▸"}</span> {t("p8lst.blkArchivedN", { n: archived.length })}
           </button>
           {showArchived && (
             <div className="mt-2 flex flex-col gap-1.5">
@@ -874,10 +885,10 @@ function BlockLibrary({
                   <span className="h-3 w-3 flex-none rounded-[4px]" style={{ background: blockColor(b.id) }} />
                   <span className="flex-1 truncate text-[13px] font-bold">{b.name}</span>
                   <Button sm onClick={() => unarchive(b.id)}>
-                    Unarchive
+                    {t("p8lst.blkUnarchive")}
                   </Button>
                   <Button sm variant="danger" onClick={() => deleteBlock(b.id, b.name)}>
-                    Delete
+                    {t("p8lst.blkDelete")}
                   </Button>
                 </div>
               ))}
@@ -910,6 +921,7 @@ function LibraryCard({
   onToggle: () => void;
   onDropBlock: (draggedId: string) => void;
 }) {
+  const t = useT();
   const [renaming, setRenaming] = useState(false);
   const [tempName, setTempName] = useState(block.name);
   const [showCalc, setShowCalc] = useState(false);
@@ -970,7 +982,7 @@ function LibraryCard({
   const archive = () =>
     void act(() => apiPost(`/api/block-bundles/${encodeURIComponent(block.id)}/archive`, { archived: true }));
   const remove = () => {
-    if (!confirm(`Delete “${block.name}”? This can’t be undone.`)) return;
+    if (!confirm(t("p8lst.blkDeleteBlockConfirm", { name: block.name }))) return;
     void act(() => apiCall(`/api/block-bundles/${encodeURIComponent(block.id)}`, { method: "DELETE" }));
   };
 
@@ -1006,7 +1018,7 @@ function LibraryCard({
               className="flex-1"
             />
             <Button sm variant="primary" onClick={saveName}>
-              Save
+              {t("p8lst.blkSave")}
             </Button>
           </div>
         ) : (
@@ -1014,7 +1026,7 @@ function LibraryCard({
             <span
               draggable
               onDragStart={(e) => e.dataTransfer.setData("text/plain", `block:${block.id}`)}
-              title="Drag to reorder"
+              title={t("p8lst.blkDragReorder")}
               className="flex-none cursor-grab text-[14px] leading-none text-white/60 active:cursor-grabbing"
             >
               ⠿
@@ -1033,7 +1045,7 @@ function LibraryCard({
                 setTempName(block.name);
                 setRenaming(true);
               }}
-              aria-label="Rename block"
+              aria-label={t("p8lst.blkRename")}
               className="flex-none text-[12px] text-white/70 hover:text-white"
             >
               ✎
@@ -1048,12 +1060,12 @@ function LibraryCard({
                 : "bg-[#f59e0b] text-white"
             }`}
           >
-            {block.priced ? "Priced" : "⚠ Needs pricing"}
+            {block.priced ? t("p8lst.blkPriced") : t("p8lst.blkNeedsPricing")}
           </span>
           <button
             type="button"
             onClick={onToggle}
-            aria-label={expanded ? "Collapse" : "Expand"}
+            aria-label={expanded ? t("p8lst.blkCollapse") : t("p8lst.blkExpand")}
             className="text-[11px] text-white/70 hover:text-white"
           >
             {expanded ? "▲" : "▼"}
@@ -1061,8 +1073,7 @@ function LibraryCard({
         </div>
       </div>
       <div className="mt-0.5 text-[11.5px] text-white/80">
-        {blockPeriods.length} period{blockPeriods.length === 1 ? "" : "s"} · {blockPasses.length} pass
-        {blockPasses.length === 1 ? "" : "es"}
+        {t("p8lst.blkCounts", { p: blockPeriods.length, q: blockPasses.length })}
       </div>
       </div>
 
@@ -1071,7 +1082,7 @@ function LibraryCard({
           <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
             <div>
               <div className="text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-                Periods
+                {t("p8lst.blkPeriods")}
               </div>
               {editing ? (
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -1086,7 +1097,7 @@ function LibraryCard({
                       onChange={(e) => e.target.value && addPeriod(e.target.value)}
                       className="h-[26px] py-0 text-[11px]"
                     >
-                      <option value="">+ Add period…</option>
+                      <option value="">{t("p8lst.blkAddPeriodOpt")}</option>
                       {availablePeriods.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.title}
@@ -1111,7 +1122,7 @@ function LibraryCard({
             </div>
             <div>
               <div className="text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-                Passes
+                {t("p8lst.blkPasses")}
               </div>
               {editing ? (
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -1126,7 +1137,7 @@ function LibraryCard({
                       onChange={(e) => e.target.value && addPass(e.target.value)}
                       className="h-[26px] py-0 text-[11px]"
                     >
-                      <option value="">+ Add pass…</option>
+                      <option value="">{t("p8lst.blkAddPassOpt")}</option>
                       {availablePasses.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
@@ -1154,7 +1165,7 @@ function LibraryCard({
           {/* Send to listings */}
           <div className="mt-2.5">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-              Sent to listings
+              {t("p8lst.blkSentTo")}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
               {inListings.length ? (
@@ -1164,7 +1175,7 @@ function LibraryCard({
                   </Chip>
                 ))
               ) : (
-                <span className="text-[11.5px] text-[var(--ink-3)]">Not sent to any listing yet.</span>
+                <span className="text-[11.5px] text-[var(--ink-3)]">{t("p8lst.blkNotSent")}</span>
               )}
               {available.length > 0 && (
                 <Select
@@ -1181,7 +1192,7 @@ function LibraryCard({
                     paddingInlineEnd: 10,
                   }}
                 >
-                  <option value="">📩  Send to a listing…</option>
+                  <option value="">{t("p8lst.blkSendOpt")}</option>
                   {available.map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.name}
@@ -1192,7 +1203,7 @@ function LibraryCard({
             </div>
             {inListings.length > 0 && !block.priced && (
               <div className="mt-1 text-[11px] text-[var(--ink-3)]">
-                Sort pricing to push pass prices to these listings.
+                {t("p8lst.blkSortToPush")}
               </div>
             )}
           </div>
@@ -1200,19 +1211,19 @@ function LibraryCard({
           <div className="mt-3 flex flex-wrap gap-1.5">
             <Button sm variant={showCalc ? "primary" : "default"} onClick={() => setShowCalc((v) => !v)}
               style={!showCalc && !block.priced ? { background: "#f59e0b", color: "#fff", borderColor: "#f59e0b" } : undefined}>
-              {showCalc ? "Close pricing" : block.priced ? "Sort pricing" : "⚠ Set prices"}
+              {showCalc ? t("p8lst.blkClosePricing") : block.priced ? t("p8lst.blkSortPricing") : t("p8lst.blkSetPrices")}
             </Button>
             <Button sm variant={editing ? "primary" : "default"} onClick={() => setEditing((v) => !v)}>
-              {editing ? "Done" : "Edit"}
+              {editing ? t("p8lst.blkDone") : t("p8lst.blkEdit")}
             </Button>
             <Button sm onClick={duplicate}>
-              Duplicate
+              {t("p8lst.blkDuplicate")}
             </Button>
             <Button sm onClick={archive}>
-              Archive
+              {t("p8lst.blkArchive")}
             </Button>
             <Button sm variant="danger" onClick={remove}>
-              Delete
+              {t("p8lst.blkDelete")}
             </Button>
           </div>
         </>
@@ -1235,6 +1246,8 @@ function PricingCalculator({
   periods: Period[];
   onSavePricing: (over: Partial<BundleBody>) => Promise<boolean>;
 }) {
+  const t = useT();
+  const { locale } = useI18n();
   const [openPass, setOpenPass] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -1351,7 +1364,7 @@ function PricingCalculator({
   return (
     <div className="mt-2.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5">
       <div className="mb-2 flex items-center gap-2">
-        <span className="text-[13px] font-extrabold">💷 Pricing calculator</span>
+        <span className="text-[13px] font-extrabold">{t("p8lst.blkCalcTitle")}</span>
         <button
           type="button"
           onClick={() => setCalcOn((v) => !v)}
@@ -1362,19 +1375,19 @@ function PricingCalculator({
         >
           <span
             className="absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white transition-all"
-            style={{ left: calcOn ? "16px" : "2px" }}
+            style={{ insetInlineStart: calcOn ? "16px" : "2px" }}
           />
         </button>
-        <span className="text-[11px] text-[var(--ink-3)]">Auto-calculate {calcOn ? "on" : "off"}</span>
+        <span className="text-[11px] text-[var(--ink-3)]">{calcOn ? t("p8lst.blkAutoOn") : t("p8lst.blkAutoOff")}</span>
       </div>
       <p className="mb-2 text-[11px] text-[var(--ink-3)]">
         {calcOn
-          ? "Set each pass's full price — its timings are worked out automatically (a later finish costs more). Passes are priced on their own; a day pass isn't a fraction of the week. Edit any timing to override, then Save pricing."
-          : "Auto-calc is off — set each price by hand, then Save pricing."}
+          ? t("p8lst.blkCalcOnHelp")
+          : t("p8lst.blkCalcOffHelp")}
       </p>
 
       {passes.length === 0 ? (
-        <div className="text-[11.5px] text-[var(--ink-3)]">Add passes to price them.</div>
+        <div className="text-[11.5px] text-[var(--ink-3)]">{t("p8lst.blkAddPassesToPrice")}</div>
       ) : (
         <div className="flex flex-col gap-1.5">
           {passes.map((q, idx) => {
@@ -1391,8 +1404,8 @@ function PricingCalculator({
                 >
                   <span className="text-[13px] font-extrabold">{q.name}</span>
                   <span className="text-[11px] text-[var(--ink-3)]">
-                    {q.days} {q.days > 1 ? "days" : "day"}
-                    {isM ? " · longest" : ""}
+                    {pickPlural(t, locale, "p8lst.blkDays", q.days)}
+                    {isM ? ` · ${t("p8lst.blkLongest")}` : ""}
                   </span>
                   <span className="ms-auto text-[13px] font-extrabold">{money(price || 0)}</span>
                   <span className="text-[var(--ink-3)]">{open ? "▲" : "▼"}</span>
@@ -1405,11 +1418,11 @@ function PricingCalculator({
                         isn't a fraction of the week. Its timings calculate from it. */}
                     <div className="mb-2.5 rounded-lg border-2 p-2.5" style={{ borderColor: "#e0a020", background: "#fdf6ea" }}>
                       <label className="block text-[11.5px] font-extrabold leading-[1.45] text-[#8a5a09]">
-                        💷 Full price for this pass
+                        {t("p8lst.blkFullPrice")}
                         {longestTiming && timingRows.length > 1 ? (
-                          <span className="font-semibold text-[#a97b2e]"> — set it for the <b>longest finish ({longestLabel})</b>; earlier finishes work out cheaper from this</span>
+                          <span className="font-semibold text-[#a97b2e]"> <Rich text={t("p8lst.blkFullPriceLongest", { label: longestLabel })} /></span>
                         ) : (
-                          <span className="font-semibold text-[#a97b2e]"> — what this pass costs</span>
+                          <span className="font-semibold text-[#a97b2e]"> {t("p8lst.blkFullPriceSimple")}</span>
                         )}
                       </label>
                       <div className="mt-1.5 flex items-center gap-1.5">
@@ -1425,10 +1438,10 @@ function PricingCalculator({
                       </div>
                     </div>
                     <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-                      Timings &amp; prices <span className="font-semibold normal-case tracking-normal">— a later finish costs proportionally more</span>
+                      {t("p8lst.blkTimingsPrices")} <span className="font-semibold normal-case tracking-normal">{t("p8lst.blkTimingsNote")}</span>
                     </div>
                     {timingRows.length === 0 ? (
-                      <div className="text-[11px] text-[var(--ink-3)]">No timings on this block yet.</div>
+                      <div className="text-[11px] text-[var(--ink-3)]">{t("p8lst.blkNoTimings")}</div>
                     ) : (
                       timingRows.map((p) => {
                         const key = `${q.id}_${p.id}`;
@@ -1456,7 +1469,7 @@ function PricingCalculator({
                             {ovStr !== undefined && calcOn && (
                               <button
                                 type="button"
-                                title="Reset to calculated"
+                                title={t("p8lst.blkResetCalc")}
                                 onClick={() => resetPeriodPrice(key)}
                                 className="text-[14px] font-bold text-[var(--brand)]"
                               >
@@ -1477,11 +1490,11 @@ function PricingCalculator({
 
       <div className="mt-2.5 flex items-center gap-2">
         <Button sm variant="primary" disabled={busy} onClick={save}>
-          {busy ? "Saving…" : "Save pricing"}
+          {busy ? t("p8lst.blkSaving") : t("p8lst.blkSavePricing")}
         </Button>
         {calcOn && block.resolved.perDay > 0 && (
           <span className="text-[11px] text-[var(--ink-3)]">
-            Per-day rate {money(block.resolved.perDay)}
+            {t("p8lst.blkPerDay", { price: money(block.resolved.perDay) })}
           </span>
         )}
       </div>
@@ -1516,13 +1529,14 @@ function ChipRow({ label, children }: { label: string; children: React.ReactNode
 }
 
 function Chip({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
+  const t = useT();
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[3px] text-[11.5px] font-semibold text-[var(--ink-2)]">
       {children}
       <button
         type="button"
         onClick={onRemove}
-        aria-label="Remove"
+        aria-label={t("p8lst.blkRemove")}
         className="text-[var(--ink-3)] hover:text-[var(--red)]"
       >
         ×
