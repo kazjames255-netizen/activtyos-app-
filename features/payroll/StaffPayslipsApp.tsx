@@ -29,7 +29,7 @@ export function StaffPayslipsApp() {
   const { t, locale: appLocale } = useI18n();
   const locale = appLocale === "en" ? "en-GB" : appLocale; // for dates — plain "en" formats US-style
   const { settings } = useSettings();
-  const provider = settings.providerName || settings.billing?.businessName || "Your employer";
+  const provider = settings.providerName || settings.billing?.businessName || t("p8wf.prYourEmployer");
   const [runs, setRuns] = useState<PayRun[]>([]);
   const [loadErr, setLoadErr] = useState(false);
   const demo = isDemoMode();
@@ -51,7 +51,7 @@ export function StaffPayslipsApp() {
       <PageHero title={t("staffp.payTitle")} icon="🧾" lede={t("staffp.payLede")} />
 
       {/* year-to-date summary */}
-      {loadErr && <Card className="mb-3 border-s-4 border-s-[#c0392b] p-3 text-[12.5px] font-semibold text-[#c0392b]">⚠ Couldn&rsquo;t load your payslips — check your connection and reopen this page.</Card>}
+      {loadErr && <Card className="mb-3 border-s-4 border-s-[#c0392b] p-3 text-[12.5px] font-semibold text-[#c0392b]">{t("p8wf.prPayslipsLoadErr")}</Card>}
       {mine.length > 0 && <CollapsibleStats id="payslips">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
