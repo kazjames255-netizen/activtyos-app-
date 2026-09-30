@@ -146,7 +146,8 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
         ...(periodId ? { periodId } : {}),
         dates,
         child: k.name.trim(),
-        age: parseInt(k.age, 10) || 0,
+        // A blank age is UNKNOWN, not 0 (an infant) — omit it so the server's age gate skips it.
+        ...(Number.isFinite(parseInt(k.age, 10)) ? { age: parseInt(k.age, 10) } : {}),
         ...(addonIds.length ? { addons: addonIds.map((id) => ({ id })) } : {}),
       }));
       const res = await api<{ bookings: { ref: string; status: string }[]; total: number }>("/api/my/bookings", {

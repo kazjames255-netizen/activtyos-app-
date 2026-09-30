@@ -686,7 +686,12 @@ listings.put("/:id", async (req, res) => {
     return;
   }
   const data: ListingInput = parsed.data;
-  { const bad = await foreignRefProblem(req.auth!, req.auth!.tenantId!, data); if (bad) { res.status(400).json({ error: bad }); return; } }
+  { // Only ids CHANGED vs the stored listing are checked — inherited head-office bundle/menu ids must not block an unrelated edit.
+    const stored = own.snap.data() as { blockId?: string | null; mealPlan?: Record<string, unknown> };
+    const menuOf = (v: unknown) => (typeof v === "string" ? v : (v as { menuId?: string } | null)?.menuId);
+    const oldMenus = new Set(Object.values(stored.mealPlan ?? {}).map(menuOf));
+    const mealPlan = data.mealPlan ? Object.fromEntries(Object.entries(data.mealPlan).filter(([, v]) => !oldMenus.has(menuOf(v)))) : undefined;
+    const bad = await foreignRefProblem(req.auth!, req.auth!.tenantId!, { blockId: data.blockId && data.blockId !== stored.blockId ? data.blockId : null, mealPlan }); if (bad) { res.status(400).json({ error: bad }); return; } }
   if (data.status === "live") {
     const problems = publishProblems({ ...own.snap.data()!, ...data });
     if (problems.length) {

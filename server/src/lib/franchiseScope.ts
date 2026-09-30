@@ -49,9 +49,17 @@ export async function franchiseChildIds(tenantId: string, franchiseId: string): 
  *  listings). Used to scope messaging / email audiences to the franchise's own
  *  families rather than the whole company. Emails are lower-cased. */
 export async function franchiseFamilyEmails(tenantId: string, franchiseId: string): Promise<Set<string>> {
-  const snap = await db.collection("bookings").where("tenantId", "==", tenantId).where("franchiseId", "==", franchiseId).get();
+  const [snap, cust] = await Promise.all([
+    db.collection("bookings").where("tenantId", "==", tenantId).where("franchiseId", "==", franchiseId).get(),
+    // Customers the franchise created itself (stamped franchiseId) are its families even before their first booking.
+    db.collection("customers").where("tenantId", "==", tenantId).where("franchiseId", "==", franchiseId).get(),
+  ]);
   const out = new Set<string>();
   for (const d of snap.docs) {
+    const e = (d.data() as { email?: string }).email;
+    if (e) out.add(e.toLowerCase());
+  }
+  for (const d of cust.docs) {
     const e = (d.data() as { email?: string }).email;
     if (e) out.add(e.toLowerCase());
   }

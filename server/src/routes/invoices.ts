@@ -138,7 +138,11 @@ invoices.put("/:id", async (req, res) => {
   const before = o.snap.data() as { lineItems?: LineItem[]; amount?: number; taxRate?: number };
   if (p.lineItems !== undefined || p.taxRate !== undefined || clear.includes("taxRate")) {
     const rate = clear.includes("taxRate") ? undefined : (p.taxRate ?? before.taxRate);
-    patch.amount = grandTotal(p.lineItems ?? before.lineItems, p.amount ?? before.amount, rate);
+    const merged = p.lineItems ?? before.lineItems;
+    // With no line items the stored amount is already the GROSS total (net + old VAT) — back the old rate out before applying the new one.
+    const oldRate = before.taxRate ?? 0;
+    const base = p.amount ?? (merged && merged.length ? before.amount : before.amount !== undefined ? before.amount / (1 + oldRate / 100) : undefined);
+    patch.amount = grandTotal(merged, base, rate);
   } else if (p.amount !== undefined) patch.amount = round2(p.amount);
   applyClears(patch, clear);
   await o.snap.ref.set(patch, { merge: true });
