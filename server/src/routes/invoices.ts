@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { isBlankOrWebUrl } from "../lib/safeUrl";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
@@ -48,7 +49,7 @@ const invoiceSchema = z.object({
   bookingRef: z.string().trim().max(80).optional(),
   reference: z.string().trim().max(80).optional(),
   poNumber: z.string().trim().max(80).optional(),   // the customer's PO this invoice is against
-  poAttachmentUrl: z.string().trim().max(600).optional(), // uploaded copy of that PO
+  poAttachmentUrl: z.string().trim().max(600).refine(isBlankOrWebUrl, "Links must be web addresses (https://…)").optional(), // uploaded copy of that PO
   accountRef: z.string().trim().max(80).optional(),
   description: z.string().trim().max(300).optional(),
   amount: z.number().nonnegative().max(1_000_000).optional(),

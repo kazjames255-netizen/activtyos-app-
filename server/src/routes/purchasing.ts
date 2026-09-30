@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { isBlankOrWebUrl } from "../lib/safeUrl";
 import { z } from "zod";
 import { db } from "../firebase";
 import { sendMail } from "../lib/mailer";
@@ -51,7 +52,7 @@ const poSchema = z.object({
   notes: z.string().trim().max(2_000).optional(),
   emailedAt: z.string().max(40).optional(),
   // The supplier invoice / PO document itself (image via /api/uploads, or a link).
-  attachmentUrl: z.string().trim().max(600).optional(),
+  attachmentUrl: z.string().trim().max(600).refine(isBlankOrWebUrl, "Links must be web addresses (https://…)").optional(),
   // A standing order/invoice (e.g. a monthly retainer): fan out one per period.
   repeat: z.enum(["weekly", "fortnightly", "monthly"]).optional(),
   repeatUntil: isoDay.optional(),

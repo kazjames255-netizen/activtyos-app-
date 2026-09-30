@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { isBlankOrWebUrl } from "../lib/safeUrl";
 import { z } from "zod";
 import { db } from "../firebase";
 import { franchiseTeam } from "../lib/franchiseScope";
@@ -24,7 +25,7 @@ const certSchema = z.object({
   reference: z.string().trim().max(80).optional(),
   issued: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
   expiry: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date"),
-  documentUrl: z.string().trim().max(600).optional(),
+  documentUrl: z.string().trim().max(600).refine(isBlankOrWebUrl, "Links must be web addresses (https://…)").optional(),
   notes: z.string().trim().max(1_000).optional(),
 });
 

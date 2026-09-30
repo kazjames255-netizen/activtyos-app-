@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { isBlankOrWebUrl } from "../lib/safeUrl";
 import { isRealDay } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
@@ -22,7 +23,7 @@ const expenseSchema = z.object({
   amount: z.number().nonnegative().max(1_000_000),
   supplier: z.string().trim().max(120).optional(),
   notes: z.string().trim().max(1_000).optional(),
-  receiptUrl: z.string().trim().max(600).optional(),
+  receiptUrl: z.string().trim().max(600).refine(isBlankOrWebUrl, "Links must be web addresses (https://…)").optional(),
   // Money-out status: a "pending" expense is money you owe (what used to be a
   // bill); "paid" is money that's left. Due date + paidAt support the pending
   // workflow. Defaults to paid so a plain logged spend needs nothing extra.
