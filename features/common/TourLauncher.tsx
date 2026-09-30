@@ -86,7 +86,7 @@ export function TourLauncher({ view, portal: portalProp, custom, compact }: { vi
             ) : hasLive ? (
               <LiveTour view={view} portal={portal} steps={TOUR_STEPS[view]} />
             ) : (
-              <GuidedTour config={TOUR_CONFIGS[view]} />
+              <GuidedTour config={TOUR_CONFIGS[view]} view={view} />
             )}
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { tNow } from "@/lib/i18n/provider";
 // ─────────────────────────────────────────────────────────────────────────
 // Shared "robot narrator" bookend scene for the guided tours — a classy dark
 // screen with a female-styled robot that idles (bob + blink) and "talks" via
@@ -50,17 +51,20 @@ export const NARRATOR_CSS = `
 .tnr-link + .tnr-link{margin-top:2px}
 .tnr-link:hover{background:rgba(127,208,255,.12);transform:translateX(3px);box-shadow:inset 0 0 0 1px rgba(127,208,255,.25)}
 .tnr-link .ic{flex:none;width:31px;height:31px;border-radius:9px;display:grid;place-items:center;font-size:15px;background:rgba(127,208,255,.14);border:1px solid rgba(127,208,255,.24)}
-.tnr-link .tx{min-width:0;flex:1;text-align:left}
+.tnr-link .tx{min-width:0;flex:1;text-align:start}
 .tnr-link .tx b{display:block;font-size:12.5px;font-weight:800;color:#eaf2ff}
 .tnr-link .tx small{display:block;font-size:10.5px;color:#9fb4dd;line-height:1.35;margin-top:1px}
 .tnr-link .arw{flex:none;color:#7fd0ff;font-size:15px;font-weight:800;transition:transform .15s}
 .tnr-link:hover .arw{transform:translateX(2px)}
+html[dir="rtl"] .tnr-link .arw{transform:scaleX(-1)}
+html[dir="rtl"] .tnr-link:hover{transform:translateX(-3px)}
+html[dir="rtl"] .tnr-link:hover .arw{transform:scaleX(-1) translateX(2px)}
 .tnr-cta{margin-top:11px;border:none;border-radius:999px;padding:9px 22px;font-size:13px;font-weight:800;color:#04223f;cursor:pointer;background:linear-gradient(180deg,#8fe0ff,#3aa0ea);box-shadow:0 7px 18px -6px rgba(58,160,234,.7);animation:tnrpop .5s ease .18s both}
 .tnr-cta:hover{filter:brightness(1.06)}
 /* Unified tour control bar — a compact transport group (prev · play/pause ·
    next) with Replay and Sound as tidy buttons. Shared by all three tours. */
 .tctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
-.tctl-count{font-size:11.5px;color:#9aa6bd;font-weight:700;margin-right:auto}
+.tctl-count{font-size:11.5px;color:#9aa6bd;font-weight:700;margin-inline-end:auto}
 .tctl-grp{display:inline-flex;align-items:center;gap:3px;background:#eef3fb;border:1px solid #e2e8f4;border-radius:999px;padding:4px}
 .tctl-btn{border:1px solid #e6ebf5;background:#fff;border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:800;color:#3a4a68;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s,filter .15s;display:inline-flex;align-items:center;gap:7px;line-height:1}
 .tctl-btn:hover{border-color:#bcd0f5;background:#f4f8ff;color:#12203c}
@@ -100,7 +104,7 @@ export function controlPanelScene(badge: string, items: PanelItem[], cta?: { lab
 // Direct deep-links into the Settings tabs that govern this page.
 export function settingsScene(portal: string, items: SettingsLink[]): string {
   return controlPanelScene(
-    "⚙ Change it in Settings",
+    "⚙ " + tNow("p8misc.settings_badge"),
     items.map((it) => ({ icon: it.icon, label: it.label, note: it.note, href: `/${portal}/setup?tab=${encodeURIComponent(it.tab)}` })),
   );
 }

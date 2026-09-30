@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useT } from "@/lib/i18n/provider";
+import { useEffect, useMemo, useRef } from "react";
+import { useI18n } from "@/lib/i18n/provider";
+import { BRAND, isRTL } from "@/lib/i18n/config";
+import { localiseGuided, pickTourVoice, voiceLang } from "./tourI18n";
 import { NARRATOR_CSS, narratorScene, settingsScene, type SettingsLink } from "./tourNarrator";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -22,7 +24,7 @@ const CSS = `
 .gt-root{--navy:#16306e;--blue:#2f6bd8;--blue2:#4f8bf5;--teal:#0ea5a5;--green:#0e9a5a;--ink:#12203c;--ink2:#3a4a68;--muted:#5b6b86;--faint:#9aa6bd;--line:#e6ebf5;--panel:#f4f7fc;--surface:#fff;--brandink:#1d3a8f;color:var(--ink)}
 .gt-root .gt-controls{margin:0 0 12px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .gt-root .cbtn{border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:11px 20px;font-size:14px;font-weight:800;color:var(--ink);cursor:pointer}.gt-root .cbtn:hover{border-color:#bcd0f5;background:#f4f8ff}.gt-root .cbtn.on{background:linear-gradient(180deg,var(--blue2),var(--blue));border-color:transparent;color:#fff}
-.gt-root .gt-count{font-size:11.5px;color:var(--faint);font-weight:700;margin-right:auto}
+.gt-root .gt-count{font-size:11.5px;color:var(--faint);font-weight:700;margin-inline-end:auto}
 .gt-root .gt-stage{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 24px 50px -36px rgba(20,48,110,.5);min-height:320px;overflow:hidden}
 .gt-root .appear{animation:gtrise .4s ease both}@keyframes gtrise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
 .gt-root .field{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 10px;font-size:12.5px;color:var(--ink);font-weight:600;min-height:34px}.gt-root .field.ph{color:var(--faint);font-weight:500}
@@ -31,7 +33,7 @@ const CSS = `
 .gt-root .wcard{border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .gt-root .whead{display:flex;align-items:flex-start;gap:10px;padding:12px 15px;background:#f4f8ff;border-bottom:1px solid var(--line)}
 .gt-root .wstage{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--blue)}.gt-root .wtitle{font-size:16px;font-weight:800;color:var(--navy);margin-top:1px}
-.gt-root .wstep{margin-left:auto;font-size:11px;font-weight:800;color:var(--faint);white-space:nowrap;padding-top:2px}
+.gt-root .wstep{margin-inline-start:auto;font-size:11px;font-weight:800;color:var(--faint);white-space:nowrap;padding-top:2px}
 .gt-root .wbar{height:4px;background:var(--line)}.gt-root .wbar span{display:block;height:100%;background:linear-gradient(90deg,var(--blue2),var(--blue));transition:width .5s}
 .gt-root .wbody{padding:15px;min-height:150px}
 .gt-root .wfoot{display:flex;justify-content:space-between;padding:12px 15px;border-top:1px solid var(--line);background:#fbfdff}
@@ -42,11 +44,11 @@ const CSS = `
 .gt-root .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.gt-root .ochip{font-size:11.5px;font-weight:800;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
 .gt-root .chip2{display:inline-block;font-size:10.5px;font-weight:800;background:#eef4fd;color:var(--brandink);border-radius:999px;padding:3px 9px;margin:0 5px 5px 0}
 .gt-root .chk{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:12.5px;font-weight:700;margin-bottom:6px}.gt-root .chk .chkbx{width:18px;height:18px;border-radius:5px;background:var(--blue);display:grid;place-items:center;font-size:11px;color:#fff;flex:none}
-.gt-root .tkt{border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:10px;padding:9px 11px;margin-bottom:7px}.gt-root .tkhd{display:flex;align-items:center;gap:8px;font-size:13px}.gt-root .tkp{margin-left:auto;font-weight:800}
+.gt-root .tkt{border:1px solid var(--line);border-inline-start:3px solid var(--blue);border-radius:10px;padding:9px 11px;margin-bottom:7px}.gt-root .tkhd{display:flex;align-items:center;gap:8px;font-size:13px}.gt-root .tkp{margin-inline-start:auto;font-weight:800}
 .gt-root .prevcard{border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px -22px rgba(20,48,110,.5);max-width:340px}.gt-root .prevcard .ph{height:78px;background:linear-gradient(135deg,#2f6bd8,#3fd0c9);display:grid;place-items:center;font-size:26px}.gt-root .prevcard .pb{padding:10px 12px}.gt-root .prevcard .pt{font-size:13px;font-weight:800}.gt-root .prevcard .pm{font-size:11px;color:var(--faint);margin-top:2px}.gt-root .prevcard .pp{font-size:13px;font-weight:800;color:var(--green);margin-top:6px}
 .gt-root .gt-cursor{position:absolute;left:0;top:0;z-index:20;pointer-events:none;transition:transform .55s cubic-bezier(.5,.05,.25,1);filter:drop-shadow(0 3px 4px rgba(20,48,110,.35))}.gt-root .gt-cursor.down{transition:transform .1s}
 .gt-root .gt-cursor .ring{position:absolute;left:-9px;top:-9px;width:34px;height:34px;border-radius:50%;border:2px solid var(--blue);opacity:0}.gt-root .gt-cursor.click .ring{animation:gtclk .4s ease-out}@keyframes gtclk{0%{opacity:.7;transform:scale(.3)}100%{opacity:0;transform:scale(1)}}
-.gt-root .gt-cap{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.55;color:var(--ink2);min-height:42px}.gt-root .gt-cap b{color:var(--ink)}
+.gt-root .gt-cap{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-inline-start:4px solid var(--teal);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.55;color:var(--ink2);min-height:42px}.gt-root .gt-cap b{color:var(--ink)}
 .gt-root .gt-splash{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:radial-gradient(130% 120% at 50% 0%,#1b3f8f,#0b1020 75%);transition:opacity .5s ease;overflow:hidden}
 .gt-root .gt-splash.hide{opacity:0;pointer-events:none}
 .gt-root .gt-splash::before{content:"";position:absolute;top:0;left:-70%;width:55%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-18deg);animation:gtshine 2s ease-in-out .2s}
@@ -62,9 +64,11 @@ const CSS = `
 // so GuidedTour and the bespoke Blocks/Listings tours look identical.
 const scene = narratorScene;
 
-export function GuidedTour({ config }: { config: TourConfig }) {
-  const t = useT();
+export function GuidedTour({ config: rawConfig, view }: { config: TourConfig; view?: string }) {
+  const { t, locale } = useI18n();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // Text resolves through the catalogue at render (English fallback); the tour restarts when the language changes.
+  const config = useMemo(() => localiseGuided(view ?? rawConfig.title, rawConfig, t, locale), [view, rawConfig, t, locale]);
   const cfgRef = useRef(config);
   cfgRef.current = config;
 
@@ -95,19 +99,12 @@ export function GuidedTour({ config }: { config: TourConfig }) {
     // One fixed narrator: "Google UK English Female" when available (Chrome),
     // otherwise the closest British female / en-GB voice. No picker — every tour
     // sounds the same on a given device.
-    function pickVoice(): SpeechSynthesisVoice | null {
-      if (!hasSpeech) return null;
-      const vs = window.speechSynthesis.getVoices(); if (!vs.length) return null;
-      return vs.find((v) => v.name === "Google UK English Female")
-        || vs.find((v) => /en-GB/i.test(v.lang) && /female|Sonia|Serena|Kate|Fiona|Libby|Hazel/i.test(v.name))
-        || vs.find((v) => /en-GB/i.test(v.lang))
-        || vs.find((v) => /^en/i.test(v.lang)) || vs[0];
-    }
+    const pickVoice = () => pickTourVoice(locale);
     function speak(t: string) {
       if (!soundOn || !hasSpeech || !t) { speaking = Promise.resolve(); return; }
       const s = window.speechSynthesis; s.cancel();
       const u = new SpeechSynthesisUtterance(t);
-      if (voice) { u.voice = voice; u.lang = voice.lang; }
+      if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = voiceLang(locale);
       u.rate = 1.0; u.pitch = 1.05;
       // Move the robot's mouth only while it's genuinely speaking.
       const mouth = (on: boolean) => rootRef.current?.querySelector(".tnr-bot")?.classList.toggle("speaking", on);
@@ -128,12 +125,13 @@ export function GuidedTour({ config }: { config: TourConfig }) {
     }
     const frame = (i: number) => {
       const cfg = cfgRef.current, s = cfg.steps[i], pct = Math.round((i + 1) / cfg.steps.length * 100);
-      const nextLabel = i === cfg.steps.length - 1 ? `${t("common.done")} ✓` : `${t("common.next")} →`;
+      const nextLabel = i === cfg.steps.length - 1 ? `${t("common.done")} ✓` : `${t("common.next")} ${rtl ? "←" : "→"}`;
       return `<div class="wcard"><div class="whead"><div><div class="wstage">${s.stage}</div><div class="wtitle">${s.label}</div></div><div class="wstep">${t("common.stepXofY", { current: i + 1, total: cfg.steps.length })}</div></div>
         <div class="wbar"><span style="width:${pct}%"></span></div>
         <div class="wbody">${s.bodyHtml}</div>
-        <div class="wfoot"><span class="btn ghost">← ${t("common.back")}</span><span class="btn amber" id="gtnext">${nextLabel}</span></div></div>`;
+        <div class="wfoot"><span class="btn ghost">${rtl ? "→" : "←"} ${t("common.back")}</span><span class="btn amber" id="gtnext">${nextLabel}</span></div></div>`;
     };
+    const rtl = isRTL(locale);
     const doneView = scene(t("common.completeBadge"), t("common.allDone"), t("common.seenEssentials"));
 
     async function run(startIdx = 0) {
@@ -177,8 +175,9 @@ export function GuidedTour({ config }: { config: TourConfig }) {
     run();
 
     return () => { dead = true; token++; window.clearInterval(pollIv); if (hasSpeech) { window.speechSynthesis.cancel(); window.speechSynthesis.onvoiceschanged = null; } };
-  }, []);
+  }, [locale, view]);
 
+  const bm = /^(.*?)(OS)$/.exec(BRAND);
   return (
     <div className="gt-root" ref={rootRef}>
       <style>{CSS + NARRATOR_CSS}</style>
@@ -195,7 +194,7 @@ export function GuidedTour({ config }: { config: TourConfig }) {
       <div className="gt-stage">
         <div className="gt-cursor down"><span className="ring" /><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>
         <div className="gt-content" />
-        <div className="gt-splash"><div className="splmark">◈</div><div className="splogo">Activity<span className="splos">OS</span></div><div className="sptitle">{config.title}</div><div className="spsub">{t("common.quickGuidedWalkthrough")}</div></div>
+        <div className="gt-splash"><div className="splmark">◈</div><div className="splogo">{bm ? bm[1] : BRAND}<span className="splos">{bm ? bm[2] : ""}</span></div><div className="sptitle">{config.title}</div><div className="spsub">{t("common.quickGuidedWalkthrough")}</div></div>
       </div>
       <div className="gt-cap" />
     </div>

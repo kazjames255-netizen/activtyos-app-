@@ -1,4 +1,8 @@
 import type { LiveTourSteps } from "./LiveTour";
+import { tNow } from "@/lib/i18n/provider";
+import { BRAND } from "@/lib/i18n/config";
+
+const g = (k: string, v?: Record<string, string | number>) => tNow(["p8misc", "gm_" + k].join("."), v);
 
 // ─────────────────────────────────────────────────────────────────────────
 // The Gmail-connect walkthrough, authored as a LiveTour "slides" deck so it
@@ -59,7 +63,7 @@ export function gmailTour(address: string, code = "184973"): LiveTourSteps {
   const arrow = `
     <div style="display:flex;flex-direction:column;align-items:center;color:${BLUE}">
       <svg width="40" height="18" viewBox="0 0 40 18"><path d="M0 9h32M25 3l8 6-8 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span style="font:800 9px/1 system-ui;text-transform:uppercase;letter-spacing:.5px;margin-top:3px">a copy</span>
+      <span style="font:800 9px/1 system-ui;text-transform:uppercase;letter-spacing:.5px;margin-top:3px">${g("a_copy")}</span>
     </div>`;
 
   return {
@@ -74,12 +78,12 @@ export function gmailTour(address: string, code = "184973"): LiveTourSteps {
       {
         line: "First, copy your ActivityOS address. This private address is yours alone — nobody else can use it. You'll paste it into Gmail in a moment.",
         slide: centre(`
-          <div style="font:800 11px/1 system-ui;text-transform:uppercase;letter-spacing:.6px;color:${FAINT}">Step 1 — your inbound address</div>
+          <div style="font:800 11px/1 system-ui;text-transform:uppercase;letter-spacing:.6px;color:${FAINT}">${g("step1")}</div>
           <div style="display:flex;align-items:center;gap:10px;border:1px solid ${LINE};background:#f7f9fd;border-radius:14px;padding:12px 14px">
             <code style="font:700 14px/1 ui-monospace,monospace;color:${INK}">${address}</code>
-            ${pill("Copy", "linear-gradient(180deg,#4f8bf5,#2f6bd8)")}
+            ${pill(g("copy"), "linear-gradient(180deg,#4f8bf5,#2f6bd8)")}
           </div>
-          <div style="font:600 12px/1.5 system-ui;color:${FAINT};text-align:center">The real Copy button is on your setup panel, just behind this window.</div>`),
+          <div style="font:600 12px/1.5 system-ui;color:${FAINT};text-align:center">${g("copy_note")}</div>`),
       },
       // 2 — open forwarding settings (show the gear they need to click)
       {
@@ -89,20 +93,20 @@ export function gmailTour(address: string, code = "184973"): LiveTourSteps {
           <div style="display:flex;align-items:center;gap:12px">
             <div style="flex:1;display:flex;align-items:center;gap:9px;background:#eaf1fb;border-radius:999px;padding:9px 15px;min-width:0">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5f6b7f" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
-              <span style="font:600 12px/1 system-ui;color:${FAINT}">Search mail</span>
+              <span style="font:600 12px/1 system-ui;color:${FAINT}">${g("search")}</span>
             </div>
             <span style="display:inline-flex">${helpIcon}</span>
             <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:#e8f0fe;box-shadow:0 0 0 3px rgba(26,115,232,.4)">
               ${gearIcon}
-              <span style="position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:8px;white-space:nowrap;background:${BLUE};color:#fff;font:800 10px/1 system-ui;padding:5px 9px;border-radius:7px">See all settings ▾</span>
+              <span style="position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:8px;white-space:nowrap;background:${BLUE};color:#fff;font:800 10px/1 system-ui;padding:5px 9px;border-radius:7px">${g("see_settings")} ▾</span>
             </span>
             <span style="display:grid;grid-template-columns:repeat(3,4px);gap:3px">${Array.from({ length: 9 }).map(() => `<i style="width:4px;height:4px;border-radius:50%;background:#8a97ab;display:block"></i>`).join("")}</span>
           </div>
           <!-- After the gear → the settings tabs, Forwarding highlighted -->
-          <div style="display:flex;align-items:center;gap:7px;margin-top:34px;padding-bottom:6px">${gmailMark}<span style="font:700 12px/1 system-ui;color:${FAINT}">Settings</span></div>
+          <div style="display:flex;align-items:center;gap:7px;margin-top:34px;padding-bottom:6px">${gmailMark}<span style="font:700 12px/1 system-ui;color:${FAINT}">${g("settings")}</span></div>
           <div style="display:flex;flex-wrap:wrap;gap:12px;border-bottom:1px solid #eef1f5;padding-bottom:6px;font:600 11px/1 system-ui;color:${FAINT}">
-            <span>General</span><span>Labels</span><span>Inbox</span><span>Accounts</span><span>Filters</span>
-            <span style="color:${BLUE};font-weight:800;border-bottom:2px solid ${BLUE};padding-bottom:6px;margin-bottom:-7px">Forwarding and POP/IMAP</span>
+            <span>${g("general")}</span><span>${g("labels")}</span><span>${g("inbox")}</span><span>${g("accounts")}</span><span>${g("filters")}</span>
+            <span style="color:${BLUE};font-weight:800;border-bottom:2px solid ${BLUE};padding-bottom:6px;margin-bottom:-7px">${g("fwd_tab")}</span>
           </div>`)),
       },
       // 3 — add a forwarding address
@@ -110,11 +114,11 @@ export function gmailTour(address: string, code = "184973"): LiveTourSteps {
         line: "Click Add a forwarding address, paste the address you copied, and press Next.",
         slide: centre(chrome("mail.google.com/…/settings/fwdandpop", `
           <div style="border:1px solid ${LINE};border-radius:12px;padding:16px;box-shadow:0 10px 26px -12px rgba(20,48,110,.3)">
-            <div style="font:800 13px/1 system-ui;color:${INK}">Add a forwarding address</div>
-            <div style="margin-top:8px;font:600 11px/1 system-ui;color:${FAINT}">Please enter a new forwarding email address:</div>
+            <div style="font:800 13px/1 system-ui;color:${INK}">${g("add_fwd")}</div>
+            <div style="margin-top:8px;font:600 11px/1 system-ui;color:${FAINT}">${g("enter_fwd")}</div>
             <div style="margin-top:8px;border:1px solid ${BLUE};border-radius:6px;padding:8px 10px;font:700 12px/1 ui-monospace,monospace;color:${INK}">${address}</div>
             <div style="margin-top:16px;display:flex;justify-content:flex-end;align-items:center;gap:12px">
-              <span style="font:700 12px/1 system-ui;color:${FAINT}">Cancel</span>${pill("Next", BLUE)}
+              <span style="font:700 12px/1 system-ui;color:${FAINT}">${g("cancel")}</span>${pill(g("next"), BLUE)}
             </div>
           </div>`)),
       },
@@ -123,9 +127,9 @@ export function gmailTour(address: string, code = "184973"): LiveTourSteps {
         line: "Gmail pops up to say it's sent a confirmation. Press OK — this is just Gmail checking the address is really yours before it forwards anything.",
         slide: centre(chrome("mail.google.com/…/settings/fwdandpop", `
           <div style="border:1px solid ${LINE};border-radius:12px;padding:16px;box-shadow:0 10px 26px -12px rgba(20,48,110,.3)">
-            <div style="font:800 13px/1 system-ui;color:${INK}">Add a forwarding address</div>
-            <div style="margin-top:10px;font:600 12px/1.6 system-ui;color:${INK2}">A confirmation link has been sent to ${addrChip} to verify permission.</div>
-            <div style="margin-top:16px;display:flex;justify-content:flex-end">${pill("OK", BLUE)}</div>
+            <div style="font:800 13px/1 system-ui;color:${INK}">${g("add_fwd")}</div>
+            <div style="margin-top:10px;font:600 12px/1.6 system-ui;color:${INK2}">${g("confirm_sent", { addr: addrChip })}</div>
+            <div style="margin-top:16px;display:flex;justify-content:flex-end">${pill(g("ok"), BLUE)}</div>
           </div>`)),
       },
       // 5 — the code shows up here automatically (the verify step — may or may not)
@@ -134,13 +138,13 @@ export function gmailTour(address: string, code = "184973"): LiveTourSteps {
           "Here's the clever bit. Because that address is yours, Gmail's confirmation code appears right here on your setup panel, all by itself, within a minute. Usually that's all it takes. If Gmail also asks you to type the code in, just pop it into the box in Gmail and press Verify.",
         slide: centre(`
           <div style="width:100%;border:1px solid #f3d98a;background:#fdf6e3;border-radius:14px;padding:18px 20px">
-            <div style="font:800 12px/1 system-ui;color:#7a5a12">Gmail sent us your confirmation code</div>
+            <div style="font:800 12px/1 system-ui;color:#7a5a12">${g("code_sent")}</div>
             <div style="margin-top:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
               <code style="border-radius:9px;background:#fff;padding:8px 12px;font:800 17px/1 ui-monospace,monospace;letter-spacing:.15em;color:#7a5a12">${code}</code>
-              <span style="font:600 12px/1.4 system-ui;color:#7a5a12">appears on your setup panel automatically.</span>
+              <span style="font:600 12px/1.4 system-ui;color:#7a5a12">${g("code_auto")}</span>
             </div>
           </div>
-          <div style="font:600 12px/1.5 system-ui;color:${FAINT};text-align:center">Most of the time there's nothing to do here — it just turns green.</div>`),
+          <div style="font:600 12px/1.5 system-ui;color:${FAINT};text-align:center">${g("code_note")}</div>`),
       },
       // 6 — keep a copy & save
       {
@@ -149,24 +153,24 @@ export function gmailTour(address: string, code = "184973"): LiveTourSteps {
         slide: centre(chrome("mail.google.com/…/settings/fwdandpop", `
           <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
             <span style="margin-top:2px;width:14px;height:14px;flex:none;border-radius:50%;border:4px solid ${BLUE}"></span>
-            <span style="font:600 12px/1.5 system-ui;color:${INK}">Forward a copy of incoming mail to <b>${address}</b> and <b>keep Gmail's copy in the Inbox</b></span>
+            <span style="font:600 12px/1.5 system-ui;color:${INK}">${g("fwd_copy", { addr: address })}</span>
           </div>
           <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;opacity:.5">
             <span style="margin-top:2px;width:14px;height:14px;flex:none;border-radius:50%;border:2px solid ${LINE}"></span>
-            <span style="font:600 12px/1.5 system-ui;color:${INK2}">Disable forwarding</span>
+            <span style="font:600 12px/1.5 system-ui;color:${INK2}">${g("disable")}</span>
           </div>
-          ${pill("Save Changes", BLUE)}`)),
+          ${pill(g("save"), BLUE)}`)),
       },
       // 7 — done (also carried by doneLine; this slide is the visual payoff)
       {
         line: "You're connected. Every email now arrives in both your Gmail and here in ActivityOS.",
         slide: centre(`
           <div style="display:flex;align-items:center;gap:16px">
-            ${flowBox("Your Gmail", gmailMark, "#cdeacd", "#f3fbf3", "#127a3e")}
+            ${flowBox(g("your_gmail"), gmailMark, "#cdeacd", "#f3fbf3", "#127a3e")}
             ${arrow}
-            ${flowBox("ActivityOS", "📧", "#cdeacd", "#f3fbf3", "#16306e")}
+            ${flowBox(BRAND, "📧", "#cdeacd", "#f3fbf3", "#16306e")}
           </div>
-          <div style="font:800 13px/1 system-ui;color:#127a3e">✓ The same email lands in both places</div>`),
+          <div style="font:800 13px/1 system-ui;color:#127a3e">${g("same")}</div>`),
       },
     ],
   };

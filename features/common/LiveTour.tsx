@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useT } from "@/lib/i18n/provider";
+import { useEffect, useMemo, useRef } from "react";
+import { useI18n } from "@/lib/i18n/provider";
+import { BRAND } from "@/lib/i18n/config";
+import { anchorVariants, localiseLive, localiseSettings, pickTourVoice, voiceLang } from "./tourI18n";
 import { SETTINGS_LINKS } from "./tourSteps";
 import { NARRATOR_CSS, narratorScene, settingsScene } from "./tourNarrator";
 
@@ -36,7 +38,7 @@ const CSS = `
 .lt-root .lt-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#f5f8fd}
 .lt-root .lt-cursor{position:absolute;left:0;top:0;z-index:20;pointer-events:none;transition:transform .6s cubic-bezier(.5,.05,.25,1);filter:drop-shadow(0 3px 4px rgba(20,48,110,.4))}
 .lt-root .lt-cursor .ring{position:absolute;left:-10px;top:-10px;width:36px;height:36px;border-radius:50%;border:2px solid var(--blue);opacity:0}.lt-root .lt-cursor.click .ring{animation:ltclk .5s ease-out}@keyframes ltclk{0%{opacity:.7;transform:scale(.3)}100%{opacity:0;transform:scale(1)}}
-.lt-root .lt-cap{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.55;color:var(--ink2);min-height:42px}.lt-root .lt-cap b{color:var(--ink)}
+.lt-root .lt-cap{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-inline-start:4px solid var(--teal);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.55;color:var(--ink2);min-height:42px}.lt-root .lt-cap b{color:var(--ink)}
 .lt-root .lt-overlay{position:absolute;inset:0;z-index:15;display:none;padding:16px;background:#0b1020;overflow:auto}
 .lt-root .lt-splash{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:radial-gradient(130% 120% at 50% 0%,#1b3f8f,#0b1020 75%);transition:opacity .5s ease;overflow:hidden}
 .lt-root .lt-splash.hide{opacity:0;pointer-events:none}
@@ -53,10 +55,12 @@ const CSS = `
 `;
 
 export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: string; steps: LiveTourSteps }) {
-  const t = useT();
+  const { t, locale } = useI18n();
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const cfgRef = useRef(cfg);
-  cfgRef.current = cfg;
+  // Narration, titles and labels resolve through the catalogue at render (falling back to the authored English); anchors (`find`) stay English and are matched against the translated page by the bridge.
+  const loc = useMemo(() => localiseLive(view, cfg, t, locale), [view, cfg, t, locale]);
+  const cfgRef = useRef(loc);
+  cfgRef.current = loc;
 
   useEffect(() => {
     const root = rootRef.current;
@@ -93,20 +97,12 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
     // no dead air after it — the gap between cards was the main complaint.
     const readMs = (t: string) => Math.max(1400, t.split(/\s+/).length * 235);
 
-    function pickVoice(): SpeechSynthesisVoice | null {
-      if (!hasSpeech) return null;
-      const vs = window.speechSynthesis.getVoices();
-      if (!vs.length) return null;
-      return vs.find((v) => v.name === "Google UK English Female")
-        || vs.find((v) => /en-GB/i.test(v.lang) && /female|Sonia|Serena|Kate|Fiona|Libby|Hazel/i.test(v.name))
-        || vs.find((v) => /en-GB/i.test(v.lang))
-        || vs.find((v) => /^en/i.test(v.lang)) || vs[0];
-    }
+    const pickVoice = () => pickTourVoice(locale);
     function speak(t: string) {
       if (!soundOn || !hasSpeech || !t) { speaking = Promise.resolve(); return; }
       const s = window.speechSynthesis; s.cancel();
       const u = new SpeechSynthesisUtterance(t);
-      if (voice) { u.voice = voice; u.lang = voice.lang; }
+      if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = voiceLang(locale);
       u.rate = 1.0; u.pitch = 1.05;
       // Move the robot's mouth only while it's genuinely speaking.
       const mouth = (on: boolean) => rootRef.current?.querySelector(".tnr-bot")?.classList.toggle("speaking", on);
@@ -137,17 +133,17 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       new Promise<DOMRect | null>((res) => {
         const id = ++msgId;
         pending.set(id, res);
-        frame.contentWindow?.postMessage({ type: "tour:find", find, id, noBox }, "*");
+        frame.contentWindow?.postMessage({ type: "tour:find", find, alts: anchorVariants(find, t, locale), id, noBox }, "*");
         setTimeout(() => { if (pending.has(id)) { pending.delete(id); res(null); } }, 2600);
       });
     const clearHi = () => frame.contentWindow?.postMessage({ type: "tour:clear" }, "*");
     // Click a real control in the page (e.g. "Add event") so the tour can open a
     // create form and then walk through it — showing HOW to build, not just talk.
-    const clickInFrame = (find: string) => frame.contentWindow?.postMessage({ type: "tour:click", find }, "*");
+    const clickInFrame = (find: string) => frame.contentWindow?.postMessage({ type: "tour:click", find, alts: anchorVariants(find, t, locale) }, "*");
     // Click a repeated button (e.g. "+ Add to block") scoped to a specific card.
-    const clickWithin = (find: string, within: string) => frame.contentWindow?.postMessage({ type: "tour:click", find, within }, "*");
-    const fillInFrame = (field: string, value: string) => frame.contentWindow?.postMessage({ type: "tour:fill", field, value }, "*");
-    const pickInFrame = (text: string) => frame.contentWindow?.postMessage({ type: "tour:pick", text }, "*");
+    const clickWithin = (find: string, within: string) => frame.contentWindow?.postMessage({ type: "tour:click", find, alts: anchorVariants(find, t, locale), within, withinAlts: anchorVariants(within, t, locale) }, "*");
+    const fillInFrame = (field: string, value: string) => frame.contentWindow?.postMessage({ type: "tour:fill", field, alts: anchorVariants(field, t, locale), value }, "*");
+    const pickInFrame = (text: string) => frame.contentWindow?.postMessage({ type: "tour:pick", text, alts: anchorVariants(text, t, locale) }, "*");
 
     async function moveTo(rect: DOMRect | null) {
       if (rect) {
@@ -219,7 +215,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       // Page-specific "one last thing" — the robot beams down the Settings tabs
       // that control THIS page (each with a note on what it does).
       currentIdx = c.steps.length; clearHi(); linkEl.classList.remove("show");
-      const links = SETTINGS_LINKS[view] || [];
+      const links = localiseSettings(view, SETTINGS_LINKS[view], t, locale) || [];
       if (links.length) {
         showScene(settingsScene(portal, links));
         // Name the levers (labels only, not the whole note the card already
@@ -252,8 +248,10 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       if (hasSpeech) { window.speechSynthesis.cancel(); window.speechSynthesis.onvoiceschanged = null; }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, portal]);
+  }, [view, portal, locale]);
 
+  const bm = /^(.*?)(OS)$/.exec(BRAND);
+  const brandMain = bm ? bm[1] : BRAND, brandSuffix = bm ? bm[2] : "";
   return (
     <div className="lt-root" ref={rootRef}>
       <style>{CSS + NARRATOR_CSS}</style>
@@ -265,13 +263,13 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
         <button type="button" className="cbtn lt-sound">▶ {t("common.playWithSoundLabel")}</button>
       </div>
       <div className="lt-stage">
-        {cfg.slides
+        {loc.slides
           ? <div className="lt-frame lt-slide" />
-          : <iframe className="lt-frame" title={t("common.walkthrough")} src={`/tour/${portal}/${view}`} />}
+          : <iframe key={locale} className="lt-frame" title={t("common.walkthrough")} src={`/tour/${portal}/${view}`} />}
         <div className="lt-overlay" />
         <div className="lt-cursor"><span className="ring" /><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>
         <a className="lt-link" target="_blank" rel="noreferrer" href="#" />
-        <div className="lt-splash"><div className="splmark">◈</div><div className="splogo">Activity<span className="splos">OS</span></div><div className="sptitle">{cfg.title}</div><div className="spsub">{t("common.quickGuidedWalkthrough")}</div></div>
+        <div className="lt-splash"><div className="splmark">◈</div><div className="splogo">{brandMain}<span className="splos">{brandSuffix}</span></div><div className="sptitle">{loc.title}</div><div className="spsub">{t("common.quickGuidedWalkthrough")}</div></div>
       </div>
       <div className="lt-cap" />
     </div>

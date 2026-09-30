@@ -4,39 +4,40 @@
 // links in a calendar event's notes. One link opens straight in a new tab;
 // several drop down a list. Clicks never reach the card underneath.
 import { useState } from "react";
+import { tNow } from "@/lib/i18n/provider";
 
 export interface WebLink { url: string; title?: string }
 
 /** What a pasted address is, so the list reads "Google Sheet", not a URL soup. */
 export function urlKind(raw: string): { icon: string; label: string } {
-  let u: URL; try { u = new URL(raw); } catch { return { icon: "🔗", label: "Link" }; }
+  let u: URL; try { u = new URL(raw); } catch { return { icon: "🔗", label: tNow("p8misc.lb_link") }; }
   const h = u.hostname.replace(/^www\./, ""), p = u.pathname.toLowerCase();
   if (h === "docs.google.com") {
-    if (p.startsWith("/spreadsheets")) return { icon: "📊", label: "Google Sheet" };
-    if (p.startsWith("/presentation")) return { icon: "📽️", label: "Google Slides" };
-    if (p.startsWith("/forms")) return { icon: "📝", label: "Google Form" };
-    return { icon: "📄", label: "Google Doc" };
+    if (p.startsWith("/spreadsheets")) return { icon: "📊", label: tNow("p8misc.lb_sheet") };
+    if (p.startsWith("/presentation")) return { icon: "📽️", label: tNow("p8misc.lb_slides") };
+    if (p.startsWith("/forms")) return { icon: "📝", label: tNow("p8misc.lb_form") };
+    return { icon: "📄", label: tNow("p8misc.lb_doc") };
   }
-  if (h === "drive.google.com") return { icon: "📁", label: p.includes("/folders/") ? "Google Drive folder" : "Google Drive file" };
+  if (h === "drive.google.com") return { icon: "📁", label: tNow(p.includes("/folders/") ? "p8misc.lb_drive_folder" : "p8misc.lb_drive_file") };
   if (h.endsWith("dropbox.com")) return { icon: "📦", label: "Dropbox" };
   if (h === "1drv.ms" || h.endsWith("onedrive.live.com") || h.endsWith("sharepoint.com")) return { icon: "☁️", label: "OneDrive / SharePoint" };
-  if (h.endsWith("claude.ai") || h.endsWith("claude.site")) return { icon: "✨", label: "Claude page" };
-  if (/\.pdf$/.test(p)) return { icon: "📕", label: `PDF · ${h}` };
-  if (/\.html?$/.test(p)) return { icon: "🌐", label: `Web page · ${h}` };
+  if (h.endsWith("claude.ai") || h.endsWith("claude.site")) return { icon: "✨", label: tNow("p8misc.lb_ai_page") };
+  if (/\.pdf$/.test(p)) return { icon: "📕", label: tNow("p8misc.lb_pdf", { host: h }) };
+  if (/\.html?$/.test(p)) return { icon: "🌐", label: tNow("p8misc.lb_web", { host: h }) };
   return { icon: "🔗", label: h };
 }
 /** A pasted address, made safe to open — or why it can't be. */
 export function normaliseUrl(raw: string): { url?: string; error?: string } {
   const v = raw.trim();
   if (!v) return {};
-  if (/^file:|^\/|^~\/|^[a-z]:\\/i.test(v)) return { error: "That's a file on your computer — a web page can't open those. Put it on Google Drive (or publish it) and paste that link instead." };
+  if (/^file:|^\/|^~\/|^[a-z]:\\/i.test(v)) return { error: tNow("p8misc.lb_err_file") };
   const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`;
   try {
     const u = new URL(withScheme);
-    if (u.protocol !== "https:" && u.protocol !== "http:") return { error: "Only web links (https://…) can be added." };
-    if (!u.hostname.includes(".")) return { error: "That doesn't look like a web address." };
+    if (u.protocol !== "https:" && u.protocol !== "http:") return { error: tNow("p8misc.lb_err_scheme") };
+    if (!u.hostname.includes(".")) return { error: tNow("p8misc.lb_err_addr") };
     return { url: u.toString() };
-  } catch { return { error: "That doesn't look like a web address." }; }
+  } catch { return { error: tNow("p8misc.lb_err_addr") }; }
 }
 /** Every web address in a piece of text (an event's notes). */
 export function linksIn(text?: string): WebLink[] {
@@ -56,11 +57,11 @@ export function LinkBadge({ links, compact, onDark }: { links: WebLink[]; compac
   const labelOf = (u: WebLink) => u.title || urlKind(u.url).label;
   if (links.length === 1) {
     const u = links[0];
-    return <a href={u.url} target="_blank" rel="noopener noreferrer" onClick={stop} onMouseDown={stop} draggable={false} title={`Open ${labelOf(u)}`} className={cls} style={tone}><span className="text-[11px] leading-none">{urlKind(u.url).icon}</span>{compact ? "" : "Open"}<span aria-hidden>↗</span></a>;
+    return <a href={u.url} target="_blank" rel="noopener noreferrer" onClick={stop} onMouseDown={stop} draggable={false} title={tNow("p8misc.lb_open_x", { name: labelOf(u) })} className={cls} style={tone}><span className="text-[11px] leading-none">{urlKind(u.url).icon}</span>{compact ? "" : tNow("p8misc.lb_open")}<span aria-hidden>↗</span></a>;
   }
   return (
     <span className="relative flex-none" onClick={stop} onMouseDown={stop}>
-      <button type="button" onClick={() => setOpen((v) => !v)} title={links.map(labelOf).join("\n")} aria-expanded={open} className={cls} style={tone}><span className="text-[11px] leading-none">🔗</span>{links.length}{compact ? "" : " links"}<span className="text-[8px]">{open ? "▲" : "▼"}</span></button>
+      <button type="button" onClick={() => setOpen((v) => !v)} title={links.map(labelOf).join("\n")} aria-expanded={open} className={cls} style={tone}><span className="text-[11px] leading-none">🔗</span>{links.length}{compact ? "" : " " + tNow("p8misc.lb_links")}<span className="text-[8px]">{open ? "▲" : "▼"}</span></button>
       {open && (
         <>
           <span className="fixed inset-0 z-[150]" onClick={() => setOpen(false)} />

@@ -29,15 +29,18 @@ export function TourBridge() {
     // Find the smallest element whose visible text contains the needle, then
     // climb to its enclosing card/section so the spotlight frames a whole
     // panel rather than a lone word.
-    const find = (needle: string): HTMLElement | null => {
-      const n = needle.trim().toLowerCase();
-      if (!n) return null;
+    // Anchors are authored in English; `alts` carries their translations in the active language (the real page is localised), so a needle is a LIST and any spelling matches.
+    const lower = (x: string | string[]) => (Array.isArray(x) ? x : [x]).map((v) => v.trim().toLowerCase()).filter(Boolean);
+    const list = (main: unknown, alts: unknown): string[] => [String(main ?? ""), ...(Array.isArray(alts) ? alts.map(String) : [])];
+    const find = (needle: string | string[]): HTMLElement | null => {
+      const ns = lower(needle);
+      if (!ns.length) return null;
       const nodes = document.body.querySelectorAll<HTMLElement>("h1,h2,h3,h4,p,span,div,button,a,td,th,li,label");
       let best: HTMLElement | null = null;
       let bestLen = Infinity;
       for (const el of nodes) {
         const t = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
-        if (t.length >= n.length && t.includes(n) && t.length < bestLen) {
+        if (t.length < bestLen && ns.some((n) => t.length >= n.length && t.includes(n))) {
           best = el;
           bestLen = t.length;
         }
@@ -49,8 +52,8 @@ export function TourBridge() {
 
     // For "click" steps: prefer an actual clickable (button/link) matching the
     // text, else fall back to the nearest element, and click it.
-    const clickable = (needle: string, within?: string): HTMLElement | null => {
-      const n = needle.trim().toLowerCase();
+    const clickable = (needle: string | string[], within?: string | string[]): HTMLElement | null => {
+      const ns = lower(needle);
       // `within` scopes the search to the card containing that text — so a
       // repeated button like "+ Add to block" can be clicked on a SPECIFIC
       // period/pass, not just the first one on the page.
@@ -59,7 +62,7 @@ export function TourBridge() {
       let bestLen = Infinity;
       for (const el of scope.querySelectorAll<HTMLElement>("button,a,[role='button']")) {
         const t = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
-        if (t.includes(n) && t.length < bestLen) { best = el; bestLen = t.length; }
+        if (t.length < bestLen && ns.some((n) => t.includes(n))) { best = el; bestLen = t.length; }
       }
       return best ?? (within ? null : find(needle));
     };
@@ -91,37 +94,38 @@ export function TourBridge() {
 
     // Find the input/select/textarea a label points at (by htmlFor, containment,
     // the next field after a bare text label, or a matching placeholder).
-    const fieldFor = (labelText: string): HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null => {
-      const n = labelText.trim().toLowerCase();
+    const fieldFor = (labelText: string | string[]): HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null => {
+      const ns = lower(labelText);
       const fields = [...document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input,textarea,select")];
       const afterLabel = (lbl: Element) => fields.find((el) => lbl.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) ?? null;
       for (const lbl of document.querySelectorAll<HTMLLabelElement>("label")) {
-        if (!(lbl.textContent || "").replace(/\s+/g, " ").trim().toLowerCase().includes(n)) continue;
+        const lt = (lbl.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+        if (!ns.some((n) => lt.includes(n))) continue;
         if (lbl.htmlFor) { const el = document.getElementById(lbl.htmlFor); if (el) return el as HTMLInputElement; }
         const inner = lbl.querySelector<HTMLInputElement>("input,textarea,select"); if (inner) return inner;
         const nxt = afterLabel(lbl); if (nxt) return nxt;
       }
       // Bare (non-<label>) captions like "AGE FROM"
       for (const el of document.querySelectorAll("p,span,div")) {
-        if (el.children.length === 0 && (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase() === n) {
+        if (el.children.length === 0 && ns.includes((el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase())) {
           const nxt = afterLabel(el); if (nxt) return nxt;
         }
       }
       // A <select> whose options mention the label (e.g. "Select a venue…").
-      const sel = fields.find((el) => el instanceof HTMLSelectElement && [...el.options].some((o) => o.text.toLowerCase().includes(n)));
+      const sel = fields.find((el) => el instanceof HTMLSelectElement && [...el.options].some((o) => ns.some((n) => o.text.toLowerCase().includes(n))));
       if (sel) return sel;
-      return fields.find((el) => "placeholder" in el && (el.placeholder || "").toLowerCase().includes(n)) ?? null;
+      return fields.find((el) => "placeholder" in el && ns.some((n) => (el.placeholder || "").toLowerCase().includes(n))) ?? null;
     };
 
     const onMsg = (e: MessageEvent) => {
-      const d = e.data as { type?: string; find?: string; id?: number; field?: string; value?: string; text?: string; noBox?: boolean; within?: string } | null;
+      const d = e.data as { type?: string; find?: string; id?: number; field?: string; value?: string; text?: string; noBox?: boolean; within?: string; alts?: string[]; withinAlts?: string[] } | null;
       if (!d || typeof d !== "object") return;
       if (d.type === "tour:click") {
-        clickable(String(d.find ?? ""), d.within ? String(d.within) : undefined)?.click();
+        clickable(list(d.find, d.alts), d.within ? list(d.within, d.withinAlts) : undefined)?.click();
         return;
       }
       if (d.type === "tour:fill") {
-        const el = fieldFor(String(d.field ?? ""));
+        const el = fieldFor(list(d.field, d.alts));
         if (!el) return;
         el.scrollIntoView({ block: "center", behavior: "auto" });
         if (el instanceof HTMLSelectElement) {
@@ -138,16 +142,16 @@ export function TourBridge() {
         return;
       }
       if (d.type === "tour:pick") {
-        const t = String(d.text ?? "").trim().toLowerCase();
+        const ts = lower(list(d.text, d.alts));
         // a chip/checkbox/label/button carrying the text
         const el = [...document.querySelectorAll<HTMLElement>("button,label,[role='button'],a,span,div")]
-          .filter((x) => (x.textContent || "").replace(/\s+/g, " ").trim().toLowerCase().includes(t))
+          .filter((x) => { const xt = (x.textContent || "").replace(/\s+/g, " ").trim().toLowerCase(); return ts.some((t) => xt.includes(t)); })
           .sort((a, b) => (a.textContent || "").length - (b.textContent || "").length)[0];
         el?.click();
         return;
       }
       if (d.type === "tour:find") {
-        const el = find(String(d.find ?? ""));
+        const el = find(list(d.find, d.alts));
         if (!el) {
           window.parent.postMessage({ type: "tour:rect", id: d.id, ok: false }, "*");
           return;
