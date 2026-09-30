@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { LiveTour } from "@/features/common/LiveTour";
 import { gmailTour } from "@/features/common/tourGmail";
 
@@ -11,6 +12,7 @@ import { gmailTour } from "@/features/common/tourGmail";
 // can't embed). Launched as a popup from the email-setup panel; the tour only
 // mounts while the popup is open, so the voice stops when it closes.
 export function GmailSetupWalkthrough({ address, code, onClose }: { address: string; code?: string; onClose: () => void }) {
+  const t = useT();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
@@ -33,7 +35,7 @@ export function GmailSetupWalkthrough({ address, code, onClose }: { address: str
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close walkthrough"
+          aria-label={t("p8em.cClose")}
           style={{ position: "absolute", top: 12, insetInlineEnd: 12, zIndex: 5, width: 34, height: 34, borderRadius: 999, border: "1px solid #e6ebf5", background: "#fff", color: "#3a4a68", fontSize: 18, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}
         >
           ×

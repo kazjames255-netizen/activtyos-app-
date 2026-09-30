@@ -53,7 +53,7 @@ function withNet(url: string): string {
 function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onClick} className="relative h-6 w-11 flex-none rounded-full transition-colors" style={{ background: on ? "#22a565" : "#cfd3dd" }}>
-      <span className="absolute top-0.5 h-5 w-5 rounded-full bg-[var(--surface)] shadow transition-all" style={{ left: on ? 22 : 2 }} />
+      <span className="absolute top-0.5 h-5 w-5 rounded-full bg-[var(--surface)] shadow transition-all" style={{ insetInlineStart: on ? 22 : 2 }} />
     </button>
   );
 }
