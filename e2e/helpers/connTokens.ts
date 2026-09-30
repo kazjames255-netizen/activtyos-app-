@@ -23,8 +23,13 @@ const [tenantId, provider, cmd] = process.argv.slice(2);
     out({ broken: true });
   } else if (cmd === "restore") {
     if (!backup) { out({ restored: false, note: "no backup (not broken)" }); process.exit(0); }
-    await ref.update({ accessToken: backup.accessToken, refreshToken: backup.refreshToken, expiresAt: backup.expiresAt, e2eBackup: null, needsReconnect: false, lastAuthError: null, lastAuthErrorAt: null });
-    out({ restored: true });
+    // Providers that ROTATE refresh tokens (Xero) consume the old one the moment it is used. If a real refresh happened while the connection was
+    // "broken" (the stale-access-token self-heal path), the stored refresh token is now a NEW, valid one: overwriting it with the backup would
+    // put a used-up token back and kill the standing connection. Only restore the backup when the stored token is still our placeholder/garbage.
+    const cur = snap.get("refreshToken");
+    const rotated = cur !== "e2e-invalid-refresh-token" && cur !== backup.refreshToken;
+    await ref.update({ ...(rotated ? {} : { accessToken: backup.accessToken, refreshToken: backup.refreshToken, expiresAt: backup.expiresAt }), e2eBackup: null, needsReconnect: false, lastAuthError: null, lastAuthErrorAt: null });
+    out({ restored: true, keptRotatedTokens: rotated });
   } else throw new Error("cmd break|stale|restore|status");
   process.exit(0);
 })().catch((e) => { console.error(String(e.message ?? e)); process.exit(1); });
