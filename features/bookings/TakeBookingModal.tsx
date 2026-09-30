@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useBookingsStore } from "./store";
 import { get as apiGet, post as apiPost } from "@/lib/api";
-import { BookingOnly, type ServerListing } from "@/features/listings/ListingWizard";
+import { BookingOnly, optionLabel, type ServerListing } from "@/features/listings/ListingWizard";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { blockOn } from "@/features/listings/capacity";
 import { money } from "./helpers";
@@ -256,7 +256,7 @@ export function TakeBookingModal() {
             {catOpts.length > 0 && (
               <Pill active={!!cat} onClear={() => setCat("")}>
                 <PillSelect active={!!cat} value={cat} onChange={setCat} title={t("p8lst.btFilterCat")}
-                  options={[["", t("p8lst.btCategory")], ...catOpts.map((c) => [c.id, `${c.name} (${c.n})`] as [string, string])]} />
+                  options={[["", t("p8lst.btCategory")], ...catOpts.map((c) => [c.id, `${optionLabel(c.name)} (${c.n})`] as [string, string])]} />
               </Pill>
             )}
             {(q || venue || cat) && (

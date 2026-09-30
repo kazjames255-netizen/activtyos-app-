@@ -382,6 +382,14 @@ export const SECTION_KEYS = [
   { key: "addons", label: "Optional add-ons", eyebrow: "Add-ons", title: "Extras" },
   { key: "gallery", label: "Gallery", eyebrow: "Gallery", title: "In action" },
 ] as const;
+/** Display name for a library option. The seeded defaults (categories, what's provided, safety, SEND, outcomes) are stored in English; show them in the reader's language. Anything the operator typed shows as typed. */
+export function optionLabel(name: string): string {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  if (!slug) return name;
+  const k = "p8lst.waOpt_" + slug;
+  const r = tNow(k);
+  return r !== k ? r : name;
+}
 export const WHERE_HEAD_DEFAULT = { eyebrow: "Where is it", title: "Location" };
 /** The venue section's heading. Lives on the operator's library, not the listing — the same venue reads the same on every listing. */
 export function whereHeading(local: LocalState): { eyebrow: string; title: string } {
@@ -1297,7 +1305,7 @@ function EditableChips({ options, sel, onToggle, onAdd, onDelete, emojis, showEm
         const em = showEmoji ? chipEmoji(o) : "";
         return (
           <span key={o} className="inline-flex items-center overflow-hidden rounded-full border" style={on ? { borderColor: "transparent", background: "linear-gradient(120deg,#3f78d8,#1b3f8f)", boxShadow: "0 4px 12px -3px rgba(31,84,163,.55)" } : { borderColor: "var(--line)", background: "#fff" }}>
-            <button type="button" onClick={() => onToggle(o)} className="py-1.5 ps-3 text-[12px] font-bold" style={{ color: on ? "#fff" : "var(--ink-2)" }}>{on && check ? "✓ " : ""}{em ? em + " " : ""}{o}</button>
+            <button type="button" onClick={() => onToggle(o)} className="py-1.5 ps-3 text-[12px] font-bold" style={{ color: on ? "#fff" : "var(--ink-2)" }}>{on && check ? "✓ " : ""}{em ? em + " " : ""}{optionLabel(o)}</button>
             {onDelete && <button type="button" onClick={() => onDelete(o)} aria-label={tr("p8lst.waDeleteX", { name: o })} className="px-2 text-[11px]" style={{ color: on ? "rgba(255,255,255,.7)" : "var(--ink-3)" }}>✕</button>}
             {!onDelete && <span className="pe-3" />}
           </span>
@@ -1478,12 +1486,11 @@ function genDescription(prompt: string, section: string, d: WizardDraft, cats: s
   return aiPick("waAiDef", variant, { ...vars, kw: variant % 3 === 2 ? cap1(kw) : kw });
 }
 function genBio(prompt: string, m: StaffMember, variant: number): string {
-  const first = m.first || tNow("p8lst.waAiThey");
   const name = [m.first, m.last].filter(Boolean).join(" ") || tNow("p8lst.waAiThisCoach");
   const kws = aiKeywords(prompt, 5);
   const kw = kws.join(", ");
   const v = variant % 3;
-  if (v === 0) return tNow(kw ? "p8lst.waAiBio1a" : "p8lst.waAiBio1b", { name, first, kw }).slice(0, 300);
+  if (v === 0) return tNow(kw ? "p8lst.waAiBio1a" : "p8lst.waAiBio1b", { name, kw }).slice(0, 300);
   if (v === 1) return tNow("p8lst.waAiBio2", { name, kw: kw || tNow("p8lst.waAiWorkKids") }).slice(0, 300);
   return tNow("p8lst.waAiBio3", { name, kw: kw || tNow("p8lst.waAiFunActs") }).slice(0, 300);
 }
@@ -1650,7 +1657,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
         {local.categories.map((c) => (
           <button key={c.id} type="button" onClick={() => upd({ categoryIds: toggle(d.categoryIds, c.id) })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold"
             style={d.categoryIds.includes(c.id) ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
-            {d.categoryIds.includes(c.id) ? "✓ " : ""}{c.name}
+            {d.categoryIds.includes(c.id) ? "✓ " : ""}{optionLabel(c.name)}
           </button>
         ))}
         {local.categories.length === 0 && (
@@ -1692,7 +1699,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
               return (
                 <button key={c.id} type="button" onClick={() => upd({ heroCategoryId: c.id })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold"
                   style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
-                  {on ? "★ " : ""}{c.name}
+                  {on ? "★ " : ""}{optionLabel(c.name)}
                 </button>
               );
             })}
@@ -3631,7 +3638,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
   const chip = (o: string, fb: string, i: number) => (
     <div key={o} className="flex items-center gap-2.5 rounded-2xl bg-[#f4f7ff] px-3 py-2.5">
       <span className="flex h-8 w-8 flex-none items-center justify-center rounded-xl text-[15px]" style={{ background: ["#e7f0ff", "#e4f8ee", "#fff0f5", "#fff6e0", "#e0f5ff"][i % 5] }}>{emo(o, fb)}</span>
-      <b className="text-[13px]" style={{ color: INKp }}>{o}</b>
+      <b className="text-[13px]" style={{ color: INKp }}>{optionLabel(o)}</b>
     </div>
   );
   const grid2 = full ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1";
@@ -3657,7 +3664,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
           {/* Types in blue, location in muted grey — one colour ran them together. */}
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10.5px] font-extrabold uppercase leading-tight tracking-[0.1em]">
             {cats.length ? cats.map((c, i) => (
-              <span key={c.id} style={{ color: BLUE }}>{i > 0 && <span style={{ color: MUTp, opacity: 0.5 }}> / </span>}{c.name}</span>
+              <span key={c.id} style={{ color: BLUE }}>{i > 0 && <span style={{ color: MUTp, opacity: 0.5 }}> / </span>}{optionLabel(c.name)}</span>
             )) : <span style={{ color: BLUE }}>{tr("p7pg.holidayCamp")}</span>}
             {town && (
               <>
@@ -3679,7 +3686,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
         {/* hero image (no text on it) */}
         <div className="relative overflow-hidden rounded-[28px]" style={{ aspectRatio: heroAspect }}>
           <HeroImages imgs={imgs} fallback={HERO_FALLBACK} />
-          {heroCat && <span className="absolute start-4 top-4 z-[2] rounded-full bg-white px-3.5 py-2 text-[12px] font-extrabold" style={{ color: BLUE, transform: "rotate(-3deg)" }}>🎉 {heroCat.name}</span>}
+          {heroCat && <span className="absolute start-4 top-4 z-[2] rounded-full bg-white px-3.5 py-2 text-[12px] font-extrabold" style={{ color: BLUE, transform: "rotate(-3deg)" }}>🎉 {optionLabel(heroCat.name)}</span>}
         </div>
 
         {/* passes — fancy accordion, tap to open details */}
@@ -3874,7 +3881,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
           {cats.length ? cats.map((c, i) => (
             <span key={c.id} className="inline-flex items-center gap-2">
               {i > 0 && <span style={{ color: MUTs, opacity: 0.5 }}>/</span>}
-              <span style={{ color: LIME }}>{c.name}</span>
+              <span style={{ color: LIME }}>{optionLabel(c.name)}</span>
             </span>
           )) : <span style={{ color: LIME }}>{tr("p7pg.holidayCamp")}</span>}
           {town && (
@@ -3898,7 +3905,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
       <div className="relative overflow-hidden" style={{ aspectRatio: heroAspect }}>
         <HeroImages imgs={imgs} fallback={`linear-gradient(120deg,${EL},#00a3ff 70%,#003)`} />
         <div className="pointer-events-none absolute inset-0 z-[1]" style={{ backgroundImage: "repeating-linear-gradient(115deg,transparent 0 46px,rgba(255,255,255,.05) 46px 48px)" }} />
-        {heroCat && <span className="absolute start-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em]" style={{ background: LIME, color: INK, transform: "skewX(-8deg)" }}>{heroCat.name}</span>}
+        {heroCat && <span className="absolute start-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em]" style={{ background: LIME, color: INK, transform: "skewX(-8deg)" }}>{optionLabel(heroCat.name)}</span>}
       </div>
       {/* fancy info strip (under the image) */}
       <div className="flex flex-col border-y sm:flex-row" style={{ borderColor: LINEs, background: PANEL }}>
@@ -4138,11 +4145,11 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
             {d.description && <div><div className="text-[12px] font-extrabold uppercase tracking-[0.14em]" style={{ color: LIME }}>{headingOf(d, "about", "title")}</div><p className="mt-1.5 text-[13.5px] leading-[1.65]" style={{ color: "#c3ccdb" }}>{d.description}</p></div>}
             {!full && <div id="aos-book">{widget}</div>}
             {d.sections.some((s) => s.text) && <SportSec eye={headingOf(d, "about", "eyebrow")} title={headingOf(d, "about", "title")}>{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: CY }}>{s.type}</div><p className="mt-1 text-[14px] leading-[1.6]" style={{ color: "#c3ccdb" }}>{s.text}</p></div>)}</SportSec>}
-            {d.outcomes.length > 0 && <SportSec eye={headingOf(d, "learn", "eyebrow")} title={headingOf(d, "learn", "title")}><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => <SportRow key={o}><span className={`w-6 font-black ${cond}`} style={{ color: CY }}>{String(i + 1).padStart(2, "0")}</span>{o}</SportRow>)}</div></SportSec>}
-            {d.provided.length > 0 && <SportSec eye={headingOf(d, "included", "eyebrow")} title={headingOf(d, "included", "title")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o) => <SportRow key={o}><span>{emo(o, "✅")}</span>{o}</SportRow>)}</div></SportSec>}
-            {d.toBring.length > 0 && <SportSec eye={tr("p7pg.pleasePack")} title={tr("p7pg.whatToBring")}><div className={`grid gap-2 ${grid2}`}>{d.toBring.map((o) => <SportRow key={o}><span>{emo(o, "🎒")}</span>{o}</SportRow>)}</div></SportSec>}
-            {d.safety.length > 0 && <SportSec eye={headingOf(d, "safety", "eyebrow")} title={headingOf(d, "safety", "title")}><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o) => <SportRow key={o}><span>{emo(o, "🚑")}</span>{o}</SportRow>)}</div></SportSec>}
-            {d.send.length > 0 && <SportSec eye={headingOf(d, "send", "eyebrow")} title={headingOf(d, "send", "title")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o) => <SportRow key={o}><span>{emo(o, "♿")}</span>{o}</SportRow>)}</div></SportSec>}
+            {d.outcomes.length > 0 && <SportSec eye={headingOf(d, "learn", "eyebrow")} title={headingOf(d, "learn", "title")}><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => <SportRow key={o}><span className={`w-6 font-black ${cond}`} style={{ color: CY }}>{String(i + 1).padStart(2, "0")}</span>{optionLabel(o)}</SportRow>)}</div></SportSec>}
+            {d.provided.length > 0 && <SportSec eye={headingOf(d, "included", "eyebrow")} title={headingOf(d, "included", "title")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o) => <SportRow key={o}><span>{emo(o, "✅")}</span>{optionLabel(o)}</SportRow>)}</div></SportSec>}
+            {d.toBring.length > 0 && <SportSec eye={tr("p7pg.pleasePack")} title={tr("p7pg.whatToBring")}><div className={`grid gap-2 ${grid2}`}>{d.toBring.map((o) => <SportRow key={o}><span>{emo(o, "🎒")}</span>{optionLabel(o)}</SportRow>)}</div></SportSec>}
+            {d.safety.length > 0 && <SportSec eye={headingOf(d, "safety", "eyebrow")} title={headingOf(d, "safety", "title")}><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o) => <SportRow key={o}><span>{emo(o, "🚑")}</span>{optionLabel(o)}</SportRow>)}</div></SportSec>}
+            {d.send.length > 0 && <SportSec eye={headingOf(d, "send", "eyebrow")} title={headingOf(d, "send", "title")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o) => <SportRow key={o}><span>{emo(o, "♿")}</span>{optionLabel(o)}</SportRow>)}</div></SportSec>}
             {venue && (isOnlineVenue(venue) || venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
               <div className="border-t pt-6" style={{ borderColor: LINEs }}>
                 <button type="button" onClick={() => setWhereOpen((o) => !o)} className="flex w-full items-center justify-between border px-4 py-3 text-start" style={{ borderColor: LINEs, background: PANEL }}>

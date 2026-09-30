@@ -18,7 +18,7 @@ import { useTenantSettings } from "@/lib/settings";
 import { VenueMap } from "./VenueMap";
 import { BlocksApp } from "@/features/blocks/BlocksApp";
 import { DEMO_STAFF } from "@/features/learning/credentials";
-import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, getDraftArchived, copyDraft, draftFromListing, type ServerListing, type WizardDraft } from "./ListingWizard";
+import { optionLabel, whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, getDraftArchived, copyDraft, draftFromListing, type ServerListing, type WizardDraft } from "./ListingWizard";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Freelancer Listings — the build-manual's "Listings, services & tickets"
@@ -832,7 +832,7 @@ function ListingsTab({
         {catOpts.length > 0 && (
           <Pill active={!!catFilter} onClear={() => setCatFilter("")}>
             <PillSelect active={!!catFilter} value={catFilter} onChange={setCatFilter} title={t("p8lst.flFilterCat")}
-              options={[["", t("p8lst.flAllCats")], ...catOpts.map((c) => [c.id, `${c.name} (${c.n})`] as [string, string])]} />
+              options={[["", t("p8lst.flAllCats")], ...catOpts.map((c) => [c.id, `${optionLabel(c.name)} (${c.n})`] as [string, string])]} />
           </Pill>
         )}
 
