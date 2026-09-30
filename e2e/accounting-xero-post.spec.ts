@@ -54,12 +54,12 @@ test("post an approved pay run to Xero: gates, mapping, balanced journal, idempo
     expect((await post()).status).toBe(409);
     // creator cannot approve their own run (segregation of duties); a different creator can be approved by the company account
     expect((await call("POST", `/api/payroll/runs/${runId}/approve`, tok)).status).toBe(403);
-    patchDoc("payrollRuns", `${co.tenantId}_${runId}`, { createdBy: "e2e-other-creator@activityos-test.com" });
+    patchDoc("payrollRuns", `${co.tenantId}_${runId}`, { createdBy: "e2e-other-creator@activityos-test.com", createdByUid: "e2e-other-creator-uid" });
     expect((await call("POST", `/api/payroll/runs/${runId}/approve`, tok)).status).toBe(200);
 
     // unmapped -> 400 (freelancer tenant has no mapping; mapping is checked before connection)
     const flRun = await mk(flTok, `E2E Xero fl ${Date.now()}`);
-    patchDoc("payrollRuns", `${fl.tenantId}_${flRun}`, { createdBy: "e2e-other-creator@activityos-test.com" });
+    patchDoc("payrollRuns", `${fl.tenantId}_${flRun}`, { createdBy: "e2e-other-creator@activityos-test.com", createdByUid: "e2e-other-creator-uid" });
     expect((await call("POST", `/api/payroll/runs/${flRun}/approve`, flTok)).status).toBe(200);
     const un = await post(flRun, flTok);
     expect(un.status, JSON.stringify(un.body)).toBe(400);

@@ -10,7 +10,7 @@ import {
   qboConfig, qboConfigured, qboAuthorizeUrl, qboExchangeCode, qboRefresh, qboRevoke, qboJournalBody, qboPostJournal, qboAccounts, type QboTokens,
   xeroConfig, xeroConfigured, xeroAuthorizeUrl, xeroExchangeCode, xeroRefresh, xeroConnections, xeroRevoke, xeroJournalBody, xeroPostJournal, xeroAccounts, type XeroTokens,
   sageConfig, sageConfigured, sageAuthorizeUrl, sageExchangeCode, sageRefresh, sageBusinesses, sageJournalBody, sagePostJournal, sageAccounts, type SageTokens,
-  ProviderError, type ProviderErrorKind, EXTRA_BUCKETS, validatePayLines, requiredBuckets, journalRefs,
+  ProviderError, type ProviderErrorKind, bodyFingerprint, EXTRA_BUCKETS, validatePayLines, requiredBuckets, journalRefs,
 } from "../lib/accounting";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -231,7 +231,7 @@ async function loadAccounts(provider: Provider, key: string): Promise<AcctRow[] 
   }
   if (provider === "xero") {
     const rows = await withTokens((o) => freshXero(key, o), async (t: XeroTokens) => { const [e, l] = await Promise.all([xeroAccounts(t, "EXPENSE"), xeroAccounts(t, "LIABILITY")]); return [...e, ...l]; });
-    return rows ? rows.filter((a) => a.code).map((a) => ({ id: a.code, name: `${a.name} (${a.class})`, group: a.class === "EXPENSE" ? "expense" : "liability" })) : null;
+    return rows ? rows.filter((a) => a.code).map((a) => ({ id: a.code, name: `${a.name} (${a.class})`, group: a.system ? "system" : a.class === "EXPENSE" ? "expense" : "liability" })) : null;
   }
   const rows = await withTokens((o) => freshSage(key, o), (t: SageTokens) => sageAccounts(t));
   return rows ? rows.map((a) => ({ id: a.id, name: a.name, group: "other" })) : null;
@@ -244,7 +244,8 @@ accounting.get("/:provider/accounts", async (req, res) => {
   try {
     const rows = await loadAccounts(provider, scope.key);
     if (!rows) { res.status(409).json({ error: `${PROVIDER_NAME[provider]} isn't connected` }); return; }
-    res.json(rows.map((a) => ({ id: a.id, name: a.name })));
+    // System accounts (Xero: Accounts Payable, VAT, Unpaid Expense Claims, Rounding...) and AR/AP control accounts can't take a manual journal line: don't offer them.
+    res.json(rows.filter((a) => a.group !== "system" && a.group !== "receivable-payable").map((a) => ({ id: a.id, name: a.name })));
   } catch (e) {
     console.error(`[accounting] ${provider} accounts fetch failed:`, (e as Error).message);
     const f = providerFailure(provider, e);
@@ -298,6 +299,7 @@ accounting.put("/mapping", async (req, res) => {
         for (const [bucket, id] of Object.entries(mapping)) {
           const a = byId.get(id!);
           if (!a) { problems[bucket] = `Account "${id}" doesn't exist (or is archived) in ${PROVIDER_NAME[provider]}`; continue; }
+          if (a.group === "system") { problems[bucket] = `${a.name} is a Xero system account and can't be used in manual journals. Pick another`; continue; }
           if (a.group === "receivable-payable") { problems[bucket] = `${a.name} is a receivable/payable control account; journals to it need a customer/supplier. Pick another`; continue; }
           const allowed = BUCKET_GROUPS[bucket] ?? [];
           if (!allowed.includes(a.group)) problems[bucket] = `${a.name} is the wrong kind of account for "${BUCKET_LABEL[bucket as keyof typeof BUCKET_LABEL]}" (needs ${allowed.join(" or ")})`;
@@ -364,14 +366,21 @@ accounting.post("/post/:runId", async (req, res) => {
   const totals = computeTotals(lines);
   const paidOn = String(run.paidOn ?? "");
   const period = String(run.period ?? "");
-  const idemKey = idempotencyKey(runId, scope.tenantId);
+  const stableKey = idempotencyKey(runId, scope.tenantId); // per run: stable across retries, used for the human-visible references
   let refs: ReturnType<typeof journalRefs>;
-  try { refs = journalRefs(paidOn, idemKey); } catch (e) { res.status(400).json({ error: (e as Error).message }); return; }
+  try { refs = journalRefs(paidOn, stableKey); } catch (e) { res.status(400).json({ error: (e as Error).message }); return; }
 
   const mapSnap = await mappings.doc(docKey(scope.key, provider)).get();
   const mapping = (mapSnap.get("mapping") as AccountMapping | undefined) ?? {};
   const missing = requiredBuckets(totals).filter((b) => !mapping[b]);
   if (missing.length) { res.status(400).json({ error: `Map all the accounts before posting (missing: ${missing.map((b) => BUCKET_LABEL[b]).join(", ")})` }); return; }
+
+  // The exact request body, built once: its fingerprint is part of the provider idempotency key (see bodyFingerprint).
+  const narration = `ActivityOS payroll \u2014 ${period}`.slice(0, 250);
+  const body = provider === "quickbooks" ? qboJournalBody(mapping, totals, { paidOn, docNumber: refs.qboDocNumber })
+    : provider === "xero" ? xeroJournalBody(mapping, totals, { paidOn, narration })
+    : sageJournalBody(mapping, totals, { paidOn, reference: refs.sageReference, details: narration });
+  const idemKey = idempotencyKey(runId, scope.tenantId, bodyFingerprint(body));
 
   // ── claim the run ──
   const claimToken = newState();
@@ -400,13 +409,10 @@ accounting.post("/post/:runId", async (req, res) => {
     let posted: { id: string } | null;
     if (provider === "quickbooks") {
       const cfg = qboConfig();
-      const body = qboJournalBody(mapping, totals, { paidOn, docNumber: refs.qboDocNumber });
       posted = cfg ? await withTokens((o) => freshQbo(scope.key, o), (t: QboTokens) => qboPostJournal(cfg, t, idemKey, body)) : null;
     } else if (provider === "xero") {
-      const body = xeroJournalBody(mapping, totals, { paidOn, narration: `ActivityOS payroll - ${period}`.replace(" - ", " \u2014 ").slice(0, 250) });
       posted = await withTokens((o) => freshXero(scope.key, o), (t: XeroTokens) => xeroPostJournal(t, idemKey, body));
     } else {
-      const body = sageJournalBody(mapping, totals, { paidOn, reference: refs.sageReference, details: `ActivityOS payroll \u2014 ${period}`.slice(0, 250) });
       posted = await withTokens((o) => freshSage(scope.key, o), (t: SageTokens) => sagePostJournal(t, idemKey, body));
     }
     if (!posted) {

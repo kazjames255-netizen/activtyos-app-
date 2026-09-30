@@ -54,12 +54,12 @@ test("post an approved pay run to QuickBooks sandbox: gates, mapping, balanced j
 
     expect((await post()).status).toBe(409); // draft
     expect((await call("POST", `/api/payroll/runs/${runId}/approve`, tok)).status).toBe(403); // self-approval refused
-    patchDoc("payrollRuns", `${co.tenantId}_${runId}`, { createdBy: "e2e-other-creator@activityos-test.com" });
+    patchDoc("payrollRuns", `${co.tenantId}_${runId}`, { createdBy: "e2e-other-creator@activityos-test.com", createdByUid: "e2e-other-creator-uid" });
     expect((await call("POST", `/api/payroll/runs/${runId}/approve`, tok)).status).toBe(200);
 
     // unmapped -> 400 (freelancer tenant)
     const flRun = await mk(flTok, `E2E QBO fl ${Date.now()}`);
-    patchDoc("payrollRuns", `${fl.tenantId}_${flRun}`, { createdBy: "e2e-other-creator@activityos-test.com" });
+    patchDoc("payrollRuns", `${fl.tenantId}_${flRun}`, { createdBy: "e2e-other-creator@activityos-test.com", createdByUid: "e2e-other-creator-uid" });
     expect((await call("POST", `/api/payroll/runs/${flRun}/approve`, flTok)).status).toBe(200);
     const un = await post(flRun, flTok);
     expect(un.status, JSON.stringify(un.body)).toBe(400);
@@ -88,7 +88,7 @@ test("post an approved pay run to QuickBooks sandbox: gates, mapping, balanced j
 
     // fetch back from QBO
     const j = qbo(co.tenantId!, "get", journalId);
-    expect(j.DocNumber).toBe("AOS-PAYROLL-2026-09");
+    expect(j.DocNumber).toMatch(/^AOS-PAY-2609-[0-9a-f]{6}$/); expect(j.DocNumber.length).toBeLessThanOrEqual(21);
     expect(j.TxnDate).toBe("2026-09-30");
     const line = (desc: string) => j.Line.find((l: any) => l.Description === desc);
     const amt = (desc: string, type: string) => { const l = line(desc); expect(l.JournalEntryLineDetail.PostingType).toBe(type); return l.Amount as number; };

@@ -2,6 +2,8 @@
 //   npx tsx ../e2e/helpers/qboAdmin.ts <tenantId> get <journalId>      → prints @@JSON@@{JournalEntry}@@END@@
 //   npx tsx ../e2e/helpers/qboAdmin.ts <tenantId> delete <journalId>   → deletes (Id+SyncToken, operation=delete); prints {deleted}
 //   npx tsx ../e2e/helpers/qboAdmin.ts <tenantId> exists <journalId>   → prints {exists:boolean}
+//   npx tsx ../e2e/helpers/qboAdmin.ts <tenantId> find <docNumber>     → prints {ids:[...]} of journal entries with that DocNumber
+//   npx tsx ../e2e/helpers/qboAdmin.ts <tenantId> currency             → prints {home, multi} from Preferences
 // Refuses unless QBO_ENV=sandbox AND the connection's realm is the Intuit sandbox company 9341458202792641.
 import "../../server/node_modules/dotenv/config";
 import { db } from "../../server/src/firebase";
@@ -33,7 +35,17 @@ const [tenantId, cmd, jid] = process.argv.slice(2);
     return JSON.parse(t).JournalEntry;
   };
   const out = (o: unknown) => process.stdout.write(`@@JSON@@${JSON.stringify(o)}@@END@@\n`);
-  if (cmd === "get") { const j = await getJ(); if (!j) throw new Error("not found"); out(j); }
+  if (cmd === "find") {
+    const q = encodeURIComponent(`select Id from JournalEntry where DocNumber = '${jid.replace(/'/g, "")}'`);
+    const r = await fetch(`${base}/query?query=${q}&minorversion=75`, { headers: h }); const t = await r.text();
+    if (!r.ok) throw new Error(`find ${r.status} ${t.slice(0, 200)}`);
+    out({ ids: (JSON.parse(t).QueryResponse?.JournalEntry ?? []).map((j: { Id: string }) => j.Id) });
+  } else if (cmd === "currency") {
+    const r = await fetch(`${base}/preferences?minorversion=75`, { headers: h }); const t = await r.text();
+    if (!r.ok) throw new Error(`prefs ${r.status} ${t.slice(0, 200)}`);
+    const c = JSON.parse(t).Preferences?.CurrencyPrefs ?? {};
+    out({ home: c.HomeCurrency?.value ?? null, multi: !!c.MultiCurrencyEnabled });
+  } else if (cmd === "get") { const j = await getJ(); if (!j) throw new Error("not found"); out(j); }
   else if (cmd === "exists") out({ exists: !!(await getJ()) });
   else if (cmd === "delete") {
     const j = await getJ();

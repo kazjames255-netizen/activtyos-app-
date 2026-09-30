@@ -12,10 +12,8 @@ import { SectionHead, FieldLabel } from "@/components/ui";
 // happens from the Payroll screen (POST /api/accounting/post/:runId); this
 // screen only handles connecting and mapping.
 //
-// NOT YET REGISTERED in lib/view-registry.tsx / lib/nav/config.ts — there is
-// no existing Setup/Payroll slug for it tonight (the `payroll` slug is
-// PayrollApp, owned by another agent). Wire it in once a slug exists, or
-// render it as a tab inside PayrollApp's own Setup area.
+// Rendered by the Integrations tab of PayrollApp (live accounts; demo mode keeps its
+// local mock cards). Posting happens from the Payslips tab of the same screen.
 //
 // Every value here is safe to show the browser: connection status, provider
 // labels, chart-of-accounts entries and the 6 mapped codes. No token, secret
@@ -29,11 +27,11 @@ const PROVIDERS: { id: Provider; name: string }[] = [
   { id: "sage", name: "Sage Business Cloud Accounting" },
 ];
 
-type ConnStatus = { configured: boolean; connected: boolean; connectedAt?: string | null; label?: string | null };
+type ConnStatus = { configured: boolean; connected: boolean; connectedAt?: string | null; label?: string | null; needsReconnect?: boolean };
 type Bucket = { key: string; label: string };
 type Account = { id: string; name: string };
 
-const BUCKET_ORDER = ["grossWages", "employerNi", "employerPension", "payeNicLiability", "pensionPayable", "netWagesBank"];
+const BUCKET_ORDER = ["grossWages", "employerNi", "employerPension", "payeNicLiability", "pensionPayable", "netWagesBank", "otherDeductions"];
 
 function ProviderCard({ provider, name, status, onChange }: { provider: Provider; name: string; status: ConnStatus; onChange: () => void }) {
   const [connecting, setConnecting] = useState(false);
@@ -105,7 +103,7 @@ function ProviderCard({ provider, name, status, onChange }: { provider: Provider
         <div className="flex-1">
           <div className="text-[14px] font-extrabold text-[var(--ink)]">{name}</div>
           <div className="text-[12px] text-[var(--ink-3)]">
-            {!status.configured ? "Not configured on this server" : status.connected ? `Connected${status.label ? ` · ${status.label}` : ""}` : "Not connected"}
+            {!status.configured ? "Not configured on this server" : status.connected ? (status.needsReconnect ? "Needs reconnecting: the saved sign-in expired or was revoked" : `Connected${status.label ? ` · ${status.label}` : ""}`) : "Not connected"}
           </div>
         </div>
         {status.configured && (

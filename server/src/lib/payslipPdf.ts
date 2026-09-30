@@ -54,9 +54,10 @@ const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 // The tax year runs 6 April → 5 April. Used both for the "Tax period" line
 // and to scope the year-to-date figures — identical logic to openPayslip().
 export function taxYearFor(paidOnIso: string): { start: number; label: string; fromDate: string; endDate: string } {
-  const paid = new Date(`${paidOnIso}T12:00:00`);
-  const mo = paid.getMonth();
-  const start = mo >= 3 ? paid.getFullYear() : paid.getFullYear() - 1;
+  // The UK tax year starts on 6 April: 1-5 April still belong to the PREVIOUS year (the old `month >= April` test put 5 April in the new one,
+  // so a payslip dated 3 April 2026 showed 2026/27 while payrollYtd.ts, P60 data and the YTD store used 2025/26).
+  const [y, m, d] = paidOnIso.split("-").map(Number);
+  const start = m > 4 || (m === 4 && d >= 6) ? y : y - 1;
   return {
     start,
     label: `${start}/${String((start + 1) % 100).padStart(2, "0")}`,
@@ -66,11 +67,11 @@ export function taxYearFor(paidOnIso: string): { start: number; label: string; f
 }
 
 function taxPeriodLabel(paidOnIso: string, freqLabel: string): string {
-  const paid = new Date(`${paidOnIso}T12:00:00`);
-  const mo = paid.getMonth();
-  const taxMonth = ((mo - 3 + 12) % 12) + 1;
+  const [y, m, d] = paidOnIso.split("-").map(Number);
   const ty = taxYearFor(paidOnIso);
-  const taxWeek = Math.min(53, Math.max(1, Math.floor((Date.UTC(paid.getFullYear(), paid.getMonth(), paid.getDate()) - Date.UTC(ty.start, 3, 6)) / (7 * 86400000)) + 1));
+  // Tax month 1 = 6 Apr-5 May, ... month 12 = 6 Mar-5 Apr.
+  const taxMonth = Math.min(12, Math.max(1, (y - ty.start) * 12 + (m - 4) + (d >= 6 ? 1 : 0)));
+  const taxWeek = Math.min(53, Math.max(1, Math.floor((Date.UTC(y, m - 1, d) - Date.UTC(ty.start, 3, 6)) / (7 * 86400000)) + 1));
   if (freqLabel === "Weekly") return `Week ${taxWeek} · ${ty.label}`;
   if (freqLabel === "Monthly") return `Month ${taxMonth} · ${ty.label}`;
   return `${freqLabel} · ${ty.label}`;
