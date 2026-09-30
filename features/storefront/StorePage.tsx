@@ -83,16 +83,16 @@ export function StorePage({ tenantId }: { tenantId: string }) {
           )}
           <div className="min-w-0">
             <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#2f6bd8]" style={accent ? { color: accent.text } : undefined}>
-              Book with {provider}
+              {t("p8lst.spBookWith", { provider })}
             </div>
             <h1 className="text-[26px] font-extrabold tracking-[-0.02em] text-[#171534]">
-              Camps, clubs &amp; activities
+              {t("p8lst.spHeading")}
             </h1>
           </div>
         </div>
         {listings.length === 0 ? (
           <div className="rounded-2xl border border-[#e8edf7] bg-white p-8 text-center text-[13px] text-[#8a86a3]">
-            Nothing is open for booking right now — check back soon.
+            {t("p8lst.spNothingOpen")}
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

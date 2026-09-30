@@ -8,6 +8,7 @@ import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Badge, Button, Card } from "@/components/ui";
+import { useT, useWord } from "@/lib/i18n/provider";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Finance — v1 is the payments slice: connect the tenant's own Stripe
@@ -42,6 +43,8 @@ const when = (iso: string) =>
   new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export function PaymentsApp() {
+  const t = useT();
+  const w = useWord();
   const [status, setStatus] = useState<Status | null>(null);
   const [payments, setPayments] = useState<PaymentRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +64,7 @@ export function PaymentsApp() {
       const { url } = await apiPost<{ url: string }>("/api/payments/connect", {});
       window.location.href = url; // Stripe-hosted Express onboarding
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't start Stripe onboarding");
+      setError(e instanceof Error ? e.message : t("p8lst.payStartFail"));
       setBusy(false);
     }
   }
@@ -74,10 +77,10 @@ export function PaymentsApp() {
   return (
     <div className="text-[var(--ink)]">
       <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-        Finance — payments
+        {t("p8lst.payTitle")}
       </h2>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">
-        Card payments land directly in your own Stripe account — ActivityOS never holds your money.
+        {t("p8lst.payIntro")}
       </p>
 
       {error && (
@@ -88,32 +91,32 @@ export function PaymentsApp() {
 
       {isFranchisePortal ? (
         <Card className="mb-4 p-4 text-[12.5px] text-[var(--ink-2)]">
-          <div className="text-[14px] font-extrabold text-[var(--ink)]">Your head office manages the payout account</div>
-          <div className="mt-0.5">Card payments from your families are received into your head office&rsquo;s Stripe account, so there&rsquo;s nothing for you to connect. What you owe head office is on the Royalties page.</div>
+          <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8lst.payHeadOfficeTitle")}</div>
+          <div className="mt-0.5">{t("p8lst.payHeadOfficeBody")}</div>
         </Card>
       ) : (
       <Card className="mb-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-[14px] font-extrabold">
-              {ready ? "✅ Stripe connected — you can take card payments" : status?.connected ? "⚠️ Stripe onboarding not finished" : "Connect your Stripe account"}
+              {ready ? t("p8lst.payConnectedTitle") : status?.connected ? t("p8lst.payOnbIncomplete") : t("p8lst.payConnectTitle")}
             </div>
             <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">
               {ready
-                ? `Payouts ${status?.payoutsEnabled ? "enabled" : "pending"} · account ${status?.accountId}`
+                ? t(status?.payoutsEnabled ? "p8lst.payPayoutsEnabled" : "p8lst.payPayoutsPending", { id: status?.accountId ?? "" })
                 : status?.connected
-                  ? "Stripe still needs some details before you can take payments — resume below."
-                  : "A few minutes with Stripe: identity, business details and where payouts go."}
+                  ? t("p8lst.payResumeNote")
+                  : t("p8lst.payConnectNote")}
               {status?.platformFallback && !ready && (
                 <span className="ms-1 font-bold text-[#9a5a00]">
-                  (Dev mode: test payments still work meanwhile via the platform account.)
+                  {t("p8lst.payDevMode")}
                 </span>
               )}
             </div>
           </div>
           {!ready && (
             <Button variant="primary" disabled={busy || !status} onClick={connect}>
-              {busy ? "Opening Stripe…" : status?.connected ? "Resume onboarding" : "Connect Stripe"}
+              {busy ? t("p8lst.payOpening") : status?.connected ? t("p8lst.payResume") : t("p8lst.payConnect")}
             </Button>
           )}
         </div>
@@ -121,13 +124,13 @@ export function PaymentsApp() {
       )}
 
       <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-        Payments &amp; refunds
+        {t("p8lst.paySection")}
       </div>
       {!payments ? (
-        <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+        <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8lst.payLoading")}</div>
       ) : payments.length === 0 ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">
-          No payments yet — they appear here the moment a parent pays.
+          {t("p8lst.payNone")}
         </Card>
       ) : (
         <Card className="overflow-hidden p-0">
@@ -138,13 +141,13 @@ export function PaymentsApp() {
                 {money(p.amount)}
               </span>
               <span className="min-w-0 flex-1 truncate text-[var(--ink-2)]">
-                {p.type === "refund" ? "Refund · " : ""}
+                {p.type === "refund" ? t("p8lst.payRefundPrefix") : ""}
                 {/* Invoice pay-link records carry no booking refs — say what
                     they are instead of crashing the whole Finance page. */}
-                {p.refs?.length ? p.refs.join(", ") : p.kind === "invoice" ? "Invoice payment" : "—"}
+                {p.refs?.length ? p.refs.join(", ") : p.kind === "invoice" ? t("p8lst.payInvoice") : "—"}
                 {p.email ? ` · ${p.email}` : ""}
               </span>
-              {p.platformFallback && <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>test fallback</Badge>}
+              {p.platformFallback && <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{t("p8lst.payTestFallback")}</Badge>}
               <Badge
                 tone={
                   p.status === "succeeded"
@@ -154,7 +157,7 @@ export function PaymentsApp() {
                       : { bg: "var(--panel)", fg: "var(--ink-3)" }
                 }
               >
-                {p.status}
+                {p.status === "succeeded" ? t("p8lst.pmSucceeded") : p.status === "failed" ? t("p8lst.pmFailed") : w(p.status)}
               </Badge>
               <span className="text-[11.5px] text-[var(--ink-3)]">{when(p.createdAt)}</span>
             </div>

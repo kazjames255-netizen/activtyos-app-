@@ -6,6 +6,8 @@ import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-
 import { post as apiPost } from "@/lib/api";
 import { money } from "@/features/bookings/helpers";
 import { Button } from "@/components/ui";
+import { useT, useWord, tNow, useI18n } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Card payment for one or more bookings (a family's basket pays at once).
@@ -25,6 +27,8 @@ interface CheckoutInfo {
 }
 
 function PayForm({ info, onPaid, onError }: { info: CheckoutInfo; onPaid: () => void; onError: (m: string) => void }) {
+  const t = useT();
+  const w = useWord();
   const stripeJs = useStripe();
   const elements = useElements();
   const [busy, setBusy] = useState(false);
@@ -34,7 +38,7 @@ function PayForm({ info, onPaid, onError }: { info: CheckoutInfo; onPaid: () => 
     setBusy(true);
     const { error } = await stripeJs.confirmPayment({ elements, redirect: "if_required" });
     if (error) {
-      onError(error.message ?? "Payment failed");
+      onError(error.message ?? t("p8lst.pmPayFailed"));
       setBusy(false);
       return;
     }
@@ -44,9 +48,9 @@ function PayForm({ info, onPaid, onError }: { info: CheckoutInfo; onPaid: () => 
         {},
       );
       if (res.paid) onPaid();
-      else onError(`Payment is ${res.status} — it hasn't completed yet.`);
+      else onError(t("p8lst.pmNotCompleted", { status: res.status === "succeeded" ? t("p8lst.pmSucceeded") : res.status === "failed" ? t("p8lst.pmFailed") : w(res.status) }));
     } catch (e) {
-      onError(e instanceof Error ? e.message : "Couldn't verify the payment");
+      onError(e instanceof Error ? e.message : t("p8lst.pmVerifyFail"));
     }
     setBusy(false);
   }
@@ -55,19 +59,21 @@ function PayForm({ info, onPaid, onError }: { info: CheckoutInfo; onPaid: () => 
     <>
       <PaymentElement />
       <Button variant="primary" disabled={busy || !stripeJs} onClick={pay} className="mt-3 w-full">
-        {busy ? "Paying…" : `Pay ${money(info.amount)}`}
+        {busy ? t("p8lst.pmPaying") : t("p8lst.pmPay", { amount: money(info.amount) })}
       </Button>
     </>
   );
 }
 
 export function PayModal({ refs = [], tenantId, mealOrderIds, onClose, onPaid }: { refs?: string[]; tenantId?: string; mealOrderIds?: string[]; onClose: () => void; onPaid: () => void }) {
+  const t = useT();
+  const { locale } = useI18n();
   const [info, setInfo] = useState<CheckoutInfo | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
   const meals = !!mealOrderIds?.length;
-  const noun = meals ? "meal" : "booking";
+  const nCount = meals ? (mealOrderIds?.length ?? 0) : refs.length;
 
   useEffect(() => {
     let alive = true;
@@ -79,7 +85,7 @@ export function PayModal({ refs = [], tenantId, mealOrderIds, onClose, onPaid }:
         // connected account or the client secret won't match.
         setStripePromise(loadStripe(PK, i.stripeAccount ? { stripeAccount: i.stripeAccount } : undefined));
       })
-      .catch((e) => alive && setError(e instanceof Error ? e.message : "Couldn't start the payment"));
+      .catch((e) => alive && setError(e instanceof Error ? e.message : tNow("p8lst.pmStartFail")));
     return () => {
       alive = false;
     };
@@ -94,26 +100,26 @@ export function PayModal({ refs = [], tenantId, mealOrderIds, onClose, onPaid }:
       <div className="w-full max-w-[440px] rounded-2xl bg-white p-5 text-[#171534] shadow-2xl">
         <div className="mb-2 flex items-center justify-between">
           <div className="text-[16px] font-extrabold">
-            {paid ? "Payment complete" : meals ? `Pay for your meal${(mealOrderIds?.length ?? 0) > 1 ? "s" : ""}` : `Pay for booking${refs.length > 1 ? "s" : ""} ${refs.join(", ")}`}
+            {paid ? t("p8lst.pmCompleteTitle") : meals ? pickPlural(t, locale, "p8lst.pmPayMeal", nCount) : pickPlural(t, locale, "p8lst.pmPayBooking", nCount, { refs: refs.join(", ") })}
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-[20px] leading-none text-[#8a86a3]">
+          <button type="button" onClick={onClose} aria-label={t("p8lst.pmClose")} className="text-[20px] leading-none text-[#8a86a3]">
             ×
           </button>
         </div>
         {paid ? (
           <div className="py-4 text-center">
             <div className="text-[22px]">✅</div>
-            <p className="mt-1 text-[13.5px]">Thanks — your {noun}{meals ? ((mealOrderIds?.length ?? 0) > 1 ? "s are" : " is") : (refs.length > 1 ? "s are" : " is")} paid.</p>
+            <p className="mt-1 text-[13.5px]">{pickPlural(t, locale, meals ? "p8lst.pmThanksMeal" : "p8lst.pmThanksBooking", nCount)}</p>
             <Button variant="primary" onClick={onClose} className="mt-3">
-              Done
+              {t("p8lst.pmDone")}
             </Button>
           </div>
         ) : !PK ? (
-          <div className="text-[13px] text-[#e21d27]">Payments aren’t configured (no publishable key).</div>
+          <div className="text-[13px] text-[#e21d27]">{t("p8lst.pmNoKey")}</div>
         ) : error ? (
           <div className="text-[13px] font-bold text-[#e21d27]">{error}</div>
         ) : !info || !stripePromise ? (
-          <div className="py-6 text-center text-[13px] text-[#8a86a3]">Preparing secure payment…</div>
+          <div className="py-6 text-center text-[13px] text-[#8a86a3]">{t("p8lst.pmPreparing")}</div>
         ) : (
           <Elements stripe={stripePromise} options={{ clientSecret: info.clientSecret }}>
             <PayForm

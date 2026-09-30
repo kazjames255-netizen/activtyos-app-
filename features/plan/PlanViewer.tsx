@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { AosMark } from "@/components/auth/AuthBrand";
+import { useT } from "@/lib/i18n/provider";
 
 // Secure viewer for a child's EHCP / SEND plan, opened straight from the link
 // in a new-booking email. The file lives behind an authenticated API route (no
@@ -15,9 +16,10 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 type State = "loading" | "ready" | "anon" | "denied" | "error";
 
 export function PlanViewer({ id }: { id: string }) {
+  const t = useT();
   const [state, setState] = useState<State>("loading");
   const [url, setUrl] = useState<string | null>(null);
-  const [name, setName] = useState("EHCP / SEND plan");
+  const [name, setName] = useState(() => t("p8lst.pvDefaultName"));
   const [kind, setKind] = useState<"pdf" | "image" | "other">("pdf");
 
   useEffect(() => {
@@ -80,20 +82,20 @@ export function PlanViewer({ id }: { id: string }) {
           // eslint-disable-next-line @next/next/no-img-element
           <div style={{ flex: 1, overflow: "auto", display: "flex", justifyContent: "center", padding: 16 }}><img src={url} alt={name} style={{ maxWidth: "100%", height: "auto", background: "#fff" }} /></div>
         ) : (
-          <Msg emoji="📄" title="This file can't be shown here" body="It isn't a PDF or a photo, so it won't open in the browser. Ask the family to upload the plan as a PDF or a photo." />
+          <Msg emoji="📄" title={t("p8lst.pvNoShowTitle")} body={t("p8lst.pvNoShowBody")} />
         )}
       </Shell>
     );
   if (state === "loading")
-    return <Shell><Msg emoji="⏳" title="Opening the plan…" body="Fetching it securely — one moment." /></Shell>;
+    return <Shell><Msg emoji="⏳" title={t("p8lst.pvOpeningTitle")} body={t("p8lst.pvOpeningBody")} /></Shell>;
   if (state === "anon")
     return (
       <Shell>
-        <Msg emoji="🔒" title="Please sign in" body="This plan is only visible to your team. Sign in and you'll come straight back to it."
-          action={<Link href={`/login?next=${encodeURIComponent(`/plan/${id}`)}`} style={{ display: "inline-block", marginTop: 14, background: "#1d3a8f", color: "#fff", padding: "10px 20px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>Sign in</Link>} />
+        <Msg emoji="🔒" title={t("p8lst.pvSignInTitle")} body={t("p8lst.pvSignInBody")}
+          action={<Link href={`/login?next=${encodeURIComponent(`/plan/${id}`)}`} style={{ display: "inline-block", marginTop: 14, background: "#1d3a8f", color: "#fff", padding: "10px 20px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>{t("p8lst.pvSignInBtn")}</Link>} />
       </Shell>
     );
   if (state === "denied")
-    return <Shell><Msg emoji="🚫" title="Not available" body="This plan isn't shared with your account, or it no longer exists. Only a provider a child has been booked with can view their plan." /></Shell>;
-  return <Shell><Msg emoji="⚠️" title="Couldn't open the plan" body="Something went wrong loading the file. Try again, or open it from the booking in ActivityOS." /></Shell>;
+    return <Shell><Msg emoji="🚫" title={t("p8lst.pvDeniedTitle")} body={t("p8lst.pvDeniedBody")} /></Shell>;
+  return <Shell><Msg emoji="⚠️" title={t("p8lst.pvErrorTitle")} body={t("p8lst.pvErrorBody")} /></Shell>;
 }

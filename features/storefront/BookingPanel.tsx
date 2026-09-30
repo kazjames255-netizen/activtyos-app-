@@ -1,6 +1,7 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { useT, useWord } from "@/lib/i18n/provider";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, get as apiGet } from "@/lib/api";
@@ -42,6 +43,8 @@ const fmtDay = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
 export function BookingPanel({ listing, signedIn }: { listing: ServerListing; signedIn: boolean }) {
+  const t = useT();
+  const w = useWord();
   const blocks = ((listing.blocks ?? []) as Block[]).filter((b) => b.open && (b.sessions?.length ?? 0) > 0);
   const bundle = listing.bundle;
   const passes = bundle?.passes?.length
@@ -125,8 +128,8 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
         body: JSON.stringify({ tenantId: listing.tenantId, code, subtotal: preview.total, listingId: listing.id, attendees: validKids.length }),
       });
       if (r.valid && r.off != null) { setAppliedCode({ code: r.code ?? code.toUpperCase(), off: r.off }); setCodeInput(""); }
-      else { setAppliedCode(null); setCodeErr(r.reason ?? "That code can’t be used"); }
-    } catch (e) { setCodeErr(e instanceof Error ? e.message : "Couldn’t check that code"); }
+      else { setAppliedCode(null); setCodeErr(r.reason ?? t("p8lst.bpCodeInvalid")); }
+    } catch (e) { setCodeErr(e instanceof Error ? e.message : t("p8lst.bpCodeCheckFail")); }
     setCodeChecking(false);
   }
 
@@ -156,7 +159,7 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
       });
       setDone({ refs: res.bookings.map((b) => b.ref), status: res.bookings[0]?.status ?? "", total: res.total });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Booking failed");
+      setError(e instanceof Error ? e.message : t("p8lst.bpFail"));
     }
     setBusy(false);
   }
@@ -176,33 +179,34 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
         <div className="text-[20px]">🎉</div>
         <div className="mt-1 text-[16px] font-extrabold text-[#171534]">
           {done.status === "Confirmed"
-            ? "You're booked!"
+            ? t("p8lst.bpBooked")
             : done.status === "Waitlisted"
-              ? "You're on the waiting list"
-              : "Booking request sent"}
+              ? t("p8lst.bpWaitlisted")
+              : t("p8lst.bpRequestSent")}
         </div>
         <p className="mt-1 text-[13px] text-[#4a4763]">
-          {done.refs.length === 1 ? `Booking ${done.refs[0]}` : `Bookings ${done.refs.join(", ")}`} · total{" "}
-          <b>{money(done.total)}</b>
-          {done.status === "Approval needed" && " — the provider will confirm your place."}
-          {done.status === "Waitlisted" && " — you'll be offered a place if one frees up."}
+          {done.refs.length === 1
+            ? t("p8lst.bpSummaryOne", { refs: done.refs[0], amount: money(done.total) })
+            : t("p8lst.bpSummaryMany", { refs: done.refs.join(", "), amount: money(done.total) })}
+          {done.status === "Approval needed" && t("p8lst.bpApprovalNote")}
+          {done.status === "Waitlisted" && t("p8lst.bpWaitNote")}
         </p>
         {paid ? (
-          <p className="mt-1 text-[13px] font-bold text-[#1d3a8f]">✅ Paid — see you there!</p>
+          <p className="mt-1 text-[13px] font-bold text-[#1d3a8f]">{t("p8lst.bpPaidOk")}</p>
         ) : done.status === "Confirmed" && done.total > 0 ? (
           <button
             type="button"
             className={S.cta + " mt-3"}
             onClick={() => setPaying(true)}
           >
-            Pay {money(done.total)} now
+            {t("p8lst.bpPayNow", { amount: money(done.total) })}
           </button>
         ) : (
-          <p className="mt-1 text-[12px] text-[#8a86a3]">Payment is collected after confirmation.</p>
+          <p className="mt-1 text-[12px] text-[#8a86a3]">{t("p8lst.bpPayAfterConfirm")}</p>
         )}
         <div>
           <Link href="/custdash/bookings" className="mt-3 inline-block rounded-xl bg-[#2f6bd8] px-4 py-2 text-[13px] font-bold text-white">
-            View my bookings
+            {t("p8lst.bpViewBookings")}
           </Link>
         </div>
         {paying && (
@@ -214,28 +218,28 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
   if (!blocks.length || !passes.length)
     return (
       <div className={S.card + " text-center text-[13px] text-[#8a86a3]"}>
-        {opensLater ? "Booking hasn’t opened yet." : "No dates are open for booking right now."}
+        {opensLater ? t("p8lst.bpNotOpened") : t("p8lst.bpNoneOpen")}
       </div>
     );
 
   return (
     <div className={S.card}>
-      <div className="mb-3 text-[16px] font-extrabold text-[#171534]">Book your place</div>
+      <div className="mb-3 text-[16px] font-extrabold text-[#171534]">{t("p8lst.bpBookTitle")}</div>
       <div className="grid gap-3 sm:grid-cols-2">
         {blocks.length > 1 && (
           <div className="sm:col-span-2">
-            <label className={S.label}>Dates</label>
+            <label className={S.label}>{t("p8lst.bpDates")}</label>
             <select className={S.input} value={blockId} onChange={(e) => setBlockId(e.target.value)}>
               {blocks.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.name} — {b.spotsLeft > 0 ? `${b.spotsLeft} place${b.spotsLeft === 1 ? "" : "s"} left` : "Full · waitlist"}
+                  {b.name} — {b.spotsLeft > 0 ? t("p8lst.bpPlacesLeft", { n: b.spotsLeft }) : t("p8lst.bpFullWait")}
                 </option>
               ))}
             </select>
           </div>
         )}
         <div>
-          <label className={S.label}>Pass</label>
+          <label className={S.label}>{t("p8lst.bpPass")}</label>
           <select className={S.input} value={passId} onChange={(e) => setPassId(e.target.value)}>
             {passes.map((p) => (
               <option key={p.id} value={p.id}>
@@ -246,9 +250,9 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
         </div>
         {!!bundle?.periods?.length && (
           <div>
-            <label className={S.label}>Timing</label>
+            <label className={S.label}>{t("p8lst.bpTiming")}</label>
             <select className={S.input} value={periodId} onChange={(e) => setPeriodId(e.target.value)}>
-              <option value="">Standard</option>
+              <option value="">{t("p8lst.bpStandard")}</option>
               {bundle.periods.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title} ({p.start}–{p.finish})
@@ -260,7 +264,7 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
         {pickable && (
           <div className="sm:col-span-2">
             <label className={S.label}>
-              Pick {need} day{need === 1 ? "" : "s"} ({dates.length}/{need})
+              {t("p8lst.bpPickDays", { n: need, got: dates.length })}
             </label>
             <div className="flex flex-wrap gap-1.5">
               {sessionDates.map((d) => (
@@ -272,12 +276,12 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
           </div>
         )}
         <div className="sm:col-span-2">
-          <label className={S.label}>Who’s coming?</label>
+          <label className={S.label}>{t("p8lst.bpWho")}</label>
           {kids.map((k, i) => (
             <div key={i} className="mb-1.5 flex gap-1.5">
               <input
                 className={S.input}
-                placeholder="Child's name"
+                placeholder={t("p8lst.bpChildName")}
                 list={saved.length ? "saved-children" : undefined}
                 value={k.name}
                 onChange={(e) => {
@@ -288,14 +292,14 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
               />
               <input
                 className={S.input + " max-w-[90px]"}
-                placeholder="Age"
+                placeholder={t("p8lst.bpAge")}
                 type="number"
                 min={0}
                 value={k.age}
                 onChange={(e) => setKids((p) => p.map((x, j) => (j === i ? { ...x, age: e.target.value } : x)))}
               />
               {kids.length > 1 && (
-                <button type="button" className="px-1 text-[#8a86a3]" onClick={() => setKids((p) => p.filter((_, j) => j !== i))} aria-label="Remove child">
+                <button type="button" className="px-1 text-[#8a86a3]" onClick={() => setKids((p) => p.filter((_, j) => j !== i))} aria-label={t("p8lst.bpRemoveChild")}>
                   ×
                 </button>
               )}
@@ -309,12 +313,12 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
             </datalist>
           )}
           <button type="button" className="text-[12px] font-bold text-[#2f6bd8] underline" onClick={() => setKids((p) => [...p, { name: "", age: "" }])}>
-            + Add another child
+            {t("p8lst.bpAddChild")}
           </button>
         </div>
         {addons.length > 0 && (
           <div className="sm:col-span-2">
-            <label className={S.label}>Add-ons (per child)</label>
+            <label className={S.label}>{t("p8lst.bpAddons")}</label>
             <div className="flex flex-wrap gap-1.5">
               {addons.map((a) => (
                 <button
@@ -323,17 +327,17 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
                   className={S.chip(addonIds.includes(a.id))}
                   onClick={() => setAddonIds((p) => (p.includes(a.id) ? p.filter((x) => x !== a.id) : [...p, a.id]))}
                 >
-                  {a.image ? "" : (a.emoji ?? "")} {a.name} · {a.type === "perday" ? `${money(a.price)}/day` : money(a.price)}
+                  {a.image ? "" : (a.emoji ?? "")} {a.name} · {a.type === "perday" ? t("p8lst.bpPerDay", { price: money(a.price) }) : money(a.price)}
                 </button>
               ))}
             </div>
           </div>
         )}
         <div>
-          <label className={S.label}>How you’ll pay</label>
+          <label className={S.label}>{t("p8lst.bpHowPay")}</label>
           <select className={S.input} value={method} onChange={(e) => setMethod(e.target.value)}>
             {METHODS.map((m) => (
-              <option key={m}>{m}</option>
+              <option key={m} value={m}>{w(m)}</option>
             ))}
           </select>
         </div>
@@ -343,13 +347,13 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
         <div className="mt-3 border-t border-[#eef1f8] pt-3">
           {appliedCode ? (
             <div className="flex items-center justify-between text-[12.5px]">
-              <span className="font-bold text-[#1d3a8f]">✓ Code {appliedCode.code} applied — you save {money(appliedCode.off)}</span>
-              <button type="button" onClick={() => { setAppliedCode(null); setCodeErr(null); }} className="font-bold text-[#2f6bd8]">Remove</button>
+              <span className="font-bold text-[#1d3a8f]">{t("p8lst.bpCodeApplied", { code: appliedCode.code, amount: money(appliedCode.off) })}</span>
+              <button type="button" onClick={() => { setAppliedCode(null); setCodeErr(null); }} className="font-bold text-[#2f6bd8]">{t("p8lst.bpRemove")}</button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <input value={codeInput} onChange={(e) => setCodeInput(e.target.value.toUpperCase())} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyCode(); } }} placeholder="Discount code" className={S.input + " flex-1 uppercase"} />
-              <button type="button" onClick={applyCode} disabled={codeChecking || !codeInput.trim()} className="rounded-lg border border-[#e0e5f2] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#4a4763] disabled:opacity-50">{codeChecking ? "Checking…" : "Apply"}</button>
+              <input value={codeInput} onChange={(e) => setCodeInput(e.target.value.toUpperCase())} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyCode(); } }} placeholder={t("p8lst.bpCodePh")} className={S.input + " flex-1 uppercase"} />
+              <button type="button" onClick={applyCode} disabled={codeChecking || !codeInput.trim()} className="rounded-lg border border-[#e0e5f2] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#4a4763] disabled:opacity-50">{codeChecking ? t("p8lst.bpChecking") : t("p8lst.bpApply")}</button>
             </div>
           )}
           {codeErr && <div className="mt-1 text-[11.5px] font-bold text-[#e21d27]">{codeErr}</div>}
@@ -366,37 +370,37 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
                 </div>
               ))}
               {appliedCode && (
-                <div className="text-[12px] text-[#1d3a8f]">−{money(appliedCode.off)} code {appliedCode.code}</div>
+                <div className="text-[12px] text-[#1d3a8f]">{t("p8lst.bpCodeLine", { amount: money(appliedCode.off), code: appliedCode.code })}</div>
               )}
               <span>
-                Total <b className="text-[16px] text-[#171534]">{money(finalTotal)}</b>
-                {validKids.length > 1 && ` for ${validKids.length} children`}
+                {t("p8lst.bpTotal")} <b className="text-[16px] text-[#171534]">{money(finalTotal)}</b>
+                {validKids.length > 1 && ` ${t("p8lst.bpForKids", { n: validKids.length })}`}
               </span>
             </>
           ) : (
             <span className="text-[#8a86a3]">
-              {pickable && dates.length < need ? `Pick ${need - dates.length} more day${need - dates.length === 1 ? "" : "s"}` : "Add a child to see the total"}
+              {pickable && dates.length < need ? t("p8lst.bpPickMore", { n: need - dates.length }) : t("p8lst.bpAddChildTotal")}
             </span>
           )}
         </div>
         {opensLater ? (
           <span className="rounded-full bg-[#fff7ed] px-3 py-1.5 text-[12px] font-bold text-[#9a3412]">
-            ⏰ Booking opens {new Date(listing.opensAt!).toLocaleString(dl(), { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+            {t("p8lst.bpOpensAt", { when: new Date(listing.opensAt!).toLocaleString(dl(), { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) })}
           </span>
         ) : !signedIn ? (
           <Link href={`/login?next=/book/${encodeURIComponent(listing.id)}`} className={S.cta + " inline-block"}>
-            Sign in to book
+            {t("p8lst.bpSignIn")}
           </Link>
         ) : (
           <button type="button" className={S.cta} disabled={busy || !preview} onClick={submit}>
-            {busy ? "Booking…" : "Confirm booking"}
+            {busy ? t("p8lst.bpBooking") : t("p8lst.bpConfirm")}
           </button>
         )}
       </div>
       {error && <div className="mt-2 text-[12.5px] font-bold text-[#e21d27]">{error}</div>}
       <div className="mt-2 text-[11.5px] text-[#8a86a3]">
-        {firebaseAuth.currentUser?.email ? `Booking as ${firebaseAuth.currentUser.email} · ` : ""}
-        Payment is collected after the provider confirms your booking.
+        {firebaseAuth.currentUser?.email ? `${t("p8lst.bpAsEmail", { email: firebaseAuth.currentUser.email })} · ` : ""}
+        {t("p8lst.bpPayAfterProvider")}
       </div>
     </div>
   );
