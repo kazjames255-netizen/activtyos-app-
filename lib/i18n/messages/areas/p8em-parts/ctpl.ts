@@ -645,5 +645,7 @@ const rows: Record<string, readonly string[]> = {
   cu363: ["Price update", "Aktualizacja cen", "Actualizare de preț", "قیمت میں تبدیلی", "ਕੀਮਤ ਅੱਪਡੇਟ", "মূল্য আপডেট", "تحديث الأسعار", "Atualização de preços", "Actualización de precios", "Mise à jour des tarifs", "Diweddariad prisiau"],
   cu364: ["Hero", "Nagłówek z obrazem", "Antet cu imagine", "نمایاں بینر", "ਮੁੱਖ ਬੈਨਰ", "হিরো ব্যানার", "الترويسة", "Destaque", "Cabecera", "Bandeau", "Prif faner"],
   cu365: ["Unit (optional)", "Jednostka (opcjonalnie)", "Unitate (opțional)", "اکائی (اختیاری)", "ਇਕਾਈ (ਵਿਕਲਪਿਕ)", "একক (ঐচ্ছিক)", "الوحدة (اختياري)", "Unidade (opcional)", "Unidad (opcional)", "Unité (facultatif)", "Uned (dewisol)"],
+  cu366: ["Price (e.g. £100)", "Cena (np. £100)", "Preț (ex. £100)", "قیمت (مثلاً £100)", "ਕੀਮਤ (ਜਿਵੇਂ £100)", "মূল্য (যেমন £১০০)", "السعر (مثل 100 جنيه)", "Preço (p. ex. £100)", "Precio (p. ej. £100)", "Prix (p. ex. 100 £)", "Pris (e.e. £100)"],
+  cu367: ["Caption", "Podpis", "Legendă", "کیپشن", "ਕੈਪਸ਼ਨ", "ক্যাপশন", "تعليق", "Legenda", "Pie de foto", "Légende", "Pennawd llun"],
 };
 export default rows;

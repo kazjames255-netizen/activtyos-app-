@@ -645,4 +645,6 @@ export const SEED_KEYS: Record<string, string> = {
   "Price update": "cu363",
   "Hero": "cu364",
   "Unit (optional)": "cu365",
+  "Price (e.g. £100)": "cu366",
+  "Caption": "cu367",
 };
