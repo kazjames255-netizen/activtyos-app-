@@ -35,7 +35,6 @@ export function ReviewsApp() {
   const portal = usePathname().split("/")[1] || "company";
   // Source labels: proper nouns (Google/Trustpilot) stay; only "In-house" translates.
   const srcLabel = (k: "inhouse" | "google" | "trustpilot") => (k === "inhouse" ? t("marketing.inHouse") : SRC[k].label);
-  const reviewsWord = (n: number) => t(n === 1 ? "marketing.reviewWord" : "marketing.reviewsWord");
   const [hub, setHub] = useState<Hub | null>(null);
   const [replyFor, setReplyFor] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");

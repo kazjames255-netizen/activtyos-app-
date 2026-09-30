@@ -465,7 +465,7 @@ export function TasksApp() {
       for (const k of kids) if (k.name && !m.has(k.name)) m.set(k.name, { ref: b.ref, sub: [k.age != null ? tr("p8lrn.tskAgeN", { n: k.age }) : null, b.booker ? tr("p8lrn.tskParentName", { name: b.booker }) : null, b.listing].filter(Boolean).join(" · ") });
     }
     return [...m.entries()].map(([name, x]) => ({ name, ref: x.ref, sub: x.sub }));
-  }, [bookings]);
+  }, [bookings, tr]);
   // Parents: aggregate across all their bookings — first hit is the most recent
   // (the API returns newest-first), and we collect the distinct listings they've
   // booked on plus contact + postcode so the row is unmistakable.
@@ -478,7 +478,7 @@ export function TasksApp() {
       else { if (b.listing && !cur.listings.includes(b.listing)) cur.listings.push(b.listing); if (!cur.postcode && b.postcode) cur.postcode = b.postcode; }
     }
     return [...m.entries()].map(([name, x]) => ({ name, ref: x.ref, sub: [x.email, x.phone, x.postcode, x.listings.length ? tr("p8lrn.tskBookedList", { list: x.listings.slice(0, 3).join(", ") }) : null].filter(Boolean).join(" · ") }));
-  }, [bookings]);
+  }, [bookings, tr]);
 
   const everything = useMemo(() => tasks ?? [], [tasks]);
   // Set before any row renders — every assignee label below reads it.

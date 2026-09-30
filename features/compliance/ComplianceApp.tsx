@@ -6,7 +6,7 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { SettingsLink } from "@/components/OperatorPage";
-import { useT } from "@/lib/i18n/provider";
+import { tNow, useT } from "@/lib/i18n/provider";
 
 interface Cert { id: string; staffName: string; type: string; reference?: string; issued?: string; expiry: string; notes?: string; status: "expired" | "expiring" | "valid" }
 interface Payload { items: Cert[]; summary: { total: number; expired: number; expiring: number; valid: number } }
@@ -33,7 +33,7 @@ export function ComplianceApp() {
   const set = (patch: Partial<typeof f>) => setF((p) => ({ ...p, ...patch }));
 
   const refresh = useCallback(() => {
-    apiGet<Payload>("/api/compliance").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : t("p8lrn.cmpErrLoad")));
+    apiGet<Payload>("/api/compliance").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : tNow("p8lrn.cmpErrLoad")));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
