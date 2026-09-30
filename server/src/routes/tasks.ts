@@ -22,12 +22,21 @@ const canUse = (role: Role) => role === "staff" || role === "company" || role ==
 /** Is this task assigned to the caller? Email first — a rename must not hand
  *  someone else's tasks over, nor take yours away. Name only as a fallback for
  *  tasks written before whoEmail existed. */
+// The name to match is the one the MANAGER put on the account (users.name) — never the Firebase display name in the token, which any user can
+// change themselves (updateProfile) and would then be handed a colleague's name-assigned tasks and steps (same rule as leave.ts, acceptance d24s5).
+const accountNames = new WeakMap<Request, string>();
+tasks.use(async (req, _res, next) => {
+  if (req.auth?.role === "staff" && req.user?.uid) {
+    try { accountNames.set(req, String((await db.collection("users").doc(req.user.uid).get()).get("name") ?? "").trim().toLowerCase()); } catch { /* falls back to email only */ }
+  }
+  next();
+});
 function assignedTo(req: Request, t: { who?: unknown; whoEmail?: unknown }): boolean {
   const email = (req.user?.email ?? "").trim().toLowerCase();
   const tEmail = String(t.whoEmail ?? "").trim().toLowerCase();
   if (tEmail) return !!email && tEmail === email;
-  const name = (req.user?.name ?? req.user?.email ?? "").trim().toLowerCase();
-  return String(t.who ?? "").trim().toLowerCase() === name;
+  const who = String(t.who ?? "").trim().toLowerCase();
+  return !!who && (who === (accountNames.get(req) ?? "") || (!!email && who === email));
 }
 
 // ── Subtask assignees (acceptance d11s8) ─────────────────────────────────────
@@ -42,7 +51,6 @@ async function whoAmI(req: Request): Promise<Me> {
   const email = (req.user?.email ?? "").trim().toLowerCase();
   const names = new Set<string>();
   const add = (n: unknown) => { const v = String(n ?? "").trim().toLowerCase(); if (v) names.add(v); };
-  add(req.user?.name);
   if (req.user?.uid) add((await db.collection("users").doc(req.user.uid).get()).get("name"));
   return { email, names };
 }
