@@ -10,3 +10,7 @@ export const DIETS: { key: Diet; label: string; short: string; letter: string; i
 ];
 
 export const dietMeta = (d?: string) => DIETS.find((x) => x.key === d);
+
+/** Translated display name of a diet (the stored key stays "meat" / "veg" / "vegan"). */
+const DIET_KEY: Record<string, string> = { meat: "p8ops.dtMeat", veg: "p8ops.dtVeg", vegan: "p8ops.dtVegan" };
+export const dietName = (t: (k: string) => string, d?: string): string => (d && DIET_KEY[d] ? t(DIET_KEY[d]) : dietMeta(d)?.label ?? "");

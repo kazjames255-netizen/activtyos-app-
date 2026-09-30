@@ -802,7 +802,7 @@ export function DashboardApp() {
         </>
       )}
 
-      <div className="mt-4 text-[11.5px] text-[var(--ink-3)]">{d.counts.listings} listing{d.counts.listings === 1 ? "" : "s"} · {d.counts.activeBlocks} active run{d.counts.activeBlocks === 1 ? "" : "s"} · {d.bookings.live} live booking{d.bookings.live === 1 ? "" : "s"}</div>
+      <div className="mt-4 text-[11.5px] text-[var(--ink-3)]">{t("p8ops.dbCountsLine", { a: d.counts.listings, b: d.counts.activeBlocks, c: d.bookings.live })}</div>
     </div>
   );
 }

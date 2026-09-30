@@ -101,9 +101,9 @@ export function MealReport() {
             ))}
             {care.size > 0 && (
               <div className="mt-1 rounded-xl border border-[#f3c6c1] bg-[#fff5f4] px-3 py-2 text-[12px] leading-[1.55]">
-                <div className="mb-0.5 font-extrabold text-[#c02636]">⚠️ Allergies & diets</div>
+                <div className="mb-0.5 font-extrabold text-[#c02636]">{t("p8ops.dtReportHead")}</div>
                 {[...care.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([child, c]) => (
-                  <div key={child}><b className="text-[var(--ink)]">{child}</b>{c.allergies ? <span className="text-[#c02636]"> — allergy: {c.allergies}</span> : null}{c.dietary ? <span className="text-[#15803d]"> — diet: {c.dietary}</span> : null}<span className="text-[var(--ink-3)]"> · {[...new Set(c.dish)].join(", ")}</span></div>
+                  <div key={child}><b className="text-[var(--ink)]">{child}</b>{c.allergies ? <span className="text-[#c02636]">{t("p8ops.dtReportAllergy", { v: c.allergies })}</span> : null}{c.dietary ? <span className="text-[#15803d]">{t("p8ops.dtReportDiet", { v: c.dietary })}</span> : null}<span className="text-[var(--ink-3)]"> · {[...new Set(c.dish)].join(", ")}</span></div>
                 ))}
               </div>
             )}

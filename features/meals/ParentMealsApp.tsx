@@ -5,11 +5,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { allergenHits } from "./allergens";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { groupWeeks, fmtDate } from "@/features/listings/format";
-import { DIETS, dietMeta, type Diet } from "./diet";
+import { DIETS, dietMeta, dietName, type Diet } from "./diet";
 import { PayModal } from "@/features/payments/PayModal";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -37,7 +37,7 @@ const AV_PAL = ["#2f6bd8", "#0ea5a5", "#7a5af8", "#e2559a", "#e8862a", "#16a34a"
 const avatarOf = (name: string) => { const s = [...name].reduce((a, c) => a + c.charCodeAt(0), 0); return { c: AV_PAL[s % AV_PAL.length], i: (name.trim()[0] || "?").toUpperCase() }; };
 // One dropdown-option label carrying every detail a dish has — price, diet,
 // the optional description, and its allergens.
-const dishOptText = (it: MenuItem) => `${it.name}${it.price > 0 ? ` · ${money(it.price)}` : ""}${it.diet ? ` · ${dietMeta(it.diet)?.label}` : ""}${it.description ? ` · ${it.description}` : ""}${it.allergens?.length ? ` · contains ${it.allergens.join(", ")}` : ""}`;
+const dishOptText = (it: MenuItem) => `${it.name}${it.price > 0 ? ` · ${money(it.price)}` : ""}${it.diet ? ` · ${dietName(tNow, it.diet)}` : ""}${it.description ? ` · ${it.description}` : ""}${it.allergens?.length ? tNow("p8ops.dtDishTail", { list: it.allergens.join(", ") }) : ""}`;
 
 
 // Shared with the kitchen view and the server (features/meals/allergens.ts).
@@ -45,8 +45,8 @@ const allergenClash = (dishAllergens: string[] | undefined, allergiesText: strin
 const dietClash = (it: MenuItem, dietary: string | undefined): string | null => {
   const d = (dietary ?? "").toLowerCase();
   if (!it.diet) return null;
-  if (d.includes("vegan") && it.diet !== "vegan") return it.diet === "meat" ? "contains meat" : "not vegan";
-  if (d.includes("veget") && it.diet === "meat") return "contains meat";
+  if (d.includes("vegan") && it.diet !== "vegan") return it.diet === "meat" ? tNow("p8ops.dtContainsMeat") : tNow("p8ops.dtNotVegan");
+  if (d.includes("veget") && it.diet === "meat") return tNow("p8ops.dtContainsMeat");
   return null;
 };
 
@@ -54,7 +54,7 @@ const Allergens = ({ list }: { list?: string[] }) => {
   const t = useT();
   return list?.length ? <span className="rounded-md bg-[#fdf3e3] px-1.5 py-[1px] text-[10px] font-semibold capitalize text-[#96631a]">{t("meals.contains")} {list.join(", ")}</span> : null;
 };
-const DietBadge = ({ diet }: { diet?: string }) => { const d = dietMeta(diet); return d ? <span className="rounded-full px-2 py-[1.5px] text-[10px] font-extrabold" style={{ background: d.bg, color: d.fg }}>{d.icon} {d.label}</span> : null; };
+const DietBadge = ({ diet }: { diet?: string }) => { const t = useT(); const d = dietMeta(diet); return d ? <span className="rounded-full px-2 py-[1.5px] text-[10px] font-extrabold" style={{ background: d.bg, color: d.fg }}>{d.icon} {dietName(t, d.key)}</span> : null; };
 // A clear coloured letter (V / M / VG) — explained by the key at the top.
 const DietLetter = ({ diet, on }: { diet?: string; on?: boolean }) => { const d = dietMeta(diet); return d ? <span className="grid h-[15px] min-w-[15px] flex-none place-items-center rounded px-[3px] text-[9px] font-extrabold" title={d.label} style={{ background: on ? "rgba(255,255,255,.9)" : d.fg, color: on ? d.fg : "#fff" }}>{d.letter}</span> : null; };
 
@@ -178,7 +178,7 @@ export function ParentMealsApp() {
         const left = dishLeft(e, it);
         if (left !== undefined && left <= 0) { setToast(t("meals.fullyBooked", { name: it.name })); return; }
         const c = childInfo.get(child);
-        if ((allergenClash(it.allergens, c?.allergies).length || dietClash(it, c?.dietary)) && typeof window !== "undefined" && !window.confirm(`Please check — ${it.name} may not suit ${child}:\n\n${[allergenClash(it.allergens, c?.allergies).length ? `contains ${allergenClash(it.allergens, c?.allergies).join(", ")}` : "", dietClash(it, c?.dietary) || ""].filter(Boolean).join("; ")}\n\nAllergen info is a guide; confirm with your provider. Choose anyway?`)) return;
+        if ((allergenClash(it.allergens, c?.allergies).length || dietClash(it, c?.dietary)) && typeof window !== "undefined" && !window.confirm(t("p8ops.dtCheckConfirm", { name: it.name, child, reasons: [allergenClash(it.allergens, c?.allergies).length ? t("p8ops.dtContainsList", { list: allergenClash(it.allergens, c?.allergies).join(", ") }) : "", dietClash(it, c?.dietary) || ""].filter(Boolean).join("; ") }))) return;
       }
       setBasket((prev) => [...prev.filter((l) => !(l.child === child && l.listingId === e.listingId && l.date === e.date)), { tenantId: e.tenantId, listingId: e.listingId, listingName: e.listingName, date: e.date, dishId: it.id, name: it.name, price: it.price, child }]);
       setToast(t("meals.addedForChild", { name: it.name, child, day: fmtDay(e.date) }));
@@ -358,7 +358,7 @@ export function ParentMealsApp() {
           {dietsPresent.length > 0 && (
             <div className="mb-2 flex flex-wrap items-center gap-1.5">
               <span className="text-[11px] font-bold text-[var(--ink-3)]">{t("meals.showLabel")}</span>
-              {([["", t("meals.allMeals")], ...dietsPresent.map((d) => [d.key, t("meals.dietOnly", { diet: `${d.icon} ${d.label}` })] as [Diet, string])] as [Diet | "", string][]).map(([k, label]) => {
+              {([["", t("meals.allMeals")], ...dietsPresent.map((d) => [d.key, t("meals.dietOnly", { diet: `${d.icon} ${dietName(t, d.key)}` })] as [Diet, string])] as [Diet | "", string][]).map(([k, label]) => {
                 const on = dietFilter === k;
                 return <button key={k || "all"} type="button" onClick={() => setDietFilter(k)} className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold transition" style={on ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>{label}</button>;
               })}
@@ -369,7 +369,7 @@ export function ParentMealsApp() {
           {dietsPresent.length > 0 && (
             <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-semibold text-[var(--ink-3)]">
               <span className="uppercase tracking-[0.04em]">{t("meals.keyLabel")}</span>
-              {dietsPresent.map((d) => <span key={d.key} className="flex items-center gap-1"><DietLetter diet={d.key} /> {d.label}</span>)}
+              {dietsPresent.map((d) => <span key={d.key} className="flex items-center gap-1"><DietLetter diet={d.key} /> {dietName(t, d.key)}</span>)}
             </div>
           )}
 

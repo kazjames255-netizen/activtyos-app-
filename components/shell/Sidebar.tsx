@@ -2,7 +2,8 @@
 
 import { navLabel } from "@/lib/i18n/words";
 import { useLbl } from "@/features/learninghub/hubLabel";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
+import { BRAND } from "@/lib/i18n/config";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -269,7 +270,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
         // lookup below, which would brand HQ as whichever provider the admin's
         // account happens to be linked to as a parent (e.g. via impersonation).
         if (m.role === "platform") {
-          setBrand("ActivityOS Platform");
+          setBrand(tNow("p8ops.shPlatformBrand", { brand: BRAND }));
           return;
         }
         // Parent side: brand with their provider (Phase 1 is single-provider) —

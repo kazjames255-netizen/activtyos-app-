@@ -8,7 +8,7 @@ import { money } from "@/features/bookings/helpers";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 import { MasterCard } from "@/components/OperatorPage";
 import { UK_ALLERGENS } from "./allergens";
-import { DIETS, dietMeta, type Diet } from "./diet";
+import { DIETS, dietMeta, dietName, type Diet } from "./diet";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Saved-menu library (Phase 1 of the meal planner). A menu is a reusable,
@@ -65,7 +65,7 @@ function MenuEditor({ initial, onSave, onCancel }: { initial: SavedMenu; onSave:
                   <button key={d.key} type="button" onClick={() => upd(it.id, { diet: on ? undefined : d.key })}
                     className="rounded-full border px-2 py-[1px] text-[10.5px] font-bold transition-colors"
                     style={on ? { borderColor: "transparent", background: d.fg, color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
-                    {d.icon} {d.label}
+                    {d.icon} {dietName(t, d.key)}
                   </button>
                 );
               })}
@@ -133,7 +133,7 @@ export function SavedMenus({ bare = false }: { bare?: boolean }) {
                 {m.items.map((it) => (
                   <span key={it.id} className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-[12px]">
                     <b>{it.name}</b>
-                    {(() => { const dm = dietMeta(it.diet); return dm ? <span className="rounded-full px-1.5 py-[0.5px] text-[10px] font-bold" style={{ background: dm.bg, color: dm.fg }}>{dm.icon} {dm.label}</span> : null; })()}
+                    {(() => { const dm = dietMeta(it.diet); return dm ? <span className="rounded-full px-1.5 py-[0.5px] text-[10px] font-bold" style={{ background: dm.bg, color: dm.fg }}>{dm.icon} {dietName(t, dm.key)}</span> : null; })()}
                     <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>
                     {it.allergens.length > 0 && <span className="capitalize text-[var(--red,#e21d27)]">⚠ {it.allergens.join(", ")}</span>}
                   </span>

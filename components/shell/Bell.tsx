@@ -112,7 +112,7 @@ export function Bell({ portal }: { portal: PortalKey }) {
           <div className="max-h-[420px] overflow-y-auto">
             {items.length === 0 && (
               <p className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">
-                Nothing yet — updates about {portal === "custdash" ? "your children and bookings" : "your day"} will land here.
+                {portal === "custdash" ? t("p8ops.shBellEmptyParent") : t("p8ops.shBellEmptyDay")}
               </p>
             )}
             {items.map((n) => (
