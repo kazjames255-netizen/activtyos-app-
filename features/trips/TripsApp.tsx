@@ -57,7 +57,10 @@ const RISK = { L: { lbl: "p8ops.tpRiskLow", bg: "#e7f6ee", fg: GREEN }, M: { lbl
 const TRANSPORT = ["Minibus", "Coach", "Walking", "Public bus", "Train", "Parents drop-off", "Provider vehicles"];
 // Stored values stay English; only the label is translated.
 const TRANSPORT_KEY: Record<string, string> = { "Minibus": "p8ops.tpTrMinibus", "Coach": "p8ops.tpTrCoach", "Walking": "p8ops.tpTrWalking", "Public bus": "p8ops.tpTrPublicBus", "Train": "p8ops.tpTrTrain", "Parents drop-off": "p8ops.tpTrParents", "Provider vehicles": "p8ops.tpTrProvider" };
-const DEFAULT_HAZARDS: Hazard[] = [
+// Template wording for a NEW trip is offered in the active language (catalogue key derived from the English text); a record that is
+// already saved keeps whatever text it holds. Role names stay as typed: the staffing check looks for "Lead".
+const tz = (s: string): string => { const k = `p8ops.ti_${s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 48)}`; const r = tNow(k); return r !== k ? r : s; };
+const EN_HAZARDS: Hazard[] = [
   { h: "Transport / travel", who: "All children & staff", controls: "Seatbelts on; head-count on and off; first-aider on board; DBS-checked driver", initial: "M", residual: "L", done: false },
   { h: "Lost / separated child", who: "Children", controls: "Hi-vis; agreed meeting point; head-count at every leg; named lead holds register; buddy system", initial: "H", residual: "L", done: false },
   { h: "Road crossing / pedestrian", who: "All", controls: "Use crossings; staff front and back; walk in pairs", initial: "M", residual: "L", done: false },
@@ -65,9 +68,8 @@ const DEFAULT_HAZARDS: Hazard[] = [
   { h: "Medical / allergies", who: "Named children", controls: "Meds & care plans carried; first-aid kit; emergency contacts to hand", initial: "M", residual: "L", done: false },
   { h: "Venue-specific hazards", who: "All", controls: "Follow venue rules & staff briefing; site risk-assessment reviewed", initial: "M", residual: "L", done: false },
 ];
-const DEFAULT_CHECKPOINTS: Checkpoint[] = [
-  { n: "Depart base", counted: null }, { n: "Arrive venue", counted: null }, { n: "Lunch / midpoint", counted: null }, { n: "Before return", counted: null }, { n: "Back at base", counted: null },
-];
+const defaultHazards = (): Hazard[] => EN_HAZARDS.map((h) => ({ ...h, h: tz(h.h), who: h.who ? tz(h.who) : h.who, controls: h.controls ? tz(h.controls) : h.controls }));
+const defaultCheckpoints = (): Checkpoint[] => ["Depart base", "Arrive venue", "Lunch / midpoint", "Before return", "Back at base"].map((n) => ({ n: tz(n), counted: null }));
 const TITLE_KEYS = ["", "p8ops.tpStep1", "p8ops.tpStep2", "p8ops.tpStep3", "p8ops.tpStep4", "p8ops.tpStep5", "p8ops.tpStep6", "p8ops.tpStep7"];
 const STEP_NUMS = [1, 2, 3, 4, 5, 6, 7];
 // Extensive, editable pick-lists for the itinerary (offered as datalists).
@@ -162,10 +164,10 @@ interface Change { key: string; label: string; old: string; next: string; who: s
 function blankTrip(ratioTarget: number): Trip {
   return {
     id: "", destination: "", address: "", date: todayIso(), transport: "", offsiteRatio: ratioTarget, cost: "0.00",
-    lead: "", leadPhone: "", evc: "", kit: "Packed lunch, water, sun cream, weather-appropriate clothing.",
-    itinerary: [{ t: "09:00", a: "Depart base", k: "Head-count on" }, { t: "", a: "", k: "" }],
-    hazards: DEFAULT_HAZARDS.map((h) => ({ ...h })), raRef: "", raAssessor: "", raDate: todayIso(), raReview: "Reviewed before each run",
-    roster: [], attendees: [], checkpoints: DEFAULT_CHECKPOINTS.map((c) => ({ ...c })), signoff: {}, returned: false,
+    lead: "", leadPhone: "", evc: "", kit: tz("Packed lunch, water, sun cream, weather-appropriate clothing."),
+    itinerary: [{ t: "09:00", a: tz("Depart base"), k: tz("Head-count on") }, { t: "", a: "", k: "" }],
+    hazards: defaultHazards(), raRef: "", raAssessor: "", raDate: todayIso(), raReview: tz("Reviewed before each run"),
+    roster: [], attendees: [], checkpoints: defaultCheckpoints(), signoff: {}, returned: false,
     askPay: true, askConsent: true,
     childNames: [], staff: [], consentObtained: false, notes: "", status: "planned",
   };
@@ -247,7 +249,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
   const { locale } = useI18n();
   const arrow = isRTL(locale) ? "←" : "→";
   const isEdit = !!existing;
-  const [t, setT] = useState<Trip>(() => existing ? { ...blankTrip(ratioTarget), ...existing, hazards: existing.hazards?.length ? existing.hazards : DEFAULT_HAZARDS.map((h) => ({ ...h })), checkpoints: existing.checkpoints?.length ? existing.checkpoints : DEFAULT_CHECKPOINTS.map((c) => ({ ...c })), roster: existing.roster ?? [], attendees: existing.attendees ?? [], itinerary: existing.itinerary?.length ? existing.itinerary : [{ t: "", a: "", k: "" }], signoff: existing.signoff ?? {} } : blankTrip(ratioTarget));
+  const [t, setT] = useState<Trip>(() => existing ? { ...blankTrip(ratioTarget), ...existing, hazards: existing.hazards?.length ? existing.hazards : defaultHazards(), checkpoints: existing.checkpoints?.length ? existing.checkpoints : defaultCheckpoints(), roster: existing.roster ?? [], attendees: existing.attendees ?? [], itinerary: existing.itinerary?.length ? existing.itinerary : [{ t: "", a: "", k: "" }], signoff: existing.signoff ?? {} } : blankTrip(ratioTarget));
   const [open, setOpen] = useState<number>(existing ? Math.min(7, activeStepOf(existing)) : 1);
   const [track, setTrack] = useState(false);
   const [review, setReview] = useState(false);
@@ -454,8 +456,8 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                   </div>
                   <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
                     <div className="mb-1.5 flex items-center justify-between"><span className="text-[12.5px] font-extrabold">{tr("p8ops.tpItinerary")}</span><button type="button" onClick={() => mut((d) => { (d.itinerary ??= []).push({ t: "", a: "", k: "" }); })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">{tr("p8ops.tpAddItin")}</button></div>
-                    <datalist id="itin-activities">{ITIN_ACTIVITIES.map((a) => <option key={a} value={a} />)}</datalist>
-                    <datalist id="itin-actions">{ITIN_ACTIONS.map((a) => <option key={a} value={a} />)}</datalist>
+                    <datalist id="itin-activities">{ITIN_ACTIVITIES.map((a) => <option key={a} value={tz(a)} />)}</datalist>
+                    <datalist id="itin-actions">{ITIN_ACTIONS.map((a) => <option key={a} value={tz(a)} />)}</datalist>
                     <div className="flex flex-col gap-1.5">{(t.itinerary ?? []).map((r, i) => (
                       <div key={i} className="grid grid-cols-[64px_1fr_1fr_auto] items-center gap-1.5 max-sm:grid-cols-[64px_minmax(0,1fr)_minmax(0,1fr)_auto]">
                         <input value={r.t ?? ""} onChange={(e) => edit(`itinerary.${i}.t`, e.target.value, tr("p8ops.tpLblItinTime"))} placeholder="09:00" className={inputCls} />
@@ -644,7 +646,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                       </div>
                     );
                   })}
-                  <button type="button" onClick={() => mut((d) => { (d.checkpoints ??= []).push({ n: "New checkpoint", counted: null }); })} className="self-start rounded-lg border-2 border-dashed border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{tr("p8ops.tpAddCheckpoint")}</button>
+                  <button type="button" onClick={() => mut((d) => { (d.checkpoints ??= []).push({ n: tz("New checkpoint"), counted: null }); })} className="self-start rounded-lg border-2 border-dashed border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{tr("p8ops.tpAddCheckpoint")}</button>
                   <div className="rounded-lg bg-[#fdebec] px-3 py-2 text-[12px] font-semibold" style={{ color: RED }}>{tr("p8ops.tpEmergencyStep6", { phone: t.leadPhone || "—" })}</div>
                 </div>)}
 
