@@ -1,6 +1,7 @@
 "use client";
 
 import { FieldLabel, Input, Select } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
 import { answerKey, DEFAULT_QUESTION_LENGTH, type ChildQuestion } from "@/lib/settings";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -42,6 +43,7 @@ export function QuestionFields({
   heading?: string;
   tone?: QuestionTone;
 }) {
+  const t = useT();
   if (questions.length === 0) return null;
 
   const set = (key: string, value: string) => onChange({ ...answers, [key]: value });
@@ -74,7 +76,7 @@ export function QuestionFields({
 
               {q.type === "choice" && (
                 <Select value={value} onChange={(e) => set(key, e.target.value)} className="w-full">
-                  <option value="">Not said</option>
+                  <option value="">{t("p8ops.qfNotSaid")}</option>
                   {(q.options ?? []).map((o) => (
                     <option key={o} value={o}>
                       {o}
@@ -100,7 +102,7 @@ export function QuestionFields({
                           : { borderColor: "var(--line)", color: "var(--ink-3)" }
                       }
                     >
-                      {v}
+                      {v === "Yes" ? t("p8ops.qfYes") : t("p8ops.qfNo")}
                     </button>
                   ))}
                 </div>
@@ -129,6 +131,7 @@ function ThemedQuestions({
   tone: QuestionTone;
   heading?: string;
 }) {
+  const t = useT();
   return (
     <div className="mt-3 border-t pt-2.5" style={{ borderColor: tone.line }}>
       {heading && (
@@ -144,7 +147,7 @@ function ThemedQuestions({
             <div className="mb-1 text-[11px] font-bold" style={{ color: tone.ink }}>
               {q.label}{" "}
               <span className="font-normal" style={{ color: tone.muted }}>
-                {q.required ? "— required" : "— optional"}
+                {q.required ? t("p8ops.qfRequired") : t("p8ops.qfOptional")}
               </span>
             </div>
 
@@ -197,7 +200,7 @@ function ThemedQuestions({
                           : { borderColor: `${tone.ink}33`, color: tone.muted }
                       }
                     >
-                      {v}
+                      {v === "Yes" ? t("p8ops.qfYes") : t("p8ops.qfNo")}
                     </button>
                   );
                 })}

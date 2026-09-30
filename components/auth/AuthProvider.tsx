@@ -6,6 +6,7 @@ import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { clearMeCache } from "@/components/auth/PortalGuard";
 import { post } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 
 interface AuthState {
   user: User | null;
@@ -74,6 +75,7 @@ async function signOutEverywhere() {
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -101,7 +103,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   if (loading || !user) {
     return (
       <div className="flex h-screen items-center justify-center text-[13px] text-[var(--ink-3)]">
-        Checking session…
+        {t("p8ops.shCheckingSession")}
       </div>
     );
   }

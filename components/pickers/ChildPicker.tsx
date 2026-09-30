@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
+import { richT } from "@/components/shell/richT";
 
 export interface ChildOption { name: string; childId?: string; sub?: string }
 
@@ -11,9 +13,10 @@ export interface ChildOption { name: string; childId?: string; sub?: string }
  * re-opens the search. A deliberate off-list name is still possible via the
  * "not a booked child" row, but it won't link.
  */
-export function ChildPicker({ value, options, onPick, placeholder = "Search a booked child…" }: {
+export function ChildPicker({ value, options, onPick, placeholder }: {
   value?: string; options: ChildOption[]; onPick: (name: string, childId?: string) => void; placeholder?: string;
 }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const committed = value?.trim();
@@ -25,7 +28,7 @@ export function ChildPicker({ value, options, onPick, placeholder = "Search a bo
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#1d3a8f] text-[10px] font-extrabold text-white">{committed[0]?.toUpperCase() ?? "?"}</span>
           <span className="truncate">{committed}</span>
         </span>
-        <button type="button" onClick={() => { onPick("", undefined); setQ(""); }} className="shrink-0 text-[12px] font-bold text-[#1d3a8f] underline">Change</button>
+        <button type="button" onClick={() => { onPick("", undefined); setQ(""); }} className="shrink-0 text-[12px] font-bold text-[#1d3a8f] underline">{t("p8ops.shChange")}</button>
       </div>
     );
   }
@@ -35,7 +38,7 @@ export function ChildPicker({ value, options, onPick, placeholder = "Search a bo
   const exact = options.some((o) => o.name.trim().toLowerCase() === ql);
   return (
     <div className="relative">
-      <Input value={q} placeholder={placeholder} className="w-full"
+      <Input value={q} placeholder={placeholder ?? t("p8ops.shSearchBookedChild")} className="w-full"
         onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
       {open && (matches.length > 0 || !!ql) && (
         <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg">
@@ -48,7 +51,7 @@ export function ChildPicker({ value, options, onPick, placeholder = "Search a bo
           {ql && !exact && (
             <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(q.trim(), undefined); setQ(""); setOpen(false); }}
               className="flex w-full items-center gap-1.5 border-t border-[var(--line)] px-3 py-1.5 text-start text-[12px] text-[var(--ink-3)] hover:bg-[var(--panel)]">
-              Use &ldquo;<b className="text-[var(--ink-2)]">{q.trim()}</b>&rdquo; — not a booked child
+              {richT(t, "p8ops.shUseNotBooked", { name: <b className="text-[var(--ink-2)]">{q.trim()}</b> })}
             </button>
           )}
         </div>

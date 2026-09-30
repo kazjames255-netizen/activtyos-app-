@@ -16,10 +16,13 @@
 import { useEffect, useState } from "react";
 import { getActAs } from "@/lib/api";
 import { getMe } from "@/components/auth/PortalGuard";
+import { useT } from "@/lib/i18n/provider";
+import { richT } from "./richT";
 
 const TENANT_PORTALS = new Set(["company", "franchise", "freelancer", "staff"]);
 
 export function PlatformViewBar({ portal }: { portal: string }) {
+  const t = useT();
   const [isPlatform, setIsPlatform] = useState(false);
   const [actingAs, setActingAs] = useState(false);
 
@@ -38,7 +41,7 @@ export function PlatformViewBar({ portal }: { portal: string }) {
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-[#8a1c1c] px-4 py-2 text-center text-[12.5px] font-bold text-white">
-      <span>⚠️ <b className="font-extrabold">Platform admin view</b> — showing data merged across every tenant, not scoped to one provider. Real business &amp; family data below, with no tenant labels.</span>
+      <span>{richT(t, "p8ops.shPlatformView", { title: <b className="font-extrabold">{t("p8ops.shPlatformViewTitle")}</b> })}</span>
     </div>
   );
 }

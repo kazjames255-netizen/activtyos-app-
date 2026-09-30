@@ -105,6 +105,7 @@ export function PageHero({
    *  a slug of the title when `stats` is present. */
   collapseId?: string;
 }) {
+  const t = useT();
   const foldable = !!stats;
   // A compact "How it works" launcher lives inside the title card on operator
   // pages that have a walkthrough. Pages with bespoke per-tab launchers manage
@@ -154,11 +155,11 @@ export function PageHero({
                 type="button"
                 onClick={toggle}
                 aria-expanded={open}
-                title={open ? "Collapse cards" : "Show cards"}
+                title={open ? t("p8ops.opCollapseCards") : t("p8ops.opShowCards")}
                 className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white"
                 style={{ background: "rgba(12,26,68,.42)" }}
               >
-                <span className="text-[10px] leading-none">{open ? "▾" : "▸"}</span>{open ? "Hide" : "Show"}
+                <span className="text-[10px] leading-none">{open ? "▾" : "▸"}</span>{open ? t("p8ops.opHide") : t("p8ops.opShow")}
               </button>
             )}
           </div>
@@ -176,6 +177,7 @@ export function PageHero({
  * `tone="light"` suits a white/light card; the default suits a blue hero.
  */
 export function SettingsLink({ tone = "hero", className = "" }: { tone?: "hero" | "light"; className?: string }) {
+  const t = useT();
   const parts = (usePathname() ?? "").split("/");
   const portal = parts[1] ?? "";
   const view = parts[2] ?? "";
@@ -185,8 +187,8 @@ export function SettingsLink({ tone = "hero", className = "" }: { tone?: "hero" 
     <Link
       // `from` lets the Setup page offer a Back link to the page you came from.
       href={`/${portal}/setup?tab=${tab}&from=${view}`}
-      title="Change settings"
-      aria-label="Change settings for this page"
+      title={t("p8ops.opChangeSettings")}
+      aria-label={t("p8ops.opChangeSettingsPage")}
       // Inconspicuous: a bare gear, no background. White on blue heroes; navy on
       // light title cards so it stays visible either way. `order-last` keeps it the
       // right-most control in whatever header row it sits in, on every page.
