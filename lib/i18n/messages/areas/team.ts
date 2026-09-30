@@ -692,6 +692,8 @@ function frOverrides(): Partial<TeamMessages> {
     add: "Ajouter",
     requiredItemsCount: "{required} requis · {total} éléments",
     saveRequirements: "Enregistrer les exigences",
+    deactivateNotYetLive: "Cela marque la personne comme désactivée dans votre liste, mais ne révoque PAS encore sa connexion — la suspension de compte n’est pas encore développée. Pour bloquer l’accès maintenant, changez le mot de passe de son compte ou contactez le support.\n\nMarquer comme désactivée malgré tout ?",
+    deactivateConfirm: "Désactiver cette personne ? Elle sera déconnectée et refusée partout dans l’application immédiatement. Vous pourrez la réactiver plus tard.",
   };
 }
 
@@ -1022,6 +1024,8 @@ function esOverrides(): Partial<TeamMessages> {
     add: "Añadir",
     requiredItemsCount: "{required} obligatorios · {total} elementos",
     saveRequirements: "Guardar requisitos",
+    deactivateNotYetLive: "Esto marca a la persona como desactivada en tu lista, pero TODAVÍA NO revoca su inicio de sesión — la suspensión de cuentas aún no está implementada. Para bloquear el acceso ahora, cambia la contraseña de su cuenta o contacta con soporte.\n\n¿Marcar como desactivada de todos modos?",
+    deactivateConfirm: "¿Desactivar a esta persona? Se cerrará su sesión y se le denegará el acceso en toda la app de inmediato. Puedes reactivarla más tarde.",
   };
 }
 
@@ -1352,6 +1356,8 @@ function ptOverrides(): Partial<TeamMessages> {
     add: "Adicionar",
     requiredItemsCount: "{required} obrigatórios · {total} itens",
     saveRequirements: "Guardar requisitos",
+    deactivateNotYetLive: "Isto marca a pessoa como desativada na sua lista, mas AINDA NÃO revoga o início de sessão — a suspensão de contas ainda não está implementada. Para bloquear o acesso agora, altere a palavra-passe da conta ou contacte o suporte.\n\nMarcar como desativada mesmo assim?",
+    deactivateConfirm: "Desligar esta pessoa? A sessão será terminada e o acesso recusado em toda a aplicação de imediato. Pode reativá-la mais tarde.",
   };
 }
 
@@ -1682,6 +1688,8 @@ function roOverrides(): Partial<TeamMessages> {
     add: "Adaugă",
     requiredItemsCount: "{required} obligatorii · {total} elemente",
     saveRequirements: "Salvează cerințele",
+    deactivateNotYetLive: "Aceasta le marchează ca dezactivați în lista ta, dar NU le revocă încă autentificarea — suspendarea conturilor nu este încă implementată. Pentru a opri accesul acum, schimbă parola contului lor sau contactează asistența.\n\nMarchezi ca dezactivat oricum?",
+    deactivateConfirm: "Dezactivezi această persoană? Va fi deconectată și respinsă peste tot în aplicație imediat. O poți reactiva mai târziu.",
   };
 }
 
@@ -2012,6 +2020,8 @@ function plOverrides(): Partial<TeamMessages> {
     add: "Dodaj",
     requiredItemsCount: "{required} wymaganych · {total} pozycji",
     saveRequirements: "Zapisz wymagania",
+    deactivateNotYetLive: "To oznacza je jako dezaktywowane na Twojej liście, ale NIE odbiera jeszcze możliwości logowania — zawieszanie kont nie jest jeszcze zbudowane. Aby zablokować dostęp teraz, zmień hasło do ich konta lub skontaktuj się z pomocą techniczną.\n\nOznaczyć jako dezaktywowane mimo to?",
+    deactivateConfirm: "Wyłączyć tę osobę? Zostanie od razu wylogowana i odrzucana wszędzie w aplikacji. Możesz ją później ponownie aktywować.",
   };
 }
 
@@ -2342,6 +2352,8 @@ function arOverrides(): Partial<TeamMessages> {
     add: "إضافة",
     requiredItemsCount: "{required} مطلوب · {total} عنصرًا",
     saveRequirements: "حفظ المتطلبات",
+    deactivateNotYetLive: "هذا يضعهم كمعطّلين في قائمتك، لكنه لا يلغي تسجيل دخولهم بعد — تعليق الحسابات غير مُنجز بعد. لإيقاف الوصول الآن، غيّر كلمة مرور حسابهم أو تواصل مع الدعم.\n\nهل تريد وضع علامة التعطيل على أي حال؟",
+    deactivateConfirm: "إيقاف هذا الشخص؟ سيتم تسجيل خروجه ورفضه في كل مكان في التطبيق فورًا. يمكنك إعادة تفعيله لاحقًا.",
   };
 }
 
@@ -2672,6 +2684,8 @@ function urOverrides(): Partial<TeamMessages> {
     add: "شامل کریں",
     requiredItemsCount: "{required} لازمی · {total} آئٹمز",
     saveRequirements: "تقاضے محفوظ کریں",
+    deactivateNotYetLive: "اس سے وہ آپ کی فہرست میں غیر فعال نشان زد ہو جاتے ہیں، لیکن ان کا سائن اِن ابھی منسوخ نہیں ہوتا — اکاؤنٹ معطلی ابھی بنی نہیں۔ رسائی ابھی روکنے کے لیے ان کے اکاؤنٹ کا پاس ورڈ بدلیں یا سپورٹ سے رابطہ کریں۔\n\nپھر بھی غیر فعال نشان زد کریں؟",
+    deactivateConfirm: "اس شخص کو بند کریں؟ وہ فوراً سائن آؤٹ ہو جائیں گے اور ایپ میں ہر جگہ مسترد کر دیے جائیں گے۔ آپ انہیں بعد میں دوبارہ فعال کر سکتے ہیں۔",
   };
 }
 
@@ -3002,6 +3016,8 @@ function cyOverrides(): Partial<TeamMessages> {
     add: "Ychwanegu",
     requiredItemsCount: "{required} gofynnol · {total} eitem",
     saveRequirements: "Cadw'r gofynion",
+    deactivateNotYetLive: "Mae hyn yn nodi eu bod wedi'u dadactifadu yn eich rhestr, ond NID yw'n dirymu eu mewngofnodi eto — nid yw atal cyfrifon wedi'i adeiladu. I atal mynediad nawr, newidiwch gyfrinair eu cyfrif neu cysylltwch â chymorth.\n\nNodi fel wedi'i ddadactifadu beth bynnag?",
+    deactivateConfirm: "Diffodd yr unigolyn hwn? Byddant yn cael eu allgofnodi a'u gwrthod ym mhobman yn yr ap ar unwaith. Gallwch eu hailysgogi yn nes ymlaen.",
   };
 }
 
@@ -3297,6 +3313,43 @@ function paOverrides(): Partial<TeamMessages> {
     add: "ਸ਼ਾਮਲ ਕਰੋ",
     requiredItemsCount: "{required} ਲਾਜ਼ਮੀ · {total} ਆਈਟਮ",
     saveRequirements: "ਲੋੜਾਂ ਸੰਭਾਲੋ",
+    deactivateNotYetLive: "ਇਹ ਉਨ੍ਹਾਂ ਨੂੰ ਤੁਹਾਡੀ ਸੂਚੀ ਵਿੱਚ ਅਯੋਗ ਵਜੋਂ ਨਿਸ਼ਾਨਬੱਧ ਕਰਦਾ ਹੈ, ਪਰ ਉਨ੍ਹਾਂ ਦਾ ਸਾਈਨ ਇਨ ਅਜੇ ਰੱਦ ਨਹੀਂ ਕਰਦਾ — ਖਾਤਾ ਮੁਅੱਤਲੀ ਅਜੇ ਬਣੀ ਨਹੀਂ। ਪਹੁੰਚ ਹੁਣੇ ਰੋਕਣ ਲਈ ਉਨ੍ਹਾਂ ਦੇ ਖਾਤੇ ਦਾ ਪਾਸਵਰਡ ਬਦਲੋ ਜਾਂ ਸਹਾਇਤਾ ਨਾਲ ਸੰਪਰਕ ਕਰੋ।\n\nਫਿਰ ਵੀ ਅਯੋਗ ਵਜੋਂ ਨਿਸ਼ਾਨਬੱਧ ਕਰਨਾ ਹੈ?",
+    deactivateConfirm: "ਇਸ ਵਿਅਕਤੀ ਨੂੰ ਬੰਦ ਕਰਨਾ ਹੈ? ਉਹ ਤੁਰੰਤ ਸਾਈਨ ਆਊਟ ਹੋ ਜਾਣਗੇ ਅਤੇ ਐਪ ਵਿੱਚ ਹਰ ਥਾਂ ਰੱਦ ਕਰ ਦਿੱਤੇ ਜਾਣਗੇ। ਤੁਸੀਂ ਉਨ੍ਹਾਂ ਨੂੰ ਬਾਅਦ ਵਿੱਚ ਦੁਬਾਰਾ ਸਰਗਰਮ ਕਰ ਸਕਦੇ ਹੋ।",
+    noLiveListings: "{where} ਕੋਈ ਲਾਈਵ ਗਤੀਵਿਧੀ ਨਹੀਂ — “ਇੱਥੇ ਦੀਆਂ ਸਾਰੀਆਂ ਗਤੀਵਿਧੀਆਂ” ਉੱਥੇ ਚੱਲਣ ਵਾਲੀ ਹਰ ਚੀਜ਼ ਨੂੰ ਕਵਰ ਕਰਦਾ ਹੈ।",
+    showInSchedulePre: "ਉਹ ਇਸ ਲਈ ਸ਼ਡਿਊਲ ਵਿੱਚ ਦਿਸਦੇ ਹਨ ਅਤੇ ਉਨ੍ਹਾਂ ਨੂੰ ਸ਼ਿਫਟਾਂ ਦਿੱਤੀਆਂ ਜਾ ਸਕਦੀਆਂ ਹਨ। ",
+    copyLinkHelpPre: " ਉਸ ਵਿਅਕਤੀ ਦਾ ਸਾਈਨ ਅੱਪ ਲਿੰਕ ਲੈ ਲੈਂਦਾ ਹੈ ਤਾਂ ਜੋ ਤੁਸੀਂ ਖ਼ੁਦ ਭੇਜ ਸਕੋ (ਵਟਸਐਪ, ਸਲੈਕ, ਟੈਕਸਟ…) — ਖੋਲ੍ਹਣ 'ਤੇ ਉਹ ਸ਼ਾਮਲ ਹੋ ਜਾਂਦੇ ਹਨ। ਸਰਗਰਮ ਟੀਮ ਅਤੇ ਉਨ੍ਹਾਂ ਦੀਆਂ ਥਾਵਾਂ ਇੱਥੇ ਹਨ ",
+    copyLinkTitle: "ਉਨ੍ਹਾਂ ਦਾ ਸਾਈਨ ਅੱਪ ਲਿੰਕ ਕਾਪੀ ਕਰਦਾ ਹੈ — ਖ਼ੁਦ ਭੇਜੋ ਅਤੇ ਖੋਲ੍ਹਣ 'ਤੇ ਉਹ ਸ਼ਾਮਲ ਹੋ ਜਾਣਗੇ",
+    onboardingSentToast: "📨 {name} ਨੂੰ ਆਨਬੋਰਡਿੰਗ ਲਿੰਕ ਭੇਜਿਆ ਗਿਆ। ਅਰਜ਼ੀ ਵਿੱਚੋਂ ਉਨ੍ਹਾਂ ਦੇ ਹਵਾਲੇ, ਪਤਾ ਅਤੇ ਵੇਰਵੇ ਪਹਿਲਾਂ ਤੋਂ ਭਰੇ ਹੋਣਗੇ — ਉਨ੍ਹਾਂ ਤੋਂ ਦੁਬਾਰਾ ਨਹੀਂ ਪੁੱਛਿਆ ਜਾਵੇਗਾ।",
+    carryPre: "↳ ਤੀਰ ਨਾਲ ਨਿਸ਼ਾਨਬੱਧ ਖਾਨੇ ਆਨਬੋਰਡਿੰਗ ਦਾ ਵੀ ਹਿੱਸਾ ਹਨ — ਜਦੋਂ ਤੁਸੀਂ ਆਨਬੋਰਡਿੰਗ ਲਿੰਕ ਸਵੀਕਾਰ ਕਰ ਕੇ ਭੇਜਦੇ ਹੋ, ਤਾਂ ਉਹ ",
+    resetMasterConfirm: "ਕੀ ਮਿਆਰੀ ਫਾਰਮ ਨੂੰ ਪੂਰੇ ਮਾਸਟਰ ਟੈਂਪਲੇਟ 'ਤੇ ਵਾਪਸ ਰੀਸੈੱਟ ਕਰਨਾ ਹੈ? ਇਹ 'ਮਿਆਰੀ' ਫਾਰਮ ਨੂੰ ਬਦਲ ਦੇਵੇਗਾ।",
+    sendModalHelpPre: "ਉਮੀਦਵਾਰ ਇਸਨੂੰ ਭਰਦੇ ਹਨ ਅਤੇ ਉਨ੍ਹਾਂ ਦੀ ਅਰਜ਼ੀ ਇੱਥੇ ਪਹੁੰਚਦੀ ਹੈ ",
+    sendModalHelpPost: " ਤਾਂ ਜੋ ਤੁਸੀਂ ਸਮੀਖਿਆ ਕਰ ਸਕੋ।",
+    sendModalDemoPre: "ਡੈਮੋ: ਲਿੰਕ + ਈਮੇਲ ਭੇਜਣਾ ਬੈਕਐਂਡ (ਅਮੀਰ) ਨਾਲ ਜੁੜਿਆ ਹੈ। ",
+    sendModalDemoPost: " ਪੰਨਾ ਜੋ ਉਮੀਦਵਾਰ ਭਰਦੇ ਹਨ, ਉਹ ਬੈਕਐਂਡ ਦਾ ਹਿੱਸਾ ਹੈ।",
+    applicationInviteSentToast: "📨 {name} ਨੂੰ ਅਰਜ਼ੀ ਦਾ ਸੱਦਾ ਭੇਜਿਆ ਗਿਆ — ਜਦੋਂ ਉਹ ਅਰਜ਼ੀ ਦੇਣਗੇ ਤਾਂ ਉਹ ਅਰਜ਼ੀਆਂ ਵਿੱਚ ਆ ਜਾਵੇਗੀ।",
+    formEditorHelpPre: "ਉਹ ਖਾਨੇ ਜਿਨ੍ਹਾਂ ਦੀ ",
+    formEditorHelpPost: " ਮੈਪਿੰਗ ਹੈ (ਹਵਾਲੇ, ਪਤਾ, ਉਪਲਬਧਤਾ…) ਬਿਨੈਕਾਰ ਨੂੰ ਸਵੀਕਾਰ ਕਰਨ 'ਤੇ ਆਨਬੋਰਡਿੰਗ ਰਿਕਾਰਡ ਨੂੰ ਪਹਿਲਾਂ ਤੋਂ ਭਰ ਦਿੰਦੇ ਹਨ — ਅਹੁਦੇ ਸੈੱਟਅੱਪ → ਸਟਾਫ਼ ਭੂਮਿਕਾਵਾਂ ({n}) ਤੋਂ ਆਉਂਦੇ ਹਨ।",
+    manageJobTitles: "ਸੈੱਟਅੱਪ → ਸਟਾਫ਼ ਭੂਮਿਕਾਵਾਂ ਵਿੱਚ ਅਹੁਦੇ ਪ੍ਰਬੰਧਿਤ ਕਰੋ।",
+    tapTimesPre: "ਉਹ ਸਮੇਂ ਚੁਣੋ ਜਦੋਂ ਤੁਸੀਂ ਕੰਮ ਕਰ ਸਕਦੇ ਹੋ। ਇਹ ਅੱਗੇ ਜਾਂਦਾ ਹੈ ",
+    addCertFromArea: "＋ ਸਰਟੀਫਿਕੇਟ ਖੇਤਰ ਵਿੱਚੋਂ ਸਰਟੀਫਿਕੇਟ ਸ਼ਾਮਲ ਕਰੋ…",
+    setCertRolePre: "ਤੈਅ ਕਰੋ ਕਿ ਕਿਹੜੀ ਭੂਮਿਕਾ ਨੂੰ ਕਿਹੜਾ ਸਰਟੀਫਿਕੇਟ ਚਾਹੀਦਾ ਹੈ ",
+    setCertRoleMid: " ਵਿੱਚ। ਸਟਾਫ਼ ਇਹਨਾਂ ਨੂੰ ਇੱਥੇ ਅੱਪਲੋਡ ਕਰਦਾ ਹੈ ",
+    fromInviteTitle: "ਸਾਈਨ ਅੱਪ ਲਿੰਕ ਕਦੋਂ ਭੇਜਿਆ ਗਿਆ, ਇਹ ਤੈਅ ਹੈ — ਸਟਾਫ਼ ਸੋਧ ਨਹੀਂ ਸਕਦਾ; ਕੰਪਨੀ ਸੋਧ ਸਕਦੀ ਹੈ",
+    scrSubtitle: "ਤੁਹਾਡੀ ਟੀਮ ਵਿੱਚ ਸੁਰੱਖਿਅਤ ਭਰਤੀ ਜਾਂਚਾਂ ਦਾ Ofsted-ਸ਼ੈਲੀ ਦਾ ਸਾਰ।",
+    naExplain: " = ਉਸ ਵਿਅਕਤੀ ਦੀ ਭੂਮਿਕਾ ਲਈ ਲੋੜੀਂਦਾ ਨਹੀਂ (ਲੋੜਾਂ ਵਿੱਚ ਤੈਅ)। ਪੂਰਾ ਰਿਕਾਰਡ ਖੋਲ੍ਹਣ ਲਈ ਨਾਂ 'ਤੇ ਕਲਿੱਕ ਕਰੋ।",
+    flaggedPre: "⚠ ਉਨ੍ਹਾਂ ਨੇ ਨਿਸ਼ਾਨਬੱਧ ਕੀਤਾ ",
+    compulsoryOutstandingMid: " ਲਾਜ਼ਮੀ ਆਈਟਮ ਅਜੇ ਬਾਕੀ ਹਨ: ",
+    chaseThese: "। ਸ਼ੁਰੂ ਕਰਨ ਦੀ ਮਨਜ਼ੂਰੀ ਤੋਂ ਪਹਿਲਾਂ ਇਨ੍ਹਾਂ ਦਾ ਪਿੱਛਾ ਕਰੋ।",
+    updatedAfterSubmit: "🔄 {name} ਨੇ ਜਮ੍ਹਾਂ ਕਰਨ ਤੋਂ ਬਾਅਦ {date} ਨੂੰ ਆਪਣੇ ਵੇਰਵੇ ਅੱਪਡੇਟ ਕੀਤੇ — ਕਿਰਪਾ ਕਰਕੇ ਤਬਦੀਲੀਆਂ ਦੀ ਸਮੀਖਿਆ ਕਰੋ।",
+    allChecksVerified: "✓ ਸਾਰੀਆਂ ਸੁਰੱਖਿਅਤ ਭਰਤੀ ਜਾਂਚਾਂ ਦੀ ਪੁਸ਼ਟੀ ਹੋ ਗਈ — ਸ਼ੁਰੂ ਕਰਨ ਦੀ ਮਨਜ਼ੂਰੀ।",
+    notClearedYet: "⏳ ਅਜੇ ਮਨਜ਼ੂਰੀ ਨਹੀਂ — ਪੁਸ਼ਟੀ ਬਾਕੀ ਹੈ: {labels}।",
+    certsTrackedPre: "ਸਰਟੀਫਿਕੇਟਾਂ (DBS, ਮੁੱਢਲੀ ਸਹਾਇਤਾ) ਦਾ ਰਿਕਾਰਡ ਵੀ ਰੱਖਿਆ ਜਾਂਦਾ ਹੈ ",
+    certsTrackedPost: " ਵਿੱਚ। ਸੰਵੇਦਨਸ਼ੀਲ ਖਾਨਿਆਂ (🔒) ਨੂੰ ਸੁਰੱਖਿਅਤ ਸਟੋਰੇਜ ਅਤੇ ਰੱਖ-ਰਖਾਅ ਦੀ ਲੋੜ ਹੈ — ਬੈਕਐਂਡ ਸੂਚੀ 'ਤੇ।",
+    disqualExampleTitle: "ਅਯੋਗਤਾ ਸਵੈ-ਘੋਸ਼ਣਾ — ਉਦਾਹਰਨ",
+    disqualPrintNote: "ਇਸਨੂੰ ਪ੍ਰਿੰਟ ਕਰੋ, ਸਟਾਫ਼ ਮੈਂਬਰ ਤੋਂ ਦਸਤਖ਼ਤ ਕਰਵਾਓ, ਫਿਰ ਦਸਤਖ਼ਤ ਕੀਤੀ ਕਾਪੀ ਅੱਪਲੋਡ ਕਰੋ ਅਤੇ ਡੱਬੇ ਵਿੱਚ ਟਿੱਕ ਲਾਓ।",
+    requirementsHelpPre: "ਤੈਅ ਕਰੋ ਕਿ ਕੀ ਲੋੜੀਂਦਾ ਹੈ ਅਤੇ ਕਿਸ 'ਤੇ ਲਾਗੂ ਹੁੰਦਾ ਹੈ। ",
+    requirementsHelpPost: " ਨੂੰ ਭੂਮਿਕਾਵਾਂ 'ਤੇ ਸੈੱਟ ਕਰੋ ਤਾਂ ਜੋ ਕਿਸੇ ਭੂਮਿਕਾ ਨੂੰ ਛੋਟ ਮਿਲੇ (ਜਿਵੇਂ ਦਫ਼ਤਰੀ ਐਡਮਿਨ ਤੋਂ DBS ਹਟਾਓ) — ਫਿਰ ਇਹ ਉਨ੍ਹਾਂ ਲਈ ਲੁਕ ਜਾਂਦਾ ਹੈ, ਪਰ ਕਿਸੇ ਵਿਅਕਤੀ ਨੂੰ ਫਿਰ ਵੀ ਜੋੜਿਆ ਜਾ ਸਕਦਾ ਹੈ।",
+    gatesClearedTitle: "'ਸ਼ੁਰੂ ਕਰਨ ਦੀ ਮਨਜ਼ੂਰੀ' ਦੇ ਗੇਟ",
   };
 }
 
@@ -3589,5 +3642,45 @@ function bnOverrides(): Partial<TeamMessages> {
     add: "যোগ করুন",
     requiredItemsCount: "{required} আবশ্যক · {total} আইটেম",
     saveRequirements: "প্রয়োজনীয়তা সংরক্ষণ",
+    deactivateNotYetLive: "এটি আপনার তালিকায় তাদের নিষ্ক্রিয় হিসেবে চিহ্নিত করে, কিন্তু এখনই তাদের সাইন ইন বাতিল করে না — অ্যাকাউন্ট স্থগিতকরণ এখনও তৈরি হয়নি। এখনই প্রবেশ বন্ধ করতে তাদের অ্যাকাউন্টের পাসওয়ার্ড বদলান বা সহায়তার সঙ্গে যোগাযোগ করুন।\n\nতবুও নিষ্ক্রিয় হিসেবে চিহ্নিত করবেন?",
+    deactivateConfirm: "এই ব্যক্তিকে বন্ধ করবেন? তাদের সঙ্গে সঙ্গে সাইন আউট করা হবে এবং অ্যাপের সব জায়গায় প্রত্যাখ্যান করা হবে। আপনি পরে তাদের পুনরায় সক্রিয় করতে পারেন।",
+    noLiveListings: "{where} কোনো লাইভ কার্যক্রম নেই — “এখানকার সব কার্যক্রম” সেখানে চলমান সবকিছু কভার করে।",
+    showInSchedulePre: "তারা এর জন্য সূচিতে দেখা যায় এবং তাদের শিফট দেওয়া যেতে পারে। ",
+    copyLinkHelpPre: " সেই ব্যক্তির সাইন-আপ লিঙ্ক নিয়ে নেয়, যাতে আপনি নিজে পাঠাতে পারেন (হোয়াটসঅ্যাপ, স্ল্যাক, টেক্সট…) — খুললেই তারা যোগ দেয়। সক্রিয় টিম ও তাদের স্থান আছে ",
+    copyLinkTitle: "তাদের সাইন-আপ লিঙ্ক কপি করে — নিজে পাঠান, খুললেই তারা যোগ দেবে",
+    onboardingSentToast: "📨 {name}-কে অনবোর্ডিং লিঙ্ক পাঠানো হয়েছে। আবেদন থেকে তাদের রেফারেন্স, ঠিকানা ও বিবরণ আগে থেকেই পূরণ থাকবে — তাদের আর জিজ্ঞাসা করা হবে না।",
+    carryPre: "↳ তীর চিহ্নিত ঘরগুলো অনবোর্ডিংয়েরও অংশ — আপনি যখন অনবোর্ডিং লিঙ্ক গ্রহণ করে পাঠান, তখন সেগুলো ",
+    resetMasterConfirm: "মানক ফর্মটি কি পূর্ণ মাস্টার টেমপ্লেটে রিসেট করবেন? এটি 'মানক' ফর্মটি প্রতিস্থাপন করবে।",
+    sendModalHelpPre: "প্রার্থীরা এটি পূরণ করে এবং তাদের আবেদন পৌঁছায় ",
+    sendModalHelpPost: " যাতে আপনি পর্যালোচনা করতে পারেন।",
+    sendModalDemoPre: "ডেমো: লিঙ্ক + ইমেল পাঠানো ব্যাকএন্ডের (আমির) সঙ্গে যুক্ত। ",
+    sendModalDemoPost: " পৃষ্ঠা যা প্রার্থীরা পূরণ করে তা ব্যাকএন্ডের অংশ।",
+    applicationInviteSentToast: "📨 {name}-কে আবেদনের আমন্ত্রণ পাঠানো হয়েছে — তারা আবেদন করলে তা আবেদন বিভাগে পৌঁছাবে।",
+    formEditorHelpPre: "যেসব ঘরের ",
+    formEditorHelpPost: " ম্যাপিং আছে (রেফারেন্স, ঠিকানা, প্রাপ্যতা…) সেগুলো আবেদনকারীকে গ্রহণ করলে অনবোর্ডিং রেকর্ড আগে থেকে পূরণ করে দেয় — পদবি আসে সেটআপ → কর্মী ভূমিকা ({n}) থেকে।",
+    manageJobTitles: "সেটআপ → কর্মী ভূমিকায় পদবি পরিচালনা করুন।",
+    tapTimesPre: "যে সময়গুলোতে কাজ করতে পারেন সেগুলো ট্যাপ করুন। এটি স্থানান্তরিত হয় ",
+    addCertFromArea: "＋ সার্টিফিকেট এলাকা থেকে একটি সার্টিফিকেট যোগ করুন…",
+    setCertRolePre: "কোন ভূমিকার জন্য কোন সার্টিফিকেট দরকার তা ঠিক করুন ",
+    setCertRoleMid: " এ। কর্মীরা এগুলো এখানে আপলোড করেন ",
+    fromInviteTitle: "সাইন-আপ লিঙ্ক কখন পাঠানো হয়েছে তা নির্ধারিত — কর্মীরা সম্পাদনা করতে পারে না; কোম্পানি পারে",
+    scrSubtitle: "আপনার টিম জুড়ে নিরাপদ নিয়োগ যাচাইয়ের Ofsted-শৈলীর সারসংক্ষেপ।",
+    naExplain: " = ঐ ব্যক্তির ভূমিকার জন্য প্রয়োজন নেই (প্রয়োজনীয়তায় নির্ধারিত)। পূর্ণ রেকর্ড খুলতে নামে ক্লিক করুন।",
+    flaggedPre: "⚠ তারা চিহ্নিত করেছে ",
+    compulsoryOutstandingMid: " বাধ্যতামূলক আইটেম এখনও বাকি: ",
+    chaseThese: "। শুরুর অনুমোদনের আগে এগুলো অনুসরণ করুন।",
+    updatedAfterSubmit: "🔄 {name} জমা দেওয়ার পর {date}-এ তাদের বিবরণ আপডেট করেছেন — অনুগ্রহ করে পরিবর্তনগুলো পর্যালোচনা করুন।",
+    allChecksVerified: "✓ সব নিরাপদ নিয়োগ যাচাই নিশ্চিত — শুরুর অনুমোদন দেওয়া হয়েছে।",
+    notClearedYet: "⏳ এখনও অনুমোদিত নয় — যাচাই বাকি: {labels}।",
+    certsTrackedPre: "সার্টিফিকেট (DBS, প্রাথমিক চিকিৎসা) ট্র্যাকও করা হয় ",
+    certsTrackedPost: "-এ। সংবেদনশীল ঘরগুলোর (🔒) জন্য নিরাপদ সংরক্ষণ ও ধারণ দরকার — ব্যাকএন্ড তালিকায়।",
+    disqualExampleTitle: "অযোগ্যতার স্ব-ঘোষণা — উদাহরণ",
+    disqualPrintNote: "এটি প্রিন্ট করুন, কর্মীকে দিয়ে সই করান, তারপর সই করা কপি আপলোড করুন এবং বাক্সে টিক দিন।",
+    requirementsHelpPre: "কী প্রয়োজন এবং কার ক্ষেত্রে প্রযোজ্য তা ঠিক করুন। ",
+    requirementsHelpPost: " ভূমিকায় সেট করুন যাতে কোনো ভূমিকাকে অব্যাহতি দেওয়া যায় (যেমন অফিস অ্যাডমিন থেকে DBS সরান) — তখন এটি তাদের জন্য লুকানো থাকে, তবে কোনো ব্যক্তির জন্য যোগ করা যায়।",
+    gatesClearedTitle: "'শুরুর অনুমোদন'-এর গেট",
+    step3HelpPre: "যে পদে তাদের নির্ধারণ করা হয়েছে (লাইফগার্ড, সাইট ম্যানেজার…) — রোটার রঙিন সারি। তালিকায় নেই? ব্যবহার করুন ",
+    noRosterExplainPre: "তারা সূচি বা কোনো রেজিস্টারে দেখা যাবে না — তবে তাদের ",
+    noRosterExplainPost: " অনুমোদিত পৃষ্ঠায় প্রবেশাধিকার থাকবে। আপনি তাদের পরে এখান থেকে নিয়োগ করতে পারেন ",
   };
 }

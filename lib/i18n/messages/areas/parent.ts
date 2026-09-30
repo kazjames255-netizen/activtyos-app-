@@ -861,6 +861,12 @@ parent.pl = Object.assign(clone(), {
   tabCancelledRefunded: "Anulowane i zwrócone",
   noBookingsMatch: "Brak rezerwacji pasujących do filtrów.",
   nothingHereRightNow: "Nic tu teraz nie ma.",
+  myKidsAgesHint: "Pokaż tylko zajęcia przyjmujące dzieci w wieku któregoś z Twoich dzieci",
+  myKidsAgesNote: "Wyświetlamy zajęcia dla wieku Twoich dzieci — oraz kilka, których przedział wiekowy nie do końca pasuje, ale których organizator przyjmuje dzieci spoza niego (rezerwujesz wtedy jako prośbę do zatwierdzenia).",
+  priceFilterHint: "Filtruje według najtańszego sposobu rezerwacji — ceny pokazują, czy są za sesję, za dzień czy za tydzień.",
+  onDateHint: "Wybierz dzień, w którym dziecko ma czas — pokażemy zajęcia odbywające się tego dnia",
+  distancesFromAddress: "Odległości od Twojego adresu",
+  appliedOnceBackend: "Zostanie zastosowane po zbudowaniu backendu (§U)",
 });
 
 // Romanian
@@ -1262,6 +1268,12 @@ parent.ro = Object.assign(clone(), {
   tabCancelledRefunded: "Anulate și rambursate",
   noBookingsMatch: "Nicio rezervare nu se potrivește acestor filtre.",
   nothingHereRightNow: "Nimic aici momentan.",
+  myKidsAgesHint: "Afișează doar activitățile care acceptă vârsta unuia dintre copiii tăi",
+  myKidsAgesNote: "Se afișează activități pentru vârstele copiilor tăi — plus câteva al căror interval de vârstă nu se potrivește tocmai, dar al căror furnizor primește și copii din afara lui (vei rezerva ca o cerere pe care o aprobă ei).",
+  priceFilterHint: "Filtrează după cea mai ieftină modalitate de rezervare — prețurile arată dacă sunt pe sesiune, pe zi sau pe săptămână.",
+  onDateHint: "Alege o zi în care copilul este liber — afișează activitățile din acea dată",
+  distancesFromAddress: "Distanțe față de adresa ta",
+  appliedOnceBackend: "Se aplică după ce backendul este construit (§U)",
 });
 
 // Spanish
@@ -1663,6 +1675,12 @@ parent.es = Object.assign(clone(), {
   tabCancelledRefunded: "Canceladas y reembolsadas",
   noBookingsMatch: "Ninguna reserva coincide con estos filtros.",
   nothingHereRightNow: "Nada por aquí ahora mismo.",
+  myKidsAgesHint: "Mostrar solo actividades que admiten la edad de alguno de tus hijos",
+  myKidsAgesNote: "Mostramos actividades para las edades de tus hijos — y algunas cuyo rango de edad no encaja del todo pero cuyo proveedor acepta a niños fuera de él (reservarías como solicitud para que la aprueben).",
+  priceFilterHint: "Filtra por la forma más barata de reservar — los precios indican si son por sesión, por día o por semana.",
+  onDateHint: "Elige un día en que tu hijo esté libre — muestra las actividades de esa fecha",
+  distancesFromAddress: "Distancias desde tu dirección",
+  appliedOnceBackend: "Se aplicará cuando se construya el backend (§U)",
 });
 
 // French
@@ -2064,6 +2082,12 @@ parent.fr = Object.assign(clone(), {
   tabCancelledRefunded: "Annulées et remboursées",
   noBookingsMatch: "Aucune réservation ne correspond à ces filtres.",
   nothingHereRightNow: "Rien ici pour le moment.",
+  myKidsAgesHint: "Afficher uniquement les activités qui acceptent l’âge d’un de vos enfants",
+  myKidsAgesNote: "Affichage des activités pour l’âge de vos enfants — plus quelques-unes dont la tranche d’âge ne correspond pas tout à fait mais dont l’organisateur accueille des enfants hors de cette tranche (vous réserveriez sous forme de demande à faire valider).",
+  priceFilterHint: "Filtre selon la façon la moins chère de réserver — les prix indiquent si c’est par séance, par jour ou par semaine.",
+  onDateHint: "Choisissez un jour où votre enfant est libre — affiche les activités de cette date",
+  distancesFromAddress: "Distances depuis votre adresse",
+  appliedOnceBackend: "Appliqué une fois le backend construit (§U)",
 });
 
 // Portuguese
