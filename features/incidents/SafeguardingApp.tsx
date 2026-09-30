@@ -1,6 +1,9 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { useT, useI18n, tNow } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
+import { richT } from "@/components/shell/richT";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -10,7 +13,7 @@ import { ChildPicker, type ChildOption } from "@/components/pickers/ChildPicker"
 import { NotesThread } from "./NotesThread";
 import { BodyMap, type BodyMark } from "./BodyMap";
 import { groupByChild } from "./IncidentsApp";
-import { SG_CATEGORIES, riskFor, protocolFor, DSL_DECISIONS, KCSIE_URL, type Risk } from "./safeguarding";
+import { SG_CATEGORIES, riskFor, protocolFor, DSL_DECISIONS, KCSIE_URL, sgCategoryLabel, DEC_KEY, type Risk } from "./safeguarding";
 
 interface SgLog {
   id: string; kind: "safeguarding"; date: string; time?: string; childName: string; childId?: string;
@@ -25,7 +28,7 @@ interface SgLog {
   /** Staff's own report about a colleague: the server sends its status only. */
   restricted?: boolean; statusLabel?: string;
 }
-const RISK ={ minor: { label: "Low", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { label: "Medium", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "High", bg: "#fdebec", fg: "#c02636" } } as const;
+const RISK = { minor: { label: "p8ops.tpRiskLow", full: "p8ops.sgRiskLowFull", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { label: "p8ops.sgMedium", full: "p8ops.sgRiskMedFull", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "p8ops.tpRiskHigh", full: "p8ops.sgRiskHighFull", bg: "#fdebec", fg: "#c02636" } } as const;
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const nowTime = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${p(t.getHours())}:${p(t.getMinutes())}`; };
 const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
@@ -42,11 +45,11 @@ function resolveAuthority(c?: SgContacts, name?: string): SgAuthority | undefine
   const list = c?.authorities ?? [];
   if (name) { const hit = list.find((a) => a.name === name); if (hit) return hit; }
   if (list.length === 1) return list[0];
-  if (!name && (c?.ladoPhone || c?.socialCarePhone)) return { id: "legacy", name: c?.localAuthority ?? "your local authority", ladoName: c?.ladoName, ladoPhone: c?.ladoPhone, socialCarePhone: c?.socialCarePhone, outOfHoursPhone: c?.outOfHoursPhone };
+  if (!name && (c?.ladoPhone || c?.socialCarePhone)) return { id: "legacy", name: c?.localAuthority ?? tNow("p8ops.sgYourAuth"), ladoName: c?.ladoName, ladoPhone: c?.ladoPhone, socialCarePhone: c?.socialCarePhone, outOfHoursPhone: c?.outOfHoursPhone };
   return list.find((a) => a.name === name);
 }
-const emergencyLines = (c?: SgContacts): Line[] => ([c?.policePhone && { label: "Police", phone: c.policePhone }, c?.nspccPhone && { label: "NSPCC helpline", phone: c.nspccPhone }].filter(Boolean) as Line[]);
-const referralLines = (a?: SgAuthority): Line[] => (!a ? [] : [a.ladoPhone && { label: `LADO${a.ladoName ? ` — ${a.ladoName}` : ""} · about an adult`, phone: a.ladoPhone }, a.socialCarePhone && { label: "Children's social care (MASH)", phone: a.socialCarePhone }, a.outOfHoursPhone && { label: "Out-of-hours / EDT", phone: a.outOfHoursPhone }].filter(Boolean) as Line[]);
+const emergencyLines = (c?: SgContacts): Line[] => ([c?.policePhone && { label: tNow("p8ops.sgPolice"), phone: c.policePhone }, c?.nspccPhone && { label: tNow("p8ops.sgNspcc"), phone: c.nspccPhone }].filter(Boolean) as Line[]);
+const referralLines = (a?: SgAuthority): Line[] => (!a ? [] : [a.ladoPhone && { label: tNow("p8ops.sgLadoAdult", { name: a.ladoName ? ` — ${a.ladoName}` : "" }), phone: a.ladoPhone }, a.socialCarePhone && { label: tNow("p8ops.sgMash"), phone: a.socialCarePhone }, a.outOfHoursPhone && { label: tNow("p8ops.sgOoh"), phone: a.outOfHoursPhone }].filter(Boolean) as Line[]);
 const extraLines = (c?: SgContacts): Line[] => (c?.extra ?? []).filter((e) => e.label?.trim() && e.phone?.trim());
 const allContactLines = (c?: SgContacts, authorityName?: string): Line[] => [...emergencyLines(c), ...referralLines(resolveAuthority(c, authorityName)), ...extraLines(c)];
 
@@ -57,13 +60,14 @@ function LineRow({ it }: { it: Line }) {
 // The contacts panel — emergency numbers, then the chosen authority's referral
 // numbers (LADO / MASH), then any extras.
 function ContactsBlock({ c, authorityName }: { c?: SgContacts; authorityName?: string }) {
+  const t = useT();
   const em = emergencyLines(c), auth = resolveAuthority(c, authorityName), ref = referralLines(auth), ex = extraLines(c);
   if (!em.length && !ref.length && !ex.length) return null;
   return (
     <div className="mt-2 flex flex-col gap-1.5">
-      {em.length > 0 && <div className="rounded-lg border border-[#f6c9cc] bg-[#fdebec] p-2"><div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-wide text-[#c02636]">🚨 If a child is in immediate danger</div><div className="flex flex-col gap-0.5">{em.map((it, i) => <LineRow key={i} it={it} />)}</div></div>}
-      {ref.length > 0 && <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2"><div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">🏛️ Refer to — {auth?.name}</div><div className="flex flex-col gap-0.5">{ref.map((it, i) => <LineRow key={i} it={it} />)}</div></div>}
-      {ex.length > 0 && <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2"><div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">📞 Also</div><div className="flex flex-col gap-0.5">{ex.map((it, i) => <LineRow key={i} it={it} />)}</div></div>}
+      {em.length > 0 && <div className="rounded-lg border border-[#f6c9cc] bg-[#fdebec] p-2"><div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-wide text-[#c02636]">{t("p8ops.sgImmDanger")}</div><div className="flex flex-col gap-0.5">{em.map((it, i) => <LineRow key={i} it={it} />)}</div></div>}
+      {ref.length > 0 && <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2"><div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8ops.sgReferTo", { name: auth?.name ?? "" })}</div><div className="flex flex-col gap-0.5">{ref.map((it, i) => <LineRow key={i} it={it} />)}</div></div>}
+      {ex.length > 0 && <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2"><div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8ops.sgAlso")}</div><div className="flex flex-col gap-0.5">{ex.map((it, i) => <LineRow key={i} it={it} />)}</div></div>}
     </div>
   );
 }
@@ -72,11 +76,14 @@ type Draft = Partial<SgLog> & { date: string; time?: string; childName: string; 
 const emptyDraft = (reportedTo: string): Draft => ({ date: todayIso(), time: nowTime(), childName: "", description: "", severity: "moderate", concernCategory: "", reportedTo, subject: "child", bodyMap: [], attachments: [] });
 
 function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: () => void; onCancel: () => void }) {
+  const t = useT();
   const { settings } = useSettings();
   const sg = settings.safeguarding ?? {};
   const dslTitle = sg.dslTitle || "Designated Safeguarding Lead (DSL)";
   const dslName = sg.dslName || "";
   const dslLabel = [dslTitle, dslName].filter(Boolean).join(" · ");
+  // What the user reads; the stored value (dslLabel) keeps the English default title.
+  const dslShown = [sg.dslTitle || t("p8ops.sgDslTitle"), dslName].filter(Boolean).join(" · ");
   const categories = sg.categories?.length ? sg.categories : [...SG_CATEGORIES];
   const isEdit = !!existing;
   const [d, setD] = useState<Draft>(existing ? { ...existing } : emptyDraft(dslLabel));
@@ -91,7 +98,7 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
     ...new Map(bkgs.filter((b) => b.child).map((b) => [b.child!.trim().toLowerCase(), { name: b.child!, childId: b.childId }])).values(),
     { name: "Other / staff member" },
   ];
-  const proto = protocolFor(d.concernCategory ?? "", sg.protocol, { title: dslTitle, name: dslName }, d.subject);
+  const proto = protocolFor(d.concernCategory ?? "", sg.protocol, { title: sg.dslTitle, name: dslName }, d.subject);
 
   function pickCategory(cat: string) { set({ concernCategory: cat, severity: cat ? riskFor(cat) : d.severity }); }
 
@@ -106,13 +113,13 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
         urls.push(url);
       }
       set({ attachments: [...(d.attachments ?? []), ...urls] });
-    } catch { setError("Couldn’t upload a file — try a smaller image."); }
+    } catch { setError(t("p8ops.sgUploadFailed")); }
     finally { setUploading(false); }
   }
 
   async function save() {
-    if (!d.childName.trim() || !d.description.trim()) { setError("Add who is involved and what happened."); return; }
-    if (!d.concernCategory) { setError("Choose a concern category."); return; }
+    if (!d.childName.trim() || !d.description.trim()) { setError(t("p8ops.sgAddWho")); return; }
+    if (!d.concernCategory) { setError(t("p8ops.sgChooseCat")); return; }
     setBusy(true); setError(null);
     // Settings can land after the form opens, so a new concern's "reported to"
     // is resolved NOW — the DSL actually configured, unless someone typed their own.
@@ -123,26 +130,26 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
       if (isEdit) await apiPut(`/api/incidents/${encodeURIComponent(existing!.id)}`, { ...payload, notifyParentOfEdit: false });
       else await apiPost("/api/incidents", payload);
       onSaved();
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("p8ops.tpCouldntSave")); setBusy(false); }
   }
 
   const tone = proto.tone === "red" ? { bg: "#fdebec", fg: "#c02636", line: "#f6c9cc" } : proto.tone === "amber" ? { bg: "#fdf3d8", fg: "#9a5a00", line: "#f6e2a8" } : { bg: "#eef1f6", fg: "#4a4763", line: "var(--line)" };
 
   return (
     <Card className="mb-3.5 p-4">
-      <div className="mb-1 text-[14px] font-extrabold">{isEdit ? "Edit safeguarding concern" : "Log a safeguarding concern"}</div>
-      <p className="mb-3 text-[11.5px] text-[var(--ink-3)]">Record facts only — what you saw or heard, in the child&rsquo;s own words where possible. No opinions. This is confidential and routed to your {dslLabel}.</p>
+      <div className="mb-1 text-[14px] font-extrabold">{isEdit ? t("p8ops.sgEditTitle") : t("p8ops.sgLogTitle")}</div>
+      <p className="mb-3 text-[11.5px] text-[var(--ink-3)]">{t("p8ops.sgFactsOnly", { dsl: dslShown })}</p>
       {!dslName.trim() && (
         <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] font-semibold text-[#c02636]">
-          ⚠ Nobody is named as your safeguarding lead (Setup → Safeguarding). You can still log this — do — but it won&rsquo;t reach a named person until one is set.
+          {t("p8ops.sgNoLead")}
         </div>
       )}
 
-      <FieldLabel>This concern is about…</FieldLabel>
+      <FieldLabel>{t("p8ops.sgAbout")}</FieldLabel>
       <div className="mb-2.5 mt-1 grid gap-1.5 sm:grid-cols-2">
-        {([["child", "🧒 A child", "A child on camp"], ["staff", "🧑‍🏫 A member of staff", "An allegation about staff / a volunteer"]] as [("child" | "staff"), string, string][]).map(([v, t, sub]) => (
+        {([["child", t("p8ops.sgAChild"), t("p8ops.sgAChildSub")], ["staff", t("p8ops.sgAStaff"), t("p8ops.sgAStaffSub")]] as [("child" | "staff"), string, string][]).map(([v, label, sub]) => (
           <button key={v} type="button" onClick={() => set({ subject: v, ...(v === "staff" && !d.concernCategory ? { concernCategory: "Allegation against a member of staff / volunteer", severity: riskFor("allegation") } : {}) })} className="rounded-xl border-2 px-3 py-2 text-start transition-colors" style={(d.subject ?? "child") === v ? { borderColor: "#1d3a8f", background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
-            <div className="text-[12.5px] font-extrabold" style={{ color: (d.subject ?? "child") === v ? "#1d3a8f" : "var(--ink-2)" }}>{t}</div>
+            <div className="text-[12.5px] font-extrabold" style={{ color: (d.subject ?? "child") === v ? "#1d3a8f" : "var(--ink-2)" }}>{label}</div>
             <div className="text-[11px] text-[var(--ink-3)]">{sub}</div>
           </button>
         ))}
@@ -150,24 +157,24 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
 
       <div className="grid gap-2.5 sm:grid-cols-2">
         <div>
-          <FieldLabel>Category</FieldLabel>
+          <FieldLabel>{t("p8ops.sgCategory")}</FieldLabel>
           <select value={d.concernCategory ?? ""} onChange={(e) => pickCategory(e.target.value)} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] outline-none focus:border-[#1d3a8f]">
-            <option value="">— select —</option>
-            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+            <option value="">{t("p8ops.sgSelect")}</option>
+            {categories.map((c) => <option key={c} value={c}>{sgCategoryLabel(t, c)}</option>)}
           </select>
         </div>
         <div>
-          <FieldLabel>Risk level</FieldLabel>
+          <FieldLabel>{t("p8ops.sgRiskLevel")}</FieldLabel>
           <div className="flex gap-1.5">{(["minor", "moderate", "serious"] as const).map((s) => (
-            <button key={s} type="button" onClick={() => set({ severity: s })} className="flex-1 rounded-lg border-2 px-2 py-2 text-[12.5px] font-extrabold transition-colors" style={d.severity === s ? { borderColor: RISK[s].fg, background: RISK[s].fg, color: "#fff" } : { borderColor: RISK[s].bg, background: RISK[s].bg, color: RISK[s].fg }}>{RISK[s].label}</button>
+            <button key={s} type="button" onClick={() => set({ severity: s })} className="flex-1 rounded-lg border-2 px-2 py-2 text-[12.5px] font-extrabold transition-colors" style={d.severity === s ? { borderColor: RISK[s].fg, background: RISK[s].fg, color: "#fff" } : { borderColor: RISK[s].bg, background: RISK[s].bg, color: RISK[s].fg }}>{t(RISK[s].label)}</button>
           ))}</div>
         </div>
         {(sg.contacts?.authorities?.length ?? 0) > 0 && (
           <div className="sm:col-span-2">
-            <FieldLabel>Local authority</FieldLabel>
+            <FieldLabel>{t("p8ops.sgLocalAuthority")}</FieldLabel>
             <select value={d.localAuthority ?? ""} onChange={(e) => set({ localAuthority: e.target.value })} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] outline-none focus:border-[#1d3a8f]">
-              <option value="">— which council&rsquo;s area? —</option>
-              {(sg.contacts?.authorities ?? []).map((a) => <option key={a.id} value={a.name}>{a.name || "(unnamed)"}</option>)}
+              <option value="">{t("p8ops.sgWhichCouncil")}</option>
+              {(sg.contacts?.authorities ?? []).map((a) => <option key={a.id} value={a.name}>{a.name || t("p8ops.sgUnnamed")}</option>)}
             </select>
           </div>
         )}
@@ -175,7 +182,7 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
 
       {d.concernCategory && (
         <div className="mt-2.5 rounded-xl border p-3" style={{ background: tone.bg, borderColor: tone.line }}>
-          <div className="text-[12px] font-extrabold" style={{ color: tone.fg }}>What to do now</div>
+          <div className="text-[12px] font-extrabold" style={{ color: tone.fg }}>{t("p8ops.sgWhatToDo")}</div>
           <div className="mt-0.5 text-[11.5px]" style={{ color: tone.fg }}><b>{proto.due}</b> · {proto.who} · <span className="opacity-80">{proto.ref}</span></div>
           <ol className="mt-1.5 list-decimal space-y-0.5 ps-4 text-[11.5px] text-[var(--ink-2)]">{proto.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
           <ContactsBlock c={sg.contacts} authorityName={d.localAuthority} />
@@ -184,36 +191,36 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
 
       <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <FieldLabel>{d.subject === "staff" ? "Member of staff involved" : "Child / person involved"}</FieldLabel>
+          <FieldLabel>{d.subject === "staff" ? t("p8ops.sgStaffInvolved") : t("p8ops.sgChildInvolved")}</FieldLabel>
           {d.subject === "staff"
             ? <>
-                <Input value={d.childName} onChange={(e) => set({ childName: e.target.value, childId: undefined })} placeholder="Name of the staff member / volunteer" className="w-full" />
+                <Input value={d.childName} onChange={(e) => set({ childName: e.target.value, childId: undefined })} placeholder={t("p8ops.sgStaffNamePh")} className="w-full" />
                 {/* An allegation about the safeguarding lead can't go to them (s13-fx5-dsl). */}
                 <label className="mt-1.5 flex items-start gap-2 text-[12px] text-[var(--ink-2)]">
                   <input type="checkbox" checked={d.aboutDsl === true} onChange={(e) => set({ aboutDsl: e.target.checked })} className="mt-0.5" />
-                  <span>This is about our safeguarding lead{sg.dslName ? ` (${sg.dslName}${sg.deputyDslName ? ` or deputy ${sg.deputyDslName}` : ""})` : sg.deputyDslName ? ` or deputy (${sg.deputyDslName})` : ""} — send it to the account holder only.</span>
+                  <span>{t("p8ops.sgAboutLead", { who: sg.dslName ? (sg.deputyDslName ? t("p8ops.sgLeadNameDep", { name: sg.dslName, dep: sg.deputyDslName }) : ` (${sg.dslName})`) : sg.deputyDslName ? t("p8ops.sgLeadDepOnly", { dep: sg.deputyDslName }) : "" })}</span>
                 </label>
               </>
-            : <ChildPicker value={d.childName} options={childOptions} onPick={(name, childId) => set({ childName: name, childId })} placeholder="Search a booked child, or ‘Other / staff member’…" />}
+            : <ChildPicker value={d.childName} options={childOptions} onPick={(name, childId) => set({ childName: name, childId })} placeholder={t("p8ops.sgChildPh")} />}
         </div>
-        <div className="sm:col-span-2"><FieldLabel>Location</FieldLabel><Input value={d.location ?? ""} onChange={(e) => set({ location: e.target.value })} placeholder="e.g. Loughton Manor — Hall" className="w-full" /></div>
-        <div><FieldLabel>Date</FieldLabel><Input type="date" max={todayIso()} value={d.date} onChange={(e) => set({ date: e.target.value })} className="w-full" /></div>
-        <div><FieldLabel>Time</FieldLabel><Input type="time" value={d.time ?? ""} onChange={(e) => set({ time: e.target.value })} className="w-full" /></div>
+        <div className="sm:col-span-2"><FieldLabel>{t("p8ops.sgLocation")}</FieldLabel><Input value={d.location ?? ""} onChange={(e) => set({ location: e.target.value })} placeholder={t("p8ops.sgLocationPh")} className="w-full" /></div>
+        <div><FieldLabel>{t("p8ops.rgHdrDate")}</FieldLabel><Input type="date" max={todayIso()} value={d.date} onChange={(e) => set({ date: e.target.value })} className="w-full" /></div>
+        <div><FieldLabel>{t("p8ops.sgTime")}</FieldLabel><Input type="time" value={d.time ?? ""} onChange={(e) => set({ time: e.target.value })} className="w-full" /></div>
       </div>
 
-      <div className="mt-2.5"><FieldLabel>What happened (facts only)</FieldLabel><textarea value={d.description} onChange={(e) => set({ description: e.target.value })} rows={3} placeholder="What you saw or heard, in the child’s own words where possible. No opinions." className="w-full resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] leading-relaxed outline-none focus:border-[#1d3a8f]" /></div>
-      <div className="mt-2.5"><FieldLabel>Immediate action taken</FieldLabel><textarea value={d.actionTaken ?? ""} onChange={(e) => set({ actionTaken: e.target.value })} rows={2} placeholder="First aid given, child reassured, area made safe, etc." className="w-full resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] leading-relaxed outline-none focus:border-[#1d3a8f]" /></div>
+      <div className="mt-2.5"><FieldLabel>{t("p8ops.sgWhatHappened")}</FieldLabel><textarea value={d.description} onChange={(e) => set({ description: e.target.value })} rows={3} placeholder={t("p8ops.sgWhatPh")} className="w-full resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] leading-relaxed outline-none focus:border-[#1d3a8f]" /></div>
+      <div className="mt-2.5"><FieldLabel>{t("p8ops.sgImmediate")}</FieldLabel><textarea value={d.actionTaken ?? ""} onChange={(e) => set({ actionTaken: e.target.value })} rows={2} placeholder={t("p8ops.sgImmediatePh")} className="w-full resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] leading-relaxed outline-none focus:border-[#1d3a8f]" /></div>
 
-      <div className="mt-2.5"><FieldLabel>Witnesses (optional)</FieldLabel><Input value={d.witnesses ?? ""} onChange={(e) => set({ witnesses: e.target.value })} className="w-full" /></div>
+      <div className="mt-2.5"><FieldLabel>{t("p8ops.sgWitnesses")}</FieldLabel><Input value={d.witnesses ?? ""} onChange={(e) => set({ witnesses: e.target.value })} className="w-full" /></div>
 
       <div className="mt-2.5">
-        <FieldLabel>Attach a file (optional)</FieldLabel>
+        <FieldLabel>{t("p8ops.sgAttach")}</FieldLabel>
         <input type="file" accept="image/*" multiple onChange={(e) => attach(e.target.files)} className="block w-full text-[12px] text-[var(--ink-2)] file:me-2 file:rounded-md file:border-0 file:bg-[#eef4fd] file:px-2.5 file:py-1 file:text-[12px] file:font-bold file:text-[#1d3a8f]" />
-        {uploading && <div className="mt-1 text-[11px] text-[var(--ink-3)]">Uploading…</div>}
+        {uploading && <div className="mt-1 text-[11px] text-[var(--ink-3)]">{t("p8ops.sgUploading")}</div>}
         {(d.attachments?.length ?? 0) > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {d.attachments!.map((u, i) => (
-              <span key={i} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ink-2)]">📎 file {i + 1}<button type="button" onClick={() => set({ attachments: d.attachments!.filter((_, j) => j !== i) })} className="text-[var(--ink-3)]">✕</button></span>
+              <span key={i} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ink-2)]">📎 {t("p8ops.sgFileN", { n: i + 1 })}<button type="button" onClick={() => set({ attachments: d.attachments!.filter((_, j) => j !== i) })} className="text-[var(--ink-3)]">✕</button></span>
             ))}
           </div>
         )}
@@ -223,10 +230,10 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
 
       {error && <div className="mt-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3">
-        <Button onClick={onCancel}>Cancel</Button>
-        <Button variant="solid" disabled={busy} onClick={save}>{busy ? "Saving…" : isEdit ? "Save concern" : "Log & notify company"}</Button>
+        <Button onClick={onCancel}>{t("p8ops.rtCancel")}</Button>
+        <Button variant="solid" disabled={busy} onClick={save}>{busy ? t("p8ops.tpSaving") : isEdit ? t("p8ops.sgSaveConcern") : t("p8ops.sgLogNotify")}</Button>
       </div>
-      <p className="mt-2 text-[11px] text-[var(--ink-3)]">A copy stays with you; your company sees it immediately. Timestamped and attributed to you automatically.</p>
+      <p className="mt-2 text-[11px] text-[var(--ink-3)]">{t("p8ops.sgCopyNote")}</p>
     </Card>
   );
 }
@@ -287,11 +294,15 @@ function downloadConcernPdf(rec: SgLog, contacts?: SgContacts, opts?: { extraHtm
 
 interface PdfProvider { name?: string; email?: string; phone?: string; address?: string; logoUrl?: string }
 interface EditField { section: string; key: string; label: string }
+// The exported PDF stays in English (it goes to UK agencies); only the dialog is translated.
+const SEC_KEY: Record<string, string> = { "Child on file": "p8ops.sgSecChild", "Parent / carer": "p8ops.sgSecParent", "Provider": "p8ops.sgSecProvider" };
+const LBL_KEY: Record<string, string> = { "Date of birth / age": "p8ops.sgLblDob", "School": "p8ops.rgColSchool", "Allergies": "p8ops.rgColAllergies", "Medical": "p8ops.dbFlagMedical", "SEND": "p8ops.sgLblSend", "Dietary": "p8ops.dbFlagDietary", "Swimming": "p8ops.sgLblSwimming", "Care & behaviour notes": "p8ops.sgLblCareNotes", "Collection password": "p8ops.rgColPassword", "Emergency contact": "p8ops.rgColEmergency", "Name": "p8ops.sgLblName", "Email": "p8ops.sgLblEmail", "Phone": "p8ops.sgLblPhone", "Address": "p8ops.tpAddress", "Postcode": "p8ops.sgLblPostcode", "Provider": "p8ops.sgSecProvider" };
 
 // Pull the child's full dossier and show it as an EDITABLE preview: tick to
 // include, edit any value in place, remove what you don't want. Also offers the
 // provider's logo + contact details. "Show all, then edit/remove."
 function ConcernPdfDialog({ rec, contacts, provider, onClose }: { rec: SgLog; contacts?: SgContacts; provider: PdfProvider; onClose: () => void }) {
+  const t = useT();
   const [dossier, setDossier] = useState<Dossier | null>(null);
   const [loading, setLoading] = useState(true);
   const [omit, setOmit] = useState<Set<string>>(new Set());
@@ -324,9 +335,9 @@ function ConcernPdfDialog({ rec, contacts, provider, onClose }: { rec: SgLog; co
   add("Provider", "prov.name", "Provider", provider.name); add("Provider", "prov.email", "Email", provider.email); add("Provider", "prov.phone", "Phone", provider.phone); add("Provider", "prov.address", "Address", provider.address);
   // list-type sections (toggle only)
   const lists: { key: string; label: string }[] = [];
-  if (dossier?.siblings?.length) lists.push({ key: "siblings", label: `Siblings (${dossier.siblings.length})` });
-  if (dossier?.bookings?.length) lists.push({ key: "bookings", label: `Recent bookings (${dossier.bookings.length})` });
-  if (dossier?.history?.length) lists.push({ key: "history", label: `Incident & behaviour history (${dossier.history.length})` });
+  if (dossier?.siblings?.length) lists.push({ key: "siblings", label: t("p8ops.sgListSiblings", { n: dossier.siblings.length }) });
+  if (dossier?.bookings?.length) lists.push({ key: "bookings", label: t("p8ops.sgListBookings", { n: dossier.bookings.length }) });
+  if (dossier?.history?.length) lists.push({ key: "history", label: t("p8ops.sgListHistory", { n: dossier.history.length }) });
 
   useEffect(() => { if (dossier && !inited.current) { inited.current = true; setVals(initVals); } }, [dossier]); // eslint-disable-line react-hooks/exhaustive-deps
   const on = (k: string) => !omit.has(k);
@@ -349,23 +360,23 @@ function ConcernPdfDialog({ rec, contacts, provider, onClose }: { rec: SgLog; co
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="max-h-[85vh] w-full max-w-[560px] overflow-y-auto rounded-2xl bg-[var(--surface)] p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-1 text-[15px] font-extrabold text-[var(--ink)]">Download safeguarding PDF</div>
-        <p className="mb-3 text-[12px] text-[var(--ink-3)]">Everything on file about {rec.childName} is included — untick to remove, or edit any value here before you export.</p>
-        {loading ? <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">Gathering the child&rsquo;s information…</div> : (
+        <div className="mb-1 text-[15px] font-extrabold text-[var(--ink)]">{t("p8ops.sgPdfTitle")}</div>
+        <p className="mb-3 text-[12px] text-[var(--ink-3)]">{t("p8ops.sgPdfHelp", { name: rec.childName })}</p>
+        {loading ? <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8ops.sgGathering")}</div> : (
           <>
             {provider.logoUrl && (
               <label className="mb-2.5 flex cursor-pointer items-center gap-2 rounded-md bg-[var(--panel)] px-2 py-1.5 text-[12.5px] font-semibold text-[var(--ink-2)]">
-                <input type="checkbox" checked={showLogo} onChange={() => setShowLogo((v) => !v)} />Show your logo at the top
+                <input type="checkbox" checked={showLogo} onChange={() => setShowLogo((v) => !v)} />{t("p8ops.sgShowLogo")}
               </label>
             )}
             {sections.map((sec) => (
               <div key={sec} className="mb-2.5">
-                <div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{sec}</div>
+                <div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{SEC_KEY[sec] ? t(SEC_KEY[sec]) : sec}</div>
                 <div className="flex flex-col gap-1">
                   {singles.filter((f) => f.section === sec).map((f) => (
                     <div key={f.key} className="flex items-center gap-2 rounded-md px-1 py-0.5" style={on(f.key) ? {} : { opacity: 0.45 }}>
                       <input type="checkbox" checked={on(f.key)} onChange={() => toggle(f.key)} className="shrink-0" />
-                      <span className="w-[130px] shrink-0 text-[11.5px] font-bold text-[var(--ink)]">{f.label}</span>
+                      <span className="w-[130px] shrink-0 text-[11.5px] font-bold text-[var(--ink)]">{LBL_KEY[f.label] ? t(LBL_KEY[f.label]) : f.label}</span>
                       <input value={vals[f.key] ?? ""} disabled={!on(f.key)} onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))} className="min-w-0 flex-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 text-[12px] disabled:bg-[var(--panel)]" />
                     </div>
                   ))}
@@ -374,7 +385,7 @@ function ConcernPdfDialog({ rec, contacts, provider, onClose }: { rec: SgLog; co
             ))}
             {lists.length > 0 && (
               <div className="mb-2.5">
-                <div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">More on file</div>
+                <div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8ops.sgSecMore")}</div>
                 <div className="flex flex-col gap-1">
                   {lists.map((f) => (
                     <label key={f.key} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-[12.5px] text-[var(--ink-2)]" style={on(f.key) ? { background: "#eef4fd" } : {}}>
@@ -387,8 +398,8 @@ function ConcernPdfDialog({ rec, contacts, provider, onClose }: { rec: SgLog; co
           </>
         )}
         <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3">
-          <Button sm onClick={onClose}>Cancel</Button>
-          <Button sm variant="solid" disabled={loading} onClick={build}>⬇ Download PDF</Button>
+          <Button sm onClick={onClose}>{t("p8ops.rtCancel")}</Button>
+          <Button sm variant="solid" disabled={loading} onClick={build}>{t("p8ops.sgDownloadPdf")}</Button>
         </div>
       </div>
     </div>
@@ -406,6 +417,7 @@ function initialLog(rec: SgLog): DslEntry[] {
 // a timestamp; you add what was said / your actions and a review date per action.
 // Auto-saves. You are the DSL.
 function DslActions({ rec, contacts, provider, onSaved }: { rec: SgLog; contacts?: SgContacts; provider: PdfProvider; onSaved: () => void }) {
+  const t = useT();
   const [log, setLog] = useState<DslEntry[]>(() => initialLog(rec));
   const [status, setStatus] = useState<"idle" | "editing" | "saved" | "error">("idle");
   const [pdfOpen, setPdfOpen] = useState(false);
@@ -417,47 +429,47 @@ function DslActions({ rec, contacts, provider, onSaved }: { rec: SgLog; contacts
 
   useEffect(() => {
     if (!dirty.current) return;
-    const t = setTimeout(async () => {
+    const tm = setTimeout(async () => {
       try { await apiPut(`/api/incidents/${encodeURIComponent(rec.id)}`, { dslLog: log, dslActionedAt: new Date().toISOString(), notifyParentOfEdit: false }); setStatus("saved"); onSaved(); }
       catch { setStatus("error"); }
     }, 700);
-    return () => clearTimeout(t);
+    return () => clearTimeout(tm);
   }, [log]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="mt-2.5 rounded-xl border-2 border-[#1d3a8f] bg-[#f5f9ff] p-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[13px] font-extrabold text-[#1d3a8f]">🛡️ What you did about it</div>
+        <div className="text-[13px] font-extrabold text-[#1d3a8f]">{t("p8ops.sgDslHead")}</div>
         <a href={KCSIE_URL} target="_blank" rel="noreferrer" className="flex-none text-[11px] font-bold text-[#1d3a8f] underline">KCSIE 2026 ↗</a>
       </div>
-      <p className="mb-2 mt-0.5 text-[11px] text-[var(--ink-3)]">As the safeguarding lead, tap each action you take — it&rsquo;s logged with the time. Add what was said, your actions and a review date under each. Saves as you go.</p>
+      <p className="mb-2 mt-0.5 text-[11px] text-[var(--ink-3)]">{t("p8ops.sgDslHelp")}</p>
       <ContactsBlock c={contacts} authorityName={rec.localAuthority} />
 
-      <div className="mt-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Add an action</div>
+      <div className="mt-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8ops.sgAddAction")}</div>
       <div className="mt-1 grid gap-1.5 sm:grid-cols-2">
         {DSL_DECISIONS.map((o) => { const tc = DTONE[o.tone] ?? DTONE.grey; return (
           <button key={o.key} type="button" onClick={() => add(o)} className="rounded-lg border-2 border-[var(--line)] bg-white p-2 text-start transition-colors hover:border-[#1d3a8f]">
-            <div className="text-[12px] font-extrabold" style={{ color: tc.c }}>＋ {o.label}</div>
-            <div className="mt-0.5 text-[10.5px] leading-snug text-[var(--ink-3)]">{o.when}</div>
+            <div className="text-[12px] font-extrabold" style={{ color: tc.c }}>＋ {DEC_KEY[o.key] ? t(DEC_KEY[o.key][0]) : o.label}</div>
+            <div className="mt-0.5 text-[10.5px] leading-snug text-[var(--ink-3)]">{DEC_KEY[o.key] ? t(DEC_KEY[o.key][1]) : o.when}</div>
           </button>
         ); })}
       </div>
 
       {log.length > 0 && (
         <>
-          <div className="mt-3 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Action log</div>
+          <div className="mt-3 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8ops.sgActionLog")}</div>
           <div className="mt-1 flex flex-col gap-1.5">
             {log.map((e, i) => (
               <div key={e.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[12px] font-extrabold text-[var(--ink)]">{i + 1}. {e.label}{e.done ? " ✓" : ""}</span>
+                  <span className="text-[12px] font-extrabold text-[var(--ink)]">{i + 1}. {DEC_KEY[e.key] ? t(DEC_KEY[e.key][0]) : e.label}{e.done ? " ✓" : ""}</span>
                   <span className="flex items-center gap-2 text-[10.5px] text-[var(--ink-3)]">{stampTime(e.at)}<button type="button" onClick={() => remove(e.id)} className="font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕</button></span>
                 </div>
-                <textarea value={e.note ?? ""} onChange={(ev) => patch(e.id, { note: ev.target.value })} rows={2} placeholder="What was said / what you did…" className="mt-1 w-full resize-y rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] outline-none focus:border-[#1d3a8f]" />
+                <textarea value={e.note ?? ""} onChange={(ev) => patch(e.id, { note: ev.target.value })} rows={2} placeholder={t("p8ops.sgWhatSaid")} className="mt-1 w-full resize-y rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] outline-none focus:border-[#1d3a8f]" />
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
-                  <label className="flex items-center gap-1 text-[var(--ink-3)]">Review by <input type="date" value={e.reviewDate ?? ""} onChange={(ev) => patch(e.id, { reviewDate: ev.target.value || undefined })} className="rounded border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[11px]" /></label>
-                  <button type="button" onClick={() => patch(e.id, { done: !e.done, doneAt: !e.done ? new Date().toISOString() : undefined })} className="rounded-full border px-2.5 py-0.5 font-bold" style={e.done ? { borderColor: "#0f7a43", background: "#e7f6ee", color: "#0f7a43" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{e.done ? "✓ Completed" : "Mark completed"}</button>
-                  {e.reviewDate && !e.done && <span className="font-semibold text-[#9a5a00]">🗓 due {e.reviewDate}</span>}
+                  <label className="flex items-center gap-1 text-[var(--ink-3)]">{t("p8ops.sgReviewBy")} <input type="date" value={e.reviewDate ?? ""} onChange={(ev) => patch(e.id, { reviewDate: ev.target.value || undefined })} className="rounded border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[11px]" /></label>
+                  <button type="button" onClick={() => patch(e.id, { done: !e.done, doneAt: !e.done ? new Date().toISOString() : undefined })} className="rounded-full border px-2.5 py-0.5 font-bold" style={e.done ? { borderColor: "#0f7a43", background: "#e7f6ee", color: "#0f7a43" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{e.done ? t("p8ops.sgCompleted") : t("p8ops.sgMarkCompleted")}</button>
+                  {e.reviewDate && !e.done && <span className="font-semibold text-[#9a5a00]">{t("p8ops.sgDueOn", { date: e.reviewDate })}</span>}
                 </div>
               </div>
             ))}
@@ -466,10 +478,10 @@ function DslActions({ rec, contacts, provider, onSaved }: { rec: SgLog; contacts
       )}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setPdfOpen(true)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">⬇ Download PDF…</button>
+        <button type="button" onClick={() => setPdfOpen(true)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{t("p8ops.sgDownloadEll")}</button>
         {pdfOpen && <ConcernPdfDialog rec={rec} contacts={contacts} provider={provider} onClose={() => setPdfOpen(false)} />}
         <span className="text-[11px] font-semibold" style={{ color: status === "error" ? "#c02636" : status === "saved" ? "#0f7a43" : "var(--ink-3)" }}>
-          {status === "editing" ? "Saving…" : status === "saved" ? "✓ Saved" : status === "error" ? "Couldn’t save — try again" : "Saves automatically"}
+          {status === "editing" ? t("p8ops.tpSaving") : status === "saved" ? t("p8ops.sgSaved") : status === "error" ? t("p8ops.sgSaveFailed") : t("p8ops.sgAutoSaves")}
         </span>
       </div>
     </div>
@@ -477,6 +489,8 @@ function DslActions({ rec, contacts, provider, onSaved }: { rec: SgLog; contacts
 }
 
 export function SafeguardingApp() {
+  const t = useT();
+  const { locale } = useI18n();
   const { settings } = useSettings();
   const sg = settings.safeguarding ?? {};
   const b = settings.billing ?? {};
@@ -491,16 +505,16 @@ export function SafeguardingApp() {
   const [riskFilter, setRiskFilter] = useState("");
 
   const refresh = useCallback(() => {
-    apiGet<SgLog[]>("/api/incidents?kind=safeguarding").then((l) => { setLogs(l); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<SgLog[]>("/api/incidents?kind=safeguarding").then((l) => { setLogs(l); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : t("p8ops.dbFailedLoad")));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
   useRealtime(["incidents"], refresh);
 
   async function remove(l: SgLog) {
-    if (!confirm(`Delete this safeguarding record for ${l.childName}? Safeguarding records are usually kept.`)) return;
+    if (!confirm(t("p8ops.sgConfirmDelete", { name: l.childName }))) return;
     try { await api(`/api/incidents/${encodeURIComponent(l.id)}`, { method: "DELETE" }); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p8ops.sgDeleteFailed")); }
   }
 
   const all = logs ?? [];
@@ -517,14 +531,14 @@ export function SafeguardingApp() {
     return { thisMonth, high };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [all]);
-  const tiles: [string, number][] = [["This month", thisMonth], ["High risk", high], ["Total", all.length]];
+  const tiles: [string, number][] = [[t("p8ops.tpThisMonth"), thisMonth], [t("p8ops.sgHighRiskTile"), high], [t("p8ops.tpTotal"), all.length]];
 
   return (
     <div>
       {/* You are the DSL — concerns come straight here */}
       <div className="mb-3 flex items-start gap-2 rounded-xl border border-[#cfe0f7] bg-[#f5f9ff] px-3.5 py-2.5">
         <span className="text-[16px] leading-none">🛡️</span>
-        <div className="text-[12px] leading-snug text-[var(--ink-2)]"><b className="text-[#1d3a8f]">You are the safeguarding lead{sg.dslName ? ` (${sg.dslName})` : ""}.</b> Record a concern, then record what you did about it — including which agency you called. <span className="font-semibold text-[var(--ink-2)]">Set your local contacts (LADO, children&rsquo;s social care), categories and protocol in Setup → Safeguarding.</span></div>
+        <div className="text-[12px] leading-snug text-[var(--ink-2)]"><b className="text-[#1d3a8f]">{t("p8ops.sgLeadBold", { who: sg.dslName ? ` (${sg.dslName})` : "" })}</b> {t("p8ops.sgLeadRest")} <span className="font-semibold text-[var(--ink-2)]">{t("p8ops.sgSetContacts")}</span></div>
       </div>
 
       {/* compact header — the page title bar is provided by Log concern */}
@@ -537,7 +551,7 @@ export function SafeguardingApp() {
             </div>
           ))}
         </div>
-        {!adding && !editing && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white shadow-sm transition-transform hover:-translate-y-px">＋ Log a safeguarding concern</button>}
+        {!adding && !editing && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white shadow-sm transition-transform hover:-translate-y-px">{t("p8ops.sgLogBtn")}</button>}
       </div>
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{error}</div>}
@@ -546,22 +560,22 @@ export function SafeguardingApp() {
 
       {all.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          {([["", "All"], ["minor", "Low"], ["moderate", "Medium"], ["serious", "High"]] as [string, string][]).map(([id, label]) => (
+          {([["", t("p8ops.tpAll")], ["minor", t("p8ops.tpRiskLow")], ["moderate", t("p8ops.sgMedium")], ["serious", t("p8ops.tpRiskHigh")]] as [string, string][]).map(([id, label]) => (
             <button key={label} type="button" onClick={() => setRiskFilter(id)} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors" style={riskFilter === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{label}</button>
           ))}
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search child, category or details…" className="ms-auto w-60 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p8ops.sgSearchPh")} className="ms-auto w-60 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
         </div>
       )}
 
-      {!logs ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-        : shown.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{all.length === 0 ? "No safeguarding records — hopefully it stays that way." : "No records match."}</Card>
+      {!logs ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8ops.shLoading")}</div>
+        : shown.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{all.length === 0 ? t("p8ops.sgNoRecords") : t("p8ops.sgNoMatch")}</Card>
         : (
           <div className="flex flex-col gap-4">
             {groupByChild(shown).map((g) => (
               <div key={g.key}>
                 <div className="mb-1.5 flex items-center gap-2 px-0.5">
                   <span className="text-[13.5px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>👤 {g.name}</span>
-                  <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-3)]">{g.items.length} record{g.items.length === 1 ? "" : "s"}</span>
+                  <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-3)]">{pickPlural(t, locale, "p8ops.sgRecN", g.items.length)}</span>
                 </div>
                 <div className="flex flex-col gap-2.5">
             {g.items.map((l) => {
@@ -574,43 +588,43 @@ export function SafeguardingApp() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-baseline gap-x-2">
                           <span className="text-[15px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{l.childName}</span>
-                          {l.concernCategory && <span className="text-[12px] text-[var(--ink-2)]">{l.concernCategory}</span>}
+                          {l.concernCategory && <span className="text-[12px] text-[var(--ink-2)]">{sgCategoryLabel(t, l.concernCategory)}</span>}
                           <span className="text-[11px] text-[var(--ink-3)]">{fmtDate(l.date)}{l.time ? ` · ${l.time}` : ""}</span>
                         </div>
                         <p className="mt-0.5 line-clamp-2 max-w-[640px] text-[12.5px] leading-snug text-[var(--ink-2)]">{l.description}</p>
-                        {(() => { const pend = (l.dslLog ?? []).filter((e) => e.reviewDate && !e.done); if (!pend.length) return null; const next = pend.map((e) => e.reviewDate!).sort()[0]; return <p className="mt-1 text-[11.5px] font-bold text-[#9a5a00]">🗓 {pend.length} action{pend.length === 1 ? "" : "s"} to complete by {next}</p>; })()}
+                        {(() => { const pend = (l.dslLog ?? []).filter((e) => e.reviewDate && !e.done); if (!pend.length) return null; const next = pend.map((e) => e.reviewDate!).sort()[0]; return <p className="mt-1 text-[11.5px] font-bold text-[#9a5a00]">{t("p8ops.sgActionsDue", { n: pend.length, date: next })}</p>; })()}
                       </div>
                       <div className="flex flex-wrap items-center gap-1 sm:max-w-[46%] sm:justify-end">
-                        {!l.restricted && <Badge tone={{ bg: risk.bg, fg: risk.fg }}>{risk.label} risk</Badge>}
-                        {l.subject === "staff" &&<Badge tone={{ bg: "#f3e8ff", fg: "#6d28d9" }}>🧑‍🏫 Staff</Badge>}
-                        {l.restricted ? <Badge tone={{ bg: "#f3e8ff", fg: "#6d28d9" }}>🔒 {l.statusLabel ?? "With the safeguarding lead"}</Badge>
-                          : (l.dslLog?.length ?? 0) > 0 || (l.dslActions?.length ?? 0) > 0 ? <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ DSL actioned</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>⏳ Awaiting DSL</Badge>}
+                        {!l.restricted && <Badge tone={{ bg: risk.bg, fg: risk.fg }}>{t(risk.full)}</Badge>}
+                        {l.subject === "staff" &&<Badge tone={{ bg: "#f3e8ff", fg: "#6d28d9" }}>{t("p8ops.sgStaffBadge")}</Badge>}
+                        {l.restricted ? <Badge tone={{ bg: "#f3e8ff", fg: "#6d28d9" }}>🔒 {l.statusLabel ?? t("p8ops.sgWithLead")}</Badge>
+                          : (l.dslLog?.length ?? 0) > 0 || (l.dslActions?.length ?? 0) > 0 ? <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>{t("p8ops.sgDslActioned")}</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{t("p8ops.sgAwaitingDsl")}</Badge>}
                         {(l.bodyMap?.length ?? 0) > 0 && <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>⛑️ {l.bodyMap!.length}</Badge>}
                       </div>
                     </div>
                     {l.restricted ? (
-                      <p className="mt-2 border-t border-[var(--line)] pt-2 text-[11.5px] text-[var(--ink-3)]">You reported a concern about a member of staff. Only the safeguarding lead can see its details — speak to them if you have more to add.</p>
+                      <p className="mt-2 border-t border-[var(--line)] pt-2 text-[11.5px] text-[var(--ink-3)]">{t("p8ops.sgRestricted")}</p>
                     ) : (<>
                     <div className="mt-2 flex flex-wrap gap-2 border-t border-[var(--line)] pt-2">
-                      <Button sm variant={openId !== l.id && (l.dslLog?.length ?? 0) === 0 ? "solid" : undefined} onClick={() => setOpenId(openId === l.id ? null : l.id)}>{openId === l.id ? "Hide" : (l.dslLog?.length ?? 0) > 0 ? "🛡️ Review & action" : "🛡️ Review & action (DSL)"}</Button>
-                      <Button sm variant="solid" onClick={() => { setEditing(l); setAdding(false); setOpenId(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit/Update</Button>
-                      {canManage && <Button sm variant="danger" onClick={() => remove(l)}>Delete</Button>}
+                      <Button sm variant={openId !== l.id && (l.dslLog?.length ?? 0) === 0 ? "solid" : undefined} onClick={() => setOpenId(openId === l.id ? null : l.id)}>{openId === l.id ? t("p8ops.opHide") : (l.dslLog?.length ?? 0) > 0 ? t("p8ops.sgReviewAction") : t("p8ops.sgReviewActionDsl")}</Button>
+                      <Button sm variant="solid" onClick={() => { setEditing(l); setAdding(false); setOpenId(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>{t("p8ops.sgEditUpdate")}</Button>
+                      {canManage && <Button sm variant="danger" onClick={() => remove(l)}>{t("p8ops.tpDelete")}</Button>}
                     </div>
                     {openId === l.id && (
                       <>
                         {/* Your action area — record what you did about it */}
                         <DslActions rec={l} contacts={sg.contacts} provider={provider} onSaved={refresh} />
-                        <div className="mt-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">The concern</div>
+                        <div className="mt-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8ops.sgTheConcern")}</div>
                         <div className="mt-1 grid gap-x-6 gap-y-1.5 rounded-xl bg-[var(--panel)] px-3.5 py-3 text-[12px] sm:grid-cols-2">
-                          {l.location && <div><span className="text-[var(--ink-3)]">Where: </span><b>{l.location}</b></div>}
-                          {l.actionTaken && <div><span className="text-[var(--ink-3)]">Immediate action: </span><b>{l.actionTaken}</b></div>}
-                          {l.reportedTo && <div><span className="text-[var(--ink-3)]">Told: </span><b>{l.reportedTo}</b></div>}
-                          {l.witnesses && <div><span className="text-[var(--ink-3)]">Witnesses: </span><b>{l.witnesses}</b></div>}
-                          {l.recordedByName && <div><span className="text-[var(--ink-3)]">Recorded by: </span><b>{l.recordedByName}</b></div>}
-                          {(l.attachments?.length ?? 0) > 0 && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Attachments: </span>{l.attachments!.map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer" className="me-2 font-bold text-[#1d3a8f] underline">📎 file {i + 1}</a>)}</div>}
+                          {l.location && <div><span className="text-[var(--ink-3)]">{t("p8ops.sgWhere")}</span><b>{l.location}</b></div>}
+                          {l.actionTaken && <div><span className="text-[var(--ink-3)]">{t("p8ops.sgImmActionLbl")}</span><b>{l.actionTaken}</b></div>}
+                          {l.reportedTo && <div><span className="text-[var(--ink-3)]">{t("p8ops.sgTold")}</span><b>{l.reportedTo}</b></div>}
+                          {l.witnesses && <div><span className="text-[var(--ink-3)]">{t("p8ops.sgWitnessesLbl")}</span><b>{l.witnesses}</b></div>}
+                          {l.recordedByName && <div><span className="text-[var(--ink-3)]">{t("p8ops.sgRecordedBy")}</span><b>{l.recordedByName}</b></div>}
+                          {(l.attachments?.length ?? 0) > 0 && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">{t("p8ops.sgAttachments")}</span>{l.attachments!.map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer" className="me-2 font-bold text-[#1d3a8f] underline">📎 {t("p8ops.sgFileN", { n: i + 1 })}</a>)}</div>}
                         </div>
                         {(l.bodyMap?.length ?? 0) > 0 && <div className="mt-2.5"><BodyMap value={l.bodyMap ?? []} readOnly startOpen /></div>}
-                        <div className="mt-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Action log &amp; notes</div>
+                        <div className="mt-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8ops.sgLogNotes")}</div>
                         <NotesThread id={l.id} notes={l.notes} side="staff" onAdded={refresh} />
                       </>
                     )}

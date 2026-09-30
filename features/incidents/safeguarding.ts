@@ -2,6 +2,8 @@
 // "What to do now" protocol, transcribed from the prototype's safeguarding
 // stream so the staff form behaves the same. Facts-only, DSL-routed.
 
+import { tNow } from "@/lib/i18n/provider";
+
 export type Risk = "minor" | "moderate" | "serious"; // low / medium / high
 
 export const SG_CATEGORIES = [
@@ -20,6 +22,21 @@ export const SG_CATEGORIES = [
   "Allegation against a member of staff / volunteer",
   "Welfare concern / early help",
 ] as const;
+
+/** Display name for a category. The stored value stays the English string (riskFor / protocolFor match on it); custom categories show as typed. */
+export const SG_CAT_KEY: Record<string, string> = Object.fromEntries(SG_CATEGORIES.map((c, i) => [c, `p8ops.sgCat${i + 1}`]));
+export const sgCategoryLabel = (t: (k: string) => string, cat: string): string => (SG_CAT_KEY[cat] ? t(SG_CAT_KEY[cat]) : cat);
+/** DSL decision key -> catalogue keys (label / when). Stored log entries keep their English label; the display is translated by key. */
+export const DEC_KEY: Record<string, [string, string]> = {
+  "monitor": ["p8ops.sgDecMonitor", "p8ops.sgDecMonitorWhen"],
+  "early-help": ["p8ops.sgDecEarly", "p8ops.sgDecEarlyWhen"],
+  "childrens-social-care": ["p8ops.sgDecSocial", "p8ops.sgDecSocialWhen"],
+  "police": ["p8ops.sgDecPolice", "p8ops.sgDecPoliceWhen"],
+  "lado": ["p8ops.sgDecLado", "p8ops.sgDecLadoWhen"],
+  "nrm-nspcc": ["p8ops.sgDecNrm", "p8ops.sgDecNrmWhen"],
+  "inform-parents": ["p8ops.sgDecParents", "p8ops.sgDecParentsWhen"],
+  "no-action": ["p8ops.sgDecNoAction", "p8ops.sgDecNoActionWhen"],
+};
 
 const has = (s: string, ...needles: string[]) => needles.some((n) => s.toLowerCase().includes(n));
 
@@ -48,17 +65,13 @@ export const DEFAULT_PROTOCOL = {
  *  you don't investigate, and it may go to the LADO (harm threshold) or be
  *  recorded as a low-level concern. */
 export function staffAllegationProtocol(dslWho: string): Protocol {
+  const L = (k: string, v?: Record<string, string | number>) => tNow(`p8ops.${k}`, v);
   return {
-    who: `Case manager — ${dslWho} → LADO`,
-    due: "Refer to the LADO within 1 working day (if the harm threshold is met)",
+    who: L("sgStaffWho", { dsl: dslWho }),
+    due: L("sgStaffDue"),
     tone: "red",
-    ref: "KCSIE Part 4",
-    steps: [
-      "Do not investigate and do not question the child or the person — refer at once to the case manager (the most senior person; if it concerns them, the proprietor / chair).",
-      "Where the allegation meets the harm threshold, the case manager reports to the Local Authority Designated Officer (LADO) within one working day; the LADO advises next steps. Do not tip off the person.",
-      "For a lower-level concern that doesn't meet the threshold, still record it and share with the case manager — patterns matter.",
-      "Put the child's safety first and keep it confidential. Consider suspension only as a last resort, after weighing alternatives.",
-    ],
+    ref: L("sgStaffRef"),
+    steps: [L("sgStaffStep1"), L("sgStaffStep2"), L("sgStaffStep3"), L("sgStaffStep4")],
   };
 }
 
@@ -67,15 +80,18 @@ export function staffAllegationProtocol(dslWho: string): Protocol {
  *  overrides. `dsl` is the provider's editable lead title + name. When `subject`
  *  is "staff" the KCSIE Part 4 (allegations) process is shown instead. */
 export function protocolFor(cat: string, base?: { due?: string; ref?: string; steps?: string[] }, dsl?: { title?: string; name?: string }, subject?: "child" | "staff"): Protocol {
-  const steps = base?.steps?.length ? base.steps : DEFAULT_PROTOCOL.steps;
-  const dslWho = [dsl?.title || "Designated Safeguarding Lead (DSL)", dsl?.name].filter(Boolean).join(" · ");
+  const L = (k: string, v?: Record<string, string | number>) => tNow(`p8ops.${k}`, v);
+  // The provider's own protocol text (Setup → Safeguarding) is shown as they wrote it; only the built-in default wording is translated.
+  const custom = !!base?.steps?.length && JSON.stringify(base.steps) !== JSON.stringify(DEFAULT_PROTOCOL.steps);
+  const steps = custom ? base!.steps! : [L("sgStepFacts"), L("sgStepDecide"), L("sgStepShare")];
+  const dslWho = [dsl?.title || L("sgDslTitle"), dsl?.name].filter(Boolean).join(" · ");
   if (subject === "staff" || has(cat, "allegation against")) return staffAllegationProtocol(dslWho);
-  const youDecide = `You${dsl?.name ? ` (${dsl.name})` : ""} decide the referral`;
-  const p: Protocol = { who: youDecide, due: base?.due || DEFAULT_PROTOCOL.due, tone: "red", ref: base?.ref || DEFAULT_PROTOCOL.ref, steps };
-  if (has(cat, "fgm")) return { ...p, who: `${dslWho} + Police (mandatory)`, due: "Mandatory report — without delay", steps: ["This is a mandatory report — the DSL must inform the police without delay.", ...steps.slice(1)] };
-  if (has(cat, "self-harm", "suicidal", "mental health")) return { ...p, due: "Same day — 999 if life at risk", steps: ["If there is an immediate risk to life, call 999 first.", ...steps] };
-  if (has(cat, "exploitation", "modern slavery")) return { ...p, who: `${dslWho} → NRM`, due: "Same day — consider NRM", steps: ["Tell the DSL — consider a National Referral Mechanism (NRM) referral.", ...steps.slice(1)] };
-  if (has(cat, "welfare", "early help")) return { ...p, due: "Same day — record & monitor", tone: "amber", steps: ["Record and monitor — raise early help with the DSL.", ...steps.slice(1)] };
+  const youDecide = dsl?.name ? L("sgYouDecideNamed", { name: dsl.name }) : L("sgYouDecide");
+  const p: Protocol = { who: youDecide, due: !base?.due || base.due === DEFAULT_PROTOCOL.due ? L("sgSameDay") : base.due, tone: "red", ref: base?.ref || DEFAULT_PROTOCOL.ref, steps };
+  if (has(cat, "fgm")) return { ...p, who: L("sgFgmWho", { dsl: dslWho }), due: L("sgFgmDue"), steps: [L("sgFgmStep"), ...steps.slice(1)] };
+  if (has(cat, "self-harm", "suicidal", "mental health")) return { ...p, due: L("sgSelfHarmDue"), steps: [L("sgSelfHarmStep"), ...steps] };
+  if (has(cat, "exploitation", "modern slavery")) return { ...p, who: L("sgExploitWho", { dsl: dslWho }), due: L("sgExploitDue"), steps: [L("sgExploitStep"), ...steps.slice(1)] };
+  if (has(cat, "welfare", "early help")) return { ...p, due: L("sgWelfareDue"), tone: "amber", steps: [L("sgWelfareStep"), ...steps.slice(1)] };
   return p;
 }
 

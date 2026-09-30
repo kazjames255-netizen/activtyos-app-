@@ -30,6 +30,9 @@ const LIGHT_PALETTE = {
 const fmtDate = (d: string, loc = "en-GB") =>
   new Date(`${d}T00:00:00Z`).toLocaleDateString(loc, { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
+// Transport is stored in English; translate at display.
+const TRANSPORT_KEY: Record<string, string> = { "Minibus": "p8ops.tpTrMinibus", "Coach": "p8ops.tpTrCoach", "Walking": "p8ops.tpTrWalking", "Public bus": "p8ops.tpTrPublicBus", "Train": "p8ops.tpTrTrain", "Parents drop-off": "p8ops.tpTrParents", "Provider vehicles": "p8ops.tpTrProvider" };
+
 // `labelKey` is a care.* i18n key — translated at render.
 const CONSENT_META: Record<TripChild["consent"], { labelKey: string; bg: string; fg: string }> = {
   granted: { labelKey: "care.tripConsentGiven", bg: "#e7f6ee", fg: "#0f7a43" },
@@ -102,8 +105,8 @@ export function ParentTripsApp() {
                 <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-[var(--ink-2)]">
                   {trip.departTime && <span>{t("care.tripDeparts", { time: trip.departTime })}</span>}
                   {trip.returnTime && <span>{t("care.tripBack", { time: trip.returnTime })}</span>}
-                  {trip.transport && <span>{trip.transport}</span>}
-                  {trip.cost && <span className="font-bold">£{trip.cost}{trip.payBy ? ` · ${t("care.tripPayBy", { date: trip.payBy })}` : ""}</span>}
+                  {trip.transport && <span>{TRANSPORT_KEY[trip.transport] ? t(TRANSPORT_KEY[trip.transport]) : trip.transport}</span>}
+                  {trip.cost && <span className="font-bold">£{trip.cost}{trip.payBy ? ` · ${t("care.tripPayBy", { date: fmtDate(trip.payBy, loc) })}` : ""}</span>}
                 </div>
 
                 <div className="mt-3 flex flex-col gap-2 border-t border-[var(--line)] pt-3">
