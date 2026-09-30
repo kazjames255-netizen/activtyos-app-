@@ -10,7 +10,7 @@ import {
   qboConfig, qboConfigured, qboAuthorizeUrl, qboExchangeCode, qboRefresh, qboRevoke, qboJournalBody, qboPostJournal, qboAccounts, type QboTokens,
   xeroConfig, xeroConfigured, xeroAuthorizeUrl, xeroExchangeCode, xeroRefresh, xeroConnections, xeroRevoke, xeroJournalBody, xeroPostJournal, xeroAccounts, type XeroTokens,
   sageConfig, sageConfigured, sageAuthorizeUrl, sageExchangeCode, sageRefresh, sageBusinesses, sageJournalBody, sagePostJournal, sageAccounts, type SageTokens,
-  ProviderError, type ProviderErrorKind, bodyFingerprint, EXTRA_BUCKETS, validatePayLines, requiredBuckets, journalRefs,
+  pfetch, ProviderError, type ProviderErrorKind, bodyFingerprint, EXTRA_BUCKETS, validatePayLines, requiredBuckets, journalRefs,
 } from "../lib/accounting";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -340,6 +340,53 @@ const CLAIM_TTL_MS = 3 * 60_000;
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 type Acct = { provider?: string; status?: string; journalId?: string; claimToken?: string; claimedAt?: string };
 
+// ── GBP guard ───────────────────────────────────────────────────────────────
+// Payroll figures are pounds and the journal body carries no currency, so a provider company whose HOME currency is not GBP would book them as
+// that currency (the QuickBooks sandbox company is USD). Before posting we read the provider's base currency and refuse with 409 unless it is GBP.
+//   · ACCOUNTING_ALLOW_NON_GBP=1 turns the guard off (deliberate override).
+//   · QuickBooks SANDBOX realm 9341458202792641 is allowed without the env var, but ONLY while QBO_ENV is not "production" (qboConfig().environment
+//     === "sandbox"), so the e2e specs keep running against the USD sandbox company.
+//   · FAIL OPEN: if the currency can't be read (network, 4xx/5xx, unexpected shape, not connected) we log and carry on - the guard must never
+//     stop a real GBP customer's post because a read-only lookup hiccuped. Only a currency we positively READ and that is not GBP blocks.
+const QBO_SANDBOX_REALM = "9341458202792641";
+type CurrencyRead = { currency: string | null; source: string; allowedByOverride?: boolean };
+async function providerBaseCurrency(provider: Provider, key: string): Promise<CurrencyRead> {
+  if (provider === "quickbooks") {
+    const cfg = qboConfig(); if (!cfg) return { currency: null, source: "quickbooks:not-configured" };
+    const r = await withTokens((o) => freshQbo(key, o), async (t: QboTokens): Promise<CurrencyRead> => {
+      if (cfg.environment === "sandbox" && t.realmId === QBO_SANDBOX_REALM) return { currency: null, source: "quickbooks:sandbox-realm", allowedByOverride: true };
+      const res = await pfetch(`${cfg.apiBase}/v3/company/${t.realmId}/preferences?minorversion=75`, { headers: { Authorization: `Bearer ${t.accessToken}`, Accept: "application/json" } }, "idempotent", "QuickBooks");
+      if (!res.ok) return { currency: null, source: `quickbooks:http-${res.status}` };
+      const j = JSON.parse(await res.text()) as { Preferences?: { CurrencyPrefs?: { HomeCurrency?: { value?: string } } } };
+      return { currency: j.Preferences?.CurrencyPrefs?.HomeCurrency?.value ?? null, source: "quickbooks:preferences" };
+    });
+    return r ?? { currency: null, source: "quickbooks:not-connected" };
+  }
+  if (provider === "xero") {
+    const r = await withTokens((o) => freshXero(key, o), async (t: XeroTokens): Promise<CurrencyRead> => {
+      const res = await pfetch("https://api.xero.com/api.xro/2.0/Organisation", { headers: { Authorization: `Bearer ${t.accessToken}`, "xero-tenant-id": t.xeroTenantId, Accept: "application/json" } }, "idempotent", "Xero");
+      if (!res.ok) return { currency: null, source: `xero:http-${res.status}` };
+      const j = JSON.parse(await res.text()) as { Organisations?: Array<{ BaseCurrency?: string }> };
+      return { currency: j.Organisations?.[0]?.BaseCurrency ?? null, source: "xero:organisation" };
+    });
+    return r ?? { currency: null, source: "xero:not-connected" };
+  }
+  const r = await withTokens((o) => freshSage(key, o), async (t: SageTokens): Promise<CurrencyRead> => {
+    const res = await pfetch("https://api.accounting.sage.com/v3.1/business", { headers: { Authorization: `Bearer ${t.accessToken}`, "X-Business": t.businessId, Accept: "application/json" } }, "idempotent", "Sage");
+    if (!res.ok) return { currency: null, source: `sage:http-${res.status}` };
+    const j = JSON.parse(await res.text()) as { base_currency?: { id?: string } | string; currency?: { id?: string } | string };
+    const c = j.base_currency ?? j.currency;
+    return { currency: typeof c === "string" ? c : c?.id ?? null, source: "sage:business" };
+  });
+  return r ?? { currency: null, source: "sage:not-connected" };
+}
+/** The guard's decision, separated from the fetch so it reads plainly: block only on a positively-read non-GBP currency with no override. */
+function gbpGuardBlocks(read: CurrencyRead, allowEnv: string | undefined): boolean {
+  if (allowEnv === "1") return false;
+  if (read.allowedByOverride) return false;
+  return !!read.currency && read.currency.trim().toUpperCase() !== "GBP";
+}
+
 accounting.post("/post/:runId", async (req, res) => {
   const scope = await manager(req, res); if (!scope) return;
   const runId = String(req.params.runId);
@@ -381,6 +428,18 @@ accounting.post("/post/:runId", async (req, res) => {
     : provider === "xero" ? xeroJournalBody(mapping, totals, { paidOn, narration })
     : sageJournalBody(mapping, totals, { paidOn, reference: refs.sageReference, details: narration });
   const idemKey = idempotencyKey(runId, scope.tenantId, bodyFingerprint(body));
+
+  // ── GBP guard (before the claim, so a refusal leaves the run untouched and retryable) ──
+  if (process.env.ACCOUNTING_ALLOW_NON_GBP !== "1") {
+    let read: CurrencyRead = { currency: null, source: "unread" };
+    try { read = await providerBaseCurrency(provider, scope.key); }
+    catch (e) { console.warn(`[accounting] ${provider} base-currency lookup failed, posting anyway (fail open): ${(e as Error).message}`); }
+    if (gbpGuardBlocks(read, process.env.ACCOUNTING_ALLOW_NON_GBP)) {
+      console.warn(`[accounting] refused post of run ${runId} to ${provider}: base currency ${read.currency} is not GBP`);
+      res.status(409).json({ error: `${PROVIDER_NAME[provider]} is set up in ${read.currency}, not GBP. Payroll figures are in pounds, so posting them would book the wrong amounts. Connect a company whose home currency is GBP, then retry.`, code: "non_gbp_provider", currency: read.currency });
+      return;
+    }
+  }
 
   // ── claim the run ──
   const claimToken = newState();

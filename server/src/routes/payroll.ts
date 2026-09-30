@@ -8,6 +8,8 @@ import { decryptField, encryptField } from "../lib/fieldCrypto";
 import { addRunToYtd, getYtd, ukTaxYearOf } from "../lib/payrollYtd";
 import { auditPayroll } from "../lib/payrollAudit";
 import { rateLimit } from "../lib/rateLimit";
+import { createHash } from "node:crypto";
+import { checkRunLine, describeMismatches, resolveCalcMode, ytdInputsFor, type Emp, type LineMismatch, type SubmittedLine } from "../../../features/payroll/payCalc";
 
 // Payroll (the operator Payroll screen's store), on the server.
 //
@@ -225,6 +227,42 @@ payroll.put("/adjust", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Server-side recalculation (see the POST /runs handler) ──────────────────────────────────────────────────────────────────────────
+type RunBody = { period: string; paidOn: string; freq?: "weekly" | "fortnightly" | "fourweekly" | "monthly"; window?: { start: string; end: string }; lines: SubmittedLine[] };
+const shortHash = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 8);
+/** Re-run the shared engine per line from the STORED employee record + the line's per-run inputs and list what differs by more than 1p. Returns null when it
+ *  can't check at all (no freq, no stored employees) and NEVER throws: a checker fault must not stop a pay run. Lines whose person isn't on the stored list
+ *  (demo / manual rows) count as `unverified` and are not mismatches. Optional PAYROLL_SERVER_CALC_YTD=1 adds an advisory cumulative-PAYE comparison. */
+async function recalcCheck(key: string, body: RunBody): Promise<{ checked: number; unverified: number; mismatches: LineMismatch[]; ytdAdvisory?: { employeeKey: string; sent: number; cumulative: number }[] } | null> {
+  try {
+    if (!body.freq) return null;
+    const c = await cfg(key).get();
+    const emps = c.get("employees") as (Emp & { niNumberEnc?: string })[] | null | undefined;
+    if (!Array.isArray(emps) || !emps.length) return null;
+    const byId = new Map(emps.map((e) => [String(e.id), e]));
+    const adj = (c.get("adjust") ?? {}) as Record<string, Record<string, { taxCode?: string; niCat?: string }>>;
+    const periodAdj = adj[body.period] ?? {};
+    const mismatches: LineMismatch[] = []; const ytdAdvisory: { employeeKey: string; sent: number; cumulative: number }[] = [];
+    let checked = 0, unverified = 0;
+    for (const line of body.lines) {
+      const e = byId.get(String(line.id));
+      if (!e) { unverified++; continue; }
+      const a = periodAdj[String(line.id)];
+      const { niNumberEnc: _n, ...emp } = e; // never carry the encrypted NI into the engine
+      const r = checkRunLine(emp as Emp, line, body.freq, { window: body.window, allowedTaxCodes: a?.taxCode ? [a.taxCode] : [], allowedNiCats: a?.niCat ? [a.niCat] : [] });
+      checked++; mismatches.push(...r.mismatches);
+      if (process.env.PAYROLL_SERVER_CALC_YTD === "1" && typeof line.payeM === "number") {
+        const y = await getYtd(key, String(line.id), ukTaxYearOf(body.paidOn)).catch(() => null);
+        if (y) { const cum = checkRunLine(emp as Emp, line, body.freq, { window: body.window, allowedTaxCodes: a?.taxCode ? [a.taxCode] : [], allowedNiCats: a?.niCat ? [a.niCat] : [], ytd: ytdInputsFor(body.paidOn, body.freq, y) }).computed.payeM; if (Math.abs(cum - line.payeM) > 0.01) ytdAdvisory.push({ employeeKey: String(line.id), sent: line.payeM, cumulative: cum }); }
+      }
+    }
+    return { checked, unverified, mismatches, ...(ytdAdvisory.length ? { ytdAdvisory } : {}) };
+  } catch (e) {
+    console.error("[payroll] calc-check failed (run not blocked):", (e as Error).message);
+    return null;
+  }
+}
+
 // POST /api/payroll/runs — record a DRAFT run. Never overwrites: a second
 // run for the same period is a second record. Segregation of duties (item
 // #39 pt.6): a run created here is NOT yet approved — POST .../approve
@@ -251,6 +289,8 @@ payroll.post("/runs", async (req, res) => {
     lines: z.array(lineSchema).min(1).max(1_000),
     /** The caller was asked "a run for this period already exists — create another?" and said yes. */
     allowDuplicate: z.boolean().optional(),
+    /** Stricter-only: a caller may ask THIS request to be checked in "enforce" mode when the server mode is warn. Never stored; can't loosen anything. */
+    calcMode: z.enum(["warn", "enforce"]).optional(),
   }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   // A second run for a period that already has one is how a month gets paid twice (and, once both are approved, counted twice into every
@@ -260,9 +300,26 @@ payroll.post("/runs", async (req, res) => {
     if (same) { res.status(409).json({ error: `A pay run for ${parsed.data.period} already exists (${same.get("status") === "approved" ? "approved" : "draft"}). Creating another would pay it twice.`, code: "duplicate_run", existingRunId: same.get("id") }); return; }
   }
   delete (parsed.data as { allowDuplicate?: boolean }).allowDuplicate;
+  const requestedCalcMode = parsed.data.calcMode;
+  delete (parsed.data as { calcMode?: string }).calcMode;
+  // Server-side recalculation (PAYROLL_SERVER_CALC = off | warn | enforce, default warn). Warn never blocks; it only records a mismatch on the run.
+  const calcMode = resolveCalcMode(process.env.PAYROLL_SERVER_CALC, requestedCalcMode);
+  let calcCheck: Record<string, unknown> | null = null;
+  if (calcMode !== "off") {
+    const r = await recalcCheck(key, parsed.data as unknown as RunBody);
+    if (r && r.mismatches.length) {
+      const hashed = r.mismatches.slice(0, 20).map((m) => `${shortHash(m.employeeKey)}:${m.field}`).join(",");
+      console.warn(`[payroll] calc-check ${calcMode}: ${r.mismatches.length} mismatch(es) on ${r.checked} checked line(s) in ${key} (${hashed})`); // no names, no NI, no amounts
+      if (calcMode === "enforce") {
+        const nameOf = (k: string) => String((parsed.data.lines.find((l) => l.id === k) as { name?: string } | undefined)?.name ?? "an employee");
+        res.status(400).json({ error: describeMismatches(r.mismatches, nameOf), code: "calc_mismatch", mismatches: r.mismatches.slice(0, 50) }); return;
+      }
+    }
+    if (r && (r.mismatches.length || r.ytdAdvisory?.length)) calcCheck = { status: r.mismatches.length ? "mismatch" : "ok", mode: calcMode, checkedAt: new Date().toISOString(), checked: r.checked, unverified: r.unverified, mismatches: r.mismatches.slice(0, 200), ...(r.ytdAdvisory?.length ? { ytdAdvisory: r.ytdAdvisory } : {}) };
+  }
   const now = new Date().toISOString();
   const id = "pr_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const doc = { ...JSON.parse(JSON.stringify(parsed.data)), id, status: "draft", createdAt: now, createdBy: req.user?.email ?? null, createdByUid: req.user?.uid ?? null, approvedAt: null, approvedBy: null, publishedAt: null, payKey: key, tenantId: req.auth!.tenantId, franchiseId: req.auth!.franchiseId ?? null };
+  const doc = { ...JSON.parse(JSON.stringify(parsed.data)), id, status: "draft", createdAt: now, ...(calcCheck ? { calcCheck } : {}), createdBy: req.user?.email ?? null, createdByUid: req.user?.uid ?? null, approvedAt: null, approvedBy: null, publishedAt: null, payKey: key, tenantId: req.auth!.tenantId, franchiseId: req.auth!.franchiseId ?? null };
   // A run is ONE Firestore document (hard limit 1 MiB): an oversized one used to die inside .create() as a bare 500. Refuse it up front with advice.
   const bytes = Buffer.byteLength(JSON.stringify(doc));
   if (bytes > 900_000) { res.status(413).json({ error: `This pay run is too large to store (${Math.round(bytes / 1024)} KB for ${parsed.data.lines.length} people; the limit is about 900 KB). Split it into smaller runs, e.g. one per location or pay group.` }); return; }

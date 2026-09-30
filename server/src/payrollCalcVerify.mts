@@ -10,7 +10,7 @@ import {
   payePeriod, niPeriod, qualifyingEarnings, studentLoanDeduction, sspWeekly, smpWeekly, sppWeekly,
   rnd2, trunc2, niRound, taxPeriodNo, parseTaxCode, starterCode, niThresholds,
 } from "../../features/payroll/ukStatutory";
-import { computeLine, payeAnnual, eeNiAnnual, erNiAnnual, type Emp } from "../../features/payroll/payCalc";
+import { computeLine, payeAnnual, eeNiAnnual, erNiAnnual, checkRunLine, resolveCalcMode, describeMismatches, ytdInputsFor, employmentShare, type Emp, type Line } from "../../features/payroll/payCalc";
 
 let pass = 0, fail = 0;
 const near = (a: number, b: number) => Math.abs(a - b) < 0.0051;
@@ -225,6 +225,145 @@ eq("60k monthly gross 5000 paye M1", l.payeM, 952.00);
 eq("erNiAnnual A 20000", erNiAnnual(20000), 2250);
 eq("eeNiAnnual A 50270", eeNiAnnual(50270), 3016);
 eq("eeNiAnnual A 60000", eeNiAnnual(60000), 3016 + 194.6);
+
+// ── 10. GOLDEN steady-pay lines: the engine's numbers are pinned (month-1 basis, no YTD, legacy pension) so a change to computeLine shows up here ──
+const gold = (label: string, l: Line, want: { g: number; p: number; ee: number; er: number; pen: number; net: number }) => {
+  eq(`${label} gross`, l.grossM, want.g); eq(`${label} paye`, l.payeM, want.p); eq(`${label} eeNi`, l.eeNiM, want.ee); eq(`${label} erNi`, l.erNiM, want.er); eq(`${label} eePen`, l.eePenM, want.pen); eq(`${label} net`, l.netM, want.net);
+};
+gold("golden 36k monthly", computeLine(sal()), { g: 3000, p: 390.20, ee: 156.16, er: 387.45, pen: 0, net: 2453.64 });
+gold("golden 36k monthly pension", computeLine(sal({ pension: true })), { g: 3000, p: 390.20, ee: 156.16, er: 387.45, pen: 124, net: 2329.64 });
+gold("golden 36k monthly SL2", computeLine(sal({ studentLoanPlan: "plan2" })), { g: 3000, p: 390.20, ee: 156.16, er: 387.45, pen: 0, net: 2404.64 });
+gold("golden hourly weekly 12.71x20", computeLine(hr(), {}, "weekly"), { g: 254.20, p: 2.40, ee: 0.98, er: 23.73, pen: 0, net: 250.82 });
+gold("golden 60k monthly", computeLine(sal({ rate: 60000 })), { g: 5000, p: 952, ee: 267.50, er: 687.45, pen: 0, net: 3780.50 });
+eq("golden rolled-up hourly weekly gross", computeLine(hr(), { hours: 40, rolledUp: true }, "weekly").grossM, 569.76);
+eq("computeLine without ytd is identical to explicit month-1 ytd (period 1, nothing to date)", computeLine(sal(), { ytd: { period: 1, payToDate: 0, taxToDate: 0 } }).payeM, computeLine(sal()).payeM);
+eq("weekly period-1 cumulative == W1 basis", computeLine(hr(), { ytd: { period: 1, payToDate: 0, taxToDate: 0 } }, "weekly").payeM, computeLine(hr(), {}, "weekly").payeM);
+
+// ── 11. server recalculation (checkRunLine): steady-pay lines built by the browser's own call never mismatch ──
+const FREQS: F[] = ["weekly", "fortnightly", "fourweekly", "monthly"];
+const bodyOf = (l: Line) => JSON.parse(JSON.stringify(l)) as Line; // what the server really receives: JSON
+const variants: [string, Emp, object][] = [
+  ["salaried", sal(), {}],
+  ["salaried pension", sal({ pension: true }), {}],
+  ["salaried SL2 + pension", sal({ studentLoanPlan: "plan2", pension: true }), {}],
+  ["salaried postgrad", sal({ studentLoanPlan: "postgrad" }), {}],
+  ["salaried scotland", sal({ taxRegime: "scotland" }), {}],
+  ["salaried K code", sal({ taxCode: "K100" }), {}],
+  ["salaried BR", sal({ taxCode: "BR" }), {}],
+  ["salaried cat M", sal({ niCat: "M" }), {}],
+  ["hourly contracted", hr(), {}],
+  ["hourly manual hours 37.25", hr(), { hours: 37.25, hoursFrom: "manual" }],
+  ["hourly timesheet 80.5h", hr({ rate: 15.5 }), { hours: 80.5, hoursFrom: "timesheet" }],
+  ["hourly rolled-up", hr(), { rolledUp: true, hours: 35, hoursFrom: "manual" }],
+  ["bonus + advance", sal(), { additions: [{ id: "b", label: "Bonus", amount: 750 }], deductions: [{ id: "a", label: "Advance", amount: 120.5 }] }],
+  ["unpaid leave 3d", sal(), { leave: { byKind: { unpaid: 3 }, paidDays: 0, unpaidDays: 3, sickDays: 0, statutoryDays: 0, toilDays: 0 } }],
+  ["sick ssp", hr(), { sickPay: "ssp", leave: { byKind: { sick: 2 }, paidDays: 0, unpaidDays: 0, sickDays: 2, statutoryDays: 0, toilDays: 0 } }],
+  ["paid leave timesheet", hr(), { hours: 60, hoursFrom: "timesheet", leave: { byKind: { annual: 2 }, paidDays: 2, unpaidDays: 0, sickDays: 0, statutoryDays: 0, toilDays: 0 } }],
+  ["override paye+ni", sal(), { override: { paye: 77.77, eeNi: 12.34 } }],
+  ["part share 0.4", sal(), { share: 0.4 }],
+];
+let cleanRuns = 0, cleanTotal = 0;
+for (const [name, e, o] of variants) for (const f of FREQS) {
+  const l = bodyOf(computeLine(e, o as never, f)); cleanTotal++;
+  const r = checkRunLine(e, l as never, f);
+  if (r.mismatches.length === 0) cleanRuns++;
+  ok(`no mismatch: ${name} (${f})`, r.mismatches.length === 0, r.mismatches);
+}
+ok("all steady-pay variants x 4 frequencies verified clean", cleanRuns === cleanTotal && cleanTotal === variants.length * 4);
+
+// tampering: each figure changed by 2p (over the 1p tolerance) is named; 1p is tolerated
+const base = bodyOf(computeLine(sal({ pension: true, studentLoanPlan: "plan2" })));
+const tweak = (k: string, d: number) => ({ ...base, [k]: (base as never as Record<string, number>)[k] + d });
+for (const k of ["grossM", "payeM", "eeNiM", "erNiM", "eePenM", "erPenM", "netM"]) {
+  ok(`2p over on ${k} -> mismatch on ${k}`, checkRunLine(sal({ pension: true, studentLoanPlan: "plan2" }), tweak(k, 0.02) as never, "monthly").mismatches.some((m) => m.field === k));
+  ok(`1p off on ${k} -> tolerated`, !checkRunLine(sal({ pension: true, studentLoanPlan: "plan2" }), tweak(k, 0.01) as never, "monthly").mismatches.some((m) => m.field === k));
+}
+{
+  const e = sal({ pension: true, studentLoanPlan: "plan2" });
+  const r = checkRunLine(e, { ...base, payeM: 0, netM: base.netM + base.payeM } as never, "monthly");
+  ok("PAYE zeroed -> payeM and netM both flagged", r.mismatches.some((m) => m.field === "payeM") && r.mismatches.some((m) => m.field === "netM"));
+  const m = r.mismatches.find((x) => x.field === "payeM")!;
+  ok("mismatch carries employeeKey/sent/computed", m.employeeKey === "e" && m.sent === 0 && Math.abs((m.computed as number) - 390.20) < 0.006, m);
+  ok("mismatch object has no name / NI field", !JSON.stringify(r.mismatches).includes("Test Person") && Object.keys(m).sort().join() === "computed,employeeKey,field,sent");
+  const sl = checkRunLine(e, { ...base, deductions: [] } as never, "monthly");
+  ok("student loan item stripped -> studentLoan flagged", sl.mismatches.some((x) => x.field === "studentLoan"), sl.mismatches);
+  const rate = checkRunLine(e, { ...base, rate: 99999 } as never, "monthly");
+  ok("rate differs from master -> flagged", rate.mismatches.some((x) => x.field === "rate"));
+  ok("non-finite money flagged", checkRunLine(e, { ...base, payeM: Number.NaN } as never, "monthly").mismatches.some((x) => x.field === "payeM"));
+  const nt = checkRunLine(e, { ...base, taxCode: "NT", payeM: 0 } as never, "monthly");
+  ok("tax code not on master/stored adjustment -> taxCode flagged", nt.mismatches.some((x) => x.field === "taxCode" && x.sent === "NT" && x.computed === "1257L"));
+  const ntOk = checkRunLine(e, bodyOf(computeLine(e, { taxCode: "BR" })) as never, "monthly", { allowedTaxCodes: ["BR"] });
+  ok("tax code from the stored period adjustment is accepted", ntOk.mismatches.length === 0, ntOk.mismatches);
+  const cat = checkRunLine(e, { ...base, niCat: "C" } as never, "monthly");
+  ok("NI category not on master -> niCat flagged", cat.mismatches.some((x) => x.field === "niCat"));
+  const holp = checkRunLine(hr(), { ...bodyOf(computeLine(hr(), { hours: 40, rolledUp: true, hoursFrom: "manual" }, "weekly")), grossM: 100 } as never, "weekly");
+  ok("rolled-up line with lowered gross flagged", holp.mismatches.some((x) => x.field === "grossM"));
+  const extra = checkRunLine(e, { ...base, additions: [{ id: "x", label: "Sneaky", amount: 5000 }] } as never, "monthly");
+  ok("an addition not reflected in the figures -> gross flagged", extra.mismatches.some((x) => x.field === "grossM"));
+  const fakeHol = checkRunLine(hr(), { ...bodyOf(computeLine(hr(), { hours: 40, hoursFrom: "manual" }, "weekly")), additions: [{ id: "__holpay", label: "h", amount: 1 }] } as never, "weekly");
+  ok("a forged __holpay item is recomputed (12.07%), not trusted", fakeHol.mismatches.some((x) => x.field === "grossM"));
+  const omitted = checkRunLine(e, { id: "e", grossM: 3000 } as never, "monthly");
+  ok("figures the line leaves out are not compared", omitted.mismatches.length === 0, omitted.mismatches);
+}
+// pro-rata from dates + window
+{
+  const starter = sal({ startDate: "2026-10-15" });
+  const win = { start: "2026-10-01", end: "2026-10-31" };
+  const sh = employmentShare(starter, win.start, win.end).share;
+  const good = bodyOf(computeLine(starter, { share: sh }));
+  ok("starter share matches the window", checkRunLine(starter, good as never, "monthly", { window: win }).mismatches.length === 0);
+  const cheat = checkRunLine(starter, bodyOf(computeLine(starter)) as never, "monthly", { window: win });
+  ok("starter paid a FULL month -> proRata flagged", cheat.mismatches.some((x) => x.field === "proRata"), cheat.mismatches);
+  const leaver = sal({ leaveDate: "2026-09-20" });
+  const lv = checkRunLine(leaver, bodyOf(computeLine(leaver)) as never, "monthly", { window: win });
+  ok("paid after leaving -> employed flagged", lv.mismatches.some((x) => x.field === "employed"));
+}
+
+// ── 12. modes: off | warn | enforce (resolveCalcMode) ──
+const M = resolveCalcMode;
+ok("unset -> warn (the live default)", M(undefined) === "warn" && M(null) === "warn" && M("") === "warn");
+ok("off", M("off") === "off" && M("OFF") === "off" && M(" off ") === "off");
+ok("enforce", M("enforce") === "enforce" && M("Enforce") === "enforce");
+ok("typos never enforce", M("enforced") === "warn" && M("true") === "warn" && M("1") === "warn" && M("on") === "warn");
+ok("explicit warn", M("warn") === "warn");
+ok("caller may raise warn -> enforce", M(undefined, "enforce") === "enforce" && M("warn", "enforce") === "enforce");
+ok("caller cannot lower enforce", M("enforce", "warn") === "enforce");
+ok("caller cannot switch off", M("off", "enforce") === "off" && M(undefined, "off") === "warn");
+ok("a junk request value is ignored", M(undefined, "whatever") === "warn");
+{
+  // the route's decision: warn never blocks, enforce blocks iff there is a mismatch, off never checks
+  const decide = (mode: string, mm: number) => (mode === "off" ? "skip" : mm && mode === "enforce" ? "reject" : mm ? "store" : "untouched");
+  ok("warn + mismatch -> store, run still created", decide(M(undefined), 2) === "store");
+  ok("warn + clean -> untouched", decide(M(undefined), 0) === "untouched");
+  ok("enforce + mismatch -> reject", decide(M("enforce"), 1) === "reject");
+  ok("enforce + clean -> untouched", decide(M("enforce"), 0) === "untouched");
+  ok("off -> skip", decide(M("off"), 5) === "skip");
+  const msg = describeMismatches([{ employeeKey: "e", field: "payeM", sent: 0, computed: 390.2 }, ...[1, 2, 3].map((i) => ({ employeeKey: "e" + i, field: "netM", sent: 1, computed: 2 }))], (k) => (k === "e" ? "Test Person" : "Other"));
+  ok("enforce message is readable: names person, field, sent, computed", /Test Person: payeM sent 0 but the server calculates 390.2/.test(msg) && /1 more/.test(msg) && /create the run again/.test(msg), msg);
+}
+
+// ── 13. year-to-date inputs (advisory cumulative PAYE) ──
+{
+  const y = (paidOn: string, f: F, t: { gross: number; paye: number } | null) => ytdInputsFor(paidOn, f, t);
+  ok("ytd inputs: May month 2", JSON.stringify(y("2026-05-31", "monthly", { gross: 3000, paye: 390.2 })) === JSON.stringify({ period: 2, payToDate: 3000, taxToDate: 390.2 }));
+  ok("ytd inputs: no record -> zero to date", JSON.stringify(y("2026-04-30", "monthly", null)) === JSON.stringify({ period: 1, payToDate: 0, taxToDate: 0 }));
+  ok("ytd inputs: weekly", y("2026-04-19", "weekly", { gross: 0, paye: 0 }).period === 2);
+  const steady = computeLine(sal(), { ytd: y("2026-05-31", "monthly", { gross: 3000, paye: 390.2 }) });
+  eq("steady pay month 2 cumulative paye (HMRC rounding of free pay: 390.40)", steady.payeM, 390.40);
+  ok("steady-pay cumulative differs from month-1 by pennies only", Math.abs(steady.payeM - computeLine(sal()).payeM) <= 0.25);
+  const bonus = computeLine(sal(), { additions: [{ id: "b", label: "Bonus", amount: 2000 }], ytd: y("2026-05-31", "monthly", { gross: 3000, paye: 390.2 }) });
+  eq("bonus in month 2 cumulative: pay 5000+3000 to date", bonus.payeM, 790.40);
+  ok("...is LESS than the month-1 bonus estimate of 952 (why cumulative matters)", bonus.payeM < 952);
+  const starter = computeLine(sal(), { ytd: y("2026-10-31", "monthly", { gross: 12000, paye: 1500 }) });
+  eq("P45 starter in month 7 (12000 / 1500 to date)", starter.payeM, 32.40);
+  const fresh = computeLine(sal(), { ytd: y("2026-10-31", "monthly", { gross: 0, paye: 0 }) });
+  eq("mid-year starter, no P45, cumulative: month-7 catch-up allowance -> 0 tax", fresh.payeM, 0);
+  // cumulative feeds the checker's computed figure but the browser's month-1 line still passes WITHOUT it (default) and is advisory-different WITH it
+  const m1 = bodyOf(computeLine(sal()));
+  ok("default (no ytd): month-1 line verifies clean", checkRunLine(sal(), m1 as never, "monthly").mismatches.length === 0);
+  const adv = checkRunLine(sal(), m1 as never, "monthly", { ytd: y("2026-05-31", "monthly", { gross: 3000, paye: 390.2 }) });
+  ok("with ytd supplied the paye differs by the free-pay rounding (advisory only)", adv.mismatches.some((x) => x.field === "payeM"));
+}
 
 console.log(`\npayrollCalcVerify: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

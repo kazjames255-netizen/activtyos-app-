@@ -2,11 +2,11 @@
 // (acceptance d17s6/d17s7). The PAYE / NI / pension ESTIMATE helpers moved
 // here unchanged from PayrollApp; new: pay hours from the real (server)
 // timesheets, and approved leave for the period.
-import { dateLocale as dl } from "@/lib/i18n/format";
-import { defaultPayTreatment, workingDays } from "@/lib/holiday";
+import { dateLocale as dl } from "../../lib/i18n/format";
+import { defaultPayTreatment, workingDays } from "../../lib/holiday";
 
 // ——— UK PAYE / NI / pension ESTIMATE helpers (2026/27; rest-of-UK bands) ———
-import { rnd2, payePeriod, niPeriod, qualifyingEarnings, studentLoanDeduction, AE, type SlPlan } from "./ukStatutory";
+import { rnd2, taxPeriodNo, payePeriod, niPeriod, qualifyingEarnings, studentLoanDeduction, AE, type SlPlan } from "./ukStatutory";
 export const r2 = rnd2; // nearest penny, float-noise-proof (was Math.round(n*100)/100 — 1.005 -> 1.00)
 
 // Annual-figure wrappers, kept for callers/tests that want a whole-year number. The engine itself
@@ -165,6 +165,81 @@ export function computeLine(e: Emp, a: LineOpts = {}, freq: Freq = "monthly"): L
   const hoursM = r2(periodHours);
   const hoursFrom = e.basis === "hour" ? (a.hoursFrom ?? (useH ? "manual" : "contracted")) : undefined;
   return { id: e.id, staffKey: staffSlug(e.name), name: e.name, role: e.role, op: e.op, basis: e.basis, rate, hpw: e.hpw, weeks: e.weeks || 52, taxCode, niCat, freqLabel: FREQ_LABEL[freq], hoursM, ...(hoursFrom ? { hoursFrom } : {}), basePayM, ...(share < 1 ? { proRata: r2(share * 10000) / 10000 } : {}), ...(unpaidLeaveM > 0 ? { unpaidLeaveM } : {}), ...(sickLeaveM > 0 ? { sickLeaveM } : {}), ...(sickDays > 0 ? { sickPay: (sspOnly ? "ssp" : "full") as SickPay } : {}), ...(lv && Object.keys(lv.byKind).length ? { leave: lv } : {}), addM, dedM, additions, deductions: deductionsAll, manual: { paye: ov.paye != null, eeNi: ov.eeNi != null, eePen: ov.eePen != null }, grossM, payeM, eeNiM, erNiM, eePenM, erPenM, netM: r2(grossM - payeM - eeNiM - eePenM - dedM) };
+}
+
+// ── Server-side recalculation of a submitted pay run (routes/payroll.ts POST /runs) ─────────────────────────────────────────────────
+// The browser computes every line with computeLine and POSTs the figures; the server re-runs the SAME engine from the STORED employee record plus
+// the per-run inputs on the line (hours, adjustments, leave, pro-rata) and compares. Pure (no Firestore) so payrollCalcVerify.mts can test it.
+export type CalcMode = "off" | "warn" | "enforce";
+/** PAYROLL_SERVER_CALC: off | warn | enforce. Anything else (unset, typo) = warn - NEVER enforce by accident. A caller may ask for "enforce" on its own request
+ *  (stricter only) when the server mode is warn; it can never loosen the server mode, and "off" stays off. */
+export function resolveCalcMode(env: string | undefined | null, requested?: string | null): CalcMode {
+  const e = String(env ?? "").trim().toLowerCase();
+  const base: CalcMode = e === "off" || e === "enforce" ? e : "warn";
+  if (base === "warn" && requested === "enforce") return "enforce";
+  return base;
+}
+export interface LineMismatch { employeeKey: string; field: string; sent: number | string | null; computed: number | string | null }
+/** The submitted line, loosely typed: it is untrusted input straight from the request body. */
+export type SubmittedLine = { id?: string; staffKey?: string; name?: string; rate?: number; taxCode?: string; niCat?: string; hoursM?: number; hoursFrom?: string; proRata?: number; sickPay?: string; leave?: LeaveSum; additions?: AdjItem[]; deductions?: AdjItem[]; manual?: { paye?: boolean; eeNi?: boolean; eePen?: boolean } } & Partial<Pick<Line, "grossM" | "payeM" | "eeNiM" | "erNiM" | "eePenM" | "erPenM" | "netM">>;
+const DERIVED_ADD = new Set(["__holpay", "__leavepay", "__sickpay"]);
+const pence = (n: number) => Math.round(n * 100);
+export const CALC_TOLERANCE_P = 1; // 1p
+/** Recompute ONE submitted line and list every field that differs by more than 1p. `employed:false` (window given, person not employed in it) is itself a mismatch.
+ *  `allowed` = the tax codes / NI categories the tenant legitimately has for this person this period (master record + that period's stored adjustment). */
+export function checkRunLine(emp: Emp, line: SubmittedLine, freq: Freq, opts: { window?: { start: string; end: string }; allowedTaxCodes?: string[]; allowedNiCats?: string[]; pensionScheme?: LineOpts["pensionScheme"]; ytd?: LineOpts["ytd"] } = {}): { computed: Line; mismatches: LineMismatch[] } {
+  const key = String(line.id ?? emp.id);
+  const mm: LineMismatch[] = [];
+  const num = (field: string, sent: number | undefined, computed: number, tolP = CALC_TOLERANCE_P) => { if (sent == null) return; if (typeof sent !== "number" || !Number.isFinite(sent) || Math.abs(pence(sent) - pence(computed)) > tolP) mm.push({ employeeKey: key, field, sent: Number.isFinite(sent as number) ? sent : null, computed }); };
+  // the things the master record owns are NOT taken on trust from the line
+  if (line.rate != null && pence(line.rate) !== pence(emp.rate)) mm.push({ employeeKey: key, field: "rate", sent: line.rate, computed: emp.rate });
+  const okCode = (sent: string | undefined, master: string, allowed: string[] | undefined) => !sent || sent === master || (allowed ?? []).includes(sent);
+  const taxCode = okCode(line.taxCode, emp.taxCode, opts.allowedTaxCodes) && line.taxCode ? line.taxCode : emp.taxCode;
+  const niCat = okCode(line.niCat, emp.niCat, opts.allowedNiCats) && line.niCat ? line.niCat : emp.niCat;
+  if (taxCode !== (line.taxCode || emp.taxCode)) mm.push({ employeeKey: key, field: "taxCode", sent: line.taxCode ?? null, computed: emp.taxCode });
+  if (niCat !== (line.niCat || emp.niCat)) mm.push({ employeeKey: key, field: "niCat", sent: line.niCat ?? null, computed: emp.niCat });
+  // pro-rata share: recomputed from start/leave dates + window when the run states its window, else the line's own proRata
+  let share = line.proRata != null ? Math.min(1, Math.max(0, line.proRata)) : 1;
+  if (opts.window) {
+    const es = employmentShare(emp, opts.window.start, opts.window.end);
+    if (!es.employed) mm.push({ employeeKey: key, field: "employed", sent: 1, computed: 0 });
+    else { const sentShare = line.proRata ?? 1; if (Math.abs(sentShare - r2(es.share * 10000) / 10000) > 0.0002) mm.push({ employeeKey: key, field: "proRata", sent: sentShare, computed: r2(es.share * 10000) / 10000 }); }
+    share = es.employed ? es.share : share;
+  }
+  const hoursFrom = line.hoursFrom === "manual" || line.hoursFrom === "timesheet" || line.hoursFrom === "contracted" ? line.hoursFrom : undefined;
+  const hours = emp.basis === "hour" && (hoursFrom === "manual" || hoursFrom === "timesheet") && typeof line.hoursM === "number" ? line.hoursM : undefined;
+  const man = line.manual ?? {};
+  const computed = computeLine(emp, {
+    hours, taxCode, niCat, hoursFrom, share,
+    rolledUp: (line.additions ?? []).some((a) => a.id === "__holpay"),
+    additions: (line.additions ?? []).filter((a) => !DERIVED_ADD.has(a.id)),
+    deductions: (line.deductions ?? []).filter((d) => d.id !== "__studentloan"),
+    override: { paye: man.paye ? line.payeM ?? null : null, eeNi: man.eeNi ? line.eeNiM ?? null : null, eePen: man.eePen ? line.eePenM ?? null : null },
+    leave: line.leave, sickPay: line.sickPay === "ssp" ? "ssp" : line.sickPay === "full" ? "full" : undefined,
+    pensionScheme: opts.pensionScheme, ytd: opts.ytd,
+  }, freq);
+  // hourly by hours: hoursM is rounded to 2dp on the line, so allow the rounding its pay can carry (rate x 0.005h) on hours-driven figures
+  const hourSlack = hours != null ? Math.ceil(emp.rate * 0.005 * 100) : 0;
+  num("grossM", line.grossM, computed.grossM, CALC_TOLERANCE_P + hourSlack);
+  num("payeM", line.payeM, computed.payeM, CALC_TOLERANCE_P + hourSlack);
+  num("eeNiM", line.eeNiM, computed.eeNiM, CALC_TOLERANCE_P + hourSlack);
+  num("erNiM", line.erNiM, computed.erNiM, CALC_TOLERANCE_P + hourSlack);
+  num("eePenM", line.eePenM, computed.eePenM, CALC_TOLERANCE_P + hourSlack);
+  num("erPenM", line.erPenM, computed.erPenM, CALC_TOLERANCE_P + hourSlack);
+  const slOf = (ds?: AdjItem[]) => r2((ds ?? []).filter((d) => d.id === "__studentloan").reduce((n, d) => n + (Number(d.amount) || 0), 0));
+  if (line.deductions) num("studentLoan", slOf(line.deductions), slOf(computed.deductions), CALC_TOLERANCE_P + hourSlack);
+  num("netM", line.netM, computed.netM, CALC_TOLERANCE_P + 3 * hourSlack);
+  return { computed, mismatches: mm };
+}
+/** Cumulative-PAYE inputs from the stored payrollYtd totals (gross ~ taxable pay, see server/src/lib/payrollYtd.ts) for a run paid on `paidOn`. ADVISORY ONLY
+ *  (PAYROLL_SERVER_CALC_YTD=1): the browser's lines are Month-1/Week-1 basis, so feeding this into the comparison would change today's numbers. */
+export function ytdInputsFor(paidOn: string, freq: Freq, ytd: { gross?: number; paye?: number } | null | undefined): NonNullable<LineOpts["ytd"]> {
+  return { period: taxPeriodNo(paidOn, freq), payToDate: ytd?.gross ?? 0, taxToDate: ytd?.paye ?? 0 };
+}
+/** A readable one-paragraph refusal for enforce mode. */
+export function describeMismatches(mm: LineMismatch[], nameOf: (key: string) => string): string {
+  const first = mm.slice(0, 3).map((m) => `${nameOf(m.employeeKey)}: ${m.field} sent ${m.sent} but the server calculates ${m.computed}`).join("; ");
+  return `The figures on this pay run don't match the server's own calculation (${first}${mm.length > 3 ? `; and ${mm.length - 3} more` : ""}). Refresh Payroll and create the run again.`;
 }
 
 // ── Leave (the holiday planner, /api/leave) ─────────────────────────────────
