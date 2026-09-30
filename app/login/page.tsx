@@ -102,7 +102,7 @@ function LoginForm() {
       return;
     }
     try {
-      await sendPasswordResetEmail(firebaseAuth, email);
+      await sendPasswordResetEmail(firebaseAuth, email.trim());
       setNotice(t("p7login.resetSent", { email }));
     } catch {
       setError(t("p7login.resetFail"));
@@ -190,7 +190,7 @@ function LoginForm() {
       // Firebase's own sign-in call talks straight to Google's servers, not ours, and has
       // no timeout of its own — a slow/blocked DNS lookup (identitytoolkit.googleapis.com)
       // used to leave the button stuck on "Signing in…" forever with no error at all.
-      await withTimeout(signInWithEmailAndPassword(firebaseAuth, email, password), "Signing in");
+      await withTimeout(signInWithEmailAndPassword(firebaseAuth, email.trim(), password), "Signing in");
       if (await stopForClosedAccount()) return;
       await goHome();
     } catch (err) {
@@ -278,13 +278,14 @@ function LoginForm() {
       <form onSubmit={submit} className="flex flex-col gap-3.5">
         <div>
           <FieldLabel htmlFor="login-email">{t("p7login.email")}</FieldLabel>
-          <Input id="login-email" type="email" required autoComplete="email" placeholder="you@example.com"
+          <Input id="login-email" type="email" required autoComplete="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="you@example.com"
             value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" />
         </div>
         <div>
           <FieldLabel htmlFor="login-password">{t("p7login.password")}</FieldLabel>
           <div className="relative">
             <Input id="login-password" type={showPw ? "text" : "password"} required autoComplete="current-password"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false}
               value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pe-14" />
             <button type="button" onClick={() => setShowPw((v) => !v)}
               className="absolute end-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[var(--ink-3)] hover:text-[var(--ink-2)]">
