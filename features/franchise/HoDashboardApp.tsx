@@ -187,6 +187,19 @@ export function HoDashboardApp() {
     <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#eef2f8]"><div className="h-full rounded-full" style={{ width: `${Math.max(2, (v / maxRev) * 100)}%`, background: color }} /></div>
   );
 
+  // The API sends English sentences; rebuild the known ones from the row data so they follow the language picker.
+  const attMsg = (a: Overview["attention"][number]) => {
+    const f = a.franchiseId ? d?.franchises.find((x) => x.franchiseId === a.franchiseId) : undefined;
+    if (f) {
+      if (a.kind === "safeguarding") return t(f.openIncidents === 1 ? "p8fr.attIncOne" : "p8fr.attIncOther", { name: f.name, count: f.openIncidents });
+      if (a.kind === "territory-approve") return t("p8fr.attTerrApprove", { name: f.name });
+      if (a.kind === "territory") return t("p8fr.attNoTerr", { name: f.name });
+      if (a.kind === "decline") return t("p8fr.attDecline", { name: f.name, pct: Math.abs(f.trendPct) });
+      if (a.kind === "outstanding") return t("p8fr.attOutstanding", { name: f.name, amount: "£" + Math.round(f.outstanding).toLocaleString(dl()) });
+    }
+    const m = a.kind === "invite" ? /^(.*) — invite sent, awaiting sign-up$/.exec(a.message) : null;
+    return m ? t("p8fr.attInvite", { name: m[1] }) : a.message;
+  };
   const kindLabel = (k: string) => (k === "accident" ? t("franchise.tagAccident") : k === "safeguarding" ? t("franchise.tagSafeguarding") : k === "incident" ? t("franchise.tagIncident") : k);
   const royaltyBasis = d ? (d.settings.basis === "perBooking" ? t("franchise.perBookingShort", { amount: money(d.settings.perBookingFee ?? 0) }) : t("franchise.pctOfRevenue", { rate: d.settings.rate ?? 0 })) : "…";
 
@@ -258,7 +271,7 @@ export function HoDashboardApp() {
                       const inner = (
                         <div className="flex items-start gap-2 rounded-lg px-2.5 py-1.5" style={{ background: s.bg }}>
                           <span className="mt-1 h-2 w-2 flex-none rounded-full" style={{ background: s.dot }} />
-                          <div className="min-w-0 flex-1 text-[12px] leading-snug text-[var(--ink-2)]">{a.message}</div>
+                          <div className="min-w-0 flex-1 text-[12px] leading-snug text-[var(--ink-2)]">{attMsg(a)}</div>
                           {a.franchiseId && <button type="button" onClick={() => setHoScopeId(a.franchiseId!)} className="flex-none text-[11px] font-extrabold text-[#2f6bd8] hover:underline">{t("franchise.view")}</button>}
                         </div>
                       );
