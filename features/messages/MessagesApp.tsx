@@ -442,7 +442,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
             {templates.map((t) => { const ok = templateUsable(t); return <option key={t.id} value={t.id} disabled={!ok}>{t.name}{ok ? "" : ` · ${tr("comms.sendFromBooking")}`}</option>; })}
           </Select>
           {mergeFieldsFor(composeCtx).map((f) => (
-            <button key={f.token} type="button" title={`${f.token} — ${f.desc}`} onClick={() => setDraft((d) => (d ? `${d} ` : "") + f.token)}
+            <button key={f.token} type="button" title={`${f.token} — ${tr("p8em.mf_" + f.token.replace(/[{}]/g, ""))}`} onClick={() => setDraft((d) => (d ? `${d} ` : "") + f.token)}
               className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>
           ))}
           <button type="button" onClick={saveTemplate} className="rounded-full border border-dashed border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">{tr("comms.saveAsTemplate")}</button>

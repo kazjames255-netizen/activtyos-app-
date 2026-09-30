@@ -81,7 +81,7 @@ function TemplateModal({ initial, onDone }: { initial?: Template; onDone: (chang
               {MERGE_FIELDS.map((f) => (
                 <button key={f.token} type="button" onClick={() => insert(f.token)} className="flex items-baseline gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-start hover:bg-[var(--panel)]">
                   <span className="w-[112px] flex-none text-[11.5px] font-bold text-[var(--brand-strong)]">{f.token}</span>
-                  <span className="text-[11.5px] text-[var(--ink-3)]">{f.desc}{f.bookingScoped ? t("p8em.tplNeedsBooking") : ""}</span>
+                  <span className="text-[11.5px] text-[var(--ink-3)]">{t("p8em.mf_" + f.token.replace(/[{}]/g, ""))}{f.bookingScoped ? t("p8em.tplNeedsBooking") : ""}</span>
                 </button>
               ))}
             </div>
