@@ -8,6 +8,7 @@
 // viewer's own theme (they may have no account at all).
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -31,6 +32,7 @@ const fmt = (iso?: string | null) => {
 // the special ref prop, which a Server Component may not pass to a Client
 // Component at all ("Refs cannot be used in Server Components...").
 export function VerifyCertificate({ certRef }: { certRef: string }) {
+  const t = useT();
   const [result, setResult] = useState<Result | null>(null);
   const [err, setErr] = useState(false);
 
@@ -49,28 +51,28 @@ export function VerifyCertificate({ certRef }: { certRef: string }) {
   return (
     <div style={{ minHeight: "100vh", background: "#f4f5f9", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: "-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" }}>
       <div style={{ width: "100%", maxWidth: 420, borderRadius: 18, background: "#fff", boxShadow: "0 10px 40px rgba(20,20,40,.08)", padding: "32px 28px", textAlign: "center" }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", color: "#8b93ad", marginBottom: 18 }}>Certificate verification</div>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", color: "#8b93ad", marginBottom: 18 }}>{t("p8wf.vcTitle")}</div>
 
-        {!result && !err && <div style={{ color: "#8b93ad", fontSize: 14, padding: "24px 0" }}>Checking…</div>}
-        {err && <Status icon="⚠" tone="#b45309" bg="#fff7ed" title="Couldn't check this right now" body="Please try again in a moment." />}
+        {!result && !err && <div style={{ color: "#8b93ad", fontSize: 14, padding: "24px 0" }}>{t("p8wf.vcChecking")}</div>}
+        {err && <Status icon="⚠" tone="#b45309" bg="#fff7ed" title={t("p8wf.vcErrTitle")} body={t("p8wf.vcErrBody")} />}
 
         {result && !result.found && (
-          <Status icon="✕" tone="#c0392b" bg="#fdecec" title="Not a verified certificate" body="This reference doesn't match a currently verified certificate. It may be unrecognised, still pending review, or no longer valid." />
+          <Status icon="✕" tone="#c0392b" bg="#fdecec" title={t("p8wf.vcNotTitle")} body={t("p8wf.vcNotBody")} />
         )}
 
         {ok && (
-          <Status icon="✓" tone="#0f7a43" bg="#e2f4ea" title="Verified" body={null}>
+          <Status icon="✓" tone="#0f7a43" bg="#e2f4ea" title={t("p8wf.vcValid")} body={null}>
             <Details result={result!} />
           </Status>
         )}
 
         {expired && (
-          <Status icon="!" tone="#b45309" bg="#fcefd2" title="Certificate expired" body={null}>
+          <Status icon="!" tone="#b45309" bg="#fcefd2" title={t("p8wf.vcExpired")} body={null}>
             <Details result={result!} />
           </Status>
         )}
 
-        <div style={{ marginTop: 22, fontSize: 11, color: "#b3b8c9" }}>ActivityOS certificate check{result?.ref ? ` · Ref ${result.ref}` : ""}</div>
+        <div style={{ marginTop: 22, fontSize: 11, color: "#b3b8c9" }}>{result?.ref ? t("p8wf.vcFooterRef", { ref: result.ref }) : t("p8wf.vcFooter")}</div>
       </div>
     </div>
   );
@@ -88,11 +90,12 @@ function Status({ icon, tone, bg, title, body, children }: { icon: string; tone:
 }
 
 function Details({ result }: { result: Result }) {
+  const t = useT();
   const rows: [string, string | null][] = [
-    ["Holder", result.name ?? null],
-    ["Certificate", result.type ?? null],
-    ["On record as of", fmt(result.verifiedOn)],
-    ["Expiry", result.expiry ? fmt(result.expiry) : "No expiry on record"],
+    [t("p8wf.vcHolder"), result.name ?? null],
+    [t("p8wf.vcCertificate"), result.type ?? null],
+    [t("p8wf.vcAsOf"), fmt(result.verifiedOn)],
+    [t("p8wf.vcExpiry"), result.expiry ? fmt(result.expiry) : t("p8wf.vcNoExpiry")],
   ];
   return (
     <div style={{ marginTop: 14, borderTop: "1px solid #eef1f7", paddingTop: 14, display: "grid", gap: 8, textAlign: "start" }}>

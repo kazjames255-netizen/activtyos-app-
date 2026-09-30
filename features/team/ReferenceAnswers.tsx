@@ -9,6 +9,7 @@
 // snapshot of the questions it was sent under, so a reference answered before
 // the provider edited their form still reads back exactly as it was asked.
 import { Input } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
 import {
   detailsKey,
   needsDetails,
@@ -51,6 +52,7 @@ function Pills({ q, value, onPick }: { q: RefQuestion; value: string; onPick: (v
 const textareaCls = "w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-[13px] leading-snug text-[var(--ink)] outline-none focus:border-[#b45309]";
 
 export function QuestionField({ q, answers, set }: { q: RefQuestion; answers: Record<string, string>; set: (id: string, v: string) => void }) {
+  const t = useT();
   const v = answers[q.id] ?? "";
   const wide = q.kind === "long" || q.kind === "choice";
   const details = needsDetails(q, answers);
@@ -73,7 +75,7 @@ export function QuestionField({ q, answers, set }: { q: RefQuestion; answers: Re
       {details && (
         <div className="mt-2">
           <label className="mb-1 block text-[11.5px] font-bold text-[#a32020]">
-            {q.detailsLabel || "Please give details"} <span className="text-[#c0392b]">*</span>
+            {q.detailsLabel || t("p8wf.raDetails")} <span className="text-[#c0392b]">*</span>
           </label>
           <textarea
             value={answers[detailsKey(q.id)] ?? ""}
@@ -120,6 +122,7 @@ export function ReferenceQuestionForm({ sections, answers, set }: { sections: Re
  *  are shown as "—" rather than hidden: on a safeguarding reference, a question
  *  someone skipped is itself information. */
 export function ReferenceReadback({ sections, answers }: { sections: RefSection[]; answers: Record<string, string> }) {
+  const t = useT();
   return (
     <div className="space-y-3">
       {sections.map((s) => (
@@ -145,7 +148,7 @@ export function ReferenceReadback({ sections, answers }: { sections: RefSection[
       ))}
       {(answers.signedName || answers.signedPosition || answers.signedOrg) && (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-[12px] text-[var(--ink-2)]">
-          <span className="font-extrabold text-[var(--ink)]">Signed:</span> {answers.signedName}
+          <span className="font-extrabold text-[var(--ink)]">{t("p8wf.raSigned")}</span> {answers.signedName}
           {answers.signedPosition ? ` · ${answers.signedPosition}` : ""}
           {answers.signedOrg ? ` · ${answers.signedOrg}` : ""}
         </div>

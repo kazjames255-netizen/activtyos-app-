@@ -21,6 +21,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, Input } from "@/components/ui";
 import { del, get, openFile, post } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
+import { useI18n, useT } from "@/lib/i18n/provider";
+import { isRTL } from "@/lib/i18n/config";
+import { pickPlural } from "@/lib/i18n/plural";
+import { Rich } from "@/components/i18n/Rich";
 import { ReferenceQuestionForm, ReferenceReadback } from "./ReferenceAnswers";
 import { DEFAULT_REFERENCE_SECTIONS, type RefSection } from "./referenceQuestions";
 import { ReferenceQuestionsEditor } from "./ReferenceQuestionsEditor";
@@ -80,6 +84,7 @@ const esc = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">":
 
 /** Load and mutate one person's reference requests. */
 function useReferences(staffName: string, jobTitle?: string) {
+  const t = useT();
   // Held WITH the name it was fetched for: switching person must not show
   // theirs against this one while the fetch is in flight. Stale reads as
   // "still loading".
@@ -92,7 +97,7 @@ function useReferences(staffName: string, jobTitle?: string) {
     get<ReferenceRequest[] | null>(`/api/references?staff=${encodeURIComponent(staffName)}`)
       // Demo/tour mode answers null rather than hitting the network.
       .then((list) => { setLoaded({ staff: staffName, list: Array.isArray(list) ? list : [] }); setErr(null); })
-      .catch((e) => { setErr(e instanceof Error ? e.message : "Couldn't load the references"); setLoaded({ staff: staffName, list: [] }); });
+      .catch((e) => { setErr(e instanceof Error ? e.message : t("p8wf.rrCouldntLoad")); setLoaded({ staff: staffName, list: [] }); });
   // Re-reads when the operator picks a different person.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [staffName]);
@@ -115,7 +120,7 @@ function useReferences(staffName: string, jobTitle?: string) {
   /** Create the request. `deliver` decides whether we email the referee, hand
    *  the operator a link to send however they like, or record a phone call. */
   const request = (referee: Referee, deliver: "email" | "link" | "phone" = "email") => {
-    if (!referee.name) { setErr("Add the referee's name first."); return; }
+    if (!referee.name) { setErr(t("p8wf.rrAddRefereeFirst")); return; }
     return act(`send-${referee.slot}`, () => post<ReferenceRequest>("/api/references", {
       staffName,
       slot: referee.slot,
@@ -136,9 +141,11 @@ type RefCtl = ReturnType<typeof useReferences>;
 
 /** The status line for one referee: what's happened, and what to do next. */
 function RefereeStrip({ referee, ctl }: { referee: Referee; ctl: RefCtl }) {
+  const t = useT();
   const [viewing, setViewing] = useState(false);
   const [recording, setRecording] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { locale } = useI18n();
   const r = ctl.forSlot(referee.slot);
   const { busy } = ctl;
 
@@ -154,7 +161,7 @@ function RefereeStrip({ referee, ctl }: { referee: Referee; ctl: RefCtl }) {
     </>
   );
 
-  if (ctl.reqs === null) return <div className="px-3 py-2 text-[11.5px] text-[var(--ink-3)]">Checking…</div>;
+  if (ctl.reqs === null) return <div className="px-3 py-2 text-[11.5px] text-[var(--ink-3)]">{t("p8wf.vcChecking")}</div>;
 
   if (!r) {
     const sending = busy === `send-${referee.slot}`;
@@ -162,18 +169,18 @@ function RefereeStrip({ referee, ctl }: { referee: Referee; ctl: RefCtl }) {
     // in a tooltip is how you end up staring at a row wondering where the
     // "send" is.
     const missing = !referee.name
-      ? "Add the referee's name to request a reference — type it above, or pull it from their application."
+      ? t("p8wf.rrMissingName")
       : !referee.email
-        ? "No email for this referee. Create a link to send them yourself, or take the reference over the phone."
+        ? t("p8wf.rrMissingEmail")
         : null;
     return (
       <div className="border-t border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Not requested yet</span>
+          <span className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("p8wf.rrNotRequested")}</span>
           <div className="ms-auto flex flex-wrap gap-1.5">
             {referee.name && referee.email && (
               <Button sm variant="primary" disabled={sending} onClick={() => void ctl.request(referee, "email")}>
-                {sending ? "Sending…" : "✉️ Send request"}
+                {sending ? t("p8wf.hoSending") : t("p8wf.rrSendRequest")}
               </Button>
             )}
             {referee.name && (
@@ -181,9 +188,9 @@ function RefereeStrip({ referee, ctl }: { referee: Referee; ctl: RefCtl }) {
                 {/* Create + copy in one go: the point of this button is to end
                     up with the URL on the clipboard, not to admire a new row. */}
                 <Button sm disabled={sending} onClick={() => void ctl.request(referee, "link")?.then((made) => { if (made) copyLink(made.token); })}>
-                  {sending ? "Creating…" : copied ? "Link copied ✓" : "🔗 Create a link"}
+                  {sending ? t("p8wf.rrCreating") : copied ? t("p8wf.rrLinkCopied") : t("p8wf.rrCreateLink")}
                 </Button>
-                <Button sm disabled={sending} onClick={() => void ctl.request(referee, "phone")}>☎️ Take by phone</Button>
+                <Button sm disabled={sending} onClick={() => void ctl.request(referee, "phone")}>{t("p8wf.rrTakeByPhone")}</Button>
               </>
             )}
           </div>
@@ -199,17 +206,17 @@ function RefereeStrip({ referee, ctl }: { referee: Referee; ctl: RefCtl }) {
       <div className={"border-t px-3 py-2.5 " + (bad ? "border-[#f3c2c2] bg-[#fdecec]" : "border-[#cfe8d7] bg-[#f4fbf6]")}>
         <div className="flex flex-wrap items-center gap-2">
           <span className={"text-[11.5px] font-extrabold " + (bad ? "text-[#a32020]" : "text-[#0f7a43]")}>
-            {bad ? "⚠ Concern flagged" : "✓ Received"} {fmt(r.submittedAt)}
-            {r.method === "phone" ? ` · taken by phone${r.recordedBy ? ` by ${r.recordedBy}` : ""}` : ""}
+            {t(bad ? "p8wf.rrConcernFlagged" : "p8wf.rrReceivedDate", { date: fmt(r.submittedAt) })}
+            {r.method === "phone" ? (r.recordedBy ? t("p8wf.rrByPhoneBy", { who: r.recordedBy }) : t("p8wf.rrByPhone")) : ""}
           </span>
           <div className="ms-auto flex flex-wrap gap-1.5">
-            {r.hasFile && <Button sm onClick={() => void openFile(`/api/references/${r.token}/file`)}>📎 {r.fileName ?? "Document"}</Button>}
-            <Button sm variant="primary" onClick={() => setViewing(true)}>Read the reference</Button>
+            {r.hasFile && <Button sm onClick={() => void openFile(`/api/references/${r.token}/file`)}>📎 {r.fileName ?? t("p8wf.rrDocument")}</Button>}
+            <Button sm variant="primary" onClick={() => setViewing(true)}>{t("p8wf.rrReadIt")}</Button>
           </div>
         </div>
         {r.concernResolved && (
           <div className="mt-1.5 text-[11px] leading-snug text-[#0f7a43]">
-            Reviewed by {r.concernResolved.by} on {fmt(r.concernResolved.at)} — {r.concernResolved.note}
+            {t("p8wf.rrReviewedBy", { by: r.concernResolved.by, date: fmt(r.concernResolved.at), note: r.concernResolved.note })}
           </div>
         )}
         {modals}
@@ -219,8 +226,8 @@ function RefereeStrip({ referee, ctl }: { referee: Referee; ctl: RefCtl }) {
 
   if (r.status === "declined") return (
     <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-      <span className="text-[11.5px] font-bold text-[var(--ink-2)]">Declined {fmt(r.declinedAt)}{r.declineReason ? ` — “${r.declineReason}”` : ""}</span>
-      <Button sm className="ms-auto" disabled={busy === `del-${r.token}`} onClick={() => void ctl.act(`del-${r.token}`, () => del(`/api/references/${r.token}`))}>Ask someone else</Button>
+      <span className="text-[11.5px] font-bold text-[var(--ink-2)]">{r.declineReason ? t("p8wf.rrDeclinedReason", { date: fmt(r.declinedAt), reason: r.declineReason }) : t("p8wf.rrDeclinedDate", { date: fmt(r.declinedAt) })}</span>
+      <Button sm className="ms-auto" disabled={busy === `del-${r.token}`} onClick={() => void ctl.act(`del-${r.token}`, () => del(`/api/references/${r.token}`))}>{t("p8wf.rrAskElse")}</Button>
     </div>
   );
 
@@ -231,25 +238,25 @@ function RefereeStrip({ referee, ctl }: { referee: Referee; ctl: RefCtl }) {
       <div className="flex flex-wrap items-center gap-2">
         <span className={"text-[11.5px] font-extrabold " + (stale ? "text-[#8a4b09]" : "text-[var(--ink-2)]")}>
           {r.openedAt
-            ? `👀 Opened ${fmt(r.openedAt)}`
+            ? t("p8wf.rrOpened", { date: fmt(r.openedAt) })
             : r.method === "phone" && !r.lastSentAt
-              ? "☎️ To take by phone"
+              ? t("p8wf.rrToPhone")
               : r.method === "link" && !r.lastSentAt
                 // Nothing was emailed — saying "Sent" would be a lie, and the
                 // operator still has a job to do with that link.
-                ? `🔗 Link ready ${fmt(r.createdAt)} — send it to them`
-                : `✉️ Sent ${fmt(r.lastSentAt ?? r.createdAt)}`}
-          {waited > 0 && <span className="font-semibold"> · {waited} day{waited === 1 ? "" : "s"} ago</span>}
-          {r.chases > 0 && <span className="font-semibold"> · chased {r.chases}×</span>}
+                ? t("p8wf.rrLinkReady", { date: fmt(r.createdAt) })
+                : t("p8wf.rrSent", { date: fmt(r.lastSentAt ?? r.createdAt) })}
+          {waited > 0 && <span className="font-semibold">{pickPlural(t, locale, "p8wf.rrDaysAgo", waited)}</span>}
+          {r.chases > 0 && <span className="font-semibold">{t("p8wf.rrChased", { n: r.chases })}</span>}
         </span>
         <div className="ms-auto flex flex-wrap gap-1.5">
-          {r.refereeEmail && <Button sm disabled={busy === `chase-${r.token}`} onClick={() => void ctl.act(`chase-${r.token}`, () => post(`/api/references/${r.token}/resend`, {}))}>{busy === `chase-${r.token}` ? "Sending…" : "🔔 Chase"}</Button>}
-          <Button sm onClick={() => copyLink(r.token)}>{copied ? "Copied ✓" : "🔗 Copy link"}</Button>
-          <Button sm onClick={() => setRecording(true)}>☎️ Record what they said</Button>
-          <Button sm variant="danger" disabled={busy === `del-${r.token}`} onClick={() => void ctl.act(`del-${r.token}`, () => del(`/api/references/${r.token}`))}>Cancel</Button>
+          {r.refereeEmail && <Button sm disabled={busy === `chase-${r.token}`} onClick={() => void ctl.act(`chase-${r.token}`, () => post(`/api/references/${r.token}/resend`, {}))}>{busy === `chase-${r.token}` ? t("p8wf.hoSending") : t("p8wf.rrChase")}</Button>}
+          <Button sm onClick={() => copyLink(r.token)}>{copied ? t("p8wf.rrCopiedTick") : t("p8wf.rrCopyLink")}</Button>
+          <Button sm onClick={() => setRecording(true)}>{t("p8wf.rrRecordWhat")}</Button>
+          <Button sm variant="danger" disabled={busy === `del-${r.token}`} onClick={() => void ctl.act(`del-${r.token}`, () => del(`/api/references/${r.token}`))}>{t("common.cancel")}</Button>
         </div>
       </div>
-      {stale && <div className="mt-1 text-[11px] text-[#8a4b09]">No reply yet — a chaser, or a phone call, usually does it.</div>}
+      {stale && <div className="mt-1 text-[11px] text-[#8a4b09]">{t("p8wf.rrNoReply")}</div>}
       {modals}
     </div>
   );
@@ -275,6 +282,7 @@ function PullFromApplication({ staffName, hasAny, onPull }: {
   hasAny: boolean;
   onPull: (answers: Record<string, string>) => void;
 }) {
+  const t = useT();
   const [apps, setApps] = useState<PulledApp[]>([]);
   const [pickOpen, setPickOpen] = useState(false);
   useEffect(() => {
@@ -288,7 +296,7 @@ function PullFromApplication({ staffName, hasAny, onPull }: {
   const exact = withRefs.find((a) => a.name.trim().toLowerCase() === staffName.trim().toLowerCase());
 
   const pull = (a: PulledApp) => {
-    if (hasAny && !window.confirm(`Replace the referee details on ${staffName}'s record with the ones from ${a.name}'s application?`)) return;
+    if (hasAny && !window.confirm(t("p8wf.rrConfirmReplace", { staff: staffName, app: a.name }))) return;
     onPull(a.answers ?? {});
     setPickOpen(false);
   };
@@ -297,14 +305,14 @@ function PullFromApplication({ staffName, hasAny, onPull }: {
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#cdddf7] bg-[#eef4ff] px-3.5 py-2.5">
       <span className="text-[11.5px] font-semibold leading-snug text-[#1d54c4]">
         {exact
-          ? <>📥 <b>{exact.name}</b> applied {appDate(exact.submittedAt)} and gave referee details on the form.</>
-          : <>📥 Referee details can be pulled straight from an application.</>}
+          ? <Rich text={t("p8wf.rrAppliedGave", { name: exact.name, date: appDate(exact.submittedAt) })} />
+          : t("p8wf.rrPullAvailable")}
       </span>
       <div className="relative ms-auto">
         {exact ? (
-          <Button sm onClick={() => pull(exact)}>Pull their referees</Button>
+          <Button sm onClick={() => pull(exact)}>{t("p8wf.rrPullTheir")}</Button>
         ) : (
-          <Button sm onClick={() => setPickOpen((v) => !v)}>Pull from an application…</Button>
+          <Button sm onClick={() => setPickOpen((v) => !v)}>{t("p8wf.rrPullFrom")}</Button>
         )}
         {pickOpen && (
           <div className="absolute end-0 z-20 mt-1 max-h-[240px] w-[260px] overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
@@ -335,6 +343,7 @@ export function ApplicationReferences({ candidateName, jobTitle, answers, accept
   answers: Record<string, string>;
   accepted: boolean;
 }) {
+  const t = useT();
   const ctl = useReferences(candidateName, jobTitle);
   const referees: Referee[] = [1, 2].map((slot) => ({
     slot,
@@ -348,28 +357,27 @@ export function ApplicationReferences({ candidateName, jobTitle, answers, accept
   return (
     <div className="mb-3 overflow-hidden rounded-xl border border-[#f3cfa6] bg-[#fffdfa]">
       <div className="flex flex-wrap items-center gap-2 border-b border-[#f3cfa6] bg-[#fdf3e0] px-3 py-2">
-        <span className="text-[12.5px] font-extrabold text-[#8a4b09]">📋 References</span>
+        <span className="text-[12.5px] font-extrabold text-[#8a4b09]">{t("p8wf.rrRefsTitle")}</span>
         <span className="text-[11px] text-[#96632a]">
-          {named.length === 0 ? "No referees on this application" : `${done} of ${named.length} back`}
+          {named.length === 0 ? t("p8wf.rrNoReferees") : t("p8wf.rrNBack", { done, n: named.length })}
         </span>
         {!accepted && named.length > 0 && (
-          <span className="ms-auto text-[10.5px] font-bold text-[#96632a]">Ask now — before interview is the safer-recruitment norm</span>
+          <span className="ms-auto text-[10.5px] font-bold text-[#96632a]">{t("p8wf.rrAskNow")}</span>
         )}
       </div>
       <div className="space-y-2 p-2.5">
         {errBar(ctl.err)}
         {named.length === 0 ? (
           <p className="px-1 py-1 text-[11.5px] leading-snug text-[var(--ink-3)]">
-            This application form didn&rsquo;t collect referee details, or the candidate left them blank. Add them on
-            their onboarding record once they&rsquo;re accepted, and request from there.
+            {t("p8wf.rrNoCollected")}
           </p>
         ) : named.map((referee) => (
           <div key={referee.slot} className="overflow-hidden rounded-lg border border-[var(--line)] bg-white">
             <div className="px-3 py-2">
               <div className="text-[12.5px] font-extrabold text-[var(--ink)]">👤 {referee.name}</div>
               <div className="text-[11px] text-[var(--ink-3)]">
-                {referee.org || "No organisation given"}
-                {referee.email ? ` · ${referee.email}` : " · no email — phone only"}
+                {referee.org || t("p8wf.rrNoOrg")}
+                {referee.email ? ` · ${referee.email}` : t("p8wf.rrNoEmailPhone")}
               </div>
             </div>
             <RefereeStrip referee={referee} ctl={ctl} />
@@ -377,8 +385,7 @@ export function ApplicationReferences({ candidateName, jobTitle, answers, accept
         ))}
         {named.length > 0 && (
           <p className="px-1 text-[10.5px] leading-snug text-[var(--ink-3)]">
-            These follow {candidateName.split(" ")[0]} into <b>Onboarding → References &amp; history</b>{" "}
-            — same requests, nothing to re-send if they&rsquo;re hired.
+            <Rich text={t("p8wf.rrFollow", { first: candidateName.split(" ")[0] })} />
           </p>
         )}
       </div>
@@ -399,6 +406,8 @@ export function ReferencesStep({ fields, staffName, jobTitle, values, setVal, se
   setVals: (patches: Record<string, Partial<OnboardValue>>) => void;
   fieldCard: (f: OnboardField) => React.ReactNode;
 }) {
+  const t = useT();
+  const { locale } = useI18n();
   const ctl = useReferences(staffName, jobTitle);
   const { settings, save } = useSettings();
   const [editing, setEditing] = useState(false);
@@ -436,8 +445,8 @@ export function ReferencesStep({ fields, staffName, jobTitle, values, setVal, se
       {errBar(ctl.err)}
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] text-[var(--ink-3)]">Referees are emailed a short form — or you can send the link yourself, or take it by phone.</span>
-        <Button sm className="ms-auto" onClick={() => setEditing(true)}>⚙ Reference questions</Button>
+        <span className="text-[11px] text-[var(--ink-3)]">{t("p8wf.rrEmailedShort")}</span>
+        <Button sm className="ms-auto" onClick={() => setEditing(true)}>{t("p8wf.rrQuestionsBtn")}</Button>
       </div>
       {editing && (
         <ReferenceQuestionsEditor
@@ -460,7 +469,7 @@ export function ReferencesStep({ fields, staffName, jobTitle, values, setVal, se
         if (!gfields.length) return null;
         return (
           <div key={g.slot} className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-            <div className="flex items-center gap-1.5 px-3 pt-2.5 text-[12.5px] font-extrabold text-[#b45309]"><span>👤</span>{g.title}</div>
+            <div className="flex items-center gap-1.5 px-3 pt-2.5 text-[12.5px] font-extrabold text-[#b45309]"><span>👤</span>{t("p8wf.rrRefTitle", { n: g.slot })}</div>
             <div className="grid gap-2.5 p-3 sm:grid-cols-2">{gfields.map(fieldCard)}</div>
             <RefereeStrip referee={refereeFor(g)} ctl={ctl} />
           </div>
@@ -473,27 +482,27 @@ export function ReferencesStep({ fields, staffName, jobTitle, values, setVal, se
           <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[12px] font-bold text-[var(--ink-2)]">
             {values.refsCheck?.status === "verified" && <span className="text-[#0f7a43]">✓</span>}
             {refsCheck.label}<span className="text-[#c0392b]">*</span>
-            <span title="Blocks cleared-to-start" className="text-[10px]">🚦</span>
+            <span title={t("p8wf.rrBlockTip")} className="text-[10px]">🚦</span>
           </div>
           <div className="text-[11.5px] text-[var(--ink-3)]">
-            {satisfiedCount} of {wanted} reference{wanted === 1 ? "" : "s"} back.
-            {blocking.length > 0 && <b className="text-[#a32020]"> A safeguarding concern is flagged — review it before signing this off.</b>}
+            {pickPlural(t, locale, "p8wf.rrNofN", wanted, { done: satisfiedCount })}
+            {blocking.length > 0 && <b className="text-[#a32020]">{t("p8wf.rrConcernReview")}</b>}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {values.refsCheck?.status === "verified" ? (
               <>
-                <span className="rounded-full bg-[#e6f4ea] px-2.5 py-1 text-[11px] font-bold text-[#0f7a43]">Satisfactory{values.refsCheck?.at ? ` · ${fmt(values.refsCheck.at)}` : ""}</span>
-                <Button sm onClick={() => setVal("refsCheck", { status: satisfiedCount >= wanted ? "received" : "requested", at: undefined })}>Undo</Button>
+                <span className="rounded-full bg-[#e6f4ea] px-2.5 py-1 text-[11px] font-bold text-[#0f7a43]">{t("p8wf.rrSatisfactory")}{values.refsCheck?.at ? ` · ${fmt(values.refsCheck.at)}` : ""}</span>
+                <Button sm onClick={() => setVal("refsCheck", { status: satisfiedCount >= wanted ? "received" : "requested", at: undefined })}>{t("p8wf.rrUndo")}</Button>
               </>
             ) : (
               <Button
                 sm
                 variant="primary"
                 disabled={satisfiedCount < wanted || blocking.length > 0}
-                title={blocking.length ? "Record what you did about the flagged concern first" : satisfiedCount < wanted ? "Both references need to be back first" : undefined}
+                title={blocking.length ? t("p8wf.rrRecordFirst") : satisfiedCount < wanted ? t("p8wf.rrBothBack") : undefined}
                 onClick={() => setVal("refsCheck", { status: "verified", at: new Date().toISOString() })}
               >
-                Mark references satisfactory
+                {t("p8wf.rrMarkSatisfactory")}
               </Button>
             )}
           </div>
@@ -508,6 +517,10 @@ export function ReferencesStep({ fields, staffName, jobTitle, values, setVal, se
 // ——— read a returned reference ———
 
 function ViewReference({ r, staffName, onClose, onResolved }: { r: ReferenceRequest; staffName: string; onClose: () => void; onResolved: () => void }) {
+  const t = useT();
+  const { locale } = useI18n();
+  const phoneSfx = r.method === "phone" ? (r.recordedBy ? t("p8wf.rrByPhoneBy", { who: r.recordedBy }) : t("p8wf.rrByPhone")) : "";
+  const fromLine = t("p8wf.rrFromLine", { referee: r.refereeName, org: r.refereeOrg ? ` · ${r.refereeOrg}` : "", date: fmt(r.submittedAt), phone: phoneSfx });
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -518,12 +531,12 @@ function ViewReference({ r, staffName, onClose, onResolved }: { r: ReferenceRequ
     const rows = Object.entries(answers).map(([k, v]) => `<tr><td class="k">${esc(k)}</td><td class="v">${esc(v)}</td></tr>`).join("");
     const w = window.open("", "_blank");
     if (!w) return;
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Reference — ${esc(staffName)}</title><style>body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:26px}h1{font-size:19px;margin:0 0 2px}.sub{color:#6b7086;font-size:12px;margin-bottom:14px}table{width:100%;border-collapse:collapse;font-size:12px}td{padding:6px 8px;border-top:1px solid #eef1f7;vertical-align:top}td.k{color:#6b7086;width:44%}td.v{font-weight:600}</style></head><body><h1>Reference for ${esc(staffName)}</h1><div class="sub">From ${esc(r.refereeName)}${r.refereeOrg ? ` · ${esc(r.refereeOrg)}` : ""} · received ${esc(fmt(r.submittedAt))}${r.method === "phone" ? " · taken by phone" : ""}</div><table>${rows}</table><script>window.onload=function(){setTimeout(function(){window.print()},350)}</script></body></html>`);
+    w.document.write(`<!doctype html><html lang="${locale}" dir="${isRTL(locale) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${esc(t("p8wf.rrPrintTitle", { name: staffName }))}</title><style>body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:26px}h1{font-size:19px;margin:0 0 2px}.sub{color:#6b7086;font-size:12px;margin-bottom:14px}table{width:100%;border-collapse:collapse;font-size:12px}td{padding:6px 8px;border-top:1px solid #eef1f7;vertical-align:top}td.k{color:#6b7086;width:44%}td.v{font-weight:600}</style></head><body><h1>${esc(t("p8wf.rrReferenceFor", { name: staffName }))}</h1><div class="sub">${esc(fromLine)}</div><table>${rows}</table><script>window.onload=function(){setTimeout(function(){window.print()},350)}</script></body></html>`);
     w.document.close();
   };
 
   async function resolve() {
-    if (!note.trim()) { setErr("Write down what you did about it — that note is the record."); return; }
+    if (!note.trim()) { setErr(t("p8wf.rrWriteNote")); return; }
     setBusy(true); setErr(null);
     try { await post(`/api/references/${r.token}/resolve`, { note }); onResolved(); }
     catch (e) { setErr((e as Error).message); setBusy(false); }
@@ -534,41 +547,39 @@ function ViewReference({ r, staffName, onClose, onResolved }: { r: ReferenceRequ
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex-none border-b border-[var(--line)] px-5 py-3.5">
           <div className="flex items-center gap-2">
-            <h3 className="text-[15px] font-extrabold text-[var(--ink)]">Reference for {staffName}</h3>
+            <h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("p8wf.rrReferenceFor", { name: staffName })}</h3>
             <button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button>
           </div>
           <p className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">
-            From {r.refereeName}{r.refereeOrg ? ` · ${r.refereeOrg}` : ""} · received {fmt(r.submittedAt)}
-            {r.method === "phone" ? ` · taken by phone${r.recordedBy ? ` by ${r.recordedBy}` : ""}` : ""}
+            {fromLine}
           </p>
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           {bad && (
             <div className="rounded-xl border border-[#f3c2c2] bg-[#fdecec] px-4 py-3">
-              <div className="text-[13px] font-extrabold text-[#a32020]">⚠ A safeguarding question was answered “yes”.</div>
+              <div className="text-[13px] font-extrabold text-[#a32020]">{t("p8wf.rrBadTitle")}</div>
               <p className="mt-1 text-[12px] leading-snug text-[#8a2020]">
-                {staffName} stays on hold until someone records what was done about this — a conversation with the referee,
-                a note to the DSL, a decision not to proceed. The note below goes on the record with your name and today&rsquo;s date.
+                {t("p8wf.rrBadBody", { name: staffName })}
               </p>
             </div>
           )}
           <ReferenceReadback sections={r.sections?.length ? r.sections : DEFAULT_REFERENCE_SECTIONS} answers={answers} />
           {r.hasFile && (
-            <Button onClick={() => void openFile(`/api/references/${r.token}/file`)}>📎 Open the attached document{r.fileName ? ` (${r.fileName})` : ""}</Button>
+            <Button onClick={() => void openFile(`/api/references/${r.token}/file`)}>{r.fileName ? t("p8wf.rrOpenAttachedN", { file: r.fileName }) : t("p8wf.rrOpenAttached")}</Button>
           )}
           {bad && (
             <div className="rounded-xl border border-[var(--line)] p-3">
-              <div className="mb-1 text-[12px] font-extrabold text-[var(--ink-2)]">What did you do about it?</div>
-              <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="e.g. Phoned the referee 11 Sep — allegation was investigated and not substantiated. Discussed with DSL, proceeding with a 3-month review." className="w-full rounded-lg border border-[var(--line)] px-2.5 py-2 text-[13px] outline-none focus:border-[#1d3a8f]" />
+              <div className="mb-1 text-[12px] font-extrabold text-[var(--ink-2)]">{t("p8wf.rrWhatDid")}</div>
+              <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder={t("p8wf.rrNotePh")} className="w-full rounded-lg border border-[var(--line)] px-2.5 py-2 text-[13px] outline-none focus:border-[#1d3a8f]" />
               {err && <div className="mt-1.5 text-[11.5px] font-semibold text-[#a32020]">{err}</div>}
-              <Button variant="primary" className="mt-2" disabled={busy} onClick={resolve}>{busy ? "Saving…" : "Record the review"}</Button>
+              <Button variant="primary" className="mt-2" disabled={busy} onClick={resolve}>{busy ? t("p8wf.prSaving") : t("p8wf.rrRecordReview")}</Button>
             </div>
           )}
         </div>
         <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3">
-          <span className="text-[11px] text-[var(--ink-3)]">Visible to your team only.</span>
-          <Button className="ms-auto" onClick={print}>Print</Button>
-          <Button variant="primary" onClick={onClose}>Close</Button>
+          <span className="text-[11px] text-[var(--ink-3)]">{t("p8wf.rrVisibleTeam")}</span>
+          <Button className="ms-auto" onClick={print}>{t("p8wf.rrPrint")}</Button>
+          <Button variant="primary" onClick={onClose}>{t("p8wf.rrClose")}</Button>
         </div>
       </div>
     </div>
@@ -578,6 +589,7 @@ function ViewReference({ r, staffName, onClose, onResolved }: { r: ReferenceRequ
 // ——— a reference taken over the phone ———
 
 function RecordByPhone({ r, staffName, onClose, onSaved }: { r: ReferenceRequest; staffName: string; onClose: () => void; onSaved: () => void }) {
+  const t = useT();
   const [answers, setAnswers] = useState<Record<string, string>>(r.answers ?? {});
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -597,17 +609,16 @@ function RecordByPhone({ r, staffName, onClose, onSaved }: { r: ReferenceRequest
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex-none border-b border-[var(--line)] px-5 py-3.5">
           <div className="flex items-center gap-2">
-            <h3 className="text-[15px] font-extrabold text-[var(--ink)]">Reference by phone — {staffName}</h3>
+            <h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("p8wf.rrByPhoneTitle", { name: staffName })}</h3>
             <button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button>
           </div>
           <p className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">
-            The same questions the form asks, so a phoned reference records the same things. It&rsquo;s saved
-            against your name, with today&rsquo;s date, as the person who took it.
+            {t("p8wf.rrByPhoneLede")}
           </p>
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto bg-[#f7f4ee] px-5 py-4">
           <div className="rounded-xl border border-[var(--line)] bg-white p-3">
-            <label className="text-[12.5px] font-bold text-[var(--ink-2)]">Who you spoke to
+            <label className="text-[12.5px] font-bold text-[var(--ink-2)]">{t("p8wf.rrWhoSpoke")}
               <Input value={signedName} onChange={(e) => setSignedName(e.target.value)} className="mt-1 w-full bg-white" />
             </label>
           </div>
@@ -615,8 +626,8 @@ function RecordByPhone({ r, staffName, onClose, onSaved }: { r: ReferenceRequest
         </div>
         <div className="flex flex-none flex-wrap items-center gap-2 border-t border-[var(--line)] px-5 py-3">
           {err && <span className="text-[11.5px] font-semibold text-[#a32020]">{err}</span>}
-          <Button className="ms-auto" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save the reference"}</Button>
+          <Button className="ms-auto" onClick={onClose}>{t("common.cancel")}</Button>
+          <Button variant="primary" disabled={busy} onClick={save}>{busy ? t("p8wf.prSaving") : t("p8wf.rrSaveRef")}</Button>
         </div>
       </div>
     </div>
