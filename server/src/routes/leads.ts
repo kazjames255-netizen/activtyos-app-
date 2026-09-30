@@ -310,10 +310,13 @@ leads.patch("/:id", async (req, res) => {
   // Working a researched prospect (contacted / won / lost) puts it on the HQ
   // Sales board; its pipeline stage follows unless the board already has it further on.
   const ref = db.collection("leads").doc(req.params.id);
+  // A merge-set on a stale/typo'd id would mint a phantom lead (with inPipeline, a nameless card on the Sales board).
+  const before = await ref.get();
+  if (!before.exists) { res.status(404).json({ error: "Lead not found" }); return; }
   const extra: Record<string, unknown> = {};
   if (parsed.data.status && parsed.data.status !== "new") {
     extra.inPipeline = true;
-    const stage = ((await ref.get()).get("stage") as string | undefined) ?? "new";
+    const stage = (before.get("stage") as string | undefined) ?? "new";
     if (parsed.data.status !== "contacted" || stage === "new") extra.stage = parsed.data.status;
   }
   await ref.set({ ...parsed.data, ...extra, updatedAt: new Date().toISOString() }, { merge: true });
