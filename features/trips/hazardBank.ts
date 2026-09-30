@@ -458,5 +458,18 @@ export const HAZARD_BANK: BankEntry[] = [
   },
 ];
 
+/** A bank entry in the active language (catalogue keys `hb_<id>_a|d|w|c<n>`); anything missing falls back to the English text. */
+type T = (key: string, vars?: Record<string, string | number>) => string;
+export function localiseEntry(t: T, e: BankEntry): BankEntry {
+  const k = `p8ops.hb_${e.id.replace(/-/g, "_")}`;
+  const g = (suffix: string, en: string) => { const r = t(`${k}_${suffix}`); return r === `${k}_${suffix}` ? en : r; };
+  return { ...e, area: g("a", e.area), desc: g("d", e.desc), who: g("w", e.who), controls: e.controls.map((c, i) => g(`c${i + 1}`, c)) };
+}
+export function categoryLabel(t: T, cat: string): string {
+  const k = `p8ops.hbcat_${cat.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")}`;
+  const r = t(k);
+  return r === k ? cat : r;
+}
+
 export const bankByCategory = () =>
   HAZARD_CATEGORIES.map((cat) => ({ cat, entries: HAZARD_BANK.filter((e) => e.cat === cat) })).filter((g) => g.entries.length > 0);

@@ -14,7 +14,7 @@ import { useSettings } from "@/lib/settings";
 import { Badge, Button, Card } from "@/components/ui";
 import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
-import { bankByCategory, HAZARD_BANK } from "./hazardBank";
+import { bankByCategory, categoryLabel, localiseEntry, HAZARD_BANK } from "./hazardBank";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Trips & visits — the manual's full end-to-end off-site planner. Browse every
@@ -279,7 +279,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
     });
   };
   const mut = (fn: (d: Trip) => void) => setT((prev) => { const next = structuredClone(prev) as Trip; fn(next); return next; });
-  const addBankHazard = (id: string) => { const e = HAZARD_BANK.find((x) => x.id === id); if (!e) return; mut((d) => { (d.hazards ??= []).push({ h: e.desc, who: e.who, controls: e.controls.map((c) => `• ${c}`).join("\n"), initial: e.initial, residual: e.residual, done: false, amendedOn: todayIso(), amendedBy: me }); d.raSigned = false; }); };
+  const addBankHazard = (id: string) => { const e0 = HAZARD_BANK.find((x) => x.id === id); if (!e0) return; const e = localiseEntry(tr, e0); mut((d) => { (d.hazards ??= []).push({ h: e.desc, who: e.who, controls: e.controls.map((c) => `• ${c}`).join("\n"), initial: e.initial, residual: e.residual, done: false, amendedOn: todayIso(), amendedBy: me }); d.raSigned = false; }); };
   // edit a hazard text field and stamp "last amended" with today + assessor
   // set any hazard field: records the change (when Track changes is on) and stamps "last amended"
   const hazSet = (i: number, field: "h" | "who" | "controls" | "initial" | "residual" | "done", value: unknown, label: string) => { edit(`hazards.${i}.${field}`, value, label); mut((d) => { if (d.hazards?.[i]) { d.hazards[i].amendedOn = todayIso(); d.hazards[i].amendedBy = me; if (d.raSigned) d.raSigned = false; } }); };
@@ -490,7 +490,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                     const have = new Set((t.hazards ?? []).map((h) => h.h.trim().toLowerCase()));
                     const isAdded = (e: (typeof HAZARD_BANK)[number]) => have.has(e.desc.trim().toLowerCase());
                     const bq = bankQ.trim().toLowerCase();
-                    const groups = bankByCategory().map((g) => ({ ...g, entries: g.entries.filter((e) => !bq || `${e.area} ${e.desc} ${e.who} ${e.controls.join(" ")}`.toLowerCase().includes(bq)) })).filter((g) => g.entries.length > 0);
+                    const groups = bankByCategory().map((g) => ({ ...g, entries: g.entries.map((en) => localiseEntry(tr, en)).filter((e) => !bq || `${e.area} ${e.desc} ${e.who} ${e.controls.join(" ")}`.toLowerCase().includes(bq)) })).filter((g) => g.entries.length > 0);
                     return (
                       <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
                         <div className="mb-2 flex items-center gap-2">
@@ -500,7 +500,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                         <div className="flex max-h-[320px] flex-col gap-2.5 overflow-y-auto [scrollbar-width:thin]">
                           {groups.map((g) => (
                             <div key={g.cat}>
-                              <div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{g.cat}</div>
+                              <div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{categoryLabel(tr, g.cat)}</div>
                               <div className="flex flex-col gap-1.5">
                                 {g.entries.map((e) => {
                                   const added = isAdded(e);
