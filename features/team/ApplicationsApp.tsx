@@ -161,7 +161,7 @@ function carryOver(app: Application, form: AppForm) {
     }
     // To the server (onboardStore) — the record used to be written only to
     // this browser, so the new starter's onboarding started blank anywhere else.
-    void saveOnboardRecord(rec).catch((e) => alert(`The application was accepted, but copying it into onboarding failed: ${e instanceof Error ? e.message : "try again"}.`));
+    void saveOnboardRecord(rec).catch((e) => alert(tNow("p8wf.apAcceptedCopyFail", { err: e instanceof Error ? e.message : tNow("p8wf.tryAgainLc") })));
   } catch { /* ignore */ }
 }
 

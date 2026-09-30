@@ -10,13 +10,17 @@
 // remains. Demo/local — per-user identity is Amir's.
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useI18n } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
 import { availabilityDone, complianceProgress, outstandingDocs, outstandingCourses, syncOutstandingDocs } from "./staffTasks";
 
 const HIDE_KEY = "aos.staff.reminderHidden.v1"; // sessionStorage
 
-interface Part { label: string; view: string; gating: boolean }
+// `key` is a p8wf catalogue key (translated at render so a language switch updates the bar); `count` picks a plural form.
+interface Part { key: string; vars?: Record<string, number>; count?: number; view: string; gating: boolean }
 
 export function StaffReminderBanner() {
+  const { t, locale } = useI18n();
   const router = useRouter();
   const pathname = usePathname() || "/staff";
   const portal = pathname.split("/")[1] || "staff";
@@ -28,14 +32,14 @@ export function StaffReminderBanner() {
     const build = () => {
       const next: Part[] = [];
       // gating setup first, in the same order as the first-login launcher
-      if (!availabilityDone()) next.push({ label: "Set your availability", view: "availability", gating: true });
+      if (!availabilityDone()) next.push({ key: "p8wf.rbAvail", view: "availability", gating: true });
       const comp = complianceProgress();
-      if (comp.total > 0 && comp.done < comp.total) next.push({ label: `Finish your compliance details (${comp.done}/${comp.total})`, view: "onboarding", gating: true });
+      if (comp.total > 0 && comp.done < comp.total) next.push({ key: "p8wf.rbCompliance", vars: { done: comp.done, total: comp.total }, view: "onboarding", gating: true });
       // no-rush items
       const courses = outstandingCourses();
-      if (courses > 0) next.push({ label: `${courses} course${courses > 1 ? "s" : ""} to complete`, view: "certificates", gating: false });
+      if (courses > 0) next.push({ key: "p8wf.rbCourses", count: courses, view: "certificates", gating: false });
       const docs = outstandingDocs();
-      if (docs > 0) next.push({ label: `${docs} document${docs > 1 ? "s" : ""} to read`, view: "documents", gating: false });
+      if (docs > 0) next.push({ key: "p8wf.rbDocs", count: docs, view: "documents", gating: false });
       if (live) setParts(next);
     };
     build();
@@ -54,16 +58,16 @@ export function StaffReminderBanner() {
     <div className="flex items-center gap-3 border-b border-[#f2d9a8] bg-gradient-to-r from-[#fff5df] to-[#fdecc8] px-4 py-2 sm:px-5" style={{ color: "#7a4e00" }}>
       <span className="text-[15px]" aria-hidden>📌</span>
       <div className="min-w-0 flex-1 text-[12.5px] font-semibold">
-        <span className="font-extrabold">Still to do:</span>{" "}
+        <span className="font-extrabold">{t("p8wf.rbStill")}</span>{" "}
         {parts.map((p, i) => (
           <span key={p.view}>
-            <button type="button" onClick={() => router.push(`/${portal}/${p.view}`)} className="underline decoration-[#c98a1a]/50 underline-offset-2 hover:decoration-[#7a4e00]">{p.label}</button>
+            <button type="button" onClick={() => router.push(`/${portal}/${p.view}`)} className="underline decoration-[#c98a1a]/50 underline-offset-2 hover:decoration-[#7a4e00]">{p.count != null ? pickPlural(t, locale, p.key, p.count) : t(p.key, p.vars)}</button>
             {i < parts.length - 1 ? <span className="text-[#b98a3c]"> · </span> : null}
           </span>
         ))}
-        {!anyGating && <span className="ms-1 hidden text-[#a9803a] sm:inline">— no rush, work through them over your first few shifts.</span>}
+        {!anyGating && <span className="ms-1 hidden text-[#a9803a] sm:inline">{t("p8wf.rbNoRush")}</span>}
       </div>
-      <button type="button" onClick={dismiss} aria-label="Hide reminder" className="flex-none rounded-full px-2 py-0.5 text-[15px] leading-none text-[#a9803a] hover:bg-white/50 hover:text-[#7a4e00]">×</button>
+      <button type="button" onClick={dismiss} aria-label={t("p8wf.rbHide")} className="flex-none rounded-full px-2 py-0.5 text-[15px] leading-none text-[#a9803a] hover:bg-white/50 hover:text-[#7a4e00]">×</button>
     </div>
   );
 }

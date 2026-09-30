@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { get as apiGet, post as apiPost, api } from "@/lib/api";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
-import { useI18n } from "@/lib/i18n/provider";
+import { tNow, useI18n } from "@/lib/i18n/provider";
 
 const CATS = ["Travel & mileage", "Equipment", "Activity materials", "Food & catering", "Training", "Other"];
 type Status = "submitted" | "approved" | "paid" | "declined";
@@ -40,7 +40,7 @@ export function StaffExpensesApp() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [form, setForm] = useState({ date: todayISO(), category: CATS[0], amount: "", note: "", receipt: "", receiptName: "" });
-  const reload = () => apiGet<Claim[]>("/api/expense-claims").then((c) => setClaims(Array.isArray(c) ? c : [])).catch(() => setErr("Couldn't load your claims"));
+  const reload = () => apiGet<Claim[]>("/api/expense-claims").then((c) => setClaims(Array.isArray(c) ? c : [])).catch(() => setErr(tNow("p8wf.seErrLoad")));
   useEffect(() => { void reload(); }, []);
 
   // The server returns only this person's claims.

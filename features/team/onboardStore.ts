@@ -13,6 +13,7 @@
 
 import { api, fetchBlob, get as apiGet, isDemoMode, post as apiPost, put as apiPut } from "@/lib/api";
 import { typeOf } from "@/features/listings/planUpload";
+import { tNow } from "@/lib/i18n/provider";
 import { DEMO_STAFF } from "@/features/learning/credentials";
 
 const DEMO_NAMES = new Set(DEMO_STAFF.map((s) => s.name));
@@ -48,7 +49,7 @@ const b64 = (blob: Blob) => new Promise<string>((res, rej) => { const r = new Fi
 
 async function uploadDataUrl(staff: string, dataUrl: string, name: string): Promise<string> {
   const blob = Object.assign(await (await fetch(dataUrl)).blob(), { name });
-  if (blob.size > 15_000_000) throw new Error(`${name} is ${Math.round(blob.size / 1024 / 1024)}MB — the limit is 15MB.`);
+  if (blob.size > 15_000_000) throw new Error(tNow("p8wf.obFileTooBig", { name, mb: Math.round(blob.size / 1024 / 1024) }));
   const total = Math.max(1, Math.ceil(blob.size / CHUNK));
   const { id } = await apiPost<{ id: string }>("/api/onboarding/files", { staff, name: name || "document", contentType: typeOf(blob), bytes: blob.size, total });
   for (let i = 0; i < total; i += 1) await api(`/api/onboarding/files/${id}/chunks/${i}`, { method: "PUT", body: JSON.stringify({ b64: await b64(blob.slice(i * CHUNK, (i + 1) * CHUNK)) }) });
