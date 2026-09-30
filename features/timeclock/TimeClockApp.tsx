@@ -4,7 +4,7 @@
 // a mini "who's in now". Optional location capture on clock-in. Demo "me" =
 // Marcus Bell (matches the other staff self-service areas).
 import { useEffect, useMemo, useState } from "react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Input, Select } from "@/components/ui";
 import { Rich } from "@/components/i18n/Rich";
 import { getMe, peekMe } from "@/components/auth/PortalGuard";
 import { isDemoMode } from "@/lib/api";
@@ -12,7 +12,8 @@ import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useT } from "@/lib/i18n/provider";
 import {
   type ClockRecord, loadClock, loadClockSettings, slug, clockIn, clockOut, startBreak, endBreak,
-  workedMs, fmtDur, hhmm, sinceLabel, shiftToday, useClockRefresh
+  workedMs, fmtDur, hhmm, sinceLabel, shiftToday, useClockRefresh,
+  sendCorrection, localDayOffset, useClockSettingsRefresh, syncClockSettings
 } from "./data";
 
 const DEMO_ME = "Marcus Bell";
@@ -57,6 +58,18 @@ export function TimeClockApp() {
   const onBreak = others.filter((r) => r.status === "break").length;
   // leads see everyone working at their own listing (role name configurable)
   const leadLabel = loadClockSettings().leadLabel;
+  const [backfillDays, setBackfillDays] = useState(() => loadClockSettings().staffBackfillDays);
+  useClockSettingsRefresh((s) => setBackfillDays(s.staffBackfillDays));
+  useEffect(() => { void syncClockSettings(); }, []);
+  const [fixDay, setFixDay] = useState(() => localDayOffset(1));
+  const [fixKind, setFixKind] = useState<"in" | "out">("out");
+  const [fixTime, setFixTime] = useState("");
+  const [fixMsg, setFixMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const submitFix = async () => {
+    setFixMsg(null);
+    try { await sendCorrection(fixKind, fixDay, fixTime, ME); setFixMsg({ ok: true, text: tr("p7tc.fixDone") }); setFixTime(""); }
+    catch (e) { setFixMsg({ ok: false, text: e instanceof Error ? e.message : "Failed" }); }
+  };
   const isLead = (me.role || "").toLowerCase() === leadLabel.toLowerCase();
   const teamHere = others.filter((r) => r.op && r.op === me.op && r.status !== "out");
 
@@ -123,6 +136,20 @@ export function TimeClockApp() {
               <div key={r.id} className="flex items-center gap-2 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-semibold text-[var(--ink)]">{r.name}</span>{r.op && <span className="text-[var(--ink-3)]">· {r.op}</span>}<span className="ms-auto text-[var(--ink-3)]">{r.status === "break" ? "on break" : sinceLabel(r.clockInAt)}</span></div>
             ))}</div>
           </Card>
+
+          {/* Earlier-day correction — only when the manager allowed it in Setup */}
+          {backfillDays > 0 && !isDemoMode() && (
+            <Card className="p-4">
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p7tc.fixTitle")}</div>
+              <p className="mb-2 text-[11px] text-[var(--ink-3)]">{tr("p7tc.fixLede")}</p>
+              <div className="grid grid-cols-3 gap-2">
+                <label className="block text-[11px] font-bold text-[var(--ink-3)]">{tr("p7tc.fixDay")}<Select value={fixDay} onChange={(e) => setFixDay(e.target.value)} className="w-full">{Array.from({ length: backfillDays }, (_, i) => localDayOffset(i + 1)).map((d) => <option key={d} value={d}>{d}</option>)}</Select></label>
+                <label className="block text-[11px] font-bold text-[var(--ink-3)]">{tr("p7tc.fixKind")}<Select value={fixKind} onChange={(e) => setFixKind(e.target.value as "in" | "out")} className="w-full"><option value="in">{tr("p7tc.evIn")}</option><option value="out">{tr("p7tc.evOut")}</option></Select></label>
+                <label className="block text-[11px] font-bold text-[var(--ink-3)]">{tr("p7tc.fixTime")}<Input type="time" value={fixTime} onChange={(e) => setFixTime(e.target.value)} className="w-full" /></label>
+              </div>
+              <div className="mt-2 flex items-center gap-2"><Button variant="primary" onClick={submitFix} disabled={!fixTime}>{tr("p7tc.fixSend")}</Button>{fixMsg && <span className={`text-[12px] font-semibold ${fixMsg.ok ? "text-[#0f7a43]" : "text-[#c0392b]"}`}>{fixMsg.text}</span>}</div>
+            </Card>
+          )}
 
           {/* Lead view — everyone working at this person's own listing */}
           {isLead && (

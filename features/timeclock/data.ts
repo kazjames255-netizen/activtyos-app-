@@ -27,6 +27,7 @@ export interface ClockRecord {
   payBasis?: "actual" | "scheduled" | "scheduled-less-late" | "custom"; // how to pay this shift (manager override) — mirrors the global pay policy + "set hours"
   payHoursOverride?: number; // hours when payBasis === "custom"
   editNote?: string;    // manager's reason for editing times/pay
+  staffEdited?: boolean; needsReview?: boolean; staffEditedBy?: string; staffEditedAt?: string; // staff supplied the time for an earlier day — manager reviews
   events: ClockEvent[];
   day: string;          // ISO date these events belong to
 }
@@ -36,9 +37,9 @@ export interface ClockRecord {
 //  scheduled-less-late — pay scheduled hours MINUS any lateness (early arrival adds nothing)
 export type PayPolicy = "actual" | "scheduled" | "scheduled-less-late";
 // A "lead" (label configurable) can see everyone working at their own listing.
-export interface ClockSettings { payPolicy: PayPolicy; autoPayOvertime: boolean; graceMin: number; rounding: 0 | 5 | 15; leadLabel: string }
+export interface ClockSettings { payPolicy: PayPolicy; autoPayOvertime: boolean; graceMin: number; rounding: 0 | 5 | 15; leadLabel: string; staffBackfillDays: number }
 
-export const DEFAULT_CLOCK_SETTINGS: ClockSettings = { payPolicy: "actual", autoPayOvertime: false, graceMin: 5, rounding: 0, leadLabel: "Lead" };
+export const DEFAULT_CLOCK_SETTINGS: ClockSettings = { payPolicy: "actual", autoPayOvertime: false, graceMin: 5, rounding: 0, leadLabel: "Lead", staffBackfillDays: 0 };
 export const CLOCK_KEY = "aos.timeclock.v1";
 export const CLOCK_SETTINGS_KEY = "aos.timeclock.settings.v1";
 const ROTA_KEY = "aos.rota.v5";
@@ -243,6 +244,15 @@ function sendEvent(kind: ClockEvent["kind"], name: string, extra: { role?: strin
     // whole store exists to prevent.
     .catch((e: unknown) => { alert(`Your ${kind === "in" ? "clock-in" : kind === "out" ? "clock-out" : "break"} wasn't saved to the team board: ${e instanceof Error ? e.message : "no connection"}. Try again.`); });
 }
+/** Staff correct their own clocking on an EARLIER day (only when the manager turned it on): the real time is supplied, not the server's clock. Rejects with the API's message. */
+export async function sendCorrection(kind: "in" | "out", day: string, time: string, name: string): Promise<void> {
+  await apiPost("/api/timeclock/event", { kind, day, time, name });
+  await syncClock();
+}
+/** Records staff corrected themselves that a manager hasn't reviewed yet (managers only). */
+export const loadReviewQueue = (): Promise<ClockRecord[]> => apiGet<ClockRecord[]>("/api/timeclock/review");
+export const markReviewed = (id: string, day: string): Promise<unknown> => apiPatch(`/api/timeclock/${encodeURIComponent(id)}?day=${day}`, { needsReview: false });
+export const localDayOffset = (n: number): string => { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 function sendPatch(id: string, patch: Record<string, unknown>) {
   if (isDemoMode()) return;
   void apiPatch(`/api/timeclock/${encodeURIComponent(id)}?day=${todayISO()}`, patch).then(() => syncClock()).catch(() => {});

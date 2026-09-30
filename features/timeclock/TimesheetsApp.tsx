@@ -10,7 +10,7 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useTenantSettings } from "@/lib/settings";
 import {
-  type ClockRecord, type ClockSettings, loadClock, loadClockSettings, saveClockSettings, syncClockSettings, useClockSettingsRefresh,
+  type ClockRecord, type ClockSettings, loadReviewQueue, markReviewed, loadClock, loadClockSettings, saveClockSettings, syncClockSettings, useClockSettingsRefresh,
   offToday, workedMs, paidMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, shiftToday, lateMinutesToday, rateFor, setApproved, editRecord, payHours, clockOut, useClockRefresh
 } from "./data";
 
@@ -35,6 +35,9 @@ export function TimesheetsApp() {
   const [nudges, setNudges] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => { setAll(loadClock()); setSettings(loadClockSettings()); void syncClockSettings(); }, []);
+  const [review, setReview] = useState<ClockRecord[]>([]);
+  const refreshReview = () => { loadReviewQueue().then(setReview).catch(() => setReview([])); };
+  useEffect(() => { refreshReview(); }, []);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2400); };
   const saveSettings = (s: ClockSettings) => { setSettings(s); saveClockSettings(s); };
 
@@ -219,6 +222,21 @@ export function TimesheetsApp() {
         );
       })()}
 
+      {tab === "sheets" && review.length > 0 && (
+        <Card className="mt-4 border-[#f59e0b] p-4">
+          <div className="mb-1 text-[13px] font-extrabold text-[#8a5a09]">Needs review · staff-entered times ({review.length})</div>
+          <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">These earlier-day clockings were entered by the staff member (not stamped by the clock). Check them, fix any that are wrong, then mark reviewed.</p>
+          <div className="divide-y divide-[var(--line)]">{review.map((r) => (
+            <div key={r.id + r.day} className="flex flex-wrap items-center gap-2 py-1.5 text-[12.5px]">
+              <span className="font-bold text-[var(--ink)]">{r.name}</span><span className="text-[var(--ink-3)]">{r.day}</span>
+              <span className="tabular-nums text-[var(--ink-2)]">{r.clockInAt ? hhmm(r.clockInAt) : "—"} → {r.clockOutAt ? hhmm(r.clockOutAt) : "—"}</span>
+              <span className="text-[11px] text-[var(--ink-3)]">entered {r.staffEditedAt ? new Date(r.staffEditedAt).toLocaleString(dl()) : ""}{r.staffEditedBy ? ` by ${r.staffEditedBy}` : ""}</span>
+              <button type="button" onClick={() => { markReviewed(r.id, r.day).then(refreshReview).catch((e: unknown) => flash(e instanceof Error ? e.message : "Couldn't save")); }} className="ms-auto rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">Mark reviewed</button>
+            </div>
+          ))}</div>
+        </Card>
+      )}
+
       {tab === "sheets" && (
         <Card className="mt-4 p-4">
           <div className="mb-2 flex flex-wrap items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Timesheets · today</span><Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="ms-auto"><option value="all">All listings</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
@@ -262,6 +280,7 @@ export function TimesheetsApp() {
               <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Grace period (min)</span><Select value={String(settings.graceMin)} onChange={(e) => saveSettings({ ...settings, graceMin: Number(e.target.value) })} className="w-full">{[0, 3, 5, 10, 15].map((n) => <option key={n} value={n}>{n} min</option>)}</Select></label>
               <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Round hours to</span><Select value={String(settings.rounding)} onChange={(e) => saveSettings({ ...settings, rounding: Number(e.target.value) as ClockSettings["rounding"] })} className="w-full"><option value="0">Exact</option><option value="5">Nearest 5 min</option><option value="15">Nearest 15 min</option></Select></label>
             </div>
+            <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg bg-[var(--panel)] px-3 py-2.5"><input type="checkbox" checked={settings.staffBackfillDays > 0} onChange={(e) => saveSettings({ ...settings, staffBackfillDays: e.target.checked ? 7 : 0 })} className="mt-0.5 h-4 w-4 accent-[#1d3a8f]" /><span className="text-[12.5px] text-[var(--ink)]"><b>Let staff correct their own earlier clockings</b><br /><span className="text-[11.5px] text-[var(--ink-3)]">Off (default): only a manager can fix a forgotten clock-in/out on an earlier day. On: staff enter the real time for a recent day themselves; it is flagged here for you to review.</span>{settings.staffBackfillDays > 0 && <span className="mt-1.5 flex items-center gap-2 text-[11.5px] font-bold text-[var(--ink-3)]">Look back up to <Select value={String(settings.staffBackfillDays)} onChange={(e) => saveSettings({ ...settings, staffBackfillDays: Number(e.target.value) })} className="w-24">{Array.from({ length: 14 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n} day{n === 1 ? "" : "s"}</option>)}</Select></span>}</span></label>
             <label className="mt-3 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">&ldquo;Lead&rdquo; role name</span><Input value={settings.leadLabel} onChange={(e) => saveSettings({ ...settings, leadLabel: e.target.value || "Lead" })} className="w-full" /><span className="mt-1 block text-[10.5px] text-[var(--ink-3)]">Staff with this role see everyone working at their own listing (in their Clock in/out screen). Rename it to whatever you call your site leads (e.g. &ldquo;Site manager&rdquo;).</span></label>
             <div className="mt-3 rounded-lg bg-[#eef4fd] px-3 py-2 text-[11.5px] font-semibold text-[#1d3a8f]">Approved hours feed the Payroll pay run automatically (Rostered-hours mode reads the clocked in/out).</div>
           </Card>

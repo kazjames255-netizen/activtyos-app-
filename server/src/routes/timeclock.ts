@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isRealDay, ukTodayPlus } from "../lib/ukDate";
+import { isRealDay, isRealTime, ukToday, ukTodayPlus } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { AuthContext, Role } from "../middleware/role";
@@ -25,7 +25,7 @@ const slug = (name: string) => name.trim().toLowerCase().replace(/\s+/g, "-");
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const docId = (key: string, day: string, id: string) => `${key}_${day}_${id}`.replace(/\//g, "_");
 
-interface ClockEvent { t: string; kind: "in" | "out" | "break-start" | "break-end"; loc?: string }
+interface ClockEvent { t: string; kind: "in" | "out" | "break-start" | "break-end"; loc?: string; manual?: boolean }
 interface ClockRecord {
   id: string; name: string; role?: string; op?: string;
   status: "out" | "in" | "break";
@@ -33,6 +33,8 @@ interface ClockRecord {
   lateMin?: number; loc?: string; approved?: boolean;
   payBasis?: string; payHoursOverride?: number; editNote?: string;
   events: ClockEvent[]; day: string;
+  // Set when staff supplied the time themselves for an earlier day (tenant setting staffBackfillDays) — the manager must review it.
+  staffEdited?: boolean; needsReview?: boolean; staffEditedBy?: string; staffEditedAt?: string;
 }
 
 // Tenant-wide pay-policy settings (grace minutes, rounding, pay basis, lead
@@ -47,14 +49,17 @@ interface ClockPaySettings {
   graceMin: number;
   rounding: 0 | 5 | 15;
   leadLabel: string;
+  /** 0 = off (default): only a manager fixes a forgotten clock-out on an earlier day. 1-14 = staff may correct their OWN clockings up to this many days back (by giving the real time). */
+  staffBackfillDays: number;
 }
-const DEFAULT_CLOCK_SETTINGS: ClockPaySettings = { payPolicy: "actual", autoPayOvertime: false, graceMin: 5, rounding: 0, leadLabel: "Lead" };
+const DEFAULT_CLOCK_SETTINGS: ClockPaySettings = { payPolicy: "actual", autoPayOvertime: false, graceMin: 5, rounding: 0, leadLabel: "Lead", staffBackfillDays: 0 };
 const settingsSchema = z.object({
   payPolicy: z.enum(["actual", "scheduled", "scheduled-less-late"]),
   autoPayOvertime: z.boolean(),
   graceMin: z.number().int().min(0).max(120),
   rounding: z.union([z.literal(0), z.literal(5), z.literal(15)]),
   leadLabel: z.string().trim().min(1).max(60),
+  staffBackfillDays: z.number().int().min(0).max(14).optional(),
 });
 
 // GET /api/timeclock/settings — the tenant's pay-policy settings. Managers
@@ -81,6 +86,19 @@ timeclock.put("/settings", async (req, res) => {
   await clockCfg(key).set({ ...parsed.data, tenantId: auth.tenantId, franchiseId: auth.franchiseId ?? null, updatedAt: new Date().toISOString(), updatedBy: req.user?.email ?? null }, { merge: true });
   res.json({ ok: true, settings: parsed.data });
 });
+
+/** UK wall-clock `day` + `HH:MM` -> the real instant (ISO), DST-safe. */
+function ukWallToISO(day: string, hm: string): string {
+  const want = Date.parse(`${day}T${hm}:00Z`);
+  const offsetAt = (t: number) => {
+    const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(new Date(t));
+    const g = (ty: string) => Number(parts.find((x) => x.type === ty)!.value);
+    return Date.UTC(g("year"), g("month") - 1, g("day"), g("hour"), g("minute"), g("second")) - Math.floor(t / 1000) * 1000;
+  };
+  let t = want - offsetAt(want);
+  t = want - offsetAt(t);
+  return new Date(t).toISOString();
+}
 
 /** The signed-in member of staff's own name, from their account. */
 async function ownName(uid: string | undefined): Promise<string> {
@@ -120,7 +138,10 @@ const eventSchema = z.object({
   role: z.string().trim().max(80).optional(),
   loc: z.string().trim().max(160).optional(),
   lateMin: z.number().int().min(0).max(24 * 60).optional(),
+  /** HH:MM (UK) — the real clocking time, required when staff correct an earlier day. */
+  time: z.string().refine(isRealTime, "Not a real time (HH:MM)").optional(),
 });
+class BadCorrection extends Error {}
 class AlreadyIn extends Error { constructor(public since: string) { super("already_in"); } }
 
 timeclock.post("/event", async (req, res) => {
@@ -130,11 +151,22 @@ timeclock.post("/event", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const p = parsed.data;
   // The time is the server's, but the DAY the record files under was the client's word: a member of staff could hang today's real clocking on
-  // any date they weren't rostered (a pay row for a day they didn't work). Staff clock for today (±1 day for time zones / a shift over midnight);
-  // a manager or lead back-filling from the board is unrestricted.
-  if (auth.role === "staff" && !auth.lead && (p.day < ukTodayPlus(-1) || p.day > ukTodayPlus(1))) {
-    res.status(400).json({ error: "You can only clock in and out for today." });
-    return;
+  // any date they weren't rostered (a pay row for a day they didn't work). Staff clock for today only. Earlier days are manager-only unless the
+  // tenant turned on staffBackfillDays — and then the staff member must SUPPLY the real time (server "now" on Monday's record made on Wednesday
+  // would be a ~48h shift), and the record is flagged for the manager. A manager or lead back-filling from the board is unrestricted.
+  const isPlainStaff = auth.role === "staff" && !auth.lead;
+  const today = ukToday();
+  let correctionAt: string | null = null;
+  if (isPlainStaff && p.day !== today) {
+    if (p.day > today) { res.status(400).json({ error: "You can't clock in or out for a future day." }); return; }
+    const cfg = (await clockCfg(keyOf(auth.tenantId, auth.franchiseId)).get()).data() ?? {};
+    const lookBack = Number(cfg.staffBackfillDays ?? 0);
+    if (!(lookBack > 0)) { res.status(400).json({ error: "You can only clock in and out for today. Ask your manager to fix an earlier day." }); return; }
+    if (p.day < ukTodayPlus(-lookBack)) { res.status(400).json({ error: `You can only correct the last ${lookBack} day${lookBack === 1 ? "" : "s"}. Ask your manager.` }); return; }
+    if (p.kind !== "in" && p.kind !== "out") { res.status(400).json({ error: "Only a clock-in or clock-out can be corrected for an earlier day." }); return; }
+    if (!p.time) { res.status(400).json({ error: "Enter the actual time (HH:MM) you clocked." }); return; }
+    correctionAt = ukWallToISO(p.day, p.time);
+    if (Date.parse(correctionAt) > Date.now()) { res.status(400).json({ error: "That time is in the future." }); return; }
   }
   const self = await ownName(req.user?.uid);
   const onBehalf = canManage(auth.role) || auth.lead === true;
@@ -144,13 +176,19 @@ timeclock.post("/event", async (req, res) => {
   const key = keyOf(auth.tenantId, auth.franchiseId);
   const id = slug(name);
   const ref = db.collection("clockRecords").doc(docId(key, p.day, id));
-  const now = new Date().toISOString();
+  const realNow = new Date().toISOString();
+  const now = correctionAt ?? realNow;
+  const manual = correctionAt !== null;
   let rec: ClockRecord;
   try { rec = await db.runTransaction(async (tx) => {
     const cur = (await tx.get(ref)).data();
     const r: ClockRecord = cur ? strip(cur) : { id, name, status: "out", breakMs: 0, events: [], day: p.day };
     r.events = [...(r.events ?? [])];
     if (p.role && !r.role) r.role = p.role;
+    if (manual && p.kind === "out") {
+      if (!r.clockInAt) throw new BadCorrection("There's no clock-in on that day to clock out of.");
+      if (!(Date.parse(now) > Date.parse(r.clockInAt))) throw new BadCorrection("Clock-out must be after your clock-in.");
+    }
     switch (p.kind) {
       case "in":
         // A second clock-in while already on shift (or on a break) would wipe the
@@ -159,11 +197,11 @@ timeclock.post("/event", async (req, res) => {
         r.status = "in"; r.clockInAt = now; r.clockOutAt = undefined; r.breakMs = 0; r.breakStart = undefined;
         if (p.lateMin !== undefined) r.lateMin = p.lateMin;
         if (p.loc) r.loc = p.loc;
-        r.events.push({ t: now, kind: "in", ...(p.loc ? { loc: p.loc } : {}) });
+        r.events.push({ t: now, kind: "in", ...(p.loc ? { loc: p.loc } : {}), ...(manual ? { manual: true } : {}) });
         break;
       case "out":
         if (r.status === "break" && r.breakStart) { r.breakMs += Date.parse(now) - Date.parse(r.breakStart); r.breakStart = undefined; }
-        r.status = "out"; r.clockOutAt = now; r.events.push({ t: now, kind: "out" });
+        r.status = "out"; r.clockOutAt = now; r.events.push({ t: now, kind: "out", ...(manual ? { manual: true } : {}) });
         break;
       case "break-start":
         if (r.status === "in") { r.status = "break"; r.breakStart = now; r.events.push({ t: now, kind: "break-start" }); }
@@ -172,14 +210,25 @@ timeclock.post("/event", async (req, res) => {
         if (r.status === "break" && r.breakStart) { r.breakMs += Date.parse(now) - Date.parse(r.breakStart); r.breakStart = undefined; r.status = "in"; r.events.push({ t: now, kind: "break-end" }); }
         break;
     }
+    if (manual) { r.staffEdited = true; r.needsReview = true; r.staffEditedBy = req.user?.email ?? self; r.staffEditedAt = realNow; }
     const clean = JSON.parse(JSON.stringify(r)) as ClockRecord; // drop undefined
-    tx.set(ref, { ...clean, key, tenantId: auth.tenantId, franchiseId: auth.franchiseId ?? null, updatedAt: now, ...(name === self ? { uid: req.user?.uid ?? null } : {}) });
+    tx.set(ref, { ...clean, key, tenantId: auth.tenantId, franchiseId: auth.franchiseId ?? null, updatedAt: realNow, ...(name === self ? { uid: req.user?.uid ?? null } : {}) });
     return clean;
   }); } catch (e) {
     if (e instanceof AlreadyIn) { res.status(409).json({ error: "Already clocked in — clock out first.", code: "already_in", since: e.since }); return; }
+    if (e instanceof BadCorrection) { res.status(400).json({ error: e.message }); return; }
     throw e;
   }
+  if (manual) void db.collection("clockAuditLog").add({ tenantId: auth.tenantId, franchiseId: auth.franchiseId ?? null, key, action: "staff-correction", actor: req.user?.email ?? req.user?.uid ?? null, name, day: p.day, kind: p.kind, suppliedTime: p.time, recordedAt: now, at: realNow }).catch((e2) => console.error("[clockAudit] write failed:", (e2 as Error).message));
   res.json(rec);
+});
+
+// GET /api/timeclock/review — records staff corrected themselves (earlier days) that a manager hasn't reviewed yet, last 15 days.
+timeclock.get("/review", async (req, res) => {
+  const auth = req.auth!;
+  if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Only a manager can review staff corrections" }); return; }
+  const snap = await db.collection("clockRecords").where("key", "==", keyOf(auth.tenantId, auth.franchiseId)).where("day", ">=", ukTodayPlus(-15)).get();
+  res.json(snap.docs.map((d) => strip(d.data())).filter((r) => r.needsReview).sort((a, b) => a.day.localeCompare(b.day)));
 });
 
 // PATCH /api/timeclock/:id?day= — a manager edits a timesheet row (times,
@@ -194,6 +243,7 @@ const patchSchema = z.object({
   clockOutAt: z.string().max(40).refine((v) => Number.isFinite(Date.parse(v)), "Not a real date/time").nullable().optional(),
   breakMs: z.number().min(0).max(24 * 3600_000).optional(),
   lateMin: z.number().int().min(0).max(24 * 60).optional(),
+  needsReview: z.literal(false).optional(), // a manager marks a staff-made correction as reviewed
 });
 timeclock.patch("/:id", async (req, res) => {
   const auth: AuthContext = req.auth!;
