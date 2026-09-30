@@ -1,4 +1,5 @@
 import { sign, verify } from "./signing";
+import { apiBase, webBase } from "./emailSend";
 import { normLocale, renderDigest, renderNudge, type Celebrate, type DigestData, type MailKind, type Rendered } from "./hubDigestEmail";
 import type { LocaleCode } from "../../../lib/i18n/config";
 
@@ -25,8 +26,9 @@ export const DIGEST_DOW = 0;            // Sunday
 export const DIGEST_FROM_MIN = 17 * 60; // 17:00 UK
 const H = 3_600_000, D = 24 * H;
 
-export const apiBase = () => process.env.API_URL || "http://localhost:4000";
-export const webBase = () => process.env.WEB_URL || "http://localhost:3000";
+// Shared base-URL helpers (dev fallback only outside production; in production
+// an unset WEB_URL/API_URL logs once and yields "" so links degrade to relative).
+export { apiBase, webBase } from "./emailSend";
 
 // ── opt-out tokens ─────────────────────────────────────────────────────────
 // base64url(JSON [tenantId, email, scope]) + "." + HMAC — tamper-evident (tenant ids are public), no expiry (an

@@ -1,5 +1,6 @@
 import { Router, type Request } from "express";
 import { isBlankOrWebUrl } from "../lib/safeUrl";
+import { webBase } from "../lib/emailSend";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
@@ -18,8 +19,9 @@ import { splitClears, applyClears } from "../lib/patchClear";
 
 // PUBLIC_WEB_URL/APP_URL are this file's historic names; WEB_URL is what the
 // rest of the server (lib/stripe.ts) and DEPLOY.md use. Accept all three or a
-// deploy following the guide ships pay links pointing at localhost.
-const WEB_URL = process.env.PUBLIC_WEB_URL || process.env.APP_URL || process.env.WEB_URL || "http://localhost:3000";
+// deploy following the guide ships pay links pointing at the wrong host. Falls back to the shared webBase()
+// (dev-only fallback; logs once in production and returns "" => no pay link).
+const webUrl = () => (process.env.PUBLIC_WEB_URL || process.env.APP_URL || "").trim().replace(/\/+$/, "") || webBase();
 
 // Invoices (Money — INCOMING / accounts receivable) — a bill the provider
 // SENDS a customer (parent) to collect payment, optionally tied to a booking.
@@ -164,7 +166,7 @@ invoices.post("/:id/email", async (req, res) => {
   const billing = (tenant.data()?.settings as Record<string, unknown> | undefined)?.billing as Record<string, unknown> | undefined;
   // `link:false` sends the bank-details-only version (no online pay-link).
   const withLink = req.body?.link !== false;
-  const payUrl = withLink && doc.payToken ? `${WEB_URL}/pay/${doc.payToken}` : undefined;
+  const payUrl = withLink && doc.payToken && webUrl() ? `${webUrl()}/pay/${doc.payToken}` : undefined;
   const html = renderMoneyDoc("invoice", doc, billing, payUrl);
   // The trading name on the invoice is the name it should arrive from, and a
   // billing query has to be able to reply to the provider, not the platform.

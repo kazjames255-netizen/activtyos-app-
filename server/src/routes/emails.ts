@@ -792,7 +792,7 @@ emailsInbound.post("/", async (req, res) => {
 //   • It's signed (Svix), not shared-secret. Verification needs the RAW body,
 //     so this mounts BEFORE express.json — same as the Stripe webhook.
 //
-// Local setup: cloudflared tunnel --url http://localhost:4000, point a Resend
+// Local setup: cloudflared tunnel --url http://127.0.0.1:4000, point a Resend
 // webhook at <public-url>/api/emails/inbound/resend for the `email.received`
 // event, then put its signing secret in RESEND_WEBHOOK_SECRET and an API key
 // in RESEND_API_KEY.

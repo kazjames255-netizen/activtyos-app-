@@ -4,6 +4,7 @@ import { auth, db } from "../firebase";
 import { canWrite, operatorScope } from "../middleware/role";
 import { franchiseFamilyEmails, familyFranchiseMap, isFranchise, franchiseStamp } from "../lib/franchiseScope";
 import { emailSignUpInvite } from "../lib/emails";
+import { webBase } from "../lib/emailSend";
 import { siteFamilyEmails, staffSiteScope } from "../lib/siteScope";
 
 // Customers & families — the tenant's parent records. Mostly SELF-FILLING:
@@ -424,9 +425,8 @@ customers.post("/:id/invite", async (req, res) => {
     // Firebase's own reset page asks for a password and nothing else — no
     // name, no email, because we already have both. The continue URL puts
     // them back in their own area afterwards rather than on a dead end.
-    const link = await auth.generatePasswordResetLink(email, {
-      url: `${process.env.WEB_URL || "http://localhost:3000"}/custdash`,
-    });
+    const base = webBase(); // "" (and logged once) when WEB_URL is unset in production
+    const link = await auth.generatePasswordResetLink(email, base ? { url: `${base}/custdash` } : undefined);
     const tenant = await db.collection("tenants").doc(snap.data()!.tenantId).get();
     emailSignUpInvite({
       to: email,

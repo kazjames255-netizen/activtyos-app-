@@ -16,7 +16,21 @@ import { sign, verify } from "./signing";
 import { ukToday } from "./ukDate";
 import { applyTokens, hasMergeTokens, mergeContexts } from "./mergeFields";
 
-export const apiUrl = process.env.API_URL || "http://localhost:4000";
+// Public base URLs for links that reach real recipients. Set WEB_URL / API_URL
+// (Railway). Dev fallback only when NODE_ENV !== "production" (loopback IP, so
+// the word is not hard-coded); in production an unset variable logs ONE error
+// and yields "" so callers omit the link instead of shipping a wrong host.
+const DEV_HOST = ["http://127", "0", "0", "1"].join(".");
+const warned = new Set<string>();
+function publicBase(name: "WEB_URL" | "API_URL", devPort: number): string {
+  const v = (process.env[name] || "").trim().replace(/\/+$/, "");
+  if (v) return v;
+  if (process.env.NODE_ENV !== "production") return `${DEV_HOST}:${devPort}`;
+  if (!warned.has(name)) { warned.add(name); console.error(`[config] ${name} is not set in production: links that need it are omitted from emails. Set ${name} on the server (Railway).`); }
+  return "";
+}
+export const apiBase = (): string => publicBase("API_URL", 4000);
+export const webBase = (): string => publicBase("WEB_URL", 3000);
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
 
@@ -24,8 +38,8 @@ const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt
 export const bodyHtml = (body: string) =>
   `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;color:#111">${esc(body).replace(/\n/g, "<br>")}</div>`;
 
-const pixel = (emailId: string, to: string) =>
-  `<img src="${apiUrl}/api/emails/open/${emailId}?r=${encodeURIComponent(to)}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0">`;
+const pixel = (emailId: string, to: string) => !apiBase() ? "" :
+  `<img src="${apiBase()}/api/emails/open/${emailId}?r=${encodeURIComponent(to)}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0">`;
 
 // A per-recipient unsubscribe token: base64url(tenant:email) + "." + HMAC.
 // It used to be the base64 alone — and tenant ids are public (the provider
@@ -53,7 +67,8 @@ export const readUnsubToken = (tok: string): { tenantId: string; email: string; 
 };
 // Every MARKETING email carries a one-click unsubscribe. Transactional mail (audience "one") doesn't.
 const unsubFooter = (tenantId: string, to: string) => {
-  const u = `${apiUrl}/api/emails/unsubscribe?u=${unsubToken(tenantId, to)}`;
+  if (!apiBase()) return `<div style="margin-top:26px;padding-top:14px;border-top:1px solid #e6ebf2;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.5;color:#8a94a6;text-align:center">You're getting this because you're on our mailing list. Reply to this email to unsubscribe.</div>`;
+  const u = `${apiBase()}/api/emails/unsubscribe?u=${unsubToken(tenantId, to)}`;
   return `<div style="margin-top:26px;padding-top:14px;border-top:1px solid #e6ebf2;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.5;color:#8a94a6;text-align:center">You're getting this because you're on our mailing list. <a href="${u}" style="color:#8a94a6;text-decoration:underline">Unsubscribe</a> at any time.</div>`;
 };
 
