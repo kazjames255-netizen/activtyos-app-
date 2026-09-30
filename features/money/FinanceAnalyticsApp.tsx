@@ -16,6 +16,10 @@ import {
   GRAD, ACT_C, money, compactMoney,
   Tile, Ring, Donut, Breakdown, Panel, Legend, Empty, Info, TrendChart,
 } from "./finance-kit";
+import { useT, useWord } from "@/lib/i18n/provider";
+import { BRAND } from "@/lib/i18n/config";
+import { rich } from "./rich";
+import { methodLabel } from "./finI18n";
 import { financeFigures, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, type PaymentRecord } from "./financeFigures";
 
 // ── Types for the extra ledgers we fold in (subset of each route's shape) ──
@@ -25,9 +29,15 @@ interface PayStatus { connected: boolean; payoutsEnabled?: boolean; chargesEnabl
 
 const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GREEN = "#0f7a43", GOLD = "#f0b100", PINK = "#e2225f";
 const VALUE_BANDS: [string, number, number][] = [["£0–25", 0, 25], ["£25–50", 25, 50], ["£50–100", 50, 100], ["£100–200", 100, 200], ["£200+", 200, Infinity]];
-const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+// Weekday short names in the viewer's language (index 0 = Sunday; 7 Jan 2024 was a Sunday).
+const dowShort = (i: number) => { try { return new Intl.DateTimeFormat(dl(), { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2024, 0, 7 + i))); } catch { return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i]; } };
+const DOW = [0, 1, 2, 3, 4, 5, 6];
 
 export function FinanceAnalyticsApp() {
+  const t = useT();
+  const w = useWord();
+  const srcLabel = (l: string) => (l === "Childcare / voucher" ? t("p8fin.faSrcChildcare") : methodLabel(t, l));
+  const ageLabel = (l: string) => (l === "Under 5" ? t("p8fin.faAgeUnder5") : l);
   // A franchise shares head office's payout (Stripe) account: it can't connect or open it (the API says so), so its
   // Payouts tab explains that instead of offering buttons that only ever fail.
   const isFranchisePortal = portalOf(usePathname()) === "franchise";
@@ -80,7 +90,7 @@ export function FinanceAnalyticsApp() {
         return next;
       });
       setError(null);
-    }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    }).catch((e) => setError(e instanceof Error ? e.message : t("p8fin.gLoadFailed")));
     apiGet<InvPayload>("/api/invoices").then((p) => setInvoices(p)).catch(() => setInvoices({ items: [], summary: { count: 0, outstanding: 0, collected: 0, overdue: 0 } }));
     apiGet<PaymentRecord[]>("/api/payments").then((p) => setPayments(Array.isArray(p) ? p : [])).catch(() => {});
     apiGet<PayStatus>("/api/payments/status").then(setStatus).catch(() => {});
@@ -97,7 +107,7 @@ export function FinanceAnalyticsApp() {
       setListingVenueId(Object.fromEntries(list.filter((l) => l.id && l.venueId).map((l) => [l.id, l.venueId as string])));
       const used = new Set(list.map((l) => l.venueId).filter(Boolean));
       setVenues((lib?.venues ?? []).filter((v) => used.has(v.id)));
-      setAddonMeta(Object.fromEntries((lib?.addons ?? []).map((x) => [x.id, { name: x.name || "Add-on", price: Number(x.price) || 0 }])));
+      setAddonMeta(Object.fromEntries((lib?.addons ?? []).map((x) => [x.id, { name: x.name || t("p8fin.faAddonFallback"), price: Number(x.price) || 0 }])));
     }).catch(() => {});
     // Child sex lives on the customer/child record (a booking learner links by
     // name), so the gender split needs the customers list. Empty if not collected.
@@ -107,14 +117,14 @@ export function FinanceAnalyticsApp() {
         for (const c of cs ?? []) for (const k of c.children ?? []) if (k.name && (k.sex === "boy" || k.sex === "girl")) m[k.name.trim().toLowerCase()] = k.sex;
         setChildSex(m);
       }).catch(() => {});
-  }, []);
+  }, [t]);
   useEffect(load, [load]);
   useRealtime(["bookings", "payments", "invoices"], load);
 
   async function connect() {
     setConnecting(true);
     try { const { url } = await apiPost<{ url: string }>("/api/payments/connect", {}); window.location.href = url; }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t start Stripe"); setConnecting(false); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p8fin.faErrStripeStart")); setConnecting(false); }
   }
 
   /** Into the provider's own Stripe dashboard — change bank details, see
@@ -123,7 +133,7 @@ export function FinanceAnalyticsApp() {
   async function manage() {
     setConnecting(true);
     try { const { url } = await apiPost<{ url: string }>("/api/payments/dashboard", {}); window.location.href = url; }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t open Stripe"); setConnecting(false); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p8fin.faErrStripeOpen")); setConnecting(false); }
   }
 
   // The figures themselves live in ./financeFigures (plain functions, so the
@@ -167,10 +177,10 @@ export function FinanceAnalyticsApp() {
     }
 
     const valueBands = VALUE_BANDS.map(([label, lo, hi], i) => { const n = amounts.filter((v) => v >= lo && v < hi).length; return { label, value: n, sub: String(n), color: ACT_C[i % ACT_C.length] }; });
-    const topAddons = [...addonCount.entries()].map(([id, count]) => ({ label: addonMeta[id]?.name ?? "Add-on", count, rev: (addonMeta[id]?.price ?? 0) * count })).sort((x, y) => y.rev - x.rev || y.count - x.count).slice(0, 8)
-      .map((r, i) => ({ label: r.label, value: r.rev, sub: `${money(r.rev)} · ${r.count} sold`, color: ACT_C[i % ACT_C.length] }));
+    const topAddons = [...addonCount.entries()].map(([id, count]) => ({ label: addonMeta[id]?.name ?? t("p8fin.faAddonFallback"), count, rev: (addonMeta[id]?.price ?? 0) * count })).sort((x, y) => y.rev - x.rev || y.count - x.count).slice(0, 8)
+      .map((r, i) => ({ label: r.label, value: r.rev, sub: t("p8fin.faAddonSold", { amount: money(r.rev), n: r.count }), color: ACT_C[i % ACT_C.length] }));
     const passRows = [...byPass.entries()].sort((x, y) => y[1].revenue - x[1].revenue).slice(0, 8).map(([label, v], i) => ({ label, value: v.revenue, sub: `${money(v.revenue)} · ${v.count}`, color: ACT_C[i % ACT_C.length] }));
-    const dowRows = DOW.map((label, i) => ({ label, value: dow[i], sub: String(dow[i]), color: LIGHTB }));
+    const dowRows = DOW.map((i) => ({ label: dowShort(i), value: dow[i], sub: String(dow[i]), color: LIGHTB }));
 
     return {
       winBookings,
@@ -182,7 +192,7 @@ export function FinanceAnalyticsApp() {
       gender, genderKnown: gender.boy + gender.girl,
       dowRows,
     };
-  }, [bookings, months, nowMs, season, venue, listingSeason, listingVenueId, addonMeta, childSex]);
+  }, [bookings, months, nowMs, season, venue, listingSeason, listingVenueId, addonMeta, childSex, t]);
 
   // ref → booker name, so a payout row can name who paid (payments carry only refs).
   const nameByRef = useMemo(() => {
@@ -223,10 +233,10 @@ export function FinanceAnalyticsApp() {
     <div className="flex items-center gap-2">
       <div className="inline-flex items-center gap-1 rounded-full bg-white/15 p-1 text-[12px] font-bold text-white">
         {[3, 6, 12].map((m) => (
-          <button key={m} type="button" onClick={() => setMonths(m)} className="rounded-full px-3 py-1 transition-colors" style={months === m ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.85)" }}>{m}m</button>
+          <button key={m} type="button" onClick={() => setMonths(m)} className="rounded-full px-3 py-1 transition-colors" style={months === m ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.85)" }}>{t("p8fin.faMonthsShort", { m })}</button>
         ))}
       </div>
-      <button type="button" onClick={exportCSV} title="Download the filtered bookings as CSV" className="rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold text-white hover:bg-white/25">⬇ CSV</button>
+      <button type="button" onClick={exportCSV} title={t("p8fin.faDownloadCsvTip")} className="rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold text-white hover:bg-white/25">⬇ CSV</button>
     </div>
   );
 
@@ -234,69 +244,69 @@ export function FinanceAnalyticsApp() {
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       <PageHero
         icon="£"
-        title="Finance & analytics"
-        lede={<>Everything money — revenue, payouts, what you&rsquo;re owed and who&rsquo;s booking. <span className="font-semibold text-white">{rangeLabel}</span></>}
+        title={t("p8fin.faTitle")}
+        lede={<>{t("p8fin.faLede")} <span className="font-semibold text-white">{rangeLabel}</span></>}
         actions={periodToggle}
       />
       <TabStrip
-        tabs={[["overview", "Overview"], ["revenue", "Revenue"], ["payouts", "Payouts"], ["debts", "Debts"], ["insights", "Insights"]]}
+        tabs={[["overview", t("p8fin.exTabOverview")], ["revenue", t("p8fin.faTabRevenue")], ["payouts", t("p8fin.faTabPayouts")], ["debts", t("p8fin.faTabDebts")], ["insights", t("p8fin.faTabInsights")]]}
         value={tab}
-        onChange={(t) => { setTabTouched(true); setTab(t); }}
+        onChange={(tb) => { setTabTouched(true); setTab(tb); }}
       />
 
       {/* Filter bar — Season + Location scope every figure below. Hidden when the
           tenant has neither set up, so single-site freelancers see no clutter. */}
       {(seasons.length > 0 || venues.length > 0) && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Filter</span>
-          <SeasonPicker seasons={seasons} value={season} onChange={setSeason} allLabel="All seasons" />
+          <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8fin.faFilter")}</span>
+          <SeasonPicker seasons={seasons} value={season} onChange={setSeason} allLabel={t("p8fin.recAllSeasons")} />
           {venues.length > 0 && (
             <select value={venue} onChange={(e) => setVenue(e.target.value)} className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] outline-none focus:border-[#2f6bd8]">
-              <option value="">📍 All locations</option>
+              <option value="">{t("p8fin.faAllLocations")}</option>
               {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
           )}
-          {(season || venue) && <button type="button" onClick={() => { setSeason(""); setVenue(""); }} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline">Reset</button>}
+          {(season || venue) && <button type="button" onClick={() => { setSeason(""); setVenue(""); }} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline">{t("p8fin.faReset")}</button>}
         </div>
       )}
 
       {/* Insights sub-sections — one hub instead of three top tabs. */}
       {tab === "insights" && !loading && (
         <div className="mb-3 inline-flex flex-wrap gap-1 rounded-full bg-white p-1 shadow-sm">
-          {([["customers", "👤 Customers & learners"], ["addons", "🧩 Add-ons"], ["value", "📊 Value & mix"]] as [typeof insTab, string][]).map(([k, l]) => (
+          {([["customers", t("p8fin.faInsCustomers")], ["addons", t("p8fin.faInsAddons")], ["value", t("p8fin.faInsValue")]] as [typeof insTab, string][]).map(([k, l]) => (
             <button key={k} type="button" onClick={() => setInsTab(k)} className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-bold ${insTab === k ? "bg-[#1d3a8f] text-white" : "text-[var(--ink-2)] hover:bg-[#f2f5fb]"}`}>{l}</button>
           ))}
         </div>
       )}
 
       {loading ? (
-        <div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">Loading your figures…</div>
+        <div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8fin.faLoadingFigures")}</div>
       ) : tab === "overview" ? (
         <div className="flex flex-col gap-4">
           <CollapsibleStats id="finance-overview">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label="Revenue collected" icon="💰" grad={GRAD.green} value={money(a.collected)} sub={<>of {money(a.booked)} booked<Delta pct={a.collectedDelta} /></>} aside={<Ring pct={a.booked ? (a.collected / a.booked) * 100 : 0} label={`${a.booked ? Math.round((a.collected / a.booked) * 100) : 0}%`} />} />
-            <Tile label="Owed to you" icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub={a.owed > 0 ? "owed now · any period" : "all settled"} />
-            <Tile label="Refunds" icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub={`given in the last ${months} months`} />
-            <Tile label="Est. net after fees" icon="🏦" grad={GRAD.blue} value={money(a.net)} sub={`after ~${money(a.fees)} card fees`} />
+            <Tile label={t("p8fin.faRevCollected")} icon="💰" grad={GRAD.green} value={money(a.collected)} sub={<>{t("p8fin.faOfBooked", { amount: money(a.booked) })}<Delta pct={a.collectedDelta} /></>} aside={<Ring pct={a.booked ? (a.collected / a.booked) * 100 : 0} label={`${a.booked ? Math.round((a.collected / a.booked) * 100) : 0}%`} />} />
+            <Tile label={t("p8fin.faOwedToYou")} icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub={a.owed > 0 ? t("p8fin.faOwedNow") : t("p8fin.faAllSettled")} />
+            <Tile label={t("p8fin.faRefunds")} icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub={t("p8fin.faRefundsGiven", { n: months })} />
+            <Tile label={t("p8fin.faEstNet")} icon="🏦" grad={GRAD.blue} value={money(a.net)} sub={t("p8fin.faAfterFees", { fees: money(a.fees) })} />
           </div>
           </CollapsibleStats>
           <div className="grid gap-4 lg:grid-cols-3">
-            <Panel title="Revenue over time" right={<Legend items={[["Booked", LIGHTB], ["Collected", GREEN]]} />} className="lg:col-span-2">
+            <Panel title={t("p8fin.faRevOverTime")} right={<Legend items={[[t("p8fin.faBooked"), LIGHTB], [t("p8fin.faCollected"), GREEN]]} />} className="lg:col-span-2">
               <TrendChart series={a.bookedByMonth} series2={a.collectedByMonth} fmt={compactMoney} color={LIGHTB} color2={GREEN} />
             </Panel>
-            <Panel title="Where money comes from">
-              {a.source.length ? <Donut segments={a.source} center={compactMoney(a.collected)} sub="collected" valueFmt={money} /> : <Empty>No paid bookings yet.</Empty>}
+            <Panel title={t("p8fin.faWhereMoney")}>
+              {a.source.length ? <Donut segments={a.source.map((x) => ({ ...x, label: srcLabel(x.label) }))} center={compactMoney(a.collected)} sub={t("p8fin.faCollectedSub")} valueFmt={money} /> : <Empty>{t("p8fin.faNoPaid")}</Empty>}
             </Panel>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <Panel title="Top listings by revenue"><Breakdown entries={a.topListings} /></Panel>
-            <Panel title="Customers at a glance">
+            <Panel title={t("p8fin.faTopListings")}><Breakdown entries={a.topListings} /></Panel>
+            <Panel title={t("p8fin.faCustAtGlance")}>
               <div className="grid grid-cols-2 gap-3">
-                <MiniStat label="Bookers" value={a.totalBookers} tone={BLUE} />
-                <MiniStat label="Learners" value={a.totalLearners} tone={GREEN} />
-                <MiniStat label="Returning bookers" value={a.returningBookers} tone={PINK} />
-                <MiniStat label="Spend / customer" value={money(a.spendPerCustomer)} tone={GOLD} isText />
+                <MiniStat label={t("p8fin.faBookers")} value={a.totalBookers} tone={BLUE} />
+                <MiniStat label={t("p8fin.faLearners")} value={a.totalLearners} tone={GREEN} />
+                <MiniStat label={t("p8fin.faReturningBookers")} value={a.returningBookers} tone={PINK} />
+                <MiniStat label={t("p8fin.faSpendPerCust")} value={money(a.spendPerCustomer)} tone={GOLD} isText />
               </div>
             </Panel>
           </div>
@@ -305,36 +315,36 @@ export function FinanceAnalyticsApp() {
         <div className="flex flex-col gap-4">
           <CollapsibleStats id="finance-revenue">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label="Total booked" icon="🎫" grad={GRAD.blue} value={money(a.booked)} sub={<><span>{months}-month value</span><Delta pct={a.bookedDelta} /></>} />
-            <Tile label="Collected" icon="✅" grad={GRAD.green} value={money(a.collected)} sub={<><span>by date paid</span><Delta pct={a.collectedDelta} /></>} />
-            <Tile label="Outstanding" icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.teal} value={money(a.owed)} sub="owed now · any period" />
-            <Tile label="Refunds" icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub="issued in period" />
+            <Tile label={t("p8fin.faTotalBooked")} icon="🎫" grad={GRAD.blue} value={money(a.booked)} sub={<><span>{t("p8fin.faMonthValue", { n: months })}</span><Delta pct={a.bookedDelta} /></>} />
+            <Tile label={t("p8fin.faCollected")} icon="✅" grad={GRAD.green} value={money(a.collected)} sub={<><span>{t("p8fin.faByDatePaid")}</span><Delta pct={a.collectedDelta} /></>} />
+            <Tile label={t("p8fin.recTileOutstanding")} icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.teal} value={money(a.owed)} sub={t("p8fin.faOwedNow")} />
+            <Tile label={t("p8fin.faRefunds")} icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub={t("p8fin.faIssuedPeriod")} />
           </div>
           </CollapsibleStats>
-          <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">Booking revenue only — booked by the month it was booked, collected by the month it was paid. Standalone invoices and income you log by hand are in Money in.</div>
-          <Panel title="Booked vs collected by month" right={<Legend items={[["Booked", LIGHTB], ["Collected", GREEN]]} />}>
+          <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">{t("p8fin.faRevenueNote")}</div>
+          <Panel title={t("p8fin.faBookedVsCollected")} right={<Legend items={[[t("p8fin.faBooked"), LIGHTB], [t("p8fin.faCollected"), GREEN]]} />}>
             <TrendChart series={a.bookedByMonth} series2={a.collectedByMonth} fmt={compactMoney} color={LIGHTB} color2={GREEN} />
           </Panel>
           <div className="grid gap-4 lg:grid-cols-2">
-            <Panel title={<span className="flex items-center gap-1.5">Revenue by source <Info text="Card = payments through your connected account; Childcare/voucher = funded places." /></span>}>
-              {a.source.length ? <Donut segments={a.source} center={compactMoney(a.collected)} sub="collected" valueFmt={money} /> : <Empty>No paid bookings yet.</Empty>}
+            <Panel title={<span className="flex items-center gap-1.5">{t("p8fin.faRevBySource")} <Info text={t("p8fin.faSourceInfo")} /></span>}>
+              {a.source.length ? <Donut segments={a.source.map((x) => ({ ...x, label: srcLabel(x.label) }))} center={compactMoney(a.collected)} sub={t("p8fin.faCollectedSub")} valueFmt={money} /> : <Empty>{t("p8fin.faNoPaid")}</Empty>}
             </Panel>
-            <Panel title="Revenue by listing"><Breakdown entries={a.topListings} /></Panel>
+            <Panel title={t("p8fin.faRevByListing")}><Breakdown entries={a.topListings} /></Panel>
           </div>
         </div>
       ) : tab === "payouts" ? (
         <div className="flex flex-col gap-4">
           {isFranchisePortal && (
             <div data-ui="payout-account" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-[12.5px] text-[var(--ink-2)]">
-              <b>Your head office manages the payout account.</b> Card payments from your families are received into it — you don&rsquo;t connect a Stripe account yourself. What you owe head office on your bookings is on the <a href="/franchise/royalties" className="font-bold text-[#1d3a8f] underline">Royalties</a> page.
+              {(() => { const [pre, post] = t("p8fin.faHeadOffice").split("{link}"); return <>{rich(pre)}<a href="/franchise/royalties" className="font-bold text-[#1d3a8f] underline">{t("p8fin.faRoyalties")}</a>{rich(post ?? "")}</>; })()}
             </div>
           )}
           {!isFranchisePortal && status && !status.payoutsEnabled && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#f3d98a] bg-[#fdf6e3] p-4">
               <div className="text-[12.5px] text-[#7a5a12]">
-                <b>{status.connected ? "Finish setting up payouts" : "Connect your payout account"}</b> — card payments land in your own account. ActivityOS never holds your money.
+                <b>{status.connected ? t("p8fin.faFinishPayouts") : t("p8fin.faConnectPayoutAcct")}</b>{t("p8fin.faCardsLand", { brand: BRAND })}
               </div>
-              <button type="button" onClick={connect} disabled={connecting} className="rounded-full bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-bold text-white disabled:opacity-60">{connecting ? "Opening…" : status.connected ? "Continue setup" : "Connect payouts"}</button>
+              <button type="button" onClick={connect} disabled={connecting} className="rounded-full bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-bold text-white disabled:opacity-60">{connecting ? t("p8fin.faOpening") : status.connected ? t("p8fin.faContinueSetup") : t("p8fin.faConnectPayouts")}</button>
             </div>
           )}
           {/* Stays put once payouts are live — the banner above disappears at
@@ -343,54 +353,54 @@ export function FinanceAnalyticsApp() {
           {!isFranchisePortal && status?.payoutsEnabled && (
             <div data-ui="payout-account" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
               <div className="text-[12.5px] text-[var(--ink-2)]">
-                <b className="text-[#0f7a43]">✓ Payout account connected</b>
-                <span className="text-[var(--ink-3)]"> — card payments go straight to your own bank. Bank details and statements live in Stripe.</span>
+                <b className="text-[#0f7a43]">{t("p8fin.faPayoutConnected")}</b>
+                <span className="text-[var(--ink-3)]">{t("p8fin.faPayoutConnectedNote")}</span>
               </div>
-              <button type="button" onClick={manage} disabled={connecting} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[12.5px] font-bold text-[var(--ink)] disabled:opacity-60">{connecting ? "Opening…" : "Manage payouts →"}</button>
+              <button type="button" onClick={manage} disabled={connecting} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[12.5px] font-bold text-[var(--ink)] disabled:opacity-60">{connecting ? t("p8fin.faOpening") : t("p8fin.faManagePayouts")}</button>
             </div>
           )}
           <CollapsibleStats id="finance-payouts">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label="On the way (est.)" icon="🚚" grad={GRAD.amber} value={money(a.inTransit)} sub="card payments, last 7 days" />
-            <Tile label="In your bank (est.)" icon="🏦" grad={GRAD.green} value={money(a.inBank)} sub="card payments, settled earlier" />
-            <Tile label="Est. fees" icon="✂️" grad={GRAD.violet} value={money(a.fees)} sub="~1.4% + 20p / card payment" />
-            <Tile label="Est. net (period)" icon="💷" grad={GRAD.blue} value={money(a.net)} sub="collected − card fees" />
+            <Tile label={t("p8fin.faOnTheWay")} icon="🚚" grad={GRAD.amber} value={money(a.inTransit)} sub={t("p8fin.faCardLast7")} />
+            <Tile label={t("p8fin.faInBank")} icon="🏦" grad={GRAD.green} value={money(a.inBank)} sub={t("p8fin.faCardSettled")} />
+            <Tile label={t("p8fin.faEstFees")} icon="✂️" grad={GRAD.violet} value={money(a.fees)} sub={t("p8fin.faFeesFormula")} />
+            <Tile label={t("p8fin.faEstNetPeriod")} icon="💷" grad={GRAD.blue} value={money(a.net)} sub={t("p8fin.faCollectedMinusFees")} />
           </div>
           </CollapsibleStats>
-          <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">These payout figures are ActivityOS estimates from your card payments only. Cash, bank transfers, vouchers and Tax-Free Childcare reach you directly, so they never show here as a payout. Exact balances appear once your payment provider is fully connected.</div>
-          <Panel title="Payout transactions">
+          <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">{t("p8fin.faPayoutNote", { brand: BRAND })}</div>
+          <Panel title={t("p8fin.faPayoutTx")}>
             {payments.filter(isCardPayment).length ? (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] text-[12.5px]">
-                  <thead><tr className="border-b border-[var(--line)] text-start text-[10.5px] uppercase tracking-wide text-[var(--ink-3)]"><th className="py-2 font-bold">Date</th><th className="font-bold">Paid by</th><th className="font-bold">Method</th><th className="font-bold">Reference</th><th className="font-bold">Status</th><th className="py-2 text-end font-bold">Amount</th></tr></thead>
+                  <thead><tr className="border-b border-[var(--line)] text-start text-[10.5px] uppercase tracking-wide text-[var(--ink-3)]"><th className="py-2 font-bold">{t("p8fin.gDate")}</th><th className="font-bold">{t("p8fin.faPaidBy")}</th><th className="font-bold">{t("p8fin.recMethod")}</th><th className="font-bold">{t("p8fin.recReference")}</th><th className="font-bold">{t("p8fin.gStatus")}</th><th className="py-2 text-end font-bold">{t("p8fin.gAmount")}</th></tr></thead>
                   <tbody>
                     {payments.filter(isCardPayment).slice(0, 40).map((p) => (
                       <tr key={p.id} className="border-b border-[var(--line)]">
                         <td className="py-2 text-[var(--ink-2)]">{new Date(p.createdAt).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}</td>
                         <td className="font-semibold text-[var(--ink)]">{payerName(p)}</td>
-                        <td className="text-[var(--ink-2)]">{p.method || "Card"}</td>
+                        <td className="text-[var(--ink-2)]">{methodLabel(t, p.method || "Card")}</td>
                         <td className="text-[var(--ink-3)]">{p.refs?.join(", ") || "—"}</td>
-                        <td><span className="rounded-full bg-[#e2f5ea] px-2 py-0.5 text-[10.5px] font-bold capitalize text-[#0b8446]">{p.status}</span></td>
+                        <td><span className="rounded-full bg-[#e2f5ea] px-2 py-0.5 text-[10.5px] font-bold capitalize text-[#0b8446]">{w(p.status)}</span></td>
                         <td className="py-2 text-end font-extrabold tabular-nums">{money(p.amount)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            ) : <Empty>No payout transactions yet — they appear as card payments are taken.</Empty>}
+            ) : <Empty>{t("p8fin.faNoPayoutTx")}</Empty>}
           </Panel>
         </div>
       ) : tab === "debts" ? (
         <div className="flex flex-col gap-4">
           <CollapsibleStats id="finance-debts">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label="Owed by families" icon="🧾" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub="owed now · whenever booked" />
-            <Tile label="Unpaid invoices" icon="📄" grad={GRAD.amber} value={money(invoices?.summary.outstanding ?? 0)} sub={`${invoices?.items.filter((i) => i.status === "sent").length ?? 0} open`} />
-            <Tile label="Overdue invoices" icon="⏰" grad={GRAD.pink} value={money(invoices?.summary.overdue ?? 0)} sub={`${invoices?.items.filter((i) => i.overdue).length ?? 0} past due`} />
-            <Tile label="Refunds issued" icon="↩️" grad={GRAD.violet} value={money(a.refunds)} sub={`given in the last ${months} months`} />
+            <Tile label={t("p8fin.faOwedByFamilies")} icon="🧾" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub={t("p8fin.faWheneverBooked")} />
+            <Tile label={t("p8fin.faUnpaidInvoices")} icon="📄" grad={GRAD.amber} value={money(invoices?.summary.outstanding ?? 0)} sub={t("p8fin.faNOpen", { n: invoices?.items.filter((i) => i.status === "sent").length ?? 0 })} />
+            <Tile label={t("p8fin.faOverdueInvoices")} icon="⏰" grad={GRAD.pink} value={money(invoices?.summary.overdue ?? 0)} sub={t("p8fin.faNPastDue", { n: invoices?.items.filter((i) => i.overdue).length ?? 0 })} />
+            <Tile label={t("p8fin.faRefundsIssued")} icon="↩️" grad={GRAD.violet} value={money(a.refunds)} sub={t("p8fin.faRefundsGiven", { n: months })} />
           </div>
           </CollapsibleStats>
-          <Panel title="Who owes you" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{a.owing.length} booking{a.owing.length === 1 ? "" : "s"} · {money(a.owed)}</span>}>
+          <Panel title={t("p8fin.faWhoOwes")} right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{t("p8fin.faBookingsOwed", { n: a.owing.length, amount: money(a.owed) })}</span>}>
             {a.owing.length ? (
               <div className="flex flex-col divide-y divide-[var(--line)]">
                 {a.owing.slice(0, 30).map((o) => (
@@ -398,56 +408,56 @@ export function FinanceAnalyticsApp() {
                     <span className="min-w-0 flex-1 truncate"><b>{o.name}</b>{o.listing && <span className="text-[var(--ink-3)]"> · {o.listing}</span>}</span>
                     <span className="hidden whitespace-nowrap text-[11px] text-[var(--ink-3)] sm:inline">{o.when ? new Date(o.when.length === 10 ? `${o.when}T00:00:00` : o.when).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : ""}</span>
                     <span className="w-20 text-end font-extrabold tabular-nums text-[#c02636]">{money(o.owed)}</span>
-                    <button type="button" onClick={() => router.push(`/${portal}/bookings?ref=${encodeURIComponent(o.ref)}`)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]">Chase / view →</button>
+                    <button type="button" onClick={() => router.push(`/${portal}/bookings?ref=${encodeURIComponent(o.ref)}`)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]">{t("p8fin.faChaseView")}</button>
                   </div>
                 ))}
-                {a.owing.length > 30 && <div className="pt-2 text-center text-[11px] text-[var(--ink-3)]">+{a.owing.length - 30} more — showing the 30 largest.</div>}
+                {a.owing.length > 30 && <div className="pt-2 text-center text-[11px] text-[var(--ink-3)]">{t("p8fin.faMoreShowing", { n: a.owing.length - 30 })}</div>}
               </div>
-            ) : <Empty>Nobody owes you right now — everything&rsquo;s collected. 🎉</Empty>}
+            ) : <Empty>{t("p8fin.faNobodyOwes")}</Empty>}
           </Panel>
-          <Panel title="Unpaid & overdue invoices">
+          <Panel title={t("p8fin.faUnpaidOverdueInv")}>
             {invoices && invoices.items.filter((i) => i.status === "sent").length ? (
               <div className="flex flex-col divide-y divide-[var(--line)]">
                 {invoices.items.filter((i) => i.status === "sent").slice(0, 30).map((iv) => (
                   <div key={iv.id} className="flex items-center gap-3 py-2.5 text-[12.5px]">
                     <span className="min-w-0 flex-1 truncate font-semibold">{iv.customerName}</span>
-                    {iv.overdue && <span className="rounded-full bg-[#fdebec] px-2 py-0.5 text-[10.5px] font-bold text-[#c02636]">Overdue</span>}
-                    <span className="text-[11px] text-[var(--ink-3)]">{iv.dueDate ? `due ${new Date(iv.dueDate).toLocaleDateString(dl(), { day: "numeric", month: "short" })}` : ""}</span>
+                    {iv.overdue && <span className="rounded-full bg-[#fdebec] px-2 py-0.5 text-[10.5px] font-bold text-[#c02636]">{t("p8fin.recTileOverdue")}</span>}
+                    <span className="text-[11px] text-[var(--ink-3)]">{iv.dueDate ? t("p8fin.inDueDate", { date: new Date(iv.dueDate).toLocaleDateString(dl(), { day: "numeric", month: "short" }) }) : ""}</span>
                     <span className="w-20 text-end font-extrabold tabular-nums">{money(iv.amount)}</span>
                   </div>
                 ))}
               </div>
-            ) : <Empty>No unpaid invoices — nicely on top of it.</Empty>}
+            ) : <Empty>{t("p8fin.faNoUnpaid")}</Empty>}
           </Panel>
         </div>
       ) : tab === "insights" && insTab === "customers" ? (
         <div className="flex flex-col gap-4">
           <CollapsibleStats id="finance-insights-customers">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label="Total bookers" icon="👤" grad={GRAD.blue} value={String(a.totalBookers)} sub={`in the last ${months} months`} />
-            <Tile label="Total learners" icon="🧒" grad={GRAD.teal} value={String(a.totalLearners)} sub="children booked in" />
-            <Tile label="Returning bookers" icon="🔁" grad={GRAD.pink} value={String(a.returningBookers)} sub={`${a.newBookers} new`} aside={<Ring pct={a.totalBookers ? (a.returningBookers / a.totalBookers) * 100 : 0} label={`${a.totalBookers ? Math.round((a.returningBookers / a.totalBookers) * 100) : 0}%`} />} />
-            <Tile label="Spend per customer" icon="💷" grad={GRAD.green} value={money(a.spendPerCustomer)} sub="collected ÷ bookers" />
+            <Tile label={t("p8fin.faTotalBookers")} icon="👤" grad={GRAD.blue} value={String(a.totalBookers)} sub={t("p8fin.faInLastMonths", { n: months })} />
+            <Tile label={t("p8fin.faTotalLearners")} icon="🧒" grad={GRAD.teal} value={String(a.totalLearners)} sub={t("p8fin.faChildrenBooked")} />
+            <Tile label={t("p8fin.faReturningBookers")} icon="🔁" grad={GRAD.pink} value={String(a.returningBookers)} sub={t("p8fin.faNNew", { n: a.newBookers })} aside={<Ring pct={a.totalBookers ? (a.returningBookers / a.totalBookers) * 100 : 0} label={`${a.totalBookers ? Math.round((a.returningBookers / a.totalBookers) * 100) : 0}%`} />} />
+            <Tile label={t("p8fin.faSpendPerCustomer")} icon="💷" grad={GRAD.green} value={money(a.spendPerCustomer)} sub={t("p8fin.faCollectedDivBookers")} />
           </div>
           </CollapsibleStats>
           <div className="grid gap-4 lg:grid-cols-3">
-            <Panel title="New vs returning bookers">
-              {a.totalBookers ? <Donut segments={[{ label: "Returning", value: a.returningBookers, color: PINK }, { label: "New", value: a.newBookers, color: LIGHTB }]} center={`${a.totalBookers ? Math.round((a.returningBookers / a.totalBookers) * 100) : 0}%`} sub="returning" /> : <Empty>No bookers yet.</Empty>}
+            <Panel title={t("p8fin.faNewVsReturning")}>
+              {a.totalBookers ? <Donut segments={[{ label: t("p8fin.faReturning"), value: a.returningBookers, color: PINK }, { label: t("p8fin.faNew"), value: a.newBookers, color: LIGHTB }]} center={`${a.totalBookers ? Math.round((a.returningBookers / a.totalBookers) * 100) : 0}%`} sub={t("p8fin.faReturning")} /> : <Empty>{t("p8fin.faNoBookers")}</Empty>}
             </Panel>
-            <Panel title="Paid vs free sessions">
-              {a.paidSessions + a.freeSessions > 0 ? <Donut segments={[{ label: "Paid sessions", value: a.paidSessions, color: GREEN }, { label: "Free sessions", value: a.freeSessions, color: GOLD }]} center={String(a.paidSessions + a.freeSessions)} sub="sessions" /> : <Empty>No sessions yet.</Empty>}
+            <Panel title={t("p8fin.faPaidVsFree")}>
+              {a.paidSessions + a.freeSessions > 0 ? <Donut segments={[{ label: t("p8fin.faPaidSessions"), value: a.paidSessions, color: GREEN }, { label: t("p8fin.faFreeSessions"), value: a.freeSessions, color: GOLD }]} center={String(a.paidSessions + a.freeSessions)} sub={t("p8fin.faSessions")} /> : <Empty>{t("p8fin.faNoSessions")}</Empty>}
             </Panel>
-            <Panel title="Age distribution">
-              {a.ageDist.some((x) => x.value > 0) ? <Breakdown entries={a.ageDist} /> : <Empty>No ages recorded yet.</Empty>}
+            <Panel title={t("p8fin.faAgeDist")}>
+              {a.ageDist.some((x) => x.value > 0) ? <Breakdown entries={a.ageDist.map((x) => ({ ...x, label: ageLabel(x.label) }))} /> : <Empty>{t("p8fin.faNoAges")}</Empty>}
             </Panel>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <Panel title="Top customers by spend"><Breakdown entries={a.topCustomers} /></Panel>
-            <Panel title="New vs returning learners">
-              {a.totalLearners ? <Donut segments={[{ label: "Returning", value: a.returningLearners, color: PINK }, { label: "New", value: a.newLearners, color: LIGHTB }]} center={`${a.totalLearners ? Math.round((a.returningLearners / a.totalLearners) * 100) : 0}%`} sub="returning" /> : <Empty>No learners yet.</Empty>}
+            <Panel title={t("p8fin.faTopCustomers")}><Breakdown entries={a.topCustomers} /></Panel>
+            <Panel title={t("p8fin.faNewVsRetLearners")}>
+              {a.totalLearners ? <Donut segments={[{ label: t("p8fin.faReturning"), value: a.returningLearners, color: PINK }, { label: t("p8fin.faNew"), value: a.newLearners, color: LIGHTB }]} center={`${a.totalLearners ? Math.round((a.returningLearners / a.totalLearners) * 100) : 0}%`} sub={t("p8fin.faReturning")} /> : <Empty>{t("p8fin.faNoLearners")}</Empty>}
             </Panel>
           </div>
-          <Panel title="Revenue over time" right={<Legend items={[["Collected", GREEN]]} />}>
+          <Panel title={t("p8fin.faRevOverTime")} right={<Legend items={[[t("p8fin.faCollected"), GREEN]]} />}>
             <TrendChart series={a.collectedByMonth} fmt={compactMoney} color={GREEN} />
           </Panel>
         </div>
@@ -455,38 +465,38 @@ export function FinanceAnalyticsApp() {
         <div className="flex flex-col gap-4">
           <CollapsibleStats id="finance-insights-addons">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label="Add-on revenue (est.)" icon="🧩" grad={GRAD.violet} value={money(mix.addonRevenue)} sub="from paid add-ons" />
-            <Tile label="Attach rate" icon="📈" grad={GRAD.blue} value={`${mix.attachRate}%`} sub="of bookings add an extra" aside={<Ring pct={mix.attachRate} label={`${mix.attachRate}%`} />} />
-            <Tile label="Add-ons sold" icon="🛒" grad={GRAD.teal} value={String(mix.addonUnits)} sub="units in period" />
-            <Tile label="Bookings w/ add-ons" icon="✅" grad={GRAD.green} value={String(mix.bookingsWithAddon)} sub={`of ${mix.winBookings} bookings`} />
+            <Tile label={t("p8fin.faAddonRev")} icon="🧩" grad={GRAD.violet} value={money(mix.addonRevenue)} sub={t("p8fin.faFromPaidAddons")} />
+            <Tile label={t("p8fin.faAttachRate")} icon="📈" grad={GRAD.blue} value={`${mix.attachRate}%`} sub={t("p8fin.faOfBookingsAdd")} aside={<Ring pct={mix.attachRate} label={`${mix.attachRate}%`} />} />
+            <Tile label={t("p8fin.faAddonsSold")} icon="🛒" grad={GRAD.teal} value={String(mix.addonUnits)} sub={t("p8fin.faUnitsInPeriod")} />
+            <Tile label={t("p8fin.faBookingsWithAddons")} icon="✅" grad={GRAD.green} value={String(mix.bookingsWithAddon)} sub={t("p8fin.faOfNBookings", { n: mix.winBookings })} />
           </div>
           </CollapsibleStats>
-          <Panel title="Top add-ons by revenue" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">est. price × units sold</span>}>
-            {mix.topAddons.length ? <Breakdown entries={mix.topAddons} /> : <Empty>No add-ons sold yet — create them in the listing builder&rsquo;s Add-ons step, and they&rsquo;ll show here once booked.</Empty>}
+          <Panel title={t("p8fin.faTopAddons")} right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{t("p8fin.faEstPriceUnits")}</span>}>
+            {mix.topAddons.length ? <Breakdown entries={mix.topAddons} /> : <Empty>{t("p8fin.faNoAddons")}</Empty>}
           </Panel>
-          <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">Add-on revenue is estimated (each add-on&rsquo;s library price × times booked); meals ride the add-on lines too.</div>
+          <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">{t("p8fin.faAddonNote")}</div>
         </div>
       ) : (
         <div className="flex flex-col gap-4">
           <CollapsibleStats id="finance-insights-bookings">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label="Avg booking value" icon="🧮" grad={GRAD.blue} value={money(mix.avgBookingValue)} sub={`across ${mix.winBookings} bookings`} />
-            <Tile label="Median booking" icon="📊" grad={GRAD.teal} value={money(mix.medianValue)} sub="typical basket" />
-            <Tile label="Boys : girls" icon="🚻" grad={GRAD.violet} value={mix.genderKnown ? `${Math.round((mix.gender.boy / mix.genderKnown) * 100)}:${Math.round((mix.gender.girl / mix.genderKnown) * 100)}` : "—"} sub={mix.genderKnown ? `${mix.genderKnown} with gender set` : "no gender recorded"} />
-            <Tile label="Busiest day" icon="📅" grad={GRAD.amber} value={mix.dowRows.reduce((m, r) => (r.value > m.value ? r : m), mix.dowRows[0]).value ? mix.dowRows.reduce((m, r) => (r.value > m.value ? r : m), mix.dowRows[0]).label : "—"} sub="most sessions" />
+            <Tile label={t("p8fin.faAvgBooking")} icon="🧮" grad={GRAD.blue} value={money(mix.avgBookingValue)} sub={t("p8fin.faAcrossN", { n: mix.winBookings })} />
+            <Tile label={t("p8fin.faMedian")} icon="📊" grad={GRAD.teal} value={money(mix.medianValue)} sub={t("p8fin.faTypicalBasket")} />
+            <Tile label={t("p8fin.faBoysGirls")} icon="🚻" grad={GRAD.violet} value={mix.genderKnown ? `${Math.round((mix.gender.boy / mix.genderKnown) * 100)}:${Math.round((mix.gender.girl / mix.genderKnown) * 100)}` : "—"} sub={mix.genderKnown ? t("p8fin.faNWithGender", { n: mix.genderKnown }) : t("p8fin.faNoGenderShort")} />
+            <Tile label={t("p8fin.faBusiestDay")} icon="📅" grad={GRAD.amber} value={mix.dowRows.reduce((m, r) => (r.value > m.value ? r : m), mix.dowRows[0]).value ? mix.dowRows.reduce((m, r) => (r.value > m.value ? r : m), mix.dowRows[0]).label : "—"} sub={t("p8fin.faMostSessions")} />
           </div>
           </CollapsibleStats>
           <div className="grid gap-4 lg:grid-cols-2">
-            <Panel title="Booking value distribution"><Breakdown entries={mix.valueBands} /></Panel>
-            <Panel title="Pass / ticket mix" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">revenue · bookings</span>}>
-              {mix.passRows.some((r) => r.value > 0) ? <Breakdown entries={mix.passRows} /> : <Empty>No paid passes yet.</Empty>}
+            <Panel title={t("p8fin.faValueDist")}><Breakdown entries={mix.valueBands} /></Panel>
+            <Panel title={t("p8fin.faPassMix")} right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{t("p8fin.faRevenueBookings")}</span>}>
+              {mix.passRows.some((r) => r.value > 0) ? <Breakdown entries={mix.passRows} /> : <Empty>{t("p8fin.faNoPasses")}</Empty>}
             </Panel>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <Panel title="Gender split" right={<Info text="From each child's recorded sex (Setup → collect gender). Learners with none set aren't counted." />}>
-              {mix.genderKnown ? <Donut segments={[{ label: "Boys", value: mix.gender.boy, color: LIGHTB }, { label: "Girls", value: mix.gender.girl, color: PINK }]} center={`${Math.round((mix.gender.boy / mix.genderKnown) * 100)}%`} sub="boys" /> : <Empty>No gender recorded — turn on &ldquo;collect gender&rdquo; in Setup to compare.</Empty>}
+            <Panel title={t("p8fin.faGenderSplit")} right={<Info text={t("p8fin.faGenderInfo")} />}>
+              {mix.genderKnown ? <Donut segments={[{ label: t("p8fin.faBoys"), value: mix.gender.boy, color: LIGHTB }, { label: t("p8fin.faGirls"), value: mix.gender.girl, color: PINK }]} center={`${Math.round((mix.gender.boy / mix.genderKnown) * 100)}%`} sub={t("p8fin.faBoysSub")} /> : <Empty>{t("p8fin.faNoGenderTurnOn")}</Empty>}
             </Panel>
-            <Panel title="Busiest days of the week">
+            <Panel title={t("p8fin.faBusiestWeek")}>
               <Breakdown entries={mix.dowRows} />
             </Panel>
           </div>
@@ -498,9 +508,10 @@ export function FinanceAnalyticsApp() {
 
 // Period-on-period change chip for a gradient tile's sub-line (white text).
 function Delta({ pct }: { pct: number | null }) {
+  const t = useT();
   if (pct == null) return null;
   const up = pct >= 0;
-  return <span className="ms-1.5 inline-flex items-center gap-0.5 rounded-full bg-white/20 px-1.5 py-[1px] text-[10.5px] font-extrabold text-white">{up ? "▲" : "▼"} {Math.abs(pct)}% <span className="font-semibold opacity-80">vs prev</span></span>;
+  return <span className="ms-1.5 inline-flex items-center gap-0.5 rounded-full bg-white/20 px-1.5 py-[1px] text-[10.5px] font-extrabold text-white">{up ? "▲" : "▼"} {Math.abs(pct)}% <span className="font-semibold opacity-80">{t("p8fin.faVsPrev")}</span></span>;
 }
 
 // A compact figure used inside light panels (not a gradient tile).
