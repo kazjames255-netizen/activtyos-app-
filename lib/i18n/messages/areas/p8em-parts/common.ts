@@ -1,0 +1,28 @@
+// p8em common strings shared across email / newsfeed / templates. Row order: en, pl, ro, ur, pa, bn, ar, pt, es, fr, cy.
+const rows: Record<string, readonly string[]> = {
+  cCancel: ["Cancel", "Anuluj", "Anulează", "منسوخ کریں", "ਰੱਦ ਕਰੋ", "বাতিল", "إلغاء", "Cancelar", "Cancelar", "Annuler", "Canslo"],
+  cEdit: ["Edit", "Edytuj", "Editează", "ترمیم کریں", "ਸੋਧੋ", "সম্পাদনা", "تعديل", "Editar", "Editar", "Modifier", "Golygu"],
+  cDelete: ["Delete", "Usuń", "Șterge", "حذف کریں", "ਮਿਟਾਓ", "মুছুন", "حذف", "Eliminar", "Eliminar", "Supprimer", "Dileu"],
+  cDuplicate: ["Duplicate", "Duplikuj", "Duplică", "نقل بنائیں", "ਡੁਪਲੀਕੇਟ ਕਰੋ", "ডুপ্লিকেট করুন", "تكرار", "Duplicar", "Duplicar", "Dupliquer", "Dyblygu"],
+  cLoading: ["Loading…", "Ładowanie…", "Se încarcă…", "لوڈ ہو رہا ہے…", "ਲੋਡ ਹو ਰਿਹਾ ਹੈ…", "লোড হচ্ছে…", "جارٍ التحميل…", "A carregar…", "Cargando…", "Chargement…", "Yn llwytho…"],
+  cBack: ["← Back", "← Wstecz", "← Înapoi", "→ واپس", "← ਵਾਪਸ", "← ফিরে যান", "→ رجوع", "← Voltar", "← Atrás", "← Retour", "← Yn ôl"],
+  cClose: ["Close", "Zamknij", "Închide", "بند کریں", "ਬੰਦ ਕਰੋ", "বন্ধ করুন", "إغلاق", "Fechar", "Cerrar", "Fermer", "Cau"],
+  cRemove: ["Remove", "Usuń", "Elimină", "ہٹائیں", "ਹਟਾਓ", "সরান", "إزالة", "Remover", "Quitar", "Retirer", "Tynnu"],
+  cClear: ["Clear", "Wyczyść", "Șterge", "صاف کریں", "ਸਾਫ਼ ਕਰੋ", "মুছে ফেলুন", "مسح", "Limpar", "Borrar", "Effacer", "Clirio"],
+  cSend: ["Send", "Wyślij", "Trimite", "بھیجیں", "ਭੇਜੋ", "পাঠান", "إرسال", "Enviar", "Enviar", "Envoyer", "Anfon"],
+  cSaving: ["Saving…", "Zapisywanie…", "Se salvează…", "محفوظ ہو رہا ہے…", "ਸੰਭਾਲਿਆ ਜਾ ਰਿਹਾ ਹੈ…", "সংরক্ষণ হচ্ছে…", "جارٍ الحفظ…", "A guardar…", "Guardando…", "Enregistrement…", "Yn cadw…"],
+  cSubject: ["Subject", "Temat", "Subiect", "موضوع", "ਵਿਸ਼ਾ", "বিষয়", "الموضوع", "Assunto", "Asunto", "Objet", "Pwnc"],
+  cMessage: ["Message", "Wiadomość", "Mesaj", "پیغام", "ਸੁਨੇਹਾ", "বার্তা", "الرسالة", "Mensagem", "Mensaje", "Message", "Neges"],
+  cName: ["Name", "Nazwa", "Nume", "نام", "ਨਾਮ", "নাম", "الاسم", "Nome", "Nombre", "Nom", "Enw"],
+  cPreset: ["Preset", "Gotowy", "Presetat", "پہلے سے تیار", "ਪਹਿਲਾਂ ਤੋਂ ਤਿਆਰ", "প্রিসেট", "جاهز", "Predefinido", "Predefinido", "Préréglage", "Rhagosodedig"],
+  cPinned: ["Pinned", "Przypięte", "Fixat", "پن کیا ہوا", "ਪਿੰਨ ਕੀਤਾ", "পিন করা", "مثبّت", "Afixado", "Fijado", "Épinglé", "Wedi’i binio"],
+  cUrgent: ["Urgent", "Pilne", "Urgent", "فوری", "ਜ਼ਰੂਰੀ", "জরুরি", "عاجل", "Urgente", "Urgente", "Urgent", "Brys"],
+  cSearchMail: ["Search mail", "Szukaj w poczcie", "Caută în e-mailuri", "میل تلاش کریں", "ਮੇਲ ਖੋਜੋ", "মেইল খুঁজুন", "البحث في البريد", "Pesquisar e-mails", "Buscar correo", "Rechercher dans les e-mails", "Chwilio e-byst"],
+  cAll: ["All", "Wszystkie", "Toate", "سب", "ਸਾਰੇ", "সব", "الكل", "Todos", "Todos", "Tous", "Pob un"],
+  cPreview: ["Preview", "Podgląd", "Previzualizare", "پیش منظر", "ਝਲਕ", "প্রিভিউ", "معاينة", "Pré-visualizar", "Vista previa", "Aperçu", "Rhagolwg"],
+  cYes: ["Yes", "Tak", "Da", "ہاں", "ਹਾਂ", "হ্যাঁ", "نعم", "Sim", "Sí", "Oui", "Ie"],
+  cSaveFailed: ["Save failed", "Nie udało się zapisać", "Salvarea a eșuat", "محفوظ نہیں ہو سکا", "ਸੰਭਾਲਿਆ ਨਹੀਂ ਜਾ ਸਕਿਆ", "সংরক্ষণ ব্যর্থ হয়েছে", "تعذّر الحفظ", "Falha ao guardar", "No se pudo guardar", "Échec de l’enregistrement", "Methwyd cadw"],
+  cLoadFailed: ["Failed to load", "Nie udało się wczytać", "Încărcarea a eșuat", "لوڈ نہیں ہو سکا", "ਲੋਡ ਨਹੀਂ ਹੋ ਸਕਿਆ", "লোড করা যায়নি", "تعذّر التحميل", "Falha ao carregar", "No se pudo cargar", "Échec du chargement", "Methwyd llwytho"],
+  cDeleteFailed: ["Couldn’t delete", "Nie udało się usunąć", "Nu s-a putut șterge", "حذف نہیں ہو سکا", "ਮਿਟਾਇਆ ਨਹੀਂ ਜਾ ਸਕਿਆ", "মুছে ফেলা যায়নি", "تعذّر الحذف", "Não foi possível eliminar", "No se pudo eliminar", "Suppression impossible", "Methwyd dileu"],
+};
+export default rows;
