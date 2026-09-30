@@ -26,11 +26,14 @@ const col = db.collection("customers");
 // own "has" check, which doesn't filter on status either). Without this, a
 // parent who has booked with two different providers under the same email
 // leaks every child on their account into both providers' Families views.
-async function tenantChildIds(tenantId: string): Promise<Set<string>> {
+/** Children booked with this tenant — narrowed to one franchise (or "__ho__" = head office's own direct bookings) when a
+ *  scope is given, so a shared family's record only lists the children that franchise actually looks after. */
+async function tenantChildIds(tenantId: string, scopeFid = ""): Promise<Set<string>> {
   const snap = await db.collection("bookings").where("tenantId", "==", tenantId).get();
   const ids = new Set<string>();
   for (const d of snap.docs) {
-    const b = d.data() as { childId?: string; kids?: { childId?: string }[] };
+    const b = d.data() as { childId?: string; kids?: { childId?: string }[]; franchiseId?: string | null };
+    if (scopeFid === "__ho__" ? b.franchiseId : scopeFid && (b.franchiseId ?? null) !== scopeFid) continue;
     if (b.childId) ids.add(b.childId);
     for (const k of b.kids ?? []) if (k.childId) ids.add(k.childId);
   }
@@ -171,6 +174,17 @@ customers.get("/", async (req, res) => {
   // for each in-scope booking email that isn't already a customer.
   if (scopeFid && scope.tenantId) {
     const bkSnap = await db.collection("bookings").where("tenantId", "==", scope.tenantId).get();
+    // One family record is shared by every franchise the family books with (customers are tenant-level), and its
+    // `children` list accumulates from ALL of those bookings. In a franchise's (or a drilled-in head-office) view keep
+    // only the children that franchise actually looks after — never a sibling franchise's child.
+    const scopeKids = new Set<string>();
+    for (const d of bkSnap.docs) {
+      const b = d.data() as { child?: string; kids?: { name?: string }[]; franchiseId?: string | null };
+      if (scopeFid === "__ho__" ? b.franchiseId : (b.franchiseId ?? null) !== scopeFid) continue;
+      if (b.child) scopeKids.add(b.child.trim().toLowerCase());
+      for (const k of b.kids ?? []) if (k.name) scopeKids.add(k.name.trim().toLowerCase());
+    }
+    list = list.map((c) => ((c as { franchiseId?: string | null }).franchiseId === scopeFid ? c : { ...c, children: (c.children ?? []).filter((k) => scopeKids.has(String(k.name ?? "").trim().toLowerCase())) }));
     const have = new Set(list.map((c) => (c.email ?? "").toLowerCase()).filter(Boolean));
     const derived = new Map<string, { name: string; children: Set<string>; createdAt?: string }>();
     for (const d of bkSnap.docs) {
@@ -207,7 +221,7 @@ customers.get("/", async (req, res) => {
   const tenantChildIdsCache = new Map<string, Promise<Set<string>>>();
   const tenantChildIdsFor = (tenantId: string) => {
     let p = tenantChildIdsCache.get(tenantId);
-    if (!p) { p = tenantChildIds(tenantId); tenantChildIdsCache.set(tenantId, p); }
+    if (!p) { p = tenantChildIds(tenantId, scopeFid); tenantChildIdsCache.set(tenantId, p); }
     return p;
   };
   await Promise.all(
@@ -561,7 +575,8 @@ customers.get("/:id/family", async (req, res) => {
   if (uid) {
     const [snap, booked] = await Promise.all([
       db.collection("children").where("parentUid", "==", uid).get(),
-      tenantChildIds(cust.tenantId),
+      // A franchise sees only the children its own bookings cover (a family shared with a sibling franchise keeps that one private).
+      tenantChildIds(cust.tenantId, isFranchise(req.auth!) ? req.auth!.franchiseId : ""),
     ]);
     children = snap.docs.filter((d) => booked.has(d.id)).map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }));
   }
