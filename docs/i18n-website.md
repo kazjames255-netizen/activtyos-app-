@@ -131,3 +131,11 @@ Not converted (and why):
 - bn: safeguarding = শিশু সুরক্ষা (app uses নিরাপত্তা = security); week chips স1..স6 very short; "nan" (grandma) rendered as দিদিমা/ঠাকুমা.
 - pa: "TBC" = ਬਾਕੀ (ambiguous); week chips ਹ1..ਹ6; two idioms (not washing their face / archaeology project) worth checking.
 - All languages: `g.w1..g.w6` (week chips) and very short UI labels.
+
+## Playwright results (run via scripts/e2e-locked.sh, 1 Oct 2026 early hours)
+`e2e/v2-i18n.spec.ts` with `V2_MORE=pl,cy,bn,pa,pt,fr`: 201 tests, all passed (selector/persistence/restore-English, navigator.language default, keyboard/label,
+18 pages x 10 languages: lang/dir correct, selector value, 0 leftover English, 0 missing keys, 0 unhooked visible text (allow-list: logo, initials, language names),
+legal/pricing notice visible, no horizontal overflow at 1440 and 390 px, plus English text + pixel diff vs the pre-conversion pages for all 18 pages).
+`public/v2/_orig/` (pristine copies used for the English diff) was deleted afterwards so it is not deployed; the English-diff tests then skip. To re-run them:
+`git show 59be6012:public/v2/<page>.html` into `public/v2/_orig/` (never commit it).
+Screenshots of every page in ar and es at 1440/390 were taken and spot-checked by eye (RTL mirroring, footer, pricing, franchises, schools at 390 OK).
