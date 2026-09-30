@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "agent": "plan3-payroll-calc", "date": "2026-09-30",
+    "verify": "cd server && npx tsx --tsconfig ../tsconfig.json src/payrollCalcVerify.mts  (182 hand-computed assertions, all pass)",
+    "engine": "features/payroll/ukStatutory.ts (new, pure) + features/payroll/payCalc.ts computeLine",
+    "status": "engine is an ESTIMATE-grade calc; RTI/statutory payslip remain the provider's"
+  },
+  "rates_verified_2026_27": {
+    "income_tax_rUK": "PA 12,570; taper 1 per 2 over 100,000; 20% to 37,700 taxable; 40% to 125,140; 45% above (gov.uk/income-tax-rates). Wales = England.",
+    "income_tax_scotland": "19% to 3,967 taxable (16,537 income), 20% to 16,956 (29,526), 21% to 31,092 (43,662), 42% to 62,430 (75,000), 45% to 125,140, 48% above (gov.scot 2026-27; page said 'proposed pending confirmation' - re-check after Budget Act)",
+    "ni_class1": "weekly LEL 129 PT 242 ST 96 UEL/UST 967; monthly 559/1048/417/4189; annual 6,708/12,570/5,000/50,270. EE 8% PT-UEL, 2% above; cat B 1.85%; J/Z 2%; C nil. ER 15% over ST; H/M/Z/V 0% to UST(=UEL); freeport UST 25,000 (gov.uk rates-and-thresholds-for-employers-2026-to-2027)",
+    "employment_allowance": "10,500 (employer-level, NOT applied per line)",
+    "student_loan": "P1 26,900; P2 29,385; P4 33,795; P5 25,000 (9%); PG 21,000 (6%). Period threshold = annual/periods rounded down to penny; deduction rounded down to pound (HMRC payroll technical spec for 6 Apr 2026)",
+    "auto_enrolment": "qualifying earnings 6,240-50,270; 5% employee / 3% employer minimum; trigger 10,000 (gov.uk pension pages; 2026/27 unchanged)",
+    "ssp_smp": "SSP lower of 123.25 or 80% AWE (from day 1, no LEL test from 6 Apr 2026); SMP 90% AWE first 6 wks then lower of 194.32 / 90%; SPP/SAP/ShPP 194.32 or 90%",
+    "holiday": "12.07% rolled-up for irregular hours/part-year (5.6/46.4) - engine already correct",
+    "emergency_codes": "1257L W1 / M1 / X (non-cumulative)"
+  },
+  "bugs_found_and_fixed": [
+    {"id": "B1", "sev": "high", "what": "Cat J/Z (2% NI), B (1.85%), V (veteran ER) all silently treated as cat A; Z employer NI charged 15% from ST", "fix": "niPeriod category table"},
+    {"id": "B2", "sev": "med", "what": "NI annualised (annual/ppy) instead of HMRC published period thresholds (PT 1,048 not 1,047.50; UEL 4,189 not 4,189.17; weekly 242 not 241.73; ST 417/96): 1-4p per line", "fix": "niThresholds table"},
+    {"id": "B3", "sev": "high", "what": "Tax code allowance was N*10; HMRC uses N*10+9 (1257L free pay 12,579; monthly 1,048.25). Also taxable pay not floored to whole pounds nor bands rounded up. Monthly 3,000 gave 390.50 vs HMRC 390.20; weekly 500 gave 51.65 vs 51.60", "fix": "payePeriod (HMRC method)"},
+    {"id": "B4", "sev": "high", "what": "Higher-rate band ended at taxable 112,570 (75% of the way to the additional rate) - anyone with taxable pay 112,570-125,140 (gross ~116.8k-125.1k) was taxed 45% instead of 40%. Correct limit is taxable 125,140", "fix": "TAX.ruk.limits"},
+    {"id": "B5", "sev": "med", "what": "Automatic £100k personal-allowance taper applied by the engine; PAYE follows the code (HMRC reissues a lower code) so the engine mis-stated tax for 100k+ earners on 1257L", "fix": "removed; see accountant items"},
+    {"id": "B6", "sev": "high", "what": "S-prefix (Scottish) codes had the prefix stripped and used rUK bands; Emp.taxRegime ignored. D2/D3/SD* codes unhandled", "fix": "Scottish 2026/27 bands, SBR/SD0-SD3, taxRegime fallback"},
+    {"id": "B7", "sev": "high", "what": "Student/postgraduate loans never deducted though Emp.studentLoanPlan exists (field only)", "fix": "auto '__studentloan' post-tax deduction; UI select added to employee editor"},
+    {"id": "B8", "sev": "med", "what": "No cumulative PAYE: every run was an annualised estimate, so bonuses, tax-code changes, P45 starters, and leaver refunds were wrong; W1/M1/X were stripped and ignored", "fix": "payePeriod cumulative mode + LineOpts.ytd (opt-in; UI does not feed it yet)"},
+    {"id": "B9", "sev": "low", "what": "r2 = Math.round(n*100)/100 rounds 1.005 to 1.00 (float noise); NI half-penny rule and PAYE truncation absent", "fix": "rnd2/niRound/trunc2"},
+    {"id": "B10", "sev": "med", "what": "Pension: qualifying-earnings upper limit fractional (4,189.17/mo) and 5% deducted from net with PAYE on full gross = no tax relief under any real scheme type", "fix": "period QE (4,189); pensionScheme option netpay/ras added, DEFAULT left 'legacy' pending accountant/tenant decision"},
+    {"id": "B11", "sev": "low", "what": "NI category select offered only A,B,C,H,M", "fix": "added J,V,Z"}
+  ],
+  "open_items": [
+    "UI does not yet pass LineOpts.ytd (cumulative) - needs payrollYtd (server) PAYE-to-date + period number (taxPeriodNo) wiring, plus P45 previous pay/tax capture on onboarding. Until then every line is Month1/Week1 basis (correct for steady pay, not for bonuses/mid-year starters)",
+    "Default pensionScheme is still 'legacy' - a tenant setting (net pay vs relief at source vs salary sacrifice) is needed; payslip shows eePen deducted with no relief",
+    "Student loan booked in the journal's otherDeductions bucket (accounting.ts) - should credit the HMRC PAYE/NIC liability. payrollYtd store has no student-loan field",
+    "SSP/SMP/SPP not calculated in a run (rate helpers + tests exist: sspWeekly/smpWeekly/sppWeekly); sickPay='ssp' still leaves SSP to the provider. Qualifying-day / AWE (8-week) logic absent",
+    "Employment Allowance (10,500) not applied - employer-level, on EPS; needs connected-company/de-minimis eligibility",
+    "Directors' annual-earnings NI method not implemented (Emp.director is field only)",
+    "Regulatory 50% limit implemented for K codes only; week 53 / 5-April 'week 53' pay dates clamp to period 52; HMRC 2-week/4-week 'period 27/14' edge cases not modelled",
+    "NI cats E,K,N,X and freeport verification: F/I/L/S use 25,000 UST from the gov.uk summary, not independently confirmed; unknown letters fall back to A (niPeriod.known=false)",
+    "Under-21/apprentice relief applies by NI category set on the record; nothing derives category from DOB or apprenticeship start",
+    "NMW check (21+ 12.71, 18-20 10.85, <18 8.00, apprentice 8.00) not enforced in payroll",
+    "Free-pay/band rounding follows HMRC's spec from memory of the tables (ceil to penny; band limits ceil to £); confirmed against published 1257L monthly 1,048.25 and weekly 241.91 but a +-1p difference vs a commercial provider on cumulative weeks is possible",
+    "payCalc.ts / PayrollApp.tsx working-tree edits are mixed with another agent's uncommitted pro-rata (employmentShare) hunks - commit together"
+  ],
+  "accountant_judgement": [
+    "Pension scheme type per client (net pay vs relief at source vs salary sacrifice) and the resulting PAYE/NI basis",
+    "Employees earning 100k-125,140: engine follows the code as entered; HMRC should issue a reduced code - confirm process",
+    "Scottish rates are per the Scottish Budget 13 Jan 2026 proposals as published on gov.scot; confirm final Act figures",
+    "Where student loan deductions post in Xero/QBO journals",
+    "Emergency-code (M1/W1) handling for starters without P45/declaration and Starter Statement B/C mapping (B = 1257L M1, C = BR)",
+    "Whether estimates should ever be used as the real payslip (currently disclaimed on the payslip)"
+  ],
+  "cases": { "total_assertions": 182, "groups": "rounding 9; PAYE M1/W1/fortnight/4wk/BR/D0/D1/NT/0T/K/S/C/SD 45; cumulative 6 (m2, refund, P45 starter, code change, weekly, W1 ignore); starters A/B/C 3; NI 41 incl thresholds/cats/periods; pension 8; student loan 13; SSP/SMP/SPP 8; tax period numbers 10; end-to-end computeLine 40 (bonus, negative adj, rolled-up, pro-rata, overrides, pension schemes, SL)" }
+}
