@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from "node:crypto";
 import type { TfcFailure } from "../../../lib/tfc";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -28,8 +28,13 @@ import type { TfcFailure } from "../../../lib/tfc";
 // ─────────────────────────────────────────────────────────────────────────
 
 /** Money as HMRC sends and takes it: whole pence. */
-const toPence = (pounds: number) => Math.round(pounds * 100);
-const toPounds = (pence: number) => Math.round(pence) / 100;
+/** Whole pence from pounds. EPSILON nudges half-penny binary artefacts the
+ *  right way (1.005 → 101, not 100). Non-finite input gives NaN, which callers
+ *  must refuse to send. */
+export const toPence = (pounds: number) => (Number.isFinite(pounds) ? Math.round((pounds + Number.EPSILON) * 100) : NaN);
+/** Pounds from HMRC's pence. Anything that isn't a finite number reads as 0
+ *  rather than NaN, so a malformed field can never show as "£NaN". */
+export const toPounds = (pence: unknown) => (typeof pence === "number" && Number.isFinite(pence) ? Math.round(pence) / 100 : 0);
 
 export interface TfcConfig {
   /** Sandbox https://test-api.service.hmrc.gov.uk, production https://api.service.hmrc.gov.uk. */
@@ -74,9 +79,13 @@ export const tfcConfigured = () => tfcConfig() !== null;
 
 export type TfcResult<T> =
   | { ok: true; data: T }
-  | { ok: false; failure: TfcFailure; code?: string; message?: string };
+  | { ok: false; failure: TfcFailure; code?: string; message?: string; uncertain?: boolean };
 
-const fail = (failure: TfcFailure, code?: string, message?: string): TfcResult<never> => ({ ok: false, failure, code, message });
+/** `uncertain` = the request may have REACHED HMRC (timeout, dropped socket,
+ *  unreadable success body). For a payment that means money may have moved, so
+ *  it must never be blindly re-sent. */
+const fail = (failure: TfcFailure, code?: string, message?: string, uncertain?: boolean): TfcResult<never> =>
+  uncertain ? { ok: false, failure, code, message, uncertain: true } : { ok: false, failure, code, message };
 
 /** OAuth tokens as we store them. Sensitive — see routes/tfc.ts. */
 export interface TfcTokens {
@@ -152,7 +161,7 @@ async function callHmrc<T>(
     // Network/timeout: never a documented failure, so it is a connection
     // failure and the parent goes to the manual path.
     console.error(`[tfc] ${what} network error (correlation ${correlationId}):`, (e as Error).message);
-    return fail("connection-failed", undefined, "We couldn't reach HMRC.");
+    return fail("connection-failed", undefined, "We couldn't reach HMRC.", true);
   }
   const text = await res.text().catch(() => "");
   let parsed: unknown = null;
@@ -160,7 +169,7 @@ async function callHmrc<T>(
   if (res.ok) {
     if (!parsed || typeof parsed !== "object") {
       console.error(`[tfc] ${what} returned ${res.status} with an unreadable body (correlation ${correlationId})`);
-      return fail("connection-failed");
+      return fail("connection-failed", undefined, undefined, true);
     }
     return { ok: true, data: parsed as T };
   }
@@ -170,7 +179,8 @@ async function callHmrc<T>(
   // request carried a bearer token, so nothing else from this exchange is
   // safe to put in a log line.
   console.warn(`[tfc] ${what} failed: HTTP ${res.status} ${err.errorCode ?? "(no code)"} → ${failure} (correlation ${correlationId})`);
-  return fail(failure, err.errorCode, err.errorDescription);
+  // A 5xx may have been processed before it failed; a 4xx never was.
+  return fail(failure, err.errorCode, err.errorDescription, res.status >= 500);
 }
 
 // ── OAuth 2.0 (authorization code) ───────────────────────────────────────
@@ -221,7 +231,11 @@ async function tokenRequest(cfg: TfcConfig, form: Record<string, string>, what: 
     console.warn(`[tfc] ${what} failed: HTTP ${res.status} ${body.error ?? "(no error field)"}`);
     // A refresh that is refused means the link is over, not that HMRC is down:
     // the parent has to re-authorise, which is the "connection expired" state.
-    return fail(what === "token refresh" ? "connection-expired" : "connection-failed");
+    // Only a REFUSAL (4xx: invalid_grant, revoked, expired) ends the link. A
+    // network blip or HMRC 5xx/429 is transient — marking the link dead for it
+    // would send a parent back through GOV.UK for nothing.
+    const refused = res.status >= 400 && res.status < 500 && res.status !== 429 && res.status !== 408;
+    return fail(what === "token refresh" && refused ? "connection-expired" : "connection-failed");
   }
   return {
     ok: true,
@@ -379,6 +393,13 @@ export async function submitPayment(
   tokens: TfcTokens,
   args: { outboundChildPaymentRef: string; amount: number; ccpRegReference: string; ccpPostcode: string },
 ): Promise<TfcResult<{ paymentReference: string; estimatedPaymentDate: string }>> {
+  // Refuse to send a payment HMRC would read as something else: NaN, zero or
+  // sub-penny amounts. Nothing has been sent, so this is a definite failure.
+  const pence = toPence(args.amount);
+  if (!Number.isInteger(pence) || pence < 1) {
+    console.warn("[tfc] payment refused locally: amount is not a positive number of pence");
+    return fail("connection-failed", undefined, "Invalid payment amount.");
+  }
   const r = await callHmrc<{ payment_reference?: string; estimated_payment_date?: string }>(
     cfg,
     tokens,
@@ -387,7 +408,7 @@ export async function submitPayment(
       outbound_child_payment_ref: args.outboundChildPaymentRef,
       epp_unique_customer_id: cfg.eppUniqueCustomerId,
       epp_reg_reference: cfg.eppRegReference,
-      payment_amount: toPence(args.amount),
+      payment_amount: pence,
       ccp_reg_reference: args.ccpRegReference,
       ccp_postcode: args.ccpPostcode,
       // The only value the API accepts: funds go straight to the childcare
@@ -404,4 +425,95 @@ export async function submitPayment(
       estimatedPaymentDate: r.data.estimated_payment_date ?? "",
     },
   };
+}
+
+// ── Token-at-rest encryption (optional, AES-256-GCM) ─────────────────────
+// With HMRC_TFC_TOKEN_KEY set (32 bytes, base64 or 64 hex chars) tokens are
+// sealed before they reach Firestore. Unset = plaintext, as before (see the
+// note in routes/tfc.ts). Plaintext values written earlier stay readable.
+
+const SEAL_PREFIX = "enc:v1:";
+
+function tokenKey(): Buffer | null {
+  const raw = env("HMRC_TFC_TOKEN_KEY");
+  if (!raw) return null;
+  const k = /^[0-9a-f]{64}$/i.test(raw) ? Buffer.from(raw, "hex") : Buffer.from(raw, "base64");
+  if (k.length !== 32) throw new Error("HMRC_TFC_TOKEN_KEY must decode to exactly 32 bytes");
+  return k;
+}
+
+export function sealToken(plain: string): string {
+  const key = tokenKey();
+  if (!key) return plain;
+  const iv = randomBytes(12);
+  const c = createCipheriv("aes-256-gcm", key, iv);
+  const enc = Buffer.concat([c.update(plain, "utf8"), c.final()]);
+  return SEAL_PREFIX + Buffer.concat([iv, c.getAuthTag(), enc]).toString("base64");
+}
+
+/** The plaintext token, or null when it is sealed and cannot be opened. */
+export function openToken(stored: string): string | null {
+  if (!stored.startsWith(SEAL_PREFIX)) return stored;
+  try {
+    const key = tokenKey();
+    if (!key) return null;
+    const buf = Buffer.from(stored.slice(SEAL_PREFIX.length), "base64");
+    const d = createDecipheriv("aes-256-gcm", key, buf.subarray(0, 12));
+    d.setAuthTag(buf.subarray(12, 28));
+    return Buffer.concat([d.update(buf.subarray(28)), d.final()]).toString("utf8");
+  } catch {
+    return null;
+  }
+}
+
+// ── Payment idempotency ──────────────────────────────────────────────────
+// A payment moves real money and HMRC offers no documented idempotency key we
+// can rely on (see docs/tfc/audit-findings.md), so WE guarantee at-most-once
+// per key: the intent is written BEFORE the call, and a key that is pending,
+// uncertain or done is never sent to HMRC a second time.
+
+export type PayRecStatus = "pending" | "ok" | "failed" | "uncertain";
+export interface PayRec {
+  status: PayRecStatus;
+  paymentReference?: string;
+  estimatedPaymentDate?: string;
+  failure?: TfcFailure;
+  code?: string | null;
+}
+export interface PayStore {
+  /** Atomically create the record if absent. Returns the existing one otherwise. */
+  begin(id: string, rec: PayRec): Promise<PayRec | null>;
+  finish(id: string, patch: PayRec): Promise<void>;
+}
+type PaySuccess = { paymentReference: string; estimatedPaymentDate: string };
+
+export async function payOnce(
+  store: PayStore,
+  id: string,
+  send: () => Promise<TfcResult<PaySuccess>>,
+): Promise<TfcResult<PaySuccess>> {
+  const existing = await store.begin(id, { status: "pending" });
+  if (existing) {
+    if (existing.status === "ok") {
+      return { ok: true, data: { paymentReference: existing.paymentReference ?? "", estimatedPaymentDate: existing.estimatedPaymentDate ?? "" } };
+    }
+    if (existing.status === "failed") return fail(existing.failure ?? "connection-failed", existing.code ?? undefined);
+    // pending / uncertain: HMRC may already hold this payment. Do not re-send.
+    return fail("connection-failed", "PAYMENT_IN_DOUBT", "An earlier attempt with this key may have been paid.", true);
+  }
+  let r: TfcResult<PaySuccess>;
+  try {
+    r = await send();
+  } catch (e) {
+    // send() should never throw; if it does we cannot know what HMRC did.
+    console.error("[tfc] payment send threw:", (e as Error).message);
+    r = fail("connection-failed", undefined, undefined, true);
+  }
+  const patch: PayRec = r.ok
+    ? { status: "ok", paymentReference: r.data.paymentReference, estimatedPaymentDate: r.data.estimatedPaymentDate }
+    : { status: r.uncertain ? "uncertain" : "failed", failure: r.failure, code: r.code ?? null };
+  // HMRC's answer is already in hand; failing to record it must not hide a
+  // successful payment from the caller.
+  await store.finish(id, patch).catch((e) => console.error("[tfc] could not record payment outcome:", (e as Error).message));
+  return r;
 }

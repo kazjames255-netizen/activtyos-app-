@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { rateLimit } from "../lib/rateLimit";
 import { childcareSettingsComplete, loadChildcareSettings, looksLikeTfcRef } from "../lib/childcare";
 import { ukToday } from "../lib/ukDate";
 import {
@@ -9,7 +10,12 @@ import {
   authorizeUrl,
   exchangeCode,
   linkAccount,
+  openToken,
+  payOnce,
+  sealToken,
   submitPayment,
+  type PayRec,
+  type PayStore,
   tfcConfig,
   withFreshTokens,
   type TfcTokens,
@@ -94,15 +100,18 @@ type StateDoc = {
   expiresAt: number;
 };
 
-const tokensOf = (d: LinkDoc): TfcTokens | null =>
-  d.accessToken && d.refreshToken && typeof d.expiresAt === "number"
-    ? { accessToken: d.accessToken, refreshToken: d.refreshToken, expiresAt: d.expiresAt }
-    : null;
+const tokensOf = (d: LinkDoc): TfcTokens | null => {
+  if (!d.accessToken || !d.refreshToken || typeof d.expiresAt !== "number") return null;
+  // Sealed at rest when HMRC_TFC_TOKEN_KEY is set; null if it can't be opened.
+  const accessToken = openToken(d.accessToken);
+  const refreshToken = openToken(d.refreshToken);
+  return accessToken && refreshToken ? { accessToken, refreshToken, expiresAt: d.expiresAt } : null;
+};
 
 /** Persist rotated tokens. HMRC issues a NEW refresh token on every refresh;
  *  dropping it costs the parent a fresh GOV.UK sign-in. */
 async function saveTokens(childId: string, t: TfcTokens): Promise<void> {
-  await linksCol.doc(childId).set({ accessToken: t.accessToken, refreshToken: t.refreshToken, expiresAt: t.expiresAt }, { merge: true });
+  await linksCol.doc(childId).set({ accessToken: sealToken(t.accessToken), refreshToken: sealToken(t.refreshToken), expiresAt: t.expiresAt }, { merge: true });
 }
 
 /** HMRC wants YYYY-MM-DD. Children carry whatever the parent typed. */
@@ -115,6 +124,9 @@ function isoDob(dob: unknown): string | null {
 }
 
 /** Parent-only. Everything below reads and writes one family's data. */
+// Per-user limit (the tokens and HMRC calls behind these routes are costly and,
+// for /pay, move money): 60 requests a minute per signed-in parent.
+tfc.use(rateLimit("tfc", 60, 60_000, (req) => req.user?.uid));
 tfc.use((req, res, next) => {
   if (req.auth?.role !== "parent") {
     res.status(403).json({ error: "Tax-Free Childcare is a parent account feature" });
@@ -341,7 +353,30 @@ const paySchema = z.object({
   reference: z.string().trim().min(1).max(40),
   amount: z.number().positive().max(10_000),
   tenantId: z.string().trim().max(60).optional(),
+  /** One id per payment the parent intends. A repeat with the same key (a
+   *  retry, a double-click) replays the first outcome and never re-sends. */
+  idempotencyKey: z.string().trim().min(8).max(80).regex(/^[A-Za-z0-9_-]+$/).optional(),
 });
+
+/** Firestore-backed payment ledger for payOnce(): create() is the atomic claim. */
+const payStore: PayStore = {
+  async begin(id, rec) {
+    const ref = paymentsCol.doc(id);
+    try {
+      await ref.create({ ...rec, createdAt: new Date().toISOString() });
+      return null;
+    } catch {
+      const cur = await ref.get();
+      if (cur.exists) return cur.data() as PayRec;
+      throw new Error("could not record payment intent");
+    }
+  },
+  async finish(id, patch) {
+    await paymentsCol.doc(id).set({ ...patch, updatedAt: new Date().toISOString() }, { merge: true });
+  },
+};
+
+const PAY_LOCK_MS = 60_000;
 
 tfc.post("/pay", async (req, res) => {
   const cfg = tfcConfig();
@@ -352,6 +387,11 @@ tfc.post("/pay", async (req, res) => {
   const link = await linkForReference(uid, p.data.reference);
   const tokens = link ? tokensOf(link) : null;
   if (!link || !tokens || !link.reference) { res.json({ ok: false, failure: "not-connected" satisfies TfcFailure }); return; }
+  // A link that never completed (or was marked dead) is not a link to pay from.
+  if (link.linked !== true) {
+    res.json({ ok: false, failure: link.failure === "connection-expired" ? "connection-expired" : "not-connected" });
+    return;
+  }
 
   const provider = await providerIdentity(p.data.tenantId);
   if (!provider) {
@@ -363,32 +403,43 @@ tfc.post("/pay", async (req, res) => {
     return;
   }
 
-  const r = await withFreshTokens(cfg, tokens, (t) => saveTokens(link.childId, t), (t) =>
-    submitPayment(cfg, t, {
-      outboundChildPaymentRef: link.reference!,
-      amount: p.data.amount,
-      ccpRegReference: provider.registrationNumber,
-      ccpPostcode: provider.postcode,
-    }));
+  // One payment in flight per child: a second request while the first is out
+  // is refused rather than queued (double-submit / two tabs).
+  const lockRef = db.collection("tfcPayLocks").doc(link.childId);
+  const locked = await db.runTransaction(async (tx) => {
+    const cur = await tx.get(lockRef);
+    if (cur.exists && (cur.get("expiresAt") as number) > Date.now()) return false;
+    tx.set(lockRef, { parentUid: uid, expiresAt: Date.now() + PAY_LOCK_MS });
+    return true;
+  });
+  if (!locked) { res.status(409).json({ ok: false, failure: "connection-failed", error: "A payment for this child is already in progress." }); return; }
 
-  // Every attempt is recorded, successful or not: Part B of the spec is about
-  // money that was promised and may never arrive, and an attempt that failed
-  // is the start of that story.
-  await paymentsCol.add({
-    parentUid: uid,
-    childId: link.childId,
-    reference: link.reference,
-    tenantId: p.data.tenantId ?? null,
-    amount: p.data.amount,
-    createdAt: new Date().toISOString(),
-    ...(r.ok
-      ? { ok: true, paymentReference: r.data.paymentReference, estimatedPaymentDate: r.data.estimatedPaymentDate }
-      : { ok: false, failure: r.failure, code: r.code ?? null }),
-  }).catch((e) => console.error("[tfc] could not record the payment attempt:", (e as Error).message));
+  // The intent is written BEFORE HMRC is called, keyed by the idempotency key
+  // (or a fresh id), so a crash between "HMRC paid" and "we recorded it" leaves
+  // a pending row to reconcile rather than no trace at all.
+  const payId = p.data.idempotencyKey ? `${link.childId}_${p.data.idempotencyKey}` : `${link.childId}_${randomBytes(12).toString("hex")}`;
+  let r;
+  try {
+    r = await payOnce(payStore, payId, async () => {
+      // Audit context on the row (no tokens, no secrets).
+      await paymentsCol.doc(payId).set({
+        parentUid: uid, childId: link.childId, reference: link.reference, tenantId: p.data.tenantId ?? null, amount: p.data.amount,
+      }, { merge: true }).catch((e) => console.error("[tfc] could not annotate payment intent:", (e as Error).message));
+      return withFreshTokens(cfg, tokens, (t) => saveTokens(link.childId, t), (t) =>
+        submitPayment(cfg, t, {
+          outboundChildPaymentRef: link.reference!,
+          amount: p.data.amount,
+          ccpRegReference: provider.registrationNumber,
+          ccpPostcode: provider.postcode,
+        }));
+    });
+  } finally {
+    await lockRef.delete().catch(() => { /* expires in a minute anyway */ });
+  }
 
   if (!r.ok) {
     if (r.failure === "connection-expired") await linksCol.doc(link.childId).set({ linked: false, failure: r.failure }, { merge: true });
-    res.json({ ok: false, failure: r.failure });
+    res.json({ ok: false, failure: r.failure, ...(r.uncertain ? { uncertain: true } : {}) });
     return;
   }
   res.json({ ok: true, paymentReference: r.data.paymentReference, estimatedPaymentDate: r.data.estimatedPaymentDate });
@@ -440,8 +491,15 @@ tfcCallback.get("/", async (req, res) => {
     html("That link has expired", "Close this window and select 'Login with HMRC' again.", false, 400);
     return;
   }
-  // Single use: claim it before doing anything that can be replayed.
-  await snap.ref.set({ status: "working" }, { merge: true });
+  // Single use: claim it ATOMICALLY before doing anything that can be replayed
+  // (a read-then-write would let two concurrent redirects both pass).
+  const claimed = await db.runTransaction(async (tx) => {
+    const cur = await tx.get(snap.ref);
+    if (!cur.exists || cur.get("status") !== "pending") return false;
+    tx.update(snap.ref, { status: "working" });
+    return true;
+  });
+  if (!claimed) { html("That link has expired", "Close this window and select 'Login with HMRC' again.", false, 400); return; }
 
   const finish = async (failure: TfcFailure | null, childFullName?: string, reference?: string) => {
     await snap.ref.set(
@@ -484,8 +542,8 @@ tfcCallback.get("/", async (req, res) => {
       parentUid: d.parentUid,
       childId: child.id,
       childName: child.get("name") ?? null,
-      accessToken: tokenRes.data.accessToken,
-      refreshToken: tokenRes.data.refreshToken,
+      accessToken: sealToken(tokenRes.data.accessToken),
+      refreshToken: sealToken(tokenRes.data.refreshToken),
       expiresAt: tokenRes.data.expiresAt,
       linked: false,
       updatedAt: new Date().toISOString(),

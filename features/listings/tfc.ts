@@ -216,17 +216,28 @@ function simulatedBalance(reference: string): TfcBalance {
   return { amount: Math.round((20 + (h % 120)) * 100) / 100, simulated: true };
 }
 
-export interface TfcPayResult { ok: boolean; failure?: TfcFailure }
+export interface TfcPayResult { ok: boolean; failure?: TfcFailure; /** The request may have reached HMRC — do NOT offer an automatic retry. */ uncertain?: boolean }
 
-/** Ask HMRC to send `amount` to this provider against `reference`. */
-export async function pay(args: { reference: string; amount: number; tenantId?: string }): Promise<TfcPayResult> {
+/** Ask HMRC to send `amount` to this provider against `reference`.
+ *
+ *  `idempotencyKey` identifies ONE intended payment: the server never sends the
+ *  same key to HMRC twice. Pass the same key when retrying the same payment;
+ *  omit it and each call is a new payment (a key is generated for the call). */
+export async function pay(args: { reference: string; amount: number; tenantId?: string; idempotencyKey?: string }): Promise<TfcPayResult> {
   if (!HMRC_CONNECTED) return { ok: false, failure: "not-connected" };
+  const idempotencyKey = args.idempotencyKey || newKey();
   try {
-    const r = await post<{ ok: boolean; failure?: TfcFailure }>("/api/my/tfc/pay", args);
-    return r?.ok ? { ok: true } : { ok: false, failure: r?.failure ?? "connection-failed" };
+    const r = await post<{ ok: boolean; failure?: TfcFailure; uncertain?: boolean }>("/api/my/tfc/pay", { ...args, idempotencyKey });
+    return r?.ok ? { ok: true } : { ok: false, failure: r?.failure ?? "connection-failed", ...(r?.uncertain ? { uncertain: true } : {}) };
   } catch {
-    return { ok: false, failure: "connection-failed" };
+    // The request may or may not have arrived — the parent must check HMRC
+    // before paying again, so flag it rather than implying a clean failure.
+    return { ok: false, failure: "connection-failed", uncertain: true };
   }
+}
+
+function newKey(): string {
+  try { return globalThis.crypto.randomUUID(); } catch { return `k${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`; }
 }
 
 /** True once HMRC is actually wired — the UI uses this to decide whether to
