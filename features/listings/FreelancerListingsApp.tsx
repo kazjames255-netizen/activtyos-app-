@@ -1,6 +1,10 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { useT, useI18n, tNow } from "@/lib/i18n/provider";
+import { Rich } from "@/components/i18n/Rich";
+import { pickPlural } from "@/lib/i18n/plural";
+import { isRTL } from "@/lib/i18n/config";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
@@ -121,7 +125,7 @@ const openLabel = (v: string) => {
   return `${d.getDate()} ${d.toLocaleDateString(dl(), { month: "short" })}, ${time.replace(/\s/g, "").toLowerCase()}`;
 };
 const shortDate = (iso: string) =>
-  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" }) : "TBC";
+  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" }) : tNow("p8lst.flTbc");
 
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -233,6 +237,7 @@ async function putLibrary(s: LocalState): Promise<void> {
 
 /** Freelancer Listings — manual layout, Phase A. */
 export function FreelancerListingsApp() {
+  const t9 = useT();
   // Allow a deep-link to a tab (e.g. the walkthrough's "set up your locations"
   // link → ?tab=locations) while defaulting to the Listings tab.
   const initialTab = (): Tab => {
@@ -291,7 +296,7 @@ export function FreelancerListingsApp() {
           return ls;
         })
         .catch((e) => {
-          setError(e instanceof Error ? e.message : "Failed to load listings");
+          setError(e instanceof Error ? e.message : t9("p8lst.laLoadFailed"));
           // Never leave the page stuck on "Loading…" — show the error instead.
           setListings((prev) => prev ?? []);
           return null;
@@ -334,12 +339,12 @@ export function FreelancerListingsApp() {
             }
           }
           setLocal(merged);
-          if (recovered) void putLibrary(merged).catch((e) => setError(e instanceof Error ? e.message : "Couldn't save your library"));
+          if (recovered) void putLibrary(merged).catch((e) => setError(e instanceof Error ? e.message : t9("p8lst.flLibFail")));
         }
         else {
           const start = loadLocal();
           setLocal(start);
-          void putLibrary(start).catch((e) => setError(e instanceof Error ? e.message : "Couldn't save your library"));
+          void putLibrary(start).catch((e) => setError(e instanceof Error ? e.message : t9("p8lst.flLibFail")));
         }
       })
       .catch(() => {
@@ -360,7 +365,7 @@ export function FreelancerListingsApp() {
     // A swallowed failure here is why an add-on could look saved while the
     // customer page never saw it — the library lived only in this browser.
     libTimer.current = setTimeout(
-      () => void putLibrary(local).catch((e) => setError(e instanceof Error ? e.message : "Couldn't save your categories, venues and add-ons")),
+      () => void putLibrary(local).catch((e) => setError(e instanceof Error ? e.message : t9("p8lst.flLibFail2"))),
       800,
     );
   }, [local]);
@@ -376,23 +381,23 @@ export function FreelancerListingsApp() {
       <div className="py-10 text-center text-[12.5px]">
         {error ? (
           <div className="mx-auto max-w-[420px] rounded-lg border px-3 py-2.5" style={{ borderColor: "#f4c7c7", background: "#fdf2f2", color: "#b91c1c" }}>
-            <div className="font-bold">Couldn’t load your listings</div>
+            <div className="font-bold">{t9("p8lst.flCantLoad")}</div>
             <div className="mt-1">{error}</div>
             <button type="button" onClick={refresh} className="mt-2 font-bold underline">
-              Try again
+              {t9("p8lst.flTryAgain")}
             </button>
           </div>
         ) : (
-          <span className="text-[var(--ink-3)]">Loading…</span>
+          <span className="text-[var(--ink-3)]">{t9("p8lst.flLoading")}</span>
         )}
       </div>
     );
 
   // Left→right as the natural build order: where → when/pricing → the listing.
   const TABS: [Tab, string][] = [
-    ["locations", "Locations"],
-    ["blocks", "Blocks"],
-    ["listings", "Listings"],
+    ["locations", t9("p8lst.flTabLocations")],
+    ["blocks", t9("p8lst.flTabBlocks")],
+    ["listings", t9("p8lst.flTabListings")],
   ];
 
   return (
@@ -413,8 +418,8 @@ export function FreelancerListingsApp() {
       }
     >
       <PageHero
-        title="Blocks & listings"
-        lede="Locations, scheduling blocks and your programmes"
+        title={t9("p8lst.flHeroTitle")}
+        lede={t9("p8lst.flHeroLede")}
         icon="🎫"
         actions={<>
           <TourLauncher view={tab === "blocks" ? "blocks" : "listings"} compact />
@@ -426,24 +431,24 @@ export function FreelancerListingsApp() {
                 // The whole-storefront widget for the operator's own website.
                 const tid = (listings?.[0] as { tenantId?: string } | undefined)?.tenantId;
                 if (!tid) {
-                  alert("Create a listing first — the storefront embed shows your live listings.");
+                  alert(t9("p8lst.flEmbedNeed"));
                   return;
                 }
                 const snippet = `<script src="${window.location.origin}/embed.js" data-store="${tid}" async></script>`;
                 navigator.clipboard?.writeText(snippet).then(() =>
-                  alert(`Copied! Paste this into your website's HTML for a button that opens your WHOLE storefront (every live listing):\n\n${snippet}\n\nTips:\n· data-mode="inline" embeds the storefront directly in the page\n· on React/Next sites, put <div data-activityos-store="${tid}"></div> where it should go and load the script anywhere`),
+                  alert(t9("p8lst.flEmbedStoreAlert", { snippet, tid })),
                 ).catch(() => {});
               }}
               className="rounded-full bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#2f5fd0] shadow-sm transition hover:bg-white/10"
             >
-              {"</>"} Embed
+              {t9("p8lst.flEmbedBtn")}
             </button>
             <button
               type="button"
               onClick={() => startNew()}
               className="rounded-full bg-[#EE1F63] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110"
             >
-              ＋ New listing
+              {t9("p8lst.flNewBtn")}
             </button>
           </>
           )}
@@ -479,7 +484,7 @@ export function FreelancerListingsApp() {
           <span>⚠</span>
           <span className="flex-1">{error}</span>
           <button type="button" onClick={() => setError(null)} className="font-bold underline">
-            Dismiss
+            {t9("p8lst.flDismiss")}
           </button>
         </div>
       )}
@@ -494,11 +499,11 @@ export function FreelancerListingsApp() {
             setWizard({ draft: saved ?? { ...emptyDraft(), id: l.id, title: l.name }, key: l.id });
           }}
           onResume={(key, dr) => setWizard({ draft: dr, key })}
-          onDeleteDraft={(key) => { if (confirm("Delete this draft?")) { deleteDraft(key); setTick((t) => t + 1); } }}
+          onDeleteDraft={(key) => { if (confirm(t9("p8lst.flDraftDelConfirm"))) { deleteDraft(key); setTick((t) => t + 1); } }}
           onSetVisibility={(l, vis) => {
             api(`/api/listings/${encodeURIComponent(l.id)}`, { method: "PUT", body: JSON.stringify({ visibility: vis }) })
               .then(() => refresh())
-              .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t change visibility"));
+              .catch((e) => setError(e instanceof Error ? e.message : t9("p8lst.flVisFail")));
             setTick((t) => t + 1);
           }}
           visTick={tick}
@@ -529,11 +534,12 @@ export function FreelancerListingsApp() {
 // shows the current state at a glance instead of a wall of empty controls. The
 // native select chevron is replaced — it can't be recoloured for the filled state.
 export function Pill({ active, onClear, children }: { active: boolean; onClear?: () => void; children: React.ReactNode }) {
+  const t = useT();
   return (
     <span className="flex h-8 items-center gap-1.5 rounded-full border ps-3 pe-1 transition-colors"
       style={active ? { background: "var(--brand)", borderColor: "var(--brand)" } : { background: "var(--panel)", borderColor: "var(--line)" }}>
       {children}
-      <button type="button" onClick={onClear} title={active ? "Clear" : undefined} aria-hidden={!active}
+      <button type="button" onClick={onClear} title={active ? t("p8lst.flClear") : undefined} aria-hidden={!active}
         className="me-1 text-[13px] leading-none transition-opacity"
         style={active ? { color: "rgba(255,255,255,.75)" } : { opacity: 0, pointerEvents: "none", width: 0, marginInlineEnd: 0 }}>×</button>
     </span>
@@ -558,16 +564,16 @@ export function PillSelect({ active, value, onChange, options, title }: { active
 }
 
 type SortKey = "soonest" | "latest" | "ending" | "capacity" | "booked" | "full" | "left" | "price" | "name";
-const SORTS: [SortKey, string][] = [
-  ["soonest", "Starting soonest"],
-  ["latest", "Starting latest"],
-  ["ending", "Ending soonest"],
-  ["capacity", "Most places offered"],
-  ["booked", "Most places booked"],
-  ["full", "Highest % booked"],
-  ["left", "Fewest places left"],
-  ["price", "Price: low to high"],
-  ["name", "Name A–Z"],
+const SORT_KEYS: [SortKey, string][] = [
+  ["soonest", "flSortSoonest"],
+  ["latest", "flSortLatest"],
+  ["ending", "flSortEnding"],
+  ["capacity", "flSortCapacity"],
+  ["booked", "flSortBooked"],
+  ["full", "flSortFull"],
+  ["left", "flSortLeft"],
+  ["price", "flSortPrice"],
+  ["name", "flSortName"],
 ];
 
 function ListingsTab({
@@ -593,6 +599,9 @@ function ListingsTab({
   onError: (m: string) => void;
   refresh: () => Promise<Listing[] | null>;
 }) {
+  const t = useT();
+  const { locale } = useI18n();
+  const rtl = isRTL(locale);
   const [q, setQ] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "live" | "ended" | "draft">("all");
@@ -641,37 +650,38 @@ function ListingsTab({
       // Copy the full server draft when there is one (the server strips
       // read-only fields like tenantId/blocks); legacy docs copy name+passes.
       const dr = serverDraft(l);
+      const copyName = t("p8lst.flCopyName", { name: l.name });
       const body = dr
-        ? { ...dr, id: undefined, title: `${l.name} (copy)`, name: `${l.name} (copy)`, status: "draft", archived: false, passes: l.passes }
-        : { name: `${l.name} (copy)`, passes: l.passes };
+        ? { ...dr, id: undefined, title: copyName, name: copyName, status: "draft", archived: false, passes: l.passes }
+        : { name: copyName, passes: l.passes };
       const created = await apiPost<{ id: string }>("/api/listings", body);
-      copyDraft(l.id, created.id, { title: `${l.name} (copy)`, archived: false });
+      copyDraft(l.id, created.id, { title: copyName, archived: false });
       refresh();
       setArchiveTick((t) => t + 1);
     } catch (e) {
-      onError(e instanceof Error ? e.message : "Duplicate failed");
+      onError(e instanceof Error ? e.message : t("p8lst.flDupFail"));
     }
   }
   async function remove(l: Listing) {
     const booked = bookedCount(l);
-    if (booked > 0) { alert(`“${l.name}” has ${booked} booking${booked === 1 ? "" : "s"} and can’t be deleted — archive it instead.`); return; }
-    if (!confirm(`Delete “${l.name}”? This can’t be undone.`)) return;
+    if (booked > 0) { alert(t("p8lst.flHasBookings", { name: l.name, n: booked })); return; }
+    if (!confirm(t("p8lst.flDelConfirm", { name: l.name }))) return;
     try {
       await api(`/api/listings/${encodeURIComponent(l.id)}`, { method: "DELETE" });
       // Confirm it actually went — a "successful" delete that leaves the row
       // in place otherwise just looks like the button did nothing.
       const after = await refresh();
       if (after?.some((x) => x.id === l.id)) {
-        onError(`The server accepted deleting “${l.name}” but it's still in the list. Send this to your developer — the listing may belong to a different account.`);
+        onError(t("p8lst.flDelStuck", { name: l.name }));
       }
     } catch (e) {
-      onError(e instanceof Error ? e.message : "Delete failed");
+      onError(e instanceof Error ? e.message : t("p8lst.flDelFail"));
     }
   }
   const archive = (l: Listing, v: boolean) => {
     api(`/api/listings/${encodeURIComponent(l.id)}`, { method: "PUT", body: JSON.stringify({ archived: v }) })
       .then(() => refresh())
-      .catch((e) => onError(e instanceof Error ? e.message : "Archive failed"));
+      .catch((e) => onError(e instanceof Error ? e.message : t("p8lst.flArchFail")));
     setArchiveTick((t) => t + 1);
     if (v) {
       // Show where it went: open the Archived section + a dismissible undo note.
@@ -699,7 +709,7 @@ function ListingsTab({
   const copyEmbed = (l: Listing) => {
     const snippet = `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/embed.js" data-listing="${l.id}" async></script>`;
     navigator.clipboard?.writeText(snippet)
-      .then(() => alert(`Copied! Paste this into your website's HTML for a "Book now" button:\n\n${snippet}\n\nTips:\n· add data-mode="inline" to embed the whole booking page instead of a button\n· on React/Next sites, put <div data-activityos-book="${l.id}"></div> where the button should go and load the script however you like`))
+      .then(() => alert(t("p8lst.flEmbedOneAlert", { snippet, id: l.id })))
       .catch(() => {});
   };
 
@@ -776,14 +786,14 @@ function ListingsTab({
 
   const draftsBlock = drafts.length > 0 && (
     <div className="mb-3">
-      <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Drafts ({drafts.length}) — resume where you left off</div>
+      <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8lst.flDraftsHead", { n: drafts.length })}</div>
       <div className="flex flex-col gap-1.5">
         {drafts.map(([key, dr]) => (
           <div key={key} className="flex items-center gap-2 rounded-xl border border-dashed border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-            <span className="rounded-full bg-[#fdf3d8] px-2 py-[2px] text-[10px] font-bold text-[#9a5a00]">Draft</span>
-            <span className="flex-1 truncate text-[13px] font-bold">{dr.title.trim() || "Untitled listing"}</span>
-            <Button sm variant="primary" onClick={() => onResume(key, dr)}>Resume</Button>
-            <Button sm variant="danger" onClick={() => onDeleteDraft(key)}>Delete</Button>
+            <span className="rounded-full bg-[#fdf3d8] px-2 py-[2px] text-[10px] font-bold text-[#9a5a00]">{t("p8lst.flDraft")}</span>
+            <span className="flex-1 truncate text-[13px] font-bold">{dr.title.trim() || t("p8lst.flUntitled")}</span>
+            <Button sm variant="primary" onClick={() => onResume(key, dr)}>{t("p8lst.flResume")}</Button>
+            <Button sm variant="danger" onClick={() => onDeleteDraft(key)}>{t("p8lst.flDelete")}</Button>
           </div>
         ))}
       </div>
@@ -794,7 +804,7 @@ function ListingsTab({
     return (
       <div>
         {draftsBlock}
-        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No listings yet — create your first with <b>＋ New listing</b> and it appears in the parents’ Browse page.</Card>
+        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]"><Rich text={t("p8lst.flNoListings")} /></Card>
       </div>
     );
 
@@ -808,21 +818,21 @@ function ListingsTab({
           <svg viewBox="0 0 16 16" fill="none" className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-3)] opacity-60">
             <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.7" /><path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
           </svg>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search listings…"
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p8lst.flSearchPh")}
             className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] ps-[32px] pe-3 text-[12.5px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-2)] focus:border-[var(--brand-2)]" />
         </div>
 
         {venueOpts.length > 0 && (
           <Pill active={!!venueFilter} onClear={() => setVenueFilter("")}>
-            <PillSelect active={!!venueFilter} value={venueFilter} onChange={setVenueFilter} title="Filter by location"
-              options={[["", "All locations"], ...venueOpts.map((v) => [v.id, `${v.name} (${v.n})`] as [string, string])]} />
+            <PillSelect active={!!venueFilter} value={venueFilter} onChange={setVenueFilter} title={t("p8lst.flFilterLoc")}
+              options={[["", t("p8lst.flAllLoc")], ...venueOpts.map((v) => [v.id, `${v.name} (${v.n})`] as [string, string])]} />
           </Pill>
         )}
 
         {catOpts.length > 0 && (
           <Pill active={!!catFilter} onClear={() => setCatFilter("")}>
-            <PillSelect active={!!catFilter} value={catFilter} onChange={setCatFilter} title="Filter by category"
-              options={[["", "All categories"], ...catOpts.map((c) => [c.id, `${c.name} (${c.n})`] as [string, string])]} />
+            <PillSelect active={!!catFilter} value={catFilter} onChange={setCatFilter} title={t("p8lst.flFilterCat")}
+              options={[["", t("p8lst.flAllCats")], ...catOpts.map((c) => [c.id, `${c.name} (${c.n})`] as [string, string])]} />
           </Pill>
         )}
 
@@ -830,39 +840,39 @@ function ListingsTab({
           const seasonOpts = seasons.map((s) => ({ ...s, n: rows.filter((r) => !r.archived && r.seasonId === s.id).length })).filter((s) => s.n > 0);
           return seasonOpts.length > 0 ? (
             <Pill active={!!seasonFilter} onClear={() => setSeasonFilter("")}>
-              <PillSelect active={!!seasonFilter} value={seasonFilter} onChange={setSeasonFilter} title="Filter by season"
-                options={[["", "All seasons"], ...seasonOpts.map((s) => [s.id, `${s.name} (${s.n})`] as [string, string])]} />
+              <PillSelect active={!!seasonFilter} value={seasonFilter} onChange={setSeasonFilter} title={t("p8lst.flFilterSeason")}
+                options={[["", t("p8lst.flAllSeasons")], ...seasonOpts.map((s) => [s.id, `${s.name} (${s.n})`] as [string, string])]} />
             </Pill>
           ) : null;
         })()}
 
         <Pill active={sortBy !== "soonest"} onClear={() => setSortBy("soonest")}>
-          <PillSelect active={sortBy !== "soonest"} value={sortBy} onChange={(v) => setSortBy(v as SortKey)} title="Sort the list"
-            options={SORTS.map(([k, label]) => [k, label] as [string, string])} />
+          <PillSelect active={sortBy !== "soonest"} value={sortBy} onChange={(v) => setSortBy(v as SortKey)} title={t("p8lst.flSortTitle")}
+            options={SORT_KEYS.map(([k, label]) => [k, t("p8lst." + label)] as [string, string])} />
         </Pill>
 
         <Pill active={!!dateFilter} onClear={() => setDateFilter("")}>
-          <span className="whitespace-nowrap text-[12.5px] font-semibold" style={{ color: dateFilter ? "#fff" : "var(--ink)" }}>Runs on</span>
+          <span className="whitespace-nowrap text-[12.5px] font-semibold" style={{ color: dateFilter ? "#fff" : "var(--ink)" }}>{t("p8lst.flRunsOn")}</span>
           <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}
             className="h-full w-[112px] border-0 bg-transparent text-[12.5px] font-semibold outline-none"
             style={{ color: dateFilter ? "#fff" : "var(--ink)", colorScheme: dateFilter ? "dark" : "light" }} />
         </Pill>
 
         {(q || dateFilter || venueFilter || catFilter || seasonFilter || sortBy !== "soonest") && (
-          <button type="button" title="Clear every filter"
+          <button type="button" title={t("p8lst.flClearAll")}
             onClick={() => { setQ(""); setDateFilter(""); setVenueFilter(""); setCatFilter(""); setSeasonFilter(""); setSortBy("soonest"); }}
-            className="h-8 px-1 text-[11.5px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline">Reset</button>
+            className="h-8 px-1 text-[11.5px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline">{t("p8lst.flReset")}</button>
         )}
 
         <span className="ms-auto flex h-8 items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5 text-[11.5px] font-semibold">
-          {([["all", "All"], ["live", "Published"], ["draft", "Unpublished"], ["ended", "Ended"]] as const).map(([k, label]) => (
+          {([["all", t("p8lst.flStAll")], ["live", t("p8lst.flStPub")], ["draft", t("p8lst.flStUnpub")], ["ended", t("p8lst.flStEnded")]] as const).map(([k, label]) => (
             <button key={k} type="button" onClick={() => setStatusFilter(k)} className="h-full rounded-full px-3 transition-colors"
               style={statusFilter === k ? { background: "var(--brand)", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
         </span>
       </div>
       {activeShown.length === 0 ? (
-        <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">{q || dateFilter || venueFilter || catFilter ? `No listings match your filters${dateFilter ? " on that date" : ""}.` : "No active listings — check Archived below."}</Card>
+        <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">{q || dateFilter || venueFilter || catFilter ? (dateFilter ? t("p8lst.flNoMatchDate") : t("p8lst.flNoMatch")) : t("p8lst.flNoActive")}</Card>
       ) : (
         activeShown.map(({ l, info, vn, cap, spaces, isLive, isDraft, seasonId }) => {
           const season = seasonName(seasonId);
@@ -877,12 +887,12 @@ function ListingsTab({
                       <div className="text-[26px] font-extrabold leading-none sm:mt-0.5" style={{ fontVariantNumeric: "tabular-nums" }}>{dayOf(info.from)}</div>
                       <div className="mx-auto my-2 hidden h-px w-6 bg-white/30 sm:block" />
                       <div className="text-[11px] leading-[1.35] opacity-90 sm:text-center">
-                        <span className="sm:hidden">→ </span>to <b>{shortDate(info.to)}</b>
-                        {info.totalDays > 0 && <><br className="hidden sm:block" /><span className="sm:hidden"> · </span>{info.totalDays} days</>}
+                        <span className="sm:hidden">{rtl ? "← " : "→ "}</span><Rich text={t("p8lst.flToDate", { date: shortDate(info.to) })} />
+                        {info.totalDays > 0 && <><br className="hidden sm:block" /><span className="sm:hidden"> · </span>{pickPlural(t, locale, "p7pol.dy", info.totalDays)}</>}
                       </div>
                     </>
                   ) : (
-                    <div className="text-[11px] font-bold uppercase tracking-[0.1em] opacity-90">Dates TBC</div>
+                    <div className="text-[11px] font-bold uppercase tracking-[0.1em] opacity-90">{t("p8lst.flDatesTbc")}</div>
                   )}
                 </div>
 
@@ -890,19 +900,19 @@ function ListingsTab({
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-[17px] font-bold leading-tight tracking-[-0.02em] text-[var(--ink)]">{l.name}</h3>
                     {isDraft ? (
-                      <span title="Not published — parents can't see or book this" className="rounded-full px-2 py-[2px] text-[10px] font-semibold" style={{ background: "#fff7ed", color: "#9a3412" }}>Unpublished</span>
+                      <span title={t("p8lst.flUnpubTip")} className="rounded-full px-2 py-[2px] text-[10px] font-semibold" style={{ background: "#fff7ed", color: "#9a3412" }}>{t("p8lst.flStUnpub")}</span>
                     ) : isLive ? (
-                      <span title="Published and still to run — parents can find and book it" className="inline-flex items-center gap-1 rounded-full bg-[#eaf0fc] px-2 py-[2px] text-[10px] font-semibold text-[#1d3a8f]"><span className="inline-block h-1.5 w-1.5 rounded-full bg-[#3f78d8]" />Published</span>
+                      <span title={t("p8lst.flPubTip")} className="inline-flex items-center gap-1 rounded-full bg-[#eaf0fc] px-2 py-[2px] text-[10px] font-semibold text-[#1d3a8f]"><span className="inline-block h-1.5 w-1.5 rounded-full bg-[#3f78d8]" />{t("p8lst.flStPub")}</span>
                     ) : (
-                      <span title="Published, but the last date has passed" className="rounded-full bg-[var(--surface)] px-2 py-[2px] text-[10px] font-semibold text-[var(--ink-3)]">Ended</span>
+                      <span title={t("p8lst.flEndedTip")} className="rounded-full bg-[var(--surface)] px-2 py-[2px] text-[10px] font-semibold text-[var(--ink-3)]">{t("p8lst.flStEnded")}</span>
                     )}
                     {info?.opensAt && info.opensAt > nowLocal() && (
-                      <span title="Parents can see this listing but can't book until then" className="rounded-full bg-[#fff7ed] px-2 py-[2px] text-[10px] font-semibold text-[#9a3412]">⏰ Opens {openLabel(info.opensAt)}</span>
+                      <span title={t("p8lst.flOpensTip")} className="rounded-full bg-[#fff7ed] px-2 py-[2px] text-[10px] font-semibold text-[#9a3412]">{t("p8lst.flOpens", { when: openLabel(info.opensAt) })}</span>
                     )}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12.5px] text-[var(--ink-3)]">
-                    <span>{vn || "No venue set"}</span>
-                    {season && <span title="Season" className="rounded-full bg-[var(--panel)] px-1.5 py-[1px] text-[10.5px] font-semibold text-[var(--ink-2)] ring-1 ring-[var(--line)]">🗓 {season}</span>}
+                    <span>{vn || t("p8lst.flNoVenue")}</span>
+                    {season && <span title={t("p8lst.flSeason")} className="rounded-full bg-[var(--panel)] px-1.5 py-[1px] text-[10.5px] font-semibold text-[var(--ink-2)] ring-1 ring-[var(--line)]">🗓 {season}</span>}
                   </div>
 
                   {/* passes */}
@@ -915,9 +925,9 @@ function ListingsTab({
                             <span className="text-[12px] font-bold text-[var(--ink)]" style={{ fontVariantNumeric: "tabular-nums" }}>{money(t.price)}</span>
                           </span>
                         ))}
-                        {l.passes.length > 3 && <span className="text-[11.5px] font-medium text-[var(--ink-3)]">+{l.passes.length - 3} more</span>}
+                        {l.passes.length > 3 && <span className="text-[11.5px] font-medium text-[var(--ink-3)]">{t("p8lst.flMore", { n: l.passes.length - 3 })}</span>}
                       </>
-                    ) : <span className="text-[12px] text-[var(--ink-3)]">No tickets yet.</span>}
+                    ) : <span className="text-[12px] text-[var(--ink-3)]">{t("p8lst.flNoTickets")}</span>}
                   </div>
 
                   {/* how full it is */}
@@ -935,10 +945,10 @@ function ListingsTab({
                           <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: tone }} />
                         </div>
                         <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[11.5px] text-[var(--ink-3)]" style={{ fontVariantNumeric: "tabular-nums" }}>
-                          <span><b className="text-[var(--ink)]">{booked}</b> of {cap} booked</span>
+                          <span><Rich text={t("p8lst.flBookedOf", { booked, cap })} bClass="text-[var(--ink)]" /></span>
                           <span className="text-[var(--line)]">·</span>
-                          <span style={{ color: tone }}><b>{left}</b> left{info?.capacityScope === "day" ? " per day" : ""}</span>
-                          {booked > 0 && <><span className="text-[var(--line)]">·</span><span>{pct}% full</span></>}
+                          <span style={{ color: tone }}><Rich text={t(info?.capacityScope === "day" ? "p8lst.flLeftDay" : "p8lst.flLeft", { left })} /></span>
+                          {booked > 0 && <><span className="text-[var(--line)]">·</span><span>{t("p8lst.flPctFull", { pct })}</span></>}
                         </div>
                       </div>
                     );
@@ -949,13 +959,13 @@ function ListingsTab({
                     <span key={visTick} className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[11px] font-semibold">
                       {(["public", "hidden"] as const).map((v) => {
                         const on = visibilityOf(l) === v;
-                        return <button key={v} type="button" onClick={() => setVisibility(l, v)} title={v === "public" ? "Listed on your booking page — parents can find and book it" : "Unlisted — off your booking page, but the direct link still books"} className="px-2.5 py-1 transition-colors" style={on ? { background: "var(--brand-soft)", color: "var(--brand-ink)" } : { color: "var(--ink-3)" }}>{v === "public" ? "Public" : "Hidden"}</button>;
+                        return <button key={v} type="button" onClick={() => setVisibility(l, v)} title={v === "public" ? t("p8lst.flPublicTip") : t("p8lst.flHiddenTip")} className="px-2.5 py-1 transition-colors" style={on ? { background: "var(--brand-soft)", color: "var(--brand-ink)" } : { color: "var(--ink-3)" }}>{v === "public" ? t("p8lst.flPublic") : t("p8lst.flHidden")}</button>;
                       })}
                     </span>
                     {linkWarnId === l.id && (
                       <div className="order-last w-full rounded-lg border px-3 py-2 text-[11.5px] leading-[1.5]"
                         style={{ background: "#fff7ed", borderColor: "#fed7aa", color: "#9a3412" }}>
-                        Link copied — but this listing is <b>Unpublished</b>, so parents will see &ldquo;not available&rdquo; until you open it in <b>Edit</b> and publish it. It works for you because you&rsquo;re signed in as the owner.
+                        <Rich text={t("p8lst.flLinkWarn")} />
                       </div>
                     )}
                     {visNote === l.id && (
@@ -964,9 +974,9 @@ function ListingsTab({
                           ? { background: "var(--brand-soft)", borderColor: "transparent", color: "var(--brand-ink)" }
                           : { background: "#fff7ed", borderColor: "#fed7aa", color: "#9a3412" }}>
                         {visibilityOf(l) === "public" ? (
-                          <><b>Public</b> — listed on your booking page. Any parent can find it, see the prices and book a place.</>
+                          <Rich text={t("p8lst.flPublicNote")} />
                         ) : (
-                          <><b>Hidden</b> — not listed on your booking page, so parents can&rsquo;t find it by browsing. Anyone you send the <b>🔗 Link</b> to can still book as normal — handy for a private group, a school, or returning families.</>
+                          <Rich text={t("p8lst.flHiddenNote")} />
                         )}
                       </div>
                     )}
@@ -975,17 +985,17 @@ function ListingsTab({
                           booking widget in operator mode. Only for listings that
                           can actually be booked (a draft has no dates/prices). */}
                       {!isDraft && isLive && (
-                        <Button sm className="!border-[#bbe7cb] !bg-[#eaf7ef] !text-[#0f7a43] hover:!bg-[#dcf0e4]" onClick={() => takeBooking(l)}>📞 Book for a customer</Button>
+                        <Button sm className="!border-[#bbe7cb] !bg-[#eaf7ef] !text-[#0f7a43] hover:!bg-[#dcf0e4]" onClick={() => takeBooking(l)}>{t("p8lst.flBookForCustomer")}</Button>
                       )}
-                      <Button sm className="!border-[#c3d6f7] !bg-[#eef4ff] !text-[#1d3a8f] hover:!bg-[#e2ecfd]" onClick={() => copyLink(l, isDraft)}>{copiedId === l.id ? "✓ Copied" : "🔗 Link"}</Button>
+                      <Button sm className="!border-[#c3d6f7] !bg-[#eef4ff] !text-[#1d3a8f] hover:!bg-[#e2ecfd]" onClick={() => copyLink(l, isDraft)}>{copiedId === l.id ? t("p8lst.flCopied") : t("p8lst.flLink")}</Button>
                       {/* QR to the /book page — parents scan it (flyer, door, table). */}
-                      <Button sm className="!border-[#ddd0f7] !bg-[#f3effe] !text-[#6d28d9] hover:!bg-[#ece2fc]" onClick={() => setQrFor(l)}>▦ QR</Button>
+                      <Button sm className="!border-[#ddd0f7] !bg-[#f3effe] !text-[#6d28d9] hover:!bg-[#ece2fc]" onClick={() => setQrFor(l)}>{t("p8lst.flQr")}</Button>
                       {/* Opens the real parent page (/book/{id}) in a new tab —
                           the exact storefront a parent sees. ?preview=1 tells the
                           page to show a "Preview" bar instead of the parent-portal
                           nav, so the provider isn't dropped into the parent app. */}
-                      <Button sm className="!border-[#bfe6e2] !bg-[#e6f6f4] !text-[#0e7d74] hover:!bg-[#d7f0ec]" onClick={() => window.open(`/book/${l.id}?preview=1`, "_blank", "noopener")}>View as parent ↗</Button>
-                      <Button sm variant="primary" onClick={() => onEdit(l)}>Edit</Button>
+                      <Button sm className="!border-[#bfe6e2] !bg-[#e6f6f4] !text-[#0e7d74] hover:!bg-[#d7f0ec]" onClick={() => window.open(`/book/${l.id}?preview=1`, "_blank", "noopener")}>{t("p8lst.flViewAsParent")}</Button>
+                      <Button sm variant="primary" onClick={() => onEdit(l)}>{t("p8lst.flEdit")}</Button>
                       <div className="relative">
                         <Button sm onClick={() => setMenuId((m) => (m === l.id ? null : l.id))}>⋯</Button>
                         {menuId === l.id && (
@@ -993,14 +1003,14 @@ function ListingsTab({
                             <div className="fixed inset-0 z-10" onClick={() => setMenuId(null)} />
                             <div className="absolute end-0 z-20 mt-1 w-[168px] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] py-1 shadow-lg">
                               {[
-                                { label: "</> Embed on my website", fn: () => copyEmbed(l) },
-                                { label: "Duplicate", fn: () => duplicate(l) },
-                                { label: "Archive", fn: () => archive(l, true) },
+                                { label: t("p8lst.flMenuEmbed"), fn: () => copyEmbed(l) },
+                                { label: t("p8lst.flMenuDup"), fn: () => duplicate(l) },
+                                { label: t("p8lst.flMenuArchive"), fn: () => archive(l, true) },
                               ].map((a) => (
                                 <button key={a.label} type="button" onClick={() => { a.fn(); setMenuId(null); }} className="block w-full px-3.5 py-2 text-start text-[12.5px] font-medium text-[var(--ink-2)] hover:bg-[var(--surface)]">{a.label}</button>
                               ))}
                               <div className="my-1 h-px bg-[var(--line)]" />
-                              <button type="button" onClick={() => { remove(l); setMenuId(null); }} className="block w-full px-3.5 py-2 text-start text-[12.5px] font-medium text-[#dc2626] hover:bg-[#fef2f2]">Delete</button>
+                              <button type="button" onClick={() => { remove(l); setMenuId(null); }} className="block w-full px-3.5 py-2 text-start text-[12.5px] font-medium text-[#dc2626] hover:bg-[#fef2f2]">{t("p8lst.flDelete")}</button>
                             </div>
                           </>
                         )}
@@ -1036,25 +1046,25 @@ function ListingsTab({
         const draft = (serverDraft(qrFor)?.status ?? allDrafts[qrFor.id]?.status ?? "live") === "draft";
         const printPoster = () => {
           const w = window.open("", "_blank"); if (!w) return;
-          w.document.write(`<!doctype html><meta charset="utf-8"><title>${qrFor.name}</title><body style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;text-align:center;padding:48px;color:#171534"><h1 style="font-size:30px;margin:0 0 6px">${qrFor.name.replace(/</g, "&lt;")}</h1><p style="font-size:17px;color:#5b6478;margin:0 0 24px">📱 Scan to book your place</p><img src="${qr}" style="width:340px;height:340px" alt="QR"/><p style="font-size:13px;color:#8a86a3;margin-top:20px">${url}</p><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body>`);
+          w.document.write(`<!doctype html><meta charset="utf-8"><title>${qrFor.name}</title><body style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;text-align:center;padding:48px;color:#171534"><h1 style="font-size:30px;margin:0 0 6px">${qrFor.name.replace(/</g, "&lt;")}</h1><p style="font-size:17px;color:#5b6478;margin:0 0 24px">${t("p8lst.flPosterScan").replace(/</g, "&lt;")}</p><img src="${qr}" style="width:340px;height:340px" alt="QR"/><p style="font-size:13px;color:#8a86a3;margin-top:20px">${url}</p><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body>`);
           w.document.close();
         };
         return (
           <div onClick={(e) => e.target === e.currentTarget && setQrFor(null)} className="fixed inset-0 z-[10000] grid place-items-center overflow-auto bg-black/55 p-4">
             <div className="w-full max-w-[360px] rounded-2xl bg-[var(--surface)] p-5 shadow-2xl">
               <div className="mb-3 flex items-center gap-2">
-                <span className="text-[14px] font-extrabold text-[var(--ink)]">📱 Scan to book</span>
+                <span className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8lst.flQrHead")}</span>
                 <button type="button" onClick={() => setQrFor(null)} className="ms-auto text-[20px] leading-none text-[var(--ink-3)]">×</button>
               </div>
               <div className="truncate text-[12.5px] font-bold text-[var(--ink-2)]">{qrFor.name}</div>
-              <img src={qr} alt={`QR code for ${qrFor.name}`} className="mx-auto mt-3 h-[240px] w-[240px] rounded-xl border border-[var(--line)]" />
-              <p className="mt-2.5 text-center text-[11.5px] text-[var(--ink-3)]">Parents scan this with their phone camera to open the booking page. Put it on a flyer, poster, door or table.</p>
-              {draft && <div className="mt-2 rounded-lg border border-[#fed7aa] bg-[#fff7ed] px-3 py-2 text-[11.5px] text-[#9a3412]">This listing is <b>Unpublished</b> — publish it (Edit) before printing, or the QR shows &ldquo;not available&rdquo; to parents.</div>}
+              <img src={qr} alt={t("p8lst.flQrAlt", { name: qrFor.name })} className="mx-auto mt-3 h-[240px] w-[240px] rounded-xl border border-[var(--line)]" />
+              <p className="mt-2.5 text-center text-[11.5px] text-[var(--ink-3)]">{t("p8lst.flQrHelp")}</p>
+              {draft && <div className="mt-2 rounded-lg border border-[#fed7aa] bg-[#fff7ed] px-3 py-2 text-[11.5px] text-[#9a3412]"><Rich text={t("p8lst.flQrDraft")} /></div>}
               <div className="mt-2 truncate rounded-lg bg-[var(--panel)] px-3 py-2 text-center text-[11px] text-[var(--ink-3)]">{url}</div>
               <div className="mt-3 flex gap-2">
-                <Button sm className="flex-1" onClick={() => { navigator.clipboard?.writeText(url).then(() => { setCopiedId(qrFor.id); setTimeout(() => setCopiedId(null), 1500); }).catch(() => {}); }}>{copiedId === qrFor.id ? "✓ Copied" : "🔗 Copy link"}</Button>
-                <Button sm className="flex-1" onClick={() => window.open(qr, "_blank", "noopener")}>⬇ Image</Button>
-                <Button sm variant="primary" className="flex-1" onClick={printPoster}>🖨 Poster</Button>
+                <Button sm className="flex-1" onClick={() => { navigator.clipboard?.writeText(url).then(() => { setCopiedId(qrFor.id); setTimeout(() => setCopiedId(null), 1500); }).catch(() => {}); }}>{copiedId === qrFor.id ? t("p8lst.flCopied") : t("p8lst.flCopyLink")}</Button>
+                <Button sm className="flex-1" onClick={() => window.open(qr, "_blank", "noopener")}>{t("p8lst.flImage")}</Button>
+                <Button sm variant="primary" className="flex-1" onClick={printPoster}>{t("p8lst.flPoster")}</Button>
               </div>
             </div>
           </div>
@@ -1064,8 +1074,8 @@ function ListingsTab({
       {/* Undo toast — makes clear where an archived listing went. */}
       {justArchived && (
         <div className="fixed bottom-5 left-1/2 z-[150] flex max-w-[92vw] -translate-x-1/2 items-center gap-3 rounded-2xl bg-[#111634] px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-xl">
-          <span>📦 <b>{justArchived.name}</b> archived — it&rsquo;s in <b>Archived</b> at the bottom.</span>
-          <button type="button" onClick={() => { const l = archivedList.find((x) => x.id === justArchived.id) ?? { id: justArchived.id, name: justArchived.name } as Listing; archive(l, false); }} className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-extrabold hover:bg-white/25">↩ Undo</button>
+          <span><Rich text={t("p8lst.flArchivedToast", { name: justArchived.name })} /></span>
+          <button type="button" onClick={() => { const l = archivedList.find((x) => x.id === justArchived.id) ?? { id: justArchived.id, name: justArchived.name } as Listing; archive(l, false); }} className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-extrabold hover:bg-white/25">{t("p8lst.flUndo")}</button>
           <button type="button" onClick={() => setJustArchived(null)} className="text-[16px] leading-none text-white/60 hover:text-white">×</button>
         </div>
       )}
@@ -1074,18 +1084,18 @@ function ListingsTab({
         <div className="mt-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
           <button type="button" onClick={() => setShowArchived((v) => !v)} className="flex w-full items-center gap-2 text-[12px] font-extrabold text-[var(--ink-2)]">
             <span className="grid h-6 w-6 place-items-center rounded-lg bg-[var(--surface)] text-[13px] ring-1 ring-[var(--line)]">📦</span>
-            <span>Archived</span>
+            <span>{t("p8lst.flArchivedHead")}</span>
             <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#5b6478] px-1.5 text-[10.5px] font-extrabold text-white">{archivedList.length}</span>
-            <span className="ms-auto text-[11px] font-semibold text-[var(--ink-3)]">{showArchived ? "▾ hide" : "▸ show"}</span>
+            <span className="ms-auto text-[11px] font-semibold text-[var(--ink-3)]">{showArchived ? t("p8lst.flHide") : t("p8lst.flShow")}</span>
           </button>
           {showArchived && (
             <div className="mt-2 flex flex-col gap-1.5">
               {archivedList.map((l) => (
                 <div key={l.id} className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-                  <span className="rounded-full bg-[#eef0f6] px-2 py-[2px] text-[10px] font-bold text-[#5b6478]">Archived</span>
+                  <span className="rounded-full bg-[#eef0f6] px-2 py-[2px] text-[10px] font-bold text-[#5b6478]">{t("p8lst.flArchivedHead")}</span>
                   <span className="flex-1 truncate text-[13px] font-bold">{l.name}</span>
-                  <Button sm variant="primary" onClick={() => archive(l, false)}>Unarchive</Button>
-                  <Button sm variant="danger" onClick={() => remove(l)}>Delete</Button>
+                  <Button sm variant="primary" onClick={() => archive(l, false)}>{t("p8lst.flUnarchive")}</Button>
+                  <Button sm variant="danger" onClick={() => remove(l)}>{t("p8lst.flDelete")}</Button>
                 </div>
               ))}
             </div>
@@ -1108,6 +1118,8 @@ function LocationsTab({
   usage: { cats: Record<string, number>; venues: Record<string, number> };
   onNewListing: (venueId?: string) => void;
 }) {
+  const t = useT();
+  const facLabel = (f: string) => (FAC_KEYS[f] ? t("p8lst." + FAC_KEYS[f]) : f);
   const [selId, setSelId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [nm, setNm] = useState("");
@@ -1135,33 +1147,33 @@ function LocationsTab({
     patch((s) => ({ ...s, venues: s.venues.map((v) => (v.id === id ? { ...v, [field]: value } : v)) }));
   const removeVenue = (id: string, name: string) => {
     const n = usage.venues[id] ?? 0;
-    const warn = n > 0 ? `\n\n${n} listing${n === 1 ? " runs" : "s run"} there — they'll lose their venue.` : "";
-    if (!confirm(`Delete venue “${name}”?${warn}`)) return;
+    const warn = n > 0 ? `\n\n${t("p8lst.flUsedWarn", { n })}` : "";
+    if (!confirm(t("p8lst.flDelVenue", { name, warn }))) return;
     patch((s) => ({ ...s, venues: s.venues.filter((v) => v.id !== id) }));
     if (selId === id) setSelId(null);
   };
 
   return (
     <Card className="p-4">
-      <div className="text-[15px] font-extrabold">Locations</div>
+      <div className="text-[15px] font-extrabold">{t("p8lst.flLocHead")}</div>
       <p className="mb-3 text-[12px] text-[var(--ink-3)]">
-        Your venues. Pick one per listing — the address is set here once and reused everywhere.
+        {t("p8lst.flLocSub")}
       </p>
 
       {/* Set once here rather than per listing — the venue section reads the
           same on every customer page. */}
       <details className="mb-3 max-w-[900px] rounded-xl border border-[var(--line)] bg-[var(--surface)]">
         <summary className="cursor-pointer list-none px-3 py-2 text-[11.5px] font-bold text-[var(--brand-ink)] [&::-webkit-details-marker]:hidden">
-          ✎ Section heading on customer pages — <span className="font-semibold text-[var(--ink-3)]">{wh.eyebrow} · {wh.title}</span>
+          {t("p8lst.flSectionHeading")} — <span className="font-semibold text-[var(--ink-3)]">{wh.eyebrow} · {wh.title}</span>
         </summary>
         <div className="flex flex-wrap gap-2 px-3 pb-3">
           <div>
-            <FieldLabel>Small label</FieldLabel>
+            <FieldLabel>{t("p8lst.flSmallLabel")}</FieldLabel>
             <Input value={local.whereHeading?.eyebrow ?? ""} placeholder={WHERE_HEAD_DEFAULT.eyebrow} className="w-[180px]"
               onChange={(e) => patch((s) => ({ ...s, whereHeading: { eyebrow: e.target.value, title: s.whereHeading?.title ?? "" } }))} />
           </div>
           <div>
-            <FieldLabel>Heading</FieldLabel>
+            <FieldLabel>{t("p8lst.flHeading")}</FieldLabel>
             <Input value={local.whereHeading?.title ?? ""} placeholder={WHERE_HEAD_DEFAULT.title} className="w-[200px]"
               onChange={(e) => patch((s) => ({ ...s, whereHeading: { eyebrow: s.whereHeading?.eyebrow ?? "", title: e.target.value } }))} />
           </div>
@@ -1187,13 +1199,13 @@ function LocationsTab({
                 <button type="button" onClick={() => setSelId(v.id)} className="min-w-0 flex-1 text-start">
                   <div className="truncate text-[13px] font-bold">{v.name}</div>
                   <div className="truncate text-[11.5px] text-[var(--ink-3)]">
-                    {v.kind === "online" ? "Runs online" : v.address || "No address yet"} · {n ? `${n} listing${n === 1 ? "" : "s"}` : "not used yet"}
+                    {v.kind === "online" ? t("p8lst.flRunsOnline") : v.address || t("p8lst.flNoAddr")} · {n ? t("p8lst.flListingsCount", { n }) : t("p8lst.flNotUsed")}
                   </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => removeVenue(v.id, v.name)}
-                  aria-label={`Delete ${v.name}`}
+                  aria-label={t("p8lst.flAriaDelete", { name: v.name })}
                   className="px-1 text-[13px] text-[var(--ink-3)] hover:text-[var(--red)]"
                 >
                   ✕
@@ -1204,7 +1216,7 @@ function LocationsTab({
 
           {local.venues.length === 0 && !adding && (
             <div className="rounded-xl border border-dashed border-[var(--line)] p-4 text-center text-[12px] text-[var(--ink-3)]">
-              No venues yet — add your first below.
+              {t("p8lst.flNoVenues")}
             </div>
           )}
 
@@ -1213,30 +1225,30 @@ function LocationsTab({
               <AddressFinder onPick={(h) => { setAddr(tidyAddress(h.label)); setPin2({ lat: h.lat, lng: h.lng }); }} />
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="flex-1">
-                  <FieldLabel>Venue name</FieldLabel>
-                  <Input value={nm} onChange={(e) => setNm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addVenue()} placeholder="e.g. Riverside Sports Hall" className="w-full" />
+                  <FieldLabel>{t("p8lst.flVenueName")}</FieldLabel>
+                  <Input value={nm} onChange={(e) => setNm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addVenue()} placeholder={t("p8lst.flVenueNamePh")} className="w-full" />
                 </div>
                 <div className="flex-1">
-                  <FieldLabel>Address <span className="font-normal text-[var(--ink-3)]">— found or typed</span></FieldLabel>
-                  <Input value={addr} onChange={(e) => setAddr(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addVenue()} placeholder="Street, town, postcode" className="w-full" />
+                  <FieldLabel>{t("p8lst.flAddress")} <span className="font-normal text-[var(--ink-3)]">{t("p8lst.flFoundOrTyped")}</span></FieldLabel>
+                  <Input value={addr} onChange={(e) => setAddr(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addVenue()} placeholder={t("p8lst.flAddrPh")} className="w-full" />
                 </div>
                 <div className="flex gap-1.5">
-                  <Button variant="primary" onClick={addVenue}>Add</Button>
-                  <Button onClick={() => { setAdding(false); setPin2(null); }}>Cancel</Button>
+                  <Button variant="primary" onClick={addVenue}>{t("p8lst.flAdd")}</Button>
+                  <Button onClick={() => { setAdding(false); setPin2(null); }}>{t("p8lst.flCancel")}</Button>
                 </div>
               </div>
-              {pin && <div className="text-[11px] font-semibold text-[#127a3e]">📍 Pin found — it&rsquo;ll show on the map once added.</div>}
+              {pin && <div className="text-[11px] font-semibold text-[#127a3e]">{t("p8lst.flPinFound")}</div>}
             </div>
           ) : (
             <div className="mt-1 flex flex-wrap gap-1.5">
-              <Button variant="primary" onClick={() => setAdding(true)}>＋ Add location</Button>
+              <Button variant="primary" onClick={() => setAdding(true)}>{t("p8lst.flAddLoc")}</Button>
               {/* Not every listing has an address — online clubs and tutoring
                   still need something to point a listing at. */}
               <Button onClick={() => {
                 const id = uid();
                 patch((st) => ({ ...st, venues: [...st.venues, { id, name: "Online", address: "", kind: "online" }] }));
                 setSelId(id);
-              }}>💻 Add online</Button>
+              }}>{t("p8lst.flAddOnline")}</Button>
             </div>
           )}
         </div>
@@ -1247,37 +1259,36 @@ function LocationsTab({
             <>
               {sel.kind === "online" ? (
                 <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
-                  💻 <b>Runs online.</b> No address, map or travel details — parents see the joining
-                  instructions you write below.
+                  <Rich text={t("p8lst.flOnlineNote")} />
                 </div>
               ) : sel.lat !== undefined ? (
                 <VenueMap lat={sel.lat} lng={sel.lng} zoom={sel.zoom} onZoom={(z) => setPin(sel.id, { zoom: z })} />
               ) : (
                 <div className="flex h-[160px] items-center justify-center rounded-lg border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 text-center text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
-                  Use <b className="mx-1">Find</b> below to drop a pin, or type the address in by hand.
+                  <Rich text={t("p8lst.flUseFind")} bClass="mx-1" />
                 </div>
               )}
               {sel.kind !== "online" && <AddressFinder onPick={(h) => setPin(sel.id, { lat: h.lat, lng: h.lng, address: tidyAddress(h.label), zoom: sel.zoom ?? 16 })} />}
               <div>
-                <FieldLabel>Venue name</FieldLabel>
+                <FieldLabel>{t("p8lst.flVenueName")}</FieldLabel>
                 <Input value={sel.name} onChange={(e) => updateVenue(sel.id, "name", e.target.value)} className="w-full" />
               </div>
               {sel.kind !== "online" && (
                 <div>
-                  <FieldLabel>Address <span className="font-normal text-[var(--ink-3)]">— edit freely</span></FieldLabel>
-                  <Input value={sel.address} onChange={(e) => updateVenue(sel.id, "address", e.target.value)} placeholder="Street, town, postcode" className="w-full" />
+                  <FieldLabel>{t("p8lst.flAddress")} <span className="font-normal text-[var(--ink-3)]">{t("p8lst.flAddrEdit")}</span></FieldLabel>
+                  <Input value={sel.address} onChange={(e) => updateVenue(sel.id, "address", e.target.value)} placeholder={t("p8lst.flAddrPh")} className="w-full" />
                 </div>
               )}
               {sel.kind !== "online" && (
                 <div>
-                  <FieldLabel>Town / city <span className="font-normal text-[var(--ink-3)]">— parents filter by this</span></FieldLabel>
-                  <Input value={sel.city ?? ""} onChange={(e) => updateVenue(sel.id, "city", e.target.value)} placeholder="e.g. Northampton" className="w-full max-w-[280px]" />
+                  <FieldLabel>{t("p8lst.flTown")} <span className="font-normal text-[var(--ink-3)]">{t("p8lst.flTownNote")}</span></FieldLabel>
+                  <Input value={sel.city ?? ""} onChange={(e) => updateVenue(sel.id, "city", e.target.value)} placeholder={t("p8lst.flTownPh")} className="w-full max-w-[280px]" />
                 </div>
               )}
               {sel.lat !== undefined && (
                 <div className="flex items-center gap-1.5 text-[11px] text-[var(--ink-3)]">
-                  <span>📍 Pin saved</span>
-                  <button type="button" onClick={() => setPin(sel.id, { lat: undefined, lng: undefined })} className="underline hover:text-[var(--ink)]">Remove</button>
+                  <span>{t("p8lst.flPinSaved")}</span>
+                  <button type="button" onClick={() => setPin(sel.id, { lat: undefined, lng: undefined })} className="underline hover:text-[var(--ink)]">{t("p8lst.flRemove")}</button>
                 </div>
               )}
 
@@ -1285,24 +1296,24 @@ function LocationsTab({
                   ask before they book, answered once per venue. */}
               {sel.kind !== "online" && (
               <div className="border-t border-[var(--line)] pt-2">
-                <FieldLabel>What&rsquo;s there</FieldLabel>
+                <FieldLabel>{t("p8lst.flWhatsThere")}</FieldLabel>
                 <div className="mb-1.5 flex flex-wrap gap-1.5">
                   {(sel.facilities ?? []).map((f) => (
                     <span key={f} className="inline-flex items-center gap-1 rounded-full border border-[var(--brand-line)] bg-[var(--brand-soft)] py-1 ps-2.5 pe-1 text-[11.5px] font-semibold text-[var(--brand-ink)]">
-                      {f}
+                      {facLabel(f)}
                       <button type="button" onClick={() => setPin(sel.id, { facilities: (sel.facilities ?? []).filter((x) => x !== f) })}
-                        aria-label={`Remove ${f}`} className="px-1 text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
+                        aria-label={t("p8lst.flRemoveAria", { name: facLabel(f) })} className="px-1 text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
                     </span>
                   ))}
-                  {!(sel.facilities ?? []).length && <span className="text-[11.5px] text-[var(--ink-3)]">Nothing added yet.</span>}
+                  {!(sel.facilities ?? []).length && <span className="text-[11.5px] text-[var(--ink-3)]">{t("p8lst.flNothingAdded")}</span>}
                 </div>
                 <div className="mb-1.5 text-[10.5px] leading-[1.4] text-[var(--ink-3)]">
-                  Accessibility and what&rsquo;s provided are set per listing (steps 3 &amp; 4) — this is the venue itself.
+                  {t("p8lst.flFacNote")}
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {FACILITIES.filter((f) => !(sel.facilities ?? []).includes(f)).map((f) => (
                     <button key={f} type="button" onClick={() => setPin(sel.id, { facilities: [...(sel.facilities ?? []), f] })}
-                      className="rounded-full border border-dashed border-[var(--line)] px-2 py-[3px] text-[11px] font-semibold text-[var(--ink-3)] hover:border-[var(--brand-2)] hover:text-[var(--brand)]">+ {f}</button>
+                      className="rounded-full border border-dashed border-[var(--line)] px-2 py-[3px] text-[11px] font-semibold text-[var(--ink-3)] hover:border-[var(--brand-2)] hover:text-[var(--brand)]">+ {facLabel(f)}</button>
                   ))}
                 </div>
               </div>
@@ -1316,38 +1327,38 @@ function LocationsTab({
                     placeholder="///filled.count.soap" className="w-full" />
                 </div>
                 <div className="min-w-[135px] flex-1">
-                  <FieldLabel>Nearest stop / station</FieldLabel>
+                  <FieldLabel>{t("p8lst.flNearest")}</FieldLabel>
                   <Input value={sel.transport ?? ""} onChange={(e) => setPin(sel.id, { transport: e.target.value })}
-                    placeholder="Purbeck Rd bus stop, 3 min" className="w-full" />
+                    placeholder={t("p8lst.flNearestPh")} className="w-full" />
                 </div>
               </div>
               )}
 
               <div>
-                <FieldLabel>{sel.kind === "online" ? "How to join" : "Getting there & parking"}</FieldLabel>
+                <FieldLabel>{sel.kind === "online" ? t("p8lst.flHowJoin") : t("p8lst.flGettingThere")}</FieldLabel>
                 <textarea
                   value={sel.directions ?? ""}
                   onChange={(e) => setPin(sel.id, { directions: e.target.value })}
                   rows={3}
                   placeholder={sel.kind === "online"
-                    ? "A Zoom link is emailed the day before. Sessions start on the hour — please join a few minutes early."
-                    : "Free car park off Purbeck Road. Drop-off at the main entrance — please don't use the leisure centre bays."}
+                    ? t("p8lst.flJoinPh")
+                    : t("p8lst.flDirPh")}
                   className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[12.5px] leading-[1.5] text-[var(--ink)] outline-none placeholder:text-[var(--ink-2)] focus:border-[var(--brand-2)]"
                 />
               </div>
               <div className="mt-0.5 border-t border-[var(--line)] pt-2 text-[11.5px] text-[var(--ink-3)]">
                 {usage.venues[sel.id] ? (
-                  <>Used by <b className="text-[var(--ink)]">{usage.venues[sel.id]}</b> listing{usage.venues[sel.id] === 1 ? "" : "s"}.</>
+                  <Rich text={t("p8lst.flUsedBy", { n: usage.venues[sel.id] })} bClass="text-[var(--ink)]" />
                 ) : (
-                  <>Nothing runs here yet.{" "}
-                    <button type="button" onClick={() => onNewListing(sel.id)} className="font-bold text-[var(--brand)] underline">Create a listing here</button>
+                  <>{t("p8lst.flNothingRuns")}{" "}
+                    <button type="button" onClick={() => onNewListing(sel.id)} className="font-bold text-[var(--brand)] underline">{t("p8lst.flCreateHere")}</button>
                   </>
                 )}
               </div>
             </>
           ) : (
             <div className="flex h-full min-h-[180px] items-center justify-center text-center text-[12px] text-[var(--ink-3)]">
-              Add a venue to see it on the map.
+              {t("p8lst.flAddVenueMap")}
             </div>
           )}
         </div>
@@ -1362,6 +1373,11 @@ function LocationsTab({
  * equipment): those are set per listing in steps 3 and 4, and duplicating them
  * here would mean two places to keep in step.
  */
+const FAC_KEYS: Record<string, string> = {
+  "Free car park": "flFacCarPark", "On-street parking only": "flFacStreet", "Drop-off zone": "flFacDrop", "Bike racks": "flFacBike",
+  "Indoor sports hall": "flFacHall", "Astro pitch": "flFacAstro", "Floodlit": "flFacFlood", "Changing rooms": "flFacChange",
+  "Café on site": "flFacCafe", "Covered area if wet": "flFacCovered",
+};
 const FACILITIES = [
   "Free car park", "On-street parking only", "Drop-off zone", "Bike racks",
   "Indoor sports hall", "Astro pitch", "Floodlit", "Changing rooms",
@@ -1393,6 +1409,7 @@ function tidyAddress(label: string): string {
  * keystroke) to keep the volume down.
  */
 function AddressFinder({ onPick }: { onPick: (hit: Hit) => void }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[] | null>(null);
   const [state, setState] = useState<"idle" | "busy" | "error">("idle");
@@ -1415,23 +1432,23 @@ function AddressFinder({ onPick }: { onPick: (hit: Hit) => void }) {
 
   return (
     <div>
-      <FieldLabel>Find address</FieldLabel>
+      <FieldLabel>{t("p8lst.flFindAddr")}</FieldLabel>
       <div className="flex gap-1.5">
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void search(); } }}
-          placeholder="Postcode or address…"
+          placeholder={t("p8lst.flPostcodePh")}
           className="w-full"
         />
-        <Button onClick={() => void search()} disabled={state === "busy"}>{state === "busy" ? "…" : "Find"}</Button>
+        <Button onClick={() => void search()} disabled={state === "busy"}>{state === "busy" ? "…" : t("p8lst.flFind")}</Button>
       </div>
 
       {state === "error" && (
-        <div className="mt-1.5 text-[11.5px] text-[var(--red)]">Couldn&rsquo;t reach the address service — type the address in by hand below.</div>
+        <div className="mt-1.5 text-[11.5px] text-[var(--red)]">{t("p8lst.flAddrErr")}</div>
       )}
       {hits?.length === 0 && (
-        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">No match. Try the postcode on its own, or type it in by hand below.</div>
+        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{t("p8lst.flNoMatchAddr")}</div>
       )}
       {!!hits?.length && (
         <div className="mt-1.5 max-h-[132px] overflow-y-auto rounded-lg border border-[var(--line)]">

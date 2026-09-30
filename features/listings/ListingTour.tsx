@@ -2,6 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { NARRATOR_CSS, narratorScene, settingsScene, controlPanelScene } from "@/features/common/tourNarrator";
+import { useT, useI18n } from "@/lib/i18n/provider";
+import { dateLocale as dl } from "@/lib/i18n/format";
+import { BRAND, isRTL } from "@/lib/i18n/config";
 
 // ─────────────────────────────────────────────────────────────────────────
 // A self-driving, narrated "watch me build it" demo for creating a listing.
@@ -13,81 +16,95 @@ import { NARRATOR_CSS, narratorScene, settingsScene, controlPanelScene } from "@
 const F = '<span class="caret"></span>';
 type TypeField = { id: string; text: string };
 type Step = { stage: string; label: string; line: string; body: string; type?: TypeField | TypeField[]; click?: string; tabHtml?: string; scroll?: boolean };
-const STEPS: Step[] = [
-  { stage: "About", label: "Basics", line: "Start with the basics — a clear name, and a big, bright photo. Pick a layout to see how it looks, then add your main image. You can pop extra photos in the gallery too.", type: { id: "F", text: "Summer Multi-Activity Camp" },
-    body: `<div class="frm"><div><div class="fl">Listing title · up to 70 characters</div><div class="field ph focus" id="F">e.g. Summer Multi-Activity Camp${F}</div></div><div><div class="fl">Main image — layout + hero photo</div><div class="hero"><span class="heroem">⚽🤸🎨🏕️</span><span class="herocap">Summer Multi-Activity Camp</span></div><div class="lay" style="margin-top:7px"><span class="layopt on">🖼️ One big image</span><span class="layopt">Wide banner</span><span class="layopt">Collage</span><span class="layopt">Big + thumbnails</span></div></div></div>` },
-  { stage: "About", label: "Details", line: "Add the details — the age range it's for, from and to, and choose your venue.", type: [{ id: "F", text: "5" }, { id: "F2", text: "12" }],
-    body: `<div class="frm"><div class="row2"><div><div class="fl">Age from</div><div class="field ph focus" id="F">e.g. 5${F}</div></div><div><div class="fl">Age to</div><div class="field ph" id="F2">e.g. 12</div></div></div><div><div class="fl">Venue</div><div class="field">📍 Riverside Sports Hall</div></div></div>` },
-  { stage: "About", label: "Capacity", line: "Set your capacity — the most children per session; once it's full, bookings stop by themselves. If you run age groups you can cap each one per day too — but leave those blank if you just have one overall number. Blank means no limit, and zero means closed.", type: { id: "F", text: "24" },
-    body: `<div class="frm"><div style="max-width:210px"><div class="fl">Max children per session</div><div class="field ph focus" id="F">0${F}</div></div>
-      <div class="fl" style="margin-top:2px">Per-age caps<span style="font-weight:600;color:var(--faint);text-transform:none;letter-spacing:0"> — optional, per day</span></div>
-      <div class="capgrp"><span class="dot" style="background:#e2559a"></span><b>Cubs</b> <span class="g">5–7 · room 32</span><span class="field2">no limit</span></div>
-      <div class="capgrp"><span class="dot" style="background:#2f6bd8"></span><b>Explorers</b> <span class="g">8–10 · room 32</span><span class="field2">no limit</span></div>
-      <div class="capgrp"><span class="dot" style="background:#16306e"></span><b>Adventurers</b> <span class="g">11–14 · room 30</span><span class="field2">no limit</span></div>
-      <div class="hint">Leave these blank if you just have an overall capacity. Blank = no limit · 0 = closed.</div></div>` },
-  { stage: "About", label: "Content", line: "Now the description — tell parents what to expect. A friendly, clear write-up is what sells your listing.", type: { id: "F", text: "A fun-packed week of sports, games and crafts — something for everyone." },
-    body: `<div class="frm"><div><div class="fl">Description</div><div class="field ph focus" id="F" style="min-height:64px">Tell parents what to expect…${F}</div></div></div>` },
-  { stage: "About", label: "Provided", line: "Now the extras — three quick tabs here: what's provided, what to bring, and the outcomes children get. Tick what's included, then flick to What to bring and add things like a packed lunch or sun cream.", click: "C",
-    tabHtml: `<div class="chips"><span class="ochip">🥪 Packed lunch</span><span class="ochip">🧴 Sun cream</span><span class="ochip">👟 Trainers</span><span class="ochip">💧 Water bottle</span><span class="btn">＋ Add option</span></div>`,
-    body: `<div class="frm"><div class="tabs2"><span class="tab2 on">What's provided</span><span class="tab2" id="C">What to bring</span><span class="tab2">Outcomes</span></div>
-      <div id="tabc"><div class="chips"><span class="ochip">🍽️ Hot lunch</span><span class="ochip">🎒 All equipment</span><span class="ochip">🍎 Snacks &amp; drinks</span><span class="btn">＋ Add option</span></div></div></div>` },
-  { stage: "About", label: "Safety & SEND", line: "Safety and inclusion isn't free text — you pick from ready-made chips. Show your safety features, like DBS-checked staff and first aid, and the SEND support you offer, like a quiet space or one-to-one help. Anything you add here is saved for every listing.", click: "C",
-    body: `<div class="frm"><div class="fl">Safety features</div><div class="chips"><span class="ochip">🛡️ DBS-checked staff</span><span class="ochip">🚑 First aid on site</span><span class="ochip">🧑‍⚖️ Safeguarding lead</span><span class="ochip">👥 Low ratios</span><span class="btn" id="C">＋ Add option</span></div>
-      <div class="fl" style="margin-top:6px">SEND &amp; accessibility</div><div class="chips"><span class="ochip">♿ Wheelchair accessible</span><span class="ochip">🤝 1:1 support</span><span class="ochip">🤫 Quiet space</span><span class="ochip">🎓 SEND-trained staff</span></div></div>` },
-  { stage: "When it runs", label: "When it runs", line: "Pick your dates, and the calendar builds itself. Not running a particular day — a bank holiday, say, or you just don't run Thursdays? Tap it to switch it off. Everything else stays bookable.", click: "C",
-    body: `<div class="frm"><div class="row2"><div><div class="fl">Runs from</div><div class="field">Mon 28 Jul</div></div><div><div class="fl">Runs to</div><div class="field">Fri 8 Aug</div></div></div>
-      <div class="fl">Calendar · 2 weeks — tap a day to switch it off</div>
-      <div class="wkcard"><div class="wkhd" style="background:#16306e">Week 1 · from Mon 28 Jul</div><div class="wkdays"><span class="dchip">Mon 28</span><span class="dchip">Tue 29</span><span class="dchip">Wed 30</span><span class="dchip" id="C">Thu 31</span><span class="dchip">Fri 1</span></div></div>
-      <div class="wkcard"><div class="wkhd" style="background:#2f6bd8">Week 2 · from Mon 4 Aug</div><div class="wkdays"><span class="dchip">Mon 4</span><span class="dchip">Tue 5</span><span class="dchip">Wed 6</span><span class="dchip">Thu 7</span><span class="dchip">Fri 8</span></div></div></div>` },
-  { stage: "Tickets & pricing", label: "Tickets & pricing", line: "Your tickets come straight from the block you built — its passes and their prices. Each one can tweak its own age range and its capacity per day; that's how you'd cap a one-to-one place to the staff you have. Close a ticket and parents still see it marked closed; Hide it and it's gone. And here you choose how parents book each pass — any five days in one week, any five across the whole listing, or a fixed block.", click: "C",
-    body: `<div class="frm"><div class="selrow">🧩 Summer Camp · 1 period · 2 passes<span class="pill2">✓ Selected</span></div>
-      <div class="fl">Tickets on this listing — each can amend its own age &amp; capacity</div>
-      <div class="tkt"><div class="tkhd"><b>5 day pass</b> <span class="g">5 days</span><span class="tkp">£500.00</span><span class="mini">Close</span><span class="mini">Hide</span></div>
-        <div class="tkrow"><span class="mini2">Age from —</span><span class="mini2">Age to —</span><span class="mini2">Capacity/day 60</span></div></div>
-      <div class="tkt"><div class="tkhd"><b>1 day pass</b> <span class="g">1 day</span><span class="tkp">£100.00</span><span class="mini">Close</span><span class="mini">Hide</span></div></div>
-      <div class="fl" style="margin-top:2px">How parents can book each pass<span style="text-transform:none;letter-spacing:0;color:var(--ink2)"> · 5 day pass</span></div>
-      <div class="chips"><span class="rchip on" data-note="Parents pick any 5 days within a single week.">Any 5 days in one week</span><span class="rchip" data-note="Parents pick any 5 days across all the weeks it runs.">Any 5 days across the listing</span><span class="rchip" id="C" data-note="Parents book one fixed Monday–Friday block.">Fixed 5-day block</span></div>
-      <div class="hint" id="rnote">Parents pick any 5 days within a single week.</div></div>` },
-  { stage: "Tickets & pricing", label: "Discounts", line: "Discounts are optional, but lovely. There are three kinds: multi-person, for siblings or a friend booking together; multi-session, a percentage off when they book several; and early bird, money off if they book before a date. Pick a type, name it, set the amount — and parents see it right there on the booking page. They come off automatically, so there's nothing for you to do.", click: "C",
-    body: `<div class="frm"><div class="fl">Select a discount type</div>
-      <div class="dtypes"><div class="dtype"><b>👥 Multi-person</b><div class="ds">Siblings or a friend booking together pay less.</div></div>
-        <div class="dtype"><b>📅 Multi-session</b><div class="ds">Book more than 3 sessions to get 10% off.</div></div>
-        <div class="dtype on" id="C"><b>🐤 Early bird</b><div class="ds">£10 off when they book before 1 June.</div></div></div>
-      <div><div class="fl">Name your discount — parents see this</div><div class="field">Early bird — £10 off before 1 June</div></div>
-      <div class="row2"><div><div class="fl">Discount method</div><div class="field">Subtract an amount</div></div><div><div class="fl">Amount</div><div class="field">£10</div></div></div>
-      <div class="hint" style="border-left:3px solid var(--blue);padding-left:9px"><b>Parents will see:</b> Early bird — £10 off before 1 June</div></div>` },
-  { stage: "Extras & team", label: "Add-ons", line: "Offer optional add-ons — a hot lunch, or late pick-up — that parents can tick on at checkout.", click: "C",
-    body: `<div class="frm"><div class="fl">Optional add-ons</div><div class="chk"><span class="chkbx">✓</span>🍽️ Hot lunch · £4</div><div style="margin-top:2px"><span class="btn" id="C">＋ Add an add-on</span></div></div>` },
-  { stage: "Extras & team", label: "Staff", line: "Add the staff who'll be running the sessions.", click: "C",
-    body: `<div class="frm"><div class="fl">Staff on this listing</div><div class="chk"><span class="chkbx">✓</span>👤 Alex Turner · Lead</div><div style="margin-top:2px"><span class="btn" id="C">＋ Assign staff</span></div></div>` },
-  { stage: "Publish", label: "Preview", line: "Here's the best bit — the preview shows your listing exactly as parents will see it. Let's scroll through: your big photo up top, the venue, dates and ages, how many spaces, your passes and prices, the early-bird discount, and the booking panel where they pick their dates and pass. If it looks good here, it'll look good to them.", scroll: true,
-    body: `<div class="fl">Preview — the parent booking page</div><div class="ppwrap"><div class="ppscroll" id="pvscroll"><div id="pvinner">
-      <div class="pphero">⚽🤸🎨<div class="ppht">Summer Multi-Activity Camp</div></div>
-      <div class="pprow"><span>📍 Riverside Sports Hall</span><span>📅 28 Jul – 8 Aug</span><span>👧 Ages 5–12</span></div>
-      <div class="ppcols"><div><div class="ppl">Spaces</div><div class="ppbig">Up to 60</div></div>
-        <div><div class="ppl">Passes</div><div class="pppass">5 day pass <b>£500</b></div><div class="pppass">1 day pass <b>£100</b></div></div>
-        <div><div class="ppl">Discounts</div><div class="ppdisc">🐤 Early bird · £10 off</div></div></div>
-      <div class="ppcta"><div>CHOOSE DATES &amp; TIMES <span>from £500</span></div><div class="ppcta2">👉 Tap a week to take the fixed 5-day block</div></div>
-      <div class="ppl" style="padding:0 14px">Choose your pass</div><div class="ppbox">5 day pass · £500</div><div class="ppbox">1 day pass · £100</div>
-      <div class="ppl" style="padding:12px 14px 0">About this camp</div><div class="pptxt">A fun-packed week of sports, games and crafts — something for everyone. Ages 5 to 12.</div>
-      <div class="ppl" style="padding:0 14px">What's provided</div><div class="pptxt">🍽️ Hot lunch · 🎒 all equipment · 🍎 snacks &amp; drinks</div>
-      <div class="ppl" style="padding:0 14px">Safety &amp; SEND</div><div class="pptxt">🛡️ DBS-checked staff · 🚑 first aid on site · 🤫 quiet space · 🎓 SEND-trained staff</div></div></div></div>` },
-  { stage: "Publish", label: "Policy & publish", line: "Last of all, set your booking policy, and hit Publish. That's it — your listing's live and ready for bookings!",
-    body: `<div class="frm"><div><div class="fl">Booking policy</div><div class="field">Full refund up to 7 days before</div></div><div class="hint">All set — press Publish to go live.</div></div>` },
-];
+function buildSteps(t: (k: string, v?: Record<string, string | number>) => string, tag: string): Step[] {
+  const x = (k: string, v?: Record<string, string | number>) => t("p8lst." + k, v);
+  // The demo dates are fixed (Mon 28 Jul – Fri 8 Aug 2025); only their formatting follows the language.
+  const fmt = (d: number, m: number, o: Intl.DateTimeFormatOptions) => new Date(Date.UTC(2025, m, d)).toLocaleDateString(tag, { ...o, timeZone: "UTC" });
+  const wd = (d: number, m: number) => fmt(d, m, { weekday: "short", day: "numeric" });
+  const wdm = (d: number, m: number) => fmt(d, m, { weekday: "short", day: "numeric", month: "short" });
+  const dm = (d: number, m: number) => fmt(d, m, { day: "numeric", month: "short" });
+  const chips = (keys: string[]) => keys.map((k) => `<span class="ochip">${x(k)}</span>`).join("");
+  const addOpt = (id = "") => `<span class="btn"${id ? ` id="${id}"` : ""}>${x("ltAddOption")}</span>`;
+  const capgrp = (color: string, name: string, ages: string, room: number) => `<div class="capgrp"><span class="dot" style="background:${color}"></span><b>${name}</b> <span class="g">${x("ltRoom", { ages, n: room })}</span><span class="field2">${x("ltNoLimit")}</span></div>`;
+  const dchips = (list: [number, number][], idIdx = -1) => list.map(([d, m], i) => `<span class="dchip"${i === idIdx ? ' id="C"' : ""}>${wd(d, m)}</span>`).join("");
+  const ticket = (nameK: string, daysK: string, price: string, extra = "") => `<div class="tkt"><div class="tkhd"><b>${x(nameK)}</b> <span class="g">${x(daysK)}</span><span class="tkp">${price}</span><span class="mini">${x("ltClose")}</span><span class="mini">${x("ltHide")}</span></div>${extra}</div>`;
+  const sample = x("ltSampleTitle");
+  const early = x("ltDiscNameVal");
+  return [
+  { stage: x("ltStAbout"), label: x("ltLbBasics"), line: x("ltL1"), type: { id: "F", text: sample },
+    body: `<div class="frm"><div><div class="fl">${x("ltTitleLbl")}</div><div class="field ph focus" id="F">${x("ltEg", { v: sample })}${F}</div></div><div><div class="fl">${x("ltHeroLbl")}</div><div class="hero"><span class="heroem">⚽🤸🎨🏕️</span><span class="herocap">${sample}</span></div><div class="lay" style="margin-top:7px"><span class="layopt on">${x("ltLayBig")}</span><span class="layopt">${x("ltLayWide")}</span><span class="layopt">${x("ltLayCollage")}</span><span class="layopt">${x("ltLayThumbs")}</span></div></div></div>` },
+  { stage: x("ltStAbout"), label: x("ltLbDetails"), line: x("ltL2"), type: [{ id: "F", text: "5" }, { id: "F2", text: "12" }],
+    body: `<div class="frm"><div class="row2"><div><div class="fl">${x("ltAgeFrom")}</div><div class="field ph focus" id="F">${x("ltEg", { v: 5 })}${F}</div></div><div><div class="fl">${x("ltAgeTo")}</div><div class="field ph" id="F2">${x("ltEg", { v: 12 })}</div></div></div><div><div class="fl">${x("ltVenue")}</div><div class="field">📍 Riverside Sports Hall</div></div></div>` },
+  { stage: x("ltStAbout"), label: x("ltLbCapacity"), line: x("ltL3"), type: { id: "F", text: "24" },
+    body: `<div class="frm"><div style="max-width:210px"><div class="fl">${x("ltMaxKids")}</div><div class="field ph focus" id="F">0${F}</div></div>
+      <div class="fl" style="margin-top:2px">${x("ltPerAge")}<span style="font-weight:600;color:var(--faint);text-transform:none;letter-spacing:0">${x("ltOptPerDay")}</span></div>
+      ${capgrp("#e2559a", "Cubs", "5–7", 32)}
+      ${capgrp("#2f6bd8", "Explorers", "8–10", 32)}
+      ${capgrp("#16306e", "Adventurers", "11–14", 30)}
+      <div class="hint">${x("ltCapHint")}</div></div>` },
+  { stage: x("ltStAbout"), label: x("ltLbContent"), line: x("ltL4"), type: { id: "F", text: x("ltSampleDesc") },
+    body: `<div class="frm"><div><div class="fl">${x("ltDescLbl")}</div><div class="field ph focus" id="F" style="min-height:64px">${x("ltDescPh")}${F}</div></div></div>` },
+  { stage: x("ltStAbout"), label: x("ltLbProvided"), line: x("ltL5"), click: "C",
+    tabHtml: `<div class="chips">${chips(["ltChipPacked", "ltChipSun", "ltChipShoes", "ltChipWater"])}${addOpt()}</div>`,
+    body: `<div class="frm"><div class="tabs2"><span class="tab2 on">${x("ltTabProvided")}</span><span class="tab2" id="C">${x("ltTabBring")}</span><span class="tab2">${x("ltTabOutcomes")}</span></div>
+      <div id="tabc"><div class="chips">${chips(["ltChipHot", "ltChipEquip", "ltChipSnacks"])}${addOpt()}</div></div></div>` },
+  { stage: x("ltStAbout"), label: x("ltLbSafety"), line: x("ltL6"), click: "C",
+    body: `<div class="frm"><div class="fl">${x("ltSafetyLbl")}</div><div class="chips">${chips(["ltSfDbs", "ltSfAid", "ltSfLead", "ltSfRatios"])}${addOpt("C")}</div>
+      <div class="fl" style="margin-top:6px">${x("ltSendLbl")}</div><div class="chips">${chips(["ltSdWheel", "ltSd11", "ltSdQuiet", "ltSdTrained"])}</div></div>` },
+  { stage: x("ltStWhen"), label: x("ltStWhen"), line: x("ltL7"), click: "C",
+    body: `<div class="frm"><div class="row2"><div><div class="fl">${x("ltRunsFrom")}</div><div class="field">${wdm(28, 6)}</div></div><div><div class="fl">${x("ltRunsTo")}</div><div class="field">${wdm(8, 7)}</div></div></div>
+      <div class="fl">${x("ltCalLbl")}</div>
+      <div class="wkcard"><div class="wkhd" style="background:#16306e">${x("ltWeekFrom", { n: 1, date: wdm(28, 6) })}</div><div class="wkdays">${dchips([[28, 6], [29, 6], [30, 6], [31, 6], [1, 7]], 3)}</div></div>
+      <div class="wkcard"><div class="wkhd" style="background:#2f6bd8">${x("ltWeekFrom", { n: 2, date: wdm(4, 7) })}</div><div class="wkdays">${dchips([[4, 7], [5, 7], [6, 7], [7, 7], [8, 7]])}</div></div></div>` },
+  { stage: x("ltStTickets"), label: x("ltStTickets"), line: x("ltL8"), click: "C",
+    body: `<div class="frm"><div class="selrow">${x("ltSelRow")}<span class="pill2">${x("ltSelected")}</span></div>
+      <div class="fl">${x("ltTicketsLbl")}</div>
+      ${ticket("ltPass5", "ltDays5", "£500.00", `<div class="tkrow"><span class="mini2">${x("ltAgeFromDash")}</span><span class="mini2">${x("ltAgeToDash")}</span><span class="mini2">${x("ltCapDay", { n: 60 })}</span></div>`)}
+      ${ticket("ltPass1", "ltDays1", "£100.00")}
+      <div class="fl" style="margin-top:2px">${x("ltHowLbl")}<span style="text-transform:none;letter-spacing:0;color:var(--ink2)"> · ${x("ltPass5")}</span></div>
+      <div class="chips"><span class="rchip on" data-note="${x("ltRn1")}">${x("ltRch1")}</span><span class="rchip" data-note="${x("ltRn2")}">${x("ltRch2")}</span><span class="rchip" id="C" data-note="${x("ltRn3")}">${x("ltRch3")}</span></div>
+      <div class="hint" id="rnote">${x("ltRn1")}</div></div>` },
+  { stage: x("ltStTickets"), label: x("ltLbDiscounts"), line: x("ltL9"), click: "C",
+    body: `<div class="frm"><div class="fl">${x("ltDiscSel")}</div>
+      <div class="dtypes"><div class="dtype"><b>${x("ltDtPerson")}</b><div class="ds">${x("ltDsPerson")}</div></div>
+        <div class="dtype"><b>${x("ltDtSession")}</b><div class="ds">${x("ltDsSession")}</div></div>
+        <div class="dtype on" id="C"><b>${x("ltDtEarly")}</b><div class="ds">${x("ltDsEarly")}</div></div></div>
+      <div><div class="fl">${x("ltDiscName")}</div><div class="field">${early}</div></div>
+      <div class="row2"><div><div class="fl">${x("ltDiscMethod")}</div><div class="field">${x("ltDiscMethodVal")}</div></div><div><div class="fl">${x("ltAmount")}</div><div class="field">£10</div></div></div>
+      <div class="hint" style="border-inline-start:3px solid var(--blue);padding-inline-start:9px"><b>${x("ltParentsSee")}</b> ${early}</div></div>` },
+  { stage: x("ltStExtras"), label: x("ltLbAddons"), line: x("ltL10"), click: "C",
+    body: `<div class="frm"><div class="fl">${x("ltAddonsLbl")}</div><div class="chk"><span class="chkbx">✓</span>${x("ltChipHot")} · £4</div><div style="margin-top:2px"><span class="btn" id="C">${x("ltAddAddon")}</span></div></div>` },
+  { stage: x("ltStExtras"), label: x("ltLbStaff"), line: x("ltL11"), click: "C",
+    body: `<div class="frm"><div class="fl">${x("ltStaffLbl")}</div><div class="chk"><span class="chkbx">✓</span>${x("ltStaffRow")}</div><div style="margin-top:2px"><span class="btn" id="C">${x("ltAssign")}</span></div></div>` },
+  { stage: x("ltStPublish"), label: x("ltLbPreview"), line: x("ltL12"), scroll: true,
+    body: `<div class="fl">${x("ltPrevLbl")}</div><div class="ppwrap"><div class="ppscroll" id="pvscroll"><div id="pvinner">
+      <div class="pphero">⚽🤸🎨<div class="ppht">${sample}</div></div>
+      <div class="pprow"><span>📍 Riverside Sports Hall</span><span>📅 ${dm(28, 6)} – ${dm(8, 7)}</span><span>${x("ltPvAges", { a: 5, b: 12 })}</span></div>
+      <div class="ppcols"><div><div class="ppl">${x("ltSpaces")}</div><div class="ppbig">${x("ltUpTo", { n: 60 })}</div></div>
+        <div><div class="ppl">${x("ltPasses")}</div><div class="pppass">${x("ltPass5")} <b>£500</b></div><div class="pppass">${x("ltPass1")} <b>£100</b></div></div>
+        <div><div class="ppl">${x("ltDiscounts")}</div><div class="ppdisc">${x("ltPvEarly")}</div></div></div>
+      <div class="ppcta"><div>${x("ltCta")} <span>${x("ltFrom")}</span></div><div class="ppcta2">${x("ltCta2")}</div></div>
+      <div class="ppl" style="padding:0 14px">${x("ltChoosePass")}</div><div class="ppbox">${x("ltPass5")} · £500</div><div class="ppbox">${x("ltPass1")} · £100</div>
+      <div class="ppl" style="padding:12px 14px 0">${x("ltAboutCamp")}</div><div class="pptxt">${x("ltSampleDesc")} ${x("ltAgesFive")}</div>
+      <div class="ppl" style="padding:0 14px">${x("ltTabProvided")}</div><div class="pptxt">${x("ltPvProvided")}</div>
+      <div class="ppl" style="padding:0 14px">${x("ltLbSafety")}</div><div class="pptxt">${x("ltPvSafety")}</div></div></div></div>` },
+  { stage: x("ltStPublish"), label: x("ltLbPolicy"), line: x("ltL13"),
+    body: `<div class="frm"><div><div class="fl">${x("ltPolicyLbl")}</div><div class="field">${x("ltPolicyVal")}</div></div><div class="hint">${x("ltAllSet")}</div></div>` },
+  ];
+}
 
 const CSS = `
 .lt-root{--navy:#16306e;--blue:#2f6bd8;--blue2:#4f8bf5;--teal:#0ea5a5;--green:#0e9a5a;--ink:#12203c;--ink2:#3a4a68;--muted:#5b6b86;--faint:#9aa6bd;--line:#e6ebf5;--panel:#f4f7fc;--surface:#fff;--brandink:#1d3a8f;color:var(--ink)}
 .lt-root .lt-stage{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 24px 50px -36px rgba(20,48,110,.5);min-height:330px;overflow:hidden}
 .lt-root .appear{animation:ltrise .4s ease both}@keyframes ltrise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
 .lt-root .field{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 10px;font-size:12.5px;color:var(--ink);font-weight:600;min-height:34px}.lt-root .field.ph{color:var(--faint);font-weight:500}.lt-root .field.focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(22,48,110,.12)}
-.lt-root .caret{display:inline-block;width:1.5px;height:14px;background:var(--navy);margin-left:1px;vertical-align:-2px;animation:ltblink 1s step-end infinite}@keyframes ltblink{50%{opacity:0}}
+.lt-root .caret{display:inline-block;width:1.5px;height:14px;background:var(--navy);margin-inline-start:1px;vertical-align:-2px;animation:ltblink 1s step-end infinite}@keyframes ltblink{50%{opacity:0}}
 .lt-root .row2{display:flex;gap:10px}.lt-root .row2>div{flex:1}
 .lt-root .btn{border-radius:999px;padding:8px 15px;font-size:12.5px;font-weight:800;border:1px solid var(--line);background:var(--surface);color:var(--ink2);display:inline-block}.lt-root .btn.amber{background:linear-gradient(180deg,#f7c65a,#f0a92f);border-color:transparent;color:#5b3d05}.lt-root .btn.ghost{color:var(--faint)}
 .lt-root .wcard{border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .lt-root .whead{display:flex;align-items:flex-start;gap:10px;padding:12px 15px;background:#f4f8ff;border-bottom:1px solid var(--line)}
 .lt-root .wstage{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--blue)}.lt-root .wtitle{font-size:16px;font-weight:800;color:var(--navy);margin-top:1px}
-.lt-root .wstep{margin-left:auto;font-size:11px;font-weight:800;color:var(--faint);white-space:nowrap;padding-top:2px}
+.lt-root .wstep{margin-inline-start:auto;font-size:11px;font-weight:800;color:var(--faint);white-space:nowrap;padding-top:2px}
 .lt-root .wbar{height:4px;background:var(--line)}.lt-root .wbar span{display:block;height:100%;background:linear-gradient(90deg,var(--blue2),var(--blue));transition:width .5s}
 .lt-root .wbody{padding:15px;min-height:150px}
 .lt-root .wfoot{display:flex;justify-content:space-between;padding:12px 15px;border-top:1px solid var(--line);background:#fbfdff}
@@ -98,7 +115,7 @@ const CSS = `
 .lt-root .chk .chkbx{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line);display:grid;place-items:center;font-size:11px;color:#fff;flex:none}
 .lt-root .chk.on{background:#eef8ff;border-color:#bcd0f5}.lt-root .chk.on .chkbx{background:var(--blue);border-color:transparent}
 .lt-root .imgrow{display:flex;gap:8px}.lt-root .imgph{flex:1;height:54px;border-radius:9px;background:linear-gradient(135deg,#eef2fb,#dbe6fb);display:grid;place-items:center;font-size:18px;color:#9fb4dd;border:1px solid var(--line)}
-.lt-root .daychip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:11.5px;font-weight:800;color:var(--ink2);margin-right:5px}.lt-root .daychip.on{background:var(--navy);color:#fff;border-color:transparent}
+.lt-root .daychip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:11.5px;font-weight:800;color:var(--ink2);margin-inline-end:5px}.lt-root .daychip.on{background:var(--navy);color:#fff;border-color:transparent}
 .lt-root .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);padding-bottom:8px}.lt-root .tab{font-size:13px;font-weight:800;color:var(--faint);padding:4px 9px}.lt-root .tab.on{color:var(--navy);border-bottom:2px solid var(--navy)}
 .lt-root .chip2{display:inline-block;font-size:10.5px;font-weight:800;background:#eef4fd;color:var(--brandink);border-radius:999px;padding:3px 9px;margin:0 5px 5px 0}
 .lt-root .prevcard{border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px -22px rgba(20,48,110,.5);max-width:320px}
@@ -106,20 +123,20 @@ const CSS = `
 .lt-root .prevcard .pb{padding:10px 12px}.lt-root .prevcard .pt{font-size:13px;font-weight:800}.lt-root .prevcard .pm{font-size:11px;color:var(--faint);margin-top:2px}.lt-root .prevcard .pp{font-size:13px;font-weight:800;color:var(--green);margin-top:6px}
 .lt-root .lt-cursor{position:absolute;left:0;top:0;z-index:20;pointer-events:none;transition:transform .55s cubic-bezier(.5,.05,.25,1);filter:drop-shadow(0 3px 4px rgba(20,48,110,.35))}.lt-root .lt-cursor.down{transition:transform .1s}
 .lt-root .lt-cursor .ring{position:absolute;left:-9px;top:-9px;width:34px;height:34px;border-radius:50%;border:2px solid var(--blue);opacity:0}.lt-root .lt-cursor.click .ring{animation:ltclk .4s ease-out}@keyframes ltclk{0%{opacity:.7;transform:scale(.3)}100%{opacity:0;transform:scale(1)}}
-.lt-root .lt-cap{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.55;color:var(--ink2);min-height:42px}.lt-root .lt-cap b{color:var(--ink)}
+.lt-root .lt-cap{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-inline-start:4px solid var(--teal);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.55;color:var(--ink2);min-height:42px}.lt-root .lt-cap b{color:var(--ink)}
 .lt-root .lt-controls{margin:0 0 12px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .lt-root .cbtn{border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:11px 20px;font-size:14px;font-weight:800;color:var(--ink);cursor:pointer}.lt-root .cbtn:hover{border-color:#bcd0f5;background:#f4f8ff}.lt-root .cbtn.on{background:linear-gradient(180deg,#4f8bf5,#2f6bd8);border-color:transparent;color:#fff}
-.lt-root .lt-count{font-size:11.5px;color:var(--faint);font-weight:700;margin-right:auto}
+.lt-root .lt-count{font-size:11.5px;color:var(--faint);font-weight:700;margin-inline-end:auto}
 .lt-root .lnk{font-size:11.5px;font-weight:800;color:var(--brandink);background:#eef4fd;border:1px solid #cfe0fb;border-radius:999px;padding:5px 11px;cursor:pointer;display:inline-block}.lt-root .lnk:hover{background:#e2ecfc}
 .lt-root .lay{display:flex;gap:6px;flex-wrap:wrap}.lt-root .layopt{font-size:11px;font-weight:800;border:1px solid var(--line);border-radius:9px;padding:6px 9px;color:var(--ink2)}.lt-root .layopt.on{border-color:#bcd0f5;background:#eef4ff;color:var(--brandink)}
 .lt-root .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.lt-root .ochip{font-size:11.5px;font-weight:800;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
-.lt-root .capgrp{display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px dashed var(--line)}.lt-root .capgrp .g{color:var(--faint);font-weight:600}.lt-root .capgrp .field2{margin-left:auto;border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--faint);background:var(--surface)}
+.lt-root .capgrp{display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px dashed var(--line)}.lt-root .capgrp .g{color:var(--faint);font-weight:600}.lt-root .capgrp .field2{margin-inline-start:auto;border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--faint);background:var(--surface)}
 .lt-root .dot{width:9px;height:9px;border-radius:50%;flex:none}
 .lt-root .tabs2{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:10px}.lt-root .tab2{font-size:12px;font-weight:800;color:var(--faint);padding:5px 9px;cursor:pointer}.lt-root .tab2.on{color:var(--navy);border-bottom:2px solid var(--navy)}
 .lt-root .wkcard{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:7px}.lt-root .wkhd{font-size:11.5px;font-weight:800;color:#fff;padding:5px 10px}.lt-root .wkdays{display:flex;flex-wrap:wrap;gap:6px;padding:8px}
 .lt-root .dchip{border:1px solid #2f6bd8;color:#2f6bd8;background:#fff;border-radius:8px;padding:4px 9px;font-size:11px;font-weight:800}.lt-root .dchip.off{border-color:var(--line);color:var(--faint);text-decoration:line-through}
-.lt-root .selrow{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;background:#eef4fd;border:1px solid #cfe0fb;border-radius:10px;padding:8px 11px}.lt-root .pill2{margin-left:auto;font-size:10.5px;font-weight:800;color:#127a3e;background:#d8f3e1;border-radius:999px;padding:2px 9px}
-.lt-root .tkt{border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:10px;padding:9px 11px;margin-bottom:7px}.lt-root .tkhd{display:flex;align-items:center;gap:8px;font-size:13px}.lt-root .tkp{margin-left:auto;font-weight:800}.lt-root .mini{font-size:10.5px;font-weight:800;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--ink2)}
+.lt-root .selrow{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;background:#eef4fd;border:1px solid #cfe0fb;border-radius:10px;padding:8px 11px}.lt-root .pill2{margin-inline-start:auto;font-size:10.5px;font-weight:800;color:#127a3e;background:#d8f3e1;border-radius:999px;padding:2px 9px}
+.lt-root .tkt{border:1px solid var(--line);border-inline-start:3px solid var(--blue);border-radius:10px;padding:9px 11px;margin-bottom:7px}.lt-root .tkhd{display:flex;align-items:center;gap:8px;font-size:13px}.lt-root .tkp{margin-inline-start:auto;font-weight:800}.lt-root .mini{font-size:10.5px;font-weight:800;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--ink2)}
 .lt-root .tkrow{display:flex;gap:8px;margin-top:6px}.lt-root .mini2{font-size:10.5px;font-weight:700;color:var(--faint);border:1px solid var(--line);border-radius:8px;padding:4px 8px}
 .lt-root .rchip{font-size:11.5px;font-weight:800;border:1px solid var(--line);border-radius:9px;padding:6px 10px;color:var(--ink2)}.lt-root .rchip.on{border-color:#bcd0f5;background:#eef4ff;color:var(--brandink)}
 .lt-root .g{color:var(--faint);font-weight:600}
@@ -132,7 +149,7 @@ const CSS = `
 .lt-root .ppcols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:12px 14px}
 .lt-root .ppl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#7f8bb5;margin-bottom:5px}
 .lt-root .ppbig{font-size:17px;font-weight:800;font-style:italic;color:#fff}
-.lt-root .pppass{font-size:12px;color:#dfe6ff;border-left:2px solid #b6ff3a;padding-left:8px;margin-bottom:5px}.lt-root .pppass b{color:#b6ff3a}
+.lt-root .pppass{font-size:12px;color:#dfe6ff;border-inline-start:2px solid #b6ff3a;padding-inline-start:8px;margin-bottom:5px}.lt-root .pppass b{color:#b6ff3a}
 .lt-root .ppdisc{font-size:12px;color:#dfe6ff}
 .lt-root .ppcta{margin:8px 14px;background:linear-gradient(120deg,#2f6bd8,#1b3f8f);border-radius:12px;padding:12px;color:#fff;font-size:14px;font-weight:800;font-style:italic}.lt-root .ppcta span{font-size:11px;opacity:.85}.lt-root .ppcta2{margin-top:8px;background:rgba(255,255,255,.12);border-radius:8px;padding:8px;font-size:12px;font-style:normal;font-weight:700}
 .lt-root .ppbox{margin:6px 14px;background:#0f1630;border:1px solid #1a2340;border-radius:10px;padding:10px 12px;color:#dfe6ff;font-size:12.5px;font-weight:700}
@@ -151,6 +168,9 @@ const CSS = `
 `;
 
 export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
+  const tt = useT();
+  const { locale } = useI18n();
+  const rtl = isRTL(locale);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const onTabRef = useRef(onTab);
   onTabRef.current = onTab;
@@ -158,6 +178,8 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
+    const x = (k: string, v?: Record<string, string | number>) => tt("p8lst." + k, v);
+    const STEPS = buildSteps(tt, dl());
     const stage = root.querySelector(".lt-stage") as HTMLElement;
     const content = root.querySelector(".lt-content") as HTMLElement;
     const cursor = root.querySelector(".lt-cursor") as HTMLElement;
@@ -186,6 +208,9 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
     function pickVoice(): SpeechSynthesisVoice | null {
       if (!hasSpeech) return null;
       const vs = window.speechSynthesis.getVoices(); if (!vs.length) return null;
+      // Non-English language: prefer a voice for that language so the narration isn't read in an English accent.
+      const lc = dl().slice(0, 2).toLowerCase();
+      if (lc !== "en") { const own = vs.find((v) => v.lang.toLowerCase().startsWith(lc)); if (own) return own; }
       return vs.find((v) => v.name === "Google UK English Female")
         || vs.find((v) => /en-GB/i.test(v.lang) && /female|Sonia|Serena|Kate|Fiona|Libby|Hazel/i.test(v.name))
         || vs.find((v) => /en-GB/i.test(v.lang))
@@ -220,25 +245,25 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
     }
     const frame = (i: number) => {
       const s = STEPS[i], pct = Math.round((i + 1) / STEPS.length * 100);
-      return `<div class="wcard"><div class="whead"><div><div class="wstage">${s.stage}</div><div class="wtitle">${s.label}</div></div><div class="wstep">Step ${i + 1} of ${STEPS.length}</div></div>
+      return `<div class="wcard"><div class="whead"><div><div class="wstage">${s.stage}</div><div class="wtitle">${s.label}</div></div><div class="wstep">${x("ltStepOf", { i: i + 1, n: STEPS.length })}</div></div>
         <div class="wbar"><span style="width:${pct}%"></span></div>
         <div class="wbody">${s.body}</div>
-        <div class="wfoot"><span class="btn ghost">← Back</span><span class="btn amber" id="next">${i === STEPS.length - 1 ? "Publish ✓" : "Next →"}</span></div></div>`;
+        <div class="wfoot"><span class="btn ghost">${rtl ? "→" : "←"} ${x("ltBack")}</span><span class="btn amber" id="next">${i === STEPS.length - 1 ? x("ltPublishDone") : rtl ? "← " + x("ltNext") : x("ltNext") + " →"}</span></div></div>`;
     };
     // Intro is the robot's own control panel — the three quick set-ups that live
     // in their own tabs, presented like the Settings scene but at the start.
     // Categories + Locations switch the page's tab (wired below); Seasons is a
     // real link into Setup.
     const introView = controlPanelScene(
-      "✨ First — three quick set-ups",
+      x("ltIntroBadge"),
       [
-        { icon: "🏷️", label: "Categories", note: "like Holiday Camp or After-school Club", id: "lnkCat" },
-        { icon: "📍", label: "Locations", note: "your venues", id: "lnkLoc" },
-        { icon: "🗓️", label: "Seasons", note: "your holiday and term dates", href: `${setupHref}?tab=seasons` },
+        { icon: "🏷️", label: x("ltIntroCat"), note: x("ltIntroCatNote"), id: "lnkCat" },
+        { icon: "📍", label: x("ltIntroLoc"), note: x("ltIntroLocNote"), id: "lnkLoc" },
+        { icon: "🗓️", label: x("ltIntroSeasons"), note: x("ltIntroSeasonsNote"), href: `${setupHref}?tab=seasons` },
       ],
-      { label: "＋ New listing", id: "newListing" },
+      { label: x("flNewBtn"), id: "newListing" },
     );
-    const doneView = narratorScene("✓ Complete", "All done", "Your listing is live and ready to take bookings.");
+    const doneView = narratorScene(x("ltDoneBadge"), x("ltDoneTitle"), x("ltDoneSub"));
 
     async function run(startIdx = 0) {
       const tk = ++token; const alive = () => tk === token && !dead;
@@ -250,7 +275,7 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
         currentIdx = -1; content.innerHTML = introView;
         const lc = pick("lnkCat"); if (lc) lc.onclick = () => onTabRef.current?.("categories");
         const ll = pick("lnkLoc"); if (ll) ll.onclick = () => onTabRef.current?.("locations");
-        await line("Let's create a listing — that's a camp, class or club parents can book. First though, three quick set-ups live in their own tabs: your <b>Categories</b>, your <b>Locations</b> — that's your venues — and your <b>Seasons</b>, your holiday and term dates. There are links right here to jump straight to each. Set them up once and reuse them everywhere. Then hit <b>New listing</b>."); if (!alive()) return;
+        await line(x("ltIntroLine")); if (!alive()) return;
         await move("newListing"); await click(); if (!alive()) return;
       } else if (splash) { splash.style.display = "none"; }
       for (let i = Math.max(0, startIdx); i < STEPS.length; i++) {
@@ -268,28 +293,29 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
       // control what every listing starts from.
       const portal = window.location.pathname.split("/")[1] || "freelancer";
       currentIdx = STEPS.length; content.innerHTML = settingsScene(portal, [
-        { icon: "🆕", label: "New listing defaults", tab: "defaults", note: "what every new listing starts with" },
-        { icon: "🗓️", label: "Seasons", tab: "seasons", note: "your term and holiday dates" },
+        { icon: "🆕", label: x("ltSetDefaults"), tab: "defaults", note: x("ltSetDefaultsNote") },
+        { icon: "🗓️", label: x("ltIntroSeasons"), tab: "seasons", note: x("ltSetSeasonsNote") },
       ]);
-      await line("One last thing — the defaults every new listing starts with, and your seasons, both live in Settings. Tap either card to jump straight there."); if (!alive()) return;
+      await line(x("ltOutroLine")); if (!alive()) return;
       content.innerHTML = doneView;
-      if (!alive()) return; await line("That's it — your listing is ready!");
+      if (!alive()) return; await line(x("ltDoneLine"));
     }
 
     let voicePoll = 0;
     const pollIv = hasSpeech ? window.setInterval(() => { if (window.speechSynthesis.getVoices().length) { voice = pickVoice(); window.clearInterval(pollIv); } else if (++voicePoll > 24) window.clearInterval(pollIv); }, 250) : 0;
     if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); }; }
     // Turning sound on hides the on-screen caption (the voice replaces it).
-    const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? "🔊 Sound on" : "▶ Play with sound"; capEl.style.display = on ? "none" : ""; };
+    const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? x("ltSoundOn") : x("ltSoundOff"); capEl.style.display = on ? "none" : ""; };
     replayBtn.onclick = () => { run(0); };
     if (backBtn) backBtn.onclick = () => { run(currentIdx - 1); };
     if (fwdBtn) fwdBtn.onclick = () => { run(currentIdx + 1); };
     soundBtn.onclick = () => { setSound(!soundOn); if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(currentIdx < 0 ? 0 : currentIdx); };
-    if (pauseBtn) pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶" : "⏸"; pauseBtn.title = paused ? "Resume" : "Pause"; if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); root.querySelector(".tnr-bot")?.classList.toggle("speaking", !paused && soundOn && window.speechSynthesis.speaking); } if (!paused) waiters.splice(0).forEach((f) => f()); };
+    if (pauseBtn) pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶" : "⏸"; pauseBtn.title = paused ? x("ltResume") : x("ltPause"); if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); root.querySelector(".tnr-bot")?.classList.toggle("speaking", !paused && soundOn && window.speechSynthesis.speaking); } if (!paused) waiters.splice(0).forEach((f) => f()); };
     run();
 
     return () => { dead = true; token++; window.clearInterval(pollIv); if (hasSpeech) { window.speechSynthesis.cancel(); window.speechSynthesis.onvoiceschanged = null; } };
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale]);
 
   return (
     <div className="lt-root" ref={rootRef}>
@@ -297,17 +323,17 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
       <div className="tctl lt-controls">
         <span className="tctl-count lt-count" />
         <div className="tctl-grp">
-          <button type="button" className="tctl-btn ico lt-back" title="Back a step" aria-label="Back a step">⏮</button>
-          <button type="button" className="tctl-btn primary lt-pause" title="Pause or resume" aria-label="Pause or resume">⏸</button>
-          <button type="button" className="tctl-btn ico lt-fwd" title="Skip forward" aria-label="Skip forward">⏭</button>
+          <button type="button" className="tctl-btn ico lt-back" title={tt("p8lst.ltBackTitle")} aria-label={tt("p8lst.ltBackTitle")}>⏮</button>
+          <button type="button" className="tctl-btn primary lt-pause" title={tt("p8lst.ltPauseTitle")} aria-label={tt("p8lst.ltPauseTitle")}>⏸</button>
+          <button type="button" className="tctl-btn ico lt-fwd" title={tt("p8lst.ltFwdTitle")} aria-label={tt("p8lst.ltFwdTitle")}>⏭</button>
         </div>
-        <button type="button" className="tctl-btn lt-replay" title="Start again">↺ Replay</button>
-        <button type="button" className="tctl-btn lt-sound">▶ Play with sound</button>
+        <button type="button" className="tctl-btn lt-replay" title={tt("p8lst.ltReplayTitle")}>{tt("p8lst.ltReplay")}</button>
+        <button type="button" className="tctl-btn lt-sound">{tt("p8lst.ltSoundOff")}</button>
       </div>
       <div className="lt-stage">
         <div className="lt-cursor down"><span className="ring" /><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>
         <div className="lt-content" />
-        <div className="lt-splash"><div className="splmark">◈</div><div className="splogo">Activity<span className="splos">OS</span></div><div className="sptitle">Create a listing</div><div className="spsub">a quick guided walkthrough</div></div>
+        <div className="lt-splash"><div className="splmark">◈</div><div className="splogo">{BRAND.replace(/OS$/, "")}{BRAND.endsWith("OS") && <span className="splos">OS</span>}</div><div className="sptitle">{tt("p8lst.ltSplashTitle")}</div><div className="spsub">{tt("p8lst.ltSplashSub")}</div></div>
       </div>
       <div className="lt-cap" />
     </div>
