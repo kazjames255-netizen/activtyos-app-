@@ -417,7 +417,7 @@ function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen
             className="flex cursor-pointer flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[0_1px_2px_rgba(16,24,40,.05)] hover:border-[var(--ink-3)]">
             <span title={KINDS[l.kind ?? "business"].label} className="text-[16px]">{KINDS[l.kind ?? "business"].icon}</span>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[13.5px] font-extrabold">{l.business}</div>
+              <div className="truncate text-[13.5px] font-extrabold">{l.business === "Untitled" ? tr("p8hq.slUntitled") : l.business}</div>
               <div className="truncate text-[11.5px] text-[var(--ink-3)]">{l.contactName} · {l.location}</div>
               {l.interest === "website-design-question" && (
                 <div className="mt-0.5 truncate text-[11.5px] font-semibold text-[#a5670a]">{tr("p8hq.slAsked", { msg: l.message || tr("p8hq.slNoMessage") })}{l.activities.some((a) => a.direction === "out") ? tr("p8hq.slAnswered") : ""}</div>
@@ -742,7 +742,7 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
     <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/40 p-4" onClick={onClose}>
       <div className="my-6 w-[min(640px,96vw)] rounded-2xl bg-[var(--surface)] shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-2 rounded-t-2xl px-5 py-3.5 text-white" style={{ background: HERO }}>
-          <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{lead ? f.business || tr("p8hq.slLead") : tr("p8hq.slNewLead")}</div>
+          <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{lead ? (f.business === "Untitled" ? tr("p8hq.slUntitled") : f.business) || tr("p8hq.slLead") : tr("p8hq.slNewLead")}</div>
           <button type="button" onClick={onClose} className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-bold">{tr("p8hq.slClose")}</button>
         </div>
         {f.interest === "website-design-question" && (() => {
