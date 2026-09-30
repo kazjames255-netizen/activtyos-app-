@@ -12,7 +12,7 @@ const territorySchema = z.object({
   status: z.enum(["draft", "proposed", "agreed"]).optional(),
   areas: z.array(z.object({
     id: z.string().max(60), name: z.string().max(80), color: z.string().max(20),
-    rings: z.array(z.object({ lat: z.number(), lng: z.number() })).max(500),
+    rings: z.array(z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })).max(500),
   })).max(20).optional(),
 });
 

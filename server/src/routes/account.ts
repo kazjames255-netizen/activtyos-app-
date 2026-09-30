@@ -34,7 +34,7 @@ const putSchema = z.object({
       id: z.string().max(40),
       name: z.string().max(80),
       color: z.string().max(16),
-      rings: z.array(z.object({ lat: z.number(), lng: z.number() })).max(4000),
+      rings: z.array(z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })).max(4000),
     })).max(50),
     // draft = still drawing · proposed = submitted, awaiting the other party · agreed = signed off.
     status: z.enum(["draft", "proposed", "agreed"]).optional(),
