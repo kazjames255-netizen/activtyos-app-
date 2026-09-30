@@ -340,7 +340,8 @@ my.get("/meal-days", async (req, res) => {
   const snap = await bookingsCol.where("email", "==", email).get();
   const bookings = snap.docs
     .map((d) => fromDoc(d.data() as BookingDoc))
-    .filter((b) => b.listingId && (b.status !== "Cancelled"));
+    // Only bookings that hold a place: a waitlisted / declined / merely-offered one has no day to feed a child on.
+    .filter((b) => b.listingId && b.status !== "Cancelled" && b.status !== "Declined" && b.status !== "Waitlisted" && b.status !== "Offered");
   const listingIds = [...new Set(bookings.map((b) => b.listingId).filter(Boolean) as string[])].slice(0, 50);
   if (!listingIds.length) { res.json([]); return; }
 

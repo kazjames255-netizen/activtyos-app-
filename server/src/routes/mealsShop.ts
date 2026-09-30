@@ -9,6 +9,8 @@ import type { Role } from "../middleware/role";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { resolveCutoff, canOrderMeal, cutoffLabel } from "../lib/mealCutoff";
 import { customerAreaOn } from "../lib/customerArea";
+import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
+import { registerRows } from "../lib/registerRows";
 
 // Meal ordering (parent-facing meals shop). Operators publish a menu of
 // orderable meals (name + price); a parent who's booked with that provider
@@ -340,6 +342,19 @@ mealOrders.post("/", async (req, res) => {
     // must offer meals on this date, and every line must be an item on that
     // day's menu — prices come from the menu, never the client.
     if (!input.listingId) { res.status(400).json({ error: "This order needs a listing" }); return; }
+    // The child must actually hold a place on this listing that day. The Meals screen only offers booked days, but the API took a
+    // meal for ANY day/child on the menu — the kitchen then counted (and the family was billed for) a child who wasn't coming.
+    {
+      const mine = (await Promise.all([...new Set([email, email.toLowerCase()])].map((e) => db.collection("bookings").where("tenantId", "==", input.tenantId).where("email", "==", e).get())))
+        .flatMap((q) => q.docs);
+      const wantName = input.childName.trim().toLowerCase();
+      const holds = mine.some((d) => {
+        const b = fromDoc(d.data() as BookingDoc);
+        return b.listingId === input.listingId
+          && registerRows(b, input.date).some((r) => r.expected && (input.childId && r.childId ? r.childId === input.childId : r.name.trim().toLowerCase() === wantName));
+      });
+      if (!holds) { res.status(409).json({ error: `${input.childName} doesn't have a place on ${input.date} at this activity, so a meal can't be ordered for that day.` }); return; }
+    }
     const listingSnap = await db.collection("listings").doc(input.listingId).get();
     const listing = listingSnap.data();
     if (!listingSnap.exists || listing!.tenantId !== input.tenantId || !listing!.mealsEnabled) {
