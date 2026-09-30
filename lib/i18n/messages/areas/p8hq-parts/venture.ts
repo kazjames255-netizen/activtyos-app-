@@ -1,6 +1,7 @@
 // p8hq venture part: VentureLakesApp, InternationalExpansionApp, ActivlySiteApp (labels keyed by English text via hq()).
 import { lwRows } from "./_lw";
 import { VENTURE2 } from "./venture2";
+import { VENTURE3 } from "./venture3";
 
 export default lwRows([
   ["Acres (largest first)", "Akry (od największych)", "Acri (cei mai mari primii)", "ایکڑ (سب سے بڑے پہلے)", "ਏਕੜ (ਸਭ ਤੋਂ ਵੱਡੇ ਪਹਿਲਾਂ)", "একর (বড় থেকে ছোট)", "الأفدنة (الأكبر أولًا)", "Acres (maiores primeiro)", "Acres (mayores primero)", "Acres (plus grands d'abord)", "Erwau (y mwyaf yn gyntaf)"],
@@ -85,4 +86,5 @@ export default lwRows([
   ["Checked", "Sprawdzono", "Verificat", "جانچا گیا", "ਜਾਂਚਿਆ ਗਿਆ", "যাচাই করা হয়েছে", "تم الفحص", "Verificado", "Comprobado", "Vérifié", "Gwiriwyd"],
   ["No sites match these filters.", "Żadne miejsca nie pasują do tych filtrów.", "Niciun loc nu se potrivește cu aceste filtre.", "ان فلٹرز سے کوئی مقام مماثل نہیں۔", "ਇਨ੍ਹਾਂ ਫਿਲਟਰਾਂ ਨਾਲ ਕੋਈ ਥਾਂ ਮੇਲ ਨਹੀਂ ਖਾਂਦੀ।", "এই ফিল্টারগুলির সাথে কোনো স্থান মেলেনি।", "لا توجد مواقع تطابق هذه المرشحات.", "Nenhum local corresponde a estes filtros.", "Ningún sitio coincide con estos filtros.", "Dim safleoedd yn cyfateb i'r hidlyddion hyn.", "Dim safleoedd yn cyfateb i'r hidlyddion hyn."].slice(0, 11),
   ...VENTURE2,
+  ...VENTURE3,
 ]);

@@ -2,6 +2,12 @@
 
 import { Card, SectionHead } from "@/components/ui";
 import { renderMarkdown } from "@/lib/markdown";
+import { useT, tNow } from "@/lib/i18n/provider";
+import { H, hq } from "./hqText";
+import { currentLocaleCode } from "@/lib/i18n/format";
+
+/** Long report text by catalogue key (`p8hq.ieMd_<id>`); falls back to the English source until a language has been translated. */
+const reportText = (id: string, en: string) => { if (currentLocaleCode() === "en") return en; const k = `p8hq.ieMd_${id}`; const r = tNow(k); return r === k ? en : r; };
 
 // INTERNATIONAL EXPANSION & £10M TARGET (platform-only) — a read-only
 // rendering of the consolidated report on international expansion versus the
@@ -38,26 +44,26 @@ function Tile({ icon, value, label, sub, grad }: { icon: string; value: string; 
         <div className="mt-1.5 text-[24px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>
           {value}
         </div>
-        <div className="mt-1 break-words text-[11.5px] font-semibold leading-snug text-white/90">{label}</div>
-        <div className="mt-1 break-words text-[10.5px] leading-snug text-white/65">{sub}</div>
+        <div className="mt-1 break-words text-[11.5px] font-semibold leading-snug text-white/90">{hq(label)}</div>
+        <div className="mt-1 break-words text-[10.5px] leading-snug text-white/65">{hq(sub)}</div>
       </div>
     </div>
   );
 }
 
 const STAT_LINE = [
-  { icon: "🚨", grad: GRAD.pink, value: "0%", label: "of 50,489 leads ever marked contacted/won/lost", sub: "The funnel that's supposed to fund everything below doesn't exist yet" },
-  { icon: "⚖️", grad: GRAD.amber, value: "0.64:1", label: "base-case LTV:CAC (healthy SaaS = 3:1)", sub: "On median assumptions, new customers may not be profitable yet" },
-  { icon: "🎯", grad: GRAD.violet, value: "£40–100M", label: "ARR needed to hit £10M profit at a realistic 10–25% net margin", sub: "vs. a 50,489-lead pipeline that would need >100% conversion just to get there" },
-  { icon: "⏳", grad: GRAD.blue, value: "10 years", label: "for the closest UK comp (ClassForKids) to reach <£5M revenue, then exit", sub: "The best available evidence for how fast this category actually moves" },
-  { icon: "🇮🇪", grad: GRAD.teal, value: "3,102", label: "registered providers on Ireland's Tusla register", sub: "Best-evidenced next market — but see the sequencing problem below" },
+  { icon: "🚨", grad: GRAD.pink, value: "0%", label: H("of 50,489 leads ever marked contacted/won/lost"), sub: H("The funnel that's supposed to fund everything below doesn't exist yet") },
+  { icon: "⚖️", grad: GRAD.amber, value: "0.64:1", label: H("base-case LTV:CAC (healthy SaaS = 3:1)"), sub: H("On median assumptions, new customers may not be profitable yet") },
+  { icon: "🎯", grad: GRAD.violet, value: "£40–100M", label: H("ARR needed to hit £10M profit at a realistic 10–25% net margin"), sub: H("vs. a 50,489-lead pipeline that would need >100% conversion just to get there") },
+  { icon: "⏳", grad: GRAD.blue, value: "10 years", label: H("for the closest UK comp (ClassForKids) to reach <£5M revenue, then exit"), sub: H("The best available evidence for how fast this category actually moves") },
+  { icon: "🇮🇪", grad: GRAD.teal, value: "3,102", label: H("registered providers on Ireland's Tusla register"), sub: H("Best-evidenced next market — but see the sequencing problem below") },
 ];
 
 const START_MONDAY = [
-  { icon: "✉️", grad: GRAD.blue, value: "19,284", label: "drafted outreach emails, ready to review", sub: "scripts/leads/overnight_draft_outreach.mjs — nothing sent yet" },
-  { icon: "❓", grad: GRAD.amber, value: "6,640", label: "leads tagged “uncertain”", sub: "uncertain_verify.mjs exists but hasn't cleared the backlog" },
-  { icon: "✅", grad: GRAD.green, value: "3,469", label: "leads tagged “likely fit”", sub: "Highest-confidence slice — best candidates for the first send" },
-  { icon: "📇", grad: GRAD.teal, value: "35,329", label: "leads with an email or phone on file", sub: "of 49,314 non-duplicate, non-excluded leads — addressable right now" },
+  { icon: "✉️", grad: GRAD.blue, value: "19,284", label: H("drafted outreach emails, ready to review"), sub: H("scripts/leads/overnight_draft_outreach.mjs — nothing sent yet") },
+  { icon: "❓", grad: GRAD.amber, value: "6,640", label: H("leads tagged “uncertain”"), sub: H("uncertain_verify.mjs exists but hasn't cleared the backlog") },
+  { icon: "✅", grad: GRAD.green, value: "3,469", label: H("leads tagged “likely fit”"), sub: H("Highest-confidence slice — best candidates for the first send") },
+  { icon: "📇", grad: GRAD.teal, value: "35,329", label: H("leads with an email or phone on file"), sub: H("of 49,314 non-duplicate, non-excluded leads — addressable right now") },
 ];
 
 const RECOMMENDATION = "**Recommendation: Don't spend on international expansion yet. Fix the UK funnel first (0% of 50,489 leads have ever been contacted, won, or lost), monetize it as a success-fee lead-engine, and treat international entry — starting with Ireland — as a 2026-H2 move once UK unit economics are proven, not assumed.**\n\n**The £10M-profit-in-2-years target is unrealistic as currently framed — off by roughly 1–2 orders of magnitude given real comps and real unit economics.** A credible reframe: **£1–3M profit in 2 years is achievable; £10M is a 4–6 year outcome**, and only if churn and monetization are fixed. Details below — read the numbers before the narrative.";
@@ -72,7 +78,7 @@ interface Section {
 const SECTIONS: Section[] = [
   {
     id: "start-monday",
-    nav: "Start Monday",
+    nav: H("Start Monday"),
     extra: "start-monday",
     md: String.raw`
 ## Start Monday: the next 7 days
@@ -94,7 +100,7 @@ Concrete actions, in order, this week — not "review the strategy," actual task
   },
   {
     id: "s1",
-    nav: "1 · Gate everything",
+    nav: H("1 · Gate everything"),
     md: String.raw`
 ## 1. The number that should gate everything else
 
@@ -107,7 +113,7 @@ This isn't a detail buried in an appendix — it's the fact that should reframe 
   },
   {
     id: "s2",
-    nav: "2 · Real comps",
+    nav: H("2 · Real comps"),
     md: String.raw`
 ## 2. What real competitors actually did (and how long it took)
 
@@ -131,7 +137,7 @@ Comparisons to real companies in this exact category, not category-agnostic SaaS
   },
   {
     id: "s3",
-    nav: "3 · Unit economics",
+    nav: H("3 · Unit economics"),
     md: String.raw`
 ## 3. Unit economics, stress-tested honestly
 
@@ -201,7 +207,7 @@ What specifically happens each quarter — concrete moves, not strategy-speak:
   },
   {
     id: "s4",
-    nav: "4 · Why not now",
+    nav: H("4 · Why not now"),
     md: String.raw`
 ## 4. The case against spending on international expansion right now
 
@@ -231,7 +237,7 @@ This needs to be argued, not asserted, because the counter-case is real too.
   },
   {
     id: "s5",
-    nav: "5 · Is it a moat?",
+    nav: H("5 · Is it a moat?"),
     md: String.raw`
 ## 5. Is the lead database a moat? No — and that's the actual strategic insight
 
@@ -262,7 +268,7 @@ This also happens to be the prerequisite for making the churn/monetization fixes
   },
   {
     id: "s6",
-    nav: "6 · The 9 markets",
+    nav: H("6 · The 9 markets"),
     md: String.raw`
 ## 6. Where does that leave the nine international markets?
 
@@ -287,7 +293,7 @@ The underlying market research (five independently verified deep-dives, adversar
   },
   {
     id: "kpi",
-    nav: "KPI tracking",
+    nav: H("KPI tracking"),
     md: String.raw`
 ## Keeping score: the weekly/monthly KPI list
 
@@ -321,7 +327,7 @@ This report is worthless as a management tool if nobody checks whether it's happ
   },
   {
     id: "bottom-line",
-    nav: "Bottom line",
+    nav: H("Bottom line"),
     md: String.raw`
 ## Bottom line
 
@@ -334,22 +340,23 @@ This report is worthless as a management tool if nobody checks whether it's happ
 ];
 
 export function InternationalExpansionApp() {
+  useT(); // re-render on language change (labels are translated at render time)
   return (
     <div className="flex flex-col gap-3.5 p-4">
       <SectionHead>
-        International Expansion
+        {hq("International Expansion")}
         <span className="ms-2 font-normal text-[12px] text-[var(--ink-3)]">
-          Fix the UK funnel first — the case against international spend right now, and an honest verdict on the £10M target
+          {hq("Fix the UK funnel first — the case against international spend right now, and an honest verdict on the £10M target")}
         </span>
       </SectionHead>
 
       <Card className="border-s-4 border-s-[var(--brand)] bg-[var(--surface-2,rgba(127,127,127,0.04))] p-4 text-[13px] leading-relaxed text-[var(--ink-2)]">
-        <div className="mx-auto max-w-[840px]">{renderMarkdown(RECOMMENDATION)}</div>
+        <div className="mx-auto max-w-[840px]">{renderMarkdown(reportText("reco", RECOMMENDATION))}</div>
       </Card>
 
       <div>
         <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">
-          The stat line a founder needs in 5 seconds
+          {hq("The stat line a founder needs in 5 seconds")}
         </div>
         <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
           {STAT_LINE.map((t) => (
@@ -365,7 +372,7 @@ export function InternationalExpansionApp() {
             href={`#${s.id}`}
             className="flex-none whitespace-nowrap rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]"
           >
-            {s.nav}
+            {hq(s.nav)}
           </a>
         ))}
       </nav>
@@ -380,7 +387,7 @@ export function InternationalExpansionApp() {
                 ))}
               </div>
             )}
-            {renderMarkdown(s.md.trim())}
+            {renderMarkdown(reportText(s.id, s.md.trim()))}
           </div>
         </Card>
       ))}
