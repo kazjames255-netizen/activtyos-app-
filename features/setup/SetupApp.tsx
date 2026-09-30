@@ -46,7 +46,7 @@ import {
   HUB_DEFAULTS,
   type HubSettings,
 } from "@/lib/settings";
-import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPolicy, type RefundBand } from "@/lib/cancellation";
+import { policyWordingT, sortBands, HOURS, type CancellationPolicy, type NamedPolicy, type RefundBand } from "@/lib/cancellation";
 import { defaultSeasonNames, type Season } from "@/lib/seasons";
 import { SG_CATEGORIES, DEFAULT_PROTOCOL } from "@/features/incidents/safeguarding";
 import { MembershipTierCard } from "@/features/parent/MembershipsApp";
@@ -1032,7 +1032,7 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
         <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
           {t("p8set.polParentsRead")}
         </div>
-        <div className="text-[12.5px] leading-[1.55]">{policyWording({ ...policy, wording: undefined })}</div>
+        <div className="text-[12.5px] leading-[1.55]">{policyWordingT(t, locale, { ...policy, wording: undefined })}</div>
         <div className="mt-2 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
           {t("p8set.polWritten")}
         </div>
