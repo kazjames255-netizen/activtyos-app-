@@ -10,6 +10,7 @@
  * receives { p, scene, reduced } where p is 0..1 progress through the scene.
  * Only transform / opacity / stroke-dashoffset are animated.
  */
+import { dateLocale } from "@/lib/i18n/format";
 import type { ReactNode } from "react";
 import type { MotionScene } from "./courseContent";
 
@@ -111,7 +112,7 @@ export const GENERIC_SCENES: Record<string, (sp: SP) => ReactNode> = {
         return <g key={i} opacity={o}><circle cx={x} cy={80} r={17} fill={KACCENT} /><circle cx={x} cy={80} r={17} fill="none" stroke={KFIELD_A} strokeWidth={2} />{T(x, 85, 15, String(i + 1), 1, KFIELD_A)}{T(x, 118, 9.5, label, 1, KINK, "middle", Math.min(cell * 0.86, 92))}</g>; })}</g>; },
   // A big number that counts up, with a caption.
   gstat: ({ p, scene, reduced }) => { const raw = pr(scene).value || ""; const m = raw.match(/^(\D*)(\d[\d,\.]*)(.*)$/); const d = reduced ? 1 : eo(seg(p, .05, .8));
-    let shown = raw; if (m) { const num = parseFloat(m[2].replace(/,/g, "")); const cur = Math.round(num * d); shown = m[1] + cur.toLocaleString() + m[3]; }
+    let shown = raw; if (m) { const num = parseFloat(m[2].replace(/,/g, "")); const cur = Math.round(num * d); shown = m[1] + cur.toLocaleString(dateLocale()) + m[3]; }
     return <g><ellipse cx={160} cy={82} rx={120} ry={54} fill={KACCENT} opacity={.08} />{T(160, 96, 62, shown, 1, KINK)}{pr(scene).sub ? T(160, 138, 13, pr(scene).sub!, d, "rgba(255,255,255,.85)") : null}</g>; },
   // A warning beat — alert triangle pulses, optional subject icon behind.
   galert: ({ p, scene, reduced }) => { const d = reduced ? 1 : eo(seg(p, .05, .6)); const ic = pr(scene).icon;
