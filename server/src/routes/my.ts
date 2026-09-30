@@ -196,7 +196,9 @@ const cancelSchema = z.object({
 const childSchema = z.object({
   name: z.string().trim().min(1).max(80),
   age: z.number().int().min(0).max(17).optional(),
-  dob: z.string().trim().max(20).optional(),
+  // A real calendar date in the past (or blank). "banana" / a future date used to be stored, leave the child's age unknown, and so
+  // skip the listing age gate on every booking.
+  dob: z.string().trim().max(20).refine((v) => v === "" || (isRealDay(v) && v <= ukToday()), "Enter a real date of birth (not in the future)").optional(),
   school: z.string().trim().max(120).optional(),
   allergies: z.string().trim().max(300).optional(),
   medical: z.string().trim().max(300).optional(),
@@ -771,8 +773,9 @@ my.post("/bookings", async (req, res) => {
   // checkout blocks the booking outright; this only bites the "Yes" case.)
   const ageFrom = parseInt(listing.ageFrom ?? "", 10);
   const ageTo = parseInt(listing.ageTo ?? "", 10);
+  // Age 0 is a real age (an infant) — only an UNKNOWN age (undefined) is exempt from the gate.
   const outOfRange = (age?: number) =>
-    typeof age === "number" && Number.isFinite(age) && age > 0 &&
+    typeof age === "number" && Number.isFinite(age) && age >= 0 &&
     ((Number.isFinite(ageFrom) && age < ageFrom) || (Number.isFinite(ageTo) && age > ageTo));
   // Lifecycle gates — the client-side lock is a courtesy, this is the control.
   if ((listing.status ?? "live") !== "live" || listing.archived) {
@@ -910,10 +913,13 @@ my.post("/bookings", async (req, res) => {
   const resolveChild = (i: { child: string; childId?: string; age?: number }) => {
     // A childId must belong to this account — never trust a foreign id.
     const rec = (i.childId && childById.get(i.childId)) || childByName.get(i.child.trim().toLowerCase());
+    const known = i.age ?? rec?.age ?? ageFromDob(rec?.dob);
     return {
       childId: rec?.id,
       name: rec?.name ?? i.child,
-      age: i.age ?? rec?.age ?? ageFromDob(rec?.dob) ?? 0,
+      age: known ?? 0,
+      /** false = nothing tells us the age (stored as 0) — the age gate can't judge it, so it doesn't. */
+      ageKnown: known !== undefined,
       answers: rec?.answers,
     };
   };
@@ -924,8 +930,8 @@ my.post("/bookings", async (req, res) => {
   // through and later flipped to Approval needed).
   if (!listing.allowOutOfRange && (Number.isFinite(ageFrom) || Number.isFinite(ageTo))) {
     for (const it of input.items) {
-      const { name, age } = resolveChild(it);
-      if (outOfRange(age)) {
+      const { name, age, ageKnown } = resolveChild(it);
+      if (outOfRange(ageKnown ? age : undefined)) {
         res.status(400).json({ error: `${name || "A child"} is outside this listing’s age range (${listing.ageFrom ?? ""}–${listing.ageTo ?? ""}).` });
         return;
       }
@@ -1642,7 +1648,7 @@ my.post("/bookings", async (req, res) => {
             // Out-of-range child on an allow-out-of-range listing → request a
             // place (Approval needed), overriding an otherwise auto-confirm. An
             // operator booking on-behalf is itself the approval, so it stands.
-            status: placed ? (!onBehalf && ((listing.allowOutOfRange && outOfRange(rc.age)) || (reviewNoQ.length > 0 && !!rc.answers && reviewNoQ.some((qid) => (rc.answers![qid] ?? "").trim().toLowerCase() === "no"))) ? "Approval needed" : placedStatus) : "Waitlisted",
+            status: placed ? (!onBehalf && ((listing.allowOutOfRange && outOfRange(rc.ageKnown ? rc.age : undefined)) || (reviewNoQ.length > 0 && !!rc.answers && reviewNoQ.some((qid) => (rc.answers![qid] ?? "").trim().toLowerCase() === "no"))) ? "Approval needed" : placedStatus) : "Waitlisted",
             // Judged on what's left to pay, not the method: a HAF/free £0 place
             // — or one fully covered by store credit — is Funded, never Unpaid.
             // A voucher booking waits on the scheme's money, not the parent — a
