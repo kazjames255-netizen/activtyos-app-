@@ -11,6 +11,7 @@ import { Button, Card, FieldLabel, Input, Select, inputCls } from "@/components/
 import { useI18n, useT, useWord } from "@/lib/i18n/provider";
 import { Rich, tr, slug } from "./Rich";
 import { pickPlural } from "@/lib/i18n/plural";
+import { navLabel } from "@/lib/i18n/words";
 import { PrintableDoc } from "@/features/money/doc-shared";
 import { HowItWorks } from "@/components/HowItWorks";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
@@ -1390,7 +1391,7 @@ export function SetupApp() {
     referrals: "Refer a friend", listings: "Listings", blocks: "Blocks", bookings: "Bookings",
     finance: "Finance", reconciliation: "Reconciliation", locations: "Locations", staff: "Team",
   };
-  const backLabel = fromView ? (FROM_LABELS[fromView] ?? fromView.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase())) : "";
+  const backLabel = fromView ? (FROM_LABELS[fromView] ? navLabel(t, FROM_LABELS[fromView]) : fromView.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase())) : "";
   const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "announcements", "roles", "reviews", "learning", "hub", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
@@ -2457,66 +2458,66 @@ export function SetupApp() {
           </Row>
 
           <div className="mt-4 border-t border-[var(--line)] pt-4">
-            <div className="text-[14px] font-extrabold text-[var(--ink)]">Business &amp; bank details</div>
-            <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]">Printed on your POs and invoices (and their PDFs/emails). Bank details appear on invoices as the “how to pay” block.</p>
+            <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8set.bbHead")}</div>
+            <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]">{t("p8set.bbLede")}</p>
             <div className="grid gap-2.5 sm:grid-cols-2">
               {([
-                ["businessName", "Business name", "Little Kickers Ltd"],
+                ["businessName", t("p8set.bbBusinessName"), "Little Kickers Ltd"],
                 ["email", t("p8set.coEmail"), "hello@yourbiz.co.uk"],
                 ["phone", t("p8set.coPhone"), "07700 900000"],
                 ["vatNumber", t("p8set.coVat"), "GB123456789"],
-                ["address", "Address", "12 High St, Townsville, AB1 2CD"],
-                ["paymentTerms", "Payment terms", "Due within 14 days"],
-                ["bankName", "Bank name", "Barclays"],
-                ["accountName", "Account name", "Little Kickers Ltd"],
-                ["sortCode", "Sort code", "12-34-56"],
-                ["accountNumber", "Account number", "12345678"],
+                ["address", t("p8set.bbAddress"), "12 High St, Townsville, AB1 2CD"],
+                ["paymentTerms", t("p8set.bbTerms"), "Due within 14 days"],
+                ["bankName", t("p8set.bbBank"), "Barclays"],
+                ["accountName", t("p8set.bbAccName"), "Little Kickers Ltd"],
+                ["sortCode", t("p8set.bbSort"), "12-34-56"],
+                ["accountNumber", t("p8set.bbAccNo"), "12345678"],
               ] as const).map(([k, label, ph]) => (
                 <div key={k}><FieldLabel>{label}</FieldLabel><Input value={settings.billing?.[k] ?? ""} placeholder={ph} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), [k]: e.target.value } } })} className="w-full" /></div>
               ))}
             </div>
-            <div className="mt-2.5"><FieldLabel>Invoice/PO footer note</FieldLabel><Input value={settings.billing?.footer ?? ""} placeholder="Thank you for your business" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), footer: e.target.value } } })} className="w-full" /></div>
+            <div className="mt-2.5"><FieldLabel>{t("p8set.bbFooter")}</FieldLabel><Input value={settings.billing?.footer ?? ""} placeholder={t("p8set.bbFooterPh")} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), footer: e.target.value } } })} className="w-full" /></div>
           </div>
 
           <div className="mt-4 border-t border-[var(--line)] pt-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-[14px] font-extrabold text-[var(--ink)]">Invoice template — what to show</div>
-              <button type="button" onClick={() => setTmplPreview(true)} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm hover:brightness-110">👁 Preview invoice</button>
+              <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8set.invTmplHead")}</div>
+              <button type="button" onClick={() => setTmplPreview(true)} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm hover:brightness-110">{t("p8set.invPreview")}</button>
             </div>
-            <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]">Add your logo and pick which optional fields appear when you raise an invoice. Hit <b>Preview</b> to see a sample with your details.</p>
+            <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]"><Rich k="p8set.invTmplLede" slots={{}} /></p>
             <div className="grid gap-2.5 sm:grid-cols-2">
               <div>
-                <FieldLabel>Logo</FieldLabel>
+                <FieldLabel>{t("p8set.invLogo")}</FieldLabel>
                 <div className="flex items-center gap-2">
                   {settings.billing?.logoUrl && <img src={settings.billing.logoUrl} alt={t("p8set.logoAlt")} className="h-9 max-w-[120px] rounded border border-[var(--line)] object-contain" />}
                   <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ {t("setup.upload")}<input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error(t("p8set.logoReadErr"))); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? t("p8set.logoFailed", { msg: err.message }) : t("p8set.logoFailedGeneric")); } e.target.value = ""; }} /></label>
-                  {settings.billing?.logoUrl && <button type="button" onClick={() => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } })} className="text-[11.5px] font-bold text-[var(--ink-3)]">Remove</button>}
+                  {settings.billing?.logoUrl && <button type="button" onClick={() => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } })} className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("setup.remove")}</button>}
                 </div>
-                <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">PNG, JPG, SVG, WebP, GIF, BMP or AVIF — up to 1MB, resized automatically. (iPhone HEIC: export as JPG first.)</div>
+                <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("p8set.logoFormats")}</div>
               </div>
-              <div><FieldLabel>Company registration no.</FieldLabel><Input value={settings.billing?.companyReg ?? ""} placeholder="133950" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), companyReg: e.target.value } } })} className="w-full" /></div>
+              <div><FieldLabel>{t("p8set.coReg")}</FieldLabel><Input value={settings.billing?.companyReg ?? ""} placeholder="133950" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), companyReg: e.target.value } } })} className="w-full" /></div>
             </div>
             <div className="mt-3">
-              <FieldLabel>Optional invoice fields — tick what you use</FieldLabel>
+              <FieldLabel>{t("p8set.invOptFields")}</FieldLabel>
               <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px]">
-                {([["poNumber", "Customer PO number"], ["accountRef", "Account ref"], ["vat", "VAT / tax"]] as const).map(([k, label]) => (
+                {([["poNumber", t("p8set.invFldPo")], ["accountRef", t("p8set.invFldRef")], ["vat", t("p8set.invFldVat")]] as const).map(([k, label]) => (
                   <label key={k} className="flex items-center gap-1.5 font-bold"><input type="checkbox" checked={!!settings.billing?.fields?.[k]} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), fields: { ...(settings.billing?.fields ?? {}), [k]: e.target.checked } } } })} /> {label}</label>
                 ))}
               </div>
             </div>
-            {settings.billing?.fields?.vat && <div className="mt-2.5 max-w-[200px]"><FieldLabel>Default VAT %</FieldLabel><Input type="number" value={settings.billing?.defaultTaxRate ?? ""} placeholder="20" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), defaultTaxRate: e.target.value === "" ? undefined : Number(e.target.value) } } })} className="w-full" /></div>}
+            {settings.billing?.fields?.vat && <div className="mt-2.5 max-w-[200px]"><FieldLabel>{t("p8set.invDefVat")}</FieldLabel><Input type="number" value={settings.billing?.defaultTaxRate ?? ""} placeholder="20" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), defaultTaxRate: e.target.value === "" ? undefined : Number(e.target.value) } } })} className="w-full" /></div>}
           </div>
 
           <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-[14px] font-extrabold text-[var(--ink)]">Purchase-order template</div>
-              <button type="button" onClick={() => setPoPreview(true)} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm hover:brightness-110">👁 Preview PO</button>
+              <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8set.poTmplHead")}</div>
+              <button type="button" onClick={() => setPoPreview(true)} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm hover:brightness-110">{t("p8set.poPreview")}</button>
             </div>
-            <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]">Boilerplate printed on every purchase order below the items. The per-PO bits (supplier, deliver-to, comments) are set when you raise the order.</p>
+            <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]">{t("p8set.poTmplLede")}</p>
             <div className="grid gap-3">
-              <div><FieldLabel>Payment method</FieldLabel><Input value={settings.billing?.poPaymentMethod ?? ""} placeholder="e.g. To be invoiced — 30 days from receipt" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), poPaymentMethod: e.target.value } } })} className="w-full" /></div>
-              <div><FieldLabel>Instructions to suppliers <span className="font-normal normal-case text-[var(--ink-3)]">— one per line, auto-numbered</span></FieldLabel><textarea value={settings.billing?.poInstructions ?? ""} rows={4} placeholder={"Quote this PO number on all invoices\nEmail invoices as PDF to accounts@yourbusiness.com\nA delivery note must accompany all goods"} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), poInstructions: e.target.value } } })} className={`${inputCls} w-full resize-y`} /></div>
-              <div><FieldLabel>Terms &amp; conditions</FieldLabel><textarea value={settings.billing?.poTerms ?? ""} rows={3} placeholder="By accepting this order you agree to our standard terms and conditions…" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), poTerms: e.target.value } } })} className={`${inputCls} w-full resize-y`} /></div>
+              <div><FieldLabel>{t("p8set.poPayMethod")}</FieldLabel><Input value={settings.billing?.poPaymentMethod ?? ""} placeholder={t("p8set.poPayMethodPh")} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), poPaymentMethod: e.target.value } } })} className="w-full" /></div>
+              <div><FieldLabel>{t("p8set.poInstr")} <span className="font-normal normal-case text-[var(--ink-3)]">{t("p8set.poInstrNote")}</span></FieldLabel><textarea value={settings.billing?.poInstructions ?? ""} rows={4} placeholder={t("p8set.poInstrPh")} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), poInstructions: e.target.value } } })} className={`${inputCls} w-full resize-y`} /></div>
+              <div><FieldLabel>{t("p8set.poTerms")}</FieldLabel><textarea value={settings.billing?.poTerms ?? ""} rows={3} placeholder={t("p8set.poTermsPh")} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), poTerms: e.target.value } } })} className={`${inputCls} w-full resize-y`} /></div>
             </div>
           </div>
           {tmplPreview && (() => {
@@ -2525,9 +2526,9 @@ export function SetupApp() {
               reference: "INV-1001", customerName: "Sample Customer Ltd", customerAddress: "1 Example Street, Townsville AB1 2CD", customerEmail: "customer@example.com",
               poNumber: f.poNumber ? "4200075991" : undefined, accountRef: f.accountRef ? "ACC-001" : undefined,
               date: "2026-01-15",
-              lineItems: [{ description: "Summer camp — week 1", qty: 1, unitPrice: 120 }, { description: "Extended day", qty: 3, unitPrice: 8 }],
+              lineItems: [{ description: t("p8set.smpSummerCamp"), qty: 1, unitPrice: 120 }, { description: t("p8set.smpExtDay"), qty: 3, unitPrice: 8 }],
               taxRate: f.vat ? (settings.billing?.defaultTaxRate ?? 20) : undefined,
-              notes: "This is a preview of how your invoices will look.",
+              notes: t("p8set.smpNoteInv"),
             } as Record<string, unknown>;
             return <PrintableDoc kind="invoice" doc={sample} billing={settings.billing} onClose={() => setTmplPreview(false)} />;
           })()}
@@ -2536,9 +2537,9 @@ export function SetupApp() {
               reference: "PO-1001", supplier: "Sample Supplier Ltd", supplierAddress: "12 Trade Park, Industry Way, Townsville AB1 2CD", supplierEmail: "sales@supplier.example",
               date: "2026-01-15", dueDate: "2026-01-29",
               requestedBy: settings.billing?.businessName ? `${settings.billing.businessName} — Ops` : "Operations",
-              deliveryAddress: settings.billing?.address ?? "", comments: "Please confirm receipt of this order by return email.",
-              lineItems: [{ description: "Summer HAF programme — SEN", qty: 1, unitPrice: 16800 }, { description: "Extra sessions", qty: 4, unitPrice: 120 }],
-              notes: "This is a preview of how your purchase orders will look.",
+              deliveryAddress: settings.billing?.address ?? "", comments: t("p8set.smpComment"),
+              lineItems: [{ description: t("p8set.smpHaf"), qty: 1, unitPrice: 16800 }, { description: t("p8set.smpExtra"), qty: 4, unitPrice: 120 }],
+              notes: t("p8set.smpNotePo"),
             } as Record<string, unknown>;
             return <PrintableDoc kind="po" doc={sample} billing={settings.billing} onClose={() => setPoPreview(false)} />;
           })()}
@@ -2688,23 +2689,23 @@ export function SetupApp() {
                 nothing". Repeat the error right where the toggles are. */}
             {error && (
               <div className="mb-3 rounded-xl border border-[#f3b9b9] bg-[#fdeeee] px-4 py-3 text-[12.5px] font-semibold text-[#8a1c1c]">
-                ⚠️ {error} — your last change didn’t save and has been reverted.
+                {t("p8set.ftSaveFailed", { error: error ?? "" })}
               </div>
             )}
             <Section
-              title="Always on"
-              lede="The essentials for running — including the pieces that go into setting up a listing (availability, locations). These can't be switched off."
+              title={t("p8set.ftAlwaysOn")}
+              lede={t("p8set.ftAlwaysOnLede")}
             >
               {core.map((it) => (
-                <Row key={it.view} label={it.label ?? it.view}>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)]">🔒 Always on</span>
+                <Row key={it.view} label={navLabel(t, it.label ?? it.view)}>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)]">🔒 {t("p8set.ftAlwaysOn")}</span>
                 </Row>
               ))}
             </Section>
 
             <Section
-              title="Your features"
-              lede="Switch off anything you don't use — it leaves your dashboard entirely. For anything families also see, flip the nested “Show to families” switch to keep it for yourself but hide it from them."
+              title={t("p8set.ftYourFeatures")}
+              lede={t("p8set.ftYourFeaturesLede")}
             >
               {optional.map((it) => {
                 const on = !featureOff(fe, it.view);
@@ -2714,16 +2715,16 @@ export function SetupApp() {
                   <div key={it.view} className="border-b border-dashed border-[var(--line)] py-2.5 last:border-b-0">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="min-w-[200px] flex-1">
-                        <div className="text-[13px] font-bold">{it.label ?? it.view}</div>
+                        <div className="text-[13px] font-bold">{navLabel(t, it.label ?? it.view)}</div>
                         {FEATURE_HINTS[it.view] && <div className="mt-0.5 text-[11.5px] leading-[1.45] text-[var(--ink-2)]">{it.view === "learninghub" ? t("hubshell.su_learninghubHint") : FEATURE_HINTS[it.view]}</div>}
-                        {keys && <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">👪 Families see this too</div>}
+                        {keys && <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{t("p8set.ftFamiliesSee")}</div>}
                       </div>
                       <Toggle on={on} onChange={(v) => setFe(it.view, v)} labels={[t("p8set.on"), t("p8set.off")]} />
                     </div>
                     {keys && on && (
                       <div className="mt-2 ms-3 flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-                        <span className="text-[11.5px] font-semibold text-[var(--ink-2)]">👪 Show to families{ca.simpleMode ? " — off in Simple mode" : ""}</span>
-                        <Toggle on={shownToFamilies} disabled={ca.simpleMode} onChange={(v) => setCAkeys(keys, v)} labels={["Shown", "Hidden"]} />
+                        <span className="text-[11.5px] font-semibold text-[var(--ink-2)]">{t("p8set.ftShowFamilies")}{ca.simpleMode ? t("p8set.ftOffSimple") : ""}</span>
+                        <Toggle on={shownToFamilies} disabled={ca.simpleMode} onChange={(v) => setCAkeys(keys, v)} labels={[tx("p8set.shown"), tx("p8set.hidden")]} />
                       </div>
                     )}
                   </div>
@@ -2732,17 +2733,17 @@ export function SetupApp() {
             </Section>
 
             <Section
-              title="Families also see"
-              lede="Extras in the family app. Simple mode strips their area right back to just booking, activities and account — overriding the switches above."
+              title={t("p8set.ftFamiliesAlso")}
+              lede={t("p8set.ftFamiliesAlsoLede")}
             >
-              <Row label="✨ Simple mode" note="Overrides the rest" hint="On: families see only booking, activities and their account.">
+              <Row label={t("p8set.ftSimple")} note={t("p8set.ftOverrides")} hint={t("p8set.ftSimpleHint")}>
                 <Toggle on={ca.simpleMode} onChange={(v) => setCAkey("simpleMode", v)} labels={[t("p8set.on"), t("p8set.off")]} />
               </Row>
-              <Row label="👛 Wallet / credit" hint="Store credit families can spend at checkout.">
-                <Toggle on={ca.simpleMode ? false : ca.wallet} disabled={ca.simpleMode} onChange={(v) => setCAkey("wallet", v)} labels={["Shown", "Hidden"]} />
+              <Row label={t("p8set.ftWallet")} hint={t("p8set.ftWalletHint")}>
+                <Toggle on={ca.simpleMode ? false : ca.wallet} disabled={ca.simpleMode} onChange={(v) => setCAkey("wallet", v)} labels={[tx("p8set.shown"), tx("p8set.hidden")]} />
               </Row>
-              <Row label="🔍 Browse your activities" hint="The page where families see and book your activities. (The cross-provider marketplace is separate — see the Marketplace tab.)">
-                <Toggle on={ca.simpleMode ? false : ca.browse} disabled={ca.simpleMode} onChange={(v) => setCAkey("browse", v)} labels={["Shown", "Hidden"]} />
+              <Row label={t("p8set.ftBrowse")} hint={t("p8set.ftBrowseHint")}>
+                <Toggle on={ca.simpleMode ? false : ca.browse} disabled={ca.simpleMode} onChange={(v) => setCAkey("browse", v)} labels={[tx("p8set.shown"), tx("p8set.hidden")]} />
               </Row>
             </Section>
           </>
@@ -2754,16 +2755,16 @@ export function SetupApp() {
         const unit = (v: number) => (r.type === "percent" ? `${v}%` : `£${v}`);
         return (
           <Section
-            title="Refer a friend"
-            lede="Refer-a-friend rewards now live on the Referrals page, so you set them up right where you track the results."
+            title={t("p8set.rfTitle")}
+            lede={t("p8set.rfLede")}
           >
             <div className="flex flex-col items-start gap-3 py-1">
               <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12.5px] text-[var(--ink-2)]">
                 {r.enabled
-                  ? <>Currently <b>on</b> — friend gets <b>{unit(r.friendOff)}</b> off, referrer earns <b>{unit(r.referrerReward)}</b>.</>
-                  : <>Currently <b>off</b> — families don’t see a referral page.</>}
+                  ? <Rich k="p8set.rfOn" vars={{ friend: unit(r.friendOff), referrer: unit(r.referrerReward) }} slots={{}} />
+                  : <Rich k="p8set.rfOff" slots={{}} />}
               </div>
-              <a href={`/${portal}/referrals`} className="rounded-full bg-[#2f5fd0] px-4 py-2 text-[12.5px] font-bold text-white transition-opacity hover:opacity-90">Open Referrals to edit →</a>
+              <a href={`/${portal}/referrals`} className="rounded-full bg-[#2f5fd0] px-4 py-2 text-[12.5px] font-bold text-white transition-opacity hover:opacity-90">{t("p8set.rfOpen")}</a>
             </div>
           </Section>
         );
@@ -2777,10 +2778,10 @@ export function SetupApp() {
           setM({ tiers: m.tiers.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
         return (
           <Section
-            title="Memberships"
-            lede="Offer families up to three monthly plans. Each tier gives EITHER wallet credit every month, or a standing % off every booking (which stacks on top of any coupons). Toggle tiers on/off and set the price + benefit. Recurring billing is handled by Stripe."
+            title={t("p8set.msTitle")}
+            lede={t("p8set.msLede")}
           >
-            <Row label="⭐ Memberships" hint="Off: no memberships page for families. On: families can join the tiers you switch on below.">
+            <Row label={t("p8set.msLabel")} hint={t("p8set.msHint")}>
               <Toggle on={m.enabled} onChange={(v) => setM({ enabled: v })} labels={[t("p8set.on"), t("p8set.off")]} />
             </Row>
             {m.tiers.map((t) => {
@@ -2792,13 +2793,13 @@ export function SetupApp() {
                     <Toggle on={t.enabled} onChange={(v) => setTier(t.id, { enabled: v })} labels={[tx("p8set.on"), tx("p8set.off")]} />
                   </div>
                   <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    <label className="text-[12px] font-semibold text-[var(--ink-2)]">Price / month
+                    <label className="text-[12px] font-semibold text-[var(--ink-2)]">{tx("p8set.msPrice")}
                       <span className="mt-1 flex items-center gap-1"><span className="text-[12px] font-bold text-[var(--ink-3)]">£</span><Input type="number" min="0" step="1" value={String(t.priceMonthly)} onChange={(e) => setTier(t.id, { priceMonthly: num(e.target.value) })} className="w-full" /></span>
                     </label>
-                    <label className="text-[12px] font-semibold text-[var(--ink-2)]">Benefit
-                      <span className="mt-1 block"><Toggle on={pct} onChange={(v) => setTier(t.id, { benefitType: v ? "percent" : "credit" })} labels={["% off", "£ credit"]} /></span>
+                    <label className="text-[12px] font-semibold text-[var(--ink-2)]">{tx("p8set.msBenefit")}
+                      <span className="mt-1 block"><Toggle on={pct} onChange={(v) => setTier(t.id, { benefitType: v ? "percent" : "credit" })} labels={[tx("p8set.msPctOff"), tx("p8set.msCredit")]} /></span>
                     </label>
-                    <label className="text-[12px] font-semibold text-[var(--ink-2)]">{pct ? "% off every booking" : "£ credit / month"}
+                    <label className="text-[12px] font-semibold text-[var(--ink-2)]">{pct ? tx("p8set.msPctEvery") : tx("p8set.msCreditMonth")}
                       <span className="mt-1 flex items-center gap-1">{!pct && <span className="text-[12px] font-bold text-[var(--ink-3)]">£</span>}<Input type="number" min="0" step="1" max={pct ? "100" : undefined} value={String(t.benefitValue)} onChange={(e) => setTier(t.id, { benefitValue: Math.min(pct ? 100 : 1e6, num(e.target.value)) })} className="w-full" />{pct && <span className="text-[12px] font-bold text-[var(--ink-3)]">%</span>}</span>
                     </label>
                   </div>
@@ -2806,10 +2807,10 @@ export function SetupApp() {
                       value, so they always see what a member actually gets. It's
                       shown automatically on the customer card, so it's NOT a perk. */}
                   <div className="mt-2 rounded-lg bg-[#eef4ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">
-                    {pct ? "🏷️ " : "👛 "}Members get: {pct ? `${t.benefitValue}% off every booking` : `£${t.benefitValue} wallet credit every month`}
+                    {pct ? "🏷️ " : "👛 "}{pct ? tx("p8set.msGetPct", { n: t.benefitValue }) : tx("p8set.msGetCredit", { n: t.benefitValue })}
                   </div>
                   {t.benefitType === "credit" && t.benefitValue <= t.priceMonthly && (
-                    <div className="mt-2 rounded-lg bg-[#fdf3d8] px-3 py-1.5 text-[11.5px] font-semibold text-[#8a5300]">⚠️ Members pay £{t.priceMonthly}/mo but only get £{t.benefitValue} back — set the credit above the price (e.g. £{t.priceMonthly}/mo → £{Math.round(t.priceMonthly * 1.25)} wallet) so it’s worth joining.</div>
+                    <div className="mt-2 rounded-lg bg-[#fdf3d8] px-3 py-1.5 text-[11.5px] font-semibold text-[#8a5300]">{tx("p8set.msWarn", { price: t.priceMonthly, benefit: t.benefitValue, suggest: Math.round(t.priceMonthly * 1.25) })}</div>
                   )}
                 </div>
               );
@@ -2821,11 +2822,11 @@ export function SetupApp() {
               if (!m.enabled || live.length === 0) return null;
               return (
                 <div className="mt-5">
-                  <div className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Preview — how families see it</div>
+                  <div className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("p8set.msPreview")}</div>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {live.map((t) => (
                       <MembershipTierCard key={t.id} tier={t}
-                        footer={<div className="rounded-full bg-[var(--brand-2,#2f6bd8)] py-2 text-center text-[12.5px] font-extrabold text-white">Join {t.name}</div>} />
+                        footer={<div className="rounded-full bg-[var(--brand-2,#2f6bd8)] py-2 text-center text-[12.5px] font-extrabold text-white">{tx("p8set.msJoin", { name: t.name })}</div>} />
                     ))}
                   </div>
                 </div>
@@ -2839,8 +2840,8 @@ export function SetupApp() {
 
       {activeTab === "seasons" && (
         <Section
-          title="Seasons"
-          lede="Your trading periods — just names (Autumn 1, Summer Holidays, Full year…). Each listing picks its season when you build it, and Bookings, Audiences and takings group by it. No dates, so different holiday dates across towns don’t matter."
+          title={t("p8set.ssTitle")}
+          lede={t("p8set.ssLede")}
         >
           <SeasonsEditor items={settings.seasons ?? []} onChange={(v) => set("seasons", v)} />
         </Section>
@@ -2849,15 +2850,15 @@ export function SetupApp() {
       {activeTab === "bookings" && (
         <>
           <Section
-            title="How parents pay"
-            lede="How you record payment when you take a booking yourself — over the phone, or for a funded or free place. These are stored on the booking and drive the funding column in your exports."
+            title={t("p8set.hpTitle")}
+            lede={t("p8set.hpLede")}
           >
             <PayMethodEditor items={settings.payMethods} onChange={(v) => set("payMethods", v)} />
             <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
-              <b className="text-[var(--ink-2)]">&ldquo;Awaiting payment&rdquo; is about the money, not the place.</b> The booking is <b>confirmed straight away</b> either way — the place is held, the child is on the register. The badge only tells you whether the cash has landed: Card is paid on the spot; bank transfer, cash and vouchers sit <b>awaiting payment</b> until you reconcile them (nothing is un-booked in the meantime). So a cash booking is <i>Booked · payment outstanding</i>, exactly as you&rsquo;d expect.
+              <Rich k="p8set.hpNoteA" slots={{}} />
               <br />
               <br />
-              Standard methods are fixed (toggle on/off); &ldquo;Card&rdquo; routes to Stripe so it can&rsquo;t be renamed. Add <i>your own</i> labels below for anything else you record by hand. There&rsquo;s no &ldquo;Free place&rdquo; — a <b>£0</b> booking skips payment on its own and is marked <b>Funded</b>.
+              <Rich k="p8set.hpNoteB" slots={{}} />
             </div>
           </Section>
         </>
@@ -2866,54 +2867,52 @@ export function SetupApp() {
       {activeTab === "vouchers" && (
         <>
           <Section
-            title="Childcare vouchers"
-            lede="Parents paying by employer voucher pay on their scheme’s own website, not here — so they need whatever that scheme asks for. Some want an account number, some your setting name, some an Ofsted number, so the labels are yours to write. Fill in the schemes you’re registered with; anything left blank isn’t offered."
+            title={t("p8set.cvTitle")}
+            lede={t("p8set.cvLede")}
           >
             <VoucherEditor items={settings.voucherProviders} onChange={(v) => set("voucherProviders", v)} />
 
             <div className="mt-3 border-t border-dashed border-[var(--line)] pt-2.5">
               <Row
-                label="Hold the place for"
-                hint="After this the booking is flagged for you to look at (overdue vouchers show on your dashboard) — nothing is cancelled automatically. That's deliberate: if you're a day late reconciling a payment that did arrive, an automatic cancellation would throw away a family's booking over your admin. The call stays yours."
+                label={t("p8set.cvHold")}
+                hint={t("p8set.cvHoldHint")}
               >
-                <NumberBox value={settings.voucherHoldDays} onChange={(n) => set("voucherHoldDays", n)} min={1} max={60} suffix="days" />
+                <NumberBox value={settings.voucherHoldDays} onChange={(n) => set("voucherHoldDays", n)} min={1} max={60} suffix={t("p8set.sfxDays")} />
               </Row>
               <Row
-                label="Money must reach you"
-                hint="Most providers want it in before the child turns up. Set how far ahead — the parent is told to send it earlier still, since voucher money spends a few days in transit."
+                label={t("p8set.cvMust")}
+                hint={t("p8set.cvMustHint")}
               >
                 <Select value={String(settings.voucherDueByDays)} onChange={(e) => set("voucherDueByDays", Number(e.target.value))}>
-                  <option value="0">By the day it starts</option>
-                  <option value="1">The day before it starts</option>
-                  <option value="2">2 days before</option>
-                  <option value="3">3 days before</option>
-                  <option value="7">A week before</option>
+                  <option value="0">{t("p8set.cvBy0")}</option>
+                  <option value="1">{t("p8set.cvBy1")}</option>
+                  <option value="2">{t("p8set.cvBy2")}</option>
+                  <option value="3">{t("p8set.cvBy3")}</option>
+                  <option value="7">{t("p8set.cvBy7")}</option>
                 </Select>
               </Row>
               <Row
-                label="If it starts too soon"
-                hint="A camp starting tomorrow can't be paid for by voucher in time. What happens then is your call — the parent is told what's going on either way."
-                note={settings.voucherWhenClose === "approve" ? "Holding for approval needs building (Amir)" : undefined}
+                label={t("p8set.cvSoon")}
+                hint={t("p8set.cvSoonHint")}
+                note={settings.voucherWhenClose === "approve" ? t("p8set.cvApproveNote") : undefined}
               >
                 <Select value={settings.voucherWhenClose} onChange={(e) => set("voucherWhenClose", e.target.value as TenantSettings["voucherWhenClose"])}>
-                  <option value="hide">Don&rsquo;t offer vouchers</option>
-                  <option value="warn">Offer them, but warn</option>
-                  <option value="approve">Offer them, but I approve first</option>
-                  <option value="normal">Take it as a normal booking</option>
+                  <option value="hide">{t("p8set.cvHide")}</option>
+                  <option value="warn">{t("p8set.cvWarn")}</option>
+                  <option value="approve">{t("p8set.cvApprove")}</option>
+                  <option value="normal">{t("p8set.cvNormal")}</option>
                 </Select>
               </Row>
               <Row
-                label="Voucher money takes"
-                hint="How long it takes to reach you. Vouchers aren't offered on a booking starting sooner than this — a payment that can't arrive in time isn't a payment, it's you chasing someone on the morning of the camp."
+                label={t("p8set.cvTakes")}
+                hint={t("p8set.cvTakesHint")}
               >
-                <NumberBox value={settings.voucherClearDays} onChange={(n) => set("voucherClearDays", n)} min={0} max={14} suffix="days" />
+                <NumberBox value={settings.voucherClearDays} onChange={(n) => set("voucherClearDays", n)} min={0} max={14} suffix={t("p8set.sfxDays")} />
               </Row>
             </div>
 
             <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
-              <b className="text-[var(--ink-2)]">Tax-Free Childcare isn’t here.</b> It’s HMRC rather
-              than an employer scheme, it uses your Ofsted number, and it’s getting its own
-              reconciliation — so it stays a payment method in its own right.
+              <Rich k="p8set.vTfcNote" slots={{}} />
             </div>
           </Section>
         </>
@@ -2922,17 +2921,17 @@ export function SetupApp() {
       {activeTab === "groups" && (
         <>
           <Section
-            title="Age groups & rooms"
-            lede="Set your groups once, here — colour, age band, staffing ratio, and room size (the most children the space holds). This is the single source; the Ratios board and every listing read from it."
+            title={t("p8set.agTitle")}
+            lede={t("p8set.agLede")}
           >
             <GroupsEditor groups={settings.ratioGroups} onChange={(v) => set("ratioGroups", v)} />
 
             {/* One scannable strip: where these groups get used. */}
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
               {[
-                { icon: "📋", head: "Here (Setup)", body: "The only place you edit a group — name, colour, age, ratio, room size." },
-                { icon: "🎫", head: "Listings", body: "Cap how many places each group takes per day (never above its room size). Nothing else." },
-                { icon: "⚖️", head: "Ratios board", body: "Shows the groups and runs the day's cover — drag a child to another group as needed. View only, never edits them." },
+                { icon: "📋", head: t("p8set.agHere"), body: t("p8set.agHereBody") },
+                { icon: "🎫", head: t("p8set.agListings"), body: t("p8set.agListingsBody") },
+                { icon: "⚖️", head: t("p8set.agRatios"), body: t("p8set.agRatiosBody") },
               ].map((t) => (
                 <div key={t.head} className="rounded-xl border border-[var(--line)] bg-[var(--panel,#fbf8fc)] p-3">
                   <div className="text-[12px] font-extrabold">{t.icon} {t.head}</div>
