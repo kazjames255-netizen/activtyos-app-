@@ -1,0 +1,226 @@
+{
+ "p3-p4-01": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Any staff account could PUT /api/messages/settings and repoint the whole tenant's new-message notification email (verified: notifyEmail set to attacker@example.com by a staff token); GET also showed the owner's account email.",
+  "notes": "messages.ts: both handlers refuse role staff (403). Commit 08ad1c15.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-02": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "GET /api/library handed staff settings.billing bank name / account name / sort code / account number.",
+  "notes": "library.ts strips those four fields for staff only. Commit 08ad1c15.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-03": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "An unnamed staff account (invite made without a name \u2014 the 'copy link' path) could PUT /api/account {name:'Jane Rota'} for any name no other USER holds, then read that colleague's DBS reference (/api/compliance), and by the same match onboarding (bank/NI), credentials, payslips and appraisals.",
+  "notes": "account.ts nameHasRecords(): first self-naming refused when any rota/payroll/leave/library/certification/onboarding/credential/absence record already carries the name (whitespace-insensitive). Commit 7704a813.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-04": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "AI co-pilot (/api/ai/chat) ignored Roles & permissions: a role at Incidents None (API 403) asked it to list every accident with child names and descriptions and got them.",
+  "notes": "ai.ts restrictStaffSnapshot() drops registers/attendance/care flags, meals, sessions, tasks, incidents, child totals, team when the role is None on the matching area. Commit 7ea9a029.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-05": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "AI co-pilot ignored a staff member's assigned sites: a coach assigned to a non-existent listing was told every site's children expected today and the incident log.",
+  "notes": "tenantSnapshot takes the SiteScope (bookings, blocks, listings, children, incidents narrowed). Commit 6e2d517a.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-06": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Team bell (/api/notifications) ignored both the roles matrix and site assignment for staff: medication/accident/trip/moment alerts naming children and parent emails.",
+  "notes": "notifications.ts filters by cap area (None) and drops child alerts for site-scoped staff. Commits 51441a48, 170e4396.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-07": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "GET /api/wallet/summary (customer-credit liability) wasn't in the roles matrix, so a Finances:None staff role could read it.",
+  "notes": "accessMap.ts CAP_API: /api/wallet -> finances. Commit eeed6590.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-08": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "/staff/clockinout hard-coded 'Marcus Bell' for every staff member: every real clock-in there hit 'You can only clock yourself in and out' (server refuses a name that isn't theirs) and an alert.",
+  "notes": "TimeClockApp uses the signed-in account name (verified: page shows the real name, clock in/out records). Commit 802ba723.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-09": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "GET /api/customers listed every site's families (names, emails, phones, children) to a coach assigned to one site; bookings/registers/child card were already site-scoped.",
+  "notes": "Filtered to families booked at the staff member's sites (8 -> 0 for a non-listing; only that booker for a real listing). Commit 166debff.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-10": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Site-assigned staff could pull any listing's families (POST /api/messages/listing-recipients), broadcast to them, and message any tenant customer.",
+  "notes": "messages.ts limits all three to families booked at their sites (shared siteFamilyEmails in lib/siteScope.ts). Commit 4aa6ec91.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-11": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Staff saw a review's probation verdict (probationOutcome) before it was put to them.",
+  "notes": "appraisals.ts strips it until status is signoff/complete. Commit 7aca5b52.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-12": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "Welcome launcher and the 'Still to do' bar counted the seeded DEMO policies for every real staff member ('10 documents to read' for a provider with none) while the Documents page said 0 of 0.",
+  "notes": "staffTasks.syncOutstandingDocs reads /api/documents/library for real accounts; demo library is tour-only. Verified in browser. Commits d3857518, 782d3ac1.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-13": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "Every staff page fetched the full bookings list (a Bookings badge for a tab staff don't have) and message threads, producing 403 console errors on every screen for roles at None.",
+  "notes": "use-booking-flags skips staff; use-unread skips when Messages is None. Verified: zero 403s on ordinary pages for a restricted role. Commit 503b1d43.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-14": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "A role at None on Messages/Families still showed both top-bar tabs (leading to a 'no access' page).",
+  "notes": "Header staffHides() uses the same caps/feature tables as the sidebar. Commit 7f8fc460.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-15": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "POST /api/timeclock/event accepted any calendar day from staff (2026-09-01 accepted): a real clocking could be filed against a day they weren't rostered.",
+  "notes": "Staff limited to today +/-1; leads/managers unchanged. Commit df8e3842.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-16": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "A child could be signed in/collected on a future session date (stamped with the server clock).",
+  "notes": "registers.ts refuses in/collect more than a day ahead. Commits da1e6543, b4bf7597.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-17": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Staff expense claims accepted a date in 2099.",
+  "notes": "expenseClaims.ts refuses future dates. Commit 582bc7d7.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-18": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "A medication dose could be recorded with a future date.",
+  "notes": "medications.ts refuses date > today+1. Commit 53074405.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-19": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "Ratios page for staff auto-tried to seed/edit the tenant team via PUT /api/library and showed 'Couldn't save your team' (403); the TeamManager editor was shown to staff.",
+  "notes": "RatiosApp skips the seed and hides TeamManager for role staff. Commit 7f44cfcf.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-20": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "Staff dashboard fetched ratios/registers/tasks/incidents/timetables even for a role at None: 403s on every load and a raw 'Your role doesn't have access...' line.",
+  "notes": "StaffDashApp skips areas the role is None on. Commit 690bf2d8.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-21": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Name-assigned tasks and checklist steps matched the Firebase display name from the token, which any user can change to a colleague's (same class as acceptance d24s5, fixed in leave.ts but not here); trips' 'trip lead' send gate had the same flaw.",
+  "notes": "tasks.ts and trips.ts match users.name (account name) only. Commits 6eee35ec, aa4dc1d9.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-22": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Probed all 772 mounted routes as a staff token (and a parent token): every manager-only write is 403 (payroll, accounting, invites, invoices, discounts, listings, blocks, timetables publish, emails, subscription, franchises, leads, tenants...), cross-tenant ids are 404, x-act-as is ignored, deactivation revokes tokens, site-scoped staff cannot mark another site's register, a role at View can read but not write.",
+  "notes": "No change needed.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-23": {
+  "verdict": "open",
+  "method": "design",
+  "actual": "Any staff account (no matrix set, or Messaging: Edit) can broadcast email to every family of a listing, post to the parents' newsfeed and edit inventory / events-calendar items; there is no per-staff 'may message families' switch (only the roles matrix).",
+  "notes": "Product decision, not a bug. Suggest defaulting coach to Messaging: View.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-24": {
+  "verdict": "open",
+  "method": "code",
+  "actual": "Joining via an invite made without a name: the 'Your name' box on /signup only sets the Firebase display name, not users.name, so the account is unnamed (clock/rota/payslips need a name) until the staff member sets one on My account (allowed once, now blocked for names that already have records). There is no manager route to name a joined member.",
+  "notes": "Suggest: accept the typed name server-side when the invite has none (reusing nameHasRecords), or add PATCH /api/invites/:token {name}. invites.ts was being edited concurrently so left alone.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-25": {
+  "verdict": "open",
+  "method": "code",
+  "actual": "Clock-in `lateMin` and `loc` are supplied by the client; a staff member can post lateMin:0 to hide lateness (visible to the manager as clock-in vs shift start).",
+  "notes": "Compute lateness server-side from rotaShifts on the 'in' event.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-26": {
+  "verdict": "open",
+  "method": "design",
+  "actual": "Roles matrix has no area for Inventory, pricing catalogues (periods/passes/block-bundles) or library settings, so a role at None everywhere can still read them; /api/library is required by every screen so only the bank fields were stripped.",
+  "notes": "Add areas if this matters.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-27": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "A task a member of staff added with no assignee (Quick add without an @name, or '+ New task' left unassigned) was created unassigned and immediately vanished from their own My tasks list (staff only see tasks assigned to them): quick-add returned 201, My tasks stayed at 0.",
+  "notes": "POST /api/tasks: an unassigned task from staff is assigned to the creator. Verified in the browser (e2e/staff-portal.spec.ts). Commit 5e1b0e4e.",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ },
+ "p3-p4-28": {
+  "verdict": "pass",
+  "method": "browser",
+  "actual": "Live sweep of all 30 staff routes (incl. aliases) as a normal coach role, an all-None role and the standing staff: every view renders, no page errors; clock in/out, register sign-in/reset, tasks, time-off, expense, concern and first-aid forms open and work; /company, /platform and /custdash URLs bounce a staff account back into /staff; a role at None shows 'You don't have access' pages, hides its tabs/sidebar items and (after the fixes) fires no stray 403s.",
+  "notes": "Spec: e2e/staff-portal.spec.ts (regression).",
+  "at": "2026-09-30",
+  "agent": "plan3-P4"
+ }
+}
