@@ -1,0 +1,194 @@
+{
+ "p3-p1-01": {
+  "verdict": "pass",
+  "method": "browser",
+  "actual": "All 52 company nav views (dashboard through moments) render with no uncaught exceptions and no failing /api calls, apart from environment items below.",
+  "notes": "Sweep spec e2e/p1-company-sweep.spec.ts + p1-company-sweep2.spec.ts (clicks every non-destructive tab/button per view).",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-02": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "PUT /api/discounts/:id checked 'percent <= 100' only on the patch, so {value:250} on a percent code, or {type:'percent'} on a 500-off amount code, each saved a 250%/500% code.",
+  "notes": "Merged existing+patch is now re-checked. Commit 6ba3ef85. Verified live 400.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-03": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Every YYYY-MM-DD schema used a bare regex: an expense dated 2026-13-45 and 2026-02-31 were saved to the ledger.",
+  "notes": "Added isRealDay in server/src/lib/ukDate.ts and applied to expenses, income, invoices, purchasing, discounts, tasks, leave, expense claims, payroll, timeclock, rota, blocks, appraisals, learning, my. Commit ac730758.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-04": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "POST /api/blocks accepted session times '25:99' and a session ending before it starts (15:00 to 09:00).",
+  "notes": "isRealTime + end>start refines on blocks schedule and explicit sessions; blockBundles and rota clock also validate. Commit 1566ca6d.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-05": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "POST /api/bookings/:ref/record-payment (and reconcile) stored an unparseable 'date' as the payment createdAt ('garbage').",
+  "notes": "date must be Date.parse-able. Commit 24116e9a. NOTE one throwaway payment with createdAt 'garbage' remains on APF-10329 in the e2e company tenant (wiped by the next e2e data wipe).",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-06": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "An expense of 1e308 rounded to Infinity, serialised as null, and nulled the whole expenses summary total. Money fields were uncapped across bookings, expenses, income, invoices, purchasing, listings passes, discounts subtotal.",
+  "notes": "Capped at 1,000,000 (invoice/purchasing line qty 100,000). Commits 7f6a2de5, 3046e696, 9ae2343d (also listing discount rule percent <= 100 and block bundle prices).",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-07": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Task deadline 'time' accepted 'zz:99'.",
+  "notes": "Validated as blank or real HH:MM. Commit 7e094b75.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-08": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Calendar events and trips only length-checked date/start/end/depart/return: 'garbage' and 2026-02-30 saved.",
+  "notes": "Real day / HH:MM required (blank allowed for optional). Commit 973d056e.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-09": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Incidents/accidents log date+time, credential and compliance issue/expiry, availability startDate, rota and shift date/times, timetable dateFrom/dateTo, medication administration date/time and course dates, moments date, meal-order dates were only length-checked.",
+  "notes": "Commits 82a8b2f8 and c19c07e2. Rota GET->PUT round trip re-verified 200.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-10": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "POST /api/customers saved email 'not an email <x>' (with marketing opt-in) and the invalid address is later emailed as a marketing contact.",
+  "notes": "Email format required when non-blank. Commit fd76cea3. Family CSV import counts per-row failures already.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-11": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "Zod validation failures were shown to providers as raw JSON ([{code:custom,message:...,path:[date]}]).",
+  "notes": "lib/api.ts readableIssues() turns them into 'date: Not a real calendar date'. Commit 61e7376e.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-12": {
+  "verdict": "open",
+  "method": "browser",
+  "actual": "Take a booking modal (features/bookings/TakeBookingModal.tsx) and several other full-screen overlays / dropdowns (registers listing picker) do not close on Escape.",
+  "notes": "Take a booking modal fixed and verified live (Escape closes it; the fix landed inside another agent's commit 9c546505). The ~79 other fixed-inset overlays and the registers listing dropdown are a systemic gap, not changed.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-13": {
+  "verdict": "open",
+  "method": "browser",
+  "actual": "Hydration mismatch on /company/finance: CompanyFinanceSwitch (and CompanyDashboardSwitch/StaffSwitch) branch on peekMe() during render, so SSR renders FinanceAnalyticsApp and the client renders HoFinanceApp (title 'Finance & analytics' vs 'Finance').",
+  "notes": "Dev overlay '1 Issue' toast only; React recovers by client render. Left as is (peekMe is deliberate for a correct first client render).",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-14": {
+  "verdict": "open",
+  "method": "environment",
+  "actual": "GET /api/payments/status 503 'no STRIPE_SECRET_KEY on the server' so Get paid shows 'Payments aren't configured'.",
+  "notes": "server/.env has no STRIPE_SECRET_KEY on this dev machine; environmental, not a code bug. Payments e2e will not pass until it is set.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-15": {
+  "verdict": "info",
+  "method": "environment",
+  "actual": "API (tsx watch) restarts every time any agent edits a server file, so sweep runs saw ERR_CONNECTION_REFUSED and 15-40s first-paint on dashboard/splitfees (Loading... placeholder) while the API was down or dev-compiling.",
+  "notes": "Not reproducible with a warm API: /api/ho/overview 0.8s, /api/splitfees 0.6s. /api/purchasing is the slowest list at ~3s.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-16": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "PATCH /api/timeclock/:id accepted clockInAt 'garbage' and a clock-out in 2020 for a 2026 day (NaN / negative payroll hours).",
+  "notes": "Stamps must parse, out after in, shift under 24h; the Timesheets editor now rolls an overnight shift (22:00-02:00) to the next day. Commit b5542465. Verified live 400s. NOTE throwaway clock record 'P1 Clock Person' (2026-09-30) remains in the e2e company tenant.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-17": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "POST /api/leave/absences accepted days:50 on a one-day request (staff-supplied days count against allowance).",
+  "notes": "days may not exceed the calendar span of the dates. Commit a097a150.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-18": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "A staff member could submit receiptUrl 'javascript:alert(document.domain)' on an expense claim; the manager's claims list renders it as <a href>. Same for expense receiptUrl, invoice poAttachmentUrl, purchasing attachmentUrl, compliance documentUrl, and a newsfeed post call-to-action url (rendered to PARENTS via window.open).",
+  "notes": "New lib/safeUrl.ts: web addresses only (http/https or /api/images/). Commits 917d46bf and 418bead6 (the parent newsfeed also refuses non-http links client-side).",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-19": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "PUT/DELETE /api/<anything>/<id> with a '/', '..', '__proto__' or a 3000-char id returned 500 and raised the ops alarm each time (any signed-in user could spam it).",
+  "notes": "Global error handler maps Firestore INVALID_ARGUMENT id errors to 404. Commit bb9d80d2. Re-fuzzed 30 resources x 5 ids x 4 methods: zero 5xx.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-20": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Territory polygons accepted lat 999 / lng -500 and could be marked 'agreed'.",
+  "notes": "Ranges enforced on franchises, invites and account schemas. Commit 77060c35. The e2e franchise's territory was restored to draft/no areas (an agreedAt/agreedBy stamp from my test remains on that user).",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-21": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "POST /api/invoices/:id/email and /api/purchasing/:id/email passed body.to straight to the mailer ('a@b.com, c@d.com'); invoice customerEmail and PO supplierEmail had no format check.",
+  "notes": "Single valid email required. Commit d58c6c12.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-22": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "With a franchise picked in the head-office scope switcher, the top-bar tabs (Bookings, Families) were squeezed into a 28px scroll box at 1280px wide (a stray '[' sliver visible); unreachable.",
+  "notes": "Account-name label now shows from 1440px (was 1280) and the scope picker is 160px below 1440. Measured live: nav 302px, both tabs fully visible at 1280/1366/1440. Commit 481dc128. STILL OPEN at 1024px (scroll box 0-84px).",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-23": {
+  "verdict": "open",
+  "method": "browser",
+  "actual": "Regression run of related e2e specs after these changes: settings-scheduling (4), trips-consent, safeguarding accidents all pass. Four failures need triage: booking-lifecycle approval (API restart mid-run: 'fetch failed: other side closed'), coupons parent checkout (\u00a318.00 not visible; validate API returns off:2 correctly), dayops register (Collect stays disabled), safeguarding medication loop (the parent's Salbutamol was authorised against another tenant, v1BjePNHt9jtJnIRFReb, because the provider <select> index 0 is no longer the company; test-order contamination).",
+  "notes": "See entry 24 for the re-run.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-24": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Negative/authorisation probes: staff/parent tokens cannot write operator resources (expenses, discounts, income, invoices, invites, listings, blocks, suppliers, purchasing all 403); freelancer token PUT/DELETE on company expense/discount/task ids is 404; parent /api/incidents is child-scoped and hides safeguarding unless shared; fuzzing 145 documented paths with empty/garbage bodies and junk query strings produced no 5xx apart from the Stripe-not-configured 503.",
+  "notes": "Read-only + throwaway data; all created rows deleted.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ }
+}
