@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { isBlankOrWebUrl } from "../lib/safeUrl";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
@@ -24,7 +25,7 @@ const canManage = (role: Role) => role === "company" || role === "freelancer" ||
 
 // A call-to-action / link on a post: a label plus either a listing (target = its
 // title, opens the listing in-app) or an external url.
-const ctaSchema = z.object({ label: z.string().trim().max(60), target: z.string().trim().max(160).optional(), listingId: z.string().trim().max(80).optional(), url: z.string().trim().max(600).optional() }).nullable();
+const ctaSchema = z.object({ label: z.string().trim().max(60), target: z.string().trim().max(160).optional(), listingId: z.string().trim().max(80).optional(), url: z.string().trim().max(600).refine(isBlankOrWebUrl, "Links must be web addresses (https://…)").optional() }).nullable();
 // A designed newsletter payload (layout + palette + company + content blocks).
 // Block fields are all strings; images are uploaded URLs, so the doc stays small.
 const nlBlockSchema = z.object({ t: z.string().max(20) }).catchall(z.union([z.string().max(4_000), z.number()]));
