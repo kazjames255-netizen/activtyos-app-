@@ -2259,6 +2259,7 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
 }
 
 // ── Step: Automatic discounts ──────────────────────────────────────────────
+// title/eg are English fallbacks — rendered through p8lst.wbDk_<kind>_title/_eg.
 const DISCOUNT_KINDS: { kind: DiscountKind; title: string; eg: string; icon: string; colour: string }[] = [
   { kind: "person", title: "Multi-person", eg: "Siblings pay £3.50 each, bring a friend pay £10.00 each", icon: "👨‍👩‍👧", colour: "#2f6bd8" },
   { kind: "session", title: "Multi-session", eg: "Book more than 3 sessions to get 10% off", icon: "📅", colour: "#3f78d8" },
@@ -2266,6 +2267,9 @@ const DISCOUNT_KINDS: { kind: DiscountKind; title: string; eg: string; icon: str
 ];
 
 function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; tickets: { name: string; days: number; price: number }[] }) {
+  const tr = useT();
+  const { locale } = useI18n();
+  const tx = { tr, locale };
   const rules = d.discounts ?? [];
   const setRules = (next: DiscountRule[]) => upd({ discounts: next });
   // One form at a time: picking a type opens it here rather than stacking
@@ -2288,15 +2292,15 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
 
   return (
     <div className="mx-auto max-w-[1120px]">
-      <StepHead n={7} kicker="STEP 7 · DISCOUNTS" title="Automatic discounts" lede="Rules that come off the price by themselves at checkout — no codes for parents to remember." />
-      <RichCard icon="🏷️" title="Discount rules" subtitle="Come off the price automatically at checkout — no codes to remember" tint="violet">
+      <StepHead n={7} kicker={tr("p8lst.wbKickDisc")} title={tr("p8lst.wbDiscTitle")} lede={tr("p8lst.wbDiscLede")} />
+      <RichCard icon="🏷️" title={tr("p8lst.wbDiscRules")} subtitle={tr("p8lst.wbDiscRulesSub")} tint="violet">
         <div>
 
       {/* Create / edit panel */}
       <Card className="mb-4 overflow-hidden p-0">
         <div className="border-b border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <div className="text-[13px] font-extrabold">{editing ? "Edit discount rule" : "Create an automatic discount rule"}</div>
-          <div className="text-[11.5px] text-[var(--ink-3)]">Select a discount type</div>
+          <div className="text-[13px] font-extrabold">{editing ? tr("p8lst.wbDiscEditRule") : tr("p8lst.wbDiscCreateRule")}</div>
+          <div className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.wbDiscSelectType")}</div>
         </div>
 
         <div className="grid gap-2 p-4 sm:grid-cols-3">
@@ -2308,10 +2312,10 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
                 style={on ? { borderColor: k.colour, background: `${k.colour}0f` } : { borderColor: "var(--line)" }}>
                 <div className="flex items-center gap-2">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg text-[16px]" style={{ background: `${k.colour}1a` }}>{k.icon}</span>
-                  <span className="text-[12.5px] font-extrabold" style={{ color: on ? k.colour : "var(--ink)" }}>{k.title}</span>
+                  <span className="text-[12.5px] font-extrabold" style={{ color: on ? k.colour : "var(--ink)" }}>{tr("p8lst.wbDk_" + k.kind + "_title")}</span>
                   {on && <span className="ms-auto text-[13px]" style={{ color: k.colour }}>✓</span>}
                 </div>
-                <div className="mt-1.5 text-[11px] leading-[1.45] text-[var(--ink-3)]">{k.eg}</div>
+                <div className="mt-1.5 text-[11px] leading-[1.45] text-[var(--ink-3)]">{tr("p8lst.wbDk_" + k.kind + "_eg")}</div>
               </button>
             );
           })}
@@ -2319,13 +2323,13 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
 
         {form && (
           <div className="border-t border-[var(--line)] p-4">
-            <FieldLabel>Name your discount — parents see this on the booking page</FieldLabel>
-            <Input value={nameEdited ? form.name : ruleSummary(form)} onChange={(e) => { const v = e.target.value; if (v.trim() === "") { setNameEdited(false); set({ name: "" }); } else { setNameEdited(true); set({ name: v }); } }} placeholder={ruleSummary(form)} className="mb-3.5 w-full text-[12.5px]" />
+            <FieldLabel>{tr("p8lst.wbDiscName")}</FieldLabel>
+            <Input value={nameEdited ? form.name : ruleSummary(form, tx)} onChange={(e) => { const v = e.target.value; if (v.trim() === "") { setNameEdited(false); set({ name: "" }); } else { setNameEdited(true); set({ name: v }); } }} placeholder={ruleSummary(form, tx)} className="mb-3.5 w-full text-[12.5px]" />
 
-            <FieldLabel>Which tickets does it apply to?</FieldLabel>
+            <FieldLabel>{tr("p8lst.wbDiscWhich")}</FieldLabel>
             <div className="mb-3.5 flex flex-wrap gap-1.5">
               <button type="button" onClick={() => set({ passNames: [] })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold"
-                style={form.passNames.length === 0 ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>All tickets</button>
+                style={form.passNames.length === 0 ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{tr("p8lst.wbAllTickets")}</button>
               {tickets.map((t) => {
                 const on = form.passNames.includes(t.name);
                 return (
@@ -2334,39 +2338,38 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
                     style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{t.name}</button>
                 );
               })}
-              {tickets.length === 0 && <span className="text-[11.5px] text-[var(--ink-3)]">Pick a block in Tickets &amp; pricing first.</span>}
+              {tickets.length === 0 && <span className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.wbPickBlockFirst")}</span>}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               {form.kind !== "early" ? (
                 <div>
-                  <FieldLabel>{form.kind === "person" ? "Applies when attendees are more than" : "Applies when sessions are more than"}</FieldLabel>
+                  <FieldLabel>{form.kind === "person" ? tr("p8lst.wbDiscMoreAtt") : tr("p8lst.wbDiscMoreSes")}</FieldLabel>
                   <Input type="number" min={1} value={form.moreThan} onChange={(e) => set({ moreThan: Math.max(1, parseInt(e.target.value, 10) || 1) })} className="w-full" />
                 </div>
               ) : (
                 <div>
-                  <FieldLabel>Must book on or before</FieldLabel>
+                  <FieldLabel>{tr("p8lst.wbDiscBefore")}</FieldLabel>
                   <Input type="date" value={form.beforeDate} onChange={(e) => set({ beforeDate: e.target.value })} className="w-full" />
                 </div>
               )}
 
               {form.kind === "person" && (
                 <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
-                  Applies to <b>every child</b> on the same pass. Two siblings on one week both get it;
-                  a child booked on their own doesn&rsquo;t.
+                  <Rich text={tr("p8lst.wbDiscPersonNote")} />
                 </div>
               )}
 
               <div>
-                <FieldLabel>Discount method</FieldLabel>
+                <FieldLabel>{tr("p8lst.wbDiscMethod")}</FieldLabel>
                 <Select value={form.method} onChange={(e) => set({ method: e.target.value as DiscountRule["method"] })} className="w-full text-[12px]">
-                  {form.kind !== "session" && <option value="price">A discounted price</option>}
-                  {form.kind !== "session" && <option value="subtract">Subtract an amount</option>}
-                  <option value="percent">By a percentage</option>
+                  {form.kind !== "session" && <option value="price">{tr("p8lst.wbDiscM_price")}</option>}
+                  {form.kind !== "session" && <option value="subtract">{tr("p8lst.wbDiscM_subtract")}</option>}
+                  <option value="percent">{tr("p8lst.wbDiscM_percent")}</option>
                 </Select>
               </div>
               <div>
-                <FieldLabel>{form.method === "percent" ? "Percent off" : "Amount"}</FieldLabel>
+                <FieldLabel>{form.method === "percent" ? tr("p8lst.wbDiscPercentOff") : tr("p8lst.wbDiscAmount")}</FieldLabel>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[13px] font-extrabold text-[var(--ink-3)]">{form.method === "percent" ? "%" : "£"}</span>
                   <Input type="number" min={0} step="0.01" value={form.value} onChange={(e) => set({ value: Math.max(0, parseFloat(e.target.value) || 0) })} className="w-full" />
@@ -2375,12 +2378,12 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
             </div>
 
             <div className="mt-3.5 rounded-lg border-s-4 bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]" style={{ borderInlineStartColor: kindOf(form.kind).colour }}>
-              <b>Parents will see:</b> {form.name.trim() || ruleSummary(form)}
+              <b>{tr("p8lst.wbParentsSee")}</b> {form.name.trim() || ruleSummary(form, tx)}
             </div>
 
             <div className="mt-3 flex gap-2">
-              <Button variant="primary" onClick={save}>{editing ? "Save changes" : "Add discount"}</Button>
-              <Button onClick={() => openForm(null)}>Cancel</Button>
+              <Button variant="primary" onClick={save}>{editing ? tr("p8lst.wbSaveChanges") : tr("p8lst.wbAddDiscount")}</Button>
+              <Button onClick={() => openForm(null)}>{tr("p8lst.wbCancel")}</Button>
             </div>
           </div>
         )}
@@ -2389,7 +2392,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
       {/* Saved rules */}
       {rules.length > 0 && (
         <>
-          <SectionHead>Your discounts ({rules.length})</SectionHead>
+          <SectionHead>{tr("p8lst.wbYourDiscounts", { n: rules.length })}</SectionHead>
           <div className="flex flex-col gap-2">
             {rules.map((r) => {
               const k = kindOf(r.kind);
@@ -2397,16 +2400,16 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
                 <div key={r.id} className="flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3" style={{ borderInlineStart: `4px solid ${k.colour}`, opacity: r.enabled ? 1 : 0.55 }}>
                   <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-[15px]" style={{ background: `${k.colour}1a` }}>{k.icon}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] font-bold">{r.name.trim() || ruleSummary(r)}</span>
-                    <span className="block truncate text-[11px] text-[var(--ink-3)]">{k.title} · {r.passNames.length ? r.passNames.join(", ") : "all tickets"}</span>
+                    <span className="block truncate text-[12.5px] font-bold">{r.name.trim() || ruleSummary(r, tx)}</span>
+                    <span className="block truncate text-[11px] text-[var(--ink-3)]">{tr("p8lst.wbDk_" + k.kind + "_title")} · {r.passNames.length ? r.passNames.join(", ") : tr("p8lst.wbAllTicketsLc")}</span>
                   </span>
                   <span className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold" style={{ background: `${k.colour}1a`, color: k.colour }}>
                     {r.method === "percent" ? `${r.value}%` : money(r.value)}
                   </span>
                   <button type="button" onClick={() => setRules(rules.map((x) => (x.id === r.id ? { ...x, enabled: !x.enabled } : x)))}
                     className="rounded-full border px-2.5 py-1 text-[11px] font-bold"
-                    style={r.enabled ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{r.enabled ? "On" : "Off"}</button>
-                  <Button sm onClick={() => openForm(r, !!r.name?.trim())}>Edit</Button>
+                    style={r.enabled ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{r.enabled ? tr("p8lst.wbOn") : tr("p8lst.wbOff")}</button>
+                  <Button sm onClick={() => openForm(r, !!r.name?.trim())}>{tr("p8lst.wbEdit")}</Button>
                   <button type="button" onClick={() => { setRules(rules.filter((x) => x.id !== r.id)); if (form?.id === r.id) openForm(null); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
                 </div>
               );
@@ -2416,11 +2419,11 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
       )}
 
       {rules.length === 0 && !form && (
-        <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">No discounts yet — pick a type above to create your first rule.</Card>
+        <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">{tr("p8lst.wbNoDiscounts")}</Card>
       )}
 
       <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[11.5px] text-[var(--ink-3)]">
-        <b className="text-[var(--ink-2)]">How these stack:</b> multi-session discounts are applied after multi-person ones have been calculated, then early bird. If two rules conflict, the parent is offered the best price.
+        <Rich text={tr("p8lst.wbDiscStack")} bClass="text-[var(--ink-2)]" />
       </div>
         </div>
       </RichCard>
@@ -2434,14 +2437,15 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
 // placeholder. Lives once on the Preview step (was also inline on each step —
 // removed as redundant clutter).
 function HeadingsEditor({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
+  const tr = useT();
   const [open, setOpen] = useState(false);
   const set = (k: string, v: string) => upd({ headings: { ...(d.headings ?? {}), [k]: v } });
   return (
     <Card className="mb-3 p-3.5">
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between text-start">
         <span>
-          <span className="text-[13px] font-extrabold">Section headings</span>
-          <span className="ms-2 text-[11.5px] text-[var(--ink-3)]">Reword any heading parents see — leave blank for the default.</span>
+          <span className="text-[13px] font-extrabold">{tr("p8lst.wbSecHeadings")}</span>
+          <span className="ms-2 text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.wbSecHeadingsSub")}</span>
         </span>
         <span className="text-[13px] text-[var(--ink-3)]">{open ? "▾" : "▸"}</span>
       </button>
@@ -2449,12 +2453,12 @@ function HeadingsEditor({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDra
         <div className="mt-3 flex flex-col gap-2.5">
           {SECTION_KEYS.map((s) => (
             <div key={s.key} className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[130px_1fr_1fr]">
-              <span className="text-[11.5px] font-bold text-[var(--ink-2)]">{s.label}</span>
-              <Input value={d.headings?.[`${s.key}.eyebrow`] ?? ""} onChange={(e) => set(`${s.key}.eyebrow`, e.target.value)} placeholder={s.eyebrow} className="w-full text-[12px]" />
-              <Input value={d.headings?.[`${s.key}.title`] ?? ""} onChange={(e) => set(`${s.key}.title`, e.target.value)} placeholder={s.key === "about" ? d.descriptionSection || s.title : s.title} className="w-full text-[12px]" />
+              <span className="text-[11.5px] font-bold text-[var(--ink-2)]">{tr("p8lst.wbSecLabel_" + s.key)}</span>
+              <Input value={d.headings?.[`${s.key}.eyebrow`] ?? ""} onChange={(e) => set(`${s.key}.eyebrow`, e.target.value)} placeholder={(() => { const k = `p7pg.h_${s.key}_eyebrow`; const v = tr(k); return v !== k ? v : s.eyebrow; })()} className="w-full text-[12px]" />
+              <Input value={d.headings?.[`${s.key}.title`] ?? ""} onChange={(e) => set(`${s.key}.title`, e.target.value)} placeholder={s.key === "about" && d.descriptionSection ? d.descriptionSection : (() => { const k = `p7pg.h_${s.key}_title`; const v = tr(k); return v !== k ? v : s.title; })()} className="w-full text-[12px]" />
             </div>
           ))}
-          <div className="text-[11px] text-[var(--ink-3)]">Left = the small label above the heading; right = the heading itself. “About the camp” follows your Section title from step 2 unless you set one here.</div>
+          <div className="text-[11px] text-[var(--ink-3)]">{tr("p8lst.wbSecHeadingsNote")}</div>
         </div>
       )}
     </Card>
@@ -2464,6 +2468,7 @@ function HeadingsEditor({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDra
 // Give an add-on an emoji (from the bank) or a photo — shown next to it on the
 // customer page. A photo wins over an emoji.
 function AddonIcon({ addon, patchLocal }: { addon: AddonTemplate; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
+  const tr = useT();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -2478,7 +2483,7 @@ function AddonIcon({ addon, patchLocal }: { addon: AddonTemplate; patchLocal: (f
   const shown = q.trim() ? EMOJI_BANK.filter((_, i) => i < 300).filter((x) => x.includes(q.trim())) : EMOJI_BANK.slice(0, 300);
   return (
     <span className="relative">
-      <button type="button" onClick={() => setOpen((v) => !v)} title="Choose an emoji or image"
+      <button type="button" onClick={() => setOpen((v) => !v)} title={tr("p8lst.wbPickEmojiTip")}
         className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] hover:border-[var(--brand)]">
         {addon.image ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -2490,8 +2495,8 @@ function AddonIcon({ addon, patchLocal }: { addon: AddonTemplate; patchLocal: (f
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
           <div className="absolute end-0 z-30 mt-1 w-[290px] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-lg">
             <div className="mb-2 flex items-center gap-1.5">
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search emoji…" className="w-full text-[12px]" />
-              <Button sm onClick={() => fileRef.current?.click()}>Image</Button>
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("p8lst.wbSearchEmoji")} className="w-full text-[12px]" />
+              <Button sm onClick={() => fileRef.current?.click()}>{tr("p8lst.wbImage")}</Button>
             </div>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pickImage} />
             <div className="grid max-h-[190px] grid-cols-10 gap-0.5 overflow-y-auto">
@@ -2502,7 +2507,7 @@ function AddonIcon({ addon, patchLocal }: { addon: AddonTemplate; patchLocal: (f
             </div>
             {(addon.emoji || addon.image) && (
               <button type="button" onClick={() => { set({ emoji: undefined, image: undefined }); setOpen(false); }}
-                className="mt-2 w-full rounded-lg border border-[var(--line)] py-1.5 text-[11.5px] font-bold text-[var(--ink-3)]">Remove</button>
+                className="mt-2 w-full rounded-lg border border-[var(--line)] py-1.5 text-[11.5px] font-bold text-[var(--ink-3)]">{tr("p8lst.wbRemove")}</button>
             )}
           </div>
         </>
@@ -2512,6 +2517,7 @@ function AddonIcon({ addon, patchLocal }: { addon: AddonTemplate; patchLocal: (f
 }
 
 function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
+  const tr = useT();
   const [name, setName] = useState("");
   const [type, setType] = useState<"perday" | "once">("perday");
   const [desc, setDesc] = useState("");
@@ -2520,7 +2526,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
   // validation, and no chance of the two drifting apart.
   const [editing, setEditing] = useState<string | null>(null);
   const [qs, setQs] = useState<AddonQuestion[]>([]);
-  const types: Record<string, string> = { perday: "Per day", once: "One-off" };
+  const types: Record<string, string> = { perday: tr("p8lst.wbAddonPerDay"), once: tr("p8lst.wbAddonOnce") };
   const clear = () => { setName(""); setPrice(""); setDesc(""); setType("perday"); setQs([]); setEditing(null); };
   const startEdit = (a: AddonTemplate) => {
     setEditing(a.id);
@@ -2556,14 +2562,14 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
   };
   return (
     <div className="mx-auto max-w-[1120px]">
-      <StepHead n={8} kicker="STEP 8 · ADD-ONS" title="Optional add-ons" lede="Per-day, whole-block or one-off extras. Add-ons you create are saved and reusable on any listing." />
+      <StepHead n={8} kicker={tr("p8lst.wbKickAddons")} title={tr("p8lst.wbAddonsTitle")} lede={tr("p8lst.wbAddonsLede")} />
       <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#b7dde7] bg-[#eef8fb] px-3 py-2 text-[11.5px] leading-[1.5] text-[#0c4a5e]">
         <span>🍽</span>
-        <span className="flex-1"><b>Food isn&rsquo;t an add-on.</b> Set meals up in the <b>Meals planner</b> — they get a day-by-day menu, allergens and dietary options, and their own checkout step. Add-ons here are for <b>non-food</b> extras (late pick-up, kit, photos…).</span>
-        <button type="button" onClick={() => window.open(window.location.pathname.replace(/\/[^/]*$/, "/meals"), "_blank")} className="whitespace-nowrap rounded-full border border-[#0c4a5e] bg-white px-2.5 py-1 text-[11px] font-bold text-[#0c4a5e] hover:bg-[#eef8fb]">Open Meals planner ↗</button>
+        <span className="flex-1"><Rich text={tr("p8lst.wbFoodNote")} /></span>
+        <button type="button" onClick={() => window.open(window.location.pathname.replace(/\/[^/]*$/, "/meals"), "_blank")} className="whitespace-nowrap rounded-full border border-[#0c4a5e] bg-white px-2.5 py-1 text-[11px] font-bold text-[#0c4a5e] hover:bg-[#eef8fb]">{tr("p8lst.wbOpenMeals")}</button>
       </div>
       <div className="grid items-start gap-4 md:grid-cols-2">
-      <RichCard icon="🧩" title="Your add-ons" subtitle="Tick the ones for this listing" tint="teal">
+      <RichCard icon="🧩" title={tr("p8lst.wbYourAddons")} subtitle={tr("p8lst.wbTickForListing")} tint="teal">
       {local.addons.length > 0 ? (
         <div className="flex flex-col gap-1.5">
           {local.addons.map((a) => {
@@ -2576,62 +2582,62 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
                     <span className="block text-[12.5px] font-bold">{a.name}</span>
                     {a.description && <span className="block text-[10.5px] leading-[1.4] text-[var(--ink-3)]">{a.description}</span>}
                   </span>
-                  <span className="flex-none text-[11px] text-[var(--ink-3)]">{types[a.type] ?? "One-off"} · {money(a.price)}</span>
+                  <span className="flex-none text-[11px] text-[var(--ink-3)]">{types[a.type] ?? tr("p8lst.wbAddonOnce")} · {money(a.price)}</span>
                 </button>
                 <AddonIcon addon={a} patchLocal={patchLocal} />
-                <button type="button" onClick={() => startEdit(a)} title={`Edit ${a.name}`}
-                  className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:border-[var(--brand)]">Edit</button>
+                <button type="button" onClick={() => startEdit(a)} title={tr("p8lst.wbEditItem", { name: a.name })}
+                  className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:border-[var(--brand)]">{tr("p8lst.wbEdit")}</button>
                 <button type="button" onClick={() => { if (editing === a.id) clear(); patchLocal((s) => ({ ...s, addons: s.addons.filter((x) => x.id !== a.id) })); upd({ addonIds: d.addonIds.filter((x) => x !== a.id) }); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
               </div>
             );
           })}
         </div>
-      ) : <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]">No add-ons yet — create one on the right. They save and appear on every listing.</div>}
+      ) : <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]">{tr("p8lst.wbNoAddons")}</div>}
       </RichCard>
-      <RichCard icon={editing ? "✏️" : "➕"} title={editing ? `Editing “${local.addons.find((x) => x.id === editing)?.name ?? ""}”` : "Create a new add-on"} subtitle="Saved and reusable on any listing">
+      <RichCard icon={editing ? "✏️" : "➕"} title={editing ? tr("p8lst.wbEditingTitle", { name: local.addons.find((x) => x.id === editing)?.name ?? "" }) : tr("p8lst.wbCreateAddon")} subtitle={tr("p8lst.wbSavedReusable")}>
       <div className="flex flex-wrap items-end gap-2">
-        <div className="flex-1"><FieldLabel>Name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Late pick-up" className="w-full" /></div>
-        <div><FieldLabel>Type</FieldLabel><Select value={type} onChange={(e) => setType(e.target.value as "perday" | "once")} className="w-[130px]">{Object.entries(types).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></div>
-        <div className="w-[90px]"><FieldLabel>Price £</FieldLabel><Input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className="w-full" /></div>
-        <div className="w-full"><FieldLabel>Description <span className="font-normal text-[var(--ink-3)]">— optional, shown to parents</span></FieldLabel>
-          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="e.g. Collect any time up to 5:30 pm — a relaxed end to the day." className="w-full" /></div>
+        <div className="flex-1"><FieldLabel>{tr("p8lst.wbName")}</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("p8lst.wbAddonNamePh")} className="w-full" /></div>
+        <div><FieldLabel>{tr("p8lst.wbType")}</FieldLabel><Select value={type} onChange={(e) => setType(e.target.value as "perday" | "once")} className="w-[130px]">{Object.entries(types).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></div>
+        <div className="w-[90px]"><FieldLabel>{tr("p8lst.wbPriceGbp")}</FieldLabel><Input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className="w-full" /></div>
+        <div className="w-full"><FieldLabel>{tr("p8lst.wbDescription")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.wbOptionalShown")}</span></FieldLabel>
+          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={tr("p8lst.wbAddonDescPh")} className="w-full" /></div>
         <div className="w-full">
-          <FieldLabel>Questions <span className="font-normal text-[var(--ink-3)]">— optional, asked per child at checkout</span></FieldLabel>
+          <FieldLabel>{tr("p8lst.wbQuestions")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.wbQuestionsSub")}</span></FieldLabel>
           {qs.map((q, i) => {
             const set = (patch: Partial<AddonQuestion>) => setQs(qs.map((x, n) => (n === i ? { ...x, ...patch } : x)));
             return (
               <div key={q.id} className="mb-1.5 flex flex-wrap items-end gap-2 rounded-lg border border-[var(--line)] p-2">
                 <div className="min-w-[150px] flex-1">
-                  <FieldLabel>Question</FieldLabel>
-                  <Input value={q.label} onChange={(e) => set({ label: e.target.value })} placeholder="e.g. T-shirt size" className="w-full" />
+                  <FieldLabel>{tr("p8lst.wbQuestion")}</FieldLabel>
+                  <Input value={q.label} onChange={(e) => set({ label: e.target.value })} placeholder={tr("p8lst.wbQuestionPh")} className="w-full" />
                 </div>
                 <div>
-                  <FieldLabel>Answer</FieldLabel>
+                  <FieldLabel>{tr("p8lst.wbAnswer")}</FieldLabel>
                   <Select value={q.type} onChange={(e) => set({ type: e.target.value as AddonQuestion["type"] })} className="w-[130px]">
-                    <option value="choice">Pick one</option>
-                    <option value="text">Type an answer</option>
+                    <option value="choice">{tr("p8lst.wbPickOne")}</option>
+                    <option value="text">{tr("p8lst.wbTypeAnswer")}</option>
                   </Select>
                 </div>
                 {q.type === "choice" && (
                   <div className="min-w-[180px] flex-1">
-                    <FieldLabel>Options <span className="font-normal text-[var(--ink-3)]">— comma separated</span></FieldLabel>
+                    <FieldLabel>{tr("p8lst.wbOptions")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.wbOptionsSub")}</span></FieldLabel>
                     <Input value={(q.options ?? []).join(", ")} onChange={(e) => set({ options: e.target.value.split(",") })}
-                      placeholder="Age 5-6, Age 7-8, Age 9-10" className="w-full" />
+                      placeholder={tr("p8lst.wbOptionsPh")} className="w-full" />
                   </div>
                 )}
                 <label className="flex items-center gap-1.5 pb-2 text-[11.5px] font-bold text-[var(--ink-2)]">
                   <input type="checkbox" checked={!!q.required} onChange={(e) => set({ required: e.target.checked })} />
-                  Must answer
+                  {tr("p8lst.wbMustAnswer")}
                 </label>
                 <button type="button" onClick={() => setQs(qs.filter((_, n) => n !== i))}
                   className="pb-2 text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
               </div>
             );
           })}
-          <Button sm onClick={() => setQs([...qs, { id: uid(), label: "", type: "choice", options: [] }])}>＋ Add a question</Button>
+          <Button sm onClick={() => setQs([...qs, { id: uid(), label: "", type: "choice", options: [] }])}>{tr("p8lst.wbAddQuestion")}</Button>
         </div>
-        <Button variant="primary" onClick={save}>{editing ? "Save changes" : "＋ Add"}</Button>
-        {editing && <Button onClick={clear}>Cancel</Button>}
+        <Button variant="primary" onClick={save}>{editing ? tr("p8lst.wbSaveChanges") : tr("p8lst.wbAddPlus")}</Button>
+        {editing && <Button onClick={clear}>{tr("p8lst.wbCancel")}</Button>}
       </div>
       </RichCard>
       </div>
@@ -2640,6 +2646,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
 }
 
 function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
+  const tr = useT();
   const [q, setQ] = useState("");
   const [bioN, setBioN] = useState<Record<string, number>>({});
   const updMember = (id: string, patch: Partial<StaffMember>) => patchLocal((s) => ({ ...s, staff: s.staff.map((m) => (m.id === id ? { ...m, ...patch } : m)) }));
@@ -2649,17 +2656,17 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
   const assignedCount = local.staff.filter((m) => d.staffIds.includes(m.id)).length;
   return (
     <div className="mx-auto max-w-[1120px]">
-      <StepHead n={9} kicker="STEP 9 · STAFF" title="Staff onsite" lede="Search your onboarded team, assign who's onsite for this listing, and set the bio parents see." />
-      <RichCard icon="🧑‍🏫" title="Your team" subtitle="Search your onboarded staff · assign who's onsite · edit their bio">
+      <StepHead n={9} kicker={tr("p8lst.wbKickStaff")} title={tr("p8lst.wbStaffTitle")} lede={tr("p8lst.wbStaffLede")} />
+      <RichCard icon="🧑‍🏫" title={tr("p8lst.wbYourTeam")} subtitle={tr("p8lst.wbYourTeamSub")}>
         <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍  Search staff by name…" className="w-full max-w-[300px]" />
-        <span className="text-[11.5px] font-semibold text-[var(--ink-3)]">{assignedCount} assigned to this listing</span>
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("p8lst.wbSearchStaffPh")} className="w-full max-w-[300px]" />
+        <span className="text-[11.5px] font-semibold text-[var(--ink-3)]">{tr("p8lst.wbAssignedN", { n: assignedCount })}</span>
       </div>
       {local.staff.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]">No staff onboarded yet — add your team in <b>Team &amp; invites</b>, then they&rsquo;ll show here to assign.</div>
+        <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]"><Rich text={tr("p8lst.wbNoStaff")} /></div>
       ) : list.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]">No staff match &ldquo;{q}&rdquo;.</div>
+        <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]">{tr("p8lst.wbNoStaffMatch", { q })}</div>
       ) : (
         <div className="grid items-start gap-2 md:grid-cols-2">
           {list.map((m) => {
@@ -2670,22 +2677,22 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
                   <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white font-extrabold text-[var(--brand-ink)] ring-1 ring-[var(--brand-2)]/30">{(m.first[0] || "?").toUpperCase()}</span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{m.first} {m.last}</div>
-                    <div className="truncate text-[10.5px] text-[var(--ink-3)]">{m.bio ? m.bio : "No bio yet"}</div>
+                    <div className="truncate text-[10.5px] text-[var(--ink-3)]">{m.bio ? m.bio : tr("p8lst.wbNoBio")}</div>
                   </div>
-                  <Button sm variant={on ? "primary" : "default"} onClick={() => upd({ staffIds: toggle(d.staffIds, m.id) })}>{on ? "✓ Onsite" : "Assign"}</Button>
+                  <Button sm variant={on ? "primary" : "default"} onClick={() => upd({ staffIds: toggle(d.staffIds, m.id) })}>{on ? tr("p8lst.wbOnsite") : tr("p8lst.wbAssign")}</Button>
                 </div>
                 <div className="mb-1 flex items-center justify-between">
-                  <FieldLabel>Bio <span className="font-normal text-[var(--ink-3)]">— parents see this</span></FieldLabel>
-                  <Button sm onClick={() => writeBio(m)}>✨ Write with AI</Button>
+                  <FieldLabel>{tr("p8lst.wbBio")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.wbParentsSeeThis")}</span></FieldLabel>
+                  <Button sm onClick={() => writeBio(m)}>{tr("p8lst.wbWriteAI")}</Button>
                 </div>
-                <textarea value={m.bio} maxLength={300} onChange={(e) => updMember(m.id, { bio: e.target.value })} placeholder="Type a few words (e.g. football, patient, 6 years) then ✨ Write with AI…"
+                <textarea value={m.bio} maxLength={300} onChange={(e) => updMember(m.id, { bio: e.target.value })} placeholder={tr("p8lst.wbBioPh")}
                   className="h-[58px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 text-[12.5px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
               </div>
             );
           })}
         </div>
       )}
-      <div className="mt-2 text-[11px] text-[var(--ink-3)]">Staff come from your <b>onboarded team</b> (add people in Team &amp; invites). Bios are saved and reused on every listing; assign only the ones onsite for this one.</div>
+      <div className="mt-2 text-[11px] text-[var(--ink-3)]"><Rich text={tr("p8lst.wbStaffNote")} /></div>
         </div>
       </RichCard>
     </div>
@@ -2694,6 +2701,7 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
 
 /** Optional embargo: the listing is visible, but booking is held until a date. */
 function BookingOpens({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const tr = useT();
   // Default to 9am tomorrow — a sensible "next morning" release most operators want.
   const suggest = () => {
     const t = new Date();
@@ -2706,20 +2714,19 @@ function BookingOpens({ value, onChange }: { value: string; onChange: (v: string
     return (
       <button type="button" onClick={() => onChange(suggest())}
         className="mb-1 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12.5px] font-bold text-[var(--brand-ink)] hover:border-[var(--brand-2)]">
-        ⏰ Schedule when bookings open
+        {tr("p8lst.wbScheduleOpen")}
       </button>
     );
   }
   return (
     <div className="mb-1 rounded-xl border p-3" style={{ borderColor: "var(--brand-2)", background: "var(--brand-soft)" }}>
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <div className="text-[12.5px] font-extrabold text-[var(--brand-ink)]">⏰ Bookings open at</div>
-        <button type="button" onClick={() => onChange("")} className="text-[11.5px] font-bold text-[var(--ink-3)] underline">Open straight away</button>
+        <div className="text-[12.5px] font-extrabold text-[var(--brand-ink)]">{tr("p8lst.wbBookingsOpenAt")}</div>
+        <button type="button" onClick={() => onChange("")} className="text-[11.5px] font-bold text-[var(--ink-3)] underline">{tr("p8lst.wbOpenNow")}</button>
       </div>
       <Input type="datetime-local" value={value} onChange={(e) => onChange(e.target.value)} className="w-full max-w-[240px]" />
       <div className="mt-1.5 text-[11px] leading-[1.5] text-[var(--ink-2)]">
-        Parents can see the listing before this, but can&rsquo;t book — they see a countdown instead of the book button.
-        Use it so everyone gets a fair shot at a popular camp rather than whoever happens to be looking.
+        {tr("p8lst.wbOpensNote")}
       </div>
     </div>
   );
@@ -2727,16 +2734,16 @@ function BookingOpens({ value, onChange }: { value: string; onChange: (v: string
 
 // The booking cut-off — how close to a session families can still book.
 function BookingCutoff({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const tr = useT();
   return (
     <div className="mb-1 mt-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-      <div className="text-[12.5px] font-extrabold text-[var(--brand-ink)]">🛑 Stop taking bookings</div>
+      <div className="text-[12.5px] font-extrabold text-[var(--brand-ink)]">{tr("p8lst.wbStopBookings")}</div>
       <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]">
-        <Input type="number" min={0} step={1} value={value} onChange={(e) => onChange(e.target.value.replace(/[^\d]/g, "").slice(0, 4))} placeholder="0" className="w-[90px]" aria-label="Hours before a session" />
-        <span>hours before each session starts</span>
+        <Input type="number" min={0} step={1} value={value} onChange={(e) => onChange(e.target.value.replace(/[^\d]/g, "").slice(0, 4))} placeholder="0" className="w-[90px]" aria-label={tr("p8lst.wbHoursBeforeAria")} />
+        <span>{tr("p8lst.wbHoursBefore")}</span>
       </div>
       <div className="mt-1.5 text-[11px] leading-[1.5] text-[var(--ink-2)]">
-        Leave blank to take bookings right up to the day. Once a session is inside the cut-off, parents can&rsquo;t book it online
-        (e.g. 24 closes a 9am session at 9am the day before). You can still add a late place yourself from Bookings.
+        {tr("p8lst.wbCutoffNote")}
       </div>
     </div>
   );
