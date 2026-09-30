@@ -52,6 +52,8 @@ for (const p of PAGES) {
     if (vpFilter && !vpFilter.includes(vn)) continue;
     const ctx = await wk.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, hasTouch: touch, isMobile: touch, reducedMotion: 'reduce', userAgent: touch ? devices['iPhone 13'].userAgent : undefined });
     const page = await ctx.newPage();
+    if (process.env.BLOCK) await page.route("**/responsive.*", r => r.abort());
+    if (process.env.FREEZE) await page.addInitScript(() => { window.requestAnimationFrame = () => 0; window.setInterval = () => 0; Math.random = () => 0.5; const s = document.createElement("style"); s.textContent = "*,*::before,*::after{animation:none!important;transition:none!important}"; document.addEventListener("DOMContentLoaded", () => document.head.appendChild(s)); });
     try {
       await page.goto(BASE + p + '.html' + (process.env.QS||''), { waitUntil: 'load', timeout: 30000 });
       await page.waitForTimeout(600);
