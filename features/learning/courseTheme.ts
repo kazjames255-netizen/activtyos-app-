@@ -3,6 +3,7 @@
 // (CoursePlayer) via CSS variables. Mirrors the newsletter builder's palette
 // model so operators get the same email-campaign-style experience for courses.
 import type { Block } from "./courseContent";
+import { tNow } from "@/lib/i18n/provider";
 
 export interface CoursePalette { id: string; name: string; accent: string; accent2: string; soft: string; grad: string }
 
@@ -31,6 +32,14 @@ export const COURSE_PALETTES: CoursePalette[] = [
   mk("grape", "Grape", "#7c3aed", "#db2777"),
 ];
 
+// Display names (stored ids/English names stay as they are; shown translated).
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+export const paletteName = (p: { id: string }) => tNow("p8lrn.ctPal" + cap(p.id));
+export const sectionName = (s: { id: string }) => tNow("p8lrn.ctSec" + cap(s.id) + "N");
+export const sectionDesc = (s: { id: string }) => tNow("p8lrn.ctSec" + cap(s.id) + "D");
+const GROUP_KEY: Record<string, string> = { Openers: "ctGrpOpeners", Teaching: "ctGrpTeaching", Interactive: "ctGrpInteractive", Media: "ctGrpMedia", Assessment: "ctGrpAssessment", "Wrap-up": "ctGrpWrapup", "Text & media": "ctBgrpTextMedia", "Structure & data": "ctBgrpStructure", "Interactive activities": "ctBgrpInteractive" };
+export const groupName = (g: string) => (GROUP_KEY[g] ? tNow("p8lrn." + GROUP_KEY[g]) : g);
+export const blockKindLabel = (k: string) => tNow("p8lrn.ctKind" + cap(k));
 export const coursePaletteOf = (id?: string): CoursePalette => COURSE_PALETTES.find((p) => p.id === id) ?? COURSE_PALETTES[0];
 
 // ——— Ready-made SECTIONS ————————————————————————————————————————————
