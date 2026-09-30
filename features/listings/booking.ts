@@ -302,6 +302,8 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     d.discounts ?? [],
     basket.map((x) => ({ name: x.name, price: priceOf(x), days: x.dates.length, heads: headsOn(x) })),
     attendees,
+    undefined,
+    { tr: tb, locale: loc },
   );
   const saved = Math.max(0, Math.round((subtotal - total) * 100) / 100);
   // "21st, 22nd, 23rd, 24th August" — grouped by month so the month isn't
@@ -368,7 +370,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
       : [{ name: pass.name, price: unitPrice, days: sel.length }];
     const items = [...basket.map((x) => ({ name: x.name, price: priceOf(x), days: x.dates.length })), ...pending];
     const gross = items.reduce((s, i) => s + i.price, 0) * attendees;
-    const res = applyDiscounts(d.discounts ?? [], items, attendees);
+    const res = applyDiscounts(d.discounts ?? [], items, attendees, undefined, { tr: tb, locale: loc });
     const off = Math.max(0, Math.round((gross - res.total) * 100) / 100);
     return off > 0 ? { ...res, gross, off } : null;
   })();

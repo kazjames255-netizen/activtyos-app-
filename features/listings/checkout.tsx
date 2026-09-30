@@ -46,7 +46,7 @@ export function useParents(skip = false) {
     apiGet<{ id: string; name?: string; email?: string; children?: ChildProfile[] }[]>("/api/customers")
       .then((cs) => {
         if (!alive) return;
-        setList(cs.map((c) => ({ id: c.id, name: c.name || c.email || "Unnamed", email: c.email, children: c.children ?? [] })));
+        setList(cs.map((c) => ({ id: c.id, name: c.name || c.email || tNow("p8lst.ck8Unnamed"), email: c.email, children: c.children ?? [] })));
         setState("ready");
       })
       // An empty address book and a failed request look identical otherwise.
@@ -384,7 +384,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
         return (
           <div key={`ask-${c.name}-${i}`} className={`mt-2 border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
             <div className="text-[12px] font-bold" style={{ color: tk.ink }}>
-              About {c.name.trim() || "this child"}, for this booking
+              {tr("p8lst.ck8AboutChild", { name: c.name.trim() || tr("p7ck.thisChildLower") })}
             </div>
             <QuestionFields
               questions={qs}
@@ -494,9 +494,9 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               maxLength={CHILD_LIMITS.collectionPassword}
               onChange={(e) => setDraft({ ...draft, collectionPassword: e.target.value })}
               inputMode={pinMode ? "numeric" : undefined}
-              placeholder={pinMode ? "e.g. 4816" : "e.g. Bluebell"} className={inp} style={inpStyle} />
+              placeholder={pinMode ? tr("p8lst.ck8PhPin") : tr("p8lst.ck8PhWord")} className={inp} style={inpStyle} />
             <div className="mt-1 text-[10px] leading-[1.4]" style={{ color: tk.muted }}>
-              Staff can see this {pinMode ? "PIN" : "word"}, so don&rsquo;t use a password from anywhere else.
+              {tr(pinMode ? "p8lst.ck8StaffSeePin" : "p8lst.ck8StaffSeeWord")}
             </div>
           </div>
           )}
@@ -548,7 +548,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                   <button type="button" onClick={() => planRef.current?.click()}
                     className={`mt-2 flex w-full items-center justify-center gap-2 border-2 px-3 py-2.5 text-[12.5px] font-extrabold ${tk.round}`}
                     style={{ borderColor: tk.accent, color: tk.accent, background: "transparent" }}>
-                    <span aria-hidden>📎</span> Choose a file to upload
+                    <span aria-hidden>📎</span> {tr("p8lst.ck8ChooseFile")}
                   </button>
                 )}
                 {!draft.sendPlanId && (
@@ -661,7 +661,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               className={`flex-1 py-2 text-[12.5px] font-extrabold ${tk.round}`}
               style={{ background: tk.accent, color: tk.accentInk }}>{editing !== null ? tr("p7ck.saveDetails") : tr("p7ck.addChild")}</button>
             <button type="button" onClick={() => { setOpen(false); setEditing(null); setTried(false); setDraft({ name: "", photoConsent: false }); }}
-              className="text-[12px] font-bold" style={{ color: tk.muted }}>Cancel</button>
+              className="text-[12px] font-bold" style={{ color: tk.muted }}>{tr("p8lst.ck8Cancel")}</button>
           </div>
         </div>
       )}
@@ -1294,7 +1294,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             {npReady && (
               <div className={`mb-2 border px-3 py-2 text-[11.5px] leading-[1.5] ${tk.round}`}
                 style={{ borderColor: tk.accent, background: `${tk.accent}1a`, color: tk.ink }}>
-                Their login and booking go to <b>{np.email.trim()}</b> — read it back to them before you carry on.
+                <Rich text={tr("p8lst.ck8LoginGoesTo", { email: np.email.trim() })} bClass="" />
               </div>
             )}
             <button type="button" disabled={!npReady}
@@ -1391,14 +1391,15 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       {clashesOn(x.id).length > 0 && (
                         <div className="mt-1.5 border px-2.5 py-1.5 text-[11px] leading-[1.45]"
                           style={{ borderColor: "#fed7aa", background: "#fff7ed", color: "#9a3412" }}>
-                          {[...new Set(clashesOn(x.id).map((c) => c.name))].join(" and ")} {clashesOn(x.id).length === 1 ? "is" : "are"} already
-                          booked at this time on {[...new Set(clashesOn(x.id).map((c) => fmtDate(c.iso)))].join(", ")} in another pass.
-                          Take them off one of the two, or pick a session at a different time.
+                          {tr([...new Set(clashesOn(x.id).map((c) => c.name))].length === 1 ? "p8lst.ck8ClashOne" : "p8lst.ck8ClashMany", {
+                            names: new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format([...new Set(clashesOn(x.id).map((c) => c.name))]),
+                            dates: new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format([...new Set(clashesOn(x.id).map((c) => fmtDate(c.iso)))]),
+                          })}
                         </div>
                       )}
                       {b.childrenOn(x.id).length === 0 && roster.length > 0 && (
                         <div className="mt-1 text-[11px]" style={{ color: "#c2410c" }}>
-                          Nobody&rsquo;s on this {x.dates.length === 1 ? "day" : "pass"} — remove it or put a child on it.
+                          {tr(x.dates.length === 1 ? "p8lst.ck8NobodyDay" : "p8lst.ck8NobodyPass")}
                         </div>
                       )}
                       {/* The saving on the line that earned it — a lump at the
@@ -1413,7 +1414,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                         return (
                           <div className="mt-2 flex flex-col gap-0.5 border-t pt-2" style={{ borderColor: tk.line }}>
                             <div className="flex items-baseline justify-between gap-3 text-[11.5px]">
-                              <span style={{ color: tk.muted }}>Cost</span>
+                              <span style={{ color: tk.muted }}>{tr("p8lst.ck8Cost")}</span>
                               <span style={{ color: tk.ink }}>{money(gross)}</span>
                             </div>
                             {savings.map((sv) => (
@@ -1517,7 +1518,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             {mealTotal > 0 ? tr("p7ck.nextMeals", { amt: money(mealTotal) }) : tr("p7ck.nextArrow")}
           </button>
           <BackBtn tk={tk} onClick={() => { if (addons.length) { setExtraIdx(ordered.length - 1); setCkStage("extras"); } else setCkStage("who"); }} className="mt-3">
-            Back to {ordered.length ? ordered[ordered.length - 1].name : "children"}
+            {ordered.length ? tr("p7ck.backTo", { step: ordered[ordered.length - 1].name }) : tr("p8lst.ck8BackToChildren")}
           </BackBtn>
         </div>
       )}
@@ -1536,7 +1537,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         ))}
         {addonTotal > 0 && (
           <div className="flex items-baseline justify-between text-[11.5px]" style={{ color: tk.muted }}>
-            <span>Add-ons</span><b style={{ color: tk.ink }}>{money(addonTotal)}</b>
+            <span>{tr("p8lst.ck8Addons")}</span><b style={{ color: tk.ink }}>{money(addonTotal)}</b>
           </div>
         )}
         {mealTotal > 0 && (
@@ -1545,7 +1546,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           </div>
         )}
         <div className="mt-2 flex items-baseline justify-between text-[14px]">
-          <span style={{ color: tk.muted }}>Total</span>
+          <span style={{ color: tk.muted }}>{tr("p8lst.ck8Total")}</span>
           <span className="flex items-baseline gap-2">
             {/* What it was BEFORE discounts — showing the discounted total here
                 struck through said "£540, was £540". */}
@@ -1593,14 +1594,14 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           <>
             {appliedCodes.map((a) => (
               <div key={a.code} className="mt-2 flex items-baseline justify-between text-[12px]">
-                <span style={{ color: tk.muted }}>🏷️ Code {a.code}{a.exclusive ? " (exclusive)" : ""}</span>
+                <span style={{ color: tk.muted }}>{tr(a.exclusive ? "p8lst.ck8CodeLineExclusive" : "p8lst.ck8CodeLine", { code: a.code })}</span>
                 <b style={{ color: tk.accent }}>−{money(Math.min(a.off, grandTotal))}</b>
               </div>
             ))}
             {walletAvail > 0 && (
               <div className="mt-2">
                 <div className="flex items-baseline justify-between text-[12px]">
-                  <span style={{ color: tk.muted }}>👛 Wallet credit ({money(walletBalance)} available)</span>
+                  <span style={{ color: tk.muted }}>{tr("p8lst.ck8WalletCredit", { amt: money(walletBalance) })}</span>
                   <b style={{ color: walletApplied > 0 ? tk.accent : tk.muted }}>−{money(walletApplied)}</b>
                 </div>
                 {/* Auto-applied in full, but the family can spend less and keep
@@ -1612,7 +1613,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       <button key={label} type="button" onClick={() => setWalletUse(label === "All" ? null : 0)}
                         className={`px-2 py-[3px] text-[10.5px] font-bold ${tk.round}`}
                         style={on ? { background: tk.accent, color: "#0a0a0a" } : { border: `1px solid ${tk.line}`, color: tk.muted }}>
-                        {label}
+                        {label === "All" ? tr("p8lst.ck8WalletAll") : tr("p8lst.ck8WalletNone")}
                       </button>
                     );
                   })}
@@ -1622,7 +1623,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 </div>
                 {walletApplied < walletAvail && (
                   <div className="mt-0.5 text-[10.5px]" style={{ color: tk.muted }}>
-                    {money(walletBalance - walletApplied)} stays in your wallet for next time.
+                    {tr("p8lst.ck8WalletStays", { amt: money(walletBalance - walletApplied) })}
                   </div>
                 )}
               </div>
@@ -1643,7 +1644,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               className={`w-[86px] border px-2 py-1 text-end text-[12.5px] font-bold outline-none ${tk.round}`}
               style={{ background: tk.inputBg, borderColor: b.totalOverride !== null ? tk.accent : tk.line, color: tk.ink }} />
             {b.totalOverride !== null && (
-              <button type="button" onClick={() => b.setTotalOverride(null)} className="text-[11px] font-bold" style={{ color: tk.muted }}>Reset</button>
+              <button type="button" onClick={() => b.setTotalOverride(null)} className="text-[11px] font-bold" style={{ color: tk.muted }}>{tr("p8lst.ck8Reset")}</button>
             )}
           </span>
         </div>}
@@ -1659,7 +1660,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           unansweredRequired(
             questionsFor(ckQuestions, d.id ?? undefined, ageOn(c.dob, d.runFrom)).filter(asksEveryBooking),
             c.answers ?? {},
-          ).map((q) => ({ who: c.name.trim() || "this child", label: q.label })),
+          ).map((q) => ({ who: c.name.trim() || tr("p7ck.thisChildLower"), label: q.label })),
         );
         const ready =
           roster.length > 0 && unassigned === 0 && shortPasses.length === 0 && clashes.length === 0 && outstanding.length === 0;
@@ -1671,9 +1672,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               <div className={`mt-4 flex items-baseline justify-between gap-3 border-2 px-4 py-3 ${tk.round}`}
                 style={{ borderColor: `${tk.muted}55`, background: tk.inputBg }}>
                 <span className="text-[12.5px] font-bold" style={{ color: tk.ink }}>
-                  Booking so far
+                  {tr("p8lst.ck8BookingSoFar")}
                   <span className="ms-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>
-                    {b.basket.length} pass{b.basket.length === 1 ? "" : "es"}
+                    {pickPlural(tr, locale, "p8lst.ck8PassCount", b.basket.length)}
                     {b.saved > 0 ? tr("p7ck.savedAmt", { amt: money(b.saved) }) : ""}
                   </span>
                 </span>
@@ -1787,7 +1788,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                     <span className="text-[18px] font-black uppercase italic" style={{ color: BAR_INK }}>{a.name}</span>
                     <span className="text-[12px]" style={{ color: BAR_INK, opacity: 0.8 }}>
-                      <b className="italic" style={{ opacity: 1 }}>{money(a.price)}</b> {perDay ? "per day" : "one-off"}
+                      <b className="italic" style={{ opacity: 1 }}>{money(a.price)}</b> {perDay ? tr("p8lst.ck8PerDay") : tr("p8lst.ck8OneOff")}
                     </span>
                   </div>
                   {a.description && (
@@ -1920,12 +1921,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               ))}
               {thisExtra > 0 && (
                 <div className="mt-0.5 flex items-baseline justify-between text-[12px] font-bold">
-                  <span style={{ color: tk.ink }}>{a.name} total</span>
+                  <span style={{ color: tk.ink }}>{tr("p8lst.ck8ExtraTotal", { name: a.name })}</span>
                   <span style={{ color: tk.ink }}>{money(thisExtra)}</span>
                 </div>
               )}
               <div className="mt-1.5 flex items-baseline justify-between text-[11.5px]" style={{ color: tk.muted }}>
-                <span>Passes</span><span>{money(b.total)}</span>
+                <span>{tr("p8lst.ck8Passes")}</span><span>{money(b.total)}</span>
               </div>
               {/* Named, not lumped: "Extras £50" doesn't tell you the t-shirts
                   from the lunches, which is the thing you'd want to change. */}
@@ -1947,7 +1948,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
 
             <div className="mt-3 flex items-center gap-2">
               <BackBtn tk={tk} onClick={() => step(-1)}>
-                Back to {extraIdx === 0 ? "children" : ordered[extraIdx - 1].name}
+                {extraIdx === 0 ? tr("p8lst.ck8BackToChildren") : tr("p7ck.backTo", { step: ordered[extraIdx - 1].name })}
               </BackBtn>
               {/* One way on, never two: Skip until something is chosen, Next
                   after. Offering to decline what they've just picked reads as
@@ -1975,7 +1976,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           to the one they want, by name. */}
       {ckStage === "pay" && (
         <BackBtn tk={tk} onClick={() => { if (hasMeals) setCkStage("meals"); else if (addons.length) { setExtraIdx(ordered.length - 1); setCkStage("extras"); } else setCkStage("who"); }} className="mt-3">
-          Back to {hasMeals ? "meals" : ordered.length ? ordered[ordered.length - 1].name : "children"}
+          {hasMeals ? tr("p8lst.ck8BackToMeals") : ordered.length ? tr("p7ck.backTo", { step: ordered[ordered.length - 1].name }) : tr("p8lst.ck8BackToChildren")}
         </BackBtn>
       )}
       {/* Nothing to pay: a parent isn't asked how they'd like to settle £0.
@@ -2302,7 +2303,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 {tfcConnecting && (
                   <TfcConnect
                     childName={tfcConnecting}
-                    providerName={(ckSettings.providerName ?? "").trim() || "your provider"}
+                    providerName={(ckSettings.providerName ?? "").trim() || tr("p8lst.ck8YourProvider")}
                     reference={voucherRefs[tfcConnecting]}
                     onLinked={(reference) => {
                       setTfcLinked((m) => ({ ...m, [tfcConnecting]: reference }));

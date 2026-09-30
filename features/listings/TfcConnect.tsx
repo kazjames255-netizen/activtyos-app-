@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { linkAccount, HMRC_CONNECTED, TFC_FAILURE_COPY, type TfcFailure } from "./tfc";
+import { linkAccount, HMRC_CONNECTED, type TfcFailure } from "./tfc";
+import { useT } from "@/lib/i18n/provider";
+import { Rich } from "@/components/i18n/Rich";
 
 // ─────────────────────────────────────────────────────────────────────────
 // The GOV.UK hand-off, as designed: our "connect" screen → HMRC's consent
@@ -46,6 +48,9 @@ export function TfcConnect({ childName, providerName, reference, onLinked, onClo
   onLinked: (reference: string) => void;
   onClose: () => void;
 }) {
+  const tr = useT();
+  // Same wording the checkout uses for each designed HMRC failure (p7ck.tfc*), so the two screens never disagree.
+  const failureKey: Record<TfcFailure, string> = { "not-connected": "tfcNotConnected", "insufficient-funds": "tfcInsufficient", "provider-not-added": "tfcProviderNotAdded", "connection-failed": "tfcConnFailed", "connection-expired": "tfcConnExpired" };
   const [stage, setStage] = useState<Stage>("consent");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<TfcFailure>("connection-failed");
@@ -86,15 +91,15 @@ export function TfcConnect({ childName, providerName, reference, onLinked, onClo
         {stage === "consent" && (
           <>
             <div className="mt-3 text-[16px] font-extrabold leading-tight" style={{ color: GOV.ink }}>
-              Allow your software to connect with HMRC
+              {tr("p8lst.tfc8AllowTitle")}
             </div>
             <div className="mt-2 text-[12.5px] leading-[1.55]" style={{ color: GOV.muted }}>
-              Use this service to give <b style={{ color: GOV.ink }}>{providerName}</b> permission to:
+              <Rich text={tr("p8lst.tfc8PermIntro", { provider: providerName })} bClass="text-[#0b0c0c]" />
             </div>
             <ul className="mt-2 flex flex-col gap-1.5">
               {[
-                "Access your Tax-Free Childcare account details",
-                "Process requests for payments to childcare providers",
+                tr("p8lst.tfc8Perm1"),
+                tr("p8lst.tfc8Perm2"),
               ].map((line) => (
                 <li key={line} className="flex items-start gap-2 text-[12.5px]" style={{ color: GOV.ink }}>
                   <span style={{ color: GOV.green }}>✓</span><span>{line}</span>
@@ -102,19 +107,18 @@ export function TfcConnect({ childName, providerName, reference, onLinked, onClo
               ))}
             </ul>
             <div className="mt-2.5 text-[11.5px] leading-[1.5]" style={{ color: GOV.muted }}>
-              You&rsquo;ll sign in with your Government Gateway details on GOV.UK. This is for <b style={{ color: GOV.ink }}>{childName}</b>&rsquo;s
-              Tax-Free Childcare account. You can remove this permission from your HMRC account at any time.
+              <Rich text={tr("p8lst.tfc8ConsentNote", { child: childName })} bClass="text-[#0b0c0c]" />
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <button type="button" onClick={handOff}
                 className="rounded px-4 py-2 text-[13px] font-extrabold"
                 style={{ background: GOV.green, color: "#fff" }}>
-                Continue to sign in
+                {tr("p8lst.tfc8Continue")}
               </button>
               <button type="button" onClick={onClose}
                 className="rounded border px-3 py-2 text-[12.5px] font-bold"
                 style={{ borderColor: GOV.line, color: GOV.ink }}>
-                Cancel
+                {tr("p8lst.ck8Cancel")}
               </button>
             </div>
           </>
@@ -123,11 +127,11 @@ export function TfcConnect({ childName, providerName, reference, onLinked, onClo
         {stage === "handoff" && (
           <div className="py-6 text-center">
             <div className="text-[13.5px] font-extrabold" style={{ color: GOV.ink }}>
-              {busy ? "Taking you to GOV.UK to sign in…" : "Signing you in…"}
+              {busy ? tr("p8lst.tfc8TakingYou") : tr("p8lst.tfc8SigningYou")}
             </div>
             <div className="mx-auto mt-2 max-w-[380px] text-[11.5px] leading-[1.5]" style={{ color: GOV.muted }}>
-              You&rsquo;ll enter your Government Gateway user ID and password on GOV.UK — never here.
-              {!HMRC_CONNECTED && " (The live connection to HMRC isn’t switched on yet, so we’re completing this step for you.)"}
+              {tr("p8lst.tfc8NeverHere")}
+              {!HMRC_CONNECTED && " " + tr("p8lst.tfc8NotLive")}
             </div>
           </div>
         )}
@@ -135,21 +139,21 @@ export function TfcConnect({ childName, providerName, reference, onLinked, onClo
         {stage === "failed" && (
           <div className="py-5 text-center">
             <div className="text-[15px] font-extrabold" style={{ color: "#d4351c" }}>
-              {TFC_FAILURE_COPY[failure].title}
+              {tr(`p7ck.${failureKey[failure]}_title`)}
             </div>
             <div className="mx-auto mt-1.5 max-w-[380px] text-[12px] leading-[1.5]" style={{ color: GOV.muted }}>
-              {TFC_FAILURE_COPY[failure].detail}
+              {tr(`p7ck.${failureKey[failure]}_detail`)}
             </div>
             <div className="mt-3 flex flex-wrap justify-center gap-2">
               <button type="button" onClick={() => setStage("consent")}
                 className="rounded px-4 py-2 text-[13px] font-extrabold"
                 style={{ background: GOV.green, color: "#fff" }}>
-                Try again
+                {tr("p8lst.tfc8TryAgain")}
               </button>
               <button type="button" onClick={onClose}
                 className="rounded border px-3 py-2 text-[12.5px] font-bold"
                 style={{ borderColor: GOV.line, color: GOV.ink }}>
-                Pay from HMRC instead
+                {tr("p8lst.tfc8PayFromHmrc")}
               </button>
             </div>
           </div>
@@ -157,14 +161,14 @@ export function TfcConnect({ childName, providerName, reference, onLinked, onClo
 
         {stage === "done" && (
           <div className="py-6 text-center">
-            <div className="text-[15px] font-extrabold" style={{ color: GOV.green }}>✓ Account linked</div>
+            <div className="text-[15px] font-extrabold" style={{ color: GOV.green }}>{tr("p8lst.tfc8Linked")}</div>
             <div className="mx-auto mt-1.5 max-w-[380px] text-[12px]" style={{ color: GOV.muted }}>
-              {childName}&rsquo;s Tax-Free Childcare account is connected. You can close this and choose how much to pay from it.
+              {tr("p8lst.tfc8LinkedBody", { child: childName })}
             </div>
             <button type="button" onClick={onClose}
               className="mt-3 rounded px-4 py-2 text-[13px] font-extrabold"
               style={{ background: GOV.green, color: "#fff" }}>
-              Back to your booking
+              {tr("p8lst.tfc8BackToBooking")}
             </button>
           </div>
         )}

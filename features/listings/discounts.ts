@@ -1,4 +1,9 @@
 import { money } from "../bookings/helpers";
+import { pickPlural } from "@/lib/i18n/plural";
+
+/** Optional display translator. The server calls these functions without it (English, stored as before); the browser
+ *  passes `{ tr: useT(), locale }` so the summaries/terms/scope it SHOWS follow the picked language. Pure: no React import. */
+export type DiscountTx = { tr: (k: string, v?: Record<string, string | number>) => string; locale: string };
 
 // ─────────────────────────────────────────────────────────────────────────
 // Automatic discounts — the ONE implementation, shared verbatim by the
@@ -53,8 +58,13 @@ export function emptyRule(kind: DiscountKind): DiscountRule {
 }
 
 /** Plain-English summary shown to the operator and the booker. */
-export function ruleSummary(r: DiscountRule): string {
+export function ruleSummary(r: DiscountRule, tx?: DiscountTx): string {
   const amount = r.method === "percent" ? `${r.value}%` : money(r.value);
+  if (tx) {
+    if (r.kind === "person") return pickPlural(tx.tr, tx.locale, r.method === "price" ? "p8lst.lm8DscPersonPrice" : "p8lst.lm8DscPersonOff", r.moreThan, { amt: amount });
+    if (r.kind === "session") return pickPlural(tx.tr, tx.locale, "p8lst.lm8DscSession", r.moreThan, { amt: amount });
+    return tx.tr("p8lst.lm8DscEarly", { date: r.beforeDate || tx.tr("p8lst.lm8DscCutoff"), amt: amount });
+  }
   if (r.kind === "person")
     return r.method === "price"
       ? `More than ${r.moreThan} child${r.moreThan === 1 ? "" : "ren"} on a pass — every child pays ${amount} per ticket`
@@ -92,16 +102,17 @@ export function applyDiscounts(
   items: { name: string; price: number; days: number; heads?: number }[],
   attendees: number,
   today = new Date().toISOString().slice(0, 10),
+  tx?: DiscountTx,
 ): { lines: DiscountLine[]; total: number } {
   const headsOf = (i: { heads?: number }) => Math.max(0, i.heads ?? attendees);
   const gross = items.reduce((s, i) => s + i.price * headsOf(i), 0);
   if (!items.length) return { lines: [], total: 0 };
   const live = rules.filter((r) => r.enabled);
   const covers = (r: DiscountRule, n: string) => r.passNames.length === 0 || r.passNames.includes(n);
-  const scopeOf = (r: DiscountRule) => (r.passNames.length === 0 ? "All passes" : r.passNames.join(", "));
+  const scopeOf = (r: DiscountRule) => (r.passNames.length === 0 ? (tx ? tx.tr("p7pg.allPasses") : "All passes") : r.passNames.join(", "));
   const termsOf = (r: DiscountRule) => {
-    const amount = r.method === "percent" ? `${r.value}%` : r.method === "subtract" ? `${money(r.value)} off` : `${money(r.value)} each`;
-    return r.kind === "person" ? `${amount} · every child` : amount;
+    const amount = r.method === "percent" ? `${r.value}%` : r.method === "subtract" ? (tx ? tx.tr("p8lst.lm8AmtOff", { amt: money(r.value) }) : `${money(r.value)} off`) : (tx ? tx.tr("p8lst.lm8AmtEach", { amt: money(r.value) }) : `${money(r.value)} each`);
+    return r.kind === "person" ? (tx ? tx.tr("p8lst.lm8EveryChild", { amt: amount }) : `${amount} · every child`) : amount;
   };
   const off = (r: DiscountRule, unit: number) =>
     r.method === "percent" ? (unit * r.value) / 100 : r.method === "subtract" ? Math.min(unit, r.value) : Math.max(0, unit - r.value);
@@ -123,7 +134,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestPerson || amount > bestPerson.amount)) bestPerson = { r, amount, perItem };
   }
   if (bestPerson) {
-    lines.push({ name: bestPerson.r.name || ruleSummary(bestPerson.r), amount: bestPerson.amount, scope: scopeOf(bestPerson.r), terms: termsOf(bestPerson.r), perItem: bestPerson.perItem });
+    lines.push({ name: bestPerson.r.name || ruleSummary(bestPerson.r, tx), amount: bestPerson.amount, scope: scopeOf(bestPerson.r), terms: termsOf(bestPerson.r), perItem: bestPerson.perItem });
     running -= bestPerson.amount;
   }
 
@@ -156,7 +167,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestSession || amount > bestSession.amount)) bestSession = { r, amount };
   }
   if (bestSession) {
-    lines.push({ name: bestSession.r.name || ruleSummary(bestSession.r), amount: bestSession.amount, scope: scopeOf(bestSession.r), terms: termsOf(bestSession.r), perItem: spread(bestSession.r, bestSession.amount) });
+    lines.push({ name: bestSession.r.name || ruleSummary(bestSession.r, tx), amount: bestSession.amount, scope: scopeOf(bestSession.r), terms: termsOf(bestSession.r), perItem: spread(bestSession.r, bestSession.amount) });
     running -= bestSession.amount;
   }
 
@@ -168,7 +179,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestEarly || amount > bestEarly.amount)) bestEarly = { r, amount };
   }
   if (bestEarly) {
-    lines.push({ name: bestEarly.r.name || ruleSummary(bestEarly.r), amount: bestEarly.amount, scope: scopeOf(bestEarly.r), terms: termsOf(bestEarly.r), perItem: spread(bestEarly.r, bestEarly.amount) });
+    lines.push({ name: bestEarly.r.name || ruleSummary(bestEarly.r, tx), amount: bestEarly.amount, scope: scopeOf(bestEarly.r), terms: termsOf(bestEarly.r), perItem: spread(bestEarly.r, bestEarly.amount) });
     running -= bestEarly.amount;
   }
 

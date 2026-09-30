@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 
 // Shared between the operator's Locations tab and the customer page, so it
 // lives outside both (ListingWizard and FreelancerListingsApp already import
@@ -34,6 +35,7 @@ export function VenueMap({
   onZoom?: (z: number) => void;
   height?: number;
 }) {
+  const tr = useT();
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   useEffect(() => {
@@ -98,14 +100,14 @@ export function VenueMap({
         {onZoom && (
           <div className="absolute end-1.5 top-1.5 flex flex-col overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] shadow-sm">
             <button type="button" onClick={() => onZoom(Math.min(MAX_Z, z + 1))} disabled={z >= MAX_Z}
-              className="h-6 w-6 text-[14px] font-bold leading-none text-[var(--ink-2)] hover:bg-[var(--surface)] disabled:opacity-35" aria-label="Zoom in">+</button>
+              className="h-6 w-6 text-[14px] font-bold leading-none text-[var(--ink-2)] hover:bg-[var(--surface)] disabled:opacity-35" aria-label={tr("p8lst.lm8ZoomIn")}>+</button>
             <button type="button" onClick={() => onZoom(Math.max(MIN_Z, z - 1))} disabled={z <= MIN_Z}
-              className="h-6 w-6 border-t border-[var(--line)] text-[14px] font-bold leading-none text-[var(--ink-2)] hover:bg-[var(--surface)] disabled:opacity-35" aria-label="Zoom out">−</button>
+              className="h-6 w-6 border-t border-[var(--line)] text-[14px] font-bold leading-none text-[var(--ink-2)] hover:bg-[var(--surface)] disabled:opacity-35" aria-label={tr("p8lst.lm8ZoomOut")}>−</button>
           </div>
         )}
       </div>
       <div className="mt-1 text-end text-[9.5px] leading-none text-[var(--ink-3)]">
-        Contains OS data © Crown copyright &amp; database rights
+        {tr("p8lst.lm8MapCredit")}
       </div>
     </div>
   );
