@@ -92,7 +92,9 @@ demoSlotsPublic.get("/", async (_req, res) => {
     (await leadsCol.where("slotAt", ">=", from).where("slotAt", "<=", to).get()).docs
       .map((d) => d.get("slotAt") as string),
   );
-  res.json(candidates.filter((c) => !booked.has(c.iso)));
+  // Two templates for the same weekday+time (older data has them) must still read as ONE bookable slot.
+  const seenIso = new Set<string>();
+  res.json(candidates.filter((c) => { if (booked.has(c.iso) || seenIso.has(c.iso)) return false; seenIso.add(c.iso); return true; }));
 });
 
 // Everything below is HQ-only (platform role).
