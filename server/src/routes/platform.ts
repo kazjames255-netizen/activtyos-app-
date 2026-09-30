@@ -184,13 +184,20 @@ platform.get("/providers", async (req, res) => {
   }
   const settingsById: Record<string, Record<string, unknown>> = {};
   for (const d of libsSnap.docs) settingsById[d.id] = (d.data()?.settings as Record<string, unknown>) ?? {};
+  // The users collection already carries every account's email (doc id = auth uid) — use it instead of one Auth
+  // lookup per tenant (136+ round trips made this list take seconds); Auth stays the fallback for a missing doc.
+  const emailByUid = new Map<string, string>();
+  for (const d of usersSnap.docs) { const e = d.get("email"); if (typeof e === "string" && e) emailByUid.set(d.id, e); }
 
   const providers = await Promise.all(tenantsSnap.docs.map(async (d) => {
     const t = d.data();
     const s = settingsById[d.id] ?? {};
     const billing = (s.billing as Record<string, unknown> | undefined) ?? {};
     let ownerEmail: string | null = null;
-    try { if (t.ownerUid) ownerEmail = (await auth.getUser(t.ownerUid as string)).email ?? null; } catch { /* deleted owner */ }
+    if (t.ownerUid) {
+      ownerEmail = emailByUid.get(t.ownerUid as string) ?? null;
+      if (!ownerEmail) { try { ownerEmail = (await auth.getUser(t.ownerUid as string)).email ?? null; } catch { /* deleted owner */ } }
+    }
     return {
       id: d.id,
       name: (t.name as string) ?? d.id,
@@ -230,6 +237,8 @@ platform.patch("/providers/:id/features", async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
   const parsed = z.object({ view: z.string().min(1).max(60), on: z.boolean() }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  // Only for a real tenant — a typo'd/stale id must not mint an orphan library doc.
+  if (!(await db.collection("tenants").doc(req.params.id).get()).exists) { res.status(404).json({ error: "No such provider" }); return; }
   await db.collection("libraries").doc(req.params.id).set(
     { settings: { features: { [parsed.data.view]: parsed.data.on } } },
     { merge: true },
@@ -328,6 +337,8 @@ platform.get("/at-risk", async (req, res) => {
 platform.post("/at-risk/:id/contacted", async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
   const contacted = (req.body as { contacted?: boolean })?.contacted !== false;
+  // Same as the features toggle: merge-set on a missing id would mint a phantom tenant that then shows up in every HQ list.
+  if (!(await db.collection("tenants").doc(req.params.id).get()).exists) { res.status(404).json({ error: "No such provider" }); return; }
   await db.collection("tenants").doc(req.params.id).set({ retentionContactedAt: contacted ? new Date().toISOString() : null }, { merge: true });
   res.json({ ok: true, contactedAt: contacted ? new Date().toISOString() : null });
 });
