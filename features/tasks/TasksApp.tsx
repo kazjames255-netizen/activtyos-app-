@@ -1294,9 +1294,9 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-sm">
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => stepBy(-1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-bold">‹</button>
+        <button type="button" onClick={() => stepBy(-1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-bold"><span className="inline-block rtl:-scale-x-100">‹</span></button>
         <div className="min-w-[180px] text-[14px] font-extrabold">{title}</div>
-        <button type="button" onClick={() => stepBy(1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-bold">›</button>
+        <button type="button" onClick={() => stepBy(1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-bold"><span className="inline-block rtl:-scale-x-100">›</span></button>
         <button type="button" onClick={() => setAnchor(today)} className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)]">{tr("p7tk.dueToday")}</button>
         {/* Segmented control. The selected pill was a pale tint on white, which
             at this size read as "slightly lighter", not "selected" — it takes a
@@ -1914,7 +1914,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
               right={!rangeEdit ? <button type="button" onClick={() => { setRangeMsg(null); setRangeEdit({ from: task.seriesFrom ?? seriesStart ?? task.due ?? "", until: task.seriesUntil ?? task.due ?? "", freq: task.seriesFreq ?? "daily" }); }} className="rounded-lg bg-[#0e7490] px-2.5 py-1 text-[11.5px] font-extrabold text-white shadow-sm hover:brightness-110">{tr("p7tk.editDates")}</button> : null}>
               <div className="flex items-center gap-2 text-[13px] font-bold text-[var(--ink)]">
                 <span className="rounded-lg bg-[#ecfeff] px-2.5 py-1 text-[#0e7490] ring-1 ring-[#a5f3fc]">{(task.seriesFrom ?? seriesStart) ? fmtDay((task.seriesFrom ?? seriesStart)!) : "—"}</span>
-                <span className="text-[var(--ink-3)]">→</span>
+                <span className="inline-block text-[var(--ink-3)] rtl:-scale-x-100">→</span>
                 <span className="rounded-lg bg-[#ecfeff] px-2.5 py-1 text-[#0e7490] ring-1 ring-[#a5f3fc]">{task.seriesUntil ? fmtDay(task.seriesUntil) : "—"}</span>
               </div>
               {rangeEdit && (

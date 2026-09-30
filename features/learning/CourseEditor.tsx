@@ -182,7 +182,7 @@ function BlockEditor({ b, onChange }: { b: Block; onChange: (b: Block) => void }
       {b.items.map((it, i) => (
         <div key={i} className="mb-1.5 flex items-center gap-1.5">
           <Input value={it.text} onChange={(e) => onChange({ ...b, items: b.items.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)) })} placeholder={tr("p8lrn.cePhItem")} className="w-full" />
-          <span className="flex-none text-[var(--ink-3)]">→</span>
+          <span className="inline-block flex-none text-[var(--ink-3)] rtl:-scale-x-100">→</span>
           <Select value={it.bucket} onChange={(e) => onChange({ ...b, items: b.items.map((x, j) => (j === i ? { ...x, bucket: Number(e.target.value) } : x)) })} className="max-w-[150px]">{b.buckets.map((bk, bi) => <option key={bi} value={bi}>{bk || tr("p8lrn.ceGroupN", { n: bi + 1 })}</option>)}</Select>
           <DelBtn onClick={() => onChange({ ...b, items: b.items.filter((_, j) => j !== i) })} />
         </div>

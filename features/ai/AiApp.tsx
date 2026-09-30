@@ -373,14 +373,14 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
               <div className="flex flex-col gap-3">
                 {msgs.map((m, i) => {
                   if (m.role === "user") return (
-                    <div key={i} className="flex justify-end"><div className="max-w-[85%] rounded-2xl rounded-br-md bg-[#eaf0fc] px-3.5 py-2 text-[13px] font-medium text-[#1d3a8f]">{m.content}</div></div>
+                    <div key={i} className="flex justify-end"><div className="max-w-[85%] rounded-2xl rounded-ee-md bg-[#eaf0fc] px-3.5 py-2 text-[13px] font-medium text-[#1d3a8f]">{m.content}</div></div>
                   );
                   const acts = actionsFor(m.content, kind, portal);
                   return (
                     <div key={i} className="flex items-start gap-2.5">
                       <RobotAvatar state={busy && i === msgs.length - 1 ? "thinking" : tts.speaking && i === msgs.length - 1 ? "talking" : "idle"} size={34} className="mt-0.5 flex-none" />
                       <div className="max-w-[85%]">
-                        <div className="rounded-2xl rounded-bl-md border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[var(--ink)]"><RichText text={m.content} /></div>
+                        <div className="rounded-2xl rounded-es-md border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[var(--ink)]"><RichText text={m.content} /></div>
                         {acts.length > 0 && (
                           <div className="mt-1.5 flex flex-wrap gap-1.5">
                             {acts.map((a) => (
@@ -393,12 +393,12 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
                   );
                 })}
                 {busy && (
-                  <div className="flex items-center gap-2.5"><RobotAvatar state="thinking" size={34} className="flex-none" /><div className="rounded-2xl rounded-bl-md border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[12.5px] text-[var(--ink-3)]">{t("p8lrn.aiReading")}</div></div>
+                  <div className="flex items-center gap-2.5"><RobotAvatar state="thinking" size={34} className="flex-none" /><div className="rounded-2xl rounded-es-md border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[12.5px] text-[var(--ink-3)]">{t("p8lrn.aiReading")}</div></div>
                 )}
                 {pendingAction && (
                   <div className="flex items-start gap-2.5">
                     <RobotAvatar state="idle" size={34} className="mt-0.5 flex-none" />
-                    <div className="w-full max-w-[420px] rounded-2xl rounded-bl-md border border-[#cdddf7] bg-[#f6faff] p-3">
+                    <div className="w-full max-w-[420px] rounded-2xl rounded-es-md border border-[#cdddf7] bg-[#f6faff] p-3">
                       <div className="text-[12.5px] font-extrabold text-[#1d3a8f]">{pendingAction.kind === "task" ? t("p8lrn.aiCreateTaskQ") : t("p8lrn.aiAddCalQ")}</div>
                       <label className="mt-2 block text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8lrn.docFldTitle")}
                         <input className="mt-0.5 w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] font-medium text-[var(--ink)] outline-none focus:border-[#2f6bd8]" value={pendingAction.title} onChange={(e) => setPendingAction((p) => (p ? { ...p, title: e.target.value } : p))} />
@@ -429,7 +429,7 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
                 {proposed && (
                   <div className="flex items-start gap-2.5">
                     <RobotAvatar state="idle" size={34} className="mt-0.5 flex-none" />
-                    <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-[#cdddf7] bg-[#f6faff] p-3">
+                    <div className="max-w-[85%] rounded-2xl rounded-es-md border border-[#cdddf7] bg-[#f6faff] p-3">
                       <div className="text-[12.5px] font-extrabold text-[#1d3a8f]">{t("p8lrn.aiConfirmQ")}</div>
                       <div className="mt-1 text-[12.5px] leading-relaxed text-[var(--ink)]">{proposed.summary}</div>
                       {actError && <div className="mt-2 rounded-md border border-[#f6c9cc] bg-[#fdebec] px-2 py-1 text-[11.5px] text-[#c02636]">{actError}</div>}
