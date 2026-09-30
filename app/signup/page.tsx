@@ -8,6 +8,8 @@ import { firebaseAuth } from "@/lib/firebase/client";
 import { post as apiPost, get as apiGet, api } from "@/lib/api";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { AUTH_LIGHT, AosMark } from "@/components/auth/AuthBrand";
+import { useI18n, tNow } from "@/lib/i18n/provider";
+import { isRTL } from "@/lib/i18n/config";
 
 type AccountType = "parent" | "freelancer" | "company" | "franchise";
 
@@ -17,33 +19,43 @@ type AccountType = "parent" | "freelancer" | "company" | "franchise";
 // on the FRANCHISE plan (different fees) with the franchisor tools (oversee &
 // bill franchisees). It is NOT the same as a plain Company. Individual
 // FRANCHISEES never self-sign-up: their Head Office sends them an invite link.
+// label/desc are catalogue keys (p8pub.*), resolved at render time.
 const ACCOUNT_TYPES: { value: AccountType; label: string; desc: string; icon: string; home: string }[] = [
-  { value: "freelancer", label: "Freelancer", desc: "For solo coaches & instructors — your own branding.", icon: "⭐", home: "/freelancer/bookings" },
-  { value: "company", label: "Company", desc: "For established companies — priced by your team size.", icon: "🏛️", home: "/company/bookings" },
-  { value: "franchise", label: "Franchise Head Office", desc: "Run a franchise network — oversee, brand & bill your franchisees.", icon: "🌐", home: "/company/bookings" },
+  { value: "freelancer", label: "p8pub.suFreelancer", desc: "p8pub.suFreelancerD", icon: "⭐", home: "/freelancer/bookings" },
+  { value: "company", label: "p8pub.suCompany", desc: "p8pub.suCompanyD", icon: "🏛️", home: "/company/bookings" },
+  { value: "franchise", label: "p8pub.suFranchise", desc: "p8pub.suFranchiseD", icon: "🌐", home: "/company/bookings" },
 ];
 
 const INVITE_HOME: Record<string, string> = { franchise: "/franchise/bookings", staff: "/staff/dash" };
 
 // What a new provider runs — informational, seeded into settings and used to
 // tailor copy later. Multi-select; "Other" is fine on its own.
-const ACTIVITY_KINDS = [
-  "Holiday camps", "After-school clubs", "Weekend classes", "Sports coaching",
-  "Nursery / early years", "Tuition", "Music & arts", "Other",
+// `v` is the English value stored on the tenant (never translated); `k` is the display key.
+const ACTIVITY_KINDS: { v: string; k: string }[] = [
+  { v: "Holiday camps", k: "p8pub.suKHoliday" }, { v: "After-school clubs", k: "p8pub.suKAfter" },
+  { v: "Weekend classes", k: "p8pub.suKWeekend" }, { v: "Sports coaching", k: "p8pub.suKSports" },
+  { v: "Nursery / early years", k: "p8pub.suKNursery" }, { v: "Tuition", k: "p8pub.suKTuition" },
+  { v: "Music & arts", k: "p8pub.suKMusic" }, { v: "Other", k: "p8pub.suKOther" },
 ];
 
 // Marketing attribution — single-select, big tappable cards.
-const HEARD_OPTIONS: { label: string; icon: string }[] = [
-  { label: "Google / search", icon: "🔍" },
-  { label: "Word of mouth", icon: "💬" },
-  { label: "Referred by a friend", icon: "🤝" },
-  { label: "Facebook group", icon: "👥" },
-  { label: "Event or conference", icon: "🎟️" },
-  { label: "Press or article", icon: "📰" },
-  { label: "Contacted by our team — email", icon: "✉️" },
-  { label: "Contacted by our team — phone", icon: "📞" },
-  { label: "Somewhere else", icon: "✨" },
+// `label` is the English value sent as heardAbout (never translated); `k` is the display key.
+const HEARD_OPTIONS: { label: string; k: string; icon: string }[] = [
+  { label: "Google / search", k: "p8pub.suHGoogle", icon: "🔍" },
+  { label: "Word of mouth", k: "p8pub.suHWord", icon: "💬" },
+  { label: "Referred by a friend", k: "p8pub.suHFriend", icon: "🤝" },
+  { label: "Facebook group", k: "p8pub.suHFb", icon: "👥" },
+  { label: "Event or conference", k: "p8pub.suHEvent", icon: "🎟️" },
+  { label: "Press or article", k: "p8pub.suHPress", icon: "📰" },
+  { label: "Contacted by our team — email", k: "p8pub.suHEmail", icon: "✉️" },
+  { label: "Contacted by our team — phone", k: "p8pub.suHPhone", icon: "📞" },
+  { label: "Somewhere else", k: "p8pub.suHElse", icon: "✨" },
 ];
+
+// Render "**bold**" segments of a catalogue string as <b>.
+function rich(str: string): React.ReactNode {
+  return str.split("**").map((part, i) => (i % 2 ? <b key={i}>{part}</b> : <span key={i}>{part}</span>));
+}
 
 interface InvitePreview { role: "franchise" | "staff"; tenantName: string; franchiseName?: string | null; franchiseArea?: string | null; territoryByHo?: boolean }
 
@@ -55,13 +67,13 @@ type StepId = "type" | "you" | "business" | "identity" | "hear" | "login" | "pay
 const TERMS_VERSION = "2026-09-05";
 const DPA_VERSION = "2026-09-05";
 const STEP_META: Record<StepId, { emoji: string; title: string; lede: string }> = {
-  type: { emoji: "", title: "Let's get you set up", lede: "Choose how you’ll use Activly." },
-  you: { emoji: "🙋", title: "About you", lede: "So we can set up your account." },
-  business: { emoji: "🏢", title: "About your business", lede: "This seeds your storefront, invoices and Setup." },
-  identity: { emoji: "🌟", title: "How parents see you", lede: "Your public name on booking pages, and your logo." },
-  hear: { emoji: "📣", title: "How did you hear about us?", lede: "Helps us reach more providers like you." },
-  login: { emoji: "🔑", title: "Your login", lede: "This is how you’ll sign in." },
-  payments: { emoji: "💳", title: "Get paid", lede: "Set up how money reaches you. You can skip and do this any time in Setup." },
+  type: { emoji: "", title: "p8pub.suTypeT", lede: "p8pub.suTypeL" },
+  you: { emoji: "🙋", title: "p8pub.suYouT", lede: "p8pub.suYouL" },
+  business: { emoji: "🏢", title: "p8pub.suBizT", lede: "p8pub.suBizL" },
+  identity: { emoji: "🌟", title: "p8pub.suIdT", lede: "p8pub.suIdL" },
+  hear: { emoji: "📣", title: "p8pub.suHearT", lede: "p8pub.suHearL" },
+  login: { emoji: "🔑", title: "p8pub.suLoginT", lede: "p8pub.suLoginL" },
+  payments: { emoji: "💳", title: "p8pub.suPayT", lede: "p8pub.suPayL" },
 };
 
 // Downscale a logo to a small square-ish PNG/JPEG under the /api/uploads cap
@@ -70,7 +82,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
   const img = await new Promise<HTMLImageElement>((res, rej) => {
     const i = new Image();
     i.onload = () => res(i);
-    i.onerror = () => rej(new Error("Couldn’t read that image"));
+    i.onerror = () => rej(new Error(tNow("p8pub.suEImg")));
     i.src = dataUrl;
   });
   const max = 480;
@@ -98,6 +110,9 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //   Parent                → a short path (parents normally arrive via a
 //                           provider's link — kept for now)
 function SignupForm() {
+  const { t, locale } = useI18n();
+  const arrow = isRTL(locale) ? "←" : "→";
+  const backArrow = isRTL(locale) ? "→" : "←";
   const router = useRouter();
   const params = useSearchParams();
   const inviteToken = params.get("invite");
@@ -147,12 +162,12 @@ function SignupForm() {
     const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
     fetch(`${base}/api/invites/${encodeURIComponent(inviteToken)}`)
       .then(async (r) => {
-        if (!r.ok) throw new Error((await r.json()).error || "Invalid invite");
+        if (!r.ok) throw new Error((await r.json()).error || t("p8pub.suEInvite"));
         const data: InvitePreview = await r.json();
         setInvite(data);
         if (data.role === "franchise") { setFrName(data.franchiseName || ""); setFrArea(data.franchiseArea || ""); }
       })
-      .catch((e) => setInviteError(e instanceof Error ? e.message : "Invalid invite"));
+      .catch((e) => setInviteError(e instanceof Error ? e.message : t("p8pub.suEInvite")));
   }, [inviteToken]);
 
   // Whether the head office pre-filled this franchise's name/area on the invite.
@@ -175,19 +190,19 @@ function SignupForm() {
 
   function stepProblem(id: StepId): string | null {
     if (id === "business") {
-      if (businessName.trim().length < 2) return "Enter your business name.";
+      if (businessName.trim().length < 2) return t("p8pub.suVBiz");
       // The server caps it at 80 (register-role) — and the login account is
       // created before that call, so an over-long name must stop here.
-      if (businessName.trim().length > 80) return "Keep your business name to 80 characters or fewer.";
-      if (address.trim().length < 2) return "Tell us where you’re based.";
-      if (postcode.trim().length < 2) return "Add your postcode.";
+      if (businessName.trim().length > 80) return t("p8pub.suVBizLong");
+      if (address.trim().length < 2) return t("p8pub.suVWhere");
+      if (postcode.trim().length < 2) return t("p8pub.suVPostcode");
     }
     if (id === "identity" && providerNameMode === "person" && name.trim().length < 2)
-      return "Enter your name, or choose to show your business name to parents.";
-    if (id === "hear" && !heard) return "Pick one — it really helps us.";
+      return t("p8pub.suVPerson");
+    if (id === "hear" && !heard) return t("p8pub.suVHear");
     if (id === "login") {
-      if (!/^\S+@\S+\.\S+$/.test(email.trim())) return "Enter a valid email address.";
-      if (password.length < 6) return "Password must be at least 6 characters.";
+      if (!/^\S+@\S+\.\S+$/.test(email.trim())) return t("p8pub.suVEmail");
+      if (password.length < 6) return t("p8pub.suVPw");
     }
     return null;
   }
@@ -197,16 +212,16 @@ function SignupForm() {
       const dataUrl = await new Promise<string>((res, rej) => {
         const r = new FileReader();
         r.onload = () => res(String(r.result));
-        r.onerror = () => rej(new Error("Couldn’t read that file"));
+        r.onerror = () => rej(new Error(tNow("p8pub.suEFile")));
         r.readAsDataURL(file);
       });
       setLogo(dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn’t load that image.");
+      setError(err instanceof Error ? err.message : t("p8pub.suELoadImg"));
     }
   }
 
-  const homeUrl = ACCOUNT_TYPES.find((t) => t.value === accountType)!.home;
+  const homeUrl = ACCOUNT_TYPES.find((a) => a.value === accountType)!.home;
 
   function next() {
     const problem = stepProblem(current);
@@ -215,7 +230,7 @@ function SignupForm() {
     // "login" is where the account is created. Operators then get one more
     // (optional) "payments" step; parents finish here. "payments" is the finish.
     if (current === "login") {
-      if (isOperator && !agreed) { setError("Please agree to the Terms of Service and Data Processing Agreement to continue."); return; }
+      if (isOperator && !agreed) { setError(t("p8pub.suVAgree")); return; }
       void submit(); return;
     }
     if (current === "payments") { void finishPayments(); return; }
@@ -260,8 +275,8 @@ function SignupForm() {
     } catch (err) {
       setStripeMsg(
         err instanceof Error && /configured/i.test(err.message)
-          ? "Card payments aren’t enabled on this server yet — you can connect Stripe later from Finance."
-          : err instanceof Error ? err.message : "Couldn’t start Stripe — try again from Finance later.",
+          ? t("p8pub.suEStripeOff")
+          : err instanceof Error ? err.message : t("p8pub.suEStripe"),
       );
       setStripeBusy(false);
     }
@@ -320,11 +335,13 @@ function SignupForm() {
     } catch (err) {
       const code = (err as { code?: string }).code || "";
       setError(
-        code === "auth/email-already-in-use" ? "That email already has an account — try signing in instead."
-          : code === "auth/weak-password" ? "Password is too weak (minimum 6 characters)."
-          : code === "auth/invalid-email" ? "That email address doesn’t look right."
-          : err instanceof Error ? err.message
-          : "Sign-up failed — check the details and try again.",
+        code === "auth/email-already-in-use" ? t("p8pub.suEInUse")
+          : code === "auth/weak-password" ? t("p8pub.suEWeak")
+          : code === "auth/invalid-email" ? t("p8pub.suEBadEmail")
+          : code === "auth/too-many-requests" ? t("p7login.tooMany")
+          : code === "auth/network-request-failed" ? t("p7login.network")
+          : err instanceof Error && !code ? err.message
+          : t("p8pub.suEFail"),
       );
       setBusy(false);
       setStep(steps.indexOf("login"));
@@ -336,24 +353,23 @@ function SignupForm() {
     if (inviteError) {
       return (
         <Card className="w-full max-w-[460px] p-6" style={{ borderInlineStart: "4px solid #1d3a8f" }}>
-          <h1 className="mb-2 text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Invite problem</h1>
+          <h1 className="mb-2 text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8pub.suIvProblem")}</h1>
           <p className="text-[13px] text-[var(--red)]">{inviteError}</p>
           <p className="mt-3 text-[12.5px] text-[var(--ink-3)]">
-            Ask the person who invited you for a fresh link, or{" "}
-            <Link href="/signup" className="font-bold text-[var(--brand-2)]">create a regular account</Link>.
+            {t("p8pub.suIvAsk").split("{link}").flatMap((part, i, arr) => i < arr.length - 1 ? [part, <Link key={i} href="/signup" className="font-bold text-[var(--brand-2)]">{t("p8pub.suIvRegular")}</Link>] : [part])}
           </p>
         </Card>
       );
     }
     return (
       <Card className={`w-full overflow-hidden p-0 ${invite?.role === "franchise" ? "max-w-[840px]" : "max-w-[460px]"}`}>
-        <Hero emoji="🎉" eyebrow="You're invited" title={invite ? `Join ${invite.tenantName}` : "Join your team"}
-          lede={invite ? (invite.role === "franchise" ? `You've been invited to run ${[invite.franchiseName, invite.franchiseArea && `${invite.franchiseArea} franchise`].filter(Boolean).join(" · ") || "a franchise"}.` : "You've been invited as staff.") : "Loading your invite…"} />
+        <Hero emoji="🎉" eyebrow={t("p8pub.suIvEyebrow")} title={invite ? t("p8pub.suIvJoin", { name: invite.tenantName }) : t("p8pub.suIvJoinTeam")}
+          lede={invite ? (invite.role === "franchise" ? t("p8pub.suIvRunLede", { what: [invite.franchiseName, invite.franchiseArea && t("p8pub.suIvAreaFr", { area: invite.franchiseArea })].filter(Boolean).join(" · ") || t("p8pub.suIvAFr") }) : t("p8pub.suIvStaff")) : t("p8pub.suIvLoading")} />
         <form
           onSubmit={async (e) => {
             e.preventDefault(); setError(null);
-            if (!/^\S+@\S+\.\S+$/.test(email.trim())) { setError("Enter a valid email address."); return; }
-            if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+            if (!/^\S+@\S+\.\S+$/.test(email.trim())) { setError(t("p8pub.suVEmail")); return; }
+            if (password.length < 6) { setError(t("p8pub.suVPw")); return; }
             setBusy(true);
             try {
               const cred = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
@@ -366,7 +382,7 @@ function SignupForm() {
               router.replace(INVITE_HOME[joined.role] ?? "/");
             } catch (err) {
               const code = (err as { code?: string }).code || "";
-              setError(code === "auth/email-already-in-use" ? "That email already has an account — sign in instead." : err instanceof Error ? err.message : "Couldn’t join — try again.");
+              setError(code === "auth/email-already-in-use" ? t("p8pub.suEInUse2") : code === "auth/weak-password" ? t("p8pub.suEWeak") : code === "auth/invalid-email" ? t("p8pub.suEBadEmail") : code === "auth/too-many-requests" ? t("p7login.tooMany") : code === "auth/network-request-failed" ? t("p7login.network") : err instanceof Error && !code ? err.message : t("p8pub.suEJoin"));
               setBusy(false);
             }
           }}
@@ -375,42 +391,42 @@ function SignupForm() {
           {invite?.role === "franchise" && (
             <div className="rounded-xl border-2 border-[#39426E] bg-[#392B73] p-3.5">
               <div className="flex items-center justify-between gap-2">
-                <div className="text-[12px] font-extrabold text-[#2f5fd0]">🌐 Your franchise</div>
-                {frFromHo && <span className="rounded-full bg-[var(--raised)] px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide text-[#2f5fd0] ring-1 ring-[#39426E]">Set by head office</span>}
+                <div className="text-[12px] font-extrabold text-[#2f5fd0]">🌐 {t("p8pub.suIvYourFr")}</div>
+                {frFromHo && <span className="rounded-full bg-[var(--raised)] px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide text-[#2f5fd0] ring-1 ring-[#39426E]">{t("p8pub.suIvSetHo")}</span>}
               </div>
-              <p className="mt-0.5 text-[11px] leading-snug text-[var(--ink-3)]">{frFromHo ? "Your head office set your franchise name and area — these are locked. Ask them if anything needs changing." : "Confirm your franchise business name and the area you cover."}</p>
+              <p className="mt-0.5 text-[11px] leading-snug text-[var(--ink-3)]">{frFromHo ? t("p8pub.suIvLocked") : t("p8pub.suIvConfirm")}</p>
               {frFromHo ? (
                 <div className="mt-2.5 flex flex-col gap-2.5">
                   <div>
-                    <FieldLabel htmlFor="iv-frname">Franchise business name</FieldLabel>
-                    <div className="flex items-center justify-between gap-2 rounded-lg border border-[#39426E] bg-white/80 px-3 py-2.5 text-[14px] font-bold text-white"><span className="truncate">{frName}</span><span className="flex-none text-[12px] text-[var(--ink-3)]" title="Set by head office">🔒</span></div>
+                    <FieldLabel htmlFor="iv-frname">{t("p8pub.suIvFrName")}</FieldLabel>
+                    <div className="flex items-center justify-between gap-2 rounded-lg border border-[#39426E] bg-white/80 px-3 py-2.5 text-[14px] font-bold text-white"><span className="truncate">{frName}</span><span className="flex-none text-[12px] text-[var(--ink-3)]" title={t("p8pub.suIvSetHo")}>🔒</span></div>
                   </div>
                   <div>
-                    <FieldLabel htmlFor="iv-frarea">Area / territory</FieldLabel>
-                    <div className="flex items-center justify-between gap-2 rounded-lg border border-[#39426E] bg-white/80 px-3 py-2.5 text-[14px] font-bold text-white"><span className="truncate">{frArea}</span><span className="flex-none text-[12px] text-[var(--ink-3)]" title="Set by head office">🔒</span></div>
+                    <FieldLabel htmlFor="iv-frarea">{t("p8pub.suIvArea")}</FieldLabel>
+                    <div className="flex items-center justify-between gap-2 rounded-lg border border-[#39426E] bg-white/80 px-3 py-2.5 text-[14px] font-bold text-white"><span className="truncate">{frArea}</span><span className="flex-none text-[12px] text-[var(--ink-3)]" title={t("p8pub.suIvSetHo")}>🔒</span></div>
                   </div>
                 </div>
               ) : (
                 <div className="mt-2.5 flex flex-col gap-2.5">
-                  <div><FieldLabel htmlFor="iv-frname">Franchise business name</FieldLabel><Input id="iv-frname" value={frName} onChange={(e) => setFrName(e.target.value)} placeholder="e.g. APF Activity Camps" className="w-full" /></div>
-                  <div><FieldLabel htmlFor="iv-frarea">Area / territory</FieldLabel><Input id="iv-frarea" value={frArea} onChange={(e) => setFrArea(e.target.value)} placeholder="e.g. London" className="w-full" /></div>
+                  <div><FieldLabel htmlFor="iv-frname">{t("p8pub.suIvFrName")}</FieldLabel><Input id="iv-frname" value={frName} onChange={(e) => setFrName(e.target.value)} placeholder={t("p8pub.suEg", { x: "APF Activity Camps" })} className="w-full" /></div>
+                  <div><FieldLabel htmlFor="iv-frarea">{t("p8pub.suIvArea")}</FieldLabel><Input id="iv-frarea" value={frArea} onChange={(e) => setFrArea(e.target.value)} placeholder={t("p8pub.suEg", { x: "London" })} className="w-full" /></div>
                 </div>
               )}
-              {(frName.trim() || frArea.trim()) && <div className="mt-2.5 rounded-lg bg-[var(--raised)] px-3 py-2 text-center text-[12px] font-extrabold uppercase tracking-wide text-[#2f5fd0] ring-1 ring-[#39426E]">{frName.trim() || "Your brand"} · {frArea.trim() || "Area"} Franchise</div>}
+              {(frName.trim() || frArea.trim()) && <div className="mt-2.5 rounded-lg bg-[var(--raised)] px-3 py-2 text-center text-[12px] font-extrabold uppercase tracking-wide text-[#2f5fd0] ring-1 ring-[#39426E]">{t("p8pub.suIvPreview", { name: frName.trim() || t("p8pub.suIvYourBrand"), area: frArea.trim() || t("p8pub.suIvAreaWord") })}</div>}
               <div className="mt-3 flex items-start gap-2 border-t border-[#39426E] pt-3 text-[11px] leading-snug text-[var(--ink-3)]">
                 <span className="text-[13px] leading-none">🗺</span>
                 {invite?.territoryByHo
-                  ? <span>Your head office has already mapped your <b className="text-[#2f5fd0]">service territory</b> — you&rsquo;ll review and approve it from your dashboard once you&rsquo;re in.</span>
-                  : <span>You&rsquo;ll map out your <b className="text-[#2f5fd0]">service territory</b> once you&rsquo;re in — from your dashboard&rsquo;s onboarding, so your head office can review and agree it.</span>}
+                  ? <span className="[&_b]:text-[#2f5fd0]">{rich(t("p8pub.suIvTerrHo"))}</span>
+                  : <span className="[&_b]:text-[#2f5fd0]">{rich(t("p8pub.suIvTerrSelf"))}</span>}
               </div>
             </div>
           )}
           <div className="flex flex-col gap-3.5">
-            <div><FieldLabel htmlFor="iv-name">Your name</FieldLabel><Input id="iv-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="w-full" /></div>
-            <div><FieldLabel htmlFor="iv-email">Email</FieldLabel><Input id="iv-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" /></div>
-            <div><FieldLabel htmlFor="iv-pw">Password</FieldLabel><Input id="iv-pw" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full" /></div>
+            <div><FieldLabel htmlFor="iv-name">{t("p8pub.suYourName")}</FieldLabel><Input id="iv-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="w-full" /></div>
+            <div><FieldLabel htmlFor="iv-email">{t("p7login.email")}</FieldLabel><Input id="iv-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" /></div>
+            <div><FieldLabel htmlFor="iv-pw">{t("p7login.password")}</FieldLabel><Input id="iv-pw" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full" /></div>
             {error && <ErrorBox>{error}</ErrorBox>}
-            <Button variant="primary" type="submit" disabled={busy || !invite} className="mt-1 h-11 w-full text-[14px]">{busy ? "Joining…" : invite ? `Join ${invite.tenantName}` : "Join"}</Button>
+            <Button variant="primary" type="submit" disabled={busy || !invite} className="mt-1 h-11 w-full text-[14px]">{busy ? t("p8pub.suIvJoining") : invite ? t("p8pub.suIvJoin", { name: invite.tenantName }) : t("p8pub.suIvJoinBare")}</Button>
             <SignInLink />
           </div>
         </form>
@@ -420,78 +436,78 @@ function SignupForm() {
 
   // ── Operator / parent wizard ─────────────────────────────────────────────
   const meta = STEP_META[current];
-  const eyebrow = current === "payments" ? "🎉 Account created" : current === "type" && referredBy ? "🎉 You're invited to Activly" : `Step ${step + 1} of ${steps.length}`;
+  const eyebrow = current === "payments" ? `🎉 ${t("p8pub.suEyebrowCreated")}` : current === "type" && referredBy ? `🎉 ${t("p8pub.suEyebrowInvited")}` : t("p8pub.suStepOf", { n: step + 1, total: steps.length });
   return (
     <Card className="w-full max-w-[640px] overflow-hidden p-0">
-      <Hero emoji={meta.emoji} eyebrow={eyebrow} title={meta.title} lede={meta.lede} steps={steps} step={step} />
+      <Hero emoji={meta.emoji} eyebrow={eyebrow} title={t(meta.title)} lede={t(meta.lede)} steps={steps} step={step} />
 
       <div className="px-7 pb-2 pt-6">
         {current === "type" && (
           <>
           <div className="grid gap-3 sm:grid-cols-3">
-            {ACCOUNT_TYPES.map((t) => {
-              const on = accountType === t.value;
+            {ACCOUNT_TYPES.map((at) => {
+              const on = accountType === at.value;
               return (
-                <button key={t.value} type="button" onClick={() => { setAccountType(t.value); setStep(0); }}
+                <button key={at.value} type="button" onClick={() => { setAccountType(at.value); setStep(0); }}
                   className="rounded-2xl border-2 p-4 text-start transition-all"
                   style={on ? { borderColor: "#1d3a8f", background: "var(--brand-soft)", boxShadow: "0 8px 22px -12px rgba(29,58,143,.5)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
-                  <div className="text-[26px] leading-none">{t.icon}</div>
-                  <div className="mt-2 text-[15px] font-extrabold" style={{ color: on ? "var(--brand-ink)" : "var(--ink)" }}>{t.label}</div>
-                  <div className="mt-0.5 text-[12px] leading-snug" style={{ color: on ? "var(--brand-strong)" : "var(--ink-3)" }}>{t.desc}</div>
+                  <div className="text-[26px] leading-none">{at.icon}</div>
+                  <div className="mt-2 text-[15px] font-extrabold" style={{ color: on ? "var(--brand-ink)" : "var(--ink)" }}>{t(at.label)}</div>
+                  <div className="mt-0.5 text-[12px] leading-snug" style={{ color: on ? "var(--brand-strong)" : "var(--ink-3)" }}>{t(at.desc)}</div>
                 </button>
               );
             })}
           </div>
           <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-[12px] leading-snug text-[var(--ink-2)]">
-            <span className="me-1">🏬</span><b>Running a single franchise branch?</b> You don't sign up here — your <b>Head Office</b> sends you an invite link that sets up your franchise (with your area) for you.
+            <span className="me-1">🏬</span>{rich(t("p8pub.suSingleBranch"))}
           </div>
           </>
         )}
 
         {current === "you" && (
           <div className="flex flex-col gap-4">
-            <div><FieldLabel htmlFor="p-name">Your name</FieldLabel><Input id="p-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam Taylor" className="w-full" /></div>
+            <div><FieldLabel htmlFor="p-name">{t("p8pub.suYourName")}</FieldLabel><Input id="p-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("p8pub.suEg", { x: "Sam Taylor" })} className="w-full" /></div>
             <div>
-              <FieldLabel htmlFor="p-pc">Postcode <span className="font-normal text-[var(--ink-3)]">— optional</span></FieldLabel>
-              <Input id="p-pc" autoComplete="postal-code" value={postcode} onChange={(e) => setPostcode(e.target.value.toUpperCase())} placeholder="e.g. NN5 7EA" className="w-full" />
-              <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">Lets us show you activities nearest to you. You can change it later.</p>
+              <FieldLabel htmlFor="p-pc">{t("p8pub.suPostcode")} <span className="font-normal text-[var(--ink-3)]">{t("p8pub.suOptional")}</span></FieldLabel>
+              <Input id="p-pc" autoComplete="postal-code" value={postcode} onChange={(e) => setPostcode(e.target.value.toUpperCase())} placeholder={t("p8pub.suEg", { x: "NN5 7EA" })} className="w-full" />
+              <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("p8pub.suPcHelp")}</p>
             </div>
           </div>
         )}
 
         {current === "business" && (
           <div className="flex flex-col gap-4">
-            <div><FieldLabel htmlFor="b-name">Business name</FieldLabel><Input id="b-name" required maxLength={80} value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="e.g. APF Activity Camps" className="w-full" /></div>
+            <div><FieldLabel htmlFor="b-name">{t("p8pub.suBizName")}</FieldLabel><Input id="b-name" required maxLength={80} value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder={t("p8pub.suEg", { x: "APF Activity Camps" })} className="w-full" /></div>
             <div>
-              <FieldLabel>What do you run? <span className="font-normal text-[var(--ink-3)]">— pick any</span></FieldLabel>
+              <FieldLabel>{t("p8pub.suWhatRun")} <span className="font-normal text-[var(--ink-3)]">{t("p8pub.suPickAny")}</span></FieldLabel>
               <div className="mt-1 flex flex-wrap gap-2">
                 {ACTIVITY_KINDS.map((k) => {
-                  const on = kinds.includes(k);
+                  const on = kinds.includes(k.v);
                   return (
-                    <button key={k} type="button" onClick={() => toggleKind(k)}
+                    <button key={k.v} type="button" onClick={() => toggleKind(k.v)}
                       className="rounded-full border px-3.5 py-2 text-[13px] font-bold transition-colors"
                       style={on ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
-                      {on ? "✓ " : ""}{k}
+                      {on ? "✓ " : ""}{t(k.k)}
                     </button>
                   );
                 })}
               </div>
             </div>
             <div>
-              <FieldLabel>Where are you based?</FieldLabel>
+              <FieldLabel>{t("p8pub.suWhereBased")}</FieldLabel>
               <div className="grid gap-3 sm:grid-cols-[1fr_150px]">
-                <Input id="b-addr" required value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, town" className="w-full" aria-label="Address" />
-                <Input id="b-pc" required autoComplete="postal-code" value={postcode} onChange={(e) => setPostcode(e.target.value.toUpperCase())} placeholder="Postcode" className="w-full" aria-label="Postcode" />
+                <Input id="b-addr" required value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("p8pub.suStreetTown")} className="w-full" aria-label={t("p8pub.suAddress")} />
+                <Input id="b-pc" required autoComplete="postal-code" value={postcode} onChange={(e) => setPostcode(e.target.value.toUpperCase())} placeholder={t("p8pub.suPostcode")} className="w-full" aria-label={t("p8pub.suPostcode")} />
               </div>
-              <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">Used on your invoices and to show families how near you are.</p>
+              <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("p8pub.suAddrHelp")}</p>
             </div>
             <div>
-              <FieldLabel>Contact details <span className="font-normal normal-case text-[var(--ink-3)]">— shown to parents & on invoices</span></FieldLabel>
+              <FieldLabel>{t("p8pub.suContactDetails")} <span className="font-normal normal-case text-[var(--ink-3)]">{t("p8pub.suContactShown")}</span></FieldLabel>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Input id="b-email" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="Contact email (optional)" className="w-full" aria-label="Contact email" />
-                <Input id="b-phone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone (optional)" className="w-full" aria-label="Phone" />
+                <Input id="b-email" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder={t("p8pub.suContactEmailPh")} className="w-full" aria-label={t("p8pub.suContactEmail")} />
+                <Input id="b-phone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("p8pub.suPhonePh")} className="w-full" aria-label={t("p8pub.suPhone")} />
               </div>
-              <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">Leave email blank to use your login email.</p>
+              <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("p8pub.suEmailBlank")}</p>
             </div>
           </div>
         )}
@@ -499,9 +515,9 @@ function SignupForm() {
         {current === "identity" && (
           <div className="flex flex-col gap-4">
             <div>
-              <FieldLabel>What should parents see you as?</FieldLabel>
+              <FieldLabel>{t("p8pub.suSeeYouAs")}</FieldLabel>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                {([["business", "My business name", businessName.trim() || "Your business name"], ["person", "My own name", name.trim() || "Your name"]] as const).map(([mode, heading, preview]) => {
+                {([["business", t("p8pub.suMyBiz"), businessName.trim() || t("p8pub.suYourBizName")], ["person", t("p8pub.suMyName"), name.trim() || t("p8pub.suYourName")]] as const).map(([mode, heading, preview]) => {
                   const on = providerNameMode === mode;
                   return (
                     <button key={mode} type="button" onClick={() => setProviderNameMode(mode)} className="rounded-xl border-2 p-3 text-start transition-colors"
@@ -514,19 +530,19 @@ function SignupForm() {
               </div>
             </div>
             {providerNameMode === "person" && (
-              <div><FieldLabel htmlFor="i-name">Your name</FieldLabel><Input id="i-name" autoComplete="name" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam Taylor" className="w-full" /></div>
+              <div><FieldLabel htmlFor="i-name">{t("p8pub.suYourName")}</FieldLabel><Input id="i-name" autoComplete="name" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("p8pub.suEg", { x: "Sam Taylor" })} className="w-full" /></div>
             )}
             <div>
-              <FieldLabel>Logo <span className="font-normal text-[var(--ink-3)]">— optional, shows on invoices & your page</span></FieldLabel>
+              <FieldLabel>{t("p8pub.suLogo")} <span className="font-normal text-[var(--ink-3)]">{t("p8pub.suLogoHelp")}</span></FieldLabel>
               <div className="flex items-center gap-3">
                 {logo
-                  ? <img src={logo} alt="logo preview" className="h-12 max-w-[130px] rounded-lg border border-[var(--line)] object-contain" />
+                  ? <img src={logo} alt={t("p8pub.suLogoAlt")} className="h-12 max-w-[130px] rounded-lg border border-[var(--line)] object-contain" />
                   : <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-[var(--line)] text-[18px] text-[var(--ink-3)]">🖼️</div>}
                 <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[#1d3a8f]">
-                  ⬆ Upload
+                  ⬆ {t("p8pub.suUpload")}
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onLogoFile(f); e.target.value = ""; }} />
                 </label>
-                {logo && <button type="button" onClick={() => setLogo("")} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[var(--red)]">Remove</button>}
+                {logo && <button type="button" onClick={() => setLogo("")} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[var(--red)]">{t("p8pub.suRemove")}</button>}
               </div>
             </div>
           </div>
@@ -541,7 +557,7 @@ function SignupForm() {
                   className="flex flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-3.5 text-center transition-all"
                   style={on ? { borderColor: "#1d3a8f", background: "var(--brand-soft)", boxShadow: "0 8px 22px -14px rgba(29,58,143,.55)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                   <span className="text-[22px] leading-none">{o.icon}</span>
-                  <span className="text-[12px] font-bold leading-tight" style={{ color: on ? "var(--brand-ink)" : "var(--ink-2)" }}>{o.label}</span>
+                  <span className="text-[12px] font-bold leading-tight" style={{ color: on ? "var(--brand-ink)" : "var(--ink-2)" }}>{t(o.k)}</span>
                 </button>
               );
             })}
@@ -550,15 +566,16 @@ function SignupForm() {
 
         {current === "login" && (
           <div className="flex flex-col gap-4">
-            <div><FieldLabel htmlFor="l-email">Email</FieldLabel><Input id="l-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" /></div>
-            <div><FieldLabel htmlFor="l-pw">Password</FieldLabel><Input id="l-pw" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" className="w-full" /></div>
+            <div><FieldLabel htmlFor="l-email">{t("p7login.email")}</FieldLabel><Input id="l-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" /></div>
+            <div><FieldLabel htmlFor="l-pw">{t("p7login.password")}</FieldLabel><Input id="l-pw" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("p8pub.suPwPh")} className="w-full" /></div>
             {isOperator && (
               <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[12.5px] leading-snug text-[var(--ink-2)]">
                 <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-[#FF3D7F]" />
-                <span>I agree, on behalf of my organisation, to the{" "}
-                  <a href="/terms.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">Terms of Service</a> and the{" "}
-                  <a href="/dpa.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">Data Processing Agreement</a>, and have read the{" "}
-                  <a href="/privacy.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">Privacy Policy</a>.</span>
+                <span>{t("p8pub.suAgree").split(/(\{terms\}|\{dpa\}|\{privacy\})/).map((part, i) =>
+                  part === "{terms}" ? <a key={i} href="/terms.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">{t("p8pub.suTerms")}</a>
+                  : part === "{dpa}" ? <a key={i} href="/dpa.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">{t("p8pub.suDpa")}</a>
+                  : part === "{privacy}" ? <a key={i} href="/privacy.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">{t("p8pub.suPrivacy")}</a>
+                  : <span key={i}>{part}</span>)}</span>
               </label>
             )}
           </div>
@@ -567,7 +584,7 @@ function SignupForm() {
         {current === "payments" && (
           <div className="flex flex-col gap-5">
             <div className="rounded-xl bg-[var(--brand-soft,#eef3ff)] px-4 py-3 text-[12.5px] font-semibold text-[var(--brand-ink,#16306e)]">
-              🎉 Your account’s ready. Set up how you get paid below, or skip and do it later in <span className="whitespace-nowrap">Setup → Money</span> and Finance.
+              🎉 {t("p8pub.suPayReady")}
             </div>
 
             {/* Card payments via Stripe — needs the tenant, which now exists. */}
@@ -575,13 +592,13 @@ function SignupForm() {
               <div className="flex items-start gap-3">
                 <div className="text-[24px] leading-none">💳</div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[14.5px] font-extrabold text-[var(--ink)]">Take card payments</div>
+                  <div className="text-[14.5px] font-extrabold text-[var(--ink)]">{t("p8pub.suPayCard")}</div>
                   <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--ink-3)]">
-                    Connect Stripe so parents can pay by card and money lands straight in your bank. Opens Stripe’s secure setup — you can come back and finish it any time.
+                    {t("p8pub.suPayCardD")}
                   </p>
                   <button type="button" onClick={() => void connectStripe()} disabled={stripeBusy}
                     className="mt-2.5 rounded-full bg-[#635bff] px-4 py-2 text-[12.5px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60">
-                    {stripeBusy ? "Opening Stripe…" : "Connect with Stripe →"}
+                    {stripeBusy ? t("p8pub.suStripeBusy") : `${t("p8pub.suStripeBtn")} ${arrow}`}
                   </button>
                   {stripeMsg && <p className="mt-2 text-[11.5px] font-semibold text-[var(--red)]">{stripeMsg}</p>}
                 </div>
@@ -593,15 +610,15 @@ function SignupForm() {
               <div className="flex items-start gap-3">
                 <div className="text-[24px] leading-none">🏦</div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[14.5px] font-extrabold text-[var(--ink)]">Your bank details <span className="font-normal text-[var(--ink-3)]">— optional</span></div>
+                  <div className="text-[14.5px] font-extrabold text-[var(--ink)]">{t("p8pub.suPayBank")} <span className="font-normal text-[var(--ink-3)]">{t("p8pub.suOptional")}</span></div>
                   <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--ink-3)]">
-                    Shown on your invoices so parents paying by transfer, Tax-Free Childcare or vouchers know where to send money.
+                    {t("p8pub.suPayBankD")}
                   </p>
                   <div className="mt-3 flex flex-col gap-3">
-                    <div><FieldLabel htmlFor="pay-bank">Bank name</FieldLabel><Input id="pay-bank" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. Barclays" className="w-full" /></div>
+                    <div><FieldLabel htmlFor="pay-bank">{t("p8pub.suBankName")}</FieldLabel><Input id="pay-bank" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder={t("p8pub.suEg", { x: "Barclays" })} className="w-full" /></div>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div><FieldLabel htmlFor="pay-sort">Sort code</FieldLabel><Input id="pay-sort" inputMode="numeric" value={sortCode} onChange={(e) => setSortCode(e.target.value)} placeholder="00-00-00" className="w-full" /></div>
-                      <div><FieldLabel htmlFor="pay-acc">Account number</FieldLabel><Input id="pay-acc" inputMode="numeric" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="12345678" className="w-full" /></div>
+                      <div><FieldLabel htmlFor="pay-sort">{t("p8pub.suSortCode")}</FieldLabel><Input id="pay-sort" inputMode="numeric" value={sortCode} onChange={(e) => setSortCode(e.target.value)} placeholder="00-00-00" className="w-full" /></div>
+                      <div><FieldLabel htmlFor="pay-acc">{t("p8pub.suAccNo")}</FieldLabel><Input id="pay-acc" inputMode="numeric" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="12345678" className="w-full" /></div>
                     </div>
                   </div>
                 </div>
@@ -616,17 +633,17 @@ function SignupForm() {
       <div className="mt-2 flex items-center justify-between gap-3 border-t border-[var(--line)] bg-[var(--panel)] px-7 py-4">
         {current === "payments"
           // Account already exists — no going back, just skip the optional setup.
-          ? <button type="button" onClick={() => router.replace(homeUrl)} disabled={busy} className="text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)] disabled:opacity-50">Skip for now →</button>
+          ? <button type="button" onClick={() => router.replace(homeUrl)} disabled={busy} className="text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)] disabled:opacity-50">{t("p8pub.suSkip")} {arrow}</button>
           : step > 0
-          ? <button type="button" onClick={back} disabled={busy} className="text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)] disabled:opacity-50">← Back</button>
+          ? <button type="button" onClick={back} disabled={busy} className="text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)] disabled:opacity-50">{backArrow} {t("p8pub.suBack")}</button>
           : <SignInLink inline />}
         <div className="flex items-center gap-3">
           <Button variant={current === "login" || current === "payments" ? "primary" : "solid"} type="button" onClick={next} disabled={busy || (current === "login" && isOperator && !agreed)} className="h-11 min-w-[150px] justify-center text-[14px]">
             {current === "payments"
-              ? (busy ? "Saving…" : "Go to dashboard →")
+              ? (busy ? t("p8pub.suSaving") : `${t("p8pub.suGoDash")} ${arrow}`)
               : current === "login"
-              ? (busy ? "Creating…" : "🎉 Create account")
-              : "Continue →"}
+              ? (busy ? t("p8pub.suCreating") : `🎉 ${t("p8pub.suCreate")}`)
+              : `${t("p8pub.suContinue")} ${arrow}`}
           </Button>
         </div>
       </div>
@@ -671,10 +688,11 @@ function ErrorBox({ children, className = "" }: { children: React.ReactNode; cla
 }
 
 function SignInLink({ inline }: { inline?: boolean } = {}) {
+  const { t } = useI18n();
   return (
     <p className={inline ? "text-[13px] text-[var(--ink-3)]" : "text-center text-[12.5px] text-[var(--ink-3)]"}>
-      Already have an account?{" "}
-      <Link href="/login" className="font-bold text-[var(--brand-2)]">Sign in</Link>
+      {t("p8pub.suHaveAcct")}{" "}
+      <Link href="/login" className="font-bold text-[var(--brand-2)]">{t("p7login.signIn")}</Link>
     </p>
   );
 }
