@@ -17,7 +17,7 @@ import { withVideos } from "./courseVideos";
 import { withEnhancements } from "./courseEnhancements";
 import { CourseHero } from "./courseArt";
 import { openCertificate, makeRef } from "./certificates";
-import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel as credTargetLabel, exportCredsPdf, fmtDate as fmtCredDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
+import { credTypeName, credStatusWord, useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel as credTargetLabel, exportCredsPdf, fmtDate as fmtCredDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
 import { useRouter } from "next/navigation";
 import { CourseEditor } from "./CourseEditor";
 import { csvText } from "@/lib/csv";
@@ -774,7 +774,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
               const cells = staff.flatMap((s) => cred.types.map((t) => ({ req: t.required, applies: appliesTo(t, s.name, s.role), st: credStatus(cred.recordFor(s.name, t.id)) })));
               const cnt = (st: CredStatus) => st === "Missing" ? cells.filter((c) => c.st === "Missing" && c.req && c.applies).length : cells.filter((c) => c.st === st).length;
               const rows = staff.filter((s) => credStatusFilter === "all" || visTypes.some((t) => { const st = credStatus(cred.recordFor(s.name, t.id)); if (st !== credStatusFilter) return false; return credStatusFilter === "Missing" ? t.required && appliesTo(t, s.name, s.role) : true; }));
-              const csv = () => downloadCSV(`credentials-${todayISO()}.csv`, [tr("p8lrn.docColStaff"), tr("p8lrn.lcColLocation"), ...cred.types.map((t) => t.name)], staff.map((s) => [s.name, s.op, ...cred.types.map((t) => credStatus(cred.recordFor(s.name, t.id)))]));
+              const csv = () => downloadCSV(`credentials-${todayISO()}.csv`, [tr("p8lrn.docColStaff"), tr("p8lrn.lcColLocation"), ...cred.types.map((t) => credTypeName(t))], staff.map((s) => [s.name, s.op, ...cred.types.map((t) => credStatusWord(credStatus(cred.recordFor(s.name, t.id))))]));
               return (<>
                 <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">{tr("p8lrn.lcCertsIntro")}</p>
                 <CollapsibleStats id="learning-certs">
@@ -796,11 +796,11 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                     )}
                   </div>
                   <Button variant="primary" onClick={() => setCertEdit(blankRecord(staff[0]?.name ?? "", cred.types[0]?.id ?? ""))}>{tr("p8lrn.lcAddCert")}</Button>
-                  <Select value={credTypeFilter} onChange={(e) => setCredTypeFilter(e.target.value)} className="max-w-[200px]"><option value="all">{tr("p8lrn.lcAllCreds")}</option>{cred.types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
+                  <Select value={credTypeFilter} onChange={(e) => setCredTypeFilter(e.target.value)} className="max-w-[200px]"><option value="all">{tr("p8lrn.lcAllCreds")}</option>{cred.types.map((t) => <option key={t.id} value={t.id}>{credTypeName(t)}</option>)}</Select>
                   {credStatusFilter !== "all" && <button type="button" onClick={() => setCredStatusFilter("all")} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{tr("p8lrn.lcClearX")}</button>}
                 </div>
                 <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-                  <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-start text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{tr("p8lrn.docColStaff")}</th><th className="px-3 py-2.5 font-extrabold">{tr("p8lrn.lcColLocation")}</th>{visTypes.map((t) => <th key={t.id} title={t.required ? tr("p8lrn.lcRequiredFor", { who: credTargetLabel(t) }) : statusWord("Optional")} className="px-3 py-2.5 font-extrabold whitespace-nowrap">{t.name}{t.required && <span className="ms-0.5 text-[#c0392b]">*</span>}</th>)}</tr></thead>
+                  <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-start text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{tr("p8lrn.docColStaff")}</th><th className="px-3 py-2.5 font-extrabold">{tr("p8lrn.lcColLocation")}</th>{visTypes.map((t) => <th key={t.id} title={t.required ? tr("p8lrn.lcRequiredFor", { who: credTargetLabel(t) }) : statusWord("Optional")} className="px-3 py-2.5 font-extrabold whitespace-nowrap">{credTypeName(t)}{t.required && <span className="ms-0.5 text-[#c0392b]">*</span>}</th>)}</tr></thead>
                     <tbody>{rows.map((s) => (
                       <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]"><td className="px-3 py-2.5 font-bold text-[var(--ink)]">{s.name}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.op}</td>{visTypes.map((t) => { const r = cred.recordFor(s.name, t.id); if (!appliesTo(t, s.name, s.role) && !r) return <td key={t.id} className="px-3 py-2 text-[var(--ink-3)]" title={tr("p8lrn.lcNotRequiredFor")}>—</td>; return <td key={t.id} className="px-3 py-2"><button type="button" onClick={() => setCertCell({ staff: s.name, typeId: t.id })} className="transition-opacity hover:opacity-70"><CredBadge s={credStatus(r)} /></button></td>; })}</tr>
                     ))}
@@ -1010,7 +1010,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
         return (
           <div className="fixed inset-0 z-[138] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={() => setCertCell(null)}>
             <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
-              <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t?.name ?? tr("p8lrn.lcCredentialWord")}</h3><CredBadge s={st} /><button type="button" onClick={() => setCertCell(null)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+              <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t ? credTypeName(t) : tr("p8lrn.lcCredentialWord")}</h3><CredBadge s={st} /><button type="button" onClick={() => setCertCell(null)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
               <div className="mb-3 text-[12px] text-[var(--ink-3)]">{certCell.staff}</div>
               {r ? (<>
                 <div className="grid grid-cols-2 gap-2 text-[12.5px]">
@@ -1028,7 +1028,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                   <button type="button" title={tr("p8lrn.gDelete")} onClick={() => { if (typeof window !== "undefined" && window.confirm(tr("p8lrn.lcConfirmDelCert"))) { cred.deleteRecord(r.id); setCertCell(null); flash(tr("p8lrn.lcDeletedToast")); } }} className="ms-auto text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
                 </div>
               </>) : (<>
-                <p className="rounded-lg bg-[#fdecec] px-3 py-2.5 text-[12.5px] font-semibold text-[#c0392b]">{tr("p8lrn.lcNoCredOnFile", { type: t?.name ?? tr("p8lrn.lcCredentialWord"), staff: certCell.staff })}</p>
+                <p className="rounded-lg bg-[#fdecec] px-3 py-2.5 text-[12.5px] font-semibold text-[#c0392b]">{tr("p8lrn.lcNoCredOnFile", { type: t ? credTypeName(t) : tr("p8lrn.lcCredentialWord"), staff: certCell.staff })}</p>
                 <div className="mt-3 flex justify-end gap-2"><Button onClick={() => setCertCell(null)}>{tr("p8lrn.gClose")}</Button><Button variant="primary" onClick={() => { setCertEdit(blankRecord(certCell.staff, certCell.typeId)); setCertCell(null); }}>{tr("p8lrn.lcAddOnBehalf")}</Button></div>
               </>)}
             </div>

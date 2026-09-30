@@ -7,6 +7,7 @@
 // state). Front-end demo store; real file storage + verification persistence are
 // Amir's (see handoff).
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { tNow, useT } from "@/lib/i18n/provider";
 import { useEffect, useRef, useState } from "react";
 import { del as apiDel, fetchBlob, get as apiGet, isDemoMode, openFile, post as apiPost, put as apiPut } from "@/lib/api";
 import { typeOf } from "@/features/listings/planUpload";
@@ -35,7 +36,7 @@ export function appliesTo(t: CredType, staffName: string, staffRole?: string): b
   if (k === "roles") return (t.applyRoles ?? []).some((r) => { const rl = r.toLowerCase(), sr = (staffRole ?? "").toLowerCase(); return !!sr && (rl.includes(sr) || sr.includes(rl.split(/[ /]/)[0])); });
   return true;
 }
-export const targetLabel = (t: CredType): string => { const k = t.applyKind ?? "all"; if (k === "all") return "All staff"; if (k === "roles") return (t.applyRoles ?? []).join(", ") || "no roles"; return (t.applyStaff ?? []).join(", ") || "no staff"; };
+export const targetLabel = (t: CredType): string => { const k = t.applyKind ?? "all"; if (k === "all") return tNow("p8lrn.docAllStaff"); if (k === "roles") return (t.applyRoles ?? []).join(", ") || tNow("p8lrn.lcTargetNoRoles"); return (t.applyStaff ?? []).join(", ") || tNow("p8lrn.lcTargetNoStaff"); };
 export interface CredFile { name: string; data: string; at: string }
 export interface CredRecord {
   id: string; staff: string; typeId: string;
@@ -67,6 +68,11 @@ export const DEFAULT_CRED_TYPES: CredType[] = [
   { id: "food", name: "Food Hygiene (Level 2)", required: false, renewMonths: 36, needsFile: true },
 ];
 
+// Default credential types keep their stored English names; shown translated until a provider renames them.
+const DEFAULT_TYPE_KEY: Record<string, [string, string]> = { dbs: ["DBS Check", "p8lrn.cmpTypeDbs"], pfa: ["Paediatric First Aid", "p8lrn.cmpTypePaedFirstAid"], safeguarding: ["Safeguarding Training", "p8lrn.crTypeSafeguarding"], faw: ["First Aid at Work", "p8lrn.crTypeFaw"], food: ["Food Hygiene (Level 2)", "p8lrn.crTypeFood2"] };
+export const credTypeName = (t: { id: string; name: string }): string => { const d = DEFAULT_TYPE_KEY[t.id]; return d && d[0] === t.name ? tNow(d[1]) : t.name; };
+const CRED_STATUS_KEY: Record<string, string> = { Valid: "p8lrn.lcStValid", Expiring: "p8lrn.lcStExpiring", Expired: "p8lrn.lcStExpired", Pending: "p8lrn.lcStPending", Rejected: "p8lrn.crStRejected", Missing: "p8lrn.crStMissing" };
+export const credStatusWord = (s: string): string => (CRED_STATUS_KEY[s] ? tNow(CRED_STATUS_KEY[s]) : s);
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addMonths = (base: Date, m: number) => new Date(base.getFullYear(), base.getMonth() + m, base.getDate());
 export const fmtDate = (s?: string) => { if (!s) return "—"; const d = new Date(s + "T00:00:00"); return isNaN(d.getTime()) ? s : d.toLocaleDateString(dl(), { day: "2-digit", month: "short", year: "numeric" }); };
@@ -87,7 +93,7 @@ export const CRED_TONE: Record<CredStatus, string> = {
   Valid: "bg-[#e2f4ea] text-[#0f7a43]", Expiring: "bg-[#fcefd2] text-[#b45309]", Expired: "bg-[#fdecec] text-[#c0392b]",
   Pending: "bg-[#eaf1ff] text-[#1d54c4]", Rejected: "bg-[#fdecec] text-[#c0392b]", Missing: "bg-[#eef1f6] text-[#64748b]",
 };
-export const CredBadge = ({ s }: { s: CredStatus }) => <span className={"inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold " + CRED_TONE[s]}>{s}</span>;
+export const CredBadge = ({ s }: { s: CredStatus }) => <span className={"inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold " + CRED_TONE[s]}>{credStatusWord(s)}</span>;
 
 // seed a demo record set from the staff RAG statuses (relative to today so the
 // Valid/Expiring/Expired demo stays correct whatever the clock says)
@@ -114,23 +120,23 @@ export function exportCredsPdf(staff: { name: string; op: string }[], types: Cre
   // Open the window now (a popup opened after an await gets blocked), then
   // fetch any stored scans and fill it in.
   const w = window.open("", "_blank"); if (!w) return;
-  w.document.write("<p style=\"font-family:sans-serif;padding:24px\">Preparing…</p>");
+  w.document.write(`<p style="font-family:sans-serif;padding:24px">${tNow("p8lrn.crPreparing")}</p>`);
   void (async () => {
   const data = new Map<string, string>();
   if (withDocs) await Promise.all(staff.flatMap((s) => types.map(async (t) => { const r = getRec(s.name, t.id); const d = await resolveData(r?.fileData); if (d) data.set(`${s.name}|${t.id}`, d); })));
   const e = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
-  const head = `<tr><th>Staff</th><th>Location</th>${types.map((t) => `<th>${e(t.name)}</th>`).join("")}</tr>`;
-  const body = staff.map((s) => `<tr><td><b>${e(s.name)}</b></td><td>${e(s.op)}</td>${types.map((t) => { const r = getRec(s.name, t.id); const st = credStatus(r); return `<td class="st ${st}">${st}${r?.expiry ? `<span class="d">exp ${e(fmtDate(r.expiry))}</span>` : ""}</td>`; }).join("")}</tr>`).join("");
+  const head = `<tr><th>${e(tNow("p8lrn.docColStaff"))}</th><th>${e(tNow("p8lrn.lcColLocation"))}</th>${types.map((t) => `<th>${e(credTypeName(t))}</th>`).join("")}</tr>`;
+  const body = staff.map((s) => `<tr><td><b>${e(s.name)}</b></td><td>${e(s.op)}</td>${types.map((t) => { const r = getRec(s.name, t.id); const st = credStatus(r); return `<td class="st ${st}">${e(credStatusWord(st))}${r?.expiry ? `<span class="d">${e(tNow("p8lrn.crExpDate", { date: fmtDate(r.expiry) }))}</span>` : ""}</td>`; }).join("")}</tr>`).join("");
   let docs = "";
-  if (withDocs) staff.forEach((s) => types.forEach((t) => { const r = getRec(s.name, t.id); const fd = data.get(`${s.name}|${t.id}`); if (r && fd) { const img = fd.startsWith("data:image"); docs += `<div class="doc"><div class="dh">${e(s.name)} — ${e(t.name)}${r.number ? " · " + e(r.number) : ""}${r.fileName ? ` · ${e(r.fileName)}` : ""}</div>${img ? `<img src="${fd}"/>` : `<object data="${fd}" type="application/pdf" class="pdfdoc"><iframe src="${fd}" class="pdfdoc"></iframe></object>`}</div>`; } }));
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Credential register — ${e(provider)}</title><style>
+  if (withDocs) staff.forEach((s) => types.forEach((t) => { const r = getRec(s.name, t.id); const fd = data.get(`${s.name}|${t.id}`); if (r && fd) { const img = fd.startsWith("data:image"); docs += `<div class="doc"><div class="dh">${e(s.name)} — ${e(credTypeName(t))}${r.number ? " · " + e(r.number) : ""}${r.fileName ? ` · ${e(r.fileName)}` : ""}</div>${img ? `<img src="${fd}"/>` : `<object data="${fd}" type="application/pdf" class="pdfdoc"><iframe src="${fd}" class="pdfdoc"></iframe></object>`}</div>`; } }));
+  const html = `<!doctype html><html lang="${dl().split("-u-")[0]}" dir="${["ar", "ur"].includes(dl().slice(0, 2)) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${e(tNow("p8lrn.crRegisterTitle", { provider }))}</title><style>
     body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:26px}
     h1{font-size:20px;margin:0 0 2px}.sub{color:#6b7086;font-size:12px;margin-bottom:16px}
     table{width:100%;border-collapse:collapse;font-size:11.5px}th{background:#f1f4fb;text-align:left;padding:7px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#6b7086;border-bottom:1px solid #e5e7f0}td{padding:7px 8px;border-top:1px solid #eef1f7;vertical-align:top}
     .st{font-weight:700}.st .d{display:block;font-weight:400;font-size:10px;color:#8b93ad}.Valid{color:#0f7a43}.Expiring{color:#b45309}.Expired{color:#c0392b}.Rejected{color:#c0392b}.Pending{color:#1d54c4}.Missing{color:#94a3b8}
     .doc{page-break-before:always;padding-top:16px}.dh{font-weight:700;font-size:14px;margin-bottom:8px;border-bottom:1px solid #e5e7f0;padding-bottom:6px}.doc img{max-width:100%;max-height:880px;border:1px solid #e5e7f0;border-radius:6px}.pdfdoc{display:block;width:100%;height:960px;border:1px solid #e5e7f0;border-radius:6px}
     @media print{body{padding:0 6mm}}
-  </style></head><body><h1>${e(provider)} — Credential register</h1><div class="sub">Generated ${new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" })}${withDocs ? " · with certificate documents" : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
+  </style></head><body><h1>${e(tNow("p8lrn.crRegisterTitle", { provider }))}</h1><div class="sub">${e(tNow("p8lrn.crGenerated", { date: new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }) }))}${withDocs ? e(tNow("p8lrn.crWithCertDocs")) : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
   w.document.open(); w.document.write(html); w.document.close();
   })();
 }
@@ -151,18 +157,18 @@ export function exportCredsPack(params: {
   // Open the window now (a popup opened after an await gets blocked), then
   // fetch any stored scans and fill it in.
   const w = window.open("", "_blank"); if (!w) return;
-  w.document.write("<p style=\"font-family:sans-serif;padding:24px\">Preparing…</p>");
+  w.document.write(`<p style="font-family:sans-serif;padding:24px">${tNow("p8lrn.crPreparing")}</p>`);
   void (async () => {
   const data = new Map<string, string>();
   if (withDocs) await Promise.all(staff.flatMap((s) => types.map(async (t) => { const r = getRec(s.name, t.id); const d = await resolveData(r?.fileData); if (d) data.set(`${s.name}|${t.id}`, d); })));
   const e = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
-  const head = `<tr><th>Staff</th><th>Location</th>${types.map((t) => `<th>${e(t.name)}</th>`).join("")}</tr>`;
-  const body = staff.map((s) => `<tr><td><b>${e(s.name)}</b></td><td>${e(s.op)}</td>${types.map((t) => { const r = getRec(s.name, t.id); const st = credStatus(r); return `<td class="st ${st}">${st}${r?.expiry ? `<span class="d">exp ${e(fmtDate(r.expiry))}</span>` : ""}</td>`; }).join("")}</tr>`).join("");
+  const head = `<tr><th>${e(tNow("p8lrn.docColStaff"))}</th><th>${e(tNow("p8lrn.lcColLocation"))}</th>${types.map((t) => `<th>${e(credTypeName(t))}</th>`).join("")}</tr>`;
+  const body = staff.map((s) => `<tr><td><b>${e(s.name)}</b></td><td>${e(s.op)}</td>${types.map((t) => { const r = getRec(s.name, t.id); const st = credStatus(r); return `<td class="st ${st}">${e(credStatusWord(st))}${r?.expiry ? `<span class="d">${e(tNow("p8lrn.crExpDate", { date: fmtDate(r.expiry) }))}</span>` : ""}</td>`; }).join("")}</tr>`).join("");
   let docs = "";
-  if (withDocs) staff.forEach((s) => types.forEach((t) => { const r = getRec(s.name, t.id); const fd = data.get(`${s.name}|${t.id}`); if (r && fd) { const img = fd.startsWith("data:image"); docs += `<div class="doc"><div class="dh">${e(s.name)} — ${e(t.name)}${r.number ? " · " + e(r.number) : ""}${r.fileName ? ` · ${e(r.fileName)}` : ""}</div>${img ? `<img src="${fd}"/>` : `<object data="${fd}" type="application/pdf" class="pdfdoc"><iframe src="${fd}" class="pdfdoc"></iframe></object>`}</div>`; } }));
+  if (withDocs) staff.forEach((s) => types.forEach((t) => { const r = getRec(s.name, t.id); const fd = data.get(`${s.name}|${t.id}`); if (r && fd) { const img = fd.startsWith("data:image"); docs += `<div class="doc"><div class="dh">${e(s.name)} — ${e(credTypeName(t))}${r.number ? " · " + e(r.number) : ""}${r.fileName ? ` · ${e(r.fileName)}` : ""}</div>${img ? `<img src="${fd}"/>` : `<object data="${fd}" type="application/pdf" class="pdfdoc"><iframe src="${fd}" class="pdfdoc"></iframe></object>`}</div>`; } }));
   const certPages = courseCerts.map(({ data, templateId }) => `<div class="certpage">${renderCert(data, templateId)}</div>`).join("");
   const needFonts = courseCerts.length ? CERT_FONTS : "";
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Credential pack — ${e(provider)}</title>${needFonts}<style>
+  const html = `<!doctype html><html lang="${dl().split("-u-")[0]}" dir="${["ar", "ur"].includes(dl().slice(0, 2)) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${e(tNow("p8lrn.crPackTitle", { provider }))}</title>${needFonts}<style>
     body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:26px}
     h1{font-size:20px;margin:0 0 2px}.sub{color:#6b7086;font-size:12px;margin-bottom:16px}
     table{width:100%;border-collapse:collapse;font-size:11.5px}th{background:#f1f4fb;text-align:left;padding:7px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#6b7086;border-bottom:1px solid #e5e7f0}td{padding:7px 8px;border-top:1px solid #eef1f7;vertical-align:top}
@@ -170,7 +176,7 @@ export function exportCredsPack(params: {
     .doc{page-break-before:always;padding-top:16px}.dh{font-weight:700;font-size:14px;margin-bottom:8px;border-bottom:1px solid #e5e7f0;padding-bottom:6px}.doc img{max-width:100%;max-height:880px;border:1px solid #e5e7f0;border-radius:6px}.pdfdoc{display:block;width:100%;height:960px;border:1px solid #e5e7f0;border-radius:6px}
     .certpage{page-break-before:always;transform:scale(.82);transform-origin:top center}
     @media print{body{padding:0 6mm}}
-  </style></head><body><h1>${e(provider)} — Credential pack</h1><div class="sub">Generated ${new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" })} · ${staff.length} staff · ${types.length} credential${types.length === 1 ? "" : "s"}${withDocs ? " · with documents" : ""}${courseCerts.length ? ` · ${courseCerts.length} course certificate${courseCerts.length === 1 ? "" : "s"}` : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}${certPages}<script>window.onload=function(){setTimeout(function(){window.print()},${courseCerts.length ? 650 : 400})}</script></body></html>`;
+  </style></head><body><h1>${e(tNow("p8lrn.crPackTitle", { provider }))}</h1><div class="sub">${e(tNow("p8lrn.crGenerated", { date: new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }) }))}${e(tNow("p8lrn.crPackMeta", { s: staff.length, c: types.length }))}${withDocs ? e(tNow("p8lrn.crWithDocs")) : ""}${courseCerts.length ? e(tNow("p8lrn.crPackCerts", { n: courseCerts.length })) : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}${certPages}<script>window.onload=function(){setTimeout(function(){window.print()},${courseCerts.length ? 650 : 400})}</script></body></html>`;
   w.document.open(); w.document.write(html); w.document.close();
   })();
 }
@@ -206,7 +212,7 @@ export function useCredentials(seedStaff: { name: string; dbs: string; pfa: stri
     if (isDemoMode()) return;
     // Type names are edited as you type — save once they settle.
     if (typesTimer.current) clearTimeout(typesTimer.current);
-    typesTimer.current = setTimeout(() => { apiPut("/api/credentials/types", { types: t }).catch((e) => alert(`Couldn't save credential types: ${e instanceof Error ? e.message : "try again"}`)); }, 800);
+    typesTimer.current = setTimeout(() => { apiPut("/api/credentials/types", { types: t }).catch((e) => alert(tNow("p8lrn.crErrSaveTypes", { msg: e instanceof Error ? e.message : tNow("p8lrn.lcTryAgainLc") }))); }, 800);
   };
   const saveRecords = (r: CredRecord[]) => { setRecords(r); try { localStorage.setItem(CRED_RKEY, JSON.stringify(r)); } catch { /* ignore */ } };
   const upsertRecord = (r: CredRecord) => {
@@ -215,11 +221,11 @@ export function useCredentials(seedStaff: { name: string; dbs: string; pfa: stri
     void toServer(r)
       .then((body) => apiPut<ServerRec>(`/api/credentials/records/${encodeURIComponent(r.id)}`, body))
       .then((saved) => setRecords((cur) => cur.map((x) => (x.id === r.id ? fromServer(saved) : x))))
-      .catch((e) => alert(`Couldn't save the certificate: ${e instanceof Error ? e.message : "try again"}`));
+      .catch((e) => alert(tNow("p8lrn.crErrSaveCert", { msg: e instanceof Error ? e.message : tNow("p8lrn.lcTryAgainLc") })));
   };
   const deleteRecord = (id: string) => {
     saveRecords(records.filter((x) => x.id !== id));
-    if (!isDemoMode()) apiDel(`/api/credentials/records/${encodeURIComponent(id)}`).catch((e) => alert(`Couldn't delete the certificate: ${e instanceof Error ? e.message : "try again"}`));
+    if (!isDemoMode()) apiDel(`/api/credentials/records/${encodeURIComponent(id)}`).catch((e) => alert(tNow("p8lrn.crErrDeleteCert", { msg: e instanceof Error ? e.message : tNow("p8lrn.lcTryAgainLc") })));
   };
   const upsertType = (t: CredType) => saveTypes(types.some((x) => x.id === t.id) ? types.map((x) => (x.id === t.id ? t : x)) : [...types, t]);
   const deleteType = (id: string) => saveTypes(types.filter((x) => x.id !== id));
@@ -248,7 +254,7 @@ async function toServer(r: CredRecord): Promise<ServerRec> {
 const CHUNK = 480_000;
 async function uploadCredFile(staff: string, dataUrl: string, name: string): Promise<string> {
   const blob = await (await fetch(dataUrl)).blob();
-  if (blob.size > 15_000_000) throw new Error(`${name} is over 15MB`);
+  if (blob.size > 15_000_000) throw new Error(tNow("p8lrn.crErrOver15", { name }));
   const total = Math.max(1, Math.ceil(blob.size / CHUNK));
   const { id } = await apiPost<{ id: string }>("/api/onboarding/files", { staff, name, contentType: typeOf(Object.assign(blob, { name })), bytes: blob.size, total });
   const b64 = (part: Blob) => new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onload = () => { const u = String(rd.result); res(u.slice(u.indexOf(",") + 1)); }; rd.onerror = () => rej(rd.error); rd.readAsDataURL(part); });
@@ -270,7 +276,7 @@ export const blankRecord = (staff: string, typeId: string): CredRecord => ({ id:
 // open an uploaded certificate (data URL) in a new tab via a Blob URL
 export function openCredFile(dataUrl?: string) {
   if (!dataUrl || typeof window === "undefined") return;
-  if (dataUrl.startsWith(FILE_PREFIX)) { openFile(`/api/onboarding/files/${encodeURIComponent(dataUrl.slice(FILE_PREFIX.length))}`).catch((e) => alert(e instanceof Error ? e.message : "Couldn't open that file")); return; }
+  if (dataUrl.startsWith(FILE_PREFIX)) { openFile(`/api/onboarding/files/${encodeURIComponent(dataUrl.slice(FILE_PREFIX.length))}`).catch((e) => alert(e instanceof Error ? e.message : tNow("p8lrn.crErrOpenFile"))); return; }
   try {
     const [meta, b64] = dataUrl.split(","); const m = /:(.*?);/.exec(meta)?.[1] || "application/octet-stream";
     const bin = atob(b64); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
@@ -280,6 +286,7 @@ export function openCredFile(dataUrl?: string) {
 
 // ——— add / edit a record (used by staff + manager) ———
 export function CredEditor({ rec, types, lockStaff, staffList, onSave, onClose }: { rec: CredRecord; types: CredType[]; lockStaff?: boolean; staffList?: { name: string }[]; onSave: (r: CredRecord) => void; onClose: () => void }) {
+  const tr = useT();
   const [r, setR] = useState<CredRecord>(rec);
   const [staffQ, setStaffQ] = useState("");
   const [staffOpen, setStaffOpen] = useState(false);
@@ -292,58 +299,58 @@ export function CredEditor({ rec, types, lockStaff, staffList, onSave, onClose }
   return createPortal(
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{rec.issue || files.length ? "Edit certificate" : "Add certificate"}</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{rec.issue || files.length ? tr("p8lrn.crEditCert") : tr("p8lrn.crAddCertTitle")}</h3><button type="button" onClick={onClose} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
           {!lockStaff && (staffList && staffList.length ? (
-            <div className="relative"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Staff member</span>
-              <button type="button" onClick={() => { setStaffOpen((v) => !v); setStaffQ(""); }} className="flex w-full items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-start text-[13px] font-semibold text-[var(--ink)] hover:border-[#1d3a8f]">{r.staff || <span className="text-[var(--ink-3)]">Choose staff…</span>}<span className="text-[var(--ink-3)]">▾</span></button>
+            <div className="relative"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.cmpFldStaff")}</span>
+              <button type="button" onClick={() => { setStaffOpen((v) => !v); setStaffQ(""); }} className="flex w-full items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-start text-[13px] font-semibold text-[var(--ink)] hover:border-[#1d3a8f]">{r.staff || <span className="text-[var(--ink-3)]">{tr("p8lrn.crChooseStaff")}</span>}<span className="text-[var(--ink-3)]">▾</span></button>
               {staffOpen && (
                 <div className="absolute z-10 mt-1 max-h-[260px] w-full overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
-                  <input autoFocus value={staffQ} onChange={(e) => setStaffQ(e.target.value)} placeholder="Search name…" className="mb-1 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[#1d3a8f]" />
+                  <input autoFocus value={staffQ} onChange={(e) => setStaffQ(e.target.value)} placeholder={tr("p8lrn.crSearchName")} className="mb-1 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[#1d3a8f]" />
                   {opts.map((s) => <button key={s.name} type="button" onClick={() => { setR({ ...r, staff: s.name }); setStaffOpen(false); }} className={"block w-full truncate rounded-lg px-2.5 py-1.5 text-start text-[13px] font-semibold hover:bg-[var(--panel)] " + (s.name === r.staff ? "text-[#1d3a8f]" : "text-[var(--ink-2)]")}>{s.name === r.staff ? "✓ " : ""}{s.name}</button>)}
-                  {!opts.length && <div className="px-2.5 py-2 text-[12px] text-[var(--ink-3)]">No match.</div>}
+                  {!opts.length && <div className="px-2.5 py-2 text-[12px] text-[var(--ink-3)]">{tr("p8lrn.crNoMatch")}</div>}
                 </div>
               )}
             </div>
-          ) : <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Staff member</span><Input value={r.staff} onChange={(e) => setR({ ...r, staff: e.target.value })} className="w-full" /></label>)}
-          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Credential</span><Select value={r.typeId} onChange={(e) => setR({ ...r, typeId: e.target.value })} className="w-full">{types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></label>
+          ) : <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.cmpFldStaff")}</span><Input value={r.staff} onChange={(e) => setR({ ...r, staff: e.target.value })} className="w-full" /></label>)}
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcCredentialWord")}</span><Select value={r.typeId} onChange={(e) => setR({ ...r, typeId: e.target.value })} className="w-full">{types.map((t) => <option key={t.id} value={t.id}>{credTypeName(t)}</option>)}</Select></label>
           <div className="grid grid-cols-2 gap-2">
-            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Issued</span><Input type="date" value={r.issue ?? ""} onChange={(e) => setR({ ...r, issue: e.target.value })} onBlur={autoExpiry} className="w-full" /></label>
-            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Expires</span><Input type="date" value={r.expiry ?? ""} onChange={(e) => setR({ ...r, expiry: e.target.value })} className="w-full" /></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.cmpFldIssued")}</span><Input type="date" value={r.issue ?? ""} onChange={(e) => setR({ ...r, issue: e.target.value })} onBlur={autoExpiry} className="w-full" /></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.cmpFldExpires")}</span><Input type="date" value={r.expiry ?? ""} onChange={(e) => setR({ ...r, expiry: e.target.value })} className="w-full" /></label>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Issuing body</span><Input value={r.issuer ?? ""} onChange={(e) => setR({ ...r, issuer: e.target.value })} placeholder="e.g. St John Ambulance" className="w-full" /></label>
-            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Certificate no.</span><Input value={r.number ?? ""} onChange={(e) => setR({ ...r, number: e.target.value })} className="w-full" /></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.crIssuingBody")}</span><Input value={r.issuer ?? ""} onChange={(e) => setR({ ...r, issuer: e.target.value })} placeholder={tr("p8lrn.crPhIssuer")} className="w-full" /></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.crCertNo")}</span><Input value={r.number ?? ""} onChange={(e) => setR({ ...r, number: e.target.value })} className="w-full" /></label>
           </div>
           {type?.dbs && (
             <div className="rounded-lg bg-[var(--panel)] p-2.5">
-              <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">DBS details</div>
+              <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.crDbsDetails")}</div>
               <div className="grid grid-cols-2 gap-2">
-                <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase text-[var(--ink-3)]">Level</span><Select value={r.dbsLevel ?? "Enhanced"} onChange={(e) => setR({ ...r, dbsLevel: e.target.value })} className="w-full"><option>Basic</option><option>Standard</option><option>Enhanced</option><option>Enhanced + Barred</option></Select></label>
-                <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase text-[var(--ink-3)]">Update Service no. (optional)</span><Input value={r.dbsUpdateNo ?? ""} onChange={(e) => setR({ ...r, dbsUpdateNo: e.target.value })} placeholder="e.g. 0123456789" className="w-full" /></label>
+                <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase text-[var(--ink-3)]">{tr("p8lrn.crLevel")}</span><Select value={r.dbsLevel ?? "Enhanced"} onChange={(e) => setR({ ...r, dbsLevel: e.target.value })} className="w-full"><option>Basic</option><option>Standard</option><option>Enhanced</option><option>Enhanced + Barred</option></Select></label>
+                <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase text-[var(--ink-3)]">{tr("p8lrn.crUpdateNo")}</span><Input value={r.dbsUpdateNo ?? ""} onChange={(e) => setR({ ...r, dbsUpdateNo: e.target.value })} placeholder="e.g. 0123456789" className="w-full" /></label>
               </div>
-              <label className="mt-2 flex items-center gap-2 text-[12px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={!!r.dbsUpdate} onChange={(e) => setR({ ...r, dbsUpdate: e.target.checked })} /> Registered with the DBS Update Service</label>
+              <label className="mt-2 flex items-center gap-2 text-[12px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={!!r.dbsUpdate} onChange={(e) => setR({ ...r, dbsUpdate: e.target.checked })} /> {tr("p8lrn.crRegisteredUpdate")}</label>
             </div>
           )}
-          <div><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Certificate file{files.length > 1 ? ` · ${files.length} versions` : ""}</span>
+          <div><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.crCertFile")}{files.length > 1 ? tr("p8lrn.crVersionsN", { n: files.length }) : ""}</span>
             {files.length > 0 && (
               <div className="mb-2 space-y-1">
                 {files.map((f, i) => { const latest = i === files.length - 1; return (
                   <div key={i} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5">
                     <span className="truncate text-[12px] font-semibold text-[var(--ink-2)]">📎 {f.name}</span>
-                    {latest ? <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#0f7a43]">Current</span> : <span className="rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#64748b]">Older</span>}
+                    {latest ? <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#0f7a43]">{tr("p8lrn.crCurrent")}</span> : <span className="rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#64748b]">{tr("p8lrn.crOlder")}</span>}
                     {f.at && <span className="text-[10px] text-[var(--ink-3)]">{fmtDate(f.at.slice(0, 10))}</span>}
-                    <button type="button" onClick={() => openCredFile(f.data)} className="ms-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">View</button>
-                    <button type="button" title="Remove this version" onClick={() => removeFile(i)} className="text-[12px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
+                    <button type="button" onClick={() => openCredFile(f.data)} className="ms-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{tr("p8lrn.crView")}</button>
+                    <button type="button" title={tr("p8lrn.crRemoveVersion")} onClick={() => removeFile(i)} className="text-[12px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
                   </div>
                 ); })}
               </div>
             )}
-            <label className="inline-flex cursor-pointer items-center rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ {files.length ? "Upload new version" : "Upload"}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) addFile(f); e.target.value = ""; }} /></label>
-            {files.length > 1 && <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">A new upload is kept as a new version — older ones stay viewable here. The newest is used everywhere else.</p>}
+            <label className="inline-flex cursor-pointer items-center rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ {files.length ? tr("p8lrn.docUploadNew") : tr("p8lrn.crUpload")}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) addFile(f); e.target.value = ""; }} /></label>
+            {files.length > 1 && <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">{tr("p8lrn.crNewVersionNote")}</p>}
           </div>
         </div>
-        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!r.staff.trim() || !r.typeId} onClick={() => onSave({ ...r, updatedAt: iso(new Date()) })}>Save</Button></div>
+        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>{tr("p8lrn.gCancel")}</Button><Button variant="primary" disabled={!r.staff.trim() || !r.typeId} onClick={() => onSave({ ...r, updatedAt: iso(new Date()) })}>{tr("p8lrn.gSave")}</Button></div>
       </div>
     </div>, document.body);
 }
