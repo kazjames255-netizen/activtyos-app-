@@ -1,12 +1,16 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, currentLocaleCode } from "@/lib/i18n/format";
+import { isRTL } from "@/lib/i18n/config";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost, put as apiPut, setActAs } from "@/lib/api";
 import { getDefaultView, type PortalKey } from "@/lib/nav/config";
 import { useRealtime } from "@/lib/realtime";
 import { CategoryManager } from "./SupportInboxApp";
+import { useT } from "@/lib/i18n/provider";
+import { BRAND } from "@/lib/i18n/config";
+import { H, hq } from "./hqText";
 
 // ── Support review ───────────────────────────────────────────────────────────
 // The tracking side of HQ support: every thread (messages AND bugs) recollected
@@ -30,16 +34,16 @@ interface Review {
 
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), var(--hero-grad)";
 const STATUS_META = {
-  open: { label: "Open", bg: "#E8EEFD", fg: "#2f5fd0" },
-  in_progress: { label: "In progress", bg: "#FCF1DC", fg: "#F5A524" },
-  resolved: { label: "Resolved", bg: "#E2F6EC", fg: "#0f7a43" },
+  open: { label: H("Open"), bg: "#E8EEFD", fg: "#2f5fd0" },
+  in_progress: { label: H("In progress"), bg: "#FCF1DC", fg: "#F5A524" },
+  resolved: { label: H("Resolved"), bg: "#E2F6EC", fg: "#0f7a43" },
 } as const;
 const TIER_CHIP: Record<Tier, { label: string; bg: string; fg: string }> = {
-  freelancer: { label: "Freelancer", bg: "#E8EEFD", fg: "#2f5fd0" },
-  company: { label: "Company", bg: "#E8EEFD", fg: "#2f5fd0" },
-  franchise: { label: "Franchise", bg: "#E8EEFD", fg: "#2f5fd0" },
+  freelancer: { label: H("Freelancer"), bg: "#E8EEFD", fg: "#2f5fd0" },
+  company: { label: H("Company"), bg: "#E8EEFD", fg: "#2f5fd0" },
+  franchise: { label: H("Franchise"), bg: "#E8EEFD", fg: "#2f5fd0" },
 };
-const chipFor = (p: { tier: Tier; franchiseId: string | null }) => (p.tier === "franchise" && !p.franchiseId ? { label: "Head office", bg: "#E2F6EC", fg: "#0f7a43" } : TIER_CHIP[p.tier]);
+const chipFor = (p: { tier: Tier; franchiseId: string | null }) => (p.tier === "franchise" && !p.franchiseId ? { label: H("Head office"), bg: "#E2F6EC", fg: "#0f7a43" } : TIER_CHIP[p.tier]);
 const initials = (s: string) => (s.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
 const GRADS = ["linear-gradient(135deg,#2f5fd0,#2f5fd0)", "linear-gradient(135deg,#2f5fd0,#5aa0f0)", "linear-gradient(135deg,#274ba3,#2f5fd0)", "linear-gradient(135deg,#6d28d9,#5a3fd0)"];
 const grad = (s: string) => GRADS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
@@ -49,6 +53,7 @@ const selCls = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-
 interface Account { uid: string; email: string; role: string; portal: string; label: string }
 
 export function SupportReviewApp() {
+  useT(); // re-render on language change (labels are translated at render time)
   const router = useRouter();
   const [data, setData] = useState<Review | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -77,20 +82,21 @@ export function SupportReviewApp() {
   // the thread's email against the impersonatable accounts list.
   const openAccount = async (email: string) => {
     const acc = accounts.find((a) => a.email.toLowerCase() === email.toLowerCase());
-    if (!acc) { setErr(`No account found to open for ${email || "this thread"}.`); return; }
+    if (!acc) { setErr(hq("No account found to open for {who}.", { who: email || hq("this thread") })); return; }
     try {
       const r = await apiPost<{ uid: string; role: string; portal: string }>("/api/platform/impersonate", { uid: acc.uid });
       setActAs({ uid: acc.uid, label: acc.label, portal: r.portal, role: r.role });
       router.push(`/${r.portal}/${getDefaultView(r.portal as PortalKey)}`);
-    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn't open that account"); }
+    } catch (e) { setErr(e instanceof Error ? e.message : hq("Couldn’t open that account")); }
   };
 
   const run = (p: Promise<unknown>) => p.then(() => { setErr(null); load(); }).catch((e) => setErr(e instanceof Error ? e.message : String(e)));
   // A short, friendly note the provider sees when you choose to inform them.
   const STATUS_MSG: Record<ThreadStatus, string> = {
-    resolved: "Update from the ActivityOS team: we've marked this as resolved. Do reply if anything's still not right.",
-    in_progress: "Update from the ActivityOS team: we're on this now and will keep you posted.",
-    open: "Update from the ActivityOS team: we've reopened this and are taking another look.",
+    // Sent to the provider as message content (not UI chrome), so it stays as authored.
+    resolved: `Update from the ${BRAND} team: we've marked this as resolved. Do reply if anything's still not right.`,
+    in_progress: `Update from the ${BRAND} team: we're on this now and will keep you posted.`,
+    open: `Update from the ${BRAND} team: we've reopened this and are taking another look.`,
   };
   const setStatus = (id: string, status: ThreadStatus, inform: boolean) =>
     run(apiPut(`/api/platform/support/${id}`, { status }).then(() => (inform ? apiPost(`/api/platform/support/${id}/messages`, { body: STATUS_MSG[status] }) : null)));
@@ -133,14 +139,14 @@ export function SupportReviewApp() {
       <div className="overflow-hidden rounded-2xl text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex flex-wrap items-end justify-between gap-4 px-5 py-4">
           <div>
-            <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>Support review</h2>
-            <p className="mt-0.5 text-[12.5px] text-white/80">Every message &amp; bug, grouped by category with an AI read of the recurring concern — so trends are easy to track.</p>
+            <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>{hq("Support review")}</h2>
+            <p className="mt-0.5 text-[12.5px] text-white/80">{hq("Every message & bug, grouped by category with an AI read of the recurring concern — so trends are easy to track.")}</p>
           </div>
           {data && (
             <div className="flex gap-2">
-              <Stat label="Threads" value={data.totals.threads} />
-              <Stat label="Open" value={data.totals.open + data.totals.inProgress} />
-              <Stat label="Bugs" value={data.totals.bugs} />
+              <Stat label={hq("Threads")} value={data.totals.threads} />
+              <Stat label={hq("Open")} value={data.totals.open + data.totals.inProgress} />
+              <Stat label={hq("Bugs")} value={data.totals.bugs} />
             </div>
           )}
         </div>
@@ -149,37 +155,37 @@ export function SupportReviewApp() {
       {/* Action row */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => setManaging(true)} disabled={!catsLoaded}
-          className="rounded-full border disabled:opacity-50 border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:border-[#C6D0E6]">⚙︎ Manage categories</button>
+          className="rounded-full border disabled:opacity-50 border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:border-[#C6D0E6]">{hq("⚙︎ Manage categories")}</button>
         <button type="button" onClick={load}
-          className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:border-[#C6D0E6]">↻ Refresh</button>
+          className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:border-[#C6D0E6]">{hq("↻ Refresh")}</button>
         {(statusF !== "all" || catF !== "all" || provF !== "all") && (
           <button type="button" onClick={() => { setStatusF("all"); setCatF("all"); setProvF("all"); }}
-            className="rounded-full bg-[#FDE7EF] px-3.5 py-1.5 text-[12px] font-bold text-[#C81E5E] hover:bg-[#FDE7EF]">✕ Clear filters</button>
+            className="rounded-full bg-[#FDE7EF] px-3.5 py-1.5 text-[12px] font-bold text-[#C81E5E] hover:bg-[#FDE7EF]">{hq("✕ Clear filters")}</button>
         )}
-        <a href="/platform/messages" className="ms-auto rounded-full bg-[#2f5fd0] px-3.5 py-1.5 text-[12.5px] font-bold text-white hover:bg-[#2f5fd0]">← Back to inbox</a>
+        <a href="/platform/messages" className="ms-auto rounded-full bg-[#2f5fd0] px-3.5 py-1.5 text-[12.5px] font-bold text-white hover:bg-[#2f5fd0]">{isRTL(currentLocaleCode()) ? "→" : "←"} {hq("Back to inbox")}</a>
       </div>
 
       {/* Circular filter panel */}
       {data && (
         <div className="mt-4 rounded-3xl border border-[var(--line)] bg-[var(--surface)] p-5">
-          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Status</div>
+          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{hq("Status")}</div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <Circle size="lg" label="Everything" count={data.totals.threads} tone="ink" on={statusF === "all"} onClick={() => setStatusF("all")} />
-            <Circle size="lg" label="Open" count={data.totals.open + data.totals.inProgress} tone="blue" on={statusF === "open"} onClick={() => setStatusF("open")} />
-            <Circle size="lg" label="Resolved" count={data.totals.resolved} tone="green" on={statusF === "resolved"} onClick={() => setStatusF("resolved")} />
+            <Circle size="lg" label={hq("Everything")} count={data.totals.threads} tone="ink" on={statusF === "all"} onClick={() => setStatusF("all")} />
+            <Circle size="lg" label={hq("Open")} count={data.totals.open + data.totals.inProgress} tone="blue" on={statusF === "open"} onClick={() => setStatusF("open")} />
+            <Circle size="lg" label={hq("Resolved")} count={data.totals.resolved} tone="green" on={statusF === "resolved"} onClick={() => setStatusF("resolved")} />
             <span className="mx-1 hidden h-16 w-px bg-[var(--line)] sm:block" />
             <label className="flex items-center gap-1.5 text-[11.5px] font-bold text-[var(--ink-3)]">
-              Provider
-              <select value={provF} onChange={(e) => setProvF(e.target.value)} className={selCls} aria-label="Provider">
-                <option value="all">Everyone</option>
+              {hq("Provider")}
+              <select value={provF} onChange={(e) => setProvF(e.target.value)} className={selCls} aria-label={hq("Provider")}>
+                <option value="all">{hq("Everyone")}</option>
                 {provOptions.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             </label>
           </div>
 
-          <div className="mb-2 mt-5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Category</div>
+          <div className="mb-2 mt-5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{hq("Category")}</div>
           <div className="flex flex-wrap gap-x-5 gap-y-3">
-            <Circle emoji="🗂" label="All" count={data.totals.threads} tone="ink" on={catF === "all"} onClick={() => setCatF("all")} />
+            <Circle emoji="🗂" label={hq("All")} count={data.totals.threads} tone="ink" on={catF === "all"} onClick={() => setCatF("all")} />
             {data.categoryGroups.map((g) => (
               <Circle key={g.categoryId} emoji={g.emoji ?? "🗂"} label={g.label} count={g.count} tone="violet" on={catF === g.categoryId} onClick={() => setCatF(g.categoryId)} />
             ))}
@@ -190,23 +196,23 @@ export function SupportReviewApp() {
       {err && <div className="mt-3 rounded-xl border px-3.5 py-2 text-[12.5px] font-bold" style={{ borderColor: "#C81E5E", background: "#FDE7EF", color: "#C81E5E" }}>{err}</div>}
 
       {!data ? (
-        <div className="mt-8 text-center text-[12.5px] text-[var(--ink-3)]">Gathering the picture…</div>
+        <div className="mt-8 text-center text-[12.5px] text-[var(--ink-3)]">{hq("Gathering the picture…")}</div>
       ) : (
         <div className="mt-4 space-y-4">
           {/* AI overview */}
           {data.overview ? (
             <div className="rounded-2xl border border-[#E4E9F5] bg-[#E8EEFD] px-4 py-3">
-              <div className="mb-1 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#2f5fd0]">✦ AI overview</div>
+              <div className="mb-1 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#2f5fd0]">{hq("✦ AI overview")}</div>
               <p className="text-[13px] leading-relaxed text-[var(--ink)]">{data.overview}</p>
             </div>
           ) : !data.aiConfigured ? (
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-[12px] text-[var(--ink-3)]">
-              ✦ AI summaries are switched on once the model key is configured on the server — the grouped tracking below works regardless.
+              {hq("✦ AI summaries are switched on once the model key is configured on the server — the grouped tracking below works regardless.")}
             </div>
           ) : null}
 
           {groups.length === 0 ? (
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">{statusF === "all" ? "Nothing to review yet — messages and bug reports will collect here." : `No ${statusF} threads.`}</div>
+            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">{statusF === "all" ? hq("Nothing to review yet — messages and bug reports will collect here.") : statusF === "open" ? hq("No open threads.") : hq("No resolved threads.")}</div>
           ) : (
             groups.map((g) => {
               const isOpen = open.has(g.categoryId);
@@ -217,8 +223,8 @@ export function SupportReviewApp() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-[15px] font-extrabold">{g.label}</span>
-                        <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{g.count} {g.count === 1 ? "thread" : "threads"}</span>
-                        {g.open > 0 && <span className="rounded-full bg-[#E8EEFD] px-2 py-0.5 text-[11px] font-bold text-[#2f5fd0]">{g.open} open</span>}
+                        <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{hq("Threads: {n}", { n: g.count })}</span>
+                        {g.open > 0 && <span className="rounded-full bg-[#E8EEFD] px-2 py-0.5 text-[11px] font-bold text-[#2f5fd0]">{hq("Open: {n}", { n: g.open })}</span>}
                       </div>
                       {g.aiSummary && <p className="mt-0.5 truncate text-[12px] italic text-[var(--ink-2)]">✦ {g.aiSummary}</p>}
                     </div>
@@ -229,7 +235,7 @@ export function SupportReviewApp() {
                     <div className="border-t border-[var(--line)] px-4 py-3">
                       {g.aiSummary && (
                         <div className="mb-3 rounded-xl bg-[#E8EEFD] px-3 py-2 text-[12.5px] leading-relaxed text-[var(--ink)]">
-                          <span className="font-bold text-[#2f5fd0]">✦ Summary · </span>{g.aiSummary}
+                          <span className="font-bold text-[#2f5fd0]">{hq("✦ Summary")} · </span>{g.aiSummary}
                         </div>
                       )}
                       <div className="space-y-1.5">
@@ -265,6 +271,7 @@ function ManagedThread({ r, onStatus, onNote, onInform, onOpenAccount }: {
   onInform: (body: string) => void;
   onOpenAccount: () => void;
 }) {
+  useT();
   const [expanded, setExpanded] = useState(false);
   const [inform, setInform] = useState(false);   // false = Hide (internal) · true = Show (tell provider)
   const [note, setNote] = useState("");
@@ -278,44 +285,44 @@ function ManagedThread({ r, onStatus, onNote, onInform, onOpenAccount }: {
       <div className="flex flex-wrap items-center gap-2 px-2.5 py-2">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[9.5px] font-extrabold text-white" style={{ background: grad(r.providerName) }}>{initials(r.providerName)}</span>
         <span className="shrink-0 truncate text-[12.5px] font-extrabold">{r.providerName}</span>
-        <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: chip.bg, color: chip.fg }}>{chip.label}</span>
+        <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: chip.bg, color: chip.fg }}>{hq(chip.label)}</span>
         <span className="mx-0.5 h-3 w-px shrink-0 bg-[var(--line)]" />
-        <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: st.bg, color: st.fg }}>{st.label}</span>
+        <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: st.bg, color: st.fg }}>{hq(st.label)}</span>
         {r.ticket && <span className="shrink-0 rounded bg-[var(--panel)] px-1.5 py-0.5 font-mono text-[9.5px] font-bold text-[var(--ink-3)]">{r.ticket}</span>}
         <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{r.subject}</span>
-        {(r.notes?.length ?? 0) > 0 && <span className="shrink-0 text-[10.5px] text-[var(--ink-3)]" title="Internal notes">📝 {r.notes.length}</span>}
+        {(r.notes?.length ?? 0) > 0 && <span className="shrink-0 text-[10.5px] text-[var(--ink-3)]" title={hq("Internal notes")}>📝 {r.notes.length}</span>}
         <span className="shrink-0 text-[10.5px] text-[var(--ink-3)]">{fmtWhen(r.at)}</span>
         <button type="button" onClick={() => setExpanded((v) => !v)}
-          className="shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:border-[#C6D0E6]">{expanded ? "Close" : "Manage"}</button>
-        <button type="button" onClick={onOpenAccount} title="Open this account and see what they see"
-          className="shrink-0 rounded-full border border-[#E4E9F5] px-2 py-0.5 text-[10.5px] font-bold text-[#2f5fd0] hover:bg-[#EDE9FD]">🔎 Open account</button>
-        <a href={`/platform/messages?thread=${r.id}`} title="Open the full conversation"
-          className="shrink-0 text-[11px] font-bold text-[#2f5fd0] hover:underline">Thread ↗</a>
+          className="shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:border-[#C6D0E6]">{expanded ? hq("Close") : hq("Manage")}</button>
+        <button type="button" onClick={onOpenAccount} title={hq("Open this account and see what they see")}
+          className="shrink-0 rounded-full border border-[#E4E9F5] px-2 py-0.5 text-[10.5px] font-bold text-[#2f5fd0] hover:bg-[#EDE9FD]">{hq("🔎 Open account")}</button>
+        <a href={`/platform/messages?thread=${r.id}`} title={hq("Open the full conversation")}
+          className="shrink-0 text-[11px] font-bold text-[#2f5fd0] hover:underline">{hq("Thread")} ↗</a>
       </div>
 
       {expanded && (
         <div className="space-y-2.5 border-t border-[var(--line)] px-3 py-2.5">
           {/* Inform toggle — controls whether status changes & messages reach the provider. */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Provider updates</span>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{hq("Provider updates")}</span>
             <div className="inline-flex rounded-full border border-[var(--line)] p-0.5">
               <button type="button" onClick={() => setInform(false)}
-                className="rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors" style={!inform ? { background: "#6b6880", color: "#fff" } : { color: "var(--ink-3)" }}>🙈 Hide (internal)</button>
+                className="rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors" style={!inform ? { background: "#6b6880", color: "#fff" } : { color: "var(--ink-3)" }}>{hq("🙈 Hide (internal)")}</button>
               <button type="button" onClick={() => setInform(true)}
-                className="rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors" style={inform ? { background: "#0f7a43", color: "#fff" } : { color: "var(--ink-3)" }}>👁 Show (tell them)</button>
+                className="rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors" style={inform ? { background: "#0f7a43", color: "#fff" } : { color: "var(--ink-3)" }}>{hq("👁 Show (tell them)")}</button>
             </div>
-            <span className="text-[10.5px] text-[var(--ink-3)]">{inform ? "Status changes send the provider a note." : "Changes stay HQ-only."}</span>
+            <span className="text-[10.5px] text-[var(--ink-3)]">{inform ? hq("Status changes send the provider a note.") : hq("Changes stay HQ-only.")}</span>
           </div>
 
           {/* Status */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Status</span>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{hq("Status")}</span>
             {(["open", "resolved"] as ThreadStatus[]).map((s) => {
               const on = (s === "open" ? r.status !== "resolved" : r.status === "resolved"); const m = STATUS_META[s];
               return (
                 <button key={s} type="button" onClick={() => { if (!on) onStatus(s, inform); }}
                   className="rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors"
-                  style={on ? { background: m.fg, color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)" }}>{m.label}</button>
+                  style={on ? { background: m.fg, color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)" }}>{hq(m.label)}</button>
               );
             })}
           </div>
@@ -326,7 +333,7 @@ function ManagedThread({ r, onStatus, onNote, onInform, onOpenAccount }: {
               {r.notes.map((n) => (
                 <div key={n.id} className="rounded-lg bg-[var(--panel)] px-2.5 py-1.5">
                   <div className="text-[12px] text-[var(--ink)]">{n.text}</div>
-                  <div className="mt-0.5 text-[10px] text-[var(--ink-3)]">{n.byEmail ?? "HQ"} · {fmtWhen(n.at)}</div>
+                  <div className="mt-0.5 text-[10px] text-[var(--ink-3)]">{n.byEmail ?? hq("HQ")} · {fmtWhen(n.at)}</div>
                 </div>
               ))}
             </div>
@@ -336,10 +343,10 @@ function ManagedThread({ r, onStatus, onNote, onInform, onOpenAccount }: {
           <div className="flex items-end gap-2">
             <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={1}
               onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveNote(); } }}
-              placeholder="📝 Internal note (only your team sees this)…"
+              placeholder={hq("📝 Internal note (only your team sees this)…")}
               className="flex-1 resize-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] outline-none focus:border-[#C6D0E6]" />
             <button type="button" onClick={saveNote} disabled={!note.trim()}
-              className="rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] disabled:opacity-40">Add note</button>
+              className="rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] disabled:opacity-40">{hq("Add note")}</button>
           </div>
 
           {/* Message the provider — only when Show is on */}
@@ -347,10 +354,10 @@ function ManagedThread({ r, onStatus, onNote, onInform, onOpenAccount }: {
             <div className="flex items-end gap-2">
               <textarea value={msg} onChange={(e) => setMsg(e.target.value)} rows={1}
                 onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); sendMsg(); } }}
-                placeholder="👁 Message the provider (they'll see this)…"
+                placeholder={hq("👁 Message the provider (they’ll see this)…")}
                 className="flex-1 resize-none rounded-lg border border-[#E4E9F5] bg-[#E2F6EC] px-2.5 py-1.5 text-[12px] outline-none focus:border-[#0f7a43]" />
               <button type="button" onClick={sendMsg} disabled={!msg.trim()}
-                className="rounded-lg bg-[#0f7a43] px-2.5 py-1.5 text-[11.5px] font-bold text-white disabled:opacity-40">Send</button>
+                className="rounded-lg bg-[#0f7a43] px-2.5 py-1.5 text-[11.5px] font-bold text-white disabled:opacity-40">{hq("Send")}</button>
             </div>
           )}
         </div>

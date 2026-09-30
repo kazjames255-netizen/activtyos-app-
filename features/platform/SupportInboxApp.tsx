@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useT } from "@/lib/i18n/provider";
+import { H, hq } from "./hqText";
 
 // ── HQ Support & messages ───────────────────────────────────────────────────
 // One inbox where HQ talks to providers (by tier) and to a provider's customers
@@ -32,14 +34,14 @@ interface Thread {
 
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
 const TIERS: Record<Tier, { label: string; bg: string; fg: string }> = {
-  freelancer: { label: "Freelancer", bg: "#eef2fb", fg: "#3f5bb3" },
-  company: { label: "Company", bg: "#eaf0fc", fg: "#1d3a8f" },
-  franchise: { label: "Franchise", bg: "#efeaff", fg: "#6d28d9" },
+  freelancer: { label: H("Freelancer"), bg: "#eef2fb", fg: "#3f5bb3" },
+  company: { label: H("Company"), bg: "#eaf0fc", fg: "#1d3a8f" },
+  franchise: { label: H("Franchise"), bg: "#efeaff", fg: "#6d28d9" },
 };
 const SEV: Record<Report["severity"], { label: string; bg: string; fg: string }> = {
-  high: { label: "High", bg: "#fdebec", fg: "#c02636" },
-  medium: { label: "Medium", bg: "#fdf0e3", fg: "#a5670a" },
-  low: { label: "Low", bg: "#eef0f5", fg: "#6b6880" },
+  high: { label: H("High"), bg: "#fdebec", fg: "#c02636" },
+  medium: { label: H("Medium"), bg: "#fdf0e3", fg: "#a5670a" },
+  low: { label: H("Low"), bg: "#eef0f5", fg: "#6b6880" },
 };
 const GRADS = ["linear-gradient(135deg,#1d3a8f,#3f78d8)", "linear-gradient(135deg,#3f78d8,#5aa0f0)", "linear-gradient(135deg,#274ba3,#4f8bf5)", "linear-gradient(135deg,#6d28d9,#a855f7)"];
 const initials = (s: string) => (s.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
@@ -59,11 +61,12 @@ const tierOf = (p: Provider): Tier => ((p.subscription?.plan as string) === "fra
 
 type FilterId = "all" | Tier | "customers" | "bugs" | "resolved";
 const FILTERS: { id: FilterId; label: string }[] = [
-  { id: "all", label: "All" }, { id: "freelancer", label: "Freelancer" }, { id: "company", label: "Company" },
-  { id: "franchise", label: "Franchise" }, { id: "customers", label: "Customers" }, { id: "bugs", label: "🐞 Bugs" }, { id: "resolved", label: "Resolved" },
+  { id: "all", label: H("All") }, { id: "freelancer", label: H("Freelancer") }, { id: "company", label: H("Company") },
+  { id: "franchise", label: H("Franchise") }, { id: "customers", label: H("Customers") }, { id: "bugs", label: H("🐞 Bugs") }, { id: "resolved", label: H("Resolved") },
 ];
 
 export function SupportInboxApp() {
+  useT(); // re-render on language change (labels are translated at render time)
   const searchParams = useSearchParams();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [filter, setFilter] = useState<FilterId>("all");
@@ -130,13 +133,13 @@ export function SupportInboxApp() {
       <div className="overflow-hidden rounded-2xl text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex flex-wrap items-end justify-between gap-4 px-5 py-4">
           <div>
-            <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>Messages &amp; support</h2>
-            <p className="mt-0.5 text-[12.5px] text-white/80">Talk to providers and their customers, and triage reported bugs — all in one HQ inbox.</p>
+            <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>{hq("Messages & support")}</h2>
+            <p className="mt-0.5 text-[12.5px] text-white/80">{hq("Talk to providers and their customers, and triage reported bugs — all in one HQ inbox.")}</p>
           </div>
           <div className="flex gap-2">
-            <Stat label="Open" value={openCount} />
-            <Stat label="Unread" value={unreadCount} />
-            <Stat label="Open bugs" value={bugCount} />
+            <Stat label={hq("Open")} value={openCount} />
+            <Stat label={hq("Unread")} value={unreadCount} />
+            <Stat label={hq("Open bugs")} value={bugCount} />
           </div>
         </div>
       </div>
@@ -148,15 +151,15 @@ export function SupportInboxApp() {
             <button key={f.id} type="button" onClick={() => setFilter(f.id)}
               className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
               style={on ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
-              {f.label}
+              {hq(f.label)}
             </button>
           );
         })}
         <div className="ms-auto flex flex-wrap items-center gap-2">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, provider…"
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={hq("Search name, email, provider…")}
             className="w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
           <button type="button" onClick={() => setComposing(true)}
-            className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12.5px] font-bold text-white hover:bg-[#16306e]">✉️ New message</button>
+            className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12.5px] font-bold text-white hover:bg-[#16306e]">{hq("✉️ New message")}</button>
         </div>
       </div>
 
@@ -165,7 +168,7 @@ export function SupportInboxApp() {
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,360px)_1fr]">
         {/* Thread list */}
         <div className="flex flex-col gap-2">
-          {filtered.length === 0 && <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-8 text-center text-[12.5px] text-[var(--ink-3)]">No conversations here.</div>}
+          {filtered.length === 0 && <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-8 text-center text-[12.5px] text-[var(--ink-3)]">{hq("No conversations here.")}</div>}
           {filtered.map((t) => {
             const isSel = t.id === selId;
             const last = t.messages[t.messages.length - 1];
@@ -181,7 +184,7 @@ export function SupportInboxApp() {
                       {t.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-[#EE1F63]" />}
                     </div>
                     <div className="truncate text-[11px] text-[var(--ink-3)]">
-                      {t.party === "customer" ? <>Customer · via {t.providerName}</> : <>Provider</>}
+                      {t.party === "customer" ? hq("Customer · via {provider}", { provider: t.providerName }) : hq("Provider")}
                     </div>
                   </div>
                   <TierChip tier={t.tier} />
@@ -191,8 +194,8 @@ export function SupportInboxApp() {
                   <span className="truncate text-[12.5px] font-semibold">{t.subject}</span>
                 </div>
                 <div className="mt-0.5 flex items-center justify-between gap-2">
-                  <span className="truncate text-[11.5px] text-[var(--ink-3)]">{last?.from === "hq" ? "You: " : ""}{last?.body}</span>
-                  {t.status === "resolved" && <span className="shrink-0 rounded-full bg-[#e7f6ee] px-1.5 py-0.5 text-[10px] font-bold text-[#0f7a43]">Resolved</span>}
+                  <span className="truncate text-[11.5px] text-[var(--ink-3)]">{last?.from === "hq" ? `${hq("You")}: ` : ""}{last?.body}</span>
+                  {t.status === "resolved" && <span className="shrink-0 rounded-full bg-[#e7f6ee] px-1.5 py-0.5 text-[10px] font-bold text-[#0f7a43]">{hq("Resolved")}</span>}
                 </div>
               </button>
             );
@@ -202,7 +205,7 @@ export function SupportInboxApp() {
         {/* Conversation */}
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
           {!sel ? (
-            <div className="flex h-full min-h-[320px] items-center justify-center px-6 text-center text-[13px] text-[var(--ink-3)]">Pick a conversation to read and reply.</div>
+            <div className="flex h-full min-h-[320px] items-center justify-center px-6 text-center text-[13px] text-[var(--ink-3)]">{hq("Pick a conversation to read and reply.")}</div>
           ) : (
             <Conversation key={sel.id} t={sel} onReply={reply} onToggleResolved={toggleResolved} />
           )}
@@ -215,6 +218,7 @@ export function SupportInboxApp() {
 }
 
 function Conversation({ t, onReply, onToggleResolved }: { t: Thread; onReply: (b: string) => void; onToggleResolved: () => void }) {
+  useT();
   const [draft, setDraft] = useState("");
   const send = () => { const b = draft.trim(); if (!b) return; onReply(b); setDraft(""); };
   return (
@@ -227,27 +231,27 @@ function Conversation({ t, onReply, onToggleResolved }: { t: Thread; onReply: (b
               <span className="text-[15px] font-extrabold">{t.name}</span>
               <TierChip tier={t.tier} />
             </div>
-            <div className="text-[11.5px] text-[var(--ink-3)]">{t.email} · {t.party === "customer" ? `Customer of ${t.providerName}` : "Provider"}</div>
+            <div className="text-[11.5px] text-[var(--ink-3)]">{t.email} · {t.party === "customer" ? hq("Customer of {provider}", { provider: t.providerName }) : hq("Provider")}</div>
           </div>
         </div>
         <button type="button" onClick={onToggleResolved}
           className="rounded-full border px-3 py-1.5 text-[12px] font-bold"
           style={t.status !== "resolved" ? { borderColor: "#0f7a43", color: "#0f7a43" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
-          {t.status !== "resolved" ? "✓ Mark resolved" : "↩︎ Reopen"}
+          {t.status !== "resolved" ? hq("✓ Mark resolved") : hq("↩︎ Reopen")}
         </button>
       </div>
 
       {t.report && (
         <div className="mx-4 mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3.5 py-3">
           <div className="mb-1.5 flex items-center gap-2">
-            <span className="text-[12px] font-extrabold">🐞 Reported details</span>
-            <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: SEV[t.report.severity].bg, color: SEV[t.report.severity].fg }}>{SEV[t.report.severity].label}</span>
+            <span className="text-[12px] font-extrabold">{hq("🐞 Reported details")}</span>
+            <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: SEV[t.report.severity].bg, color: SEV[t.report.severity].fg }}>{hq(SEV[t.report.severity].label)}</span>
             <span className="text-[11px] text-[var(--ink-3)]">{t.report.channel}</span>
           </div>
           <dl className="grid grid-cols-[84px_1fr] gap-x-3 gap-y-1 text-[12px]">
-            <dt className="text-[var(--ink-3)]">Page</dt><dd className="font-semibold">{t.report.page}</dd>
-            <dt className="text-[var(--ink-3)]">Device</dt><dd className="font-semibold">{t.report.device}</dd>
-            <dt className="text-[var(--ink-3)]">Steps</dt><dd>{t.report.steps}</dd>
+            <dt className="text-[var(--ink-3)]">{hq("Page")}</dt><dd className="font-semibold">{t.report.page}</dd>
+            <dt className="text-[var(--ink-3)]">{hq("Device")}</dt><dd className="font-semibold">{t.report.device}</dd>
+            <dt className="text-[var(--ink-3)]">{hq("Steps")}</dt><dd>{t.report.steps}</dd>
           </dl>
         </div>
       )}
@@ -257,7 +261,7 @@ function Conversation({ t, onReply, onToggleResolved }: { t: Thread; onReply: (b
         {t.messages.map((m) => (
           <div key={m.id} className={"max-w-[78%] " + (m.from === "hq" ? "self-end" : "self-start")}>
             <div className={"rounded-2xl px-3.5 py-2 text-[13px] " + (m.from === "hq" ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink)]")}>{m.body}</div>
-            <div className={"mt-0.5 text-[10.5px] text-[var(--ink-3)] " + (m.from === "hq" ? "text-end" : "")}>{m.from === "hq" ? "HQ" : t.name.split(" ")[0]} · {fmtWhen(m.at)}</div>
+            <div className={"mt-0.5 text-[10.5px] text-[var(--ink-3)] " + (m.from === "hq" ? "text-end" : "")}>{m.from === "hq" ? hq("HQ") : t.name.split(" ")[0]} · {fmtWhen(m.at)}</div>
           </div>
         ))}
       </div>
@@ -265,16 +269,17 @@ function Conversation({ t, onReply, onToggleResolved }: { t: Thread; onReply: (b
       <div className="flex items-end gap-2 border-t border-[var(--line)] px-3 py-3">
         <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={2}
           onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } }}
-          placeholder="Write a reply…  (⌘/Ctrl + Enter to send)"
+          placeholder={hq("Write a reply…  (⌘/Ctrl + Enter to send)")}
           className="flex-1 resize-none rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#1d3a8f]" />
         <button type="button" onClick={send} disabled={!draft.trim()}
-          className="rounded-xl bg-[#1d3a8f] px-4 py-2 text-[13px] font-bold text-white disabled:opacity-40">Send</button>
+          className="rounded-xl bg-[#1d3a8f] px-4 py-2 text-[13px] font-bold text-white disabled:opacity-40">{hq("Send")}</button>
       </div>
     </div>
   );
 }
 
 function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onClose: () => void; onCreate: (id: string) => void }) {
+  useT();
   const [party, setParty] = useState<Party>("provider");
   const [tierFilter, setTierFilter] = useState<"all" | Tier>("all");
   const [providerId, setProviderId] = useState("");
@@ -316,7 +321,7 @@ function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onC
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-[var(--surface)] shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3.5 text-white" style={{ background: HERO }}>
-          <span className="text-[15px] font-extrabold">New message</span>
+          <span className="text-[15px] font-extrabold">{hq("New message")}</span>
           <button type="button" onClick={onClose} className="text-white/80 hover:text-white">✕</button>
         </div>
         <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto p-5">
@@ -324,41 +329,41 @@ function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onC
             {(["provider", "customer"] as Party[]).map((p) => (
               <button key={p} type="button" onClick={() => { setParty(p); setProviderId(""); }}
                 className="rounded-full px-4 py-1.5 text-[12.5px] font-bold capitalize"
-                style={party === p ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-2)" }}>{p === "provider" ? "To a provider" : "To a customer"}</button>
+                style={party === p ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-2)" }}>{p === "provider" ? hq("To a provider") : hq("To a customer")}</button>
             ))}
           </div>
 
           {party === "customer" && (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <Field label="Customer name"><input value={custName} onChange={(e) => setCustName(e.target.value)} className={inputCls} /></Field>
-              <Field label="Customer email"><input value={custEmail} onChange={(e) => setCustEmail(e.target.value)} className={inputCls} /></Field>
+              <Field label={hq("Customer name")}><input value={custName} onChange={(e) => setCustName(e.target.value)} className={inputCls} /></Field>
+              <Field label={hq("Customer email")}><input value={custEmail} onChange={(e) => setCustEmail(e.target.value)} className={inputCls} /></Field>
             </div>
           )}
 
           <div>
-            <span className="mb-1 block text-[11.5px] font-bold text-[var(--ink-3)]">{party === "provider" ? "Provider" : "Their provider"}</span>
+            <span className="mb-1 block text-[11.5px] font-bold text-[var(--ink-3)]">{party === "provider" ? hq("Provider") : hq("Their provider")}</span>
             {chosen ? (
               <div className="flex items-center justify-between gap-2 rounded-lg border border-[#1d3a8f] bg-[#eaf0fc] px-3 py-2">
                 <span className="flex items-center gap-2 text-[13px] font-bold text-[#1d3a8f]">
                   <span className="flex h-6 w-6 items-center justify-center rounded-md text-[10px] font-extrabold text-white" style={{ background: grad(chosen.name) }}>{initials(chosen.name)}</span>
                   {chosen.name} <TierChip tier={tierOf(chosen)} />
                 </span>
-                <button type="button" onClick={() => setProviderId("")} className="text-[12px] font-bold text-[#1d3a8f] underline">Change</button>
+                <button type="button" onClick={() => setProviderId("")} className="text-[12px] font-bold text-[#1d3a8f] underline">{hq("Change")}</button>
               </div>
             ) : (
               <>
                 <input value={provQuery} onChange={(e) => setProvQuery(e.target.value)} autoFocus
-                  placeholder={providers.length ? "Search providers by name or email…" : "Loading providers…"} className={inputCls} />
+                  placeholder={providers.length ? hq("Search providers by name or email…") : hq("Loading providers…")} className={inputCls} />
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {([["all", "All"], ["freelancer", "Freelancer"], ["company", "Company"], ["franchise", "Franchise"]] as [("all" | Tier), string][]).map(([id, label]) => (
+                  {([["all", H("All")], ["freelancer", H("Freelancer")], ["company", H("Company")], ["franchise", H("Franchise")]] as [("all" | Tier), string][]).map(([id, label]) => (
                     <button key={id} type="button" onClick={() => setTierFilter(id)}
                       className="rounded-full border px-3 py-1 text-[11.5px] font-bold"
-                      style={tierFilter === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
+                      style={tierFilter === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{hq(label)}</button>
                   ))}
                 </div>
                 <div className="mt-1.5 max-h-44 overflow-y-auto rounded-lg border border-[var(--line)]">
                   {list.length === 0 ? (
-                    <div className="px-3 py-4 text-center text-[12px] text-[var(--ink-3)]">{providers.length ? "No providers match." : "Loading…"}</div>
+                    <div className="px-3 py-4 text-center text-[12px] text-[var(--ink-3)]">{providers.length ? hq("No providers match.") : hq("Loading…")}</div>
                   ) : list.map((p) => (
                     <button key={p.id} type="button" onClick={() => setProviderId(p.id)}
                       className="flex w-full items-center gap-2 border-b border-[var(--line)] px-3 py-2 text-start last:border-0 hover:bg-[var(--panel)]">
@@ -375,13 +380,13 @@ function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onC
             )}
           </div>
 
-          <Field label="Subject"><input value={subject} onChange={(e) => setSubject(e.target.value)} className={inputCls} placeholder="What's this about?" /></Field>
-          <Field label="Message"><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className={inputCls} /></Field>
+          <Field label={hq("Subject")}><input value={subject} onChange={(e) => setSubject(e.target.value)} className={inputCls} placeholder={hq("What’s this about?")} /></Field>
+          <Field label={hq("Message")}><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className={inputCls} /></Field>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] px-5 py-3">
           {error && <span className="me-auto text-[12px] font-bold text-[#c02636]">{error}</span>}
-          <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-4 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button>
-          <button type="button" onClick={submit} disabled={!canSend || sending} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">{sending ? "Sending…" : "Send message"}</button>
+          <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-4 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">{hq("Cancel")}</button>
+          <button type="button" onClick={submit} disabled={!canSend || sending} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">{sending ? hq("Sending…") : hq("Send message")}</button>
         </div>
       </div>
     </div>
@@ -402,7 +407,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 function TierChip({ tier }: { tier: Tier }) {
   const s = TIERS[tier];
-  return <span className="shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: s.bg, color: s.fg }}>{s.label}</span>;
+  return <span className="shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: s.bg, color: s.fg }}>{hq(s.label)}</span>;
 }
 
 // ── Category manager ─────────────────────────────────────────────────────────
@@ -419,6 +424,7 @@ export function CategoryManager({
   onClose: () => void;
   onSaved: (c: SupportCategory[]) => void;
 }) {
+  useT();
   const [cats, setCats] = useState<SupportCategory[]>(categories.map((c) => ({ ...c })));
   const [saving, setSaving] = useState(false);
 
@@ -427,7 +433,7 @@ export function CategoryManager({
 
   const setAt = (i: number, patch: Partial<SupportCategory>) =>
     setCats((cs) => cs.map((c, j) => (j === i ? { ...c, ...patch } : c)));
-  const add = () => setCats((cs) => [...cs, { id: `cat-${Math.floor(Math.random() * 1e6)}`, label: "", emoji: "" }]);
+  const add = () => setCats((cs) => [...cs, { id: `cat-${Math.floor(Math.random() * 1e6)}`, label: H(""), emoji: "" }]);
   const remove = (i: number) => setCats((cs) => cs.filter((_, j) => j !== i));
 
   const save = async () => {
@@ -448,7 +454,7 @@ export function CategoryManager({
     <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/50 p-4 pt-[8vh]" onClick={onClose}>
       <div className="w-full max-w-[440px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_30px_70px_-30px_rgba(0,0,0,.7)]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-[16px] font-extrabold text-[var(--ink)]">Manage categories</h3>
+          <h3 className="text-[16px] font-extrabold text-[var(--ink)]">{hq("Manage categories")}</h3>
           <button type="button" onClick={onClose} className="text-[var(--ink-3)] hover:text-[var(--ink)]">✕</button>
         </div>
         <div className="flex flex-col gap-2">
@@ -456,16 +462,16 @@ export function CategoryManager({
             <div key={i} className="flex items-center gap-2">
               <input value={c.emoji || ""} onChange={(e) => setAt(i, { emoji: e.target.value })} placeholder="🙂" maxLength={4}
                 className="w-12 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-center text-[14px] outline-none" />
-              <input value={c.label} onChange={(e) => setAt(i, { label: e.target.value })} placeholder="Category name"
+              <input value={c.label} onChange={(e) => setAt(i, { label: e.target.value })} placeholder={hq("Category name")}
                 className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#C6D0E6]" />
-              <button type="button" onClick={() => remove(i)} className="px-1.5 text-[var(--ink-3)] hover:text-[#C81E5E]" title="Remove">✕</button>
+              <button type="button" onClick={() => remove(i)} className="px-1.5 text-[var(--ink-3)] hover:text-[#C81E5E]" title={hq("Remove")}>✕</button>
             </div>
           ))}
         </div>
-        <button type="button" onClick={add} className="mt-2.5 rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:border-[#C6D0E6]">+ Add category</button>
+        <button type="button" onClick={add} className="mt-2.5 rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:border-[#C6D0E6]">{hq("+ Add category")}</button>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-3.5 py-2 text-[13px] font-bold text-[var(--ink-2)]">Cancel</button>
-          <button type="button" onClick={save} disabled={saving} className="rounded-lg bg-[#2f5fd0] px-4 py-2 text-[13px] font-bold text-white disabled:opacity-40">{saving ? "Saving…" : "Save"}</button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-3.5 py-2 text-[13px] font-bold text-[var(--ink-2)]">{hq("Cancel")}</button>
+          <button type="button" onClick={save} disabled={saving} className="rounded-lg bg-[#2f5fd0] px-4 py-2 text-[13px] font-bold text-white disabled:opacity-40">{saving ? hq("Saving…") : hq("Save")}</button>
         </div>
       </div>
     </div>
