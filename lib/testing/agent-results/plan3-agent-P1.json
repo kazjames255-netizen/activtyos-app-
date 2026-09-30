@@ -176,10 +176,10 @@
   "agent": "plan3-P1"
  },
  "p3-p1-23": {
-  "verdict": "open",
+  "verdict": "info",
   "method": "browser",
-  "actual": "Regression run of related e2e specs after these changes: settings-scheduling (4), trips-consent, safeguarding accidents all pass. Four failures need triage: booking-lifecycle approval (API restart mid-run: 'fetch failed: other side closed'), coupons parent checkout (\u00a318.00 not visible; validate API returns off:2 correctly), dayops register (Collect stays disabled), safeguarding medication loop (the parent's Salbutamol was authorised against another tenant, v1BjePNHt9jtJnIRFReb, because the provider <select> index 0 is no longer the company; test-order contamination).",
-  "notes": "See entry 24 for the re-run.",
+  "actual": "Related e2e specs after these changes: settings-scheduling (4), trips-consent, safeguarding accidents, coupons (both), booking-lifecycle cancel + approval, dayops register/newsfeed/task all pass. Remaining failures were NOT caused by these changes: safeguarding 'medication consent loop' (provider <select> index 0 is now another tenant, so the dose is authorised against v1BjePNHt9jtJnIRFReb), dayops 'expired DBS' (freelancer session bounced to /login mid-run), and API restarts (tsx watch) while any agent commits a server file causing 'fetch failed: other side closed'.",
+  "notes": "See entries 26-27 for the two real defects found while triaging them.",
   "at": "2026-09-30",
   "agent": "plan3-P1"
  },
@@ -188,6 +188,70 @@
   "method": "api",
   "actual": "Negative/authorisation probes: staff/parent tokens cannot write operator resources (expenses, discounts, income, invoices, invites, listings, blocks, suppliers, purchasing all 403); freelancer token PUT/DELETE on company expense/discount/task ids is 404; parent /api/incidents is child-scoped and hides safeguarding unless shared; fuzzing 145 documented paths with empty/garbage bodies and junk query strings produced no 5xx apart from the Stripe-not-configured 503.",
   "notes": "Read-only + throwaway data; all created rows deleted.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-25": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "Head-office Finance (/company/finance overview) totalled future rows of a recurring expense/income (created up front, one per future date) and Pending bills as money already moved; 'Outstanding invoices' counted drafts and cancelled invoices. Finance & analytics 'Unpaid invoices' list showed cancelled/draft invoices.",
+  "notes": "HoFinanceApp: only rows dated <= today, Money out = paid only, owed = status 'sent' (server OWED rule); FinanceAnalyticsApp list/count = sent. Commit 40d5aa8c. Live-verified by e2e/ho-finance-window.spec.ts (poll converges on +137 out / +20 in; would never converge on the old totals).",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-26": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "Money out overview 'spent this month / year' tiles counted Pending bills while the header above them says Cash basis excludes them.",
+  "notes": "ExpensesApp tiles follow settings.money.basis. Commit b7a399f1, covered by ho-finance-window.spec.ts second test.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-27": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "Parent My bookings: the listing-detail effect depended on its own result state, so every response re-requested every listing still in flight. A family with ~65 past listings fired hundreds of GET /api/listings/:id, filled the browser's 6 sockets, and the refetch after 'Accept the place' queued 15s+ behind them - the card kept showing the offer although the server had confirmed it (waitlist loop e2e failed 3/3 with this).",
+  "notes": "Each listing is fetched once, live bookings first, 4 at a time. Commit 8c1fb95c. Trace evidence: /tmp/p1/tr3 trace (65 listing GETs twice, post-accept GET delayed to +14s). Re-run of the waitlist spec after the fix is in entry 28.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-28": {
+  "verdict": "info",
+  "method": "browser",
+  "actual": "Post-fix re-run of booking-lifecycle waitlist loop.",
+  "notes": "See final report / this entry updated when the run finished.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-29": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Adding a family (or re-importing a CSV) with an email already on the list created a second record and re-sent the sign-up invite; PUT/GET /api/meals/<anything> accepted a non-date and wrote a junk menu doc.",
+  "notes": "customers POST: 409 duplicate_family (email stored lower-case; import counts them as skipped). meals: real-day required. Commits e1ab1600, 3363b13e.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-30": {
+  "verdict": "open",
+  "method": "browser",
+  "actual": "Header tabs at 1024px wide with a franchise picked: scroll box is 0-84px so Bookings/Families are still clipped (fixed for 1280-1440).",
+  "notes": "Would need the tabs to collapse to icons under ~1200px.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-31": {
+  "verdict": "open",
+  "method": "browser",
+  "actual": "ExpensesApp 'OUT IN <year>' header/tiles include future-dated rows of a recurring expense (whole calendar year) - arguably 'planned', unlike the HO Finance page which now counts only what has happened.",
+  "notes": "Left; label semantics decision for the owner.",
+  "at": "2026-09-30",
+  "agent": "plan3-P1"
+ },
+ "p3-p1-32": {
+  "verdict": "open",
+  "method": "test",
+  "actual": "dayops.spec.ts register test was broken by da1e6543 (register refuses sign-in for a day more than a day ahead); fixed here by provisioning the listing with startToday.",
+  "notes": "Committed with the P1 work.",
   "at": "2026-09-30",
   "agent": "plan3-P1"
  }
