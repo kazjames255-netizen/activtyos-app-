@@ -4,7 +4,7 @@
 // Re-run any time; existing blocks are replaced in place (marked with data-aos-i18n).   node scripts/i18n-v2/inject.mjs
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, PAGES } from './convert.mjs';
+import { ROOT, PAGES, LEGAL } from './convert.mjs';
 
 export const VERSION = '1';
 export const LANGS = [['en', 'English'], ['ar', 'العربية'], ['ur', 'اردو'], ['pl', 'Polski'], ['ro', 'Română'], ['cy', 'Cymraeg'], ['bn', 'বাংলা'], ['pa', 'ਪੰਜਾਬੀ'], ['pt', 'Português'], ['es', 'Español'], ['fr', 'Français']];
@@ -20,9 +20,10 @@ for (const p of PAGES) {
   s = s.replace(vp[0], vp[0] + early);
   // selector
   if (s.includes('<div class="nav-cta">')) s = s.replace('<div class="nav-cta">', '<div class="nav-cta">' + sel);
-  else if (s.includes('</nav></div></header>')) s = s.replace('</nav></div></header>', '</nav>' + sel + '</div></header>');
+  else if (s.includes('</nav></div></header>')) s = s.replace('</nav></div></header>', sel + '</nav></div></header>');
   else throw new Error('no header slot ' + p);
   if (!/<title/.test(s)) s = s.replace(early, early + '<title>For parents — Activly</title>');
+  s = s.replace(/<body( data-aos-legal(="[^"]*")?)?>/, LEGAL.has(p) ? '<body data-aos-legal="legal">' : p === 'pricing' ? '<body data-aos-legal="pricing">' : '<body>');
   fs.writeFileSync(f, s);
 }
 console.log('injected', PAGES.length, 'pages');

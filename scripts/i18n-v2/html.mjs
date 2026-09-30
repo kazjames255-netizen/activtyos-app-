@@ -73,7 +73,7 @@ function readOpen(src, i) {
 }
 export const attr = (el, n) => { const a = el.attrs.find((x) => x.name === n); return a ? a.value : undefined; };
 
-const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“', mdash: '—', ndash: '–', hellip: '…', rarr: '→', larr: '←', middot: '·', times: '×', pound: '£', euro: '€', copy: '©', reg: '®', trade: '™', bull: '•', check: '✓', lsaquo: '‹', rsaquo: '›', laquo: '«', raquo: '»', uarr: '↑', darr: '↓', harr: '↔', deg: '°', eacute: 'é', shy: '­', thinsp: ' ', ensp: ' ', emsp: ' ', plusmn: '±', frac12: '½', sect: '§', para: '¶', checkmark: '✓', zwj: '‍' };
+const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“', mdash: '—', ndash: '–', hellip: '…', rarr: '→', larr: '←', middot: '·', times: '×', pound: '£', euro: '€', copy: '©', reg: '®', trade: '™', bull: '•', check: '✓', lsaquo: '‹', rsaquo: '›', laquo: '«', raquo: '»', uarr: '↑', darr: '↓', harr: '↔', deg: '°', eacute: 'é', shy: '­', thinsp: ' ', ensp: ' ', emsp: ' ', plusmn: '±', frac12: '½', sect: '§', para: '¶', checkmark: '✓', zwj: '‍', minus: '\u2212', acirc: '\u00e2', ccedil: '\u00e7', ecirc: '\u00ea', ntilde: '\u00f1', agrave: '\u00e0', egrave: '\u00e8', uuml: '\u00fc', ouml: '\u00f6', auml: '\u00e4', iacute: '\u00ed', oacute: '\u00f3', aacute: '\u00e1', uacute: '\u00fa' };
 export function decode(s) {
   return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z0-9]+);/gi, (m, e) => {
     if (e[0] === '#') { const c = e[1].toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); try { return String.fromCodePoint(c); } catch { return m; } }

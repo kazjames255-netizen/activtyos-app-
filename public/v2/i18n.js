@@ -91,7 +91,19 @@
     root.classList.remove('i18n-wait');
     cur = lang; window.__aosLang = lang;
     var sel = document.getElementById('aosLang'); if (sel && sel.value !== lang) sel.value = lang;
-    var ex = document.getElementById('aosLangNote'); if (ex) ex.hidden = false;
+    legalNote(lang);
+  }
+  // Translated legal/pricing pages carry a notice that the English version is the binding one.
+  function legalNote(lang) {
+    var kind = document.body && document.body.getAttribute('data-aos-legal');
+    var old = document.getElementById('aosLegalNote'); if (old) old.parentNode.removeChild(old);
+    if (!kind || lang === 'en') return;
+    var d = document.createElement('div'); d.id = 'aosLegalNote'; d.className = 'aos-legal-note'; d.setAttribute('role', 'note');
+    var t = document.createElement('span'); t.textContent = window.aosT(kind === 'pricing' ? 'js.pricing-notice' : 'js.legal-notice', kind === 'pricing' ? 'Translation notice: this page has been translated for your convenience. The English version is the authoritative version of our prices and plan terms and prevails if there is any difference.' : 'Translation notice: this page has been translated for your convenience only. The English version is the legally binding version and prevails if there is any difference between the two.');
+    var a = document.createElement('a'); a.href = '#'; a.textContent = window.aosT('js.legal-notice-link', 'Read the English version');
+    a.addEventListener('click', function (e) { e.preventDefault(); set('en'); });
+    d.appendChild(t); d.appendChild(document.createTextNode(' ')); d.appendChild(a);
+    var h = document.querySelector('header.nav'); if (h && h.parentNode) h.parentNode.insertBefore(d, h.nextSibling); else document.body.insertBefore(d, document.body.firstChild);
   }
   function loadEn() { return load('en'); }
   function go(lang, first) {
