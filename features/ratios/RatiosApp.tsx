@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } fro
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { peekMe } from "@/components/auth/PortalGuard";
 import { Button, Card } from "@/components/ui";
 import { OperatorPage } from "@/components/OperatorPage";
 import { useSettings, groupForAge, DEFAULT_RATIO_GROUPS, type RatioGroup } from "@/lib/settings";
@@ -727,6 +728,7 @@ export function RatiosApp() {
   const [staffLoaded, setStaffLoaded] = useState(false);
   const { settings, loading: settingsLoading } = useSettings();
   const { user } = useAuth();
+  const isStaffView = peekMe()?.role === "staff";
   const groups = settings.ratioGroups.length ? settings.ratioGroups : DEFAULT_RATIO_GROUPS;
 
   const refresh = useCallback(() => {
@@ -780,12 +782,13 @@ export function RatiosApp() {
   useEffect(() => {
     if (seededRef.current || !staffLoaded || settingsLoading) return;
     seededRef.current = true;
+    if (isStaffView) return; // a member of staff can't write the tenant library (403 → "Couldn't save your team") and isn't the account holder anyway
     if (staffLib.length > 0) return;
     const nm = (settings.providerName || user?.displayName || "").trim();
     if (!nm) return;
     const [first, ...rest] = nm.split(" ");
     saveStaff([{ id: HOLDER_ID, first, last: rest.join(" ") }]);
-  }, [staffLoaded, settingsLoading, staffLib, settings.providerName, user, saveStaff]);
+  }, [staffLoaded, settingsLoading, staffLib, settings.providerName, user, saveStaff, isStaffView]);
 
   const ready = loadedDate === date && sessions;
   // The picker lists every live listing. Fall back to whatever's running today
@@ -956,7 +959,7 @@ export function RatiosApp() {
       <PolicyTable groups={groups} />
 
       {/* Your team — add/manage staff, shared with the listing Staff step */}
-      <TeamManager staff={staffLib} onChange={saveStaff} holderId={HOLDER_ID} />
+      {!isStaffView && <TeamManager staff={staffLib} onChange={saveStaff} holderId={HOLDER_ID} />}
 
       {/* Cover by group board — the day-to-day workspace */}
       {!ready ? (
