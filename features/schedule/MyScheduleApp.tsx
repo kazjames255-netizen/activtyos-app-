@@ -16,6 +16,7 @@ import { getMe, peekMe } from "@/components/auth/PortalGuard";
 import { useT } from "@/lib/i18n/provider";
 import { Rich } from "@/features/setup/Rich";
 import { localTime, hmPad, roleLabel } from "./fmt";
+import { formatGBP } from "@/lib/i18n/format";
 import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
@@ -29,7 +30,7 @@ const ROTA_KEY = "aos.rota.v5";
 interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; date: string; start: string; end: string; in?: string; out?: string; note?: string; rate?: number; address?: string;
   /** Server-computed (GET /api/rota) — this person has approved leave covering the date. */
   staffOnLeave?: boolean; needsCover?: boolean }
-const money = (n: number) => `£${n.toFixed(2)}`;
+const money = (n: number) => formatGBP(n);
 interface Staff { id: string; name: string }
 const ROLE_COL: Record<string, string> = { "Lead Coach": "#2f6bd8", Lifeguard: "#0f857b", Coach: "#6366f1", "Activity Assistant": "#8b5cf6", "Activity Instructor": "#b45309", "First Aider": "#c06a10" };
 const roleCol = (r: string) => ROLE_COL[r] ?? "#64748b";
