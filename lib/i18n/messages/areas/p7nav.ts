@@ -5,7 +5,7 @@ export default fromRows({
   dashboard: ["Dashboard", "Pulpit", "Panou de control", "ڈیش بورڈ", "ਡੈਸ਼ਬੋਰਡ", "ড্যাশবোর্ড", "لوحة التحكم", "Painel", "Panel", "Tableau de bord", "Dangosfwrdd"],
   newsfeed: ["Newsfeed", "Aktualności", "Noutăți", "نیوز فیڈ", "ਨਿਊਜ਼ਫੀਡ", "নিউজফিড", "آخر الأخبار", "Novidades", "Novedades", "Fil d’actualité", "Ffrwd newyddion"],
   messages: ["Messages", "Wiadomości", "Mesaje", "پیغامات", "ਸੁਨੇਹੇ", "বার্তা", "الرسائل", "Mensagens", "Mensajes", "Messages", "Negeseuon"],
-  message_activityos: ["Message ActivityOS", "Napisz do ActivityOS", "Scrie-i ActivityOS", "ActivityOS کو پیغام بھیجیں", "ActivityOS ਨੂੰ ਸੁਨੇਹਾ ਭੇਜੋ", "ActivityOS-কে বার্তা পাঠান", "راسل ActivityOS", "Enviar mensagem à ActivityOS", "Escribir a ActivityOS", "Écrire à ActivityOS", "Neges i ActivityOS"],
+  message_activityos: ["Message {brand}", "Napisz do {brand}", "Scrie-i {brand}", "{brand} کو پیغام بھیجیں", "{brand} ਨੂੰ ਸੁਨੇਹਾ ਭੇਜੋ", "{brand}-কে বার্তা পাঠান", "راسل {brand}", "Enviar mensagem à {brand}", "Escribir a {brand}", "Écrire à {brand}", "Neges i {brand}"],
   email: ["Email", "E-mail", "E-mail", "ای میل", "ਈਮੇਲ", "ইমেইল", "البريد الإلكتروني", "E-mail", "Correo electrónico", "E-mail", "E-bost"],
   blocks_listings: ["Blocks & listings", "Bloki i oferty", "Blocuri și oferte", "بلاکس اور لسٹنگز", "ਬਲਾਕ ਅਤੇ ਲਿਸਟਿੰਗਾਂ", "ব্লক ও লিস্টিং", "الكتل والإعلانات", "Blocos e anúncios", "Bloques y anuncios", "Blocs et annonces", "Blociau a rhestrau"],
   blocks: ["Blocks", "Bloki", "Blocuri", "بلاکس", "ਬਲਾਕ", "ব্লক", "الكتل", "Blocos", "Bloques", "Blocs", "Blociau"],
