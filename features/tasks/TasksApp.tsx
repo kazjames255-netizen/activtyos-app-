@@ -437,7 +437,7 @@ export function TasksApp() {
         .map((p) => ({ name: displayName(p.name, p.email), email: (p.email ?? "").trim() }))))
       .catch(() => {});
   }, []);
-  useEffect(() => { if (portal === "platform") return; /* HQ has no tenant: /api/listings + /api/bookings 403 */ apiGet<{ id: string; title?: string; name?: string; location?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", location: x.location })))).catch(() => {}); }, [portal]);
+  useEffect(() => { if (portal === "platform") return; /* HQ has no tenant: /api/listings + /api/bookings 403 */ apiGet<{ id: string; title?: string; name?: string; location?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || tr("p7tk.linkListing"), location: x.location })))).catch(() => {}); }, [portal]);
   useEffect(() => { if (portal === "platform") return; apiGet<{ ref: string; booker?: string; email?: string; phone?: string; postcode?: string; child?: string; kids?: { name: string; age?: number }[]; listing?: string; pass?: string; dates?: string }[]>("/api/bookings").then((b) => setBookings(b)).catch(() => {}); }, [portal]);
   // HQ only: the sales pipeline, so a task can hang off a real lead.
   useEffect(() => {

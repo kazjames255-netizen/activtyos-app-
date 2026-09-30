@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { currentLocaleCode, dateLocale } from "@/lib/i18n/format";
 
 // Same narrator as the guided tours: Google UK English Female where available,
 // else the closest British female / en-GB voice.
@@ -34,7 +35,12 @@ export function useTts() {
 
   useEffect(() => {
     if (!supported) return;
-    const set = () => { voiceRef.current = pickBritishVoice(); };
+    // English keeps the British co-pilot voice; other languages look for a voice in the chosen language first.
+    const set = () => {
+      const code = currentLocaleCode();
+      const native = code !== "en" && typeof window !== "undefined" ? window.speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith(code)) : undefined;
+      voiceRef.current = native ?? pickBritishVoice();
+    };
     set();
     window.speechSynthesis.onvoiceschanged = set;
     return () => { window.speechSynthesis.onvoiceschanged = null; window.speechSynthesis.cancel(); };
@@ -75,7 +81,7 @@ export function useMic(onFinal: (text: string) => void) {
     const w = window as unknown as Record<string, new () => SpeechRecognitionLike>;
     const Rec = w.SpeechRecognition || w.webkitSpeechRecognition;
     const r = new Rec();
-    r.lang = "en-GB"; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+    r.lang = dateLocale().split("-u-")[0]; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
     let final = "";
     r.onresult = (e: SpeechRecognitionEventLike) => {
       let itr = "";

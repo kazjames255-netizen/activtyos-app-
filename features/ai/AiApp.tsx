@@ -8,6 +8,7 @@ import { peekMe } from "@/components/auth/PortalGuard";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import { RobotAvatar, type RobotState } from "./RobotAvatar";
 import { useMic, useTts } from "./voice";
+import { useT } from "@/lib/i18n/provider";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AI co-pilot — a conversational assistant with the ActivityOS robot as its
@@ -26,58 +27,39 @@ interface Chat { id: string; title: string; at: number; pinned?: boolean; msgs: 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 // ── Empty-state suggestion chips, grouped by job ──────────────────────────
-const STARTERS: Record<Kind, { label: string; icon: string; qs: string[] }[]> = {
-  operator: [
-    { label: "Today", icon: "📋", qs: ["Who's booked in today?", "Which sessions are running now?", "Is anyone not signed in yet?", "Are any allergies or SEND in today?"] },
-    { label: "Money", icon: "💷", qs: ["How much have I taken this week?", "Which families still owe money?", "What are my biggest expenses this month?", "Any invoices overdue?"] },
-    { label: "Bookings", icon: "🎫", qs: ["How full are my upcoming sessions?", "Any bookings awaiting approval?", "Which sessions still have spaces?", "How did bookings go this week?"] },
-    { label: "Children & safety", icon: "🛡️", qs: ["Who has SEND in today?", "Show me recent accidents or incidents", "How many children have a medical need on file?"] },
-    { label: "Marketing", icon: "📣", qs: ["Which listings are filling fastest?", "Which discount codes are live?", "Who are my top-spending families?", "How's my referral scheme doing?"] },
-    { label: "Running it", icon: "⚙️", qs: ["Anything low on stock?", "Any unread messages?", "How do I add a new listing?", "How do I turn on childcare vouchers?"] },
-  ],
-  staff: [
-    { label: "Today", icon: "📋", qs: ["Who's expected in today?", "Who hasn't been signed in?", "What sessions are running today and when?", "How many children are in right now?"] },
-    { label: "Children & safety", icon: "🛡️", qs: ["Any allergies in my group today?", "Who has SEND in today?", "How do I report a safeguarding concern?"] },
-    { label: "My day", icon: "✅", qs: ["What tasks are still open?", "Anything due today?", "How do I take the register?", "How do I clock in and out?"] },
-  ],
-  parent: [
-    { label: "My family", icon: "👨‍👩‍👧", qs: ["What have my children got coming up?", "When's my child's next session?", "Which providers am I signed up with?"] },
-    { label: "Money", icon: "💷", qs: ["Do I owe anything at the moment?", "Do I have any store credit?", "How do I pay what I owe?"] },
-    { label: "Managing", icon: "⚙️", qs: ["How do I book a new activity?", "How do I change or cancel a booking?", "How do I update my child's allergies?", "How do I give trip consent?"] },
-  ],
-  platform: [
-    { label: "Overview", icon: "📊", qs: ["How many providers are on the platform?", "How are bookings split by status?", "Who joined recently?"] },
-  ],
-  headoffice: [
-    { label: "Network", icon: "🌐", qs: ["How's the whole network performing this month?", "Which franchise is doing best?", "Which franchises need my attention?", "How many families across all franchises?"] },
-    { label: "Money & royalties", icon: "💷", qs: ["What's my total royalty income this month?", "How is network revenue trending?", "Which franchise brings in the most revenue?", "What are head office's biggest costs?"] },
-    { label: "Franchises", icon: "🏬", qs: ["Which franchises are live?", "Any territories awaiting approval?", "Which franchise has the most bookings?", "How is franchise onboarding going?"] },
-    { label: "Oversight", icon: "🛡️", qs: ["Any open safeguarding concerns across the network?", "Any incidents this week across franchises?", "Which franchises have overdue compliance?"] },
-  ],
+// Group shape per kind; the texts live in the p8lrn catalogue (aiGrp*, aiQ<kind><group><index>).
+const STARTER_SHAPE: Record<Kind, { g: string; icon: string; n: number }[]> = {
+  operator: [{ g: "aiGrpToday", icon: "📋", n: 4 }, { g: "aiGrpMoney", icon: "💷", n: 4 }, { g: "aiGrpBookings", icon: "🎫", n: 4 }, { g: "aiGrpSafety", icon: "🛡️", n: 3 }, { g: "aiGrpMarketing", icon: "📣", n: 4 }, { g: "aiGrpRunning", icon: "⚙️", n: 4 }],
+  staff: [{ g: "aiGrpToday", icon: "📋", n: 4 }, { g: "aiGrpSafety", icon: "🛡️", n: 3 }, { g: "aiGrpMyDay", icon: "✅", n: 4 }],
+  parent: [{ g: "aiGrpFamily", icon: "👨‍👩‍👧", n: 3 }, { g: "aiGrpMoney", icon: "💷", n: 3 }, { g: "aiGrpManaging", icon: "⚙️", n: 4 }],
+  platform: [{ g: "aiGrpOverview", icon: "📊", n: 3 }],
+  headoffice: [{ g: "aiGrpNetwork", icon: "🌐", n: 4 }, { g: "aiGrpRoyalties", icon: "💷", n: 4 }, { g: "aiGrpFranchises", icon: "🏬", n: 4 }, { g: "aiGrpOversight", icon: "🛡️", n: 3 }],
 };
+const KIND_SHORT: Record<Kind, string> = { operator: "op", staff: "st", parent: "pa", platform: "pl", headoffice: "ho" };
+const startersFor = (kind: Kind, t: (k: string) => string): { label: string; icon: string; qs: string[] }[] =>
+  STARTER_SHAPE[kind].map((grp, gi) => ({ label: t(`p8lrn.${grp.g}`), icon: grp.icon, qs: Array.from({ length: grp.n }, (_, qi) => t(`p8lrn.aiQ${KIND_SHORT[kind]}${gi}${qi}`)) }));
 
-const BRIEF_PROMPT = "Give me a short briefing of what needs my attention today — the most important two or three things only, in a friendly sentence or two.";
 
 // ── Jump-to-action deep-links inferred from an answer (operator/staff only) ──
 const INTENTS: { re: RegExp; icon: string; label: string; view: string }[] = [
-  { re: /\b(owe|owed|unpaid|outstanding|invoice|reconcile|voucher)\b/i, icon: "🧮", label: "Reconciliation", view: "reconciliation" },
-  { re: /\b(booking|booked|approval|waitlist|refund|cancel)\b/i, icon: "🎫", label: "Bookings", view: "bookings" },
-  { re: /\b(register|sign(ed)? in|attendance|on site|collected)\b/i, icon: "📋", label: "Register", view: "registers" },
-  { re: /\b(message|remind|contact|chase|email them)\b/i, icon: "✉️", label: "Message families", view: "messages" },
-  { re: /\b(task|to-?do|overdue task|due today)\b/i, icon: "✅", label: "Task manager", view: "tasks" },
-  { re: /\b(staff|rota|shift|workforce)\b/i, icon: "👷", label: "Schedule", view: "schedule" },
-  { re: /\b(dbs|certificate|compliance|expir|safeguard)\b/i, icon: "🛡️", label: "Compliance", view: "compliance" },
-  { re: /\b(revenue|income|payout|takings?|profit|finance)\b/i, icon: "💷", label: "Finance", view: "finance" },
-  { re: /\b(listing|spaces?|capacity|filling|places left)\b/i, icon: "🗂️", label: "Listings", view: "listings" },
+  { re: /\b(owe|owed|unpaid|outstanding|invoice|reconcile|voucher)\b/i, icon: "🧮", label: "p8lrn.aiInReconciliation", view: "reconciliation" },
+  { re: /\b(booking|booked|approval|waitlist|refund|cancel)\b/i, icon: "🎫", label: "p8lrn.aiInBookings", view: "bookings" },
+  { re: /\b(register|sign(ed)? in|attendance|on site|collected)\b/i, icon: "📋", label: "p8lrn.aiInRegister", view: "registers" },
+  { re: /\b(message|remind|contact|chase|email them)\b/i, icon: "✉️", label: "p8lrn.aiInMessages", view: "messages" },
+  { re: /\b(task|to-?do|overdue task|due today)\b/i, icon: "✅", label: "p8lrn.aiInTasks", view: "tasks" },
+  { re: /\b(staff|rota|shift|workforce)\b/i, icon: "👷", label: "p8lrn.aiInSchedule", view: "schedule" },
+  { re: /\b(dbs|certificate|compliance|expir|safeguard)\b/i, icon: "🛡️", label: "p8lrn.aiInCompliance", view: "compliance" },
+  { re: /\b(revenue|income|payout|takings?|profit|finance)\b/i, icon: "💷", label: "p8lrn.aiInFinance", view: "finance" },
+  { re: /\b(listing|spaces?|capacity|filling|places left)\b/i, icon: "🗂️", label: "p8lrn.aiInListings", view: "listings" },
 ];
 
 // Head office jumps to its own network screens, not the per-site operator ones.
 const HO_INTENTS: { re: RegExp; icon: string; label: string; view: string }[] = [
-  { re: /\b(royalty|royalties|split ?fees?|fees?)\b/i, icon: "％", label: "Split fees", view: "splitfees" },
-  { re: /\b(franchise|network|territory|territories|onboard|performing|best|worst|attention)\b/i, icon: "🏬", label: "Franchises", view: "franchise-overview" },
-  { re: /\b(revenue|income|finance|profit|expense|cost|takings?)\b/i, icon: "£", label: "Finance", view: "finance" },
-  { re: /\b(feature|turn on|turn off|module|switch)\b/i, icon: "🎛️", label: "Feature control", view: "franchise-features" },
-  { re: /\b(safeguard|incident|accident|medication|compliance|dbs)\b/i, icon: "🛡️", label: "Safeguarding", view: "incidents" },
+  { re: /\b(royalty|royalties|split ?fees?|fees?)\b/i, icon: "％", label: "p8lrn.aiInSplitFees", view: "splitfees" },
+  { re: /\b(franchise|network|territory|territories|onboard|performing|best|worst|attention)\b/i, icon: "🏬", label: "p8lrn.aiInFranchises", view: "franchise-overview" },
+  { re: /\b(revenue|income|finance|profit|expense|cost|takings?)\b/i, icon: "£", label: "p8lrn.aiInFinance", view: "finance" },
+  { re: /\b(feature|turn on|turn off|module|switch)\b/i, icon: "🎛️", label: "p8lrn.aiInFeatures", view: "franchise-features" },
+  { re: /\b(safeguard|incident|accident|medication|compliance|dbs)\b/i, icon: "🛡️", label: "p8lrn.aiInSafeguarding", view: "incidents" },
 ];
 
 function actionsFor(text: string, kind: Kind, portal: string) {
@@ -127,14 +109,14 @@ function detectAction(text: string): ActionDraft | null {
   return null;
 }
 
-function followupsFor(text: string): string[] {
-  const t = text.toLowerCase();
-  if (/\b(owe|unpaid|outstanding|invoice)\b/.test(t)) return ["Who owes the most?", "How long have these been outstanding?"];
-  if (/\b(booking|booked|session|spaces?)\b/.test(t)) return ["Break that down by listing", "How does this week compare to last?"];
-  if (/\b(register|sign|attendance|on site)\b/.test(t)) return ["Who hasn't been signed in?", "How many are on site right now?"];
-  if (/\b(staff|rota|shift|certificate)\b/.test(t)) return ["Who's off this week?", "Any certificates expiring soon?"];
-  if (/\b(revenue|income|money|payout|takings?)\b/.test(t)) return ["Compare to last month", "Which listing earns the most?"];
-  return ["Tell me more", "Break that down"];
+function followupsFor(text: string, t: (k: string) => string): string[] {
+  const low = text.toLowerCase();
+  if (/\b(owe|unpaid|outstanding|invoice)\b/.test(low)) return [t("p8lrn.aiFuOwe1"), t("p8lrn.aiFuOwe2")];
+  if (/\b(booking|booked|session|spaces?)\b/.test(low)) return [t("p8lrn.aiFuBook1"), t("p8lrn.aiFuBook2")];
+  if (/\b(register|sign|attendance|on site)\b/.test(low)) return [t("p8lrn.aiFuReg1"), t("p8lrn.aiFuReg2")];
+  if (/\b(staff|rota|shift|certificate)\b/.test(low)) return [t("p8lrn.aiFuStaff1"), t("p8lrn.aiFuStaff2")];
+  if (/\b(revenue|income|money|payout|takings?)\b/.test(low)) return [t("p8lrn.aiFuRev1"), t("p8lrn.aiFuRev2")];
+  return [t("p8lrn.aiFuMore"), t("p8lrn.aiFuBreak")];
 }
 
 // ── Lightweight markdown → nodes (bold, code, links, bullet + numbered lists) ─
@@ -178,15 +160,10 @@ function RichText({ text }: { text: string }) {
   return <div className="text-[13px] leading-relaxed">{blocks}</div>;
 }
 
-const GREETING: Record<Kind, string> = {
-  operator: "Hi — I'm your ActivityOS co-pilot. Ask me anything about your day and I'll read it straight from your live data.",
-  staff: "Hi — I'm your ActivityOS co-pilot. Ask me who's in, what's running, or what's still to do.",
-  parent: "Hi — I'm your ActivityOS assistant. Ask me about your bookings, what's coming up, or anything you owe.",
-  platform: "Hi — I'm your ActivityOS co-pilot. Ask me about providers, bookings and platform activity.",
-  headoffice: "Hi — I'm your head-office co-pilot. Ask me how the network's performing, how each franchise is doing, or about royalties, revenue and oversight across all your franchises.",
-};
+const GREETING_KEY: Record<Kind, string> = { operator: "p8lrn.aiGreetOperator", staff: "p8lrn.aiGreetStaff", parent: "p8lrn.aiGreetParent", platform: "p8lrn.aiGreetPlatform", headoffice: "p8lrn.aiGreetHeadOffice" };
 
 export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
+  const t = useT();
   const portal = (usePathname().split("/")[1] || "freelancer");
   // A head office viewing its whole network gets the head-office co-pilot (network
   // + franchise + royalty questions), not the per-site operator one.
@@ -276,15 +253,15 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
     try {
       if (pendingAction.kind === "task") {
         await post("/api/tasks", { t: pendingAction.title, ...(pendingAction.due ? { due: pendingAction.due } : {}) });
-        appendAssistant(`✅ Done — I've added the task "${pendingAction.title}"${pendingAction.due ? `, due ${pendingAction.due}` : ""} to your Task manager.`);
+        appendAssistant(t("p8lrn.aiDoneTask", { title: pendingAction.title, due: pendingAction.due ? t("p8lrn.aiDoneTaskDue", { date: pendingAction.due }) : "" }));
       } else {
         await post("/api/calendar-events", { title: pendingAction.title, date: pendingAction.date, ...(pendingAction.time ? { start: pendingAction.time } : { allDay: true }) });
-        appendAssistant(`✅ Done — "${pendingAction.title}" is now in your calendar on ${pendingAction.date}.`);
+        appendAssistant(t("p8lrn.aiDoneEvent", { title: pendingAction.title, date: pendingAction.date ?? "" }));
       }
       setPendingAction(null);
     } catch (e) { setActError((e as Error).message); }
     finally { setActBusy(false); }
-  }, [pendingAction, actBusy, appendAssistant]);
+  }, [pendingAction, actBusy, appendAssistant, t]);
 
   // Confirm a server-proposed action (backend tool-use) — the server executes
   // it and re-checks permissions; we just relay the receipt.
@@ -293,18 +270,19 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
     setActBusy(true); setActError(null);
     try {
       const r = await post<{ reply?: string }>("/api/ai/act", { id: proposed.id, tool: proposed.tool, args: proposed.args });
-      appendAssistant(r.reply ?? "✅ Done.");
+      appendAssistant(r.reply ?? t("p8lrn.aiDone"));
       setProposed(null);
     } catch (e) { setActError((e as Error).message); }
     finally { setActBusy(false); }
-  }, [proposed, actBusy, appendAssistant]);
+  }, [proposed, actBusy, appendAssistant, t]);
 
   const mic = useMic((t) => { if (handsFreeRef.current) void send(t); else setDraft((d) => (d ? d + " " : "") + t); });
   const micRef = useRef(mic);
   useEffect(() => { micRef.current = mic; });
 
   const robotState: RobotState = busy ? "thinking" : tts.speaking ? "talking" : mic.listening ? "listening" : "idle";
-  const status = busy ? "Thinking…" : tts.speaking ? "Speaking…" : mic.listening ? "Listening…" : "Ready when you are";
+  const status = busy ? t("p8lrn.aiStThinking") : tts.speaking ? t("p8lrn.aiStSpeaking") : mic.listening ? t("p8lrn.aiStListening") : t("p8lrn.aiStReady");
+  const starters = startersFor(kind, t);
 
   const [ideasOpen, setIdeasOpen] = useState(false);
   const newChat = () => { tts.cancel(); setMsgs([]); setDraft(""); setError(null); setPendingAction(null); setProposed(null); setActError(null); setChatId(uid()); setIdeasOpen(false); };
@@ -331,10 +309,10 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
       style={{ ...LIGHT_PALETTE, background: "radial-gradient(120% 80% at 0% 0%, rgba(63,120,216,.12) 0%, transparent 50%), radial-gradient(110% 70% at 100% 0%, rgba(127,208,255,.10) 0%, transparent 46%), linear-gradient(180deg,#eaf1fc 0%,#f5f8fd 45%,#f4f8ff 100%)" }}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="flex items-center gap-2 text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>AI co-pilot</h2>
-          <p className="text-[12px] text-[var(--ink-3)]">Answers from your live data · read-only, it points you to the right screen for actions</p>
+          <h2 className="flex items-center gap-2 text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8lrn.aiTitle")}</h2>
+          <p className="text-[12px] text-[var(--ink-3)]">{t("p8lrn.aiSub")}</p>
         </div>
-        <button type="button" onClick={newChat} className="rounded-full bg-white px-4 py-2 text-[12.5px] font-extrabold text-[#1d3a8f] shadow-sm ring-1 ring-[var(--line)] transition hover:-translate-y-px">＋ New chat</button>
+        <button type="button" onClick={newChat} className="rounded-full bg-white px-4 py-2 text-[12.5px] font-extrabold text-[#1d3a8f] shadow-sm ring-1 ring-[var(--line)] transition hover:-translate-y-px">{t("p8lrn.aiNewChat")}</button>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[290px_1fr]">
@@ -344,23 +322,23 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
             <RobotAvatar state={robotState} size={132} className="mx-auto" />
             <div className="mt-1.5 text-[13.5px] font-extrabold">{status}</div>
             <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-              {toggle(speakOn, speakOn ? "🔊 Voice on" : "🔊 Voice", () => { const nv = !speakOn; setSpeakOn(nv); if (!nv) { tts.cancel(); setHandsFree(false); } })}
-              {mic.supported && toggle(handsFree, "🎙 Hands-free", toggleHandsFree)}
+              {toggle(speakOn, speakOn ? t("p8lrn.aiVoiceOn") : t("p8lrn.aiVoice"), () => { const nv = !speakOn; setSpeakOn(nv); if (!nv) { tts.cancel(); setHandsFree(false); } })}
+              {mic.supported && toggle(handsFree, t("p8lrn.aiHandsFree"), toggleHandsFree)}
             </div>
             {(tts.speaking || busy) && (
-              <button type="button" onClick={() => { tts.cancel(); }} className="mt-2 rounded-full bg-white/12 px-3 py-1 text-[11px] font-bold text-white/90 hover:bg-white/20">■ Stop</button>
+              <button type="button" onClick={() => { tts.cancel(); }} className="mt-2 rounded-full bg-white/12 px-3 py-1 text-[11px] font-bold text-white/90 hover:bg-white/20">{t("p8lrn.aiStop")}</button>
             )}
           </div>
 
           <div className="hidden min-h-0 flex-1 flex-col rounded-2xl border border-[var(--line)] bg-white p-2 lg:flex">
-            <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Recent chats</div>
+            <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{t("p8lrn.aiRecentChats")}</div>
             <div className="min-h-0 flex-1 overflow-y-auto">
-              {sortedChats.length === 0 && <div className="px-2 py-3 text-[11.5px] text-[var(--ink-3)]">Your conversations will appear here.</div>}
+              {sortedChats.length === 0 && <div className="px-2 py-3 text-[11.5px] text-[var(--ink-3)]">{t("p8lrn.aiNoChats")}</div>}
               {sortedChats.map((c) => (
                 <div key={c.id} className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 ${c.id === chatId ? "bg-[var(--panel)] ring-1 ring-[var(--line)]" : "hover:bg-[var(--panel)]"}`}>
                   <button type="button" onClick={() => loadChat(c)} className="min-w-0 flex-1 truncate text-start text-[12px] font-semibold text-[var(--ink-2)]">{c.pinned ? "📌 " : ""}{c.title}</button>
-                  <button type="button" onClick={() => pinChat(c.id)} title="Pin" className="opacity-0 group-hover:opacity-100 text-[11px] text-[var(--ink-3)]">📌</button>
-                  <button type="button" onClick={() => delChat(c.id)} title="Delete" className="opacity-0 group-hover:opacity-100 text-[12px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>
+                  <button type="button" onClick={() => pinChat(c.id)} title={t("p8lrn.aiPin")} className="opacity-0 group-hover:opacity-100 text-[11px] text-[var(--ink-3)]">📌</button>
+                  <button type="button" onClick={() => delChat(c.id)} title={t("p8lrn.gDelete")} className="opacity-0 group-hover:opacity-100 text-[12px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>
                 </div>
               ))}
             </div>
@@ -373,13 +351,13 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
             {msgs.length === 0 ? (
               <div className="mx-auto max-w-[560px] pt-4">
                 <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center">
-                  <p className="text-[13.5px] font-semibold text-[var(--ink)]">{GREETING[kind]}</p>
+                  <p className="text-[13.5px] font-semibold text-[var(--ink)]">{t(GREETING_KEY[kind])}</p>
                   {(kind === "operator" || kind === "staff" || kind === "headoffice") && (
-                    <button type="button" onClick={() => void send(BRIEF_PROMPT)} className="mt-3 rounded-full px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{kind === "headoffice" ? "☀️ Brief me on the network" : "☀️ Brief me on today"}</button>
+                    <button type="button" onClick={() => void send(t("p8lrn.aiBriefPrompt"))} className="mt-3 rounded-full px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{kind === "headoffice" ? t("p8lrn.aiBriefNetwork") : t("p8lrn.aiBriefToday")}</button>
                   )}
                 </div>
                 <div className="mt-4 space-y-3">
-                  {STARTERS[kind].map((g) => (
+                  {starters.map((g) => (
                     <div key={g.label}>
                       <div className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{g.icon} {g.label}</div>
                       <div className="flex flex-wrap gap-1.5">
@@ -406,7 +384,7 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
                         {acts.length > 0 && (
                           <div className="mt-1.5 flex flex-wrap gap-1.5">
                             {acts.map((a) => (
-                              <a key={a.href} href={a.href} className="inline-flex items-center gap-1.5 rounded-full border border-[#cdddf7] bg-[#f2f7ff] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] no-underline transition hover:bg-[#e7f0ff]"><span>{a.icon}</span>{a.label}<span className="text-[#7fa8e8]">→</span></a>
+                              <a key={a.href} href={a.href} className="inline-flex items-center gap-1.5 rounded-full border border-[#cdddf7] bg-[#f2f7ff] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] no-underline transition hover:bg-[#e7f0ff]"><span>{a.icon}</span>{t(a.label)}<span className="text-[#7fa8e8] rtl:rotate-180 rtl:inline-block">→</span></a>
                             ))}
                           </div>
                         )}
@@ -415,36 +393,36 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
                   );
                 })}
                 {busy && (
-                  <div className="flex items-center gap-2.5"><RobotAvatar state="thinking" size={34} className="flex-none" /><div className="rounded-2xl rounded-bl-md border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[12.5px] text-[var(--ink-3)]">Reading your live data…</div></div>
+                  <div className="flex items-center gap-2.5"><RobotAvatar state="thinking" size={34} className="flex-none" /><div className="rounded-2xl rounded-bl-md border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[12.5px] text-[var(--ink-3)]">{t("p8lrn.aiReading")}</div></div>
                 )}
                 {pendingAction && (
                   <div className="flex items-start gap-2.5">
                     <RobotAvatar state="idle" size={34} className="mt-0.5 flex-none" />
                     <div className="w-full max-w-[420px] rounded-2xl rounded-bl-md border border-[#cdddf7] bg-[#f6faff] p-3">
-                      <div className="text-[12.5px] font-extrabold text-[#1d3a8f]">{pendingAction.kind === "task" ? "✅ Create this task?" : "🗓️ Add this to your calendar?"}</div>
-                      <label className="mt-2 block text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Title
+                      <div className="text-[12.5px] font-extrabold text-[#1d3a8f]">{pendingAction.kind === "task" ? t("p8lrn.aiCreateTaskQ") : t("p8lrn.aiAddCalQ")}</div>
+                      <label className="mt-2 block text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8lrn.docFldTitle")}
                         <input className="mt-0.5 w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] font-medium text-[var(--ink)] outline-none focus:border-[#2f6bd8]" value={pendingAction.title} onChange={(e) => setPendingAction((p) => (p ? { ...p, title: e.target.value } : p))} />
                       </label>
                       {pendingAction.kind === "task" ? (
-                        <label className="mt-2 block text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Due (optional)
+                        <label className="mt-2 block text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8lrn.aiDueOptional")}
                           <input type="date" className="mt-0.5 w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" value={pendingAction.due ?? ""} onChange={(e) => setPendingAction((p) => (p ? { ...p, due: e.target.value } : p))} />
                         </label>
                       ) : (
                         <div className="mt-2 flex gap-2">
-                          <label className="flex-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Date
+                          <label className="flex-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8lrn.aiFldDate")}
                             <input type="date" className="mt-0.5 w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" value={pendingAction.date ?? ""} onChange={(e) => setPendingAction((p) => (p ? { ...p, date: e.target.value } : p))} />
                           </label>
-                          <label className="flex-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Time (optional)
+                          <label className="flex-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8lrn.aiTimeOptional")}
                             <input type="time" className="mt-0.5 w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" value={pendingAction.time ?? ""} onChange={(e) => setPendingAction((p) => (p ? { ...p, time: e.target.value } : p))} />
                           </label>
                         </div>
                       )}
                       {actError && <div className="mt-2 rounded-md border border-[#f6c9cc] bg-[#fdebec] px-2 py-1 text-[11.5px] text-[#c02636]">{actError}</div>}
                       <div className="mt-2.5 flex items-center gap-2">
-                        <button type="button" onClick={() => void runAction()} disabled={actBusy || !pendingAction.title.trim() || (pendingAction.kind === "calendar" && !pendingAction.date)} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>{actBusy ? "Working…" : pendingAction.kind === "task" ? "Create task" : "Add event"}</button>
-                        <button type="button" onClick={() => { setPendingAction(null); setActError(null); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Cancel</button>
+                        <button type="button" onClick={() => void runAction()} disabled={actBusy || !pendingAction.title.trim() || (pendingAction.kind === "calendar" && !pendingAction.date)} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>{actBusy ? t("p8lrn.aiWorking") : pendingAction.kind === "task" ? t("p8lrn.aiCreateTaskBtn") : t("p8lrn.aiAddEventBtn")}</button>
+                        <button type="button" onClick={() => { setPendingAction(null); setActError(null); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{t("p8lrn.gCancel")}</button>
                       </div>
-                      <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">I only create it when you click — edit the details first if you like.</div>
+                      <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">{t("p8lrn.aiOnlyOnClick")}</div>
                     </div>
                   </div>
                 )}
@@ -452,14 +430,14 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
                   <div className="flex items-start gap-2.5">
                     <RobotAvatar state="idle" size={34} className="mt-0.5 flex-none" />
                     <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-[#cdddf7] bg-[#f6faff] p-3">
-                      <div className="text-[12.5px] font-extrabold text-[#1d3a8f]">Confirm this action?</div>
+                      <div className="text-[12.5px] font-extrabold text-[#1d3a8f]">{t("p8lrn.aiConfirmQ")}</div>
                       <div className="mt-1 text-[12.5px] leading-relaxed text-[var(--ink)]">{proposed.summary}</div>
                       {actError && <div className="mt-2 rounded-md border border-[#f6c9cc] bg-[#fdebec] px-2 py-1 text-[11.5px] text-[#c02636]">{actError}</div>}
                       <div className="mt-2.5 flex items-center gap-2">
-                        <button type="button" onClick={() => void confirmProposed()} disabled={actBusy} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>{actBusy ? "Working…" : "Yes, do it"}</button>
-                        <button type="button" onClick={() => { setProposed(null); setActError(null); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Cancel</button>
+                        <button type="button" onClick={() => void confirmProposed()} disabled={actBusy} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>{actBusy ? t("p8lrn.aiWorking") : t("p8lrn.aiYesDoIt")}</button>
+                        <button type="button" onClick={() => { setProposed(null); setActError(null); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{t("p8lrn.gCancel")}</button>
                       </div>
-                      <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Nothing happens until you confirm — the server runs it and checks you're allowed.</div>
+                      <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">{t("p8lrn.aiNothingUntil")}</div>
                     </div>
                   </div>
                 )}
@@ -472,7 +450,7 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
           {/* Follow-up chips */}
           {showFollowups && (
             <div className="flex flex-wrap gap-1.5 border-t border-[var(--line)] px-3 pt-2">
-              {followupsFor(last.content).map((f) => (
+              {followupsFor(last.content, t).map((f) => (
                 <button key={f} type="button" onClick={() => void send(f)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[11.5px] font-semibold text-[var(--ink-2)] transition hover:border-[#2f6bd8] hover:text-[var(--ink)]">{f}</button>
               ))}
             </div>
@@ -481,9 +459,9 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
           {/* Suggested questions — reachable at any point in a chat, via the 💡 button */}
           {ideasOpen && (
             <div className="max-h-[42vh] overflow-y-auto border-t border-[var(--line)] px-3 py-2.5">
-              <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Try asking</div>
+              <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">{t("p8lrn.aiTryAsking")}</div>
               <div className="flex flex-col gap-2.5">
-                {STARTERS[kind].map((g) => (
+                {starters.map((g) => (
                   <div key={g.label}>
                     <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">{g.icon} {g.label}</div>
                     <div className="flex flex-wrap gap-1.5">
@@ -499,11 +477,11 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
 
           {/* Composer */}
           <div className="flex items-end gap-2 border-t border-[var(--line)] p-2.5">
-            <button type="button" onClick={() => setIdeasOpen((o) => !o)} title="Suggested questions" aria-expanded={ideasOpen}
+            <button type="button" onClick={() => setIdeasOpen((o) => !o)} title={t("p8lrn.aiSuggested")} aria-expanded={ideasOpen}
               className="flex h-10 w-10 flex-none items-center justify-center rounded-full text-[16px] transition"
               style={ideasOpen ? { background: "#2f6bd8", color: "#fff" } : { background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>💡</button>
             {mic.supported && (
-              <button type="button" onClick={() => (mic.listening ? mic.stop() : mic.start())} title={mic.listening ? "Stop" : "Speak"}
+              <button type="button" onClick={() => (mic.listening ? mic.stop() : mic.start())} title={mic.listening ? t("p8lrn.aiStopMic") : t("p8lrn.aiSpeak")}
                 className="flex h-10 w-10 flex-none items-center justify-center rounded-full text-[16px] transition"
                 style={mic.listening ? { background: "#ee1f63", color: "#fff", boxShadow: "0 0 0 4px rgba(238,31,99,.18)" } : { background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>🎙</button>
             )}
@@ -511,11 +489,11 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
               value={mic.listening && mic.interim ? mic.interim : draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(draft); } }}
-              placeholder={mic.listening ? "Listening…" : "Ask about your day…  (Enter to send)"}
+              placeholder={mic.listening ? t("p8lrn.aiStListening") : t("p8lrn.aiPlaceholder")}
               rows={Math.min(5, Math.max(1, draft.split("\n").length))}
               className="max-h-[140px] min-h-[44px] flex-1 resize-none rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[13px] leading-[1.5] text-[var(--ink)] outline-none focus:border-[#2f6bd8]"
             />
-            <button type="button" onClick={() => void send(draft)} disabled={!draft.trim() || busy} className="h-10 flex-none rounded-full px-4 text-[13px] font-extrabold text-white transition disabled:opacity-40" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>Send</button>
+            <button type="button" onClick={() => void send(draft)} disabled={!draft.trim() || busy} className="h-10 flex-none rounded-full px-4 text-[13px] font-extrabold text-white transition disabled:opacity-40" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{t("p8lrn.gSend")}</button>
           </div>
         </div>
       </div>
