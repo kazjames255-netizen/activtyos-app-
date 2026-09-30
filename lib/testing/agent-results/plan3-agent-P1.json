@@ -216,10 +216,10 @@
   "agent": "plan3-P1"
  },
  "p3-p1-28": {
-  "verdict": "info",
+  "verdict": "pass",
   "method": "browser",
-  "actual": "Post-fix re-run of booking-lifecycle waitlist loop.",
-  "notes": "See final report / this entry updated when the run finished.",
+  "actual": "booking-lifecycle waitlist loop (waitlisted -> operator offers -> parent accepts -> Confirmed) failed 3/3 before the My bookings fetch fix and passes after it (30s).",
+  "notes": "e2e/booking-lifecycle.spec.ts -g waitlist, run through scripts/e2e-locked.sh.",
   "at": "2026-09-30",
   "agent": "plan3-P1"
  },
