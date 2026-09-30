@@ -7,7 +7,8 @@ import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n, useT } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
 import { Card } from "@/components/ui";
 import { Rich } from "@/components/i18n/Rich";
 
@@ -24,6 +25,7 @@ const RATING_KEYS = ["", "p8par.rateBad", "p8par.rateMeh", "p8par.rateGood", "p8
 
 export function FeedbackApp() {
   const t = useT();
+  const { locale } = useI18n();
   const sp = useSearchParams();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [mine, setMine] = useState<Feedback[]>([]);
@@ -107,7 +109,7 @@ export function FeedbackApp() {
           <label className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("parent.yourRating")}</label>
           <div className="flex items-center gap-1.5">
             {STARS.map((n) => (
-              <button key={n} type="button" onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(0)} onClick={() => setRating(n)} aria-label={`${n} star${n === 1 ? "" : "s"}`} className="text-[30px] leading-none transition-transform hover:scale-110" style={{ color: (hover || rating) >= n ? "#f5b301" : "#d9d5e4" }}>★</button>
+              <button key={n} type="button" onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(0)} onClick={() => setRating(n)} aria-label={pickPlural(t, locale, "p8par.starN", n)} className="text-[30px] leading-none transition-transform hover:scale-110" style={{ color: (hover || rating) >= n ? "#f5b301" : "#d9d5e4" }}>★</button>
             ))}
             <span className="ms-2 text-[12.5px] font-bold text-[var(--ink-2)]">{RATING_KEYS[hover || rating] ? t(RATING_KEYS[hover || rating]) : ""}</span>
           </div>

@@ -44,11 +44,11 @@ const fmtDay = (iso?: string) =>
   iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" }) : null;
 
 // The age band a listing accepts, worded for either or both ends being open.
-function agesLabel(l: ListingSummary): string | null {
+function agesLabel(l: ListingSummary, t: (k: string, v?: Record<string, string | number>) => string): string | null {
   const { ageFrom, ageTo } = l;
   if (ageFrom == null && ageTo == null) return null;
-  if (ageFrom != null && ageTo != null) return `Ages ${ageFrom}–${ageTo}`;
-  return ageFrom != null ? `Ages ${ageFrom}+` : `Up to age ${ageTo}`;
+  if (ageFrom != null && ageTo != null) return t("p8par.agesRange", { from: ageFrom, to: ageTo });
+  return ageFrom != null ? t("p8par.agesFrom", { from: ageFrom }) : t("p8par.agesUpTo", { to: ageTo ?? 0 });
 }
 
 // Its run window — earliest block start to latest block end.
@@ -587,7 +587,7 @@ export function BrowseApp() {
                 )}
                 {/* Best auto-offer as a corner ribbon (clipped by overflow-hidden). */}
                 {l.bestOfferPercent ? (
-                  <span className="absolute right-[-30px] top-[13px] rotate-[38deg] bg-[#e24b4a] px-8 py-[5px] text-[11px] font-extrabold text-white shadow-[0_4px_10px_rgba(0,0,0,.2)]">
+                  <span className="absolute end-[-30px] top-[13px] rotate-[38deg] rtl:-rotate-[38deg] bg-[#e24b4a] px-8 py-[5px] text-[11px] font-extrabold text-white shadow-[0_4px_10px_rgba(0,0,0,.2)]">
                     {t("parent.saveBadge", { n: l.bestOfferPercent })}
                   </span>
                 ) : null}
@@ -596,9 +596,9 @@ export function BrowseApp() {
                     <div className="truncate text-[15px] font-extrabold text-white">{l.title || l.name}</div>
                     <div className="truncate text-[11.5px] text-[#cdddf7]">{l.tenantName} · {t("parent.fromWord")} {money(from)} <span className="opacity-90">/ {priceBasis(l)}</span></div>
                   </div>
-                  {(agesLabel(l) || dateRange(l)) && (
+                  {(agesLabel(l, t) || dateRange(l)) && (
                     <div className="flex flex-none flex-col items-end gap-1">
-                      {agesLabel(l) && <span className="whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-[11px] font-extrabold text-[var(--brand)] shadow-sm">{agesLabel(l)}</span>}
+                      {agesLabel(l, t) && <span className="whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-[11px] font-extrabold text-[var(--brand)] shadow-sm">{agesLabel(l, t)}</span>}
                       {dateRange(l) && (() => { const rd = runDatesByMonth(l); return (
                         <span className="group/date relative whitespace-nowrap rounded-full bg-[#c9f24a] px-2 py-0.5 text-[11px] font-extrabold text-[#2a3400] shadow-sm">
                           📅 {dateRange(l)}

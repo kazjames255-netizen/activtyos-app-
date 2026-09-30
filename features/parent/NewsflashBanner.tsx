@@ -132,7 +132,7 @@ export function NewsflashBanner() {
               {/* underneath: see other newsfeeds */}
               <div className="flex flex-none items-center justify-between gap-2 border-t border-[var(--line)] bg-[var(--surface,#fff)] px-4 py-2.5">
                 <button type="button" onClick={() => setShown(null)} className="text-[12.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">{t("parent.closeText")}</button>
-                <button type="button" onClick={seeAll} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold text-white" style={{ background: color }}>{t("parent.seeOtherNewsfeeds")}{more > 0 ? t("parent.nMoreParen", { count: more }) : ""} →</button>
+                <button type="button" onClick={seeAll} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold text-white" style={{ background: color }}>{t("parent.seeOtherNewsfeeds")}{more > 0 ? t("parent.nMoreParen", { count: more }) : ""} <span className="inline-block rtl:-scale-x-100">→</span></button>
               </div>
             </div>
           </div>

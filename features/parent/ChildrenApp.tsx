@@ -737,7 +737,7 @@ export function ChildrenApp() {
                     <div className="min-w-0 flex-1">
                       <div className="text-[15.5px] font-extrabold leading-tight">{c.name}</div>
                       <div className="text-[11.5px] text-[var(--ink-3)]">
-                        {[c.age !== undefined ? `Age ${c.age}` : null, c.school].filter(Boolean).join(" · ") || t("parent.tapEditToAdd")}
+                        {[c.age !== undefined ? t("p8par.ageN", { n: c.age }) : null, c.school].filter(Boolean).join(" · ") || t("parent.tapEditToAdd")}
                       </div>
                     </div>
                     <div className="flex flex-none items-center gap-3 text-[12px] font-bold">

@@ -78,9 +78,9 @@ function AvailabilityCalendar({ available, taken, value, onPick }: { available: 
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
       <div className="mb-1.5 flex items-center justify-between">
-        <button type="button" disabled={!canPrev} onClick={() => step(-1)} className="rounded-md px-2 py-0.5 text-[15px] font-bold text-[var(--brand-2)] disabled:opacity-25">‹</button>
+        <button type="button" disabled={!canPrev} onClick={() => step(-1)} className="rounded-md px-2 py-0.5 text-[15px] font-bold text-[var(--brand-2)] disabled:opacity-25"><span className="inline-block rtl:-scale-x-100">‹</span></button>
         <span className="text-[12.5px] font-extrabold text-[var(--ink)]">{label}</span>
-        <button type="button" disabled={!canNext} onClick={() => step(1)} className="rounded-md px-2 py-0.5 text-[15px] font-bold text-[var(--brand-2)] disabled:opacity-25">›</button>
+        <button type="button" disabled={!canNext} onClick={() => step(1)} className="rounded-md px-2 py-0.5 text-[15px] font-bold text-[var(--brand-2)] disabled:opacity-25"><span className="inline-block rtl:-scale-x-100">›</span></button>
       </div>
       <div className="grid grid-cols-7 gap-0.5 text-center text-[9px] font-bold text-[var(--ink-3)]">
         {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => <div key={i}>{d}</div>)}
@@ -370,7 +370,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                             <div key={s.key}>
                               <div className="mb-1 text-[12px] font-semibold">
                                 {multiKid && <span className="text-[var(--ink-3)]">{s.childName}: </span>}
-                                {t("p7bk.moveWord")} <b>{fmtIso(s.date)}</b>{chosen ? <> → <b className="text-[var(--brand)]">{fmtIso(chosen)}</b></> : <span className="text-[var(--ink-3)]"> → {t("p7bk.chooseBelow")}</span>}
+                                {t("p7bk.moveWord")} <b>{fmtIso(s.date)}</b>{chosen ? <> <span className="inline-block rtl:-scale-x-100">→</span> <b className="text-[var(--brand)]">{fmtIso(chosen)}</b></> : <span className="text-[var(--ink-3)]"> <span className="inline-block rtl:-scale-x-100">→</span> {t("p7bk.chooseBelow")}</span>}
                               </div>
                               <AvailabilityCalendar available={moveDates} taken={taken} value={chosen} onPick={(iso) => setMoveTo((m) => ({ ...m, [s.key]: iso }))} />
                             </div>
@@ -724,7 +724,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
                       return (
                         <div key={iso} className="flex items-center gap-2 text-[12.5px]">
                           <span className="w-[120px] font-semibold">{fmtIso(iso)}</span>
-                          <span className="text-[var(--ink-3)]">→</span>
+                          <span className="text-[var(--ink-3)] inline-block rtl:-scale-x-100">→</span>
                           <select value={moves[iso] ?? ""} onChange={(e) => setMove(iso, e.target.value)}
                             className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px]" aria-label={t("parent.moveDateTo", { date: fmtIso(iso) })}>
                             <option value="">{t("parent.keepThisDate")}</option>
@@ -1002,7 +1002,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
             {approved.length > 0 && (
               <ul className="mt-1 flex flex-col gap-0.5">
                 {approved.map((m, i) => (
-                  <li key={i} className="font-semibold">{dcMultiChild && m.childName ? `${m.childName}: ` : ""}{fmtIso(m.from)} → <b>{fmtIso(m.to)}</b></li>
+                  <li key={i} className="font-semibold">{dcMultiChild && m.childName ? `${m.childName}: ` : ""}{fmtIso(m.from)} <span className="inline-block rtl:-scale-x-100">→</span> <b>{fmtIso(m.to)}</b></li>
                 ))}
               </ul>
             )}

@@ -14,7 +14,8 @@ import { uploadPlan } from "@/features/listings/planUpload";
 import { CHILD_LIMITS, ageOn } from "@/features/listings/checkout";
 import { useTenantSettings, questionsFor, dobRequired, limitFor } from "@/lib/settings";
 import { QuestionFields } from "@/components/QuestionFields";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n, useT } from "@/lib/i18n/provider";
+import { isRTL } from "@/lib/i18n/config";
 import { Rich } from "@/components/i18n/Rich";
 
 /**
@@ -168,6 +169,8 @@ function ContactPane({
   onBack: () => void;
 }) {
   const t = useT();
+  const { locale } = useI18n();
+  const fa = (s: string) => (isRTL(locale) ? s.replace(/[←→]/g, (c) => (c === "←" ? "→" : "←")) : s); // arrows point the other way in RTL
   const portalHref = usePortalHref();
   const digits = (phone ?? "").replace(/\D/g, "");
   // A UK mobile typed as 07… won't work on wa.me, which wants the country code.
@@ -187,7 +190,7 @@ function ContactPane({
           onClick={onBack}
           className="flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]"
         >
-          {t("customers.backArrow")}
+          {fa(t("customers.backArrow"))}
         </button>
         <b className="min-w-0 flex-1 truncate text-[13px] text-[var(--ink)]">{t("customers.contactName", { name })}</b>
       </div>
@@ -213,7 +216,7 @@ function ContactPane({
           <span className={dead}>{t("customers.noPhoneNumber")}</span>
         )}
         {email ? (
-          <a href={portalHref(`/messages?compose&emails=${encodeURIComponent(email)}&body=${encodeURIComponent(`Hi ${name.split(" ")[0] || "there"},\n\n`)}`)} className={item}>
+          <a href={portalHref(`/messages?compose&emails=${encodeURIComponent(email)}&body=${encodeURIComponent(`${name.split(" ")[0] ? t("p8par.msgHi", { name: name.split(" ")[0] }) : t("p8par.msgHiNoName")}\n\n`)}`)} className={item}>
             💌 <span className="min-w-0 flex-1 truncate">{t("customers.messageInApp")}</span>
           </a>
         ) : (
@@ -261,6 +264,8 @@ const splitName = (name: string) => {
 
 export function CustomersApp() {
   const t = useT();
+  const { locale } = useI18n();
+  const fa = (s: string) => (isRTL(locale) ? s.replace(/[←→]/g, (c) => (c === "←" ? "→" : "←")) : s);
   // Head office can open ONE franchise's families without leaving the HO view —
   // a ?franchiseId= param scopes the list (and ?fr= carries the name for the
   // banner). Empty = the caller's own full list.
@@ -1485,7 +1490,7 @@ export function CustomersApp() {
                     onClick={() => setContactId(c.id)}
                     className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]"
                   >
-                    {t("customers.contactArrow")}
+                    {fa(t("customers.contactArrow"))}
                   </button>
                   {canWrite && (c.email ?? "").includes("@") && (
                     <button
