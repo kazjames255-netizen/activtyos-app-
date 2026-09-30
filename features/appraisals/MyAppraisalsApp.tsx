@@ -39,7 +39,7 @@ export function MyAppraisalsApp() {
   const persist = (r: Review[]) => { setReviews(r); saveReviews(r); };
   const submitSelf = (r: Review) => {
     if (demo) { persist(reviews.map((x) => x.id === r.id ? r : x)); setSelf(null); flash(t("staffp.aprSubmitted")); return; }
-    submitSelfAssessment(r).then(() => { setReviews(loadReviews()); setSelf(null); flash(t("staffp.aprSubmitted")); }).catch((e) => flash(`⚠ ${e instanceof Error ? e.message : "Couldn't send it — try again"}`));
+    submitSelfAssessment(r).then(() => { setReviews(loadReviews()); setSelf(null); flash(t("staffp.aprSubmitted")); }).catch((e) => flash(`⚠ ${e instanceof Error ? e.message : t("p8wf.aprErrSend")}`));
   };
 
   const todo = mine.filter((r) => r.status !== "complete" && !r.self.done);
@@ -50,7 +50,7 @@ export function MyAppraisalsApp() {
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title={t("staffp.aprTitle")} icon="📋" lede={t("staffp.aprLede")} />
-      {loadErr && <Card className="mt-4 border-s-4 border-s-[#c0392b] p-3 text-[12.5px] font-semibold text-[#c0392b]">⚠ Couldn&rsquo;t load your appraisals — check your connection and reopen this page.</Card>}
+      {loadErr && <Card className="mt-4 border-s-4 border-s-[#c0392b] p-3 text-[12.5px] font-semibold text-[#c0392b]">{t("p8wf.aprLoadErrMine")}</Card>}
 
       {todo.length > 0 && (
         <Card className="mt-4 border-s-4 border-s-[#1d3a8f] p-4">

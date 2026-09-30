@@ -10,6 +10,7 @@
 // A member of staff's device only ever holds their own reviews. The seeded
 // reviews, notes, PIP and 9-box are the demo's only.
 import { DEMO_STAFF } from "@/features/learning/credentials";
+import { tNow } from "@/lib/i18n/provider";
 import { get as apiGet, post as apiPost, put as apiPut, isDemoMode } from "@/lib/api";
 import {
   type Review, type ReviewTemplate, type FeedbackNote, type PIP, type Talent, type Competency, type BoxDef,
@@ -58,7 +59,7 @@ function saveConfig(part: ConfigPart, v: unknown) {
   // Templates and the 9-box categories save as you type — once you pause.
   pendingConfig.set(part, setTimeout(() => {
     pendingConfig.delete(part);
-    apiPut("/api/appraisals/config", { [part]: v }).catch((e) => announce(e instanceof Error ? e.message : "Couldn't save that change"));
+    apiPut("/api/appraisals/config", { [part]: v }).catch((e) => announce(e instanceof Error ? e.message : tNow("p8wf.aprErrSave")));
   }, 600));
 }
 /** Staff: send my self-assessment (only that part of the review changes). */
@@ -110,12 +111,12 @@ export const saveReviews = (r: Review[]) => {
   write(RK, r);
   if (isDemoMode()) return;
   // Never diff against nothing — every cached review would read as new.
-  if (!serverReviews) { announce("Couldn't reach the server — that change isn't saved"); return; }
+  if (!serverReviews) { announce(tNow("p8wf.aprErrNoServer")); return; }
   const changed = r.filter((x) => serverReviews!.get(x.id) !== stable(x));
   if (!changed.length) return;
   void Promise.allSettled(changed.map((x) => apiPut(`/api/appraisals/reviews/${encodeURIComponent(x.id)}`, x))).then((res) => {
     const bad = res.find((x) => x.status === "rejected") as PromiseRejectedResult | undefined;
-    if (bad) announce(bad.reason instanceof Error ? bad.reason.message : "Couldn't save that change");
+    if (bad) announce(bad.reason instanceof Error ? bad.reason.message : tNow("p8wf.aprErrSave"));
     // Finish on the server's version — a refused change rolls back on screen.
     return syncAppraisals();
   });
