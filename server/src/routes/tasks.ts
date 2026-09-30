@@ -245,9 +245,15 @@ tasks.post("/", async (req, res) => {
   if (!bucketOf(auth) || !canUse(auth.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
   const parsed = taskSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  // A member of staff only ever sees tasks assigned to them, so a task they add with no assignee (Quick add without an @name, or "+ New task"
+  // left on Unassigned) used to vanish from their own list the moment it saved. Unassigned from staff means "mine".
+  const mine = auth.role === "staff" && !String(parsed.data.who ?? "").trim() && !String(parsed.data.whoEmail ?? "").trim()
+    ? { who: String((await db.collection("users").doc(req.user!.uid).get()).get("name") ?? "").trim() || (req.user?.email ?? ""), whoEmail: req.user?.email ?? undefined }
+    : {};
   const doc = {
     status: "todo", prio: "med", labels: [], subs: [], comments: [], atts: [], spawn: false, link: null, who: "", due: null,
     ...parsed.data,
+    ...mine,
     tenantId: bucketOf(auth), createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Staff", createdAt: new Date().toISOString(),
     // Which network this task belongs to. Head office and freelancers write
     // null; a franchisee's tasks are pinned to it so the GET can scope them.
