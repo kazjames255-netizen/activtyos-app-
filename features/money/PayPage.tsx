@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { money } from "@/features/bookings/helpers";
-import { useT } from "@/lib/i18n/provider";
+import { tNow, useT } from "@/lib/i18n/provider";
 
 interface PublicInvoice { provider: string; amount: number; description: string | null; reference: string | null; status: string; dueDate: string | null; customerName: string | null; payMethods: string[]; cardEnabled: boolean; closed?: boolean; paidAt?: string | null }
 interface CheckoutInfo { paymentId: string; clientSecret: string; stripeAccount: string | null; amount: number }
@@ -19,7 +19,7 @@ const fmtDay = (iso?: string | null) => (iso ? new Date(`${iso}T00:00:00Z`).toLo
 async function publicPost<T>(path: string): Promise<T> {
   const r = await fetch(`${API}${path}`, { method: "POST", headers: { "content-type": "application/json" } });
   const body = await r.json().catch(() => null);
-  if (!r.ok) throw new Error((body as { error?: string })?.error ?? "Request failed");
+  if (!r.ok) throw new Error((body as { error?: string })?.error ?? tNow("p8fin.payReqFailed"));
   return body as T;
 }
 

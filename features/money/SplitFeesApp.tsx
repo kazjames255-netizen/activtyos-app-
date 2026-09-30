@@ -7,7 +7,8 @@ import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { MoneyMovesNote } from "@/features/franchise/FranchiseRoyaltiesApp";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n, useT } from "@/lib/i18n/provider";
+import { isRTL } from "@/lib/i18n/config";
 
 interface Settings { basis: "revenue" | "perBooking"; rate?: number; perBookingFee?: number }
 interface Row { franchiseId: string; name: string; count: number; revenue: number; collected: number; fee: number }
@@ -94,6 +95,7 @@ const PRESETS: [string, string][] = [["1m", "split1m"], ["3m", "split3m"], ["6m"
 
 export function SplitFeesApp() {
   const t = useT();
+  const arrow = isRTL(useI18n().locale) ? "←" : "→";
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [edit, setEdit] = useState(false);
@@ -128,7 +130,7 @@ export function SplitFeesApp() {
 
   const basisLabel = data.settings.basis === "perBooking" ? t("money.splitPerBooking", { amount: money(data.settings.perBookingFee ?? 0) }) : t("money.splitPctOfRevenue", { rate: data.settings.rate ?? 0 });
   const windowKey = PRESETS.find(([k]) => k === period)?.[1];
-  const windowLabel = custom ? `${from} → ${to}` : (windowKey ? t(`money.${windowKey}`) : "");
+  const windowLabel = custom ? `${from} ${arrow} ${to}` : (windowKey ? t(`money.${windowKey}`) : "");
 
   return (
     <div className="text-[var(--ink)]">
@@ -147,7 +149,7 @@ export function SplitFeesApp() {
         <div className="flex items-center gap-1.5">
           <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("money.splitCustom")}</span>
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] outline-none focus:border-[#2f6bd8]" />
-          <span className="text-[var(--ink-3)]">→</span>
+          <span className="text-[var(--ink-3)]">{arrow}</span>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] outline-none focus:border-[#2f6bd8]" />
           {custom && <button type="button" onClick={() => { setFrom(""); setTo(""); }} className="text-[11.5px] font-bold text-[#2f6bd8] hover:underline">{t("money.splitClear")}</button>}
         </div>

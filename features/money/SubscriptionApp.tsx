@@ -10,6 +10,7 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useT } from "@/lib/i18n/provider";
+import { BRAND } from "@/lib/i18n/config";
 
 // The platform's own Stripe account (plan fees) — NOT a provider's connected
 // account (those live in PayPage/PayModal for parents paying providers).
@@ -313,7 +314,7 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
           <div className="overflow-hidden rounded-2xl text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
             <div className="px-6 py-6 sm:px-8">
               <div className="flex items-center justify-between gap-3">
-                <div className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span style={{ color: "#fff" }}>Activity</span><span style={{ color: "#EE1F63" }}>OS</span></div>
+                <div className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span style={{ color: "#fff" }}>{BRAND.replace(/OS$/, "")}</span><span style={{ color: "#EE1F63" }}>{BRAND.endsWith("OS") ? "OS" : ""}</span></div>
                 <button type="button" onClick={async () => { await signOutUser(); router.replace("/login"); }} className="rounded-full border border-white/30 bg-white/10 px-3.5 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-white/20">{t("money.subLogOut")}</button>
               </div>
               <div className="mt-3 text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>{t("money.subAlmostThere")}</div>
@@ -532,12 +533,13 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
 /** The plan belongs to the account holder. A franchise's team sits on head office's plan and the API refuses it the
  *  subscription, so its (hidden) /franchise/subscription route explains that instead of showing a raw error. */
 export function SubscriptionApp(props: { gate?: boolean; onStarted?: () => void } = {}) {
+  const t = useT();
   const pathname = usePathname();
   if (!props.gate && portalOf(pathname) === "franchise") {
     return (
       <div className="mx-auto max-w-[560px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 text-[13px] text-[var(--ink-2)]">
-        <div className="mb-1 text-[16px] font-extrabold text-[var(--ink)]">Your head office manages the plan</div>
-        Your franchise and its team run on your head office&rsquo;s ActivityOS plan, so there&rsquo;s no subscription to manage here.
+        <div className="mb-1 text-[16px] font-extrabold text-[var(--ink)]">{t("p8fin.subFranchiseTitle")}</div>
+        {t("p8fin.subFranchiseBody", { brand: BRAND })}
       </div>
     );
   }

@@ -7,7 +7,8 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { Tile, GRAD, money } from "@/features/money/finance-kit";
-import { useT, useWord } from "@/lib/i18n/provider";
+import { useI18n, useT, useWord } from "@/lib/i18n/provider";
+import { isRTL } from "@/lib/i18n/config";
 import { rich } from "@/features/money/rich";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -552,6 +553,7 @@ const VIA_KEY: Record<string, string> = { card: "p8fin.recViaCard", wallet: "p8f
 // From/To dates are set, those win — the same range as the ledger below.
 function RefundsPanel({ rows, from, to }: { rows: RefundRow[]; from: string; to: string }) {
   const t = useT();
+  const arrow = isRTL(useI18n().locale) ? "←" : "→";
   const w = useWord();
   const [all, setAll] = useState(false);
   // The UK day, like the server's "today".
@@ -582,7 +584,7 @@ function RefundsPanel({ rows, from, to }: { rows: RefundRow[]; from: string; to:
             <div key={`${r.ref}-${i}`} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-4 py-2 text-[12.5px]">
               <span className="w-[92px] text-[11.5px] text-[var(--ink-3)]">{r.date ? fmt(r.date) : t("p8fin.recUndated")}</span>
               <span className="min-w-0 flex-1 truncate"><b>#{r.ref}</b> <span className="text-[var(--ink-2)]">{r.booker}</span><span className="text-[var(--ink-3)]"> · {w(r.label)}{r.listing ? ` · ${r.listing}` : ""}</span></span>
-              <span className="text-[11px] text-[var(--ink-3)]">{w(r.method)}{r.via ? ` → ${t(VIA_KEY[r.via])}` : ""}</span>
+              <span className="text-[11px] text-[var(--ink-3)]">{w(r.method)}{r.via ? ` ${arrow} ${t(VIA_KEY[r.via])}` : ""}</span>
               <span className="w-20 text-end font-extrabold tabular-nums text-[#b45309]">−{money(r.amount)}</span>
             </div>
           ))}
