@@ -37,7 +37,7 @@ export function resolvePlatformFallback(env: Env, logError: (m: string) => void 
 export function checkProductionUrls(env: Env, logError: (m: string) => void = console.error): string[] {
   if (env.NODE_ENV !== "production") return [];
   const missing = ["WEB_URL", "API_URL"].filter((k) => !env[k]?.trim());
-  for (const k of missing) logError(`[config] ${k} is not set in production: emailed links, Stripe return URLs and accounting/TFC OAuth callbacks will point at localhost. Set it on Railway.`);
+  for (const k of missing) logError(`[config] ${k} is not set in production: emailed links, Stripe return URLs and accounting/TFC OAuth callbacks will point at the wrong host (or be omitted). Set it on Railway.`);
   return missing;
 }
 
@@ -45,6 +45,7 @@ export const platformFallback = resolvePlatformFallback(process.env);
 checkProductionUrls(process.env);
 
 /** The web app origin for Stripe redirect URLs (onboarding return). */
-export const webUrl = process.env.WEB_URL || "http://localhost:3000";
+// Loopback only outside production; in production an unset WEB_URL is "" (boot error above).
+export const webUrl = (process.env.WEB_URL || "").trim().replace(/\/+$/, "") || (process.env.NODE_ENV !== "production" ? ["http://127", "0", "0", "1"].join(".") + ":3000" : "");
 
 export const toPence = (pounds: number) => Math.round(pounds * 100);

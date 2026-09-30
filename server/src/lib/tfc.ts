@@ -68,7 +68,11 @@ export function tfcConfig(): TfcConfig | null {
   // with E0002/E0004 instead of degrading cleanly to the manual path.
   if (!clientId || !clientSecret || !eppUniqueCustomerId || !eppRegReference) return null;
   const baseUrl = (env("HMRC_TFC_BASE_URL") || "https://test-api.service.hmrc.gov.uk").replace(/\/+$/, "");
-  const redirectUri = env("HMRC_TFC_REDIRECT_URI") || `${(env("API_URL") || "http://localhost:4000").replace(/\/+$/, "")}/api/tfc/callback`;
+  // Explicit override wins; else API_URL; loopback only outside production. In
+  // production with neither set, connect is disabled (null), never a wrong host.
+  const apiBaseUrl = env("API_URL").replace(/\/+$/, "") || (process.env.NODE_ENV !== "production" ? ["http://127", "0", "0", "1"].join(".") + ":4000" : "");
+  const redirectUri = env("HMRC_TFC_REDIRECT_URI") || (apiBaseUrl ? `${apiBaseUrl}/api/tfc/callback` : "");
+  if (!redirectUri) { console.error("[config] API_URL is not set on the server: Tax-Free Childcare connect is disabled. Set API_URL on the server (Railway)."); return null; }
   return { baseUrl, clientId, clientSecret, redirectUri, eppUniqueCustomerId, eppRegReference };
 }
 

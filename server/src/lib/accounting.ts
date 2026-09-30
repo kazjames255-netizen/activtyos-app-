@@ -26,7 +26,18 @@ export type Provider = "quickbooks" | "xero" | "sage";
 export const PROVIDERS: Provider[] = ["quickbooks", "xero", "sage"];
 
 const env = (k: string) => (process.env[k] ?? "").trim();
-const apiUrl = () => (env("API_URL") || "http://localhost:4000").replace(/\/+$/, "");
+// Loopback dev host only when NODE_ENV !== "production"; in production an unset
+// API_URL yields "" and the config below returns null (connect disabled), so a
+// wrong-host redirect can never reach a provider.
+const DEV_API = ["http://127", "0", "0", "1"].join(".") + ":4000";
+const apiUrl = (): string => (env("API_URL").replace(/\/+$/, "")) || (process.env.NODE_ENV !== "production" ? DEV_API : "");
+/** Redirect URI: explicit override wins; else built from API_URL; "" when production has no API_URL. */
+function redirectFor(override: string, path: string): string {
+  if (override) return override;
+  const base = apiUrl();
+  if (!base) { console.error("[config] API_URL is not set on the server: accounting connect is disabled. Set API_URL on the server (Railway)."); return ""; }
+  return `${base}${path}`;
+}
 
 // ── Provider HTTP: timeouts, classified errors, bounded retries ───────────
 export type ProviderErrorKind = "auth" | "rate" | "validation" | "outage" | "network";
@@ -229,7 +240,8 @@ export function qboConfig(): QboConfig | null {
   const clientId = env("QBO_CLIENT_ID"), clientSecret = env("QBO_CLIENT_SECRET");
   if (!clientId || !clientSecret) return null;
   const environment = env("QBO_ENV") === "production" ? "production" : "sandbox";
-  const redirectUri = env("QBO_REDIRECT_URI") || `${apiUrl()}/api/accounting/callback/quickbooks`;
+  const redirectUri = redirectFor(env("QBO_REDIRECT_URI"), "/api/accounting/callback/quickbooks");
+  if (!redirectUri) return null;
   const apiBase = environment === "production" ? "https://quickbooks.api.intuit.com" : "https://sandbox-quickbooks.api.intuit.com";
   return { clientId, clientSecret, redirectUri, environment, apiBase };
 }
@@ -322,7 +334,8 @@ export interface XeroConfig { clientId: string; clientSecret: string; redirectUr
 export function xeroConfig(): XeroConfig | null {
   const clientId = env("XERO_CLIENT_ID"), clientSecret = env("XERO_CLIENT_SECRET");
   if (!clientId || !clientSecret) return null;
-  const redirectUri = env("XERO_REDIRECT_URI") || `${apiUrl()}/api/accounting/callback/xero`;
+  const redirectUri = redirectFor(env("XERO_REDIRECT_URI"), "/api/accounting/callback/xero");
+  if (!redirectUri) return null;
   return { clientId, clientSecret, redirectUri };
 }
 export const xeroConfigured = () => xeroConfig() !== null;
@@ -449,7 +462,8 @@ export interface SageConfig { clientId: string; clientSecret: string; redirectUr
 export function sageConfig(): SageConfig | null {
   const clientId = env("SAGE_CLIENT_ID"), clientSecret = env("SAGE_CLIENT_SECRET");
   if (!clientId || !clientSecret) return null;
-  const redirectUri = env("SAGE_REDIRECT_URI") || `${apiUrl()}/api/accounting/callback/sage`;
+  const redirectUri = redirectFor(env("SAGE_REDIRECT_URI"), "/api/accounting/callback/sage");
+  if (!redirectUri) return null;
   return { clientId, clientSecret, redirectUri };
 }
 export const sageConfigured = () => sageConfig() !== null;

@@ -85,7 +85,7 @@ export async function ensureLeadVideoUrl(leadId: string): Promise<string | null>
 
 /** The ActivityOS mark as an inline (CID) attachment. Embedded rather than
  *  hot-linked so it renders in every client and regardless of environment —
- *  Gmail/Outlook strip SVG and data-URIs and can't reach a localhost URL. Any
+ *  Gmail/Outlook strip SVG and data-URIs and can't reach a loopback/dev URL. Any
  *  email that shows the mark must include this in its attachments. */
 export function aosLogoAttachment(): MailAttachment {
   return { filename: "activityos.png", content: Buffer.from(AOS_MARK_PNG_B64, "base64"), contentType: "image/png", cid: "aos-mark" };

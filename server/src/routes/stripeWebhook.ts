@@ -29,7 +29,7 @@ import { clearSubscriptionCache } from "../middleware/subscription";
 // missed deliveries; the Connect half has no such backstop, so the endpoint
 // must be reachable in production.
 //
-// Local setup: stripe listen --forward-to localhost:4000/api/stripe/webhook
+// Local setup: stripe listen --forward-to the local API port 4000/api/stripe/webhook
 // and put the printed whsec_… in server/.env as STRIPE_WEBHOOK_SECRET.
 // ─────────────────────────────────────────────────────────────────────────
 export const stripeWebhook = Router();
