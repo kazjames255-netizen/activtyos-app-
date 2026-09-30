@@ -2159,28 +2159,28 @@ export function SetupApp() {
       {activeTab === "people" && (
         <>
           <Section
-            title="What you collect about every child"
-            lede="The built-in details, whoever fills them in — you or the parent. Switch off anything you have no use for; a field you never read is one a family shouldn't be asked to fill. Where a field is typed into, the character limit sits beside it — too short and a parent can't explain a real medical need, too long and your registers and exports become unreadable."
+            title={t("p8set.ppHead")}
+            lede={t("p8set.ppLede")}
           >
-            <Row label="Child's name" hint="Every register, booking and name badge is drawn from it.">
+            <Row label={t("p8set.ppChildName")} hint={t("p8set.ppChildNameHint")}>
               <AlwaysOn />
             </Row>
             <Row
               label={t("p8set.regc_allergies")}
-              hint="A blank allergy field and a genuinely allergy-free child look identical, so it always gets asked."
+              hint={t("p8set.ppAllergiesHint")}
             >
               <span className="flex items-center gap-2">
                 <AlwaysOn />
                 <Limit value={settings.charLimits.allergies} onChange={(n) => set("charLimits", { ...settings.charLimits, allergies: n })} />
               </span>
             </Row>
-            <Row label="Medical needs" hint="Staff need it before day one, not on the day.">
+            <Row label={t("p8set.ppMedical")} hint={t("p8set.ppMedicalHint")}>
               <span className="flex items-center gap-2">
                 <AlwaysOn />
                 <Limit value={settings.charLimits.medical} onChange={(n) => set("charLimits", { ...settings.charLimits, medical: n })} />
               </span>
             </Row>
-            <Row label="Ask about dietary needs" hint="Vegetarian, halal, intolerances — separate from an allergy, which is a safety matter. Optional: a sports coach hiring a pitch provides no food and has no use for it, so switch it off.">
+            <Row label={t("p8set.ppDietary")} hint={t("p8set.ppDietaryHint")}>
               <span className="flex items-center gap-2">
                 {settings.collectDietary && (
                   <Limit value={settings.charLimits.dietary} onChange={(n) => set("charLimits", { ...settings.charLimits, dietary: n })} />
@@ -2188,7 +2188,7 @@ export function SetupApp() {
                 <Toggle on={settings.collectDietary} onChange={(v) => set("collectDietary", v)} />
               </span>
             </Row>
-            <Row label="Likes & dislikes" hint="What settles them and what doesn't. Two short boxes — the first is likes, the second dislikes.">
+            <Row label={t("p8set.ppLikes")} hint={t("p8set.ppLikesHint")}>
               <span className="flex items-center gap-2">
                 <Limit value={settings.charLimits.likes} onChange={(n) => set("charLimits", { ...settings.charLimits, likes: n })} />
                 <Limit value={settings.charLimits.dislikes} onChange={(n) => set("charLimits", { ...settings.charLimits, dislikes: n })} />
@@ -2196,40 +2196,40 @@ export function SetupApp() {
             </Row>
 
             <Row
-              label="Date of birth required"
+              label={t("p8set.ppDob")}
               hint={
                 dobLock.forcedBy.length
-                  ? `Locked on: ${dobLock.forcedBy.length === 1 ? `“${dobLock.forcedBy[0].label}” is` : `${dobLock.forcedBy.length} questions are`} only asked about certain ages, and there's no age without a date of birth. Remove the age range to unlock this.`
-                  : "Required: a child can't be saved without one. Optional: they can — useful when someone rings up and you haven't asked yet. The catch is that a child's age is worked out from their date of birth, so until it's there you won't see their age anywhere, listing age limits won't be checked for them, and they won't count towards a ratio band. Give any question an age range and this switches back on, because there's no age to match against."
+                  ? (dobLock.forcedBy.length === 1 ? t("p8set.ppDobLockOne", { label: dobLock.forcedBy[0].label }) : t("p8set.ppDobLockMany", { n: dobLock.forcedBy.length }))
+                  : t("p8set.ppDobHint")
               }
             >
               <Toggle
                 on={dobLock.required}
                 disabled={dobLock.forcedBy.length > 0}
                 onChange={(v) => set("requireDob", v)}
-                labels={["Required", "Optional"]}
+                labels={[t("p8set.credRequired"), t("p8set.optional")]}
               />
             </Row>
-            <Row label="Ask a child's gender" hint="Some providers need it for changing rooms or teams; others have no reason to ask.">
+            <Row label={t("p8set.ppGender")} hint={t("p8set.ppGenderHint")}>
               <Toggle on={settings.collectGender} onChange={(v) => set("collectGender", v)} />
             </Row>
             {settings.collectGender && (
-              <Row label="Options offered" hint="What a parent can pick from." note="Not shown in the forms yet — they still offer Boy/Girl">
+              <Row label={t("p8set.ppOptions")} hint={t("p8set.ppOptionsHint")} note={t("p8set.ppOptionsNote")}>
                 <div className="w-[240px]">
                   <ListEditor items={settings.genderOptions} onChange={(v) => set("genderOptions", v)} placeholder={t("p8set.qAddOption")} />
                 </div>
               </Row>
             )}
-            <Row label="Child photo upload" hint="Lets a family upload a photo of their child. It shows on the register and the booking, so staff know who they're handing over at the end of the day.">
+            <Row label={t("p8set.ppPhoto")} hint={t("p8set.ppPhotoHint")}>
               <Toggle on={settings.collectPhoto} onChange={(v) => set("collectPhoto", v)} />
             </Row>
             <Row
-              label="Ask permission to use photos"
-              hint="Whether photos OF the child may be used in newsletters, on your website or social media. A different question from the one above — a family can happily give you a face for the register and still refuse publicity."
+              label={t("p8set.ppPhotoConsent")}
+              hint={t("p8set.ppPhotoConsentHint")}
             >
               <Toggle on={settings.askPhotoConsent} onChange={(v) => set("askPhotoConsent", v)} />
             </Row>
-            <Row label="Ask about SEND & additional needs" hint="A free-text field where a family describes the support their child needs, so staff can plan for it.">
+            <Row label={t("p8set.ppSend")} hint={t("p8set.ppSendHint")}>
               <span className="flex items-center gap-2">
                 {settings.collectSend && (
                   <Limit value={settings.charLimits.send} onChange={(n) => set("charLimits", { ...settings.charLimits, send: n })} />
@@ -2239,23 +2239,23 @@ export function SetupApp() {
             </Row>
             {settings.collectSend && (
               <Row
-                label="Also ask for the EHCP / SEND plan"
-                hint="Offered only once a family has said there are needs. This is a formal document you'd then be holding a copy of — worth deciding on purpose rather than collecting because you can. Your copy for staff; the parent isn't shown it back."
+                label={t("p8set.ppSendPlan")}
+                hint={t("p8set.ppSendPlanHint")}
               >
                 <Toggle on={settings.collectSendPlan} onChange={(v) => set("collectSendPlan", v)} />
               </Row>
             )}
-            <Row label="Collection check" hint="Asked only when someone other than the usual adult collects. Set once per family, not per booking.">
+            <Row label={t("p8set.ppCollCheck")} hint={t("p8set.ppCollCheckHint")}>
               <Select value={settings.collectionCheck} onChange={(e) => set("collectionCheck", e.target.value as TenantSettings["collectionCheck"])}>
-                <option value="off">Not used</option>
-                <option value="password">Password word</option>
-                <option value="pin">Numeric PIN</option>
+                <option value="off">{t("p8set.ppNotUsed")}</option>
+                <option value="password">{t("p8set.ppPassword")}</option>
+                <option value="pin">{t("p8set.ppPin")}</option>
               </Select>
             </Row>
             <Row
               label={t("p8set.regc_emergency")}
-              hint="Someone has to be reachable if you can't reach the parent, so at least one is always asked for. Set how many name-and-number pairs a family must give."
-              note="Only the first is built so far"
+              hint={t("p8set.ppEmergencyHint")}
+              note={t("p8set.ppEmergencyNote")}
             >
               <span className="flex items-center gap-2">
                 <AlwaysOn />
@@ -2265,13 +2265,12 @@ export function SetupApp() {
           </Section>
 
           <Section
-            title="Your own questions"
-            lede="Anything else you need to know, asked once by the family on the child's profile and carried to every booking after — nobody re-types them. Add your own, hide the ones that don't apply to you, and choose whether a question goes on every listing or only some."
+            title={t("p8set.ppOwnQ")}
+            lede={t("p8set.ppOwnQLede")}
           >
             <QuestionsEditor questions={questions} onChange={setQuestions} listings={listings} />
             <p className="mt-3 border-t border-dashed border-[var(--line)] pt-2.5 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
-              These are on top of the built-in details above — no need to re-create a field that
-              already exists, or you&apos;ll have families answering the same thing twice.
+              {t("p8set.ppOwnQNote")}
             </p>
           </Section>
 
@@ -2281,55 +2280,52 @@ export function SetupApp() {
       {activeTab === "cancel" && (
         <>
           <Section
-            title="Cancellation & refunds"
-            lede="The usual policies, ready to use — edit the numbers and rename them to suit you. You pick one for each listing as you build it, and the first is what a new listing starts on. The wording writes itself from the rules, so what a parent is told and what gets worked out when they cancel can never say different things."
+            title={t("p8set.cnTitle")}
+            lede={t("p8set.cnLede")}
           >
             <PolicyList policies={settings.cancellationPolicies} onChange={(v) => set("cancellationPolicies", v)} />
 
             <div className="mt-3 border-t border-dashed border-[var(--line)] pt-2.5">
               <Row
-                label="When a refund is due"
-                hint="Right now nothing moves money on its own — every refund waits for you, and you action it in your own payment provider. Automatic would issue it through Stripe the moment the policy works one out."
-                note="Automatic needs building (Amir)"
+                label={t("p8set.cnRefundDue")}
+                hint={t("p8set.cnRefundDueHint")}
+                note={t("p8set.cnAutoNote")}
               >
                 <Select
                   value={settings.refundApproval}
                   onChange={(e) => set("refundApproval", e.target.value as TenantSettings["refundApproval"])}
                 >
-                  <option value="review">Flag it for me to approve</option>
-                  <option value="auto">Issue it automatically</option>
+                  <option value="review">{t("p8set.cnFlag")}</option>
+                  <option value="auto">{t("p8set.cnAuto")}</option>
                 </Select>
               </Row>
               {settings.refundApproval === "auto" && (
-                <NotWired>
-                  A refund can&apos;t be un-sent. Until this is built, refunds still wait for you —
-                  which is the safe way round for it to be wrong.
-                </NotWired>
+                <NotWired>{t("p8set.cnUnsent")}</NotWired>
               )}
               <Row
-                label="Credit note when no cash refund is due"
-                hint="When the policy works out to nothing back, still give the family a credit note for the full amount they paid to spend on a future booking. They keep the value, you keep the cash. Off means a no-refund is simply nothing back."
-                note={settings.noRefundCredit ? "Issuing the credit needs building (Amir)" : undefined}
+                label={t("p8set.cnCredit")}
+                hint={t("p8set.cnCreditHint")}
+                note={settings.noRefundCredit ? t("p8set.cnCreditNote") : undefined}
               >
                 <Toggle on={settings.noRefundCredit} onChange={(v) => set("noRefundCredit", v)} />
               </Row>
               <Row
-                label="Let families cancel single days"
-                hint="On a multi-day pass, a parent can cancel individual days instead of the whole booking. Each day is refunded on its own notice window — a day next week may still get a refund while tomorrow gets none."
-                note="Partial refund + freeing that day's place needs building (Amir)"
+                label={t("p8set.cnPartial")}
+                hint={t("p8set.cnPartialHint")}
+                note={t("p8set.cnPartialNote")}
               >
                 <Toggle on={settings.allowPartialCancel} onChange={(v) => set("allowPartialCancel", v)} />
               </Row>
               {settings.allowPartialCancel && (
                 <div className="mt-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
-                  <div className="mb-1.5 text-[11.5px] font-bold text-[var(--ink-2)]">What a family can do with a released day (the day is valued pro-rata — what they paid ÷ days):</div>
-                  <Row label="Move it to another date" hint="Keep the booking whole — the day just moves. Only turn on if this listing lets families pick days across your dates (not a fixed week); otherwise moving a single day makes no sense.">
+                  <div className="mb-1.5 text-[11.5px] font-bold text-[var(--ink-2)]">{t("p8set.cnReleased")}</div>
+                  <Row label={t("p8set.cnMove")} hint={t("p8set.cnMoveHint")}>
                     <Toggle on={settings.partialAllowChangeDate} onChange={(v) => set("partialAllowChangeDate", v)} />
                   </Row>
-                  <Row label="Credit it to their wallet" hint="The day's value goes to the family's wallet to spend on a future booking — instant, and the money stays with you.">
+                  <Row label={t("p8set.cnWallet")} hint={t("p8set.cnWalletHint")}>
                     <Toggle on={settings.partialAllowWallet} onChange={(v) => set("partialAllowWallet", v)} />
                   </Row>
-                  <Row label="Refund it" hint="Cash back under your cancellation policy. The only option that gives money out on a part-cancelled block, so leave it off if you'd rather keep families on move-a-date or wallet credit.">
+                  <Row label={t("p8set.cnRefundIt")} hint={t("p8set.cnRefundItHint")}>
                     <Toggle on={settings.partialAllowRefund} onChange={(v) => set("partialAllowRefund", v)} />
                   </Row>
                 </div>
@@ -2337,15 +2333,15 @@ export function SetupApp() {
             </div>
           </Section>
           <Section
-            title="Cancellation reasons"
-            lede="Offered when a booking is cancelled, so you can report on why places are being lost."
+            title={t("p8set.cnReasonsTitle")}
+            lede={t("p8set.cnReasonsLede")}
           >
-            <Row label="Ask you for a reason" hint="Off means you're never made to answer — cancel and move on.">
+            <Row label={t("p8set.cnAskYou")} hint={t("p8set.cnAskYouHint")}>
               <Toggle on={settings.askReasonOperator} onChange={(v) => set("askReasonOperator", v)} />
             </Row>
             <Row
-              label="Ask parents for a reason"
-              hint="When a parent cancels their own booking. Useful for spotting patterns, but it's one more step between them and a thing they've already decided to do."
+              label={t("p8set.cnAskParents")}
+              hint={t("p8set.cnAskParentsHint")}
             >
               <Toggle on={settings.askReasonParent} onChange={(v) => set("askReasonParent", v)} />
             </Row>
@@ -2355,46 +2351,43 @@ export function SetupApp() {
           </Section>
 
           <Section
-            title="Amending dates"
-            lede="Whether a parent can move their own session dates, and the rules for it. A move only ever goes to another running date of the same listing that still has space — never onto a full day or across the age caps."
+            title={t("p8set.amTitle")}
+            lede={t("p8set.amLede")}
           >
-            <Row label="Offer date changes at all" hint="Off: the 'Change dates' flow tells families up front it isn't offered for your listings — they never pick dates only to be turned away. On: the rules below apply.">
+            <Row label={t("p8set.amOffer")} hint={t("p8set.amOfferHint")}>
               <Toggle on={settings.allowDateChanges} onChange={(v) => set("allowDateChanges", v)} />
             </Row>
             {settings.allowDateChanges && (
-            <Row label="Let parents move their own dates" hint="On: they reschedule themselves, within the rules below. Off: they send a request and you approve it, like a cancellation.">
+            <Row label={t("p8set.amSelf")} hint={t("p8set.amSelfHint")}>
               <Toggle on={settings.amendSelfService} onChange={(v) => set("amendSelfService", v)} />
             </Row>
             )}
-            <Row label="How close to a session it can still move" hint="Inside this window it's locked — a place can't be juggled the night before. Enter it in hours or days, whichever reads better for you.">
+            <Row label={t("p8set.amNotice")} hint={t("p8set.amNoticeHint")}>
               <NoticeInput hours={settings.amendNoticeHours} onChange={(h) => set("amendNoticeHours", h)} />
             </Row>
-            <Row label="Most moves per booking" hint="Stops one place being reshuffled endlessly, or leave it endless.">
+            <Row label={t("p8set.amLimit")} hint={t("p8set.amLimitHint")}>
               <MovesLimit value={settings.amendLimit} onChange={(n) => set("amendLimit", n)} />
             </Row>
-            <Row label="Admin fee per move" hint="Charged each time they move a date. Leave at 0 for free amends.">
+            <Row label={t("p8set.amFee")} hint={t("p8set.amFeeHint")}>
               <NumberBox value={settings.amendFee} onChange={(n) => set("amendFee", n)} min={0} max={200} suffix="£" />
             </Row>
-            <Row label="Allow moving to a cheaper option" hint="Whether a parent may swap onto a shorter/cheaper pass or date. Off means moves can only be to the same price or more.">
+            <Row label={t("p8set.amCheaper")} hint={t("p8set.amCheaperHint")}>
               <Toggle on={settings.amendAllowCheaper} onChange={(v) => set("amendAllowCheaper", v)} />
             </Row>
             {settings.amendAllowCheaper && (
               <>
-                <Row label="A cheaper move can refund to a card" hint="On: the difference can go back to the card they paid with. Off: it's store credit in their wallet — money stays in the business.">
+                <Row label={t("p8set.amCardRefund")} hint={t("p8set.amCardRefundHint")}>
                   <Toggle on={settings.allowCardRefund} onChange={(v) => set("allowCardRefund", v)} />
                 </Row>
                 {settings.allowCardRefund && (
-                  <Row label="Let them choose card or credit" hint="On: they pick when they move. Off: the difference always goes back to the card.">
-                    <Toggle on={settings.refundLetCustomerChoose} onChange={(v) => set("refundLetCustomerChoose", v)} labels={["They choose", "Always card"]} />
+                  <Row label={t("p8set.amChoose")} hint={t("p8set.amChooseHint")}>
+                    <Toggle on={settings.refundLetCustomerChoose} onChange={(v) => set("refundLetCustomerChoose", v)} labels={[t("p8set.theyChoose"), t("p8set.alwaysCard")]} />
                   </Row>
                 )}
               </>
             )}
             <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[11.5px] leading-[1.6] text-[var(--ink-3)]">
-              <b className="text-[var(--ink-2)]">Moving to something dearer</b> collects the difference at the point of the move —
-              the same checkout they already know. <b className="text-[var(--ink-2)]">Cancellations</b> are separate: the refund is
-              whatever the <em>cancellation policy</em> gives, and a family may take that as wallet credit if they&rsquo;d rather — but
-              can&rsquo;t demand more than the policy allows. Enforcement of every rule here is server-side and still being built.
+              <Rich k="p8set.amDearer" slots={{}} />
             </div>
           </Section>
         </>
@@ -2402,13 +2395,13 @@ export function SetupApp() {
 
       {activeTab === "defaults" && (
         <>
-          <Section title="Defaults for a new listing" lede="What a new listing starts with. You can still change any of it per listing.">
-            <Row label="Capacity" hint="A tutoring provider's default is 8; a holiday camp's is 60.">
-              <NumberBox value={settings.defaultCapacity} onChange={(n) => set("defaultCapacity", n)} min={1} max={999} suffix="places" />
+          <Section title={t("p8set.dfTitle")} lede={t("p8set.dfLede")}>
+            <Row label={t("p8set.dfCapacity")} hint={t("p8set.dfCapacityHint")}>
+              <NumberBox value={settings.defaultCapacity} onChange={(n) => set("defaultCapacity", n)} min={1} max={999} suffix={t("p8set.places")} />
             </Row>
-            <Row label="Days it runs" hint="Weekend-only providers shouldn't have to untick five boxes on every listing.">
+            <Row label={t("p8set.dfDays")} hint={t("p8set.dfDaysHint")}>
               <div className="flex gap-1">
-                {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => {
+                {Array.from({ length: 7 }, (_, i) => new Date(Date.UTC(2024, 0, 1 + i)).toLocaleDateString(dl(), { weekday: "narrow", timeZone: "UTC" })).map((d, i) => {
                   const on = settings.defaultRunningDays.includes(i + 1);
                   return (
                     <button
@@ -2429,7 +2422,7 @@ export function SetupApp() {
                 })}
               </div>
             </Row>
-            <Row label="Show places left to parents" hint="Off hides remaining-place counts on your booking page entirely. When it&rsquo;s on, the &ldquo;only N places left&rdquo; note appears on its own at a third of capacity, capped at five — so an 8-place class warns at 3 and a 60-place camp warns at 5. Nothing to set.">
+            <Row label={t("p8set.dfShow")} hint={t("p8set.dfShowHint")}>
               <Toggle on={settings.showSpaces} onChange={(v) => set("showSpaces", v)} />
             </Row>
           </Section>
@@ -2438,28 +2431,28 @@ export function SetupApp() {
 
       {activeTab === "marketplace" && (
         <Section
-          title="ActivityOS marketplace"
-          lede="Your own storefront link always shows your public activities. Switching this on also lists them in the shared ActivityOS marketplace, where families browsing the app can discover you — not just the ones who already have your link."
+          title={t("p8set.mkTitle")}
+          lede={t("p8set.mkLede")}
         >
-          <Row label="List us in the marketplace" hint="Off: families reach you only through your storefront/booking link. On: your live, public listings also appear in every family's in-app Browse.">
-            <Toggle on={!!settings.marketplaceListed} onChange={(v) => set("marketplaceListed", v)} labels={["Listed", "Off"]} />
+          <Row label={t("p8set.mkList")} hint={t("p8set.mkListHint")}>
+            <Toggle on={!!settings.marketplaceListed} onChange={(v) => set("marketplaceListed", v)} labels={[t("p8set.listed"), t("p8set.off")]} />
           </Row>
         </Section>
       )}
 
       {activeTab === "money" && (
         <Section
-          title="Money — what you track"
-          lede="Your Money section splits into money going OUT (Expenses + supplier Bills/POs) and money coming IN (customer Invoices with pay-links). Show one side or both, and choose whether you raise formal purchase orders."
+          title={t("p8set.mnTitle")}
+          lede={t("p8set.mnLede")}
         >
-          <Row label="Show in your Money menu" hint="Outgoing = Expenses + Bills/POs. Incoming = customer Invoices. Both shows everything.">
+          <Row label={t("p8set.mnShow")} hint={t("p8set.mnShowHint")}>
             <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[12px] font-bold">
               {(["outgoing", "incoming", "both"] as const).map((k) => (
-                <button key={k} type="button" onClick={() => void save({ settings: { ...settings, money: { ...(settings.money ?? {}), show: k } } })} className="px-3.5 py-1.5 capitalize transition-colors" style={(settings.money?.show ?? "both") === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{k}</button>
+                <button key={k} type="button" onClick={() => void save({ settings: { ...settings, money: { ...(settings.money ?? {}), show: k } } })} className="px-3.5 py-1.5 capitalize transition-colors" style={(settings.money?.show ?? "both") === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{t("p8set.mnShow_" + k)}</button>
               ))}
             </div>
           </Row>
-          <Row label="We raise purchase orders" hint="On: the Bills page keeps a draft (PO) stage before a bill is received and paid. Off (common for smaller providers): you just track supplier bills — received, then paid.">
+          <Row label={t("p8set.mnPo")} hint={t("p8set.mnPoHint")}>
             <Toggle on={!!settings.money?.usePurchaseOrders} onChange={(v) => void save({ settings: { ...settings, money: { ...(settings.money ?? {}), usePurchaseOrders: v } } })} labels={[t("p8set.yes"), t("p8set.no")]} />
           </Row>
 
