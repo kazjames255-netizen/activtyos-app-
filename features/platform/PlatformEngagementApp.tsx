@@ -3,15 +3,21 @@
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
+import { useT, tNow } from "@/lib/i18n/provider";
+import { navLabel } from "@/lib/i18n/words";
+import { H, hq } from "./hqText";
 
 interface Row { view: string; avgSeconds: number; views: number; totalSeconds: number; avgPrevSeconds: number; viewsPrev: number; deltaPct: number | null }
 interface Payload { rows: Row[]; totalViews: number }
 
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
 const BLUE = "#1d3a8f";
-const dur = (s: number) => (s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m` : s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`);
-const PRETTY: Record<string, string> = { moneyin: "Money in", moneyout: "Money out", dash: "Dashboard", home: "Home", learninghub: "Learning hub" };
+const dur = (s: number) => (s >= 3600 ? hq("{h}h {m}m", { h: Math.floor(s / 3600), m: Math.round((s % 3600) / 60) }) : s >= 60 ? hq("{m}m {s}s", { m: Math.floor(s / 60), s: s % 60 }) : hq("{s}s", { s }));
+const PRETTY: Record<string, string> = { moneyin: H("Money in"), moneyout: H("Money out"), dash: H("Dashboard"), home: H("Home"), learninghub: H("Learning hub") };
 const pretty = (v: string) => PRETTY[v] ?? v.replace(/[-_]/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^\w/, (c) => c.toUpperCase());
+
+/** Page name in the active language: the sidebar label catalogue first, then our own words (falls back to the readable English). */
+const pageName = (v: string) => { const p = pretty(v); const nl = navLabel(tNow, p); return nl !== p ? nl : hq(p); };
 
 /** Two raw view keys can read as the same page ("dash" + "dashboard" are both "Dashboard") — fold them into one row so the list never shows the same name twice. */
 function mergeSameLabel(rows: Row[]): Row[] {
@@ -29,9 +35,10 @@ function mergeSameLabel(rows: Row[]): Row[] {
   return [...by.values()];
 }
 
-const FILTERS: [string, string][] = [["all", "All"], ["freelancer", "Freelancer"], ["company", "Company"]];
+const FILTERS: [string, string][] = [["all", H("All")], ["freelancer", H("Freelancer")], ["company", H("Company")]];
 
 export function PlatformEngagementApp() {
+  useT(); // re-render on language change (labels are translated at render time)
   const [d, setD] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [type, setType] = useState("all");
@@ -39,7 +46,7 @@ export function PlatformEngagementApp() {
   const [metric, setMetric] = useState<"visits" | "time">("visits");
 
   const load = useCallback(() => {
-    apiGet<Payload>(`/api/platform/page-engagement?type=${type}`).then((p) => { setD({ ...p, rows: mergeSameLabel(p.rows) }); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Payload>(`/api/platform/page-engagement?type=${type}`).then((p) => { setD({ ...p, rows: mergeSameLabel(p.rows) }); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : hq("Failed to load")));
   }, [type]);
   useEffect(load, [load]);
 
@@ -54,15 +61,15 @@ export function PlatformEngagementApp() {
       <div className="overflow-hidden rounded-2xl text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex flex-wrap items-end justify-between gap-3 px-6 py-5">
           <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>Platform · Head office</div>
-            <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>🔥 Page engagement</h2>
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>{hq("Platform · Head office")}</div>
+            <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>{hq("🔥 Page engagement")}</h2>
             <p className="mt-1 max-w-[640px] text-[12.5px] leading-snug text-white/85">
-              Average time providers spend on each page — so you can see <b className="text-white">how popular each tab is</b> and where they focus. Last 3 months, compared to the previous 3.
+              {hq("Average time providers spend on each page — so you can see how popular each tab is and where they focus. Last 3 months, compared to the previous 3.")}
             </p>
           </div>
           <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold">
             {FILTERS.map(([v, label]) => (
-              <button key={v} type="button" onClick={() => setType(v)} className="rounded-full px-3 py-1 transition-colors" style={type === v ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.8)" }}>{label}</button>
+              <button key={v} type="button" onClick={() => setType(v)} className="rounded-full px-3 py-1 transition-colors" style={type === v ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.8)" }}>{hq(label)}</button>
             ))}
           </div>
         </div>
@@ -70,27 +77,27 @@ export function PlatformEngagementApp() {
 
       {error && <div className="mt-3 text-[12.5px] text-[var(--red)]">{error}</div>}
       {!d ? (
-        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading engagement…</div>
+        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{hq("Loading engagement…")}</div>
       ) : d.rows.length === 0 ? (
         <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] py-12 text-center text-[13px] text-[var(--ink-3)]">
-          No page activity yet for this filter.<br /><span className="text-[11.5px]">It fills in as providers use the app — every page visit is timed and rolls up here.</span>
+          {hq("No page activity yet for this filter.")}<br /><span className="text-[11.5px]">{hq("It fills in as providers use the app — every page visit is timed and rolls up here.")}</span>
         </div>
       ) : (
         <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[12px]">
-            <span className="font-bold text-[var(--ink-2)]">Most popular pages{type !== "all" ? ` · ${pretty(type)}` : ""}</span>
+            <span className="font-bold text-[var(--ink-2)]">{hq("Most popular pages")}{type !== "all" ? ` · ${pageName(type)}` : ""}</span>
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5 text-[11px] font-bold">
-                {([["visits", "Visits"], ["time", "Time"]] as const).map(([v, l]) => (
+                {([["visits", hq("Visits")], ["time", hq("Time")]] as const).map(([v, l]) => (
                   <button key={v} type="button" onClick={() => setMetric(v)} className="rounded-full px-2.5 py-0.5 transition-colors" style={metric === v ? { background: "#0f7a43", color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>
                 ))}
               </div>
               <div className="inline-flex items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5 text-[11px] font-bold">
-                {([["high", "Highest"], ["low", "Lowest"]] as const).map(([v, l]) => (
+                {([["high", hq("Highest")], ["low", hq("Lowest")]] as const).map(([v, l]) => (
                   <button key={v} type="button" onClick={() => setOrder(v)} className="rounded-full px-2.5 py-0.5 transition-colors" style={order === v ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>
                 ))}
               </div>
-              <span className="text-[var(--ink-3)]">by {metric === "visits" ? "visits" : "time on page"} · vs prev 3 mo</span>
+              <span className="text-[var(--ink-3)]">{metric === "visits" ? hq("by visits · vs prev 3 mo") : hq("by time on page · vs prev 3 mo")}</span>
             </div>
           </div>
           <div className="flex flex-col divide-y divide-[var(--line)]">
@@ -102,27 +109,27 @@ export function PlatformEngagementApp() {
                   <span className="w-5 text-center text-[11px] font-bold text-[var(--ink-3)]">{i + 1}</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate font-extrabold">{pretty(r.view)}</span>
+                      <span className="truncate font-extrabold">{pageName(r.view)}</span>
                       <span className="shrink-0 tabular-nums">
                         {metric === "visits"
-                          ? <><b>{r.views.toLocaleString(dl())}</b> <span className="text-[11px] font-normal text-[var(--ink-3)]">visits</span></>
-                          : <><b>{dur(r.avgSeconds)}</b> <span className="text-[11px] font-normal text-[var(--ink-3)]">avg</span></>}
+                          ? <><b>{r.views.toLocaleString(dl())}</b> <span className="text-[11px] font-normal text-[var(--ink-3)]">{hq("visits")}</span></>
+                          : <><b>{dur(r.avgSeconds)}</b> <span className="text-[11px] font-normal text-[var(--ink-3)]">{hq("avg")}</span></>}
                       </span>
                     </div>
                     <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(val(r) / maxVal) * 100}%`, background: `linear-gradient(90deg,${BLUE},#3f78d8)` }} /></div>
                     <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-[var(--ink-3)]">
-                      <span>{metric === "visits" ? `${dur(r.avgSeconds)} avg time` : `${r.views.toLocaleString(dl())} visits`}</span>
+                      <span>{metric === "visits" ? hq("{t} avg time", { t: dur(r.avgSeconds) }) : hq("{n} visits", { n: r.views.toLocaleString(dl()) })}</span>
                       {totalSecs > 0 && (
-                        <span className="rounded-full bg-[#eef2fb] px-1.5 py-0.5 font-bold text-[#1d3a8f]" title="Share of all time providers spent on the platform">
-                          {Math.round((r.totalSeconds / totalSecs) * 100)}% of platform time
+                        <span className="rounded-full bg-[#eef2fb] px-1.5 py-0.5 font-bold text-[#1d3a8f]" title={hq("Share of all time providers spent on the platform")}>
+                          {hq("{pct}% of platform time", { pct: Math.round((r.totalSeconds / totalSecs) * 100) })}
                         </span>
                       )}
                       {r.deltaPct != null && (
                         <span className="font-bold" style={{ color: up ? "#0f7a43" : down ? "#c02636" : "var(--ink-3)" }}>
-                          {up ? "▲" : down ? "▼" : "•"} {Math.abs(Math.round(r.deltaPct * 100))}% vs prev 3 mo
+                          {up ? "▲" : down ? "▼" : "•"} {hq("{pct}% vs prev 3 mo", { pct: Math.abs(Math.round(r.deltaPct * 100)) })}
                         </span>
                       )}
-                      {r.deltaPct == null && r.avgSeconds > 0 && <span className="text-[#1d3a8f]">new this period</span>}
+                      {r.deltaPct == null && r.avgSeconds > 0 && <span className="text-[#1d3a8f]">{hq("new this period")}</span>}
                     </div>
                   </div>
                 </div>
