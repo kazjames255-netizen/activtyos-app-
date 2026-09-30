@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { isRealDay } from "../lib/ukDate";
+import { isBlankOrWebUrl } from "../lib/safeUrl";
+import { isRealDay, ukTodayPlus } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
@@ -22,11 +23,11 @@ const CATS = ["Travel & mileage", "Equipment", "Activity materials", "Food & cat
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 const claimSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDay, "Not a real calendar date"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDay, "Not a real calendar date").refine((d) => d <= ukTodayPlus(1), "Money can only be claimed back once it has been spent — that date is in the future"),
   category: z.enum(CATS),
   amount: z.number().positive().max(10_000),
   note: z.string().trim().max(500).default(""),
-  receiptUrl: z.string().trim().max(600).optional(),
+  receiptUrl: z.string().trim().max(600).refine(isBlankOrWebUrl, "Links must be web addresses (https://…)").optional(),
   receiptName: z.string().trim().max(200).optional(),
 });
 
