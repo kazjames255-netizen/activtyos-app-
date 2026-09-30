@@ -1,5 +1,6 @@
 "use client";
 
+import { portalOf } from "@/lib/portal-href";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -27,6 +28,9 @@ const VALUE_BANDS: [string, number, number][] = [["£0–25", 0, 25], ["£25–5
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function FinanceAnalyticsApp() {
+  // A franchise shares head office's payout (Stripe) account: it can't connect or open it (the API says so), so its
+  // Payouts tab explains that instead of offering buttons that only ever fail.
+  const isFranchisePortal = portalOf(usePathname()) === "franchise";
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [invoices, setInvoices] = useState<InvPayload | null>(null);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -320,7 +324,12 @@ export function FinanceAnalyticsApp() {
         </div>
       ) : tab === "payouts" ? (
         <div className="flex flex-col gap-4">
-          {status && !status.payoutsEnabled && (
+          {isFranchisePortal && (
+            <div data-ui="payout-account" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-[12.5px] text-[var(--ink-2)]">
+              <b>Your head office manages the payout account.</b> Card payments from your families are received into it — you don&rsquo;t connect a Stripe account yourself. What you owe head office on your bookings is on the <a href="/franchise/royalties" className="font-bold text-[#1d3a8f] underline">Royalties</a> page.
+            </div>
+          )}
+          {!isFranchisePortal && status && !status.payoutsEnabled && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#f3d98a] bg-[#fdf6e3] p-4">
               <div className="text-[12.5px] text-[#7a5a12]">
                 <b>{status.connected ? "Finish setting up payouts" : "Connect your payout account"}</b> — card payments land in your own account. ActivityOS never holds your money.
@@ -331,7 +340,7 @@ export function FinanceAnalyticsApp() {
           {/* Stays put once payouts are live — the banner above disappears at
               that point, and without this there'd be no way back to payout
               settings to change a bank account. */}
-          {status?.payoutsEnabled && (
+          {!isFranchisePortal && status?.payoutsEnabled && (
             <div data-ui="payout-account" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
               <div className="text-[12.5px] text-[var(--ink-2)]">
                 <b className="text-[#0f7a43]">✓ Payout account connected</b>

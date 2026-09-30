@@ -65,9 +65,9 @@ export function MoneyMovesNote({ audience }: { audience: "ho" | "franchise" }) {
     <div className="rounded-xl border border-[#cfe0f7] bg-[#eef4fd] p-3.5 text-[12px] leading-relaxed text-[#1d3a8f]">
       <div className="mb-0.5 font-extrabold">💳 How the royalty is paid</div>
       {audience === "ho"
-        ? <>This page is the <b>report</b> of what each franchise owes. Collection runs on <b>Stripe Connect</b>: each franchise connects its own Stripe account (<b>Get paid</b>), and the royalty is taken automatically from their takings. <b>Auto-collection is coming</b> — until it&rsquo;s switched on, settle these amounts with your franchises as you do now.</>
-        : <>This is what you owe head office, calculated from your bookings. Once you connect your Stripe account (<b>Get paid</b>), the royalty is taken automatically from your takings via <b>Stripe Connect</b>. <b>Auto-collection is coming</b> — until then it&rsquo;s settled with your head office as agreed.</>}
-      <div className="mt-1.5"><Link href={audience === "ho" ? "/company/getpaid" : "/franchise/getpaid"} className="font-extrabold underline">Set up Get paid (Stripe) →</Link></div>
+        ? <>This page is the <b>report</b> of what each franchise owes. Card payments from every franchise&rsquo;s families land in <b>your</b> payout account (<b>Get paid</b>) — franchises don&rsquo;t have their own Stripe account yet. <b>Automatic collection is planned</b>; until then, settle these amounts with your franchises as you do now.</>
+        : <>This is what you owe head office, calculated from your bookings. Card payments from your families are received into your head office&rsquo;s payout account, so the royalty is settled with head office as agreed. <b>Automatic collection is planned</b> — until then nothing is taken from you automatically.</>}
+      {audience === "ho" && <div className="mt-1.5"><Link href="/company/getpaid" className="font-extrabold underline">Set up Get paid (Stripe) →</Link></div>}
     </div>
   );
 }
