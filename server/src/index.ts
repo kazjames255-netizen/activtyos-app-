@@ -401,6 +401,13 @@ app.use(
       res.status(400).json({ error: "That request wasn't valid — please try again." });
       return;
     }
+    // A malformed :id in the URL (a "/" in it, "__proto__", ".." or > 1500 bytes) makes Firestore throw INVALID_ARGUMENT before any lookup.
+    // That's "no such record", not a server fault — it used to be a 500 that also raised the ops alarm for anyone typing junk in a URL.
+    const fsMsg = String((err as Error)?.message ?? "");
+    if (/must point to a document|not a valid resource path|longer than 1500 bytes|Resource id .* is invalid|contains a resource id/.test(fsMsg)) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
     // A 500 is a fault: record it and (first occurrence) raise the alarm, so
     // "how would you know at 07:00 on a Monday?" has an answer (d27s3).
     const fault = err as Error;
