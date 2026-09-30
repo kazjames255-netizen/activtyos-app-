@@ -8,6 +8,9 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Badge, Button, Card } from "@/components/ui";
 import { SettingsLink } from "@/components/OperatorPage";
+import { useT } from "@/lib/i18n/provider";
+import { rich } from "@/features/money/rich";
+import { catLabel } from "@/features/money/finI18n";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Inventory — the operator's kit & stock check: what they hold, where it's
@@ -37,6 +40,10 @@ const dayssince = (iso?: string | null) => (iso ? Math.floor((Date.now() - new D
 const isLow = (i: Item) => i.minQty != null && i.quantity <= i.minQty;
 
 export function InventoryApp() {
+  const t = useT();
+  // canonical stored values stay English; only the display is translated
+  const seasonLabel = (s: string) => (s === "This season" ? t("p8fin.invThisSeason") : s);
+  const uncatLabel = (c: string) => (c === "Uncategorised" ? t("p8fin.invUncategorised") : c);
   const { settings, save } = useSettings();
   const inv = settings.inventory ?? {};
   // Setup → Inventory has a "Low stock alerts" toggle that was written and then
@@ -67,7 +74,7 @@ export function InventoryApp() {
   const [ordering, setOrdering] = useState<Item | null>(null);
   const [canManage, setCanManage] = useState(false);
 
-  const refresh = useCallback(() => { apiGet<Item[]>("/api/inventory").then((l) => { setItems(l); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load")); }, []);
+  const refresh = useCallback(() => { apiGet<Item[]>("/api/inventory").then((l) => { setItems(l); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : t("p8fin.gLoadFailed"))); }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((m) => setCanManage(["company", "freelancer", "franchise"].includes(m.role))).catch(() => {}); }, []);
   useRealtime(["inventory"], refresh);
@@ -93,11 +100,11 @@ export function InventoryApp() {
   const low = seasonItems.filter(lowStock).length;
   const toCheck = seasonItems.filter((i) => dayssince(i.lastCheckedAt) >= STALE_DAYS).length;
   const cats = new Set(seasonItems.map((i) => i.category || "Uncategorised")).size;
-  const tiles: [string, number | string][] = [["Items", seasonItems.length], ["Categories", cats], ...(lowAlerts ? [["Low stock", low] as [string, number]] : []), ["To check", toCheck]];
+  const tiles: [string, number | string][] = [[t("p8fin.invTileItems"), seasonItems.length], [t("p8fin.invTileCategories"), cats], ...(lowAlerts ? [[t("p8fin.invTileLow"), low] as [string, number]] : []), [t("p8fin.invTileToCheck"), toCheck]];
 
-  async function remove(i: Item) { if (!confirm(`Delete “${i.name}”?`)) return; try { await api(`/api/inventory/${encodeURIComponent(i.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
-  async function doCheck(i: Item, qty: number) { try { await apiPost(`/api/inventory/${encodeURIComponent(i.id)}/check`, { quantity: qty }); setCheckVals((v) => { const n = { ...v }; delete n[i.id]; return n; }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
-  async function markReceived(i: Item) { if (!confirm(`Mark ${i.orderQty ?? 0} ${i.name} as received? They'll be added to stock.`)) return; try { await apiPost(`/api/inventory/${encodeURIComponent(i.id)}/received`, {}); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  async function remove(i: Item) { if (!confirm(t("p8fin.invConfirmDelete", { name: i.name }))) return; try { await api(`/api/inventory/${encodeURIComponent(i.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.gFailed")); } }
+  async function doCheck(i: Item, qty: number) { try { await apiPost(`/api/inventory/${encodeURIComponent(i.id)}/check`, { quantity: qty }); setCheckVals((v) => { const n = { ...v }; delete n[i.id]; return n; }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.gFailed")); } }
+  async function markReceived(i: Item) { if (!confirm(t("p8fin.invConfirmReceived", { qty: i.orderQty ?? 0, name: i.name }))) return; try { await apiPost(`/api/inventory/${encodeURIComponent(i.id)}/received`, {}); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.gFailed")); } }
 
   const [heroOpen, setHeroOpen] = useState(true);
   useEffect(() => { try { if (localStorage.getItem("aos.hero.inventory") === "0") setHeroOpen(false); } catch { /* ignore */ } }, []);
@@ -109,13 +116,13 @@ export function InventoryApp() {
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">📦</span>Inventory</div>
-            <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">Your kit & stock — what you hold, where it&rsquo;s stored, how many, and when it was last counted. Run a stock check, and carry a season&rsquo;s stock over to the next.</p>
+            <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">📦</span>{t("p8fin.invTitle")}</div>
+            <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">{t("p8fin.invIntro")}</p>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             <SettingsLink />
-            <button type="button" onClick={toggleHero} aria-expanded={heroOpen} className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
-            <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[var(--surface)] px-4 py-2 text-[13px] font-extrabold text-[#2f5fd0] shadow-md transition-transform hover:-translate-y-px">＋ Add item</button>
+            <button type="button" onClick={toggleHero} aria-expanded={heroOpen} className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? t("p8fin.gHide") : t("p8fin.gShow")}</button>
+            <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[var(--surface)] px-4 py-2 text-[13px] font-extrabold text-[#2f5fd0] shadow-md transition-transform hover:-translate-y-px">{t("p8fin.invAddItem")}</button>
           </div>
         </div>
         {items && heroOpen && (
@@ -127,15 +134,10 @@ export function InventoryApp() {
 
       {/* how it works — top, under the title */}
       <details className="group mb-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-[13px] font-extrabold" style={{ color: BLUE }}><span className="text-[11px] transition-transform group-open:rotate-90">▸</span> How it works</summary>
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-[13px] font-extrabold" style={{ color: BLUE }}><span className="text-[11px] transition-transform group-open:rotate-90">▸</span> {t("p8fin.invHowTitle")}</summary>
         <div className="border-t border-[var(--line)] px-4 py-3 text-[12.5px] leading-[1.6] text-[var(--ink-2)]">
           <ul className="ms-4 list-disc space-y-1.5">
-            <li><b>Add your kit</b> — each item has a category, where it&rsquo;s stored, how many, an optional reorder level and a season. Items are grouped by category (each colour-coded).</li>
-            <li><b>Do a stock check</b> — <b>Start stock check</b> turns every count into an input; enter the real figure and <b>✓ Count</b> saves it and <b>auto-stamps the time + who</b>. The most-recent count sits on the card; click it to see the <b>last 5 counts</b>.</li>
-            <li><b>Running low</b> — set a reorder level and an item shows <b>⚠ Low</b> when it drops to it. Anything not counted in a while is flagged <b>due a check</b> (set the window in Settings → Inventory).</li>
-            <li><b>Order more → Expenses</b> — <b>🛒 Order</b> records how many, the cost and supplier, and <b>logs a matching expense</b> under the category you pick (Paid or Owed — default in Settings). <b>✓ Received</b> adds them into stock.</li>
-            <li><b>Seasons</b> — pick a season up top; <b>Carry over to next season</b> copies a season&rsquo;s items (kit + counts) into a new one so you don&rsquo;t re-enter everything.</li>
-            <li><b>Find things</b> — filter by category, location, <b>Low stock</b> or <b>Needs a check</b>, or search.</li>
+            {[t("p8fin.invHow1"), t("p8fin.invHow2"), t("p8fin.invHow3"), t("p8fin.invHow4"), t("p8fin.invHow5"), t("p8fin.invHow6")].map((h, n) => <li key={n}>{rich(h)}</li>)}
           </ul>
         </div>
       </details>
@@ -147,32 +149,32 @@ export function InventoryApp() {
 
       {/* season bar */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Season</span>
+        <span className="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("p8fin.invSeason")}</span>
         <select value={sel} onChange={(e) => setSeason(e.target.value)} className={`${inputCls} font-bold`}>
-          {seasons.map((s) => <option key={s} value={s}>{s}</option>)}
+          {seasons.map((s) => <option key={s} value={s}>{seasonLabel(s)}</option>)}
         </select>
-        {canManage && <Button sm onClick={() => setCarry(true)}>↪ Carry over to next season…</Button>}
-        <button type="button" onClick={() => setCheckMode((v) => !v)} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors" style={checkMode ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{checkMode ? "✓ Stock-check mode on" : "🔢 Start stock check"}</button>
+        {canManage && <Button sm onClick={() => setCarry(true)}>{t("p8fin.invCarryBtn")}</Button>}
+        <button type="button" onClick={() => setCheckMode((v) => !v)} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors" style={checkMode ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{checkMode ? t("p8fin.invCheckOn") : t("p8fin.invCheckStart")}</button>
       </div>
 
       {/* filters */}
       {items && all.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className={inputCls}><option value="">All categories</option>{[...new Set(seasonItems.map((i) => i.category || "Uncategorised"))].sort().map((c) => <option key={c} value={c === "Uncategorised" ? "" : c}>{c}</option>)}</select>
-          <select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className={inputCls}><option value="">All locations</option>{[...new Set(seasonItems.map((i) => i.location).filter(Boolean))].sort().map((l) => <option key={l} value={l!}>{l}</option>)}</select>
-          {lowAlerts && <button type="button" onClick={() => setLowOnly((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={lowOnly ? { borderColor: RED, background: "#fdebec", color: RED } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{lowOnly ? "✓ " : ""}Low stock</button>}
-          <button type="button" onClick={() => setUncheckedOnly((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={uncheckedOnly ? { borderColor: AMBER, background: "#FCF1DC", color: "var(--ink-2)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{uncheckedOnly ? "✓ " : ""}Needs a check</button>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search items…" className="ms-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+          <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className={inputCls}><option value="">{t("p8fin.invAllCategories")}</option>{[...new Set(seasonItems.map((i) => i.category || "Uncategorised"))].sort().map((c) => <option key={c} value={c === "Uncategorised" ? "" : c}>{uncatLabel(c)}</option>)}</select>
+          <select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className={inputCls}><option value="">{t("p8fin.invAllLocations")}</option>{[...new Set(seasonItems.map((i) => i.location).filter(Boolean))].sort().map((l) => <option key={l} value={l!}>{l}</option>)}</select>
+          {lowAlerts && <button type="button" onClick={() => setLowOnly((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={lowOnly ? { borderColor: RED, background: "#fdebec", color: RED } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{lowOnly ? "✓ " : ""}{t("p8fin.invTileLow")}</button>}
+          <button type="button" onClick={() => setUncheckedOnly((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={uncheckedOnly ? { borderColor: AMBER, background: "#FCF1DC", color: "var(--ink-2)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{uncheckedOnly ? "✓ " : ""}{t("p8fin.invNeedsCheck")}</button>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p8fin.invSearchPh")} className="ms-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
         </div>
       )}
 
-      {!items ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-        : shown.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{all.length === 0 ? "No stock recorded yet — add your first item." : seasonItems.length === 0 ? `Nothing in “${sel}” yet — add items, or carry over from a previous season.` : "No items match your filters."}</Card>
+      {!items ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8fin.gLoading")}</div>
+        : shown.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{all.length === 0 ? t("p8fin.invEmptyNone") : seasonItems.length === 0 ? t("p8fin.invEmptySeason", { season: seasonLabel(sel) }) : t("p8fin.invEmptyFilter")}</Card>
         : (
           <div className="flex flex-col gap-4">
             {groups.map(([cat, list]) => (
               <div key={cat}>
-                <div className="mb-1.5 flex items-center gap-2"><span className="h-3.5 w-[5px] rounded-full" style={{ background: catColor(cat) }} /><span className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: catColor(cat) }}>{cat}</span><span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: `color-mix(in srgb,${catColor(cat)} 14%,var(--surface))`, color: catColor(cat) }}>{list.length}</span></div>
+                <div className="mb-1.5 flex items-center gap-2"><span className="h-3.5 w-[5px] rounded-full" style={{ background: catColor(cat) }} /><span className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: catColor(cat) }}>{uncatLabel(cat)}</span><span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: `color-mix(in srgb,${catColor(cat)} 14%,var(--surface))`, color: catColor(cat) }}>{list.length}</span></div>
                 <div className="flex flex-col gap-2">
                   {list.map((i) => {
                     const stale = dayssince(i.lastCheckedAt) >= STALE_DAYS, checking = checkMode;
@@ -185,8 +187,8 @@ export function InventoryApp() {
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-[13.5px] font-extrabold">{i.name}</span>
                               {i.location && <Badge tone={{ bg: "#eef4fd", fg: BLUE }}>📍 {i.location}</Badge>}
-                              {lowStock(i) && <Badge tone={{ bg: "#fdebec", fg: RED }}>⚠ Low</Badge>}
-                              {i.ordered && <Badge tone={{ bg: "#fdf3d8", fg: AMBER }}>🛒 On order · {i.orderQty} · {money(i.orderCost)}{i.orderStatus === "pending" ? " (owed)" : " (paid)"}</Badge>}
+                              {lowStock(i) && <Badge tone={{ bg: "#fdebec", fg: RED }}>{t("p8fin.invLowBadge")}</Badge>}
+                              {i.ordered && <Badge tone={{ bg: "#fdf3d8", fg: AMBER }}>{t("p8fin.invOnOrder", { qty: i.orderQty ?? 0, cost: money(i.orderCost) })}{i.orderStatus === "pending" ? t("p8fin.invOwedTag") : t("p8fin.invPaidTag")}</Badge>}
                               {i.carriedFrom && <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>↪ {i.carriedFrom}</Badge>}
                             </div>
                             {i.notes && <div className="mt-0.5 truncate text-[11px] text-[var(--ink-3)]">{i.notes}</div>}
@@ -195,30 +197,30 @@ export function InventoryApp() {
                             <div className="flex items-center gap-1.5">
                               <input type="number" min={0} value={val} onChange={(e) => setCheckVals((v) => ({ ...v, [i.id]: e.target.value }))} className="w-20 rounded-md border border-[var(--line)] px-2 py-1 text-center text-[13px] font-extrabold" />
                               {i.unit && <span className="text-[11.5px] text-[var(--ink-3)]">{i.unit}</span>}
-                              <Button sm variant="solid" onClick={() => doCheck(i, Math.max(0, parseInt(val, 10) || 0))}>✓ Count</Button>
+                              <Button sm variant="solid" onClick={() => doCheck(i, Math.max(0, parseInt(val, 10) || 0))}>{t("p8fin.invCount")}</Button>
                             </div>
                           ) : (
                             // most recent count, inline in the header — click to see the last 5
-                            <button type="button" onClick={() => nChecks && setHistId(histId === i.id ? null : i.id)} className="text-end" title={nChecks ? "Count history" : undefined}>
+                            <button type="button" onClick={() => nChecks && setHistId(histId === i.id ? null : i.id)} className="text-end" title={nChecks ? t("p8fin.invCountHistory") : undefined}>
                               <div className="text-[17px] font-extrabold leading-none tabular-nums" style={{ color: lowStock(i) ? RED : "var(--ink)" }}>{i.quantity}{i.unit ? <span className="text-[11px] font-semibold text-[var(--ink-3)]"> {i.unit}</span> : ""}</div>
-                              <div className="mt-0.5 text-[10px]" style={stale || !i.lastCheckedAt ? { color: "var(--ink-2)", fontWeight: 700 } : { color: "var(--ink-3)" }}>{i.lastCheckedAt ? `✓ ${fmtDate(i.lastCheckedAt)}${i.lastCheckedBy ? ` · ${i.lastCheckedBy.split(" ")[0]}` : ""}${stale ? " · due" : ""}` : "never checked"}{i.minQty != null ? ` · min ${i.minQty}` : ""}{nChecks > 0 ? (histOpen ? " ▴" : " ▾") : ""}</div>
+                              <div className="mt-0.5 text-[10px]" style={stale || !i.lastCheckedAt ? { color: "var(--ink-2)", fontWeight: 700 } : { color: "var(--ink-3)" }}>{i.lastCheckedAt ? `✓ ${fmtDate(i.lastCheckedAt)}${i.lastCheckedBy ? ` · ${i.lastCheckedBy.split(" ")[0]}` : ""}${stale ? t("p8fin.invDue") : ""}` : t("p8fin.invNeverChecked")}{i.minQty != null ? t("p8fin.invMinQty", { n: i.minQty }) : ""}{nChecks > 0 ? (histOpen ? " ▴" : " ▾") : ""}</div>
                             </button>
                           )}
                           <div className="flex flex-wrap gap-1.5">
-                            {!checking && <Button sm onClick={() => { setCheckVals((v) => ({ ...v, [i.id]: String(i.quantity) })); setHistId(i.id); setCheckMode(true); }}>Check</Button>}
-                            {canManage && (i.ordered ? <Button sm variant="solid" onClick={() => markReceived(i)}>✓ Received</Button> : <Button sm onClick={() => setOrdering(i)}>🛒 Order</Button>)}
-                            <Button sm onClick={() => { setEditing(i); setAdding(false); }}>Edit</Button>
-                            {canManage && <Button sm variant="danger" onClick={() => remove(i)}>Delete</Button>}
+                            {!checking && <Button sm onClick={() => { setCheckVals((v) => ({ ...v, [i.id]: String(i.quantity) })); setHistId(i.id); setCheckMode(true); }}>{t("p8fin.invCheck")}</Button>}
+                            {canManage && (i.ordered ? <Button sm variant="solid" onClick={() => markReceived(i)}>{t("p8fin.invReceived")}</Button> : <Button sm onClick={() => setOrdering(i)}>{t("p8fin.invOrder")}</Button>)}
+                            <Button sm onClick={() => { setEditing(i); setAdding(false); }}>{t("p8fin.gEdit")}</Button>
+                            {canManage && <Button sm variant="danger" onClick={() => remove(i)}>{t("p8fin.gDelete")}</Button>}
                           </div>
                         </div>
                         {histOpen && nChecks > 0 && (
                           <div className="mt-2 flex items-center gap-2 overflow-x-auto border-t border-[var(--line)] pt-2 [scrollbar-width:thin]">
-                            <span className="flex-none text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Last 5:</span>
+                            <span className="flex-none text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8fin.invLast5")}</span>
                             {(i.checks ?? []).slice(0, 5).map((c, idx) => (
                               <div key={idx} className="flex flex-none items-center gap-1.5 rounded-lg border px-2 py-1" style={idx === 0 ? { borderColor: GREEN, background: "#e7f6ee" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
                                 <span className="text-[13px] font-extrabold tabular-nums" style={{ color: idx === 0 ? GREEN : "var(--ink)" }}>{c.quantity}</span>
                                 <span className="text-[10px] text-[var(--ink-3)]">{fmtStamp(c.at)}{c.by ? ` · ${c.by.split(" ")[0]}` : ""}</span>
-                                {idx === 0 && <span className="rounded-full px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase text-white" style={{ background: "#0f7a43" }}>latest</span>}
+                                {idx === 0 && <span className="rounded-full px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase text-white" style={{ background: "#0f7a43" }}>{t("p8fin.invLatest")}</span>}
                               </div>
                             ))}
                           </div>
@@ -239,6 +241,7 @@ export function InventoryApp() {
 type SettingsShape = ReturnType<typeof useSettings>["settings"];
 type SaveFn = ReturnType<typeof useSettings>["save"];
 function ItemForm({ existing, categories, locations, seasons, defaultSeason, settings, save, onClose, onSaved, onDelete }: { existing?: Item; categories: string[]; locations: string[]; seasons: string[]; defaultSeason: string; settings: SettingsShape; save: SaveFn; onClose: () => void; onSaved: () => void; onDelete?: () => void }) {
+  const t = useT();
   const isEdit = !!existing;
   const [name, setName] = useState(existing?.name ?? "");
   // A cleared (null) category/location stays "— none —" on re-open; only a NEW item defaults to the first option.
@@ -259,10 +262,10 @@ function ItemForm({ existing, categories, locations, seasons, defaultSeason, set
     if (!cur.includes(v)) await save({ settings: { ...settings, inventory: { ...settings.inventory, [key]: [...cur, v] } } });
     setLocal(v);
   }
-  const promptAdd = (key: "categories" | "locations" | "seasons", label: string, setLocal: (v: string) => void) => { const v = window.prompt(`New ${label}`); if (v) addOption(key, v, setLocal); };
+  const promptAdd = (key: "categories" | "locations" | "seasons", label: string, setLocal: (v: string) => void) => { const v = window.prompt(t(label === "category" ? "p8fin.invPromptCategory" : label === "location" ? "p8fin.invPromptLocation" : "p8fin.invPromptSeason")); if (v) addOption(key, v, setLocal); };
 
   async function submit() {
-    if (!name.trim()) { setError("Give the item a name."); return; }
+    if (!name.trim()) { setError(t("p8fin.invNeedName")); return; }
     setBusy(true); setError(null);
     // Editing: a field left blank is sent as null so the server CLEARS it (undefined
     // would be dropped and the merge keep the old value — e.g. a reorder level
@@ -270,35 +273,35 @@ function ItemForm({ existing, categories, locations, seasons, defaultSeason, set
     const blank = isEdit ? null : undefined;
     const body = { name: name.trim(), category: category || blank, location: location || blank, quantity: Math.max(0, parseInt(quantity, 10) || 0), unit: unit.trim() || blank, minQty: minQty.trim() === "" ? blank : Math.max(0, parseInt(minQty, 10) || 0), season: season || undefined /* never cleared: a seasonless item drops out of every season view */, notes: notes.trim() || blank };
     try { if (isEdit) await apiPut(`/api/inventory/${encodeURIComponent(existing!.id)}`, body); else await apiPost("/api/inventory", body); onSaved(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p8fin.invCouldntSave")); setBusy(false); }
   }
   const lbl = (s: string) => <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{s}</span>;
   const selectAdd = (key: "categories" | "locations" | "seasons", label: string, opts: string[], val: string, setVal: (v: string) => void) => (
-    <div className="flex gap-1.5"><select value={val} onChange={(e) => setVal(e.target.value)} className={`${inputCls} flex-1`}><option value="">— none —</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</select><button type="button" onClick={() => promptAdd(key, label, setVal)} className="rounded-md border border-[var(--line)] px-2 text-[11px] font-bold text-[#1d3a8f]">＋</button></div>
+    <div className="flex gap-1.5"><select value={val} onChange={(e) => setVal(e.target.value)} className={`${inputCls} flex-1`}><option value="">{t("p8fin.gNone")}</option>{opts.map((o) => <option key={o} value={o}>{key === "seasons" && o === "This season" ? t("p8fin.invThisSeason") : o}</option>)}</select><button type="button" onClick={() => promptAdd(key, label, setVal)} className="rounded-md border border-[var(--line)] px-2 text-[11px] font-bold text-[#1d3a8f]">＋</button></div>
   );
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4" onClick={onClose}>
       <div className="mt-[5vh] w-full max-w-[480px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center justify-between"><div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{isEdit ? "Edit item" : "Add item"}</div><button type="button" onClick={onClose} className="text-[var(--ink-3)] hover:text-[var(--ink)]">✕</button></div>
+        <div className="mb-3 flex items-center justify-between"><div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{isEdit ? t("p8fin.invEditItem") : t("p8fin.invAddItemTitle")}</div><button type="button" onClick={onClose} className="text-[var(--ink-3)] hover:text-[var(--ink)]">✕</button></div>
         <div className="flex flex-col gap-2.5">
-          <label className="flex flex-col gap-1">{lbl("Item")}<input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Footballs (size 4)" className={`${inputCls} w-full`} /></label>
+          <label className="flex flex-col gap-1">{lbl(t("p8fin.invFItem"))}<input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("p8fin.invFItemPh")} className={`${inputCls} w-full`} /></label>
           <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1">{lbl("Category")}{selectAdd("categories", "category", categories, category, setCategory)}</div>
-            <div className="flex flex-col gap-1">{lbl("Stored at")}{selectAdd("locations", "location", locations, location, setLocation)}</div>
+            <div className="flex flex-col gap-1">{lbl(t("p8fin.gCategory"))}{selectAdd("categories", "category", categories, category, setCategory)}</div>
+            <div className="flex flex-col gap-1">{lbl(t("p8fin.invFStored"))}{selectAdd("locations", "location", locations, location, setLocation)}</div>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <label className="flex flex-col gap-1">{lbl("How many")}<input type="number" min={0} value={quantity} onChange={(e) => setQuantity(e.target.value)} className={`${inputCls} w-full`} /></label>
-            <label className="flex flex-col gap-1">{lbl("Unit")}<input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="e.g. box" className={`${inputCls} w-full`} /></label>
-            <label className="flex flex-col gap-1">{lbl("Reorder at")}<input type="number" min={0} value={minQty} onChange={(e) => setMinQty(e.target.value)} placeholder="min" className={`${inputCls} w-full`} /></label>
+            <label className="flex flex-col gap-1">{lbl(t("p8fin.invFHowMany"))}<input type="number" min={0} value={quantity} onChange={(e) => setQuantity(e.target.value)} className={`${inputCls} w-full`} /></label>
+            <label className="flex flex-col gap-1">{lbl(t("p8fin.invFUnit"))}<input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={t("p8fin.invFUnitPh")} className={`${inputCls} w-full`} /></label>
+            <label className="flex flex-col gap-1">{lbl(t("p8fin.invFReorder"))}<input type="number" min={0} value={minQty} onChange={(e) => setMinQty(e.target.value)} placeholder={t("p8fin.invFMinPh")} className={`${inputCls} w-full`} /></label>
           </div>
-          <div className="flex flex-col gap-1">{lbl("Season")}{selectAdd("seasons", "season", seasons, season, setSeason)}</div>
-          <label className="flex flex-col gap-1">{lbl("Notes (optional)")}<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Condition, supplier, anything to remember…" className={`${inputCls} w-full resize-y leading-[1.5] [field-sizing:content]`} /></label>
+          <div className="flex flex-col gap-1">{lbl(t("p8fin.invSeason"))}{selectAdd("seasons", "season", seasons, season, setSeason)}</div>
+          <label className="flex flex-col gap-1">{lbl(t("p8fin.gNotesOpt"))}<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder={t("p8fin.invFNotesPh")} className={`${inputCls} w-full resize-y leading-[1.5] [field-sizing:content]`} /></label>
         </div>
         {error && <div className="mt-2.5 text-[12px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
         <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3">
-          {onDelete ? <button type="button" onClick={onDelete} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold" style={{ color: RED }}>Delete</button> : <span />}
-          <div className="flex gap-2"><button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Cancel</button><button type="button" disabled={busy} onClick={submit} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{busy ? "Saving…" : "Save item"}</button></div>
+          {onDelete ? <button type="button" onClick={onDelete} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold" style={{ color: RED }}>{t("p8fin.gDelete")}</button> : <span />}
+          <div className="flex gap-2"><button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{t("p8fin.gCancel")}</button><button type="button" disabled={busy} onClick={submit} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{busy ? t("p8fin.gSaving") : t("p8fin.invSaveItem")}</button></div>
         </div>
       </div>
     </div>
@@ -307,6 +310,7 @@ function ItemForm({ existing, categories, locations, seasons, defaultSeason, set
 
 // ── Order more ───────────────────────────────────────────────────────────────
 function OrderModal({ item, defaultStatus, defaultCategory, onClose, onDone }: { item: Item; defaultStatus: "paid" | "pending"; defaultCategory: string; onClose: () => void; onDone: () => void }) {
+  const t = useT();
   const suggested = item.minQty != null ? Math.max(1, (item.minQty * 2) - item.quantity) : 1;
   const [quantity, setQuantity] = useState(String(suggested > 0 ? suggested : 1));
   const [cost, setCost] = useState("");
@@ -319,28 +323,28 @@ function OrderModal({ item, defaultStatus, defaultCategory, onClose, onDone }: {
 
   async function submit() {
     const qty = Math.max(0, parseInt(quantity, 10) || 0), amt = Math.max(0, parseFloat(cost) || 0);
-    if (!qty) { setError("How many are you ordering?"); return; }
+    if (!qty) { setError(t("p8fin.invHowManyOrdering")); return; }
     setBusy(true); setError(null);
     try { await apiPost(`/api/inventory/${encodeURIComponent(item.id)}/order`, { quantity: qty, cost: amt, category, supplier: supplier.trim() || undefined, status }); onDone(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t place order"); setBusy(false); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p8fin.invCouldntOrder")); setBusy(false); }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4" onClick={onClose}>
       <div className="mt-[7vh] w-full max-w-[420px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-1 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Order more — {item.name}</div>
-        <p className="mb-3 text-[12px] text-[var(--ink-2)]">Records the order on this item and logs it to <b>Expenses</b> under the category you pick.</p>
+        <div className="mb-1 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8fin.invOrderTitle", { name: item.name })}</div>
+        <p className="mb-3 text-[12px] text-[var(--ink-2)]">{rich(t("p8fin.invOrderExplain"))}</p>
         <div className="flex flex-col gap-2.5">
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex flex-col gap-1">{lbl("How many")}<input type="number" min={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} className={`${inputCls} w-full`} /></label>
-            <label className="flex flex-col gap-1">{lbl("Total cost (£)")}<input type="number" min={0} step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" className={`${inputCls} w-full`} /></label>
+            <label className="flex flex-col gap-1">{lbl(t("p8fin.invFHowMany"))}<input type="number" min={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} className={`${inputCls} w-full`} /></label>
+            <label className="flex flex-col gap-1">{lbl(t("p8fin.invTotalCost"))}<input type="number" min={0} step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" className={`${inputCls} w-full`} /></label>
           </div>
-          <label className="flex flex-col gap-1">{lbl("Supplier (optional)")}<input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Who from" className={`${inputCls} w-full`} /></label>
-          <label className="flex flex-col gap-1">{lbl("Expense category")}<select value={category} onChange={(e) => setCategory(e.target.value)} className={`${inputCls} w-full`}>{EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></label>
-          <div>{lbl("Payment")}<div className="mt-1 flex gap-1.5">{(["pending", "paid"] as const).map((s) => <button key={s} type="button" onClick={() => setStatus(s)} className="rounded-full border-2 px-3 py-1 text-[12px] font-bold" style={status === s ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{s === "pending" ? "Owed (unpaid)" : "Already paid"}</button>)}</div></div>
+          <label className="flex flex-col gap-1">{lbl(t("p8fin.gSupplierOpt"))}<input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder={t("p8fin.invWhoFrom")} className={`${inputCls} w-full`} /></label>
+          <label className="flex flex-col gap-1">{lbl(t("p8fin.invExpenseCategory"))}<select value={category} onChange={(e) => setCategory(e.target.value)} className={`${inputCls} w-full`}>{EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{catLabel(t, c)}</option>)}</select></label>
+          <div>{lbl(t("p8fin.invPayment"))}<div className="mt-1 flex gap-1.5">{(["pending", "paid"] as const).map((s) => <button key={s} type="button" onClick={() => setStatus(s)} className="rounded-full border-2 px-3 py-1 text-[12px] font-bold" style={status === s ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{s === "pending" ? t("p8fin.invOwedUnpaid") : t("p8fin.invAlreadyPaid")}</button>)}</div></div>
         </div>
         {error && <div className="mt-2.5 text-[12px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
-        <div className="mt-4 flex justify-end gap-2 border-t border-[var(--line)] pt-3"><button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Cancel</button><button type="button" disabled={busy} onClick={submit} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{busy ? "Ordering…" : "Place order → Expenses"}</button></div>
+        <div className="mt-4 flex justify-end gap-2 border-t border-[var(--line)] pt-3"><button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{t("p8fin.gCancel")}</button><button type="button" disabled={busy} onClick={submit} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{busy ? t("p8fin.invOrderingBusy") : t("p8fin.invPlaceOrder")}</button></div>
       </div>
     </div>
   );
@@ -348,6 +352,7 @@ function OrderModal({ item, defaultStatus, defaultCategory, onClose, onDone }: {
 
 // ── Carry over ───────────────────────────────────────────────────────────────
 function CarryOverModal({ seasons, fromDefault, settings, save, onClose, onDone }: { seasons: string[]; fromDefault: string; settings: SettingsShape; save: SaveFn; onClose: () => void; onDone: (to: string) => void }) {
+  const t = useT();
   const [from, setFrom] = useState(fromDefault || seasons[0] || "");
   const [to, setTo] = useState("");
   const [busy, setBusy] = useState(false);
@@ -355,7 +360,7 @@ function CarryOverModal({ seasons, fromDefault, settings, save, onClose, onDone 
   const [result, setResult] = useState<number | null>(null);
 
   async function run() {
-    const target = to.trim(); if (!from || !target) { setError("Pick a season to copy from and name the new one."); return; }
+    const target = to.trim(); if (!from || !target) { setError(t("p8fin.invPickSeasonErr")); return; }
     setBusy(true); setError(null);
     try {
       const r = await apiPost<{ copied: number }>("/api/inventory/carry-over", { fromSeason: from, toSeason: target });
@@ -365,21 +370,21 @@ function CarryOverModal({ seasons, fromDefault, settings, save, onClose, onDone 
       else await save({ settings: { ...settings, inventory: { ...settings.inventory, currentSeason: target } } });
       setResult(r.copied);
       setTimeout(() => onDone(target), 900);
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t carry over"); setBusy(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.invCouldntCarry")); setBusy(false); }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4" onClick={onClose}>
       <div className="mt-[8vh] w-full max-w-[420px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-1 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Carry over to next season</div>
-        <p className="mb-3 text-[12px] text-[var(--ink-2)]">Copies every item (kit + current counts) from one season into a new one, so you don&rsquo;t re-enter everything. The new season starts unchecked.</p>
+        <div className="mb-1 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8fin.invCarryTitle")}</div>
+        <p className="mb-3 text-[12px] text-[var(--ink-2)]">{t("p8fin.invCarryExplain")}</p>
         <div className="flex flex-col gap-2.5">
-          <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Copy from</span><select value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} w-full`}>{seasons.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
-          <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Into season — pick one or type a new name</span><input list="carry-into-seasons" value={to} onChange={(e) => setTo(e.target.value)} placeholder="e.g. Summer 2027" className={`${inputCls} w-full`} /><datalist id="carry-into-seasons">{seasons.filter((s) => s !== from).map((s) => <option key={s} value={s} />)}</datalist></label>
+          <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8fin.invCopyFrom")}</span><select value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} w-full`}>{seasons.map((s) => <option key={s} value={s}>{s === "This season" ? t("p8fin.invThisSeason") : s}</option>)}</select></label>
+          <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8fin.invIntoSeason")}</span><input list="carry-into-seasons" value={to} onChange={(e) => setTo(e.target.value)} placeholder={t("p8fin.invIntoPh")} className={`${inputCls} w-full`} /><datalist id="carry-into-seasons">{seasons.filter((s) => s !== from).map((s) => <option key={s} value={s} />)}</datalist></label>
         </div>
         {error && <div className="mt-2.5 text-[12px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
-        {result != null && <div className="mt-2.5 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-bold" style={{ color: GREEN }}>✓ Carried over {result} item{result === 1 ? "" : "s"} into “{to}”.</div>}
-        <div className="mt-4 flex justify-end gap-2 border-t border-[var(--line)] pt-3"><button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Close</button><button type="button" disabled={busy} onClick={run} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{busy ? "Working…" : "Carry over"}</button></div>
+        {result != null && <div className="mt-2.5 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-bold" style={{ color: GREEN }}>{t("p8fin.invCarried", { n: result, to })}</div>}
+        <div className="mt-4 flex justify-end gap-2 border-t border-[var(--line)] pt-3"><button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{t("p8fin.gClose")}</button><button type="button" disabled={busy} onClick={run} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{busy ? t("p8fin.invCarryBusy") : t("p8fin.invCarryGo")}</button></div>
       </div>
     </div>
   );
