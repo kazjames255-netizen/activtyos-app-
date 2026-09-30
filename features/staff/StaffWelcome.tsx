@@ -11,11 +11,14 @@
 // forces it). Front-end demo — real per-user "welcomed" state + identity are Amir's.
 import { useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useT } from "@/lib/i18n/provider";
+import { Rich } from "@/components/i18n/Rich";
 import { availabilityDone, complianceProgress, outstandingDocs, outstandingCourses, syncOutstandingDocs } from "./staffTasks";
 
 const FLAG = "aos.staff.welcomed.v1";
 
 export function StaffWelcome() {
+  const t = useT();
   const router = useRouter();
   const portal = (usePathname() || "/staff").split("/")[1] || "staff";
   const forced = useSearchParams().get("welcome") === "1";
@@ -42,8 +45,8 @@ export function StaffWelcome() {
   const complianceOk = comp.total > 0 && comp.done >= comp.total;
   // ordered gating steps — only the ones still outstanding
   const STEPS = ([
-    ["1", "📅", "Set your availability", "Tell us the days and times you can work — this puts you on the rota.", "availability", !availOk, "2 mins"],
-    ["2", "🪪", "Complete your compliance details", "Your right-to-work, DBS, references and emergency contacts. Save as you go.", "onboarding", !complianceOk, comp.total ? `${comp.done}/${comp.total} done` : "safer recruitment"],
+    ["1", "📅", t("p7tc.swAvailTitle"), t("p7tc.swAvailSub"), "availability", !availOk, t("p7tc.swMins")],
+    ["2", "🪪", t("p7tc.swCompTitle"), t("p7tc.swCompSub"), "onboarding", !complianceOk, comp.total ? t("p7tc.swDone", { done: comp.done, total: comp.total }) : t("p7tc.swSafer")],
   ] as const).filter(([, , , , , outstanding]) => outstanding);
   const allDone = STEPS.length === 0;
   const firstView = STEPS[0]?.[4] ?? "availability";
@@ -54,9 +57,9 @@ export function StaffWelcome() {
         <div className="relative overflow-hidden px-6 py-6 text-white" style={{ background: allDone ? "linear-gradient(135deg,#166534,#37b26a)" : "linear-gradient(135deg,#1d3a8f,#3f7ae0)" }}>
           <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 400 140" preserveAspectRatio="xMidYMid slice" aria-hidden><circle cx="368" cy="18" r="66" fill="#fff" opacity="0.1" /><circle cx="330" cy="140" r="44" fill="#fff" opacity="0.07" /></svg>
           <div className="relative">
-            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/80">Welcome to the team</div>
-            <h2 className="mt-1 text-[22px] font-extrabold leading-tight">{allDone ? "You're all set up 🎉" : "Let's get you started"}</h2>
-            <p className="mt-1 text-[13px] text-white/85">{allDone ? "Nothing left to set up. Anything else will show as a gentle reminder at the top." : "Just two quick things before your first shift — the rest can wait."}</p>
+            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/80">{t("p7tc.swWelcome")}</div>
+            <h2 className="mt-1 text-[22px] font-extrabold leading-tight">{allDone ? t("p7tc.swAllSet") : t("p7tc.swStarted")}</h2>
+            <p className="mt-1 text-[13px] text-white/85">{allDone ? t("p7tc.swNothingLeft") : t("p7tc.swTwoThings")}</p>
           </div>
         </div>
 
@@ -73,15 +76,15 @@ export function StaffWelcome() {
             {laterCount > 0 && (
               <div className="mt-1 flex items-start gap-2 rounded-xl bg-[#fff7e6] p-3 text-[12px] text-[#8a5a00]">
                 <span className="text-[14px]">📌</span>
-                <span>You also have <b>{laterCount}</b> course{laterCount > 1 ? "s" : ""} & document{laterCount > 1 ? "s" : ""} to work through — no rush. We'll keep a reminder at the top of your screen until they're done.</span>
+                <span><Rich text={t("p7tc.swLater", { count: laterCount })} /></span>
               </div>
             )}
           </div>
         )}
 
         <div className="flex items-center gap-2 border-t border-[var(--line)] px-5 py-3">
-          <button type="button" onClick={dismiss} className="text-[12.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink-2)]">{allDone ? "Close" : "Skip for now"}</button>
-          {!allDone && <button type="button" onClick={() => go(firstView)} className="ms-auto rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white hover:brightness-110">Start with step 1 →</button>}
+          <button type="button" onClick={dismiss} className="text-[12.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink-2)]">{allDone ? t("p7tc.swClose") : t("p7tc.swSkip")}</button>
+          {!allDone && <button type="button" onClick={() => go(firstView)} className="ms-auto rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white hover:brightness-110">{t("p7tc.swStart")}</button>}
         </div>
       </div>
     </div>

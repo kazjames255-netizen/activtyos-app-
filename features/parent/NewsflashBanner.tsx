@@ -23,7 +23,7 @@ const LS = "aos.newsflash.seen.v1";
 const readSeen = (): string[] => { try { return JSON.parse(localStorage.getItem(LS) || "[]"); } catch { return []; } };
 const writeSeen = (ids: string[]) => { try { localStorage.setItem(LS, JSON.stringify(ids.slice(-500))); } catch { /* private mode */ } };
 const TPLC: Record<string, string> = { announce: "#2596df", event: "#7c5cff", reminder: "#f59e0b", urgent: "#ef4444", celebrate: "#e22295", booking: "#15b364", newsletter: "var(--brand)" };
-const TAG: Record<string, string> = { urgent: "URGENT", event: "EVENT", celebrate: "GOOD NEWS", booking: "DON’T MISS", reminder: "REMINDER", newsletter: "NEWSLETTER", announce: "NEWS" };
+const TAG: Record<string, string> = { urgent: "p7parent.nfUrgent", event: "p7parent.nfEvent", celebrate: "p7parent.nfCelebrate", booking: "p7parent.nfBooking", reminder: "p7parent.nfReminder", newsletter: "p7parent.nfNewsletter", announce: "p7parent.nfNews" };
 const colourOf = (p: FlashPost) => p.colour || TPLC[p.tpl ?? "announce"] || "var(--brand)";
 
 export function NewsflashBanner() {
@@ -71,7 +71,7 @@ export function NewsflashBanner() {
 
       {p && !shown && (() => {
         const color = colourOf(p);
-        const tag = TAG[p.tpl ?? "announce"] ?? "NEWS";
+        const tag = t(TAG[p.tpl ?? "announce"] ?? "p7parent.nfNews");
         const thumb = p.newsletter?.blocks?.find((b) => b.image)?.image || p.photoUrl;
         const headline = p.title || p.body.slice(0, 90);
         return (
@@ -98,7 +98,7 @@ export function NewsflashBanner() {
 
       {shown && (() => {
         const color = colourOf(shown);
-        const tag = TAG[shown.tpl ?? "announce"] ?? "NEWS";
+        const tag = t(TAG[shown.tpl ?? "announce"] ?? "p7parent.nfNews");
         const isNl = shown.tpl === "newsletter" && shown.newsletter;
         const more = unseen.filter((x) => x.id !== shown.id).length;
         return (

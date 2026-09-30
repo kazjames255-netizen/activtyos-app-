@@ -3,6 +3,7 @@
 // Coloured, invoice-style, one receipt per page. Includes the provider's logo
 // when available and always shows the method of payment.
 
+import { tNow } from "@/lib/i18n/provider";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import type { Booking } from "@/features/bookings/types";
 import { bookingDateSummary, money, payLabelFor, refundedTotal } from "@/features/bookings/helpers";
@@ -122,7 +123,7 @@ function drawReceipt(doc: Doc, b: Booking, ctx: ReceiptCtx, logo: { dataUrl: str
     ["Activity", b.listing],
     ["Pass", b.ticket || b.pass || "—"],
     ["Child", childrenOf(b)],
-    ["Dates", bookingDateSummary(b)],
+    ["Dates", bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))],
   ];
   if (b.sessions && b.sessions.length) rows.push(["Sessions / times", b.sessions.join("   ·   ")]);
   if (loc) rows.push(["Location", loc]);

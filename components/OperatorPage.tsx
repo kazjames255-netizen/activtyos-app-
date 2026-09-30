@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useT } from "@/lib/i18n/provider";
 import { TourLauncher } from "@/features/common/TourLauncher";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -220,7 +221,7 @@ function slug(title: ReactNode): string {
 export function CollapsibleStats({
   id,
   children,
-  label = "Overview",
+  label,
   className = "mb-4",
 }: {
   id: string;
@@ -228,6 +229,7 @@ export function CollapsibleStats({
   label?: string;
   className?: string;
 }) {
+  const t = useT();
   const key = `aos.hero.${id}`;
   const [open, setOpen] = useState(true);
   useEffect(() => {
@@ -241,14 +243,14 @@ export function CollapsibleStats({
   return (
     <div className={className}>
       <div className="mb-1.5 flex items-center gap-2">
-        <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-[var(--ink-3)]">{label}</span>
+        <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-[var(--ink-3)]">{label ?? t("p7tk.overviewWord")}</span>
         <button
           type="button"
           onClick={toggle}
           aria-expanded={open}
           className="ms-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]"
         >
-          {open ? "▴ Hide" : "▾ Show"}
+          {open ? `▴ ${t("p7tk.hideWord")}` : `▾ ${t("p7tk.showWord")}`}
         </button>
       </div>
       {open && children}

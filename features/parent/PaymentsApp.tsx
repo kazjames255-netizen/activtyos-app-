@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
 import { useSettings } from "@/lib/settings";
 import { bookingDateSummary, money, owedOf, payLabelFor, payTone, refundedTotal } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
@@ -44,7 +44,7 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] font-bold">{b.listing}</div>
         <div className="text-[11.5px] text-[var(--ink-3)]">
-          {b.child} · {bookingDateSummary(b)} · Ref {b.ref}
+          {b.child} · {bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))} · Ref {b.ref}
         </div>
       </div>
       <span className="hidden w-[92px] text-end text-[11.5px] text-[var(--ink-3)] sm:inline">{methodOf(b)}</span>

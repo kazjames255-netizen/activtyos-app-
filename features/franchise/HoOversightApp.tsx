@@ -3,12 +3,13 @@
 // Head-office READ-ONLY oversight across every franchise — safeguarding/incidents,
 // accidents or medication. Shows a per-franchise breakdown + a records list, each
 // tagged with the franchise it belongs to. The head office watches the whole
-// network here; to act on a record it drills into that franchise.
+// network here; to act on a record it drills into that p7ho.
 
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { Card } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
 import { setHoScopeId } from "@/components/franchise/HoScope";
 
 type Area = "incidents" | "accidents" | "medication";
@@ -20,26 +21,27 @@ interface FrBucket { franchiseId: string | null; name: string; total: number; op
 interface Payload { area: Area; records: Rec[]; byFranchise: FrBucket[]; totals: { records: number; open: number; last30: number } }
 
 const META: Record<Area, { icon: string; title: string; lede: string; noun: string }> = {
-  incidents: { icon: "🛡️", title: "Safeguarding & incidents", lede: "Every concern and incident logged across your network — view-only oversight.", noun: "records" },
-  accidents: { icon: "🩹", title: "Accidents", lede: "Every accident logged across your network — view-only oversight.", noun: "accidents" },
-  medication: { icon: "💊", title: "Medication", lede: "Every authorised medication across your network — view-only oversight.", noun: "medications" },
+  incidents: { icon: "🛡️", title: "p7ho.safeguardingIncidents", lede: "p7ho.oversightLedeIncidents", noun: "p7ho.nounRecords" },
+  accidents: { icon: "🩹", title: "p7ho.accidents", lede: "p7ho.oversightLedeAccidents", noun: "p7ho.nounAccidents" },
+  medication: { icon: "💊", title: "p7ho.medication", lede: "p7ho.oversightLedeMedication", noun: "p7ho.nounMedications" },
 };
 const PALETTE = ["#2f6bd8", "#e0483d", "#0f9d58", "#f5b81f", "#8e44ad", "#e67e22", "#16a085", "#c2185b"];
 const KIND_TAG: Record<string, { label: string; bg: string; fg: string }> = {
-  accident: { label: "Accident", bg: "#fdf0e3", fg: "#b45309" },
-  incident: { label: "Incident", bg: "#eef4fd", fg: "#1d3a8f" },
-  safeguarding: { label: "Safeguarding", bg: "#fdecec", fg: "#c0392b" },
-  medication: { label: "Medication", bg: "#f3f0fb", fg: "#6d28d9" },
+  accident: { label: "p7ho.tagAccident", bg: "#fdf0e3", fg: "#b45309" },
+  incident: { label: "p7ho.tagIncident", bg: "#eef4fd", fg: "#1d3a8f" },
+  safeguarding: { label: "p7ho.tagSafeguarding", bg: "#fdecec", fg: "#c0392b" },
+  medication: { label: "p7ho.tagMedication", bg: "#f3f0fb", fg: "#6d28d9" },
 };
 const fmtWhen = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "—");
 
 export function HoOversightApp({ area }: { area: Area }) {
+  const t = useT();
   const [d, setD] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fFilter, setFFilter] = useState<string>("all");
   const meta = META[area];
 
-  useEffect(() => { setD(null); apiGet<Payload>(`/api/ho/oversight/${area}`).then(setD).catch((e) => setError(e instanceof Error ? e.message : "Couldn't load")); }, [area]);
+  useEffect(() => { setD(null); apiGet<Payload>(`/api/ho/oversight/${area}`).then(setD).catch((e) => setError(e instanceof Error ? e.message : t("p7ho.couldntLoad"))); }, [area]);
 
   const colorOf = (fid: string | null) => (fid == null ? "#64748b" : PALETTE[Math.max(0, (d?.byFranchise ?? []).filter((b) => b.franchiseId).findIndex((b) => b.franchiseId === fid)) % PALETTE.length]);
   const records = useMemo(() => (d?.records ?? []).filter((r) => fFilter === "all" || (fFilter === "__ho__" ? !r.franchiseId : r.franchiseId === fFilter)), [d, fFilter]);
@@ -51,20 +53,20 @@ export function HoOversightApp({ area }: { area: Area }) {
         <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(0,0,0,.5)]" style={{ background: "var(--hero-grad)" }}>
           <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-[16px]">{meta.icon}</span>
-            {meta.title}
+            {t(meta.title)}
           </div>
-          <p className="mt-1.5 max-w-[620px] text-[12.5px] leading-[1.5] text-white/80">{meta.lede}</p>
+          <p className="mt-1.5 max-w-[620px] text-[12.5px] leading-[1.5] text-white/80">{t(meta.lede)}</p>
         </div>
 
-        <div className="mb-3 flex items-center gap-2 rounded-lg border border-[#dbe6fb] bg-[#eef4fd] px-3 py-2 text-[12px] font-bold text-[#1d3a8f]">👁 View-only across the network — open a franchise to add, edit or close a record.</div>
+        <div className="mb-3 flex items-center gap-2 rounded-lg border border-[#dbe6fb] bg-[#eef4fd] px-3 py-2 text-[12px] font-bold text-[#1d3a8f]">{t("p7ho.viewOnlyBanner")}</div>
         {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
         {!d ? (
-          <div className="py-16 text-center text-[13px] text-[var(--ink-3)]">Loading…</div>
+          <div className="py-16 text-center text-[13px] text-[var(--ink-3)]">{t("p7ho.loading")}</div>
         ) : (
           <>
             {/* Summary tiles */}
             <div className="mb-3 grid grid-cols-3 gap-2.5">
-              {[["Total", String(d.totals.records)], ["Open / unresolved", String(d.totals.open)], ["Last 30 days", String(d.totals.last30)]].map(([k, v], i) => (
+              {[[t("p7ho.total"), String(d.totals.records)], [t("p7ho.openUnresolved"), String(d.totals.open)], [t("p7ho.last30Days"), String(d.totals.last30)]].map(([k, v], i) => (
                 <Card key={k} className="p-4"><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{k}</div><div className={"mt-1 text-[22px] font-extrabold tabular-nums " + (i === 1 && d.totals.open > 0 ? "text-[#c0392b]" : "")} style={{ fontFamily: "var(--ff-display)" }}>{v}</div></Card>
               ))}
             </div>
@@ -72,8 +74,8 @@ export function HoOversightApp({ area }: { area: Area }) {
             {/* Per-franchise breakdown */}
             <Card className="mb-3 p-4">
               <div className="mb-2.5 flex items-center justify-between">
-                <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">By franchise</div>
-                <button type="button" onClick={() => setFFilter("all")} className={"rounded-md px-2.5 py-1 text-[11.5px] font-extrabold " + (fFilter === "all" ? "bg-[#171534] text-white" : "border border-[var(--line)] text-[var(--ink-2)]")}>All · {d.totals.records}</button>
+                <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p7ho.byFranchise")}</div>
+                <button type="button" onClick={() => setFFilter("all")} className={"rounded-md px-2.5 py-1 text-[11.5px] font-extrabold " + (fFilter === "all" ? "bg-[#171534] text-white" : "border border-[var(--line)] text-[var(--ink-2)]")}>{t("p7ho.all")} · {d.totals.records}</button>
               </div>
               <div className="flex flex-col gap-1.5">
                 {d.byFranchise.map((b) => {
@@ -83,13 +85,13 @@ export function HoOversightApp({ area }: { area: Area }) {
                     <button key={key} type="button" onClick={() => setFFilter(active ? "all" : key)} className={"flex items-center gap-3 rounded-xl border px-3 py-2 text-start transition-colors " + (active ? "border-[#171534] bg-[var(--panel)]" : "border-[var(--line)] hover:bg-[var(--panel)]")}>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 text-[12.5px] font-extrabold">
-                          {b.franchiseId == null && <span className="rounded-full bg-[#17181c] px-1.5 py-0.5 text-[9px] font-black uppercase text-white">HO</span>}
+                          {b.franchiseId == null && <span className="rounded-full bg-[#17181c] px-1.5 py-0.5 text-[9px] font-black uppercase text-white">{t("p7ho.hoBadge")}</span>}
                           <span className="truncate">{b.name}</span>
-                          {b.open > 0 && <span className="rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9.5px] font-black text-[#c0392b]">{b.open} open</span>}
+                          {b.open > 0 && <span className="rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9.5px] font-black text-[#c0392b]">{t("p7ho.openCount", { count: b.open })}</span>}
                         </div>
                         <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(b.total / maxTotal) * 100}%`, background: colorOf(b.franchiseId) }} /></div>
                       </div>
-                      <div className="flex-none text-end"><div className="text-[14px] font-black tabular-nums">{b.total}</div><div className="text-[10px] font-bold text-[var(--ink-3)]">{b.last30} in 30d</div></div>
+                      <div className="flex-none text-end"><div className="text-[14px] font-black tabular-nums">{b.total}</div><div className="text-[10px] font-bold text-[var(--ink-3)]">{t("p7ho.in30d", { count: b.last30 })}</div></div>
                     </button>
                   );
                 })}
@@ -98,24 +100,24 @@ export function HoOversightApp({ area }: { area: Area }) {
 
             {/* Records list (read-only) */}
             <Card className="p-0">
-              <div className="border-b border-[var(--line)] px-4 py-3 text-[13px] font-extrabold">{meta.title} <span className="font-bold text-[var(--ink-3)]">· {records.length} {meta.noun}</span></div>
+              <div className="border-b border-[var(--line)] px-4 py-3 text-[13px] font-extrabold">{t(meta.title)} <span className="font-bold text-[var(--ink-3)]">· {records.length} {t(meta.noun)}</span></div>
               {records.length === 0 ? (
-                <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">No {meta.noun} to show.</div>
+                <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("p7ho.noNounToShow", { noun: t(meta.noun) })}</div>
               ) : (
                 <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
                   {records.map((r) => {
                     const tag = KIND_TAG[r.kind] ?? KIND_TAG.incident;
                     return (
                       <div key={r.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-[12.5px]">
-                        <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: tag.bg, color: tag.fg }}>{tag.label}</span>
+                        <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: tag.bg, color: tag.fg }}>{t(tag.label)}</span>
                         <span className="font-extrabold">{r.childName}</span>
                         {area === "medication"
                           ? <span className="text-[var(--ink-2)]">{r.medicine}{r.dose ? ` · ${r.dose}` : ""}</span>
                           : r.summary && <span className="text-[var(--ink-2)]">{r.summary}{r.bodyPart ? ` (${r.bodyPart})` : ""}</span>}
                         <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${colorOf(r.franchiseId)}1a`, color: colorOf(r.franchiseId) }}><span className="h-1.5 w-1.5 rounded-full" style={{ background: colorOf(r.franchiseId) }} />{r.franchiseName}</span>
-                        {r.open && area !== "medication" && <span className="rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9.5px] font-black text-[#c0392b]">Open</span>}
+                        {r.open && area !== "medication" && <span className="rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9.5px] font-black text-[#c0392b]">{t("p7ho.openWord")}</span>}
                         <span className="ms-auto text-[11px] text-[var(--ink-3)]">{fmtWhen(r.when)}</span>
-                        {r.franchiseId && <button type="button" onClick={() => setHoScopeId(r.franchiseId!)} className="text-[11px] font-extrabold text-[#2f6bd8] hover:underline">Open →</button>}
+                        {r.franchiseId && <button type="button" onClick={() => setHoScopeId(r.franchiseId!)} className="text-[11px] font-extrabold text-[#2f6bd8] hover:underline">{t("p7ho.openArrow")}</button>}
                       </div>
                     );
                   })}

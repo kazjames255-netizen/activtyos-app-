@@ -209,9 +209,9 @@ function QuickLinks({ tasks, me, onOpen }: { tasks: Task[]; me: string; onOpen: 
     .sort((a, b) => (nextOf(a.tasks).due ?? "9999").localeCompare(nextOf(b.tasks).due ?? "9999")) : [];
   return (
     <span className="relative shrink-0">
-      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} title="All the links on your open tasks"
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} title={tr("p7tk.quickLinksTip")}
         className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">
-        🔗 Quick links{byUrl.size ? ` (${byUrl.size})` : ""}
+        🔗 {tr("p7tk.quickLinks")}{byUrl.size ? ` (${byUrl.size})` : ""}
       </button>
       {open && (
         <>
@@ -653,10 +653,10 @@ export function TasksApp() {
   // hero; the dark one is for when the tile is SELECTED and flips to white,
   // where every pale accent drops to ~1.2:1 and the underline disappears.
   const kpis: [string, number, number, string, KpiKey, string][] = [
-    ["Open", jobs(openTasks), openTasks.length, "#bfe0ff", "open", "#1d6fd0"],
-    ["Overdue", jobs(overdue), overdue.length, "#ffb4bd", "overdue", "#c02636"],
-    ["Due this week", jobs(dueWeek), dueWeek.length, "#ffd9a6", "week", "#b45309"],
-    ...(manager ? [["Unassigned", jobs(unassigned), unassigned.length, "#d6dbe6", "unassigned", "#5a6478"] as [string, number, number, string, KpiKey, string]] : []),
+    [tr("p7tk.kpiOpen"), jobs(openTasks), openTasks.length, "#bfe0ff", "open", "#1d6fd0"],
+    [tr("p7tk.kpiOverdue"), jobs(overdue), overdue.length, "#ffb4bd", "overdue", "#c02636"],
+    [tr("p7tk.dueThisWeek"), jobs(dueWeek), dueWeek.length, "#ffd9a6", "week", "#b45309"],
+    ...(manager ? [[tr("p7tk.unassigned"), jobs(unassigned), unassigned.length, "#d6dbe6", "unassigned", "#5a6478"] as [string, number, number, string, KpiKey, string]] : []),
   ];
 
   // Combined filters — free-text search + a priority chip + the clicked KPI tile
@@ -682,12 +682,12 @@ export function TasksApp() {
 
   const openTask = openId ? all.find((t) => t.id === openId) ?? null : null;
   const TABS: [typeof tab, string][] = manager
-    ? [["mine", "My tasks"], ["team", "Team"], ["board", "Board"], ["cal", "Calendar"], ["archive", `Archive${archived.length ? ` (${archived.length})` : ""}`]]
-    : [["mine", "My tasks"], ["board", "Board"], ["cal", "Calendar"], ["archive", `Archive${archived.length ? ` (${archived.length})` : ""}`]];
-  const sub = role === "staff" ? "Your to-do list — tied to the sessions, children & camps you're working."
-    : isFreelancer ? "Your to-dos across every company you work for — one combined inbox."
-    : role === "franchise" ? "Tasks for your franchise team & freelancers — tied to your camps, bookings & people."
-    : "Everything your team & freelancers need to do — tied to the camps, bookings & people it's about.";
+    ? [["mine", tr("p7tk.tabMine")], ["team", tr("p7tk.tabTeam")], ["board", tr("p7tk.tabBoard")], ["cal", tr("p7tk.tabCal")], ["archive", archived.length ? tr("p7tk.tabArchiveN", { n: archived.length }) : tr("p7tk.tabArchive")]]
+    : [["mine", tr("p7tk.tabMine")], ["board", tr("p7tk.tabBoard")], ["cal", tr("p7tk.tabCal")], ["archive", archived.length ? tr("p7tk.tabArchiveN", { n: archived.length }) : tr("p7tk.tabArchive")]];
+  const sub = role === "staff" ? tr("p7tk.subStaff")
+    : isFreelancer ? tr("p7tk.subFreelancer")
+    : role === "franchise" ? tr("p7tk.subFranchise")
+    : tr("p7tk.subDefault");
 
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -699,7 +699,7 @@ export function TasksApp() {
           <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{tr("p7tk.taskManager")}</div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             <TourLauncher view="tasks" compact />
-            <button type="button" onClick={toggleHero} aria-expanded={heroOpen} title={heroOpen ? "Collapse cards" : "Show cards"} className="inline-flex flex-none items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
+            <button type="button" onClick={toggleHero} aria-expanded={heroOpen} title={heroOpen ? tr("p7tk.collapseCards") : tr("p7tk.showCards")} className="inline-flex flex-none items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? tr("p7tk.hideWord") : tr("p7tk.showWord")}</button>
           </div>
         </div>
         {heroOpen && <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">{sub}</p>}
@@ -707,7 +707,7 @@ export function TasksApp() {
           {kpis.map(([label, n, dates, color, key, onColor]) => {
             const on = kpiFilter === key;
             return (
-              <button key={label} type="button" onClick={() => setKpiFilter(on ? "" : key)} title={`Show ${label.toLowerCase()}`}
+              <button key={label} type="button" onClick={() => setKpiFilter(on ? "" : key)} title={label}
                 className="rounded-xl px-4 py-2 text-start backdrop-blur-sm transition hover:-translate-y-0.5"
                 style={on ? { background: "#fff", boxShadow: "0 6px 18px -8px rgba(0,0,0,.4)" } : { background: "rgba(255,255,255,.15)" }}>
                 {/* `on` renders a WHITE tile, so the ink has to be navy. This
@@ -719,7 +719,7 @@ export function TasksApp() {
                 {dates > n && (
                   <div className="mt-0.5 text-[9.5px] font-semibold" style={{ color: on ? "#8a86a3" : "rgba(255,255,255,.62)" }}
                     title={pickPlural(tr, locale, "p7tk.tasksTip", n, { dates })}>
-                    🔁 {dates} dates
+                    🔁 {tr("p7tk.nDates", { n: dates })}
                   </div>
                 )}
                 <div className="mt-0.5 h-0.5 w-6 rounded-full" style={{ background: on ? onColor : color }} />
@@ -743,14 +743,14 @@ export function TasksApp() {
             <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder={tr(noAssignee ? "p7tk.quickPhNoWho" : "p7tk.quickPh")} className="min-w-0 flex-1 bg-transparent px-3 py-2 text-[13px] outline-none" />
             <button type="button" onClick={addQuick} disabled={!qa.trim()}
               className="shrink-0 rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white transition disabled:opacity-35">
-              Quick add
+              {tr("p7tk.quickAdd")}
             </button>
           </div>
-          <label className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink-3)]"><span>Deadline</span><input type="date" value={qaDue} onChange={(e) => setQaDue(e.target.value)} className="bg-transparent text-[12.5px] text-[var(--ink)] outline-none" /></label>
+          <label className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink-3)]"><span>{tr("p7tk.deadline")}</span><input type="date" value={qaDue} onChange={(e) => setQaDue(e.target.value)} className="bg-transparent text-[12.5px] text-[var(--ink)] outline-none" /></label>
           <QuickLinks tasks={all} me={me} onOpen={setOpenId} />
           <button type="button" onClick={() => setRemOpen(true)} title={tr("p7tk.remindersTip")}
             className="shrink-0 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">
-            🔔 Reminders
+            🔔 {tr("p7tk.remindersBtn")}
           </button>
           <button type="button" onClick={() => setCreating(true)} className="rounded-lg bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:-translate-y-px">{tr("p7tk.newTaskBtn")}</button>
         </div>
@@ -778,12 +778,12 @@ export function TasksApp() {
       )}
       {!onMilestones && <>
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">When</span>
-        {([["All", ""], ["Today", "today"], ["Tomorrow", "tomorrow"]] as const).map(([label, val]) => <button key={label} type="button" onClick={() => setDueScope(val)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={dueScope === val ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+        <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p7tk.whenLbl")}</span>
+        {([[tr("p7tk.allWord"), ""], [tr("p7tk.dueToday"), "today"], [tr("p7tk.dueTomorrow"), "tomorrow"]] as const).map(([label, val]) => <button key={label} type="button" onClick={() => setDueScope(val)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={dueScope === val ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
         <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={dueScope && dueScope !== "today" && dueScope !== "tomorrow" ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}><span>{tr("p7tk.pickDate")}</span><input type="date" value={dueScope !== "today" && dueScope !== "tomorrow" ? dueScope : ""} onChange={(e) => setDueScope(e.target.value)} className="bg-transparent text-[11.5px] text-[var(--ink)] outline-none" /></label>
       </div>
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Priority</span>
+        <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p7tk.priorityLbl")}</span>
         {(["urgent", "high", "med", "low"] as Prio[]).map((p) => <button key={p} type="button" onClick={() => setPrioFilter(prioFilter === p ? "" : p)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={prioFilter === p ? { borderColor: PRIO[p].dot, background: `${PRIO[p].dot}1a`, color: PRIO[p].dot } : { borderColor: "var(--line)", color: "var(--ink-2)" }}><span className="h-2 w-2 rounded-full" style={{ background: PRIO[p].dot }} />{PRIO[p].label}</button>)}
         {filtersActive && <><button type="button" onClick={clearFilters} className="ms-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)]">{tr("p7tk.clearX")}</button><span className="text-[11.5px] text-[var(--ink-3)]">{pickPlural(tr, locale, "p7tk.matchN", base.length)}</span></>}
       </div>
@@ -823,8 +823,7 @@ export function TasksApp() {
                 <button type="button" onClick={() => setRemOpen(false)} className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--panel)] text-[15px] font-bold text-[var(--ink-2)]">×</button>
               </div>
               <p className="mt-1.5 text-[12.5px] text-[var(--ink-2)]">
-                Sent to <b>both</b> the assignee and whoever created the task. Due-today goes out at the task&rsquo;s time,
-                or from 08:00 if it has none; overdue chases the next morning, once.
+                <Rich text={tr("p7tk.remExplain")} />
               </p>
               {rows.map(([k, label]) => (
                 <div key={k} className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] px-3 py-2.5">
@@ -1305,11 +1304,11 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
         <div className="ms-auto flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-1">
           {(["day", "week", "month"] as const).map((v) => (
             <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v}
-              className="rounded-full px-3.5 py-1 text-[11.5px] font-extrabold capitalize transition-colors"
+              className="rounded-full px-3.5 py-1 text-[11.5px] font-extrabold transition-colors"
               style={view === v
                 ? { background: BLUE, color: "#fff", boxShadow: "0 1px 4px rgba(29,58,143,.35)" }
                 : { color: "var(--ink-2)" }}>
-              {v}
+              {tr(v === "day" ? "p7tk.calDay" : v === "week" ? "p7tk.calWeek" : "p7tk.calMonth")}
             </button>
           ))}
         </div>

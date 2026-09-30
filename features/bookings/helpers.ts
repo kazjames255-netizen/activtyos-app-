@@ -159,7 +159,7 @@ const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "
  * days (or the session strings). Single day → "Thu 6 Aug 2026"; several →
  * "Starts Thu 6 Aug 2026" (the full list is on the expanded card).
  */
-export function bookingDateSummary(b: Booking): string {
+export function bookingDateSummary(b: Booking, starts: (date: string) => string = (d) => `Starts ${d}`): string {
   const days = (b.days && b.days.length ? [...b.days] : sessionIsoDates(b)).sort();
   if (!days.length) return b.dates || "—";
   const fmt = (iso: string) => {
@@ -168,7 +168,7 @@ export function bookingDateSummary(b: Booking): string {
       ? iso
       : d.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
   };
-  return days.length > 1 ? `Starts ${fmt(days[0])}` : fmt(days[0]);
+  return days.length > 1 ? starts(fmt(days[0])) : fmt(days[0]);
 }
 
 /**

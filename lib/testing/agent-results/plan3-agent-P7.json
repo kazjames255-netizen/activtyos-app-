@@ -1,9 +1,90 @@
 {
- "p3-p7-01": {"verdict": "fixed", "method": "static", "actual": "Sidebar item labels were English in every non-English locale (about 86 labels).", "notes": "navLabel() plus p7nav catalogue, 11 locales.", "at": "2026-09-30", "agent": "plan3-P7"},
- "p3-p7-02": {"verdict": "fixed", "method": "static", "actual": "Header tips, bug-report modal, bell, PortalGuard and ViewGate strings were English.", "notes": "p7shell area; use-booking-flags now returns structured tips.", "at": "2026-09-30", "agent": "plan3-P7"},
- "p3-p7-03": {"verdict": "fixed", "method": "static", "actual": "Operator Bookings list and booking detail, parent My bookings, dashboard, medication, incidents, time clock were fully English.", "notes": "Areas p7bkl p7bd p7bk p7dash p7med p7inc p7tc; stored canonical values (status, pay, medication schedule) translated only at display.", "at": "2026-09-30", "agent": "plan3-P7"},
- "p3-p7-04": {"verdict": "fixed", "method": "static", "actual": "Public storefront, booking widget, checkout, pay page and confirmation card were English; cancellation policy wording was English.", "notes": "Areas p7pub p7cl p7bw p7be p7pg p7ck p7pol.", "at": "2026-09-30", "agent": "plan3-P7"},
- "p3-p7-05": {"verdict": "fixed", "method": "static", "actual": "Parent cancel flow rendered literal &rsquo; entities; arrows did not flip in ar/ur; physical left/right classes broke RTL.", "notes": "Logical Tailwind properties; arrows flipped in ar/ur columns.", "at": "2026-09-30", "agent": "plan3-P7"},
- "p3-p7-06": {"verdict": "fixed", "method": "static", "actual": "Task manager (about 220 strings incl. priorities, due labels, repeat flow, drawer, confirms) was English.", "notes": "p7tk area, commit ae3463c1.", "at": "2026-09-30", "agent": "plan3-P7"},
- "p3-p7-07": {"verdict": "open", "method": "static", "actual": "Still English: TripsApp, RatiosApp, StaffOnboardingApp, MomentsApp, Templates, Compliance, Email, Setup, ListingWizard operator steps.", "notes": "Next batch. Live sweep e2e/i18n/p7-sweep.spec.ts written but had not run (e2e lock queue), so live RTL overflow and leftover results are unverified.", "at": "2026-09-30", "agent": "plan3-P7"}
+ "p3-p7-01": {
+  "verdict": "fixed",
+  "method": "static",
+  "actual": "Sidebar item labels were English in every non-English locale (about 86 labels).",
+  "notes": "navLabel() plus p7nav catalogue, 11 locales.",
+  "at": "2026-09-30",
+  "agent": "plan3-P7"
+ },
+ "p3-p7-02": {
+  "verdict": "fixed",
+  "method": "static",
+  "actual": "Header tips, bug-report modal, bell, PortalGuard and ViewGate strings were English.",
+  "notes": "p7shell area; use-booking-flags now returns structured tips.",
+  "at": "2026-09-30",
+  "agent": "plan3-P7"
+ },
+ "p3-p7-03": {
+  "verdict": "fixed",
+  "method": "static",
+  "actual": "Operator Bookings list and booking detail, parent My bookings, dashboard, medication, incidents, time clock were fully English.",
+  "notes": "Areas p7bkl p7bd p7bk p7dash p7med p7inc p7tc; stored canonical values (status, pay, medication schedule) translated only at display.",
+  "at": "2026-09-30",
+  "agent": "plan3-P7"
+ },
+ "p3-p7-04": {
+  "verdict": "fixed",
+  "method": "static",
+  "actual": "Public storefront, booking widget, checkout, pay page and confirmation card were English; cancellation policy wording was English.",
+  "notes": "Areas p7pub p7cl p7bw p7be p7pg p7ck p7pol.",
+  "at": "2026-09-30",
+  "agent": "plan3-P7"
+ },
+ "p3-p7-05": {
+  "verdict": "fixed",
+  "method": "static",
+  "actual": "Parent cancel flow rendered literal &rsquo; entities; arrows did not flip in ar/ur; physical left/right classes broke RTL.",
+  "notes": "Logical Tailwind properties; arrows flipped in ar/ur columns.",
+  "at": "2026-09-30",
+  "agent": "plan3-P7"
+ },
+ "p3-p7-06": {
+  "verdict": "fixed",
+  "method": "static",
+  "actual": "Task manager (about 220 strings incl. priorities, due labels, repeat flow, drawer, confirms) was English.",
+  "notes": "p7tk area, commit ae3463c1.",
+  "at": "2026-09-30",
+  "agent": "plan3-P7"
+ },
+ "p3-p7-07": {
+  "verdict": "open",
+  "method": "static",
+  "actual": "Still English: TripsApp, RatiosApp, StaffOnboardingApp, MomentsApp, Templates, Compliance, Email, Setup, ListingWizard operator steps.",
+  "notes": "Live sweep now run (see p3-p7-08..10). Remaining English: TripsApp, RatiosApp, StaffOnboardingApp, MomentsApp, Templates, Compliance, Email, Setup, ListingWizard, plus Blocks & listings, Sessions & blocks, Calendar, Timetable, Customers, Finance/money-in/out, Reconciliation, Inventory, Staff/rota/payroll/leave/timesheets, Learning Centre, Documents, Reviews, Marketing, Referrals, AI co-pilot, HO franchise-network pages (franchise catalogue only has en/pl/ro/ur, unwired).",
+  "at": "2026-09-30",
+  "agent": "plan3-P7"
+ },
+ "p3-p7-08": {
+  "verdict": "pass",
+  "method": "live",
+  "actual": "scripts/e2e-locked.sh e2e/i18n/p7-sweep.spec.ts run for ar, ur, ro across company, franchise, staff, custdash, platform (freelancer signed out, see p3-p7-11): zero raw catalogue keys, zero page errors, zero RTL horizontal overflow (scrollWidth == clientWidth) on every nav view.",
+  "notes": "18 tests passed in 39 min. Sidebar labels, staff medication/incidents/accidents/time clock, parent bookings all render translated.",
+  "at": "2026-09-30",
+  "agent": "plan3-P7"
+ },
+ "p3-p7-09": {
+  "verdict": "fixed",
+  "method": "live",
+  "actual": "Task manager tabs, KPI tiles, sub-title, Quick add, Deadline, When/Priority chips, Reminders, Quick links, calendar Day/Week/Month were English in ar/ur/ro although the p7tk catalogue had the keys (wiring lost). Parent newsflash tag (NEWS/URGENT...), 'Starts <date>' booking summary, staff first-login welcome modal, the shared 'Overview / Hide' hero toggle were English.",
+  "notes": "Wired in TasksApp, NewsflashBanner, bookingDateSummary callers, StaffWelcome, OperatorPage. Re-swept ar staff/custdash/company: tasks, bookings, Starts clean.",
+  "at": "2026-09-30",
+  "agent": "plan3-P7"
+ },
+ "p3-p7-10": {
+  "verdict": "fixed",
+  "method": "static",
+  "actual": "HO network oversight pages (incidents, accidents, medication) were English in all locales; the franchise catalogue existed only for en/pl/ro/ur and was never wired.",
+  "notes": "New p7ho area (11 locales) wired into HoOversightApp; not re-swept live after this last change; tsc and i18n:check clean.",
+  "at": "2026-09-30",
+  "agent": "plan3-P7"
+ },
+ "p3-p7-11": {
+  "verdict": "open",
+  "method": "live",
+  "actual": "Freelancer portal not verified: the stored e2e freelancer auth state is signed out (every view lands on the sign-in page). Public storefront/checkout/pay pages are not covered by the sweep spec and were not checked live.",
+  "notes": "Regenerate e2e/.auth freelancer state (setup project) and rerun P7_PORTALS=freelancer. Also out of scope leftovers: AiApp chat, TimesheetsApp, HO franchise pages.",
+  "at": "2026-09-30",
+  "agent": "plan3-P7"
+ }
 }
