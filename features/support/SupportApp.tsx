@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
+import { BRAND } from "@/lib/i18n/config";
 import { useI18n } from "@/lib/i18n/provider";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, Input, Select } from "@/components/ui";
@@ -113,7 +114,7 @@ export function SupportApp() {
                     )}
                     <div className="whitespace-pre-wrap">{m.body}</div>
                     <div className={`mt-0.5 text-[10px] ${mine ? "text-white/70" : "text-[var(--ink-3)]"}`}>
-                      {mine ? t("account.you") : (isCustomer ? t("account.support") : "ActivityOS")} · {when(m.createdAt, dateLoc)}
+                      {mine ? t("account.you") : (isCustomer ? t("account.support") : BRAND)} · {when(m.createdAt, dateLoc)}
                     </div>
                   </div>
                 );

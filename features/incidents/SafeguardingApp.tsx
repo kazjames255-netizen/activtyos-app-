@@ -12,6 +12,7 @@ import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 import { ChildPicker, type ChildOption } from "@/components/pickers/ChildPicker";
 import { NotesThread } from "./NotesThread";
 import { BodyMap, type BodyMark } from "./BodyMap";
+import { BRAND } from "@/lib/i18n/config";
 import { groupByChild } from "./IncidentsApp";
 import { SG_CATEGORIES, riskFor, protocolFor, DSL_DECISIONS, KCSIE_URL, sgCategoryLabel, DEC_KEY, type Risk } from "./safeguarding";
 
@@ -284,7 +285,7 @@ function downloadConcernPdf(rec: SgLog, contacts?: SgContacts, opts?: { extraHtm
     <h2>DSL action log</h2><table>${actionsHtml || "<tr><th>Actions</th><td>— none recorded —</td></tr>"}</table>
     ${opts?.extraHtml ?? ""}
     ${contactsHtml ? `<h2>Who to call</h2><div>${contactsHtml}</div>` : ""}
-    <p style="margin-top:24px;color:#8a86a3;font-size:11px">Generated from ActivityOS. KCSIE 2026.</p>
+    <p style="margin-top:24px;color:#8a86a3;font-size:11px">Generated from ${BRAND}. KCSIE 2026.</p>
     </body></html>`;
   const w = window.open("", "_blank", "width=820,height=1000");
   if (!w) return;
