@@ -9,6 +9,7 @@
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
+import { useT, tNow } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { setHoScopeId } from "@/components/franchise/HoScope";
@@ -25,22 +26,25 @@ const PALETTE = ["#2f6bd8", "#e0483d", "#0f9d58", "#f5b81f", "#8e44ad", "#e67e22
 const fmtSince = (iso: string | null) => {
   if (!iso) return "—";
   const days = Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  return days <= 0 ? "today" : days === 1 ? "yesterday" : days < 30 ? `${days}d ago` : new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short" });
+  return days <= 0 ? tNow("franchise.sinceToday") : days === 1 ? tNow("franchise.sinceYesterday") : days < 30 ? tNow("franchise.sinceDaysAgo", { days }) : new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short" });
 };
 const trendChip = (pct: number) => pct === 0 ? null : <span className={"text-[11px] font-extrabold " + (pct > 0 ? "text-[#0f7a43]" : "text-[#c0392b]")}>{pct > 0 ? "▲" : "▼"} {Math.abs(pct)}%</span>;
 
 const terrBadge = (s: string) =>
-  s === "agreed" ? <span className="rounded-full bg-[#e2f4ea] px-2 py-0.5 text-[10px] font-extrabold text-[#0f7a43]">✓ territory agreed</span>
-    : s === "proposed" ? <span className="rounded-full bg-[#fdf0e3] px-2 py-0.5 text-[10px] font-extrabold text-[#b45309]">territory pending</span>
-      : <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-3)]">no territory</span>;
+  s === "agreed" ? <span className="rounded-full bg-[#e2f4ea] px-2 py-0.5 text-[10px] font-extrabold text-[#0f7a43]">{tNow("franchise.territoryAgreed")}</span>
+    : s === "proposed" ? <span className="rounded-full bg-[#fdf0e3] px-2 py-0.5 text-[10px] font-extrabold text-[#b45309]">{tNow("franchise.territoryPending")}</span>
+      : <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-3)]">{tNow("franchise.noTerritory")}</span>;
 
 export function FranchiseOverviewApp() {
+  const t = useT();
+  const bkgs = (n: number) => t(n === 1 ? "franchise.bookingOne" : "franchise.bookingOther", { count: n });
+  const lsts = (n: number) => t(n === 1 ? "franchise.listingOne" : "franchise.listingOther", { count: n });
   const [ov, setOv] = useState<Overview | null>(null);
   const [listings, setListings] = useState<OwnListing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = () => {
-    apiGet<Overview>("/api/ho/overview").then(setOv).catch((e) => setError(e instanceof Error ? e.message : "Couldn't load the network"));
+    apiGet<Overview>("/api/ho/overview").then(setOv).catch((e) => setError(e instanceof Error ? e.message : tNow("franchise.couldntLoadNetwork")));
     apiGet<OwnListing[]>("/api/listings?mine=1").then(setListings).catch(() => setListings([]));
   };
   useEffect(() => { load(); }, []);
@@ -63,7 +67,7 @@ export function FranchiseOverviewApp() {
         <span className="absolute inset-y-0 start-0 w-1" style={{ background: s.tone }} />
         <div className="flex items-center gap-1.5 ps-1.5">
           <span className="text-[12px] leading-none" aria-hidden>{s.icon}</span>
-          <span className="text-[9px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{k}</span>
+          <span className="text-[9px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{t("franchise." + k.toLowerCase())}</span>
         </div>
         <div className="ps-1.5 text-[17px] font-black leading-tight tabular-nums" style={{ color: s.tone }}>{v}</div>
       </div>
@@ -81,13 +85,13 @@ export function FranchiseOverviewApp() {
   // Read-only list of the listings a franchise runs (no reassign — too risky here).
   const ListingRows = ({ fid }: { fid: string | null }) => {
     const ls = listingsFor(fid);
-    if (!listings) return <div className="py-2 text-[11.5px] text-[var(--ink-3)]">Loading listings…</div>;
-    if (ls.length === 0) return <div className="py-2 text-[11.5px] text-[var(--ink-3)]">No listings yet.</div>;
+    if (!listings) return <div className="py-2 text-[11.5px] text-[var(--ink-3)]">{t("franchise.loadingListings")}</div>;
+    if (ls.length === 0) return <div className="py-2 text-[11.5px] text-[var(--ink-3)]">{t("franchise.noListingsYet")}</div>;
     return (
       <div className="flex flex-wrap gap-1.5">
         {ls.map((l) => (
           <span key={l.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11.5px] font-semibold">
-            {l.title || l.name || "Untitled listing"}{l.location && <span className="font-normal text-[var(--ink-3)]">· {l.location}</span>}
+            {l.title || l.name || t("franchise.untitledListing")}{l.location && <span className="font-normal text-[var(--ink-3)]">· {l.location}</span>}
           </span>
         ))}
       </div>
@@ -100,16 +104,16 @@ export function FranchiseOverviewApp() {
         <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(0,0,0,.5)]" style={{ background: "var(--hero-grad)" }}>
           <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-[16px]">🏬</span>
-            Franchises
+            {t("franchise.franchises")}
           </div>
-          <p className="mt-1.5 max-w-[620px] text-[12.5px] leading-[1.5] text-white/80">Every franchise at a glance — what they run, how they&rsquo;re trading, their most popular listing and season. Open any franchise to run it.</p>
+          <p className="mt-1.5 max-w-[620px] text-[12.5px] leading-[1.5] text-white/80">{t("franchise.franchisesLede")}</p>
         </div>
 
         {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
         {!ov ? (
-          <div className="py-16 text-center text-[13px] text-[var(--ink-3)]">Loading franchises…</div>
+          <div className="py-16 text-center text-[13px] text-[var(--ink-3)]">{t("franchise.loadingFranchises")}</div>
         ) : franchises.length === 0 ? (
-          <Card className="p-10 text-center text-[13px] text-[var(--ink-3)]">No franchises yet. Invite one from <b>Invite franchises</b>.</Card>
+          <Card className="p-10 text-center text-[13px] text-[var(--ink-3)]">{t("franchise.noFranchisesYetInvite")} <b>{t("franchise.inviteFranchises")}</b>.</Card>
         ) : (
           <div className="flex flex-col gap-3">
             {franchises.map((f) => (
@@ -120,9 +124,9 @@ export function FranchiseOverviewApp() {
                   {f.area && <span className="text-[12px] font-semibold text-[var(--ink-3)]">· {f.area}</span>}
                   {terrBadge(f.territory)}
                   {trendChip(f.trendPct)}
-                  {f.openIncidents > 0 && <span className="rounded-full bg-[#fdecec] px-2 py-0.5 text-[10px] font-extrabold text-[#c0392b]">🛡 {f.openIncidents} open</span>}
-                  {!f.live && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-3)]">not trading yet</span>}
-                  <button type="button" onClick={() => setHoScopeId(f.franchiseId)} className="ms-auto rounded-full bg-[#171534] px-3.5 py-1.5 text-[11.5px] font-extrabold text-white hover:brightness-125">Open franchise →</button>
+                  {f.openIncidents > 0 && <span className="rounded-full bg-[#fdecec] px-2 py-0.5 text-[10px] font-extrabold text-[#c0392b]">🛡 {t("franchise.openCount", { count: f.openIncidents })}</span>}
+                  {!f.live && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-3)]">{t("franchise.notTradingYet")}</span>}
+                  <button type="button" onClick={() => setHoScopeId(f.franchiseId)} className="ms-auto rounded-full bg-[#171534] px-3.5 py-1.5 text-[11.5px] font-extrabold text-white hover:brightness-125">{t("franchise.openFranchise")}</button>
                 </div>
                 <div className="mb-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
                   <Stat k="Revenue" v={money(f.revenue)} />
@@ -133,13 +137,13 @@ export function FranchiseOverviewApp() {
                   <Stat k="Royalty" v={money(f.royalty)} />
                 </div>
                 <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <Insight icon="⭐" k="Most popular" v={f.topListing?.name ?? "—"} sub={f.topListing ? `${f.topListing.bookings} booking${f.topListing.bookings === 1 ? "" : "s"}` : undefined} />
-                  <Insight icon="🗓️" k="Top season" v={f.topSeason?.name ?? "—"} sub={f.topSeason ? `${money(f.topSeason.revenue)} · ${f.topSeason.bookings} bkg` : "no seasons set"} />
-                  <Insight icon="💷" k="Avg booking" v={money(f.avgBooking)} />
-                  <Insight icon="🕒" k="Last booking" v={fmtSince(f.lastBookingAt)} sub={`${f.listingCount} listing${f.listingCount === 1 ? "" : "s"}`} />
+                  <Insight icon="⭐" k={t("franchise.mostPopular")} v={f.topListing?.name ?? "—"} sub={f.topListing ? bkgs(f.topListing.bookings) : undefined} />
+                  <Insight icon="🗓️" k={t("franchise.topSeason")} v={f.topSeason?.name ?? "—"} sub={f.topSeason ? `${money(f.topSeason.revenue)} · ${t("franchise.bkgCount", { count: f.topSeason.bookings })}` : t("franchise.noSeasonsSet")} />
+                  <Insight icon="💷" k={t("franchise.avgBooking")} v={money(f.avgBooking)} />
+                  <Insight icon="🕒" k={t("franchise.lastBooking")} v={fmtSince(f.lastBookingAt)} sub={lsts(f.listingCount)} />
                 </div>
                 <div className="rounded-xl border border-[var(--line)] p-3">
-                  <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Listings it runs · {f.listingCount}</div>
+                  <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("franchise.listingsItRuns")} · {f.listingCount}</div>
                   <ListingRows fid={f.franchiseId} />
                 </div>
               </Card>
@@ -149,8 +153,8 @@ export function FranchiseOverviewApp() {
             <Card className="border-2 border-dashed border-[var(--line)] bg-[var(--panel)] p-4">
               <div className="mb-2.5 flex flex-wrap items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#64748b] text-[12px]">🏛</span>
-                <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Head office <span className="font-normal text-[var(--ink-3)]">· direct</span></div>
-                <button type="button" onClick={() => setHoScopeId("__ho__")} className="ms-auto rounded-full bg-[#171534] px-3.5 py-1.5 text-[11.5px] font-extrabold text-white hover:brightness-125">Open →</button>
+                <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("franchise.headOffice")} <span className="font-normal text-[var(--ink-3)]">· {t("franchise.direct")}</span></div>
+                <button type="button" onClick={() => setHoScopeId("__ho__")} className="ms-auto rounded-full bg-[#171534] px-3.5 py-1.5 text-[11.5px] font-extrabold text-white hover:brightness-125">{t("franchise.openArrow")}</button>
               </div>
               <div className="mb-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
                 <Stat k="Revenue" v={money(ov.direct.revenue)} />
@@ -161,13 +165,13 @@ export function FranchiseOverviewApp() {
                 <Stat k="Royalty" v="—" />
               </div>
               <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Insight icon="⭐" k="Most popular" v={ov.direct.topListing?.name ?? "—"} sub={ov.direct.topListing ? `${ov.direct.topListing.bookings} bookings` : undefined} />
-                <Insight icon="🗓️" k="Top season" v={ov.direct.topSeason?.name ?? "—"} sub={ov.direct.topSeason ? `${money(ov.direct.topSeason.revenue)} · ${ov.direct.topSeason.bookings} bkg` : "no seasons set"} />
-                <Insight icon="💷" k="Avg booking" v={money(ov.direct.avgBooking)} />
-                <Insight icon="📋" k="Listings" v={`${ov.direct.listingCount}`} />
+                <Insight icon="⭐" k={t("franchise.mostPopular")} v={ov.direct.topListing?.name ?? "—"} sub={ov.direct.topListing ? bkgs(ov.direct.topListing.bookings) : undefined} />
+                <Insight icon="🗓️" k={t("franchise.topSeason")} v={ov.direct.topSeason?.name ?? "—"} sub={ov.direct.topSeason ? `${money(ov.direct.topSeason.revenue)} · ${t("franchise.bkgCount", { count: ov.direct.topSeason.bookings })}` : t("franchise.noSeasonsSet")} />
+                <Insight icon="💷" k={t("franchise.avgBooking")} v={money(ov.direct.avgBooking)} />
+                <Insight icon="📋" k={t("franchise.listings")} v={`${ov.direct.listingCount}`} />
               </div>
               <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-                <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Listings head office runs directly · {ov.direct.listingCount}</div>
+                <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("franchise.listingsHoRunsDirectly")} · {ov.direct.listingCount}</div>
                 <ListingRows fid={null} />
               </div>
             </Card>

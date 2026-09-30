@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Map as LMap, Polygon as LPolygon, LatLng } from "leaflet";
+import { useI18n } from "@/lib/i18n/provider";
 
 export interface TerritoryArea {
   id: string;
@@ -37,6 +38,9 @@ interface Props {
 }
 
 export default function TerritoryMap({ value, onChange, editable = false, venues = [], height = 400, focus }: Props) {
+  const { t, locale } = useI18n();
+  const langRef = useRef(locale);
+  langRef.current = locale;
   const holderRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LMap | null>(null);
   const LRef = useRef<typeof import("leaflet") | null>(null);
@@ -106,6 +110,8 @@ export default function TerritoryMap({ value, onChange, editable = false, venues
       });
 
       if (editable) {
+        // Translate the draw toolbar where Geoman ships that language (falls back to English).
+        try { map.pm.setLang((langRef.current === "pt" ? "pt_br" : langRef.current) as never, undefined, "en" as never); } catch { /* unsupported language */ }
         map.pm.addControls({
           position: "topleft",
           drawPolygon: true, drawRectangle: true,
@@ -189,42 +195,42 @@ export default function TerritoryMap({ value, onChange, editable = false, venues
         {editable && (
           <div className="mb-2 flex gap-2">
             <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); runSearch(); } }}
-              placeholder="Find a place — e.g. Camden, London" className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#3f78d8]" />
-            <button type="button" onClick={runSearch} disabled={searching} className="flex-none rounded-lg bg-[#1d3a8f] px-3 py-2 text-[12.5px] font-bold text-white hover:brightness-110 disabled:opacity-50">{searching ? "…" : "Find"}</button>
+              placeholder={t("p8fr.mapFindPh")} className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#3f78d8]" />
+            <button type="button" onClick={runSearch} disabled={searching} className="flex-none rounded-lg bg-[#1d3a8f] px-3 py-2 text-[12.5px] font-bold text-white hover:brightness-110 disabled:opacity-50">{searching ? "…" : t("p8fr.mapFind")}</button>
           </div>
         )}
         <div ref={holderRef} style={{ height, borderRadius: 12, overflow: "hidden" }} className="border border-[var(--line)] bg-[#e8eef7]" />
-        {editable && <p className="mt-1.5 text-[11px] leading-snug text-[var(--ink-3)]">Use the ▰ tool (top-left) to draw the boundary of an area, then the ✎/🗑 tools to adjust or remove it. Add more than one area for multiple territories.</p>}
+        {editable && <p className="mt-1.5 text-[11px] leading-snug text-[var(--ink-3)]">{t("p8fr.mapHint")}</p>}
       </div>
 
       <div className="w-full flex-none lg:w-[220px]">
-        <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{editable ? "Areas you cover" : "Areas covered"}</div>
+        <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{editable ? t("p8fr.mapAreasYouCover") : t("p8fr.mapAreasCovered")}</div>
         {!ready ? (
-          <div className="mt-2 text-[12px] text-[var(--ink-3)]">Loading map…</div>
+          <div className="mt-2 text-[12px] text-[var(--ink-3)]">{t("p8fr.mapLoading")}</div>
         ) : areas.length === 0 ? (
-          <div className="mt-2 rounded-lg border border-dashed border-[var(--line)] p-3 text-[12px] leading-snug text-[var(--ink-3)]">{editable ? "No areas yet — draw one on the map to define where you operate." : "No territory drawn yet."}</div>
+          <div className="mt-2 rounded-lg border border-dashed border-[var(--line)] p-3 text-[12px] leading-snug text-[var(--ink-3)]">{editable ? t("p8fr.mapNoAreasEdit") : t("p8fr.mapNoTerritory")}</div>
         ) : (
           <ul className="mt-2 flex flex-col gap-1.5">
             {areas.map((a) => (
               <li key={a.id} className="rounded-lg border border-[var(--line)] bg-white p-2">
                 <div className="flex items-center gap-1.5">
                   {editable
-                    ? <input type="color" value={a.color} onChange={(e) => recolor(a.id, e.target.value)} className="h-5 w-5 flex-none cursor-pointer rounded border-0 bg-transparent p-0" title="Colour" />
+                    ? <input type="color" value={a.color} onChange={(e) => recolor(a.id, e.target.value)} className="h-5 w-5 flex-none cursor-pointer rounded border-0 bg-transparent p-0" title={t("p8fr.mapColour")} />
                     : <span className="h-3.5 w-3.5 flex-none rounded-full" style={{ background: a.color }} />}
                   {editable
                     ? <input value={a.name} onChange={(e) => rename(a.id, e.target.value)} className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 text-[12.5px] font-bold outline-none hover:border-[var(--line)] focus:border-[#3f78d8]" />
                     : <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold">{a.name}</span>}
                 </div>
                 <div className="mt-1 flex items-center gap-2 ps-[26px] text-[11px]">
-                  <button type="button" onClick={() => focusArea(a.id)} className="font-bold text-[#1d3a8f] hover:underline">Zoom to</button>
-                  {editable && <button type="button" onClick={() => remove(a.id)} className="font-bold text-[#c0392b] hover:underline">Remove</button>}
-                  <span className="ms-auto text-[var(--ink-3)]">{a.rings.length} pts</span>
+                  <button type="button" onClick={() => focusArea(a.id)} className="font-bold text-[#1d3a8f] hover:underline">{t("p8fr.mapZoomTo")}</button>
+                  {editable && <button type="button" onClick={() => remove(a.id)} className="font-bold text-[#c0392b] hover:underline">{t("p8fr.mapRemove")}</button>}
+                  <span className="ms-auto text-[var(--ink-3)]">{t("p8fr.mapPts", { count: a.rings.length })}</span>
                 </div>
               </li>
             ))}
           </ul>
         )}
-        {venues.length > 0 && <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]">📍 {venues.length} venue{venues.length === 1 ? "" : "s"} shown as pins.</p>}
+        {venues.length > 0 && <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]">{t(venues.length === 1 ? "p8fr.mapVenuesOne" : "p8fr.mapVenuesOther", { count: venues.length })}</p>}
       </div>
     </div>
   );

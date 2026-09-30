@@ -8,6 +8,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 
 interface Fr { franchiseId: string; name: string; area: string | null }
 interface Counts { children: number; families: number; bookings?: number }
@@ -16,6 +17,7 @@ interface Overview { franchises: (Counts & { franchiseId: string })[]; direct: C
 const PALETTE = ["#2f6bd8", "#e0483d", "#0f9d58", "#f5b81f", "#8e44ad", "#e67e22", "#16a085", "#c2185b"];
 
 export function FranchiseScopeList({ onPick, noun = "children", hideAll = false }: { onPick: (scope: string, label: string) => void; noun?: "children" | "families"; hideAll?: boolean }) {
+  const t = useT();
   const [franchises, setFranchises] = useState<Fr[] | null>(null);
   const [ov, setOv] = useState<Overview | null>(null);
 
@@ -31,7 +33,7 @@ export function FranchiseScopeList({ onPick, noun = "children", hideAll = false 
     return { children, families };
   }, [ov]);
   const countOf = (fid: string | null): Counts => (fid == null ? (ov?.direct ?? { children: 0, families: 0 }) : (ov?.franchises.find((f) => f.franchiseId === fid) ?? { children: 0, families: 0 }));
-  const sub = (c: Counts) => `${c.children} children · ${c.families} ${c.families === 1 ? "family" : "families"}`;
+  const sub = (c: Counts) => `${t("franchise.childOther", { count: c.children })} · ${t(c.families === 1 ? "franchise.familyOne" : "franchise.familyOther", { count: c.families })}`;
 
   const Card = ({ icon, iconBg, iconInk, title, area, subline, onClick }: { icon: string; iconBg: string; iconInk?: string; title: React.ReactNode; area?: string | null; subline: string; onClick: () => void }) => (
     <button type="button" onClick={onClick} className="flex items-center gap-3 rounded-xl border border-[#e3e0ea] bg-white px-3.5 py-2.5 text-start text-[#171534] transition hover:border-[#171534] hover:bg-[#f7f6fb]">
@@ -46,12 +48,12 @@ export function FranchiseScopeList({ onPick, noun = "children", hideAll = false 
 
   return (
     <div className="flex flex-col gap-1.5">
-      {!hideAll && <Card icon="🌐" iconBg="#ede9fe" title="All franchises" subline={ov ? sub(totals) : `Search every ${noun} across the network`} onClick={() => onPick("__all__", "All franchises")} />}
-      <Card icon="🏛️" iconBg="#e6eaf5" title={<>Head office <span className="font-normal text-[var(--ink-3)]">· direct</span></>} subline={ov ? sub(countOf(null)) : "Your own locations"} onClick={() => onPick("__ho__", "Head office")} />
+      {!hideAll && <Card icon="🌐" iconBg="#ede9fe" title={t("franchise.allFranchises")} subline={ov ? sub(totals) : t("franchise.searchEvery", { noun: t(noun === "families" ? "franchise.nounFamilies" : "franchise.nounChildren") })} onClick={() => onPick("__all__", t("franchise.allFranchises"))} />}
+      <Card icon="🏛️" iconBg="#e6eaf5" title={<>{t("franchise.headOffice")} <span className="font-normal text-[var(--ink-3)]">· {t("franchise.direct")}</span></>} subline={ov ? sub(countOf(null)) : t("franchise.yourOwnLocations")} onClick={() => onPick("__ho__", t("franchise.headOffice"))} />
       {(franchises ?? []).map((f, i) => (
-        <Card key={f.franchiseId} icon={f.name.slice(0, 1).toUpperCase()} iconBg={`${PALETTE[i % PALETTE.length]}1f`} iconInk={PALETTE[i % PALETTE.length]} title={f.name} area={f.area} subline={ov ? sub(countOf(f.franchiseId)) : "Franchise"} onClick={() => onPick(f.franchiseId, f.name)} />
+        <Card key={f.franchiseId} icon={f.name.slice(0, 1).toUpperCase()} iconBg={`${PALETTE[i % PALETTE.length]}1f`} iconInk={PALETTE[i % PALETTE.length]} title={f.name} area={f.area} subline={ov ? sub(countOf(f.franchiseId)) : t("franchise.franchiseFallback")} onClick={() => onPick(f.franchiseId, f.name)} />
       ))}
-      {franchises && franchises.length === 0 && <div className="py-4 text-center text-[12px] text-[var(--ink-3)]">No franchises yet.</div>}
+      {franchises && franchises.length === 0 && <div className="py-4 text-center text-[12px] text-[var(--ink-3)]">{t("franchise.noFranchisesYet")}</div>}
     </div>
   );
 }

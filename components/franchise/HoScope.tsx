@@ -9,6 +9,10 @@ import { useEffect, useReducer, useState } from "react";
 import Link from "next/link";
 import { get as apiGet } from "@/lib/api";
 import { getMe } from "@/components/auth/PortalGuard";
+import { useT } from "@/lib/i18n/provider";
+
+// "**bold**" markers in a catalogue string -> <b>.
+const boldify = (s: string, color?: string) => s.split("**").map((p, i) => (i % 2 ? <b key={i} style={color ? { color } : undefined}>{p}</b> : p));
 
 const KEY = "aos.ho.scope";
 // The scope also rides in the URL under this query param — see below.
@@ -114,6 +118,7 @@ function useFranchises(): Franchise[] | null {
 
 /** Header dropdown — only rendered for a head office with ≥1 franchise. */
 export function HoScopeSwitcher({ portal }: { portal: string }) {
+  const t = useT();
   const franchises = useFranchises();
   const scope = useHoScope();
   if (portal !== "company" || !franchises || franchises.length === 0) return null;
@@ -126,7 +131,7 @@ export function HoScopeSwitcher({ portal }: { portal: string }) {
     <label
       className="inline-flex cursor-pointer items-center gap-2 rounded-full border bg-white px-2 py-1 shadow-sm transition-transform hover:-translate-y-px"
       style={{ borderColor: drilled ? "#d9cffb" : "#dbe6fb" }}
-      title="Choose which part of your network you're viewing — the whole network, your own locations, or one franchise"
+      title={t("p8fr.scopeTitle")}
     >
       <span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[12px] leading-none text-white" style={{ background: accent }}>👁</span>
       <select
@@ -135,8 +140,8 @@ export function HoScopeSwitcher({ portal }: { portal: string }) {
         className="max-w-[160px] cursor-pointer appearance-none truncate border-0 bg-transparent pe-1 text-[12.5px] font-extrabold outline-none min-[1440px]:max-w-[210px]"
         style={{ color: accent }}
       >
-        <option value="" className="text-[var(--ink)]">Head office — all franchises</option>
-        <option value={HO_OWN} className="text-[var(--ink)]">Head office — own locations</option>
+        <option value="" className="text-[var(--ink)]">{t("p8fr.scopeAll")}</option>
+        <option value={HO_OWN} className="text-[var(--ink)]">{t("p8fr.scopeOwn")}</option>
         {franchises.map((f) => (
           <option key={f.franchiseId} value={f.franchiseId} className="text-[var(--ink)]">{f.name}{f.area ? ` · ${f.area}` : ""}</option>
         ))}
@@ -168,17 +173,18 @@ export function HoThemeSync() {
  *  I viewing" control. Always shown for a company that has franchises; switching
  *  it re-scopes the whole portal. Rendered by app/[portal]/layout.tsx. */
 export function HoScopeBar() {
+  const t = useT();
   const franchises = useFranchises();
   const scope = useHoScope();
   if (!franchises || franchises.length === 0) return null;
   const drilled = !!scope;
   const own = scope === HO_OWN;
   const fr = !own && scope ? franchises.find((x) => x.franchiseId === scope) : null;
-  const label = !drilled ? "Head office — all franchises" : own ? "Head office — own locations" : fr ? `${fr.name}${fr.area ? ` · ${fr.area}` : ""}` : "This franchise";
+  const label = !drilled ? t("p8fr.scopeAll") : own ? t("p8fr.scopeOwn") : fr ? `${fr.name}${fr.area ? ` · ${fr.area}` : ""}` : t("p8fr.scopeThisFranchise");
   const accent = drilled ? "#7c3aed" : "#1d3a8f";
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-4 py-2" style={{ background: drilled ? "#faf6ff" : "#f3f6fd", borderColor: drilled ? "#e6d8f6" : "#dbe6fb" }}>
-      <span className="text-[9.5px] font-black uppercase tracking-[0.14em]" style={{ color: accent, opacity: 0.75 }}>Viewing</span>
+      <span className="text-[9.5px] font-black uppercase tracking-[0.14em]" style={{ color: accent, opacity: 0.75 }}>{t("p8fr.scopeViewing")}</span>
       <div className="relative inline-flex items-center">
         <span className="pointer-events-none absolute start-3 text-[13px] leading-none" aria-hidden>👁</span>
         <select
@@ -187,8 +193,8 @@ export function HoScopeBar() {
           className="cursor-pointer appearance-none truncate rounded-lg border bg-white py-1.5 ps-9 pe-8 text-[13.5px] font-extrabold shadow-sm outline-none"
           style={{ color: accent, borderColor: drilled ? "#d9cffb" : "#cddcf7", maxWidth: "min(66vw, 340px)" }}
         >
-          <option value="" className="text-[var(--ink)]">Head office — all franchises</option>
-          <option value={HO_OWN} className="text-[var(--ink)]">Head office — own locations</option>
+          <option value="" className="text-[var(--ink)]">{t("p8fr.scopeAll")}</option>
+          <option value={HO_OWN} className="text-[var(--ink)]">{t("p8fr.scopeOwn")}</option>
           {franchises.map((f) => (
             <option key={f.franchiseId} value={f.franchiseId} className="text-[var(--ink)]">{f.name}{f.area ? ` · ${f.area}` : ""}</option>
           ))}
@@ -197,11 +203,11 @@ export function HoScopeBar() {
       </div>
       {drilled ? (
         <>
-          <span className="hidden text-[12px] text-[var(--ink-3)] sm:inline">Showing <b style={{ color: accent }}>{label}</b> only — not your head-office view.</span>
-          <button type="button" onClick={() => setHoScopeId(null)} className="ms-auto rounded-full px-3 py-1 text-[11.5px] font-extrabold text-white transition hover:brightness-110" style={{ background: accent }}>← Back to all franchises</button>
+          <span className="hidden text-[12px] text-[var(--ink-3)] sm:inline">{boldify(t("p8fr.scopeShowing", { label }), accent)}</span>
+          <button type="button" onClick={() => setHoScopeId(null)} className="ms-auto rounded-full px-3 py-1 text-[11.5px] font-extrabold text-white transition hover:brightness-110" style={{ background: accent }}>{t("p8fr.scopeBackAll")}</button>
         </>
       ) : (
-        <span className="ms-auto text-[12px] text-[var(--ink-3)]">Your whole network · {franchises.length} franchise{franchises.length === 1 ? "" : "s"}</span>
+        <span className="ms-auto text-[12px] text-[var(--ink-3)]">{t(franchises.length === 1 ? "p8fr.scopeNetworkOne" : "p8fr.scopeNetworkOther", { count: franchises.length })}</span>
       )}
     </div>
   );
@@ -209,18 +215,19 @@ export function HoScopeBar() {
 
 /** Full-width banner shown under the header while scoped into a franchise. */
 export function HoScopeBanner() {
+  const t = useT();
   const franchises = useFranchises();
   const scope = useHoScope();
   if (!scope || !franchises) return null;
   const own = scope === HO_OWN;
   const f = own ? null : franchises.find((x) => x.franchiseId === scope);
   if (!own && !f) return null;
-  const label = own ? "Head office — own locations" : `${f!.name}${f!.area ? ` · ${f!.area}` : ""}`;
+  const label = own ? t("p8fr.scopeOwn") : `${f!.name}${f!.area ? ` · ${f!.area}` : ""}`;
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-[#e6d8f6] bg-[#faf6ff] px-4 py-1.5 text-[12px] font-bold text-[#7a3aa8]">
-      <span>👁 Viewing as <b>{label}</b> — {own ? "you're seeing only your own directly-run locations, not your franchises." : "you're seeing this franchise's data, not your head-office view."}</span>
-      <button type="button" onClick={() => setHoScopeId(null)} className="ms-auto rounded-full bg-[#7a3aa8] px-3 py-0.5 text-[11px] font-extrabold text-white hover:brightness-110">Back to head office</button>
-      <Link href="/company/territories" className="rounded-full border border-[#d9c4ee] px-3 py-0.5 text-[11px] font-extrabold text-[#7a3aa8] no-underline hover:bg-white">Territories</Link>
+      <span>{boldify(t(own ? "p8fr.scopeBannerOwn" : "p8fr.scopeBannerFr", { label }))}</span>
+      <button type="button" onClick={() => setHoScopeId(null)} className="ms-auto rounded-full bg-[#7a3aa8] px-3 py-0.5 text-[11px] font-extrabold text-white hover:brightness-110">{t("p8fr.scopeBackHo")}</button>
+      <Link href="/company/territories" className="rounded-full border border-[#d9c4ee] px-3 py-0.5 text-[11px] font-extrabold text-[#7a3aa8] no-underline hover:bg-white">{t("p8fr.scopeTerritories")}</Link>
     </div>
   );
 }

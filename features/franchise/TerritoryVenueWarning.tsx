@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 import { pointInAnyArea, type TerritoryAreaGeo } from "@/lib/geo";
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function TerritoryVenueWarning({ venue }: Props) {
+  const t = useT();
   const [terr, setTerr] = useState<{ role: string; areas: TerritoryAreaGeo[]; status?: string } | null>(null);
   useEffect(() => {
     apiGet<{ role: string; franchiseTerritory?: { areas: TerritoryAreaGeo[]; status?: string } | null }>("/api/account")
@@ -26,8 +28,7 @@ export function TerritoryVenueWarning({ venue }: Props) {
 
   return (
     <div className="mb-3 max-w-[520px] rounded-lg border border-[#f0d9a8] bg-[#fdf6e3] px-3 py-2 text-[12px] leading-snug text-[#7a5b06]">
-      ⚠ <b>{venue.name || "This venue"}</b> looks <b>outside your territory</b>
-      {terr.status === "agreed" ? " agreed with your head office" : " (still pending head office agreement)"}. Check with your head office before running services here.
+      ⚠ {t("franchise.territoryOutside", { venue: venue.name || t("franchise.territoryVenueFallback"), clause: terr.status === "agreed" ? t("franchise.territoryClauseAgreed") : t("franchise.territoryClausePending") })}
     </div>
   );
 }

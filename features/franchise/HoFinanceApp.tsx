@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useT, tNow } from "@/lib/i18n/provider";
 import { withHoMoney } from "@/lib/ho-net";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import { Button, Card, Input } from "@/components/ui";
@@ -26,13 +27,15 @@ interface MItem { id?: string; status?: string; date?: string; amount?: number; 
 interface MPayload { items: MItem[]; summary: { total: number; count: number; byCategory: Record<string, number> } }
 interface Invoice { id?: string; amount?: number; status?: string; dueDate?: string; date?: string; to?: string; customer?: string; billTo?: string }
 
-const PRESETS = [["1m", "1 month"], ["3m", "3 months"], ["6m", "6 months"], ["12m", "12 months"], ["all", "All time"]] as const;
+const PRESETS = [["1m", "finOneMonth"], ["3m", "franchise.threeMonths"], ["6m", "franchise.sixMonths"], ["12m", "franchise.twelveMonths"], ["all", "finAllTime"]] as const;
+const presetKey = (k: string) => (k.startsWith("franchise.") ? k : `p8fr.${k}`);
 type Period = (typeof PRESETS)[number][0];
 const monthsBack: Record<Exclude<Period, "all">, number> = { "1m": 1, "3m": 3, "6m": 6, "12m": 12 };
 
 type FinTab = "overview" | "in" | "out" | "invoices";
 
 export function HoFinanceApp() {
+  const t = useT();
   const [tab, setTab] = useState<FinTab>("overview");
   const [period, setPeriod] = useState<Period>("3m");
   const [split, setSplit] = useState<SplitPayload | null>(null);
@@ -42,7 +45,7 @@ export function HoFinanceApp() {
   const [err, setErr] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
-    apiGet<SplitPayload>(`/api/splitfees?period=${period}`).then(setSplit).catch((e) => setErr(e instanceof Error ? e.message : "Couldn’t load finance."));
+    apiGet<SplitPayload>(`/api/splitfees?period=${period}`).then(setSplit).catch((e) => setErr(e instanceof Error ? e.message : tNow("p8fr.finLoadErr")));
     apiGet<MPayload>(withHoMoney("/api/income")).then(setInc).catch(() => {});
     apiGet<MPayload>(withHoMoney("/api/expenses")).then(setExp).catch(() => {});
     apiGet<{ items: Invoice[] }>(withHoMoney("/api/invoices")).then((p) => setInv(p.items ?? [])).catch(() => {});
@@ -79,8 +82,8 @@ export function HoFinanceApp() {
   );
 
   return (
-    <OperatorPage title="Finance" icon="£" lede="Head office at a glance — your own money in and out, royalty income from the network, and a breakdown by franchise.">
-      <TabStrip<FinTab> tabs={[["overview", "Overview"], ["in", "Money in"], ["out", "Money out"], ["invoices", "Invoices"]]} value={tab} onChange={setTab} />
+    <OperatorPage title={t("p8fr.finTitle")} icon="£" lede={t("p8fr.finLede")}>
+      <TabStrip<FinTab> tabs={[["overview", t("p8fr.finTabOverview")], ["in", t("p8fr.finTabIn")], ["out", t("p8fr.finTabOut")], ["invoices", t("p8fr.finTabInvoices")]]} value={tab} onChange={setTab} />
       {tab === "in" && <SimpleLedger kind="in" items={inc?.items ?? []} onAdded={refresh} />}
       {tab === "out" && <SimpleLedger kind="out" items={exp?.items ?? []} onAdded={refresh} />}
       {tab === "invoices" && <InvoiceList items={inv} franchises={(split?.franchises ?? []).map((f) => f.name)} onCreated={refresh} />}
@@ -90,35 +93,35 @@ export function HoFinanceApp() {
       {/* Period */}
       <div className="mb-3 flex flex-wrap gap-1.5">
         {PRESETS.map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setPeriod(k)} className="rounded-full border px-3 py-1 text-[12px] font-bold transition-colors" style={period === k ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{label}</button>
+          <button key={k} type="button" onClick={() => setPeriod(k)} className="rounded-full border px-3 py-1 text-[12px] font-bold transition-colors" style={period === k ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{t(presetKey(label))}</button>
         ))}
       </div>
 
       {/* Headline P&L */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KPI label="Money in (own)" value={gbp(moneyIn)} tone="#0f8a4a" hint={`${incItems.length} entr${incItems.length === 1 ? "y" : "ies"}`} />
-        <KPI label="Royalty income" value={gbp(royalty)} tone="#1d3a8f" hint={`from ${franchises.length} franchise${franchises.length === 1 ? "" : "s"}`} />
-        <KPI label="Money out (own)" value={gbp(moneyOut)} tone="#c02636" hint={`${expItems.length} entr${expItems.length === 1 ? "y" : "ies"}`} />
-        <KPI label="Net" value={gbp(net)} tone={net >= 0 ? "#0f8a4a" : "#c02636"} hint="in + royalties − out" />
+        <KPI label={t("p8fr.finKpiIn")} value={gbp(moneyIn)} tone="#0f8a4a" hint={t(incItems.length === 1 ? "p8fr.finEntryOne" : "p8fr.finEntryOther", { count: incItems.length })} />
+        <KPI label={t("p8fr.finKpiRoyalty")} value={gbp(royalty)} tone="#1d3a8f" hint={t(franchises.length === 1 ? "p8fr.finFromFranchiseOne" : "p8fr.finFromFranchiseOther", { count: franchises.length })} />
+        <KPI label={t("p8fr.finKpiOut")} value={gbp(moneyOut)} tone="#c02636" hint={t(expItems.length === 1 ? "p8fr.finEntryOne" : "p8fr.finEntryOther", { count: expItems.length })} />
+        <KPI label={t("p8fr.finKpiNet")} value={gbp(net)} tone={net >= 0 ? "#0f8a4a" : "#c02636"} hint={t("p8fr.finNetHint")} />
       </div>
 
       {/* Breakdown by franchise */}
       <Card className="mt-4 p-4">
         <div className="mb-2 flex items-center justify-between">
-          <div className="text-[14px] font-extrabold text-[var(--ink)]">Breakdown by franchise</div>
-          <Link href="/company/splitfees" className="text-[11.5px] font-bold text-[#2f6bd8] hover:underline">Full split-fees →</Link>
+          <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8fr.finBreakdown")}</div>
+          <Link href="/company/splitfees" className="text-[11.5px] font-bold text-[#2f6bd8] hover:underline">{t("p8fr.finFullSplit")}</Link>
         </div>
         {franchises.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[var(--line)] p-6 text-center text-[12.5px] text-[var(--ink-3)]">No franchise revenue in this period yet.</div>
+          <div className="rounded-xl border border-dashed border-[var(--line)] p-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8fr.finNoFranchiseRev")}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-start text-[12.5px]">
               <thead>
                 <tr className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">
-                  <th className="py-1.5 pe-3">Franchise</th>
-                  <th className="py-1.5 pe-3 text-end">Bookings</th>
-                  <th className="py-1.5 pe-3">Revenue</th>
-                  <th className="py-1.5 text-end">Your royalty</th>
+                  <th className="py-1.5 pe-3">{t("p8fr.finColFranchise")}</th>
+                  <th className="py-1.5 pe-3 text-end">{t("franchise.bookings")}</th>
+                  <th className="py-1.5 pe-3">{t("franchise.revenue")}</th>
+                  <th className="py-1.5 text-end">{t("p8fr.finYourRoyalty")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -138,7 +141,7 @@ export function HoFinanceApp() {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-[var(--line)] text-[12.5px]">
-                  <td className="py-2 pe-3 font-extrabold text-[var(--ink)]">Total</td>
+                  <td className="py-2 pe-3 font-extrabold text-[var(--ink)]">{t("franchise.total")}</td>
                   <td className="py-2 pe-3" />
                   <td className="py-2 pe-3 font-extrabold tabular-nums text-[var(--ink)]">{gbp(split?.totals.revenue ?? 0)}</td>
                   <td className="py-2 text-end font-black tabular-nums text-[#1d3a8f]">{gbp(royalty)}</td>
@@ -151,19 +154,19 @@ export function HoFinanceApp() {
 
       {/* Recent money in / out + invoices */}
       <div className="mt-4 grid gap-3 lg:grid-cols-3">
-        <RecentCard title="Recent money in" onOpen={() => setTab("in")} items={incItems.slice(0, 6)} tone="#0f8a4a" empty="No money in yet." labelOf={(x) => x.source || x.category || x.note || "Income"} />
-        <RecentCard title="Recent money out" onOpen={() => setTab("out")} items={expItems.slice(0, 6)} tone="#c02636" empty="No spending yet." labelOf={(x) => x.supplier || x.category || x.description || x.note || "Expense"} />
+        <RecentCard title={t("p8fr.finRecentIn")} onOpen={() => setTab("in")} items={incItems.slice(0, 6)} tone="#0f8a4a" empty={t("p8fr.finNoIn")} labelOf={(x) => x.source || x.category || x.note || t("p8fr.finIncomeWord")} />
+        <RecentCard title={t("p8fr.finRecentOut")} onOpen={() => setTab("out")} items={expItems.slice(0, 6)} tone="#c02636" empty={t("p8fr.finNoOut")} labelOf={(x) => x.supplier || x.category || x.description || x.note || t("p8fr.finExpenseWord")} />
         <Card className="p-4">
           <div className="mb-2 flex items-center justify-between">
-            <div className="text-[13px] font-extrabold text-[var(--ink)]">Invoices</div>
-            <button type="button" onClick={() => setTab("invoices")} className="text-[11.5px] font-bold text-[#2f6bd8] hover:underline">Open →</button>
+            <div className="text-[13px] font-extrabold text-[var(--ink)]">{t("p8fr.finTabInvoices")}</div>
+            <button type="button" onClick={() => setTab("invoices")} className="text-[11.5px] font-bold text-[#2f6bd8] hover:underline">{t("franchise.openArrow")}</button>
           </div>
           <div className="rounded-xl bg-[var(--panel)] p-3">
-            <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Outstanding</div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8fr.finOutstanding")}</div>
             <div className="mt-0.5 text-[22px] font-black tabular-nums text-[#c02636]">{gbp(outstandingTotal)}</div>
-            <div className="text-[11.5px] text-[var(--ink-3)]">{outstanding.length} unpaid · {inv.length} total</div>
+            <div className="text-[11.5px] text-[var(--ink-3)]">{t("p8fr.finUnpaidTotal", { unpaid: outstanding.length, total: inv.length })}</div>
           </div>
-          <button type="button" onClick={() => setTab("invoices")} className="mt-3 block w-full rounded-lg bg-[#1d3a8f] px-3 py-2 text-center text-[12.5px] font-extrabold text-white transition hover:brightness-110">＋ Bill a franchise / new invoice</button>
+          <button type="button" onClick={() => setTab("invoices")} className="mt-3 block w-full rounded-lg bg-[#1d3a8f] px-3 py-2 text-center text-[12.5px] font-extrabold text-white transition hover:brightness-110">{t("p8fr.finBillBtn")}</button>
         </Card>
       </div>
       </>)}
@@ -175,8 +178,9 @@ export function HoFinanceApp() {
 // analytics, payment-type splits or "collected so far": those are per-site
 // operator numbers, not head office's own books. Just: log an entry, see the list.
 function SimpleLedger({ kind, items, onAdded }: { kind: "in" | "out"; items: MItem[]; onAdded: () => void }) {
+  const t = useT();
   const url = kind === "in" ? "/api/income" : "/api/expenses";
-  const partyLabel = kind === "in" ? "From (optional)" : "Paid to (optional)";
+  const partyLabel = kind === "in" ? t("p8fr.finFromOpt") : t("p8fr.finPaidToOpt");
   const partyKey = kind === "in" ? "source" : "supplier";
   const tone = kind === "in" ? "#0f8a4a" : "#c02636";
   const today = new Date().toISOString().slice(0, 10);
@@ -191,43 +195,43 @@ function SimpleLedger({ kind, items, onAdded }: { kind: "in" | "out"; items: MIt
 
   async function add() {
     const n = parseFloat(amt);
-    if (!date || !cat.trim() || !(n >= 0)) { setErr("Add a date, a category and an amount."); return; }
+    if (!date || !cat.trim() || !(n >= 0)) { setErr(t("p8fr.finNeedDateCatAmt")); return; }
     setBusy(true); setErr(null);
     try {
       await apiPost(withHoMoney(url), { date, category: cat.trim(), amount: n, ...(party.trim() ? { [partyKey]: party.trim() } : {}) });
       setCat(""); setAmt(""); setParty(""); onAdded();
-    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save that."); }
+    } catch (e) { setErr(e instanceof Error ? e.message : t("p8fr.finSaveFail")); }
     finally { setBusy(false); }
   }
 
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(0,320px)_1fr]">
       <Card className="h-fit p-4">
-        <div className="text-[14px] font-extrabold text-[var(--ink)]">Log {kind === "in" ? "money in" : "money out"}</div>
-        <div className="mb-3 mt-0.5 text-[11.5px] text-[var(--ink-3)]">Head office’s own {kind === "in" ? "income" : "spending"} — not franchise or booking money.</div>
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">{kind === "in" ? t("p8fr.finLogIn") : t("p8fr.finLogOut")}</div>
+        <div className="mb-3 mt-0.5 text-[11.5px] text-[var(--ink-3)]">{kind === "in" ? t("p8fr.finOwnIncomeNote") : t("p8fr.finOwnSpendNote")}</div>
         {err && <div className="mb-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] text-[#c02636]">{err}</div>}
-        <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Date</label>
+        <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8fr.finLblDate")}</label>
         <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mb-2.5 w-full" />
-        <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Category</label>
-        <Input value={cat} onChange={(e) => setCat(e.target.value)} placeholder={kind === "in" ? "e.g. Royalty top-up, grant" : "e.g. Marketing, software, rent"} className="mb-2.5 w-full" />
-        <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Amount (£)</label>
+        <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8fr.finLblCategory")}</label>
+        <Input value={cat} onChange={(e) => setCat(e.target.value)} placeholder={kind === "in" ? t("p8fr.finPhCatIn") : t("p8fr.finPhCatOut")} className="mb-2.5 w-full" />
+        <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8fr.finLblAmount")}</label>
         <Input type="number" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="0.00" className="mb-2.5 w-full" />
         <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{partyLabel}</label>
-        <Input value={party} onChange={(e) => setParty(e.target.value)} placeholder={kind === "in" ? "who it came from" : "supplier"} className="mb-3 w-full" />
-        <Button variant="primary" onClick={add} disabled={busy}>{busy ? "Saving…" : `Add ${kind === "in" ? "income" : "expense"}`}</Button>
+        <Input value={party} onChange={(e) => setParty(e.target.value)} placeholder={kind === "in" ? t("p8fr.finPhFrom") : t("p8fr.finPhSupplier")} className="mb-3 w-full" />
+        <Button variant="primary" onClick={add} disabled={busy}>{busy ? t("franchise.saving") : kind === "in" ? t("p8fr.finAddIncome") : t("p8fr.finAddExpense")}</Button>
       </Card>
 
       <Card className="p-4">
         <div className="mb-2 flex items-center justify-between">
-          <div className="text-[13px] font-extrabold text-[var(--ink)]">{kind === "in" ? "Money in" : "Money out"} ({sorted.length})</div>
+          <div className="text-[13px] font-extrabold text-[var(--ink)]">{kind === "in" ? t("p8fr.finTabIn") : t("p8fr.finTabOut")} ({sorted.length})</div>
           <div className="text-[13px] font-black tabular-nums" style={{ color: tone }}>{gbp(total)}</div>
         </div>
         {sorted.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[var(--line)] p-8 text-center text-[12.5px] text-[var(--ink-3)]">Nothing logged yet — add your first entry on the left.</div>
+          <div className="rounded-xl border border-dashed border-[var(--line)] p-8 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8fr.finNothingLogged")}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-start text-[12.5px]">
-              <thead><tr className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><th className="py-1.5 pe-3">Date</th><th className="py-1.5 pe-3">Category</th><th className="py-1.5 pe-3">{kind === "in" ? "From" : "Paid to"}</th><th className="py-1.5 text-end">Amount</th></tr></thead>
+              <thead><tr className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><th className="py-1.5 pe-3">{t("p8fr.finLblDate")}</th><th className="py-1.5 pe-3">{t("p8fr.finLblCategory")}</th><th className="py-1.5 pe-3">{kind === "in" ? t("p8fr.finColFrom") : t("p8fr.finColPaidTo")}</th><th className="py-1.5 text-end">{t("p8fr.finColAmount")}</th></tr></thead>
               <tbody>
                 {sorted.map((x, i) => (
                   <tr key={x.id ?? i} className="border-t border-[var(--line)]">
@@ -247,6 +251,7 @@ function SimpleLedger({ kind, items, onAdded }: { kind: "in" | "out"; items: MIt
 }
 
 function InvoiceList({ items, franchises, onCreated }: { items: Invoice[]; franchises: string[]; onCreated: () => void }) {
+  const t = useT();
   const sorted = [...items].sort((a, b) => `${b.date ?? b.dueDate ?? ""}`.localeCompare(`${a.date ?? a.dueDate ?? ""}`));
   const paid = (s?: string) => (s ?? "").toLowerCase() === "paid";
   const [open, setOpen] = useState(false);
@@ -259,61 +264,61 @@ function InvoiceList({ items, franchises, onCreated }: { items: Invoice[]; franc
 
   async function create() {
     const n = parseFloat(amt);
-    if (!billTo.trim() || !(n > 0)) { setErr("Add who to bill and an amount."); return; }
+    if (!billTo.trim() || !(n > 0)) { setErr(t("p8fr.finNeedBillTo")); return; }
     setBusy(true); setErr(null);
     try {
       await apiPost(withHoMoney("/api/invoices"), { customerName: billTo.trim(), amount: n, ...(due ? { dueDate: due } : {}), ...(desc.trim() ? { description: desc.trim() } : {}) });
       setBillTo(""); setAmt(""); setDue(""); setDesc(""); setOpen(false); onCreated();
-    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t create the invoice."); }
+    } catch (e) { setErr(e instanceof Error ? e.message : t("p8fr.finCreateFail")); }
     finally { setBusy(false); }
   }
 
   return (
     <Card className="p-4">
       <div className="mb-2 flex items-center justify-between">
-        <div className="text-[13px] font-extrabold text-[var(--ink)]">Invoices ({sorted.length})</div>
-        <button type="button" onClick={() => { setOpen((o) => !o); setErr(null); }} className="rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white transition hover:brightness-110">{open ? "Close" : "＋ New invoice"}</button>
+        <div className="text-[13px] font-extrabold text-[var(--ink)]">{t("p8fr.finTabInvoices")} ({sorted.length})</div>
+        <button type="button" onClick={() => { setOpen((o) => !o); setErr(null); }} className="rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white transition hover:brightness-110">{open ? t("p8fr.finClose") : t("p8fr.finNewInvoice")}</button>
       </div>
 
       {open && (
         <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <div className="mb-2 text-[12px] font-extrabold text-[var(--ink)]">Bill a franchise</div>
+          <div className="mb-2 text-[12px] font-extrabold text-[var(--ink)]">{t("p8fr.finBillAFranchise")}</div>
           {err && <div className="mb-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] text-[#c02636]">{err}</div>}
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Bill to</label>
-              <input list="ho-inv-franchises" value={billTo} onChange={(e) => setBillTo(e.target.value)} placeholder="Franchise name" className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />
+              <label className="mb-1 block text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8fr.finLblBillTo")}</label>
+              <input list="ho-inv-franchises" value={billTo} onChange={(e) => setBillTo(e.target.value)} placeholder={t("p8fr.finPhFranchiseName")} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />
               <datalist id="ho-inv-franchises">{franchises.map((f) => <option key={f} value={f} />)}</datalist>
             </div>
             <div>
-              <label className="mb-1 block text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Amount (£)</label>
+              <label className="mb-1 block text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8fr.finLblAmount")}</label>
               <input type="number" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="0.00" className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />
             </div>
             <div>
-              <label className="mb-1 block text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Due date</label>
+              <label className="mb-1 block text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8fr.finLblDue")}</label>
               <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">What for (optional)</label>
-              <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="e.g. September royalty fee" className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />
+              <label className="mb-1 block text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8fr.finLblWhatFor")}</label>
+              <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={t("p8fr.finPhWhatFor")} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />
             </div>
           </div>
-          <button type="button" onClick={create} disabled={busy} className="mt-3 rounded-lg bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-extrabold text-white transition hover:brightness-110 disabled:opacity-60">{busy ? "Creating…" : "Create invoice"}</button>
+          <button type="button" onClick={create} disabled={busy} className="mt-3 rounded-lg bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-extrabold text-white transition hover:brightness-110 disabled:opacity-60">{busy ? t("franchise.creating") : t("p8fr.finCreateInvoice")}</button>
         </div>
       )}
 
       {sorted.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--line)] p-8 text-center text-[12.5px] text-[var(--ink-3)]">No invoices yet. Raise one to bill a franchise their fees.</div>
+        <div className="rounded-xl border border-dashed border-[var(--line)] p-8 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8fr.finNoInvoices")}</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-start text-[12.5px]">
-            <thead><tr className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><th className="py-1.5 pe-3">Billed to</th><th className="py-1.5 pe-3">Due</th><th className="py-1.5 pe-3">Status</th><th className="py-1.5 text-end">Amount</th></tr></thead>
+            <thead><tr className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><th className="py-1.5 pe-3">{t("p8fr.finColBilledTo")}</th><th className="py-1.5 pe-3">{t("p8fr.finColDue")}</th><th className="py-1.5 pe-3">{t("p8fr.finColStatus")}</th><th className="py-1.5 text-end">{t("p8fr.finColAmount")}</th></tr></thead>
             <tbody>
               {sorted.map((iv, i) => (
                 <tr key={iv.id ?? i} className="border-t border-[var(--line)]">
                   <td className="py-2 pe-3 font-bold text-[var(--ink)]">{iv.billTo || iv.customer || iv.to || "—"}</td>
                   <td className="py-2 pe-3 tabular-nums text-[var(--ink-2)]">{shortDate(iv.dueDate)}</td>
-                  <td className="py-2 pe-3"><span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={paid(iv.status) ? { background: "#e4f5eb", color: "#0f7a43" } : { background: "#fdecc8", color: "#8a5a00" }}>{paid(iv.status) ? "Paid" : (iv.status ?? "").toLowerCase() === "draft" ? "Draft" : (iv.status ?? "").toLowerCase() === "cancelled" ? "Cancelled" : "Outstanding"}</span></td>
+                  <td className="py-2 pe-3"><span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={paid(iv.status) ? { background: "#e4f5eb", color: "#0f7a43" } : { background: "#fdecc8", color: "#8a5a00" }}>{paid(iv.status) ? t("p8fr.finStatusPaid") : (iv.status ?? "").toLowerCase() === "draft" ? t("p8fr.finStatusDraft") : (iv.status ?? "").toLowerCase() === "cancelled" ? t("p8fr.finStatusCancelled") : t("p8fr.finOutstanding")}</span></td>
                   <td className="py-2 text-end font-extrabold tabular-nums text-[var(--ink)]">{gbp(iv.amount || 0)}</td>
                 </tr>
               ))}
@@ -326,11 +331,12 @@ function InvoiceList({ items, franchises, onCreated }: { items: Invoice[]; franc
 }
 
 function RecentCard({ title, onOpen, items, tone, empty, labelOf }: { title: string; onOpen: () => void; items: MItem[]; tone: string; empty: string; labelOf: (x: MItem) => string }) {
+  const t = useT();
   return (
     <Card className="p-4">
       <div className="mb-2 flex items-center justify-between">
         <div className="text-[13px] font-extrabold text-[var(--ink)]">{title}</div>
-        <button type="button" onClick={onOpen} className="text-[11.5px] font-bold text-[#2f6bd8] hover:underline">Open →</button>
+        <button type="button" onClick={onOpen} className="text-[11.5px] font-bold text-[#2f6bd8] hover:underline">{t("franchise.openArrow")}</button>
       </div>
       {items.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]">{empty}</div>
