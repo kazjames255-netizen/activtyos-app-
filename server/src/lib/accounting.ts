@@ -212,7 +212,9 @@ export function xeroConfig(): XeroConfig | null {
 }
 export const xeroConfigured = () => xeroConfig() !== null;
 
-const XERO_SCOPE = "openid profile email offline_access accounting.transactions accounting.settings";
+// Granular scopes only: Xero apps created on/after 2 Mar 2026 get "invalid_scope" for the old broad accounting.transactions.
+// We post ManualJournals and read the Accounts list, nothing else.
+const XERO_SCOPE = "openid profile email offline_access accounting.manualjournals accounting.settings";
 export function xeroAuthorizeUrl(cfg: XeroConfig, state: string, codeChallenge: string): string {
   const q = new URLSearchParams({
     response_type: "code",
