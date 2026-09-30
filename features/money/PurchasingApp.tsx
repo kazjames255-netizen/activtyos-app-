@@ -11,6 +11,9 @@ import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { LineItemsEditor, PrintableDoc, lineTotal, type LineItem } from "@/features/money/doc-shared";
 import { csvText } from "@/lib/csv";
+import { tNow, useT } from "@/lib/i18n/provider";
+import { rich } from "./rich";
+import { catLabel } from "./finI18n";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -23,15 +26,15 @@ interface PO { id: string; kind?: "bill" | "po"; category?: string; supplier: st
 interface Payload { items: PO[]; summary: { count: number; outstanding: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "received", "paid", "cancelled"];
+// `label` is a catalogue key (the status value sent to the API stays the English enum).
 const STATUS_META: Record<Status, { label: string; bg: string; fg: string }> = {
-  draft: { label: "Draft", bg: "var(--panel)", fg: "var(--ink-3)" },
-  sent: { label: "Ordered", bg: "#eaf0fc", fg: "#1d3a8f" },
-  received: { label: "Received", bg: "#fff4e0", fg: "#a86400" },
-  paid: { label: "Paid", bg: "#eaf0fc", fg: "#1d3a8f" },
-  cancelled: { label: "Cancelled", bg: "var(--panel)", fg: "var(--ink-3)" },
+  draft: { label: "p8fin.puStDraft", bg: "var(--panel)", fg: "var(--ink-3)" },
+  sent: { label: "p8fin.puStSent", bg: "#eaf0fc", fg: "#1d3a8f" },
+  received: { label: "p8fin.puStReceived", bg: "#fff4e0", fg: "#a86400" },
+  paid: { label: "p8fin.gPaid", bg: "#eaf0fc", fg: "#1d3a8f" },
+  cancelled: { label: "p8fin.puStCancelled", bg: "var(--panel)", fg: "var(--ink-3)" },
 };
 const OUTSTANDING = new Set<Status>(["sent", "received"]);
-const REPEAT_LABEL: Record<Repeat, string> = { weekly: "week", fortnightly: "2 weeks", monthly: "month" };
 // Same list Expenses uses, so a paid bill folds into the money-out picture under
 // a matching category.
 const CATEGORIES = ["Equipment", "Venue hire", "Staff", "Travel", "Marketing", "Insurance", "Supplies", "Training", "Software", "Utilities", "Other"];
@@ -62,7 +65,7 @@ const IcEdit = () => <svg {...svgProps}><path d="M12 20h9" /><path d="M16.5 3.5a
 const IcTrash = () => <svg {...svgProps}><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>;
 
 function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(file); });
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error(tNow("p8fin.exErrFileRead"))); r.readAsDataURL(file); });
 }
 function compressImage(dataUrl: string): Promise<string> {
   return new Promise((resolve) => {
@@ -86,12 +89,17 @@ const PDF_MAX_BYTES = 750_000;
 
 // A photo previews; a PDF (or a pasted link <img> can't draw) shows a file chip.
 function DocThumb({ url, className = "" }: { url: string; className?: string }) {
+  const t = useT();
   const [ok, setOk] = useState(true);
-  if (!ok) return <div title="PDF / file — open to view" className={`flex flex-col items-center justify-center bg-[var(--panel)] text-[18px] leading-none ${className}`}>🧾<span className="mt-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">file</span></div>;
-  return <img src={url} alt="invoice" onError={() => setOk(false)} className={`object-cover ${className}`} />;
+  if (!ok) return <div title={t("p8fin.exThumbTip")} className={`flex flex-col items-center justify-center bg-[var(--panel)] text-[18px] leading-none ${className}`}>🧾<span className="mt-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8fin.exThumbFile")}</span></div>;
+  return <img src={url} alt={t("p8fin.puDocAlt")} onError={() => setOk(false)} className={`object-cover ${className}`} />;
 }
 
 export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: boolean; fixedKind?: "bill" | "po" } = {}) {
+  const t = useT();
+  const repeatWord = (r: Repeat | undefined) => (r === "weekly" ? t("p8fin.exEveryWeek") : r === "fortnightly" ? t("p8fin.exEvery2Weeks") : r === "monthly" ? t("p8fin.exEveryMonth") : "");
+  const repeatUntilTip = (r: Repeat | undefined, date: string) => (r === "weekly" ? t("p8fin.exRepeatsWeekly", { date }) : r === "fortnightly" ? t("p8fin.exRepeatsFortnightly", { date }) : r === "monthly" ? t("p8fin.exRepeatsMonthly", { date }) : t("p8fin.exRepeating"));
+  const createsWord = (r: Repeat, date: string) => (r === "weekly" ? t("p8fin.puCreatesWeekly", { date }) : r === "fortnightly" ? t("p8fin.puCreatesFortnightly", { date }) : t("p8fin.puCreatesMonthly", { date }));
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
@@ -125,7 +133,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
         return p;
       });
       setError(null);
-    }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    }).catch((e) => setError(e instanceof Error ? e.message : t("p8fin.gLoadFailed")));
     apiGet<{ name: string; email?: string; phone?: string; address?: string }[]>("/api/suppliers").then((s) => setSavedSuppliers(Array.isArray(s) ? s.filter((x) => x.name) : [])).catch(() => {});
   }, [hoScope]);
   useEffect(() => { refresh(); }, [refresh]);
@@ -141,7 +149,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
   const kind = fixedKind ?? (usePO ? docKind : "bill");
   const isPo = kind === "po";
   const visibleStatuses = useMemo(() => (isPo ? STATUSES : STATUSES.filter((s) => s !== "draft")), [isPo]);
-  const newLabel = isPo ? "＋ Raise a PO" : "＋ New bill";
+  const newLabel = isPo ? t("p8fin.puNewPO") : t("p8fin.puNewBill");
 
   const items = useMemo(() => (data?.items ?? []).filter((p) => (p.kind ?? "bill") === kind), [data, kind]);
   const today = todayIso();
@@ -219,10 +227,10 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
   const openAdd = () => setEditor({ kind, category: "Supplies", supplier: "", supplierEmail: "", reference: "", date: todayIso(), dueDate: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], status: isPo ? "draft" : "received", notes: "", attachmentUrl: "", deliveryAddress: "", requestedBy: "", comments: "", repeat: "none", repeatUntil: "" });
   const openEdit = (p: PO) => setEditor({ id: p.id, kind: p.kind ?? "bill", category: p.category ?? "Supplies", supplier: p.supplier, supplierEmail: p.supplierEmail ?? "", reference: p.reference ?? "", date: p.date, dueDate: p.dueDate ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.notes ?? "", qty: 1, unitPrice: p.amount }], status: p.status, notes: p.notes ?? "", attachmentUrl: p.attachmentUrl ?? "", deliveryAddress: p.deliveryAddress ?? "", requestedBy: p.requestedBy ?? "", comments: p.comments ?? "", repeat: p.repeat ?? "none", repeatUntil: p.repeatUntil ?? "", seriesId: p.seriesId });
   async function emailDoc(p: PO) {
-    const to = (p.supplierEmail || window.prompt(`Email this ${p.kind === "po" ? "purchase order" : "bill query"} to:`, "") || "").trim();
+    const to = (p.supplierEmail || window.prompt(t(p.kind === "po" ? "p8fin.puPromptEmailPO" : "p8fin.puPromptEmailBill"), "") || "").trim();
     if (!to) return;
     setEmailing(true);
-    try { await apiPost(`/api/purchasing/${encodeURIComponent(p.id)}/email`, { to }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Email failed"); } finally { setEmailing(false); }
+    try { await apiPost(`/api/purchasing/${encodeURIComponent(p.id)}/email`, { to }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.puEmailFailed")); } finally { setEmailing(false); }
   }
   function whatsApp(p: PO) {
     const biz = settings.billing?.businessName || "us";
@@ -233,10 +241,10 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
   async function save() {
     if (!editor) return;
     const lines = editor.lineItems.filter((li) => li.description.trim() || li.unitPrice > 0);
-    if (!editor.supplier.trim()) { setError("Supplier is required."); return; }
-    if (lineTotal(lines) <= 0) { setError("Add at least one line with an amount."); return; }
+    if (!editor.supplier.trim()) { setError(t("p8fin.puErrSupplier")); return; }
+    if (lineTotal(lines) <= 0) { setError(t("p8fin.puErrLine")); return; }
     const isNewSeries = !editor.id && editor.repeat !== "none";
-    if (isNewSeries && (!editor.repeatUntil || editor.repeatUntil <= editor.date)) { setError("For a repeat, pick an ‘until’ date after the start date."); return; }
+    if (isNewSeries && (!editor.repeatUntil || editor.repeatUntil <= editor.date)) { setError(t("p8fin.exErrRepeatUntil")); return; }
     setSaving(true);
     // Pull the saved supplier's contact details onto the doc so a PO carries a
     // full "To" block (address/phone) and the emailed copy matches.
@@ -248,9 +256,9 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
       if (editor.id) await apiPut(`/api/purchasing/${encodeURIComponent(editor.id)}`, body);
       else await apiPost("/api/purchasing", body);
       setEditor(null); setError(null); refresh();
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); } finally { setSaving(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.mkSaveErr")); } finally { setSaving(false); }
   }
-  async function setStatus(p: PO, status: Status) { try { await apiPut(`/api/purchasing/${encodeURIComponent(p.id)}`, { status }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  async function setStatus(p: PO, status: Status) { try { await apiPut(`/api/purchasing/${encodeURIComponent(p.id)}`, { status }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.gFailed")); } }
   // Turn a received PO into a Pending expense so it flows into money-out totals.
   async function addToExpenses(p: PO) {
     if (p.expenseId) return;
@@ -258,13 +266,13 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
       const exp = await apiPost<{ id: string }>("/api/expenses", { date: todayIso(), category: p.category || "Supplies", amount: p.amount, supplier: p.supplier, notes: `From PO${p.reference ? ` ${p.reference}` : ""}`, status: "pending", dueDate: p.dueDate || undefined });
       await apiPut(`/api/purchasing/${encodeURIComponent(p.id)}`, { expenseId: exp.id, status: "received" });
       setError(null); refresh();
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t add to expenses"); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.puErrAddExp")); }
   }
   async function onPickDoc(file: File) {
     setUploading(true); setError(null);
     try {
       const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-      if (isPdf && file.size > PDF_MAX_BYTES) throw new Error(`That PDF is ${Math.ceil(file.size / 1000)}KB — the limit is ${PDF_MAX_BYTES / 1000}KB. Save a smaller PDF or upload a photo instead.`);
+      if (isPdf && file.size > PDF_MAX_BYTES) throw new Error(t("p8fin.exErrPdfSize", { kb: Math.ceil(file.size / 1000), max: PDF_MAX_BYTES / 1000 }));
       let dataUrl = await readAsDataUrl(file);
       if (isPdf) dataUrl = dataUrl.replace(/^data:[^;,]*;base64,/, "data:application/pdf;base64,"); // some OSes label a .pdf octet-stream
       const payload = dataUrl.startsWith("data:image/") ? await compressImage(dataUrl) : dataUrl;
@@ -272,23 +280,23 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
       // paperwork — a signed link the purchasing route re-signs, not a public image.
       const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl: payload, purpose: "private" });
       setEditor((ed) => (ed ? { ...ed, attachmentUrl: url } : ed));
-    } catch (e) { setError(e instanceof Error ? e.message : "Upload failed — try a smaller image or paste a link."); } finally { setUploading(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.exErrUpload")); } finally { setUploading(false); }
   }
   async function remove(p: PO) {
-    if (!confirm(`Delete the order for ${p.supplier} (${money(p.amount)})?`)) return;
-    try { await del(`/api/purchasing/${encodeURIComponent(p.id)}`); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+    if (!confirm(t("p8fin.puConfirmDelOrder", { supplier: p.supplier, amount: money(p.amount) }))) return;
+    try { await del(`/api/purchasing/${encodeURIComponent(p.id)}`); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.gFailed")); }
   }
   async function deleteSeries() {
     if (!editor?.seriesId) return;
-    if (!confirm("Delete every order in this repeating series?")) return;
-    try { await del(`/api/purchasing/series/${encodeURIComponent(editor.seriesId)}`); setEditor(null); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+    if (!confirm(t("p8fin.puConfirmDelSeries"))) return;
+    try { await del(`/api/purchasing/series/${encodeURIComponent(editor.seriesId)}`); setEditor(null); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.gFailed")); }
   }
   async function renameSupplier(oldName: string, raw: string) {
     const newName = raw.trim(); setRenaming(null);
     if (!newName || newName === oldName) return;
     const affected = items.filter((p) => p.supplier === oldName);
     try { await Promise.all(affected.map((p) => apiPut(`/api/purchasing/${encodeURIComponent(p.id)}`, { supplier: newName }))); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t rename"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p8fin.exErrRename")); }
   }
   function exportCsv() {
     const header = ["Supplier", "Reference", "Date", "Due", "Amount", "Status", "Notes", "Attachment", "Repeats", "Source"];
@@ -298,7 +306,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
     const a = document.createElement("a"); a.href = url; a.download = `purchasing-${flt}-${todayIso()}.csv`; a.click(); URL.revokeObjectURL(url);
   }
 
-  const StatusPill = ({ s }: { s: Status }) => <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: STATUS_META[s].bg, color: STATUS_META[s].fg }}>{STATUS_META[s].label}</span>;
+  const StatusPill = ({ s }: { s: Status }) => <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: STATUS_META[s].bg, color: STATUS_META[s].fg }}>{t(STATUS_META[s].label)}</span>;
 
   return (
     <div className={embedded ? "text-[var(--ink)]" : "-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]"} style={embedded ? undefined : LIGHT_PALETTE}>
@@ -307,15 +315,15 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
         <button type="button" onClick={openAdd} className="absolute end-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">{newLabel}</button>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🧾</span>
-          Purchasing &amp; invoices
+          {t("p8fin.puHeroTitle")}
         </div>
-        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Purchase orders and supplier invoices — from draft to paid. Track what you owe, what’s overdue, and every invoice document in one place.</p>
+        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">{t("p8fin.puHeroIntro")}</p>
         {data && (
           <div className="mt-4 flex flex-wrap gap-2.5">
-            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{money(outstanding)}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Outstanding</div></div>
-            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="flex items-baseline gap-1.5"><div className="text-[20px] font-extrabold leading-none">{money(overdueTotal)}</div>{overdueItems.length > 0 && <span className="text-[11px] font-bold text-[#ffd2d2]">{overdueItems.length}</span>}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Overdue</div></div>
-            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{money(paidYear)}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Paid this year</div></div>
-            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{items.length}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Orders</div></div>
+            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{money(outstanding)}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{t("p8fin.recTileOutstanding")}</div></div>
+            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="flex items-baseline gap-1.5"><div className="text-[20px] font-extrabold leading-none">{money(overdueTotal)}</div>{overdueItems.length > 0 && <span className="text-[11px] font-bold text-[#ffd2d2]">{overdueItems.length}</span>}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{t("p8fin.recTileOverdue")}</div></div>
+            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{money(paidYear)}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{t("p8fin.puPaidYear")}</div></div>
+            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{items.length}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{t("p8fin.puOrders")}</div></div>
           </div>
         )}
       </div>
@@ -323,7 +331,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
 
       {usePO && !fixedKind && (
         <div className="mb-3 inline-flex rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
-          {([["bill", "🧾 Bills"], ["po", "📦 Purchase orders"]] as const).map(([k, label]) => (
+          {([["bill", t("p8fin.puKindBills")], ["po", t("p8fin.puKindPOs")]] as const).map(([k, label]) => (
             <button key={k} type="button" onClick={() => setDocKind(k)} className="rounded-full px-4 py-1.5 transition-colors" style={docKind === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
         </div>
@@ -333,38 +341,38 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
 
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex flex-wrap rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
-          {([["overview", "Overview"], ["ledger", isPo ? "All POs" : "All bills"], ["paid", `Paid${paidItems.length ? ` · ${paidItems.length}` : ""}`], ["invoices", `Invoices${withDoc.length ? ` · ${withDoc.length}` : ""}`], ["suppliers", "Suppliers"]] as const).map(([k, label]) => (
+          {([["overview", t("p8fin.exTabOverview")], ["ledger", isPo ? t("p8fin.puAllPOs") : t("p8fin.puAllBills")], ["paid", `${t("p8fin.exTabPaid")}${paidItems.length ? ` · ${paidItems.length}` : ""}`], ["invoices", `${t("p8fin.puTabInvoices")}${withDoc.length ? ` · ${withDoc.length}` : ""}`], ["suppliers", t("p8fin.exTabSuppliers")]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} className="rounded-full px-4 py-1.5 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
         </div>
         {embedded && <button type="button" onClick={openAdd} className={btnPrimary}>{newLabel}</button>}
       </div>
 
-      {!data ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+      {!data ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8fin.gLoading")}</div>
       : items.length === 0 ? (
         <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">
           <div className="text-[30px]">🧾</div>
-          <div className="mt-1 text-[15px] font-extrabold text-[var(--ink)]">{usePO ? "No POs or bills yet" : "No bills yet"}</div>
-          <p className="mx-auto mt-1 max-w-[440px] leading-[1.6]">{usePO ? "Raise a purchase order to a supplier, or log a bill you’ve received" : "Log a supplier bill you need to pay"} — with line items, track it from {usePO ? "draft PO " : ""}to paid, flag what’s overdue, and keep the invoice document attached.</p>
+          <div className="mt-1 text-[15px] font-extrabold text-[var(--ink)]">{usePO ? t("p8fin.puNoPOsOrBills") : t("p8fin.puNoBills")}</div>
+          <p className="mx-auto mt-1 max-w-[440px] leading-[1.6]">{usePO ? t("p8fin.puEmptyBodyPO") : t("p8fin.puEmptyBodyBill")}</p>
           <button type="button" onClick={openAdd} className={`${btnPrimary} mx-auto mt-4`}>{newLabel}</button>
         </Card>
       ) : tab === "overview" ? (
         <div className="flex flex-col gap-3.5">
           <Card className="grid gap-3 p-4 sm:grid-cols-4">
-            <div><div className="text-[20px] font-extrabold leading-none">{money(outstanding)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">outstanding to pay</div></div>
-            <div><div className="text-[20px] font-extrabold leading-none" style={{ color: overdueTotal > 0 ? "var(--red,#e21d27)" : undefined }}>{money(overdueTotal)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">overdue · {overdueItems.length}</div></div>
-            <div><div className="text-[20px] font-extrabold leading-none">{money(committedTotal)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">committed (excl. cancelled)</div></div>
-            <div><div className="text-[20px] font-extrabold leading-none">{money(paidYear)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">paid in {thisYear}</div></div>
+            <div><div className="text-[20px] font-extrabold leading-none">{money(outstanding)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.puOutstandingToPay")}</div></div>
+            <div><div className="text-[20px] font-extrabold leading-none" style={{ color: overdueTotal > 0 ? "var(--red,#e21d27)" : undefined }}>{money(overdueTotal)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.puOverdueN", { n: overdueItems.length })}</div></div>
+            <div><div className="text-[20px] font-extrabold leading-none">{money(committedTotal)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.puCommitted")}</div></div>
+            <div><div className="text-[20px] font-extrabold leading-none">{money(paidYear)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.puPaidInYear", { year: thisYear })}</div></div>
           </Card>
 
           {/* Pipeline */}
           <Card className="p-4">
-            <div className="mb-2.5 text-[13.5px] font-extrabold">Pipeline</div>
+            <div className="mb-2.5 text-[13.5px] font-extrabold">{t("p8fin.puPipeline")}</div>
             <div className="flex flex-wrap gap-2">
               {byStatus.map((s) => (
                 <button key={s.status} type="button" onClick={() => { setFlt(s.status); setTab("ledger"); }} className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2 text-start transition hover:border-[var(--ink-3)]">
                   <StatusPill s={s.status} />
-                  <div><div className="text-[14px] font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{s.count} order{s.count === 1 ? "" : "s"}</div></div>
+                  <div><div className="text-[14px] font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{t("p8fin.puOrdersN", { n: s.count })}</div></div>
                 </button>
               ))}
             </div>
@@ -374,10 +382,10 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
             const max = Math.max(1, ...monthly.map((m) => m.total));
             return (
               <Card className="p-4">
-                <div className="mb-3 flex items-baseline justify-between"><div className="text-[13.5px] font-extrabold">Last 6 months</div><div className="text-[11px] text-[var(--ink-3)]">ordered per month (excl. cancelled)</div></div>
+                <div className="mb-3 flex items-baseline justify-between"><div className="text-[13.5px] font-extrabold">{t("p8fin.exLast6")}</div><div className="text-[11px] text-[var(--ink-3)]">{t("p8fin.puOrderedPerMonth")}</div></div>
                 <div className="flex items-end gap-3 overflow-x-auto">
                   {monthly.map((m) => (
-                    <div key={m.key} className="flex flex-1 flex-col items-center" title={`${m.label}: ${money(m.total)} · ${m.count} order${m.count === 1 ? "" : "s"}`}>
+                    <div key={m.key} className="flex flex-1 flex-col items-center" title={t("p8fin.puMonthTip", { label: m.label, amount: money(m.total), n: m.count })}>
                       <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-2)]">{m.total > 0 ? money(m.total) : ""}</div>
                       <div className="w-full max-w-[46px] rounded-t-[4px]" style={{ height: `${8 + (m.total / max) * 96}px`, background: m.key === thisMonthKey ? "linear-gradient(180deg,#1d3a8f,#16306e)" : "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }} />
                       <div className="mt-1.5 text-[11px] font-bold text-[var(--ink-3)]">{m.label}</div>
@@ -392,14 +400,14 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
             {/* Needs attention */}
             <Card className="p-4">
               <div className="mb-2 flex items-baseline justify-between">
-                <div className="text-[13.5px] font-extrabold">Needs paying</div>
-                <div className="text-[10.5px] text-[var(--ink-3)]">tap a row to edit</div>
+                <div className="text-[13.5px] font-extrabold">{t("p8fin.puNeedsPaying")}</div>
+                <div className="text-[10.5px] text-[var(--ink-3)]">{t("p8fin.puTapToEdit")}</div>
               </div>
-              {overdueItems.length + dueSoon.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Nothing overdue or due soon 🎉</div> : (
+              {overdueItems.length + dueSoon.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{t("p8fin.puNothingOverdue")}</div> : (
                 <div className="flex flex-col gap-0.5">
                   {[...overdueItems, ...dueSoon].slice(0, 7).map((p) => (
                     <button key={p.id} type="button" onClick={() => openEdit(p)} className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-start text-[12px] transition-colors hover:bg-[var(--panel)]">
-                      <span className={`flex-none rounded-full px-2 py-0.5 text-[9.5px] font-bold ${isOverdue(p) ? "bg-[var(--red-soft,#fdebec)] text-[var(--red,#e21d27)]" : "bg-[#fff4e0] text-[#a86400]"}`}>{isOverdue(p) ? "overdue" : "due soon"}</span>
+                      <span className={`flex-none rounded-full px-2 py-0.5 text-[9.5px] font-bold ${isOverdue(p) ? "bg-[var(--red-soft,#fdebec)] text-[var(--red,#e21d27)]" : "bg-[#fff4e0] text-[#a86400]"}`}>{isOverdue(p) ? t("p8fin.recOverdueBadge") : t("p8fin.puDueSoon")}</span>
                       <div className="min-w-0 flex-1 truncate font-bold">{p.supplier}</div>
                       <span className="flex-none text-[11px] text-[var(--ink-3)]">{fmtDay(p.dueDate)}</span>
                       <span className="flex-none font-extrabold tabular-nums">{money(p.amount)}</span>
@@ -411,13 +419,13 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
             </Card>
 
             <Card className="p-4">
-              <div className="mb-2.5 text-[13.5px] font-extrabold">Top suppliers</div>
+              <div className="mb-2.5 text-[13.5px] font-extrabold">{t("p8fin.exTopSuppliers")}</div>
               <div className="flex flex-col">
                 {suppliers.slice(0, 6).map((s, i) => (
                   <div key={s.supplier} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
                     <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[var(--brand-soft,#eaf0fc)] text-[11px] font-extrabold text-[var(--brand-strong,#16306e)]">{i + 1}</span>
                     <div className="min-w-0 flex-1 truncate font-bold">{s.supplier}</div>
-                    <div className="flex-none text-end"><div className="font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{s.count} order{s.count === 1 ? "" : "s"}{s.outstanding > 0 ? ` · ${money(s.outstanding)} due` : ""}</div></div>
+                    <div className="flex-none text-end"><div className="font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{s.outstanding > 0 ? t("p8fin.puOrdersDue", { n: s.count, amount: money(s.outstanding) }) : t("p8fin.puOrdersN", { n: s.count })}</div></div>
                   </div>
                 ))}
               </div>
@@ -430,87 +438,87 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
                 <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search supplier, ref or note…" className="w-[220px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 ps-7 pe-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]" />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p8fin.puSearchPh")} className="w-[220px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 ps-7 pe-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]" />
               </div>
               <select value={flt} onChange={(e) => setFlt(e.target.value as Flt)} className={`${pill} rounded-full`}>
-                <option value="all">All orders</option>
-                <option value="outstanding">Outstanding</option>
-                <option value="overdue">Overdue</option>
-                <option value="duesoon">Due soon (14d)</option>
-                {visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+                <option value="all">{t("p8fin.puFltAll")}</option>
+                <option value="outstanding">{t("p8fin.recTileOutstanding")}</option>
+                <option value="overdue">{t("p8fin.recTileOverdue")}</option>
+                <option value="duesoon">{t("p8fin.puFltDueSoon")}</option>
+                {visibleStatuses.map((s) => <option key={s} value={s}>{t(STATUS_META[s].label)}</option>)}
               </select>
               <div className="ms-auto flex items-center gap-2">
-                <button type="button" onClick={exportCsv} className={btnGhost}>⬇ Export CSV</button>
+                <button type="button" onClick={exportCsv} className={btnGhost}>{t("p8fin.exExportCsv")}</button>
                 <button type="button" onClick={openAdd} className={btnPrimary}>{newLabel}</button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
-                {([["all", "All time"], ["month", "This month"], ["lastmonth", "Last month"], ["year", "This year"]] as const).map(([k, label]) => (
+                {([["all", t("p8fin.exRangeAll")], ["month", t("p8fin.exRangeMonth")], ["lastmonth", t("p8fin.exRangeLast")], ["year", t("p8fin.exRangeYear")]] as const).map(([k, label]) => (
                   <button key={k} onClick={() => setRange(k)} className="px-3 py-1.5 transition-colors" style={range === k ? { background: "#2f6bd8", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
                 ))}
               </div>
-              <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
-              <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">to <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
+              <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.recFrom")} <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
+              <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.recTo")} <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
-                {([["date", "Newest"], ["due", "Due date"], ["amount", "Largest"]] as const).map(([k, label]) => (
+                {([["date", t("p8fin.refSortNewest")], ["due", t("p8fin.puSortDue")], ["amount", t("p8fin.exSortLargest")]] as const).map(([k, label]) => (
                   <button key={k} onClick={() => setSort(k)} className="px-3 py-1.5 transition-colors" style={sort === k ? { background: "#2f6bd8", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
                 ))}
               </div>
-              {activeFilters > 0 && <button type="button" onClick={clearFilters} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Clear {activeFilters} filter{activeFilters === 1 ? "" : "s"} ✕</button>}
+              {activeFilters > 0 && <button type="button" onClick={clearFilters} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("p8fin.exClearFilters", { n: activeFilters })}</button>}
             </div>
           </Card>
 
           <div className="flex items-baseline justify-between px-1 text-[12px] text-[var(--ink-3)]">
-            <span><b className="text-[var(--ink)]">{filtered.length}</b> of {items.length} order{items.length === 1 ? "" : "s"}</span>
-            <span>showing <b className="text-[var(--ink)]">{money(filteredTotal)}</b></span>
+            <span>{rich(t("p8fin.puOrdersShown", { n: filtered.length, count: items.length }))}</span>
+            <span>{rich(t("p8fin.exShowingTotal", { amount: money(filteredTotal) }))}</span>
           </div>
 
-          {filtered.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">Nothing matches those filters.</Card> : (
+          {filtered.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8fin.exNoMatch")}</Card> : (
             <div className="flex flex-col gap-1.5">
               {filtered.map((p) => (
                 <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="flex-none rounded-md px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide" style={{ background: (p.kind ?? "bill") === "po" ? "#eef2fb" : "#f0f1f6", color: (p.kind ?? "bill") === "po" ? "#1d3a8f" : "var(--ink-3)" }}>{(p.kind ?? "bill") === "po" ? "PO" : "Bill"}</span>
+                      <span className="flex-none rounded-md px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide" style={{ background: (p.kind ?? "bill") === "po" ? "#eef2fb" : "#f0f1f6", color: (p.kind ?? "bill") === "po" ? "#1d3a8f" : "var(--ink-3)" }}>{(p.kind ?? "bill") === "po" ? "PO" : t("p8fin.puBillBadge")}</span>
                       <span className="truncate text-[13px] font-bold">{p.supplier}</span>
-                      {!isPo && p.category && <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">{p.category}</span>}
+                      {!isPo && p.category && <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">{catLabel(t, p.category)}</span>}
                       {p.reference && <span className="text-[11px] text-[var(--ink-3)]">{p.reference}</span>}
-                      {p.seriesId && <span className="rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10px] font-bold text-[#1d3a8f]" title={p.repeatUntil ? `Repeats every ${p.repeat ? REPEAT_LABEL[p.repeat] : ""} until ${fmtDay(p.repeatUntil)}` : "Repeating"}>🔁 {p.repeat ? REPEAT_LABEL[p.repeat] : ""}</span>}
-                      {isOverdue(p) && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-2 py-0.5 text-[10px] font-bold text-[var(--red,#e21d27)]">overdue</span>}
+                      {p.seriesId && <span className="rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10px] font-bold text-[#1d3a8f]" title={p.repeatUntil ? repeatUntilTip(p.repeat, fmtDay(p.repeatUntil)) : t("p8fin.exRepeating")}>🔁 {repeatWord(p.repeat)}</span>}
+                      {isOverdue(p) && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-2 py-0.5 text-[10px] font-bold text-[var(--red,#e21d27)]">{t("p8fin.recOverdueBadge")}</span>}
                     </div>
-                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.notes ? ` · ${p.notes}` : ""}{p.emailedAt ? <span className="ms-1 font-bold text-[#1d3a8f]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? t("p8fin.exDueTag", { date: fmtDay(p.dueDate) }) : ""}{p.notes ? ` · ${p.notes}` : ""}{p.emailedAt ? <span className="ms-1 font-bold text-[#1d3a8f]">{t("p8fin.puEmailedOn", { date: fmtDay(p.emailedAt.slice(0, 10)) })}</span> : ""}</div>
                   </div>
                   {p.attachmentUrl
-                    ? <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 {isPo ? "supplier invoice" : "receipt"}</a>
-                    : <button type="button" onClick={() => openEdit(p)} className="flex-none text-[11px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]" title={isPo ? "Attach the supplier's invoice" : "Attach the receipt"}>＋ attach {isPo ? "invoice" : "receipt"}</button>}
+                    ? <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">{isPo ? t("p8fin.puSupplierInvoiceLink") : t("p8fin.puReceiptLink")}</a>
+                    : <button type="button" onClick={() => openEdit(p)} className="flex-none text-[11px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]" title={isPo ? t("p8fin.puAttachInvoiceTip") : t("p8fin.puAttachReceiptTip")}>{isPo ? t("p8fin.puAttachInvoiceBtn") : t("p8fin.puAttachReceiptBtn")}</button>}
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
                   {isPo && (p.expenseId
-                    ? <span className="flex-none rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)]" title="Added to Expenses as a pending expense">✓ In expenses</span>
-                    : <button type="button" onClick={() => addToExpenses(p)} className="flex-none whitespace-nowrap rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:brightness-95" title="Mark received & create a pending expense from this PO">＋ Add to expenses</button>)}
-                  {OUTSTANDING.has(p.status) && <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:brightness-95">Mark paid</button>}
-                  <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
+                    ? <span className="flex-none rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)]" title={t("p8fin.puInExpensesTip")}>{t("p8fin.puInExpenses")}</span>
+                    : <button type="button" onClick={() => addToExpenses(p)} className="flex-none whitespace-nowrap rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:brightness-95" title={t("p8fin.puAddToExpensesTip")}>{t("p8fin.puAddToExpensesBtn")}</button>)}
+                  {OUTSTANDING.has(p.status) && <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:brightness-95">{t("p8fin.exMarkPaid")}</button>}
+                  <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{visibleStatuses.map((s) => <option key={s} value={s}>{t(STATUS_META[s].label)}</option>)}</select>
                   <div className="flex flex-none items-center gap-1">
                     {/* A PO is a document you raise and send to a supplier; a bill is one they sent you — so view/send are PO-only. */}
                     {isPo && (
                       <>
-                        <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View"><IcView /></button>
+                        <button type="button" onClick={() => setViewing(p)} className={iconBtn} title={t("p8fin.puViewPdf")} aria-label={t("p8fin.puView")}><IcView /></button>
                         <div className="relative">
-                          <button type="button" onClick={() => setSendFor(sendFor === p.id ? null : p.id)} className={`${iconBtn} ${sendFor === p.id ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : ""}`} title="Send" aria-label="Send"><IcSend /></button>
+                          <button type="button" onClick={() => setSendFor(sendFor === p.id ? null : p.id)} className={`${iconBtn} ${sendFor === p.id ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : ""}`} title={t("p8fin.puSend")} aria-label={t("p8fin.puSend")}><IcSend /></button>
                           {sendFor === p.id && (
                             <>
                               <div className="fixed inset-0 z-30" onClick={() => setSendFor(null)} />
                               <div className="absolute end-0 top-full z-40 mt-1 w-48 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
-                                <button type="button" onClick={() => { setSendFor(null); void emailDoc(p); }} className={menuItem}>✉️ Email to supplier</button>
-                                <button type="button" onClick={() => { setSendFor(null); whatsApp(p); }} className={menuItem}>💬 WhatsApp</button>
+                                <button type="button" onClick={() => { setSendFor(null); void emailDoc(p); }} className={menuItem}>{t("p8fin.puEmailSupplier")}</button>
+                                <button type="button" onClick={() => { setSendFor(null); whatsApp(p); }} className={menuItem}>{t("p8fin.puWhatsApp")}</button>
                               </div>
                             </>
                           )}
                         </div>
                       </>
                     )}
-                    <button type="button" onClick={() => openEdit(p)} className={iconBtn} title="Edit" aria-label="Edit"><IcEdit /></button>
-                    <button type="button" onClick={() => remove(p)} className={`${iconBtn} hover:border-[var(--red)] hover:bg-[var(--red-soft,#fdebec)] hover:text-[var(--red)]`} title="Delete" aria-label="Delete"><IcTrash /></button>
+                    <button type="button" onClick={() => openEdit(p)} className={iconBtn} title={t("p8fin.gEdit")} aria-label={t("p8fin.gEdit")}><IcEdit /></button>
+                    <button type="button" onClick={() => remove(p)} className={`${iconBtn} hover:border-[var(--red)] hover:bg-[var(--red-soft,#fdebec)] hover:text-[var(--red)]`} title={t("p8fin.gDelete")} aria-label={t("p8fin.gDelete")}><IcTrash /></button>
                   </div>
                 </Card>
               ))}
@@ -518,15 +526,15 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
           )}
         </div>
       ) : tab === "paid" ? (
-        paidItems.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">Nothing marked paid yet — attach the supplier invoice and hit “Mark paid”.</Card> : (
+        paidItems.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8fin.puNothingPaid")}</Card> : (
           <div className="flex flex-col gap-1.5">
             {paidItems.map((p) => (
               <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
-                <span className="flex-none rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">✓ Paid</span>
+                <span className="flex-none rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">{t("p8fin.puPaidBadge")}</span>
                 <div className="min-w-0 flex-1 truncate"><span className="text-[13px] font-bold">{p.supplier}</span>{p.reference ? <span className="ms-1.5 text-[11px] text-[var(--ink-3)]">{p.reference}</span> : ""}<span className="ms-1.5 text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}</span></div>
-                {p.attachmentUrl && <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 {isPo ? "invoice" : "receipt"}</a>}
+                {p.attachmentUrl && <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">{isPo ? t("p8fin.puInvoiceWord") : t("p8fin.puReceiptLink")}</a>}
                 <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
-                <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
+                <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title={t("p8fin.puViewPdf")} aria-label={t("p8fin.puView")}>📄</button>
               </Card>
             ))}
           </div>
@@ -535,31 +543,31 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
         <div className="flex flex-col gap-3.5">
           <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
             <div>
-              <div className="text-[13.5px] font-extrabold">{withDoc.length} of {items.length} orders have an invoice attached</div>
-              <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">Keep every supplier invoice document with its order.</div>
+              <div className="text-[13.5px] font-extrabold">{rich(t("p8fin.puInvAttached", { n: withDoc.length, total: items.length }))}</div>
+              <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{t("p8fin.puInvHint")}</div>
             </div>
             <div className="h-2 w-[160px] overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full bg-[#1d3a8f]" style={{ width: `${items.length ? (withDoc.length / items.length) * 100 : 0}%` }} /></div>
           </Card>
 
           <Card className="flex flex-wrap items-center gap-2 p-3">
             <select value={iSup} onChange={(e) => setISup(e.target.value)} className={`${pill} rounded-full`}>
-              <option value="all">All suppliers</option>
+              <option value="all">{t("p8fin.puAllSuppliers")}</option>
               {supplierNames.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
-            <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">From <input type="date" value={iFrom} onChange={(e) => setIFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
-            <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">to <input type="date" value={iTo} onChange={(e) => setITo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
-            {(iSup !== "all" || iFrom || iTo) && <button type="button" onClick={() => { setISup("all"); setIFrom(""); setITo(""); }} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Clear ✕</button>}
-            <span className="ms-auto text-[12px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{invoicesShown.length}</b> shown</span>
+            <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.recFrom")} <input type="date" value={iFrom} onChange={(e) => setIFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
+            <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.recTo")} <input type="date" value={iTo} onChange={(e) => setITo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
+            {(iSup !== "all" || iFrom || iTo) && <button type="button" onClick={() => { setISup("all"); setIFrom(""); setITo(""); }} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("p8fin.grClear")}</button>}
+            <span className="ms-auto text-[12px] text-[var(--ink-3)]">{t("p8fin.recShown", { n: invoicesShown.length })}</span>
           </Card>
 
-          {invoicesShown.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">{withDoc.length === 0 ? "No invoices attached yet — open any order and attach one." : "No invoices match those filters."}</Card> : (
+          {invoicesShown.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">{withDoc.length === 0 ? t("p8fin.puNoInvYet") : t("p8fin.puNoInvMatch")}</Card> : (
             <div className="grid gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
               {invoicesShown.map((p) => (
                 <Card key={p.id} className="overflow-hidden">
                   <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="block"><DocThumb url={p.attachmentUrl!} className="h-[120px] w-full" /></a>
                   <div className="p-2.5">
                     <div className="flex items-baseline justify-between"><span className="truncate text-[12px] font-bold">{p.supplier}</span><span className="flex-none text-[12.5px] font-extrabold tabular-nums">{money(p.amount)}</span></div>
-                    <div className="mt-0.5 flex items-center justify-between text-[11px] text-[var(--ink-3)]"><span>{p.reference || fmtDay(p.date)}</span><button type="button" onClick={() => openEdit(p)} className="font-bold text-[#1d3a8f] hover:underline">Edit</button></div>
+                    <div className="mt-0.5 flex items-center justify-between text-[11px] text-[var(--ink-3)]"><span>{p.reference || fmtDay(p.date)}</span><button type="button" onClick={() => openEdit(p)} className="font-bold text-[#1d3a8f] hover:underline">{t("p8fin.gEdit")}</button></div>
                   </div>
                 </Card>
               ))}
@@ -568,7 +576,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
 
           {missingDoc.length > 0 && (
             <Card className="p-4">
-              <div className="mb-2 text-[13px] font-extrabold">No invoice attached · {missingDoc.length}</div>
+              <div className="mb-2 text-[13px] font-extrabold">{t("p8fin.puNoInvHead", { n: missingDoc.length })}</div>
               <div className="flex flex-col">
                 {missingDoc.slice(0, 12).map((p) => (
                   <div key={p.id} className="flex items-center gap-2.5 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
@@ -576,10 +584,10 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
                     <StatusPill s={p.status} />
                     <span className="flex-none text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}</span>
                     <span className="flex-none font-extrabold tabular-nums">{money(p.amount)}</span>
-                    <button type="button" onClick={() => openEdit(p)} className={`${btnGhost} !py-1 !text-[11px]`}>＋ Attach</button>
+                    <button type="button" onClick={() => openEdit(p)} className={`${btnGhost} !py-1 !text-[11px]`}>{t("p8fin.puAttachBtn")}</button>
                   </div>
                 ))}
-                {missingDoc.length > 12 && <div className="pt-2 text-center text-[11.5px] text-[var(--ink-3)]">+ {missingDoc.length - 12} more.</div>}
+                {missingDoc.length > 12 && <div className="pt-2 text-center text-[11.5px] text-[var(--ink-3)]">{t("p8fin.puMoreN", { n: missingDoc.length - 12 })}</div>}
               </div>
             </Card>
           )}
@@ -593,24 +601,24 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
                 {renaming?.name === s.supplier ? (
                   <div className="flex flex-1 items-center gap-1.5">
                     <input autoFocus value={renaming.value} onChange={(e) => setRenaming({ name: s.supplier, value: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") void renameSupplier(s.supplier, renaming.value); if (e.key === "Escape") setRenaming(null); }} className={`${fieldCls} max-w-[260px]`} />
-                    <button type="button" onClick={() => void renameSupplier(s.supplier, renaming.value)} className={`${btnPrimary} !py-1.5`}>Save</button>
-                    <button type="button" onClick={() => setRenaming(null)} className="text-[12px] font-bold text-[var(--ink-3)]">Cancel</button>
+                    <button type="button" onClick={() => void renameSupplier(s.supplier, renaming.value)} className={`${btnPrimary} !py-1.5`}>{t("p8fin.gSave")}</button>
+                    <button type="button" onClick={() => setRenaming(null)} className="text-[12px] font-bold text-[var(--ink-3)]">{t("p8fin.gCancel")}</button>
                   </div>
                 ) : (
                   <>
                     <div className="text-[13.5px] font-extrabold">{s.supplier}</div>
                     <div className="flex items-center gap-2.5">
                       <div className="text-[15px] font-extrabold tabular-nums">{money(s.total)}</div>
-                      <button type="button" onClick={() => setRenaming({ name: s.supplier, value: s.supplier })} className="text-[var(--ink-3)] hover:text-[#1d3a8f]" title="Rename supplier (updates all its orders)" aria-label="Rename">✎</button>
+                      <button type="button" onClick={() => setRenaming({ name: s.supplier, value: s.supplier })} className="text-[var(--ink-3)] hover:text-[#1d3a8f]" title={t("p8fin.puRenameSupplierTip")} aria-label={t("p8fin.exRenameAria")}>✎</button>
                     </div>
                   </>
                 )}
               </div>
               <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (s.total / (suppliers[0]?.total || 1)) * 100)}%`, background: "linear-gradient(90deg,#3f78d8,#1d3a8f)" }} /></div>
               <div className="mt-1.5 flex flex-wrap gap-x-4 text-[11.5px] text-[var(--ink-3)]">
-                <span><b className="text-[var(--ink)]">{s.count}</b> order{s.count === 1 ? "" : "s"}</span>
-                {s.outstanding > 0 && <span><b className="text-[var(--red,#e21d27)]">{money(s.outstanding)}</b> outstanding</span>}
-                <span>avg <b className="text-[var(--ink)]">{money(s.total / s.count)}</b></span>
+                <span>{rich(t("p8fin.puOrdersCount", { n: s.count }))}</span>
+                {s.outstanding > 0 && <span>{rich(t("p8fin.puOutstandingBold", { amount: money(s.outstanding) }))}</span>}
+                <span>{rich(t("p8fin.exCatAvg", { amount: money(s.total / s.count) }))}</span>
               </div>
             </Card>
           ))}
@@ -626,92 +634,92 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
                 <div className="flex items-center gap-2.5">
                   <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-[18px]">{editor.kind === "po" ? "📦" : "🧾"}</span>
                   <div>
-                    <div className="text-[17px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? (editor.kind === "po" ? "Edit purchase order" : "Edit bill") : editor.kind === "po" ? "Raise a purchase order" : "New supplier bill"}</div>
-                    <div className="mt-0.5 text-[11px] font-bold text-white/80">{editor.kind === "po" ? "Purchase order" : "Supplier bill"} · Total {money(lineTotal(editor.lineItems))}</div>
+                    <div className="text-[17px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? (editor.kind === "po" ? t("p8fin.puEditPO") : t("p8fin.puEditBill")) : editor.kind === "po" ? t("p8fin.puRaisePO") : t("p8fin.puNewSupplierBill")}</div>
+                    <div className="mt-0.5 text-[11px] font-bold text-white/80">{t("p8fin.puTotalSub", { doc: editor.kind === "po" ? t("p8fin.puDocPO") : t("p8fin.puDocBill"), amount: money(lineTotal(editor.lineItems)) })}</div>
                   </div>
                 </div>
               </div>
               <div className="p-5">
               <div className="grid gap-2.5 sm:grid-cols-2">
-                <label className="block sm:col-span-2"><span className={labelCls}>Supplier {savedSuppliers.length > 0 && <span className="font-normal normal-case text-[var(--ink-3)]">— pick a saved one or type</span>}</span>
-                  <input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder="Who you’re paying" className={fieldCls} list="poSuppliers" autoComplete="off" />
+                <label className="block sm:col-span-2"><span className={labelCls}>{t("p8fin.gSupplier")} {savedSuppliers.length > 0 && <span className="font-normal normal-case text-[var(--ink-3)]">{t("p8fin.exPickOrType")}</span>}</span>
+                  <input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder={t("p8fin.puWhoPaying")} className={fieldCls} list="poSuppliers" autoComplete="off" />
                   <datalist id="poSuppliers">{savedSuppliers.map((s) => <option key={s.name} value={s.name} />)}</datalist>
                 </label>
-                <label className="block sm:col-span-2"><span className={labelCls}>Category <span className="font-normal normal-case text-[var(--ink-3)]">— so it counts in your money-out picture</span></span><select value={editor.category} onChange={(e) => setEditor({ ...editor, category: e.target.value })} className={fieldCls}>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></label>
-                <label className="block"><span className={labelCls}>{editor.kind === "po" ? "PO number" : "Supplier invoice no."}</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder={editor.kind === "po" ? "PO-1234" : "e.g. their INV-5567"} className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Supplier email</span><input type="email" value={editor.supplierEmail} onChange={(e) => setEditor({ ...editor, supplierEmail: e.target.value })} placeholder="supplier@email.com" className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Date</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Due date</span>
+                <label className="block sm:col-span-2"><span className={labelCls}>{t("p8fin.gCategory")} <span className="font-normal normal-case text-[var(--ink-3)]">{t("p8fin.puCatHint")}</span></span><select value={editor.category} onChange={(e) => setEditor({ ...editor, category: e.target.value })} className={fieldCls}>{CATEGORIES.map((c) => <option key={c} value={c}>{catLabel(t, c)}</option>)}</select></label>
+                <label className="block"><span className={labelCls}>{editor.kind === "po" ? t("p8fin.puPoNumber") : t("p8fin.puSupInvNo")}</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder={editor.kind === "po" ? "PO-1234" : t("p8fin.puInvPh")} className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>{t("p8fin.puSupplierEmail")}</span><input type="email" value={editor.supplierEmail} onChange={(e) => setEditor({ ...editor, supplierEmail: e.target.value })} placeholder="supplier@email.com" className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>{t("p8fin.gDate")}</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>{t("p8fin.exDueDate")}</span>
                   <input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} />
                   <div className="mt-1 flex flex-wrap gap-1">
                     {DUE_PRESETS.map((n) => { const iso = addDaysIso(editor.date, n); const on = editor.dueDate === iso; return (
-                      <button key={n} type="button" onClick={() => setEditor({ ...editor, dueDate: iso })} className="rounded-full border px-2 py-0.5 text-[10.5px] font-bold transition-colors" style={on ? { background: "#1d3a8f", color: "#fff", borderColor: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{n === 7 ? "⭐ " : ""}+{n}d</button>
+                      <button key={n} type="button" onClick={() => setEditor({ ...editor, dueDate: iso })} className="rounded-full border px-2 py-0.5 text-[10.5px] font-bold transition-colors" style={on ? { background: "#1d3a8f", color: "#fff", borderColor: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{n === 7 ? "⭐ " : ""}{t("p8fin.puPlusDays", { n })}</button>
                     ); })}
                   </div>
                 </label>
-                <label className="block"><span className={labelCls}>Status</span><select value={editor.status} onChange={(e) => setEditor({ ...editor, status: e.target.value as Status })} className={fieldCls}>{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select></label>
+                <label className="block"><span className={labelCls}>{t("p8fin.gStatus")}</span><select value={editor.status} onChange={(e) => setEditor({ ...editor, status: e.target.value as Status })} className={fieldCls}>{visibleStatuses.map((s) => <option key={s} value={s}>{t(STATUS_META[s].label)}</option>)}</select></label>
               </div>
-              <div className="mt-3"><span className={labelCls}>Items</span><LineItemsEditor items={editor.lineItems} onChange={(li) => setEditor({ ...editor, lineItems: li })} /></div>
-              <label className="mt-2.5 block"><span className={labelCls}>Notes</span><input value={editor.notes} onChange={(e) => setEditor({ ...editor, notes: e.target.value })} placeholder="What it’s for" className={fieldCls} /></label>
+              <div className="mt-3"><span className={labelCls}>{t("p8fin.puItems")}</span><LineItemsEditor items={editor.lineItems} onChange={(li) => setEditor({ ...editor, lineItems: li })} /></div>
+              <label className="mt-2.5 block"><span className={labelCls}>{t("p8fin.gNotes")}</span><input value={editor.notes} onChange={(e) => setEditor({ ...editor, notes: e.target.value })} placeholder={t("p8fin.puNotesPh")} className={fieldCls} /></label>
 
               {editor.kind === "po" && (
                 <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-                  <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[#1d3a8f]">Purchase-order details <span className="font-normal normal-case text-[var(--ink-3)]">— printed on the PO</span></div>
+                  <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[#1d3a8f]">{t("p8fin.puPoDetails")} <span className="font-normal normal-case text-[var(--ink-3)]">{t("p8fin.puPrintedOnPO")}</span></div>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="block"><span className={labelCls}>Requested by</span><input value={editor.requestedBy} onChange={(e) => setEditor({ ...editor, requestedBy: e.target.value })} placeholder="Who raised it" className={fieldCls} /></label>
-                    <label className="block"><span className={labelCls}>Delivery date <span className="font-normal normal-case text-[var(--ink-3)]">— uses the ‘due’ date above</span></span><input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} /></label>
-                    <label className="block sm:col-span-2"><span className={labelCls}>Deliver to <span className="font-normal normal-case text-[var(--ink-3)]">— leave blank to use your business address</span></span><textarea value={editor.deliveryAddress} onChange={(e) => setEditor({ ...editor, deliveryAddress: e.target.value })} rows={2} placeholder="Site / address where goods should be delivered" className={`${fieldCls} resize-y`} /></label>
-                    <label className="block sm:col-span-2"><span className={labelCls}>Comments to supplier</span><textarea value={editor.comments} onChange={(e) => setEditor({ ...editor, comments: e.target.value })} rows={2} placeholder="e.g. Please quote this PO number on your invoice" className={`${fieldCls} resize-y`} /></label>
+                    <label className="block"><span className={labelCls}>{t("p8fin.puRequestedBy")}</span><input value={editor.requestedBy} onChange={(e) => setEditor({ ...editor, requestedBy: e.target.value })} placeholder={t("p8fin.puWhoRaised")} className={fieldCls} /></label>
+                    <label className="block"><span className={labelCls}>{t("p8fin.puDeliveryDate")} <span className="font-normal normal-case text-[var(--ink-3)]">{t("p8fin.puUsesDue")}</span></span><input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} /></label>
+                    <label className="block sm:col-span-2"><span className={labelCls}>{t("p8fin.puDeliverTo")} <span className="font-normal normal-case text-[var(--ink-3)]">{t("p8fin.puLeaveBlankBiz")}</span></span><textarea value={editor.deliveryAddress} onChange={(e) => setEditor({ ...editor, deliveryAddress: e.target.value })} rows={2} placeholder={t("p8fin.puDeliverPh")} className={`${fieldCls} resize-y`} /></label>
+                    <label className="block sm:col-span-2"><span className={labelCls}>{t("p8fin.puCommentsSup")}</span><textarea value={editor.comments} onChange={(e) => setEditor({ ...editor, comments: e.target.value })} rows={2} placeholder={t("p8fin.puCommentsPh")} className={`${fieldCls} resize-y`} /></label>
                   </div>
-                  <p className="mt-2 text-[11px] text-[var(--ink-3)]">Payment method, supplier instructions &amp; terms come from your <b>PO template</b> in Setup → Money.</p>
+                  <p className="mt-2 text-[11px] text-[var(--ink-3)]">{rich(t("p8fin.puPoTemplateNote"))}</p>
                 </div>
               )}
 
               {!editor.id && (
                 <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
-                  <label className="block"><span className={labelCls}>Repeat</span>
+                  <label className="block"><span className={labelCls}>{t("p8fin.exRepeat")}</span>
                     <select value={editor.repeat} onChange={(e) => setEditor({ ...editor, repeat: e.target.value as Editor["repeat"] })} className={fieldCls}>
-                      <option value="none">One-off</option>
-                      <option value="weekly">Every week</option>
-                      <option value="fortnightly">Every 2 weeks</option>
-                      <option value="monthly">Every month</option>
+                      <option value="none">{t("p8fin.exOneOff")}</option>
+                      <option value="weekly">{t("p8fin.exEveryWeek")}</option>
+                      <option value="fortnightly">{t("p8fin.exEvery2Weeks")}</option>
+                      <option value="monthly">{t("p8fin.exEveryMonth")}</option>
                     </select>
                   </label>
-                  {editor.repeat !== "none" && <label className="block"><span className={labelCls}>Repeat until</span><input type="date" min={editor.date} value={editor.repeatUntil} onChange={(e) => setEditor({ ...editor, repeatUntil: e.target.value })} className={fieldCls} /></label>}
+                  {editor.repeat !== "none" && <label className="block"><span className={labelCls}>{t("p8fin.exRepeatUntil")}</span><input type="date" min={editor.date} value={editor.repeatUntil} onChange={(e) => setEditor({ ...editor, repeatUntil: e.target.value })} className={fieldCls} /></label>}
                 </div>
               )}
-              {!editor.id && editor.repeat !== "none" && <p className="mt-1 text-[11px] text-[var(--ink-3)]">Creates one order every {REPEAT_LABEL[editor.repeat as Repeat]} from {fmtDay(editor.date)} until the date above (due dates keep the same gap).</p>}
+              {!editor.id && editor.repeat !== "none" && <p className="mt-1 text-[11px] text-[var(--ink-3)]">{createsWord(editor.repeat as Repeat, fmtDay(editor.date))}</p>}
               {editor.id && editor.seriesId && (
-                <div className="mt-2.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-3)]">🔁 Part of a repeating series. Saving changes only this order. <button type="button" onClick={deleteSeries} className="font-bold text-[var(--red,#e21d27)] hover:underline">Delete whole series</button></div>
+                <div className="mt-2.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.puSeriesNote")} <button type="button" onClick={deleteSeries} className="font-bold text-[var(--red,#e21d27)] hover:underline">{t("p8fin.exDeleteSeries")}</button></div>
               )}
 
               <div className="mt-2.5">
-                <span className={labelCls}>{editor.kind === "po" ? "Attach a document" : "Receipt / supplier invoice"} <span className="font-normal normal-case text-[var(--ink-3)]">(optional)</span></span>
+                <span className={labelCls}>{editor.kind === "po" ? t("p8fin.puAttachDoc") : t("p8fin.puReceiptOrInvoice")} <span className="font-normal normal-case text-[var(--ink-3)]">{t("p8fin.gOptionalParen")}</span></span>
                 <div className="flex flex-wrap items-center gap-2">
                   <label className={`${btnGhost} cursor-pointer !py-1.5`}>
-                    {uploading ? "Uploading…" : "⬆ Upload photo or PDF"}
+                    {uploading ? t("p8fin.exUploading") : t("p8fin.exUploadBtn")}
                     <input type="file" accept="image/*,application/pdf,.pdf" className="hidden" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) void onPickDoc(f); e.target.value = ""; }} />
                   </label>
-                  <span className="text-[11px] text-[var(--ink-3)]">or paste a link</span>
+                  <span className="text-[11px] text-[var(--ink-3)]">{t("p8fin.exOrPasteLink")}</span>
                   <input value={editor.attachmentUrl} onChange={(e) => setEditor({ ...editor, attachmentUrl: e.target.value })} placeholder="https://…" className={`${fieldCls} min-w-[160px] flex-1`} />
                 </div>
                 {editor.attachmentUrl && (
                   <div className="mt-2 flex items-center gap-2">
                     <DocThumb url={editor.attachmentUrl} className="h-12 w-12 rounded-lg border border-[var(--line)]" />
-                    <a href={editor.attachmentUrl} target="_blank" rel="noreferrer" className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Open</a>
-                    <button type="button" onClick={() => setEditor({ ...editor, attachmentUrl: "" })} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[var(--red)]">Remove</button>
+                    <a href={editor.attachmentUrl} target="_blank" rel="noreferrer" className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("p8fin.exOpen")}</a>
+                    <button type="button" onClick={() => setEditor({ ...editor, attachmentUrl: "" })} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[var(--red)]">{t("p8fin.exRemove")}</button>
                   </div>
                 )}
               </div>
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                 {editor.id && isPo ? ((data?.items ?? []).find((p) => p.id === editor.id)?.expenseId
-                  ? <span className="text-[11.5px] font-bold text-[var(--ink-3)]">✓ Added to Expenses</span>
-                  : <button type="button" onClick={() => { const p = (data?.items ?? []).find((x) => x.id === editor.id); if (p) { void addToExpenses(p); setEditor(null); } }} className="rounded-full border border-[#cdddf7] bg-[#eaf0fc] px-3.5 py-2 text-[12px] font-extrabold text-[#1d3a8f] transition hover:brightness-95" title="Mark received & create a pending expense from this PO">＋ Add to Expenses</button>)
+                  ? <span className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("p8fin.puAddedToExp")}</span>
+                  : <button type="button" onClick={() => { const p = (data?.items ?? []).find((x) => x.id === editor.id); if (p) { void addToExpenses(p); setEditor(null); } }} className="rounded-full border border-[#cdddf7] bg-[#eaf0fc] px-3.5 py-2 text-[12px] font-extrabold text-[#1d3a8f] transition hover:brightness-95" title={t("p8fin.puAddToExpensesTip")}>{t("p8fin.puAddToExpBtn")}</button>)
                   : <span />}
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setEditor(null)} className={btnGhost}>Cancel</button>
-                  <button type="button" onClick={save} disabled={saving || uploading} className={btnPrimary}>{saving ? "Saving…" : editor.id ? "Save changes" : editor.repeat !== "none" ? "Create series" : editor.kind === "po" ? "Save PO" : "Save bill"}</button>
+                  <button type="button" onClick={() => setEditor(null)} className={btnGhost}>{t("p8fin.gCancel")}</button>
+                  <button type="button" onClick={save} disabled={saving || uploading} className={btnPrimary}>{saving ? t("p8fin.gSaving") : editor.id ? t("p8fin.mkSaveChanges") : editor.repeat !== "none" ? t("p8fin.exCreateSeries") : editor.kind === "po" ? t("p8fin.puSavePO") : t("p8fin.puSaveBill")}</button>
                 </div>
               </div>
               </div>
@@ -720,7 +728,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
         </div>
       )}
 
-      {viewing && <PrintableDoc kind={viewing.kind === "po" ? "po" : "bill"} doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} actions={[{ key: "email", label: emailing ? "Sending…" : "✉️ Email to supplier", onClick: () => emailDoc(viewing), disabled: emailing }]} onClose={() => setViewing(null)} />}
+      {viewing && <PrintableDoc kind={viewing.kind === "po" ? "po" : "bill"} doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} actions={[{ key: "email", label: emailing ? t("p8fin.puSending") : t("p8fin.puEmailSupplier"), onClick: () => emailDoc(viewing), disabled: emailing }]} onClose={() => setViewing(null)} />}
     </div>
   );
 }
