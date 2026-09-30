@@ -2467,7 +2467,7 @@ export function SetupApp() {
                 ["phone", t("p8set.coPhone"), "07700 900000"],
                 ["vatNumber", t("p8set.coVat"), "GB123456789"],
                 ["address", t("p8set.bbAddress"), "12 High St, Townsville, AB1 2CD"],
-                ["paymentTerms", t("p8set.bbTerms"), "Due within 14 days"],
+                ["paymentTerms", t("p8set.bbTerms"), t("p8set.bbTermsPh")],
                 ["bankName", t("p8set.bbBank"), "Barclays"],
                 ["accountName", t("p8set.bbAccName"), "Little Kickers Ltd"],
                 ["sortCode", t("p8set.bbSort"), "12-34-56"],
