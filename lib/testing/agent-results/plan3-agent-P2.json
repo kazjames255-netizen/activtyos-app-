@@ -1,0 +1,186 @@
+{
+ "p3-p2-01": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Two franchises + head office in ONE tenant (throwaway, live API). Franchise A could PUT/DELETE/invite/write-children on head office's and franchise B's Families records by id (customers.ts ownCustomer only checked tenantId). POST /:id/invite even created a Firebase account + emailed head office's family.",
+  "notes": "ownCustomer + /invite now require the family to be the franchise's own (stamped franchiseId, or booked on its listings). A family a franchise adds is now stamped with its franchiseId and shows in its own Families list (before, a franchise-added family with no booking was invisible to its creator). e2e/franchise-isolation.spec.ts covers it.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-02": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Franchise A could edit or delete head office's network posts and franchise B's posts (PUT/DELETE /api/posts/:id, tenant check only), and re-aim its own post at the whole network by sending franchiseId:null.",
+  "notes": "posts.ts own() now 404s a franchise on any post that isn't its own franchise's; a franchise can no longer change a post's franchiseId.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-03": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "A franchise's STAFF (role staff + franchiseId) got head office's and every sibling franchise's listings (and block dates) from GET /api/listings?mine=1, and the Documents library team list named every listing in the tenant. A franchise could also open head office's / a sibling's DRAFT listing by id.",
+  "notes": "listings.ts uses isFranchise() (franchise + its staff) for ?mine=1 and for the 'own' test on GET /:id; documents.ts teamFor only names the franchise's own listings.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-04": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Compliance certificates (DBS etc.) and staff availability requests: the LIST was scoped to the franchise's team but PUT/DELETE /api/compliance/:id and the availability submission / assign / delete-by-id routes were tenant-only, so franchise A could read or change head office's and B's staff DBS numbers and availability by id.",
+  "notes": "Both now use the same 'own team' rule as their lists (franchiseTeam names/emails, stamped franchiseId).",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-05": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Meals: a franchise could mark head office's / a sibling's family's meal order Paid, cancel or approve/decline its change request; legacy meal OPTIONS were tenant-wide (a franchise listed, edited and deleted head office's).",
+  "notes": "mealsShop.ts: pay/cancel/request check the order's listing belongs to the franchise; meal options are stamped with franchiseId on create, listed via scopeRows and guarded via visibleToFranchise. Parents' ordering of a tenant's active options is unchanged (see open item).",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-06": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Ratios: the day BOARD (child -> group moves + who covers each group) is ONE doc per tenant per day, so a franchise read head office's and siblings' moves and its Save overwrote them; PUT /api/ratios/:blockId/:date let a franchise write groups onto head office's / a sibling's session.",
+  "notes": "Franchise (and its staff) now read/write their own board doc ({tenant}__fr__{franchise}_{date}); head office's is unchanged. Block PUT requires the block's listing to be the franchise's.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-07": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Moments: PUT/DELETE/comment/marketing-flag on head office's or a sibling's moment by id worked for a franchise; and a franchise's own 'their work' photo (no tagged child) was invisible to the franchise that posted it.",
+  "notes": "moments.ts: ownMoment + comment use a shared 'moment belongs to this franchise' rule (tagged own child, stamped franchiseId, or posted by its team); new moments are stamped with franchiseId.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-08": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Email module was tenant-wide for a franchise: send HISTORY (subjects/bodies of head office's campaigns AND payslip emails), the scheduled queue (cancel head office's scheduled send), the inbound INBOX (head office's redirected mailbox: read/star/delete) and the mailbox Gmail setup code.",
+  "notes": "History/scheduled docs carry franchiseId (also through the scheduled-send sweep); a franchise sees only its own (or its team's). Inbox shows only mail from the franchise's own families; mailbox summary/verification code hidden. NB commit d9c6cf01 also carries another agent's uncommitted sweeps.ts unsubscribe hunk.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-09": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Message folders (Messages) were tenant-shared: a franchise could rename or delete head office's / a sibling's folder (delete also un-filed their threads).",
+  "notes": "Folders stamped with the creator's franchise ('__ho__' for head office); a franchise sees its own + legacy unstamped ones, and can only rename/delete its own.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-10": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "A franchise's lead staff could change ANY child's allergy/medical/SEND care notes in the tenant (PUT /api/children/:id compared role === 'franchise' only). GET /api/incidents/:id/dossier returned any tenant incident's child + family contact details (name, email, phone, address) and the child's bookings to any franchise.",
+  "notes": "children.ts uses the franchise-or-staff-with-franchiseId rule; dossier 404s records that are not the franchise's, filters bookings + history to its own.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-11": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Trips: a franchise planner typing another franchise's / head office's child NAME (or sending a forged attendee childId) got that child linked: medical/allergy flags copied onto its trip and the child's parent sent a consent request email/bell.",
+  "notes": "enrichTrip takes the franchise scope like the existing site scope: only children booked with the franchise link; foreign childIds are dropped.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-12": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "POST /api/bookings (manual booking): franchise A could take a booking on head office's or franchise B's block. Attribution kept it out of A's revenue but it consumed a place on THEIR block, landed on THEIR register and emailed the booker a pay link from the wrong brand.",
+  "notes": "Refused with 400 inside the transaction unless the block's listing is the franchise's own. Head office booking on a franchise block still attributes to that franchise.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-13": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Discount codes: a code created by franchise B (franchiseId stamped) validated and redeemed at checkout on franchise A's and head office's listings (tenant match only).",
+  "notes": "checkCode() takes the listing's owning franchise; a franchise's code only works on its own listings (validate + POST /api/my/bookings). Head office codes stay network-wide.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-14": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "A franchise could point its listing's blockId at head office's / a sibling's ticket bundle (or its mealPlan at their menus) and have that bundle's name, timings and passes published on its own listing page.",
+  "notes": "Create + update validate the bundle/menus are visible to the listing owner (visibleToFranchise).",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-15": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Published timetables reached every parent of the TENANT: a parent booked only with franchise A saw franchise B's and head office's weeks (audience 'everyone').",
+  "notes": "timetables.ts parent branch: a franchise's timetable reaches that franchise's families only; head office's own reaches families booked with head office directly.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-16": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Invites: (a) the signup page shows head-office-granted franchise name/area 'locked', but POST /accept with a crafted body overrode both (and head office's proposed territory). (b) Deactivating a franchise left its STAFF accounts fully active with access to its children.",
+  "notes": "(a) invite values win; the joiner may only fill blanks. (b) Deactivate cascades to the franchise's staff (revokes their sessions); reactivate restores only those the cascade switched off.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-17": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Head-office overview: per-franchise 'open incidents' showed 0 when incidents named the child by name only (network total said 3) - stamped franchiseId ignored; 'avg per franchise' included head office's own direct revenue. Reassigning a listing to another franchise left its EXISTING bookings on the old franchiseId, so the new owner was credited royalty but couldn't see/run those children.",
+  "notes": "hoOverview attributes by stamped franchiseId, then child id, then name; average uses franchise revenue only. listings PUT migrates the listing's bookings (listingId + blockId, both shapes) when franchiseId changes.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-18": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Parent-facing GET /api/posts (and Moments) returned postedBy / postedByName - the staff member's sign-in EMAIL address (postedByName falls back to it) - to every family.",
+  "notes": "Stripped from the parent feed (families see authorLabel); moments show 'The team' when the name is an email.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-19": {
+  "verdict": "fixed",
+  "method": "browser",
+  "actual": "Franchise portal live sweep (all 42 nav views render; screenshots reviewed). UI bugs: Team page showed a plan tile ('On your plan / extra bill monthly / Manage plan') for a franchise whose plan API is refused, with links to /company/subscription (bounced); shared views linked to /company/... or /freelancer/... (Team roles + upgrade links, Schedule/Locations 'Listings', Families 'Message in app', wizard 'Build a block'); franchise Finance > Payouts, Get paid and Royalties all told a franchise to 'Connect your Stripe account' although POST /payments/connect refuses franchises (head office owns the payout account). Also /franchise/subscription (hidden route) rendered the raw API error 'Requires an operator account'.",
+  "notes": "New lib/portal-href.ts (usePortalHref/portalOf) builds links inside the reader's own portal; franchise-specific copy/controls. Spec e2e/franchise-isolation.spec.ts asserts it. /franchise/subscription now says head office manages the plan.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-20": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Verified clean (no change needed): every GET list endpoint (353 paths) as franchise, franchise staff, lead staff and a second franchise for markers of head office / other franchise / other tenant; cross-tenant company cannot read or write the tenant's data; ?franchiseId= spoofing has no effect for a franchise; head-office-only routes (ho overview, franchises, features, territory, splitfees, invites role franchise, platform/*) are 403 for franchise + staff; bookings actions (cancel/pay/approve/reconcile/nudge/bulk) on foreign refs 404; registers, medications, incidents, invoices, purchasing, income, shifts, tasks (+series), timetables, blocks, bundles/passes/periods by id 404; payroll/leave/library are per-franchise keyed; AI tenantSnapshot for a franchise contains only its own slice; split-fees /mine agrees with head office's figure.",
+  "notes": "Repeatable via the API half of e2e/franchise-isolation.spec.ts (own throwaway company + 2 franchises + staff).",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-23": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "A family that books with two franchises has ONE tenant-level customer record, whose children list accumulates from all of its bookings: franchise A's Families view listed the child that had only ever attended franchise B (name and any merged child-profile fields). The safeguarding child roster for that family (/customers/:id/children) was likewise tenant-wide. Separately GET /api/wallet/summary handed a franchise the whole network's unspent store-credit liability.",
+  "notes": "customers.ts filters the record's children (and the roster, and merged account children) to those booked in the caller's franchise scope (head-office drill-in too); wallet summary sums only the franchise's own families.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-21": {
+  "verdict": "open",
+  "method": "api",
+  "actual": "Head office's 'Feature control' is a suggestion: it writes the franchise's OWN settings.features, and the franchise can flip the switch back on itself with PUT /api/library (verified: HO off -> franchise PUT features.meals=true -> API answers again).",
+  "notes": "Documented as intended ('a franchise can still change its features itself later') but a franchisor turning safeguarding/finance modules off can't enforce it. Needs a product decision: HO-locked flags (e.g. settings.hoLocked) that PUT /api/library ignores.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ },
+ "p3-p2-22": {
+  "verdict": "open",
+  "method": "code",
+  "actual": "Smaller items left for a decision: (1) PUT /api/account lets a franchise rename franchiseName/franchiseArea after head office granted them; (2) territory areas with zero points are accepted as a 'proposed' territory; (3) a franchise library is a COPY of head office's taken on first write, so a later head-office brand rename leaves that franchise's listing page showing the old brand while Browse shows the new one; (4) legacy meal-options ordering by parents is per tenant (a parent of franchise A can order franchise B's active options); (5) head office's 'view as franchise' lens (?franchiseId=) is honoured by bookings/families/finance/email/inventory/etc. but NOT by blocks, listings, discounts, tasks, calendar, trips, incidents, posts, medication, compliance, shifts; (6) the Teaching Hub 'How it works' Try-it button and tutor scripts link to /freelancer/learninghub for every portal.",
+  "notes": "None of these leak another franchise's data; listed so they are not lost.",
+  "at": "2026-09-30",
+  "agent": "plan3-P2"
+ }
+}
