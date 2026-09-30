@@ -2102,6 +2102,12 @@ my.post("/bookings/:ref/amend", async (req, res) => {
       return;
     }
     if (mv.from === mv.to) { res.status(400).json({ error: "That's the same date" }); return; }
+    // Nothing moves off or onto a day that has already gone, or onto a day this booking already covers.
+    const todayUk = ukToday();
+    if (mv.from && mv.from < todayUk) { res.status(400).json({ error: `${prettyDay(mv.from)} has already passed` }); return; }
+    if (mv.to < todayUk) { res.status(400).json({ error: `${prettyDay(mv.to)} has already passed` }); return; }
+    // (Skipped for a multi-child booking, where another child may already be on that day, and for a swap of two of its own days.)
+    if ((booking.kids?.length ?? 0) <= 1 && onBooking.has(mv.to) && !moves.some((m) => m.from === mv.to)) { res.status(400).json({ error: `This booking already covers ${prettyDay(mv.to)}` }); return; }
     // The target must be a session this block actually runs, with room left.
     // Re-checked on approval too — availability moves while a request waits.
     if (block) {
