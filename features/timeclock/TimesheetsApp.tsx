@@ -285,6 +285,7 @@ export function TimesheetsApp() {
 }
 
 // yyyy-mm-dd for building ISO from a HH:MM time input on the record's day
+const nextDay = (day: string) => { const d = new Date(`${day}T12:00:00`); d.setDate(d.getDate() + 1); const p = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 const toISO = (day: string, hm: string) => (hm ? new Date(`${day}T${hm}:00`).toISOString() : undefined);
 function TimesheetEditor({ rec, onSave, onClose }: { rec: ClockRecord; onSave: (patch: Partial<ClockRecord>) => void; onClose: () => void }) {
   const day = rec.day;
@@ -309,7 +310,7 @@ function TimesheetEditor({ rec, onSave, onClose }: { rec: ClockRecord; onSave: (
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Reason / note</span><Input value={note} placeholder="why the times/pay were changed" onChange={(e) => setNote(e.target.value)} className="w-full" /></label>
           <div className="rounded-lg bg-[#eef4fd] px-3 py-2 text-[11.5px] font-semibold text-[#1d3a8f]">{basis === "actual" ? "Paid on the clocked in/out (minus break)." : basis === "scheduled" ? "Paid their scheduled hours regardless of when they clocked in." : basis === "scheduled-less-late" ? "Paid scheduled hours minus any lateness (early arrival adds nothing)." : `Paid ${custom || "—"} hours flat.`}</div>
         </div>
-        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => onSave({ clockInAt: toISO(day, inHm), clockOutAt: toISO(day, outHm), breakMs: Math.max(0, breakMin) * 60000, payBasis: basis, payHoursOverride: basis === "custom" ? (parseFloat(custom) || 0) : undefined, editNote: note || undefined })}>Save</Button></div>
+        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => onSave({ clockInAt: toISO(day, inHm), clockOutAt: inHm && outHm && outHm < inHm ? toISO(nextDay(day), outHm) : toISO(day, outHm), /* an overnight shift (22:00 → 02:00) ends the next morning */ breakMs: Math.max(0, breakMin) * 60000, payBasis: basis, payHoursOverride: basis === "custom" ? (parseFloat(custom) || 0) : undefined, editNote: note || undefined })}>Save</Button></div>
       </div>
     </div>
   );

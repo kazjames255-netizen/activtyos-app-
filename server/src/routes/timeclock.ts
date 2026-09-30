@@ -189,8 +189,9 @@ const patchSchema = z.object({
   payBasis: z.enum(["actual", "scheduled", "scheduled-less-late", "custom"]).nullable().optional(),
   payHoursOverride: z.number().min(0).max(24).nullable().optional(),
   editNote: z.string().trim().max(500).optional(),
-  clockInAt: z.string().max(40).optional(),
-  clockOutAt: z.string().max(40).nullable().optional(),
+  // Stored and later subtracted for payroll hours: an unparseable stamp ("garbage") became NaN hours.
+  clockInAt: z.string().max(40).refine((v) => Number.isFinite(Date.parse(v)), "Not a real date/time").optional(),
+  clockOutAt: z.string().max(40).refine((v) => Number.isFinite(Date.parse(v)), "Not a real date/time").nullable().optional(),
   breakMs: z.number().min(0).max(24 * 3600_000).optional(),
   lateMin: z.number().int().min(0).max(24 * 60).optional(),
 });
@@ -204,6 +205,14 @@ timeclock.patch("/:id", async (req, res) => {
   const ref = db.collection("clockRecords").doc(docId(keyOf(auth.tenantId, auth.franchiseId), day, String(req.params.id)));
   const snap = await ref.get();
   if (!snap.exists) { res.status(404).json({ error: "No clock record for that person on that day" }); return; }
+  // The edited clock-in/out must still make sense together: out after in, and not a shift longer than a day.
+  const inAt = parsed.data.clockInAt ?? (snap.get("clockInAt") as string | undefined);
+  const outAt = parsed.data.clockOutAt !== undefined ? parsed.data.clockOutAt : (snap.get("clockOutAt") as string | null | undefined);
+  if (inAt && outAt) {
+    const span = Date.parse(outAt) - Date.parse(inAt);
+    if (!(span > 0)) { res.status(400).json({ error: "Clock-out must be after clock-in" }); return; }
+    if (span > 24 * 3600_000) { res.status(400).json({ error: "That shift is longer than 24 hours — check the times" }); return; }
+  }
   const patch: Record<string, unknown> = { updatedAt: new Date().toISOString(), editedBy: req.user?.email ?? null };
   for (const [k, v] of Object.entries(parsed.data)) if (v !== undefined) patch[k] = v;
   await ref.set(patch, { merge: true });
