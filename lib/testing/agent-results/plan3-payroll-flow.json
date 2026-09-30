@@ -1,0 +1,146 @@
+{
+ "pf-lifecycle": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Second company-role manager on the same tenant: draft created by A; A self-approve 403 (Segregation of duties); B approves 200; re-approve 400; publish/email of a draft refused (400/409); staff /mine hides drafts; staff PDF of draft 403; other tenant 404; publish then staff sees only own line (net equals stored), own PDF 200 %PDF, colleague's 403, re-download byte-identical; email by staff 403, by manager 200; unpublish hides again; YTD unchanged by a refused re-approve; invalid dates/negative gross/backwards timesheet range are readable 400s.",
+  "notes": "",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-dup-run": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "POST /api/payroll/runs for a period that already has a run used to create a second record silently (a month paid twice, both counted into YTD once approved). Now 409 code duplicate_run + existingRunId unless allowDuplicate:true; the screen already confirms and now sends allowDuplicate after the user says yes.",
+  "notes": "server/src/routes/payroll.ts, features/payroll/PayrollApp.tsx",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-employee-fields-wiped": {
+  "verdict": "fixed",
+  "method": "ui",
+  "actual": "Every save on the Employees tab went through cleanEmp, which dropped startDate, leaveDate, studentLoanPlan, director and taxRegime that the API stores - one edit erased them. Now preserved. Spec edits the starter via the real modal and asserts the API still holds startDate and the leaver's leaveDate.",
+  "notes": "features/payroll/PayrollApp.tsx cleanEmp",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-starter-leaver": {
+  "verdict": "fixed",
+  "method": "ui",
+  "actual": "startDate/leaveDate existed on the API but nothing used them and the UI had no field: a leaver was paid in full every period until removed by hand, a new starter a full month. Added Start/Leaving date fields (leaving before start refused), employmentShare() in payCalc: part-period = Mon-Fri pro-rata of contracted salary/hours (chip 'pro-rata N%'), a leaver is paid to their last day then drops off later runs, and someone not employed in the window is left out with a 'Not in this run' note. Screen figures equal API-stored lines to the penny.",
+  "notes": "features/payroll/payCalc.ts employmentShare; PayrollApp.tsx",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-ytd-drafts": {
+  "verdict": "fixed",
+  "method": "code",
+  "actual": "Payslip YTD (server PDF and the browser preview) summed EVERY run including unapproved drafts and abandoned duplicates, while the payrollYtd store counts on approval only, so a payslip could show a YTD the books never had. Both now exclude drafts. A draft PDF preview (managers) includes itself, is rebuilt each view and is no longer cached - previously the first draft render was cached for ever and would have been served as the 'issued' payslip after approval.",
+  "notes": "server/src/routes/payslips.ts getOrBuildPdf/loadAllRuns; PayrollApp.tsx openPayslip",
+  "evidence": "no automated assertion of PDF text (compressed streams); verified by reading code paths",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-draft-label": {
+  "verdict": "fixed",
+  "method": "ui",
+  "actual": "Button said 'Approve & generate payslips' but only creates a DRAFT that a different person must approve. Renamed 'Create pay run', lede/empty state corrected; every run card now shows a Draft / Approved chip (and data-ui=card for anchored assertions).",
+  "notes": "",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-staff-screen": {
+  "verdict": "pass",
+  "method": "ui",
+  "actual": "Staff My payslips at 390px in en/ar/ur: card for THIS run's unique period shows the API net, never the colleague's; html dir=rtl for ar/ur; no page overflow.",
+  "notes": "",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-mobile-company": {
+  "verdict": "pass",
+  "method": "ui",
+  "actual": "Company Payroll all five tabs at 390px: no payroll content wider than the phone (tables scroll inside their own wrapper). Observation: document scrollWidth exceeds the viewport by ~57px on this page because of the shell header (Head office selector / flag / avatar are clipped) - shell issue, not payroll.",
+  "notes": "",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-approve-race": {
+  "verdict": "pass",
+  "method": "code",
+  "actual": "Approve check-and-flip is already a Firestore transaction (added concurrently by another agent while this pass ran), so two simultaneous approvals cannot both add the run to YTD.",
+  "notes": "",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-open-lock-period": {
+  "verdict": "open",
+  "method": "code",
+  "actual": "There is NO period lock: nothing stops adjusting the period's adjustments after a run is approved, nor creating a run for a closed period (only the duplicate guard now).",
+  "notes": "",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-open-reversal": {
+  "verdict": "open",
+  "method": "code",
+  "actual": "No reversal/void/correction of an approved run and no way to discard a draft (runs are immutable, no delete route). A wrong approved run can only be published-off; needs a design decision (credit run vs void flag, YTD rollback, accounting journal reversal).",
+  "notes": "",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-open-server-maths": {
+  "verdict": "open",
+  "method": "code",
+  "actual": "POST /runs stores the browser-computed lines as sent (net is not checked against gross minus deductions server-side; only bounds). Business logic is client-side in payCalc.ts, contrary to AGENTS.md - a manager's own client is trusted.",
+  "notes": "",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-open-i18n-company": {
+  "verdict": "open",
+  "method": "ui",
+  "actual": "Company Payroll screen and its payslip HTML are hard-coded English (no t()), so ar/ur users get English in an LTR-styled screen. Staff My payslips is translated. StaffPayslipsApp load-error text is also English.",
+  "notes": "",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-open-ni-ui": {
+  "verdict": "open",
+  "method": "ui",
+  "actual": "No UI to enter an employee's NI number, student-loan plan, director or tax regime (API accepts and encrypts NI); payslips therefore carry no NI number. Student loans/Scottish bands are not calculated.",
+  "notes": "",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-open-cached-legacy": {
+  "verdict": "open",
+  "method": "code",
+  "actual": "Any draft payslip PDF cached BEFORE this fix (payslipPdfs) still holds a draft-inflated YTD and will be served for that run once approved.",
+  "notes": "",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ },
+ "pf-open-not-tested": {
+  "verdict": "open",
+  "method": "ui",
+  "actual": "Not driven this pass: timesheet-approved hours path, sickness/holiday leave lines and adjustments in the browser (covered by plan2-H API/hand-calc), true empty state (shared tenant always has runs), email delivery confirmation (route asserted; transport not inspected).",
+  "notes": "",
+  "evidence": "e2e/payroll-flow.spec.ts",
+  "at": "2026-09-30",
+  "agent": "plan3-payroll-flow"
+ }
+}

@@ -77,7 +77,7 @@ export function StaffPayslipsApp() {
         ) : (
           <div className="divide-y divide-[var(--line)]">
             {mine.map(({ run, line }) => (
-              <div key={run.id} className="flex w-full items-center gap-3 px-4 py-3 hover:bg-[#f6f8fd]">
+              <div key={run.id} data-ui="card" data-testid="staff-payslip" className="flex w-full items-center gap-3 px-4 py-3 hover:bg-[#f6f8fd]">
                 <button
                   type="button"
                   onClick={() => openPayslip(line, run.period, run.paidOn, provider, runs)}

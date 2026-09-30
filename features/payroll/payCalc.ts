@@ -6,35 +6,15 @@ import { dateLocale as dl } from "@/lib/i18n/format";
 import { defaultPayTreatment, workingDays } from "@/lib/holiday";
 
 // ——— UK PAYE / NI / pension ESTIMATE helpers (2026/27; rest-of-UK bands) ———
-export const r2 = (n: number) => Math.round((n || 0) * 100) / 100;
+import { rnd2, payePeriod, niPeriod, qualifyingEarnings, studentLoanDeduction, AE, type SlPlan } from "./ukStatutory";
+export const r2 = rnd2; // nearest penny, float-noise-proof (was Math.round(n*100)/100 — 1.005 -> 1.00)
 
-// annual PAYE from gross + tax code — parses the allowance, BR/D0/D1/NT and K
-// codes, and the £100k personal-allowance taper. Rest-of-UK bands (S/C prefixes
-// are stripped; a real Scottish/Welsh calc is backend). Estimate only.
-export function payeAnnual(gross: number, taxCodeRaw = "1257L"): number {
-  const code = String(taxCodeRaw).toUpperCase().replace(/\s|W1|M1|X/g, "").replace(/^[SC]/, "");
-  if (code === "NT") return 0;
-  if (code === "BR") return gross * 0.20;
-  if (code === "D0") return gross * 0.40;
-  if (code === "D1") return gross * 0.45;
-  let taxable: number;
-  if (code.startsWith("K")) taxable = gross + (parseInt(code.slice(1)) || 0) * 10; // K = extra taxable, no allowance
-  else { const num = parseInt(code.replace(/[^0-9]/g, "")) || 1257; const pa = Math.max(0, num * 10 - Math.max(0, gross - 100000) / 2); taxable = Math.max(0, gross - pa); }
-  const basic = Math.min(taxable, 37700) * 0.20;
-  const higher = Math.min(Math.max(0, taxable - 37700), 112570 - 37700) * 0.40;
-  const add = Math.max(0, taxable - 112570) * 0.45;
-  return basic + higher + add;
-}
-export function eeNiAnnual(gross: number, cat = "A"): number {
-  if (cat === "C") return 0; // over State Pension age
-  const PT = 12570, UEL = 50270;
-  return Math.min(Math.max(0, gross - PT), UEL - PT) * 0.08 + Math.max(0, gross - UEL) * 0.02;
-}
-export function erNiAnnual(gross: number, cat = "A"): number {
-  if (cat === "M" || cat === "H") return Math.max(0, gross - 50270) * 0.15; // under-21 / apprentice under-25: 0% to UST
-  return Math.max(0, gross - 5000) * 0.15; // 2025/26+ : 15% above the £5,000 secondary threshold
-}
-export const qePension = (annualGross: number) => Math.min(Math.max(annualGross - 6240, 0), 50270 - 6240); // qualifying earnings band
+// Annual-figure wrappers, kept for callers/tests that want a whole-year number. The engine itself
+// (computeLine) works PER PERIOD with HMRC's method — see ukStatutory.ts.
+export function payeAnnual(gross: number, taxCodeRaw = "1257L"): number { return payePeriod(gross, taxCodeRaw, { freq: "annual" }).tax; }
+export function eeNiAnnual(gross: number, cat = "A"): number { return niPeriod(gross, cat, "annual").ee; }
+export function erNiAnnual(gross: number, cat = "A"): number { return niPeriod(gross, cat, "annual").er; }
+export const qePension = (annualGross: number) => qualifyingEarnings(annualGross, "annual"); // qualifying earnings band
 
 /** How an hourly person's hours are found: their contract, or their APPROVED
  *  timesheets (clock in/out). "rota" is the old name for the timesheet source. */
@@ -76,7 +56,7 @@ export interface LeaveSum { byKind: Record<string, number>; paidDays: number; un
  *  sick days come off pay like unpaid leave and SSP itself is left to the
  *  payroll provider (not calculated here). */
 export type SickPay = "full" | "ssp";
-export interface Line { id: string; staffKey?: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; weeks: number; taxCode: string; niCat: string; freqLabel?: string; hoursM: number; hoursFrom?: "contracted" | "timesheet" | "manual"; basePayM: number; unpaidLeaveM?: number; sickLeaveM?: number; sickPay?: SickPay; leave?: LeaveSum; addM: number; dedM: number; additions: AdjItem[]; deductions: AdjItem[]; manual: { paye: boolean; eeNi: boolean; eePen: boolean }; grossM: number; payeM: number; eeNiM: number; erNiM: number; eePenM: number; erPenM: number; netM: number }
+export interface Line { id: string; staffKey?: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; weeks: number; taxCode: string; niCat: string; freqLabel?: string; hoursM: number; hoursFrom?: "contracted" | "timesheet" | "manual"; basePayM: number; proRata?: number; unpaidLeaveM?: number; sickLeaveM?: number; sickPay?: SickPay; leave?: LeaveSum; addM: number; dedM: number; additions: AdjItem[]; deductions: AdjItem[]; manual: { paye: boolean; eeNi: boolean; eePen: boolean }; grossM: number; payeM: number; eeNiM: number; erNiM: number; eePenM: number; erPenM: number; netM: number }
 
 export const grossMonthly = (e: Emp) => e.basis === "year" ? e.rate / 12 : e.rate * e.hpw * (e.weeks || 52) / 12;
 export const sumItems = (a?: AdjItem[]) => r2((a || []).reduce((n, x) => n + (Number(x.amount) || 0), 0));
@@ -89,6 +69,15 @@ export const FREQ_LABEL: Record<Freq, string> = { weekly: "Weekly", fortnightly:
 // Leave is booked in Mon–Fri working days (the planner's workingDays), so one
 // day is a fifth of the contracted week: a whole week off comes to exactly one
 // contracted week, for part-timers too. A salaried day is salary ÷ 260.
+const isoWeekdays = (from: string, to: string): number => { let n = 0; for (let t = Date.parse(`${from}T12:00:00Z`); t <= Date.parse(`${to}T12:00:00Z`); t += 86_400_000) { const d = new Date(t).getUTCDay(); if (d !== 0 && d !== 6) n++; } return n; };
+/** Was this person employed at all in the pay window [start, end], and what share of its Mon–Fri days? A new starter (startDate) part-way
+ *  through is paid pro-rata; a leaver (leaveDate) is paid up to and including their last day and then drops out of later runs. No dates = full. */
+export function employmentShare(e: Pick<Emp, "startDate" | "leaveDate">, start: string, end: string): { employed: boolean; share: number } {
+  const from = e.startDate && e.startDate > start ? e.startDate : start, to = e.leaveDate && e.leaveDate < end ? e.leaveDate : end;
+  if (from > to) return { employed: false, share: 0 };
+  const all = isoWeekdays(start, end);
+  return { employed: true, share: all ? Math.min(1, isoWeekdays(from, to) / all) : 1 };
+}
 export const leaveDayHours = (e: Pick<Emp, "hpw">) => (e.hpw || 0) / 5;
 export const salaryDayRate = (e: Pick<Emp, "rate">) => (e.rate || 0) / 260;
 
@@ -99,6 +88,14 @@ export interface LineOpts {
   hoursFrom?: "contracted" | "timesheet" | "manual";
   leave?: LeaveSum;
   sickPay?: SickPay;
+  /** Share of the period this person was employed (0–1, from employmentShare) — scales contracted hours / salary. */
+  share?: number;
+  /** Cumulative PAYE inputs (tax-year period number + pay/tax to date BEFORE this run, or a P45 for a starter). Omitted = Week1/Month1 steady-pay estimate. */
+  ytd?: { period: number; payToDate: number; taxToDate: number };
+  /** How the workplace pension is taxed — see computeLine. Default "legacy" (unchanged behaviour) until a tenant picks. */
+  pensionScheme?: "legacy" | "netpay" | "ras";
+  /** false = skip the student-loan deduction (e.g. SL start-date not yet reached / SL1 stop notice). */
+  studentLoan?: boolean;
 }
 // computeLine estimates ONE PERIOD for one employee at pay frequency `freq`.
 // Adjustments: `hours` pays an hourly person by actual hours (approved
@@ -118,7 +115,8 @@ export function computeLine(e: Emp, a: LineOpts = {}, freq: Freq = "monthly"): L
   const ppy = PPY[freq];
   const taxCode = a.taxCode || e.taxCode, niCat = a.niCat || e.niCat;
   const rate = a.rate != null ? a.rate : e.rate;
-  const contractedHours = e.basis === "hour" ? (e.hpw * (e.weeks || 52)) / ppy : 0; // avg contracted hours in one period
+  const share = a.share != null ? Math.min(1, Math.max(0, a.share)) : 1; // new starter / leaver part-period
+  const contractedHours = e.basis === "hour" ? ((e.hpw * (e.weeks || 52)) / ppy) * share : 0; // avg contracted hours in one period
   const useH = a.hours != null && e.basis === "hour";
   const lv = a.leave;
   const unpaidDays = lv?.unpaidDays || 0;
@@ -128,7 +126,7 @@ export function computeLine(e: Emp, a: LineOpts = {}, freq: Freq = "monthly"): L
   const unpaidH = e.basis === "hour" && !useH ? Math.min(contractedHours, unpaidDays * leaveDayHours(e)) : 0;
   const sickH = e.basis === "hour" && !useH && sspOnly ? Math.min(contractedHours - unpaidH, sickDays * leaveDayHours(e)) : 0;
   const periodHours = e.basis === "hour" ? (useH ? (a.hours as number) : contractedHours - unpaidH - sickH) : 0;
-  const fullSalary = e.rate / ppy;
+  const fullSalary = (e.rate / ppy) * share;
   const unpaidSalary = e.basis === "year" ? Math.min(fullSalary, unpaidDays * salaryDayRate(e)) : 0;
   const sickSalary = e.basis === "year" && sspOnly ? Math.min(fullSalary - unpaidSalary, sickDays * salaryDayRate(e)) : 0;
   const basePayM = r2(e.basis === "hour" ? rate * periodHours : fullSalary - unpaidSalary - sickSalary);
@@ -143,18 +141,30 @@ export function computeLine(e: Emp, a: LineOpts = {}, freq: Freq = "monthly"): L
   const sickPaidH = e.basis === "hour" && a.hoursFrom === "timesheet" && !sspOnly ? sickDays * leaveDayHours(e) : 0;
   const sickAdd: AdjItem[] = sickPaidH > 0 ? [{ id: "__sickpay", label: `Sick pay (full pay) · ${sickDays} day${sickDays === 1 ? "" : "s"} × ${r2(leaveDayHours(e))}h`, amount: r2(sickPaidH * rate) }] : [];
   const additions = [...holidayAdd, ...leaveAdd, ...sickAdd, ...(a.additions || [])];
-  const addM = sumItems(additions), dedM = sumItems(a.deductions);
-  const grossM = r2(basePayM + addM); const grossA = grossM * ppy;
+  const addM = sumItems(additions);
+  const grossM = r2(basePayM + addM);
   const ov = a.override || {};
-  const payeM = ov.paye != null ? r2(ov.paye) : r2(payeAnnual(grossA, taxCode) / ppy);
-  const eeNiM = ov.eeNi != null ? r2(ov.eeNi) : r2(eeNiAnnual(grossA, niCat) / ppy);
-  const erNiM = r2(erNiAnnual(grossA, niCat) / ppy);
-  const qeM = qePension(grossA) / ppy;
-  const eePenM = ov.eePen != null ? r2(ov.eePen) : (e.pension ? r2(qeM * 0.05) : 0);
-  const erPenM = e.pension ? r2(qeM * 0.03) : 0;
+  // Workplace pension first (net-pay schemes reduce TAXABLE pay). Per-period qualifying earnings (ukStatutory.qualifyingEarnings).
+  const qeM = qualifyingEarnings(grossM, freq);
+  const eePenFull = e.pension ? r2(qeM * AE.eeRate) : 0;
+  const scheme = a.pensionScheme ?? "legacy";
+  // legacy = the pre-30-Sep behaviour: PAYE on full gross, the 5% comes off net with no tax relief (wrong for both real scheme types — set a scheme).
+  // netpay = employee 5% is deducted BEFORE PAYE. ras (relief at source) = employee pays 80% of the 5% (4%), the provider claims 20% back from HMRC.
+  const taxableM = scheme === "netpay" ? grossM - eePenFull : grossM;
+  const payeM = ov.paye != null ? r2(ov.paye) : payePeriod(taxableM, taxCode, { freq, cumulative: a.ytd, regime: e.taxRegime }).tax;
+  const ni = niPeriod(grossM, niCat, freq);
+  const eeNiM = ov.eeNi != null ? r2(ov.eeNi) : ni.ee;
+  const erNiM = ni.er;
+  const eePenM = ov.eePen != null ? r2(ov.eePen) : scheme === "ras" ? r2(eePenFull * 0.8) : eePenFull;
+  const erPenM = e.pension ? r2(qeM * AE.erRate) : 0;
+  // Student / postgraduate loan: a post-tax deduction on NI-able earnings (HMRC: period threshold = annual/periods rounded down to the penny, result rounded down to the pound).
+  const sl = a.studentLoan === false ? 0 : studentLoanDeduction(grossM, (e.studentLoanPlan || "none") as SlPlan, freq);
+  const slItem: AdjItem[] = sl > 0 ? [{ id: "__studentloan", label: `${e.studentLoanPlan === "postgrad" ? "Postgraduate loan" : `Student loan (${String(e.studentLoanPlan).replace("plan", "Plan ")})`}`, amount: sl }] : [];
+  const deductionsAll = [...slItem, ...(a.deductions || [])];
+  const dedM = sumItems(deductionsAll);
   const hoursM = r2(periodHours);
   const hoursFrom = e.basis === "hour" ? (a.hoursFrom ?? (useH ? "manual" : "contracted")) : undefined;
-  return { id: e.id, staffKey: staffSlug(e.name), name: e.name, role: e.role, op: e.op, basis: e.basis, rate, hpw: e.hpw, weeks: e.weeks || 52, taxCode, niCat, freqLabel: FREQ_LABEL[freq], hoursM, ...(hoursFrom ? { hoursFrom } : {}), basePayM, ...(unpaidLeaveM > 0 ? { unpaidLeaveM } : {}), ...(sickLeaveM > 0 ? { sickLeaveM } : {}), ...(sickDays > 0 ? { sickPay: (sspOnly ? "ssp" : "full") as SickPay } : {}), ...(lv && Object.keys(lv.byKind).length ? { leave: lv } : {}), addM, dedM, additions, deductions: a.deductions || [], manual: { paye: ov.paye != null, eeNi: ov.eeNi != null, eePen: ov.eePen != null }, grossM, payeM, eeNiM, erNiM, eePenM, erPenM, netM: r2(grossM - payeM - eeNiM - eePenM - dedM) };
+  return { id: e.id, staffKey: staffSlug(e.name), name: e.name, role: e.role, op: e.op, basis: e.basis, rate, hpw: e.hpw, weeks: e.weeks || 52, taxCode, niCat, freqLabel: FREQ_LABEL[freq], hoursM, ...(hoursFrom ? { hoursFrom } : {}), basePayM, ...(share < 1 ? { proRata: r2(share * 10000) / 10000 } : {}), ...(unpaidLeaveM > 0 ? { unpaidLeaveM } : {}), ...(sickLeaveM > 0 ? { sickLeaveM } : {}), ...(sickDays > 0 ? { sickPay: (sspOnly ? "ssp" : "full") as SickPay } : {}), ...(lv && Object.keys(lv.byKind).length ? { leave: lv } : {}), addM, dedM, additions, deductions: deductionsAll, manual: { paye: ov.paye != null, eeNi: ov.eeNi != null, eePen: ov.eePen != null }, grossM, payeM, eeNiM, erNiM, eePenM, erPenM, netM: r2(grossM - payeM - eeNiM - eePenM - dedM) };
 }
 
 // ── Leave (the holiday planner, /api/leave) ─────────────────────────────────
