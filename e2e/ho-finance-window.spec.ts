@@ -75,9 +75,17 @@ test("HO finance totals only money that has moved, and owed = sent invoices", as
     const sentTotal = (invs.items as { status: string; amount: number }[]).filter((i) => i.status === "sent").reduce((s, i) => s + i.amount, 0);
     await expect.poll(async () => Math.round(num((await outstanding.innerText()).trim())), { timeout: 45_000 }).toBe(Math.round(sentTotal));
   } finally {
-    for (const id of expenseIds) await api("DELETE", `/api/expenses/${id}`).catch(() => {});
-    for (const id of incomeIds) await api("DELETE", `/api/income/${id}`).catch(() => {});
-    for (const id of invoiceIds) await api("DELETE", `/api/invoices/${id}`).catch(() => {});
+    // Sweep by marker rather than by the ids we happened to capture (a recurring series returns its rows in a different shape, and a dropped
+    // response would leave rows behind that skew every later run's totals).
+    void expenseIds; void incomeIds; void invoiceIds;
+    const sweep = async (path: string, mine: (x: Record<string, unknown>) => boolean) => {
+      const list = await api("GET", path).catch(() => ({}));
+      const items = (Array.isArray(list) ? list : list.items ?? []) as Record<string, unknown>[];
+      for (const x of items.filter(mine)) await api("DELETE", `${path}/${x.id}`).catch(() => {});
+    };
+    await sweep("/api/expenses", (x) => x.category === "P1fin");
+    await sweep("/api/income", (x) => x.category === "P1fin");
+    await sweep("/api/invoices", (x) => String(x.customerName ?? "").startsWith("P1 "));
   }
 });
 
@@ -115,6 +123,8 @@ test("Money out overview: 'spent this month' follows the cash basis (Pending isn
     await page.reload();
     await expect.poll(async () => (await spent()) - before, { timeout: 45_000 }).toBe(5);
   } finally {
-    for (const id of ids) await api("DELETE", `/api/expenses/${id}`).catch(() => {});
+    void ids;
+    const list = await api("GET", "/api/expenses").catch(() => ({ items: [] }));
+    for (const x of ((list.items ?? []) as { id: string; category?: string }[]).filter((e) => e.category === "P1fin")) await api("DELETE", `/api/expenses/${x.id}`).catch(() => {});
   }
 });
