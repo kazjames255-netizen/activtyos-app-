@@ -561,6 +561,8 @@ export function LeadsApp() {
   // Thousands of leads: draw a page at a time.
   const [limit, setLimit] = useState(60);
 
+  // The server only keeps the newest few thousand leads in its list (LEADS_CACHE_MAX) — say so rather than calling that "the whole database".
+  const [capped, setCapped] = useState(false);
   const [loadError, setLoadError] = useState(false);
   // The actual reason, so "couldn't load" is never a mystery (sign-in token, server down…).
   const [loadWhy, setLoadWhy] = useState("");
@@ -575,8 +577,8 @@ export function LeadsApp() {
   // everything. A generous page size keeps the walk short while still meaning no
   // single response is ever the full ~tens-of-thousands-row dump the old route sent.
   const PAGE_SIZE = 2000;
-  const loadAllPages = async (fresh: boolean): Promise<{ leads: Lead[]; warming?: boolean; refreshing?: boolean }> => {
-    const first = await apiGet<{ leads: Lead[]; warming?: boolean; refreshing?: boolean; total?: number; nextCursor?: string | null }>(
+  const loadAllPages = async (fresh: boolean): Promise<{ leads: Lead[]; warming?: boolean; refreshing?: boolean; truncated?: boolean }> => {
+    const first = await apiGet<{ leads: Lead[]; warming?: boolean; refreshing?: boolean; truncated?: boolean; total?: number; nextCursor?: string | null }>(
       `/api/leads?limit=${PAGE_SIZE}${fresh ? "&fresh=1" : ""}`,
     );
     if (first.warming) return first;
@@ -587,13 +589,14 @@ export function LeadsApp() {
       all.push(...(page.leads || []));
       cursor = page.nextCursor ?? null;
     }
-    return { leads: all, refreshing: first.refreshing };
+    return { leads: all, refreshing: first.refreshing, truncated: first.truncated };
   };
   const load = (retry = true, fresh = false, tries = 0): Promise<void> => loadAllPages(fresh)
     .then((r) => {
       if (later.current) clearTimeout(later.current);
       if (r.warming) { later.current = setTimeout(() => void load(), 4000); return; }
       const next = r.leads || [];
+      setCapped(!!r.truncated);
       // The background poll re-fetches every 45s even when nothing changed. Bail out of the
       // state update (keep the same array reference) when the payload is byte-for-byte the
       // same as what's already loaded, so `rows` below doesn't re-derive all ~41,500 leads
@@ -823,7 +826,7 @@ export function LeadsApp() {
         </div>
         <p className="mt-1 text-[12.5px] text-white/80">UK children&apos;s activity and childcare providers — from booking directories, Ofsted&apos;s register and website demo requests.</p>
         <div className="mt-3 flex flex-wrap gap-2 text-[12.5px]">
-          {([["Providers (whole database)", rows.length], ["📇 Ready to contact", ready], ["⭐ Best prospects", best.length], ["🔎 Still researching", rows.length - ready]] as const).map(([k, n]) => (
+          {([[capped ? "Newest providers (list is capped — the database is larger)" : "Providers (whole database)", rows.length], ["📇 Ready to contact", ready], ["⭐ Best prospects", best.length], ["🔎 Still researching", rows.length - ready]] as const).map(([k, n]) => (
             <span key={k} className="rounded-xl bg-white/15 px-3 py-1.5"><b className="text-[15px]">{n.toLocaleString()}</b> <span className="text-white/85">{k}</span></span>
           ))}
           <span className="rounded-xl bg-white/10 px-3 py-1.5 text-white/70">These totals ignore filters — the tabs and list below reflect your current filter</span>
