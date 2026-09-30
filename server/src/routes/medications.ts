@@ -1,5 +1,5 @@
 import { Router, type Request } from "express";
-import { isRealDay, isBlankOrRealDay, isBlankOrRealTime } from "../lib/ukDate";
+import { isRealDay, isBlankOrRealDay, isBlankOrRealTime, ukTodayPlus } from "../lib/ukDate";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
@@ -357,6 +357,11 @@ medications.post("/:id/administer", async (req, res) => {
   const parsed = administerSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues });
+    return;
+  }
+  // A dose is a record of something that HAS happened: a future-dated one would sit in the parent's MAR as given and defeat the duplicate-dose check.
+  if (parsed.data.date > ukTodayPlus(1)) { // +1: the device may be a time zone ahead of the UK
+    res.status(400).json({ error: "That date is in the future — a dose can only be recorded once it has been given." });
     return;
   }
   const expiryDate = med.expiryDate as string | undefined;
