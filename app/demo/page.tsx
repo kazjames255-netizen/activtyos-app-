@@ -362,6 +362,10 @@ export default function DemoPage() {
         </div>
 
         <style>{`
+          /* keep the fixed language picker (top inline-end corner) clear of the site header's buttons */
+          header.nav .nav-cta { margin-left: 0; margin-inline-start: auto; margin-inline-end: 60px; }
+          @media (min-width: 640px) { header.nav .nav-cta { margin-inline-end: 100px; } }
+          @media (min-width: 1460px) { header.nav .nav-cta { margin-inline-end: 0; } }
           @media (max-width: 860px) {
             .demo-grid { grid-template-columns: 1fr !important; }
             .demo-covers { grid-template-columns: 1fr !important; }
