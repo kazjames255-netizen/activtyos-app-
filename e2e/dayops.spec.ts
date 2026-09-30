@@ -18,7 +18,7 @@ const childName = `E2E Reg Kid ${stamp}`;
 
 test.beforeAll(async () => {
   accounts = loadAccounts().accounts;
-  listing = await provisionLiveListing(accounts.company, { title: `E2E DayOps ${stamp}`, price: 0 });
+  listing = await provisionLiveListing(accounts.company, { title: `E2E DayOps ${stamp}`, price: 0, startToday: true /* the register refuses sign-in for a day more than a day ahead (da1e6543), so the session must be today */ });
   await bookViaApi(accounts.parent, listing, { child: childName });
 });
 
