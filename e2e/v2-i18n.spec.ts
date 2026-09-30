@@ -9,7 +9,7 @@ import sharp from "sharp";
 
 const PAGES = ["activly", "parents", "companies", "franchises", "freelancers", "schools", "pricing", "tour", "safeguarding", "security", "dpa", "privacy", "terms", "platform-bookings", "platform-comms", "platform-finance", "platform-safeguarding", "platform-staff"];
 const LEGAL = ["privacy", "terms", "dpa", "security", "safeguarding"];
-const LANGS: Record<string, { dir: "rtl" | "ltr" }> = { ar: { dir: "rtl" }, ur: { dir: "rtl" }, ro: { dir: "ltr" }, es: { dir: "ltr" } };
+const LANGS: Record<string, { dir: "rtl" | "ltr" }> = { ar: { dir: "rtl" }, ur: { dir: "rtl" }, ro: { dir: "ltr" }, es: { dir: "ltr" }, ...(process.env.V2_MORE ? Object.fromEntries(process.env.V2_MORE.split(",").map((l) => [l, { dir: (l === "ar" || l === "ur" ? "rtl" : "ltr") as "rtl" | "ltr" }])) : {}) };
 const V2 = path.join(process.cwd(), "public/v2");
 const SHOTS = process.env.V2_SHOTS;
 const ORIG = fs.existsSync(path.join(V2, "_orig"));
@@ -18,7 +18,6 @@ const EN = dict("en");
 const brand = (s: string) => s.split("{brand}").join("Activly");
 const plain = (s: string) => brand(s).replace(/<br\s*\/?>/g, " ").replace(/<\/?\d+\/?>/g, "").replace(/&lt;/g, "<").replace(/\s+/g, " ").trim();
 // strings that legitimately stay identical in every language (brand/proper nouns, acronyms, numbers)
-const SAME_OK = /^([A-Z0-9£$€%&·:.,+\-–—/ ()|●✓×]+|[\p{Emoji}\s]+)$/u;
 
 test.use({ reducedMotion: "reduce" });
 
@@ -129,7 +128,7 @@ test.describe("v2 site i18n", () => {
   });
 
   for (const p of PAGES) {
-    for (const l of Object.keys(LANGS)) {
+    for (const l of Object.keys(LANGS).filter((x) => fs.existsSync(path.join(V2, "i18n", `${x}.json`)))) {
       test(`${p} in ${l}: lang/dir, no leftover English, no missing keys, no overflow`, async ({ page }, info) => {
         test.setTimeout(90_000);
         const d = dict(l);

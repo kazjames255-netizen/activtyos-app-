@@ -84,6 +84,18 @@
       }
     }
     if (window.aosRebrand) window.aosRebrand();
+    isolateNumbers(lang);
+  }
+  // In RTL pages keep prices/figures (e.g. "£49", "−£13.50", "62%", "09:00–15:00") as isolated LTR runs so the currency sign and minus stay on the correct side.
+  var NUMRUN = /^[\s\u2212+\-–—]*[£€$]?[\d][\d.,:]*\s*[kKmM%]?(\s*[–—-]\s*[£€$]?[\d][\d.,:]*\s*[kKmM%]?)?(\/[a-zA-Z]+)?$/;
+  function isolateNumbers(lang) {
+    var rtl = !!RTL[lang], els = document.body.querySelectorAll('span,b,strong,i,em,small');
+    for (var i = 0; i < els.length; i++) {
+      var e = els[i]; if (e.children.length) continue;
+      var t = e.textContent.trim(); if (!t || t.length > 24) continue;
+      if (rtl) { if (NUMRUN.test(t) && !e.hasAttribute('dir')) { e.setAttribute('dir', 'ltr'); e.setAttribute('data-aos-ltr', ''); } }
+      else if (e.hasAttribute('data-aos-ltr')) { e.removeAttribute('dir'); e.removeAttribute('data-aos-ltr'); }
+    }
   }
   function setDoc(lang) {
     root.setAttribute('lang', lang);
