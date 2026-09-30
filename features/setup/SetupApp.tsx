@@ -8,7 +8,9 @@ import { api, get as apiGet } from "@/lib/api";
 import { NAV_GROUPS, type PortalKey } from "@/lib/nav/config";
 import { CORE_VIEWS, featureOff } from "@/lib/use-customer-area";
 import { Button, Card, FieldLabel, Input, Select, inputCls } from "@/components/ui";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n, useT, useWord } from "@/lib/i18n/provider";
+import { Rich, tr, slug } from "./Rich";
+import { pickPlural } from "@/lib/i18n/plural";
 import { PrintableDoc } from "@/features/money/doc-shared";
 import { HowItWorks } from "@/components/HowItWorks";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
@@ -108,6 +110,7 @@ type Tab = "features" | "company" | "branding" | "people" | "staff" | "announcem
 // store the rest of this page uses — so it manages its own load/save.
 interface MsgSettings { emailOnNewMessage: boolean; notifyEmail: string; accountEmail: string }
 function NotificationsTab() {
+  const t = useT();
   const { settings, save } = useSettings();
   const prefs = settings.notifications ?? {};
   const setPref = (key: string, on: boolean) =>
@@ -116,7 +119,7 @@ function NotificationsTab() {
     // Not locked — but "a child hasn't been collected" isn't a preference in
     // the way "new booking" is, so say so once before it goes quiet.
     if (ch === "off" && NOTIFICATIONS_SAFETY.has(key)
-      && !confirm(`Turn off "${label}" completely?\n\nThis is a safety alert. You will get no bell and no email, even when it matters.`)) return;
+      && !confirm(t("p8set.ntOffConfirm", { label }))) return;
     const v = ch === "off" ? false : ch === "bell" ? "bell" : true;
     void save({ settings: { ...settings, notifications: { ...prefs, [key]: v } } });
   };
@@ -132,28 +135,28 @@ function NotificationsTab() {
     if (s) setS({ ...s, emailOnNewMessage: v });
     setErr(null);
     try { await api<MsgSettings>("/api/messages/settings", { method: "PUT", body: JSON.stringify({ emailOnNewMessage: v }) }); }
-    catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save"); }
+    catch (e) { setErr(e instanceof Error ? e.message : t("p8set.ntCouldntSave")); }
   }
   // Where every alert email lands: the address you sign in with (an old custom
   // override still wins if one was ever set, but the UI to set one is gone).
   const alertEmail = (s?.notifyEmail || s?.accountEmail || "").trim();
   return (
     <Card className="p-5">
-      <h3 className="text-[15px] font-extrabold">Message notifications</h3>
-      <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">Stay on top of what families send you.</p>
+      <h3 className="text-[15px] font-extrabold">{t("p8set.ntMsgHead")}</h3>
+      <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">{t("p8set.ntMsgLede")}</p>
       <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] px-4 py-3">
         <div className="min-w-0">
-          <div className="text-[13.5px] font-bold">Email me when I get a new message</div>
-          <div className="text-[12px] text-[var(--ink-3)]">We’ll email you the message with a link straight to the conversation.</div>
+          <div className="text-[13.5px] font-bold">{t("p8set.ntEmailMe")}</div>
+          <div className="text-[12px] text-[var(--ink-3)]">{t("p8set.ntEmailMeHint")}</div>
         </div>
         {s && <Toggle on={s.emailOnNewMessage} onChange={change} />}
       </div>
       {s?.emailOnNewMessage && (
         <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <div className="text-[13px] font-semibold text-[var(--ink)]">
-            Sent to <span className="font-extrabold">{alertEmail || "your sign-in email"}</span>
+            <Rich k="p8set.ntSentTo" vars={{}} slots={{ email: <span className="font-extrabold">{alertEmail || t("p8set.ntSignInEmail")}</span> }} />
           </div>
-          <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">This is the email you sign in with — every alert goes here. To change it, update your email in Account.</div>
+          <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{t("p8set.ntSentHint")}</div>
         </div>
       )}
       {err && <div className="mt-2 text-[12.5px] text-[var(--red,#e21d27)]">{err}</div>}
@@ -162,39 +165,39 @@ function NotificationsTab() {
         <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border-2 px-4 py-3.5"
           style={{ borderColor: emailOn ? "#2f6bd8" : "var(--line)", background: emailOn ? "linear-gradient(180deg,#eff5ff,#fff)" : "var(--surface)" }}>
           <div className="min-w-0">
-            <div className="text-[14px] font-extrabold">Platform emails to my personal inbox</div>
+            <div className="text-[14px] font-extrabold">{t("p8set.ntPlatHead")}</div>
             <div className="text-[12px] text-[var(--ink-3)]">
               {emailOn
-                ? <>On — you’ll get an email at <span className="font-bold">{alertEmail || "your sign-in email"}</span> for every alert below that’s switched on. Turn this off to keep everything in the in-app bell only, with nothing sent to your inbox.</>
-                : "Off — nothing is emailed to you. Every alert still shows in your in-app bell so you don’t miss anything."}
+                ? <Rich k="p8set.ntPlatOn" slots={{ email: <span className="font-bold">{alertEmail || t("p8set.ntSignInEmail")}</span> }} />
+                : t("p8set.ntPlatOff")}
             </div>
           </div>
-          <Toggle on={emailOn} onChange={(v) => setPref(EMAIL_DELIVERY_KEY, v)} labels={["On", "Off"]} />
+          <Toggle on={emailOn} onChange={(v) => setPref(EMAIL_DELIVERY_KEY, v)} labels={[t("p8set.on"), t("p8set.off")]} />
         </div>
-        <h3 className="text-[15px] font-extrabold">What we alert you about</h3>
+        <h3 className="text-[15px] font-extrabold">{t("p8set.ntAlertHead")}</h3>
         <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">
           {emailOn
-            ? "Each of these sends your team an in-app bell and an email. Switch off any you don’t want — the rest keep coming."
-            : "Emails are off above, so these send an in-app bell only. Switch off any you don’t want in the bell either."}
+            ? t("p8set.ntAlertOn")
+            : t("p8set.ntAlertOff")}
         </p>
         {groups.map((g) => (
           <div key={g} className="mb-3">
-            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{g}</div>
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{tr(t, "p8set.ntg_" + slug(g), g)}</div>
             <div className="overflow-hidden rounded-xl border border-[var(--line)]">
               {PROVIDER_NOTIFICATIONS.filter((n) => n.group === g).map((n, i) => (
                 <div key={n.key} className={`flex items-center justify-between gap-3 px-4 py-2.5 ${i > 0 ? "border-t border-[var(--line)]" : ""}`}>
                   <div className="min-w-0 text-[13px] font-semibold text-[var(--ink)]">
-                    {n.label}
-                    {NOTIFICATIONS_SAFETY.has(n.key) && <span className="ms-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#a5760a]">safety</span>}
+                    {tr(t, "p8set.ntf_" + slug(n.key), n.label)}
+                    {NOTIFICATIONS_SAFETY.has(n.key) && <span className="ms-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#a5760a]">{t("p8set.ntSafety")}</span>}
                   </div>
                   {/* Three-way: bell + email · bell only · off. The old boolean
                       still reads correctly — true is "both", false is "off". */}
                   <div className="flex shrink-0 gap-1">
                     {(["both", "bell", "off"] as NotifyChannel[]).map((c) => {
                       const cur = notificationChannel(prefs, n.key, n.defaultOff);
-                      const label = c === "both" ? "Bell + email" : c === "bell" ? "Bell only" : "Off";
+                      const label = c === "both" ? t("p8set.ntBoth") : c === "bell" ? t("p8set.ntBell") : t("p8set.off");
                       return (
-                        <button key={c} type="button" onClick={() => setChannel(n.key, c, n.label)}
+                        <button key={c} type="button" onClick={() => setChannel(n.key, c, tr(t, "p8set.ntf_" + slug(n.key), n.label))}
                           className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold"
                           style={cur === c
                             ? { background: c === "off" ? "#fdeaee" : "#eaf0fc", color: c === "off" ? "#b3123c" : "#1d3a8f" }
@@ -261,12 +264,14 @@ function Row({
   );
 }
 
-function Toggle({ on, onChange, labels = ["On", "Off"], disabled }: { on: boolean; onChange: (v: boolean) => void; labels?: [string, string] | string[]; disabled?: boolean }) {
+function Toggle({ on, onChange, labels: labelsIn, disabled }: { on: boolean; onChange: (v: boolean) => void; labels?: [string, string] | string[]; disabled?: boolean }) {
+  const t = useT();
+  const labels = labelsIn ?? [t("p8set.on"), t("p8set.off")];
   return (
     <div
       className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] p-[3px] text-[12px] font-extrabold shadow-[inset_0_1px_2px_rgba(15,23,42,.06)]"
       style={disabled ? { opacity: 0.5 } : undefined}
-      title={disabled ? "Locked — turn Simple mode off to use this" : undefined}
+      title={disabled ? t("p8set.toggleLocked") : undefined}
     >
       {[true, false].map((v, i) => {
         const active = on === v;
@@ -314,6 +319,7 @@ function NumberBox({ value, onChange, min = 0, max = 999, suffix }: { value: num
 // session can be moved right up to when it starts). Stored as hours.
 type NoticeUnit = "hours" | "days" | "anytime";
 function NoticeInput({ hours, onChange }: { hours: number; onChange: (h: number) => void }) {
+  const t = useT();
   const [unit, setUnit] = useState<NoticeUnit>(hours === 0 ? "anytime" : hours % 24 === 0 ? "days" : "hours");
   const shown = unit === "days" ? Math.round(hours / 24) || 1 : hours || 1;
   const apply = (n: number, u: NoticeUnit) => onChange(u === "anytime" ? 0 : Math.max(0, u === "days" ? n * 24 : n));
@@ -329,9 +335,9 @@ function NoticeInput({ hours, onChange }: { hours: number; onChange: (h: number)
         />
       )}
       <Select value={unit} onChange={(e) => { const u = e.target.value as NoticeUnit; setUnit(u); apply(shown, u); }}>
-        <option value="hours">hours before</option>
-        <option value="days">days before</option>
-        <option value="anytime">anytime — no limit</option>
+        <option value="hours">{t("p8set.noticeHours")}</option>
+        <option value="days">{t("p8set.noticeDays")}</option>
+        <option value="anytime">{t("p8set.noticeAnytime")}</option>
       </Select>
     </span>
   );
@@ -340,6 +346,7 @@ function NoticeInput({ hours, onChange }: { hours: number; onChange: (h: number)
 // Amend limit: an "Endless" pill instead of a confusing 0. 0 = endless in the
 // store; a specific cap is any number ≥ 1.
 function MovesLimit({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const t = useT();
   const endless = value === 0;
   return (
     <span className="inline-flex items-center gap-2">
@@ -349,9 +356,9 @@ function MovesLimit({ value, onChange }: { value: number; onChange: (n: number) 
         className="rounded-full border px-3 py-1 text-[11.5px] font-bold"
         style={endless ? { borderColor: "transparent", background: "var(--brand-2)", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}
       >
-        ♾ Endless
+        ♾ {t("p8set.endless")}
       </button>
-      {!endless && <NumberBox value={value} onChange={(n) => onChange(Math.max(1, n))} min={1} max={20} suffix="moves" />}
+      {!endless && <NumberBox value={value} onChange={(n) => onChange(Math.max(1, n))} min={1} max={20} suffix={t("p8set.moves")} />}
     </span>
   );
 }
@@ -363,12 +370,13 @@ function MovesLimit({ value, onChange }: { value: number; onChange: (n: number) 
  * doesn't collect one.
  */
 function AlwaysOn() {
+  const t = useT();
   return (
     <span
-      title="Can't be switched off — a register without it isn't a register."
+      title={t("p8set.alwaysOnTip")}
       className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)]"
     >
-      <span aria-hidden>🔒</span> Always on
+      <span aria-hidden>🔒</span> {t("p8set.alwaysOn")}
     </span>
   );
 }
@@ -379,10 +387,11 @@ function AlwaysOn() {
  * measure means checking two places to answer one question.
  */
 function Limit({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const t = useT();
   return (
-    <span className="inline-flex items-center gap-1" title="Longest answer a family can give, in characters">
+    <span className="inline-flex items-center gap-1" title={t("p8set.limitTip")}>
       <NumberBox value={value} onChange={onChange} min={20} max={2000} />
-      <span className="text-[11px] text-[var(--ink-3)]">chars</span>
+      <span className="text-[11px] text-[var(--ink-3)]">{t("p8set.chars")}</span>
     </span>
   );
 }
@@ -404,6 +413,7 @@ function ListEditor({
   /** Shown when removing — the consequence the operator can't see. */
   warn?: string;
 }) {
+  const t = useT();
   const [draft, setDraft] = useState("");
   const add = () => {
     const v = draft.trim();
@@ -423,9 +433,9 @@ function ListEditor({
             />
             <button
               type="button"
-              aria-label={`Remove ${it}`}
+              aria-label={t("p8set.removeItem", { name: it })}
               onClick={() => {
-                if (warn && !confirm(`Remove “${it}”?\n\n${warn}`)) return;
+                if (warn && !confirm(t("p8set.removeItemConfirm", { name: it, warn }))) return;
                 onChange(items.filter((_, j) => j !== i));
               }}
               className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]"
@@ -435,7 +445,7 @@ function ListEditor({
           </div>
         ))}
         {items.length === 0 && (
-          <div className="text-[12px] text-[var(--ink-3)]">Nothing here yet — add the first below.</div>
+          <div className="text-[12px] text-[var(--ink-3)]">{t("p8set.listEmpty")}</div>
         )}
       </div>
       <div className="flex gap-1.5">
@@ -446,7 +456,7 @@ function ListEditor({
           placeholder={placeholder}
           className="flex-1"
         />
-        <Button onClick={add}>＋ Add</Button>
+        <Button onClick={add}>＋ {t("p8set.add")}</Button>
       </div>
     </div>
   );
@@ -469,6 +479,9 @@ const PAY_TONE: Record<string, { bg: string; fg: string }> = {
   funded: { bg: "#e4edfd", fg: "#1d3a8f" },
 };
 function PayMethodEditor({ items, onChange }: { items: string[]; onChange: (next: string[]) => void }) {
+  const t = useT();
+  const w = useWord();
+  const payLabel = (l: string) => tr(t, "p8set.pay_" + slug(l), w(l));
   const [draft, setDraft] = useState("");
   const standard = new Set(PAY_STANDARD.map((m) => m.label));
   const enabled = new Set(items);
@@ -481,23 +494,23 @@ function PayMethodEditor({ items, onChange }: { items: string[]; onChange: (next
     <div className="flex flex-col gap-1.5">
       {PAY_STANDARD.map((m) => (
         <div key={m.label} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
-          <span className="text-[13px] font-semibold text-[var(--ink)]">{m.label}</span>
-          {badge(m.tone, m.behaviour)}
-          <span className="hidden text-[11px] text-[var(--ink-3)] lg:inline">· {m.note}</span>
+          <span className="text-[13px] font-semibold text-[var(--ink)]">{payLabel(m.label)}</span>
+          {badge(m.tone, t("p8set.payBeh_" + m.tone))}
+          <span className="hidden text-[11px] text-[var(--ink-3)] lg:inline">· {t("p8set.payNote_" + slug(m.label))}</span>
           <div className="ms-auto"><Toggle on={enabled.has(m.label)} onChange={(v) => toggle(m.label, v)} /></div>
         </div>
       ))}
-      {customs.length > 0 && <div className="mt-2 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Your own methods</div>}
+      {customs.length > 0 && <div className="mt-2 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("p8set.payOwn")}</div>}
       {customs.map((it) => (
         <div key={it} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
           <Input value={it} onChange={(e) => onChange(items.map((x) => (x === it ? e.target.value : x)))} className="flex-1" />
-          {badge("pending", "Awaiting payment")}
-          <button type="button" aria-label={`Remove ${it}`} onClick={() => { if (!confirm(`Remove “${it}”?\n\nBookings already recorded against it keep the method; it just stops being offered on new ones.`)) return; onChange(items.filter((x) => x !== it)); }} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+          {badge("pending", t("p8set.payBeh_pending"))}
+          <button type="button" aria-label={t("p8set.removeItem", { name: it })} onClick={() => { if (!confirm(t("p8set.payRemoveConfirm", { name: it }))) return; onChange(items.filter((x) => x !== it)); }} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
         </div>
       ))}
       <div className="mt-1 flex gap-1.5">
-        <Input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCustom()} placeholder="Add your own — e.g. Standing order" className="flex-1" />
-        <Button onClick={addCustom}>＋ Add</Button>
+        <Input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCustom()} placeholder={t("p8set.payAddOwn")} className="flex-1" />
+        <Button onClick={addCustom}>＋ {t("p8set.add")}</Button>
       </div>
     </div>
   );
@@ -505,22 +518,23 @@ function PayMethodEditor({ items, onChange }: { items: string[]; onChange: (next
 
 // ── Seasons — just the names; listings pick their season in the listing builder ──
 function SeasonsEditor({ items, onChange }: { items: Season[]; onChange: (next: Season[]) => void }) {
+  const t = useT();
   const patch = (id: string, fn: (s: Season) => Season) => onChange(items.map((s) => (s.id === id ? fn(s) : s)));
-  const remove = (name: string, id: string) => { if (confirm(`Remove “${name}”?\n\nListings set to it just become “no season”.`)) onChange(items.filter((s) => s.id !== id)); };
-  const add = () => onChange([...items, { id: `s-${uid()}`, name: "New season" }]);
-  const reset = () => { if (confirm("Replace your seasons with the standard UK set?\n\nThe 6 term half-terms + all 6 holidays (Oct, Christmas, Feb, Easter, May, Summer) + Full year. Any listing already set to one of your current seasons will need re-picking its season.")) onChange(defaultSeasonNames()); };
+  const remove = (name: string, id: string) => { if (confirm(t("p8set.seasonRemoveConfirm", { name }))) onChange(items.filter((s) => s.id !== id)); };
+  const add = () => onChange([...items, { id: `s-${uid()}`, name: t("p8set.seasonNew") }]);
+  const reset = () => { if (confirm(t("p8set.seasonResetConfirm"))) onChange(defaultSeasonNames()); };
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="rounded-lg border-s-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">📅 Just the <b>names</b> here — no dates. You pick a listing’s season <b>when you build the listing</b> (Basics step). Bookings, audiences and takings then group by it, so different holiday dates across towns don’t matter.</div>
+      <div className="rounded-lg border-s-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]"><Rich k="p8set.seasonNote" slots={{}} /></div>
       {items.map((s) => (
         <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
-          <Input value={s.name} onChange={(e) => patch(s.id, (x) => ({ ...x, name: e.target.value }))} placeholder="Season name" className="min-w-[160px] flex-1 font-semibold" />
-          <button type="button" aria-label={`Remove ${s.name}`} onClick={() => remove(s.name, s.id)} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+          <Input value={s.name} onChange={(e) => patch(s.id, (x) => ({ ...x, name: e.target.value }))} placeholder={t("p8set.seasonName")} className="min-w-[160px] flex-1 font-semibold" />
+          <button type="button" aria-label={t("p8set.removeItem", { name: s.name })} onClick={() => remove(s.name, s.id)} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
         </div>
       ))}
       <div className="mt-1 flex flex-wrap gap-2">
-        <Button sm onClick={add}>＋ Add a season</Button>
-        <Button sm variant="ghost" onClick={reset}>↺ Reset to standard UK seasons</Button>
+        <Button sm onClick={add}>＋ {t("p8set.seasonAdd")}</Button>
+        <Button sm variant="ghost" onClick={reset}>↺ {t("p8set.seasonReset")}</Button>
       </div>
     </div>
   );
@@ -551,8 +565,9 @@ function NotWired({ children }: { children: React.ReactNode }) {
  * separate lists to keep in step.
  */
 function ReasonEditor({ items, onChange }: { items: CancelReason[]; onChange: (v: CancelReason[]) => void }) {
+  const t = useT();
   const [draft, setDraft] = useState("");
-  const WHO: [CancelReason["who"], string][] = [["provider", "You"], ["parent", "Parents"], ["both", "Both"]];
+  const WHO: [CancelReason["who"], string][] = [["provider", t("p8set.whoYou")], ["parent", t("p8set.whoParents")], ["both", t("p8set.whoBoth")]];
   const add = () => {
     const label = draft.trim();
     if (!label) return;
@@ -563,8 +578,8 @@ function ReasonEditor({ items, onChange }: { items: CancelReason[]; onChange: (v
   return (
     <div>
       <div className="mb-1.5 flex items-center gap-2 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-        <span className="flex-1">Reason</span>
-        <span className="w-[190px]">Offered to</span>
+        <span className="flex-1">{t("p8set.rsnReason")}</span>
+        <span className="w-[190px]">{t("p8set.rsnOfferedTo")}</span>
         <span className="w-[22px]" />
       </div>
       <div className="mb-2 flex flex-col gap-1.5">
@@ -591,7 +606,7 @@ function ReasonEditor({ items, onChange }: { items: CancelReason[]; onChange: (v
             </span>
             <button
               type="button"
-              aria-label={`Remove ${r.label}`}
+              aria-label={t("p8set.removeItem", { name: r.label })}
               onClick={() => onChange(items.filter((_, j) => j !== i))}
               className="w-[22px] text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]"
             >
@@ -601,7 +616,7 @@ function ReasonEditor({ items, onChange }: { items: CancelReason[]; onChange: (v
         ))}
         {items.length === 0 && (
           <div className="text-[12px] text-[var(--ink-3)]">
-            No reasons — whoever cancels just types one, or leaves it blank.
+            {t("p8set.rsnEmpty")}
           </div>
         )}
       </div>
@@ -610,10 +625,10 @@ function ReasonEditor({ items, onChange }: { items: CancelReason[]; onChange: (v
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
-          placeholder="e.g. Coach unavailable"
+          placeholder={t("p8set.rsnPlaceholder")}
           className="flex-1"
         />
-        <Button onClick={add}>&#65291; Add</Button>
+        <Button onClick={add}>&#65291; {t("p8set.add")}</Button>
       </div>
     </div>
   );
@@ -627,6 +642,8 @@ function ReasonEditor({ items, onChange }: { items: CancelReason[]; onChange: (v
  * editable because no fixed set covers them all.
  */
 function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange: (v: VoucherProvider[]) => void }) {
+  const t = useT();
+  const { locale } = useI18n();
   const [openId, setOpenId] = useState<string | null>(null);
   // Listings + locations (venues) so an account no / Ofsted / reference can be
   // pinned to the right registered setting.
@@ -651,19 +668,19 @@ function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange
               <Input
                 value={v.name}
                 onChange={(e) => patch(i, (x) => ({ ...x, name: e.target.value }))}
-                placeholder="Scheme name"
+                placeholder={t("p8set.vSchemeName")}
                 className="w-[190px]"
                 maxLength={50}
               />
               <span className="min-w-0 flex-1 truncate text-[11.5px] text-[var(--ink-3)]">
                 {filled.length
                   ? filled.map((d) => `${d.label}: ${d.value}`).join("  ·  ")
-                  : "Not registered — parents won’t be offered this one"}
+                  : t("p8set.vNotReg")}
               </span>
-              <Button sm onClick={() => setOpenId(open ? null : v.id)}>{open ? "Done" : "Details"}</Button>
+              <Button sm onClick={() => setOpenId(open ? null : v.id)}>{open ? t("p8set.done") : t("p8set.vDetails")}</Button>
               <button
                 type="button"
-                aria-label={`Remove ${v.name}`}
+                aria-label={t("p8set.removeItem", { name: v.name })}
                 onClick={() => onChange(items.filter((_, j) => j !== i))}
                 className="w-[22px] text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]"
               >
@@ -674,8 +691,8 @@ function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange
             {open && (
               <div className="mt-3 border-t border-dashed border-[var(--line)] pt-3">
                 <div className="mb-1.5 flex items-center gap-2 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-                  <span className="w-[190px]">What they call it</span>
-                  <span className="flex-1">What to quote</span>
+                  <span className="w-[190px]">{t("p8set.vWhatCall")}</span>
+                  <span className="flex-1">{t("p8set.vWhatQuote")}</span>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   {v.details.map((d, k) => (
@@ -696,7 +713,7 @@ function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange
                       />
                       <button
                         type="button"
-                        aria-label={`Remove ${d.label}`}
+                        aria-label={t("p8set.removeItem", { name: d.label })}
                         onClick={() => patch(i, (x) => ({ ...x, details: x.details.filter((_, n) => n !== k) }))}
                         className="w-[22px] text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]"
                       >
@@ -704,14 +721,14 @@ function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange
                       </button>
                       {SCOPED_VOUCHER_LABELS.test(d.label) && (
                         <div className="flex w-full flex-wrap items-center gap-2 ps-1 text-[11px] text-[var(--ink-3)]">
-                          <span className="font-bold uppercase tracking-wide">Applies to</span>
+                          <span className="font-bold uppercase tracking-wide">{t("p8set.vAppliesTo")}</span>
                           <select value={d.listingId ?? ""} onChange={(e) => patch(i, (x) => ({ ...x, details: x.details.map((y, n) => (n === k ? { ...y, listingId: e.target.value || null, ...(e.target.value ? { locationId: null } : {}) } : y)) }))} className="max-w-[220px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px]">
-                            <option value="">All listings</option>
-                            {listings.map((l) => <option key={l.id} value={l.id}>{l.title || l.name || "Listing"}</option>)}
+                            <option value="">{t("p8set.vAllListings")}</option>
+                            {listings.map((l) => <option key={l.id} value={l.id}>{l.title || l.name || t("p8set.vListing")}</option>)}
                           </select>
                           <span>·</span>
                           <select value={d.locationId ?? ""} disabled={!!d.listingId} onChange={(e) => patch(i, (x) => ({ ...x, details: x.details.map((y, n) => (n === k ? { ...y, locationId: e.target.value || null } : y)) }))} className="max-w-[220px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] disabled:opacity-50">
-                            <option value="">{d.listingId ? "(that listing's location)" : "All locations"}</option>
+                            <option value="">{d.listingId ? t("p8set.vThatLoc") : t("p8set.vAllLocs")}</option>
                             {venues.map((vn) => <option key={vn.id} value={vn.id}>{vn.name}</option>)}
                           </select>
                         </div>
@@ -720,9 +737,9 @@ function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange
                   ))}
                 </div>
                 <Button sm className="mt-2" onClick={() => patch(i, (x) => ({ ...x, details: [...x.details, { id: uid(), label: "", value: "" }] }))}>
-                  &#65291; Add a detail
+                  &#65291; {t("p8set.vAddDetail")}
                 </Button>
-                <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]">Tip: add a <b>Website</b> detail (optional) — the sign-in link for this scheme. It shows the family a tappable link at checkout and in their confirmation email so they can pay in one tap.</p>
+                <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]"><Rich k="p8set.vTip" slots={{}} /></p>
               </div>
             )}
           </div>
@@ -735,12 +752,12 @@ function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange
 
       <div className="mt-1 flex items-center gap-2">
         <Button onClick={() => onChange([...items, { id: uid(), name: "", details: [{ id: uid(), label: "Account number/ID", value: "" }] }])}>
-          &#65291; Add a scheme
+          &#65291; {t("p8set.vAddScheme")}
         </Button>
         <span className="text-[11.5px] text-[var(--ink-3)]">
           {live === 0
-            ? "None filled in yet — parents won’t be offered vouchers at all."
-            : `${live} scheme${live === 1 ? "" : "s"} offered to parents.`}
+            ? t("p8set.vNone")
+            : pickPlural(t, locale, "p8set.vLive", live)}
         </span>
       </div>
     </div>
@@ -769,6 +786,7 @@ function Section({ title, lede, children }: { title: string; lede?: string; chil
  * same edit.
  */
 function GroupsEditor({ groups, onChange }: { groups: RatioGroup[]; onChange: (g: RatioGroup[]) => void }) {
+  const t = useT();
   const patch = (i: number, fn: (g: RatioGroup) => RatioGroup) => onChange(groups.map((x, j) => (j === i ? fn(x) : x)));
   const num = (v: string, min: number) => Math.max(min, parseInt(v, 10) || min);
   const inp = "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px]";
@@ -777,11 +795,11 @@ function GroupsEditor({ groups, onChange }: { groups: RatioGroup[]; onChange: (g
       <table className="w-full border-collapse text-[12.5px]">
         <thead>
           <tr className="text-[10.5px] uppercase tracking-[0.04em] text-[var(--ink-3)]">
-            <th className="px-2 py-1.5 text-start font-extrabold">Colour</th>
-            <th className="px-2 py-1.5 text-start font-extrabold">Group</th>
-            <th className="px-2 py-1.5 text-start font-extrabold">Age</th>
-            <th className="px-2 py-1.5 text-start font-extrabold">Target ratio</th>
-            <th className="px-2 py-1.5 text-start font-extrabold">Room size</th>
+            <th className="px-2 py-1.5 text-start font-extrabold">{t("p8set.grpColour")}</th>
+            <th className="px-2 py-1.5 text-start font-extrabold">{t("p8set.grpGroup")}</th>
+            <th className="px-2 py-1.5 text-start font-extrabold">{t("p8set.grpAge")}</th>
+            <th className="px-2 py-1.5 text-start font-extrabold">{t("p8set.grpRatio")}</th>
+            <th className="px-2 py-1.5 text-start font-extrabold">{t("p8set.grpRoom")}</th>
             <th className="px-2 py-1.5" />
           </tr>
         </thead>
@@ -789,27 +807,27 @@ function GroupsEditor({ groups, onChange }: { groups: RatioGroup[]; onChange: (g
           {groups.map((g, i) => (
             <tr key={g.id} className="border-t border-[var(--line)]">
               <td className="px-2 py-1.5">
-                <input type="color" value={g.colour} onChange={(e) => patch(i, (x) => ({ ...x, colour: e.target.value }))} className="h-7 w-10 cursor-pointer rounded border border-[var(--line)] bg-transparent p-0.5" aria-label={`${g.name} colour`} />
+                <input type="color" value={g.colour} onChange={(e) => patch(i, (x) => ({ ...x, colour: e.target.value }))} className="h-7 w-10 cursor-pointer rounded border border-[var(--line)] bg-transparent p-0.5" aria-label={t("p8set.grpColourAria", { name: g.name })} />
               </td>
               <td className="px-2 py-1.5">
-                <input value={g.name} onChange={(e) => patch(i, (x) => ({ ...x, name: e.target.value }))} className={`${inp} w-[130px] font-bold`} placeholder="Group name" />
+                <input value={g.name} onChange={(e) => patch(i, (x) => ({ ...x, name: e.target.value }))} className={`${inp} w-[130px] font-bold`} placeholder={t("p8set.grpNamePh")} />
               </td>
               <td className="px-2 py-1.5">
                 <span className="inline-flex items-center gap-1">
                   <input type="number" min={0} max={21} value={g.ageFrom} onChange={(e) => patch(i, (x) => ({ ...x, ageFrom: num(e.target.value, 0) }))} className={`${inp} w-[52px]`} />
-                  <span className="text-[var(--ink-3)]">to</span>
+                  <span className="text-[var(--ink-3)]">{t("p8set.grpTo")}</span>
                   <input type="number" min={0} max={21} value={g.ageTo} onChange={(e) => patch(i, (x) => ({ ...x, ageTo: num(e.target.value, 0) }))} className={`${inp} w-[52px]`} />
-                  <span className="text-[var(--ink-3)]">yrs</span>
+                  <span className="text-[var(--ink-3)]">{t("p8set.grpYrs")}</span>
                 </span>
               </td>
               <td className="px-2 py-1.5">
                 <span className="inline-flex items-center gap-1">1 :<input type="number" min={1} value={g.targetRatio} onChange={(e) => patch(i, (x) => ({ ...x, targetRatio: num(e.target.value, 1) }))} className={`${inp} w-[56px]`} /></span>
               </td>
               <td className="px-2 py-1.5">
-                <input type="number" min={0} value={g.maxSize || ""} placeholder="no cap" onChange={(e) => patch(i, (x) => ({ ...x, maxSize: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className={`${inp} w-[72px]`} />
+                <input type="number" min={0} value={g.maxSize || ""} placeholder={t("p8set.grpNoCap")} onChange={(e) => patch(i, (x) => ({ ...x, maxSize: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className={`${inp} w-[72px]`} />
               </td>
               <td className="px-2 py-1.5 text-end">
-                <button type="button" onClick={() => onChange(groups.filter((_, j) => j !== i))} aria-label={`Remove ${g.name}`} className="text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">×</button>
+                <button type="button" onClick={() => onChange(groups.filter((_, j) => j !== i))} aria-label={t("p8set.removeItem", { name: g.name })} className="text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">×</button>
               </td>
             </tr>
           ))}
@@ -818,17 +836,17 @@ function GroupsEditor({ groups, onChange }: { groups: RatioGroup[]; onChange: (g
       <div className="mt-2.5 flex flex-wrap items-center gap-3">
         <button
           type="button"
-          onClick={() => onChange([...groups, { id: uid(), name: `Group ${groups.length + 1}`, colour: "#2f6bd8", ageFrom: 0, ageTo: 18, targetRatio: 8, maxSize: 24 }])}
+          onClick={() => onChange([...groups, { id: uid(), name: t("p8set.grpN", { n: groups.length + 1 }), colour: "#2f6bd8", ageFrom: 0, ageTo: 18, targetRatio: 8, maxSize: 24 }])}
           className="rounded-full border border-dashed border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--brand-ink,#1d3a8f)]"
         >
-          ＋ Add group
+          ＋ {t("p8set.grpAdd")}
         </button>
         {groups.length === 0 && (
           <button type="button" onClick={() => onChange(DEFAULT_RATIO_GROUPS)} className="text-[12px] font-bold text-[var(--brand-ink,#1d3a8f)] underline">
-            Start from the standard groups
+            {t("p8set.grpStd")}
           </button>
         )}
-        <span className="text-[11px] text-[var(--ink-3)]">Leave <b>room size</b> blank for no cap.</span>
+        <span className="text-[11px] text-[var(--ink-3)]"><Rich k="p8set.grpLeave" slots={{}} /></span>
       </div>
     </div>
   );
@@ -844,21 +862,25 @@ function GroupsEditor({ groups, onChange }: { groups: RatioGroup[]; onChange: (g
  * both: the provider who wants "48 hours" finds it immediately, and the one
  * running residentials can still pick 4 weeks.
  */
-const COMMON_NOTICE: [number, string][] = [
-  [HOURS.twoWeeks, "2 weeks"],
-  [HOURS.week, "1 week"],
-  [HOURS.twoDays, "48 hours"],
-  [HOURS.day, "24 hours"],
-];
-
-const NOTICE_GROUPS: { label: string; items: [number, string][] }[] = [
-  { label: "Most used", items: COMMON_NOTICE },
-  { label: "Hours", items: Array.from({ length: 23 }, (_, i) => [i + 1, `${i + 1} hour${i === 0 ? "" : "s"}`] as [number, string]) },
-  { label: "Days", items: Array.from({ length: 6 }, (_, i) => [(i + 1) * 24, `${i + 1} day${i === 0 ? "" : "s"}`] as [number, string]) },
-  { label: "Weeks", items: Array.from({ length: 8 }, (_, i) => [(i + 1) * HOURS.week, `${i + 1} week${i === 0 ? "" : "s"}`] as [number, string]) },
-];
-
-const NOTICE_CHOICES: [number, string][] = NOTICE_GROUPS.flatMap((g) => g.items);
+type NoticeT = (key: string, vars?: Record<string, string | number>) => string;
+/** The notice-period choices in the active language: [hoursBefore, label][] groups, most used first. */
+function noticeGroups(t: NoticeT, locale: string): { label: string; items: [number, string][] }[] {
+  const hrs = (n: number) => pickPlural(t, locale, "p8set.nHours", n);
+  const days = (n: number) => pickPlural(t, locale, "p8set.nDays", n);
+  const wks = (n: number) => pickPlural(t, locale, "p8set.nWeeks", n);
+  const common: [number, string][] = [
+    [HOURS.twoWeeks, wks(2)],
+    [HOURS.week, wks(1)],
+    [HOURS.twoDays, hrs(48)],
+    [HOURS.day, hrs(24)],
+  ];
+  return [
+    { label: t("p8set.noticeMost"), items: common },
+    { label: t("p8set.noticeHoursG"), items: Array.from({ length: 23 }, (_, i) => [i + 1, hrs(i + 1)] as [number, string]) },
+    { label: t("p8set.noticeDaysG"), items: Array.from({ length: 6 }, (_, i) => [(i + 1) * 24, days(i + 1)] as [number, string]) },
+    { label: t("p8set.noticeWeeksG"), items: Array.from({ length: 8 }, (_, i) => [(i + 1) * HOURS.week, wks(i + 1)] as [number, string]) },
+  ];
+}
 
 /**
  * The refund rules, as rules.
@@ -869,6 +891,9 @@ const NOTICE_CHOICES: [number, string][] = NOTICE_GROUPS.flatMap((g) => g.items)
  * them, and then the page promises one thing while the system does another.
  */
 function PolicyList({ policies, onChange }: { policies: NamedPolicy[]; onChange: (v: NamedPolicy[]) => void }) {
+  const t = useT();
+  const { locale } = useI18n();
+  const choices = noticeGroups(t, locale).flatMap((g) => g.items);
   const [openId, setOpenId] = useState<string | null>(policies[0]?.id ?? null);
   return (
     <div>
@@ -879,25 +904,25 @@ function PolicyList({ policies, onChange }: { policies: NamedPolicy[]; onChange:
             <div className="flex flex-wrap items-center gap-2">
               {i === 0 && (
                 <span
-                  title="New listings start on this one."
+                  title={t("p8set.polDefaultTip")}
                   className="rounded-full bg-[var(--brand-soft)] px-2 py-[2px] text-[10px] font-extrabold text-[var(--brand-ink)]"
                 >
-                  DEFAULT
+                  {t("p8set.polDefault")}
                 </span>
               )}
               <Input
                 value={p.name}
                 onChange={(e) => onChange(policies.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
-                placeholder="Name this policy"
+                placeholder={t("p8set.polNamePh")}
                 className="w-[190px]"
                 maxLength={40}
               />
               <span className="min-w-0 flex-1 text-[11.5px] text-[var(--ink-3)]">
                 {sortBands(p.bands)
-                  .map((b) => (b.hoursBefore > 0 ? `${NOTICE_CHOICES.find(([h]) => h === b.hoursBefore)?.[1] ?? `${b.hoursBefore}h`}: ${b.refundPercent}%` : `later: ${b.refundPercent}%`))
+                  .map((b) => (b.hoursBefore > 0 ? t("p8set.polBand", { label: choices.find(([h]) => h === b.hoursBefore)?.[1] ?? pickPlural(t, locale, "p8set.nHours", b.hoursBefore), pct: b.refundPercent }) : t("p8set.polLater", { pct: b.refundPercent })))
                   .join("  ·  ")}
               </span>
-              <Button sm onClick={() => setOpenId(open ? null : p.id)}>{open ? "Done" : "Edit rules"}</Button>
+              <Button sm onClick={() => setOpenId(open ? null : p.id)}>{open ? t("p8set.done") : t("p8set.polEditRules")}</Button>
             </div>
             {open && (
               <div className="mt-3 border-t border-dashed border-[var(--line)] pt-3">
@@ -912,6 +937,10 @@ function PolicyList({ policies, onChange }: { policies: NamedPolicy[]; onChange:
 }
 
 function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChange: (p: CancellationPolicy) => void }) {
+  const t = useT();
+  const { locale } = useI18n();
+  const NOTICE_GROUPS = noticeGroups(t, locale);
+  const NOTICE_CHOICES = NOTICE_GROUPS.flatMap((g) => g.items);
   const bands = sortBands(policy.bands);
   const tiers = bands.filter((b) => b.hoursBefore > 0);
   const floor = bands.find((b) => b.hoursBefore <= 0) ?? { hoursBefore: 0, refundPercent: 0 };
@@ -923,7 +952,7 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
   // rather than "any later than that", which left the reader working out
   // later than *what*.
   const shortest = tiers.length ? tiers[tiers.length - 1].hoursBefore : 0;
-  const shortestLabel = NOTICE_CHOICES.find(([h]) => h === shortest)?.[1] ?? `${shortest} hours`;
+  const shortestLabel = NOTICE_CHOICES.find(([h]) => h === shortest)?.[1] ?? pickPlural(t, locale, "p8set.nHours", shortest);
   const cell = "px-2 py-2";
 
   return (
@@ -932,8 +961,8 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
         <table className="w-full border-collapse text-[12.5px]">
           <thead>
             <tr className="text-[10.5px] uppercase tracking-[0.04em] text-[var(--ink-3)]">
-              <th className={`${cell} text-start font-extrabold`}>Notice the family gives</th>
-              <th className={`${cell} text-start font-extrabold`}>They get back</th>
+              <th className={`${cell} text-start font-extrabold`}>{t("p8set.polNotice")}</th>
+              <th className={`${cell} text-start font-extrabold`}>{t("p8set.polGetBack")}</th>
               <th className={cell} />
             </tr>
           </thead>
@@ -954,7 +983,7 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
                         </optgroup>
                       ))}
                     </Select>
-                    <span className="whitespace-nowrap text-[var(--ink-3)]">or more</span>
+                    <span className="whitespace-nowrap text-[var(--ink-3)]">{t("p8set.polOrMore")}</span>
                   </span>
                 </td>
                 <td className={cell}>
@@ -969,7 +998,7 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
                 <td className={`${cell} text-end`}>
                   <button
                     type="button"
-                    aria-label="Remove this row"
+                    aria-label={t("p8set.polRemoveRow")}
                     onClick={() => write(tiers.filter((_, j) => j !== i), floor)}
                     className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]"
                   >
@@ -980,8 +1009,8 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
             ))}
             <tr className="border-t border-[var(--line)] bg-[var(--panel)]">
               <td className={cell}>
-                <span className="font-semibold">{tiers.length ? `Less than ${shortestLabel}` : "Any notice at all"}</span>
-                <span className="ms-1.5 text-[11px] text-[var(--ink-3)]">including after it has started</span>
+                <span className="font-semibold">{tiers.length ? t("p8set.polLessThan", { label: shortestLabel }) : t("p8set.polAnyNotice")}</span>
+                <span className="ms-1.5 text-[11px] text-[var(--ink-3)]">{t("p8set.polIncluding")}</span>
               </td>
               <td className={cell}>
                 <NumberBox value={floor.refundPercent} onChange={(n) => write(tiers, { hoursBefore: 0, refundPercent: n })} min={0} max={100} suffix="%" />
@@ -994,18 +1023,17 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
 
       <div className="mt-2">
         <Button onClick={() => write([...tiers, { hoursBefore: HOURS.day, refundPercent: 25 }], floor)}>
-          &#65291; Add a row
+          &#65291; {t("p8set.polAddRow")}
         </Button>
       </div>
 
       <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
         <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-          What parents will read
+          {t("p8set.polParentsRead")}
         </div>
         <div className="text-[12.5px] leading-[1.55]">{policyWording({ ...policy, wording: undefined })}</div>
         <div className="mt-2 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
-          Written from the rows above. When someone cancels, the same rows work out what&apos;s owed
-          and show it to you &mdash; you always decide whether to send it. ActivityOS never moves money.
+          {t("p8set.polWritten")}
         </div>
       </div>
     </div>
@@ -1014,11 +1042,6 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
 
 // ── Child questions ────────────────────────────────────────────────────────
 
-const TYPE_LABEL: Record<QuestionType, string> = {
-  text: "Typed answer",
-  choice: "Pick one",
-  yesno: "Yes / No",
-};
 
 /**
  * The questions a parent answers about their child, once, on the child's
@@ -1037,6 +1060,8 @@ function QuestionsEditor({
   onChange: (next: ChildQuestion[]) => void;
   listings: { id: string; title: string }[];
 }) {
+  const t = useT();
+  const { locale } = useI18n();
   const [openId, setOpenId] = useState<string | null>(null);
 
   const patch = (id: string, fn: (q: ChildQuestion) => ChildQuestion) =>
@@ -1078,67 +1103,67 @@ function QuestionsEditor({
           >
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex flex-col">
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-[10px] leading-none text-[var(--ink-3)] disabled:opacity-25" aria-label="Move up">▲</button>
-                <button type="button" onClick={() => move(i, 1)} disabled={i === questions.length - 1} className="text-[10px] leading-none text-[var(--ink-3)] disabled:opacity-25" aria-label="Move down">▼</button>
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-[10px] leading-none text-[var(--ink-3)] disabled:opacity-25" aria-label={t("p8set.moveUp")}>▲</button>
+                <button type="button" onClick={() => move(i, 1)} disabled={i === questions.length - 1} className="text-[10px] leading-none text-[var(--ink-3)] disabled:opacity-25" aria-label={t("p8set.moveDown")}>▼</button>
               </div>
 
               <div className="min-w-[160px] flex-1">
-                <div className="text-[13px] font-bold">{q.label || <span className="text-[var(--ink-3)]">Untitled question</span>}</div>
+                <div className="text-[13px] font-bold">{q.label || <span className="text-[var(--ink-3)]">{t("p8set.qUntitled")}</span>}</div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--ink-3)]">
-                  <span>{TYPE_LABEL[q.type]}</span>
-                  {q.required && <span className="rounded-full bg-[var(--brand-soft)] px-1.5 font-bold text-[var(--brand-ink)]">Must answer</span>}
-                  {q.ask === "every" && <span className="rounded-full bg-[var(--surface)] px-1.5 font-bold">Every booking</span>}
-                  <span>· {scoped ? `${(q.scope as string[]).length} listing${(q.scope as string[]).length === 1 ? "" : "s"}` : "All listings"}</span>
+                  <span>{t("p8set.qType_" + q.type)}</span>
+                  {q.required && <span className="rounded-full bg-[var(--brand-soft)] px-1.5 font-bold text-[var(--brand-ink)]">{t("p8set.qMustAnswer")}</span>}
+                  {q.ask === "every" && <span className="rounded-full bg-[var(--surface)] px-1.5 font-bold">{t("p8set.qEveryBooking")}</span>}
+                  <span>· {scoped ? pickPlural(t, locale, "p8set.qListings", (q.scope as string[]).length) : t("p8set.vAllListings")}</span>
                   {(q.minAge !== undefined || q.maxAge !== undefined) && (
                     <span className="rounded-full bg-[var(--surface)] px-1.5 font-bold">
                       {q.minAge !== undefined && q.maxAge !== undefined
-                        ? `Ages ${q.minAge}–${q.maxAge}`
+                        ? t("p8set.qAges", { min: q.minAge, max: q.maxAge })
                         : q.minAge !== undefined
-                          ? `Ages ${q.minAge}+`
-                          : `Under ${(q.maxAge ?? 0) + 1}`}
+                          ? t("p8set.qAgesMin", { min: q.minAge })
+                          : t("p8set.qUnder", { n: (q.maxAge ?? 0) + 1 })}
                     </span>
                   )}
-                  {q.hidden && <span className="rounded-full bg-[var(--surface)] px-1.5 font-bold">Hidden</span>}
+                  {q.hidden && <span className="rounded-full bg-[var(--surface)] px-1.5 font-bold">{t("p8set.qHidden")}</span>}
                 </div>
               </div>
 
-              <Toggle on={!q.hidden} onChange={(v) => patch(q.id, (x) => ({ ...x, hidden: !v }))} labels={["Asking", "Hidden"]} />
-              <Button sm onClick={() => setOpenId(open ? null : q.id)}>{open ? "Done" : "Edit"}</Button>
+              <Toggle on={!q.hidden} onChange={(v) => patch(q.id, (x) => ({ ...x, hidden: !v }))} labels={[t("p8set.qAsking"), t("p8set.qHidden")]} />
+              <Button sm onClick={() => setOpenId(open ? null : q.id)}>{open ? t("p8set.done") : t("p8set.edit")}</Button>
             </div>
 
             {open && (
               <div className="mt-3 border-t border-dashed border-[var(--line)] pt-3">
                 <div className="grid gap-2.5 md:grid-cols-2">
                   <div>
-                    <FieldLabel>Question</FieldLabel>
+                    <FieldLabel>{t("p8set.qQuestion")}</FieldLabel>
                     <Input
                       value={q.label}
                       onChange={(e) => patch(q.id, (x) => ({ ...x, label: e.target.value }))}
-                      placeholder="e.g. Can your child swim 25m?"
+                      placeholder={t("p8set.qQuestionPh")}
                       className="w-full"
                       maxLength={80}
                     />
                   </div>
                   <div>
-                    <FieldLabel>Answer type</FieldLabel>
+                    <FieldLabel>{t("p8set.qAnswerType")}</FieldLabel>
                     <Select
                       value={q.type}
                       onChange={(e) => patch(q.id, (x) => ({ ...x, type: e.target.value as QuestionType }))}
                       className="w-full"
                     >
-                      <option value="text">Typed answer</option>
-                      <option value="choice">Pick one</option>
-                      <option value="yesno">Yes / No</option>
+                      <option value="text">{t("p8set.qType_text")}</option>
+                      <option value="choice">{t("p8set.qType_choice")}</option>
+                      <option value="yesno">{t("p8set.qType_yesno")}</option>
                     </Select>
                   </div>
                 </div>
 
                 <div className="mt-2.5">
-                  <FieldLabel>Helper text — optional</FieldLabel>
+                  <FieldLabel>{t("p8set.qHelper")}</FieldLabel>
                   <Input
                     value={q.help ?? ""}
                     onChange={(e) => patch(q.id, (x) => ({ ...x, help: e.target.value || undefined }))}
-                    placeholder="Shown under the question — say why you're asking"
+                    placeholder={t("p8set.qHelperPh")}
                     className="w-full"
                     maxLength={120}
                   />
@@ -1146,131 +1171,134 @@ function QuestionsEditor({
 
                 {q.type === "text" && (
                   <div className="mt-2.5">
-                    <FieldLabel>Longest answer</FieldLabel>
+                    <FieldLabel>{t("p8set.qLongest")}</FieldLabel>
                     <NumberBox
                       value={q.maxLength ?? DEFAULT_QUESTION_LENGTH}
                       onChange={(n) => patch(q.id, (x) => ({ ...x, maxLength: n }))}
                       min={20}
                       max={2000}
-                      suffix="characters"
+                      suffix={t("p8set.qCharacters")}
                     />
                     <div className="mt-1 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
-                      Too short and a parent can&apos;t say what they need to; too long and your
-                      registers and exports become unreadable.
+                      {t("p8set.qShortNote")}
                     </div>
                   </div>
                 )}
 
                 {q.type === "choice" && (
                   <div className="mt-2.5">
-                    <FieldLabel>Options</FieldLabel>
+                    <FieldLabel>{t("p8set.qOptions")}</FieldLabel>
                     <ListEditor
                       items={q.options ?? []}
                       onChange={(options) => patch(q.id, (x) => ({ ...x, options }))}
-                      placeholder="Add an option"
+                      placeholder={t("p8set.qAddOption")}
                     />
                   </div>
                 )}
 
                 <div className="mt-3">
-                  <FieldLabel>When it&apos;s asked</FieldLabel>
+                  <FieldLabel>{t("p8set.qWhenAsked")}</FieldLabel>
                   <div className="flex flex-wrap gap-1.5">
                     <Button
                       sm
                       variant={q.ask !== "every" ? "primary" : "default"}
                       onClick={() => patch(q.id, (x) => ({ ...x, ask: "once" }))}
                     >
-                      Once, when they sign up
+                      {t("p8set.qOnce")}
                     </Button>
                     <Button
                       sm
                       variant={q.ask === "every" ? "primary" : "default"}
                       onClick={() => patch(q.id, (x) => ({ ...x, ask: "every" }))}
                     >
-                      Every booking
+                      {t("p8set.qEveryBooking")}
                     </Button>
                   </div>
                   <div className="mt-1 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
                     {q.ask === "every"
-                      ? "Asked again on each new booking, and the answer replaces the old one. For anything that goes stale — a recent injury is true in March and wrong by August."
-                      : "Asked while the child is being set up, then carried to every booking after. Right for anything that doesn't change: dietary needs, swimming ability. Families won't be asked twice."}
+                      ? t("p8set.qEveryNote")
+                      : t("p8set.qOnceNote")}
                   </div>
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="text-[12px] font-bold">Must be answered</span>
-                  <Toggle on={!!q.required} onChange={(v) => patch(q.id, (x) => ({ ...x, required: v }))} labels={["Yes", "No"]} />
+                  <span className="text-[12px] font-bold">{t("p8set.qMustBeAnswered")}</span>
+                  <Toggle on={!!q.required} onChange={(v) => patch(q.id, (x) => ({ ...x, required: v }))} labels={[t("p8set.yes"), t("p8set.no")]} />
                 </div>
 
                 {q.type === "yesno" && (
                   <div className="mt-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[12px] font-bold">If they answer <b>No</b>, hold for your approval</span>
-                      <Toggle on={!!q.reviewIfNo} onChange={(v) => patch(q.id, (x) => ({ ...x, reviewIfNo: v || undefined }))} labels={["Yes", "No"]} />
+                      <span className="text-[12px] font-bold"><Rich k="p8set.qIfNo" slots={{}} /></span>
+                      <Toggle on={!!q.reviewIfNo} onChange={(v) => patch(q.id, (x) => ({ ...x, reviewIfNo: v || undefined }))} labels={[t("p8set.yes"), t("p8set.no")]} />
                     </div>
                     <div className="mt-1 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
                       {q.reviewIfNo
-                        ? "The family can still book. It arrives as “Approval needed” for you to accept or decline, rather than confirming itself."
-                        : "The booking confirms itself whatever they answer."}
+                        ? t("p8set.qIfNoOn")
+                        : t("p8set.qIfNoOff")}
                     </div>
                   </div>
                 )}
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="text-[12px] font-bold">Show on child info for staff</span>
-                  <Toggle on={q.showOnRegister !== false} onChange={(v) => patch(q.id, (x) => ({ ...x, showOnRegister: v }))} labels={["Yes", "No"]} />
-                  <span className="text-[11.5px] text-[var(--ink-3)]">The answer appears on the child&rsquo;s register card on the day.</span>
+                  <span className="text-[12px] font-bold">{t("p8set.qShowStaff")}</span>
+                  <Toggle on={q.showOnRegister !== false} onChange={(v) => patch(q.id, (x) => ({ ...x, showOnRegister: v }))} labels={[t("p8set.yes"), t("p8set.no")]} />
+                  <span className="text-[11.5px] text-[var(--ink-3)]">{t("p8set.qShowStaffNote")}</span>
                 </div>
 
                 <div className="mt-3">
-                  <FieldLabel>Only ask about children aged</FieldLabel>
+                  <FieldLabel>{t("p8set.qOnlyAge")}</FieldLabel>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Input
                       type="number"
                       min={0}
                       max={18}
                       value={q.minAge ?? ""}
-                      placeholder="any"
+                      placeholder={t("p8set.qAny")}
                       onChange={(e) => patch(q.id, (x) => ({ ...x, minAge: e.target.value === "" ? undefined : Math.max(0, Math.min(18, parseInt(e.target.value, 10) || 0)) }))}
                       className="w-[74px]"
                     />
-                    <span className="text-[12px] text-[var(--ink-3)]">to</span>
+                    <span className="text-[12px] text-[var(--ink-3)]">{t("p8set.grpTo")}</span>
                     <Input
                       type="number"
                       min={0}
                       max={18}
                       value={q.maxAge ?? ""}
-                      placeholder="any"
+                      placeholder={t("p8set.qAny")}
                       onChange={(e) => patch(q.id, (x) => ({ ...x, maxAge: e.target.value === "" ? undefined : Math.max(0, Math.min(18, parseInt(e.target.value, 10) || 0)) }))}
                       className="w-[74px]"
                     />
                     {(q.minAge !== undefined || q.maxAge !== undefined) && (
                       <Button sm onClick={() => patch(q.id, (x) => ({ ...x, minAge: undefined, maxAge: undefined }))}>
-                        Ask about any age
+                        {t("p8set.qAskAnyAge")}
                       </Button>
                     )}
                   </div>
                   <div className="mt-1 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
                     {q.minAge === undefined && q.maxAge === undefined
-                      ? "Asked about every child."
-                      : `Asked only about children ${q.minAge !== undefined && q.maxAge !== undefined ? `aged ${q.minAge}–${q.maxAge}` : q.minAge !== undefined ? `aged ${q.minAge} and over` : `aged ${q.maxAge} and under`}. Worked out from their date of birth each time, so a child starts being asked on their birthday — and isn't asked at all until you have one.`}
+                      ? t("p8set.qAgeEvery")
+                      : q.minAge !== undefined && q.maxAge !== undefined
+                        ? t("p8set.qAgeBoth", { min: q.minAge, max: q.maxAge })
+                        : q.minAge !== undefined
+                          ? t("p8set.qAgeMin", { min: q.minAge })
+                          : t("p8set.qAgeMax", { max: q.maxAge ?? 0 })}
                   </div>
                 </div>
 
                 <div className="mt-3">
-                  <FieldLabel>Asked on</FieldLabel>
+                  <FieldLabel>{t("p8set.qAskedOn")}</FieldLabel>
                   <div className="mb-1.5 flex gap-1.5">
                     <Button sm variant={q.scope === "all" ? "primary" : "default"} onClick={() => patch(q.id, (x) => ({ ...x, scope: "all" }))}>
-                      All listings
+                      {t("p8set.vAllListings")}
                     </Button>
                     <Button sm variant={scoped ? "primary" : "default"} onClick={() => patch(q.id, (x) => ({ ...x, scope: scoped ? (x.scope as string[]) : [] }))}>
-                      Chosen listings
+                      {t("p8set.qChosenListings")}
                     </Button>
                   </div>
                   {scoped && (
                     <div className="flex flex-wrap gap-1.5">
                       {listings.length === 0 && (
-                        <span className="text-[12px] text-[var(--ink-3)]">No listings yet — this question won&apos;t be asked anywhere until you pick one.</span>
+                        <span className="text-[12px] text-[var(--ink-3)]">{t("p8set.qNoListings")}</span>
                       )}
                       {listings.map((l) => {
                         const on = (q.scope as string[]).includes(l.id);
@@ -1297,24 +1325,24 @@ function QuestionsEditor({
 
                 <div className="mt-3 flex items-center justify-between gap-2 border-t border-dashed border-[var(--line)] pt-2.5">
                   <span className="text-[11px] leading-[1.4] text-[var(--ink-3)]">
-                    Hiding keeps every answer families have already given. Deleting throws them away.
+                    {t("p8set.qHideNote")}
                   </span>
                   <Button
                     sm
                     variant="danger"
                     onClick={() => {
-                      if (!confirm(`Delete “${q.label || "this question"}”?\n\nEvery answer families have given is deleted with it. Hide it instead if you just want to stop asking.`)) return;
+                      if (!confirm(t("p8set.qDeleteConfirm", { name: q.label || t("p8set.qThis") }))) return;
                       onChange(questions.filter((x) => x.id !== q.id));
                       setOpenId(null);
                     }}
                   >
-                    Delete
+                    {t("p8set.delete")}
                   </Button>
                 </div>
 
                 <div className="mt-2 text-[10.5px] text-[var(--ink-3)]">
-                  Stored as <code>answers.{answerKey(q)}</code>
-                  {q.replaces && <> · replaces the old fixed <code>{q.replaces}</code> field</>}
+                  <Rich k="p8set.qStoredAs" slots={{ key: <code>answers.{answerKey(q)}</code> }} />
+                  {q.replaces && <> <Rich k="p8set.qReplaces" slots={{ field: <code>{q.replaces}</code> }} /></>}
                 </div>
               </div>
             )}
@@ -1323,10 +1351,10 @@ function QuestionsEditor({
       })}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="primary" onClick={add}>＋ Add a question</Button>
-        <Button onClick={addToilet}>{hasToilet ? "🚼 Toilet training (added)" : "🚼 Add toilet-training question"}</Button>
+        <Button variant="primary" onClick={add}>＋ {t("p8set.qAdd")}</Button>
+        <Button onClick={addToilet}>{hasToilet ? `🚼 ${t("p8set.qToiletAdded")}` : `🚼 ${t("p8set.qToiletAdd")}`}</Button>
       </div>
-      {!hasToilet && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Adds &ldquo;Is your child toilet trained?&rdquo;. Answering <b>no</b> holds the booking for you to accept, and the register shows a nappy tag plus a change log for that child.</p>}
+      {!hasToilet && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]"><Rich k="p8set.qToiletNote" slots={{}} /></p>}
     </div>
   );
 }
@@ -2189,7 +2217,7 @@ export function SetupApp() {
             {settings.collectGender && (
               <Row label="Options offered" hint="What a parent can pick from." note="Not shown in the forms yet — they still offer Boy/Girl">
                 <div className="w-[240px]">
-                  <ListEditor items={settings.genderOptions} onChange={(v) => set("genderOptions", v)} placeholder="Add an option" />
+                  <ListEditor items={settings.genderOptions} onChange={(v) => set("genderOptions", v)} placeholder={t("p8set.qAddOption")} />
                 </div>
               </Row>
             )}
