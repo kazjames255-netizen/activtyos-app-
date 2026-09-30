@@ -3,6 +3,9 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { Card, Panel, Select, Input, SectionHead, Badge, Button } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
+import { dateLocale } from "@/lib/i18n/format";
+import { H, hq } from "./hqText";
 
 // VENTURE CYCLE PROJECT (Phase 1) — a separate business venture Kaz and
 // Cameron are exploring: lake/country-park cycle hire, benchmarked against
@@ -60,22 +63,22 @@ interface VentureLake {
 type SortKey = "acres-desc" | "acres-asc" | "drive-asc" | "drive-desc" | "name-asc";
 
 const SORTS: Record<SortKey, { label: string; cmp: (a: VentureLake, b: VentureLake) => number }> = {
-  "acres-desc": { label: "Acres (largest first)", cmp: (a, b) => b.acres - a.acres },
-  "acres-asc": { label: "Acres (smallest first)", cmp: (a, b) => a.acres - b.acres },
-  "drive-asc": { label: "Drive time (nearest first)", cmp: (a, b) => (a.driveTimeMinutes ?? 999) - (b.driveTimeMinutes ?? 999) },
-  "drive-desc": { label: "Drive time (furthest first)", cmp: (a, b) => (b.driveTimeMinutes ?? -1) - (a.driveTimeMinutes ?? -1) },
-  "name-asc": { label: "Name (A–Z)", cmp: (a, b) => a.name.localeCompare(b.name) },
+  "acres-desc": { label: H("Acres (largest first)"), cmp: (a, b) => b.acres - a.acres },
+  "acres-asc": { label: H("Acres (smallest first)"), cmp: (a, b) => a.acres - b.acres },
+  "drive-asc": { label: H("Drive time (nearest first)"), cmp: (a, b) => (a.driveTimeMinutes ?? 999) - (b.driveTimeMinutes ?? 999) },
+  "drive-desc": { label: H("Drive time (furthest first)"), cmp: (a, b) => (b.driveTimeMinutes ?? -1) - (a.driveTimeMinutes ?? -1) },
+  "name-asc": { label: H("Name (A–Z)"), cmp: (a, b) => a.name.localeCompare(b.name) },
 };
 
 // Filters on real OSRM driving time from Milton Keynes — the data is
 // already pre-filtered server-side to <= 90 minutes, so these are all
 // "within" that ceiling; this just lets the table narrow further.
 const DRIVE_TIME_OPTIONS = [
-  { label: "Any (up to 90 min drive)", value: "" },
-  { label: "Within 30 min drive of Milton Keynes", value: "30" },
-  { label: "Within 45 min drive of Milton Keynes", value: "45" },
-  { label: "Within 60 min drive of Milton Keynes", value: "60" },
-  { label: "Within 90 min drive of Milton Keynes", value: "90" },
+  { label: H("Any (up to 90 min drive)"), value: "" },
+  { label: H("Within 30 min drive of Milton Keynes"), value: "30" },
+  { label: H("Within 45 min drive of Milton Keynes"), value: "45" },
+  { label: H("Within 60 min drive of Milton Keynes"), value: "60" },
+  { label: H("Within 90 min drive of Milton Keynes"), value: "90" },
 ];
 
 // --- Phase 2 filter derivations ---------------------------------------------
@@ -86,21 +89,21 @@ const DRIVE_TIME_OPTIONS = [
 // (phase2CheckedAt set); `hasCycleHireAlready` is a plain boolean.
 type CycleHireFilter = "" | "opportunity" | "competitor" | "unresearched";
 const CYCLE_HIRE_OPTIONS: { value: CycleHireFilter; label: string }[] = [
-  { value: "", label: "Any" },
-  { value: "opportunity", label: "No cycle hire found (opportunity)" },
-  { value: "competitor", label: "Already has cycle hire (competitor)" },
-  { value: "unresearched", label: "Not yet researched" },
+  { value: "", label: H("Any") },
+  { value: "opportunity", label: H("No cycle hire found (opportunity)") },
+  { value: "competitor", label: H("Already has cycle hire (competitor)") },
+  { value: "unresearched", label: H("Not yet researched") },
 ];
 
 // buildVerdict() in phase2_research.mjs always writes one of these three
 // prefixes, e.g. "Good fit: managed by X; no existing cycle hire found...".
 type VerdictQuality = "" | "good" | "possible" | "weaker" | "unresearched";
 const VERDICT_OPTIONS: { value: VerdictQuality; label: string }[] = [
-  { value: "", label: "Any" },
-  { value: "good", label: "Good fit" },
-  { value: "possible", label: "Possible fit" },
-  { value: "weaker", label: "Weaker fit" },
-  { value: "unresearched", label: "Not researched" },
+  { value: "", label: H("Any") },
+  { value: "good", label: H("Good fit") },
+  { value: "possible", label: H("Possible fit") },
+  { value: "weaker", label: H("Weaker fit") },
+  { value: "unresearched", label: H("Not researched") },
 ];
 function verdictQuality(verdict?: string): Exclude<VerdictQuality, ""> {
   if (!verdict) return "unresearched";
@@ -118,14 +121,14 @@ function verdictQuality(verdict?: string): Exclude<VerdictQuality, ""> {
 // trusts, private estates...) falls into "Private / other".
 type OwnerCategory = "" | "council" | "national-trust" | "wildlife-trust" | "forestry-england" | "canal-river-trust" | "private-other" | "unknown";
 const OWNER_OPTIONS: { value: OwnerCategory; label: string }[] = [
-  { value: "", label: "Any" },
-  { value: "council", label: "Council" },
-  { value: "national-trust", label: "National Trust" },
-  { value: "wildlife-trust", label: "Wildlife Trust" },
-  { value: "forestry-england", label: "Forestry England" },
-  { value: "canal-river-trust", label: "Canal & River Trust" },
-  { value: "private-other", label: "Private / other" },
-  { value: "unknown", label: "Unknown / not researched" },
+  { value: "", label: H("Any") },
+  { value: "council", label: H("Council") },
+  { value: "national-trust", label: H("National Trust") },
+  { value: "wildlife-trust", label: H("Wildlife Trust") },
+  { value: "forestry-england", label: H("Forestry England") },
+  { value: "canal-river-trust", label: H("Canal & River Trust") },
+  { value: "private-other", label: H("Private / other") },
+  { value: "unknown", label: H("Unknown / not researched") },
 ];
 function ownerCategory(owner?: string): Exclude<OwnerCategory, ""> {
   const o = owner || "";
@@ -180,11 +183,11 @@ function noConcessionInfo(r: VentureLake): boolean {
 // review count is regex-picked out of snippet text and easily confused with
 // unrelated numbers). Shown as a hover caveat wherever either field appears.
 const PRICING_CAVEAT =
-  "⚠ Any £ mention found near this site in search results — not verified to be cycle-hire specific. Treat as “worth checking”, not a confirmed price.";
+  H("⚠ Any £ mention found near this site in search results — not verified to be cycle-hire specific. Treat as “worth checking”, not a confirmed price.");
 const FOOTFALL_CAVEAT =
-  "⚠ Approximate, extracted from search snippets — low numbers (under ~20–30) are likely extraction noise, not real visitor counts.";
+  H("⚠ Approximate, extracted from search snippets — low numbers (under ~20–30) are likely extraction noise, not real visitor counts.");
 const PROTECTED_EXPLAINER =
-  "A legal conservation designation was found for this site — e.g. SSSI (Site of Special Scientific Interest), NNR (National Nature Reserve), SAC (Special Area of Conservation), or a National Trust designation. This can restrict or block adding new commercial structures (a hire kiosk, signage, storage) — check with the landowner before assuming a lease is possible.";
+  H("A legal conservation designation was found for this site — e.g. SSSI (Site of Special Scientific Interest), NNR (National Nature Reserve), SAC (Special Area of Conservation), or a National Trust designation. This can restrict or block adding new commercial structures (a hire kiosk, signage, storage) — check with the landowner before assuming a lease is possible.");
 
 // Badge palette matches the house convention (features/bookings/helpers.ts
 // statusTone/payTone) — amber = caution/unknown, red = direct competitor,
@@ -195,6 +198,7 @@ const RED = { bg: "var(--red-soft,#fdebec)", fg: "#bb1620" };
 const GREY = { bg: "#eef0f6", fg: "#5b6478" };
 
 export function VentureLakesApp() {
+  useT(); // re-render on language change (labels are translated at render time)
   const [items, setItems] = useState<VentureLake[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -266,7 +270,7 @@ export function VentureLakesApp() {
     setLoading(true);
     apiGet<{ items: VentureLake[] }>("/api/venture-lakes")
       .then((r) => { if (!cancelled) { setItems(r.items || []); setLoadError(""); } })
-      .catch((err) => { if (!cancelled) setLoadError(err instanceof Error ? err.message : "Failed to load"); })
+      .catch((err) => { if (!cancelled) setLoadError(err instanceof Error ? err.message : hq("Failed to load")); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
@@ -318,176 +322,173 @@ export function VentureLakesApp() {
   return (
     <div className="flex flex-col gap-3.5 p-4">
       <SectionHead>
-        Leads Lakes/Country Parks
+        {hq("Leads Lakes/Country Parks")}
         <span className="ms-2 font-normal text-[12px] text-[var(--ink-3)]">
-          Lakes &amp; country parks ≥ 60 acres, within a {MAX_DRIVE_MINUTES}-minute (2.5hr) drive of Milton Keynes — cycle-hire feasibility list
-          (Willen Lake, Milton Keynes = {WILLEN_ACRES} acres, 100%)
+          {hq("Lakes & country parks ≥ 60 acres, within a {m}-minute (2.5hr) drive of Milton Keynes — cycle-hire feasibility list (Willen Lake, Milton Keynes = {a} acres, 100%)", { m: MAX_DRIVE_MINUTES, a: WILLEN_ACRES })}
         </span>
       </SectionHead>
 
       <Card className="border-s-4 border-s-[var(--brand)] bg-[var(--surface-2,rgba(127,127,127,0.04))] p-3 text-[13px] text-[var(--ink-2)]">
-        <strong className="text-[var(--ink)]">Only the top 150 largest sites (by acreage) have been fully researched so far</strong> — owner, existing competition, cycle-hire status, pricing signals, path suitability, and contact details.
-        The remaining ~1,100+ sites currently only have Phase 1 data (name, size, location, drive time) and show as &quot;Not researched&quot; below.
-        Use the <strong>Researched only</strong> filter to see just the completed 150.
+        <strong className="text-[var(--ink)]">{hq("Only the top 150 largest sites (by acreage) have been fully researched so far")}</strong> {hq("— owner, existing competition, cycle-hire status, pricing signals, path suitability, and contact details. The remaining ~1,100+ sites currently only have Phase 1 data (name, size, location, drive time) and show as “Not researched” below. Use the “Researched only” filter to see just the completed 150.")}
       </Card>
 
       <Card className="flex flex-wrap items-center gap-3 p-3">
         <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
-          Sort by
+          {hq("Sort by")}
           <Select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
             {Object.entries(SORTS).map(([key, s]) => (
-              <option key={key} value={key}>{s.label}</option>
+              <option key={key} value={key}>{hq(s.label)}</option>
             ))}
           </Select>
         </label>
 
         <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
-          Drive time from MK
+          {hq("Drive time from MK")}
           <Select value={maxDriveMinutes} onChange={(e) => setMaxDriveMinutes(e.target.value)}>
             {DRIVE_TIME_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>{hq(o.label)}</option>
             ))}
           </Select>
         </label>
 
         <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
-          Min acres
+          {hq("Min acres")}
           <Select value={minAcres} onChange={(e) => setMinAcres(e.target.value)}>
-            <option value="60">60+ (all sites)</option>
+            <option value="60">{hq("60+ (all sites)")}</option>
             <option value="90">90+</option>
             <option value="120">120+</option>
-            <option value="150">150+ (Willen Lake size or larger)</option>
+            <option value="150">{hq("150+ (Willen Lake size or larger)")}</option>
           </Select>
         </label>
       </Card>
 
       <Card className="flex flex-wrap items-center gap-3 p-3">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-3)]">Phase 2 research</span>
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-3)]">{hq("Phase 2 research")}</span>
 
         <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
-          Cycle hire status
+          {hq("Cycle hire status")}
           <Select value={cycleHireFilter} onChange={(e) => setCycleHireFilter(e.target.value as CycleHireFilter)}>
             {CYCLE_HIRE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>{hq(o.label)}</option>
             ))}
           </Select>
         </label>
 
         <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
-          Best fit
+          {hq("Best fit")}
           <Select value={verdictFilter} onChange={(e) => setVerdictFilter(e.target.value as VerdictQuality)}>
             {VERDICT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>{hq(o.label)}</option>
             ))}
           </Select>
         </label>
 
         <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
-          Owner
+          {hq("Owner")}
           <Select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value as OwnerCategory)}>
             {OWNER_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>{hq(o.label)}</option>
             ))}
           </Select>
         </label>
 
         <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
-          Footpath/trail
+          {hq("Footpath/trail")}
           <Select value={trailFilter} onChange={(e) => setTrailFilter(e.target.value as TrailFilter)}>
-            <option value="">Any</option>
-            <option value="has">Has trail</option>
-            <option value="none">No trail found</option>
+            <option value="">{hq("Any")}</option>
+            <option value="has">{hq("Has trail")}</option>
+            <option value="none">{hq("No trail found")}</option>
           </Select>
         </label>
 
         <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
-          Concession/tender
+          {hq("Concession/tender")}
           <Select value={concessionFilter} onChange={(e) => setConcessionFilter(e.target.value as ConcessionFilter)}>
-            <option value="">Any</option>
-            <option value="has">Has concession info</option>
-            <option value="none">None found</option>
+            <option value="">{hq("Any")}</option>
+            <option value="has">{hq("Has concession info")}</option>
+            <option value="none">{hq("None found")}</option>
           </Select>
         </label>
 
-        <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]" title={FOOTFALL_CAVEAT}>
-          Reviews shown (footfall proxy)
+        <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]" title={hq(FOOTFALL_CAVEAT)}>
+          {hq("Reviews shown (footfall proxy)")}
           <span className="cursor-help text-[var(--ink-3)]" aria-hidden>⚠</span>
           <Select value={footfallFilter} onChange={(e) => setFootfallFilter(e.target.value as "" | "has" | "none")}>
-            <option value="">Any</option>
-            <option value="has">Yes — has review data</option>
-            <option value="none">No — none found</option>
+            <option value="">{hq("Any")}</option>
+            <option value="has">{hq("Yes — has review data")}</option>
+            <option value="none">{hq("No — none found")}</option>
           </Select>
         </label>
 
-        <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]" title={FOOTFALL_CAVEAT}>
-          Min reviews
+        <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]" title={hq(FOOTFALL_CAVEAT)}>
+          {hq("Min reviews")}
           <span className="cursor-help text-[var(--ink-3)]" aria-hidden>⚠</span>
           <Input
             type="number"
             min={0}
             inputMode="numeric"
-            placeholder="Any"
+            placeholder={hq("Any")}
             value={minReviews}
             onChange={(e) => setMinReviews(e.target.value)}
             className="w-[90px]"
           />
         </label>
 
-        <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]" title={PRICING_CAVEAT}>
+        <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]" title={hq(PRICING_CAVEAT)}>
           <input type="checkbox" checked={pricingOnly} onChange={(e) => setPricingOnly(e.target.checked)} className="h-4 w-4 accent-[var(--brand)]" />
-          Has pricing info <span className="cursor-help text-[var(--ink-3)]" aria-hidden>⚠</span>
+          {hq("Has pricing info")} <span className="cursor-help text-[var(--ink-3)]" aria-hidden>⚠</span>
         </label>
 
-        <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]" title={PROTECTED_EXPLAINER}>
+        <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]" title={hq(PROTECTED_EXPLAINER)}>
           <input type="checkbox" checked={hideProtected} onChange={(e) => setHideProtected(e.target.checked)} className="h-4 w-4 accent-[var(--brand)]" />
-          Hide protected sites <span className="cursor-help text-[var(--ink-3)]" aria-hidden>ⓘ</span>
+          {hq("Hide protected sites")} <span className="cursor-help text-[var(--ink-3)]" aria-hidden>ⓘ</span>
         </label>
 
         <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]">
           <input type="checkbox" checked={researchedOnly} onChange={(e) => setResearchedOnly(e.target.checked)} className="h-4 w-4 accent-[var(--brand)]" />
-          Researched only
+          {hq("Researched only")}
         </label>
 
         {filtersActive && (
           <button type="button" onClick={clearFilters} className="text-[12px] font-bold text-[var(--brand)] underline">
-            Clear filters
+            {hq("Clear filters")}
           </button>
         )}
 
         <Button type="button" onClick={downloadCsv} disabled={rows.length === 0}>
-          ⬇ Download CSV ({rows.length} row{rows.length === 1 ? "" : "s"}, all fields)
+          {hq("⬇ Download CSV (rows: {n}, all fields)", { n: rows.length })}
         </Button>
 
         <span className="ms-auto text-[12px] text-[var(--ink-3)]">
-          {loading ? "Loading…" : `${rows.length} of ${items.length} sites match`}
+          {loading ? hq("Loading…") : hq("{n} of {total} sites match", { n: rows.length, total: items.length })}
         </span>
       </Card>
 
       {loadError && (
-        <Card className="p-3 text-[13px] text-[var(--danger)]">Couldn&apos;t load the list: {loadError}</Card>
+        <Card className="p-3 text-[13px] text-[var(--danger)]">{hq("Couldn’t load the list: {why}", { why: loadError })}</Card>
       )}
 
       {!loading && !loadError && items.length === 0 && (
         <Card className="p-4 text-[13px] text-[var(--ink-3)]">
-          No sites loaded yet — run server/scripts/ventureLakes/fetch.mjs to populate the ventureLakes collection.
+          {hq("No sites loaded yet — run server/scripts/ventureLakes/fetch.mjs to populate the ventureLakes collection.")}
         </Card>
       )}
 
-      <Panel title="Sites">
+      <Panel title={hq("Sites")}>
         <div className="-m-4 overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse text-[13px]">
             <thead>
               <tr className="border-b border-[var(--line)] text-start text-[11px] uppercase tracking-wide text-[var(--ink-3)]">
-                <th className="px-4 py-2 font-semibold">Name</th>
-                <th className="px-4 py-2 font-semibold">Location / postcode</th>
-                <th className="px-4 py-2 font-semibold">Acres</th>
-                <th className="px-4 py-2 font-semibold">% of Willen Lake</th>
-                <th className="px-4 py-2 font-semibold">Drive time from MK</th>
-                <th className="px-4 py-2 font-semibold">Distance (mi, straight-line)</th>
-                <th className="px-4 py-2 font-semibold" title={FOOTFALL_CAVEAT}>
-                  Reviews (footfall proxy) <span className="cursor-help" aria-hidden>⚠</span>
+                <th className="px-4 py-2 font-semibold">{hq("Name")}</th>
+                <th className="px-4 py-2 font-semibold">{hq("Location / postcode")}</th>
+                <th className="px-4 py-2 font-semibold">{hq("Acres")}</th>
+                <th className="px-4 py-2 font-semibold">{hq("Size vs Willen Lake (%)")}</th>
+                <th className="px-4 py-2 font-semibold">{hq("Drive time from MK")}</th>
+                <th className="px-4 py-2 font-semibold">{hq("Distance (mi, straight-line)")}</th>
+                <th className="px-4 py-2 font-semibold" title={hq(FOOTFALL_CAVEAT)}>
+                  {hq("Reviews (footfall proxy)")} <span className="cursor-help" aria-hidden>⚠</span>
                 </th>
-                <th className="px-4 py-2 font-semibold">Phase 2</th>
+                <th className="px-4 py-2 font-semibold">{hq("Phase 2")}</th>
               </tr>
             </thead>
             <tbody>
@@ -513,12 +514,12 @@ export function VentureLakesApp() {
                         {(r.pctOfWillen ?? (r.acres / WILLEN_ACRES) * 100).toFixed(0)}%
                       </td>
                       <td className="px-4 py-2 tabular-nums">
-                        {r.driveTimeMinutes != null ? `${r.driveTimeMinutes} min` : "—"}
+                        {r.driveTimeMinutes != null ? hq("{n} min", { n: r.driveTimeMinutes }) : "—"}
                       </td>
                       <td className="px-4 py-2 tabular-nums text-[var(--ink-3)]">{r.distanceMiles.toFixed(1)}</td>
-                      <td className="px-4 py-2 tabular-nums" title={FOOTFALL_CAVEAT}>
+                      <td className="px-4 py-2 tabular-nums" title={hq(FOOTFALL_CAVEAT)}>
                         {r.reviewCountApprox != null ? (
-                          <span className="cursor-help">~{r.reviewCountApprox.toLocaleString()}</span>
+                          <span className="cursor-help">~{r.reviewCountApprox.toLocaleString(dateLocale())}</span>
                         ) : (
                           <span className="text-[var(--ink-3)]">—</span>
                         )}
@@ -526,12 +527,12 @@ export function VentureLakesApp() {
                       <td className="px-4 py-2">
                         {researched ? (
                           r.hasCycleHireAlready ? (
-                            <Badge tone={RED}>Cycle hire exists</Badge>
+                            <Badge tone={RED}>{hq("Cycle hire exists")}</Badge>
                           ) : (
-                            <Badge tone={BLUE}>No cycle hire found</Badge>
+                            <Badge tone={BLUE}>{hq("No cycle hire found")}</Badge>
                           )
                         ) : (
-                          <Badge tone={GREY}>Not researched</Badge>
+                          <Badge tone={GREY}>{hq("Not researched")}</Badge>
                         )}
                       </td>
                     </tr>
@@ -540,28 +541,28 @@ export function VentureLakesApp() {
                         <td colSpan={8} className="bg-[var(--surface-2,rgba(127,127,127,0.04))] px-4 py-3">
                           {!researched ? (
                             <p className="text-[13px] text-[var(--ink-3)]">
-                              Not yet covered by the Phase 2 research pass (top 150 sites by acreage only).
+                              {hq("Not yet covered by the Phase 2 research pass (top 150 sites by acreage only).")}
                             </p>
                           ) : (
                             <div className="flex flex-col gap-2">
                               <div className="flex flex-wrap items-center gap-2">
                                 <Badge tone={r.owner && !r.owner.startsWith("Unknown") ? BLUE : GREY}>
-                                  Owner: {r.owner || "Unknown"}
+                                  {hq("Owner: {who}", { who: r.owner || hq("Unknown") })}
                                 </Badge>
                                 {r.hasCycleHireAlready ? (
-                                  <Badge tone={RED}>Existing cycle hire — direct competitor</Badge>
+                                  <Badge tone={RED}>{hq("Existing cycle hire — direct competitor")}</Badge>
                                 ) : (
-                                  <Badge tone={BLUE}>No cycle hire found</Badge>
+                                  <Badge tone={BLUE}>{hq("No cycle hire found")}</Badge>
                                 )}
                                 {r.protectedStatus && r.protectedStatus.length > 0 && r.protectedStatus[0] !== "None found" && (
-                                  <span title={PROTECTED_EXPLAINER} className="cursor-help">
+                                  <span title={hq(PROTECTED_EXPLAINER)} className="cursor-help">
                                     <Badge tone={AMBER}>{r.protectedStatus.join(", ")} <span aria-hidden>ⓘ</span></Badge>
                                   </span>
                                 )}
                                 {r.reviewCountApprox != null && (
-                                  <span title={FOOTFALL_CAVEAT} className="cursor-help">
+                                  <span title={hq(FOOTFALL_CAVEAT)} className="cursor-help">
                                     <Badge tone={GREY}>
-                                      ~{r.reviewCountApprox.toLocaleString()} reviews (footfall proxy) <span aria-hidden>⚠</span>
+                                      {hq("~{n} reviews (footfall proxy)", { n: r.reviewCountApprox.toLocaleString(dateLocale()) })} <span aria-hidden>⚠</span>
                                     </Badge>
                                   </span>
                                 )}
@@ -574,7 +575,7 @@ export function VentureLakesApp() {
                               <div className="flex flex-wrap items-center gap-3 text-[12px]">
                                 {r.website && (
                                   <a href={r.website} target="_blank" rel="noopener noreferrer" className="font-semibold text-[var(--brand)] underline">
-                                    Website ↗
+                                    {hq("Website")} ↗
                                   </a>
                                 )}
                                 {r.email && (
@@ -582,36 +583,36 @@ export function VentureLakesApp() {
                                 )}
                                 {r.phone && <span className="text-[var(--ink-2)]">{r.phone}</span>}
                                 {!r.website && !r.email && !r.phone && (
-                                  <span className="text-[var(--ink-3)]">No website/contact found</span>
+                                  <span className="text-[var(--ink-3)]">{hq("No website/contact found")}</span>
                                 )}
                               </div>
 
                               <div className="grid grid-cols-1 gap-x-6 gap-y-1 text-[12px] text-[var(--ink-2)] sm:grid-cols-2">
                                 <div>
-                                  <span className="font-semibold text-[var(--ink-3)]">Concession/tender: </span>
+                                  <span className="font-semibold text-[var(--ink-3)]">{hq("Concession/tender")}: </span>
                                   {r.concessionInfo || "—"}
                                 </div>
                                 <div>
-                                  <span className="font-semibold text-[var(--ink-3)]">Onsite competition: </span>
+                                  <span className="font-semibold text-[var(--ink-3)]">{hq("Onsite competition")}: </span>
                                   {(r.competitionOnsite && r.competitionOnsite.join(", ")) || "—"}
                                 </div>
                                 <div>
-                                  <span className="font-semibold text-[var(--ink-3)]" title={PRICING_CAVEAT}>
-                                    Pricing notes <span className="cursor-help" aria-hidden>⚠</span>:{" "}
+                                  <span className="font-semibold text-[var(--ink-3)]" title={hq(PRICING_CAVEAT)}>
+                                    {hq("Pricing notes")} <span className="cursor-help" aria-hidden>⚠</span>:{" "}
                                   </span>
                                   {r.pricingNotes || "—"}
                                 </div>
                                 <div>
-                                  <span className="font-semibold text-[var(--ink-3)]">Path/trail suitability: </span>
+                                  <span className="font-semibold text-[var(--ink-3)]">{hq("Path/trail suitability")}: </span>
                                   {r.pathSuitability || "—"}
                                 </div>
                                 <div>
-                                  <span className="font-semibold text-[var(--ink-3)]">Parking: </span>
+                                  <span className="font-semibold text-[var(--ink-3)]">{hq("Parking")}: </span>
                                   {r.parkingNotes || "—"}
                                 </div>
                                 <div>
-                                  <span className="font-semibold text-[var(--ink-3)]">Checked: </span>
-                                  {r.phase2CheckedAt ? new Date(r.phase2CheckedAt).toLocaleDateString() : "—"}
+                                  <span className="font-semibold text-[var(--ink-3)]">{hq("Checked")}: </span>
+                                  {r.phase2CheckedAt ? new Date(r.phase2CheckedAt).toLocaleDateString(dateLocale()) : "—"}
                                 </div>
                               </div>
                             </div>
@@ -625,7 +626,7 @@ export function VentureLakesApp() {
               {!loading && rows.length === 0 && items.length > 0 && (
                 <tr>
                   <td colSpan={8} className="px-4 py-6 text-center text-[var(--ink-3)]">
-                    No sites match these filters.
+                    {hq("No sites match these filters.")}
                   </td>
                 </tr>
               )}
