@@ -7,6 +7,10 @@ import { api, get as apiGet, post as apiPost, isDemoMode } from "@/lib/api";
 import { useHoScope, getHoScopeId, HO_OWN } from "@/components/franchise/HoScope";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
+import { useT, tNow, useI18n } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
+import { currentLocaleCode } from "@/lib/i18n/format";
+import { RichB } from "@/features/common/richB";
 import { type Season } from "@/lib/seasons";
 import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
@@ -55,11 +59,12 @@ function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; labe
 }
 
 function AutoEmails({ settings, save }: { settings: TenantSettings; save: (patch: { settings?: TenantSettings }) => Promise<void> }) {
+  const t = useT();
   const ae = settings.autoEmails ?? {};
   const set = (patch: Partial<NonNullable<TenantSettings["autoEmails"]>>) => save({ settings: { ...settings, autoEmails: { ...ae, ...patch } } });
   return (
     <div>
-      <p className="mb-3 max-w-[720px] text-[12.5px] leading-[1.5] text-[var(--ink-3)]">The emails ActivityOS sends automatically on your behalf. Turn any off, or change when reminders go out. Changes save as you make them.</p>
+      <p className="mb-3 max-w-[720px] text-[12.5px] leading-[1.5] text-[var(--ink-3)]">{t("p8em.emAutoIntro")}</p>
       <div className="flex flex-col gap-2.5">
         {AUTO_EMAILS.map((c) => {
           // Effective on-state: everything defaults ON except announcements (opt-in re-marketing).
@@ -69,36 +74,36 @@ function AutoEmails({ settings, save }: { settings: TenantSettings; save: (patch
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[14.5px] font-extrabold text-[var(--ink)]">{c.title}</span>
-                    {c.core && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-extrabold text-[#1d3a8f]">Core</span>}
+                    <span className="text-[14.5px] font-extrabold text-[var(--ink)]">{t("p8em.emAuto_" + c.key + "_title")}</span>
+                    {c.core && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-extrabold text-[#1d3a8f]">{t("p8em.emCore")}</span>}
                   </div>
-                  <div className="mt-0.5 text-[12.5px] font-semibold text-[var(--ink-2)]">{c.sub}</div>
-                  <div className="mt-1 text-[12px] leading-[1.5] text-[var(--ink-3)]">{c.desc}</div>
+                  <div className="mt-0.5 text-[12.5px] font-semibold text-[var(--ink-2)]">{t("p8em.emAuto_" + c.key + "_sub")}</div>
+                  <div className="mt-1 text-[12px] leading-[1.5] text-[var(--ink-3)]">{t("p8em.emAuto_" + c.key + "_desc")}</div>
                   {c.timing && value && (
                     <label className="mt-2 flex items-center gap-2 text-[12px] font-semibold text-[var(--ink-2)]">
-                      Send
+                      {t("p8em.cSend")}
                       <Select value={String(ae[c.timing] ?? (c.timing === "sessionTiming" ? 48 : 24))} onChange={(e) => set({ [c.timing as string]: Number(e.target.value) })}>
-                        {REMINDER_TIMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        {REMINDER_TIMES.map(([v]) => <option key={v} value={v}>{t("p8em.emRem_" + v)}</option>)}
                       </Select>
                     </label>
                   )}
                 </div>
-                <Toggle on={value} onClick={() => set({ [c.key]: !value })} label={c.title} />
+                <Toggle on={value} onClick={() => set({ [c.key]: !value })} label={t("p8em.emAuto_" + c.key + "_title")} />
               </div>
               {c.key === "payments" && value && (
                 <div className="mt-3 flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
                   <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-bold text-[var(--ink)]">Payment-due reminder</div>
-                    <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">Remind a parent before an outstanding balance is due.</div>
+                    <div className="text-[13px] font-bold text-[var(--ink)]">{t("p8em.emPayDue")}</div>
+                    <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{t("p8em.emPayDueSub")}</div>
                     {ae.paymentDue !== false && (
-                      <label className="mt-2 flex items-center gap-2 text-[12px] font-semibold text-[var(--ink-2)]">Send
+                      <label className="mt-2 flex items-center gap-2 text-[12px] font-semibold text-[var(--ink-2)]">{t("p8em.cSend")}
                         <Select value={String(ae.paymentDueTiming ?? 24)} onChange={(e) => set({ paymentDueTiming: Number(e.target.value) })}>
-                          {REMINDER_TIMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                          {REMINDER_TIMES.map(([v]) => <option key={v} value={v}>{t("p8em.emRem_" + v)}</option>)}
                         </Select>
                       </label>
                     )}
                   </div>
-                  <Toggle on={ae.paymentDue !== false} onClick={() => set({ paymentDue: ae.paymentDue === false })} label="Payment-due reminder" />
+                  <Toggle on={ae.paymentDue !== false} onClick={() => set({ paymentDue: ae.paymentDue === false })} label={t("p8em.emPayDue")} />
                 </div>
               )}
             </div>
@@ -113,7 +118,7 @@ function AutoEmails({ settings, save }: { settings: TenantSettings; save: (patch
 function printDocHtml(html: string) {
   const w = typeof window !== "undefined" ? window.open("", "_blank", "width=820,height=1060") : null;
   if (!w) return;
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Document</title><style>*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4;margin:10mm}html,body{margin:0}body{font-family:system-ui,-apple-system,sans-serif;padding:12px}</style></head><body>${html}<script>window.onload=function(){window.focus();window.print();}</script></body></html>`);
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${tNow("p8em.emDocumentTitle")}</title><style>*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4;margin:10mm}html,body{margin:0}body{font-family:system-ui,-apple-system,sans-serif;padding:12px}</style></head><body>${html}<script>window.onload=function(){window.focus();window.print();}</script></body></html>`);
   w.document.close();
 }
 
@@ -136,6 +141,7 @@ function mdToHtml(src: string): string {
 // A small WYSIWYG editor — Bold/Heading/Italic/List/Link format the text LIVE
 // (contentEditable), and the value is HTML that's emailed as-is.
 function RichText({ value, onChange }: { value: string; onChange: (html: string) => void }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const selImg = useRef<HTMLImageElement | null>(null);
   const [imgW, setImgW] = useState(100);          // width % of the targeted image
@@ -144,7 +150,7 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
   const targetImg = (): HTMLImageElement | null => { const el = ref.current; if (!el) return null; if (selImg.current && el.contains(selImg.current)) return selImg.current; const imgs = el.querySelectorAll("img"); return imgs.length ? (imgs[imgs.length - 1] as HTMLImageElement) : null; };
   useEffect(() => { const el = ref.current; if (el && el.innerHTML !== value) { el.innerHTML = value; selImg.current = null; } }, [value]);
   const cmd = (c: string, arg?: string) => { ref.current?.focus(); document.execCommand(c, false, arg); if (ref.current) onChange(ref.current.innerHTML); };
-  const pickImg = (e: React.MouseEvent) => { const t = e.target as HTMLElement; if (t.tagName === "IMG") { const img = t as HTMLImageElement; selImg.current = img; setImgW(parseInt(img.style.width) || 100); } };
+  const pickImg = (e: React.MouseEvent) => { const tg = e.target as HTMLElement; if (tg.tagName === "IMG") { const img = tg as HTMLImageElement; selImg.current = img; setImgW(parseInt(img.style.width) || 100); } };
   const sizeImg = (w: number) => { const img = targetImg(); if (!img) return; selImg.current = img; const cw = Math.min(100, Math.max(10, Math.round(w))); img.style.width = `${cw}%`; img.style.height = "auto"; setImgW(cw); if (ref.current) onChange(ref.current.innerHTML); };
   const btn = "rounded px-2 py-1 text-[13px] text-[var(--ink-2)] hover:bg-[var(--surface)]";
   const sep = <span className="mx-0.5 h-4 w-px bg-[var(--line)]" />;
@@ -161,14 +167,14 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
       <div className="flex flex-wrap items-center gap-0.5 rounded-t-lg border-b border-[var(--line)] bg-[var(--panel)] px-2 py-1.5">
         {tools.map(([c, arg, title, label, cls], i) => {
           if (c === "|") return <span key={i}>{sep}</span>;
-          if (c === "color") return <label key={i} onMouseDown={(e) => e.preventDefault()} title="Text colour" className={`${btn} relative cursor-pointer font-extrabold`} style={{ color: "#2f6bd8" }}>A<input type="color" onChange={(e) => cmd("foreColor", e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" /></label>;
-          if (c === "link") return <button key={i} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { const u = prompt("Link URL"); if (u) cmd("createLink", u); }} title={title} className={btn}>{label}</button>;
-          return <button key={i} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd(c, arg)} title={title} className={`${btn} ${cls}`}>{label}</button>;
+          if (c === "color") return <label key={i} onMouseDown={(e) => e.preventDefault()} title={t("p8em.emTextColour")} className={`${btn} relative cursor-pointer font-extrabold`} style={{ color: "#2f6bd8" }}>A<input type="color" onChange={(e) => cmd("foreColor", e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" /></label>;
+          if (c === "link") return <button key={i} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { const u = prompt(t("p8em.emLinkUrl")); if (u) cmd("createLink", u); }} title={t("p8em.emTool_" + (arg ?? c))} className={btn}>{label}</button>;
+          return <button key={i} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd(c, arg)} title={t("p8em.emTool_" + (arg ?? c))} className={`${btn} ${cls}`}>{label}</button>;
         })}
       </div>
       {hasImg && (
         <div className="flex flex-wrap items-center gap-2 border-b border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2">
-          <span className="flex-none text-[11.5px] font-extrabold text-[#1d3a8f]">🖼 Photo size</span>
+          <span className="flex-none text-[11.5px] font-extrabold text-[#1d3a8f]">{t("p8em.emPhotoSize")}</span>
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(imgW - 5)} className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-[#E4E9F5] bg-[var(--surface)] text-[15px] font-extrabold text-[#2f5fd0] hover:bg-[#E8EEFD]">−</button>
           <input type="range" min={10} max={100} step={1} value={imgW} onChange={(e) => sizeImg(Number(e.target.value))} className="h-1.5 min-w-[120px] flex-1 accent-[#2f6bd8]" />
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(imgW + 5)} className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-[#E4E9F5] bg-[var(--surface)] text-[15px] font-extrabold text-[#2f5fd0] hover:bg-[#E8EEFD]">+</button>
@@ -181,7 +187,7 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
         onInput={() => { if (ref.current) onChange(ref.current.innerHTML); }}
         onClick={pickImg}
         className="min-h-[180px] px-3 py-2.5 text-[13px] leading-relaxed outline-none [&_a]:text-[#1d3a8f] [&_a]:underline [&_blockquote]:border-s-2 [&_blockquote]:border-[var(--line)] [&_blockquote]:ps-3 [&_blockquote]:text-[var(--ink-3)] [&_h3]:mb-1 [&_h3]:text-[16px] [&_h3]:font-extrabold [&_img]:cursor-pointer [&_img]:rounded-lg [&_ol]:list-decimal [&_ol]:ps-5 [&_ul]:list-disc [&_ul]:ps-5" />
-      {hasImg && <div className="rounded-b-lg border-t border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[10.5px] text-[var(--ink-3)]">💡 The slider above resizes your photo. With more than one, click the one you want first.</div>}
+      {hasImg && <div className="rounded-b-lg border-t border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[10.5px] text-[var(--ink-3)]">{t("p8em.emPhotoSizeTip")}</div>}
     </div>
   );
 }
@@ -197,6 +203,7 @@ const RATIO_AR: Record<string, string> = { square: "1 / 1", portrait: "4 / 5", s
 // quote belongs to which photo. Message/Quote are toggled right on the card; the
 // rest (size, crop, colour) live behind Edit. "Add to email" uses what's ticked.
 function SavedImageCard({ im, onPatch, onRemove, onAdd }: { im: SavedImage; onPatch: (p: Partial<SavedImage>) => void; onRemove: () => void; onAdd: () => void }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -221,38 +228,38 @@ function SavedImageCard({ im, onPatch, onRemove, onAdd }: { im: SavedImage; onPa
     <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
       <div className="relative w-full bg-black" style={{ aspectRatio: RATIO_AR[im.ratio] ?? "1 / 1" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        {preview ? <img src={preview} alt={im.childName ?? "moment"} className="h-full w-full object-contain" /> : <img src={im.photoUrl} alt="" className="h-full w-full object-cover opacity-60" />}
+        {preview ? <img src={preview} alt={im.childName ?? t("p8em.emMomentAlt")} className="h-full w-full object-contain" /> : <img src={im.photoUrl} alt="" className="h-full w-full object-cover opacity-60" />}
       </div>
       <div className="p-2.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-[11.5px] font-bold">{im.childName ?? "Moment"}</span>
-          <button type="button" onClick={() => setEditing((v) => !v)} className="rounded-full border px-2.5 py-0.5 text-[10.5px] font-bold" style={editing ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{editing ? "Done" : "⚙ Size · crop · colour"}</button>
+          <span className="truncate text-[11.5px] font-bold">{im.childName ?? t("p8em.emMoment")}</span>
+          <button type="button" onClick={() => setEditing((v) => !v)} className="rounded-full border px-2.5 py-0.5 text-[10.5px] font-bold" style={editing ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{editing ? t("p8em.emDone") : t("p8em.emSizeCropColour")}</button>
         </div>
 
         {/* message you type + the moment's quote — shown under the photo (live preview above) */}
         <div className="mt-1.5 flex items-center justify-between">
-          <span className="text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Message under the photo</span>
-          {momentCaption && captionValue !== momentCaption && <button type="button" onClick={() => onPatch({ customCaption: momentCaption })} className="text-[10px] font-bold text-[#1d3a8f]">↺ parent’s message</button>}
+          <span className="text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8em.emMsgUnderPhoto")}</span>
+          {momentCaption && captionValue !== momentCaption && <button type="button" onClick={() => onPatch({ customCaption: momentCaption })} className="text-[10px] font-bold text-[#1d3a8f]">{t("p8em.emParentMsgReset")}</button>}
         </div>
-        <textarea value={captionValue} onChange={(e) => onPatch({ customCaption: e.target.value })} rows={2} placeholder="e.g. Tony is the best player today" className="mt-1 w-full resize-none rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] [field-sizing:content]" />
-        <button type="button" disabled={nQuotes === 0} onClick={() => onPatch({ include: { ...inc, quote: !inc.quote } })} className="mt-1.5 rounded-full border-2 px-2.5 py-0.5 text-[11px] font-bold disabled:opacity-45" style={incBtn(inc.quote, nQuotes > 0)}>{inc.quote && nQuotes > 0 ? "✓ " : ""}Show marketing quote{nQuotes ? ` (${nQuotes})` : " (none)"}</button>
+        <textarea value={captionValue} onChange={(e) => onPatch({ customCaption: e.target.value })} rows={2} placeholder={t("p8em.emCaptionPh")} className="mt-1 w-full resize-none rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] [field-sizing:content]" />
+        <button type="button" disabled={nQuotes === 0} onClick={() => onPatch({ include: { ...inc, quote: !inc.quote } })} className="mt-1.5 rounded-full border-2 px-2.5 py-0.5 text-[11px] font-bold disabled:opacity-45" style={incBtn(inc.quote, nQuotes > 0)}>{inc.quote && nQuotes > 0 ? "✓ " : ""}{t("p8em.emShowQuote")}{nQuotes ? ` (${nQuotes})` : ` ${t("p8em.emNone")}`}</button>
 
         {editing && (
           <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2 text-[10.5px]">
-            <div className="mb-1 font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Size</div>
+            <div className="mb-1 font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8em.emSize")}</div>
             <div className="mb-2 flex flex-wrap gap-1">{([["square", "1:1"], ["portrait", "4:5"], ["story", "9:16"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => onPatch({ ratio: k })} className="rounded-full border px-2 py-0.5 font-bold" style={chip(im.ratio === k)}>{l}</button>)}</div>
-            <div className="mb-1 font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Crop</div>
-            <div className="mb-2 flex flex-wrap gap-1">{([["contain", "Whole photo"], ["cover", "Fill / crop"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => onPatch({ fit: k })} className="rounded-full border px-2 py-0.5 font-bold" style={chip(fit === k)}>{l}</button>)}</div>
-            <div className="mb-1 font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Text colour</div>
-            <div className="mb-2 flex flex-wrap items-center gap-1">{SWATCHES.map((sw) => <button key={sw} type="button" onClick={() => onPatch({ color: sw })} className="h-5 w-5 rounded-full border-2" style={{ background: sw, borderColor: im.color === sw ? "#171534" : "var(--line)" }} title={sw} />)}<input type="color" value={im.color} onChange={(e) => onPatch({ color: e.target.value })} className="h-6 w-7 cursor-pointer rounded border border-[var(--line)]" title="Custom colour" /></div>
-            {nParent > 0 && <button type="button" onClick={() => onPatch({ include: { ...inc, comments: !inc.comments } })} className="rounded-full border-2 px-2.5 py-0.5 text-[11px] font-bold" style={incBtn(inc.comments, true)}>{inc.comments ? "✓ " : ""}All comments ({nParent})</button>}
+            <div className="mb-1 font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8em.emCrop")}</div>
+            <div className="mb-2 flex flex-wrap gap-1">{([["contain", t("p8em.emWholePhoto")], ["cover", t("p8em.emFillCrop")]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => onPatch({ fit: k })} className="rounded-full border px-2 py-0.5 font-bold" style={chip(fit === k)}>{l}</button>)}</div>
+            <div className="mb-1 font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8em.emTextColour")}</div>
+            <div className="mb-2 flex flex-wrap items-center gap-1">{SWATCHES.map((sw) => <button key={sw} type="button" onClick={() => onPatch({ color: sw })} className="h-5 w-5 rounded-full border-2" style={{ background: sw, borderColor: im.color === sw ? "#171534" : "var(--line)" }} title={sw} />)}<input type="color" value={im.color} onChange={(e) => onPatch({ color: e.target.value })} className="h-6 w-7 cursor-pointer rounded border border-[var(--line)]" title={t("p8em.emCustomColour")} /></div>
+            {nParent > 0 && <button type="button" onClick={() => onPatch({ include: { ...inc, comments: !inc.comments } })} className="rounded-full border-2 px-2.5 py-0.5 text-[11px] font-bold" style={incBtn(inc.comments, true)}>{inc.comments ? "✓ " : ""}{t("p8em.emAllComments", { n: nParent })}</button>}
           </div>
         )}
 
         <div className="mt-2 flex gap-1.5">
-          <button type="button" onClick={onAdd} className="flex-1 rounded-md px-2 py-1 text-[11px] font-extrabold text-white" style={{ background: "#7a4e2a" }}>➕ Add to email</button>
-          <button type="button" onClick={() => triggerDownload(preview ?? im.photoUrl, `${(im.childName ?? "moment").replace(/\s+/g, "-")}-${im.ratio}.jpg`)} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold" title="Download this image (with everything shown in the preview)">⬇</button>
-          <button type="button" onClick={onRemove} className="rounded-md border border-[#f6c9cc] px-2 py-1 text-[11px] font-bold text-[#c02636] hover:bg-[#fdebec]" title="Delete this photo from your Email library">🗑</button>
+          <button type="button" onClick={onAdd} className="flex-1 rounded-md px-2 py-1 text-[11px] font-extrabold text-white" style={{ background: "#7a4e2a" }}>{t("p8em.emAddToEmail")}</button>
+          <button type="button" onClick={() => triggerDownload(preview ?? im.photoUrl, `${(im.childName ?? "moment").replace(/\s+/g, "-")}-${im.ratio}.jpg`)} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold" title={t("p8em.emDownloadImgTip")}>⬇</button>
+          <button type="button" onClick={onRemove} className="rounded-md border border-[#f6c9cc] px-2 py-1 text-[11px] font-bold text-[#c02636] hover:bg-[#fdebec]" title={t("p8em.emDeletePhotoTip")}>🗑</button>
         </div>
       </div>
     </div>
@@ -365,6 +372,7 @@ interface Mailbox { configured: boolean; address: string | null; received: numbe
  *  confirms by itself the moment the first message lands. Renders nothing
  *  until the platform has an inbound domain. */
 function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" }) {
+  const t = useT();
   const [mb, setMb] = useState<Mailbox | null>(null);
   const [copied, setCopied] = useState(false);
   const [host, setHost] = useState<string | null>(null);
@@ -392,11 +400,9 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
     if (context !== "settings" || !mb) return null;
     return (
       <Card className="p-4">
-        <div className="text-[14px] font-extrabold text-[var(--ink)]">Show your own emails here</div>
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8em.emMbShowOwn")}</div>
         <p className="mt-0.5 text-[12px] leading-relaxed text-[var(--ink-3)]">
-          Forwarding your own inbox into ActivityOS isn&rsquo;t switched on for your account yet.
-          Once it is, you&rsquo;ll get your own address here and everything parents email you will
-          appear in the Inbox alongside what you send. Ask support to turn it on.
+          {t("p8em.emMbOff")}
         </p>
       </Card>
     );
@@ -416,11 +422,11 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
     if (context === "inbox") return null;
     return (
       <div data-ui="mailbox-setup" className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#cdeacd] bg-[#f3fbf3] px-4 py-2.5">
-        <span className="text-[13px] font-extrabold text-[#127a3e]">✓ Your email is connected</span>
+        <span className="text-[13px] font-extrabold text-[#127a3e]">{t("p8em.emMbConnected")}</span>
         <code data-ui="inbound-address" className="rounded-md bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-bold text-[var(--ink-2)]">{address}</code>
-        <span className="text-[11.5px] text-[var(--ink-3)]">Last message {when(mb.lastAt ?? undefined)}</span>
-        <button type="button" onClick={() => setWalk(true)} className="text-[11.5px] font-bold text-[#1d3a8f] underline">Gmail walkthrough</button>
-        <button type="button" onClick={() => setHost("outlook")} className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] underline">Change or re-check setup</button>
+        <span className="text-[11.5px] text-[var(--ink-3)]">{t("p8em.emMbLastMsg", { when: when(mb.lastAt ?? undefined) })}</span>
+        <button type="button" onClick={() => setWalk(true)} className="text-[11.5px] font-bold text-[#1d3a8f] underline">{t("p8em.emMbGmailWalk")}</button>
+        <button type="button" onClick={() => setHost("outlook")} className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] underline">{t("p8em.emMbChange")}</button>
         {walk && <GmailSetupWalkthrough address={address} onClose={() => setWalk(false)} />}
       </div>
     );
@@ -433,47 +439,45 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
         <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2.5 text-start">
           <span className="text-[16px]">📧</span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[14px] font-extrabold text-[#16306e]">Setting up your email</span>
-            <span className="block text-[11.5px] leading-snug text-[var(--ink-3)]">See parents&rsquo; replies in this Inbox — about two minutes, once. {live ? <b className="text-[#127a3e]">✓ almost there</b> : "Tap to see how."}</span>
+            <span className="block text-[14px] font-extrabold text-[#16306e]">{t("p8em.emMbSetupTitle")}</span>
+            <span className="block text-[11.5px] leading-snug text-[var(--ink-3)]">{t("p8em.emMbSetupSub")} {live ? <b className="text-[#127a3e]">{t("p8em.emMbAlmost")}</b> : t("p8em.emMbTap")}</span>
           </span>
-          <span className="flex-none text-[12px] font-bold text-[var(--ink-3)]">{open ? "Hide ▲" : "Show ▼"}</span>
+          <span className="flex-none text-[12px] font-bold text-[var(--ink-3)]">{open ? t("p8em.emMbHide") : t("p8em.emMbShow")}</span>
         </button>
         {context === "inbox" && (
-          <button type="button" onClick={() => setDismissed(true)} title="Hide this — you can bring it back from Email → Settings"
+          <button type="button" onClick={() => setDismissed(true)} title={t("p8em.emMbHideTip")}
             className="flex-none rounded-lg px-1.5 py-0.5 text-[15px] font-bold leading-none text-[var(--ink-3)] hover:bg-[var(--surface)] hover:text-[var(--ink)]">×</button>
         )}
       </div>
 
       {!open ? null : <div className="border-t border-[#dbe6fb] px-4 py-3">
         <div className="mb-3 text-[12.5px] leading-relaxed text-[var(--ink-2)]">
-          Right now this Inbox only shows email sent <b>from</b> ActivityOS. Add one setting in your own email
-          — it takes about two minutes, once — and everything parents send you shows up here too.
-          Your email keeps working exactly as it does now, and you keep your own copy of everything.
+          <RichB text={t("p8em.emMbIntro")} />
         </div>
         {/* Gmail is by far the most common host, and its confirmation-code step
             is where people get stuck — so we offer a screen-by-screen walk. */}
         <button type="button" onClick={() => setWalk(true)}
           className="mb-3 inline-flex items-center gap-2 rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] px-3.5 py-2 text-[12.5px] font-extrabold text-[#16306e] hover:border-[#2f6bd8]">
           <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-b from-[#4f8bf5] to-[#2f6bd8] text-[10px] text-white">▶</span>
-          Watch the Gmail walkthrough
-          <span className="font-semibold text-[var(--ink-3)]">— 8 quick screens</span>
+          {t("p8em.emMbWatch")}
+          <span className="font-semibold text-[var(--ink-3)]">{t("p8em.emMb8Screens")}</span>
         </button>
         {/* Step 1 — the address. Always visible: it's what every route needs. */}
-        <div className="text-[12.5px] font-extrabold text-[var(--ink)]">Step 1 — copy your ActivityOS address</div>
+        <div className="text-[12.5px] font-extrabold text-[var(--ink)]">{t("p8em.emMbStep1")}</div>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <code data-ui="inbound-address" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink)]">{address}</code>
-          <button type="button" onClick={copy} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold text-white" style={{ background: copied ? "#0f9d58" : "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{copied ? "Copied ✓" : "Copy"}</button>
-          <span className="text-[11.5px] text-[var(--ink-3)]">This address belongs to you — nobody else can use it.</span>
+          <button type="button" onClick={copy} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold text-white" style={{ background: copied ? "#0f9d58" : "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{copied ? t("p8em.emCopied") : t("p8em.emCopy")}</button>
+          <span className="text-[11.5px] text-[var(--ink-3)]">{t("p8em.emMbOwnAddr")}</span>
         </div>
 
         {/* Step 2 — pick a provider, then show only that provider's steps. */}
-        <div className="mt-4 text-[12.5px] font-extrabold text-[var(--ink)]">Step 2 — which email do you use?</div>
+        <div className="mt-4 text-[12.5px] font-extrabold text-[var(--ink)]">{t("p8em.emMbStep2")}</div>
         <div className="mt-1.5 flex flex-wrap gap-2">
           {MAIL_HOSTS.map((h) => (
             <button key={h.id} type="button" onClick={() => setHost(h.id)}
               className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold"
               style={host === h.id ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
-              {h.emoji} {h.label}
+              {h.emoji} {h.id === "other" ? t("p8em.emHost_other_label") : h.label}
             </button>
           ))}
         </div>
@@ -482,42 +486,41 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
           <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3.5">
             {chosen.links.length > 0 && (
               <div className="mb-2.5 flex flex-wrap gap-2">
-                {chosen.links.map(([label, href]) => (
-                  <a key={href} href={href} target="_blank" rel="noreferrer" className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white">{label} ↗</a>
+                {chosen.links.map(([, href], li) => (
+                  <a key={href} href={href} target="_blank" rel="noreferrer" className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white">{t(`p8em.emHost_${chosen.id}_link${li}`)} ↗</a>
                 ))}
               </div>
             )}
             <ol className="ms-4 list-decimal text-[12.5px] leading-relaxed text-[var(--ink-2)]">
-              {chosen.steps.map((t) => <li key={t} className="mt-0.5">{t}</li>)}
+              {chosen.steps.map((s, si) => <li key={s} className="mt-0.5">{t(`p8em.emHost_${chosen.id}_s${si}`)}</li>)}
             </ol>
-            <div className="mt-2 text-[11.5px] leading-relaxed text-[var(--ink-3)]">{chosen.note}</div>
+            <div className="mt-2 text-[11.5px] leading-relaxed text-[var(--ink-3)]">{t(`p8em.emHost_${chosen.id}_note`)}</div>
           </div>
         )}
 
         {/* Gmail's code — delivered to US, so the provider can only get it here. */}
         {mb.pendingVerification && (
           <div className="mt-3 rounded-xl border border-[#f3d98a] bg-[#fdf6e3] p-3.5">
-            <div className="text-[12.5px] font-extrabold text-[#7a5a12]">Gmail sent us your confirmation code</div>
+            <div className="text-[12.5px] font-extrabold text-[#7a5a12]">{t("p8em.emMbGmailCode")}</div>
             <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
               {mb.pendingVerification.code && <code data-ui="gmail-code" className="rounded-lg bg-[var(--surface)] px-3 py-1.5 text-[17px] font-extrabold tracking-[0.15em] text-[var(--ink-2)]">{mb.pendingVerification.code}</code>}
-              <span className="text-[12px] text-[#7a5a12]">Type this into Gmail and press <b>Verify</b> to finish.</span>
+              <span className="text-[12px] text-[#7a5a12]"><RichB text={t("p8em.emMbTypeVerify")} /></span>
             </div>
-            {mb.pendingVerification.link && <a href={mb.pendingVerification.link} target="_blank" rel="noreferrer" className="mt-1.5 inline-block text-[11.5px] font-bold text-[#1d3a8f] underline">Or just click Google&rsquo;s confirm link ↗</a>}
+            {mb.pendingVerification.link && <a href={mb.pendingVerification.link} target="_blank" rel="noreferrer" className="mt-1.5 inline-block text-[11.5px] font-bold text-[#1d3a8f] underline">{t("p8em.emMbOrLink")}</a>}
           </div>
         )}
 
         {/* Step 3 — proves itself. No "test" button to misinterpret: the panel
             simply turns green when a real message arrives. */}
         <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] px-3.5 py-2.5">
-          <span className="text-[12.5px] font-extrabold text-[var(--ink)]">Step 3 —</span>
+          <span className="text-[12.5px] font-extrabold text-[var(--ink)]">{t("p8em.emMbStep3")}</span>
           {live
-            ? <span data-ui="mailbox-live" className="text-[12.5px] font-extrabold text-[#127a3e]">✓ working — your emails are arriving here</span>
-            : <span className="text-[12.5px] text-[var(--ink-2)]">waiting for your first email… this page updates by itself. Not sure it worked? Send yourself an email from another account.</span>}
+            ? <span data-ui="mailbox-live" className="text-[12.5px] font-extrabold text-[#127a3e]">{t("p8em.emMbWorking")}</span>
+            : <span className="text-[12.5px] text-[var(--ink-2)]">{t("p8em.emMbWaiting")}</span>}
         </div>
 
         <div className="mt-2.5 text-[11.5px] leading-relaxed text-[var(--ink-3)]">
-          <b>Good to know:</b> only email you <b>receive</b>{" "}appears here — messages you send from your
-          own inbox won&rsquo;t. Replies you send from ActivityOS are saved here automatically.
+          <RichB text={t("p8em.emMbGood")} />
         </div>
 
         {/* Settings is the panel's permanent home, so it owns the on/off switch
@@ -525,9 +528,9 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
         {context === "settings" && (
           <div className="mt-2.5 text-[11.5px] text-[var(--ink-3)]">
             {dismissed ? (
-              <>Hidden from your Inbox. <button type="button" onClick={() => setDismissed(false)} className="font-bold text-[#1d3a8f] underline">Show it there again</button></>
+              <>{t("p8em.emMbHidden")} <button type="button" onClick={() => setDismissed(false)} className="font-bold text-[#1d3a8f] underline">{t("p8em.emMbShowAgain")}</button></>
             ) : (
-              <button type="button" onClick={() => setDismissed(true)} className="font-bold text-[#1d3a8f] underline">Hide this from my Inbox</button>
+              <button type="button" onClick={() => setDismissed(true)} className="font-bold text-[#1d3a8f] underline">{t("p8em.emMbHideFromInbox")}</button>
             )}
           </div>
         )}
@@ -560,6 +563,7 @@ function linkify(text: string) {
 }
 
 function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, history, locations, messages, scheduled, onRefresh, seedMail }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; onEnquiry: (m: Mail, locations: string[]) => void; history: Sent[] | null; locations: string[]; messages: ServerMail[] | null; scheduled: Scheduled[] | null; onRefresh: () => void; seedMail?: string | null }) {
+  const { t, locale } = useI18n();
   const [enqFor, setEnqFor] = useState<Mail | null>(null);
   const [enqLocs, setEnqLocs] = useState<string[]>([]);
   // Server messages, patched optimistically — the realtime refresh reconciles.
@@ -608,16 +612,16 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
   const restore = (m: Mail) => { patch(m.id, { folder: "inbox" }); persist(m.id, { folder: "inbox", snoozedUntil: null }); setOpen(null); };
   // First delete → Trash (recoverable). Deleting from Trash removes it for good.
   const del = (m: Mail) => { if ((m.folder ?? "inbox") === "trash") { drop(m.id); if (isMsg(m.id)) void api(`/api/emails/messages/${m.id}`, { method: "DELETE" }).catch(() => onRefresh()); setOpen(null); } else move(m, "trash"); };
-  const cancelScheduled = (m: Mail) => { if (!m.schedId || !confirm(`Cancel the scheduled send "${m.subject}"?`)) return; void api(`/api/emails/scheduled/${m.schedId}`, { method: "DELETE" }).then(() => onRefresh()).catch(() => onRefresh()); setOpen(null); };
+  const cancelScheduled = (m: Mail) => { if (!m.schedId || !confirm(t("p8em.emCancelSchedConfirm", { subject: m.subject }))) return; void api(`/api/emails/scheduled/${m.schedId}`, { method: "DELETE" }).then(() => onRefresh()).catch(() => onRefresh()); setOpen(null); };
   const reply = (m: Mail) => { setOpen(null); onReply(m); };
   const forward = (m: Mail) => { setOpen(null); onForward(m); };
   const markUnread = (m: Mail) => { patch(m.id, { unread: true }); persist(m.id, { unread: true }); setOpen(null); };
   const quickReply = (m: Mail, text: string) => { setOpen(null); onQuickReply(m, text); };
 
   // Real sent history shows in the Sent folder as mail rows.
-  const sentMail: Mail[] = (history ?? []).map((h) => ({ id: `sent-${h.id}`, from: "You", subject: h.subject, preview: h.audience === "one" ? "Sent to 1 address" : `Sent to ${h.recipientCount} families`, time: when(h.createdAt), folder: "sent" }));
+  const sentMail: Mail[] = (history ?? []).map((h) => ({ id: `sent-${h.id}`, from: t("p8em.emYou"), subject: h.subject, preview: h.audience === "one" ? t("p8em.emSentTo1") : t("p8em.emSentToN", { n: h.recipientCount }), time: when(h.createdAt), folder: "sent" }));
   // The server-side scheduled queue shows in Scheduled, cancellable until it fires.
-  const schedMail: Mail[] = (scheduled ?? []).filter((s) => s.status === "scheduled").map((s) => ({ id: `sch-${s.id}`, schedId: s.id, from: "You", subject: s.subject, preview: `Sends ${whenSched(s.sendAt)} · to ${s.recipientCount} recipient${s.recipientCount === 1 ? "" : "s"}`, body: s.body, time: whenSched(s.sendAt), folder: "scheduled" }));
+  const schedMail: Mail[] = (scheduled ?? []).filter((s) => s.status === "scheduled").map((s) => ({ id: `sch-${s.id}`, schedId: s.id, from: t("p8em.emYou"), subject: s.subject, preview: t("p8em.emSendsPreview", { when: whenSched(s.sendAt), n: s.recipientCount }), body: s.body, time: whenSched(s.sendAt), folder: "scheduled" }));
   const pool = folder === "sent" ? sentMail : folder === "scheduled" ? schedMail : items;
   const inFolder = (m: Mail) => {
     if (folder === "all") return m.folder !== "spam" && m.folder !== "trash";
@@ -656,20 +660,20 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative min-w-[240px] flex-1">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search mail · try from: subject: label: is:unread has:attachment" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p8em.emSearchMailPh")} className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />
         </div>
-        {([["cozy", "Cozy"], ["compact", "Compact"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setDensity(k)} className="rounded-full px-4 py-2 text-[13px] font-bold" style={density === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)", background: "#fff" }}>{l}</button>)}
+        {([["cozy", t("p8em.emCozy")], ["compact", t("p8em.emCompact")]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setDensity(k)} className="rounded-full px-4 py-2 text-[13px] font-bold" style={density === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)", background: "#fff" }}>{l}</button>)}
       </div>
       {/* min-w-0 on BOTH columns: a grid track defaults to a min-content
           floor, so one wide descendant (a long address, a nowrap row) pushes
           the whole grid past the viewport and the Inbox scrolls sideways. */}
       <div className="grid gap-3 md:grid-cols-[210px_1fr]">
         <div className="min-w-0">
-          <button type="button" onClick={onCompose} className="mb-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white shadow" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>✎ Compose</button>
+          <button type="button" onClick={onCompose} className="mb-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white shadow" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{t("p8em.emCompose")}</button>
           <div className="flex flex-col">
-            {FOLDERS.map(([k, label]) => { const n = count(k); return (
+            {FOLDERS.map(([k]) => { const n = count(k); return (
               <button key={k} type="button" onClick={() => setFolder(k)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-start text-[13px] font-semibold" style={folder === k ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 800 } : { color: "var(--ink-2)" }}>
-                <span className="flex-1">{label}</span>{n ? <span className="rounded-full bg-[var(--panel)] px-1.5 text-[11px] font-bold text-[var(--ink-2)]">{n}</span> : null}
+                <span className="flex-1">{t("p8em.emFolder_" + k)}</span>{n ? <span className="rounded-full bg-[var(--panel)] px-1.5 text-[11px] font-bold text-[var(--ink-2)]">{n}</span> : null}
               </button>
             ); })}
           </div>
@@ -678,36 +682,36 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
         <MailboxSetup />
         <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
           <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2">
-            {([["all", "All"], ["unread", "Unread"], ["starred", "Starred"], ["files", "Has files"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setFilter(k)} className="rounded-full px-3 py-1 text-[12.5px] font-bold" style={filter === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)" }}>{l}</button>)}
-            <span className="ms-auto text-[12px] text-[var(--ink-3)]">{list.length ? `1–${list.length} of ${list.length}` : "0"}</span>
+            {([["all", t("p8em.cAll")], ["unread", t("p8em.emUnread")], ["starred", t("p8em.emFolder_starred")], ["files", t("p8em.emHasFiles")]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setFilter(k)} className="rounded-full px-3 py-1 text-[12.5px] font-bold" style={filter === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)" }}>{l}</button>)}
+            <span className="ms-auto text-[12px] text-[var(--ink-3)]">{list.length ? t("p8em.emRange", { n: list.length }) : "0"}</span>
           </div>
-          {list.length === 0 ? <div className="px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">{folder === "inbox" && !items.length ? "No mail yet. Email sent to your connected address lands here — sends and replies still work from Compose." : "Nothing here."}</div>
+          {list.length === 0 ? <div className="px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">{folder === "inbox" && !items.length ? t("p8em.emNoMail") : t("p8em.emNothingHere")}</div>
           : list.map((m) => (
             <div key={m.id} className={`flex w-full items-center gap-3 border-b border-[var(--line)] px-3 last:border-0 hover:bg-[#f7faff] ${pad}`} style={m.unread ? { background: "#f2f7ff" } : undefined}>
               <span className="flex-none" style={{ width: 6 }}>{m.unread && <span className="block h-2 w-2 rounded-full" style={{ background: "#2f6bd8" }} />}</span>
-              <button type="button" onClick={() => star(m)} className="flex-none text-[15px]" style={{ color: m.starred ? "#f4b400" : "var(--ink-3)" }} aria-label={m.starred ? "Unstar" : "Star"}>{m.starred ? "★" : "☆"}</button>
+              <button type="button" onClick={() => star(m)} className="flex-none text-[15px]" style={{ color: m.starred ? "#f4b400" : "var(--ink-3)" }} aria-label={m.starred ? t("p8em.emUnstar") : t("p8em.emStar")}>{m.starred ? "★" : "☆"}</button>
               <button type="button" onClick={() => openMail(m)} className="flex min-w-0 flex-1 items-center gap-3 text-start">
                 <span className={`w-[140px] flex-none truncate text-[13.5px] ${m.unread ? "font-extrabold text-[var(--ink)]" : "font-normal text-[var(--ink-2)]"}`}>{m.from}{m.thread && <span className="text-[var(--ink-3)]"> »</span>}</span>
                 <span className="min-w-0 flex-1 truncate text-[13.5px]"><span className={m.unread ? "font-extrabold text-[var(--ink)]" : "font-normal text-[var(--ink-2)]"}>{m.subject}</span> <span className="text-[var(--ink-3)]">— {m.preview}</span></span>
-                {m.labels?.map((l) => <span key={l} className="flex-none rounded-md px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}
+                {m.labels?.map((l) => <span key={l} className="flex-none rounded-md px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{t("p8em.emLabel_" + l)}</span>)}
                 {m.attachment && <span className="flex-none text-[13px] text-[var(--ink-3)]" title={m.attachment}>📎</span>}
                 <span className="flex-none text-[12px] font-semibold text-[var(--ink-3)]">{m.time}</span>
               </button>
               {folder === "sent" ? null : folder === "scheduled" ? (
-                <button type="button" onClick={() => cancelScheduled(m)} className="flex-none rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)] hover:border-[#e2b4b8] hover:text-[#c02636]" title="Cancel this scheduled send">✕ Cancel</button>
+                <button type="button" onClick={() => cancelScheduled(m)} className="flex-none rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)] hover:border-[#e2b4b8] hover:text-[#c02636]" title={t("p8em.emCancelSchedTip")}>{t("p8em.emCancelX")}</button>
               ) : restorable ? <>
-                <button type="button" onClick={() => restore(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]" title="Move to Inbox">↩</button>
-                <button type="button" onClick={() => del(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#c02636]" title={folder === "trash" ? "Delete forever" : "Move to Trash"}>🗑</button>
+                <button type="button" onClick={() => restore(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]" title={t("p8em.emMoveInbox")}>↩</button>
+                <button type="button" onClick={() => del(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#c02636]" title={folder === "trash" ? t("p8em.emDeleteForever") : t("p8em.emMoveTrash")}>🗑</button>
               </> : <>
-                <button type="button" onClick={() => archive(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[var(--ink)]" title="Archive">🗄</button>
-                <button type="button" onClick={() => del(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#c02636]" title="Move to Trash">🗑</button>
+                <button type="button" onClick={() => archive(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[var(--ink)]" title={t("p8em.emFolder_archive")}>🗄</button>
+                <button type="button" onClick={() => del(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#c02636]" title={t("p8em.emMoveTrash")}>🗑</button>
               </>}
             </div>
           ))}
         </div>
         </div>
       </div>
-      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Star, read, folders, snooze and delete are saved to your account. Sent shows your real send history; Scheduled shows queued sends you can still cancel.</div>
+      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">{t("p8em.emInboxFoot")}</div>
       {open && (() => { const o = open; const initials = o.from.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
         const toolBtn = "flex-none rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[#2f5fd0] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#2f6bd8] hover:text-[#2f5fd0]";
         return (
@@ -719,48 +723,48 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
                 <span className="text-[19px] font-extrabold leading-snug" style={{ fontFamily: "var(--ff-display)" }}>{o.subject}</span>
                 <button type="button" onClick={() => setOpen(null)} className="ms-auto flex h-7 w-7 flex-none items-center justify-center rounded-full text-[16px] text-white/85 hover:bg-white/20">×</button>
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">{o.labels?.map((l) => <span key={l} className="rounded-md px-2 py-0.5 text-[11px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}{o.tag && <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold text-white/90">🏷 {o.tag}</span>}</div>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">{o.labels?.map((l) => <span key={l} className="rounded-md px-2 py-0.5 text-[11px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{t("p8em.emLabel_" + l)}</span>)}{o.tag && <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold text-white/90">🏷 {o.tag}</span>}</div>
             </div>
             {/* toolbar — file/flag actions only exist for real stored messages */}
             <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] bg-[#f5f8fd] px-4 py-2.5">
-              <button type="button" onClick={() => setOpen(null)} className={toolBtn}>← Back</button>
-              {o.folder === "scheduled" && <button type="button" onClick={() => cancelScheduled(o)} className="flex-none rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[#2f5fd0] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#C81E5E]">✕ Cancel send</button>}
+              <button type="button" onClick={() => setOpen(null)} className={toolBtn}>{t("p8em.cBack")}</button>
+              {o.folder === "scheduled" && <button type="button" onClick={() => cancelScheduled(o)} className="flex-none rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[#2f5fd0] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#C81E5E]">{t("p8em.emCancelSend")}</button>}
               {isMsg(o.id) && <>
                 {o.folder && o.folder !== "inbox"
-                  ? <button type="button" onClick={() => restore(o)} className={toolBtn}>↩ Move to Inbox</button>
-                  : <button type="button" onClick={() => archive(o)} className={toolBtn}>🗄 Archive</button>}
-                <button type="button" onClick={() => snooze(o)} className={toolBtn} title="Hide it until later — it comes back tomorrow morning">⏰ Snooze</button>
-                <button type="button" onClick={() => markUnread(o)} className={toolBtn}>✉ Unread</button>
-                <button type="button" onClick={() => spam(o)} className={toolBtn}>⊘ Spam</button>
-                <button type="button" onClick={() => del(o)} className="flex-none rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[#2f5fd0] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#C81E5E]">🗑 {o.folder === "trash" ? "Delete forever" : "Delete"}</button>
+                  ? <button type="button" onClick={() => restore(o)} className={toolBtn}>{t("p8em.emMoveInboxBtn")}</button>
+                  : <button type="button" onClick={() => archive(o)} className={toolBtn}>{t("p8em.emArchiveBtn")}</button>}
+                <button type="button" onClick={() => snooze(o)} className={toolBtn} title={t("p8em.emSnoozeTip")}>{t("p8em.emSnooze")}</button>
+                <button type="button" onClick={() => markUnread(o)} className={toolBtn}>{t("p8em.emUnreadBtn")}</button>
+                <button type="button" onClick={() => spam(o)} className={toolBtn}>{t("p8em.emSpamBtn")}</button>
+                <button type="button" onClick={() => del(o)} className="flex-none rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[#2f5fd0] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#C81E5E]">{o.folder === "trash" ? "🗑 " + t("p8em.emDeleteForever") : t("p8em.emDeleteBtn")}</button>
               </>}
-              <button type="button" onClick={() => setShowContact((v) => !v)} className={`${toolBtn} ms-auto`} title="Show this sender's contact card">◐ Contact</button>
+              <button type="button" onClick={() => setShowContact((v) => !v)} className={`${toolBtn} ms-auto`} title={t("p8em.emContactTip")}>{t("p8em.emContactBtn")}</button>
             </div>
             {/* Reply / Forward / Mark as enquiry — also at the top so they're
                 reachable without scrolling past a long message. */}
             {isMsg(o.id) && <div className="flex flex-wrap gap-2 border-b border-[var(--line)] px-6 py-3">
-              <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(47,107,216,.5)]" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>↩ Reply</button>
-              {(o.cc?.length ?? 0) > 0 && <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↩ Reply all</button>}
-              <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↪ Forward</button>
-              <button type="button" onClick={() => { setEnqLocs([]); setEnqFor(o); }} className="ms-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title="Add this sender to your New enquiries list">➕ Mark as enquiry</button>
+              <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(47,107,216,.5)]" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{t("p8em.emReply")}</button>
+              {(o.cc?.length ?? 0) > 0 && <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">{t("p8em.emReplyAll")}</button>}
+              <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">{t("p8em.emForward")}</button>
+              <button type="button" onClick={() => { setEnqLocs([]); setEnqFor(o); }} className="ms-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title={t("p8em.emMarkEnquiryTip")}>{t("p8em.emMarkEnquiry")}</button>
             </div>}
             {/* message */}
             <div className="px-6 py-5">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full text-[13px] font-extrabold text-white shadow-[0_2px_6px_rgba(47,107,216,.35)]" style={{ background: "linear-gradient(135deg,#3f78d8,#16306e)" }}>{initials}</span>
-                <div className="min-w-0 flex-1"><div className="text-[14.5px] font-extrabold text-[var(--ink)]">{o.from}</div><div className="text-[12.5px] text-[var(--ink-3)]">{o.fromEmail}{o.to ? ` · to ${o.to}` : ""}{o.cc?.length ? `, +${o.cc.length}` : ""}</div></div>
+                <div className="min-w-0 flex-1"><div className="text-[14.5px] font-extrabold text-[var(--ink)]">{o.from}</div><div className="text-[12.5px] text-[var(--ink-3)]">{o.fromEmail}{o.to ? t("p8em.emToAddr", { to: o.to }) : ""}{o.cc?.length ? `, +${o.cc.length}` : ""}</div></div>
                 <span className="flex-none text-[12.5px] font-semibold text-[var(--ink-3)]">{o.time}</span>
               </div>
-              {showContact && <div className="mt-3 rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] p-3 text-[12.5px]"><div className="font-extrabold text-[#1d3a8f]">{o.from}</div><div className="text-[var(--ink-3)]">{o.fromEmail}</div>{o.tag && <div className="mt-1 text-[var(--ink-2)]">List: <b>{o.tag}</b></div>}<div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Full contact history opens in the CRM once linked (backend).</div></div>}
+              {showContact && <div className="mt-3 rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] p-3 text-[12.5px]"><div className="font-extrabold text-[#1d3a8f]">{o.from}</div><div className="text-[var(--ink-3)]">{o.fromEmail}</div>{o.tag && <div className="mt-1 text-[var(--ink-2)]"><RichB text={t("p8em.emListLabel", { tag: o.tag })} /></div>}<div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{t("p8em.emContactHistory")}</div></div>}
               <p className="mt-4 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-[var(--ink-2)]">{linkify(o.body ?? o.preview)}</p>
               {o.attachment && <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">📎 {o.attachment}{o.attachmentSize && <span className="font-normal text-[var(--ink-3)]">{o.attachmentSize}</span>}</div>}
             </div>
-            {o.quickReplies?.length ? <div className="border-t border-[var(--line)] bg-[#E8EEFD] px-6 py-3"><div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Quick replies</div><div className="flex flex-wrap gap-2">{o.quickReplies.map((qr) => <button key={qr} type="button" onClick={() => quickReply(o, qr)} className="rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#2f5fd0] transition-colors hover:border-[#2f6bd8] hover:bg-[#E8EEFD] hover:text-[#2f5fd0]">{qr}</button>)}</div></div> : null}
+            {o.quickReplies?.length ? <div className="border-t border-[var(--line)] bg-[#E8EEFD] px-6 py-3"><div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.emQuickReplies")}</div><div className="flex flex-wrap gap-2">{o.quickReplies.map((qr) => <button key={qr} type="button" onClick={() => quickReply(o, qr)} className="rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#2f5fd0] transition-colors hover:border-[#2f6bd8] hover:bg-[#E8EEFD] hover:text-[#2f5fd0]">{qr}</button>)}</div></div> : null}
             {isMsg(o.id) && <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-6 py-3.5">
-              <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(47,107,216,.5)]" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>↩ Reply</button>
-              {(o.cc?.length ?? 0) > 0 && <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↩ Reply all</button>}
-              <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↪ Forward</button>
-              <button type="button" onClick={() => { setEnqLocs([]); setEnqFor(o); }} className="ms-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title="Add this sender to your New enquiries list">➕ Mark as enquiry</button>
+              <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(47,107,216,.5)]" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{t("p8em.emReply")}</button>
+              {(o.cc?.length ?? 0) > 0 && <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">{t("p8em.emReplyAll")}</button>}
+              <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">{t("p8em.emForward")}</button>
+              <button type="button" onClick={() => { setEnqLocs([]); setEnqFor(o); }} className="ms-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title={t("p8em.emMarkEnquiryTip")}>{t("p8em.emMarkEnquiry")}</button>
             </div>}
           </div>
         </div>
@@ -769,23 +773,23 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
         <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/40 p-4" onClick={() => setEnqFor(null)}>
           <div className="w-full max-w-md overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl ring-1 ring-[#2f5fd0]/10" onClick={(e) => e.stopPropagation()}>
             <div className="rounded-t-2xl px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
-              <div className="text-[15px] font-extrabold">Mark as enquiry</div>
-              <div className="text-[12.5px] text-white/80">{enqFor.from} — which location are they interested in?</div>
+              <div className="text-[15px] font-extrabold">{t("p8em.emEnqTitle")}</div>
+              <div className="text-[12.5px] text-white/80">{t("p8em.emEnqWhich", { from: enqFor.from })}</div>
             </div>
             <div className="p-5">
-              <FieldLabel>Location{locations.length > 0 && <span className="ms-1 font-normal normal-case tracking-normal text-[var(--ink-3)]">— pick one or more</span>}</FieldLabel>
+              <FieldLabel>{t("p8em.nfLocation")}{locations.length > 0 && <span className="ms-1 font-normal normal-case tracking-normal text-[var(--ink-3)]">{t("p8em.emPickMore")}</span>}</FieldLabel>
               {locations.length === 0
-                ? <p className="text-[12.5px] text-[var(--ink-3)]">No venues on file yet — they&apos;ll be added with no specific location.</p>
+                ? <p className="text-[12.5px] text-[var(--ink-3)]">{t("p8em.emEnqNoVenues")}</p>
                 : <div className="flex flex-wrap gap-2">
                     {locations.map((l) => { const on = enqLocs.includes(l); return (
                       <button key={l} type="button" onClick={() => setEnqLocs((xs) => xs.includes(l) ? xs.filter((x) => x !== l) : [...xs, l])} className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition ${on ? "bg-[#16306e] text-white shadow-sm" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{on ? "✓ " : ""}{l}</button>
                     ); })}
                   </div>}
-              <p className="mt-2.5 text-[11.5px] text-[var(--ink-3)]">{enqLocs.length === 0 ? "None selected — they’ll be added with no specific location." : `They’ll appear on ${enqLocs.length} location board${enqLocs.length === 1 ? "" : "s"}.`} Drops off automatically once they book.</p>
+              <p className="mt-2.5 text-[11.5px] text-[var(--ink-3)]">{enqLocs.length === 0 ? t("p8em.emEnqNone") : pickPlural(t, locale, "p8em.emEnqBoards", enqLocs.length)} {t("p8em.emDropsOff")}</p>
               <div className="mt-5 flex items-center gap-2">
-                {enqLocs.length > 0 && <button type="button" onClick={() => setEnqLocs([])} className="me-auto text-[12px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">Clear</button>}
-                <button type="button" onClick={() => setEnqFor(null)} className="ms-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Cancel</button>
-                <button type="button" onClick={() => { onEnquiry(enqFor, enqLocs); setEnqFor(null); setOpen(null); }} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>➕ Add to enquiries</button>
+                {enqLocs.length > 0 && <button type="button" onClick={() => setEnqLocs([])} className="me-auto text-[12px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">{t("p8em.cClear")}</button>}
+                <button type="button" onClick={() => setEnqFor(null)} className="ms-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.cCancel")}</button>
+                <button type="button" onClick={() => { onEnquiry(enqFor, enqLocs); setEnqFor(null); setOpen(null); }} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>{t("p8em.emAddToEnquiries")}</button>
               </div>
             </div>
           </div>
@@ -835,8 +839,8 @@ function computeEnquiryAudiences(enquiries: EnquiryRec[], bookings: Booking[]): 
   const byLoc = new Map<string, Map<string, string>>(); const all = new Map<string, string>(); // email → name
   for (const e of active) { const em = e.email.toLowerCase(); const nm = e.name || em; all.set(em, nm); const loc = e.location || "No location"; (byLoc.get(loc) ?? byLoc.set(loc, new Map()).get(loc)!).set(em, nm); }
   const ppl = (m: Map<string, string>) => [...m].map(([email, name]) => ({ email, name }));
-  const out: Audience[] = [{ id: "enq-all", name: "New enquiries — all", count: all.size, emails: [...all.keys()], people: ppl(all), desc: "Emailed us · never booked" }];
-  for (const [loc, ems] of byLoc) out.push({ id: `enq-${loc}`, name: `New enquiries · ${loc}`, count: ems.size, emails: [...ems.keys()], people: ppl(ems), desc: `Enquired about ${loc} · never booked` });
+  const out: Audience[] = [{ id: "enq-all", name: tNow("p8em.emEnqAudAll"), count: all.size, emails: [...all.keys()], people: ppl(all), desc: tNow("p8em.emEnqDescAll") }];
+  for (const [loc, ems] of byLoc) out.push({ id: `enq-${loc}`, name: tNow("p8em.emEnqAudLoc", { loc: loc === "No location" ? tNow("p8em.emNoLocation") : loc }), count: ems.size, emails: [...ems.keys()], people: ppl(ems), desc: tNow("p8em.emEnqDescLoc", { loc: loc === "No location" ? tNow("p8em.emNoLocation") : loc }) });
   return out;
 }
 const STATUS_PILL: Record<CampStatus, { bg: string; fg: string; label: string }> = {
@@ -870,14 +874,15 @@ function resolveAudience(bookings: Booking[], f: AudFilter): { emails: string[];
   return { emails, count: emails.length };
 }
 function filterDesc(f: AudFilter): string {
+  const t = tNow;
   const b: string[] = [];
   if (f.location) b.push(f.location);
-  if (f.listingIds?.length) b.push(f.listingIds.length === 1 ? (f.listingTitles?.[0] || "a listing") : `${f.listingIds.length} listings`);
-  if (f.ageMin != null || f.ageMax != null) { const lo = f.ageMin ?? 0, hi = f.ageMax ?? 18; if (!(lo === 0 && hi === 18)) b.push(`ages ${lo}–${hi >= 18 ? "18+" : hi}`); }
-  if (f.from || f.to) { const w = f.dateType === "session" ? "attending" : f.dateType === "either" ? "booked/attending" : "booked"; b.push(`${w} ${f.from || "…"}–${f.to || "…"}`); }
-  if (f.when === "upcoming") b.push("upcoming sessions"); if (f.when === "past") b.push("past attendees");
-  if (f.repeatOnly) b.push("repeat customers");
-  return b.length ? b.join(" · ") : "All customers";
+  if (f.listingIds?.length) b.push(f.listingIds.length === 1 ? (f.listingTitles?.[0] || t("p8em.emFd_aListing")) : t("p8em.emFd_nListings", { n: f.listingIds.length }));
+  if (f.ageMin != null || f.ageMax != null) { const lo = f.ageMin ?? 0, hi = f.ageMax ?? 18; if (!(lo === 0 && hi === 18)) b.push(t("p8em.emFd_ages", { lo, hi: hi >= 18 ? "18+" : hi })); }
+  if (f.from || f.to) { const w = f.dateType === "session" ? t("p8em.emFd_attending") : f.dateType === "either" ? t("p8em.emFd_either") : t("p8em.emFd_booked"); b.push(t("p8em.emFd_range", { w, from: f.from || "…", to: f.to || "…" })); }
+  if (f.when === "upcoming") b.push(t("p8em.emFd_upcoming")); if (f.when === "past") b.push(t("p8em.emFd_past"));
+  if (f.repeatOnly) b.push(t("p8em.emFd_repeat"));
+  return b.length ? b.join(" · ") : t("p8em.emFd_all");
 }
 
 function StatCard({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: string }) {
@@ -888,6 +893,7 @@ function FunnelBar({ label, n, max, color }: { label: string; n: number; max: nu
 }
 
 function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: { bookings: Booking[]; listings: { id: string; title: string; location?: string; runFrom?: string; runTo?: string }[]; locations: string[]; onCancel: () => void; onCreate: (a: Audience, useNow: boolean) => void }) {
+  const t = useT();
   const [f, setF] = useState<AudFilter>({});
   const [name, setName] = useState("");
   const seq = useRef(0);
@@ -898,7 +904,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   const runLabel = (l: { id: string; runFrom?: string; runTo?: string }) => {
     if (l.runFrom || l.runTo) return `${fmtD(l.runFrom) || "…"} – ${fmtD(l.runTo) || "…"}`;
     const ds = bookings.filter((b) => b.listingId === l.id).map((b) => sessionDate(b)).filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime());
-    return ds.length ? `${ds[0].toLocaleDateString(dl(), { day: "numeric", month: "short" })} – ${ds[ds.length - 1].toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}` : "dates n/a";
+    return ds.length ? `${ds[0].toLocaleDateString(dl(), { day: "numeric", month: "short" })} – ${ds[ds.length - 1].toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}` : t("p8em.emDatesNA");
   };
   const AGES = Array.from({ length: 19 }, (_, i) => i); // 0..18 (18 = 18+)
   const lo = f.ageMin ?? 0, hi = f.ageMax ?? 18;
@@ -911,52 +917,52 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
       <div className="w-full max-w-xl rounded-2xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 border-b border-[var(--line)] px-5 py-3.5">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f9d58] text-white">●</span>
-          <div><div className="text-[16px] font-extrabold text-[var(--ink)]">Build an audience</div><div className="text-[12px] text-[var(--ink-3)]">Filter your customers — the count updates live.</div></div>
+          <div><div className="text-[16px] font-extrabold text-[var(--ink)]">{t("p8em.emAudBuild")}</div><div className="text-[12px] text-[var(--ink-3)]">{t("p8em.emAudFilterSub")}</div></div>
           <button type="button" onClick={onCancel} className="ms-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button>
         </div>
         <div className="max-h-[62vh] space-y-3.5 overflow-y-auto p-5">
-          <div><FieldLabel>Location</FieldLabel><Select value={f.location ?? ""} onChange={(e) => set({ location: e.target.value || undefined, listingIds: [], listingTitles: [] })} className="w-full"><option value="">Any location</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
+          <div><FieldLabel>{t("p8em.nfLocation")}</FieldLabel><Select value={f.location ?? ""} onChange={(e) => set({ location: e.target.value || undefined, listingIds: [], listingTitles: [] })} className="w-full"><option value="">{t("p8em.emAnyLocation")}</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
           <div>
-            <div className="mb-1 flex items-center justify-between"><FieldLabel>Listings — pick any (dates each ran)</FieldLabel>{listingsHere.length > 0 && <span className="flex gap-2 text-[11.5px] font-bold"><button type="button" onClick={() => set({ listingIds: listingsHere.map((l) => l.id), listingTitles: listingsHere.map((l) => l.title) })} className="text-[#1d3a8f]">Select all</button>{f.listingIds?.length ? <button type="button" onClick={() => set({ listingIds: [], listingTitles: [] })} className="text-[var(--ink-3)]">Clear</button> : null}</span>}</div>
+            <div className="mb-1 flex items-center justify-between"><FieldLabel>{t("p8em.emAudListings")}</FieldLabel>{listingsHere.length > 0 && <span className="flex gap-2 text-[11.5px] font-bold"><button type="button" onClick={() => set({ listingIds: listingsHere.map((l) => l.id), listingTitles: listingsHere.map((l) => l.title) })} className="text-[#1d3a8f]">{t("p8em.emSelectAll")}</button>{f.listingIds?.length ? <button type="button" onClick={() => set({ listingIds: [], listingTitles: [] })} className="text-[var(--ink-3)]">{t("p8em.cClear")}</button> : null}</span>}</div>
             <div className="flex flex-wrap gap-1.5">
-              {listingsHere.length === 0 ? <span className="text-[11.5px] text-[var(--ink-3)]">No listings{f.location ? ` in ${f.location}` : ""} yet.</span>
+              {listingsHere.length === 0 ? <span className="text-[11.5px] text-[var(--ink-3)]">{f.location ? t("p8em.emNoListingsIn", { loc: f.location }) : t("p8em.nfNoListings")}</span>
                 : listingsHere.map((l) => { const on = f.listingIds?.includes(l.id); return <button key={l.id} type="button" onClick={() => { const ids = new Set(f.listingIds ?? []); const titles = new Set(f.listingTitles ?? []); if (on) { ids.delete(l.id); titles.delete(l.title); } else { ids.add(l.id); titles.add(l.title); } set({ listingIds: [...ids], listingTitles: [...titles] }); }} className="rounded-lg border px-2.5 py-1.5 text-[12px] font-bold" style={on ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{l.title} <span className="font-normal text-[var(--ink-3)]">· {runLabel(l)}</span></button>; })}
             </div>
           </div>
           <div className="rounded-xl border border-[var(--line)] p-3">
-            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2"><FieldLabel>Date range</FieldLabel>{seg([["booked", "Booking made"], ["session", "Sessions attended"], ["either", "Either"]], f.dateType ?? "booked", (v) => set({ dateType: v as AudFilter["dateType"] }))}</div>
+            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2"><FieldLabel>{t("p8em.emDateRange")}</FieldLabel>{seg([["booked", t("p8em.emDt_booked")], ["session", t("p8em.emDt_session")], ["either", t("p8em.emDt_either")]], f.dateType ?? "booked", (v) => set({ dateType: v as AudFilter["dateType"] }))}</div>
             <div className="grid grid-cols-2 gap-2.5"><Input type="date" value={f.from ?? ""} onChange={(e) => set({ from: e.target.value })} className="w-full" /><Input type="date" value={f.to ?? ""} onChange={(e) => set({ to: e.target.value })} className="w-full" /></div>
-            <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">Whether these are the dates the booking was <b>made</b> or the dates the child <b>attended</b> — or match either.</p>
+            <p className="mt-1 text-[10.5px] text-[var(--ink-3)]"><RichB text={t("p8em.emDateRangeHint")} /></p>
           </div>
-          <div><FieldLabel>Age of child</FieldLabel>
+          <div><FieldLabel>{t("p8em.emAgeOfChild")}</FieldLabel>
             {(() => { const allAges = f.ageMin == null && f.ageMax == null; return (
               <div className="flex flex-wrap items-center gap-2">
-                <button type="button" onClick={() => set({ ageMin: undefined, ageMax: undefined })} className={`rounded-full px-3 py-1.5 text-[12px] font-bold transition ${allAges ? "bg-[#16306e] text-white shadow-sm" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>All ages (0–18+)</button>
-                <span className="text-[12.5px] text-[var(--ink-3)]">or pick a range:</span>
-                <span className="text-[12.5px] text-[var(--ink-2)]">From</span>
+                <button type="button" onClick={() => set({ ageMin: undefined, ageMax: undefined })} className={`rounded-full px-3 py-1.5 text-[12px] font-bold transition ${allAges ? "bg-[#16306e] text-white shadow-sm" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{t("p8em.emAllAges")}</button>
+                <span className="text-[12.5px] text-[var(--ink-3)]">{t("p8em.emOrPickRange")}</span>
+                <span className="text-[12.5px] text-[var(--ink-2)]">{t("p8em.emFrom")}</span>
                 <Select value={allAges ? "" : String(lo)} onChange={(e) => set({ ageMin: Number(e.target.value), ageMax: f.ageMax ?? 18 })} className="w-20">{allAges && <option value="">–</option>}{AGES.map((a) => <option key={a} value={a}>{a}</option>)}</Select>
-                <span className="text-[12.5px] text-[var(--ink-2)]">to</span>
+                <span className="text-[12.5px] text-[var(--ink-2)]">{t("p8em.emTo")}</span>
                 <Select value={allAges ? "" : String(hi)} onChange={(e) => set({ ageMin: f.ageMin ?? 0, ageMax: Number(e.target.value) })} className="w-20">{allAges && <option value="">–</option>}{AGES.map((a) => <option key={a} value={a}>{a === 18 ? "18+" : a}</option>)}</Select>
               </div>
             ); })()}
           </div>
           <div className="rounded-xl border border-[var(--line)] p-3">
-            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">More filters</div>
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.emMoreFilters")}</div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[12.5px] text-[var(--ink-2)]">Sessions</span>{seg([["any", "Any"], ["upcoming", "Upcoming"], ["past", "Past"]], f.when ?? "any", (v) => set({ when: v as AudFilter["when"] }))}
-              <label className="ms-2 flex items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={!!f.repeatOnly} onChange={(e) => set({ repeatOnly: e.target.checked })} /> Repeat customers only (2+)</label>
+              <span className="text-[12.5px] text-[var(--ink-2)]">{t("p8em.emSessions")}</span>{seg([["any", t("p8em.emAny")], ["upcoming", t("p8em.emUpcoming")], ["past", t("p8em.emPast")]], f.when ?? "any", (v) => set({ when: v as AudFilter["when"] }))}
+              <label className="ms-2 flex items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={!!f.repeatOnly} onChange={(e) => set({ repeatOnly: e.target.checked })} /> {t("p8em.emRepeatOnly")}</label>
             </div>
           </div>
           <div className="flex items-center gap-3 rounded-xl bg-[var(--panel)] p-3.5">
-            <div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Matching</div><div className="text-[30px] font-extrabold leading-none text-[#2f6bd8]" style={{ fontVariantNumeric: "tabular-nums" }}>{count}</div><div className="text-[10px] text-[var(--ink-3)]">customers</div></div>
+            <div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.emMatching")}</div><div className="text-[30px] font-extrabold leading-none text-[#2f6bd8]" style={{ fontVariantNumeric: "tabular-nums" }}>{count}</div><div className="text-[10px] text-[var(--ink-3)]">{t("p8em.emCustomers")}</div></div>
             <div className="text-[13px] font-semibold text-[var(--ink-2)]">{filterDesc(f)}</div>
           </div>
-          <div><FieldLabel>Audience name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="New audience" className="w-full" /></div>
+          <div><FieldLabel>{t("p8em.emAudName")}</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("p8em.emNewAudPh")} className="w-full" /></div>
         </div>
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-5 py-3">
-          <button type="button" onClick={() => onCreate(mk(), false)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>Create audience</button>
-          <button type="button" onClick={() => onCreate(mk(), true)} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Create &amp; use in campaign</button>
-          <button type="button" onClick={onCancel} className="ms-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-3)]">Cancel</button>
+          <button type="button" onClick={() => onCreate(mk(), false)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{t("p8em.emCreateAud")}</button>
+          <button type="button" onClick={() => onCreate(mk(), true)} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.emCreateUseAud")}</button>
+          <button type="button" onClick={onCancel} className="ms-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-3)]">{t("p8em.cCancel")}</button>
         </div>
       </div>
     </div>
@@ -964,6 +970,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
 }
 
 function NewCampaign({ audiences, templates, initialAudienceId, initialName, initialSubject, restrictEmails, restrictLabel, company, socials, onCancel, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; initialName?: string; initialSubject?: string; restrictEmails?: Set<string>; restrictLabel?: string; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string }, action: CampStatus) => void | Promise<void>; onRemovePerson?: (email: string) => void }) {
+  const { t, locale } = useI18n();
   const [name, setName] = useState(initialName ?? "");
   const [audIds, setAudIds] = useState<string[]>(initialAudienceId ? [initialAudienceId] : (audiences[0] ? [audiences[0].id] : []));
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
@@ -972,7 +979,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
   const [cdOn, setCdOn] = useState(false);   // add a big countdown clock to a worded email
   const [cdDate, setCdDate] = useState("");
   const [cdTime, setCdTime] = useState("");
-  const [cdHeading, setCdHeading] = useState("Hurry — offer ends soon");
+  const [cdHeading, setCdHeading] = useState(() => tNow("p8em.emHurry"));
   const [subject, setSubject] = useState(initialSubject ?? "");
   const [excludedEmails, setExcludedEmails] = useState<string[]>([]);
   const [showList, setShowList] = useState(false);
@@ -1015,40 +1022,40 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
   const [saveName, setSaveName] = useState("");
   const [chooseView, setChooseView] = useState(false);   // Content step: show just the two options (Worded / Design)
   const [savedDesigns, setSavedDesigns] = useState<SavedTemplate[]>(() => loadMyTemplates());
-  const STEPS = ["Name", "Audience", "Subject", "Content"];
+  const STEPS = [t("p8em.emStep_0"), t("p8em.emStep_1"), t("p8em.emStep_2"), t("p8em.emStep_3")];
   const lastStep = STEPS.length - 1;
   const nextDisabled = !!busy || (step === 1 && !primary);
   const submit = async (action: CampStatus) => {
-    if (!primary) { setSendErr("Pick an audience for this send first."); return; }
-    if (action === "scheduled" && !schedAt) { setSendErr("Pick a date & time to schedule the send."); return; }
+    if (!primary) { setSendErr(t("p8em.emPickAudFirst")); return; }
+    if (action === "scheduled" && !schedAt) { setSendErr(t("p8em.emPickWhen")); return; }
     const subj = subject.trim() || template?.subject || name.trim();
-    const baseName = selectedAuds.length > 1 ? `${primary.name} +${selectedAuds.length - 1} more` : primary.name;
-    const combined: Audience = { id: primary.id, name: restrictLabel ? `${baseName} · ${restrictLabel}` : baseName, count: included.length, emails: included.map((p) => p.email), desc: restrictLabel ? `${primary.desc} — who booked ${restrictLabel}` : primary.desc };
+    const baseName = selectedAuds.length > 1 ? t("p8em.emPlusMore", { name: primary.name, n: selectedAuds.length - 1 }) : primary.name;
+    const combined: Audience = { id: primary.id, name: restrictLabel ? `${baseName} · ${restrictLabel}` : baseName, count: included.length, emails: included.map((p) => p.email), desc: restrictLabel ? t("p8em.emWhoBookedPlain", { desc: primary.desc, label: restrictLabel }) : primary.desc };
     setSendErr(null); setBusy(action);
     try {
       const html = useDesign && design ? renderDesignHtml(design, company, nowMs) : (mode === "template" && wordedHasCountdown ? renderDesignHtml(wordedDesign(), company, nowMs) : undefined);
-      await onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html, body: useDesign && design ? renderDesignText(design) : (mode === "template" ? tmplBody.trim() || undefined : undefined), design: useDesign ? (design ?? undefined) : undefined, scheduledAt: action === "scheduled" ? schedAt : undefined }, action);
-      if (action === "sent") { if (useDesign) { setSaveName(name.trim() || subject.trim() || "My design"); setSentOk(true); } else onCancel(); }   // designed send → offer to save; worded → just close
-    } catch (e) { setSendErr(e instanceof Error ? e.message : "Couldn’t send — please try again."); }
+      await onSubmit({ name: name.trim() || subj || t("p8em.emUntitledCampaign"), audience: combined, template: mode === "template" ? template : undefined, subject: subj, html, body: useDesign && design ? renderDesignText(design) : (mode === "template" ? tmplBody.trim() || undefined : undefined), design: useDesign ? (design ?? undefined) : undefined, scheduledAt: action === "scheduled" ? schedAt : undefined }, action);
+      if (action === "sent") { if (useDesign) { setSaveName(name.trim() || subject.trim() || t("p8em.emMyDesign")); setSentOk(true); } else onCancel(); }   // designed send → offer to save; worded → just close
+    } catch (e) { setSendErr(e instanceof Error ? e.message : t("p8em.emSendFailed")); }
     finally { setBusy(null); }
   };
   const pickTemplate = (id: string) => { setTmplId(id); setTmplBody(templates.find((t) => t.id === id)?.body ?? ""); };
   const insertMerge = (token: string) => setTmplBody((b) => `${b}${b && !b.endsWith(" ") ? " " : ""}${token}`);
   const aiWrite = async () => {
-    const notes = window.prompt("What should this email say? A line or two — the writer turns it into a friendly email.");
+    const notes = window.prompt(t("p8em.emAiPrompt"));
     if (!notes?.trim()) return;
     setAiBusy(true); setSendErr(null);
     try { const r = await apiPost<{ title: string; body: string }>("/api/ai/compose", { kind: "announce", notes: notes.trim(), length: "medium" }); if (r.title && !subject.trim()) setSubject(r.title); if (r.body) setTmplBody((b) => (b.trim() ? `${b}\n\n${r.body}` : r.body)); }
-    catch (e) { setSendErr(e instanceof Error ? e.message : "The writer couldn’t draft that — try again."); }
+    catch (e) { setSendErr(e instanceof Error ? e.message : t("p8em.nfAiFail")); }
     finally { setAiBusy(false); }
   };
   // Reuse a previous campaign — pull its content across, then edit via the steps.
   // Reuse a previously-saved design — load it so it can be edited. Shared with the
   // designer's ⭐ My templates store, so a post-send save shows up in both places.
   const reuseSaved = (s: SavedTemplate) => { if (!name.trim()) setName(s.name ? `${s.name} (copy)` : ""); setMode("design"); setDesign({ templateId: "", accent: s.accent, blocks: s.blocks }); };
-  const saveCurrentDesign = () => { if (!design) return; const nm = saveName.trim() || "Saved design"; const item: SavedTemplate = { id: `sv-${nowMs}`, name: nm, accent: design.accent, blocks: design.blocks }; const next = [item, ...savedDesigns.filter((x) => x.name !== nm)]; setSavedDesigns(next); persistMyTemplates(next); };
+  const saveCurrentDesign = () => { if (!design) return; const nm = saveName.trim() || t("p8em.emSavedDesign"); const item: SavedTemplate = { id: `sv-${nowMs}`, name: nm, accent: design.accent, blocks: design.blocks }; const next = [item, ...savedDesigns.filter((x) => x.name !== nm)]; setSavedDesigns(next); persistMyTemplates(next); };
   // One-click countdown for the current design (templates don't include one) — adds a dated countdown so the clock shows.
-  const addCountdownToDesign = () => { const d = new Date(Date.now() + 14 * 86400000); const p = (n: number) => String(n).padStart(2, "0"); const dateStr = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; setDesign((dz) => { if (!dz) return dz; const idx = dz.blocks.findIndex((b) => b.t === "countdown"); if (idx >= 0) return { ...dz, blocks: dz.blocks.map((b, i) => (i === idx ? { ...b, date: b.date || dateStr, time: b.time || "18:00" } : b)) }; return { ...dz, blocks: [...dz.blocks, { t: "countdown", heading: "Hurry — offer ends soon", label: "", date: dateStr, time: "18:00" } as Block] }; }); };
+  const addCountdownToDesign = () => { const d = new Date(Date.now() + 14 * 86400000); const p = (n: number) => String(n).padStart(2, "0"); const dateStr = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; setDesign((dz) => { if (!dz) return dz; const idx = dz.blocks.findIndex((b) => b.t === "countdown"); if (idx >= 0) return { ...dz, blocks: dz.blocks.map((b, i) => (i === idx ? { ...b, date: b.date || dateStr, time: b.time || "18:00" } : b)) }; return { ...dz, blocks: [...dz.blocks, { t: "countdown", heading: t("p8em.emHurry"), label: "", date: dateStr, time: "18:00" } as Block] }; }); };
   // Same one-click default for a worded email — cdOn alone isn't enough to
   // show the clock (wordedHasCountdown also needs cdDate), so seed it here
   // rather than leaving cdOn true with no date, which would just show the
@@ -1072,8 +1079,8 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
         <style>{`.camp-scroll{overflow-y:scroll}.camp-scroll::-webkit-scrollbar{width:14px}.camp-scroll::-webkit-scrollbar-track{background:#e7ecf4;border-radius:8px}.camp-scroll::-webkit-scrollbar-thumb{background:#8aa0c6;border-radius:8px;border:3px solid #e7ecf4;min-height:44px}.camp-scroll::-webkit-scrollbar-thumb:hover{background:#5f7cab}`}</style>
         <div className="rounded-t-2xl px-6 py-4 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
           <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0"><div className="text-[19px] font-extrabold">New campaign</div><div className="truncate text-[12.5px] text-white/80">{primary ? <>To <b className="font-extrabold text-white">{primary.name}</b>{selectedAuds.length > 1 ? ` +${selectedAuds.length - 1} more` : ""}{restrictLabel ? <> who booked <b className="font-extrabold text-white">{restrictLabel}</b></> : ""} · {included.length} recipient{included.length === 1 ? "" : "s"}</> : "Branded-domain send with tracking + unsubscribe."}</div></div>
-            <div className="flex flex-none items-center gap-3"><span className="text-[12px] font-bold text-white/85">Step {step + 1} of {STEPS.length}</span><button type="button" onClick={onCancel} disabled={!!busy} title="Cancel" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px] font-bold hover:bg-white/30 disabled:opacity-40">×</button></div>
+            <div className="min-w-0"><div className="text-[19px] font-extrabold">{t("p8em.emNewCampaign")}</div><div className="truncate text-[12.5px] text-white/80">{primary ? <RichB className="font-extrabold text-white" text={t("p8em.emHdrTo", { name: audTitle(t, primary), more: selectedAuds.length > 1 ? t("p8em.emHdrMore", { n: selectedAuds.length - 1 }) : "", who: restrictLabel ? t("p8em.emHdrWho", { label: restrictLabel }) : "", n: included.length })} /> : t("p8em.emHdrFallback")}</div></div>
+            <div className="flex flex-none items-center gap-3"><span className="text-[12px] font-bold text-white/85">{t("p8em.emStepOf", { a: step + 1, b: STEPS.length })}</span><button type="button" onClick={onCancel} disabled={!!busy} title={t("p8em.cCancel")} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px] font-bold hover:bg-white/30 disabled:opacity-40">×</button></div>
           </div>
           <div className="mt-3 flex items-center gap-1.5">
             {STEPS.map((s, i) => <button key={s} type="button" onClick={() => setStep(i)} title={s} className="flex-1"><div className={`h-1.5 rounded-full transition ${i <= step ? "bg-[var(--surface)]" : "bg-white/25"}`} /></button>)}
@@ -1082,98 +1089,98 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
         <div className="camp-scroll max-h-[64vh] bg-[#f4f7fc] px-8 py-6">
           <div className="mx-auto flex min-h-[210px] max-w-2xl flex-col">
             {step === 0 && <div className="space-y-5">
-              <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Let&apos;s name your campaign</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Just for you — recipients never see this. Pick something you&apos;ll recognise later.</p></div>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full rounded-2xl border-2 border-[var(--line)] bg-[var(--surface)] px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#2f5fd0]" />
+              <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">{t("p8em.emNameTitle")}</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">{t("p8em.emNameSub")}</p></div>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("p8em.emNamePh")} className="w-full rounded-2xl border-2 border-[var(--line)] bg-[var(--surface)] px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#2f5fd0]" />
             </div>}
             {step === 1 && <div className="space-y-5">
-              <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Who&apos;s it going to?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Combine any audiences — recipients are deduped so no one is emailed twice.</p></div>
-              <div className="flex flex-wrap gap-2">{selectedAuds.map((a) => <span key={a.id} className="inline-flex items-center gap-2 rounded-full bg-[#eef4fd] px-4 py-2 text-[14px] font-bold text-[#1d3a8f]">{a.name} <span className="rounded-full bg-white/70 px-1.5 text-[12px]">{a.count}</span>{selectedAuds.length > 1 && <button type="button" onClick={() => removeAud(a.id)} className="text-[#1d3a8f]/50 hover:text-[#c02636]" title="Remove from this send">✕</button>}</span>)}</div>
-              {availableToAdd.length > 0 && <Select value="" onChange={(e) => addAud(e.target.value)} className="w-full max-w-md"><option value="">＋ Add another audience…</option>{segG.length > 0 && <optgroup label="🎯 Groups">{segG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}{enqG.length > 0 && <optgroup label="📩 Enquiries">{enqG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}{cusG.length > 0 && <optgroup label="⭐ Your audiences">{cusG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}</Select>}
-              <div className="rounded-xl border border-[#E4E9F5] bg-[var(--surface)] px-4 py-3 text-[13.5px] font-semibold text-[#2f5fd0] shadow-sm">📤 This send reaches <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""}.</div>
+              <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">{t("p8em.emWhoTitle")}</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">{t("p8em.emWhoSub")}</p></div>
+              <div className="flex flex-wrap gap-2">{selectedAuds.map((a) => <span key={a.id} className="inline-flex items-center gap-2 rounded-full bg-[#eef4fd] px-4 py-2 text-[14px] font-bold text-[#1d3a8f]">{audTitle(t, a)} <span className="rounded-full bg-white/70 px-1.5 text-[12px]">{a.count}</span>{selectedAuds.length > 1 && <button type="button" onClick={() => removeAud(a.id)} className="text-[#1d3a8f]/50 hover:text-[#c02636]" title={t("p8em.emRemoveFromSend")}>✕</button>}</span>)}</div>
+              {availableToAdd.length > 0 && <Select value="" onChange={(e) => addAud(e.target.value)} className="w-full max-w-md"><option value="">{t("p8em.emAddAnotherAud")}</option>{segG.length > 0 && <optgroup label={t("p8em.emGrpGroups")}>{segG.map((a) => <option key={a.id} value={a.id}>{audTitle(t, a)} ({a.count})</option>)}</optgroup>}{enqG.length > 0 && <optgroup label={t("p8em.emGrpEnquiries")}>{enqG.map((a) => <option key={a.id} value={a.id}>{audTitle(t, a)} ({a.count})</option>)}</optgroup>}{cusG.length > 0 && <optgroup label={t("p8em.emGrpYourAud")}>{cusG.map((a) => <option key={a.id} value={a.id}>{audTitle(t, a)} ({a.count})</option>)}</optgroup>}</Select>}
+              <div className="rounded-xl border border-[#E4E9F5] bg-[var(--surface)] px-4 py-3 text-[13.5px] font-semibold text-[#2f5fd0] shadow-sm"><RichB text={t("p8em.emReaches", { n: included.length, skipped: excluded.size > 0 ? t("p8em.emSkipped", { n: excluded.size }) : "" })} /></div>
             </div>}
             {step === 2 && <div className="space-y-5">
-              <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">What&apos;s the subject line?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">The first thing people read in their inbox — make it count.</p></div>
-              <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. ☀️ August camp places are open!" className="w-full rounded-2xl border-2 border-[var(--line)] bg-[var(--surface)] px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#2f5fd0]" />
+              <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">{t("p8em.emSubjTitle")}</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">{t("p8em.emSubjSub")}</p></div>
+              <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t("p8em.emSubjPh")} className="w-full rounded-2xl border-2 border-[var(--line)] bg-[var(--surface)] px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#2f5fd0]" />
             </div>}
             {step === 3 && <div className="space-y-5">
               <div className="flex flex-wrap items-end justify-between gap-3">
-                <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">How should it look?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Use a ready-worded template, or design your own branded email.</p></div>
-                <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[13px] font-bold shadow-sm">{([["template", "📄 Worded templates"], ["design", "🎨 Design your own"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => { setMode(k); setChooseView(false); }} className="px-4 py-2.5" style={!chooseView && mode === k ? { background: "#E8EEFD", color: "#2f5fd0" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
+                <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">{t("p8em.emLookTitle")}</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">{t("p8em.emLookSub")}</p></div>
+                <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[13px] font-bold shadow-sm">{([["template", t("p8em.emModeWorded")], ["design", t("p8em.emModeDesign")]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => { setMode(k); setChooseView(false); }} className="px-4 py-2.5" style={!chooseView && mode === k ? { background: "#E8EEFD", color: "#2f5fd0" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
               </div>
-              {chooseView && <div className="rounded-2xl border-2 border-dashed border-[#E4E9F5] bg-[var(--surface)] p-8 text-center shadow-sm"><div className="text-[15px] font-extrabold text-[var(--ink)]">How should your email look?</div><p className="mx-auto mt-1 max-w-sm text-[13px] text-[var(--ink-3)]">Tap <b>📄 Worded templates</b> or <b>🎨 Design your own</b> above to choose.</p></div>}
+              {chooseView && <div className="rounded-2xl border-2 border-dashed border-[#E4E9F5] bg-[var(--surface)] p-8 text-center shadow-sm"><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("p8em.emLookChoose")}</div><p className="mx-auto mt-1 max-w-sm text-[13px] text-[var(--ink-3)]"><RichB text={t("p8em.emLookTap")} /></p></div>}
               {!chooseView && <>
               {mode === "template"
-                ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-sm"><Select value={tmplId} onChange={(e) => pickTemplate(e.target.value)} className="w-full"><option value="">Start from blank</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
-                    <div className="mt-3"><FieldLabel>Subject line</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. A quick reminder about your booking" className="w-full" /></div>
+                ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-sm"><Select value={tmplId} onChange={(e) => pickTemplate(e.target.value)} className="w-full"><option value="">{t("p8em.emStartBlank")}</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
+                    <div className="mt-3"><FieldLabel>{t("p8em.emSubjectLine")}</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t("p8em.emSubjEgReminder")} className="w-full" /></div>
                     <div className="mt-3 overflow-hidden rounded-xl border border-[var(--line)]">
                       <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] bg-[#f4f7fc] px-3 py-2">
-                        <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[11.5px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? "✨ Writing…" : "✨ Help me write"}</button>
+                        <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[11.5px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? t("p8em.emWritingSp") : t("p8em.nfHelpWrite")}</button>
                         <span className="mx-1 h-4 w-px bg-[var(--line)]" />
-                        <span className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Insert:</span>
+                        <span className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.emInsert")}</span>
                         {MERGE_FIELDS.slice(0, 6).map((f) => <button key={f.token} type="button" title={f.desc} onClick={() => insertMerge(f.token)} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>)}
                       </div>
-                      <textarea value={tmplBody} onChange={(e) => setTmplBody(e.target.value)} rows={9} placeholder="Write your email… use merge fields like {ChildName} or {ListingName} and they fill in per family." className="w-full resize-y bg-[var(--surface)] px-4 py-3 text-[13.5px] leading-relaxed text-[var(--ink)] outline-none" />
+                      <textarea value={tmplBody} onChange={(e) => setTmplBody(e.target.value)} rows={9} placeholder={t("p8em.emBodyPh")} className="w-full resize-y bg-[var(--surface)] px-4 py-3 text-[13.5px] leading-relaxed text-[var(--ink)] outline-none" />
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2"><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Preview email</button><p className="text-[11.5px] text-[var(--ink-3)]">Edit freely — this text becomes the email body. Merge fields resolve per family on send.</p></div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2"><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">{t("p8em.emPreviewEmail")}</button><p className="text-[11.5px] text-[var(--ink-3)]">{t("p8em.emEditFreely")}</p></div>
                     {cdOn
                       ? <div className="mt-2 rounded-xl border border-[#bfe6cf] bg-[#eafaf0] p-3">
-                          <div className="mb-2 flex items-center gap-2"><span className="text-[12.5px] font-extrabold text-[#127a3e]">⏱ Countdown clock</span><button type="button" onClick={() => setCdOn(false)} className="ms-auto text-[11.5px] font-bold text-[#127a3e] hover:underline">Remove</button></div>
+                          <div className="mb-2 flex items-center gap-2"><span className="text-[12.5px] font-extrabold text-[#127a3e]">{t("p8em.emCdClock")}</span><button type="button" onClick={() => setCdOn(false)} className="ms-auto text-[11.5px] font-bold text-[#127a3e] hover:underline">{t("p8em.cRemove")}</button></div>
                           <div className="flex flex-wrap items-center gap-2">
                             <input type="date" value={cdDate} onChange={(e) => setCdDate(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none" />
                             <input type="time" value={cdTime} onChange={(e) => setCdTime(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none" />
-                            <input value={cdHeading} onChange={(e) => setCdHeading(e.target.value)} placeholder="Hurry — offer ends soon" className="min-w-[180px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none" />
+                            <input value={cdHeading} onChange={(e) => setCdHeading(e.target.value)} placeholder={t("p8em.emHurry")} className="min-w-[180px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none" />
                           </div>
                         </div>
-                      : <button type="button" onClick={addCountdownToWorded} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#bfe0c9] bg-[#f0faf3] px-4 py-2.5 text-[13px] font-extrabold text-[#127a3e] hover:bg-[#e3f6ea]">⏱ Countdown</button>}
+                      : <button type="button" onClick={addCountdownToWorded} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#bfe0c9] bg-[#f0faf3] px-4 py-2.5 text-[13px] font-extrabold text-[#127a3e] hover:bg-[#e3f6ea]">{t("p8em.emCdBtn")}</button>}
                   </div>
                 : design
                   ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">
-                      <div className="mb-2 flex flex-wrap items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Your design</span><button type="button" onClick={() => setDesigning(true)} className="ms-auto rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
+                      <div className="mb-2 flex flex-wrap items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">{t("p8em.emYourDesign")}</span><button type="button" onClick={() => setDesigning(true)} className="ms-auto rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">{t("p8em.emEditBtn")}</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">{t("p8em.emPopOut")}</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">{t("p8em.emDiscard")}</button></div>
                       {designCd
-                        ? <div className="mb-2 rounded-lg border border-[#bfe6cf] bg-[#eafaf0] px-3 py-2 text-[12.5px] font-bold text-[#127a3e]">⏱ Countdown clock is in this email — it&apos;ll send as a big ticking clock.</div>
-                        : <button type="button" onClick={addCountdownToDesign} className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#bfe0c9] bg-[#f0faf3] px-4 py-3 text-[13.5px] font-extrabold text-[#127a3e] hover:bg-[#e3f6ea]">⏱ Add a big countdown clock to this email</button>}
-                      <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#E8EEFD] p-3"><div className="mx-auto max-h-80 max-w-[560px] overflow-hidden rounded-lg bg-[var(--surface)] shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company, nowMs) }} /></button>
+                        ? <div className="mb-2 rounded-lg border border-[#bfe6cf] bg-[#eafaf0] px-3 py-2 text-[12.5px] font-bold text-[#127a3e]">{t("p8em.emCdInDesign")}</div>
+                        : <button type="button" onClick={addCountdownToDesign} className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#bfe0c9] bg-[#f0faf3] px-4 py-3 text-[13.5px] font-extrabold text-[#127a3e] hover:bg-[#e3f6ea]">{t("p8em.emCdAddBig")}</button>}
+                      <button type="button" onClick={() => setPreviewBig(true)} title={t("p8em.emClickEnlarge")} className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#E8EEFD] p-3"><div className="mx-auto max-h-80 max-w-[560px] overflow-hidden rounded-lg bg-[var(--surface)] shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company, nowMs) }} /></button>
                     </div>
                   : <div className="rounded-2xl border-2 border-dashed border-[#E4E9F5] bg-[var(--surface)] p-8 text-center shadow-sm">
-                      <div className="text-[16px] font-extrabold text-[var(--ink)]">Design your own email</div>
-                      <p className="mx-auto mt-1 max-w-md text-[13px] text-[var(--ink-3)]">Start a fresh design in the builder, or pick up a previous designed campaign and tweak it.</p>
+                      <div className="text-[16px] font-extrabold text-[var(--ink)]">{t("p8em.emDesignOwnTitle")}</div>
+                      <p className="mx-auto mt-1 max-w-md text-[13px] text-[var(--ink-3)]">{t("p8em.emDesignOwnSub")}</p>
                       <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
-                        <button type="button" onClick={() => setDesigning(true)} className="rounded-xl px-5 py-2.5 text-[14px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>🎨 Go to new builder</button>
-                        {savedDesigns.length > 0 && <Select value="" onChange={(e) => { const s = savedDesigns.find((x) => x.id === e.target.value); if (s) reuseSaved(s); }} className="max-w-[260px]"><option value="">📋 Use a saved one…</option>{savedDesigns.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>}
+                        <button type="button" onClick={() => setDesigning(true)} className="rounded-xl px-5 py-2.5 text-[14px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>{t("p8em.emGoBuilder")}</button>
+                        {savedDesigns.length > 0 && <Select value="" onChange={(e) => { const s = savedDesigns.find((x) => x.id === e.target.value); if (s) reuseSaved(s); }} className="max-w-[260px]"><option value="">{t("p8em.emUseSaved")}</option>{savedDesigns.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>}
                       </div>
                     </div>}
-              {cdMissingDate && <div className="rounded-xl border border-[#f2c4c9] bg-[#fdf0f1] px-4 py-3 text-[13px] font-semibold text-[#c02636]">⚠ Your countdown has no date set, so the clock won&apos;t appear. Open the {useDesign ? "designer" : "⏱ Countdown panel"} and set a date &amp; time.</div>}
-              {cdIncluded && <div className="rounded-xl border border-[#bfe6cf] bg-[#eafaf0] px-4 py-3 text-[13px] font-semibold text-[#127a3e]">⏱ Countdown included — it&apos;ll send as a big clock in the email.</div>}
-              <div className="rounded-xl border border-[#E4E9F5] bg-gradient-to-r from-[#FFFFFF] to-[#FFFFFF] px-4 py-3 text-[13.5px] font-semibold text-[#2f5fd0] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""}{selectedAuds.length > 1 ? ` · deduped across ${selectedAuds.length} audiences` : ""}.</div>
+              {cdMissingDate && <div className="rounded-xl border border-[#f2c4c9] bg-[#fdf0f1] px-4 py-3 text-[13px] font-semibold text-[#c02636]">{useDesign ? t("p8em.emCdWarnDesigner") : t("p8em.emCdWarnPanel")}</div>}
+              {cdIncluded && <div className="rounded-xl border border-[#bfe6cf] bg-[#eafaf0] px-4 py-3 text-[13px] font-semibold text-[#127a3e]">{t("p8em.emCdIncluded")}</div>}
+              <div className="rounded-xl border border-[#E4E9F5] bg-gradient-to-r from-[#FFFFFF] to-[#FFFFFF] px-4 py-3 text-[13.5px] font-semibold text-[#2f5fd0] shadow-sm"><RichB text={t("p8em.emSendingTo", { n: included.length, skipped: excluded.size > 0 ? t("p8em.emSkipped", { n: excluded.size }) : "", deduped: selectedAuds.length > 1 ? t("p8em.emDeduped", { n: selectedAuds.length }) : "" })} /></div>
               {people.length > 0 && (
                 <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-                  <button type="button" onClick={() => setShowList((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-start"><span className="text-[13px] font-extrabold text-[var(--ink)]">Recipients</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f] tabular-nums">{included.length} of {people.length}</span><span className="ms-auto text-[12px] font-bold text-[var(--ink-3)]">{showList ? "▲ Hide" : "▼ Show"}</span></button>
+                  <button type="button" onClick={() => setShowList((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-start"><span className="text-[13px] font-extrabold text-[var(--ink)]">{t("p8em.emRecipients")}</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f] tabular-nums">{t("p8em.emNofN", { a: included.length, b: people.length })}</span><span className="ms-auto text-[12px] font-bold text-[var(--ink-3)]">{showList ? t("p8em.emHideUp") : t("p8em.emShowDown")}</span></button>
                   {showList && <div className="max-h-52 overflow-y-auto border-t border-[var(--line)]">
                     {people.map((p) => { const off = excluded.has(p.email.toLowerCase()); return (
                       <div key={p.email} className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-2 last:border-0">
                         <div className="min-w-0 flex-1"><div className={`truncate text-[13px] font-semibold ${off ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{p.name || p.email}</div>{p.name && p.name !== p.email && <div className="truncate text-[11.5px] text-[var(--ink-3)]">{p.email}</div>}</div>
-                        <button type="button" onClick={() => toggleExclude(p.email)} className={`flex-none rounded-full border px-2.5 py-1 text-[11px] font-bold ${off ? "border-[#bfe6cf] text-[#127a3e] hover:bg-[#eafaf0]" : "border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{off ? "↩ Add back" : "Skip this send"}</button>
-                        {enqEmails.has(p.email.toLowerCase()) && onRemovePerson && <button type="button" onClick={() => onRemovePerson(p.email)} className="flex-none rounded-full border border-[#f0c9cd] px-2.5 py-1 text-[11px] font-bold text-[#c02636] hover:bg-[#fdecec]" title="Remove from the enquiries list for good">🗑 Remove</button>}
+                        <button type="button" onClick={() => toggleExclude(p.email)} className={`flex-none rounded-full border px-2.5 py-1 text-[11px] font-bold ${off ? "border-[#bfe6cf] text-[#127a3e] hover:bg-[#eafaf0]" : "border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{off ? t("p8em.emAddBack") : t("p8em.emSkipThisSend")}</button>
+                        {enqEmails.has(p.email.toLowerCase()) && onRemovePerson && <button type="button" onClick={() => onRemovePerson(p.email)} className="flex-none rounded-full border border-[#f0c9cd] px-2.5 py-1 text-[11px] font-bold text-[#c02636] hover:bg-[#fdecec]" title={t("p8em.emRemoveEnqTip")}>{t("p8em.emRemoveBtn")}</button>}
                       </div>
                     ); })}
                   </div>}
-                  <div className="border-t border-[var(--line)] px-4 py-2 text-[11px] text-[var(--ink-3)]">{hasEnquiryAud ? "“Skip this send” leaves them on the list for next time. “Remove” takes them off the enquiries board entirely." : "“Skip this send” excludes them from this campaign only."} Duplicate addresses are merged automatically.</div>
+                  <div className="border-t border-[var(--line)] px-4 py-2 text-[11px] text-[var(--ink-3)]">{hasEnquiryAud ? t("p8em.emSkipNoteEnq") : t("p8em.emSkipNote")} {t("p8em.emDupMerged")}</div>
                 </div>
               )}
-              <p className="text-[12px] text-[var(--ink-3)]">Opted-out recipients are excluded automatically; a one-click unsubscribe footer is added to every send.</p>
+              <p className="text-[12px] text-[var(--ink-3)]">{t("p8em.emOptedOutNote")}</p>
               </>}
             </div>}
           </div>
         </div>
         {sendErr && <div className="mx-6 mt-3 flex items-start gap-2 rounded-lg border border-[#f2c4c9] bg-[#fdf0f1] px-3 py-2 text-[12.5px] font-semibold text-[#c02636]"><span>⚠</span><span>{sendErr}</span></div>}
         <div className="flex items-center gap-2 border-t border-[var(--line)] px-6 py-3.5">
-          <button type="button" onClick={() => { if (step === 0) return onCancel(); if (step === lastStep && !chooseView) return setChooseView(true); setChooseView(false); setStep(step - 1); }} disabled={!!busy} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{step === 0 ? "Cancel" : "← Back"}</button>
+          <button type="button" onClick={() => { if (step === 0) return onCancel(); if (step === lastStep && !chooseView) return setChooseView(true); setChooseView(false); setStep(step - 1); }} disabled={!!busy} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{step === 0 ? t("p8em.cCancel") : t("p8em.cBack")}</button>
           <div className="ms-auto flex items-center gap-2">
             {step < lastStep
-              ? <button type="button" onClick={() => setStep(step + 1)} disabled={nextDisabled} className="rounded-lg px-6 py-2 text-[13px] font-extrabold text-white shadow-sm disabled:opacity-40" style={{ background: "linear-gradient(180deg,#3f78d8,#1d3a8f)" }}>Next →</button>
+              ? <button type="button" onClick={() => setStep(step + 1)} disabled={nextDisabled} className="rounded-lg px-6 py-2 text-[13px] font-extrabold text-white shadow-sm disabled:opacity-40" style={{ background: "linear-gradient(180deg,#3f78d8,#1d3a8f)" }}>{t("p8em.emNext")}</button>
               : <>
-                  <div className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-1.5 py-1"><input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} title="Schedule for" className="rounded bg-transparent px-1 py-1 text-[12px] text-[var(--ink)] outline-none" /><button type="button" onClick={() => submit("scheduled")} disabled={!!busy || !contentReady || chooseView} className="rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{busy === "scheduled" ? "Scheduling…" : "⧗ Schedule"}</button></div>
-                  <button type="button" onClick={() => submit("sent")} disabled={included.length === 0 || !contentReady || chooseView || !!busy} className="rounded-lg px-5 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{busy === "sent" ? "Sending…" : "Send now"}</button>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-1.5 py-1"><input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} title={t("p8em.emScheduleFor")} className="rounded bg-transparent px-1 py-1 text-[12px] text-[var(--ink)] outline-none" /><button type="button" onClick={() => submit("scheduled")} disabled={!!busy || !contentReady || chooseView} className="rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{busy === "scheduled" ? t("p8em.emScheduling") : t("p8em.emScheduleBtn")}</button></div>
+                  <button type="button" onClick={() => submit("sent")} disabled={included.length === 0 || !contentReady || chooseView || !!busy} className="rounded-lg px-5 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{busy === "sent" ? t("p8em.emSending") : t("p8em.emSendNow")}</button>
                 </>}
           </div>
         </div>
@@ -1181,7 +1188,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
     </div>
     {previewBig && (
       <div className="fixed inset-0 z-[140] flex flex-col bg-[#0b1730]/70 p-4 backdrop-blur-[2px]" onClick={() => setPreviewBig(false)}>
-        <div className="mx-auto flex w-full max-w-3xl items-center gap-2 py-2 text-white"><span className="text-[13px] font-extrabold">Email preview</span><span className="text-[12px] text-white/70">This is roughly how it lands in a parent&apos;s inbox.</span><button type="button" onClick={() => setPreviewBig(false)} className="ms-auto rounded-lg bg-white/15 px-3 py-1.5 text-[13px] font-bold hover:bg-white/25">✕ Close</button></div>
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-2 py-2 text-white"><span className="text-[13px] font-extrabold">{t("p8em.emPreviewTitle")}</span><span className="text-[12px] text-white/70">{t("p8em.emPreviewSub")}</span><button type="button" onClick={() => setPreviewBig(false)} className="ms-auto rounded-lg bg-white/15 px-3 py-1.5 text-[13px] font-bold hover:bg-white/25">{t("p8em.emCloseX")}</button></div>
         <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="mx-auto max-w-[600px]" dangerouslySetInnerHTML={{ __html: renderDesignHtml(useDesign && design ? design : wordedDesign(), company, nowMs) }} />
         </div>
@@ -1195,12 +1202,12 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
       <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/45 p-4">
         <div className="w-full max-w-sm rounded-2xl bg-[var(--surface)] p-6 text-center shadow-2xl">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#e8f6ee] text-[24px]">✅</div>
-          <div className="text-[18px] font-extrabold text-[var(--ink)]">Sent to {included.length} {included.length === 1 ? "family" : "families"}!</div>
-          <p className="mx-auto mt-1.5 max-w-xs text-[13px] text-[var(--ink-3)]">Save this design to reuse it next time? Give it a name:</p>
-          <input value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="e.g. Summer camp email" className="mt-3 w-full rounded-lg border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-center text-[14px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]" />
+          <div className="text-[18px] font-extrabold text-[var(--ink)]">{pickPlural(t, locale, "p8em.emSentFam", included.length)}</div>
+          <p className="mx-auto mt-1.5 max-w-xs text-[13px] text-[var(--ink-3)]">{t("p8em.emSaveDesignAsk")}</p>
+          <input value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder={t("p8em.emSaveDesignPh")} className="mt-3 w-full rounded-lg border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-center text-[14px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]" />
           <div className="mt-4 flex gap-2">
-            <button type="button" onClick={onCancel} className="flex-1 rounded-lg border border-[var(--line)] px-4 py-2.5 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">No thanks</button>
-            <button type="button" onClick={() => { saveCurrentDesign(); onCancel(); }} disabled={!saveName.trim()} className="flex-1 rounded-lg py-2.5 text-[13px] font-extrabold text-white shadow-sm disabled:opacity-40" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>Save it</button>
+            <button type="button" onClick={onCancel} className="flex-1 rounded-lg border border-[var(--line)] px-4 py-2.5 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.emNoThanks")}</button>
+            <button type="button" onClick={() => { saveCurrentDesign(); onCancel(); }} disabled={!saveName.trim()} className="flex-1 rounded-lg py-2.5 text-[13px] font-extrabold text-white shadow-sm disabled:opacity-40" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>{t("p8em.emSaveIt")}</button>
           </div>
         </div>
       </div>
@@ -1227,7 +1234,7 @@ function useCampaignData() {
       .catch(() => {});
   }, [hoScope]);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string; venueId?: string; runFrom?: string; runTo?: string; seasonId?: string | null }[]>("/api/listings?mine=1").then((l) => setRawListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", venueId: x.venueId, runFrom: x.runFrom, runTo: x.runTo, seasonId: x.seasonId })))).catch(() => {}); }, []);
-  useEffect(() => { apiGet<{ venues?: { id: string; name?: string; city?: string }[] } | null>("/api/library").then((lib) => setVenueName(Object.fromEntries((lib?.venues ?? []).map((v) => [v.id, v.name || v.city || "Venue"])))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ venues?: { id: string; name?: string; city?: string }[] } | null>("/api/library").then((lib) => setVenueName(Object.fromEntries((lib?.venues ?? []).map((v) => [v.id, v.name || v.city || tNow("p8em.emVenueWord")])))).catch(() => {}); }, []);
   useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => setTemplates([])); }, []);
   // A listing's location = its venue's name. A booking inherits its listing's location.
   const listings = rawListings.map((l) => ({ ...l, location: l.venueId ? venueName[l.venueId] : undefined }));
@@ -1236,12 +1243,13 @@ function useCampaignData() {
   const locations = [...new Set([...listings.map((l) => l.location), ...bookings.map((b) => b.locationName)].filter((x): x is string => !!x))].sort();
   const allEmails = resolveAudience(bookings, {}).emails;
   const emailName = new Map<string, string>(); for (const b of bookings) { const e = b.email?.toLowerCase(); if (e && !emailName.has(e)) emailName.set(e, b.name || e); }
-  const allAudience: Audience = { id: "all", name: "All active families", count: allEmails.length, emails: allEmails, people: allEmails.map((e) => ({ email: e, name: emailName.get(e.toLowerCase()) })), desc: "Has an active or upcoming booking" };
+  const allAudience: Audience = { id: "all", name: tNow("p8em.emAllActiveFamilies"), count: allEmails.length, emails: allEmails, people: allEmails.map((e) => ({ email: e, name: emailName.get(e.toLowerCase()) })), desc: tNow("p8em.emAllActiveDesc") };
   const liveSegments = segments ?? [];
   return { bookings, listings, templates, locations, allAudience, liveSegments };
 }
 
 function CampaignsView({ onSent, seedAudienceId, seedName, seedSubject, seedListingId, onSeedConsumed, company, socials }: { onSent: () => void; seedAudienceId?: string | null; seedName?: string; seedSubject?: string; seedListingId?: string | null; onSeedConsumed?: () => void; company?: Partial<Company>; socials?: Social[] }) {
+  const t = useT();
   const { bookings, listings, templates, locations, allAudience, liveSegments } = useCampaignData();
   // Local rows hold the DESIGN (drafts + reusable content); live status,
   // delivery and opens come from the server records they link to.
@@ -1270,12 +1278,12 @@ function CampaignsView({ onSent, seedAudienceId, seedName, seedSubject, seedList
   const restrictEmails = seedListingId
     ? new Set(bookings.filter((b) => b.listingId === seedListingId && b.email).map((b) => (b.email || "").toLowerCase()))
     : undefined;
-  const restrictLabel = seedListingId ? (listings.find((l) => l.id === seedListingId)?.title || "this listing") : undefined;
+  const restrictLabel = seedListingId ? (listings.find((l) => l.id === seedListingId)?.title || t("p8em.emThisListing")) : undefined;
   const create = async (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string }, action: CampStatus) => {
     setErr(null);
     const schedLabel = c.scheduledAt ? new Date(c.scheduledAt).toLocaleString(dl(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : undefined;
-    const row: Campaign = { id: `c${Date.now()}`, name: c.name, subtitle: c.template?.name ?? (c.html ? "Designed email" : undefined), audienceName: c.audience.name, recipients: c.audience.count, status: action, statusDate: action === "scheduled" ? schedLabel : action === "sent" ? "just now" : undefined, subject: c.subject, html: c.html, body: c.body, design: c.design, scheduledAt: c.scheduledAt, recipientEmails: c.audience.emails };
-    if (action !== "draft" && !c.audience.emails.length) throw new Error("That audience has nobody in it yet — add recipients first.");
+    const row: Campaign = { id: `c${Date.now()}`, name: c.name, subtitle: c.template?.name ?? (c.html ? t("p8em.emDesignedEmail") : undefined), audienceName: c.audience.name, recipients: c.audience.count, status: action, statusDate: action === "scheduled" ? schedLabel : action === "sent" ? t("p8em.emJustNow") : undefined, subject: c.subject, html: c.html, body: c.body, design: c.design, scheduledAt: c.scheduledAt, recipientEmails: c.audience.emails };
+    if (action !== "draft" && !c.audience.emails.length) throw new Error(t("p8em.emNobodyInAud"));
     // The send/queue is the server's; the local row keeps the design and
     // links to the server record for live status + open tracking. Errors
     // propagate to the modal so the reason is shown right where you clicked.
@@ -1299,7 +1307,7 @@ function CampaignsView({ onSent, seedAudienceId, seedName, seedSubject, seedList
     // A fired queue doc records the history id it became — follow the link.
     const h = histById.get(c.emailId ?? "") ?? (s?.emailId ? histById.get(s.emailId) : undefined);
     if (h) return { ...c, status: h.status === "sending" ? "sending" : "sent", statusDate: when(h.createdAt), recipients: h.recipientCount, delivered: h.delivered, opened: h.openedBy?.length, opens: h.delivered ? Math.round(((h.openedBy?.length ?? 0) / h.delivered) * 100) : undefined };
-    if (s) return { ...c, status: s.status === "scheduled" ? "scheduled" : s.status === "sent" ? "sent" : "draft", statusDate: s.status === "cancelled" ? "cancelled" : whenSched(s.sendAt) };
+    if (s) return { ...c, status: s.status === "scheduled" ? "scheduled" : s.status === "sent" ? "sent" : "draft", statusDate: s.status === "cancelled" ? t("p8em.emCancelled") : whenSched(s.sendAt) };
     return c;
   });
   const knownEmailIds = new Set([
@@ -1309,30 +1317,30 @@ function CampaignsView({ onSent, seedAudienceId, seedName, seedSubject, seedList
   ].filter(Boolean));
   const knownSchedIds = new Set(campaigns.map((c) => c.schedId).filter(Boolean));
   const serverOnly: Campaign[] = [
-    ...(sched ?? []).filter((s) => s.status === "scheduled" && !knownSchedIds.has(s.id)).map((s): Campaign => ({ id: `sch-${s.id}`, schedId: s.id, name: s.subject, audienceName: "Recipient list frozen at schedule time", recipients: s.recipientCount, status: "scheduled", statusDate: whenSched(s.sendAt), subject: s.subject })),
-    ...(hist ?? []).filter((h) => !knownEmailIds.has(h.id)).map((h): Campaign => ({ id: `h-${h.id}`, emailId: h.id, name: h.subject, audienceName: h.audience === "one" ? "One address" : "Families list", recipients: h.recipientCount, status: h.status === "sending" ? "sending" : "sent", statusDate: when(h.createdAt), subject: h.subject, delivered: h.delivered, opened: h.openedBy?.length, opens: h.delivered ? Math.round(((h.openedBy?.length ?? 0) / h.delivered) * 100) : undefined })),
+    ...(sched ?? []).filter((s) => s.status === "scheduled" && !knownSchedIds.has(s.id)).map((s): Campaign => ({ id: `sch-${s.id}`, schedId: s.id, name: s.subject, audienceName: t("p8em.emFrozenList"), recipients: s.recipientCount, status: "scheduled", statusDate: whenSched(s.sendAt), subject: s.subject })),
+    ...(hist ?? []).filter((h) => !knownEmailIds.has(h.id)).map((h): Campaign => ({ id: `h-${h.id}`, emailId: h.id, name: h.subject, audienceName: h.audience === "one" ? t("p8em.emOneAddress") : t("p8em.emFamiliesList"), recipients: h.recipientCount, status: h.status === "sending" ? "sending" : "sent", statusDate: when(h.createdAt), subject: h.subject, delivered: h.delivered, opened: h.openedBy?.length, opens: h.delivered ? Math.round(((h.openedBy?.length ?? 0) / h.delivered) * 100) : undefined })),
   ];
   const allRows = [...linked, ...serverOnly];
   const cq = q.trim().toLowerCase();
   const rows = cq ? allRows.filter((c) => `${c.name} ${c.subtitle ?? ""} ${c.subject ?? ""} ${c.audienceName}`.toLowerCase().includes(cq)) : allRows;
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-2"><span className="text-[13px] font-bold text-[var(--ink-2)]">Campaigns</span><div className="relative ms-2 max-w-xs flex-1"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search campaigns…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div><button type="button" onClick={() => setModal("campaign")} className="ms-auto rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New campaign</button></div>
+      <div className="mb-3 flex flex-wrap items-center gap-2"><span className="text-[13px] font-bold text-[var(--ink-2)]">{t("p8em.emCampaigns")}</span><div className="relative ms-2 max-w-xs flex-1"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p8em.emSearchCampPh")} className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div><button type="button" onClick={() => setModal("campaign")} className="ms-auto rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{t("p8em.emNewCampBtn")}</button></div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
       <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-        <div className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_70px] gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span>Campaign</span><span>Audience</span><span>Status</span><span>Opens</span><span></span></div>
-        {rows.length === 0 && <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{cq ? `No campaigns match “${q}”.` : "No campaigns yet."}</div>}
+        <div className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_70px] gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span>{t("p8em.emColCampaign")}</span><span>{t("p8em.emColAudience")}</span><span>{t("p8em.emColStatus")}</span><span>{t("p8em.emColOpens")}</span><span></span></div>
+        {rows.length === 0 && <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{cq ? t("p8em.emNoCampMatch", { q }) : t("p8em.emNoCamps")}</div>}
         {rows.map((c) => { const p = STATUS_PILL[c.status]; return (
           <div key={c.id} className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_70px] items-center gap-2 border-b border-[var(--line)] px-4 py-3 last:border-0">
             <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{c.name}</div>{c.subtitle && <div className="truncate text-[12px] text-[var(--ink-3)]">{c.subtitle}</div>}</div>
-            <div className="min-w-0"><div className="truncate text-[13px] text-[var(--ink-2)]">{c.audienceName}</div><div className="text-[12px] text-[var(--ink-3)]">{c.recipients} recipients</div></div>
-            <div><span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-extrabold" style={{ background: p.bg, color: p.fg }}>● {p.label}</span>{c.statusDate && <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{c.statusDate}</div>}</div>
-            <div>{c.opens != null ? <><div className="text-[15px] font-extrabold text-[var(--ink)]">{c.opens}%</div><div className="text-[12px] text-[var(--ink-3)]">{c.clicks ?? 0}% clicks</div></> : <span className="text-[var(--ink-3)]">—</span>}</div>
-            <div className="text-end"><button type="button" onClick={() => setDetail(c)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Open</button></div>
+            <div className="min-w-0"><div className="truncate text-[13px] text-[var(--ink-2)]">{c.audienceName}</div><div className="text-[12px] text-[var(--ink-3)]">{t("p8em.emRecipientsN", { n: c.recipients })}</div></div>
+            <div><span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-extrabold" style={{ background: p.bg, color: p.fg }}>● {t("p8em.emStat_" + c.status)}</span>{c.statusDate && <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{c.statusDate}</div>}</div>
+            <div>{c.opens != null ? <><div className="text-[15px] font-extrabold text-[var(--ink)]">{c.opens}%</div><div className="text-[12px] text-[var(--ink-3)]">{t("p8em.emClicksPct", { n: c.clicks ?? 0 })}</div></> : <span className="text-[var(--ink-3)]">—</span>}</div>
+            <div className="text-end"><button type="button" onClick={() => setDetail(c)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.emOpenBtn")}</button></div>
           </div>
         ); })}
       </div>
-      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are computed live from your bookings &amp; customer list. “Send now” and “Schedule” are real (cancel a scheduled send from Inbox → Scheduled); delivery and opens are tracked per send — opens via a pixel, so image-blocking clients won’t count.</div>
+      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">{t("p8em.emCampFoot")}</div>
       {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} initialName={seedName} initialSubject={seedSubject} restrictEmails={restrictEmails} restrictLabel={restrictLabel} company={company} socials={socials} onCancel={closeCampaign} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
       {modal === "audience" && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setModal("campaign")} onCreate={(a) => { setCustom((xs) => [...xs, a]); setModal("campaign"); }} />}
       {detail && <CampaignDetail c={detail} onClose={() => setDetail(null)} />}
@@ -1341,6 +1349,7 @@ function CampaignsView({ onSent, seedAudienceId, seedName, seedSubject, seedList
 }
 
 function CampaignDetail({ c, onClose }: { c: Campaign; onClose: () => void }) {
+  const t = useT();
   // Real numbers from the send engine: delivered = accepted by the mail
   // transport, opened = distinct recipients whose client loaded the pixel.
   const tracked = c.status === "sent" && c.delivered != null;
@@ -1353,21 +1362,21 @@ function CampaignDetail({ c, onClose }: { c: Campaign; onClose: () => void }) {
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onClose}>
       <div className="w-full max-w-2xl rounded-2xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start gap-2 border-b border-[var(--line)] px-5 py-4">
-          <div><div className="text-[20px] font-extrabold text-[var(--ink)]">{c.name}</div><div className="text-[12.5px] text-[var(--ink-3)]">{[c.subtitle, c.audienceName, `${c.recipients} recipients`].filter(Boolean).join(" · ")}</div></div>
-          <span className="ms-auto inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-extrabold" style={{ background: p.bg, color: p.fg }}>● {p.label}</span>
+          <div><div className="text-[20px] font-extrabold text-[var(--ink)]">{c.name}</div><div className="text-[12.5px] text-[var(--ink-3)]">{[c.subtitle, c.audienceName, t("p8em.emRecipientsN", { n: c.recipients })].filter(Boolean).join(" · ")}</div></div>
+          <span className="ms-auto inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-extrabold" style={{ background: p.bg, color: p.fg }}>● {t("p8em.emStat_" + c.status)}</span>
         </div>
         <div className="max-h-[66vh] overflow-y-auto p-5">
-          <div className="grid grid-cols-3 gap-3"><StatCard label="Open rate" value={tracked && delivered ? `${Math.round((opened / delivered) * 100)}%` : "—"} sub={tracked ? `${opened} of ${delivered}` : undefined} tone="#16a34a" /><StatCard label="Delivered" value={tracked ? String(delivered) : "—"} sub={tracked ? `of ${sent} sent` : undefined} tone="#16306e" /><StatCard label="Not delivered" value={tracked ? String(bounces) : "—"} tone="#ea580c" /></div>
-          <div className="mt-4 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Delivery funnel</div>
+          <div className="grid grid-cols-3 gap-3"><StatCard label={t("p8em.emOpenRate")} value={tracked && delivered ? `${Math.round((opened / delivered) * 100)}%` : "—"} sub={tracked ? t("p8em.emOfN", { a: opened, b: delivered }) : undefined} tone="#16a34a" /><StatCard label={t("p8em.emDelivered")} value={tracked ? String(delivered) : "—"} sub={tracked ? t("p8em.emOfSent", { n: sent }) : undefined} tone="#16306e" /><StatCard label={t("p8em.emNotDelivered")} value={tracked ? String(bounces) : "—"} tone="#ea580c" /></div>
+          <div className="mt-4 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.emFunnel")}</div>
           <div className="mt-2">
-            <FunnelBar label="Sent" n={sent} max={sent} color="#6b7280" />
-            <FunnelBar label="Delivered" n={delivered} max={sent} color="#16306e" />
-            <FunnelBar label="Opened" n={opened} max={sent} color="#16a34a" />
+            <FunnelBar label={t("p8em.emSentW")} n={sent} max={sent} color="#6b7280" />
+            <FunnelBar label={t("p8em.emDelivered")} n={delivered} max={sent} color="#16306e" />
+            <FunnelBar label={t("p8em.emOpenedW")} n={opened} max={sent} color="#16a34a" />
           </div>
-          <div className="mt-3 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">Opens count once per recipient, via a tracking pixel — mail clients that block images won’t register. Click tracking (wrapped links) and one-click unsubscribe are still to come. {!tracked && <b>Numbers appear once this campaign has sent.</b>}</div>
+          <div className="mt-3 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">{t("p8em.emOpensNote")} {!tracked && <b>{t("p8em.emNumbersAppear")}</b>}</div>
         </div>
         <div className="flex justify-end gap-2 border-t border-[var(--line)] px-5 py-3">
-          <button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Close</button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.cClose")}</button>
         </div>
       </div>
     </div>
@@ -1382,47 +1391,40 @@ const AUD_ACCENT = {
   enquiries: "linear-gradient(180deg,#e2586e,#c02a44)",  // red — warm leads to chase
   custom: "linear-gradient(180deg,#7b61e4,#5a3fc0)",     // violet — your own segments
 } as const;
-// Plain-English explanations for the built-in Groups (server descs are terse).
-const SEG_DESCS: Record<string, string> = {
-  "All active families": "Everyone with a booking on now or coming up — your main mailing list.",
-  "Active families": "Families with a current or upcoming booking (live from your CRM).",
-  "Past customers": "Have booked before but have nothing booked right now — perfect for a “we miss you” win-back email or a returning-family discount.",
-  "Waitlisted": "On a waiting list or holding an unconfirmed offer for a place.",
-  "New enquiries (no booking)": "Families you added under New Family (or who signed up) who haven’t booked yet. Consent must be ticked for them to appear here.",
-  "New enquiries — all": "Emailed you and you marked them as an enquiry, but they've never booked.",
-};
-// Display-name overrides so the server's "New enquiries" segment doesn't clash with the Enquiries tab.
-const SEG_NAMES: Record<string, string> = {
-  "New enquiries (no booking)": "Added families · not booked yet",
-};
+// Plain-English explanations for the built-in Groups (server descs are terse), keyed by the server's English segment name.
+const SEG_KEYS: Record<string, string> = { "Active families": "active", "Past customers": "past", "Waitlisted": "wait", "New enquiries (no booking)": "added" };
+const audTitle = (t: (k: string) => string, a: Audience) => (SEG_KEYS[a.name] ? t("p8em.emSegName_" + SEG_KEYS[a.name]) : a.name);
+const audBlurb = (t: (k: string) => string, a: Audience) => (a.id === "all" ? t("p8em.emSegDesc_all") : SEG_KEYS[a.name] ? t("p8em.emSegDesc_" + SEG_KEYS[a.name]) : a.desc);
+const withInput = (text: string, node: React.ReactNode) => { const [a, b] = text.split("\u0001"); return <>{a}{node}{b}</>; };
 function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemovePerson }: { a: Audience; onUse: (a: Audience) => void; extra?: React.ReactNode; accent?: string; onRemovePerson?: (email: string) => void }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [pq, setPq] = useState("");
   const allPeople = a.people?.length ? a.people : a.emails.map((e) => ({ email: e, name: undefined as string | undefined }));
   const people = pq.trim() ? allPeople.filter((p) => `${p.name ?? ""} ${p.email}`.toLowerCase().includes(pq.trim().toLowerCase())) : allPeople;
   return (
     <div data-ui="card" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-      <div className="flex items-start justify-between gap-2"><span className="text-[15px] font-extrabold text-[var(--ink)]">{SEG_NAMES[a.name] ?? a.name}</span><span className="text-[22px] font-extrabold text-[#1d3a8f]" style={{ fontVariantNumeric: "tabular-nums" }}>{a.count}</span></div>
-      <p className="mt-1 text-[12px] text-[var(--ink-3)]">{SEG_DESCS[a.name] ?? a.desc}</p>
+      <div className="flex items-start justify-between gap-2"><span className="text-[15px] font-extrabold text-[var(--ink)]">{audTitle(t, a)}</span><span className="text-[22px] font-extrabold text-[#1d3a8f]" style={{ fontVariantNumeric: "tabular-nums" }}>{a.count}</span></div>
+      <p className="mt-1 text-[12px] text-[var(--ink-3)]">{audBlurb(t, a)}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => onUse(a)} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm" style={{ background: accent }}>Use in campaign</button>
-        <button type="button" onClick={() => setOpen((v) => !v)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{open ? "▲ Hide" : `👁 View ${a.count}`}</button>
+        <button type="button" onClick={() => onUse(a)} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm" style={{ background: accent }}>{t("p8em.emUseInCampaign")}</button>
+        <button type="button" onClick={() => setOpen((v) => !v)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{open ? t("p8em.emHideUp") : t("p8em.emViewN", { n: a.count })}</button>
         {extra}
       </div>
       {open && (
         <div className="mt-3 overflow-hidden rounded-xl border border-[var(--line)]">
           <style>{`.aud-scroll{overflow-y:scroll}.aud-scroll::-webkit-scrollbar{width:11px}.aud-scroll::-webkit-scrollbar-track{background:#eef1f6}.aud-scroll::-webkit-scrollbar-thumb{background:#9aa9c4;border-radius:6px;border:2px solid #eef1f6}`}</style>
-          <div className="border-b border-[var(--line)] bg-[var(--panel)] p-2"><input value={pq} onChange={(e) => setPq(e.target.value)} placeholder={`🔍 Search ${allPeople.length} recipient${allPeople.length === 1 ? "" : "s"}…`} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" /></div>
+          <div className="border-b border-[var(--line)] bg-[var(--panel)] p-2"><input value={pq} onChange={(e) => setPq(e.target.value)} placeholder={t("p8em.emSearchRecipN", { n: allPeople.length })} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" /></div>
           <div className="aud-scroll h-52 bg-[var(--surface)]">
-            {people.length === 0 ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">{pq.trim() ? `No recipients match “${pq}”.` : "No recipients in this list."}</div>
+            {people.length === 0 ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">{pq.trim() ? t("p8em.emNoRecipMatch", { q: pq }) : t("p8em.emNoRecipients")}</div>
               : people.map((p) => (
                   <div key={p.email} className="flex items-center gap-2 border-b border-[var(--line)] px-3 py-2 last:border-0">
                     <div className="min-w-0 flex-1 truncate text-[12.5px] text-[var(--ink)]">{p.name && p.name !== p.email ? <><b className="font-semibold">{p.name}</b> · </> : null}<span className="text-[var(--ink-3)]">{p.email}</span></div>
-                    {onRemovePerson && <button type="button" title="Remove this person" onClick={() => { if (window.confirm(`Remove ${p.email} from this list?`)) onRemovePerson(p.email); }} className="flex-none text-[13px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕</button>}
+                    {onRemovePerson && <button type="button" title={t("p8em.emRemovePersonTip")} onClick={() => { if (window.confirm(t("p8em.emRemoveOneConfirm", { email: p.email }))) onRemovePerson(p.email); }} className="flex-none text-[13px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕</button>}
                   </div>
                 ))}
           </div>
-          {onRemovePerson && people.length > 0 && <button type="button" onClick={() => { if (window.confirm(`Remove ${pq.trim() ? "the " + people.length + " shown" : "all " + people.length} ${people.length === 1 ? "person" : "people"} from this list? This can’t be undone.`)) people.forEach((p) => onRemovePerson(p.email)); }} className="w-full border-t border-[#f2c4c9] bg-[#fdf0f1] py-2.5 text-[12px] font-extrabold text-[#c02636] hover:bg-[#fbe3e5]">🗑 Remove {pq.trim() ? `${people.length} shown` : `all ${people.length}`}</button>}
+          {onRemovePerson && people.length > 0 && <button type="button" onClick={() => { if (window.confirm(t(pq.trim() ? "p8em.emRemoveShownConfirm" : "p8em.emRemoveAllConfirm", { n: people.length }))) people.forEach((p) => onRemovePerson(p.email)); }} className="w-full border-t border-[#f2c4c9] bg-[#fdf0f1] py-2.5 text-[12px] font-extrabold text-[#c02636] hover:bg-[#fbe3e5]">{t(pq.trim() ? "p8em.emRemoveShownBtn" : "p8em.emRemoveAllBtn", { n: people.length })}</button>}
         </div>
       )}
     </div>
@@ -1436,6 +1438,7 @@ function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemoveP
 // this is informational only for now.
 type Suppression = { id: string; email: string; at: string | null; by: string };
 function SuppressionsPanel() {
+  const t = useT();
   const [rows, setRows] = useState<Suppression[] | null>(null);
   const [q, setQ] = useState("");
   const load = useCallback(() => apiGet<{ suppressions: Suppression[] }>(withNet("/api/emails/suppressions")).then((d) => setRows(d.suppressions)).catch(() => setRows([])), []);
@@ -1446,16 +1449,16 @@ function SuppressionsPanel() {
   const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString(dl(), { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
   return (
     <div>
-      <div className="mb-3 rounded-lg border-s-4 border-[#c78a00] bg-[#fff8e8] px-3 py-2 text-[11.5px] text-[#7a5600]">⚖️ <b>Always excluded.</b> Anyone on this list is skipped on every marketing send, regardless of opt-in or booking status — added by the one-click unsubscribe link in an email footer, or by removing them from an audience card. This is a record, not an editor — there's no un-suppress action yet.</div>
-      <div className="relative mb-3 max-w-sm"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search suppressed emails…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
+      <div className="mb-3 rounded-lg border-s-4 border-[#c78a00] bg-[#fff8e8] px-3 py-2 text-[11.5px] text-[#7a5600]"><RichB text={t("p8em.emSuppNote")} /></div>
+      <div className="relative mb-3 max-w-sm"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p8em.emSearchSuppPh")} className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
       {shown === null
-        ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+        ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8em.cLoading")}</div>
         : shown.length === 0
-        ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-5 text-center text-[12.5px] text-[var(--ink-3)]">{ql ? `No suppressed address matches "${q}".` : "Nobody's unsubscribed yet."}</div>
+        ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-5 text-center text-[12.5px] text-[var(--ink-3)]">{ql ? t("p8em.emNoSuppMatch", { q }) : t("p8em.emNobodyUnsub")}</div>
         : <div className="flex flex-col gap-2">{shown.map((r) => (
             <div key={r.id} data-ui="card" className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
               <div className="min-w-0 flex-1 truncate text-[13.5px] font-bold text-[var(--ink)]">{r.email}</div>
-              <Badge tone={r.by === "operator" ? { bg: "var(--panel)", fg: "var(--ink-2)" } : { bg: "#fdebec", fg: "#c02636" }}>{r.by === "operator" ? "Removed by operator" : "Unsubscribed"}</Badge>
+              <Badge tone={r.by === "operator" ? { bg: "var(--panel)", fg: "var(--ink-2)" } : { bg: "#fdebec", fg: "#c02636" }}>{r.by === "operator" ? t("p8em.emRemovedByOp") : t("p8em.emUnsubscribed")}</Badge>
               <span className="flex-none text-[11.5px] text-[var(--ink-3)]">{fmt(r.at)}</span>
             </div>
           ))}</div>}
@@ -1464,6 +1467,7 @@ function SuppressionsPanel() {
 }
 
 function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Audience) => void; payMethods?: string[]; seasons?: Season[] }) {
+  const { t, locale } = useI18n();
   const { bookings, listings, locations, allAudience, liveSegments } = useCampaignData();
   const [enquiries, setEnquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[]>(LS_ENQ, []));
   useEffect(() => { writeLS(LS_ENQ, enquiries); }, [enquiries]);
@@ -1498,9 +1502,9 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
   // Editable time window on the date-based Group cards — the count updates & saves automatically.
   const numBox = (val: number, set: (n: number) => void, min: number, max: number) => <input type="number" min={min} max={max} value={val} onChange={(e) => set(Math.max(min, Math.min(max, Number(e.target.value) || min)))} className="w-14 rounded-md border border-[var(--line)] px-1.5 py-1 text-center text-[12px] font-bold text-[var(--ink)]" />;
   const periodEditor = (id: string): React.ReactNode => {
-    if (id === "g-new") return <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[var(--ink-2)]">last {numBox(newDays, setNewDays, 7, 365)} days</span>;
-    if (id === "g-ending") return <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[var(--ink-2)]">next {numBox(endDays, setEndDays, 1, 90)} days</span>;
-    if (id === "g-lapsed") return <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[var(--ink-2)]">{numBox(lapsedMonths, setLapsedMonths, 1, 36)} months+</span>;
+    if (id === "g-new") return <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[var(--ink-2)]">{withInput(t("p8em.emPerLast", { n: "\u0001" }), numBox(newDays, setNewDays, 7, 365))}</span>;
+    if (id === "g-ending") return <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[var(--ink-2)]">{withInput(t("p8em.emPerNext", { n: "\u0001" }), numBox(endDays, setEndDays, 1, 90))}</span>;
+    if (id === "g-lapsed") return <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[var(--ink-2)]">{withInput(t("p8em.emPerMonths", { n: "\u0001" }), numBox(lapsedMonths, setLapsedMonths, 1, 36))}</span>;
     return null;
   };
   const cutoff = period === "all" ? 0 : nowMs - Number(period) * 86_400_000;
@@ -1533,7 +1537,7 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
       }
     }
     const people = [...map.values()];
-    return { id: "enq-all", name: "New enquiries — everyone", desc: "Everyone interested who hasn’t booked yet — added under New Family, signed up, or emailed you and marked as an enquiry. They drop off automatically once they book.", count: people.length, emails: people.map((p) => p.email), people };
+    return { id: "enq-all", name: t("p8em.emEnqEveryoneName"), desc: t("p8em.emEnqEveryoneDesc"), count: people.length, emails: people.map((p) => p.email), people };
   })();
   // Break the "everyone" total down by location — a true PARTITION, so the
   // per-location cards always sum back to the headline total. Each person lands
@@ -1545,7 +1549,7 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
     if (!combinedNotBooked?.people?.length) return [];
     const buckets = new Map<string, { email: string; name?: string }[]>();
     for (const p of combinedNotBooked.people) { const loc = enqLocOf.get(p.email.toLowerCase()) || "No location"; (buckets.get(loc) ?? buckets.set(loc, []).get(loc)!).push(p); }
-    return [...buckets].map(([loc, ppl]) => ({ id: `enq-${loc}`, name: `New enquiries · ${loc}`, count: ppl.length, emails: ppl.map((x) => x.email), people: ppl, desc: loc === "No location" ? "Added under New Family or enquired without a location · never booked" : `Enquired about ${loc} · never booked` }));
+    return [...buckets].map(([loc, ppl]) => ({ id: `enq-${loc}`, name: t("p8em.emEnqAudLoc", { loc: loc === "No location" ? t("p8em.emNoLocation") : loc }), count: ppl.length, emails: ppl.map((x) => x.email), people: ppl, desc: loc === "No location" ? t("p8em.emEnqNoLocDesc") : t("p8em.emEnqDescLoc", { loc }) }));
   })();
   // Computed groups from bookings (client-side). Aggregate per family (email).
   const DAY = 86_400_000;
@@ -1566,20 +1570,20 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
   const mkGroup = (id: string, name: string, desc: string, pred: (a: Agg) => boolean): Audience => { const ems = [...agg].filter(([, a]) => pred(a)).map(([e]) => e); return { id, name, desc, count: ems.length, emails: ems, people: ems.map((e) => ({ email: e, name: nameByEmail.get(e) })) }; };
   const soonEnd = nowMs + endDays * DAY;
   const computedGroups: Audience[] = [
-    mkGroup("g-new", `New this season`, `First booked in the last ${newDays} days — welcome them and upsell the next block.`, (a) => a.first !== Infinity && a.first >= nowMs - newDays * DAY),
-    mkGroup("g-repeat", "Repeat families", "Have booked with you 2+ times — your loyal regulars.", (a) => a.count >= 2),
-    mkGroup("g-multi", "Multi-child families", "Have 2+ children booked — sibling deals land well here.", (a) => a.children.size >= 2),
-    mkGroup("g-ending", "Ending soon", `Have a session in the next ${endDays} days — perfect to sell the next block.`, (a) => a.last > 0 && a.futureAt >= nowMs && a.futureAt <= soonEnd),
-    mkGroup("g-lapsed", "Lapsed families", `Last attended over ${lapsedMonths} months ago with nothing upcoming — win them back.`, (a) => a.last > 0 && a.last < nowMs - lapsedMonths * 30 * DAY && !a.future),
+    mkGroup("g-new", t("p8em.emGrp_new_name"), t("p8em.emGrp_new_desc", { n: newDays }), (a) => a.first !== Infinity && a.first >= nowMs - newDays * DAY),
+    mkGroup("g-repeat", t("p8em.emGrp_repeat_name"), t("p8em.emGrp_repeat_desc"), (a) => a.count >= 2),
+    mkGroup("g-multi", t("p8em.emGrp_multi_name"), t("p8em.emGrp_multi_desc"), (a) => a.children.size >= 2),
+    mkGroup("g-ending", t("p8em.emGrp_ending_name"), t("p8em.emGrp_ending_desc", { n: endDays }), (a) => a.last > 0 && a.futureAt >= nowMs && a.futureAt <= soonEnd),
+    mkGroup("g-lapsed", t("p8em.emGrp_lapsed_name"), t("p8em.emGrp_lapsed_desc", { n: lapsedMonths }), (a) => a.last > 0 && a.last < nowMs - lapsedMonths * 30 * DAY && !a.future),
   ];
   const hasPayData = bookings.some((b) => !!b.method);
   // Belt and braces: if a value is somehow still held (bookings reloaded without
   // methods, a restored form), it must not quietly filter everyone out.
   const payFilter = hasPayData ? segPay : "";
   const SUBS = [
-    { k: "enquiries" as const, label: "📩 Enquiries", count: combinedNotBooked?.count ?? 0 },
-    { k: "segments" as const, label: "👪 Booked parents", count: 1 + computedGroups.length + groupSegs.length },
-    { k: "suppressed" as const, label: "🚫 Unsubscribed", count: suppressedCount ?? 0 },
+    { k: "enquiries" as const, label: t("p8em.emSubEnquiries"), count: combinedNotBooked?.count ?? 0 },
+    { k: "segments" as const, label: t("p8em.emSubBooked"), count: 1 + computedGroups.length + groupSegs.length },
+    { k: "suppressed" as const, label: t("p8em.emSubUnsub"), count: suppressedCount ?? 0 },
   ];
   // Groups tab: build a live family group from the location + listing + season
   // filters (all preset to "All"). A season is just a session-date window, so it
@@ -1596,12 +1600,12 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
   const segFilterObj: AudFilter = { location: segLoc || undefined, listingIds: segListing ? [segListing] : seasonListingFilter, paymentMethod: payFilter || undefined };
   const segResolved = segFiltered ? resolveAudience(bookings, segFilterObj) : { emails: allAudience.emails, count: allAudience.count };
   const filteredAudience: Audience = segFiltered
-    ? { id: "seg-filter", name: `Families${segLoc ? ` · ${segLoc}` : ""}${segTitle ? ` · ${segTitle}` : ""}${season && !segListing ? ` · ${season.name}` : ""}${segPay ? ` · ${segPay}` : ""}`, count: segResolved.count, emails: segResolved.emails, desc: `${season && !segListing ? `Booked a ${season.name} activity` : "Active or upcoming booking"}${segLoc ? ` in ${segLoc}` : ""}${segTitle ? ` on ${segTitle}` : ""}${segPay ? ` · paid by ${segPay}` : ""}`, filter: segFilterObj, people: segResolved.emails.map((e) => ({ email: e })) }
+    ? { id: "seg-filter", name: `${t("p8em.emFamilies")}${segLoc ? ` · ${segLoc}` : ""}${segTitle ? ` · ${segTitle}` : ""}${season && !segListing ? ` · ${season.name}` : ""}${segPay ? ` · ${segPay}` : ""}`, count: segResolved.count, emails: segResolved.emails, desc: `${season && !segListing ? t("p8em.emFiltDescSeason", { name: season.name }) : t("p8em.emFiltDescActive")}${segLoc ? t("p8em.emFiltIn", { loc: segLoc }) : ""}${segTitle ? t("p8em.emFiltOn", { title: segTitle }) : ""}${segPay ? t("p8em.emFiltPaid", { pay: segPay }) : ""}`, filter: segFilterObj, people: segResolved.emails.map((e) => ({ email: e })) }
     : allAudience;
   return (
     <div>
-      <div className="mb-3 rounded-lg border-s-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Audiences are live CRM segments</b> — membership is recomputed from booking &amp; enrolment data each send, and opt-outs are always excluded.</div>
-      <div className="relative mb-3 max-w-sm"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search audiences…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
+      <div className="mb-3 rounded-lg border-s-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]"><RichB text={t("p8em.emAudInfo")} /></div>
+      <div className="relative mb-3 max-w-sm"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p8em.emSearchAudPh")} className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
 
       {/* switch between the three audience areas */}
       <div className="mb-4 flex flex-wrap gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1">
@@ -1609,41 +1613,41 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
       </div>
 
       {sub === "segments" && (<>
-        <AudSection title="🎯 Groups" hint="Ready-made groups that update themselves from your bookings & customer list — e.g. all families, or families on a given activity." />
+        <AudSection title={t("p8em.emGrpGroups")} hint={t("p8em.emGroupsHint")} />
         <div className="mb-4 rounded-2xl border border-[#E4E9F5] bg-[var(--surface)] p-4 shadow-sm">
-          <div className="mb-3 text-[14px] font-extrabold text-[#16306e]">🔎 Narrow by {seasons.length ? "season, " : ""}location, listing & payment</div>
+          <div className="mb-3 text-[14px] font-extrabold text-[#16306e]">{seasons.length ? t("p8em.emNarrowBySeason") : t("p8em.emNarrowBy")}</div>
           <div className={`grid gap-3 sm:grid-cols-2 ${seasons.length ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
-            {seasons.length > 0 && <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📅 Season</div><select value={segSeason} onChange={(e) => setSegSeason(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">All seasons</option>{seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>}
-            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📍 Location</div><select value={segLoc} onChange={(e) => setSegLoc(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">All locations</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</select></div>
-            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">🎫 Listing</div><select value={segListing} onChange={(e) => setSegListing(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">All listings</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select></div>
+            {seasons.length > 0 && <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.emFSeason")}</div><select value={segSeason} onChange={(e) => setSegSeason(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">{t("p8em.emAllSeasons")}</option>{seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>}
+            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.emFLocation")}</div><select value={segLoc} onChange={(e) => setSegLoc(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">{t("p8em.emAllLocations")}</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</select></div>
+            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.emFListing")}</div><select value={segListing} onChange={(e) => setSegListing(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">{t("p8em.emAllListings")}</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select></div>
             {/* DISABLED until bookings actually carry a payment method. It used
                 to stay pickable with only a note underneath: choosing "Card"
                 matched nothing, the audience silently fell to 0, and you could
                 send a campaign to an empty list believing it went out. A filter
                 that cannot match must not be selectable. */}
-            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">💳 Payment method</div><select value={segPay} onChange={(e) => setSegPay(e.target.value)} disabled={!hasPayData} title={hasPayData ? undefined : "Not available until bookings record how they were paid"} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0] disabled:cursor-not-allowed disabled:bg-[var(--panel)] disabled:text-[var(--ink-3)]"><option value="">Any method</option>{payMethods.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
+            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.emFPayment")}</div><select value={segPay} onChange={(e) => setSegPay(e.target.value)} disabled={!hasPayData} title={hasPayData ? undefined : t("p8em.emPayNA")} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0] disabled:cursor-not-allowed disabled:bg-[var(--panel)] disabled:text-[var(--ink-3)]"><option value="">{t("p8em.emAnyMethod")}</option>{payMethods.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
           </div>
-          {!hasPayData && <p className="mt-2 text-[11px] text-[#9a6b00]">⚠ Payment-method filtering is off because no booking records how it was paid yet. Options come from <b>Setup → “How parents pay”</b>; the filter switches on by itself once bookings carry the method (backend).</p>}
-          {segFiltered && <div className="mt-3 flex items-center gap-2"><span className="rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[13px] font-extrabold text-[#1d3a8f]">{filteredAudience.count} matching famil{filteredAudience.count === 1 ? "y" : "ies"}</span><button type="button" onClick={() => { setSegLoc(""); setSegListing(""); setSegPay(""); setSegSeason(""); }} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕ Clear filters</button></div>}
+          {!hasPayData && <p className="mt-2 text-[11px] text-[#9a6b00]"><RichB text={t("p8em.emPayWarn")} /></p>}
+          {segFiltered && <div className="mt-3 flex items-center gap-2"><span className="rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[13px] font-extrabold text-[#1d3a8f]">{pickPlural(t, locale, "p8em.emMatchFam", filteredAudience.count)}</span><button type="button" onClick={() => { setSegLoc(""); setSegListing(""); setSegPay(""); setSegSeason(""); }} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">{t("p8em.emClearFilters")}</button></div>}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[filteredAudience, ...computedGroups, ...groupSegs].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} extra={periodEditor(a.id)} />)}</div>
       </>)}
 
       {sub === "enquiries" && (<>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <AudSection title="📩 New enquiries" hint="Everyone interested who hasn’t booked. The first card is the full total; the rest split it by location and always add back up to it. All drop off automatically once they book." />
+          <AudSection title={t("p8em.emEnqTitleH")} hint={t("p8em.emEnqHint")} />
           <div className="flex flex-wrap items-center gap-2">
-            <select value={enqLoc} onChange={(e) => setEnqLoc(e.target.value)} title="Filter enquiries by location" className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]"><option value="all">📍 All locations</option>{enqBreakdown.map((a) => { const loc = a.name.replace(/^New enquiries · /, ""); return <option key={a.id} value={loc}>{loc} ({a.count})</option>; })}</select>
-            <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Enquired within</span><div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">{([["30", "Last 30d", "past 30 days"], ["90", "Last 90d", "past 90 days"], ["all", "All time", "ever"]] as const).map(([v, l, t]) => <button key={v} type="button" title={`Show enquiries received in the ${t}`} onClick={() => setPeriod(v)} className="px-3 py-1" style={period === v ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
+            <select value={enqLoc} onChange={(e) => setEnqLoc(e.target.value)} title={t("p8em.emEnqFilterTip")} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]"><option value="all">{t("p8em.emEnqAllLoc")}</option>{enqBreakdown.map((a) => { const loc = a.id.slice(4); return <option key={a.id} value={loc}>{loc === "No location" ? t("p8em.emNoLocation") : loc} ({a.count})</option>; })}</select>
+            <span className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("p8em.emEnqWithin")}</span><div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">{(["30", "90", "all"] as const).map((v) => <button key={v} type="button" title={t("p8em.emPerTip_" + v)} onClick={() => setPeriod(v)} className="px-3 py-1" style={period === v ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{t("p8em.emPer_" + v)}</button>)}</div>
           </div>
         </div>
-        <p className="mb-2 mt-1 text-[11.5px] text-[var(--ink-3)]">Filters this list by <b>how recently they first emailed you</b> — <b>Last 30d</b> shows only enquiries from the past month, <b>All time</b> shows everyone who ever enquired and still hasn&apos;t booked. Handy for chasing fresh leads vs. re-engaging old ones.</p>
-        <div className="mb-3 rounded-lg border-s-4 border-[#c78a00] bg-[#fff8e8] px-3 py-2 text-[11.5px] text-[#7a5600]">⚖️ <b>Law (UK PECR):</b> enquiries haven’t bought anything, so you can only <b>market</b> to them once they’ve <b>opted in</b> (the “yes to hearing about activities” tick on their family record). Anyone who hasn’t opted in is automatically skipped on a send. You can always reply to their enquiry directly — that’s not marketing.</div>
+        <p className="mb-2 mt-1 text-[11.5px] text-[var(--ink-3)]"><RichB text={t("p8em.emEnqPeriodNote")} /></p>
+        <div className="mb-3 rounded-lg border-s-4 border-[#c78a00] bg-[#fff8e8] px-3 py-2 text-[11.5px] text-[#7a5600]"><RichB text={t("p8em.emPecr")} /></div>
         {!combinedNotBooked?.count
-          ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Add a family under <b>New Family</b>, or open an email in the Inbox and hit <b>➕ Mark as enquiry</b>.</div>
+          ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-5 text-center text-[12.5px] text-[var(--ink-3)]"><RichB text={t("p8em.emNoOpenEnq")} /></div>
           : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {enqLoc === "all" && combinedNotBooked && matchAud(combinedNotBooked) && <AudienceCard key="notbooked" a={combinedNotBooked} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeFromNotBooked} />}
-              {(enqLoc === "all" ? enqBreakdown : enqBreakdown.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeFromNotBooked} />)}
+              {(enqLoc === "all" ? enqBreakdown : enqBreakdown.filter((a) => a.id.slice(4) === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeFromNotBooked} />)}
             </div>}
       </>)}
 
@@ -1654,7 +1658,8 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
 }
 
 interface EmailTemplate { id: string; name: string; subject?: string; body: string }
-function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) => void; company?: Partial<Company>; socials?: Social[] }) {
+function TemplatesView({ onUse, company, socials }: { onUse: (tp: EmailTemplate) => void; company?: Partial<Company>; socials?: Social[] }) {
+  const t = useT();
   const [templates, setTemplates] = useState<EmailTemplate[] | null>(null);
   const [edit, setEdit] = useState<EmailTemplate | null>(null); // the one being edited/created
   const [busy, setBusy] = useState(false);
@@ -1669,79 +1674,79 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
     // Prompt OUTSIDE the updater — React double-invokes updaters in dev
     // (StrictMode), which showed the prompt twice and kept the second
     // (auto-dismissed) answer.
-    const nm = designer?.mode === "edit" ? null : (window.prompt("Name this design template:", "My design") || "My design");
+    const nm = designer?.mode === "edit" ? null : (window.prompt(t("p8em.emDesignNamePrompt"), t("p8em.emMyDesign")) || t("p8em.emMyDesign"));
     setDesigns((xs) => {
       let next: SavedTemplate[];
       if (designer?.mode === "edit") next = xs.map((x) => (x.id === designer.item.id ? { ...x, accent: d.accent, blocks: d.blocks } : x));
-      else next = [{ id: `td-${dNow}-${xs.length}`, name: (nm ?? "My design").trim() || "My design", accent: d.accent, blocks: d.blocks }, ...xs];
+      else next = [{ id: `td-${dNow}-${xs.length}`, name: (nm ?? t("p8em.emMyDesign")).trim() || t("p8em.emMyDesign"), accent: d.accent, blocks: d.blocks }, ...xs];
       persistMyTemplates(next); return next;
     });
     setDesigner(null);
   };
-  const delDesign = (item: SavedTemplate) => { if (!confirm(`Delete the design “${item.name}”?`)) return; setDesigns((xs) => { const next = xs.filter((x) => x.id !== item.id); persistMyTemplates(next); return next; }); };
+  const delDesign = (item: SavedTemplate) => { if (!confirm(t("p8em.emDeleteDesignConfirm", { name: item.name }))) return; setDesigns((xs) => { const next = xs.filter((x) => x.id !== item.id); persistMyTemplates(next); return next; }); };
   const load = useCallback(() => apiGet<EmailTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => setTemplates([])), []);
   useEffect(() => { load(); }, [load]);
   async function saveTmpl() {
-    if (!edit || !edit.name.trim()) { setErr("Give the template a name."); return; }
+    if (!edit || !edit.name.trim()) { setErr(t("p8em.emGiveName")); return; }
     setBusy(true); setErr(null);
     const payload = { name: edit.name.trim(), subject: edit.subject?.trim() || undefined, body: edit.body };
     try {
       if (edit.id) await api(`/api/messages/templates/${encodeURIComponent(edit.id)}`, { method: "PUT", body: JSON.stringify(payload) });
       else await apiPost("/api/messages/templates", payload);
       setEdit(null); load();
-    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save"); }
+    } catch (e) { setErr(e instanceof Error ? e.message : t("p8em.nfCouldntSave")); }
     finally { setBusy(false); }
   }
-  async function del(t: EmailTemplate) {
-    if (!confirm(`Delete the template “${t.name}”?`)) return;
-    try { await api(`/api/messages/templates/${encodeURIComponent(t.id)}`, { method: "DELETE" }); load(); }
-    catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t delete"); }
+  async function del(tp: EmailTemplate) {
+    if (!confirm(t("p8em.emDeleteTplConfirm", { name: tp.name }))) return;
+    try { await api(`/api/messages/templates/${encodeURIComponent(tp.id)}`, { method: "DELETE" }); load(); }
+    catch (e) { setErr(e instanceof Error ? e.message : t("p8em.cDeleteFailed")); }
   }
-  if (!templates) return <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
+  if (!templates) return <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8em.cLoading")}</div>;
   const tq = q.trim().toLowerCase();
-  const wShown = tq ? templates.filter((t) => `${t.name} ${t.subject ?? ""} ${t.body}`.toLowerCase().includes(tq)) : templates;
+  const wShown = tq ? templates.filter((tp) => `${tp.name} ${tp.subject ?? ""} ${tp.body}`.toLowerCase().includes(tq)) : templates;
   const dShown = tq ? designs.filter((s) => s.name.toLowerCase().includes(tq)) : designs;
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[13px] font-bold shadow-sm">
-          {([["worded", "✍️ Worded templates"], ["designed", `🎨 Builder templates${designs.length ? ` (${designs.length})` : ""}`]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setSub(k)} className="px-4 py-2.5" style={sub === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
+          {([["worded", t("p8em.emTabWorded")], ["designed", `${t("p8em.emTabBuilder")}${designs.length ? ` (${designs.length})` : ""}`]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setSub(k)} className="px-4 py-2.5" style={sub === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
         </div>
-        <div className="relative max-w-xs flex-1"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search templates…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
+        <div className="relative max-w-xs flex-1"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p8em.emSearchTplPh")} className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-9 pe-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
       </div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
 
       {sub === "worded" && <>
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-[13px] font-bold text-[var(--ink-2)]">Reusable worded templates — shared with Messages</span>
-        <button type="button" onClick={() => setEdit({ id: "", name: "", subject: "", body: "" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>＋ New template</button>
+        <span className="text-[13px] font-bold text-[var(--ink-2)]">{t("p8em.emReusableWorded")}</span>
+        <button type="button" onClick={() => setEdit({ id: "", name: "", subject: "", body: "" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{t("p8em.emNewTplBtn")}</button>
       </div>
-      {wShown.length === 0 ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">{tq ? `No worded templates match “${q}”.` : "No templates yet. Create one — it’s available here and in Messages."}</Card>
-      : <div className="flex flex-col gap-2">{wShown.map((t) => (
-          <div key={t.id} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-            <div className="min-w-0 flex-1"><div className="truncate text-[13.5px] font-bold text-[var(--ink)]">{t.name}</div>{t.subject && <div className="truncate text-[12px] text-[var(--ink-3)]">{t.subject}</div>}</div>
-            <button type="button" onClick={() => onUse(t)} className="flex-none rounded-lg border border-[#2f6bd8] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">Use</button>
-            <button type="button" onClick={() => setEdit(t)} className="flex-none rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button>
-            <button type="button" onClick={() => del(t)} className="flex-none rounded-lg border border-[#f6c9cc] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button>
+      {wShown.length === 0 ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">{tq ? t("p8em.emNoWordedMatch", { q }) : t("p8em.emNoTemplates")}</Card>
+      : <div className="flex flex-col gap-2">{wShown.map((tp) => (
+          <div key={tp.id} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+            <div className="min-w-0 flex-1"><div className="truncate text-[13.5px] font-bold text-[var(--ink)]">{tp.name}</div>{tp.subject && <div className="truncate text-[12px] text-[var(--ink-3)]">{tp.subject}</div>}</div>
+            <button type="button" onClick={() => onUse(tp)} className="flex-none rounded-lg border border-[#2f6bd8] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">{t("p8em.emUse")}</button>
+            <button type="button" onClick={() => setEdit(tp)} className="flex-none rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.cEdit")}</button>
+            <button type="button" onClick={() => del(tp)} className="flex-none rounded-lg border border-[#f6c9cc] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdebec]">{t("p8em.cDelete")}</button>
           </div>
         ))}</div>}
-      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">Tip: merge fields like {"{ChildName}"} / {"{ListingName}"} fill in automatically — in bulk Email sends each family’s fields resolve from their most relevant booking ({"{SessionDate}"}, {"{VenueName}"} included), with neutral wording for anyone we can’t match.</p>
+      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">{t("p8em.emMergeTip")}</p>
       </>}
 
       {sub === "designed" && <>
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-[13px] font-bold text-[var(--ink-2)]">Build & save branded email designs — edit and save here, send from Campaigns</span>
-        <button type="button" onClick={() => setDesigner({ mode: "new" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>＋ New builder template</button>
+        <span className="text-[13px] font-bold text-[var(--ink-2)]">{t("p8em.emBuildSave")}</span>
+        <button type="button" onClick={() => setDesigner({ mode: "new" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>{t("p8em.emNewBuilderTpl")}</button>
       </div>
       {dShown.length === 0
-        ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">{tq ? `No builder templates match “${q}”.` : <>No designs yet. Hit <b>＋ New builder template</b> to build one in the visual editor — it saves here and appears in Campaigns → Design your own → “Use a saved one”.</>}</Card>
+        ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">{tq ? t("p8em.emNoBuilderMatch", { q }) : <RichB text={t("p8em.emNoDesigns")} />}</Card>
         : <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>{dShown.map((s) => (
             <div key={s.id} className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
               <div className="h-44 w-full overflow-hidden border-b border-[var(--line)] bg-[var(--surface)]"><div style={{ width: 640, transform: "scale(0.375)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: s.accent, blocks: s.blocks }, company, dNow) }} /></div>
-              <div className="flex items-center gap-2 p-2.5"><div className="min-w-0 flex-1 truncate text-[13px] font-extrabold text-[var(--ink)]">{s.name}</div><button type="button" onClick={() => setDesigner({ mode: "edit", item: s })} className="flex-none rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button><button type="button" onClick={() => delDesign(s)} className="flex-none rounded-lg border border-[#f6c9cc] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button></div>
+              <div className="flex items-center gap-2 p-2.5"><div className="min-w-0 flex-1 truncate text-[13px] font-extrabold text-[var(--ink)]">{s.name}</div><button type="button" onClick={() => setDesigner({ mode: "edit", item: s })} className="flex-none rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.cEdit")}</button><button type="button" onClick={() => delDesign(s)} className="flex-none rounded-lg border border-[#f6c9cc] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">{t("p8em.cDelete")}</button></div>
             </div>
           ))}</div>}
-      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">These are just for building &amp; saving — <b>to send</b> one, go to <b>Campaigns → New campaign → Design your own → Use a saved one</b>.</p>
+      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]"><RichB text={t("p8em.emBuilderNote")} /></p>
       </>}
       {/* No wrapping div here: CampaignDesigner's own root is already
           position:fixed, so a positioned "relative z-[130]" wrapper around
@@ -1752,18 +1757,18 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
           matter how high — the outer z-130 wrapper was what actually got
           compared against the header, not the designer's inner z-index.
           Confirmed live via getComputedStyle + elementFromPoint. */}
-      {designer && <CampaignDesigner initial={designer.mode === "edit" ? { accent: designer.item.accent, blocks: designer.item.blocks } : null} company={company} socials={socials} onCancel={() => setDesigner(null)} onSave={saveDesign} saveLabel="💾 Save template" />}
+      {designer && <CampaignDesigner initial={designer.mode === "edit" ? { accent: designer.item.accent, blocks: designer.item.blocks } : null} company={company} socials={socials} onCancel={() => setDesigner(null)} onSave={saveDesign} saveLabel={t("p8em.emSaveTplLabel")} />}
 
       {edit && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={() => setEdit(null)}>
           <div className="w-full max-w-xl rounded-2xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center border-b border-[var(--line)] px-5 py-3.5"><div className="text-[17px] font-extrabold text-[var(--ink)]">{edit.id ? "Edit template" : "New template"}</div><button type="button" onClick={() => setEdit(null)} className="ms-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button></div>
+            <div className="flex items-center border-b border-[var(--line)] px-5 py-3.5"><div className="text-[17px] font-extrabold text-[var(--ink)]">{edit.id ? t("p8em.tplEdit") : t("p8em.tplNew")}</div><button type="button" onClick={() => setEdit(null)} className="ms-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button></div>
             <div className="max-h-[66vh] space-y-2.5 overflow-y-auto p-5">
-              <div><FieldLabel>Name</FieldLabel><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="e.g. Booking confirmation" className="w-full" /></div>
-              <div><FieldLabel>Subject (optional)</FieldLabel><Input value={edit.subject ?? ""} onChange={(e) => setEdit({ ...edit, subject: e.target.value })} placeholder="Subject line" className="w-full" /></div>
-              <div><FieldLabel>Body</FieldLabel><textarea value={edit.body} onChange={(e) => setEdit({ ...edit, body: e.target.value })} rows={8} placeholder="Write the template… use {ChildName}, {ListingName} etc. for merge fields" className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px]" /><div className="mt-1 flex flex-wrap gap-1.5">{MERGE_FIELDS.map((f) => <button key={f.token} type="button" title={f.desc} onClick={() => setEdit((d) => d && ({ ...d, body: `${d.body}${d.body && !d.body.endsWith(" ") ? " " : ""}${f.token}` }))} className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>)}</div></div>
+              <div><FieldLabel>{t("p8em.cName")}</FieldLabel><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder={t("p8em.tplNamePh")} className="w-full" /></div>
+              <div><FieldLabel>{t("p8em.emSubjectOptional")}</FieldLabel><Input value={edit.subject ?? ""} onChange={(e) => setEdit({ ...edit, subject: e.target.value })} placeholder={t("p8em.emSubjectLine")} className="w-full" /></div>
+              <div><FieldLabel>{t("p8em.emBodyLbl")}</FieldLabel><textarea value={edit.body} onChange={(e) => setEdit({ ...edit, body: e.target.value })} rows={8} placeholder={t("p8em.emTplBodyPh")} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px]" /><div className="mt-1 flex flex-wrap gap-1.5">{MERGE_FIELDS.map((f) => <button key={f.token} type="button" title={f.desc} onClick={() => setEdit((d) => d && ({ ...d, body: `${d.body}${d.body && !d.body.endsWith(" ") ? " " : ""}${f.token}` }))} className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>)}</div></div>
             </div>
-            <div className="flex justify-end gap-2 border-t border-[var(--line)] px-5 py-3"><button type="button" onClick={() => setEdit(null)} className="rounded-lg border border-[var(--line)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button><button type="button" onClick={saveTmpl} disabled={busy} className="rounded-lg px-3.5 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-50" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{busy ? "Saving…" : "Save template"}</button></div>
+            <div className="flex justify-end gap-2 border-t border-[var(--line)] px-5 py-3"><button type="button" onClick={() => setEdit(null)} className="rounded-lg border border-[var(--line)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">{t("p8em.cCancel")}</button><button type="button" onClick={saveTmpl} disabled={busy} className="rounded-lg px-3.5 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-50" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{busy ? t("p8em.cSaving") : t("p8em.emSaveTpl")}</button></div>
           </div>
         </div>
       )}
@@ -1772,6 +1777,7 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
 }
 
 function AnalyticsView() {
+  const { t, locale } = useI18n();
   // Straight off the send engine's records: recipientCount (sent), delivered
   // (accepted by the transport), openedBy (distinct pixel loads). Sends from
   // before delivery tracking carry no counts — treated as delivered.
@@ -1788,37 +1794,37 @@ function AnalyticsView() {
   const bounces = sent - delivered;
   return (
     <div>
-      <div className="mb-3 rounded-lg border-s-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Email analytics</b> — per send or across all. Delivery straight from the mail transport, opens from a once-per-recipient tracking pixel (image-blocking clients won’t count). Click tracking &amp; unsubscribes are still to come.</div>
+      <div className="mb-3 rounded-lg border-s-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]"><RichB text={t("p8em.emAnInfo")} /></div>
       {/* campaign selector */}
       <div className="mb-4 flex items-center gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Campaign</span>
+        <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.emColCampaign")}</span>
         <Select value={sel} onChange={(e) => setSel(e.target.value)} className="max-w-[340px] font-bold text-[#1d3a8f]">
-          <option value="all">📊 All sends ({rows.length})</option>
+          <option value="all">{t("p8em.emAllSends", { n: rows.length })}</option>
           {rows.map((c) => <option key={c.id} value={c.id}>{c.subject} — {when(c.createdAt)}</option>)}
         </Select>
       </div>
       {active && <div className="mb-3 flex items-baseline gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]">{active.subject}</span><span className="ms-auto text-[12px] text-[var(--ink-3)]">{when(active.createdAt)}</span></div>}
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Sent" value={String(sent)} sub={`${base.length} send${base.length === 1 ? "" : "s"}`} />
-        <StatCard label="Delivered" value={String(delivered)} sub={sent ? `${Math.round((delivered / sent) * 100)}% of sent` : undefined} />
-        <StatCard label="Open rate" value={`${openRate}%`} sub={`${opened} opened`} tone="#16a34a" />
-        <StatCard label="Not delivered" value={String(bounces)} sub={sent ? `${Math.round((bounces / sent) * 100)}%` : undefined} tone="#ea580c" />
-        <StatCard label="Click rate" value="—" sub="link tracking to come" />
+        <StatCard label={t("p8em.emSentW")} value={String(sent)} sub={t("p8em.emSendsN", { n: base.length })} />
+        <StatCard label={t("p8em.emDelivered")} value={String(delivered)} sub={sent ? t("p8em.emPctOfSent", { n: Math.round((delivered / sent) * 100) }) : undefined} />
+        <StatCard label={t("p8em.emOpenRate")} value={`${openRate}%`} sub={t("p8em.emNOpened", { n: opened })} tone="#16a34a" />
+        <StatCard label={t("p8em.emNotDelivered")} value={String(bounces)} sub={sent ? `${Math.round((bounces / sent) * 100)}%` : undefined} tone="#ea580c" />
+        <StatCard label={t("p8em.emClickRate")} value="—" sub={t("p8em.emLinkTrackSoon")} />
       </div>
       {active
         ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-            <div className="mb-3 text-[15px] font-extrabold text-[var(--ink)]">Delivery funnel</div>
+            <div className="mb-3 text-[15px] font-extrabold text-[var(--ink)]">{t("p8em.emFunnel")}</div>
             <div className="space-y-2.5">
-              <FunnelBar label="Sent" n={sent} max={sent} color="#6b7280" />
-              <FunnelBar label="Delivered" n={delivered} max={sent} color="#16306e" />
-              <FunnelBar label="Opened" n={opened} max={sent} color="#16a34a" />
+              <FunnelBar label={t("p8em.emSentW")} n={sent} max={sent} color="#6b7280" />
+              <FunnelBar label={t("p8em.emDelivered")} n={delivered} max={sent} color="#16306e" />
+              <FunnelBar label={t("p8em.emOpenedW")} n={opened} max={sent} color="#16a34a" />
             </div>
           </div>
         : <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-            <div className="mb-3 text-[15px] font-extrabold text-[var(--ink)]">Open rate by send <span className="text-[12px] font-normal text-[var(--ink-3)]">— tap one for its full breakdown</span></div>
-            {rows.length === 0 ? <div className="py-4 text-center text-[13px] text-[var(--ink-3)]">No sends yet.</div>
+            <div className="mb-3 text-[15px] font-extrabold text-[var(--ink)]">{t("p8em.emOpenRateBySend")} <span className="text-[12px] font-normal text-[var(--ink-3)]">{t("p8em.emTapBreakdown")}</span></div>
+            {rows.length === 0 ? <div className="py-4 text-center text-[13px] text-[var(--ink-3)]">{t("p8em.emNoSends")}</div>
             : rows.filter((c) => c.deliveredN > 0).slice(0, 10).map((c) => { const pct = Math.round((c.openedN / c.deliveredN) * 100); return (
-              <button key={c.id} type="button" onClick={() => setSel(c.id)} className="mb-3 block w-full text-start last:mb-0"><div className="flex justify-between text-[13px]"><span className="truncate pe-3 text-[var(--ink-2)] hover:text-[#1d3a8f]">{c.subject}</span><span className="flex-none font-bold text-[var(--ink)]">{pct}% open</span></div><div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#16306e" }} /></div></button>
+              <button key={c.id} type="button" onClick={() => setSel(c.id)} className="mb-3 block w-full text-start last:mb-0"><div className="flex justify-between text-[13px]"><span className="truncate pe-3 text-[var(--ink-2)] hover:text-[#1d3a8f]">{c.subject}</span><span className="flex-none font-bold text-[var(--ink)]">{t("p8em.emPctOpen", { n: pct })}</span></div><div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#16306e" }} /></div></button>
             ); })}
           </div>}
     </div>
@@ -1827,44 +1833,45 @@ function AnalyticsView() {
 
 interface EmailSig { id: string; name: string; html: string }
 function SignatureManager({ settings, save, onClose }: { settings: TenantSettings; save: (patch: { settings?: TenantSettings }) => Promise<void>; onClose: () => void }) {
+  const t = useT();
   const sigs: EmailSig[] = settings.emailSignatures ?? [];
   const seq = useRef(0);
   const [draft, setDraft] = useState<EmailSig | null>(null);
   const b = settings.billing ?? {};
-  const name = settings.providerName || b.businessName || "Your business";
-  const fromDetails = () => `${b.logoUrl ? `<img src="${b.logoUrl}" alt="" style="max-height:64px"><br>` : ""}<b>${name}</b><br>${b.phone ? `Tel: ${b.phone}<br>` : ""}${b.email ? `Email: ${b.email}` : ""}`;
+  const name = settings.providerName || b.businessName || t("p8em.emYourBusiness");
+  const fromDetails = () => `${b.logoUrl ? `<img src="${b.logoUrl}" alt="" style="max-height:64px"><br>` : ""}<b>${name}</b><br>${b.phone ? `${t("p8em.emSigTel", { v: b.phone })}<br>` : ""}${b.email ? t("p8em.emSigEmail", { v: b.email }) : ""}`;
   const persist = (next: EmailSig[], def?: string) => save({ settings: { ...settings, emailSignatures: next, ...(def !== undefined ? { defaultSignatureId: def } : {}) } });
-  const saveDraft = () => { if (!draft) return; const d = { ...draft, name: draft.name.trim() || "Signature" }; persist(sigs.some((s) => s.id === d.id) ? sigs.map((s) => s.id === d.id ? d : s) : [...sigs, d]); setDraft(null); };
-  const del = (id: string) => { if (confirm("Delete this signature?")) persist(sigs.filter((s) => s.id !== id), settings.defaultSignatureId === id ? "" : undefined); };
+  const saveDraft = () => { if (!draft) return; const d = { ...draft, name: draft.name.trim() || t("p8em.emSigDefName") }; persist(sigs.some((s) => s.id === d.id) ? sigs.map((s) => s.id === d.id ? d : s) : [...sigs, d]); setDraft(null); };
+  const del = (id: string) => { if (confirm(t("p8em.emSigDeleteConfirm"))) persist(sigs.filter((s) => s.id !== id), settings.defaultSignatureId === id ? "" : undefined); };
   return (
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onClose}>
       <div className="w-full max-w-xl rounded-2xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center border-b border-[var(--line)] px-5 py-3.5"><div className="text-[17px] font-extrabold text-[var(--ink)]">Manage signatures</div><button type="button" onClick={onClose} className="ms-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button></div>
+        <div className="flex items-center border-b border-[var(--line)] px-5 py-3.5"><div className="text-[17px] font-extrabold text-[var(--ink)]">{t("p8em.emManageSigs")}</div><button type="button" onClick={onClose} className="ms-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button></div>
         <div className="max-h-[66vh] overflow-y-auto p-5">
           {!draft ? (
             <>
-              {sigs.length === 0 ? <p className="mb-3 text-[13px] text-[var(--ink-3)]">No signatures yet. Create one — your logo, business name and contact details, appended to the bottom of an email.</p>
+              {sigs.length === 0 ? <p className="mb-3 text-[13px] text-[var(--ink-3)]">{t("p8em.emNoSigs")}</p>
               : <div className="mb-3 flex flex-col gap-2">{sigs.map((s) => (
                   <div key={s.id} className="flex items-center gap-2 rounded-xl border border-[var(--line)] p-3">
-                    <div className="min-w-0 flex-1"><div className="text-[13.5px] font-bold text-[var(--ink)]">{s.name}{settings.defaultSignatureId === s.id && <span className="ms-2 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-extrabold text-[#1d3a8f]">Default</span>}</div><div className="mt-1 max-h-16 overflow-hidden text-[11.5px] text-[var(--ink-3)]" dangerouslySetInnerHTML={{ __html: s.html }} /></div>
+                    <div className="min-w-0 flex-1"><div className="text-[13.5px] font-bold text-[var(--ink)]">{s.name}{settings.defaultSignatureId === s.id && <span className="ms-2 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-extrabold text-[#1d3a8f]">{t("p8em.emDefault")}</span>}</div><div className="mt-1 max-h-16 overflow-hidden text-[11.5px] text-[var(--ink-3)]" dangerouslySetInnerHTML={{ __html: s.html }} /></div>
                     <div className="flex flex-none flex-col gap-1">
-                      <button type="button" onClick={() => setDraft(s)} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button>
-                      <button type="button" onClick={() => persist(sigs, settings.defaultSignatureId === s.id ? "" : s.id)} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{settings.defaultSignatureId === s.id ? "Unset default" : "Default"}</button>
-                      <button type="button" onClick={() => del(s.id)} className="rounded-md border border-[#f6c9cc] px-2 py-0.5 text-[11px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button>
+                      <button type="button" onClick={() => setDraft(s)} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.cEdit")}</button>
+                      <button type="button" onClick={() => persist(sigs, settings.defaultSignatureId === s.id ? "" : s.id)} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{settings.defaultSignatureId === s.id ? t("p8em.emUnsetDefault") : t("p8em.emDefault")}</button>
+                      <button type="button" onClick={() => del(s.id)} className="rounded-md border border-[#f6c9cc] px-2 py-0.5 text-[11px] font-bold text-[#c02636] hover:bg-[#fdebec]">{t("p8em.cDelete")}</button>
                     </div>
                   </div>
                 ))}</div>}
-              <button type="button" onClick={() => setDraft({ id: `sig-${sigs.length}-${seq.current++}`, name: "", html: fromDetails() })} className="rounded-lg px-3.5 py-2 text-[13px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New signature</button>
+              <button type="button" onClick={() => setDraft({ id: `sig-${sigs.length}-${seq.current++}`, name: "", html: fromDetails() })} className="rounded-lg px-3.5 py-2 text-[13px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{t("p8em.emNewSig")}</button>
             </>
           ) : (
             <div className="space-y-2.5">
-              <div><FieldLabel>Name</FieldLabel><Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="e.g. LOGO" className="w-full" /></div>
+              <div><FieldLabel>{t("p8em.cName")}</FieldLabel><Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder={t("p8em.emSigNamePh")} className="w-full" /></div>
               <div className="flex flex-wrap gap-2">
-                {b.logoUrl && <button type="button" onClick={() => setDraft((d) => d && ({ ...d, html: `${d.html}<img src="${b.logoUrl}" alt="" style="max-height:64px"><br>` }))} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">🖼 Insert logo</button>}
-                <button type="button" onClick={() => setDraft((d) => d && ({ ...d, html: fromDetails() }))} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">✨ Fill from my business details</button>
+                {b.logoUrl && <button type="button" onClick={() => setDraft((d) => d && ({ ...d, html: `${d.html}<img src="${b.logoUrl}" alt="" style="max-height:64px"><br>` }))} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.emInsertLogo")}</button>}
+                <button type="button" onClick={() => setDraft((d) => d && ({ ...d, html: fromDetails() }))} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.emFillFromBiz")}</button>
               </div>
-              <div><FieldLabel>Signature</FieldLabel><RichText value={draft.html} onChange={(h) => setDraft((d) => d && ({ ...d, html: h }))} /></div>
-              <div className="flex justify-end gap-2"><button type="button" onClick={() => setDraft(null)} className="rounded-lg border border-[var(--line)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button><button type="button" onClick={saveDraft} className="rounded-lg px-3.5 py-1.5 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>Save signature</button></div>
+              <div><FieldLabel>{t("p8em.emSignature")}</FieldLabel><RichText value={draft.html} onChange={(h) => setDraft((d) => d && ({ ...d, html: h }))} /></div>
+              <div className="flex justify-end gap-2"><button type="button" onClick={() => setDraft(null)} className="rounded-lg border border-[var(--line)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">{t("p8em.cCancel")}</button><button type="button" onClick={saveDraft} className="rounded-lg px-3.5 py-1.5 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{t("p8em.emSaveSig")}</button></div>
             </div>
           )}
         </div>
@@ -1874,6 +1881,7 @@ function SignatureManager({ settings, save, onClose }: { settings: TenantSetting
 }
 
 function EmailPrefs({ settings, save }: { settings: TenantSettings; save: (patch: { settings?: TenantSettings }) => Promise<void> }) {
+  const t = useT();
   const p = settings.emailPrefs ?? {};
   const sigs = settings.emailSignatures ?? [];
   const setP = (patch: Partial<NonNullable<TenantSettings["emailPrefs"]>>) => save({ settings: { ...settings, emailPrefs: { ...p, ...patch } } });
@@ -1882,29 +1890,29 @@ function EmailPrefs({ settings, save }: { settings: TenantSettings; save: (patch
     <div className="flex max-w-2xl flex-col gap-3">
       <MailboxSetup context="settings" />
       <Card className="p-4">
-        <div className="text-[14px] font-extrabold text-[var(--ink)]">Undo send</div>
-        <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">A grace period after you hit Send where you can still pull it back before it goes.</p>
-        <div className="flex flex-wrap gap-1.5">{([[0, "Off"], [5, "5s"], [10, "10s"], [20, "20s"], [30, "30s"]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => setP({ undoSeconds: v })} className="rounded-full border px-3 py-1 text-[12.5px] font-bold" style={chip((p.undoSeconds ?? 5) === v)}>{l}</button>)}</div>
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8em.emUndoSend")}</div>
+        <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">{t("p8em.emUndoSendSub")}</p>
+        <div className="flex flex-wrap gap-1.5">{([[0, t("p8em.emOff")], [5, "5s"], [10, "10s"], [20, "20s"], [30, "30s"]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => setP({ undoSeconds: v })} className="rounded-full border px-3 py-1 text-[12.5px] font-bold" style={chip((p.undoSeconds ?? 5) === v)}>{l}</button>)}</div>
       </Card>
       <Card className="p-4">
-        <div className="text-[14px] font-extrabold text-[var(--ink)]">Signature defaults</div>
-        <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">Which signature is pre-selected. Manage the signatures themselves on the Compose tab.</p>
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8em.emSigDefaults")}</div>
+        <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">{t("p8em.emSigDefaultsSub")}</p>
         <div className="grid gap-2.5 sm:grid-cols-2">
-          <div><FieldLabel>On new emails</FieldLabel><Select value={settings.defaultSignatureId || "none"} onChange={(e) => save({ settings: { ...settings, defaultSignatureId: e.target.value === "none" ? "" : e.target.value } })} className="w-full"><option value="none">No signature</option>{sigs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></div>
-          <div><FieldLabel>On reply / forward</FieldLabel><Select value={p.replySignatureId || "none"} onChange={(e) => setP({ replySignatureId: e.target.value === "none" ? "" : e.target.value })} className="w-full"><option value="none">No signature</option>{sigs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></div>
+          <div><FieldLabel>{t("p8em.emOnNewEmails")}</FieldLabel><Select value={settings.defaultSignatureId || "none"} onChange={(e) => save({ settings: { ...settings, defaultSignatureId: e.target.value === "none" ? "" : e.target.value } })} className="w-full"><option value="none">{t("p8em.emNoSignature")}</option>{sigs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></div>
+          <div><FieldLabel>{t("p8em.emOnReplyFwd")}</FieldLabel><Select value={p.replySignatureId || "none"} onChange={(e) => setP({ replySignatureId: e.target.value === "none" ? "" : e.target.value })} className="w-full"><option value="none">{t("p8em.emNoSignature")}</option>{sigs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></div>
         </div>
       </Card>
       <Card className="p-4">
-        <div className="text-[14px] font-extrabold text-[var(--ink)]">Default reply behaviour</div>
-        <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">Which button leads when you open a message in the inbox.</p>
-        <div className="flex flex-wrap gap-1.5">{([["reply", "Reply"], ["replyAll", "Reply all"]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => setP({ defaultReply: v })} className="rounded-full border px-3 py-1 text-[12.5px] font-bold" style={chip((p.defaultReply ?? "reply") === v)}>{l}</button>)}</div>
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8em.emDefReply")}</div>
+        <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">{t("p8em.emDefReplySub")}</p>
+        <div className="flex flex-wrap gap-1.5">{([["reply", t("p8em.emReplyPlain")], ["replyAll", t("p8em.emReplyAllPlain")]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => setP({ defaultReply: v })} className="rounded-full border px-3 py-1 text-[12.5px] font-bold" style={chip((p.defaultReply ?? "reply") === v)}>{l}</button>)}</div>
       </Card>
       <Card className="p-4">
-        <div className="text-[14px] font-extrabold text-[var(--ink)]">Social links</div>
-        <p className="mb-2.5 mt-0.5 text-[12px] text-[var(--ink-3)]">Enter your profiles once — they auto-fill the social row on every campaign template, so you never retype them.</p>
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8em.emSocial")}</div>
+        <p className="mb-2.5 mt-0.5 text-[12px] text-[var(--ink-3)]">{t("p8em.emSocialSub")}</p>
         <div className="grid gap-2.5 sm:grid-cols-2">
-          {([["facebook", "Facebook"], ["instagram", "Instagram"], ["tiktok", "TikTok"], ["twitter", "X / Twitter"], ["youtube", "YouTube"], ["website", "Website"]] as const).map(([net, label]) => (
-            <div key={net}><FieldLabel>{label}</FieldLabel><Input value={(settings.social?.[net] as string) ?? ""} onChange={(e) => save({ settings: { ...settings, social: { ...settings.social, [net]: e.target.value } } })} placeholder={net === "website" ? "https://…" : "Profile URL"} className="w-full" /></div>
+          {([["facebook", "Facebook"], ["instagram", "Instagram"], ["tiktok", "TikTok"], ["twitter", "X / Twitter"], ["youtube", "YouTube"], ["website", t("p8em.emWebsite")]] as const).map(([net, label]) => (
+            <div key={net}><FieldLabel>{label}</FieldLabel><Input value={(settings.social?.[net] as string) ?? ""} onChange={(e) => save({ settings: { ...settings, social: { ...settings.social, [net]: e.target.value } } })} placeholder={net === "website" ? "https://…" : t("p8em.emProfileUrl")} className="w-full" /></div>
           ))}
         </div>
       </Card>
@@ -1924,6 +1932,7 @@ const GOAL_SEED: Record<string, { name: string; subject: string }> = {
 };
 
 export function EmailApp() {
+  const { t, locale } = useI18n();
   // Deep-link from the Register: ?to=parent@email opens addressed to one parent.
   const searchParams = useSearchParams();
   const presetTo = searchParams.get("to") ?? "";
@@ -1932,7 +1941,7 @@ export function EmailApp() {
   // An optional ?goal= pre-fills a matching campaign name + subject.
   const seedAud = searchParams.get("aud");
   const seedGoal = searchParams.get("goal");
-  const seedContent = seedGoal ? GOAL_SEED[seedGoal] : undefined;
+  const seedContent = seedGoal && GOAL_SEED[seedGoal] ? { name: t(`p8em.emSeed_${seedGoal}_name`), subject: t(`p8em.emSeed_${seedGoal}_subject`) } : undefined;
   // ?listing=<id> — narrows the seeded audience to families who booked that listing.
   const seedListing = searchParams.get("listing");
   // ?mail=<id> — a preview row on the dashboard's Inbox card: land on the Inbox
@@ -1945,7 +1954,7 @@ export function EmailApp() {
   const [hoFranchises, setHoFranchises] = useState<{ franchiseId: string; name: string; area: string | null }[]>([]);
   useEffect(() => { if (emailPortalSeg === "company") apiGet<{ franchiseId: string; name: string; area: string | null }[]>("/api/franchises").then(setHoFranchises).catch(() => {}); }, [emailPortalSeg]);
   const isHo = emailPortalSeg === "company" && hoFranchises.length > 0;
-  const scopeLabel = hoScope === HO_OWN ? "Head office — own locations only" : hoScope ? (hoFranchises.find((f) => f.franchiseId === hoScope)?.name ?? "this franchise") : "the whole network — every franchise";
+  const scopeLabel = hoScope === HO_OWN ? t("p8em.emScopeOwn") : hoScope ? (hoFranchises.find((f) => f.franchiseId === hoScope)?.name ?? t("p8em.snThisFranchise")) : t("p8em.emScopeNetwork");
   // Gmail-style bright background theme for the Email surface (its own saved pick).
   const { theme, control: themeControl } = useSurfaceTheme("aos.emailTheme");
   // Hand-off from the Newsletter builder ("Email to parents") — a ready-to-send
@@ -2029,7 +2038,7 @@ export function EmailApp() {
     save({ settings: { ...settings, emailAssets: { ...(settings.emailAssets ?? {}), images: savedImages.map((im) => im.id === id ? { ...im, ...partial } : im) } } });
   }
   function removeImage(id: string) {
-    if (!confirm("Delete this photo from your Email library?\n\nThe original Moment isn’t affected — but you’d need to re-add it here to use it again.")) return;
+    if (!confirm(t("p8em.emDelPhotoConfirm"))) return;
     save({ settings: { ...settings, emailAssets: { ...(settings.emailAssets ?? {}), images: savedImages.filter((im) => im.id !== id) } } });
   }
   // Add the photo to the email draft as ONE composed image — the message + quote
@@ -2050,18 +2059,18 @@ export function EmailApp() {
       ]);
       if (dataUrl) { composed = true; src = dataUrl; try { const r = await apiPost<{ url: string }>("/api/uploads", { dataUrl }); src = r.url; } catch { /* keep the data URL */ } }
     } catch { /* keep the raw photo */ }
-    let block = `<img src="${esc(src)}" alt="${esc(im.childName ?? "photo")}" style="max-width:100%;border-radius:10px">`;
+    let block = `<img src="${esc(src)}" alt="${esc(im.childName ?? t("p8em.emPhotoAlt"))}" style="max-width:100%;border-radius:10px">`;
     if (!composed) { // raw photo — add the message/quote as text since it isn't baked in
       if (caption) block += `<div style="margin-top:6px">${esc(caption)}</div>`;
-      for (const q of quotes) block += `<div style="color:#5f6672"><i>“${esc(q.text)}”</i> — ${esc(q.byName ?? "a parent")}</div>`;
+      for (const q of quotes) block += `<div style="color:#5f6672"><i>“${esc(q.text)}”</i> — ${esc(q.byName ?? t("p8em.emAParent"))}</div>`;
     }
     setBody((b) => b.trim() ? `${b}<br><br>${block}` : block);
-    setOk("✓ Photo added to your email — it’s in the message above with a size slider. Click a photo to resize it.");
+    setOk(t("p8em.emPhotoAddedLib"));
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   const refresh = useCallback(() => {
-    apiGet<Sent[]>("/api/emails").then((h) => { setHistory(h); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Sent[]>("/api/emails").then((h) => { setHistory(h); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : tNow("p8em.cLoadFailed")));
     // A tenant's forwarded inbox accumulates over years; useRealtime refires this
     // on every emails/emailMessages/scheduledEmails/bookings/moments change
     // tenant-wide. Bail out of the state update (keep the same array reference)
@@ -2079,8 +2088,8 @@ export function EmailApp() {
   const loadRecipients = useCallback(() => { apiGet<{ count: number; families?: { email: string; name: string }[] }>(withNet("/api/emails/recipients")).then((r) => { setReach(r.count); setFamilies(r.families ?? []); }).catch(() => {}); }, [hoScope]);
   useEffect(() => { loadRecipients(); }, [loadRecipients]);
   useEffect(() => { apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); }, []);
-  useEffect(() => { apiGet<{ id: string; title?: string; name?: string; venueId?: string }[]>("/api/listings?mine=1").then((l) => setComposeListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", venueId: x.venueId })))).catch(() => {}); }, []);
-  useEffect(() => { apiGet<{ venues?: { id: string; name?: string; city?: string }[] } | null>("/api/library").then((lib) => setVenueName(Object.fromEntries((lib?.venues ?? []).map((v) => [v.id, v.name || v.city || "Venue"])))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ id: string; title?: string; name?: string; venueId?: string }[]>("/api/listings?mine=1").then((l) => setComposeListings(l.map((x) => ({ id: x.id, title: x.title || x.name || tNow("p8em.emListingWord"), venueId: x.venueId })))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ venues?: { id: string; name?: string; city?: string }[] } | null>("/api/library").then((lib) => setVenueName(Object.fromEntries((lib?.venues ?? []).map((v) => [v.id, v.name || v.city || tNow("p8em.emVenueWord")])))).catch(() => {}); }, []);
   useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setComposeBookings).catch(() => {}); }, []);
   useEffect(() => { apiGet<SenderIdentity>("/api/emails/sender").then(setSender).catch(() => {}); }, []);
   useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setComposeTemplates).catch(() => {}); }, []);
@@ -2123,14 +2132,14 @@ export function EmailApp() {
   const composeLocations = [...new Set(composeListings.map((l) => (l.venueId ? venueName[l.venueId] : undefined)).filter((x): x is string => !!x))].sort();
   const addEnquiry = (m: Mail, locations: string[]) => {
     const email = (m.fromEmail || "").toLowerCase();
-    if (!email) { setError("This sender has no email address to save."); return; }
+    if (!email) { setError(t("p8em.emSenderNoAddr")); return; }
     const prev = readLS<EnquiryRec[]>(LS_ENQ, []);
     const at = new Date().toISOString().slice(0, 10);
     const wanted = locations.length ? locations : [undefined]; // no selection → one "no specific location" record
     const additions = wanted
       .filter((loc) => !prev.some((e) => e.email.toLowerCase() === email && (e.location || undefined) === (loc || undefined)))
       .map((loc) => ({ email, name: m.from, location: loc || undefined, at } as EnquiryRec));
-    if (!additions.length) { setError(null); setOk(`${m.from} is already on ${locations.length ? "those enquiry boards" : "your New-enquiries board"}.`); return; }
+    if (!additions.length) { setError(null); setOk(t(locations.length ? "p8em.emAlreadyBoards" : "p8em.emAlreadyBoard", { from: m.from })); return; }
     writeLS(LS_ENQ, [...additions, ...prev]);
     setError(null); setOk(null);
     setUndoEnq({ name: m.from, location: locations.join(", ") || undefined, prev }); setUndoEnqLeft(5);
@@ -2170,21 +2179,21 @@ export function EmailApp() {
       const small = await downscaleImage(f);
       const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl: small });
       setBody((bd) => `${bd}<img src="${url}" alt="" style="max-width:100%;border-radius:8px"><br>`);
-      setOk("✓ Photo added — it’s in the message above with a size slider.");
+      setOk(t("p8em.emPhotoAdded"));
       if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch { setError("Couldn’t add that photo — try a smaller JPG or PNG."); }
+    } catch { setError(t("p8em.emPhotoAddFail")); }
   }
   // "Help me write" — draft/extend the email body from a short brief via the AI writer.
   const [aiBusy, setAiBusy] = useState(false);
   async function aiWrite() {
-    const notes = window.prompt("What should this email say? A line or two — the writer turns it into a friendly email.");
+    const notes = window.prompt(t("p8em.emAiPrompt"));
     if (!notes?.trim()) return;
     setAiBusy(true); setError(null);
     try {
       const r = await apiPost<{ title: string; body: string }>("/api/ai/compose", { kind: "announce", notes: notes.trim(), length: "medium" });
       if (r.title && !subject.trim()) setSubject(r.title);
       if (r.body) setBody((bd) => bd.trim() ? `${bd}<br><br>${mdToHtml(r.body)}` : mdToHtml(r.body));
-    } catch (e) { setError(e instanceof Error ? e.message : "The writer couldn’t draft that — try again."); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("p8em.nfAiFail")); }
     finally { setAiBusy(false); }
   }
 
@@ -2208,9 +2217,9 @@ export function EmailApp() {
     setSending(true); setError(null); setOk(null);
     try {
       const r = await apiPost<{ recipientCount: number }>(withNet("/api/emails/send"), payload);
-      setOk(`Sent to ${r.recipientCount} recipient${r.recipientCount === 1 ? "" : "s"}.${hadAttachments ? " (Attachments send once file-attach is wired on the backend.)" : ""}`);
+      setOk(pickPlural(tNow, currentLocaleCode(), "p8em.emSentOk", r.recipientCount) + (hadAttachments ? tNow("p8em.emAttachNote") : ""));
       setSubject(""); setBody(""); setTo(""); setCc([]); setBcc([]); setCcInput(""); setBccInput(""); setExtraTo([]); setAttachments([]); setReplyTo(null); refresh();
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t send"); }
+    } catch (e) { setError(e instanceof Error ? e.message : tNow("p8em.snCouldntSend")); }
     finally { setSending(false); }
   }, [refresh]);
 
@@ -2230,11 +2239,11 @@ export function EmailApp() {
 
   function send() {
     const bodyText = htmlToText(body);
-    if (!subject.trim() || !bodyText.trim()) { setError("A subject and a message are required."); return; }
-    if (audience === "one" && !to.trim() && extraTo.length === 0) { setError("Enter a recipient address."); return; }
-    if (audience === "listing" && listingIds.length === 0) { setError("Pick at least one listing to email."); return; }
+    if (!subject.trim() || !bodyText.trim()) { setError(t("p8em.emNeedSubjMsg")); return; }
+    if (audience === "one" && !to.trim() && extraTo.length === 0) { setError(t("p8em.emNeedAddr")); return; }
+    if (audience === "listing" && listingIds.length === 0) { setError(t("p8em.emPickListingFirst")); return; }
     const count = finalRecipients.length;
-    if (count === 0) { setError("No recipients selected to send to."); return; }
+    if (count === 0) { setError(t("p8em.emNoRecipsSel")); return; }
     const payload: Record<string, unknown> = {
       subject, body: bodyText + (selectedSig ? `\n\n${htmlToText(selectedSig.html)}` : ""),
       html: (docHtml && mode === "embed" ? docHtml : body) + (selectedSig ? `<br><br>${selectedSig.html}` : ""),
@@ -2245,7 +2254,7 @@ export function EmailApp() {
     };
     const secs = settings.emailPrefs?.undoSeconds ?? 0;   // instant send by default; opt into a grace period in Settings
     if (secs > 0) { setError(null); setOk(null); setUndoSend({ payload, count, hadAttachments: attachments.length > 0 }); setUndoLeft(secs); return; }
-    if (!confirm(`Send this email to ${count} recipient${count === 1 ? "" : "s"}?`)) return;
+    if (!confirm(pickPlural(t, locale, "p8em.emSendConfirm", count))) return;
     void dispatchSend(payload, attachments.length > 0);
   }
 
@@ -2254,9 +2263,9 @@ export function EmailApp() {
   // Inbox → Scheduled folder until then.
   async function scheduleSend() {
     const bodyText = htmlToText(body);
-    if (!subject.trim() || !bodyText.trim()) { setError("A subject and a message are required."); return; }
-    if (finalRecipients.length === 0) { setError("No recipients selected to send to."); return; }
-    if (!schedAt || new Date(schedAt) <= new Date()) { setError("Pick a future date & time to schedule."); return; }
+    if (!subject.trim() || !bodyText.trim()) { setError(t("p8em.emNeedSubjMsg")); return; }
+    if (finalRecipients.length === 0) { setError(t("p8em.emNoRecipsSel")); return; }
+    if (!schedAt || new Date(schedAt) <= new Date()) { setError(t("p8em.emPickFuture")); return; }
     setSending(true); setError(null); setOk(null);
     try {
       await apiPost(withNet("/api/emails/schedule"), {
@@ -2267,21 +2276,21 @@ export function EmailApp() {
         cc: cc.length ? cc.join(",") : undefined, bcc: bcc.length ? bcc.join(",") : undefined,
         sendAt: schedAt,
       });
-      setOk(`Scheduled for ${whenSched(schedAt)} — you can cancel it from Inbox → Scheduled until it sends.`);
+      setOk(t("p8em.emScheduledOk", { when: whenSched(schedAt) }));
       setSchedOpen(false); setSubject(""); setBody(""); setTo(""); setCc([]); setBcc([]); setCcInput(""); setBccInput(""); setExtraTo([]); setAttachments([]); setSchedAt(""); refresh();
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t schedule"); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("p8em.emCouldntSchedule")); }
     finally { setSending(false); }
   }
 
   return (
-    <OperatorPage title="Email" icon="✉️" lede="Your inbox, campaigns and the emails ActivityOS sends for you — all in one place." actions={themeControl} background={theme.page} heroBackground={theme.hero}>
-      <TabStrip<Tab> tabs={[["inbox", "Inbox"], ["compose", "Compose"], ["campaigns", "Campaigns"], ["audiences", "Audiences"], ["templates", "Templates"], ["automatic", "Automatic emails"], ["analytics", "Analytics"], ["settings", "Settings"]]} value={tab} onChange={setTab} />
+    <OperatorPage title={t("p8em.emTitle")} icon="✉️" lede={t("p8em.emLede")} actions={themeControl} background={theme.page} heroBackground={theme.hero}>
+      <TabStrip<Tab> tabs={(["inbox", "compose", "campaigns", "audiences", "templates", "automatic", "analytics", "settings"] as const).map((k) => [k, t("p8em.emTab_" + k)] as [Tab, string])} value={tab} onChange={setTab} />
       {isHo && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 text-[12.5px]" style={hoScope === HO_OWN ? { borderColor: "#f0c98a", background: "#fdf6ea", color: "#8a6d1a" } : hoScope ? { borderColor: "#b9d0f7", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "#c7bdf2", background: "#f2effc", color: "#4a2fb0" }}>
           <span className="text-[14px]">📡</span>
-          <span>Sending within <b>{scopeLabel}</b>.</span>
-          <span className="opacity-80">{hoScope === HO_OWN ? "Only your own directly-run families — no franchise customers." : hoScope ? "Only this franchise's families." : "Every family across all franchises will be in reach."}</span>
-          <span className="ms-auto opacity-70">Change with the Head office selector in the top bar.</span>
+          <span><RichB text={t("p8em.emHoSending", { scope: scopeLabel })} /></span>
+          <span className="opacity-80">{hoScope === HO_OWN ? t("p8em.emHoOwn") : hoScope ? t("p8em.emHoOne") : t("p8em.emHoAll")}</span>
+          <span className="ms-auto opacity-70">{t("p8em.emHoChange")}</span>
         </div>
       )}
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
@@ -2289,16 +2298,16 @@ export function EmailApp() {
       {undoEnq && (
         <div className="fixed bottom-6 left-1/2 z-[140] flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-[#E4E9F5] bg-[var(--surface)] px-4 py-3 shadow-[0_12px_40px_-8px_rgba(18,122,62,.4)]">
           <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[14px] text-white shadow-sm" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>✓</span>
-          <span className="text-[13px] font-semibold text-[var(--ink)]">Added <b>{undoEnq.name}</b> to New enquiries{undoEnq.location ? <> · <b>{undoEnq.location}</b></> : ""}</span>
+          <span className="text-[13px] font-semibold text-[var(--ink)]"><RichB text={t("p8em.emEnqAdded", { name: undoEnq.name, loc: undoEnq.location ? t("p8em.emEnqAddedLoc", { loc: undoEnq.location }) : "" })} /></span>
           <span className="relative flex h-7 w-7 flex-none items-center justify-center">
             <svg viewBox="0 0 36 36" className="absolute inset-0 h-full w-full -rotate-90"><circle cx="18" cy="18" r="15" fill="none" stroke="#eafaf0" strokeWidth="4" /><circle cx="18" cy="18" r="15" fill="none" stroke="#127a3e" strokeWidth="4" strokeLinecap="round" strokeDasharray={2 * Math.PI * 15} strokeDashoffset={2 * Math.PI * 15 * (1 - undoEnqLeft / 5)} style={{ transition: "stroke-dashoffset 1s linear" }} /></svg>
             <span className="text-[11px] font-extrabold tabular-nums text-[#127a3e]">{undoEnqLeft}</span>
           </span>
-          <button type="button" onClick={() => { writeLS(LS_ENQ, undoEnq.prev); setUndoEnq(null); setUndoEnqLeft(0); setOk("Undone — not added to enquiries."); }} className="flex-none rounded-lg px-3.5 py-1.5 text-[12.5px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>↩ Undo</button>
+          <button type="button" onClick={() => { writeLS(LS_ENQ, undoEnq.prev); setUndoEnq(null); setUndoEnqLeft(0); setOk(t("p8em.emUndoneEnq")); }} className="flex-none rounded-lg px-3.5 py-1.5 text-[12.5px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>{t("p8em.emUndoBtn")}</button>
         </div>
       )}
 
-      {tab === "inbox" && <InboxView seedMail={seedMail} history={history} messages={messages} scheduled={scheduled} onRefresh={refresh} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} />}
+      {tab === "inbox" && <InboxView seedMail={seedMail} history={history} messages={messages} scheduled={scheduled} onRefresh={refresh} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${t("p8em.emWrote", { from: m.from })}\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${t("p8em.emForwardedFrom", { from: m.from })}\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} seedName={seedContent?.name} seedSubject={seedContent?.subject} seedListingId={seedListing} onSeedConsumed={() => setCampaignSeedId(null)} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
       {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} payMethods={settings.payMethods ?? []} seasons={settings.seasons ?? []} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
@@ -2307,42 +2316,42 @@ export function EmailApp() {
       {tab === "settings" && <EmailPrefs settings={settings} save={save} />}
 
       {tab === "compose" && (<>
-      {undoSend && <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#E4E9F5] bg-[#E8EEFD] px-3 py-2 text-[12.5px] font-semibold text-[#2f5fd0]"><span>Sending to {undoSend.count} recipient{undoSend.count === 1 ? "" : "s"} in {undoLeft}s…</span><button type="button" onClick={() => { setUndoSend(null); setUndoLeft(0); setOk("Send cancelled — your draft is still here."); }} className="ms-auto rounded-md bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[#2f5fd0] shadow-sm">↩ Undo</button></div>}
+      {undoSend && <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#E4E9F5] bg-[#E8EEFD] px-3 py-2 text-[12.5px] font-semibold text-[#2f5fd0]"><span>{pickPlural(t, locale, "p8em.emUndoBanner", undoSend.count, { s: undoLeft })}</span><button type="button" onClick={() => { setUndoSend(null); setUndoLeft(0); setOk(t("p8em.emSendCancelled")); }} className="ms-auto rounded-md bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[#2f5fd0] shadow-sm">{t("p8em.emUndoBtn")}</button></div>}
       {designedDoc && (
         <div className="mb-4 rounded-2xl border-2 border-[#2f6bd8] bg-[#f4f8ff] p-4">
-          <div className="text-[14px] font-extrabold text-[#1d3a8f]">{docHtml ? "📰 A designed newsletter came from the Newsfeed — how should families get it?" : "🖼 This email has photos / formatting — how should families get it?"}</div>
+          <div className="text-[14px] font-extrabold text-[#1d3a8f]">{docHtml ? t("p8em.emDocNewsletter") : t("p8em.emDocMedia")}</div>
           <div className="mt-2 flex flex-wrap gap-2">
-            {([["embed", "📧 Embed it inside the email (HTML)"], ["attach", "📎 Attach it as a PDF"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setMode(k)} className="rounded-lg border-2 px-3.5 py-2 text-[13px] font-extrabold" style={mode === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{mode === k ? "✓ " : ""}{label}</button>)}
-            <button type="button" onClick={() => printDocHtml(designedDoc)} className="ms-auto rounded-lg border border-[#1d3a8f] px-3 py-2 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">⬇ Preview / download PDF</button>
+            {([["embed", t("p8em.emDocEmbed")], ["attach", t("p8em.emDocAttach")]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setMode(k)} className="rounded-lg border-2 px-3.5 py-2 text-[13px] font-extrabold" style={mode === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{mode === k ? "✓ " : ""}{label}</button>)}
+            <button type="button" onClick={() => printDocHtml(designedDoc)} className="ms-auto rounded-lg border border-[#1d3a8f] px-3 py-2 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">{t("p8em.emDocPdfBtn")}</button>
           </div>
-          <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">{mode === "embed" ? "Families get the full layout (photos + formatting) in the email body." : <span>Families get a short covering email with it attached as a PDF. <b className="text-[#8a6d1a]">Auto-attach is a backend step — grab the PDF here for now.</b></span>}</div>
+          <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">{mode === "embed" ? t("p8em.emDocEmbedHint") : <RichB className="text-[#8a6d1a]" text={t("p8em.emDocAttachHint")} />}</div>
         </div>
       )}
       <Card className="mb-4 overflow-hidden p-0">
         <div className="flex items-center gap-3 px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
           <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/15 text-[17px]">✉️</span>
-          <div><div className="text-[14.5px] font-extrabold">Compose your email</div><div className="text-[11.5px] text-white/80">Choose who gets it, write your message, then send or schedule.</div></div>
+          <div><div className="text-[14.5px] font-extrabold">{t("p8em.emComposeTitle")}</div><div className="text-[11.5px] text-white/80">{t("p8em.emComposeSub")}</div></div>
         </div>
         <div className="p-4">
-        {!replyTo && <div className="-mx-4 -mt-4 mb-3.5 flex items-center gap-2 border-b border-[var(--line)] px-4 py-2.5" style={{ background: "linear-gradient(120deg,#eef4fd,#e6fbf7)" }}><span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>1</span><span className="text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[#12306e]">Who gets it</span></div>}
+        {!replyTo && <div className="-mx-4 -mt-4 mb-3.5 flex items-center gap-2 border-b border-[var(--line)] px-4 py-2.5" style={{ background: "linear-gradient(120deg,#eef4fd,#e6fbf7)" }}><span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>1</span><span className="text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[#12306e]">{t("p8em.snWho")}</span></div>}
         {replyTo ? (
           <div className="rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] p-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#3f78d8,#16306e)" }}>{replyTo.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</span>
-              <span className="text-[13px] font-bold text-[var(--ink)]">↩ Reply to {replyTo.name}</span>
+              <span className="text-[13px] font-bold text-[var(--ink)]">{t("p8em.emReplyTo", { name: replyTo.name })}</span>
               {replyTo.email && <span className="text-[12px] text-[var(--ink-3)]">{replyTo.email}</span>}
-              <button type="button" onClick={() => setReplyTo(null)} className="ms-auto text-[11.5px] font-bold text-[#1d3a8f]">Send to more people →</button>
+              <button type="button" onClick={() => setReplyTo(null)} className="ms-auto text-[11.5px] font-bold text-[#1d3a8f]">{t("p8em.emSendMore")}</button>
             </div>
-            <div className="mt-2"><FieldLabel>To</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>
+            <div className="mt-2"><FieldLabel>{t("p8em.emToLbl")}</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>
           </div>
         ) : (
           <div>
-            <FieldLabel>👥 Send to</FieldLabel>
+            <FieldLabel>{t("p8em.emSendToLbl")}</FieldLabel>
             <div className="mt-1 flex flex-wrap gap-2">
               {([
-                ["all", "👨‍👩‍👧", "All families", families.length ? included.length : reach ?? 0],
-                ["listing", "🎟", "A listing", null],
-                ["one", "✉️", "Specific people", null],
+                ["all", "👨‍👩‍👧", t("p8em.emAud_all"), families.length ? included.length : reach ?? 0],
+                ["listing", "🎟", t("p8em.emAud_listing"), null],
+                ["one", "✉️", t("p8em.emAud_one"), null],
               ] as [("all" | "listing" | "one" | "none"), string, string, number | null][]).map(([k, icon, label, count]) => {
                 const on = audience === k;
                 return (
@@ -2354,57 +2363,57 @@ export function EmailApp() {
                 );
               })}
             </div>
-            {audience === "one" && <div className="mt-2.5 sm:max-w-[380px]"><FieldLabel>✉️ Recipient</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
+            {audience === "one" && <div className="mt-2.5 sm:max-w-[380px]"><FieldLabel>{t("p8em.emRecipientLbl")}</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
           </div>
         )}
         {sender && (
           <p data-ui="sending-as" className="mt-2 text-[11.5px] text-[var(--ink-3)]">
-            Sending as <b className="text-[var(--ink-2)]">{sender.fromName}</b> &lt;{sender.fromAddress}&gt;
+            <RichB className="text-[var(--ink-2)]" text={t("p8em.emSendingAs", { name: sender.fromName, addr: sender.fromAddress })} />
             {sender.replyTo
-              ? <> · replies go to <b className="text-[var(--ink-2)]">{sender.replyTo}</b></>
-              : <> · <span className="text-[#b45309]">no reply address set — add one in Setup so families can reply</span></>}
+              ? <RichB className="text-[var(--ink-2)]" text={t("p8em.emRepliesGo", { to: sender.replyTo })} />
+              : <> · <span className="text-[#b45309]">{t("p8em.emNoReplyAddr")}</span></>}
           </p>
         )}
         {audience === "listing" && (
           <div className="mt-2">
-            <FieldLabel>Listings — everyone booked on the ones you pick ({listingEmails.length})</FieldLabel>
+            <FieldLabel>{t("p8em.emListingsPick", { n: listingEmails.length })}</FieldLabel>
             <div className="mt-1 flex flex-wrap gap-1.5">
-              {listingOpts.length === 0 ? <span className="text-[11.5px] text-[var(--ink-3)]">No listings yet.</span>
-                : listingOpts.map((l) => { const on = listingIds.includes(l.key); const n = listingCounts.get(l.key) ?? 0; return <button key={l.key} type="button" title={n ? `${n} famil${n === 1 ? "y" : "ies"} booked` : "Nobody has booked this one yet"} onClick={() => setListingIds((xs) => on ? xs.filter((x) => x !== l.key) : [...xs, l.key])} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)", opacity: n ? 1 : 0.45 }}>{on ? "✓ " : ""}{l.title}<span className="ms-1 text-[10px] font-semibold text-[var(--ink-3)]">· {n}</span>{!l.live && <span className="ms-1 text-[10px] font-semibold text-[var(--ink-3)]">· past</span>}</button>; })}
+              {listingOpts.length === 0 ? <span className="text-[11.5px] text-[var(--ink-3)]">{t("p8em.nfNoListings")}</span>
+                : listingOpts.map((l) => { const on = listingIds.includes(l.key); const n = listingCounts.get(l.key) ?? 0; return <button key={l.key} type="button" title={n ? pickPlural(t, locale, "p8em.emFamBooked", n) : t("p8em.emNobodyBooked")} onClick={() => setListingIds((xs) => on ? xs.filter((x) => x !== l.key) : [...xs, l.key])} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)", opacity: n ? 1 : 0.45 }}>{on ? "✓ " : ""}{l.title}<span className="ms-1 text-[10px] font-semibold text-[var(--ink-3)]">· {n}</span>{!l.live && <span className="ms-1 text-[10px] font-semibold text-[var(--ink-3)]">{t("p8em.emPastTag")}</span>}</button>; })}
             </div>
-            <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">Includes past listings still linked to bookings — so parents from a listing you’ve since duplicated aren’t missed. Repeat parents are only emailed once.</p>
+            <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">{t("p8em.emListingNote")}</p>
           </div>
         )}
-        {audience !== "one" && reachCount > 1 && <p className="mt-2 text-[11.5px] font-semibold text-[#127a3e]">✓ Each family gets their own copy — recipients never see each other’s email address.</p>}
+        {audience !== "one" && reachCount > 1 && <p className="mt-2 text-[11.5px] font-semibold text-[#127a3e]">{t("p8em.emOwnCopy")}</p>}
         <div className="mt-2">
           {showCcBcc ? (
             <div className="grid gap-2.5 sm:grid-cols-2">
-              <div><FieldLabel>Cc</FieldLabel><div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5">{cc.map((e) => <span key={e} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[12px] font-bold text-[#1d3a8f]">{e}<button type="button" onClick={() => setCc((xs) => xs.filter((x) => x !== e))} className="text-[#1d3a8f]">×</button></span>)}<input value={ccInput} onChange={(e) => setCcInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addCc(); } }} onBlur={addCc} placeholder="cc@example.com — Enter to add" className="min-w-[130px] flex-1 bg-transparent px-1.5 py-1 text-[12.5px] outline-none" /></div></div>
-              <div><FieldLabel>Bcc</FieldLabel><div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5">{bcc.map((e) => <span key={e} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[12px] font-bold text-[#1d3a8f]">{e}<button type="button" onClick={() => setBcc((xs) => xs.filter((x) => x !== e))} className="text-[#1d3a8f]">×</button></span>)}<input value={bccInput} onChange={(e) => setBccInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addBcc(); } }} onBlur={addBcc} placeholder="bcc@example.com — Enter to add" className="min-w-[130px] flex-1 bg-transparent px-1.5 py-1 text-[12.5px] outline-none" /></div></div>
+              <div><FieldLabel>Cc</FieldLabel><div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5">{cc.map((e) => <span key={e} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[12px] font-bold text-[#1d3a8f]">{e}<button type="button" onClick={() => setCc((xs) => xs.filter((x) => x !== e))} className="text-[#1d3a8f]">×</button></span>)}<input value={ccInput} onChange={(e) => setCcInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addCc(); } }} onBlur={addCc} placeholder={`cc@example.com ${t("p8em.emEnterToAdd")}`} className="min-w-[130px] flex-1 bg-transparent px-1.5 py-1 text-[12.5px] outline-none" /></div></div>
+              <div><FieldLabel>Bcc</FieldLabel><div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5">{bcc.map((e) => <span key={e} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[12px] font-bold text-[#1d3a8f]">{e}<button type="button" onClick={() => setBcc((xs) => xs.filter((x) => x !== e))} className="text-[#1d3a8f]">×</button></span>)}<input value={bccInput} onChange={(e) => setBccInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addBcc(); } }} onBlur={addBcc} placeholder={`bcc@example.com ${t("p8em.emEnterToAdd")}`} className="min-w-[130px] flex-1 bg-transparent px-1.5 py-1 text-[12.5px] outline-none" /></div></div>
             </div>
-          ) : <button type="button" onClick={() => setShowCcBcc(true)} className="text-[12px] font-bold text-[#1d3a8f]">＋ Add Cc / Bcc</button>}
+          ) : <button type="button" onClick={() => setShowCcBcc(true)} className="text-[12px] font-bold text-[#1d3a8f]">{t("p8em.emAddCcBcc")}</button>}
         </div>
         {!replyTo && (
           <div className="mt-2">
-            <FieldLabel>Also send to — add anyone (yourself, a colleague…)</FieldLabel>
+            <FieldLabel>{t("p8em.emAlsoSend")}</FieldLabel>
             <div className="mt-1 flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5">
               {extraTo.map((e) => <span key={e} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[12px] font-bold text-[#1d3a8f]">{e}<button type="button" onClick={() => setExtraTo((xs) => xs.filter((x) => x !== e))} className="text-[#1d3a8f]">×</button></span>)}
-              <input value={extraInput} onChange={(e) => setExtraInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addExtra(); } }} onBlur={addExtra} placeholder="name@example.com — Enter to add" className="min-w-[180px] flex-1 bg-transparent px-1.5 py-1 text-[12.5px] outline-none" />
+              <input value={extraInput} onChange={(e) => setExtraInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addExtra(); } }} onBlur={addExtra} placeholder={`name@example.com ${t("p8em.emEnterToAdd")}`} className="min-w-[180px] flex-1 bg-transparent px-1.5 py-1 text-[12.5px] outline-none" />
             </div>
           </div>
         )}
         {audience !== "one" && audienceFamilies.length > 0 && (
           <div className="mt-2">
-            <button type="button" onClick={() => setRecipOpen((o) => !o)} className="text-[12px] font-bold text-[#1d3a8f]">{recipOpen ? "▾" : "▸"} Review the {reachCount} famil{reachCount === 1 ? "y" : "ies"} who’ll get this</button>
+            <button type="button" onClick={() => setRecipOpen((o) => !o)} className="text-[12px] font-bold text-[#1d3a8f]">{recipOpen ? "▾" : "▸"} {pickPlural(t, locale, "p8em.emReview", reachCount)}</button>
             {recipOpen && (() => { const q = recipQuery.trim().toLowerCase(); const shown = q ? audienceFamilies.filter((f) => `${f.name} ${f.email}`.toLowerCase().includes(q)) : audienceFamilies; return (
               <div className="mt-1.5 rounded-lg border border-[var(--line)]">
-                <div className="border-b border-[var(--line)] p-1.5"><input value={recipQuery} onChange={(e) => setRecipQuery(e.target.value)} placeholder="🔍 Search families by name or email…" className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#2f6bd8]" /></div>
+                <div className="border-b border-[var(--line)] p-1.5"><input value={recipQuery} onChange={(e) => setRecipQuery(e.target.value)} placeholder={t("p8em.emSearchFamPh")} className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#2f6bd8]" /></div>
                 <div className="max-h-56 divide-y divide-[var(--line)] overflow-auto">
-                  {shown.length === 0 ? <div className="px-3 py-4 text-center text-[12px] text-[var(--ink-3)]">No families match “{recipQuery.trim()}”.</div>
+                  {shown.length === 0 ? <div className="px-3 py-4 text-center text-[12px] text-[var(--ink-3)]">{t("p8em.emNoFamMatch", { q: recipQuery.trim() })}</div>
                   : shown.map((f) => { const on = !excluded.has(f.email); return (
                     <div key={f.email} className="flex items-center gap-2 px-3 py-1.5 text-[12.5px]" style={on ? undefined : { opacity: 0.5 }}>
                       <span className="min-w-0 flex-1 truncate"><b>{f.name}</b> <span className="text-[var(--ink-3)]">{f.email}</span></span>
-                      <button type="button" onClick={() => setExcluded((s) => { const n = new Set(s); if (on) n.add(f.email); else n.delete(f.email); return n; })} className="flex-none rounded-md border px-2 py-0.5 text-[11px] font-bold" style={on ? { borderColor: "var(--line)", color: "var(--ink-2)" } : { borderColor: "#1d3a8f", color: "#1d3a8f" }}>{on ? "Remove" : "Add back"}</button>
+                      <button type="button" onClick={() => setExcluded((s) => { const n = new Set(s); if (on) n.add(f.email); else n.delete(f.email); return n; })} className="flex-none rounded-md border px-2 py-0.5 text-[11px] font-bold" style={on ? { borderColor: "var(--line)", color: "var(--ink-2)" } : { borderColor: "#1d3a8f", color: "#1d3a8f" }}>{on ? t("p8em.cRemove") : t("p8em.emAddBackPlain")}</button>
                     </div>
                   ); })}
                 </div>
@@ -2412,44 +2421,44 @@ export function EmailApp() {
             ); })()}
           </div>
         )}
-        {!replyTo && <div className="-mx-4 my-3.5 flex items-center gap-2 border-y border-[var(--line)] px-4 py-2.5" style={{ background: "linear-gradient(120deg,#eef4fd,#e6fbf7)" }}><span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>2</span><span className="text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[#12306e]">Your message</span></div>}
+        {!replyTo && <div className="-mx-4 my-3.5 flex items-center gap-2 border-y border-[var(--line)] px-4 py-2.5" style={{ background: "linear-gradient(120deg,#eef4fd,#e6fbf7)" }}><span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>2</span><span className="text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[#12306e]">{t("p8em.emYourMsgStep")}</span></div>}
         {replyTo && <div className="mt-2" />}
-        <div className="mt-2.5"><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full" /></div>
+        <div className="mt-2.5"><FieldLabel>{t("p8em.cSubject")}</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full" /></div>
         <div ref={msgRef} className="mt-2.5 [scroll-margin-top:-150px]">
-          <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><FieldLabel>Message</FieldLabel>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><FieldLabel>{t("p8em.cMessage")}</FieldLabel>
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[12px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? "✨ Writing…" : "✨ Help me write"}</button>
-              <label title="Insert a photo into the email" className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">🖼 Photo<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void insertPhoto(f); e.target.value = ""; }} /></label>
-              <label title="Attach a file — images are embedded (resizable); other files attach" className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">📎 Attach<input type="file" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach((f) => { if (f.type.startsWith("image/") && confirm(`“${f.name}” is an image — embed it in the email? (Cancel = attach as a file instead.)`)) void insertPhoto(f); else addAttachment(f); }); e.target.value = ""; }} /></label>
-              {composeTemplates.length > 0 && <Select value="" onChange={(e) => { const t = composeTemplates.find((x) => x.id === e.target.value); if (t && templateUsable(t)) { if (t.subject && !subject.trim()) setSubject(t.subject); setBody((b) => b.trim() ? `${b}<br><br>${mdToHtml(t.body)}` : mdToHtml(t.body)); } }} className="text-[12px]"><option value="">＋ Insert template…</option>{composeTemplates.map((t) => { const ok = templateUsable(t); return <option key={t.id} value={t.id} disabled={!ok}>{t.name}{ok ? "" : " · per-booking only"}</option>; })}</Select>}
+              <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[12px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? t("p8em.emWritingSp") : t("p8em.nfHelpWrite")}</button>
+              <label title={t("p8em.emPhotoBtnTip")} className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.emPhotoBtn")}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void insertPhoto(f); e.target.value = ""; }} /></label>
+              <label title={t("p8em.emAttachBtnTip")} className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.emAttachBtn")}<input type="file" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach((f) => { if (f.type.startsWith("image/") && confirm(t("p8em.emEmbedImgConfirm", { name: f.name }))) void insertPhoto(f); else addAttachment(f); }); e.target.value = ""; }} /></label>
+              {composeTemplates.length > 0 && <Select value="" onChange={(e) => { const t = composeTemplates.find((x) => x.id === e.target.value); if (t && templateUsable(t)) { if (t.subject && !subject.trim()) setSubject(t.subject); setBody((b) => b.trim() ? `${b}<br><br>${mdToHtml(t.body)}` : mdToHtml(t.body)); } }} className="text-[12px]"><option value="">{t("p8em.emInsertTpl")}</option>{composeTemplates.map((tp) => { const ok = templateUsable(tp); return <option key={tp.id} value={tp.id} disabled={!ok}>{tp.name}{ok ? "" : t("p8em.emPerBookingOnly")}</option>; })}</Select>}
             </div>
           </div>
           <RichText value={body} onChange={setBody} />
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">✒ Signature</span>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.emSigLbl")}</span>
             <Select value={selectedSig ? selectedSig.id : "none"} onChange={(e) => { const v = e.target.value; if (v === "__manage") { setSigMgr(true); return; } setSigChoice(v === "none" ? "" : v); }} className="text-[12px]">
-              <option value="none">No signature</option>
+              <option value="none">{t("p8em.emNoSignature")}</option>
               {signatures.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              <option value="__manage">Manage signatures…</option>
+              <option value="__manage">{t("p8em.emManageSigs")}…</option>
             </Select>
           </div>
-          {selectedSig && <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3"><div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Signature added to the bottom</div><div className="text-[12.5px] text-[var(--ink-2)]" dangerouslySetInnerHTML={{ __html: selectedSig.html }} /></div>}
+          {selectedSig && <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3"><div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.emSigAdded")}</div><div className="text-[12.5px] text-[var(--ink-2)]" dangerouslySetInnerHTML={{ __html: selectedSig.html }} /></div>}
           {attachments.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{attachments.map((a, i) => <span key={i} className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[12px] font-bold">📎 {a.name} <span className="font-normal text-[var(--ink-3)]">{a.size}</span><button type="button" onClick={() => setAttachments((xs) => xs.filter((_, j) => j !== i))} className="text-[var(--ink-3)] hover:text-[#c02636]">×</button></span>)}</div>}
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <div className="relative inline-flex">
-            <button type="button" onClick={send} disabled={sending} className="rounded-s-lg bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-50">{sending ? "Sending…" : `Send to ${finalRecipients.length} recipient${finalRecipients.length === 1 ? "" : "s"}`}</button>
-            <button type="button" onClick={() => setSchedOpen((o) => !o)} disabled={sending} aria-label="Schedule send" className="rounded-e-lg border-s border-white/30 bg-[#1d3a8f] px-2.5 py-2 text-[12px] font-bold text-white disabled:opacity-50">▲</button>
+            <button type="button" onClick={send} disabled={sending} className="rounded-s-lg bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-50">{sending ? t("p8em.emSending") : pickPlural(t, locale, "p8em.emSendBtn", finalRecipients.length)}</button>
+            <button type="button" onClick={() => setSchedOpen((o) => !o)} disabled={sending} aria-label={t("p8em.emSchedSendAria")} className="rounded-e-lg border-s border-white/30 bg-[#1d3a8f] px-2.5 py-2 text-[12px] font-bold text-white disabled:opacity-50">▲</button>
             {schedOpen && (
               <div className="absolute bottom-full start-0 z-20 mb-1.5 w-72 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xl">
-                <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-extrabold text-[var(--ink)]">📣 Schedule send</div>
+                <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-extrabold text-[var(--ink)]">{t("p8em.emSchedSendTitle")}</div>
                 <input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px] outline-none focus:border-[#2f6bd8]" />
-                <div className="mt-2 flex gap-2"><button type="button" onClick={scheduleSend} className="flex-1 rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white">Schedule</button><button type="button" onClick={() => setSchedOpen(false)} className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button></div>
-                <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Held in a queue; the timed send runs on the backend.</div>
+                <div className="mt-2 flex gap-2"><button type="button" onClick={scheduleSend} className="flex-1 rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white">{t("p8em.nfSchedule")}</button><button type="button" onClick={() => setSchedOpen(false)} className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">{t("p8em.cCancel")}</button></div>
+                <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">{t("p8em.emHeldQueue")}</div>
               </div>
             )}
           </div>
-          {reachCount === 0 && extraTo.length === 0 && audience !== "one" && <span className="text-[11.5px] text-[var(--ink-3)]">No recipients yet.</span>}
+          {reachCount === 0 && extraTo.length === 0 && audience !== "one" && <span className="text-[11.5px] text-[var(--ink-3)]">{t("p8em.emNoRecipsYet")}</span>}
         </div>
         </div>
       </Card>
@@ -2457,8 +2466,8 @@ export function EmailApp() {
       {savedImages.length > 0 && (
         <div className="mb-4 rounded-2xl border border-[#f6e2a8] bg-[#fffdf3] p-3.5">
           <button type="button" onClick={() => setAssetsOpen((v) => !v)} className="flex w-full items-center justify-between gap-2 text-start">
-            <span className="flex items-center gap-2 text-[13px] font-extrabold" style={{ color: "var(--ink-2)", fontFamily: "var(--ff-display)" }}>{assetsOpen ? "📂" : "📁"} Photos from Moments <span className="rounded-full bg-[#FCF1DC] px-2 py-0.5 text-[11px] font-extrabold text-[var(--ink-2)]">{savedImages.length}</span>{assetsOpen && <span className="text-[11px] font-semibold text-[var(--ink-3)]">— type your message, add the quote, set size/crop/colour.</span>}</span>
-            <span className="flex-none rounded-full border border-[#f0d488] px-2.5 py-0.5 text-[11.5px] font-bold text-[#8a5a00]">{assetsOpen ? "▲ Close folder" : "▼ Open folder"}</span>
+            <span className="flex items-center gap-2 text-[13px] font-extrabold" style={{ color: "var(--ink-2)", fontFamily: "var(--ff-display)" }}>{assetsOpen ? "📂" : "📁"} {t("p8em.emPhotosFromMoments")} <span className="rounded-full bg-[#FCF1DC] px-2 py-0.5 text-[11px] font-extrabold text-[var(--ink-2)]">{savedImages.length}</span>{assetsOpen && <span className="text-[11px] font-semibold text-[var(--ink-3)]">{t("p8em.emMomentsHint")}</span>}</span>
+            <span className="flex-none rounded-full border border-[#f0d488] px-2.5 py-0.5 text-[11.5px] font-bold text-[#8a5a00]">{assetsOpen ? t("p8em.emCloseFolder") : t("p8em.emOpenFolder")}</span>
           </button>
           {assetsOpen && (
             <div className="mt-2.5 grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))" }}>
@@ -2470,15 +2479,15 @@ export function EmailApp() {
         </div>
       )}
 
-      <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Sent</div>
-      {!history ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-      : history.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">Nothing sent yet.</Card>
+      <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8em.emFolder_sent")}</div>
+      {!history ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8em.cLoading")}</div>
+      : history.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{t("p8em.emNothingSent")}</Card>
       : (
         <div className="flex flex-col gap-1.5">
           {history.map((h) => (
             <Card key={h.id} className="flex flex-wrap items-center gap-2 p-2.5">
               <span className="min-w-0 flex-1 truncate text-[13px] font-bold">{h.subject}</span>
-              <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-2)" }}>{h.audience === "one" ? "1 address" : `${h.recipientCount} famil${h.recipientCount === 1 ? "y" : "ies"}`}</Badge>
+              <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-2)" }}>{h.audience === "one" ? t("p8em.emBadgeAddr") : pickPlural(t, locale, "p8em.emBadgeFam", h.recipientCount)}</Badge>
               <span className="text-[11px] text-[var(--ink-3)]">{h.sentByName} · {when(h.createdAt)}</span>
             </Card>
           ))}
