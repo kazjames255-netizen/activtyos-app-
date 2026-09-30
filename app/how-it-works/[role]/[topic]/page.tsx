@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import HowItWorksPage from "@/features/learninghub/howitworks/HowItWorksPage";
+import { requestLocale } from "@/lib/i18n/server";
+import { howTitle } from "../../_meta";
 import { SCRIPT_LIST, topicsFor } from "@/features/learninghub/howitworks/scripts";
 import { TOPIC_ALIAS } from "@/features/learninghub/howitworks/scripts/tutorTopics";
 
@@ -12,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ role: str
   const { role, topic } = await params;
   const r = SCRIPT_LIST.find((x) => x.slug === role);
   const t = r && topicsFor(r.role).find((x) => x.topic === topic);
-  return { title: t ? `${t.title} — Teaching Hub` : "How it works" };
+  return { title: await howTitle(await requestLocale(), t || undefined) };
 }
 export default async function Page({ params, searchParams }: { params: Promise<{ role: string; topic: string }>; searchParams: Promise<{ scene?: string }> }) {
   const { role, topic } = await params;

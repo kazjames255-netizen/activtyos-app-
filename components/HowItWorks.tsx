@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useT } from "@/lib/i18n/provider";
 
 // ─────────────────────────────────────────────────────────────────────────
 // The "how it works" panel that heads Listings, Sessions & blocks, Bookings
@@ -29,15 +30,16 @@ export function HowItWorks({
   /** An interactive walkthrough that replaces the text + video placeholder. */
   tour?: ReactNode;
 }) {
+  const t = useT();
   return (
     <details className="group mb-3.5 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
       {/* --brand-ink is the ink that sits ON a brand fill (white); this label sits
           on a plain card, so it wants the brand colour itself. */}
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[13px] font-bold text-[var(--brand)] [&::-webkit-details-marker]:hidden">
         <span className="inline-block transition-transform group-open:rotate-90">▸</span>
-        <span>ℹ️ How it works</span>
+        <span>ℹ️ {t("common.howItWorks")}</span>
         <span className="ms-1 rounded-full bg-[var(--brand-soft,#eaf0fc)] px-2 py-[1px] text-[10px] font-extrabold">
-          {tour ? "▶ walkthrough" : "▶ video"}
+          {tour ? `▶ ${t("p8pub.hwWalkthrough")}` : `▶ ${t("p8pub.hwVideo")}`}
         </span>
       </summary>
 
@@ -58,11 +60,11 @@ export function HowItWorks({
             <span className="text-[26px]">▶</span>
           </div>
           <div className="mt-2 text-[11.5px] font-extrabold text-[var(--ink-2)]">
-            Walkthrough — to record
+            {t("p8pub.hwToRecord")}
           </div>
           <div className="mt-0.5 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
             {video}
-            {minutes ? ` · aim for ${minutes}` : ""}
+            {minutes ? ` · ${t("p8pub.hwAim", { minutes })}` : ""}
           </div>
         </div>
       </div>
