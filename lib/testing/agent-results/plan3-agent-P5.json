@@ -1,0 +1,154 @@
+{
+ "p3-p5-01": {
+  "verdict": "fixed",
+  "method": "api+ui",
+  "actual": "Parent PAYMENTS: 'Waiting on payment' listed waitlisted / offered / approval-pending bookings with a Pay now button and counted them in 'To pay now'; the server refuses to charge them.",
+  "notes": "features/parent/PaymentsApp.tsx uses the same rule as the server payable() (Confirmed or invoice sent). Commit cca539a2.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-02": {
+  "verdict": "fixed",
+  "method": "api+ui",
+  "actual": "A part-paid booking (paid £10 of £30) showed 'Pay £30' and POST /api/payments/checkout would charge the full £30 again; a fully-paid booking that released a day (pay 'Partially refunded', still Confirmed) also showed 'Pay £30' and would have been charged a second time. Payments 'To pay now' ignored part-paid bookings entirely.",
+  "notes": "payments.ts charges owedOf() (balance) and refuses a settled booking; My bookings Pay button + Payments owed list use owedOf. Verified in UI: released-day card has no Pay button, part-paid shows 'Pay £20.00'. Live card charge not testable (no Stripe keys, known blocker). Commit 222c644e.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-03": {
+  "verdict": "fixed",
+  "method": "api+ui",
+  "actual": "'Partially refunded' bookings were missing from the Paid list (no receipt PDF for money genuinely paid).",
+  "notes": "PaymentsApp paid list includes them (receipt already nets the refund). Commit 222c644e.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-04": {
+  "verdict": "fixed",
+  "method": "ui",
+  "actual": "React 'two children with the same key' errors (Next dev overlay 8-12 Issues) on Payments: booking numbers repeat across providers (the standing parent has 5 such refs); rows were keyed by ref alone so rows were dropped/duplicated and ticking one receipt ticked its namesake at another provider. The pending date-change localStorage marker had the same collision.",
+  "notes": "Keys/selection are tenant+ref. Verified: no duplicate-key console errors after the fix. Commit cfcfe55d.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-05": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "POST /api/my/trips/:id/consent accepted consent on CANCELLED, COMPLETED and past trips (UI hides the buttons) - flipped consentObtained and pinged the provider 'consent given' for a trip that was off.",
+  "notes": "my.ts: 409 unless the trip is upcoming and not cancelled/completed. Verified before/after. Commit cca539a2.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-06": {
+  "verdict": "fixed",
+  "method": "ui",
+  "actual": "Cancel panel told an UNPAID booking 'You're entitled to a full refund of £20.00' and offered wallet/card refund choice, then the result said 'no refund was due'. Advice and per-day values were computed on the price, not the money received (server values on paid).",
+  "notes": "MyBookingsApp uses refundableSoFar/paidSoFar; new i18n string p7bk.nothingPaid (11 languages). Verified in UI. Commit 6baa1fe5.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-07": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Child DOB accepted 'banana' / future dates -> age unknown -> stored as age 0 -> the listing age gate was skipped (a 5-12 camp booked a child with a garbage DOB). Real infants (age 0) also bypassed the gate (age > 0 test).",
+  "notes": "childSchema.dob must be blank or a real past date; outOfRange treats a KNOWN age 0 as real (unknown ages still not judged). Verified via API. Commit 296540bc.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-08": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "POST /api/meal-orders let a parent order a meal for any day/child on the menu (child never booked that listing, or a day not booked); kitchen counts and the family bill were then wrong. The Meals screen also offered waitlisted/declined bookings.",
+  "notes": "mealsShop.ts requires the child to hold a place that day (registerRows); meal-days ignores waitlisted/declined/offered bookings. Real meal-shop e2e still passes. Commit 4061f903.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-09": {
+  "verdict": "fixed",
+  "method": "api+ui",
+  "actual": "GET /api/my/meal-days looked at only the first 50 of a family's listings: a family with 82 listings (years of history) saw NO menus for the camp running today (safeguarding meal-shop e2e failed for exactly this).",
+  "notes": "Only upcoming bookings feed the look-up, cap raised to 300. Commit 35f74c01.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-10": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Newsfeed: a family with bookings at more than 10 providers silently lost the posts of the extra providers (Firestore in-query slice(0,10)).",
+  "notes": "posts.ts chunks the in-query; canSeePost no longer truncates. Commit 9a6ef99a.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-11": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Date-change (amend) requests were accepted onto/off past days and onto a day the single-child booking already covers.",
+  "notes": "my.ts amend validation (swaps and multi-child bookings still allowed). Commit 82c2953f.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-12": {
+  "verdict": "fixed",
+  "method": "env",
+  "actual": "The API on :4000 was DOWN for everyone: an uncommitted i18n edit made features/bookings/helpers.ts (imported by the server) use the '@/lib/i18n/format' alias, which tsx in server/ cannot resolve.",
+  "notes": "Switched to the relative import (as the file's own comment says server imports it). Already in HEAD via another agent's commit.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-13": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Cross-family isolation: parent B cannot read/cancel/amend/edit/delete parent A's bookings, children, incidents, medications, moments, meal orders, trips, threads; consent/authorise/note on A's records 404/403; price injection ignored; capacity respected (waitlists the 2nd family); duplicate child+day refused; stacked/expired/inactive/once-only coupons behave; percent>100 rejected; wallet credit spent correctly; refund pipeline (wallet, offline->card) consistent.",
+  "notes": "No code change.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-14": {
+  "verdict": "pass",
+  "method": "ui",
+  "actual": "All 20 custdash nav views render at 1440 and 390 with no horizontal overflow, no uncaught exceptions; trips consent (give + decline) works through the UI; add child, locked child, cancel request (unpaid + paid) and the free/paid checkout to the pay step work.",
+  "notes": "Learning Hub / Refer / Memberships show 'not available' because the test provider switched them off.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-15": {
+  "verdict": "blocked",
+  "method": "ui",
+  "actual": "Real card payment (Pay now / Confirm & pay) cannot complete: server has no STRIPE_SECRET_KEY / no publishable key; the parent sees 'Payments aren't configured (no publishable key).' - graceful.",
+  "notes": "Known environment blocker (Amir's Day-1 prerequisite). Balance-charging fix verified by code + owedOf, not by a live charge.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-16": {
+  "verdict": "open",
+  "method": "ui",
+  "actual": "Booking page: when a date is the last place on a day, adding it to the basket marks it 'Full' and shows the waiting-list box 'N day is full - Join the waiting list' for the very day in your own basket (UI subtracts the basket from capacity).",
+  "notes": "UX only; a second child legitimately needs the waitlist, so left as is. Candidate: only show the box for days full before the basket.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-17": {
+  "verdict": "open",
+  "method": "api",
+  "actual": "Feedback can be submitted unlimited times per provider/listing (rating inflation); any parent with a booking can spam 5-star reviews.",
+  "notes": "Design decision (upsert vs allow re-rate) - not changed.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-18": {
+  "verdict": "open",
+  "method": "ui",
+  "actual": "Account view calls GET /api/library as a parent (403 in the console) because AccountApp always runs useSettings(); harmless but noisy. Parent 'PUT /api/account' also stores operator-only fields (franchiseName etc.) on a parent's profile.",
+  "notes": "Low.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ },
+ "p3-p5-19": {
+  "verdict": "open",
+  "method": "e2e",
+  "actual": "safeguarding.spec.ts medication test picks provider select index 0; the standing parent now has bookings with two providers (freelancer + company) so the authorisation goes to the wrong provider and the operator never sees it. Meal-shop/moments specs pass.",
+  "notes": "Test fragility, not a product bug. Parent-portal regression spec added: e2e/parent-money-rules.spec.ts.",
+  "at": "2026-09-30",
+  "agent": "plan3-P5"
+ }
+}
