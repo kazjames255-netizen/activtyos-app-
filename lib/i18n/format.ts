@@ -31,3 +31,14 @@ export function agoLabel(t: (key: string, vars?: Record<string, string | number>
   if (hours < 24) return t("p7shell.agoHr", { n: hours });
   return t("p7shell.agoDay", { n: Math.floor(hours / 24) });
 }
+
+const SYMBOL_AFTER = new Set<LocaleCode>(["pl", "ro", "es", "fr", "pt"]);
+/**
+ * GBP amount in the active language's number conventions ("£1,234.50" in English, "1 234,50 £" in French / Polish / Spanish...), always
+ * pounds sterling with the £ sign (Intl's own currency style prints "GBP" / "£GB" / "UK£" in several locales). Amounts are unchanged:
+ * this only formats. `decimals` defaults to 2.
+ */
+export function formatGBP(n: number, decimals = 2): string {
+  const num = new Intl.NumberFormat(dateLocale(), { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(n);
+  return SYMBOL_AFTER.has(current) ? `${num} £` : `£${num}`;
+}

@@ -1,4 +1,4 @@
-import { dateLocale as dl } from "../../lib/i18n/format"; // relative: the API server imports this file too (no "@/" alias there)
+import { dateLocale as dl, formatGBP } from "../../lib/i18n/format"; // relative: the API server imports this file too (no "@/" alias there)
 import type { Booking, BookingFilter, Kid } from "./types";
 import { csvCell } from "../../lib/csv"; // relative: the API server imports this file too
 
@@ -267,8 +267,8 @@ export function avatarGradient(name: string): string {
 }
 
 export function money(n: number): string {
-  if (n > 0) return "£" + (Math.round(n * 100) / 100).toFixed(2);
-  return n === 0 ? "£0.00" : "—";
+  if (n > 0) return formatGBP(Math.round(n * 100) / 100);
+  return n === 0 ? formatGBP(0) : "—";
 }
 
 /** Reconciled = the money is in and fully accounted for. Mirrors the ledger. */
