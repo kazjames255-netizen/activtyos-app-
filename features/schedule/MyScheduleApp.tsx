@@ -14,6 +14,8 @@ import { useEffect, useMemo, useState } from "react";
 import { get as apiGet, isDemoMode } from "@/lib/api";
 import { getMe, peekMe } from "@/components/auth/PortalGuard";
 import { useT } from "@/lib/i18n/provider";
+import { Rich } from "@/features/setup/Rich";
+import { localTime, hmPad, roleLabel } from "./fmt";
 import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
@@ -42,9 +44,9 @@ const barPos = (start: string, end: string) => {
 
 const dt = (d: string) => new Date(d + "T00:00:00");
 const mins = (t: string) => { const [h, m] = (t || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
-const to12 = (t: string) => { const [h, m] = t.split(":").map(Number); const ap = h >= 12 ? "pm" : "am"; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr}${m ? ":" + String(m).padStart(2, "0") : ""}${ap}`; };
+const to12 = (t: string) => { const [h, m] = t.split(":").map(Number); const intl = localTime(h, m); if (intl) return intl; const ap = h >= 12 ? "pm" : "am"; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr}${m ? ":" + String(m).padStart(2, "0") : ""}${ap}`; };
 const hrsOf = (a: string, b: string) => Math.max(0, (mins(b) - mins(a)) / 60);
-const hLabel = (h: number) => `${Math.floor(h)}h ${String(Math.round((h % 1) * 60)).padStart(2, "0")}m`;
+const hLabel = hmPad;
 // format a Date as local yyyy-mm-dd (NOT toISOString, which shifts to UTC and can
 // roll the date back a day under BST/positive offsets — breaking week grouping)
 const localISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -193,7 +195,7 @@ export function MyScheduleApp() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {([
-          ["📅", t("schedule.nextShift"), nextShift ? dayLabel(nextShift.date) : "—", nextShift ? `${to12(nextShift.start)}–${to12(nextShift.end)} · ${nextShift.role}` : t("schedule.nothingBooked"), "#1d3a8f", "#eef4fd"],
+          ["📅", t("schedule.nextShift"), nextShift ? dayLabel(nextShift.date) : "—", nextShift ? `${to12(nextShift.start)}–${to12(nextShift.end)} · ${roleLabel(t, nextShift.role)}` : t("schedule.nothingBooked"), "#1d3a8f", "#eef4fd"],
           ["⏱", t("schedule.thisWeek"), hLabel(thisWeekHrs), t("schedule.rotaHours"), "#0f857b", "#e6f6f3"],
           ["🗓", t("schedule.upcomingShifts"), String(upcoming.length), t("schedule.onYourRota"), "#7c3aed", "#f1ecfe"],
         ] as [string, string, string, string, string, string][]).map(([ic, label, value, sub, col, bg]) => (
@@ -251,15 +253,15 @@ export function MyScheduleApp() {
                         <span className="ms-auto tabular-nums text-[12.5px] font-bold text-[var(--ink)]">{to12(s.start)}–{to12(s.end)}</span>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        {s.role && <span className="inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: col + "1a", color: col }}>{s.role}</span>}
+                        {s.role && <span className="inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: col + "1a", color: col }}>{roleLabel(t, s.role)}</span>}
                         {s.listing && <span className="truncate text-[11.5px] font-bold text-[var(--ink-2)]">{s.listing}</span>}
                         <span className="ms-auto flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums text-[var(--ink-2)]">{hLabel(hrsOf(s.start, s.end))}</span>
                       </div>
                       {(s.site || s.address) && <div className="mt-1 flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]"><span className="flex-none">📍</span><span className="truncate">{[s.site, s.address].filter(Boolean).join(" · ")}</span></div>}
                       {s.rate != null && s.rate > 0 && (
                         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11.5px]">
-                          <span className="rounded-md bg-[#e7f5ec] px-1.5 py-0.5 font-extrabold tabular-nums text-[#0f7a43]">{money(s.rate)}/hr</span>
-                          <span className="text-[var(--ink-3)]">est. <b className="tabular-nums text-[var(--ink)]">{money(s.rate * hrsOf(s.start, s.end))}</b> this shift</span>
+                          <span className="rounded-md bg-[#e7f5ec] px-1.5 py-0.5 font-extrabold tabular-nums text-[#0f7a43]">{t("p8set.scPerHr", { amt: money(s.rate) })}</span>
+                          <span className="text-[var(--ink-3)]"><Rich k="p8set.scEstShift" vars={{ amt: money(s.rate * hrsOf(s.start, s.end)) }} slots={{}} /></span>
                         </div>
                       )}
                       {s.note && <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">📝 {s.note}</div>}
@@ -366,7 +368,7 @@ export function MyScheduleApp() {
               <span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.roles")}</span>
               {weekStats.roles.map((r) => (
                 <span key={r} className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: roleCol(r) }} />{r}
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: roleCol(r) }} />{roleLabel(t, r)}
                 </span>
               ))}
             </div>
@@ -396,7 +398,7 @@ export function MyScheduleApp() {
                         // Read-only: not attributed to anyone, not claimable from here.
                         const isOpen = !s.staffId;
                         const isMe = !isOpen && (s.staffId === myId || s.staffId === AVAIL_ID);
-                        const name = isOpen ? "Open — unassigned" : isMe ? t("schedule.you") : (staffById[s.staffId!] ?? t("schedule.staff"));
+                        const name = isOpen ? t("p8set.scOpenUnassigned") : isMe ? t("schedule.you") : (staffById[s.staffId!] ?? t("schedule.staff"));
                         const col = roleCol(s.role);
                         const pos = barPos(s.start, s.end);
                         return (
@@ -406,13 +408,13 @@ export function MyScheduleApp() {
                               <div className="flex items-center gap-2">
                                 <span className={"truncate text-[13px] font-extrabold " + (isOpen ? "italic text-[#8a5a09]" : "text-[var(--ink)]")}>{name}</span>
                                 {isMe && <span className="rounded-full bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">{t("schedule.you")}</span>}
-                                {isOpen && <span className="rounded-full bg-[#fdf3e0] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#8a5a09]">Unfilled</span>}
+                                {isOpen && <span className="rounded-full bg-[#fdf3e0] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#8a5a09]">{t("schedule.unfilled")}</span>}
                                 <span className="ms-auto tabular-nums text-[12px] font-bold text-[var(--ink-2)]">{to12(s.start)}–{to12(s.end)}</span>
                               </div>
                               <div className="mt-1 flex items-center gap-2">
-                                <span className="inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: col + "1a", color: col }}>{s.role}</span>
+                                <span className="inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: col + "1a", color: col }}>{roleLabel(t, s.role)}</span>
                                 {(s.listing || s.site) && <span className="truncate text-[11px] font-medium text-[var(--ink-3)]">{s.listing || s.site}</span>}
-                                {s.staffOnLeave && <span className="inline-flex flex-none items-center gap-1 rounded-full bg-[#fff1d6] px-2 py-0.5 text-[10.5px] font-black text-[#8a5a09]">🌴 Off — needs cover</span>}
+                                {s.staffOnLeave && <span className="inline-flex flex-none items-center gap-1 rounded-full bg-[#fff1d6] px-2 py-0.5 text-[10.5px] font-black text-[#8a5a09]">🌴 {t("p8set.scOffCover")}</span>}
                               </div>
                               {/* mini timeline bar */}
                               <div className="relative mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel)]">
@@ -474,7 +476,7 @@ export function MyScheduleApp() {
                         <div className="min-w-0 flex-1">
                           <div className="text-[13px] font-extrabold text-[var(--ink)]">{dt(s.date).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "short" })}</div>
                           <div className="mt-0.5 flex items-center gap-1.5">
-                            <span className="inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: col + "1a", color: col }}>{s.role}</span>
+                            <span className="inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: col + "1a", color: col }}>{roleLabel(t, s.role)}</span>
                             <span className="text-[11.5px] tabular-nums text-[var(--ink-3)]">{to12(s.start)}–{to12(s.end)}</span>
                           </div>
                         </div>

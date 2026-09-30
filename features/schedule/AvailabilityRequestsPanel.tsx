@@ -8,6 +8,8 @@ import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get, post, patch, del } from "@/lib/api";
 import { useT } from "@/lib/i18n/provider";
+import { Rich } from "@/features/setup/Rich";
+import { wdShortName, windowLabel } from "./fmt";
 import { Button, Card, Input } from "@/components/ui";
 
 interface ReqWindow { kind: "week" | "range" | "ongoing" | "camp"; label: string; from?: string; to?: string }
@@ -20,7 +22,7 @@ interface Invite { token: string; role: string; sentTo?: string | null; usedBy?:
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const fmt = (s?: string) => (s ? new Date(`${s}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "");
 const addDaysISO = (i: string, n: number) => { const d = new Date(`${i}T00:00:00`); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
-const wdShort = (i: string) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(`${i}T00:00:00`).getDay()];
+const wdShort = (i: string) => wdShortName(new Date(`${i}T00:00:00`).getDay());
 const dNum = (i: string) => new Date(`${i}T00:00:00`).getDate();
 function weekFrom(offset: number): ReqWindow {
   const d = new Date();
@@ -61,7 +63,7 @@ export function AvailabilityRequestsPanel() {
     try {
       const window = WINDOWS[winIdx][1]();
       await post("/api/availability/requests", { staffEmail: email.trim(), staffName: name.trim() || undefined, window, note: note.trim() || undefined });
-      setFlash(t("schedule.requestedFromFlash", { email: email.trim(), window: window.label }));
+      setFlash(t("schedule.requestedFromFlash", { email: email.trim(), window: windowLabel(window) }));
       setEmail(""); setName("");
       await load();
       setTimeout(() => setFlash(null), 4000);
@@ -94,7 +96,7 @@ export function AvailabilityRequestsPanel() {
           <div>
             <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.forLabel")}</label>
             <select value={winIdx} onChange={(e) => setWinIdx(Number(e.target.value))} className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[13px] text-[var(--ink)]">
-              {WINDOWS.map(([label], i) => <option key={label} value={i}>{label}</option>)}
+              {WINDOWS.map(([label], i) => <option key={label} value={i}>{t(["p8set.scWinThis", "p8set.scWinNext", "p8set.scWinAfter", "p8set.scWinOngoing"][i])}</option>)}
             </select>
           </div>
           <div>
@@ -124,7 +126,7 @@ export function AvailabilityRequestsPanel() {
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
                     <span className="text-[13px] font-extrabold text-[var(--ink)]">{r.staffName || r.staffEmail}</span>
                     {r.staffName && <span className="text-[11.5px] text-[var(--ink-3)]">{r.staffEmail}</span>}
-                    <span className="text-[12px] text-[var(--ink-2)]">· {r.window.label}{r.window.from ? ` (${fmt(r.window.from)}–${fmt(r.window.to)})` : ""}</span>
+                    <span className="text-[12px] text-[var(--ink-2)]">· {windowLabel(r.window)}{r.window.from ? ` (${fmt(r.window.from)}–${fmt(r.window.to)})` : ""}</span>
                     {assignedN > 0 && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">📌 {t("schedule.assignedCount", { count: assignedN })}</span>}
                     <span className="ms-auto flex items-center gap-2">
                       {r.status === "submitted"
@@ -177,7 +179,7 @@ function AssignPanel({ req, onSaved }: { req: AvailRequest; onSaved: () => void 
       <div className="mb-2 flex flex-wrap items-center gap-2 text-[11.5px]">
         <span className="font-extrabold text-[var(--ink)]">{camp.listingName}{camp.location ? ` · ${camp.location}` : ""}</span>
         <span className="text-[var(--ink-3)]">{camp.open}–{camp.close}</span>
-        <span className="text-[var(--ink-3)]">· {chosenCount} days available · <b className="text-[#1d3a8f]">{assigned.size} assigned</b></span>
+        <span className="text-[var(--ink-3)]"><Rich k="p8set.scDaysAvailAssigned" vars={{ n: chosenCount, assigned: assigned.size }} slots={{}} /></span>
       </div>
       {grid === null ? <div className="py-3 text-center text-[12px] text-[var(--ink-3)]">{t("schedule.loadingAvailability")}</div> : (
         <div className="flex flex-col gap-1.5">

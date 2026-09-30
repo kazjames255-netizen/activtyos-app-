@@ -5,7 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api, get as apiGet } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
+import { Rich } from "@/features/setup/Rich";
+import { hmPad, wdShortName, wdLongName, wdLongKey, windowLabel } from "./fmt";
 import { Button, Card, Input } from "@/components/ui";
 import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
 
@@ -25,17 +27,17 @@ interface Pattern { days?: Record<string, DayAvail>; grid?: Record<string, DayAv
 const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" }) : "");
 // Full date + time for "submitted / last edited" stamps.
 const fmtStamp = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
-const requesterOf = (r: { createdByName?: string | null; createdBy?: string | null }) => r.createdByName || r.createdBy || "your manager";
+const requesterOf = (r: { createdByName?: string | null; createdBy?: string | null }) => r.createdByName || r.createdBy || tNow("p8set.scYourManager");
 const dNum = (iso: string) => new Date(`${iso}T00:00:00`).getDate();
 const dMon = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { month: "short" });
 const wdOf = (iso: string) => new Date(`${iso}T00:00:00`).getDay(); // 0 Sun … 6 Sat
-const WD_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const WD_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const WD_SHORT = { get: (i: number) => wdShortName(i) };
+const WD_LONG = { get: (i: number) => wdLongName(i) };
 const addDaysISO = (iso: string, n: number) => { const d = new Date(`${iso}T00:00:00`); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const mins = (t: string) => { const [h, m] = (t || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
 const hoursOf = (from: string, to: string) => Math.max(0, (mins(to) - mins(from)) / 60);
 const clampT = (v: string, lo: string, hi: string) => (mins(v) < mins(lo) ? lo : mins(v) > mins(hi) ? hi : v);
-const hLabel = (h: number) => `${Math.floor(h)}h ${String(Math.round((h % 1) * 60)).padStart(2, "0")}m`;
+const hLabel = hmPad;
 
 // ── Standing weekly pattern (default / ongoing) ─────────────────────────────
 type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
@@ -196,12 +198,12 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
                 <div key={wi} className="flex flex-wrap items-center gap-1.5">
                   <span className="w-[112px] flex-none text-[11.5px] font-extrabold text-[#1d3a8f]">{t("schedule.weekN", { n: wi + 1 })} <span className="font-semibold text-[var(--ink-3)]">· {dNum(wk[0])} {dMon(wk[0])}</span></span>
                   {wk.map((dt) => { const as = assigned.has(dt); const on = cell(dt).on; return (
-                    <span key={dt} className={"rounded-md px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums " + (as ? "bg-[#1d3a8f] text-white ring-2 ring-[#f5c542]" : on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")} title={as ? t("schedule.onRotaRequestOff") : on ? t("schedule.availableRange", { from: cell(dt).from, to: cell(dt).to }) : t("schedule.notChosen")}>{as ? "📌 " : ""}{WD_SHORT[wdOf(dt)]} {dNum(dt)}</span>
+                    <span key={dt} className={"rounded-md px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums " + (as ? "bg-[#1d3a8f] text-white ring-2 ring-[#f5c542]" : on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")} title={as ? t("schedule.onRotaRequestOff") : on ? t("schedule.availableRange", { from: cell(dt).from, to: cell(dt).to }) : t("schedule.notChosen")}>{as ? "📌 " : ""}{WD_SHORT.get(wdOf(dt))} {dNum(dt)}</span>
                   ); })}
                 </div>
               ))}
             </div>
-            <div className="mt-2 text-[10.5px] text-[var(--ink-3)]">Navy = chosen · <span className="text-[#b8860b]">gold ring 📌</span> = on the rota (request time off to change).</div>
+            <div className="mt-2 text-[10.5px] text-[var(--ink-3)]"><Rich k="p8set.scNavyLegend" slots={{ gold: <span className="text-[#b8860b]">{t("p8set.scGoldRing")}</span> }} /></div>
           </div>
         )}
         {req.note && <div className="border-t border-[#e3ebff] px-4 py-2.5 text-[12px] italic text-[#7a5a12]">“{req.note}”</div>}
@@ -220,9 +222,9 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
       <div className="flex items-start gap-2.5 rounded-xl border border-[#e3ebff] bg-[#eef5ff] px-3.5 py-3 text-[12px] leading-relaxed text-[#1d3a8f]">
         <span className="mt-px flex-none text-[15px] leading-none">🔒</span>
         <div>
-          <b>Two things are locked:</b>
-          <div className="mt-1 text-[var(--ink-2)]">• <b className="text-[#1d3a8f]">Days you&rsquo;ve been put on the rota</b> (📌) can&rsquo;t be switched off here — you&rsquo;re expected to work them. To change one, <b>request time off</b> and your manager will review it.</div>
-          <div className="mt-0.5 text-[var(--ink-2)]">• A day locks <b className="text-[#1d3a8f]">{lockHours > 0 ? `${lockHours}h before it starts` : "once it starts"}</b>, so availability can&rsquo;t change at the last minute. Everything further out stays fully editable. <span className="text-[var(--ink-3)]">(Set by your provider.)</span></div>
+          <b>{t("p8set.scLocked1")}</b>
+          <div className="mt-1 text-[var(--ink-2)]"><Rich k="p8set.scLocked2" slots={{}} /></div>
+          <div className="mt-0.5 text-[var(--ink-2)]"><Rich k="p8set.scLocked3" vars={{ when: lockHours > 0 ? t("p8set.scLockHoursBefore", { n: lockHours }) : t("p8set.scLockOnceStarts") }} slots={{}} /></div>
         </div>
       </div>
 
@@ -253,7 +255,7 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
                       <li key={dt} className="flex flex-wrap items-center gap-3 bg-[#f3f6ff] px-4 py-2.5">
                         <span className="grid h-[22px] w-[40px] flex-none place-items-center rounded-full bg-[#1d3a8f] text-[11px] text-white">📌</span>
                         <div className="w-[104px] flex-none">
-                          <div className="text-[13px] font-extrabold text-[var(--ink)]">{WD_LONG[wd]}</div>
+                          <div className="text-[13px] font-extrabold text-[var(--ink)]">{WD_LONG.get(wd)}</div>
                           <div className="text-[11px] font-semibold text-[var(--ink-3)]">{dNum(dt)} {dMon(dt)}</div>
                         </div>
                         <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11px] font-extrabold text-[#1d3a8f]">{t("schedule.onRotaRange", { open: camp.open, close: camp.close })}</span>
@@ -267,7 +269,7 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
                       <li key={dt} className="flex flex-wrap items-center gap-3 px-4 py-2.5 opacity-70">
                         <span className="grid h-[22px] w-[40px] flex-none place-items-center rounded-full bg-[var(--line)] text-[11px] text-[var(--ink-3)]">🔒</span>
                         <div className="w-[104px] flex-none">
-                          <div className="text-[13px] font-extrabold text-[var(--ink)]">{WD_LONG[wd]}</div>
+                          <div className="text-[13px] font-extrabold text-[var(--ink)]">{WD_LONG.get(wd)}</div>
                           <div className="text-[11px] font-semibold text-[var(--ink-3)]">{dNum(dt)} {dMon(dt)}</div>
                         </div>
                         <span className="text-[12px] font-semibold text-[var(--ink-3)]">{c.on ? t("schedule.lockedWas", { from: c.from, to: c.to }) : t("schedule.lockedTooClose")}</span>
@@ -281,7 +283,7 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
                         <span className="absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white transition-all" style={{ left: c.on ? "21px" : "3px" }} />
                       </button>
                       <div className="w-[104px] flex-none">
-                        <div className="text-[13px] font-extrabold text-[var(--ink)]">{WD_LONG[wd]}</div>
+                        <div className="text-[13px] font-extrabold text-[var(--ink)]">{WD_LONG.get(wd)}</div>
                         <div className="text-[11px] font-semibold text-[var(--ink-3)]">{dNum(dt)} {dMon(dt)}</div>
                       </div>
                       {c.on ? (
@@ -292,7 +294,7 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
                             <Input type="time" min={camp.open} max={camp.close} value={c.to} onChange={(e) => setTo(dt, e.target.value)} className="w-[104px]" style={FIELD_STYLE} />
                           </div>
                           {(() => { const synced = weekdaySynced(wd); return (
-                            <button type="button" onClick={() => repeatWeekday(dt)} className={"ms-auto flex-none rounded-full px-2.5 py-1 text-[11px] font-bold transition " + (synced ? "bg-[#1d3a8f] text-white" : "bg-[#eef4fd] text-[#1d3a8f] hover:brightness-95")} title={synced ? `Every ${WD_LONG[wd]} matches this` : `Apply these hours to every ${WD_LONG[wd]}`}>{synced ? `✓ Every ${WD_SHORT[wd]}` : `↻ Every ${WD_SHORT[wd]}`}</button>
+                            <button type="button" onClick={() => repeatWeekday(dt)} className={"ms-auto flex-none rounded-full px-2.5 py-1 text-[11px] font-bold transition " + (synced ? "bg-[#1d3a8f] text-white" : "bg-[#eef4fd] text-[#1d3a8f] hover:brightness-95")} title={synced ? t("p8set.scEveryMatches", { day: WD_LONG.get(wd) }) : t("p8set.scApplyEvery", { day: WD_LONG.get(wd) })}>{synced ? `✓ ${t("p8set.scEveryShort", { day: WD_SHORT.get(wd) })}` : `↻ ${t("p8set.scEveryShort", { day: WD_SHORT.get(wd) })}`}</button>
                           ); })()}
                         </>
                       ) : (
@@ -341,17 +343,17 @@ function StandingWeekly({ pendingReq, lastReq, pattern, onSubmitted }: { request
       {pendingReq ? (
         <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-[#f3d98a] bg-[#fdf6e3] p-3.5 text-[12.5px] leading-relaxed text-[#7a5a12]">
           <span className="mt-px flex-none text-[16px] leading-none">📩</span>
-          <div><b>Your manager has asked for your availability</b> for <b>{pendingReq.window.label}</b>. Set the days &amp; times you can work below, then <b>Submit to manager</b>. Requested by {requesterOf(pendingReq)}.</div>
+          <div><Rich k="p8set.scMgrAsked" vars={{ label: windowLabel(pendingReq.window), who: requesterOf(pendingReq) }} slots={{}} /></div>
         </div>
       ) : lastReq && lastReq.status === "submitted" ? (
         <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-[#bfe6cf] bg-[#f2fbf5] p-3.5 text-[12.5px] leading-relaxed text-[#0f7a43]">
           <span className="mt-px flex-none text-[16px] leading-none">✅</span>
-          <div><b>Availability submitted</b> for {lastReq.window.label}{lastReq.submittedAt ? ` · ${fmtStamp(lastReq.submittedAt)}` : ""}. You can update it any time — your manager will see the latest.</div>
+          <div><Rich k="p8set.scSubmittedFor" vars={{ label: windowLabel(lastReq.window), when: lastReq.submittedAt ? ` · ${fmtStamp(lastReq.submittedAt)}` : "" }} slots={{}} /></div>
         </div>
       ) : (
         <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-[#cde0f7] bg-[#eef5ff] p-3.5 text-[12.5px] leading-relaxed text-[#1d3a8f]">
           <span className="mt-px flex-none text-[16px] leading-none">🔁</span>
-          <div><b>This is your standard weekly availability</b> — a repeating pattern, not a specific week. When your manager needs it for a specific camp or week, <b>a request will appear here</b> and you can submit for those dates.</div>
+          <div><Rich k="p8set.scStandardInfo" slots={{}} /></div>
         </div>
       )}
 
@@ -364,7 +366,7 @@ function StandingWeekly({ pendingReq, lastReq, pattern, onSubmitted }: { request
                 <button type="button" onClick={() => setDay(k, { on: !day.on })} role="switch" aria-checked={day.on} className="relative h-[22px] w-[40px] flex-none rounded-full transition-colors" style={{ background: day.on ? "#2f6bd8" : "var(--line)" }}>
                   <span className="absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white transition-all" style={{ left: day.on ? "21px" : "3px" }} />
                 </button>
-                <span className="w-[92px] flex-none text-[13.5px] font-extrabold text-[var(--ink)]">{label}</span>
+                <span className="w-[92px] flex-none text-[13.5px] font-extrabold text-[var(--ink)]">{wdLongKey(k)}</span>
                 {day.on ? (
                   <div className="flex items-center gap-2 text-[12.5px] text-[var(--ink-2)]">
                     <Input type="time" value={day.from} onChange={(e) => setDay(k, { from: e.target.value })} className="w-[112px]" style={FIELD_STYLE} />

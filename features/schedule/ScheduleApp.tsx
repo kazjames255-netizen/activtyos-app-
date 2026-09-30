@@ -5,7 +5,9 @@ import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { ApiError, get as apiGet, put as apiPut, isDemoMode } from "@/lib/api";
 import { useTenantSettings } from "@/lib/settings";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
+import { Rich } from "@/features/setup/Rich";
+import { localTime, hmShort, wdShortKey, roleLabel } from "./fmt";
 import { SchedulingSettingsForm } from "./SchedulingSettings";
 import { AvailabilityRequestsPanel } from "./AvailabilityRequestsPanel";
 import { StaffAttendanceBoard } from "./StaffAttendanceBoard";
@@ -29,8 +31,8 @@ function mondayOf(d: Date) { const x = new Date(d); const day = (x.getUTCDay() +
 const mins = (t: string) => { const [h, m] = t.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
 const durH = (a: string, b: string) => Math.max(0, mins(b) - mins(a)) / 60;
 const hourOf = (t: string) => Math.floor(mins(t) / 60);
-const hLabel = (h: number) => (h === 0 ? "0h" : Number.isInteger(h) ? `${h}h` : `${Math.floor(h)}h ${Math.round((h % 1) * 60)}m`);
-const to12 = (t: string) => { const [h, m] = t.split(":").map(Number); const ap = h < 12 ? "am" : "pm"; const hh = ((h + 11) % 12) + 1; return `${hh}:${String(m).padStart(2, "0")}${ap}`; };
+const hLabel = hmShort;
+const to12 = (t: string) => { const [h, m] = t.split(":").map(Number); const intl = localTime(h, m); if (intl) return intl; const ap = h < 12 ? "am" : "pm"; const hh = ((h + 11) % 12) + 1; return `${hh}:${String(m).padStart(2, "0")}${ap}`; };
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const addDays = (s: string, n: number) => { const x = dt(s); x.setUTCDate(x.getUTCDate() + n); return iso(x); };
 const overlaps = (a: { start: string; end: string }, b: { start: string; end: string }) => mins(a.start) < mins(b.end) && mins(b.start) < mins(a.end);
@@ -54,7 +56,7 @@ const effWeek = (st: Staff, date: string): Week => st.weeks?.[iso(mondayOf(dt(da
 // availability of a staff member on a given day, for the assign panel
 function dayAvail(st: Staff, date: string): { ok: boolean; label: string } {
   const w = effWeek(st, date)[weekdayKey(date)];
-  return w ? { ok: true, label: `${to12(w.from)}–${to12(w.to)} available` } : { ok: false, label: "Unavailable this day" };
+  return w ? { ok: true, label: tNow("p8set.scAvailRange", { from: to12(w.from), to: to12(w.to) }) } : { ok: false, label: tNow("p8set.scUnavailDay") };
 }
 // group key: shifts sharing these fields are one "shift" (N needed / M filled) in the editor
 const gkey = (s: { site: string; role: string; date: string; start: string; end: string }) => `${s.site}|${s.role}|${s.date}|${s.start}|${s.end}`;
@@ -94,11 +96,11 @@ function sendRota(s: Store, ok: () => void, fail: (f: SaveFail) => void) {
     .then((r) => { markRotaSaved(s, r.updatedAt); ok(); })
     .catch((e) => {
       const status = e instanceof ApiError ? e.status : 0;
-      const msg = e instanceof Error ? e.message : "Couldn't save the rota";
+      const msg = e instanceof Error ? e.message : tNow("p8set.scRotaSaveFail");
       // 409 = a compliance refusal (roll back to what the server has);
       // 412 = someone else saved first (reload theirs); anything else — a
       // network blip, a 500 — keeps what's on screen and says it isn't saved.
-      fail({ kind: status === 409 ? "blocked" : status === 412 ? "conflict" : "other", back: rotaSave.last, msg: status === 409 || status === 412 ? msg : `Not saved yet — ${msg}. Your changes are still on screen; the next change will try again.` });
+      fail({ kind: status === 409 ? "blocked" : status === 412 ? "conflict" : "other", back: rotaSave.last, msg: status === 409 || status === 412 ? msg : tNow("p8set.scNotSavedYet", { msg }) });
     })
     .finally(() => {
       rotaSave.inflight = false;
@@ -160,6 +162,7 @@ type Draft = { groupIds: string[]; site: string; role: string; listing: string; 
 
 // Compact am–pm time picker (hour : minute : am/pm) matching the manual.
 function TimeSel({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const t = useT();
   const p = to12parts(value);
   const mins = MIN_OPTS.includes(p.m) ? MIN_OPTS : [...MIN_OPTS, p.m].sort();
   const cls = "border border-[var(--line)] bg-[var(--panel)] px-1.5 py-1 text-[13px] font-bold text-[var(--ink)] rounded-lg";
@@ -168,7 +171,7 @@ function TimeSel({ value, onChange }: { value: string; onChange: (v: string) => 
       <Select value={p.hr} onChange={(e) => onChange(from12(Number(e.target.value), p.m, p.ap))} className={cls}>{Array.from({ length: 12 }, (_, i) => i + 1).map((h) => <option key={h} value={h}>{h}</option>)}</Select>
       <span className="text-[var(--ink-3)]">:</span>
       <Select value={p.m} onChange={(e) => onChange(from12(p.hr, e.target.value, p.ap))} className={cls}>{mins.map((m) => <option key={m} value={m}>{m}</option>)}</Select>
-      <Select value={p.ap} onChange={(e) => onChange(from12(p.hr, p.m, e.target.value))} className={cls}>{["am", "pm"].map((a) => <option key={a} value={a}>{a}</option>)}</Select>
+      <Select value={p.ap} onChange={(e) => onChange(from12(p.hr, p.m, e.target.value))} className={cls}>{["am", "pm"].map((a) => <option key={a} value={a}>{t(a === "am" ? "p8set.am" : "p8set.pm")}</option>)}</Select>
     </span>
   );
 }
@@ -234,8 +237,8 @@ export function ScheduleApp() {
   };
   const importLocalRota = () => {
     const local = localOnly; if (!local) return;
-    sendRota(local, () => { setStore(local); cacheLocal(local); setLocalOnly(null); try { localStorage.removeItem(`${KEY}.local-backup`); } catch { /* ignore */ } setSaveError(null); flash("Rota imported into this account"); },
-      (f) => setSaveError(`Couldn't import it: ${f.msg}`));
+    sendRota(local, () => { setStore(local); cacheLocal(local); setLocalOnly(null); try { localStorage.removeItem(`${KEY}.local-backup`); } catch { /* ignore */ } setSaveError(null); flash(t("p8set.scRotaImported")); },
+      (f) => setSaveError(t("p8set.scImportFail", { msg: f.msg })));
   };
   const [venuesR, setVenuesR] = useState<{ id: string; name: string }[]>([]);
   const [listingsR, setListingsR] = useState<{ id: string; title: string; seasonId?: string | null; venueId?: string | null }[]>([]);
@@ -510,7 +513,7 @@ export function ScheduleApp() {
         style={heat}>
         {!compact && <div className="flex items-start gap-1"><span className="min-w-0 flex-1 font-extrabold">{to12(s.start)} – {to12(s.end)}</span>{canManage && <span role="button" onClick={(e) => { e.stopPropagation(); removeShift(s.id); }} className="flex-none opacity-60 hover:opacity-100">×</span>}</div>}
         <div className="truncate font-bold">{st ? (compact ? st.name.split(" ")[0] : st.name) : (compact ? "—" : t("schedule.unfilled"))}</div>
-        {onLeaveNow && <div className={"mt-0.5 inline-flex items-center gap-1 rounded-md bg-white/60 px-1.5 py-0.5 font-extrabold " + (compact ? "text-[8.5px]" : "text-[10px]")}>🌴 {compact ? "Off" : "Off — needs cover"}</div>}
+        {onLeaveNow && <div className={"mt-0.5 inline-flex items-center gap-1 rounded-md bg-white/60 px-1.5 py-0.5 font-extrabold " + (compact ? "text-[8.5px]" : "text-[10px]")}>🌴 {compact ? t("p8set.scOff") : t("p8set.scOffCover")}</div>}
         {!compact && s.listing && <div className="truncate text-[10px] opacity-75">🎟 {s.listing}{s.season ? ` · ${s.season}` : ""}</div>}
         {!compact && filled && !onLeaveNow && <div className="mt-1 inline-flex items-center gap-1 rounded-md bg-white/40 px-1.5 py-0.5 text-[10px] font-bold">{s.out ? `✅ ${t("schedule.outAt", { time: to12(s.out) })}` : s.in ? `🟢 ${t("schedule.inAt", { time: to12(s.in) })}` : `⚪ ${t("schedule.notIn")}`}</div>}
         {!compact && s.locked && <div className="mt-1 inline-block rounded bg-black/25 px-1.5 py-0.5 text-[9px] font-extrabold uppercase">{t("schedule.locked")}</div>}
@@ -595,7 +598,7 @@ export function ScheduleApp() {
       {(span === "2w" || span === "4w" || span === "month") && (
         <div className="mb-3 flex items-start gap-2 rounded-xl border border-[#f0d9b5] bg-[#fffaf0] px-3 py-2.5 text-[11.5px] font-semibold text-[#8a5a09]">
           <span className="text-[14px] leading-none">💡</span>
-          <span>Casual / zero-hours tip: publish just <b>one week at a time</b>. Sick pay (SSP) is only owed for shifts a person was actually rota&rsquo;d — so scheduling weeks ahead commits you to more qualifying days than you may need.</span>
+          <span><Rich k="p8set.scCasualTip" slots={{}} /></span>
         </div>
       )}
 
@@ -619,7 +622,7 @@ export function ScheduleApp() {
             </div>
           </div>
         </div>
-        <p className="relative mt-3 max-w-2xl text-[11.5px] leading-relaxed text-white/70">Predicted <b className="text-white">on-cost</b> adds a cost on top of wages (e.g. employer NI, pension). Recorded only — ActivityOS never moves money.</p>
+        <p className="relative mt-3 max-w-2xl text-[11.5px] leading-relaxed text-white/70"><Rich k="p8set.scOnCostNote" slots={{}} /></p>
       </div>
 
       <div className="mb-3 inline-flex rounded-xl bg-[var(--panel)] p-1">
@@ -633,7 +636,7 @@ export function ScheduleApp() {
 
       <Card className="mb-3 overflow-hidden">
         <button type="button" onClick={() => setHelp((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-start"><span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--panel)] text-[12px]">ⓘ</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{t("schedule.howAvailabilityWorks")}</span><span className="ms-auto text-[12px] text-[var(--ink-3)]">{help ? "▲" : "▼"}</span></button>
-        {help && <ol className="ms-9 list-decimal space-y-1 px-4 pb-3.5 text-[13px] leading-relaxed text-[var(--ink-2)]"><li><b>Request availability</b> — hit the red button in the staff panel. Everyone starts <b className="text-[#c0392b]">Not submitted</b>.</li><li>Staff set the days &amp; times they can work — their card turns <b className="text-[#0f7a43]">Confirmed</b>.</li><li>Still red? Tap the <b>gold bell</b> to send a reminder.</li><li>Then ✨ Auto-schedule fills open shifts and Publish locks them &amp; tells staff.</li></ol>}
+        {help && <ol className="ms-9 list-decimal space-y-1 px-4 pb-3.5 text-[13px] leading-relaxed text-[var(--ink-2)]"><li><Rich k="p8set.scHowList" slots={{}} /></li><li><Rich k="p8set.scHowList2" slots={{}} /></li><li><Rich k="p8set.scHowList3" slots={{}} /></li><li><Rich k="p8set.scHowList4" slots={{}} /></li></ol>}
       </Card>
 
       {/* Toolbar — classy white pills, each with its own coloured icon badge */}
@@ -794,7 +797,7 @@ export function ScheduleApp() {
                         const rows = listingShifts.filter((s) => s.role === role);
                         return (
                           <div key={role}>
-                            <div className="flex items-center gap-2 border-b border-[var(--line-2,#eef2f8)] px-3 py-1.5" style={{ boxShadow: `inset 3px 0 0 ${roleCol(role)}` }}><span className="h-2.5 w-2.5 rounded-full" style={{ background: roleCol(role) }} /><span className="text-[13px] font-extrabold" style={{ color: roleCol(role) }}>{role}</span></div>
+                            <div className="flex items-center gap-2 border-b border-[var(--line-2,#eef2f8)] px-3 py-1.5" style={{ boxShadow: `inset 3px 0 0 ${roleCol(role)}` }}><span className="h-2.5 w-2.5 rounded-full" style={{ background: roleCol(role) }} /><span className="text-[13px] font-extrabold" style={{ color: roleCol(role) }}>{roleLabel(t, role)}</span></div>
                             {!isDay && <TotalsRow rows={rows} />}
                             <CellRow rows={rows} compact={compact} onAdd={(c) => openAddL(l, role, c)} />
                           </div>
@@ -811,7 +814,7 @@ export function ScheduleApp() {
                     const rows = periodShifts.filter((s) => s.staffId === st.id);
                     return (
                       <div key={st.id}>
-                        <div className="flex items-center gap-2 border-b border-[var(--line-2,#eef2f8)] bg-[var(--panel)] px-3 py-1.5"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{st.name}</span><span className="text-[11px] text-[var(--ink-3)]">{st.role} · {hLabel(staffHours(st.id))} · {money(staffHours(st.id) * st.rate)}</span></div>
+                        <div className="flex items-center gap-2 border-b border-[var(--line-2,#eef2f8)] bg-[var(--panel)] px-3 py-1.5"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{st.name}</span><span className="text-[11px] text-[var(--ink-3)]">{roleLabel(t, st.role)} · {hLabel(staffHours(st.id))} · {money(staffHours(st.id) * st.rate)}</span></div>
                         {!isDay && <TotalsRow rows={rows} />}
                         <CellRow rows={rows} compact={compact} onAdd={(c) => openAdd(sites[0] ?? "", st.role, c, st.id)} />
                       </div>
@@ -907,7 +910,7 @@ export function ScheduleApp() {
             {/* header */}
             <div className="flex items-center gap-3 border-b border-[var(--line)] px-5 py-3.5">
               <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{firstSt ? initials(firstSt.name) : "＋"}</span>
-              <div className="min-w-0"><div className="truncate text-[16px] font-extrabold text-[var(--ink)]">{firstSt ? firstSt.name : (draft.groupIds.length ? t("schedule.shiftWord") : t("schedule.newShift"))}{filled > 1 && <span className="text-[var(--ink-3)]"> +{filled - 1}</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{draft.role} · {draft.site}</div></div>
+              <div className="min-w-0"><div className="truncate text-[16px] font-extrabold text-[var(--ink)]">{firstSt ? firstSt.name : (draft.groupIds.length ? t("schedule.shiftWord") : t("schedule.newShift"))}{filled > 1 && <span className="text-[var(--ink-3)]"> +{filled - 1}</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{roleLabel(t, draft.role)} · {draft.site}</div></div>
               <button type="button" onClick={() => { setDraft(null); setAssignOpen(false); setNoteOpen(false); }} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button>
             </div>
 
@@ -954,7 +957,7 @@ export function ScheduleApp() {
               {/* role / location / listing / season */}
               <details className="border-b border-[var(--line-2,#eef2f8)] py-2.5"><summary className="cursor-pointer list-none text-[12.5px] font-bold text-[var(--ink-2)]">⚙️ {t("schedule.roleLocationListingSeason")}</summary>
                 <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-                  <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{t("schedule.roleLabel")}</label><Select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} className="w-full">{[...new Set([draft.role, ...roleOptions])].filter(Boolean).map((r) => <option key={r} value={r}>{r}</option>)}</Select></div>
+                  <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{t("schedule.roleLabel")}</label><Select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} className="w-full">{[...new Set([draft.role, ...roleOptions])].filter(Boolean).map((r) => <option key={r} value={r}>{roleLabel(t, r)}</option>)}</Select></div>
                   <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{t("schedule.locationLabel")}</label><Select value={draft.site} onChange={(e) => setDraft({ ...draft, site: e.target.value })} className="w-full">{sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
                   <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{t("schedule.listingLabel")}</label><Input value={draft.listing} onChange={(e) => setDraft({ ...draft, listing: e.target.value })} list="rota-listings" className="w-full" /><datalist id="rota-listings">{listingOpts.map((l) => <option key={l} value={l} />)}</datalist></div>
                   <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{t("schedule.seasonLabel")}</label><Input value={draft.season} onChange={(e) => setDraft({ ...draft, season: e.target.value })} list="rota-seasons" className="w-full" /><datalist id="rota-seasons">{seasonOpts.map((s) => <option key={s} value={s} />)}</datalist></div>
@@ -1028,7 +1031,7 @@ export function ScheduleApp() {
               <div className="flex flex-col gap-2">
                 {WDAYS.map(([k, lbl]) => { const w = st.week?.[k]; return (
                   <div key={k} className="flex items-center gap-3">
-                    <span className="w-9 flex-none text-[12.5px] font-extrabold text-[var(--ink)]">{lbl}</span>
+                    <span className="w-9 flex-none text-[12.5px] font-extrabold text-[var(--ink)]">{wdShortKey(k)}</span>
                     <div className="relative h-2 flex-1 rounded-full bg-[var(--panel)]">{w && <div className="absolute top-0 h-2 rounded-full" style={{ left: `${(mins(w.from) - WIN_A) / WIN * 100}%`, width: `${(mins(w.to) - mins(w.from)) / WIN * 100}%`, background: "#22b365" }} />}</div>
                     <span className="w-[112px] flex-none text-end text-[12px] font-bold" style={{ color: w ? "#0f7a43" : "var(--ink-3)" }}>{w ? `${to12(w.from)}–${to12(w.to)}` : t("schedule.unavailable")}</span>
                   </div>
@@ -1070,11 +1073,11 @@ export function ScheduleApp() {
                   <button type="button" onClick={() => setAvailWeekMode("all")} className={"flex-1 rounded-lg px-3 py-2 text-center transition-colors " + (availWeekMode === "all" ? "bg-white shadow-sm" : "")}><div className={"text-[13px] font-extrabold " + (availWeekMode === "all" ? "text-[#1d3a8f]" : "text-[var(--ink-2)]")}>{t("schedule.allWeeks")}</div><div className="text-[10.5px] text-[var(--ink-3)]">{t("schedule.recurringPattern")}</div></button>
                 </div>
                 <p className="mt-2.5 text-[11.5px] text-[var(--ink-3)]">{availWeekMode === "all"
-                  ? <>Sets {st.name.split(" ")[0]}&rsquo;s <b>standard weekly availability</b> — applies to every week until changed.</>
-                  : <>Overrides the recurring pattern for <b>this week only</b> ({f(mondayIso)}–{f(wkSun)}).</>}</p>
+                  ? <Rich k="p8set.scAvailAll" vars={{ name: st.name.split(" ")[0] }} slots={{}} />
+                  : <Rich k="p8set.scAvailWeek" vars={{ from: f(mondayIso), to: f(wkSun) }} slots={{}} />}</p>
                 {/* individually ask this staff member to fill in their own availability */}
                 {(() => { const live = store.staff.find((x) => x.id === st.id) ?? st; const asked = live.reminders ?? 0; return (
-                  <button type="button" onClick={() => requestOne(st.id, availWeekMode)} className={"mt-2.5 flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-[11.5px] font-extrabold uppercase tracking-wide text-white shadow-sm hover:brightness-105 " + (live.avail === "confirmed" ? "bg-[#1d3a8f]" : "bg-[#c0392b]")}>✉️ {live.avail === "confirmed" ? `Ask ${st.name.split(" ")[0]} to update` : `Request ${st.name.split(" ")[0]} to complete availability`}{asked > 0 && <span className="rounded-full bg-white/25 px-1.5 py-[1px] text-[10px]">asked {asked}×</span>}</button>
+                  <button type="button" onClick={() => requestOne(st.id, availWeekMode)} className={"mt-2.5 flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-[11.5px] font-extrabold uppercase tracking-wide text-white shadow-sm hover:brightness-105 " + (live.avail === "confirmed" ? "bg-[#1d3a8f]" : "bg-[#c0392b]")}>✉️ {live.avail === "confirmed" ? t("p8set.scAskUpdate", { name: st.name.split(" ")[0] }) : t("p8set.scAskComplete", { name: st.name.split(" ")[0] })}{asked > 0 && <span className="rounded-full bg-white/25 px-1.5 py-[1px] text-[10px]">{t("p8set.scAskedN", { n: asked })}</span>}</button>
                 ); })()}
                 {/* presets */}
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -1087,7 +1090,7 @@ export function ScheduleApp() {
                   {WDAYS.map(([k, lbl]) => { const w = target[k]; return (
                     <div key={k} className="flex flex-wrap items-center gap-2.5 rounded-xl border px-3 py-2" style={{ borderColor: w ? "#c9e7d5" : "var(--line)", background: w ? "#f2faf5" : "var(--surface)" }}>
                       <button type="button" onClick={() => setDay(k, w ? null : { from: "09:00", to: "17:00" })} role="switch" aria-checked={!!w} className="relative h-[22px] w-[40px] flex-none rounded-full transition-colors" style={{ background: w ? "#22b365" : "var(--line)" }}><span className="absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white transition-all" style={{ left: w ? "21px" : "3px" }} /></button>
-                      <span className="w-[40px] flex-none text-[13px] font-extrabold text-[var(--ink)]">{lbl}</span>
+                      <span className="w-[40px] flex-none text-[13px] font-extrabold text-[var(--ink)]">{wdShortKey(k)}</span>
                       {w ? <div className="flex items-center gap-1.5"><TimeSel value={w.from} onChange={(v) => setDay(k, { ...w, from: v })} /><span className="text-[var(--ink-3)]">–</span><TimeSel value={w.to} onChange={(v) => setDay(k, { ...w, to: v })} /></div> : <span className="text-[12.5px] font-semibold text-[var(--ink-3)]">{t("schedule.notAvailable")}</span>}
                     </div>
                   ); })}
@@ -1108,7 +1111,7 @@ export function ScheduleApp() {
             <div className="mt-3 flex flex-col gap-1.5">
               {avail.length === 0 && <p className="rounded-lg bg-[var(--panel)] px-3 py-2.5 text-center text-[12px] text-[var(--ink-3)]">{t("schedule.everyRoleAlready")}</p>}
               {avail.map((r) => (
-                <button key={r} type="button" onClick={() => addRole(si, r)} className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] px-3.5 py-2.5 text-start text-[13.5px] font-bold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="h-3 w-3 flex-none rounded-full" style={{ background: roleCol(r) }} />{r}</button>
+                <button key={r} type="button" onClick={() => addRole(si, r)} className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] px-3.5 py-2.5 text-start text-[13.5px] font-bold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="h-3 w-3 flex-none rounded-full" style={{ background: roleCol(r) }} />{roleLabel(t, r)}</button>
               ))}
               <button type="button" onClick={() => { const r = window.prompt(t("schedule.newRoleNamePrompt")); if (r && r.trim()) addRole(si, r.trim()); else setRoleMenu(null); }} className="mt-1 flex items-center gap-2.5 rounded-xl border border-dashed border-[var(--line)] px-3.5 py-2.5 text-start text-[13.5px] font-bold text-[#1d3a8f] hover:bg-[var(--panel)]"><span className="text-[15px]">＋</span>{t("schedule.customRole")}</button>
             </div>
@@ -1150,15 +1153,15 @@ export function ScheduleApp() {
       {toast && <div className="fixed bottom-5 left-1/2 z-[140] -translate-x-1/2 rounded-full bg-[#16306e] px-4 py-2.5 text-[12.5px] font-bold text-white shadow-lg">{toast}</div>}
       {localOnly && (
         <div className="fixed bottom-28 left-1/2 z-[141] flex max-w-[92vw] -translate-x-1/2 flex-wrap items-center gap-2 rounded-2xl border border-[#f0d9a8] bg-[#fdf6e6] px-4 py-3 text-[12.5px] text-[#7a5b06] shadow-lg">
-          <span className="min-w-0 flex-1"><b>This browser has a rota that is not in your account</b> ({localOnly.shifts.length} shifts, {localOnly.staff.length} staff) — from before the rota was saved online. Import it only if it belongs to <b>this</b> account.</span>
-          <Button variant="primary" onClick={importLocalRota}>Import</Button>
-          <Button onClick={() => { if (window.confirm("Discard the rota saved only in this browser? (A backup copy is kept on this device.)")) setLocalOnly(null); }}>Not now</Button>
+          <span className="min-w-0 flex-1"><Rich k="p8set.scImportBanner" vars={{ shifts: localOnly.shifts.length, staff: localOnly.staff.length }} slots={{}} /></span>
+          <Button variant="primary" onClick={importLocalRota}>{t("p8set.scImport")}</Button>
+          <Button onClick={() => { if (window.confirm(t("p8set.scDiscardConfirm"))) setLocalOnly(null); }}>{t("p8set.scNotNow")}</Button>
         </div>
       )}
       {saveError && (
         <div role="alert" className="fixed bottom-16 left-1/2 z-[141] flex max-w-[92vw] -translate-x-1/2 items-start gap-3 rounded-2xl border border-[#f6c9cc] bg-[#fdebec] px-4 py-3 text-[12.5px] font-semibold text-[#c02636] shadow-lg">
           <span>⚠ {saveError}</span>
-          <button type="button" onClick={() => setSaveError(null)} className="flex-none font-extrabold" aria-label="Dismiss">✕</button>
+          <button type="button" onClick={() => setSaveError(null)} className="flex-none font-extrabold" aria-label={t("p8set.scDismiss")}>✕</button>
         </div>
       )}
     </div>

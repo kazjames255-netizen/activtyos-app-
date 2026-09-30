@@ -7,12 +7,13 @@
 // grouping are Amir's (the timesheet backend).
 import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n/provider";
+import { localTime, roleLabel } from "./fmt";
 import { loadClock, workedMs, fmtDur, hhmm, type ClockRecord, useClockRefresh } from "@/features/timeclock/data";
 
 const GREEN = "#0f9d58", BLUE = "#1d3a8f", AMBER = "#b45309";
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const toMin = (iso?: string) => { if (!iso) return null; const d = new Date(iso); return d.getHours() * 60 + d.getMinutes(); };
-const hourLabel = (m: number) => { const h = Math.floor(m / 60), mm = m % 60; const ap = h >= 12 ? "pm" : "am"; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr}${mm ? ":" + String(mm).padStart(2, "0") : ""}${ap}`; };
+const hourLabel = (m: number) => { const h = Math.floor(m / 60), mm = m % 60; const intl = localTime(h, mm); if (intl) return intl; const ap = h >= 12 ? "pm" : "am"; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr}${mm ? ":" + String(mm).padStart(2, "0") : ""}${ap}`; };
 const initials = (n: string) => n.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const checkedIn = (r: ClockRecord) => !!r.clockInAt;
 
@@ -54,7 +55,7 @@ export function StaffAttendanceBoard() {
         <div className="ms-auto flex flex-wrap items-center gap-2">
           <select value={site} onChange={(e) => setSite(e.target.value)} className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] font-semibold text-[var(--ink)]">
             <option value="all">{t("schedule.allSitesListings")}</option>
-            {sites.map((s) => <option key={s} value={s}>{s}</option>)}
+            {sites.map((s) => <option key={s} value={s}>{s === "Unassigned" ? t("p7tk.unassigned") : s}</option>)}
           </select>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] font-semibold text-[var(--ink)]" />
         </div>
@@ -63,7 +64,7 @@ export function StaffAttendanceBoard() {
       {!isToday ? (
         <div className="px-4 py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("schedule.attendanceTodayOnly")}</div>
       ) : groups.length === 0 ? (
-        <div className="px-4 py-10 text-center text-[12.5px] text-[var(--ink-3)]">{site === "all" ? t("schedule.noStaffClockedIn") : t("schedule.noStaffClockedInAt", { where: site })}</div>
+        <div className="px-4 py-10 text-center text-[12.5px] text-[var(--ink-3)]">{site === "all" ? t("schedule.noStaffClockedIn") : t("schedule.noStaffClockedInAt", { where: site === "Unassigned" ? t("p7tk.unassigned") : site })}</div>
       ) : (
         <div className="p-4">
           <div className="relative mb-2 hidden h-4 text-[10.5px] font-semibold text-[var(--ink-3)] sm:block" style={{ marginInlineStart: 176, marginInlineEnd: 128 }}>
@@ -75,7 +76,7 @@ export function StaffAttendanceBoard() {
             {groups.map(([room, rs]) => (
               <div key={room}>
                 <div className="mb-1.5 flex items-baseline gap-2">
-                  <span className="text-[12.5px] font-extrabold text-[var(--ink)]">{room}</span>
+                  <span className="text-[12.5px] font-extrabold text-[var(--ink)]">{room === "Unassigned" ? t("p7tk.unassigned") : room}</span>
                   <span className="text-[11px] text-[var(--ink-3)]">{t("schedule.inCount", { in: rs.filter(checkedIn).length, total: rs.length, pct: pctIn(rs) })}</span>
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -90,7 +91,7 @@ export function StaffAttendanceBoard() {
                         <div className="flex items-center gap-1.5 truncate">
                           <span className={"grid h-5 w-5 flex-none place-items-center rounded-full text-[8.5px] font-extrabold " + (isIn ? "bg-[#eef4fd] text-[#1d3a8f]" : "bg-[#eef1f6] text-[#94a3b8]")}>{initials(r.name)}</span>
                           <span className={"truncate text-[12px] font-bold " + (isIn ? "text-[var(--ink)]" : "text-[var(--ink-3)]")}>{r.name}</span>
-                          {r.role && <span className="hidden truncate text-[10.5px] text-[var(--ink-3)] md:inline">· {r.role}</span>}
+                          {r.role && <span className="hidden truncate text-[10.5px] text-[var(--ink-3)] md:inline">· {roleLabel(t, r.role)}</span>}
                         </div>
                         <div className="relative h-2.5 rounded-full bg-[#eef1f6]">
                           {isIn && <div className="absolute top-0 h-2.5 rounded-full" style={{ left: left + "%", width: width + "%", background: r.status === "break" ? AMBER : live ? `linear-gradient(90deg,${GREEN},#5ad19a)` : GREEN }} />}
