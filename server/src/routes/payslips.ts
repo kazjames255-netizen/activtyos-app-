@@ -5,6 +5,8 @@ import type { Role } from "../middleware/role";
 import { buildPayslipPdf, taxYearFor, type PayslipLine, type PayslipRun } from "../lib/payslipPdf";
 import { performEmailSend } from "../lib/emailSend";
 import { tenantSender } from "../lib/sender";
+import { nameIsUnique, requirePayrollAdmin } from "./payroll";
+import { auditPayroll } from "../lib/payrollAudit";
 
 // Real PDF payslips + email/bulk-send — docs/payroll-integrations-handoff.md
 // §4 ("Payslips"). A SEPARATE router from routes/payroll.ts (which another
@@ -43,7 +45,9 @@ async function loadRun(key: string, runId: string): Promise<RunDoc | null> {
 
 async function loadAllRuns(key: string): Promise<PayslipRun[]> {
   const snap = await runs.where("payKey", "==", key).get();
-  return snap.docs.map((d) => d.data() as RunDoc);
+  // Year-to-date counts only runs that are real: a draft (not yet approved by a second person, possibly abandoned or a duplicate) must not inflate
+  // anyone's YTD — the payrollYtd store makes the same choice (it is updated on approval only). Pre-approval runs carry no status → still counted.
+  return snap.docs.map((d) => d.data() as RunDoc).filter((r) => r.status !== "draft");
 }
 
 /** Who's allowed to see employeeId's payslip on this run, for this caller.
@@ -54,11 +58,16 @@ async function authorize(req: Request, res: Response, key: string, run: RunDoc, 
   const auth = req.auth!;
   const line = run.lines.find((l) => (l.staffKey ?? l.id) === employeeId);
   if (!line) { res.status(404).json({ error: "No payslip for that employee on this run" }); return null; }
-  if (canManage(auth.role) && auth.tenantId && keyOf(auth.tenantId, auth.franchiseId) === key) return line;
+  if (canManage(auth.role) && auth.tenantId && keyOf(auth.tenantId, auth.franchiseId) === key) {
+    // Same payrollAdmins gate as the rest of payroll: an owner-tier account that isn't a payroll administrator can't pull anyone's payslip.
+    if (!(await requirePayrollAdmin(req, res, "payslips"))) return null;
+    return line;
+  }
   if (auth.role === "staff" && auth.tenantId && keyOf(auth.tenantId, auth.franchiseId) === key) {
     if (!run.publishedAt) { res.status(403).json({ error: "This payslip hasn't been published yet" }); return null; }
     const name = req.user?.uid ? String((await db.collection("users").doc(req.user.uid).get()).get("name") ?? "").trim() : "";
     if (!name || slug(name) !== employeeId) { res.status(403).json({ error: "You can only view your own payslip" }); return null; }
+    if (!(await nameIsUnique(auth.tenantId, auth.franchiseId, employeeId))) { res.status(403).json({ error: "You can only view your own payslip" }); return null; }
     return line;
   }
   res.status(403).json({ error: "Forbidden" });
@@ -75,11 +84,17 @@ async function providerName(tenantId: string | null): Promise<string> {
 async function getOrBuildPdf(key: string, run: RunDoc, line: PayslipLine, tenantId: string | null, franchiseId: string | null): Promise<Buffer> {
   const id = docSafe(`${key}_${run.id}_${line.staffKey ?? line.id}`);
   const ref = pdfs.doc(id);
-  const existing = await ref.get();
-  if (existing.exists) return Buffer.from(existing.get("b64") as string, "base64");
+  const draft = run.status === "draft";
+  if (!draft) {
+    const existing = await ref.get();
+    if (existing.exists) return Buffer.from(existing.get("b64") as string, "base64");
+  }
 
   const [allRuns, provider] = await Promise.all([loadAllRuns(key), providerName(tenantId)]);
-  const bytes = buildPayslipPdf({ line, period: run.period, paidOn: run.paidOn, provider, allRuns });
+  // A draft preview (managers only) includes itself in the YTD it shows, is never persisted, and is rebuilt on every view: the issued
+  // document is the one made after approval (see the cache note above — an issued payslip must never drift).
+  const bytes = buildPayslipPdf({ line, period: run.period, paidOn: run.paidOn, provider, allRuns: draft ? [...allRuns, run as PayslipRun] : allRuns });
+  if (draft) return bytes;
   const ty = taxYearFor(run.paidOn);
   await ref.create({
     payKey: key,
@@ -115,6 +130,7 @@ payslips.get("/runs/:runId/payslip/:employeeId/pdf", async (req, res) => {
   const line = await authorize(req, res, key, run, String(req.params.employeeId));
   if (!line) return;
   const bytes = await getOrBuildPdf(key, run, line, auth.tenantId, auth.franchiseId);
+  auditPayroll(req, key, "view-payslip", { runId: run.id, employeeId: line.staffKey ?? line.id, own: auth.role === "staff" });
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `inline; filename="payslip-${slug(line.name)}-${run.period.replace(/[^a-z0-9]+/gi, "-")}.pdf"`);
   res.setHeader("Cache-Control", "private, no-store");
@@ -129,6 +145,7 @@ payslips.get("/runs/:runId/payslip/:employeeId/pdf", async (req, res) => {
 payslips.post("/runs/:runId/payslip/email", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Only a manager or owner can send payslips" }); return; }
+  if (!(await requirePayrollAdmin(req, res, "payslips"))) return;
   const parsed = z.object({ employeeId: z.string().max(160).optional() }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const key = keyOf(auth.tenantId, auth.franchiseId);
@@ -152,12 +169,20 @@ payslips.post("/runs/:runId/payslip/email", async (req, res) => {
   // never a free-text address.
   const usersSnap = await db.collection("users").where("tenantId", "==", auth.tenantId).get();
   const emailByKey = new Map<string, string>();
+  const seen = new Set<string>(), ambiguous = new Set<string>();
   for (const d of usersSnap.docs) {
-    const franchiseOk = !auth.franchiseId || d.get("franchiseId") === auth.franchiseId || !d.get("franchiseId");
+    // Exactly this pay scope (a franchise's own people, or head office's own) — not a same-named person elsewhere in the tenant, and never a parent account.
+    const franchiseOk = (d.get("franchiseId") ?? null) === (auth.franchiseId ?? null);
+    const role = String(d.get("role") ?? "");
     const name = String(d.get("name") ?? "").trim();
     const email = String(d.get("email") ?? "").trim();
-    if (name && email && franchiseOk) emailByKey.set(slug(name), email);
+    if (!name || !email || !franchiseOk || role === "parent" || role === "platform") continue;
+    const k = slug(name);
+    if (seen.has(k)) ambiguous.add(k);
+    seen.add(k);
+    emailByKey.set(k, email);
   }
+  for (const k of ambiguous) emailByKey.delete(k); // two accounts share this name — sending to either could disclose pay to the wrong person
 
   const provider = await providerName(auth.tenantId);
   const results: { employeeId: string; name: string; status: string }[] = [];
@@ -177,6 +202,7 @@ payslips.post("/runs/:runId/payslip/email", async (req, res) => {
       attachments: [{ filename: `payslip-${slug(line.name)}-${run.period.replace(/[^a-z0-9]+/gi, "-")}.pdf`, content: bytes, contentType: "application/pdf" }],
     });
     results.push({ employeeId: empKey, name: line.name, status: "sent" });
+    auditPayroll(req, key, "email-payslip", { runId: run.id, employeeId: empKey, to });
   }
   res.json({ ok: true, sent: results.filter((r) => r.status === "sent").length, results });
 });

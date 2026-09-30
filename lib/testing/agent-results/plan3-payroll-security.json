@@ -1,0 +1,173 @@
+{
+  "ps-01 unauth": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "All 18 payroll/payslip/accounting endpoints return 401 with no token.",
+    "notes": "",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "ps-02 role matrix": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "staff, franchise staff, parent, platform all 401/403 on every manager endpoint (payroll, ni reveal, runs, approve, publish, ytd, timesheets, payslip email, accounting connect/mapping/post/disconnect).",
+    "notes": "",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "ps-03 NI masking": {
+    "verdict": "pass",
+    "method": "api+db",
+    "actual": "NI never in GET /api/payroll (hasNiNumber only), raw Firestore holds only niNumberEnc (AES-256-GCM), invalid-NI 400 doesn't echo the value, reveal is explicit + audited, edit that omits NI keeps it.",
+    "notes": "",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "ps-04 money validation": {
+    "verdict": "fixed",
+    "method": "api",
+    "actual": "Run lines only required grossM/netM to be numbers (negative/1e12 accepted, other *M figures unchecked); adjust override paye/eeNi/eePen unbounded.",
+    "notes": "Fixed: every line *M figure bounded (+/-10M, gross/ni/pension >=0); overrides bounded 0..1M. Negative, huge, string, null all 400 (rate, hpw, weeks, hours, additions, deductions, overrides, lines, impossible dates).",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "ps-05 approval segregation": {
+    "verdict": "fixed",
+    "method": "api",
+    "actual": "Approve was read-then-write (race: two simultaneous approvals both succeeded and double-added the run to YTD); segregation compared email only.",
+    "notes": "Fixed: approve is a transaction (exactly one 200, one 400, YTD counted once); creator also compared by uid (createdByUid/approvedByUid stored); caller with no identity can't approve. createdBy/status/approvedBy/publishedAt spoofing in the POST body is ignored; no PUT/PATCH/DELETE/overwrite route for runs.",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "ps-06 payslip IDOR": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Staff /mine returns only their own line and only for published runs; another staff's payslip by slug/name/encoded/path-traversal = 403/404; unauth 401; rival tenant, freelancer, franchise, franchise staff, parent, platform 403/404; PDF is application/pdf, Cache-Control private,no-store.",
+    "notes": "",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "ps-07 same-name disclosure": {
+    "verdict": "fixed",
+    "method": "api",
+    "actual": "Payslips, onboarding (bank + NI) and email are matched to a person by name slug. Two accounts with the same name in a pay scope could read each other's payslips + onboarding file, and payslip email used last-writer-wins (and also matched parents, and HO/other-franchise users).",
+    "notes": "Fixed: /mine, payslip pdf and onboarding refuse an ambiguous name; email skips ambiguous names, only same-scope non-parent accounts are candidates.",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "ps-08 payrollAdmins bypass": {
+    "verdict": "fixed",
+    "method": "api",
+    "actual": "payrollAdmins allow-list was enforced only on routes/payroll.ts. Payslip PDF, payslip email, ALL accounting routes (connect/disconnect/mapping/post) and the onboarding bank+NI were open to any owner-tier login. Any owner could also add themselves to the list via PUT /api/library; staff could read the admin list.",
+    "notes": "Fixed: shared requirePayrollAdmin/isPayrollAdmin on payslips + accounting; onboarding redacts ni/bank/payRate for non-admin managers and preserves stored values on their save; PUT /api/library refuses payrollAdmins changes by non-admins; GET /api/library strips payrollAdmins for staff.",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "ps-09 audit": {
+    "verdict": "fixed",
+    "method": "api+db",
+    "actual": "Audit covered only view-employees/edit-employees(count only)/view-ni/create/approve/publish; no before/after; settings, adjust, ytd, timesheets, payslip view/email, accounting and onboarding bank/NI reads were unlogged.",
+    "notes": "Fixed: new actions edit-settings, edit-adjust, view-ytd, view-timesheets, view-payslip, email-payslip, accounting-post/mapping/connect/disconnect, view/edit-onboarding-sensitive; employee saves log per-field from/to (NI only as niChanged flag); actor uid + role recorded. Verified no NI/ciphertext/bank in any audit entry.",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "ps-10 payslip email": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Free-text recipient inputs ignored; only approved runs (409 on draft); manager-only; recipient is the account email of the same-scope staff user.",
+    "notes": "",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "ps-11 accounting post": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Draft run 409, foreign run 404, mapping isolated per tenant, connections/mapping never expose tokens, OAuth callback rejects unknown state. Concurrent double-post is claimed atomically (other agent's claimToken transaction in the same file).",
+    "notes": "",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "ps-12 rate limiting": {
+    "verdict": "fixed",
+    "method": "api",
+    "actual": "No rate limit on payroll routes.",
+    "notes": "Fixed: per-user (not IP) limits: 600/min payroll router, 30/min NI reveal, 30/min approve. rateLimit() gained an optional key function.",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "ps-13 leak scan": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Across >50 response bodies (incl. all error bodies) the NI number never appears outside the explicit reveal endpoint.",
+    "notes": "",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "open-1 oauth token storage": {
+    "verdict": "open",
+    "method": "code",
+    "actual": "accountingConnections stores QuickBooks/Xero/Sage access + refresh tokens in plaintext in Firestore (server-only, never returned).",
+    "notes": "Encrypt with lib/fieldCrypto; touches the OAuth refresh code another agent is actively rewriting.",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "open-2 onboarding scans": {
+    "verdict": "open",
+    "method": "code",
+    "actual": "ID/DBS scans are base64 chunks in Firestore (already documented in onboarding.ts, waits for object storage).",
+    "notes": "",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "open-3 payslip email history": {
+    "verdict": "open",
+    "method": "code",
+    "actual": "Sent payslip emails are stored in `emails` (subject/body with name + period, no amounts) and appear in Email send history for anyone with Email access; also carries the open-tracking pixel.",
+    "notes": "Suggest excluding audience=one payslip mails from history or skipping the pixel.",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "open-4 franchise seeded admins": {
+    "verdict": "open",
+    "method": "code",
+    "actual": "A franchise library is seeded as a copy of head office's, including settings.payrollAdmins; if HO has set the list, the franchise owner is not on it and is locked out of their own payroll until they edit Setup.",
+    "notes": "Should strip payrollAdmins when seeding a franchise library. Not exercised here.",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "open-5 audit read API": {
+    "verdict": "open",
+    "method": "code",
+    "actual": "payrollAuditLog has no read endpoint/UI (only written); immutability is by convention (no update/delete route), not by Firestore rules.",
+    "notes": "",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  },
+  "open-6 name-based identity": {
+    "verdict": "open",
+    "method": "design",
+    "actual": "Records are still linked to a person by name (ambiguity now fails closed). A uid-keyed link would be the real fix.",
+    "notes": "",
+    "evidence": "e2e/payroll-security.spec.ts (scripts/e2e-locked.sh e2e/payroll-security.spec.ts) - 12/12 pass",
+    "at": "2026-09-30T00:00:00.000Z",
+    "agent": "plan3-payroll-security"
+  }
+}

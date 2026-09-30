@@ -10,7 +10,10 @@ import { db } from "../firebase";
 
 export type PayrollAction =
   | "view-employees" | "edit-employees" | "view-ni"
-  | "create-run" | "approve-run" | "publish-run" | "unpublish-run";
+  | "create-run" | "approve-run" | "publish-run" | "unpublish-run"
+  | "edit-settings" | "edit-adjust" | "view-ytd" | "view-timesheets"
+  | "view-payslip" | "email-payslip" | "view-onboarding-sensitive" | "edit-onboarding-sensitive"
+  | "accounting-post" | "accounting-mapping" | "accounting-connect" | "accounting-disconnect";
 
 const col = db.collection("payrollAuditLog");
 
@@ -23,6 +26,8 @@ export function auditPayroll(req: Request, payKey: string, action: PayrollAction
     franchiseId: auth?.franchiseId ?? null,
     payKey,
     actor: req.user?.email ?? req.user?.uid ?? null,
+    actorUid: req.user?.uid ?? null,
+    actorRole: auth?.role ?? null,
     action,
     at: new Date().toISOString(),
     detail: detail ?? null,

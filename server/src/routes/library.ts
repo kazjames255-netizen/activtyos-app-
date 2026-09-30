@@ -1,3 +1,4 @@
+import { isPayrollAdmin } from "./payroll";
 import { Router } from "express";
 import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
@@ -70,7 +71,9 @@ library.get("/", async (req, res) => {
       snap = await db.collection("libraries").doc(docId).get();
     }
   }
-  const data = snap.exists ? snap.data() : null;
+  let data = snap.exists ? snap.data() : null;
+  // Staff never need to know who administers payroll.
+  if (data && auth.role === "staff" && data.settings && "payrollAdmins" in (data.settings as object)) { const { payrollAdmins: _pa, ...restS } = data.settings as Record<string, unknown>; data = { ...data, settings: restS }; }
   // Staff read the library for everything they render (venues, question sets, switches), but the business bank account printed on
   // invoices is finance's, not theirs — a role set to Finances/Money: None must not be able to read it straight off this call.
   const billing = (data?.settings as { billing?: Record<string, unknown> } | undefined)?.billing;
@@ -115,6 +118,10 @@ library.put("/", async (req, res) => {
   // the chosen name — the switch used to change only a label (acceptance d1s4).
   const prevS = (existing.settings ?? {}) as Record<string, unknown>;
   const nextS = (doc.settings ?? {}) as Record<string, unknown>;
+  // The payroll-administrator allow-list guards pay/NI/bank data: only someone already on it may change it (else any owner-tier login could add themselves).
+  if (JSON.stringify(nextS.payrollAdmins ?? null) !== JSON.stringify(prevS.payrollAdmins ?? null) && Array.isArray(prevS.payrollAdmins) && prevS.payrollAdmins.length) {
+    if (!(await isPayrollAdmin(req))) { res.status(403).json({ error: "Only a payroll administrator can change who the payroll administrators are." }); return; }
+  }
   if (nextS !== prevS && nextS.providerNameMode && nextS.providerNameMode !== prevS.providerNameMode && nextS.providerName === prevS.providerName) {
     let name = "";
     if (nextS.providerNameMode === "business") name = String((nextS.billing as { businessName?: string } | undefined)?.businessName ?? "").trim() || String((await db.collection("tenants").doc(auth.tenantId).get()).get("name") ?? "").trim();

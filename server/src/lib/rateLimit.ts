@@ -21,10 +21,11 @@ function clientKey(req: Request): string {
 }
 const MAX_BUCKETS = 50_000;
 
-export function rateLimit(name: string, max: number, windowMs = 60_000) {
+/** `keyFn` buckets by something other than the caller's IP (e.g. the signed-in user id) — for authenticated, sensitive routes. */
+export function rateLimit(name: string, max: number, windowMs = 60_000, keyFn?: (req: Request) => string | undefined) {
   return (req: Request, res: Response, next: NextFunction) => {
     const now = Date.now();
-    const key = `${name}:${clientKey(req)}`;
+    const key = `${name}:${keyFn?.(req) ?? clientKey(req)}`;
     let b = buckets.get(key);
     if (!b || b.resetAt <= now) {
       // Bounded memory, whatever arrives.

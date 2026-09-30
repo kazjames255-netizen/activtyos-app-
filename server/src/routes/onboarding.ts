@@ -10,6 +10,8 @@ import { unresolvedReferenceConcern } from "../lib/staffPolicy";
 // decryptField throws on anything malformed, so this file wraps them with its
 // own ENC_PREFIX envelope (below) to tell an encrypted value apart from a
 // pre-existing plaintext one, and to decrypt without ever throwing.
+import { isPayrollAdmin, nameIsUnique } from "./payroll";
+import { auditPayroll } from "../lib/payrollAudit";
 import { decryptField as rawDecrypt, encryptField as rawEncrypt } from "../lib/fieldCrypto";
 
 // Staff onboarding / the Single Central Record, on the server.
@@ -99,9 +101,15 @@ export function decryptSensitive<T extends { values?: Record<string, Record<stri
   return rec;
 }
 
+/** The signed-in person's name, which links them to their own record. Returns "" (so nothing matches) when another account in the same pay scope
+ *  carries the same name: records are matched by name, so a duplicate would otherwise read the other person's bank details + NI number. */
 async function ownName(uid: string | undefined): Promise<string> {
   if (!uid) return "";
-  return String((await db.collection("users").doc(uid).get()).get("name") ?? "").trim();
+  const u = await db.collection("users").doc(uid).get();
+  const name = String(u.get("name") ?? "").trim();
+  const tenantId = u.get("tenantId") as string | null | undefined;
+  if (name && tenantId && !(await nameIsUnique(tenantId, (u.get("franchiseId") as string | null | undefined) ?? null, name.toLowerCase().replace(/\s+/g, "-")))) return "";
+  return name;
 }
 const same = (a: string, b: string) => !!a && a.trim().toLowerCase() === b.trim().toLowerCase();
 
@@ -145,6 +153,18 @@ onboarding.get("/", async (req, res) => {
   // caller (a manager sees everyone's, filtered above to just their own for
   // a member of staff) — never decrypt a record this request won't return.
   records = records.map(decryptSensitive);
+  // Bank details / NI / pay rate follow the payroll-administrator rule: an owner-tier login that isn't one sees the record without them; every
+  // reveal of them to a manager is audited.
+  if (s.manager) {
+    const admin = await isPayrollAdmin(req);
+    let shown = 0;
+    for (const r of records) for (const id of ENCRYPTED_VALUE_IDS) {
+      const v = r.values?.[id];
+      if (!v || typeof v.v !== "string" || !v.v) continue;
+      if (admin) shown++; else r.values[id] = { ...v, v: "", redacted: true };
+    }
+    if (admin && shown) auditPayroll(req, s.key, "view-onboarding-sensitive", { records: records.length, fields: shown });
+  }
   res.json({ fields: (cfg.get("fields") as unknown[] | undefined) ?? null, records });
 });
 
@@ -200,6 +220,15 @@ onboarding.put("/records/:staff", jsonBody({ limit: "1mb" }), async (req, res) =
   }
   const now = new Date().toISOString();
   const { submittedAt, outstanding, lastEditedAt } = parsed.data;
+  if (s.manager && !(await isPayrollAdmin(req))) {
+    // Not a payroll administrator: they never saw the sensitive values (GET redacts them), so what comes back is blank — keep what's stored.
+    const prevV = (before?.values ?? {}) as Record<string, Record<string, unknown>>;
+    for (const id of ENCRYPTED_VALUE_IDS) if (prevV[id]) values[id] = { ...prevV[id] };
+  } else if (s.manager) {
+    const prevV = (before?.values ?? {}) as Record<string, Record<string, unknown>>;
+    const changed = [...ENCRYPTED_VALUE_IDS].filter((id) => values[id]?.v !== undefined && decryptValue(String(prevV[id]?.v ?? "")) !== String(values[id]?.v ?? ""));
+    if (changed.length) auditPayroll(req, s.key, "edit-onboarding-sensitive", { staff, fields: changed });
+  }
   encryptSensitive(values); // bank details / NI number, at rest — see ENCRYPTED_VALUE_IDS
   await ref.set({
     key: s.key, tenantId: s.tenantId, franchiseId: s.auth.franchiseId ?? null, staff: before?.staff ?? staff, values, extra: parsed.data.extra,

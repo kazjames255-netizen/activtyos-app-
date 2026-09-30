@@ -7,6 +7,7 @@ import { loadSettings } from "../lib/tenantLibrary";
 import { decryptField, encryptField } from "../lib/fieldCrypto";
 import { addRunToYtd, getYtd, ukTaxYearOf } from "../lib/payrollYtd";
 import { auditPayroll } from "../lib/payrollAudit";
+import { rateLimit } from "../lib/rateLimit";
 
 // Payroll (the operator Payroll screen's store), on the server.
 //
@@ -25,6 +26,12 @@ import { auditPayroll } from "../lib/payrollAudit";
 // Key: the tenant, or tenant__fr__franchise for a franchise (its own payroll).
 
 export const payroll = Router();
+
+const byUser = (req: Request) => req.user?.uid;
+// Per signed-in user (not per IP): a runaway script or a stolen token can't hammer pay data. NI reveal is stricter — it decrypts a national identifier.
+payroll.use(rateLimit("payroll", 600, 60_000, byUser));
+payroll.use("/employees/:id/ni", rateLimit("payroll-ni", 30, 60_000, byUser));
+payroll.use("/runs/:id/approve", rateLimit("payroll-approve", 30, 60_000, byUser));
 
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 const keyOf = (tenantId: string, franchiseId: string | null) => (franchiseId ? `${tenantId}__fr__${franchiseId}` : tenantId);
@@ -73,7 +80,7 @@ const adjustSchema = z.object({
   niCat: z.string().max(2).optional(),
   additions: z.array(itemSchema).max(50).optional(),
   deductions: z.array(itemSchema).max(50).optional(),
-  override: z.object({ paye: z.number().nullable().optional(), eeNi: z.number().nullable().optional(), eePen: z.number().nullable().optional() }).optional(),
+  override: z.object({ paye: z.number().min(0).max(1_000_000).nullable().optional(), eeNi: z.number().min(0).max(1_000_000).nullable().optional(), eePen: z.number().min(0).max(1_000_000).nullable().optional() }).optional(),
 });
 
 // Payroll-admin (item #39 pt.4): today every company/franchise/freelancer
@@ -83,7 +90,7 @@ const adjustSchema = z.object({
 // OR emails on the tenant's (or franchise's own) Setup — narrows it, but
 // stays OFF (today's behaviour, unchanged) until a tenant actually sets it,
 // so this is non-breaking for every tenant that hasn't configured it.
-async function isPayrollAdmin(req: Request): Promise<boolean> {
+export async function isPayrollAdmin(req: Request): Promise<boolean> {
   const auth = req.auth!;
   if (!auth.tenantId || !canManage(auth.role)) return false;
   let allow: unknown;
@@ -92,6 +99,14 @@ async function isPayrollAdmin(req: Request): Promise<boolean> {
   if (!Array.isArray(allow) || allow.length === 0) return true; // unset → today's rule (any owner-tier role)
   const uid = req.user?.uid, email = req.user?.email?.toLowerCase();
   return allow.some((x) => x === uid || (typeof x === "string" && email && x.toLowerCase() === email));
+}
+
+/** Shared gate for every payroll-adjacent route (payslips, accounting posts): owner-tier role AND, when the tenant has set payrollAdmins, on that list. */
+export async function requirePayrollAdmin(req: Request, res: Response, what = "payroll"): Promise<boolean> {
+  const auth = req.auth!;
+  if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: `Only a manager or owner can access ${what}` }); return false; }
+  if (!(await isPayrollAdmin(req))) { res.status(403).json({ error: "Only a payroll administrator can access payroll. Ask an owner to add you in Setup." }); return false; }
+  return true;
 }
 
 async function manager(req: Request, res: Response): Promise<string | null> {
@@ -105,6 +120,27 @@ const stripRun = (d: FirebaseFirestore.DocumentData) => { const { payKey: _k, te
  *  plaintext (there never is any past this point) — `hasNiNumber` tells the
  *  UI whether one is on file without revealing it. */
 const stripEmp = (e: Record<string, unknown>) => { const { niNumberEnc, ...r } = e as { niNumberEnc?: string }; return { ...r, hasNiNumber: !!niNumberEnc }; };
+
+/** Before/after of an employee-list save, for the audit trail: per person, which fields changed (old → new). NI numbers are NEVER copied into the log
+ *  (only a "niChanged" flag); bank details aren't held here at all. */
+function diffEmployees(before: Record<string, unknown>[], after: Record<string, unknown>[]) {
+  const b = new Map(before.map((e) => [String(e.id), e]));
+  const a = new Map(after.map((e) => [String(e.id), e]));
+  const out: Record<string, unknown>[] = [];
+  for (const [id, e] of a) {
+    const old = b.get(id);
+    if (!old) { out.push({ id, name: e.name, added: true }); continue; }
+    const fields: Record<string, { from: unknown; to: unknown }> = {};
+    for (const k of new Set([...Object.keys(old), ...Object.keys(e)])) {
+      if (k === "niNumberEnc") continue;
+      if (JSON.stringify(old[k] ?? null) !== JSON.stringify(e[k] ?? null)) fields[k] = { from: old[k] ?? null, to: e[k] ?? null };
+    }
+    const niChanged = (old.niNumberEnc ?? null) !== (e.niNumberEnc ?? null);
+    if (Object.keys(fields).length || niChanged) out.push({ id, name: e.name, fields, ...(niChanged ? { niChanged: true } : {}) });
+  }
+  for (const [id, e] of b) if (!a.has(id)) out.push({ id, name: e.name, removed: true });
+  return out.slice(0, 200);
+}
 
 // GET /api/payroll — { employees, adjust, runs, settings } (managers).
 payroll.get("/", async (req, res) => {
@@ -124,7 +160,9 @@ payroll.put("/settings", async (req, res) => {
   const key = await manager(req, res); if (!key) return;
   const parsed = z.object({ sickPay: z.enum(["full", "ssp"]) }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const prevSick = (await cfg(key).get()).get("settings.sickPay") ?? null;
   await cfg(key).set({ settings: { sickPay: parsed.data.sickPay }, tenantId: req.auth!.tenantId, franchiseId: req.auth!.franchiseId ?? null, updatedAt: new Date().toISOString(), updatedBy: req.user?.email ?? null }, { merge: true });
+  auditPayroll(req, key, "edit-settings", { before: { sickPay: prevSick }, after: parsed.data });
   res.json({ ok: true, settings: parsed.data });
 });
 
@@ -148,7 +186,7 @@ payroll.put("/employees", async (req, res) => {
     return { ...rest, ...(niNumberEnc ? { niNumberEnc } : {}) };
   });
   await cfg(key).set({ employees, tenantId: req.auth!.tenantId, franchiseId: req.auth!.franchiseId ?? null, updatedAt: new Date().toISOString(), updatedBy: req.user?.email ?? null }, { merge: true });
-  auditPayroll(req, key, "edit-employees", { count: employees.length });
+  auditPayroll(req, key, "edit-employees", { count: employees.length, changes: diffEmployees(existing ?? [], employees) });
   res.json({ ok: true });
 });
 
@@ -175,12 +213,15 @@ payroll.put("/adjust", async (req, res) => {
   const parsed = z.object({ period: z.string().trim().min(1).max(120), adjust: z.record(z.string().max(120), adjustSchema).nullable() }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const ref = cfg(key);
+  let prevAdjust: unknown = null;
   await db.runTransaction(async (tx) => {
     const all = { ...((await tx.get(ref)).get("adjust") ?? {}) } as Record<string, unknown>;
+    prevAdjust = all[parsed.data.period] ?? null;
     if (parsed.data.adjust && Object.keys(parsed.data.adjust).length) all[parsed.data.period] = JSON.parse(JSON.stringify(parsed.data.adjust));
     else delete all[parsed.data.period];
     tx.set(ref, { adjust: all, tenantId: req.auth!.tenantId, franchiseId: req.auth!.franchiseId ?? null, updatedAt: new Date().toISOString() }, { merge: true });
   });
+  auditPayroll(req, key, "edit-adjust", { period: parsed.data.period, before: prevAdjust, after: parsed.data.adjust ?? null });
   res.json({ ok: true });
 });
 
@@ -191,7 +232,14 @@ payroll.put("/adjust", async (req, res) => {
 // staff. This is a behaviour change: earlier callers (and PayrollApp.tsx)
 // were built when "approve" and "create" were the same click — see the
 // approve route's comment and payroll-integrations-handoff.md report.
-const lineSchema = z.object({ id: z.string().min(1).max(120), name: z.string().max(120), grossM: z.number(), netM: z.number() }).passthrough();
+// Money on a run line: bounded (no negative gross, no absurd/huge values). Every *M figure a line may carry is checked, not just the two required ones.
+const MONEY_MAX = 10_000_000;
+const moneyM = z.number().min(0).max(MONEY_MAX);
+const lineSchema = z.object({
+  id: z.string().min(1).max(120), name: z.string().max(120),
+  grossM: moneyM, netM: z.number().min(-MONEY_MAX).max(MONEY_MAX),
+  payeM: z.number().min(-MONEY_MAX).max(MONEY_MAX).optional(), eeNiM: moneyM.optional(), erNiM: moneyM.optional(), eePenM: moneyM.optional(), erPenM: moneyM.optional(),
+}).passthrough();
 payroll.post("/runs", async (req, res) => {
   const key = await manager(req, res); if (!key) return;
   const parsed = z.object({
@@ -201,11 +249,20 @@ payroll.post("/runs", async (req, res) => {
     hoursBasis: z.string().max(20).optional(),
     window: z.object({ start: z.string().regex(DAY).refine(isRealDay, "Not a real calendar date"), end: z.string().regex(DAY).refine(isRealDay, "Not a real calendar date") }).optional(),
     lines: z.array(lineSchema).min(1).max(1_000),
+    /** The caller was asked "a run for this period already exists — create another?" and said yes. */
+    allowDuplicate: z.boolean().optional(),
   }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  // A second run for a period that already has one is how a month gets paid twice (and, once both are approved, counted twice into every
+  // employee's YTD). Refused unless the caller says it is deliberate; nothing is ever overwritten either way.
+  if (!parsed.data.allowDuplicate) {
+    const same = (await runs.where("payKey", "==", key).get()).docs.find((d) => d.get("period") === parsed.data.period);
+    if (same) { res.status(409).json({ error: `A pay run for ${parsed.data.period} already exists (${same.get("status") === "approved" ? "approved" : "draft"}). Creating another would pay it twice.`, code: "duplicate_run", existingRunId: same.get("id") }); return; }
+  }
+  delete (parsed.data as { allowDuplicate?: boolean }).allowDuplicate;
   const now = new Date().toISOString();
   const id = "pr_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const doc = { ...JSON.parse(JSON.stringify(parsed.data)), id, status: "draft", createdAt: now, createdBy: req.user?.email ?? null, approvedAt: null, approvedBy: null, publishedAt: null, payKey: key, tenantId: req.auth!.tenantId, franchiseId: req.auth!.franchiseId ?? null };
+  const doc = { ...JSON.parse(JSON.stringify(parsed.data)), id, status: "draft", createdAt: now, createdBy: req.user?.email ?? null, createdByUid: req.user?.uid ?? null, approvedAt: null, approvedBy: null, publishedAt: null, payKey: key, tenantId: req.auth!.tenantId, franchiseId: req.auth!.franchiseId ?? null };
   await runs.doc(`${key}_${id}`.replace(/\//g, "_")).create(doc);
   auditPayroll(req, key, "create-run", { runId: id, period: parsed.data.period, lines: parsed.data.lines.length });
   res.status(201).json(stripRun(doc));
@@ -222,17 +279,25 @@ payroll.post("/runs", async (req, res) => {
 payroll.post("/runs/:id/approve", async (req, res) => {
   const key = await manager(req, res); if (!key) return;
   const ref = runs.doc(`${key}_${String(req.params.id)}`.replace(/\//g, "_"));
-  const snap = await ref.get();
-  if (!snap.exists || snap.get("payKey") !== key) { res.status(404).json({ error: "Not found" }); return; }
-  if (snap.get("status") === "approved") { res.status(400).json({ error: "This run is already approved." }); return; }
-  const createdBy = (snap.get("createdBy") as string | null) ?? null;
-  const approver = req.user?.email ?? null;
-  if (createdBy && approver && createdBy.toLowerCase() === approver.toLowerCase()) {
-    res.status(403).json({ error: "Segregation of duties: someone other than whoever created this run has to approve it." });
-    return;
-  }
+  // One transaction: the status check and the flip to "approved" are atomic, so two simultaneous approvals can't both win (which would also
+  // double-add the run to the employee YTD totals below).
+  const approver = req.user?.email ?? null, approverUid = req.user?.uid ?? null;
   const now = new Date().toISOString();
-  await ref.set({ status: "approved", approvedAt: now, approvedBy: approver }, { merge: true });
+  let denied: { status: number; error: string } | null = null;
+  const snap = await db.runTransaction(async (tx) => {
+    const cur = await tx.get(ref);
+    if (!cur.exists || cur.get("payKey") !== key) { denied = { status: 404, error: "Not found" }; return cur; }
+    if (cur.get("status") === "approved") { denied = { status: 400, error: "This run is already approved." }; return cur; }
+    const createdBy = (cur.get("createdBy") as string | null) ?? null;
+    const createdByUid = (cur.get("createdByUid") as string | null) ?? null;
+    // Same person by email OR by account id. A caller with no resolvable identity can't approve a run that has a recorded creator.
+    const same = (createdBy && approver && createdBy.toLowerCase() === approver.toLowerCase()) || (createdByUid && approverUid && createdByUid === approverUid);
+    const unknownApprover = (createdBy || createdByUid) && !approver && !approverUid;
+    if (same || unknownApprover) { denied = { status: 403, error: "Segregation of duties: someone other than whoever created this run has to approve it." }; return cur; }
+    tx.set(ref, { status: "approved", approvedAt: now, approvedBy: approver, approvedByUid: approverUid }, { merge: true });
+    return cur;
+  });
+  if (denied) { const d = denied as { status: number; error: string }; res.status(d.status).json({ error: d.error }); return; }
   const tenantId = String(snap.get("tenantId") ?? req.auth!.tenantId);
   const franchiseId = (snap.get("franchiseId") as string | null) ?? req.auth!.franchiseId ?? null;
   const paidOn = String(snap.get("paidOn"));
@@ -247,7 +312,7 @@ payroll.post("/runs/:id/approve", async (req, res) => {
     // Logged loudly because a missed YTD update needs a human to fix it.
     console.error(`[payroll] YTD update failed for approved run ${req.params.id} (${key}):`, (e as Error).message);
   }
-  auditPayroll(req, key, "approve-run", { runId: req.params.id });
+  auditPayroll(req, key, "approve-run", { runId: req.params.id, createdBy: snap.get("createdBy") ?? null, before: { status: "draft" }, after: { status: "approved" } });
   const updated = await ref.get();
   res.json(stripRun(updated.data()!));
 });
@@ -267,7 +332,7 @@ payroll.post("/runs/:id/publish", async (req, res) => {
   if (parsed.data.published && snap.get("status") !== "approved") { res.status(400).json({ error: "Approve this run before publishing it to staff." }); return; }
   const publishedAt = parsed.data.published ? new Date().toISOString() : null;
   await ref.set({ publishedAt, publishedBy: parsed.data.published ? req.user?.email ?? null : null }, { merge: true });
-  auditPayroll(req, key, parsed.data.published ? "publish-run" : "unpublish-run", { runId: req.params.id });
+  auditPayroll(req, key, parsed.data.published ? "publish-run" : "unpublish-run", { runId: req.params.id, before: { publishedAt: snap.get("publishedAt") ?? null }, after: { publishedAt } });
   res.json({ ok: true, publishedAt });
 });
 
@@ -278,6 +343,7 @@ payroll.get("/ytd/:empId", async (req, res) => {
   const key = await manager(req, res); if (!key) return;
   const taxYearQ = typeof req.query.taxYear === "string" ? req.query.taxYear : undefined;
   if (taxYearQ && !/^\d{4}-\d{2}$/.test(taxYearQ)) { res.status(400).json({ error: "taxYear must look like 2026-27" }); return; }
+  auditPayroll(req, key, "view-ytd", { empId: String(req.params.empId), taxYear: taxYearQ ?? null });
   const ytd = await getYtd(key, String(req.params.empId), taxYearQ);
   res.json(ytd ?? { empId: req.params.empId, taxYear: taxYearQ ?? ukTaxYearOf(new Date().toISOString().slice(0, 10)), gross: 0, taxable: 0, paye: 0, eeNi: 0, erNi: 0, eePension: 0, erPension: 0, net: 0, runs: 0 });
 });
@@ -293,9 +359,24 @@ payroll.get("/timesheets", async (req, res) => {
     days.push(d.toISOString().slice(0, 10));
     if (days.length > 62) { res.status(400).json({ error: "A pay period can't be longer than 62 days" }); return; }
   }
+  auditPayroll(req, key, "view-timesheets", { from, to });
   const snaps = await Promise.all(days.map((day) => db.collection("clockRecords").where("key", "==", key).where("day", "==", day).get()));
   res.json(snaps.flatMap((s) => s.docs.map((d) => { const { key: _k, tenantId: _t, franchiseId: _f, uid: _u, ...r } = d.data(); return r; })));
 });
+
+/** Payslips are matched to a person by the name slug the manager set. If two accounts in the same pay scope share that slug, either could read the
+ *  other's payslips — so an ambiguous name is refused (the manager must give the two people distinct names). */
+export async function nameIsUnique(tenantId: string, franchiseId: string | null, me: string): Promise<boolean> {
+  const snap = await db.collection("users").where("tenantId", "==", tenantId).get();
+  let n = 0;
+  for (const d of snap.docs) {
+    if ((d.get("franchiseId") ?? null) !== (franchiseId ?? null)) continue;
+    const r = String(d.get("role") ?? "");
+    if (r === "parent" || r === "platform") continue;
+    if (slug(String(d.get("name") ?? "")) === me) n++;
+  }
+  return n <= 1;
+}
 
 // GET /api/payroll/mine — the signed-in person's own payslips: their line of
 // every PUBLISHED run, as PayRun[] (one line each) so the payslip + YTD render
@@ -308,6 +389,7 @@ payroll.get("/mine", async (req, res) => {
   if (!name) { res.json([]); return; }
   const me = slug(name);
   const snap = await runs.where("payKey", "==", keyOf(auth.tenantId, auth.franchiseId)).get();
+  if (snap.docs.length && !(await nameIsUnique(auth.tenantId, auth.franchiseId, me))) { res.json([]); return; }
   const out = snap.docs
     .map((d) => d.data())
     .filter((r) => !!r.publishedAt)
