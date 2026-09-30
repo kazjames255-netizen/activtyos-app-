@@ -11,6 +11,8 @@ import { openCertificate, makeRef } from "./certificates";
 import { MotionBlock } from "./MotionPlayer";
 import { Figure } from "./CourseFigures";
 import { useSettings } from "@/lib/settings";
+import { useI18n } from "@/lib/i18n/provider";
+import { isRTL } from "@/lib/i18n/config";
 
 // Interactive block kinds that must be attempted before a lesson can be marked complete.
 const INTERACTIVE_KINDS = ["sort", "order", "match", "reveal", "scenario", "check"];
@@ -61,6 +63,7 @@ export const ART_KEYS = ["shield", "listen", "county", "recruit", "prevent", "ep
 // "Badge + text" illustration — a circular icon badge with the caption beside it,
 // on a palette-tinted panel (--art-grad recolours it for themed courses).
 function Scene({ art, caption }: { art: string; caption?: string }) {
+  const { t: tr } = useI18n();
   const a = ART[art] ?? ART.shield;
   return (
     <figure className="my-4">
@@ -71,7 +74,7 @@ function Scene({ art, caption }: { art: string; caption?: string }) {
         </svg>
         <div className="relative grid h-16 w-16 flex-none place-items-center overflow-hidden rounded-full bg-white/20 text-[30px] leading-none shadow-inner backdrop-blur">{a.emoji}</div>
         <div className="relative min-w-0 ps-1">
-          <div className="text-[17px] font-extrabold leading-tight" style={{ textWrap: "balance" } as React.CSSProperties}>{caption || "Illustration"}</div>
+          <div className="text-[17px] font-extrabold leading-tight" style={{ textWrap: "balance" } as React.CSSProperties}>{caption || tr("p8lrn.cpIllustration")}</div>
         </div>
       </div>
     </figure>
@@ -136,11 +139,12 @@ function useVoice() {
 
 // ——— interactive blocks ———
 function ScenarioBlock({ b, onDone }: { b: Extract<Block, { k: "scenario" }>; onDone?: () => void }) {
+  const { t: tr } = useI18n();
   const [picked, setPicked] = useState<number | null>(null);
   useEffect(() => { if (picked != null) onDone?.(); }, [picked]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="my-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-      <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--accent)]">🎬 Real-life scenario</div>
+      <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--accent)]">{tr("p8lrn.cpScenario")}</div>
       <p className="mb-3 text-[14.5px] font-semibold text-[var(--ink)]">{b.t}</p>
       <div className="flex flex-col gap-2">
         {b.choices.map((c, i) => {
@@ -158,11 +162,12 @@ function ScenarioBlock({ b, onDone }: { b: Extract<Block, { k: "scenario" }>; on
   );
 }
 function CheckBlock({ b, onDone }: { b: Extract<Block, { k: "check" }>; onDone?: () => void }) {
+  const { t: tr } = useI18n();
   const [picked, setPicked] = useState<number | null>(null);
   useEffect(() => { if (picked != null) onDone?.(); }, [picked]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="my-4 rounded-2xl border border-[var(--line)] bg-[var(--accent-soft)] p-4">
-      <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--accent)]">✓ Knowledge check</div>
+      <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--accent)]">{tr("p8lrn.cpKnowledge")}</div>
       <p className="mb-3 text-[14.5px] font-semibold text-[var(--ink)]">{b.q}</p>
       <div className="flex flex-col gap-2">
         {b.opts.map((o, i) => {
@@ -175,7 +180,7 @@ function CheckBlock({ b, onDone }: { b: Extract<Block, { k: "check" }>; onDone?:
           );
         })}
       </div>
-      {picked != null && <p className="mt-2.5 text-[12.5px] font-semibold" style={{ color: picked === b.a ? "#0f7a43" : "#c0392b" }}>{picked === b.a ? "Correct. " : "Not quite. "}{b.fb}</p>}
+      {picked != null && <p className="mt-2.5 text-[12.5px] font-semibold" style={{ color: picked === b.a ? "#0f7a43" : "#c0392b" }}>{picked === b.a ? tr("p8lrn.cpCorrect") : tr("p8lrn.cpNotQuite")}{b.fb}</p>}
     </div>
   );
 }
@@ -190,6 +195,7 @@ const ActWrap = ({ tag, children }: { tag: string; children: React.ReactNode }) 
 
 // Drag items into the right bucket
 function SortBlock({ b, onDone }: { b: Extract<Block, { k: "sort" }>; onDone?: () => void }) {
+  const { t: tr } = useI18n();
   const [placed, setPlaced] = useState<Record<number, number | null>>(() => Object.fromEntries(b.items.map((_, i) => [i, null])));
   const [checked, setChecked] = useState(false);
   const [drag, setDrag] = useState<number | null>(null);
@@ -198,7 +204,7 @@ function SortBlock({ b, onDone }: { b: Extract<Block, { k: "sort" }>; onDone?: (
   const place = (item: number, bucket: number | null) => { if (checked) return; setPlaced((p) => ({ ...p, [item]: bucket })); };
   const correct = b.items.filter((it, i) => placed[i] === it.bucket).length;
   return (
-    <ActWrap tag="Drag into the right group">
+    <ActWrap tag={tr("p8lrn.cpActSort")}>
       <p className="mb-3 text-[14px] font-semibold text-[var(--ink)]">{b.prompt}</p>
       {tray.length > 0 && <div className="mb-3 flex flex-wrap gap-2 rounded-xl border border-dashed border-[var(--line)] bg-white p-2.5">
         {tray.map((i) => <span key={i} draggable onDragStart={() => setDrag(i)} onClick={() => setDrag(drag === i ? null : i)} className={"cursor-grab rounded-lg border px-2.5 py-1.5 text-[12.5px] font-semibold " + (drag === i ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--line)] bg-[var(--panel)]")}>{b.items[i].text}</span>)}
@@ -216,8 +222,8 @@ function SortBlock({ b, onDone }: { b: Extract<Block, { k: "sort" }>; onDone?: (
         ))}
       </div>
       <div className="mt-3 flex items-center gap-3">
-        {!checked ? <button type="button" disabled={tray.length > 0} onClick={() => setChecked(true)} className="rounded-full bg-[var(--accent)] px-4 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-40">Check answers</button>
-          : <><span className="text-[13px] font-extrabold" style={{ color: correct === b.items.length ? "#0f7a43" : "#b45309" }}>{correct} / {b.items.length} correct</span><button type="button" onClick={() => { setChecked(false); setPlaced(Object.fromEntries(b.items.map((_, i) => [i, null]))); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Try again</button></>}
+        {!checked ? <button type="button" disabled={tray.length > 0} onClick={() => setChecked(true)} className="rounded-full bg-[var(--accent)] px-4 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-40">{tr("p8lrn.cpCheckAnswers")}</button>
+          : <><span className="text-[13px] font-extrabold" style={{ color: correct === b.items.length ? "#0f7a43" : "#b45309" }}>{tr("p8lrn.cpNCorrect", { a: correct, b: b.items.length })}</span><button type="button" onClick={() => { setChecked(false); setPlaced(Object.fromEntries(b.items.map((_, i) => [i, null]))); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{tr("p8lrn.gRetry")}</button></>}
       </div>
     </ActWrap>
   );
@@ -225,6 +231,7 @@ function SortBlock({ b, onDone }: { b: Extract<Block, { k: "sort" }>; onDone?: (
 
 // Drag to put the steps in the right order
 function OrderBlock({ b, onDone }: { b: Extract<Block, { k: "order" }>; onDone?: () => void }) {
+  const { t: tr } = useI18n();
   const [order, setOrder] = useState<number[]>(() => { let s = shuffle(b.items.map((_, i) => i)); if (JSON.stringify(s) === JSON.stringify(b.items.map((_, i) => i)) && b.items.length > 1) s = shuffle(s); return s; });
   const [checked, setChecked] = useState(false);
   const [drag, setDrag] = useState<number | null>(null);
@@ -232,7 +239,7 @@ function OrderBlock({ b, onDone }: { b: Extract<Block, { k: "order" }>; onDone?:
   const move = (from: number, to: number) => { if (checked || from === to) return; setOrder((o) => { const a = [...o]; const [x] = a.splice(from, 1); a.splice(to, 0, x); return a; }); };
   const right = order.filter((v, pos) => v === pos).length;
   return (
-    <ActWrap tag="Put in the correct order">
+    <ActWrap tag={tr("p8lrn.cpActOrder")}>
       <p className="mb-3 text-[14px] font-semibold text-[var(--ink)]">{b.prompt}</p>
       <div className="flex flex-col gap-2">
         {order.map((itemIdx, pos) => (
@@ -244,8 +251,8 @@ function OrderBlock({ b, onDone }: { b: Extract<Block, { k: "order" }>; onDone?:
         ))}
       </div>
       <div className="mt-3 flex items-center gap-3">
-        {!checked ? <button type="button" onClick={() => setChecked(true)} className="rounded-full bg-[var(--accent)] px-4 py-1.5 text-[12.5px] font-extrabold text-white">Check order</button>
-          : <><span className="text-[13px] font-extrabold" style={{ color: right === b.items.length ? "#0f7a43" : "#b45309" }}>{right} / {b.items.length} in place</span><button type="button" onClick={() => { setChecked(false); setOrder(shuffle(b.items.map((_, i) => i))); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Shuffle & retry</button></>}
+        {!checked ? <button type="button" onClick={() => setChecked(true)} className="rounded-full bg-[var(--accent)] px-4 py-1.5 text-[12.5px] font-extrabold text-white">{tr("p8lrn.cpCheckOrder")}</button>
+          : <><span className="text-[13px] font-extrabold" style={{ color: right === b.items.length ? "#0f7a43" : "#b45309" }}>{tr("p8lrn.cpNInPlace", { a: right, b: b.items.length })}</span><button type="button" onClick={() => { setChecked(false); setOrder(shuffle(b.items.map((_, i) => i))); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{tr("p8lrn.cpShuffle")}</button></>}
       </div>
     </ActWrap>
   );
@@ -253,6 +260,7 @@ function OrderBlock({ b, onDone }: { b: Extract<Block, { k: "order" }>; onDone?:
 
 // Tap a term, then its match
 function MatchBlock({ b, onDone }: { b: Extract<Block, { k: "match" }>; onDone?: () => void }) {
+  const { t: tr } = useI18n();
   const [rights] = useState(() => shuffle(b.pairs.map((_, i) => i)));
   const [sel, setSel] = useState<number | null>(null);
   const [links, setLinks] = useState<Record<number, number>>({}); // left index -> right pair index
@@ -261,7 +269,7 @@ function MatchBlock({ b, onDone }: { b: Extract<Block, { k: "match" }>; onDone?:
   const pick = (li: number) => { if (links[li] != null) return; setSel(sel === li ? null : li); };
   const connect = (ri: number) => { if (sel == null || Object.values(links).includes(ri)) return; setLinks((l) => ({ ...l, [sel]: ri })); setSel(null); };
   return (
-    <ActWrap tag="Match the pairs">
+    <ActWrap tag={tr("p8lrn.cpActMatch")}>
       <p className="mb-3 text-[14px] font-semibold text-[var(--ink)]">{b.prompt}</p>
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">{b.pairs.map((p, li) => { const linked = links[li] != null; const ok = linked && links[li] === li; return (
@@ -271,18 +279,19 @@ function MatchBlock({ b, onDone }: { b: Extract<Block, { k: "match" }>; onDone?:
           <button key={ri} type="button" disabled={used} onClick={() => connect(ri)} className={"rounded-xl border-2 px-3 py-2 text-start text-[13px] font-semibold transition-colors " + (used ? "border-[var(--line)] bg-[var(--panel)] opacity-45" : "border-[var(--line)] bg-white hover:border-[var(--accent)]")}>{b.pairs[ri].r}</button>
         ); })}</div>
       </div>
-      {done && <button type="button" onClick={() => { setLinks({}); setSel(null); }} className="mt-3 rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Reset</button>}
+      {done && <button type="button" onClick={() => { setLinks({}); setSel(null); }} className="mt-3 rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{tr("p8lrn.cpReset")}</button>}
     </ActWrap>
   );
 }
 
 // Flip cards
 function RevealBlock({ b, onDone }: { b: Extract<Block, { k: "reveal" }>; onDone?: () => void }) {
+  const { t: tr } = useI18n();
   const [flipped, setFlipped] = useState<Record<number, boolean>>({});
   const allFlipped = b.cards.every((_, i) => flipped[i]);
   useEffect(() => { if (allFlipped) onDone?.(); }, [allFlipped]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <ActWrap tag="Tap each card to reveal">
+    <ActWrap tag={tr("p8lrn.cpActReveal")}>
       {b.prompt && <p className="mb-3 text-[14px] font-semibold text-[var(--ink)]">{b.prompt}</p>}
       <div className="grid gap-2.5 sm:grid-cols-2">
         {b.cards.map((c, i) => (
@@ -303,6 +312,7 @@ function videoEmbed(src: string): string | null {
   return null;
 }
 export function BlockView({ b, onDone }: { b: Block; onDone?: () => void }) {
+  const { t: tr } = useI18n();
   if (b.k === "text") return <p className="my-3 text-[15px] leading-[1.75] text-[var(--ink-2)]">{b.t}</p>;
   if (b.k === "art") return <Scene art={b.art} caption={b.caption} />;
   if (b.k === "points") return (
@@ -337,7 +347,7 @@ export function BlockView({ b, onDone }: { b: Block; onDone?: () => void }) {
   if (b.k === "image") return (
     <figure className="my-4">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={b.src} alt={b.caption || "Course image"} className="mx-auto max-h-[440px] w-full rounded-2xl border border-[var(--line)] object-cover" />
+      <img src={b.src} alt={b.caption || tr("p8lrn.cpImageAlt")} className="mx-auto max-h-[440px] w-full rounded-2xl border border-[var(--line)] object-cover" />
       {b.caption && <figcaption className="mt-2 text-center text-[12.5px] italic text-[var(--ink-3)]">{b.caption}</figcaption>}
     </figure>
   );
@@ -345,7 +355,7 @@ export function BlockView({ b, onDone }: { b: Block; onDone?: () => void }) {
     const embed = videoEmbed(b.src);
     return (
       <figure className="my-4">
-        {embed ? <div className="relative overflow-hidden rounded-2xl border border-[var(--line)]" style={{ paddingTop: "56.25%" }}><iframe src={embed} title={b.caption || "Video"} className="absolute inset-0 h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div>
+        {embed ? <div className="relative overflow-hidden rounded-2xl border border-[var(--line)]" style={{ paddingTop: "56.25%" }}><iframe src={embed} title={b.caption || tr("p8lrn.cpVideo")} className="absolute inset-0 h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div>
           : <video src={b.src} controls className="w-full rounded-2xl border border-[var(--line)]" />}
         {b.caption && <figcaption className="mt-2 text-center text-[12.5px] italic text-[var(--ink-3)]">{b.caption}</figcaption>}
       </figure>
@@ -367,6 +377,7 @@ export function BlockView({ b, onDone }: { b: Block; onDone?: () => void }) {
 
 // ——— final quiz (~10 min) ———
 function QuizRunner({ qs, pass, versionLabel, courseTitle, onPass, makeCert }: { qs: QuizQ[]; pass: number; versionLabel: string; courseTitle: string; onPass: () => void; makeCert: (name: string, pct: number) => void }) {
+  const { t: tr } = useI18n();
   const [ans, setAns] = useState<Record<number, number>>({});
   const [name, setName] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -376,21 +387,21 @@ function QuizRunner({ qs, pass, versionLabel, courseTitle, onPass, makeCert }: {
   const submit = () => { setSubmitted(true); if (pctScore >= pass) onPass(); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }); };
   return (
     <article className="mx-auto max-w-[720px] px-5 py-7 sm:px-8">
-      <div className="mb-1 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#6d28d9]">Final assessment <span className="rounded-full bg-[#f3effe] px-2 py-0.5 text-[10px] normal-case tracking-normal text-[#6d28d9]">{versionLabel}</span></div>
-      <h1 className="mb-1 text-[26px] font-extrabold tracking-tight text-[var(--ink)]">Course quiz</h1>
+      <div className="mb-1 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#6d28d9]">{tr("p8lrn.cpFinalAssessment")} <span className="rounded-full bg-[#f3effe] px-2 py-0.5 text-[10px] normal-case tracking-normal text-[#6d28d9]">{versionLabel}</span></div>
+      <h1 className="mb-1 text-[26px] font-extrabold tracking-tight text-[var(--ink)]">{tr("p8lrn.cpCourseQuiz")}</h1>
       <p className="mb-5 text-[13.5px] text-[var(--ink-3)]">{qs.length} questions · pass mark {pass}% · about 10 minutes. Answer every question, then submit.</p>
       {submitted && (
         <div className={"mb-5 rounded-2xl border p-4 " + (passed ? "border-[#bfe3cd] bg-[#eef8f1]" : "border-[#f3c9cd] bg-[#fdecec]")}>
-          <div className="text-[17px] font-extrabold" style={{ color: passed ? "#0f7a43" : "#c0392b" }}>{passed ? "🎉 Passed" : "Not passed yet"} — {pctScore}% ({score}/{qs.length})</div>
+          <div className="text-[17px] font-extrabold" style={{ color: passed ? "#0f7a43" : "#c0392b" }}>{passed ? tr("p8lrn.cpPassed") : tr("p8lrn.cpNotPassed")} — {pctScore}% ({score}/{qs.length})</div>
           {passed ? (
             <div className="mt-1">
-              <div className="text-[13px] text-[var(--ink-2)]">Well done. Add your name and download your completion certificate.</div>
+              <div className="text-[13px] text-[var(--ink-2)]">{tr("p8lrn.cpWellDone")}</div>
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
-                <button type="button" onClick={() => makeCert(name, pctScore)} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[13px] font-extrabold text-white hover:brightness-110">🖨️ Download certificate (PDF)</button>
+                <input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("p8lrn.cpYourName")} className="rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
+                <button type="button" onClick={() => makeCert(name, pctScore)} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[13px] font-extrabold text-white hover:brightness-110">{tr("p8lrn.cpDownloadCert")}</button>
               </div>
             </div>
-          ) : <div className="text-[13px] text-[var(--ink-2)]">{`You need ${pass}% to pass. Review the answers below and try again.`}</div>}
+          ) : <div className="text-[13px] text-[var(--ink-2)]">{tr("p8lrn.cpNeedPass", { pass })}</div>}
         </div>
       )}
       <div className="flex flex-col gap-4">
@@ -409,14 +420,15 @@ function QuizRunner({ qs, pass, versionLabel, courseTitle, onPass, makeCert }: {
         ))}
       </div>
       <div className="mt-5 border-t border-[var(--line)] pt-4">
-        {!submitted ? <button type="button" disabled={Object.keys(ans).length < qs.length} onClick={submit} className="rounded-full bg-[#6d28d9] px-6 py-2.5 text-[14px] font-extrabold text-white disabled:opacity-40">{Object.keys(ans).length < qs.length ? `Answer all ${qs.length} to submit` : "Submit quiz"}</button>
-          : !passed ? <button type="button" onClick={() => { setSubmitted(false); setAns({}); }} className="rounded-full bg-[#6d28d9] px-6 py-2.5 text-[14px] font-extrabold text-white">Try again</button> : null}
+        {!submitted ? <button type="button" disabled={Object.keys(ans).length < qs.length} onClick={submit} className="rounded-full bg-[#6d28d9] px-6 py-2.5 text-[14px] font-extrabold text-white disabled:opacity-40">{Object.keys(ans).length < qs.length ? tr("p8lrn.cpAnswerAll", { n: qs.length }) : tr("p8lrn.cpSubmitQuiz")}</button>
+          : !passed ? <button type="button" onClick={() => { setSubmitted(false); setAns({}); }} className="rounded-full bg-[#6d28d9] px-6 py-2.5 text-[14px] font-extrabold text-white">{tr("p8lrn.gRetry")}</button> : null}
       </div>
     </article>
   );
 }
 
 export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: () => void }) {
+  const { t: tr, locale } = useI18n();
   const lessons = useMemo(() => course.lessons.filter((l) => !l.hidden), [course]); // hidden lessons are kept in data but skipped for learners
   const activeQuiz = useMemo(() => activeQuizVersion(course), [course]);
   const hasQuiz = activeQuiz.qs.length > 0;
@@ -432,8 +444,8 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
     const exp = rm ? new Date(now.getFullYear(), now.getMonth() + rm, now.getDate()) : null;
     const fmt = (dt: Date) => dt.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" });
     openCertificate({
-      name: name || "Team member", course: course.title, pct, date: fmt(now), expiry: exp ? fmt(exp) : undefined,
-      provider: settings.providerName || settings.billing?.businessName || "Your organisation",
+      name: name || tr("p8lrn.lcTeamMember"), course: course.title, pct, date: fmt(now), expiry: exp ? fmt(exp) : undefined,
+      provider: settings.providerName || settings.billing?.businessName || tr("p8lrn.cpYourOrganisation"),
       logo: settings.learning?.certLogo === false ? undefined : course.logo,
       ref: makeRef(course.title + name + fmt(now)),
       signImg: settings.learning?.certSignature, signName: settings.learning?.certSignatory, signRole: settings.learning?.certSignatoryRole,
@@ -485,10 +497,10 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
     <div className="fixed inset-0 z-[140] flex flex-col bg-[#f5f8fd]" style={{ ...LIGHT_PALETTE, ...themeVars }}>
       {/* top bar */}
       <div className="flex flex-none items-center gap-3 border-b border-[var(--line)] bg-white px-4 py-2.5 sm:px-6">
-        <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">‹ Exit</button>
+        <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{isRTL(locale) ? "›" : "‹"} {tr("p8lrn.cpExit")}</button>
         {course.logo && /* eslint-disable-next-line @next/next/no-img-element */ <img src={course.logo} alt="" className="h-8 w-auto flex-none rounded object-contain" />}
-        <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{course.title}</div><div className="text-[11px] text-[var(--ink-3)]">{isQuiz ? "Final quiz" : `Lesson ${li + 1} of ${lessons.length} · ${lesson.mins} min read`}</div></div>
-        {!isQuiz && !lessonHasMotion && <button type="button" onClick={toggleVoice} title="Read this lesson aloud" aria-label={voice.speaking ? "Stop reading this lesson aloud" : "Read this lesson aloud"} aria-pressed={voice.speaking} className={"ms-auto inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-extrabold transition-colors " + (voice.speaking ? "bg-[var(--accent)] text-white" : "border border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]")}>{voice.speaking ? "⏹ Stop voice" : "🔊 Read aloud"}{voice.speaking && <span className="flex items-end gap-0.5">{[0, 1, 2].map((i) => <span key={i} className="w-[3px] animate-pulse rounded-full bg-white" style={{ height: 6 + i * 4, animationDelay: `${i * 120}ms` }} />)}</span>}</button>}
+        <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{course.title}</div><div className="text-[11px] text-[var(--ink-3)]">{isQuiz ? tr("p8lrn.cpFinalQuiz") : tr("p8lrn.cpLessonOf", { a: li + 1, b: lessons.length, m: lesson.mins })}</div></div>
+        {!isQuiz && !lessonHasMotion && <button type="button" onClick={toggleVoice} title={tr("p8lrn.cpReadLessonAloud")} aria-label={voice.speaking ? tr("p8lrn.cpStopReadingLesson") : tr("p8lrn.cpReadLessonAloud")} aria-pressed={voice.speaking} className={"ms-auto inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-extrabold transition-colors " + (voice.speaking ? "bg-[var(--accent)] text-white" : "border border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]")}>{voice.speaking ? tr("p8lrn.cpStopVoice") : tr("p8lrn.lcReadAloud")}{voice.speaking && <span className="flex items-end gap-0.5">{[0, 1, 2].map((i) => <span key={i} className="w-[3px] animate-pulse rounded-full bg-white" style={{ height: 6 + i * 4, animationDelay: `${i * 120}ms` }} />)}</span>}</button>}
       </div>
       {/* progress */}
       <div className="h-1 flex-none bg-[var(--line)]"><div className="h-full bg-[#0f9d58] transition-all" style={{ width: `${pct}%` }} /></div>
@@ -505,13 +517,13 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
           {hasQuiz && (
             <button type="button" onClick={() => setLi(quizIdx)} className={"mt-1 flex w-full items-center gap-2.5 rounded-xl border-t border-[var(--line-2,#eef2f8)] px-3 py-2.5 pt-3 text-start transition-colors " + (isQuiz ? "bg-[#f3effe]" : "hover:bg-[var(--panel)]")}>
               <span className={"grid h-6 w-6 flex-none place-items-center rounded-full text-[11px] " + (done.has(quizIdx) ? "bg-[#0f9d58] text-white" : "bg-[#6d28d9] text-white")}>{done.has(quizIdx) ? "✓" : "🎓"}</span>
-              <span className={"text-[12.5px] font-bold " + (isQuiz ? "text-[#6d28d9]" : "text-[var(--ink-2)]")}>Final quiz</span>
+              <span className={"text-[12.5px] font-bold " + (isQuiz ? "text-[#6d28d9]" : "text-[var(--ink-2)]")}>{tr("p8lrn.cpFinalQuiz")}</span>
             </button>
           )}
         </aside>
         {/* content */}
         <main className="min-w-0 flex-1 overflow-y-auto">
-          {isQuiz ? <QuizRunner qs={activeQuiz.qs} pass={course.pass ?? 80} versionLabel={`${QUIZ_VERSION_LABELS[activeQuiz.idx]} of ${activeQuiz.count}`} courseTitle={course.title} onPass={() => setDone((d) => new Set(d).add(quizIdx))} makeCert={makeCert} /> : (
+          {isQuiz ? <QuizRunner qs={activeQuiz.qs} pass={course.pass ?? 80} versionLabel={tr("p8lrn.cpVersionOfN", { a: (QUIZ_VERSION_LABELS[activeQuiz.idx] ? activeQuiz.idx : 0) + 1, n: activeQuiz.count })} courseTitle={course.title} onPass={() => setDone((d) => new Set(d).add(quizIdx))} makeCert={makeCert} /> : (
           <article className="mx-auto max-w-[720px] px-5 py-7 sm:px-8">
             {course.theme
               ? <CourseBanner pal={pal} styleId="bubbles" subtitle={course.cat} title={course.title} className="mb-5 rounded-2xl" contentClassName="px-5 py-6 sm:px-6" />
@@ -520,11 +532,11 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
             {lesson.blocks.map((b, i) => <BlockView key={i} b={b} onDone={() => setEngaged((s) => (s.has(i) ? s : new Set(s).add(i)))} />)}
             <div className="mt-8 border-t border-[var(--line)] pt-5">
               {interactiveIdx.length > 0 && !done.has(li) && remaining > 0 && (
-                <p className="mb-3 flex items-center gap-2 rounded-xl bg-[#fdf0e6] px-3.5 py-2.5 text-[12.5px] font-semibold text-[#a8560f]">✋ Complete the {remaining} interactive {remaining === 1 ? "activity" : "activities"} above before you can mark this page complete.</p>
+                <p className="mb-3 flex items-center gap-2 rounded-xl bg-[#fdf0e6] px-3.5 py-2.5 text-[12.5px] font-semibold text-[#a8560f]">{tr("p8lrn.cpInteractiveNote", { n: remaining })}</p>
               )}
               <div className="flex items-center gap-3">
-                <button type="button" onClick={() => setLi(Math.max(0, li - 1))} disabled={li === 0} className="rounded-full border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] disabled:opacity-40">‹ Previous</button>
-                <button type="button" onClick={complete} disabled={!canComplete} title={canComplete ? "" : "Finish the interactive activities first"} className={"ms-auto rounded-full px-6 py-2 text-[14px] font-extrabold text-white transition-all " + (canComplete ? "bg-[#0f7a43] hover:brightness-105" : "cursor-not-allowed bg-[var(--ink-3)] opacity-50")}>{li < lessons.length - 1 ? "Mark complete & continue ›" : hasQuiz ? "Take the final quiz ›" : done.has(li) ? "Finish ✓" : "Mark complete ✓"}</button>
+                <button type="button" onClick={() => setLi(Math.max(0, li - 1))} disabled={li === 0} className="rounded-full border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] disabled:opacity-40">{isRTL(locale) ? "›" : "‹"} {tr("p8lrn.cpPrevious")}</button>
+                <button type="button" onClick={complete} disabled={!canComplete} title={canComplete ? "" : tr("p8lrn.cpFinishActivitiesFirst")} className={"ms-auto rounded-full px-6 py-2 text-[14px] font-extrabold text-white transition-all " + (canComplete ? "bg-[#0f7a43] hover:brightness-105" : "cursor-not-allowed bg-[var(--ink-3)] opacity-50")}>{li < lessons.length - 1 ? `${tr("p8lrn.cpMarkContinue")} ${isRTL(locale) ? "‹" : "›"}` : hasQuiz ? `${tr("p8lrn.cpTakeFinalQuiz")} ${isRTL(locale) ? "‹" : "›"}` : done.has(li) ? tr("p8lrn.cpFinishDone") : tr("p8lrn.cpMarkCompleteCheck")}</button>
               </div>
             </div>
           </article>

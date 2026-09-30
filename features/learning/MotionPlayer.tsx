@@ -12,6 +12,7 @@
  * mode runs the exact same engine on the authored per-scene seconds.
  */
 
+import { useT } from "@/lib/i18n/provider";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MotionScene } from "./courseContent";
 import { GENERIC_SCENES } from "./motionKit";
@@ -333,6 +334,7 @@ const PHASES = ["Notice", "Respond", "Record", "Report"];
 
 // ————————————————————————————————————————————————————————————————
 export function MotionBlock({ b, onDone }: { b: { title?: string; voice?: boolean; accent?: string; scenes: MotionScene[] }; onDone?: () => void }) {
+  const tr = useT();
   const scenes = b.scenes;
   const narrator = useNarrator();
   const cum = useMemo(() => { let t = 0; return scenes.map((s) => (t += Math.max(1, s.seconds) * 1000)); }, [scenes]);
@@ -559,20 +561,20 @@ export function MotionBlock({ b, onDone }: { b: { title?: string; voice?: boolea
 
           {/* poster / play-gesture gate (also unlocks mobile audio) */}
           {!started && (
-            <button type="button" onClick={play} className="absolute inset-0 z-30 grid place-items-center" style={{ background: "rgba(9,18,45,.30)" }} aria-label="Play the animated lesson">
+            <button type="button" onClick={play} className="absolute inset-0 z-30 grid place-items-center" style={{ background: "rgba(9,18,45,.30)" }} aria-label={tr("p8lrn.cpmPlayAria")}>
               <span className="grid h-16 w-16 place-items-center rounded-full bg-white/95 text-[24px] text-[#1d3a8f] shadow-xl" style={{ animation: reduced.current ? undefined : "aos-poster 2.2s ease-in-out infinite" }}>▶</span>
-              <span className="absolute bottom-4 text-[12px] font-bold text-white/90">{b.title || "Watch"} · {fmt(totalMs)}</span>
+              <span className="absolute bottom-4 text-[12px] font-bold text-white/90">{b.title || tr("p8lrn.cpmWatch")} · {fmt(totalMs)}</span>
             </button>
           )}
         </div>
 
         {/* transport */}
         <div className="flex items-center gap-2 border-t border-white/10 px-3 py-2">
-          <button type="button" onClick={() => (playing ? pause() : play())} className="grid h-8 w-8 place-items-center rounded-full bg-white text-[14px] text-[#1d3a8f]" aria-label={playing ? "Pause" : "Play"}>{playing ? "❚❚" : "▶"}</button>
-          <button type="button" onClick={replay} className="grid h-8 w-8 place-items-center rounded-full bg-white/12 text-[13px] text-white" aria-label="Replay from start">↺</button>
-          <input type="range" min={0} max={totalMs} value={elapsed.current} onChange={(e) => seek(Number(e.target.value))} className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full" style={{ background: `linear-gradient(90deg, ${WARM} ${pct}%, rgba(255,255,255,.22) ${pct}%)` }} aria-label="Scrub" />
+          <button type="button" onClick={() => (playing ? pause() : play())} className="grid h-8 w-8 place-items-center rounded-full bg-white text-[14px] text-[#1d3a8f]" aria-label={playing ? tr("p8lrn.cpmPause") : tr("p8lrn.cpmPlay")}>{playing ? "❚❚" : "▶"}</button>
+          <button type="button" onClick={replay} className="grid h-8 w-8 place-items-center rounded-full bg-white/12 text-[13px] text-white" aria-label={tr("p8lrn.cpmReplay")}>↺</button>
+          <input type="range" min={0} max={totalMs} value={elapsed.current} onChange={(e) => seek(Number(e.target.value))} className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full" style={{ background: `linear-gradient(90deg, ${WARM} ${pct}%, rgba(255,255,255,.22) ${pct}%)` }} aria-label={tr("p8lrn.cpmScrub")} />
           <span className="tabular-nums text-[11px] font-semibold text-white/80">{fmt(elapsed.current)} / {fmt(totalMs)}</span>
-          <button type="button" onClick={() => { narrator.stop(); spoken.current = -1; setMode((m) => (m === "voice" ? "text" : "voice")); }} className="ms-1 rounded-full px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: mode === "voice" ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.08)" }} aria-pressed={mode === "voice"} title={mode === "voice" ? "Narration on — switch to text only" : "Text only — switch narration on"}>{mode === "voice" ? "🔊 Voice" : "📝 Text"}</button>
+          <button type="button" onClick={() => { narrator.stop(); spoken.current = -1; setMode((m) => (m === "voice" ? "text" : "voice")); }} className="ms-1 rounded-full px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: mode === "voice" ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.08)" }} aria-pressed={mode === "voice"} title={mode === "voice" ? tr("p8lrn.cpmNarrationOnTip") : tr("p8lrn.cpmTextOnlyTip")}>{mode === "voice" ? tr("p8lrn.cpmVoice") : tr("p8lrn.cpmText")}</button>
         </div>
       </div>
       {b.title && <figcaption className="mt-2 text-center text-[11.5px] font-semibold text-[var(--ink-3)]">{b.title}</figcaption>}
