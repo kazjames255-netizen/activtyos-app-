@@ -110,7 +110,7 @@ export default function CallRoomPage() {
   }, [videoRoom]);
 
   const load = () => {
-    get<Lead>(`/api/platform/leads/${params.leadId}`).then((l) => setLead(withActivities(l))).catch((e) => setError(e instanceof Error ? e.message : t("p8hq.clLoadFail")));
+    get<Lead>(`/api/platform/leads/${params.leadId}`).then((l) => setLead(withActivities(l))).catch((e) => setError(e instanceof Error ? e.message : tNow("p8hq.clLoadFail")));
   };
   useEffect(load, [params.leadId]);
 
