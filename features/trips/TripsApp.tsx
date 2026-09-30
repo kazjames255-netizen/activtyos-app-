@@ -1,6 +1,10 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { useT, useI18n, tNow } from "@/lib/i18n/provider";
+import { isRTL } from "@/lib/i18n/config";
+import { richT } from "@/components/shell/richT";
+import { pickPlural } from "@/lib/i18n/plural";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { usePathname } from "next/navigation";
@@ -45,12 +49,14 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 const BLUE = "#1d3a8f", SIG = "#3f78d8", GREEN = "#0f7a43", AMBER = "#9a5a00", RED = "#c02636";
 const STAT = {
-  planned: { label: "Planned", bg: "#eaf0fc", fg: BLUE },
-  completed: { label: "Completed", bg: "#e7f6ee", fg: GREEN },
-  cancelled: { label: "Cancelled", bg: "#fdebec", fg: RED },
+  planned: { label: "p8ops.tpStatPlanned", bg: "#eaf0fc", fg: BLUE },
+  completed: { label: "p8ops.tpStatCompleted", bg: "#e7f6ee", fg: GREEN },
+  cancelled: { label: "p8ops.tpStatCancelled", bg: "#fdebec", fg: RED },
 } as const;
-const RISK = { L: { lbl: "Low", bg: "#e7f6ee", fg: GREEN }, M: { lbl: "Med", bg: "#fdf3d8", fg: AMBER }, H: { lbl: "High", bg: "#fdebec", fg: RED } } as const;
+const RISK = { L: { lbl: "p8ops.tpRiskLow", bg: "#e7f6ee", fg: GREEN }, M: { lbl: "p8ops.tpRiskMed", bg: "#fdf3d8", fg: AMBER }, H: { lbl: "p8ops.tpRiskHigh", bg: "#fdebec", fg: RED } } as const;
 const TRANSPORT = ["Minibus", "Coach", "Walking", "Public bus", "Train", "Parents drop-off", "Provider vehicles"];
+// Stored values stay English; only the label is translated.
+const TRANSPORT_KEY: Record<string, string> = { "Minibus": "p8ops.tpTrMinibus", "Coach": "p8ops.tpTrCoach", "Walking": "p8ops.tpTrWalking", "Public bus": "p8ops.tpTrPublicBus", "Train": "p8ops.tpTrTrain", "Parents drop-off": "p8ops.tpTrParents", "Provider vehicles": "p8ops.tpTrProvider" };
 const DEFAULT_HAZARDS: Hazard[] = [
   { h: "Transport / travel", who: "All children & staff", controls: "Seatbelts on; head-count on and off; first-aider on board; DBS-checked driver", initial: "M", residual: "L", done: false },
   { h: "Lost / separated child", who: "Children", controls: "Hi-vis; agreed meeting point; head-count at every leg; named lead holds register; buddy system", initial: "H", residual: "L", done: false },
@@ -62,7 +68,7 @@ const DEFAULT_HAZARDS: Hazard[] = [
 const DEFAULT_CHECKPOINTS: Checkpoint[] = [
   { n: "Depart base", counted: null }, { n: "Arrive venue", counted: null }, { n: "Lunch / midpoint", counted: null }, { n: "Before return", counted: null }, { n: "Back at base", counted: null },
 ];
-const TITLES = ["", "Trip details & itinerary", "Risk assessment", "Staffing & off-site ratio", "Children, consent & payment", "Line-manager sign-off", "On the day — head counts", "Return & debrief"];
+const TITLE_KEYS = ["", "p8ops.tpStep1", "p8ops.tpStep2", "p8ops.tpStep3", "p8ops.tpStep4", "p8ops.tpStep5", "p8ops.tpStep6", "p8ops.tpStep7"];
 const STEP_NUMS = [1, 2, 3, 4, 5, 6, 7];
 // Extensive, editable pick-lists for the itinerary (offered as datalists).
 const ITIN_ACTIVITIES = [
@@ -105,11 +111,11 @@ const stepDone = (t: Trip, n: number): boolean => [null, s1Ok, raDone, staffOk, 
 const readinessOf = (t: Trip) => { let c = 0; for (let n = 1; n <= 7; n++) if (stepDone(t, n)) c++; return Math.round((c / 7) * 100); };
 const activeStepOf = (t: Trip) => { for (let n = 1; n <= 7; n++) if (!stepDone(t, n)) return n; return 8; };
 function statusPill(t: Trip): [string, string] {
-  if (t.returned) return ["Completed", GREEN];
-  if ((t.checkpoints ?? []).some((c) => c.counted != null)) return ["On the trip", SIG];
-  if (s5Ok(t)) return ["Approved — ready to go", GREEN];
-  if (canSubmit(t)) return ["Ready to submit", SIG];
-  return ["In planning", "#8a86a3"];
+  if (t.returned) return ["p8ops.tpPillCompleted", GREEN];
+  if ((t.checkpoints ?? []).some((c) => c.counted != null)) return ["p8ops.tpPillOnTrip", SIG];
+  if (s5Ok(t)) return ["p8ops.tpPillApproved", GREEN];
+  if (canSubmit(t)) return ["p8ops.tpPillReady", SIG];
+  return ["p8ops.tpPillPlanning", "#8a86a3"];
 }
 
 // Bookings carry the child (or a kids[] list) + the ISO session dates each
@@ -172,12 +178,13 @@ const taCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)]
 const fl = (s: string) => <span className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-2)]"><span className="h-3 w-[3px] flex-none rounded-full bg-[#3f78d8]" />{s}</span>;
 // a polished connected L/M/H segmented control for risk ratings
 function RatingGroup({ label, cur, on }: { label: string; cur?: RiskLevel; on: (v: RiskLevel) => void }) {
+  const tr = useT();
   return (
     <div className="inline-flex items-center gap-1.5">
       <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{label}</span>
       <div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] shadow-[0_1px_2px_rgba(23,21,52,.04)]">
         {(["L", "M", "H"] as const).map((v) => (
-          <button key={v} type="button" onClick={() => on(v)} className="border-s border-[var(--line)] px-2.5 py-1 text-[11px] font-extrabold transition-colors first:border-s-0" style={cur === v ? { background: RISK[v].fg, color: "#fff" } : { background: "var(--surface)", color: RISK[v].fg }}>{RISK[v].lbl}</button>
+          <button key={v} type="button" onClick={() => on(v)} className="border-s border-[var(--line)] px-2.5 py-1 text-[11px] font-extrabold transition-colors first:border-s-0" style={cur === v ? { background: RISK[v].fg, color: "#fff" } : { background: "var(--surface)", color: RISK[v].fg }}>{tr(RISK[v].lbl)}</button>
         ))}
       </div>
     </div>
@@ -185,6 +192,7 @@ function RatingGroup({ label, cur, on }: { label: string; cur?: RiskLevel; on: (
 }
 
 function Ring({ pct }: { pct: number }) {
+  const tr = useT();
   const r = 52, circ = 2 * Math.PI * r, off = circ * (1 - pct / 100), col = pct >= 100 ? GREEN : BLUE;
   return (
     <div className="relative h-[112px] w-[112px] flex-none">
@@ -194,7 +202,7 @@ function Ring({ pct }: { pct: number }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <b className="text-[26px] font-extrabold leading-none" style={{ color: col }}>{pct}%</b>
-        <span className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">Ready</span>
+        <span className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">{tr("p8ops.tpReadyWord")}</span>
       </div>
     </div>
   );
@@ -235,6 +243,9 @@ const resolveMsg = (msg: string, t: Trip, provider: string) => msg
 const MERGE_FIELDS = ["{Destination}", "{Date}", "{Depart}", "{Return}", "{Transport}", "{Cost}", "{PayBy}", "{Lead}", "{LeadPhone}", "{Provider}"];
 
 function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: { existing?: Trip; ratioTarget: number; providerName: string; onSaved: () => void; onClose: () => void }) {
+  const tr = useT();
+  const { locale } = useI18n();
+  const arrow = isRTL(locale) ? "←" : "→";
   const isEdit = !!existing;
   const [t, setT] = useState<Trip>(() => existing ? { ...blankTrip(ratioTarget), ...existing, hazards: existing.hazards?.length ? existing.hazards : DEFAULT_HAZARDS.map((h) => ({ ...h })), checkpoints: existing.checkpoints?.length ? existing.checkpoints : DEFAULT_CHECKPOINTS.map((c) => ({ ...c })), roster: existing.roster ?? [], attendees: existing.attendees ?? [], itinerary: existing.itinerary?.length ? existing.itinerary : [{ t: "", a: "", k: "" }], signoff: existing.signoff ?? {} } : blankTrip(ratioTarget));
   const [open, setOpen] = useState<number>(existing ? Math.min(7, activeStepOf(existing)) : 1);
@@ -245,7 +256,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
   const [listingStaff, setListingStaff] = useState<string[]>([]);
   const [team, setTeam] = useState<string[]>([]);
   const [venues, setVenues] = useState<{ name: string; address?: string; city?: string }[]>([]);
-  const [me, setMe] = useState("You");
+  const [me, setMe] = useState(() => tNow("p8ops.tpYou"));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remindStamp, setRemindStamp] = useState<string | null>(null);
@@ -275,7 +286,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
 
   useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setBkgs).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ staff?: { first?: string; last?: string }[]; venues?: { name?: string; address?: string; city?: string }[] } | null>("/api/library").then((l) => { setTeam((l?.staff ?? []).map((s) => `${s.first ?? ""} ${s.last ?? ""}`.trim()).filter(Boolean)); setVenues((l?.venues ?? []).filter((v) => v.name).map((v) => ({ name: v.name!, address: v.address, city: v.city }))); }).catch(() => {}); }, []);
-  useEffect(() => { apiGet<{ name?: string; email?: string }>("/api/me").then((m) => setMe(m.name || m.email || "You")).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ name?: string; email?: string }>("/api/me").then((m) => setMe(m.name || m.email || tr("p8ops.tpYou"))).catch(() => {}); }, []);
   useEffect(() => {
     let alive = true; const lid = t.listingId;
     const p = lid ? apiGet<{ library?: { staff?: { name?: string }[]; venue?: { name?: string; address?: string } | null } }>(`/api/listings/${encodeURIComponent(lid)}`).then((r) => ({ staff: (r.library?.staff ?? []).map((s) => (s.name ?? "").trim()).filter(Boolean), venue: r.library?.venue ?? null })).catch(() => ({ staff: [] as string[], venue: null })) : Promise.resolve({ staff: [] as string[], venue: null });
@@ -292,7 +303,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
   const notBooked = booked.filter((b) => !attendeeNames.has(b.n));
 
   async function save(close: boolean) {
-    if (!t.destination.trim() || !t.date) { setError("Add a destination and date in Step 1."); setOpen(1); return; }
+    if (!t.destination.trim() || !t.date) { setError(tr("p8ops.tpAddDestDate")); setOpen(1); return; }
     setBusy(true); setError(null);
     const childNames = attendingOf(t).map((c) => c.n);
     const body = {
@@ -307,17 +318,17 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
     try {
       if (isEdit) await apiPut(`/api/trips/${encodeURIComponent(existing!.id)}`, body); else await apiPost("/api/trips", body);
       if (close) { onClose(); onSaved(); } else { onSaved(); setBusy(false); }
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : tr("p8ops.tpCouldntSave")); setBusy(false); }
   }
 
   // Soft-cancel (keeps the record marked Cancelled) or reinstate a saved trip.
   async function cancelTrip() {
     if (!isEdit) return;
     const cancelling = t.status !== "cancelled";
-    if (cancelling && !confirm(`Cancel the trip to ${t.destination || "this venue"}? It stays on record marked Cancelled — you can reinstate it later.`)) return;
+    if (cancelling && !confirm(tr("p8ops.tpConfirmCancel", { dest: t.destination || tr("p8ops.tpThisVenue") }))) return;
     setBusy(true); setError(null);
     try { await apiPut(`/api/trips/${encodeURIComponent(existing!.id)}`, { status: cancelling ? "cancelled" : "planned", returned: false }); onClose(); onSaved(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t update"); setBusy(false); }
+    catch (e) { setError(e instanceof Error ? e.message : tr("p8ops.tpCouldntUpdate")); setBusy(false); }
   }
 
   const pct = readinessOf(t), act = activeStepOf(t), sp = statusPill(t);
@@ -334,24 +345,24 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
   return (
     <Card className="mb-3.5 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{isEdit ? "Trip planner" : "Plan a trip"}</div>
+        <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{isEdit ? tr("p8ops.tpPlannerTitle") : tr("p8ops.tpPlan").replace(/^＋\s*/, "")}</div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setTrack((v) => !v)} className="flex items-center gap-2 text-[12px] font-semibold text-[var(--ink-2)]">
             <span className="relative h-[22px] w-[40px] rounded-full transition-colors" style={{ background: track ? GREEN : "var(--line)" }}><span className="absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white shadow transition-all" style={{ left: track ? "20px" : "2px" }} /></span>
-            Track changes <b style={{ color: "var(--ink)" }}>{track ? "ON" : "OFF"}</b>
+            {tr("p8ops.tpTrackChanges")} <b style={{ color: "var(--ink)" }}>{track ? tr("p8ops.tpOn") : tr("p8ops.tpOff")}</b>
           </button>
-          <button type="button" onClick={() => setReview((v) => !v)} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold transition-colors" style={review ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>Review changes ({changes.length})</button>
+          <button type="button" onClick={() => setReview((v) => !v)} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold transition-colors" style={review ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{tr("p8ops.tpReviewChanges", { n: changes.length })}</button>
         </div>
       </div>
 
       {review && (
         <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <div className="mb-1.5 flex items-center justify-between text-[12.5px] font-extrabold">Tracked changes ({changes.length}){changes.length > 0 && <span className="flex gap-1.5"><button type="button" onClick={() => setChanges([])} className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-bold">Accept all</button><button type="button" onClick={() => { changes.forEach((c) => mut((d) => setPath(d, c.key, c.old))); setChanges([]); }} className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-bold">Reject all</button></span>}</div>
-          {changes.length === 0 ? <div className="text-[11.5px] text-[var(--ink-3)]">No changes yet. Turn Track changes ON, then edit a field — old → new appears here to accept or reject.</div>
+          <div className="mb-1.5 flex items-center justify-between text-[12.5px] font-extrabold">{tr("p8ops.tpTrackedChanges", { n: changes.length })}{changes.length > 0 && <span className="flex gap-1.5"><button type="button" onClick={() => setChanges([])} className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-bold">{tr("p8ops.tpAcceptAll")}</button><button type="button" onClick={() => { changes.forEach((c) => mut((d) => setPath(d, c.key, c.old))); setChanges([]); }} className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-bold">{tr("p8ops.tpRejectAll")}</button></span>}</div>
+          {changes.length === 0 ? <div className="text-[11.5px] text-[var(--ink-3)]">{tr("p8ops.tpNoChanges")}</div>
             : <div className="flex flex-col gap-1.5">{changes.map((c, i) => (
               <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-[var(--surface)] px-2.5 py-1.5">
-                <div className="min-w-0 text-[11.5px]"><b>{c.label}</b><div className="text-[var(--ink-2)]"><del className="text-[var(--ink-3)]">{c.old || "—"}</del> → <ins className="rounded bg-[#e7f6ee] px-1 no-underline" style={{ color: GREEN }}>{c.next || "—"}</ins> <span className="text-[var(--ink-3)]">· {c.who} · {c.ts}</span></div></div>
-                <span className="flex flex-none gap-1"><button type="button" onClick={() => setChanges((cs) => cs.filter((x) => x !== c))} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">Accept</button><button type="button" onClick={() => { mut((d) => setPath(d, c.key, c.old)); setChanges((cs) => cs.filter((x) => x !== c)); }} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">Reject</button></span>
+                <div className="min-w-0 text-[11.5px]"><b>{c.label}</b><div className="text-[var(--ink-2)]"><del className="text-[var(--ink-3)]">{c.old || "—"}</del> {arrow} <ins className="rounded bg-[#e7f6ee] px-1 no-underline" style={{ color: GREEN }}>{c.next || "—"}</ins> <span className="text-[var(--ink-3)]">· {c.who} · {c.ts}</span></div></div>
+                <span className="flex flex-none gap-1"><button type="button" onClick={() => setChanges((cs) => cs.filter((x) => x !== c))} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">{tr("p8ops.tpAccept")}</button><button type="button" onClick={() => { mut((d) => setPath(d, c.key, c.old)); setChanges((cs) => cs.filter((x) => x !== c)); }} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">{tr("p8ops.tpReject")}</button></span>
               </div>
             ))}</div>}
         </div>
@@ -362,17 +373,17 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
         <Ring pct={pct} />
         <div className="min-w-[220px] flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[18px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t.destination || "New trip"}</span>
-            <span className="rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: `color-mix(in srgb,${sp[1]} 14%,transparent)`, color: `color-mix(in srgb,${sp[1]} 74%,#000)` }}>{sp[0]}</span>
+            <span className="text-[18px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t.destination || tr("p8ops.tpNewTrip")}</span>
+            <span className="rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: `color-mix(in srgb,${sp[1]} 14%,transparent)`, color: `color-mix(in srgb,${sp[1]} 74%,#000)` }}>{tr(sp[0])}</span>
           </div>
-          <div className="mb-2.5 mt-1 text-[12.5px] text-[var(--ink-2)]">{t.date ? fmtDate(t.date) : "no date"}{t.departTime ? ` · depart ${t.departTime}` : ""}{t.returnTime ? `, back ${t.returnTime}` : ""}</div>
+          <div className="mb-2.5 mt-1 text-[12.5px] text-[var(--ink-2)]">{t.date ? fmtDate(t.date) : tr("p8ops.tpNoDate")}{t.departTime ? ` · ${tr("p8ops.tpDepartT", { time: t.departTime })}` : ""}{t.returnTime ? `, ${tr("p8ops.tpBackT", { time: t.returnTime })}` : ""}</div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            {chip("Children", attendingOf(t).length)}
-            {chip("Staff", (t.roster ?? []).length, staffOk(t) ? "ok" : "bad")}
-            {chip("Off-site ratio", `1:${ratioOf(t)}`)}
-            {chip("Consents", `${attendingOf(t).length}/${(t.attendees ?? []).length - declinedOf(t).length}`, permsOk(t) ? "ok" : "warn")}
-            {chip("RA", raDone(t) ? "Signed" : "Draft", raDone(t) ? "ok" : "warn")}
-            {chip("Sign-off", s5Ok(t) ? "Approved" : "Pending", s5Ok(t) ? "ok" : "warn")}
+            {chip(tr("p8ops.tpChipChildren"), attendingOf(t).length)}
+            {chip(tr("p8ops.rtStaffWord"), (t.roster ?? []).length, staffOk(t) ? "ok" : "bad")}
+            {chip(tr("p8ops.tpChipRatio"), `1:${ratioOf(t)}`)}
+            {chip(tr("p8ops.tpChipConsents"), `${attendingOf(t).length}/${(t.attendees ?? []).length - declinedOf(t).length}`, permsOk(t) ? "ok" : "warn")}
+            {chip(tr("p8ops.tpChipRA"), raDone(t) ? tr("p8ops.tpSigned") : tr("p8ops.tpDraft"), raDone(t) ? "ok" : "warn")}
+            {chip(tr("p8ops.tpChipSignoff"), s5Ok(t) ? tr("p8ops.tpApproved") : tr("p8ops.tpPending"), s5Ok(t) ? "ok" : "warn")}
           </div>
         </div>
       </div>
@@ -382,9 +393,9 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
         {STEP_NUMS.map((n) => {
           const dn = stepDone(t, n), cur = open === n;
           return (
-            <button key={n} type="button" onClick={() => setOpen(n)} title={`Step ${n} — ${TITLES[n]}`} className="flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-start transition-colors" style={cur ? { borderColor: BLUE, background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+            <button key={n} type="button" onClick={() => setOpen(n)} title={tr("p8ops.tpStepTip", { n, title: tr(TITLE_KEYS[n]) })} className="flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-start transition-colors" style={cur ? { borderColor: BLUE, background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
               <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : cur ? { background: BLUE, color: "#fff" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{dn ? "✓" : n}</span>
-              <span className="hidden text-[11.5px] font-bold sm:block" style={{ color: cur ? BLUE : "var(--ink-2)" }}>{TITLES[n]}</span>
+              <span className="hidden text-[11.5px] font-bold sm:block" style={{ color: cur ? BLUE : "var(--ink-2)" }}>{tr(TITLE_KEYS[n])}</span>
             </button>
           );
         })}
@@ -395,20 +406,20 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
         {STEP_NUMS.map((n) => {
           if (n !== open) return null;
           const dn = stepDone(t, n), locked = n === 6 && !s5Ok(t);
-          const pillTone = dn ? { t: "Complete", c: GREEN } : locked ? { t: "Locked", c: "#8a86a3" } : n === act ? { t: "Action needed", c: SIG } : { t: "To do", c: "#8a86a3" };
+          const pillTone = dn ? { t: tr("p8ops.tpPillComplete"), c: GREEN } : locked ? { t: tr("p8ops.tpPillLocked"), c: "#8a86a3" } : n === act ? { t: tr("p8ops.tpPillAction"), c: SIG } : { t: tr("p8ops.tpPillTodo"), c: "#8a86a3" };
           return (
             <div key={n}>
               <div className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3">
                 <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[15px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : { background: "#eef4fd", color: BLUE }}>{dn ? "✓" : n}</span>
-                <span className="flex-1 min-w-0"><span className="text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step {n} of 7</span><div className="text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{TITLES[n]}</div></span>
+                <span className="flex-1 min-w-0"><span className="text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{tr("p8ops.tpStepOf", { n })}</span><div className="text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{tr(TITLE_KEYS[n])}</div></span>
                 <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={{ background: `color-mix(in srgb,${pillTone.c} 14%,transparent)`, color: `color-mix(in srgb,${pillTone.c} 74%,#000)` }}>{pillTone.t}</span>
               </div>
               <div className="bg-[var(--panel)] p-4">
                 {/* ── Step 1 ── */}
                 {n === 1 && <div className="flex flex-col gap-3">
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <div className="relative flex flex-col gap-1">{fl("Where are you going?")}
-                      <input value={t.destination ?? ""} onChange={(e) => { const v = e.target.value; edit("destination", v, "Destination"); setVenueMenu(true); const m = venueFor(v); if (m?.address) edit("address", m.address, "Address"); }} onFocus={() => setVenueMenu(true)} onBlur={() => setTimeout(() => setVenueMenu(false), 150)} placeholder="Search your saved venues, or type a place" className={inputCls} autoComplete="off" />
+                    <div className="relative flex flex-col gap-1">{fl(tr("p8ops.tpWhere"))}
+                      <input value={t.destination ?? ""} onChange={(e) => { const v = e.target.value; edit("destination", v, tr("p8ops.tpLblDestination")); setVenueMenu(true); const m = venueFor(v); if (m?.address) edit("address", m.address, tr("p8ops.tpAddress")); }} onFocus={() => setVenueMenu(true)} onBlur={() => setTimeout(() => setVenueMenu(false), 150)} placeholder={tr("p8ops.tpVenuePh")} className={inputCls} autoComplete="off" />
                       {venueMenu && (() => {
                         const q = (t.destination ?? "").trim().toLowerCase();
                         const matches = venues.filter((v) => !q || v.name.toLowerCase().includes(q) || (v.address ?? "").toLowerCase().includes(q)).slice(0, 8);
@@ -416,7 +427,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                         return (
                           <div className="absolute start-0 end-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-[0_12px_28px_-12px_rgba(23,21,52,.4)]">
                             {matches.map((v) => (
-                              <button key={v.name} type="button" onMouseDown={(e) => { e.preventDefault(); edit("destination", v.name, "Destination"); edit("address", v.address ?? "", "Address"); setVenueMenu(false); }} className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-3 py-2 text-start last:border-b-0 hover:bg-[#eef4fd]">
+                              <button key={v.name} type="button" onMouseDown={(e) => { e.preventDefault(); edit("destination", v.name, tr("p8ops.tpLblDestination")); edit("address", v.address ?? "", tr("p8ops.tpAddress")); setVenueMenu(false); }} className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-3 py-2 text-start last:border-b-0 hover:bg-[#eef4fd]">
                                 <span className="text-[12.5px] font-bold">📍 {v.name}</span>
                                 {v.address && <span className="text-[11px] text-[var(--ink-3)]">{v.address}</span>}
                               </button>
@@ -425,52 +436,52 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                         );
                       })()}
                     </div>
-                    <label className="flex flex-col gap-1">{fl("Address")}<input value={t.address ?? ""} onChange={(e) => edit("address", e.target.value, "Address")} placeholder="Postcode or full address (auto-fills from a saved venue)" className={inputCls} /></label>
-                    {listings.length > 0 && <label className="flex flex-col gap-1 sm:col-span-2">{fl("For which camp/club? (pulls booked children, staff & venue)")}<select value={t.listingId ?? ""} onChange={(e) => edit("listingId", e.target.value || "", "Listing")} className={inputCls}><option value="">All my bookings</option>{listings.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>}
-                    <label className="flex flex-col gap-1">{fl("Date")}{fieldInput("date", "Date", { type: "date" })}</label>
-                    <label className="flex flex-col gap-1">{fl("Cost per child (£)")}{fieldInput("cost", "Cost per child")}</label>
-                    <label className="flex flex-col gap-1">{fl("Depart")}{fieldInput("departTime", "Depart", { type: "time" })}</label>
-                    <label className="flex flex-col gap-1">{fl("Return")}{fieldInput("returnTime", "Return", { type: "time" })}</label>
+                    <label className="flex flex-col gap-1">{fl(tr("p8ops.tpAddress"))}<input value={t.address ?? ""} onChange={(e) => edit("address", e.target.value, tr("p8ops.tpAddress"))} placeholder={tr("p8ops.tpAddressPh")} className={inputCls} /></label>
+                    {listings.length > 0 && <label className="flex flex-col gap-1 sm:col-span-2">{fl(tr("p8ops.tpForWhichCamp"))}<select value={t.listingId ?? ""} onChange={(e) => edit("listingId", e.target.value || "", tr("p8ops.rgHdrListing"))} className={inputCls}><option value="">{tr("p8ops.tpAllMyBookings")}</option>{listings.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>}
+                    <label className="flex flex-col gap-1">{fl(tr("p8ops.rgHdrDate"))}{fieldInput("date", tr("p8ops.rgHdrDate"), { type: "date" })}</label>
+                    <label className="flex flex-col gap-1">{fl(tr("p8ops.tpCostPerChild"))}{fieldInput("cost", tr("p8ops.tpLblCost"))}</label>
+                    <label className="flex flex-col gap-1">{fl(tr("p8ops.tpDepart"))}{fieldInput("departTime", tr("p8ops.tpDepart"), { type: "time" })}</label>
+                    <label className="flex flex-col gap-1">{fl(tr("p8ops.tpReturn"))}{fieldInput("returnTime", tr("p8ops.tpReturn"), { type: "time" })}</label>
                   </div>
-                  <div>{fl("Transport")}<div className="mt-1 flex flex-wrap gap-1.5">{TRANSPORT.map((x) => <button key={x} type="button" onClick={() => edit("transport", x, "Transport")} className="rounded-full border-2 px-3 py-1 text-[12px] font-bold transition-colors" style={t.transport === x ? { borderColor: BLUE, background: "#eaf0fc", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{x}</button>)}</div><input value={TRANSPORT.includes(t.transport ?? "") ? "" : t.transport ?? ""} onChange={(e) => edit("transport", e.target.value, "Transport")} placeholder="…or type your own" className={`${inputCls} mt-1.5`} /></div>
+                  <div>{fl(tr("p8ops.tpTransport"))}<div className="mt-1 flex flex-wrap gap-1.5">{TRANSPORT.map((x) => <button key={x} type="button" onClick={() => edit("transport", x, tr("p8ops.tpTransport"))} className="rounded-full border-2 px-3 py-1 text-[12px] font-bold transition-colors" style={t.transport === x ? { borderColor: BLUE, background: "#eaf0fc", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{tr(TRANSPORT_KEY[x])}</button>)}</div><input value={TRANSPORT.includes(t.transport ?? "") ? "" : t.transport ?? ""} onChange={(e) => edit("transport", e.target.value, tr("p8ops.tpTransport"))} placeholder={tr("p8ops.tpOrTypeOwn")} className={`${inputCls} mt-1.5`} /></div>
                   <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-                    <div className="mb-1.5 flex items-center gap-2 text-[12.5px] font-extrabold">Main trip lead & contact</div>
+                    <div className="mb-1.5 flex items-center gap-2 text-[12.5px] font-extrabold">{tr("p8ops.tpLeadContact")}</div>
                     <div className="grid gap-2 sm:grid-cols-3">
-                      <label className="flex flex-col gap-1">{fl("Trip lead")}<input list="trip-leads" value={t.lead ?? ""} onChange={(e) => edit("lead", e.target.value, "Trip lead")} placeholder="Type or pick a name" className={inputCls} /><datalist id="trip-leads">{[...new Set([...(t.roster ?? []).map((s) => s.n), ...listingStaff, ...team])].filter(Boolean).map((nm) => <option key={nm} value={nm} />)}</datalist></label>
-                      <label className="flex flex-col gap-1">{fl("Lead phone")}{fieldInput("leadPhone", "Lead phone", { placeholder: "07700 900000" })}</label>
-                      <label className="flex flex-col gap-1">{fl("EVC (visit coordinator)")}{fieldInput("evc", "EVC")}</label>
+                      <label className="flex flex-col gap-1">{fl(tr("p8ops.tpTripLead"))}<input list="trip-leads" value={t.lead ?? ""} onChange={(e) => edit("lead", e.target.value, tr("p8ops.tpTripLead"))} placeholder={tr("p8ops.tpTypeOrPickName")} className={inputCls} /><datalist id="trip-leads">{[...new Set([...(t.roster ?? []).map((s) => s.n), ...listingStaff, ...team])].filter(Boolean).map((nm) => <option key={nm} value={nm} />)}</datalist></label>
+                      <label className="flex flex-col gap-1">{fl(tr("p8ops.tpLeadPhone"))}{fieldInput("leadPhone", tr("p8ops.tpLeadPhone"), { placeholder: "07700 900000" })}</label>
+                      <label className="flex flex-col gap-1">{fl(tr("p8ops.tpEvc"))}{fieldInput("evc", "EVC")}</label>
                     </div>
                   </div>
                   <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-                    <div className="mb-1.5 flex items-center justify-between"><span className="text-[12.5px] font-extrabold">Itinerary & key actions</span><button type="button" onClick={() => mut((d) => { (d.itinerary ??= []).push({ t: "", a: "", k: "" }); })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">+ Add itinerary / action</button></div>
+                    <div className="mb-1.5 flex items-center justify-between"><span className="text-[12.5px] font-extrabold">{tr("p8ops.tpItinerary")}</span><button type="button" onClick={() => mut((d) => { (d.itinerary ??= []).push({ t: "", a: "", k: "" }); })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">{tr("p8ops.tpAddItin")}</button></div>
                     <datalist id="itin-activities">{ITIN_ACTIVITIES.map((a) => <option key={a} value={a} />)}</datalist>
                     <datalist id="itin-actions">{ITIN_ACTIONS.map((a) => <option key={a} value={a} />)}</datalist>
                     <div className="flex flex-col gap-1.5">{(t.itinerary ?? []).map((r, i) => (
                       <div key={i} className="grid grid-cols-[64px_1fr_1fr_auto] items-center gap-1.5 max-sm:grid-cols-[64px_minmax(0,1fr)_minmax(0,1fr)_auto]">
-                        <input value={r.t ?? ""} onChange={(e) => edit(`itinerary.${i}.t`, e.target.value, "Itinerary time")} placeholder="09:00" className={inputCls} />
-                        <input list="itin-activities" value={r.a ?? ""} onChange={(e) => edit(`itinerary.${i}.a`, e.target.value, "Activity")} placeholder="Pick or type an activity" className={inputCls} />
-                        <input list="itin-actions" value={r.k ?? ""} onChange={(e) => edit(`itinerary.${i}.k`, e.target.value, "Key action")} placeholder="Pick or type a key action" className={inputCls} />
+                        <input value={r.t ?? ""} onChange={(e) => edit(`itinerary.${i}.t`, e.target.value, tr("p8ops.tpLblItinTime"))} placeholder="09:00" className={inputCls} />
+                        <input list="itin-activities" value={r.a ?? ""} onChange={(e) => edit(`itinerary.${i}.a`, e.target.value, tr("p8ops.tpLblActivity"))} placeholder={tr("p8ops.tpPickActivity")} className={inputCls} />
+                        <input list="itin-actions" value={r.k ?? ""} onChange={(e) => edit(`itinerary.${i}.k`, e.target.value, tr("p8ops.tpLblKeyAction"))} placeholder={tr("p8ops.tpPickAction")} className={inputCls} />
                         <button type="button" onClick={() => mut((d) => { d.itinerary = (d.itinerary ?? []).filter((_, j) => j !== i); })} className="px-1 text-[var(--ink-3)] hover:text-[#c02636]">✕</button>
                       </div>
                     ))}</div>
-                    <div className="mt-1 text-[10.5px] text-[var(--ink-3)]">Start typing to search the list, or write your own — every field is editable.</div>
+                    <div className="mt-1 text-[10.5px] text-[var(--ink-3)]">{tr("p8ops.tpItinHint")}</div>
                   </div>
-                  <label className="flex flex-col gap-1">{fl("Kit to take")}<textarea value={t.kit ?? ""} onChange={(e) => edit("kit", e.target.value, "Kit")} placeholder="Packed lunch, water, sun cream, weather-appropriate clothing, medication, first-aid kit…" className={`${taCls} min-h-[52px]`} /><span className="text-[11px] text-[var(--ink-2)]"><b>Emergency on the day:</b> trip lead {t.leadPhone || "—"} · office · 999.</span></label>
+                  <label className="flex flex-col gap-1">{fl(tr("p8ops.tpKit"))}<textarea value={t.kit ?? ""} onChange={(e) => edit("kit", e.target.value, tr("p8ops.tpLblKit"))} placeholder={tr("p8ops.tpKitPh")} className={`${taCls} min-h-[52px]`} /><span className="text-[11px] text-[var(--ink-2)]">{richT(tr, "p8ops.tpEmergencyLine", { label: <b>{tr("p8ops.tpEmergencyDay")}</b> }, { phone: t.leadPhone || "—" })}</span></label>
                 </div>}
 
                 {/* ── Step 2: Risk assessment ── */}
                 {n === 2 && <div className="flex flex-col gap-2.5">
                   <div className="grid gap-2 sm:grid-cols-4">
-                    <label className="flex flex-col gap-1">{fl("Reference")}{fieldInput("raRef", "RA reference", { placeholder: "RA-2025-074" })}</label>
-                    <label className="flex flex-col gap-1">{fl("Assessor")}{fieldInput("raAssessor", "Assessor")}</label>
-                    <label className="flex flex-col gap-1">{fl("Date")}{fieldInput("raDate", "RA date", { type: "date" })}</label>
-                    <label className="flex flex-col gap-1">{fl("Review")}{fieldInput("raReview", "Review")}</label>
+                    <label className="flex flex-col gap-1">{fl(tr("p8ops.tpRef"))}{fieldInput("raRef", tr("p8ops.tpLblRaRef"), { placeholder: "RA-2025-074" })}</label>
+                    <label className="flex flex-col gap-1">{fl(tr("p8ops.tpAssessor"))}{fieldInput("raAssessor", tr("p8ops.tpAssessor"))}</label>
+                    <label className="flex flex-col gap-1">{fl(tr("p8ops.rgHdrDate"))}{fieldInput("raDate", tr("p8ops.tpLblRaDate"), { type: "date" })}</label>
+                    <label className="flex flex-col gap-1">{fl(tr("p8ops.tpReviewLbl"))}{fieldInput("raReview", tr("p8ops.tpReviewLbl"))}</label>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[11.5px] text-[var(--ink-3)]">Set the residual risk and tick “controls in place” for every hazard, then sign off.</span><span className="flex flex-wrap gap-1.5"><button type="button" onClick={() => setBankOpen((v) => !v)} className="rounded-md border px-2 py-0.5 text-[11px] font-bold transition-colors" style={bankOpen ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{bankOpen ? "✕ Close hazard bank" : "📚 Add from hazard bank"}</button><button type="button" onClick={() => mut((d) => { (d.hazards ??= []).push({ h: "", who: "", controls: "", initial: "M", residual: "", done: false }); if (d.raSigned) d.raSigned = false; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">+ Blank hazard</button></span></div>
+                  <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[11.5px] text-[var(--ink-3)]">{tr("p8ops.tpRaHelp")}</span><span className="flex flex-wrap gap-1.5"><button type="button" onClick={() => setBankOpen((v) => !v)} className="rounded-md border px-2 py-0.5 text-[11px] font-bold transition-colors" style={bankOpen ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{bankOpen ? tr("p8ops.tpBankClose") : tr("p8ops.tpBankOpen")}</button><button type="button" onClick={() => mut((d) => { (d.hazards ??= []).push({ h: "", who: "", controls: "", initial: "M", residual: "", done: false }); if (d.raSigned) d.raSigned = false; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">{tr("p8ops.tpBlankHazard")}</button></span></div>
                   {(t.hazards ?? []).length > 0 && (() => { const allDone = (t.hazards ?? []).every((h) => h.done); const n = (t.hazards ?? []).filter((h) => h.done).length; return (
                     <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface)] px-3 py-2">
-                      <span className="text-[12px] font-semibold" style={{ color: allDone ? GREEN : "var(--ink-2)" }}>{allDone ? "✓ " : ""}{n}/{(t.hazards ?? []).length} hazards have controls in place</span>
-                      <button type="button" onClick={() => mut((d) => { const target = !allDone; (d.hazards ?? []).forEach((h) => { h.done = target; h.amendedOn = todayIso(); h.amendedBy = me; }); d.raSigned = false; })} className="rounded-md border px-2.5 py-1 text-[11.5px] font-bold transition-colors" style={allDone ? { borderColor: "var(--line)", color: "var(--ink-2)" } : { borderColor: GREEN, color: GREEN }}>{allDone ? "Untick all" : "✓ Tick all controls in place"}</button>
+                      <span className="text-[12px] font-semibold" style={{ color: allDone ? GREEN : "var(--ink-2)" }}>{allDone ? "✓ " : ""}{tr("p8ops.tpHazCtlCount", { n, total: (t.hazards ?? []).length })}</span>
+                      <button type="button" onClick={() => mut((d) => { const target = !allDone; (d.hazards ?? []).forEach((h) => { h.done = target; h.amendedOn = todayIso(); h.amendedBy = me; }); d.raSigned = false; })} className="rounded-md border px-2.5 py-1 text-[11.5px] font-bold transition-colors" style={allDone ? { borderColor: "var(--line)", color: "var(--ink-2)" } : { borderColor: GREEN, color: GREEN }}>{allDone ? tr("p8ops.tpUntickAll") : tr("p8ops.tpTickAll")}</button>
                     </div>
                   ); })()}
                   {bankOpen && (() => {
@@ -481,8 +492,8 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                     return (
                       <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
                         <div className="mb-2 flex items-center gap-2">
-                          <input value={bankQ} onChange={(e) => setBankQ(e.target.value)} placeholder={`Search ${HAZARD_BANK.length} hazards — travel, water, allergy, safeguarding…`} className={`${inputCls} flex-1`} />
-                          <button type="button" onClick={() => { const ids = groups.flatMap((g) => g.entries).filter((e) => !isAdded(e)).map((e) => e.id); ids.forEach(addBankHazard); }} className="whitespace-nowrap rounded-md border border-[var(--line)] px-2 py-1.5 text-[11px] font-bold" style={{ color: BLUE }}>Add all shown</button>
+                          <input value={bankQ} onChange={(e) => setBankQ(e.target.value)} placeholder={tr("p8ops.tpBankSearch", { n: HAZARD_BANK.length })} className={`${inputCls} flex-1`} />
+                          <button type="button" onClick={() => { const ids = groups.flatMap((g) => g.entries).filter((e) => !isAdded(e)).map((e) => e.id); ids.forEach(addBankHazard); }} className="whitespace-nowrap rounded-md border border-[var(--line)] px-2 py-1.5 text-[11px] font-bold" style={{ color: BLUE }}>{tr("p8ops.tpAddAllShown")}</button>
                         </div>
                         <div className="flex max-h-[320px] flex-col gap-2.5 overflow-y-auto [scrollbar-width:thin]">
                           {groups.map((g) => (
@@ -495,11 +506,11 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                                     <div key={e.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
                                       <div className="flex items-start gap-2">
                                         <div className="min-w-0 flex-1">
-                                          <div className="flex flex-wrap items-center gap-1.5"><span className="text-[12.5px] font-extrabold">{e.area}</span><Badge tone={{ bg: RISK[e.initial].bg, fg: RISK[e.initial].fg }}>{RISK[e.initial].lbl}→{RISK[e.residual].lbl}</Badge><span className="text-[10.5px] text-[var(--ink-3)]">{e.controls.length} controls</span></div>
+                                          <div className="flex flex-wrap items-center gap-1.5"><span className="text-[12.5px] font-extrabold">{e.area}</span><Badge tone={{ bg: RISK[e.initial].bg, fg: RISK[e.initial].fg }}>{tr(RISK[e.initial].lbl)}{arrow}{tr(RISK[e.residual].lbl)}</Badge><span className="text-[10.5px] text-[var(--ink-3)]">{tr("p8ops.tpControlsCount", { n: e.controls.length })}</span></div>
                                           <div className="mt-1 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">{e.desc}</div>
-                                          <div className="mt-1 text-[11px] leading-[1.5] text-[var(--ink-3)]"><b className="text-[var(--ink-2)]">Risk:</b> {e.who}</div>
+                                          <div className="mt-1 text-[11px] leading-[1.5] text-[var(--ink-3)]"><b className="text-[var(--ink-2)]">{tr("p8ops.tpRiskColon")}</b> {e.who}</div>
                                         </div>
-                                        <button type="button" disabled={added} onClick={() => addBankHazard(e.id)} className="flex-none rounded-md border px-2.5 py-1 text-[11px] font-bold" style={added ? { borderColor: "var(--line)", color: "var(--ink-3)" } : { borderColor: BLUE, color: BLUE }}>{added ? "✓ Added" : "＋ Add"}</button>
+                                        <button type="button" disabled={added} onClick={() => addBankHazard(e.id)} className="flex-none rounded-md border px-2.5 py-1 text-[11px] font-bold" style={added ? { borderColor: "var(--line)", color: "var(--ink-3)" } : { borderColor: BLUE, color: BLUE }}>{added ? tr("p8ops.tpAdded") : tr("p8ops.rtAdd")}</button>
                                       </div>
                                     </div>
                                   );
@@ -507,11 +518,11 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                               </div>
                             </div>
                           ))}
-                          {groups.length === 0 && <div className="px-1 py-3 text-center text-[12px] text-[var(--ink-3)]">No hazards match “{bankQ}”.</div>}
+                          {groups.length === 0 && <div className="px-1 py-3 text-center text-[12px] text-[var(--ink-3)]">{tr("p8ops.tpNoHazMatch", { q: bankQ })}</div>}
                         </div>
                         <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-2.5">
-                          <span className="text-[11.5px] font-semibold" style={{ color: GREEN }}>{(t.hazards ?? []).length} hazard{(t.hazards ?? []).length === 1 ? "" : "s"} on your assessment</span>
-                          <Button sm variant="solid" onClick={() => setBankOpen(false)}>Done — view my hazards ↓</Button>
+                          <span className="text-[11.5px] font-semibold" style={{ color: GREEN }}>{tr("p8ops.tpHazOnAssess", { n: (t.hazards ?? []).length })}</span>
+                          <Button sm variant="solid" onClick={() => setBankOpen(false)}>{tr("p8ops.tpDoneView")}</Button>
                         </div>
                       </div>
                     );
@@ -520,129 +531,129 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                     return (
                     <div key={i} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
                       <div className="mb-2.5 flex items-center justify-between">
-                        <span className="rounded-full bg-[#eef4fd] px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: BLUE }}>Hazard {i + 1}</span>
-                        <button type="button" onClick={() => mut((d) => { d.hazards = (d.hazards ?? []).filter((_, j) => j !== i); d.raSigned = false; })} className="text-[11px] font-semibold text-[var(--ink-3)] hover:text-[#c02636]">✕ Remove</button>
+                        <span className="rounded-full bg-[#eef4fd] px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: BLUE }}>{tr("p8ops.tpHazardN", { n: i + 1 })}</span>
+                        <button type="button" onClick={() => mut((d) => { d.hazards = (d.hazards ?? []).filter((_, j) => j !== i); d.raSigned = false; })} className="text-[11px] font-semibold text-[var(--ink-3)] hover:text-[#c02636]">{tr("p8ops.tpRemoveBtn")}</button>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="flex flex-col gap-1.5">{fl("Hazard — what it is")}<textarea value={h.h} onChange={(e) => hazSet(i, "h", e.target.value, "Hazard")} placeholder="e.g. Too few staff / low ratios" className={`${taCls} min-h-[46px] font-bold`} /></label>
-                        <label className="flex flex-col gap-1.5">{fl("Risk — who's harmed & how")}<textarea value={h.who ?? ""} onChange={(e) => hazSet(i, "who", e.target.value, "Who at risk")} placeholder="e.g. Children — injury near roads or water" className={`${taCls} min-h-[46px]`} /></label>
+                        <label className="flex flex-col gap-1.5">{fl(tr("p8ops.tpHazWhat"))}<textarea value={h.h} onChange={(e) => hazSet(i, "h", e.target.value, tr("p8ops.tpLblHazard"))} placeholder={tr("p8ops.tpHazPh")} className={`${taCls} min-h-[46px] font-bold`} /></label>
+                        <label className="flex flex-col gap-1.5">{fl(tr("p8ops.tpRiskWho"))}<textarea value={h.who ?? ""} onChange={(e) => hazSet(i, "who", e.target.value, tr("p8ops.tpLblWhoAtRisk"))} placeholder={tr("p8ops.tpRiskPh")} className={`${taCls} min-h-[46px]`} /></label>
                       </div>
-                      <label className="mt-3 flex flex-col gap-1.5">{fl("Control measures")}<textarea value={h.controls ?? ""} onChange={(e) => hazSet(i, "controls", e.target.value, "Controls")} placeholder="Control measures — one statement per line" className={`${taCls} min-h-[64px]`} /></label>
+                      <label className="mt-3 flex flex-col gap-1.5">{fl(tr("p8ops.tpControlMeasures"))}<textarea value={h.controls ?? ""} onChange={(e) => hazSet(i, "controls", e.target.value, tr("p8ops.tpLblControls"))} placeholder={tr("p8ops.tpControlsPh")} className={`${taCls} min-h-[64px]`} /></label>
                       <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-[var(--line)] pt-3">
-                        <div className="flex flex-col gap-1.5">{fl("Risk rating")}
+                        <div className="flex flex-col gap-1.5">{fl(tr("p8ops.tpRiskRating"))}
                           <div className="flex flex-wrap items-center gap-2">
-                            <RatingGroup label="Initial" cur={h.initial} on={(x) => hazSet(i, "initial", x, "Initial risk")} />
-                            <span className="text-[13px] font-bold text-[var(--ink-3)]">→</span>
-                            <RatingGroup label="Residual" cur={h.residual} on={(x) => hazSet(i, "residual", x, "Residual risk")} />
+                            <RatingGroup label={tr("p8ops.tpInitial")} cur={h.initial} on={(x) => hazSet(i, "initial", x, tr("p8ops.tpLblInitialRisk"))} />
+                            <span className="text-[13px] font-bold text-[var(--ink-3)]">{arrow}</span>
+                            <RatingGroup label={tr("p8ops.tpResidual")} cur={h.residual} on={(x) => hazSet(i, "residual", x, tr("p8ops.tpLblResidualRisk"))} />
                           </div>
                         </div>
-                        <label className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-bold transition-colors" style={h.done ? { background: "#e7f6ee", color: GREEN } : { background: "var(--panel)", color: "var(--ink-2)" }}><input type="checkbox" checked={!!h.done} onChange={(e) => hazSet(i, "done", e.target.checked, "Controls in place")} />Controls in place</label>
+                        <label className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-bold transition-colors" style={h.done ? { background: "#e7f6ee", color: GREEN } : { background: "var(--panel)", color: "var(--ink-2)" }}><input type="checkbox" checked={!!h.done} onChange={(e) => hazSet(i, "done", e.target.checked, tr("p8ops.tpControlsInPlace"))} />{tr("p8ops.tpControlsInPlace")}</label>
                       </div>
-                      <div className="mt-2 text-[10.5px] text-[var(--ink-3)]">Last amended: {h.amendedBy ? `${h.amendedBy} · ` : ""}{h.amendedOn ? fmtDate(h.amendedOn) : "—"}</div>
+                      <div className="mt-2 text-[10.5px] text-[var(--ink-3)]">{tr("p8ops.tpLastAmended", { by: `${h.amendedBy ? `${h.amendedBy} · ` : ""}${h.amendedOn ? fmtDate(h.amendedOn) : "—"}` })}</div>
                     </div>
                     );
                   })}</div>
-                  {t.raSigned ? <div className="flex items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Signed off by {t.raAssessor || me} ({fmtDate(t.raDate)}).<button type="button" onClick={() => mut((d) => { d.raSigned = false; })} className="ms-auto text-[11.5px] font-bold underline" style={{ color: GREEN }}>Re-open</button></div>
-                    : <div><Button variant="solid" disabled={!raReady(t.hazards ?? [])} onClick={() => mut((d) => { d.raSigned = true; d.raAssessor = d.raAssessor || me; d.raDate = d.raDate || todayIso(); })}>Sign off risk assessment</Button>{!raReady(t.hazards ?? []) && <div className="mt-1.5 rounded-lg bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold" style={{ color: AMBER }}>For every hazard: set a residual risk and tick “controls in place”.</div>}</div>}
+                  {t.raSigned ? <div className="flex items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>{tr("p8ops.tpRaSignedBy", { name: t.raAssessor || me, date: fmtDate(t.raDate) })}<button type="button" onClick={() => mut((d) => { d.raSigned = false; })} className="ms-auto text-[11.5px] font-bold underline" style={{ color: GREEN }}>{tr("p8ops.tpReopen")}</button></div>
+                    : <div><Button variant="solid" disabled={!raReady(t.hazards ?? [])} onClick={() => mut((d) => { d.raSigned = true; d.raAssessor = d.raAssessor || me; d.raDate = d.raDate || todayIso(); })}>{tr("p8ops.tpSignOffRa")}</Button>{!raReady(t.hazards ?? []) && <div className="mt-1.5 rounded-lg bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold" style={{ color: AMBER }}>{tr("p8ops.tpRaNeedsAll")}</div>}</div>}
                 </div>}
 
                 {/* ── Step 3: Staffing & ratio ── */}
                 {n === 3 && <div className="flex flex-col gap-2.5">
                   <div className="flex flex-wrap items-center gap-2 text-[12px]">
-                    <span className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5"><b>{attendingOf(t).length}</b> children going</span>
-                    <span className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5"><b>{(t.roster ?? []).length}</b> staff</span>
-                    <span className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5">actual ratio <b>1:{(t.roster ?? []).length ? Math.ceil(attendingOf(t).length / Math.max(1, (t.roster ?? []).length)) : "—"}</b></span>
-                    <span className="ms-auto flex items-center gap-1.5 text-[var(--ink-2)]">Off-site policy 1 :<input type="number" min={1} value={ratioOf(t)} onChange={(e) => edit("offsiteRatio", Math.max(1, parseInt(e.target.value, 10) || 1), "Off-site ratio")} className="w-14 rounded-md border border-[var(--line)] px-1.5 py-1 text-center text-[13px] font-extrabold" /> · need <b>{needOf(t)}</b></span>
+                    <span className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5">{richT(tr, "p8ops.tpChildrenGoing", { n: <b>{attendingOf(t).length}</b> })}</span>
+                    <span className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5">{richT(tr, "p8ops.tpStaffCount", { n: <b>{(t.roster ?? []).length}</b> })}</span>
+                    <span className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5">{richT(tr, "p8ops.tpActualRatio", { r: <b>1:{(t.roster ?? []).length ? Math.ceil(attendingOf(t).length / Math.max(1, (t.roster ?? []).length)) : "—"}</b> })}</span>
+                    <span className="ms-auto flex items-center gap-1.5 text-[var(--ink-2)]">{tr("p8ops.tpOffsitePolicy")}<input type="number" min={1} value={ratioOf(t)} onChange={(e) => edit("offsiteRatio", Math.max(1, parseInt(e.target.value, 10) || 1), tr("p8ops.tpLblOffsiteRatio"))} className="w-14 rounded-md border border-[var(--line)] px-1.5 py-1 text-center text-[13px] font-extrabold" /> {richT(tr, "p8ops.tpNeedN", { n: <b>{needOf(t)}</b> })}</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-[var(--line)]"><div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, Math.round((t.roster ?? []).length / needOf(t) * 100))}%`, background: staffOk(t) ? GREEN : RED }} /></div>
-                  {staffSuggest.length > 0 && <div><div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{listingStaff.length ? "Assigned to this listing / your team — tap to add" : "Your team — tap to add"}</div><div className="flex flex-wrap gap-1.5">{staffSuggest.map((s) => <button key={s} type="button" onClick={() => mut((d) => { (d.roster ??= []).push({ n: s, r: "Activity leader", fa: false }); })} className="rounded-full border-2 border-dashed px-2.5 py-1 text-[12px] font-bold" style={{ borderColor: "var(--line)", color: "var(--ink-2)" }}>＋ {s}</button>)}</div></div>}
+                  {staffSuggest.length > 0 && <div><div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{listingStaff.length ? tr("p8ops.tpAssignedListing") : tr("p8ops.tpYourTeamTap")}</div><div className="flex flex-wrap gap-1.5">{staffSuggest.map((s) => <button key={s} type="button" onClick={() => mut((d) => { (d.roster ??= []).push({ n: s, r: "Activity leader", fa: false }); })} className="rounded-full border-2 border-dashed px-2.5 py-1 text-[12px] font-bold" style={{ borderColor: "var(--line)", color: "var(--ink-2)" }}>＋ {s}</button>)}</div></div>}
                   <div className="flex flex-col gap-1.5">{(t.roster ?? []).map((s, i) => (
                     <div key={i} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2">
                       <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[11px] font-extrabold" style={{ color: BLUE }}>{ini(s.n)}</span>
-                      <input value={s.n} onChange={(e) => edit(`roster.${i}.n`, e.target.value, "Staff name")} placeholder="Staff name" className="min-w-[120px] flex-1 rounded-md border border-[var(--line)] px-2 py-1 text-[12.5px] font-bold outline-none focus:border-[#1d3a8f]" />
-                      <input value={s.r ?? ""} onChange={(e) => edit(`roster.${i}.r`, e.target.value, "Role")} placeholder="Role (e.g. Lead)" className="min-w-[110px] flex-1 rounded-md border border-[var(--line)] px-2 py-1 text-[12px] outline-none focus:border-[#1d3a8f]" />
-                      <button type="button" onClick={() => mut((d) => { d.roster![i].fa = !d.roster![i].fa; })} className="rounded-full px-2.5 py-1 text-[11px] font-extrabold" style={s.fa ? { background: "#e7f6ee", color: GREEN } : { background: "var(--panel)", color: "var(--ink-3)" }}>{s.fa ? "First aider" : "+ first aid"}</button>
+                      <input value={s.n} onChange={(e) => edit(`roster.${i}.n`, e.target.value, tr("p8ops.tpLblStaffName"))} placeholder={tr("p8ops.tpStaffNamePh")} className="min-w-[120px] flex-1 rounded-md border border-[var(--line)] px-2 py-1 text-[12.5px] font-bold outline-none focus:border-[#1d3a8f]" />
+                      <input value={s.r ?? ""} onChange={(e) => edit(`roster.${i}.r`, e.target.value, tr("p8ops.tpLblRole"))} placeholder={tr("p8ops.tpRolePh")} className="min-w-[110px] flex-1 rounded-md border border-[var(--line)] px-2 py-1 text-[12px] outline-none focus:border-[#1d3a8f]" />
+                      <button type="button" onClick={() => mut((d) => { d.roster![i].fa = !d.roster![i].fa; })} className="rounded-full px-2.5 py-1 text-[11px] font-extrabold" style={s.fa ? { background: "#e7f6ee", color: GREEN } : { background: "var(--panel)", color: "var(--ink-3)" }}>{s.fa ? tr("p8ops.tpFirstAider") : tr("p8ops.tpPlusFirstAid")}</button>
                       <button type="button" onClick={() => mut((d) => { d.roster = (d.roster ?? []).filter((_, j) => j !== i); })} className="px-1 text-[var(--ink-3)] hover:text-[#c02636]">✕</button>
                     </div>
                   ))}</div>
-                  <button type="button" onClick={() => mut((d) => { (d.roster ??= []).push({ n: "", r: "Activity leader", fa: false }); })} className="self-start rounded-lg border-2 border-dashed border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">＋ Add staff member</button>
-                  <div className="rounded-lg px-3 py-2 text-[12px] font-semibold" style={staffOk(t) ? { background: "#e7f6ee", color: GREEN } : { background: "#fdebec", color: RED }}>{staffOk(t) ? `✓ Off-site ratio met (1:${ratioOf(t)}), with a named lead and a first aider.` : `⚠️ ${((t.roster ?? []).length < needOf(t)) ? `Need ${needOf(t) - (t.roster ?? []).length} more staff for 1:${ratioOf(t)}. ` : ""}${hasLead(t) ? "" : "No named lead (give a staff member a role containing “Lead”). "}${hasFA(t) ? "" : "No first aider assigned."}`}</div>
+                  <button type="button" onClick={() => mut((d) => { (d.roster ??= []).push({ n: "", r: "Activity leader", fa: false }); })} className="self-start rounded-lg border-2 border-dashed border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{tr("p8ops.tpAddStaffMember")}</button>
+                  <div className="rounded-lg px-3 py-2 text-[12px] font-semibold" style={staffOk(t) ? { background: "#e7f6ee", color: GREEN } : { background: "#fdebec", color: RED }}>{staffOk(t) ? tr("p8ops.tpRatioMet", { r: ratioOf(t) }) : `⚠️ ${((t.roster ?? []).length < needOf(t)) ? tr("p8ops.tpNeedMoreStaff", { n: needOf(t) - (t.roster ?? []).length, r: ratioOf(t) }) : ""}${hasLead(t) ? "" : tr("p8ops.tpNoLead")}${hasFA(t) ? "" : tr("p8ops.tpNoFirstAider")}`}</div>
                 </div>}
 
                 {/* ── Step 4: Parent permissions ── */}
                 {n === 4 && <div className="flex flex-col gap-2.5">
                   <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-                    <div className="mb-2 text-[12.5px] font-extrabold">Add children booked on this trip</div>
+                    <div className="mb-2 text-[12.5px] font-extrabold">{tr("p8ops.tpAddBooked")}</div>
                     <div className="grid gap-2 sm:grid-cols-2">
-                      <label className="flex flex-col gap-1">{fl("From which camp / club")}<select value={t.listingId ?? ""} onChange={(e) => { edit("listingId", e.target.value || "", "Listing"); setPassFilter(""); }} className={inputCls}><option value="">All my bookings</option>{listings.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
-                      <label className="flex flex-col gap-1">{fl("Which pass (some include the trip, some don't)")}<select value={passFilter} onChange={(e) => setPassFilter(e.target.value)} className={inputCls}><option value="">All passes</option>{passOptions.map((p) => <option key={p} value={p}>{p}</option>)}</select>{passOptions.length === 0 && <span className="text-[10.5px] text-[var(--ink-3)]">No passes found for this listing/date.</span>}</label>
+                      <label className="flex flex-col gap-1">{fl(tr("p8ops.tpFromCamp"))}<select value={t.listingId ?? ""} onChange={(e) => { edit("listingId", e.target.value || "", tr("p8ops.rgHdrListing")); setPassFilter(""); }} className={inputCls}><option value="">{tr("p8ops.tpAllMyBookings")}</option>{listings.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+                      <label className="flex flex-col gap-1">{fl(tr("p8ops.tpWhichPass"))}<select value={passFilter} onChange={(e) => setPassFilter(e.target.value)} className={inputCls}><option value="">{tr("p8ops.tpAllPasses")}</option>{passOptions.map((p) => <option key={p} value={p}>{p}</option>)}</select>{passOptions.length === 0 && <span className="text-[10.5px] text-[var(--ink-3)]">{tr("p8ops.tpNoPasses")}</span>}</label>
                     </div>
-                    <div className="mt-2 mb-1 flex items-center justify-between"><span className="text-[11px] font-semibold text-[var(--ink-3)]">{notBooked.length} booked on {fmtDate(t.date)}{passFilter ? ` · ${passFilter}` : ""} not yet added</span>{notBooked.length > 0 && <button type="button" onClick={() => mut((d) => { const have = new Set((d.attendees ?? []).map((a) => a.n)); notBooked.forEach((b) => { if (!have.has(b.n)) (d.attendees ??= []).push({ n: b.n, age: b.age, consent: "pending", paid: false, em: false }); }); })} className="rounded-md border border-[#1d3a8f] px-2.5 py-1 text-[11px] font-bold" style={{ color: BLUE }}>✓ Add all {notBooked.length}</button>}</div>
+                    <div className="mt-2 mb-1 flex items-center justify-between"><span className="text-[11px] font-semibold text-[var(--ink-3)]">{tr("p8ops.tpNotYetAdded", { n: notBooked.length, date: fmtDate(t.date), pass: passFilter ? ` · ${passFilter}` : "" })}</span>{notBooked.length > 0 && <button type="button" onClick={() => mut((d) => { const have = new Set((d.attendees ?? []).map((a) => a.n)); notBooked.forEach((b) => { if (!have.has(b.n)) (d.attendees ??= []).push({ n: b.n, age: b.age, consent: "pending", paid: false, em: false }); }); })} className="rounded-md border border-[#1d3a8f] px-2.5 py-1 text-[11px] font-bold" style={{ color: BLUE }}>{tr("p8ops.tpAddAllN", { n: notBooked.length })}</button>}</div>
                     {notBooked.length > 0 ? <div className="flex max-h-44 flex-col gap-1 overflow-y-auto [scrollbar-width:thin]">{notBooked.map((b) => (
                       <div key={b.n} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5">
                         <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[10.5px] font-extrabold" style={{ color: BLUE }}>{ini(b.n)}</span>
-                        <span className="flex-1 text-[12.5px] font-semibold">{b.n}{b.age ? <span className="font-normal text-[var(--ink-3)]"> · age {b.age}</span> : ""}</span>
-                        <button type="button" onClick={() => mut((d) => { if (!(d.attendees ?? []).some((a) => a.n === b.n)) (d.attendees ??= []).push({ n: b.n, age: b.age, consent: "pending", paid: false, em: false }); })} className="rounded-md border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>＋ Add</button>
+                        <span className="flex-1 text-[12.5px] font-semibold">{b.n}{b.age ? <span className="font-normal text-[var(--ink-3)]"> · {tr("p8ops.tpAgeN", { n: b.age })}</span> : ""}</span>
+                        <button type="button" onClick={() => mut((d) => { if (!(d.attendees ?? []).some((a) => a.n === b.n)) (d.attendees ??= []).push({ n: b.n, age: b.age, consent: "pending", paid: false, em: false }); })} className="rounded-md border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>{tr("p8ops.rtAdd")}</button>
                       </div>
-                    ))}</div> : <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">{booked.length === 0 ? "No children booked on this date for the chosen listing/pass." : "Everyone booked here is already on the trip."}</div>}
+                    ))}</div> : <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">{booked.length === 0 ? tr("p8ops.tpNoBookedOnDate") : tr("p8ops.tpEveryoneAdded")}</div>}
                   </div>
                   {(t.attendees ?? []).length > 0 ? <>
-                    <div className="text-[12px] text-[var(--ink-2)]"><b>{attendingOf(t).length}</b> consented · <b style={{ color: AMBER }}>{pendingOf(t).length}</b> pending · <b style={{ color: "var(--ink-3)" }}>{declinedOf(t).length}</b> not coming · <b>{paidCountOf(t)}/{(t.attendees ?? []).length - declinedOf(t).length}</b> paid</div>
+                    <div className="text-[12px] text-[var(--ink-2)]">{richT(tr, "p8ops.tpConsentSummary", { a: <b>{attendingOf(t).length}</b>, b: <b style={{ color: AMBER }}>{pendingOf(t).length}</b>, c: <b style={{ color: "var(--ink-3)" }}>{declinedOf(t).length}</b>, d: <b>{paidCountOf(t)}/{(t.attendees ?? []).length - declinedOf(t).length}</b> })}</div>
                     <div className="flex h-2 overflow-hidden rounded-full bg-[var(--line)]">
                       <div style={{ width: `${attendingOf(t).length / (t.attendees ?? []).length * 100}%`, background: GREEN }} /><div style={{ width: `${pendingOf(t).length / (t.attendees ?? []).length * 100}%`, background: "#f0b100" }} /><div style={{ width: `${declinedOf(t).length / (t.attendees ?? []).length * 100}%`, background: "#8a86a3" }} />
                     </div>
-                    {pendingOf(t).length > 0 && <div className="flex items-center gap-2"><button type="button" onClick={() => setRemindStamp(nowLabel())} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold" style={{ color: BLUE }}>Send request to {pendingOf(t).length} parent{pendingOf(t).length > 1 ? "s" : ""}</button>{remindStamp && <span className="text-[11.5px] font-semibold" style={{ color: GREEN }}>✓ requested {remindStamp}</span>}</div>}
+                    {pendingOf(t).length > 0 && <div className="flex items-center gap-2"><button type="button" onClick={() => setRemindStamp(nowLabel())} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold" style={{ color: BLUE }}>{tr("p8ops.tpSendRequestN", { n: pendingOf(t).length })}</button>{remindStamp && <span className="text-[11.5px] font-semibold" style={{ color: GREEN }}>{tr("p8ops.tpRequestedAt", { time: remindStamp })}</span>}</div>}
                     <div className="flex flex-col gap-1.5">{(t.attendees ?? []).map((c, i) => {
-                      const cs = c.consent ?? "pending"; const tone = cs === "granted" ? { l: "Consented", bg: "#e7f6ee", fg: GREEN } : cs === "pending" ? { l: "Pending", bg: "#fdf3d8", fg: AMBER } : { l: "Not coming", bg: "#f0eef4", fg: "#8a86a3" };
+                      const cs = c.consent ?? "pending"; const tone = cs === "granted" ? { l: tr("p8ops.tpConsented"), bg: "#e7f6ee", fg: GREEN } : cs === "pending" ? { l: tr("p8ops.tpPending"), bg: "#fdf3d8", fg: AMBER } : { l: tr("p8ops.tpNotComing"), bg: "#f0eef4", fg: "#8a86a3" };
                       return (
                         <div key={i} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2">
                           <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[11px] font-extrabold" style={{ color: BLUE }}>{ini(c.n)}</span>
-                          <div className="min-w-[130px] flex-1"><div className="text-[12.5px] font-extrabold">{c.n}</div><div className="text-[11px] text-[var(--ink-3)]">{c.age ? `Age ${c.age} · ` : ""}{c.em ? "✓ emergency contact" : "⚠ no contact"}{c.med ? ` · ⚠ ${c.med}` : ""}</div></div>
-                          <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={c.paid ? { background: "#e7f6ee", color: GREEN } : { background: "var(--panel)", color: "var(--ink-3)" }}>{c.paid ? `Paid £${t.cost}` : "Unpaid"}</span>
+                          <div className="min-w-[130px] flex-1"><div className="text-[12.5px] font-extrabold">{c.n}</div><div className="text-[11px] text-[var(--ink-3)]">{c.age ? `${tr("p8ops.tpAgeN", { n: c.age }).replace(/^./, (ch) => ch.toUpperCase())} · ` : ""}{c.em ? tr("p8ops.tpEmContactOk") : tr("p8ops.tpNoContact")}{c.med ? ` · ⚠ ${c.med}` : ""}</div></div>
+                          <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={c.paid ? { background: "#e7f6ee", color: GREEN } : { background: "var(--panel)", color: "var(--ink-3)" }}>{c.paid ? tr("p8ops.tpPaidAmt", { cost: t.cost ?? "" }) : tr("p8ops.tpUnpaid")}</span>
                           <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={{ background: tone.bg, color: tone.fg }}>{tone.l}</span>
-                          {cs === "pending" && (c.paid ? <button type="button" onClick={() => mut((d) => { d.attendees![i].consent = "granted"; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>Record consent</button> : <button type="button" onClick={() => mut((d) => { d.attendees![i].paid = true; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>Take payment</button>)}
-                          {cs !== "declined" ? <button type="button" onClick={() => mut((d) => { d.attendees![i].consent = "declined"; })} className="px-1 text-[11px] text-[var(--ink-3)] hover:text-[#c02636]" title="Mark not coming">✕</button> : <button type="button" onClick={() => mut((d) => { d.attendees![i].consent = "pending"; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">Re-add</button>}
+                          {cs === "pending" && (c.paid ? <button type="button" onClick={() => mut((d) => { d.attendees![i].consent = "granted"; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>{tr("p8ops.tpRecordConsent")}</button> : <button type="button" onClick={() => mut((d) => { d.attendees![i].paid = true; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>{tr("p8ops.tpTakePayment")}</button>)}
+                          {cs !== "declined" ? <button type="button" onClick={() => mut((d) => { d.attendees![i].consent = "declined"; })} className="px-1 text-[11px] text-[var(--ink-3)] hover:text-[#c02636]" title={tr("p8ops.tpMarkNotComing")}>✕</button> : <button type="button" onClick={() => mut((d) => { d.attendees![i].consent = "pending"; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">{tr("p8ops.tpReadd")}</button>}
                         </div>
                       );
                     })}</div>
-                    <div className="rounded-lg bg-[#f4f8ff] px-3 py-2 text-[11px] text-[var(--ink-2)]">📨 Parents confirm consent & pay in their area — payment runs through your connected processor (Stripe Connect). Collecting consent from parents is set up by Amir.</div>
-                  </> : <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">No children on the trip yet — {booked.length > 0 ? "add the booked children above." : "no bookings found on this date."}</div>}
+                    <div className="rounded-lg bg-[#f4f8ff] px-3 py-2 text-[11px] text-[var(--ink-2)]">{tr("p8ops.tpPaymentNote")}</div>
+                  </> : <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">{booked.length > 0 ? tr("p8ops.tpNoChildrenAddAbove") : tr("p8ops.tpNoChildrenNoBookings")}</div>}
                 </div>}
 
                 {/* ── Step 5: Sign-off ── */}
                 {n === 5 && <div className="flex flex-col gap-2.5">
                   <div className="grid gap-2 sm:grid-cols-3">
-                    <div className="rounded-xl border-2 px-3 py-2" style={{ borderColor: `color-mix(in srgb,${GREEN} 40%,transparent)`, background: "#f2fbf6" }}>{fl("Prepared by")}<div className="text-[13px] font-extrabold">{t.lead || "Trip lead"}</div><div className="text-[11px] text-[var(--ink-3)]">Trip lead</div></div>
-                    <div className="rounded-xl border border-[var(--line)] px-3 py-2">{fl("Checks")}<div className="text-[13px] font-extrabold">RA · ratio · consents</div><div className="text-[11px] text-[var(--ink-3)]">{raDone(t) && staffOk(t) && permsOk(t) ? "All clear" : "In progress"}</div></div>
-                    <div className="rounded-xl border border-[var(--line)] px-3 py-2">{fl("Approved by")}<div className="text-[13px] font-extrabold">{s5Ok(t) ? t.signoff?.approvedBy : "Awaiting manager"}</div><div className="text-[11px] text-[var(--ink-3)]">{s5Ok(t) ? t.signoff?.approvedAt : "Line manager"}</div></div>
+                    <div className="rounded-xl border-2 px-3 py-2" style={{ borderColor: `color-mix(in srgb,${GREEN} 40%,transparent)`, background: "#f2fbf6" }}>{fl(tr("p8ops.tpPreparedBy"))}<div className="text-[13px] font-extrabold">{t.lead || tr("p8ops.tpTripLead")}</div><div className="text-[11px] text-[var(--ink-3)]">{tr("p8ops.tpTripLead")}</div></div>
+                    <div className="rounded-xl border border-[var(--line)] px-3 py-2">{fl(tr("p8ops.tpChecks"))}<div className="text-[13px] font-extrabold">{tr("p8ops.tpChecksVal")}</div><div className="text-[11px] text-[var(--ink-3)]">{raDone(t) && staffOk(t) && permsOk(t) ? tr("p8ops.tpAllClear") : tr("p8ops.tpInProgress")}</div></div>
+                    <div className="rounded-xl border border-[var(--line)] px-3 py-2">{fl(tr("p8ops.tpApprovedBy"))}<div className="text-[13px] font-extrabold">{s5Ok(t) ? t.signoff?.approvedBy : tr("p8ops.tpAwaitingMgr")}</div><div className="text-[11px] text-[var(--ink-3)]">{s5Ok(t) ? t.signoff?.approvedAt : tr("p8ops.tpLineManager")}</div></div>
                   </div>
-                  {s5Ok(t) ? <div className="rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Approved by {t.signoff?.approvedBy} on {t.signoff?.approvedAt}. The trip is cleared to run.</div>
-                    : <><Button variant="solid" disabled={!canSubmit(t)} onClick={() => mut((d) => { d.signoff = { approvedBy: `${me} (Manager)`, approvedAt: `${fmtDate(todayIso())}, ${nowLabel()}`, submitted: true }; })}>Approve trip (manager)</Button>{!canSubmit(t) && <div className="rounded-lg bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold" style={{ color: AMBER }}>⚠️ Cannot approve yet — outstanding: {[!s1Ok(t) && "trip details", !raDone(t) && "risk assessment", !staffOk(t) && "staffing/ratio", !permsOk(t) && `${pendingOf(t).length} consent${pendingOf(t).length === 1 ? "" : "s"}`].filter(Boolean).join(", ")}.</div>}</>}
+                  {s5Ok(t) ? <div className="rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>{tr("p8ops.tpApprovedMsg", { name: t.signoff?.approvedBy ?? "", when: t.signoff?.approvedAt ?? "" })}</div>
+                    : <><Button variant="solid" disabled={!canSubmit(t)} onClick={() => mut((d) => { d.signoff = { approvedBy: `${me} (Manager)`, approvedAt: `${fmtDate(todayIso())}, ${nowLabel()}`, submitted: true }; })}>{tr("p8ops.tpApproveBtn")}</Button>{!canSubmit(t) && <div className="rounded-lg bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold" style={{ color: AMBER }}>{tr("p8ops.tpCannotApprove", { list: [!s1Ok(t) && tr("p8ops.tpOutDetails"), !raDone(t) && tr("p8ops.tpOutRa"), !staffOk(t) && tr("p8ops.tpOutStaffing"), !permsOk(t) && tr("p8ops.tpOutConsents", { n: pendingOf(t).length })].filter(Boolean).join(", ") })}</div>}</>}
                 </div>}
 
                 {/* ── Step 6: Head counts ── */}
-                {n === 6 && (locked ? <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">Head counts unlock once the trip is approved (Step 5).</div> : <div className="flex flex-col gap-2">
-                  <div className="text-[12px] text-[var(--ink-2)]">Children on trip: <b>{attendingOf(t).length}</b></div>
+                {n === 6 && (locked ? <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">{tr("p8ops.tpHeadLocked")}</div> : <div className="flex flex-col gap-2">
+                  <div className="text-[12px] text-[var(--ink-2)]">{richT(tr, "p8ops.tpChildrenOnTrip", { n: <b>{attendingOf(t).length}</b> })}</div>
                   {(t.checkpoints ?? []).map((c, i) => {
                     const go = attendingOf(t).length, counted = c.counted != null, ok = counted && (c.counted ?? 0) >= go;
                     return (
                       <div key={i} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2">
-                        <input value={c.n} onChange={(e) => edit(`checkpoints.${i}.n`, e.target.value, "Checkpoint")} className="min-w-[120px] flex-1 rounded-md border border-[var(--line)] px-2 py-1 text-[12.5px] font-bold outline-none focus:border-[#1d3a8f]" />
+                        <input value={c.n} onChange={(e) => edit(`checkpoints.${i}.n`, e.target.value, tr("p8ops.tpLblCheckpoint"))} className="min-w-[120px] flex-1 rounded-md border border-[var(--line)] px-2 py-1 text-[12.5px] font-bold outline-none focus:border-[#1d3a8f]" />
                         <input type="number" min={0} value={counted ? c.counted! : go} disabled={counted} onChange={(e) => mut((d) => { d.checkpoints![i].counted = Math.max(0, parseInt(e.target.value, 10) || 0); })} className="w-16 rounded-md border border-[var(--line)] px-2 py-1 text-center text-[13px] font-extrabold disabled:opacity-60" id={`cp-${i}`} />
-                        {counted ? <><span className="rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={ok ? { background: "#e7f6ee", color: GREEN } : { background: "#fdebec", color: RED }}>{ok ? `✓ all ${c.counted}` : `⚠ ${c.counted}/${go}`}</span><button type="button" onClick={() => mut((d) => { d.checkpoints![i].counted = null; d.checkpoints![i].time = undefined; })} className="px-1 text-[var(--ink-3)]" title="Recount">↻</button></> : <button type="button" onClick={() => { const el = document.getElementById(`cp-${i}`) as HTMLInputElement | null; const v = el ? (parseInt(el.value, 10) || go) : go; mut((d) => { d.checkpoints![i].counted = v; d.checkpoints![i].time = nowLabel(); }); }} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>Confirm count</button>}
+                        {counted ? <><span className="rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={ok ? { background: "#e7f6ee", color: GREEN } : { background: "#fdebec", color: RED }}>{ok ? tr("p8ops.tpAllCountedN", { n: c.counted ?? 0 }) : `⚠ ${c.counted}/${go}`}</span><button type="button" onClick={() => mut((d) => { d.checkpoints![i].counted = null; d.checkpoints![i].time = undefined; })} className="px-1 text-[var(--ink-3)]" title={tr("p8ops.tpRecount")}>↻</button></> : <button type="button" onClick={() => { const el = document.getElementById(`cp-${i}`) as HTMLInputElement | null; const v = el ? (parseInt(el.value, 10) || go) : go; mut((d) => { d.checkpoints![i].counted = v; d.checkpoints![i].time = nowLabel(); }); }} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>{tr("p8ops.tpConfirmCount")}</button>}
                       </div>
                     );
                   })}
-                  <button type="button" onClick={() => mut((d) => { (d.checkpoints ??= []).push({ n: "New checkpoint", counted: null }); })} className="self-start rounded-lg border-2 border-dashed border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">＋ Add checkpoint</button>
-                  <div className="rounded-lg bg-[#fdebec] px-3 py-2 text-[12px] font-semibold" style={{ color: RED }}>☎ Emergency on the day: trip lead {t.leadPhone || "—"} · office · 999. Phone tree & first-aider with the group.</div>
+                  <button type="button" onClick={() => mut((d) => { (d.checkpoints ??= []).push({ n: "New checkpoint", counted: null }); })} className="self-start rounded-lg border-2 border-dashed border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{tr("p8ops.tpAddCheckpoint")}</button>
+                  <div className="rounded-lg bg-[#fdebec] px-3 py-2 text-[12px] font-semibold" style={{ color: RED }}>{tr("p8ops.tpEmergencyStep6", { phone: t.leadPhone || "—" })}</div>
                 </div>)}
 
                 {/* ── Step 7: Return & debrief ── */}
                 {n === 7 && <div className="flex flex-col gap-2.5">
-                  <label className="flex flex-col gap-1.5">{fl("Debrief notes")}<textarea value={t.notes ?? ""} onChange={(e) => edit("notes", e.target.value, "Debrief notes")} placeholder="Debrief — what went well, any incidents, anything to change next time…" className={`${taCls} min-h-[72px]`} /></label>
-                  {t.returned ? <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Trip returned and closed — all children accounted for and handed back. You can still edit the debrief above.<button type="button" onClick={() => mut((d) => { d.returned = false; d.status = "planned"; })} className="ms-auto text-[11.5px] font-bold underline" style={{ color: GREEN }}>Re-open trip</button></div>
-                    : s6Ok(t) ? <Button variant="solid" onClick={() => mut((d) => { d.returned = true; d.status = "completed"; })}>Mark trip returned & complete</Button>
-                    : <div className="rounded-lg bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold" style={{ color: AMBER }}>Complete every head-count checkpoint (Step 6) to close the trip — you can still write the debrief now.</div>}
+                  <label className="flex flex-col gap-1.5">{fl(tr("p8ops.tpDebrief"))}<textarea value={t.notes ?? ""} onChange={(e) => edit("notes", e.target.value, tr("p8ops.tpDebrief"))} placeholder={tr("p8ops.tpDebriefPh")} className={`${taCls} min-h-[72px]`} /></label>
+                  {t.returned ? <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>{tr("p8ops.tpReturnedClosed")}<button type="button" onClick={() => mut((d) => { d.returned = false; d.status = "planned"; })} className="ms-auto text-[11.5px] font-bold underline" style={{ color: GREEN }}>{tr("p8ops.tpReopenTrip")}</button></div>
+                    : s6Ok(t) ? <Button variant="solid" onClick={() => mut((d) => { d.returned = true; d.status = "completed"; })}>{tr("p8ops.tpMarkReturned")}</Button>
+                    : <div className="rounded-lg bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold" style={{ color: AMBER }}>{tr("p8ops.tpCompleteCheckpoints")}</div>}
                 </div>}
 
                 {/* ── Step 4 (part 2): parent letter — consent & payment ── */}
@@ -650,31 +661,31 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                   const msg = t.parentMsg && t.parentMsg.trim() ? t.parentMsg : defaultParentMsg(t, providerName);
                   return (
                     <div className="mt-1 flex flex-col gap-3 border-t border-[var(--line)] pt-4">
-                      <div className="flex items-center gap-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>✉️ Letter to parents <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">optional</span></div>
-                      <div className="rounded-lg bg-[#f4f8ff] px-3 py-2 text-[12px] text-[var(--ink-2)]">Skip this if parents consent/pay when they book. Choose what to ask for below — the letter and its buttons adapt.</div>
-                      <div>{fl("What is this letter asking parents to do?")}
+                      <div className="flex items-center gap-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{tr("p8ops.tpLetterTitle")} <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("p8ops.tpOptional")}</span></div>
+                      <div className="rounded-lg bg-[#f4f8ff] px-3 py-2 text-[12px] text-[var(--ink-2)]">{tr("p8ops.tpLetterSkip")}</div>
+                      <div>{fl(tr("p8ops.tpLetterAsk"))}
                         <div className="mt-1 flex flex-wrap gap-2">
-                          <button type="button" onClick={() => mut((d) => { d.askConsent = d.askConsent === false; })} className="flex items-center gap-2 rounded-lg border-2 px-3 py-1.5 text-[12px] font-bold transition-colors" style={t.askConsent !== false ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t.askConsent !== false ? "✓" : "○"} Ask for consent (permission tick)</button>
-                          <button type="button" onClick={() => mut((d) => { d.askPay = d.askPay === false; })} className="flex items-center gap-2 rounded-lg border-2 px-3 py-1.5 text-[12px] font-bold transition-colors" style={t.askPay !== false ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t.askPay !== false ? "✓" : "○"} Ask for payment</button>
+                          <button type="button" onClick={() => mut((d) => { d.askConsent = d.askConsent === false; })} className="flex items-center gap-2 rounded-lg border-2 px-3 py-1.5 text-[12px] font-bold transition-colors" style={t.askConsent !== false ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t.askConsent !== false ? "✓" : "○"} {tr("p8ops.tpAskConsent")}</button>
+                          <button type="button" onClick={() => mut((d) => { d.askPay = d.askPay === false; })} className="flex items-center gap-2 rounded-lg border-2 px-3 py-1.5 text-[12px] font-bold transition-colors" style={t.askPay !== false ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t.askPay !== false ? "✓" : "○"} {tr("p8ops.tpAskPayment")}</button>
                         </div>
                       </div>
                       <div className="grid gap-2 sm:grid-cols-2">
-                        <label className="flex flex-col gap-1">{fl(t.askPay !== false ? "Ask parents to pay by" : "Ask parents to respond by")}<input type="date" value={t.payBy ?? ""} min={todayIso()} max={t.date} onChange={(e) => edit("payBy", e.target.value, "Pay-by date")} className={inputCls} /></label>
-                        {t.askPay !== false && <div className="flex flex-col gap-1">{fl("Cost per child")}<div className="rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-[12.5px] font-bold">£{t.cost || "0.00"} <span className="font-normal text-[var(--ink-3)]">· set in Step 1</span></div></div>}
+                        <label className="flex flex-col gap-1">{fl(t.askPay !== false ? tr("p8ops.tpPayBy") : tr("p8ops.tpRespondBy"))}<input type="date" value={t.payBy ?? ""} min={todayIso()} max={t.date} onChange={(e) => edit("payBy", e.target.value, tr("p8ops.tpLblPayBy"))} className={inputCls} /></label>
+                        {t.askPay !== false && <div className="flex flex-col gap-1">{fl(tr("p8ops.tpCostPerChildLbl"))}<div className="rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-[12.5px] font-bold">£{t.cost || "0.00"} <span className="font-normal text-[var(--ink-3)]">{tr("p8ops.tpSetInStep1")}</span></div></div>}
                       </div>
                       <div>
-                        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">{fl("Message to parents (editable)")}<button type="button" onClick={() => edit("parentMsg", defaultParentMsg(t, providerName), "Parent message")} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">↺ Reset to template</button></div>
-                        <textarea value={msg} onChange={(e) => edit("parentMsg", e.target.value, "Parent message")} className={`${inputCls} min-h-[180px] [field-sizing:content] resize-y leading-[1.6]`} />
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1"><span className="text-[10.5px] font-semibold text-[var(--ink-3)]">Merge fields:</span>{MERGE_FIELDS.map((f) => <code key={f} className="rounded bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] text-[#1d3a8f]">{f}</code>)}</div>
+                        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">{fl(tr("p8ops.tpMsgEditable"))}<button type="button" onClick={() => edit("parentMsg", defaultParentMsg(t, providerName), tr("p8ops.tpLblParentMsg"))} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{tr("p8ops.tpResetTemplate")}</button></div>
+                        <textarea value={msg} onChange={(e) => edit("parentMsg", e.target.value, tr("p8ops.tpLblParentMsg"))} className={`${inputCls} min-h-[180px] [field-sizing:content] resize-y leading-[1.6]`} />
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1"><span className="text-[10.5px] font-semibold text-[var(--ink-3)]">{tr("p8ops.tpMergeFields")}</span>{MERGE_FIELDS.map((f) => <code key={f} className="rounded bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] text-[#1d3a8f]">{f}</code>)}</div>
                       </div>
                       <div>
-                        {fl("Preview — what parents receive")}
+                        {fl(tr("p8ops.tpPreview"))}
                         <div className="mt-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
                           <div className="whitespace-pre-line text-[12.5px] leading-[1.6] text-[var(--ink-2)]">{resolveMsg(msg, t, providerName)}</div>
                           <div className="mt-2.5 flex flex-wrap gap-2">
-                            {t.askConsent !== false && <div className="inline-flex items-center gap-2 rounded-lg border-2 border-[#0f7a43]/30 bg-[#e7f6ee] px-3 py-1.5 text-[12px] font-extrabold" style={{ color: GREEN }}>☑ I give permission for my child to attend {t.destination || "the trip"}</div>}
-                            {t.askPay !== false && <div className="inline-flex items-center gap-2 rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[12px] font-extrabold" style={{ color: BLUE }}>💳 Pay £{t.cost || "0.00"}{t.payBy ? ` · by ${fmtDate(t.payBy)}` : ""}</div>}
-                            {t.askConsent === false && t.askPay === false && <div className="text-[11.5px] text-[var(--ink-3)]">Nothing is being requested — turn on consent and/or payment above.</div>}
+                            {t.askConsent !== false && <div className="inline-flex items-center gap-2 rounded-lg border-2 border-[#0f7a43]/30 bg-[#e7f6ee] px-3 py-1.5 text-[12px] font-extrabold" style={{ color: GREEN }}>{tr("p8ops.tpGivePermission", { dest: t.destination || tr("p8ops.tpTheTrip") })}</div>}
+                            {t.askPay !== false && <div className="inline-flex items-center gap-2 rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[12px] font-extrabold" style={{ color: BLUE }}>{tr("p8ops.tpPayPreview", { cost: t.cost || "0.00" })}{t.payBy ? tr("p8ops.tpByDate", { date: fmtDate(t.payBy) }) : ""}</div>}
+                            {t.askConsent === false && t.askPay === false && <div className="text-[11.5px] text-[var(--ink-3)]">{tr("p8ops.tpNothingRequested")}</div>}
                           </div>
                         </div>
                       </div>
@@ -684,27 +695,27 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                         const sendAll = () => mut((d) => { (d.attendees ?? []).forEach((a) => { if (a.consent !== "declined") a.sent = true; }); d.parentMsgSentAt = `${fmtDate(todayIso())}, ${nowLabel()}`; });
                         return (
                           <div>
-                            <div className="mb-1 flex flex-wrap items-center justify-between gap-2">{fl("Who this goes to")}<span className="text-[11px] font-semibold" style={{ color: sentN === recips.length && recips.length > 0 ? GREEN : "var(--ink-3)" }}>{sentN}/{recips.length} sent</span></div>
-                            {recips.length === 0 ? <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">No children on the trip yet — add them above first.</div>
+                            <div className="mb-1 flex flex-wrap items-center justify-between gap-2">{fl(tr("p8ops.tpWhoGoesTo"))}<span className="text-[11px] font-semibold" style={{ color: sentN === recips.length && recips.length > 0 ? GREEN : "var(--ink-3)" }}>{tr("p8ops.tpSentN", { n: sentN, total: recips.length })}</span></div>
+                            {recips.length === 0 ? <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">{tr("p8ops.tpNoChildrenAddFirst")}</div>
                               : <div className="flex flex-col gap-1">
                                 {recips.map((a, i) => {
                                   const idx = (t.attendees ?? []).indexOf(a);
                                   return (
                                     <div key={i} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5">
                                       <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[10.5px] font-extrabold" style={{ color: BLUE }}>{ini(a.n)}</span>
-                                      <span className="flex-1 text-[12.5px] font-semibold">{a.n}<span className="font-normal text-[var(--ink-3)]"> · parent</span></span>
-                                      {a.sent ? <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: "#e7f6ee", color: GREEN }}>✓ Sent</span> : <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: "#fdf3d8", color: AMBER }}>Not sent</span>}
-                                      <button type="button" onClick={() => mut((d) => { if (d.attendees?.[idx]) d.attendees[idx].sent = true; d.parentMsgSentAt = `${fmtDate(todayIso())}, ${nowLabel()}`; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>{a.sent ? "Resend" : "Send"}</button>
+                                      <span className="flex-1 text-[12.5px] font-semibold">{a.n}<span className="font-normal text-[var(--ink-3)]">{tr("p8ops.tpParentSuffix")}</span></span>
+                                      {a.sent ? <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: "#e7f6ee", color: GREEN }}>{tr("p8ops.tpSentTick")}</span> : <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: "#fdf3d8", color: AMBER }}>{tr("p8ops.tpNotSent")}</span>}
+                                      <button type="button" onClick={() => mut((d) => { if (d.attendees?.[idx]) d.attendees[idx].sent = true; d.parentMsgSentAt = `${fmtDate(todayIso())}, ${nowLabel()}`; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>{a.sent ? tr("p8ops.tpResend") : tr("p8ops.tpSend")}</button>
                                     </div>
                                   );
                                 })}
                               </div>}
                             {recips.length > 0 && <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                              <Button variant="solid" onClick={sendAll}>{sentN > 0 ? "Resend to all" : "Send to all parents & generate pay links"}</Button>
-                              {sentN < recips.length && sentN > 0 && <button type="button" onClick={() => mut((d) => { (d.attendees ?? []).forEach((a) => { if (a.consent !== "declined" && !a.sent) a.sent = true; }); d.parentMsgSentAt = `${fmtDate(todayIso())}, ${nowLabel()}`; })} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold" style={{ color: BLUE }}>Send to {recips.length - sentN} not-yet-sent</button>}
-                              {t.parentMsgSentAt && <span className="text-[11.5px] font-semibold" style={{ color: GREEN }}>✓ last sent {t.parentMsgSentAt}</span>}
+                              <Button variant="solid" onClick={sendAll}>{sentN > 0 ? tr("p8ops.tpResendAll") : tr("p8ops.tpSendAll")}</Button>
+                              {sentN < recips.length && sentN > 0 && <button type="button" onClick={() => mut((d) => { (d.attendees ?? []).forEach((a) => { if (a.consent !== "declined" && !a.sent) a.sent = true; }); d.parentMsgSentAt = `${fmtDate(todayIso())}, ${nowLabel()}`; })} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold" style={{ color: BLUE }}>{tr("p8ops.tpSendNotYet", { n: recips.length - sentN })}</button>}
+                              {t.parentMsgSentAt && <span className="text-[11.5px] font-semibold" style={{ color: GREEN }}>{tr("p8ops.tpLastSent", { time: t.parentMsgSentAt })}</span>}
                             </div>}
-                            <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Emails the message + a secure pay link to each parent and adds it to their profile — the sending, link and profile entry are wired up by your backend.</div>
+                            <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{tr("p8ops.tpEmailsNote")}</div>
                           </div>
                         );
                       })()}
@@ -718,21 +729,23 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
       </div>
       {/* slideshow nav */}
       <div className="mt-3 flex items-center justify-between gap-2">
-        <Button disabled={open <= 1} onClick={() => setOpen(Math.max(1, open - 1))}>← Previous</Button>
-        <span className="hidden text-[11.5px] font-semibold text-[var(--ink-3)] sm:block">Step {open} of 7 · {TITLES[open]}</span>
-        <Button variant="solid" disabled={open >= 7} onClick={() => setOpen(Math.min(7, open + 1))}>Next →</Button>
+        <Button disabled={open <= 1} onClick={() => setOpen(Math.max(1, open - 1))}>{tr("p8ops.tpPrev")}</Button>
+        <span className="hidden text-[11.5px] font-semibold text-[var(--ink-3)] sm:block">{tr("p8ops.tpStepNav", { n: open, title: tr(TITLE_KEYS[open]) })}</span>
+        <Button variant="solid" disabled={open >= 7} onClick={() => setOpen(Math.min(7, open + 1))}>{tr("p8ops.tpNext")}</Button>
       </div>
 
       {error && <div className="mt-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3">
-        <div className="flex flex-wrap gap-2"><Button onClick={onClose}>← Back to trips</Button>{isEdit && <Button variant={t.status === "cancelled" ? undefined : "danger"} disabled={busy} onClick={cancelTrip}>{t.status === "cancelled" ? "Reinstate trip" : "Cancel trip"}</Button>}</div>
-        <div className="flex gap-2"><Button disabled={busy} onClick={() => save(false)}>{busy ? "Saving…" : "Save"}</Button><Button variant="solid" disabled={busy} onClick={() => save(true)}>{busy ? "Saving…" : "Save & close"}</Button></div>
+        <div className="flex flex-wrap gap-2"><Button onClick={onClose}>{tr("p8ops.tpBackToTrips")}</Button>{isEdit && <Button variant={t.status === "cancelled" ? undefined : "danger"} disabled={busy} onClick={cancelTrip}>{t.status === "cancelled" ? tr("p8ops.tpReinstateTrip") : tr("p8ops.tpCancelTrip")}</Button>}</div>
+        <div className="flex gap-2"><Button disabled={busy} onClick={() => save(false)}>{busy ? tr("p8ops.tpSaving") : tr("p8ops.rtSave")}</Button><Button variant="solid" disabled={busy} onClick={() => save(true)}>{busy ? tr("p8ops.tpSaving") : tr("p8ops.tpSaveClose")}</Button></div>
       </div>
     </Card>
   );
 }
 
 export function TripsApp() {
+  const tr = useT();
+  const { locale } = useI18n();
   const { settings } = useSettings();
   // Who can plan a trip. Operators (company/franchise/freelancer) always can; on
   // the staff portal we honour the setting — "all" lets staff plan, otherwise
@@ -752,27 +765,27 @@ export function TripsApp() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
 
-  const refresh = useCallback(() => { apiGet<Trip[]>("/api/trips").then((t) => { setTrips(t); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load")); }, []);
+  const refresh = useCallback(() => { apiGet<Trip[]>("/api/trips").then((t) => { setTrips(t); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : tr("p8ops.dbFailedLoad"))); }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
   useRealtime(["trips"], refresh);
 
-  async function remove(t: Trip) { if (!confirm(`Delete the trip to ${t.destination}?`)) return; try { await api(`/api/trips/${encodeURIComponent(t.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
-  async function setStatus(t: Trip, status: Status) { if (status === "cancelled" && !confirm(`Cancel the trip to ${t.destination}? It stays on record marked Cancelled — you can reinstate it later.`)) return; try { await apiPut(`/api/trips/${encodeURIComponent(t.id)}`, { status, returned: false }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  async function remove(t: Trip) { if (!confirm(tr("p8ops.tpConfirmDelete", { dest: t.destination }))) return; try { await api(`/api/trips/${encodeURIComponent(t.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : tr("p8ops.tpFailed")); } }
+  async function setStatus(t: Trip, status: Status) { if (status === "cancelled" && !confirm(tr("p8ops.tpConfirmCancel", { dest: t.destination }))) return; try { await apiPut(`/api/trips/${encodeURIComponent(t.id)}`, { status, returned: false }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : tr("p8ops.tpFailed")); } }
   // Quick head count from the card — confirm the next checkpoint without opening the planner.
   async function quickCount(t: Trip, count: number) {
     const cps = (t.checkpoints ?? []).map((c) => ({ ...c }));
     const next = cps.findIndex((c) => c.counted == null);
     if (next < 0) return;
     cps[next] = { ...cps[next], counted: count, time: nowLabel() };
-    try { await apiPut(`/api/trips/${encodeURIComponent(t.id)}`, { checkpoints: cps }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+    try { await apiPut(`/api/trips/${encodeURIComponent(t.id)}`, { checkpoints: cps }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : tr("p8ops.tpFailed")); }
   }
 
   const all = useMemo(() => trips ?? [], [trips]);
   const upcoming = all.filter((t) => !t.returned && t.status !== "cancelled" && t.date >= todayIso()).length;
   const thisMonth = all.filter((t) => (t.date ?? "").slice(0, 7) === todayIso().slice(0, 7)).length;
   const needAction = all.filter((t) => t.status === "planned" && !t.returned && !canSubmit(t)).length;
-  const tiles: [string, number][] = [["Upcoming", upcoming], ["This month", thisMonth], ["Need action", needAction], ["Total", all.length]];
+  const tiles: [string, number][] = [[tr("p8ops.tpUpcoming"), upcoming], [tr("p8ops.tpThisMonth"), thisMonth], [tr("p8ops.tpNeedAction"), needAction], [tr("p8ops.tpTotal"), all.length]];
   const ql = q.trim().toLowerCase();
   const shown = useMemo(() => all.filter((t) => (!ql || t.destination.toLowerCase().includes(ql) || (t.childNames ?? []).join(" ").toLowerCase().includes(ql)) && (!statusFilter || t.status === statusFilter)).sort((a, b) => (`${b.date}` < `${a.date}` ? -1 : 1)), [all, ql, statusFilter]);
 
@@ -781,15 +794,15 @@ export function TripsApp() {
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🚌</span>Trips &amp; visits</div>
-            <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">Plan an off-site visit end to end — details &amp; itinerary, risk assessment, ratios, parent consent, line-manager sign-off and live head counts.</p>
+            <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🚌</span>{tr("p8ops.tpTitle")}</div>
+            <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">{tr("p8ops.tpLede")}</p>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             <TourLauncher view="trips" compact />
             <SettingsLink />
             {!planning && (canPlan
-              ? <button type="button" onClick={() => setPlanning({})} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Plan a trip</button>
-              : <span className="rounded-full bg-white/15 px-3 py-1.5 text-[11.5px] font-semibold text-white/85 backdrop-blur-sm" title="Set in Setup → Trips">Only leads &amp; managers can plan trips</span>)}
+              ? <button type="button" onClick={() => setPlanning({})} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">{tr("p8ops.tpPlan")}</button>
+              : <span className="rounded-full bg-white/15 px-3 py-1.5 text-[11.5px] font-semibold text-white/85 backdrop-blur-sm" title={tr("p8ops.tpSetInSetup")}>{tr("p8ops.tpOnlyLeads")}</span>)}
           </div>
         </div>
         {trips && (
@@ -800,20 +813,20 @@ export function TripsApp() {
       </div>
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
-      {planning && <TripPlanner key={planning.trip?.id ?? "new"} existing={planning.trip} ratioTarget={ratioTarget} providerName={settings.providerName || "Your provider"} onSaved={refresh} onClose={() => setPlanning(null)} />}
+      {planning && <TripPlanner key={planning.trip?.id ?? "new"} existing={planning.trip} ratioTarget={ratioTarget} providerName={settings.providerName || tr("p8ops.tpYourProvider")} onSaved={refresh} onClose={() => setPlanning(null)} />}
 
       {!planning && trips && all.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          {([["", "All"], ["planned", "Planned"], ["completed", "Completed"], ["cancelled", "Cancelled"]] as [string, string][]).map(([id, label]) => (
+          {([["", tr("p8ops.tpAll")], ["planned", tr("p8ops.tpStatPlanned")], ["completed", tr("p8ops.tpStatCompleted")], ["cancelled", tr("p8ops.tpStatCancelled")]] as [string, string][]).map(([id, label]) => (
             <button key={label} type="button" onClick={() => setStatusFilter(id)} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors" style={statusFilter === id ? { borderColor: BLUE, background: BLUE, color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{label}</button>
           ))}
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search destination or child…" className="ms-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("p8ops.tpSearchPh")} className="ms-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
         </div>
       )}
 
       {planning ? null
-        : !trips ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-        : shown.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{all.length === 0 ? "No trips planned yet — plan your first off-site visit." : "No trips match."}</Card>
+        : !trips ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{tr("p8ops.shLoading")}</div>
+        : shown.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{all.length === 0 ? tr("p8ops.tpNone") : tr("p8ops.tpNoMatch")}</Card>
         : (
           <div className="flex flex-col gap-2.5">{shown.map((t) => {
             const st = STAT[t.status] ?? STAT.planned, pct = readinessOf(t), sp = statusPill(t);
@@ -826,26 +839,26 @@ export function TripsApp() {
                   <Ring pct={pct} />
                   <div className="min-w-[200px] flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{t.destination || "Untitled trip"}</span>
-                      <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={{ background: `color-mix(in srgb,${sp[1]} 14%,transparent)`, color: `color-mix(in srgb,${sp[1]} 74%,#000)` }}>{sp[0]}</span>
+                      <span className="text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{t.destination || tr("p8ops.tpUntitled")}</span>
+                      <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={{ background: `color-mix(in srgb,${sp[1]} 14%,transparent)`, color: `color-mix(in srgb,${sp[1]} 74%,#000)` }}>{tr(sp[0])}</span>
                     </div>
-                    <p className="mt-1 text-[12.5px] text-[var(--ink-2)]">{fmtDate(t.date)}{t.transport ? ` · ${t.transport}` : ""}{t.departTime ? ` · depart ${t.departTime}` : ""}</p>
+                    <p className="mt-1 text-[12.5px] text-[var(--ink-2)]">{fmtDate(t.date)}{t.transport ? ` · ${TRANSPORT_KEY[t.transport] ? tr(TRANSPORT_KEY[t.transport]) : t.transport}` : ""}{t.departTime ? ` · ${tr("p8ops.tpDepartT", { time: t.departTime })}` : ""}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      <Badge tone={{ bg: "#eef4fd", fg: BLUE }}>{kids} children</Badge>
-                      <Badge tone={staffOk(t) ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdebec", fg: RED }}>{staffN} staff · 1:{ratioOf(t)}</Badge>
-                      <Badge tone={raDone(t) ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdf3d8", fg: AMBER }}>{raDone(t) ? "✓ RA signed" : "RA draft"}</Badge>
+                      <Badge tone={{ bg: "#eef4fd", fg: BLUE }}>{pickPlural(tr, locale, "p8ops.rtChildN", kids)}</Badge>
+                      <Badge tone={staffOk(t) ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdebec", fg: RED }}>{tr("p8ops.tpStaffRatio", { n: staffN, r: ratioOf(t) })}</Badge>
+                      <Badge tone={raDone(t) ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdf3d8", fg: AMBER }}>{raDone(t) ? tr("p8ops.tpRaSigned") : tr("p8ops.tpRaDraft")}</Badge>
                       {(() => { const tot = (t.attendees ?? []).length - declinedOf(t).length, con = attendingOf(t).length, paid = paidCountOf(t); return <>
-                        <Badge tone={con >= tot && tot > 0 ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdf3d8", fg: AMBER }}>✍️ Consent {con}/{tot || 0}</Badge>
-                        {t.askPay !== false && (paid > 0 || tot > 0) && <Badge tone={paid >= tot && tot > 0 ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#eef4fd", fg: BLUE }}>💳 Paid {paid}/{tot || 0}</Badge>}
+                        <Badge tone={con >= tot && tot > 0 ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdf3d8", fg: AMBER }}>{tr("p8ops.tpConsentBadge", { n: con, tot: tot || 0 })}</Badge>
+                        {t.askPay !== false && (paid > 0 || tot > 0) && <Badge tone={paid >= tot && tot > 0 ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#eef4fd", fg: BLUE }}>{tr("p8ops.tpPaidBadge", { n: paid, tot: tot || 0 })}</Badge>}
                       </>; })()}
-                      <Badge tone={s5Ok(t) ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdf3d8", fg: AMBER }}>{s5Ok(t) ? "✓ signed off" : "sign-off pending"}</Badge>
-                      {under && <Badge tone={{ bg: "#fdebec", fg: RED }}>⚠️ over 1:{ratioOf(t)}</Badge>}
+                      <Badge tone={s5Ok(t) ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdf3d8", fg: AMBER }}>{s5Ok(t) ? tr("p8ops.tpSignedOff") : tr("p8ops.tpSignoffPending")}</Badge>
+                      {under && <Badge tone={{ bg: "#fdebec", fg: RED }}>{tr("p8ops.tpOverRatio", { r: ratioOf(t) })}</Badge>}
                     </div>
                   </div>
                   <div className="flex flex-none flex-col gap-2 sm:items-end">
-                    <Button sm variant="solid" onClick={() => { setPlanning({ trip: t }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Open planner</Button>
-                    {canManage && <Button sm onClick={() => setStatus(t, t.status === "cancelled" ? "planned" : "cancelled")}>{t.status === "cancelled" ? "Reinstate" : "Cancel trip"}</Button>}
-                    {canManage && <Button sm variant="danger" onClick={() => remove(t)}>Delete</Button>}
+                    <Button sm variant="solid" onClick={() => { setPlanning({ trip: t }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>{tr("p8ops.tpOpenPlanner")}</Button>
+                    {canManage && <Button sm onClick={() => setStatus(t, t.status === "cancelled" ? "planned" : "cancelled")}>{t.status === "cancelled" ? tr("p8ops.tpReinstate") : tr("p8ops.tpCancelTrip")}</Button>}
+                    {canManage && <Button sm variant="danger" onClick={() => remove(t)}>{tr("p8ops.tpDelete")}</Button>}
                   </div>
                 </div>
                 {s5Ok(t) && !t.returned && (() => {
@@ -856,14 +869,14 @@ export function TripsApp() {
                   const allOk = !nextCp;
                   return (
                     <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] bg-[#eef4fd] px-4 py-2.5">
-                      <span className="text-[12px] font-extrabold" style={{ color: BLUE }}>🧮 Head count</span>
-                      <span className="text-[11.5px] text-[var(--ink-2)]">{go} on trip · {doneN}/{cps.length} checkpoints{last ? ` · last ${last.counted}/${go} at ${last.time}` : ""}</span>
-                      {allOk ? <span className="ms-auto rounded-full bg-[#e7f6ee] px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: GREEN }}>✓ all counted</span>
-                        : <button type="button" onClick={() => quickCount(t, go)} className="ms-auto rounded-lg px-3 py-1.5 text-[12px] font-extrabold text-white shadow-sm" style={{ background: BLUE }}>✓ {nextCp!.n}: all {go} present</button>}
+                      <span className="text-[12px] font-extrabold" style={{ color: BLUE }}>{tr("p8ops.tpHeadCount")}</span>
+                      <span className="text-[11.5px] text-[var(--ink-2)]">{tr("p8ops.tpHcSummary", { go, done: doneN, total: cps.length })}{last ? tr("p8ops.tpHcLast", { c: last.counted ?? 0, go, time: last.time ?? "" }) : ""}</span>
+                      {allOk ? <span className="ms-auto rounded-full bg-[#e7f6ee] px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: GREEN }}>{tr("p8ops.tpAllCounted")}</span>
+                        : <button type="button" onClick={() => quickCount(t, go)} className="ms-auto rounded-lg px-3 py-1.5 text-[12px] font-extrabold text-white shadow-sm" style={{ background: BLUE }}>{tr("p8ops.tpQuickCount", { name: nextCp!.n, go })}</button>}
                     </div>
                   );
                 })()}
-                {notifies && !t.returned && pendingOf(t).length > 0 && <div className="border-t border-[var(--line)] bg-[#f4f8ff] px-4 py-2 text-[11.5px] text-[var(--ink-2)]">📨 {pendingOf(t).length} parent{pendingOf(t).length === 1 ? "" : "s"} still to confirm consent — chase from Step 4.</div>}
+                {notifies && !t.returned && pendingOf(t).length > 0 && <div className="border-t border-[var(--line)] bg-[#f4f8ff] px-4 py-2 text-[11.5px] text-[var(--ink-2)]">{tr("p8ops.tpChaseConsent", { n: pendingOf(t).length })}</div>}
               </Card>
             );
           })}</div>
