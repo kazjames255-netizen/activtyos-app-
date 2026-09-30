@@ -34,9 +34,11 @@ const templateSchema = z.object({
 // out slots the weekly template would otherwise offer, without touching the
 // template itself (so normal availability resumes automatically after).
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// The regex alone lets "2026-13-45" through — round-trip it so only real calendar dates are stored.
+const realDate = (v: string) => { const d = new Date(`${v}T00:00:00Z`); return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v; };
 const blackoutSchema = z.object({
-  from: z.string().regex(DATE_RE, "Use YYYY-MM-DD"),
-  to: z.string().regex(DATE_RE, "Use YYYY-MM-DD"),
+  from: z.string().regex(DATE_RE, "Use YYYY-MM-DD").refine(realDate, "Not a real date"),
+  to: z.string().regex(DATE_RE, "Use YYYY-MM-DD").refine(realDate, "Not a real date"),
   note: z.string().trim().max(160).optional().default(""),
 }).refine((v) => v.from <= v.to, { message: "'from' must not be after 'to'" });
 
@@ -107,6 +109,9 @@ demoSlotTemplates.get("/", async (_req, res) => {
 demoSlotTemplates.post("/", async (req, res) => {
   const parsed = templateSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  // The same weekday+time twice would list the same slot twice on the public /demo page.
+  const dupe = await col.where("weekday", "==", parsed.data.weekday).get();
+  if (dupe.docs.some((d) => d.get("time") === parsed.data.time)) { res.status(409).json({ error: "There's already a slot at that day and time" }); return; }
   const ref = await col.add({ ...parsed.data, createdAt: new Date().toISOString() });
   res.json({ id: ref.id });
 });
@@ -114,6 +119,8 @@ demoSlotTemplates.post("/", async (req, res) => {
 demoSlotTemplates.patch("/:id", async (req, res) => {
   const parsed = templateSchema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  // A merge-set on a stale id would mint a half-empty template.
+  if (!(await col.doc(req.params.id).get()).exists) { res.status(404).json({ error: "No such slot" }); return; }
   await col.doc(req.params.id).set(parsed.data, { merge: true });
   res.json({ ok: true });
 });
