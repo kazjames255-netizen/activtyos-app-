@@ -63,7 +63,12 @@ const AICAP: Record<string, { o: string[]; m: string[] }> = {
 };
 const AICLOSE = [" and came back beaming!", " and was so proud!", ". A really lovely day all round.", ". Such a happy afternoon!", " — a real highlight of the day."];
 const pick = <T,>(x: T[]) => x[Math.floor(Math.random() * x.length)];
-function aiCaption(names: string, activity: string) { const a = AICAP[activity] ?? AICAP["Free play"]; return `${pick(a.o).replace("{N}", names)}, ${pick(a.m)}${pick(AICLOSE)}`; }
+const AI_KEY: Record<string, string> = { "Arts & crafts": "Art", Sports: "Sport", Swimming: "Swim", "Lunch & snack": "Food", Outdoors: "Nature", Science: "Science", Drama: "Drama", "Free play": "Play" };
+// English keeps the original combinable phrases; every other language picks one of three ready-made sentences for the activity.
+function aiCaption(names: string, activity: string) {
+  if (dl().startsWith("en")) { const a = AICAP[activity] ?? AICAP["Free play"]; return `${pick(a.o).replace("{N}", names)}, ${pick(a.m)}${pick(AICLOSE)}`; }
+  return tNow(`p8ops.moAi${AI_KEY[activity] ?? "Play"}${1 + Math.floor(Math.random() * 3)}`, { N: names });
+}
 
 // ── square cropper ───────────────────────────────────────────────────────────
 function Cropper({ src, onDone, onCancel }: { src: string; onDone: (dataUrl: string) => void; onCancel: () => void }) {
@@ -126,7 +131,7 @@ function PostForm({ activities, settings, save, listings, initialChild, onPosted
   const noConsentTagged = tagged.map((id) => taggable.find((c) => c.childId === id)).filter((c): c is Taggable => !!c && !c.photoConsent);
   const nameList = (cs: Taggable[]) => listNames(cs.map((c) => c.name));
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) { const f = e.target.files?.[0]; if (f) setRawPhoto(await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(f); })); }
-  const writeAi = () => { const names = tagged.map((id) => taggable.find((c) => c.childId === id)?.name).filter(Boolean) as string[]; setCaption(aiCaption(names.length ? (names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`) : "Your child", activity)); };
+  const writeAi = () => { const names = tagged.map((id) => taggable.find((c) => c.childId === id)?.name).filter(Boolean) as string[]; setCaption(aiCaption(names.length ? listNames(names) : tr("p8ops.moYourChildCap"), activity)); };
   async function addActivity() { const n = actName.trim(); if (!n) return; const c = ACT_PALETTE[activities.length % ACT_PALETTE.length]; const next = [...activities, { k: `a${Date.now()}`, n, e: actEmoji.trim() || "🎉", c }]; await save({ settings: { ...settings, moments: { ...settings.moments, activities: next } } }); setActivity(n); setNewAct(false); setActName(""); setActEmoji("🎉"); }
 
   async function post() {
