@@ -44,7 +44,7 @@ const lineItemSchema = z.object({
 });
 const invoiceSchema = z.object({
   customerName: z.string().trim().min(1).max(160),
-  customerEmail: z.string().trim().max(160).optional(),
+  customerEmail: z.string().trim().max(160).refine((v) => v === "" || z.string().email().safeParse(v).success, "Not a valid email address").optional(),
   customerAddress: z.string().trim().max(500).optional(),
   bookingRef: z.string().trim().max(80).optional(),
   reference: z.string().trim().max(80).optional(),
@@ -155,6 +155,7 @@ invoices.post("/:id/email", async (req, res) => {
   const doc: Record<string, unknown> = { id: o.snap.id, ...(o.snap.data() as Record<string, unknown>) };
   const to = (typeof req.body?.to === "string" && req.body.to.trim()) || (doc.customerEmail as string) || "";
   if (!to) { res.status(400).json({ error: "No email address to send to — add the customer's email." }); return; }
+  if (!z.string().email().safeParse(to).success) { res.status(400).json({ error: `"${to}" isn't a valid email address.` }); return; }
   const tenant = await db.collection("tenants").doc(o.snap.data()!.tenantId as string).get();
   const billing = (tenant.data()?.settings as Record<string, unknown> | undefined)?.billing as Record<string, unknown> | undefined;
   // `link:false` sends the bank-details-only version (no online pay-link).

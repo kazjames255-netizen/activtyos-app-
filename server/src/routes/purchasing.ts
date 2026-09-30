@@ -35,7 +35,7 @@ const poSchema = z.object({
   category: z.string().trim().max(60).optional(),
   // Set when a PO has been turned into a (pending) expense, so it isn't added twice.
   expenseId: z.string().trim().max(60).optional(),
-  supplierEmail: z.string().trim().max(160).optional(),
+  supplierEmail: z.string().trim().max(160).refine((v) => v === "" || z.string().email().safeParse(v).success, "Not a valid email address").optional(),
   supplierPhone: z.string().trim().max(60).optional(),
   supplierAddress: z.string().trim().max(400).optional(),
   reference: z.string().trim().max(80).optional(),
@@ -222,6 +222,7 @@ purchasing.post("/:id/email", async (req, res) => {
   const doc: Record<string, unknown> = { id: o.snap.id, ...(o.snap.data() as Record<string, unknown>) };
   const to = (typeof req.body?.to === "string" && req.body.to.trim()) || (doc.supplierEmail as string) || "";
   if (!to) { res.status(400).json({ error: "No email address to send to." }); return; }
+  if (!z.string().email().safeParse(to).success) { res.status(400).json({ error: `"${to}" isn't a valid email address.` }); return; }
   const tenant = await db.collection("tenants").doc(o.snap.data()!.tenantId as string).get();
   const billing = (tenant.data()?.settings as Record<string, unknown> | undefined)?.billing as Record<string, unknown> | undefined;
   const html = renderMoneyDoc("po", doc, billing);
