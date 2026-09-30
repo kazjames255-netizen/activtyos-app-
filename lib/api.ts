@@ -1,6 +1,7 @@
 // Thin fetch wrapper for the Express API: attaches the signed-in user's
 // Firebase ID token and surfaces JSON error bodies as thrown Errors.
 import { firebaseAuth } from "./firebase/client";
+import { translateApiMessage } from "./i18n/apiErrors";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -27,8 +28,10 @@ export class ApiError extends Error {
     message: string,
     /** The parsed JSON error body when there was one — e.g. `{ code, nextAvailableAt }`. */
     public body?: unknown,
+    /** The message exactly as the server sent it (English). `message` is that text in the active language; compare against rawMessage, never message. */
+    public rawMessage: string = message,
   ) {
-    super(message);
+    super(translateApiMessage(message));
   }
 }
 
@@ -201,7 +204,7 @@ async function request<T>(path: string, token: string | null, init?: RequestInit
       if (process.env.NODE_ENV === "production") {
         throw timedOut
           ? new ApiError(408, "That took longer than expected. Please try again.")
-          : new ApiError(0, "We can’t reach ActivityOS right now. Check your connection and try again in a moment.");
+          : new ApiError(0, "We can’t reach {brand} right now. Check your connection and try again in a moment.");
       }
       throw timedOut
         ? new ApiError(408, `The server didn't respond within ${TIMEOUT_MS / 1000}s (${BASE}). Is the API running?`)
