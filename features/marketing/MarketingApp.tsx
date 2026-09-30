@@ -7,6 +7,8 @@ import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { TourLauncher } from "@/features/common/TourLauncher";
+import { useT } from "@/lib/i18n/provider";
+import { rich } from "@/features/money/rich";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -49,6 +51,7 @@ const isSpent = (c: Code) => c.usageLimit != null && (c.usedCount ?? 0) >= c.usa
 // all at once. Managed here in the discount-codes area; a code's "…or a group"
 // picker reads them.
 function GroupsManager({ families, groups, reload }: { families: Family[]; groups: Group[]; reload: () => void }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -59,45 +62,45 @@ function GroupsManager({ families, groups, reload }: { families: Family[]; group
   const start = (g?: Group) => { setEditId(g?.id ?? null); setName(g?.name ?? ""); setEmails(g?.emails ?? []); setErr(null); setOpen(true); setPanelOpen(true); };
   const toggle = (email: string) => setEmails((es) => (es.includes(email) ? es.filter((x) => x !== email) : [...es, email]));
   async function save() {
-    if (!name.trim()) { setErr("Give the group a name."); return; }
+    if (!name.trim()) { setErr(t("p8fin.mkGroupNameReq")); return; }
     try {
       if (editId) await api(`/api/discounts/groups/${encodeURIComponent(editId)}`, { method: "PUT", body: JSON.stringify({ name, emails }) });
       else await apiPost("/api/discounts/groups", { name, emails });
       setOpen(false); setEditId(null); reload();
-    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save the group"); }
+    } catch (e) { setErr(e instanceof Error ? e.message : t("p8fin.mkGroupSaveErr")); }
   }
-  async function remove(g: Group) { if (!confirm(`Delete the group “${g.name}”? Codes already sent to them are unaffected.`)) return; try { await api(`/api/discounts/groups/${encodeURIComponent(g.id)}`, { method: "DELETE" }); reload(); } catch {} }
+  async function remove(g: Group) { if (!confirm(t("p8fin.mkConfirmDeleteGroup", { name: g.name }))) return; try { await api(`/api/discounts/groups/${encodeURIComponent(g.id)}`, { method: "DELETE" }); reload(); } catch {} }
 
   return (
     <Card className="mb-3.5 p-4">
       <button type="button" onClick={() => setPanelOpen((o) => !o)} className="flex w-full items-center justify-between text-start">
-        <span className="text-[14px] font-extrabold">👥 Parent groups <span className="ms-1 font-normal text-[var(--ink-3)]">— save families together (e.g. “NHS parents”) to code them in one go</span></span>
+        <span className="text-[14px] font-extrabold">{t("p8fin.mkParentGroups")} <span className="ms-1 font-normal text-[var(--ink-3)]">{t("p8fin.mkParentGroupsHint")}</span></span>
         <span className="text-[var(--ink-3)]">{panelOpen ? "▲" : "▼"}</span>
       </button>
       {panelOpen && (
         <div className="mt-3">
           <div className="flex flex-wrap gap-2">
-            {groups.length === 0 && !open && <span className="text-[12.5px] text-[var(--ink-3)]">No groups yet.</span>}
+            {groups.length === 0 && !open && <span className="text-[12.5px] text-[var(--ink-3)]">{t("p8fin.mkNoGroups")}</span>}
             {groups.map((g) => (
               <span key={g.id} className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px]">
-                <b>{g.name}</b><span className="text-[var(--ink-3)]">{g.emails.length} famil{g.emails.length === 1 ? "y" : "ies"}</span>
-                <button type="button" onClick={() => start(g)} className="font-bold text-[var(--brand-2)]">Edit</button>
+                <b>{g.name}</b><span className="text-[var(--ink-3)]">{t("p8fin.mkFamiliesN", { n: g.emails.length })}</span>
+                <button type="button" onClick={() => start(g)} className="font-bold text-[var(--brand-2)]">{t("p8fin.gEdit")}</button>
                 <button type="button" onClick={() => remove(g)} className="font-bold text-[var(--red,#e21d27)]">✕</button>
               </span>
             ))}
-            {!open && <button type="button" onClick={() => start()} className="rounded-full bg-[var(--brand-2)] px-3 py-1.5 text-[12px] font-bold text-white">＋ New group</button>}
+            {!open && <button type="button" onClick={() => start()} className="rounded-full bg-[var(--brand-2)] px-3 py-1.5 text-[12px] font-bold text-white">{t("p8fin.mkNewGroup")}</button>}
           </div>
 
           {open && (
             <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-              <FieldLabel>Group name</FieldLabel>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. NHS parents" className="w-full" />
+              <FieldLabel>{t("p8fin.mkGroupName")}</FieldLabel>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("p8fin.mkGroupNamePh")} className="w-full" />
               <div className="mt-2.5 flex items-baseline justify-between">
-                <FieldLabel>Members <span className="font-normal text-[var(--ink-3)]">— {emails.length} selected</span></FieldLabel>
-                <button type="button" onClick={() => setEmails(emails.length === emailable.length ? [] : emailable.map((x) => x.email!))} className="text-[11px] font-bold text-[var(--brand-2)]">{emails.length === emailable.length ? "Clear all" : "Select all"}</button>
+                <FieldLabel>{t("p8fin.mkMembers")} <span className="font-normal text-[var(--ink-3)]">{t("p8fin.mkSelectedN", { n: emails.length })}</span></FieldLabel>
+                <button type="button" onClick={() => setEmails(emails.length === emailable.length ? [] : emailable.map((x) => x.email!))} className="text-[11px] font-bold text-[var(--brand-2)]">{emails.length === emailable.length ? t("p8fin.mkClearAll") : t("p8fin.mkSelectAll")}</button>
               </div>
               <div className="mt-1 max-h-[220px] overflow-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1">
-                {emailable.length === 0 && <div className="p-2 text-[12px] text-[var(--ink-3)]">No families with an email yet.</div>}
+                {emailable.length === 0 && <div className="p-2 text-[12px] text-[var(--ink-3)]">{t("p8fin.mkNoEmailFamilies")}</div>}
                 {emailable.map((x) => (
                   <label key={x.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[12.5px] hover:bg-[var(--panel)]">
                     <input type="checkbox" checked={emails.includes(x.email!)} onChange={() => toggle(x.email!)} className="h-4 w-4 accent-[var(--brand-2)]" />
@@ -108,8 +111,8 @@ function GroupsManager({ families, groups, reload }: { families: Family[]; group
               </div>
               {err && <div className="mt-1.5 text-[11.5px] text-[var(--red,#e21d27)]">{err}</div>}
               <div className="mt-2.5 flex gap-2">
-                <Button variant="primary" onClick={save}>{editId ? "Save group" : "Create group"}</Button>
-                <Button onClick={() => { setOpen(false); setEditId(null); }}>Cancel</Button>
+                <Button variant="primary" onClick={save}>{editId ? t("p8fin.mkSaveGroup") : t("p8fin.mkCreateGroup")}</Button>
+                <Button onClick={() => { setOpen(false); setEditId(null); }}>{t("p8fin.gCancel")}</Button>
               </div>
             </div>
           )}
@@ -120,6 +123,7 @@ function GroupsManager({ families, groups, reload }: { families: Family[]; group
 }
 
 export function MarketingApp() {
+  const t = useT();
   const [codes, setCodes] = useState<Code[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -143,7 +147,7 @@ export function MarketingApp() {
   }
 
   const refresh = useCallback(() => {
-    apiGet<Code[]>("/api/discounts").then((c) => { setCodes(c); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Code[]>("/api/discounts").then((c) => { setCodes(c); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : t("p8fin.gLoadFailed")));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<Family[]>("/api/customers").then((cs) => setFamilies(cs.filter((c) => c.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email)))).catch(() => {}); }, []);
@@ -161,8 +165,8 @@ export function MarketingApp() {
 
   async function save() {
     const value = Number(f.value);
-    if (!f.code.trim() || !value || value <= 0) { setError("A code and a positive value are required."); return; }
-    if (f.type === "percent" && value > 100) { setError("A percentage can’t exceed 100."); return; }
+    if (!f.code.trim() || !value || value <= 0) { setError(t("p8fin.mkNeedCodeValue")); return; }
+    if (f.type === "percent" && value > 100) { setError(t("p8fin.mkPctMax")); return; }
     // On edit, a blank/unticked field must be sent explicitly (null / false) — an omitted key means "leave as is",
     // so before this an expiry, cap or "one use per customer" tick could never be removed once saved.
     const clr = <T,>(v: T | undefined): T | null | undefined => (v === undefined && editId ? null : v);
@@ -183,18 +187,18 @@ export function MarketingApp() {
       if (editId) await api(`/api/discounts/${encodeURIComponent(editId)}`, { method: "PUT", body: JSON.stringify(payload) });
       else await apiPost("/api/discounts", payload);
       setF(empty); setEditId(null); setOpen(false); refresh();
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.mkSaveErr")); }
   }
-  async function toggle(c: Code) { try { await api(`/api/discounts/${encodeURIComponent(c.id)}`, { method: "PUT", body: JSON.stringify({ active: !(c.active !== false) }) }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
-  async function remove(c: Code) { if (!confirm(`Delete code ${c.code}?`)) return; try { await api(`/api/discounts/${encodeURIComponent(c.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  async function toggle(c: Code) { try { await api(`/api/discounts/${encodeURIComponent(c.id)}`, { method: "PUT", body: JSON.stringify({ active: !(c.active !== false) }) }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.gFailed")); } }
+  async function remove(c: Code) { if (!confirm(t("p8fin.mkConfirmDeleteCode", { code: c.code }))) return; try { await api(`/api/discounts/${encodeURIComponent(c.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.gFailed")); } }
 
-  const valueLabel = (c: Code) => (c.type === "percent" ? `${c.value}% off` : c.type === "perAttendee" ? `${money(c.value)} off / child` : `${money(c.value)} off`);
-  const listingName = (id?: string) => { const l = listings.find((x) => x.id === id); return l ? (l.title || l.name || "a listing") : null; };
+  const valueLabel = (c: Code) => (c.type === "percent" ? t("p8fin.mkPctOff", { value: c.value }) : c.type === "perAttendee" ? t("p8fin.mkAmtOffChild", { amount: money(c.value) }) : t("p8fin.mkAmtOff", { amount: money(c.value) }));
+  const listingName = (id?: string) => { const l = listings.find((x) => x.id === id); return l ? (l.title || l.name || t("p8fin.mkAListing")) : null; };
   const statusBadge = (c: Code) => {
-    if (c.active === false) return <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>paused</Badge>;
-    if (isExpired(c)) return <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>expired</Badge>;
-    if (isSpent(c)) return <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>used up</Badge>;
-    return <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>active</Badge>;
+    if (c.active === false) return <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>{t("p8fin.mkPaused")}</Badge>;
+    if (isExpired(c)) return <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>{t("p8fin.mkExpired")}</Badge>;
+    if (isSpent(c)) return <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>{t("p8fin.mkUsedUp")}</Badge>;
+    return <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>{t("p8fin.mkActive")}</Badge>;
   };
 
   const activeCount = (codes ?? []).filter((c) => c.active !== false && !isExpired(c) && !isSpent(c)).length;
@@ -208,22 +212,22 @@ export function MarketingApp() {
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🏷️</span>
-              Discount codes
+              {t("p8fin.mkTitle")}
             </div>
-            <p className="mt-1.5 max-w-[540px] text-[12.5px] leading-[1.5] text-white/85">Codes families type at checkout — a percentage or fixed amount off, with optional min-spend, expiry and usage caps. Redemptions update live.</p>
+            <p className="mt-1.5 max-w-[540px] text-[12.5px] leading-[1.5] text-white/85">{t("p8fin.mkIntro")}</p>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             <TourLauncher view="marketing" compact />
             {!open && (
-              <button type="button" onClick={openCreate} className="z-10 flex-none rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ New code</button>
+              <button type="button" onClick={openCreate} className="z-10 flex-none rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">{t("p8fin.mkNewCode")}</button>
             )}
           </div>
         </div>
         {codes && codes.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2.5">
-            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{activeCount}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Active</div></div>
-            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{totalRedemptions}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Redemptions</div></div>
-            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{codes.length}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Total codes</div></div>
+            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{activeCount}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{t("p8fin.mkStatActive")}</div></div>
+            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{totalRedemptions}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{t("p8fin.mkStatRedemptions")}</div></div>
+            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{codes.length}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{t("p8fin.mkStatTotal")}</div></div>
           </div>
         )}
       </div>
@@ -231,22 +235,22 @@ export function MarketingApp() {
 
       {open && (
         <Card className="mb-3.5 p-4">
-          <div className="mb-3 text-[14px] font-extrabold">{editId ? "Edit discount code" : "New discount code"}</div>
+          <div className="mb-3 text-[14px] font-extrabold">{editId ? t("p8fin.mkEditCode") : t("p8fin.mkNewCodeTitle")}</div>
           <div className="grid gap-2.5 sm:grid-cols-3">
             <div>
-              <div className="flex items-baseline justify-between"><FieldLabel>Code</FieldLabel><button type="button" onClick={() => set({ code: freshCode() })} className="text-[11px] font-bold text-[var(--brand-2)]">{f.assignedName ? "Generate from name" : "Generate"}</button></div>
-              <Input value={f.code} onChange={(e) => set({ code: e.target.value.toUpperCase() })} placeholder="E.G. SUMMER25" className="w-full uppercase" />
+              <div className="flex items-baseline justify-between"><FieldLabel>{t("p8fin.mkCode")}</FieldLabel><button type="button" onClick={() => set({ code: freshCode() })} className="text-[11px] font-bold text-[var(--brand-2)]">{f.assignedName ? t("p8fin.mkGenFromName") : t("p8fin.mkGenerate")}</button></div>
+              <Input value={f.code} onChange={(e) => set({ code: e.target.value.toUpperCase() })} placeholder={t("p8fin.mkCodePh")} className="w-full uppercase" />
             </div>
-            <div><FieldLabel>Discount type</FieldLabel><Select value={f.type} onChange={(e) => set({ type: e.target.value })} className="w-full"><option value="percent">By a percentage</option><option value="amount">A discount per booking</option><option value="perAttendee">A discount per attendee</option></Select></div>
-            <div><FieldLabel>{f.type === "percent" ? "Percent off" : f.type === "perAttendee" ? "£ off per child" : "Amount off (£)"}</FieldLabel><Input type="number" min="0" step={f.type === "percent" ? "1" : "0.01"} value={f.value} onChange={(e) => set({ value: e.target.value })} className="w-full" /></div>
-            <div><FieldLabel>Min spend (£)</FieldLabel><Input type="number" min="0" step="0.01" value={f.minSpend} onChange={(e) => set({ minSpend: e.target.value })} placeholder="optional" className="w-full" /></div>
-            <div><FieldLabel>Expiry</FieldLabel><Input type="date" value={f.expiry} onChange={(e) => set({ expiry: e.target.value })} className="w-full" /><p className="mt-1 text-[11px] leading-[1.35] text-[var(--ink-3)]">Leave blank and it never expires — it just stops when the listing it applies to closes.</p></div>
-            <div><FieldLabel>Usage limit</FieldLabel><Input type="number" min="1" step="1" value={f.usageLimit} onChange={(e) => set({ usageLimit: e.target.value })} placeholder="unlimited" className="w-full" /><p className="mt-1 text-[11px] leading-[1.35] text-[var(--ink-3)]">Total times this code can be redeemed across all families. Blank = unlimited.</p></div>
+            <div><FieldLabel>{t("p8fin.mkDiscountType")}</FieldLabel><Select value={f.type} onChange={(e) => set({ type: e.target.value })} className="w-full"><option value="percent">{t("p8fin.mkTypePercent")}</option><option value="amount">{t("p8fin.mkTypeAmount")}</option><option value="perAttendee">{t("p8fin.mkTypePerAttendee")}</option></Select></div>
+            <div><FieldLabel>{f.type === "percent" ? t("p8fin.mkValuePercent") : f.type === "perAttendee" ? t("p8fin.mkValuePerChild") : t("p8fin.mkValueAmount")}</FieldLabel><Input type="number" min="0" step={f.type === "percent" ? "1" : "0.01"} value={f.value} onChange={(e) => set({ value: e.target.value })} className="w-full" /></div>
+            <div><FieldLabel>{t("p8fin.mkMinSpend")}</FieldLabel><Input type="number" min="0" step="0.01" value={f.minSpend} onChange={(e) => set({ minSpend: e.target.value })} placeholder={t("p8fin.mkOptional")} className="w-full" /></div>
+            <div><FieldLabel>{t("p8fin.mkExpiry")}</FieldLabel><Input type="date" value={f.expiry} onChange={(e) => set({ expiry: e.target.value })} className="w-full" /><p className="mt-1 text-[11px] leading-[1.35] text-[var(--ink-3)]">{t("p8fin.mkExpiryHint")}</p></div>
+            <div><FieldLabel>{t("p8fin.mkUsageLimit")}</FieldLabel><Input type="number" min="1" step="1" value={f.usageLimit} onChange={(e) => set({ usageLimit: e.target.value })} placeholder={t("p8fin.mkUnlimited")} className="w-full" /><p className="mt-1 text-[11px] leading-[1.35] text-[var(--ink-3)]">{t("p8fin.mkUsageHint")}</p></div>
             <div>
-              <FieldLabel>Applies to</FieldLabel>
+              <FieldLabel>{t("p8fin.mkAppliesTo")}</FieldLabel>
               <Select value={f.listingId} onChange={(e) => set({ listingId: e.target.value })} className="w-full">
-                <option value="">All listings</option>
-                {listings.map((l) => <option key={l.id} value={l.id}>{l.title || l.name || "Untitled listing"}</option>)}
+                <option value="">{t("p8fin.recAllListings")}</option>
+                {listings.map((l) => <option key={l.id} value={l.id}>{l.title || l.name || t("p8fin.mkUntitledListing")}</option>)}
               </Select>
             </div>
           </div>
@@ -254,11 +258,11 @@ export function MarketingApp() {
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
             <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]">
               <input type="checkbox" checked={f.perCustomerLimit} onChange={(e) => set({ perCustomerLimit: e.target.checked })} className="h-4 w-4 accent-[var(--brand-2)]" />
-              Limit to one use per customer
+              {t("p8fin.mkOnePerCustomer")}
             </label>
             <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]">
               <input type="checkbox" checked={f.exclusive} onChange={(e) => set({ exclusive: e.target.checked })} className="h-4 w-4 accent-[var(--brand-2)]" />
-              Can’t be used with any other code
+              {t("p8fin.mkNoCombine")}
             </label>
           </div>
 
@@ -266,7 +270,7 @@ export function MarketingApp() {
               can redeem it and each one gets a message + email. */}
           <div className="mt-3 grid gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 sm:grid-cols-2">
             <div>
-              <FieldLabel>Reserve for one family</FieldLabel>
+              <FieldLabel>{t("p8fin.mkReserveOne")}</FieldLabel>
               <Select
                 value={f.assignedTo}
                 onChange={(e) => {
@@ -277,38 +281,38 @@ export function MarketingApp() {
                 }}
                 className="w-full"
               >
-                <option value="">Anyone can use it</option>
+                <option value="">{t("p8fin.mkAnyoneCanUse")}</option>
                 {families.map((c) => <option key={c.id} value={c.email}>{c.name || c.email}</option>)}
               </Select>
             </div>
             <div>
-              <FieldLabel>…or a group</FieldLabel>
+              <FieldLabel>{t("p8fin.mkOrAGroup")}</FieldLabel>
               <Select
                 value={f.assignedGroupId}
                 onChange={(e) => set({ assignedGroupId: e.target.value, ...(e.target.value ? { assignedTo: "", assignedName: "" } : {}) })}
                 className="w-full"
               >
-                <option value="">No group</option>
+                <option value="">{t("p8fin.mkNoGroup")}</option>
                 {groups.map((g) => <option key={g.id} value={g.id}>{g.name} ({g.emails.length})</option>)}
               </Select>
             </div>
             <div className="sm:col-span-2">
               {f.assignedTo
-                ? <div className="text-[11.5px] text-[var(--ink-3)]">Only <b className="text-[var(--ink-2)]">{f.assignedName || f.assignedTo}</b> can redeem this — saving sends them the code by message + email.</div>
+                ? <div className="text-[11.5px] text-[var(--ink-3)]">{rich(t("p8fin.mkOnlyFamily", { name: f.assignedName || f.assignedTo }))}</div>
                 : f.assignedGroupId
-                ? <div className="text-[11.5px] text-[var(--ink-3)]">Reserved for <b className="text-[var(--ink-2)]">{groups.find((g) => g.id === f.assignedGroupId)?.name}</b> ({groups.find((g) => g.id === f.assignedGroupId)?.emails.length ?? 0} families) — saving messages + emails every one of them, and it lands in each family&apos;s Coupons area.</div>
-                : <div className="text-[11.5px] leading-[1.5] text-[var(--ink-3)]"><b className="text-[var(--ink-2)]">Anyone can use it.</b> Public codes <b>aren&apos;t</b> emailed to families — but you can <b>copy the code and send it to all parents</b> (Messages → broadcast), and it appears automatically in each family&apos;s <b>Coupons &amp; discount codes</b> area and the banner across their dashboard.</div>}
+                ? <div className="text-[11.5px] text-[var(--ink-3)]">{rich(t("p8fin.mkOnlyGroup", { name: groups.find((g) => g.id === f.assignedGroupId)?.name ?? "", n: groups.find((g) => g.id === f.assignedGroupId)?.emails.length ?? 0 }))}</div>
+                : <div className="text-[11.5px] leading-[1.5] text-[var(--ink-3)]">{rich(t("p8fin.mkAnyoneNote"))}</div>}
             </div>
           </div>
 
-          <div className="mt-3 flex gap-2"><Button variant="primary" onClick={save}>{editId ? "Save changes" : "Create code"}</Button><Button onClick={() => { setOpen(false); setEditId(null); }}>Cancel</Button></div>
+          <div className="mt-3 flex gap-2"><Button variant="primary" onClick={save}>{editId ? t("p8fin.mkSaveChanges") : t("p8fin.mkCreateCode")}</Button><Button onClick={() => { setOpen(false); setEditId(null); }}>{t("p8fin.gCancel")}</Button></div>
         </Card>
       )}
 
       <GroupsManager families={families} groups={groups} reload={loadGroups} />
 
-      {!codes ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-      : codes.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No discount codes yet.</Card>
+      {!codes ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8fin.gLoading")}</div>
+      : codes.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{t("p8fin.mkNoCodes")}</Card>
       : (
         <div className="flex flex-col gap-2.5">
           {codes.map((c) => {
@@ -325,14 +329,14 @@ export function MarketingApp() {
                   {statusBadge(c)}
                   <div className="min-w-[140px] flex-1">
                     <div className="text-[11.5px] text-[var(--ink-3)]">
-                      {c.assignedTo ? `🔒 ${c.assignedName || c.assignedTo} only · ` : ""}
+                      {c.assignedTo ? t("p8fin.mkOnlyFor", { name: c.assignedName || c.assignedTo }) : ""}
                       {c.assignedGroupName ? `👥 ${c.assignedGroupName} (${c.assignedEmails?.length ?? 0}) · ` : ""}
-                      {c.listingId && listingName(c.listingId) ? `${listingName(c.listingId)} only · ` : ""}
-                      {c.perCustomerLimit ? "1 per customer · " : ""}
-                      {c.exclusive ? "no combining · " : ""}
-                      {c.minSpend ? `min ${money(c.minSpend)} · ` : ""}
-                      {c.usageLimit != null ? `${c.usedCount ?? 0}/${c.usageLimit} used` : `${c.usedCount ?? 0} used`}
-                      {c.expiry ? ` · expires ${fmt(c.expiry)}` : ""}
+                      {c.listingId && listingName(c.listingId) ? t("p8fin.mkListingOnly", { name: listingName(c.listingId) ?? "" }) : ""}
+                      {c.perCustomerLimit ? t("p8fin.mkOnePerCust") : ""}
+                      {c.exclusive ? t("p8fin.mkNoCombining") : ""}
+                      {c.minSpend ? t("p8fin.mkMinSpendTag", { amount: money(c.minSpend) }) : ""}
+                      {c.usageLimit != null ? t("p8fin.mkUsedOf", { used: c.usedCount ?? 0, limit: c.usageLimit }) : t("p8fin.mkUsed", { used: c.usedCount ?? 0 })}
+                      {c.expiry ? t("p8fin.mkExpiresOn", { date: fmt(c.expiry) }) : ""}
                     </div>
                     {pct != null && (
                       <div className="mt-1 h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-[var(--panel)]">
@@ -340,10 +344,10 @@ export function MarketingApp() {
                       </div>
                     )}
                   </div>
-                  <div className="ml-auto flex gap-2">
-                    <Button sm onClick={() => openEdit(c)}>Edit</Button>
-                    <Button sm onClick={() => toggle(c)}>{c.active === false ? "Resume" : "Pause"}</Button>
-                    <Button sm variant="danger" onClick={() => remove(c)}>Delete</Button>
+                  <div className="ms-auto flex gap-2">
+                    <Button sm onClick={() => openEdit(c)}>{t("p8fin.gEdit")}</Button>
+                    <Button sm onClick={() => toggle(c)}>{c.active === false ? t("p8fin.mkResume") : t("p8fin.mkPause")}</Button>
+                    <Button sm variant="danger" onClick={() => remove(c)}>{t("p8fin.gDelete")}</Button>
                   </div>
                 </div>
               </div>
