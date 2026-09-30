@@ -4,6 +4,7 @@
 import { Router } from "express";
 import { operatorScope } from "../middleware/role";
 import { tenantWalletOutstanding } from "../lib/wallet";
+import { franchiseFamilyEmails, isFranchise } from "../lib/franchiseScope";
 
 export const wallet = Router();
 
@@ -13,5 +14,7 @@ export const wallet = Router();
 wallet.get("/summary", async (req, res) => {
   const scope = operatorScope(req, res);
   if (!scope?.tenantId) return;
-  res.json({ outstanding: await tenantWalletOutstanding(scope.tenantId) });
+  // A franchise owes credit only to ITS OWN families - not the whole network's liability.
+  const fam = isFranchise(req.auth!) ? await franchiseFamilyEmails(scope.tenantId, req.auth!.franchiseId!) : undefined;
+  res.json({ outstanding: await tenantWalletOutstanding(scope.tenantId, fam) });
 });

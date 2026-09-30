@@ -179,7 +179,7 @@ export async function walletsForFamily(email: string): Promise<FamilyWallet[]> {
 
 /** Unspent credit the provider owes across all its families — the liability
  *  figure for the money dashboard. */
-export async function tenantWalletOutstanding(tenantId: string): Promise<number> {
+export async function tenantWalletOutstanding(tenantId: string, onlyEmails?: Set<string>): Promise<number> {
   const snap = await wallets().where("tenantId", "==", tenantId).get();
-  return round2(snap.docs.reduce((sum, d) => sum + Number(d.get("balance") ?? 0), 0));
+  return round2(snap.docs.filter((d) => !onlyEmails || onlyEmails.has(String(d.get("email") ?? "").toLowerCase())).reduce((sum, d) => sum + Number(d.get("balance") ?? 0), 0));
 }
