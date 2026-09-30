@@ -1,7 +1,7 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, apiPublic } from "@/lib/api";
@@ -1288,14 +1288,24 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
   // archived listings.
   type ListingDetail = AmendListing & { library?: { venue?: { name?: string; address?: string; city?: string } | null } };
   const [detailById, setDetailById] = useState<Record<string, ListingDetail>>({});
+  // Each listing is asked for ONCE, live bookings' listings first, four at a time. This effect used to depend on `detailById` too, so every
+  // response re-ran it and re-requested every listing still in flight: a family with ~65 past listings fired hundreds of GETs, filled the
+  // browser's 6 sockets per origin, and the refetch after "Accept the place" queued behind them for 15s+ (the card kept showing the offer).
+  const askedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    const ids = [...new Set((bookings ?? []).map((b) => b.listingId).filter(Boolean) as string[])];
-    ids.filter((id) => !detailById[id]).forEach((id) => {
-      apiGet<ListingDetail>(`/api/listings/${encodeURIComponent(id)}`)
-        .then((l) => setDetailById((m) => ({ ...m, [id]: l })))
-        .catch(() => {});
-    });
-  }, [bookings, detailById]);
+    const live = (b: Booking) => b.status !== "Cancelled" && b.status !== "Declined";
+    const ordered = [...(bookings ?? [])].sort((a, b) => Number(live(b)) - Number(live(a)));
+    const ids = [...new Set(ordered.map((b) => b.listingId).filter(Boolean) as string[])].filter((id) => !askedRef.current.has(id));
+    ids.forEach((id) => askedRef.current.add(id));
+    const queue = [...ids];
+    const worker = async () => {
+      for (let id = queue.shift(); id; id = queue.shift()) {
+        try { const l = await apiGet<ListingDetail>(`/api/listings/${encodeURIComponent(id)}`); setDetailById((m) => ({ ...m, [id]: l })); }
+        catch { askedRef.current.delete(id); /* a later bookings refresh may try again */ }
+      }
+    };
+    for (let i = 0; i < Math.min(4, ids.length); i++) void worker();
+  }, [bookings]);
   const listingOf = (b: Booking): AmendListing | null => (b.listingId ? detailById[b.listingId] ?? null : null);
   const venueOf = (b: Booking) => {
     const v = b.listingId ? detailById[b.listingId]?.library?.venue : null;
