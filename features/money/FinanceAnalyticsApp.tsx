@@ -385,7 +385,7 @@ export function FinanceAnalyticsApp() {
           <CollapsibleStats id="finance-debts">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Owed by families" icon="🧾" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub="owed now · whenever booked" />
-            <Tile label="Unpaid invoices" icon="📄" grad={GRAD.amber} value={money(invoices?.summary.outstanding ?? 0)} sub={`${invoices?.items.filter((i) => i.status !== "paid").length ?? 0} open`} />
+            <Tile label="Unpaid invoices" icon="📄" grad={GRAD.amber} value={money(invoices?.summary.outstanding ?? 0)} sub={`${invoices?.items.filter((i) => i.status === "sent").length ?? 0} open`} />
             <Tile label="Overdue invoices" icon="⏰" grad={GRAD.pink} value={money(invoices?.summary.overdue ?? 0)} sub={`${invoices?.items.filter((i) => i.overdue).length ?? 0} past due`} />
             <Tile label="Refunds issued" icon="↩️" grad={GRAD.violet} value={money(a.refunds)} sub={`given in the last ${months} months`} />
           </div>
@@ -406,9 +406,9 @@ export function FinanceAnalyticsApp() {
             ) : <Empty>Nobody owes you right now — everything&rsquo;s collected. 🎉</Empty>}
           </Panel>
           <Panel title="Unpaid & overdue invoices">
-            {invoices && invoices.items.filter((i) => i.status !== "paid").length ? (
+            {invoices && invoices.items.filter((i) => i.status === "sent").length ? (
               <div className="flex flex-col divide-y divide-[var(--line)]">
-                {invoices.items.filter((i) => i.status !== "paid").slice(0, 30).map((iv) => (
+                {invoices.items.filter((i) => i.status === "sent").slice(0, 30).map((iv) => (
                   <div key={iv.id} className="flex items-center gap-3 py-2.5 text-[12.5px]">
                     <span className="min-w-0 flex-1 truncate font-semibold">{iv.customerName}</span>
                     {iv.overdue && <span className="rounded-full bg-[#fdebec] px-2 py-0.5 text-[10.5px] font-bold text-[#c02636]">Overdue</span>}

@@ -22,7 +22,7 @@ const shortDate = (d?: string) => (d ? new Date(d).toLocaleDateString(dl(), { da
 
 interface FrRow { franchiseId: string; name: string; revenue: number; count: number; fee: number }
 interface SplitPayload { franchises: FrRow[]; totals: { franchises: number; revenue: number; fee: number } }
-interface MItem { id?: string; date?: string; amount?: number; category?: string; note?: string; supplier?: string; source?: string; description?: string }
+interface MItem { id?: string; status?: string; date?: string; amount?: number; category?: string; note?: string; supplier?: string; source?: string; description?: string }
 interface MPayload { items: MItem[]; summary: { total: number; count: number; byCategory: Record<string, number> } }
 interface Invoice { id?: string; amount?: number; status?: string; dueDate?: string; date?: string; to?: string; customer?: string; billTo?: string }
 
@@ -53,16 +53,21 @@ export function HoFinanceApp() {
   // Filter head office's OWN money to the chosen window (the franchise breakdown
   // is already ranged server-side via ?period).
   const startTs = useMemo(() => { if (period === "all") return 0; const d = new Date(); d.setMonth(d.getMonth() - monthsBack[period]); return d.getTime(); }, [period]);
-  const within = (d?: string) => (period === "all" ? true : d ? new Date(d).getTime() >= startTs : false);
+  // Money that has actually moved: dated on or before today. A recurring receipt/expense is created up front as one row per future date, and
+  // those rows were being totalled as if they had already happened (a monthly £100 bill through December showed as £400 spent today).
+  const todayStr = (() => { const n = new Date(); const p = (v: number) => String(v).padStart(2, "0"); return `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`; })();
+  const within = (d?: string) => !!d && d.slice(0, 10) <= todayStr && (period === "all" ? true : new Date(d).getTime() >= startTs);
   const incItems = (inc?.items ?? []).filter((x) => within(x.date)).sort((a, b) => `${b.date ?? ""}`.localeCompare(`${a.date ?? ""}`));
   const expItems = (exp?.items ?? []).filter((x) => within(x.date)).sort((a, b) => `${b.date ?? ""}`.localeCompare(`${a.date ?? ""}`));
   const moneyIn = incItems.reduce((s, x) => s + (x.amount || 0), 0);
-  const moneyOut = expItems.reduce((s, x) => s + (x.amount || 0), 0);
+  // Money out counts what has been PAID (the Money out page's default cash basis); a Pending bill is owed, not spent yet.
+  const moneyOut = expItems.filter((x) => x.status !== "pending").reduce((s, x) => s + (x.amount || 0), 0);
   const royalty = split?.totals.fee ?? 0;
   const net = moneyIn + royalty - moneyOut;
   const franchises = split?.franchises ?? [];
   const maxRev = Math.max(1, ...franchises.map((f) => f.revenue));
-  const outstanding = inv.filter((i) => (i.status ?? "").toLowerCase() !== "paid");
+  // Owed = sent and unpaid (the server's own definition): a draft was never issued and a cancelled invoice is not owed.
+  const outstanding = inv.filter((i) => (i.status ?? "").toLowerCase() === "sent");
   const outstandingTotal = outstanding.reduce((s, i) => s + (i.amount || 0), 0);
 
   const KPI = ({ label, value, tone, hint }: { label: string; value: string; tone: string; hint?: string }) => (
@@ -308,7 +313,7 @@ function InvoiceList({ items, franchises, onCreated }: { items: Invoice[]; franc
                 <tr key={iv.id ?? i} className="border-t border-[var(--line)]">
                   <td className="py-2 pe-3 font-bold text-[var(--ink)]">{iv.billTo || iv.customer || iv.to || "—"}</td>
                   <td className="py-2 pe-3 tabular-nums text-[var(--ink-2)]">{shortDate(iv.dueDate)}</td>
-                  <td className="py-2 pe-3"><span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={paid(iv.status) ? { background: "#e4f5eb", color: "#0f7a43" } : { background: "#fdecc8", color: "#8a5a00" }}>{paid(iv.status) ? "Paid" : "Outstanding"}</span></td>
+                  <td className="py-2 pe-3"><span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={paid(iv.status) ? { background: "#e4f5eb", color: "#0f7a43" } : { background: "#fdecc8", color: "#8a5a00" }}>{paid(iv.status) ? "Paid" : (iv.status ?? "").toLowerCase() === "draft" ? "Draft" : (iv.status ?? "").toLowerCase() === "cancelled" ? "Cancelled" : "Outstanding"}</span></td>
                   <td className="py-2 text-end font-extrabold tabular-nums text-[var(--ink)]">{gbp(iv.amount || 0)}</td>
                 </tr>
               ))}
