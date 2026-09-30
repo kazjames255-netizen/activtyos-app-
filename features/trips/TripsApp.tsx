@@ -213,34 +213,19 @@ function Ring({ pct }: { pct: number }) {
 // ── the 7-step planner ────────────────────────────────────────────────────
 const defaultParentMsg = (t: Trip, provider: string) => {
   const pay = t.askPay !== false, consent = t.askConsent !== false;
-  const ask = pay && consent ? "give your permission and pay £{Cost} by {PayBy}"
-    : pay ? "pay £{Cost} by {PayBy}"
-    : consent ? "give your permission by {PayBy}"
-    : "let us know by {PayBy}";
-  const action = [consent ? "[ ✓ I give permission for my child to attend ]" : "", pay ? "[ Pay £{Cost} for this trip → ]" : ""].filter(Boolean).join("\n");
-  return `Hi,
-
-We're excited to offer your child a place on our trip to {Destination} on {Date}, departing {Depart} and back by {Return}.
-
-Getting there: {Transport}${pay ? "\nCost: £{Cost} per child" : ""}
-
-To confirm your child's place, please ${ask} using the link below. If we don't hear from you by then, we may offer the place to another family.
-
-${action}
-
-Any questions, please contact {Lead} on {LeadPhone}.
-
-Thank you,
-${provider}`;
+  // The letter's wording follows the active language; the {Merge} fields stay as literal tokens and are filled by resolveMsg.
+  const ask = tNow(pay && consent ? "p8ops.tpLetterAskBoth" : pay ? "p8ops.tpLetterAskPay" : consent ? "p8ops.tpLetterAskConsent" : "p8ops.tpLetterAskNone");
+  const action = [consent ? tNow("p8ops.tpLetterBtnConsent") : "", pay ? tNow("p8ops.tpLetterBtnPay") : ""].filter(Boolean).join("\n");
+  return tNow("p8ops.tpLetterBody", { costLine: pay ? tNow("p8ops.tpLetterCost") : "", ask, action, provider });
 };
 const resolveMsg = (msg: string, t: Trip, provider: string) => msg
-  .replace(/{Destination}/g, t.destination || "the venue")
+  .replace(/{Destination}/g, t.destination || tNow("p8ops.tpFbVenue"))
   .replace(/{Address}/g, t.address || "")
-  .replace(/{Date}/g, fmtDate(t.date) || "the date")
+  .replace(/{Date}/g, fmtDate(t.date) || tNow("p8ops.tpFbDate"))
   .replace(/{Depart}/g, t.departTime || "—").replace(/{Return}/g, t.returnTime || "—")
-  .replace(/{Transport}/g, t.transport || "—").replace(/{Cost}/g, t.cost || "0.00")
-  .replace(/{PayBy}/g, t.payBy ? fmtDate(t.payBy) : "the date below")
-  .replace(/{Lead}/g, t.lead || "the trip lead").replace(/{LeadPhone}/g, t.leadPhone || "—")
+  .replace(/{Transport}/g, t.transport ? (TRANSPORT_KEY[t.transport] ? tNow(TRANSPORT_KEY[t.transport]) : t.transport) : "—").replace(/{Cost}/g, t.cost || "0.00")
+  .replace(/{PayBy}/g, t.payBy ? fmtDate(t.payBy) : tNow("p8ops.tpFbDateBelow"))
+  .replace(/{Lead}/g, t.lead || tNow("p8ops.tpFbLead")).replace(/{LeadPhone}/g, t.leadPhone || "—")
   .replace(/{Provider}/g, provider);
 const MERGE_FIELDS = ["{Destination}", "{Date}", "{Depart}", "{Return}", "{Transport}", "{Cost}", "{PayBy}", "{Lead}", "{LeadPhone}", "{Provider}"];
 

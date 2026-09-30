@@ -186,30 +186,27 @@ function lateness(a: Attendee, date: string, start: string, end: string, now: nu
   }
   return null;
 }
-const lateFor = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m` : `${m} min`);
+const lateFor = (m: number) => (m >= 60 ? tNow("p8ops.rgAgoHM", { h: Math.floor(m / 60), m: String(m % 60).padStart(2, "0") }) : tNow("p8ops.rgAgoMin", { m }));
 // The nudge wording. Warm and apologetic by default — a late parent is usually
 // stuck in traffic, not neglectful, and the register is a bad place to nag from.
 // Takes ALL of one parent's late children so a family with two on the register
 // gets one message, not one per child — matching "a parent is messaged once"
-// elsewhere on this page.
+// elsewhere on this page. The default wording is in the operator's language (they can edit it before it is sent).
 function nudgeCopy(items: { kid: string; late: Late }[], from?: string) {
-  const signoff = `\n\nThanks so much,${from ? `\n${from}` : ""}`;
+  const signoff = tNow("p8ops.rgNudgeSign", { from: from ? `\n${from}` : "" });
   const names = items.map((i) => i.kid);
-  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  let list = names.join(", ");
+  try { list = new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(names); } catch { /* keep the comma list */ }
   if (items.length === 1) {
     const { kid, late } = items[0];
     return late.kind === "collect"
-      ? { subject: `Collection reminder — ${kid}`, body: `Hi,\n\nHope you're well. Just a gentle reminder that ${kid} is still here with us — collection was due at ${late.at}, about ${lateFor(late.mins)} ago.\n\nNo problem at all if you've been held up. Could you let us know roughly when you'll be with us, so we can make sure someone's on hand to meet you?${signoff}` }
-      : { subject: `Just checking in — ${kid}`, body: `Hi,\n\nHope you're well. Just checking in — ${kid} isn't with us yet, and today's session started at ${late.at}, about ${lateFor(late.mins)} ago.\n\nNothing to worry about, we only wanted to make sure everything's OK. If they're still on their way there's no rush at all — and if plans have changed, just reply and we'll mark them absent.${signoff}` };
+      ? { subject: tNow("p8ops.rgNudgeSubjCollect", { list: kid }), body: tNow("p8ops.rgNudgeCollectOne", { kid, at: late.at, ago: lateFor(late.mins), signoff }) }
+      : { subject: tNow("p8ops.rgNudgeSubjCheck", { list: kid }), body: tNow("p8ops.rgNudgeLateOne", { kid, at: late.at, ago: lateFor(late.mins), signoff }) };
   }
-  const lines = items.map((i) => i.late.kind === "collect"
-    ? `• ${i.kid} — collection was due at ${i.late.at}, about ${lateFor(i.late.mins)} ago`
-    : `• ${i.kid} — today's session started at ${i.late.at}, about ${lateFor(i.late.mins)} ago and they're not with us yet`).join("\n");
+  const lines = items.map((i) => tNow(i.late.kind === "collect" ? "p8ops.rgNudgeLineCollect" : "p8ops.rgNudgeLineLate", { kid: i.kid, at: i.late.at, ago: lateFor(i.late.mins) })).join("\n");
   const allCollect = items.every((i) => i.late.kind === "collect");
-  const ask = allCollect
-    ? `No problem at all if you've been held up. Could you let us know roughly when you'll be with us, so we can make sure someone's on hand to meet you?`
-    : `Nothing to worry about — we only wanted to check everything's OK. Just reply and let us know, and we'll sort things this end.`;
-  return { subject: `${allCollect ? "Collection reminder" : "Just checking in"} — ${list}`, body: `Hi,\n\nHope you're well. Just a quick note about today:\n\n${lines}\n\n${ask}${signoff}` };
+  const ask = tNow(allCollect ? "p8ops.rgNudgeAskCollect" : "p8ops.rgNudgeAskLate");
+  return { subject: tNow(allCollect ? "p8ops.rgNudgeSubjCollect" : "p8ops.rgNudgeSubjCheck", { list }), body: tNow("p8ops.rgNudgeMulti", { lines, ask, signoff }) };
 }
 // Avatar chips. These were near-white pastels (#fde2e4 etc) carried over from
 // the light theme -- on a dark ground they blaze, and the initials sat on them
@@ -1509,7 +1506,7 @@ export function RegistersApp() {
       {openKid && <ChildModal a={applyEdit(openKid)} showTimes={showTimes} fields={fields} card={card} questions={questions} ctx={kidContext(openKid)} edit={edits[openKid.ref]} canEdit={canEditChild} onSaveEdit={(p) => saveEdit(openKid.ref, p)} onOpenFamilies={() => router.push(`/${portal}/customers`)} onClose={() => setOpenKid(null)} />}
       {noteFor && <NotePopup name={noteFor.name} note={notes[noteKey(noteFor.ref)]} canDeleteForever={canDeleteForever} onSave={(t, s) => saveNote(noteFor.ref, t, s)} onArchive={() => archiveNote(noteFor.ref)} onRestore={() => restoreNote(noteFor.ref)} onDeleteForever={() => deleteNoteForever(noteFor.ref)} onClose={() => setNoteFor(null)} />}
       {nudgeFor && (() => {
-        const kid = nudgeFor.a.children[0]?.name ?? "your child";
+        const kid = nudgeFor.a.children[0]?.name ?? tNow("p8ops.rgYourChild");
         const copy = nudgeCopy([{ kid, late: nudgeFor.late }], settings.providerName?.trim());
         return <NudgeDialog kid={kid} late={nudgeFor.late} email={nudgeFor.a.email!.trim().toLowerCase()} parentName={nudgeFor.a.booker ?? ""} refId={nudgeFor.a.ref} subject={copy.subject} body={copy.body} others={lateAll} from={settings.providerName?.trim()} onSent={(refs) => markNudged(refs, date)} onClose={() => setNudgeFor(null)} />;
       })()}
@@ -1651,7 +1648,7 @@ function NudgeDialog({ kid, late, email, parentName, refId, subject: subject0, b
         // nudge must never quote one child's overdue time at another's parent.
         const done: string[] = [];
         for (const g of groups) {
-          const c = nudgeCopy(g.items.map((i) => ({ kid: i.a.children[0]?.name ?? "your child", late: i.late })), from);
+          const c = nudgeCopy(g.items.map((i) => ({ kid: i.a.children[0]?.name ?? tNow("p8ops.rgYourChild"), late: i.late })), from);
           await apiPost("/api/messages", { parentEmail: g.email, parentName: g.parentName, subject: c.subject, body: c.body });
           done.push(...g.items.map((i) => i.a.ref));
         }
