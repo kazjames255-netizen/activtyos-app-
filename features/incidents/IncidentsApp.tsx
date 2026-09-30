@@ -14,6 +14,7 @@ import { TourLauncher } from "@/features/common/TourLauncher";
 import { NotesThread } from "./NotesThread";
 import { INJURY_BANK, TREATMENT_BANK, treatmentsFor } from "./firstAid";
 import { BEHAVIOUR_TYPES, BEHAVIOUR_CONCERNS, BEHAVIOUR_ACTIONS } from "./behaviourBank";
+import { bankLabel, bankText } from "./bankText";
 import { useI18n, useT } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
@@ -178,10 +179,10 @@ function LogForm({ kind, notifies, existing, initialChild, onSaved, onCancel }: 
                   <div className="mb-1.5 rounded-lg border border-[#cfe0f7] bg-[#f5f9ff] p-2">
                     <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-[#1d3a8f]">{t("p7inc.selectedRecorded")}</div>
                     <div className="flex flex-wrap gap-1.5">
-                      {treatSel.map((t) => (
-                        <span key={t} className="inline-flex items-center gap-1 rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[11px] font-semibold text-white">
-                          {t}
-                          <button type="button" onClick={() => toggleTreat(t)} className="text-white/80 hover:text-white" aria-label={removeLbl}>✕</button>
+                      {treatSel.map((x) => (
+                        <span key={x} className="inline-flex items-center gap-1 rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[11px] font-semibold text-white">
+                          {bankLabel(t, x)}
+                          <button type="button" onClick={() => toggleTreat(x)} className="text-white/80 hover:text-white" aria-label={removeLbl}>✕</button>
                         </span>
                       ))}
                       {treatOther.trim() && (
@@ -211,12 +212,12 @@ function LogForm({ kind, notifies, existing, initialChild, onSaved, onCancel }: 
                         {treatSel.length > 0 && <button type="button" onClick={() => setTreatSel([])} className="text-[10.5px] font-semibold text-[#1d3a8f] underline">{t("p7inc.clearWord")}</button>}
                       </div>
                       <div className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5 [scrollbar-width:thin]">
-                        {shown.map((t) => {
-                          const on = treatSel.includes(t);
+                        {shown.map((x) => {
+                          const on = treatSel.includes(x);
                           return (
-                            <label key={t} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-[12.5px] leading-snug transition-colors" style={on ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 700 } : { color: "var(--ink-2)" }}>
-                              <input type="checkbox" checked={on} onChange={() => toggleTreat(t)} className="mt-0.5 shrink-0" />
-                              <span>{t}</span>
+                            <label key={x} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-[12.5px] leading-snug transition-colors" style={on ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 700 } : { color: "var(--ink-2)" }}>
+                              <input type="checkbox" checked={on} onChange={() => toggleTreat(x)} className="mt-0.5 shrink-0" />
+                              <span>{bankLabel(t, x)}</span>
                             </label>
                           );
                         })}
@@ -253,15 +254,15 @@ function LogForm({ kind, notifies, existing, initialChild, onSaved, onCancel }: 
                   <div className="mb-1.5 rounded-lg border border-[#cfe0f7] bg-[#f5f9ff] p-2">
                     <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-[#1d3a8f]">{t("p7inc.selectedRecorded")}</div>
                     <div className="flex flex-wrap gap-1.5">
-                      {actSel.map((t) => <span key={t} className="inline-flex items-center gap-1 rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[11px] font-semibold text-white">{t}<button type="button" onClick={() => toggleAct(t)} className="text-white/80 hover:text-white" aria-label={removeLbl}>✕</button></span>)}
+                      {actSel.map((x) => <span key={x} className="inline-flex items-center gap-1 rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[11px] font-semibold text-white">{bankLabel(t, x)}<button type="button" onClick={() => toggleAct(x)} className="text-white/80 hover:text-white" aria-label={removeLbl}>✕</button></span>)}
                       {actOther.trim() && <span className="inline-flex items-center gap-1 rounded-full border border-[#1d3a8f] bg-white px-2 py-0.5 text-[11px] font-semibold text-[#1d3a8f]">{actOther.trim()}<button type="button" onClick={() => setActOther("")} className="text-[#1d3a8f]/70 hover:text-[#1d3a8f]" aria-label={removeLbl}>✕</button></span>}
                     </div>
                   </div>
                 )}
                 <div className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5 [scrollbar-width:thin]">
-                  {BEHAVIOUR_ACTIONS.map((t) => { const on = actSel.includes(t); return (
-                    <label key={t} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-[12.5px] leading-snug transition-colors" style={on ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 700 } : { color: "var(--ink-2)" }}>
-                      <input type="checkbox" checked={on} onChange={() => toggleAct(t)} className="mt-0.5 shrink-0" /><span>{t}</span>
+                  {BEHAVIOUR_ACTIONS.map((x) => { const on = actSel.includes(x); return (
+                    <label key={x} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-[12.5px] leading-snug transition-colors" style={on ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 700 } : { color: "var(--ink-2)" }}>
+                      <input type="checkbox" checked={on} onChange={() => toggleAct(x)} className="mt-0.5 shrink-0" /><span>{bankLabel(t, x)}</span>
                     </label>
                   ); })}
                 </div>
@@ -539,10 +540,10 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
                       <div className="mt-2.5 grid gap-x-6 gap-y-1.5 rounded-xl bg-[var(--panel)] px-3.5 py-3 text-[12px] sm:grid-cols-2">
                         {l.location && <div><span className="text-[var(--ink-3)]">{t("p7inc.dWhere")} </span><b>{l.location}</b></div>}
                         {l.injury && <div><span className="text-[var(--ink-3)]">{t("p7inc.dInjury")} </span><b>{l.injury}</b></div>}
-                        {l.treatment && <div><span className="text-[var(--ink-3)]">{t("p7inc.dFirstAid")} </span><b>{l.treatment}</b></div>}
+                        {l.treatment && <div><span className="text-[var(--ink-3)]">{t("p7inc.dFirstAid")} </span><b>{bankText(t, l.treatment)}</b></div>}
                         {l.firstAider ? <div><span className="text-[var(--ink-3)]">{t("p7inc.dFirstAiderBy")} </span><b>{l.firstAider}</b></div> : <div><span className="text-[var(--ink-3)]">{t("p7inc.dFirstAiderBy")} </span><b className="text-[var(--ink-3)]">{t("p7inc.notRecorded")}</b></div>}
                         {l.incidentType && <div><span className="text-[var(--ink-3)]">{t("p7inc.dType")} </span><b>{l.incidentType}</b></div>}
-                        {l.actionTaken && <div><span className="text-[var(--ink-3)]">{t("p7inc.dAction")} </span><b>{l.actionTaken}</b></div>}
+                        {l.actionTaken && <div><span className="text-[var(--ink-3)]">{t("p7inc.dAction")} </span><b>{bankText(t, l.actionTaken)}</b></div>}
                         {l.witnesses && <div><span className="text-[var(--ink-3)]">{t("p7inc.dWitnesses")} </span><b>{l.witnesses}</b></div>}
                         {l.parentNotifiedAt && <div><span className="text-[var(--ink-3)]">{t("p7inc.dParentInformed")} </span><b>{new Date(l.parentNotifiedAt).toLocaleString(dl())}</b></div>}
                         {l.acknowledgedAt && <div><span className="text-[var(--ink-3)]">{t("p7inc.dParentAck")} </span><b>{new Date(l.acknowledgedAt).toLocaleString(dl())}{l.acknowledgedBy ? ` · ${l.acknowledgedBy}` : ""}</b></div>}

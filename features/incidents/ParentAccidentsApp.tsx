@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
+import { bankText } from "./bankText";
 import { useI18n } from "@/lib/i18n/provider";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Card } from "@/components/ui";
@@ -141,10 +142,10 @@ export function ParentAccidentsApp() {
                     <div className="mt-2 flex flex-col gap-1.5 rounded-xl bg-[var(--panel)] px-3.5 py-3 text-[12.5px] text-[var(--ink-2)]">
                       {r.location && <div><b className="text-[var(--ink)]">{t("care.accWhere")}</b> {r.location}</div>}
                       {isBehaviour(r) ? (
-                        r.actionTaken && <div><b className="text-[var(--ink)]">{t("care.accWhatWeDid")}</b> {r.actionTaken}</div>
+                        r.actionTaken && <div><b className="text-[var(--ink)]">{t("care.accWhatWeDid")}</b> {bankText(t, r.actionTaken)}</div>
                       ) : (
                         <>
-                          {r.treatment && <div><b className="text-[var(--ink)]">{t("care.accFirstAid")}</b> {r.treatment}</div>}
+                          {r.treatment && <div><b className="text-[var(--ink)]">{t("care.accFirstAid")}</b> {bankText(t, r.treatment)}</div>}
                           <div><b className="text-[var(--ink)]">{t("care.accFirstAidBy")}</b> {r.firstAider ? r.firstAider : t("care.accNotRecorded")}</div>
                         </>
                       )}
