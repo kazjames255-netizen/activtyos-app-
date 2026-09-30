@@ -3,6 +3,7 @@
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { tNow, useT } from "@/lib/i18n/provider";
 import { del, get, post, put } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { whoLabel, foldRepeats, REPEAT_WORD, type Person } from "@/features/tasks/taskDisplay";
@@ -20,14 +21,16 @@ type Source = "cold_call" | "email" | "social" | "referral" | "event" | "inbound
 type Kind = "person" | "business" | "group" | "franchise" | "school" | "cluster" | "charity";
 // What sort of prospect this is. `nameLabel` retitles the first field, because
 // "Business" is wrong for a self-employed coach and misleading for a trust.
+// Labels are getters over the catalogue so module-level data still follows the language picker (read at render time).
+const kindDef = (k: string, icon: string) => ({ get label() { return tNow(`p8hq.slKind${k}`); }, get nameLabel() { return tNow(`p8hq.slName${k}`); }, icon });
 const KINDS: Record<Kind, { label: string; nameLabel: string; icon: string }> = {
-  person:    { label: "Person / sole trader", nameLabel: "Their name",        icon: "👤" },
-  business:  { label: "Business",              nameLabel: "Business name",     icon: "🏢" },
-  group:     { label: "Multi-site group",      nameLabel: "Group name",        icon: "🏘️" },
-  franchise: { label: "Franchise network",     nameLabel: "Network name",      icon: "🔗" },
-  school:    { label: "School / academy",      nameLabel: "School name",       icon: "🎓" },
-  cluster:   { label: "Trust or cluster",      nameLabel: "Trust / cluster name", icon: "🏛️" },
-  charity:   { label: "Charity / community",   nameLabel: "Organisation name", icon: "🤝" },
+  person:    kindDef("Person", "👤"),
+  business:  kindDef("Business", "🏢"),
+  group:     kindDef("Group", "🏘️"),
+  franchise: kindDef("Franchise", "🔗"),
+  school:    kindDef("School", "🎓"),
+  cluster:   kindDef("Cluster", "🏛️"),
+  charity:   kindDef("Charity", "🤝"),
 };
 const KIND_ORDER: Kind[] = ["person", "business", "group", "franchise", "school", "cluster", "charity"];
 // `direction` only applies to a real email exchange (the question/reply
@@ -79,31 +82,35 @@ export interface Lead {
   // call, so rescheduling never breaks a link already sent.
   videoRoom?: string;
 }
-const slotFmt = new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+// Built per call so it follows the active language (a module-level Intl object would freeze on the first locale).
+const slotFmt = { format: (d: Date) => new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(d) };
 
 // 5 clear steps left→right (a fresh Lead → a New customer who's signed up), plus
 // Lost held separately at the end. When a signup matches a lead's email/phone/
 // business, the backend auto-moves it to "New customer" (see sales-crm-handoff).
+const stg = (id: Stage, key: string, color: string, prob: number) => ({ id, get label() { return tNow(`p8hq.${key}`); }, color, prob });
 export const STAGES: { id: Stage; label: string; color: string; prob: number }[] = [
-  { id: "new", label: "1 · Lead", color: "#6b6880", prob: 0.1 },
-  { id: "contacted", label: "2 · Contacted", color: "#3f78d8", prob: 0.25 },
-  { id: "demo", label: "3 · Demo & website meeting", color: "#7c3aed", prob: 0.5 },
-  { id: "trial", label: "4 · Trial", color: "#a5670a", prob: 0.8 },
-  { id: "won", label: "5 · New customer 🎉", color: "#0f7a43", prob: 1 },
-  { id: "lost", label: "Lost", color: "#c02636", prob: 0 },
+  stg("new", "slStNew", "#6b6880", 0.1),
+  stg("contacted", "slStContacted", "#3f78d8", 0.25),
+  stg("demo", "slStDemo", "#7c3aed", 0.5),
+  stg("trial", "slStTrial", "#a5670a", 0.8),
+  stg("won", "slStWon", "#0f7a43", 1),
+  stg("lost", "slStLost", "#c02636", 0),
 ];
 const stageOf = (id: Stage) => STAGES.find((s) => s.id === id) ?? STAGES[0];
 const VALID_STAGES = new Set(STAGES.map((s) => s.id));
+const opt = <I extends string>(id: I, key: string) => ({ id, get label() { return tNow(`p8hq.${key}`); } });
 const SOURCES: { id: Source; label: string }[] = [
-  { id: "cold_call", label: "📞 Cold call" }, { id: "email", label: "✉️ Email" }, { id: "social", label: "📱 Social" },
-  { id: "referral", label: "🤝 Referral" }, { id: "event", label: "🎟️ Event" }, { id: "inbound", label: "🌐 Inbound" },
-  { id: "website_build", label: "🎨 Website build request" },
+  opt("cold_call", "slSrcCold"), opt("email", "slSrcEmail"), opt("social", "slSrcSocial"),
+  opt("referral", "slSrcReferral"), opt("event", "slSrcEvent"), opt("inbound", "slSrcInbound"),
+  opt("website_build", "slSrcWebsite"),
 ];
 const srcLabel = (s: Source) => SOURCES.find((x) => x.id === s)?.label ?? s;
 const ACT: { id: Activity["type"]; label: string }[] = [
-  { id: "call", label: "📞 Call" }, { id: "email", label: "✉️ Email" }, { id: "social", label: "📱 Social" }, { id: "demo", label: "🎥 Demo" }, { id: "note", label: "📝 Note" },
+  opt("call", "slActCall"), opt("email", "slSrcEmail"), opt("social", "slSrcSocial"), opt("demo", "slActDemo"), opt("note", "slActNote"),
 ];
 const PLAN_MRR: Record<Lead["plan"], number> = { freelancer: 29, company: 69, franchise: 86 };
+// Stored outcome text stays English (the value); the datalist shows the translated label.
 const OUTCOMES = ["Interested", "Booked a demo", "Sent info / pricing", "Call back later", "No answer", "Left voicemail", "Wants to think", "Not interested", "Wrong contact", "Signed up 🎉"];
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
 const money = (n: number) => `£${Math.round(n).toLocaleString(dl())}`;
@@ -131,11 +138,16 @@ type NewActivity = { type: Activity["type"]; note: string; outcome?: string };
  * guard would have to be remembered every time someone touches this file, and
  * the next omission is another white screen on the page you use to sell.
  */
-export const BIZ_TYPE_LABEL: Record<string, string> = {
-  holiday: "Holiday camps & clubs", wraparound: "Breakfast & after-school", activity: "Sports & activity classes",
-  tuition: "Tuition & learning", preschool: "Pre-school / playgroup", nursery: "Nursery / day care",
-  childminder: "Childminder", school: "School / MAT", other: "Other childcare",
+const bizDef = (key: string) => ({ get v() { return tNow(`p8hq.${key}`); } });
+const BIZ_DEFS: Record<string, { v: string }> = {
+  holiday: bizDef("slBizHoliday"), wraparound: bizDef("slBizWrap"), activity: bizDef("slBizActivity"),
+  tuition: bizDef("slBizTuition"), preschool: bizDef("slBizPreschool"), nursery: bizDef("slBizNursery"),
+  childminder: bizDef("slBizChildminder"), school: bizDef("slBizSchool"), other: bizDef("slBizOther"),
 };
+// Reads the active language at lookup time (Proxy over the catalogue-backed definitions above).
+export const BIZ_TYPE_LABEL: Record<string, string> = new Proxy({} as Record<string, string>, {
+  get: (_t, k) => (typeof k === "string" ? BIZ_DEFS[k]?.v : undefined),
+});
 
 function normaliseLead(raw: Lead & Partial<{ name: string; message: string; status: string; interest: string; interestedFeatures: string[]; businessType: string; businessTypes: string[] }>): Lead {
   const plan = (["freelancer", "company", "franchise"] as const).includes(raw.plan) ? raw.plan : "company";
@@ -162,7 +174,7 @@ function normaliseLead(raw: Lead & Partial<{ name: string; message: string; stat
     interestedFeatures: Array.isArray(raw.interestedFeatures) ? raw.interestedFeatures : undefined,
     interest: raw.interest === "website-design-signup" || raw.interest === "website-design-question" ? raw.interest : undefined,
     stage: VALID_STAGES.has(raw.stage) ? raw.stage : VALID_STAGES.has(raw.status as Stage) ? (raw.status as Stage) : "new",
-    business: raw.business || raw.name || raw.email || "Untitled",
+    business: raw.business || raw.name || raw.email || "Untitled", // canonical stored fallback
     email: raw.email || "", phone: raw.phone || "", location: raw.location || "", owner: raw.owner || "",
     source: normSource(raw.source || "inbound"),
     plan,
@@ -176,6 +188,7 @@ function normaliseLead(raw: Lead & Partial<{ name: string; message: string; stat
 }
 
 export function SalesApp() {
+  const tr = useT();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -207,7 +220,7 @@ export function SalesApp() {
   const refresh = useCallback(() => {
     get<Lead[]>("/api/platform/leads")
       .then((list) => { setLeads(list.map(normaliseLead)); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "Couldn't load leads"))
+      .catch((e) => setError(e instanceof Error ? e.message : tNow("p8hq.slLoadFail")))
       .finally(() => setLoading(false));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
@@ -220,17 +233,17 @@ export function SalesApp() {
       else id = (await post<Lead>("/api/platform/leads", lead)).id;
       for (const a of newActs) await post(`/api/platform/leads/${id}/activities`, a);
       refresh();
-    } catch (e) { setError(e instanceof Error ? e.message : "Save failed"); }
+    } catch (e) { setError(e instanceof Error ? e.message : tNow("p8hq.slSaveFail")); }
   };
   const remove = async (id: string) => {
     try { await del(`/api/platform/leads/${id}`); setDetail(null); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); }
+    catch (e) { setError(e instanceof Error ? e.message : tNow("p8hq.slDeleteFail")); }
   };
   // Drag between columns: optimistic (the card lands instantly), then the
   // realtime refresh confirms — or a failed PUT reverts via refetch.
   const move = (id: string, stage: Stage) => {
     setLeads((cur) => cur.map((x) => (x.id === id ? { ...x, stage, updatedAt: nowIso() } : x)));
-    put(`/api/platform/leads/${id}`, { stage }).catch((e) => { setError(e instanceof Error ? e.message : "Move failed"); refresh(); });
+    put(`/api/platform/leads/${id}`, { stage }).catch((e) => { setError(e instanceof Error ? e.message : tNow("p8hq.slMoveFail")); refresh(); });
   };
   // HQ books a non-demo lead (e.g. a website-add-on enquiry) onto a real
   // open call slot — sets exactly what a genuine /demo submission would
@@ -238,12 +251,12 @@ export function SalesApp() {
   // they'd booked it themselves.
   const bookDemo = (id: string, slotAt: string) => {
     setLeads((cur) => cur.map((x) => (x.id === id ? { ...x, stage: "demo", slotAt, updatedAt: nowIso() } : x)));
-    put(`/api/platform/leads/${id}`, { stage: "demo", slotAt }).catch((e) => { setError(e instanceof Error ? e.message : "Booking failed"); refresh(); });
+    put(`/api/platform/leads/${id}`, { stage: "demo", slotAt }).catch((e) => { setError(e instanceof Error ? e.message : tNow("p8hq.slBookFail")); refresh(); });
   };
   const doImport = async (rows: Lead[]) => {
     setImporting(false);
     try { await post("/api/platform/leads/bulk", rows); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Import failed"); }
+    catch (e) { setError(e instanceof Error ? e.message : tNow("p8hq.slImportFail")); }
   };
   // Answering a "website-design-question" lead: stores the reply on the lead
   // (so it's visible later, not just fired-and-forgotten) AND emails the
@@ -267,25 +280,25 @@ export function SalesApp() {
       <div className="overflow-hidden rounded-2xl text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex flex-wrap items-end justify-between gap-3 px-6 py-5">
           <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>Platform · Head office</div>
-            <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>💼 Sales pipeline</h2>
-            <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">Track every prospect from first touch to paying provider — outreach, demos, and who&rsquo;s converting.</p>
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>{tr("p8hq.slEyebrow")}</div>
+            <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>{tr("p8hq.slTitle")}</h2>
+            <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">{tr("p8hq.slSubtitle")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold">
-              {([["pipeline", "Pipeline"], ["dashboard", "Dashboard"], ["slots", "Demo slots"], ["calls", "Video calls"]] as const).map(([v, l]) => (
+              {([["pipeline", tr("p8hq.slTabPipeline")], ["dashboard", tr("p8hq.slTabDashboard")], ["slots", tr("p8hq.slTabSlots")], ["calls", tr("p8hq.slTabCalls")]] as const).map(([v, l]) => (
                 <button key={v} type="button" onClick={() => setTab(v)} className="rounded-full px-3 py-1 transition-colors" style={tab === v ? { background: "#fff", color: "#1d3a8f" } : { color: "rgba(255,255,255,.8)" }}>{l}</button>
               ))}
             </div>
-            <button type="button" onClick={() => setImporting(true)} className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-[12.5px] font-bold text-white hover:bg-white/20">⬆ Import CSV</button>
-            <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[#ffd23f] px-4 py-2 text-[12.5px] font-extrabold text-[#3a2a00] hover:brightness-105">+ Add lead</button>
+            <button type="button" onClick={() => setImporting(true)} className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-[12.5px] font-bold text-white hover:bg-white/20">{tr("p8hq.slImportCsv")}</button>
+            <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[#ffd23f] px-4 py-2 text-[12.5px] font-extrabold text-[#3a2a00] hover:brightness-105">{tr("p8hq.slAddLead")}</button>
           </div>
         </div>
       </div>
 
       {error && <div className="mt-3 rounded-lg bg-[#fdebec] px-3 py-2 text-[12px] font-bold text-[var(--red)]">{error}</div>}
 
-      {loading ? <div className="py-12 text-center text-[12.5px] text-[var(--ink-3)]">Loading pipeline…</div> : tab === "pipeline" ? (() => {
+      {loading ? <div className="py-12 text-center text-[12.5px] text-[var(--ink-3)]">{tr("p8hq.slLoading")}</div> : tab === "pipeline" ? (() => {
         const q = query.trim().toLowerCase();
         const qDigits = q.replace(/\D/g, "");
         const filtered = !q ? leads : leads.filter((l) => {
@@ -296,9 +309,9 @@ export function SalesApp() {
         return (
           <>
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="🔍 Find a lead — name, email or phone (e.g. an inbound caller)" className="w-full max-w-[440px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
-              {q && <span className="text-[12px] text-[var(--ink-3)]">{filtered.length} match{filtered.length === 1 ? "" : "es"} · <button type="button" onClick={() => setQuery("")} className="font-bold text-[#1d3a8f]">clear</button></span>}
-              {q && filtered.length === 0 && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[#0f7a43] px-3 py-1.5 text-[12px] font-bold text-white">+ New lead (not found)</button>}
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr("p8hq.slSearchPh")} className="w-full max-w-[440px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
+              {q && <span className="text-[12px] text-[var(--ink-3)]">{tr("p8hq.slMatches", { n: filtered.length })} · <button type="button" onClick={() => setQuery("")} className="font-bold text-[#1d3a8f]">{tr("p8hq.slClear")}</button></span>}
+              {q && filtered.length === 0 && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[#0f7a43] px-3 py-1.5 text-[12px] font-bold text-white">{tr("p8hq.slNewNotFound")}</button>}
             </div>
             <Pipeline leads={filtered} onOpen={setDetail} onMove={move} onBookDemo={bookDemo} />
           </>
@@ -318,12 +331,12 @@ export function SalesApp() {
         <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 className="text-[16px] font-extrabold">💼 Sales tasks</h3>
+              <h3 className="text-[16px] font-extrabold">{tr("p8hq.slTasksTitle")}</h3>
               <p className="mt-0.5 text-[12.5px] text-[var(--ink-2)]">
-                From your task board, linked to a lead. {salesTasks.filter((t) => t.due && t.due < today && t.status !== "done").length} overdue.
+                {tr("p8hq.slTasksSub", { n: salesTasks.filter((t) => t.due && t.due < today && t.status !== "done").length })}
               </p>
             </div>
-            <a href="/platform/tasks" className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">Open task board →</a>
+            <a href="/platform/tasks" className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">{tr("p8hq.slTasksOpen")}</a>
           </div>
           <div className="mt-4 space-y-4">
             {Object.entries(tasksByLead).sort(([a], [b]) => a.localeCompare(b)).map(([lead, ts]) => (
@@ -342,14 +355,14 @@ export function SalesApp() {
                         <a href={`/platform/tasks?task=${t.id}`} className={`min-w-0 flex-1 truncate text-[13.5px] font-semibold hover:underline ${t.status === "done" ? "text-[var(--ink-3)] line-through" : ""}`}>{t.t}</a>
                         {rest.length > 0 && (
                           <span className="hidden shrink-0 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-3)] sm:inline"
-                            title={`Repeats ${t.seriesFreq ? REPEAT_WORD[t.seriesFreq] ?? t.seriesFreq : ""} — ${rest.length} more date${rest.length === 1 ? "" : "s"}. Open it to see them all.`}>
+                            title={tr("p8hq.slTaskRepeats", { freq: t.seriesFreq ? REPEAT_WORD[t.seriesFreq] ?? t.seriesFreq : "", n: rest.length })}>
                             🔁 +{rest.length}
                           </span>
                         )}
                         {who && <span className="hidden shrink-0 text-[11.5px] text-[var(--ink-3)] sm:inline">{who}</span>}
                         <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-extrabold"
                           style={overdue ? { background: "#fdeaee", color: "#b3123c" } : { background: "var(--panel)", color: "var(--ink-3)" }}>
-                          {t.due ? (overdue ? `Overdue · ${t.due}` : t.due) : "No date"}{t.time ? ` · ${t.time}` : ""}
+                          {t.due ? (overdue ? tr("p8hq.slOverdue", { date: t.due }) : t.due) : tr("p8hq.slNoDate")}{t.time ? ` · ${t.time}` : ""}
                         </span>
                       </li>
                     );
@@ -373,6 +386,7 @@ export function SalesApp() {
 // (already added for non-drag devices) is the only way to change stage now.
 function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen: (l: Lead) => void; onMove: (id: string, s: Stage) => void; onBookDemo: (id: string, slotAt: string) => void }) {
   const router = useRouter();
+  const tr = useT();
   const [stage, setStage] = useState<Stage>("new");
   const items = leads.filter((l) => l.stage === stage);
   const sum = items.reduce((a, b) => a + b.estMrr, 0);
@@ -393,11 +407,11 @@ function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen
       </div>
 
       <div className="mt-3 flex items-center justify-between">
-        <span className="text-[12.5px] font-bold text-[var(--ink-2)]">{items.length} lead{items.length === 1 ? "" : "s"} · {money(sum)}</span>
+        <span className="text-[12.5px] font-bold text-[var(--ink-2)]">{tr("p8hq.slLeadsSum", { n: items.length, sum: money(sum) })}</span>
       </div>
 
       <div className="mt-2 flex flex-col gap-2">
-        {items.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] py-8 text-center text-[12.5px] text-[var(--ink-3)]">Nothing in {STAGES.find((s) => s.id === stage)?.label} right now.</div>}
+        {items.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] py-8 text-center text-[12.5px] text-[var(--ink-3)]">{tr("p8hq.slNothingIn", { stage: STAGES.find((s) => s.id === stage)?.label ?? "" })}</div>}
         {items.map((l) => (
           <div key={l.id} onClick={() => onOpen(l)}
             className="flex cursor-pointer flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[0_1px_2px_rgba(16,24,40,.05)] hover:border-[var(--ink-3)]">
@@ -406,32 +420,32 @@ function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen
               <div className="truncate text-[13.5px] font-extrabold">{l.business}</div>
               <div className="truncate text-[11.5px] text-[var(--ink-3)]">{l.contactName} · {l.location}</div>
               {l.interest === "website-design-question" && (
-                <div className="mt-0.5 truncate text-[11.5px] font-semibold text-[#a5670a]">❓ Asked: {l.message || "(no message)"}{l.activities.some((a) => a.direction === "out") ? " · ✅ Answered" : ""}</div>
+                <div className="mt-0.5 truncate text-[11.5px] font-semibold text-[#a5670a]">{tr("p8hq.slAsked", { msg: l.message || tr("p8hq.slNoMessage") })}{l.activities.some((a) => a.direction === "out") ? tr("p8hq.slAnswered") : ""}</div>
               )}
             </div>
             {l.interest === "website-design-signup" && (
-              <span className="truncate rounded-md bg-[#eafaf0] px-2 py-1 text-[11px] font-bold text-[#127a3e]">🌐 Wants the website add-on</span>
+              <span className="truncate rounded-md bg-[#eafaf0] px-2 py-1 text-[11px] font-bold text-[#127a3e]">{tr("p8hq.slWantsSite")}</span>
             )}
             {l.interest === "website-design-question" && (
-              <span className="truncate rounded-md bg-[#fdf3e5] px-2 py-1 text-[11px] font-bold text-[#a5670a]">❓ Question</span>
+              <span className="truncate rounded-md bg-[#fdf3e5] px-2 py-1 text-[11px] font-bold text-[#a5670a]">{tr("p8hq.slQuestion")}</span>
             )}
             {l.slotAt && (
               l.videoRoom ? (
                 <button type="button" onClick={(e) => { e.stopPropagation(); router.push(`/platform/call/${l.id}`); }}
                   className="truncate rounded-md bg-[#eef4fd] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#dde8fb]">
-                  📹 Video call · {slotFmt.format(new Date(l.slotAt))}
+                  {tr("p8hq.slVideoCallAt", { time: slotFmt.format(new Date(l.slotAt)) })}
                 </button>
               ) : (
                 <span className="truncate rounded-md bg-[#eef4fd] px-2 py-1 text-[11px] font-bold text-[#1d3a8f]">
-                  📹 Video call · {slotFmt.format(new Date(l.slotAt))}
+                  {tr("p8hq.slVideoCallAt", { time: slotFmt.format(new Date(l.slotAt)) })}
                 </span>
               )
             )}
             {l.lastReplyAt && (
-              <span title="They replied to one of our emails — see Activity below" className="truncate rounded-md bg-[#eef2fb] px-2 py-1 text-[11px] font-bold text-[#3f5bb3]">💬 Replied {fmtDay(l.lastReplyAt)}</span>
+              <span title={tr("p8hq.slRepliedTip")} className="truncate rounded-md bg-[#eef2fb] px-2 py-1 text-[11px] font-bold text-[#3f5bb3]">{tr("p8hq.slReplied", { date: fmtDay(l.lastReplyAt) })}</span>
             )}
             <span className="text-[11px] text-[var(--ink-3)]">{srcLabel(l.source).split(" ")[0]}{l.owner ? ` · ${l.owner}` : ""}</span>
-            <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[11px] font-bold capitalize text-[#1d3a8f]">{l.plan}</span>
+            <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[11px] font-bold capitalize text-[#1d3a8f]">{tr(`p8hq.slPlan${l.plan === "freelancer" ? "Freelancer" : l.plan === "franchise" ? "Franchise" : "Company"}`)}</span>
             {l.activities[0] && <span className="truncate text-[10.5px] text-[var(--ink-3)]">{fmtDay(l.activities[0].at)}: {l.activities[0].note}</span>}
             {!l.slotAt && l.stage !== "won" && l.stage !== "lost" && (
               <BookDemoButton onBook={(iso) => onBookDemo(l.id, iso)} />
@@ -442,7 +456,7 @@ function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen
               onChange={(e) => onMove(l.id, e.target.value as Stage)}
               className="ms-auto rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"
             >
-              {STAGES.map((s) => <option key={s.id} value={s.id}>Move to: {s.label}</option>)}
+              {STAGES.map((s) => <option key={s.id} value={s.id}>{tr("p8hq.slMoveTo", { stage: s.label })}</option>)}
             </select>
           </div>
         ))}
@@ -458,11 +472,12 @@ function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen
 // picking one drives the lead through the identical stage+slotAt shape a
 // genuine demo submission would.
 interface DemoSlot { iso: string; durationMins: number }
-const slotDayFmt = new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" });
-const slotTimeFmt = new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
+const slotDayFmt = { format: (d: Date) => new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }).format(d) };
+const slotTimeFmt = { format: (d: Date) => new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }).format(d) };
 const slotDayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" });
 
 function BookDemoButton({ onBook }: { onBook: (iso: string) => void }) {
+  const tr = useT();
   const [open, setOpen] = useState(false);
   const [slots, setSlots] = useState<DemoSlot[] | null>(null);
 
@@ -481,16 +496,16 @@ function BookDemoButton({ onBook }: { onBook: (iso: string) => void }) {
   return (
     <div className="relative" onClick={(e) => e.stopPropagation()}>
       <button type="button" onClick={openPicker} className="truncate rounded-md border border-[#dbe6fb] bg-[var(--surface)] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">
-        📹 Book onto a demo
+        {tr("p8hq.slBookDemoBtn")}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-[59]" onClick={() => setOpen(false)} />
           <div className="absolute end-0 top-full z-[60] mt-1.5 max-h-72 w-72 overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-xl">
             {slots === null ? (
-              <div className="p-2 text-[12px] text-[var(--ink-3)]">Loading available times…</div>
+              <div className="p-2 text-[12px] text-[var(--ink-3)]">{tr("p8hq.slSlotsLoading")}</div>
             ) : Object.keys(byDay).length === 0 ? (
-              <div className="p-2 text-[12px] text-[var(--ink-3)]">No open slots in the next 7 days — add some in Demo slots.</div>
+              <div className="p-2 text-[12px] text-[var(--ink-3)]">{tr("p8hq.slSlotsNone")}</div>
             ) : (
               Object.entries(byDay).map(([day, daySlots]) => (
                 <div key={day} className="mb-2 last:mb-0">
@@ -514,17 +529,19 @@ function BookDemoButton({ onBook }: { onBook: (iso: string) => void }) {
 }
 
 // ── Dashboard ───────────────────────────────────────────────────────────────
-const PERIODS: [string, string][] = [["today", "Today"], ["5d", "5 days"], ["week", "Last week"], ["month", "Last month"], ["3m", "3 months"], ["6m", "6 months"], ["9m", "9 months"]];
+const PERIOD_KEYS: [string, string][] = [["today", "slPerToday"], ["5d", "slPer5d"], ["week", "slPerWeek"], ["month", "slPerMonth"], ["3m", "slPer3m"], ["6m", "slPer6m"], ["9m", "slPer9m"]];
 const PERIOD_DAYS: Record<string, number> = { "5d": 5, week: 7, month: 30, "3m": 90, "6m": 180, "9m": 270 };
 
 function Dashboard({ leads }: { leads: Lead[] }) {
+  const tr = useT();
+  const PERIODS: [string, string][] = PERIOD_KEYS.map(([id, k]) => [id, tr(`p8hq.${k}`)]);
   const [now] = useState(() => Date.now()); // captured once — pure during render
   const [period, setPeriod] = useState("month");
   const DAY = 86_400_000;
   const midnight = (() => { const d = new Date(now); d.setHours(0, 0, 0, 0); return d.getTime(); })();
   const cutoff = period === "today" ? midnight : now - (PERIOD_DAYS[period] ?? 30) * DAY;
   const within = (iso: string) => new Date(iso).getTime() >= cutoff;
-  const pLabel = (PERIODS.find((p) => p[0] === period)?.[1] ?? "").toLowerCase();
+  const pLabel = (PERIODS.find((p) => p[0] === period)?.[1] ?? "").toLocaleLowerCase(dl());
 
   // Now-snapshots (live pipeline — not time-bound).
   const open = leads.filter((l) => l.stage !== "won" && l.stage !== "lost");
@@ -559,12 +576,12 @@ function Dashboard({ leads }: { leads: Lead[] }) {
   };
   const cur = winMetrics(cutoff, now);
   const prev = winMetrics(cutoff - len, cutoff);
-  const COMPARE: [string, keyof typeof cur][] = [["New leads", "newLeads"], ["Contacted", "contacted"], ["Demos", "demos"], ["Trials", "trials"], ["New customers", "won"]];
+  const COMPARE: [string, keyof typeof cur][] = [[tr("p8hq.slCmpNew"), "newLeads"], [tr("p8hq.slCmpContacted"), "contacted"], [tr("p8hq.slCmpDemos"), "demos"], [tr("p8hq.slCmpTrials"), "trials"], [tr("p8hq.slCmpCustomers"), "won"]];
 
   return (
     <div className="mt-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="text-[12px] font-bold text-[var(--ink-3)]">Show:</span>
+        <span className="text-[12px] font-bold text-[var(--ink-3)]">{tr("p8hq.slShow")}</span>
         <div className="inline-flex flex-wrap items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12px] font-bold">
           {PERIODS.map(([id, label]) => (
             <button key={id} type="button" onClick={() => setPeriod(id)} className="rounded-full px-3 py-1 transition-colors" style={period === id ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
@@ -572,17 +589,17 @@ function Dashboard({ leads }: { leads: Lead[] }) {
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="Open pipeline · now" value={money(pipeline)} sub={`${open.length} live leads`} accent="#1d3a8f" />
-        <Tile label="Weighted forecast · now" value={money(forecast)} sub="pipeline × stage odds" accent="#7c3aed" />
-        <Tile label={`New customers · ${pLabel}`} value={String(wonP.length)} sub={`${money(wonMrr)}/mo won · ${Math.round(winRate * 100)}% win`} accent="#0f7a43" />
-        <Tile label={`Activity · ${pLabel}`} value={String(activities.length)} sub={`${byType.call ?? 0} calls · ${byType.email ?? 0} emails · ${byType.demo ?? 0} demos`} accent="#f0b100" />
+        <Tile label={tr("p8hq.slTileOpen")} value={money(pipeline)} sub={tr("p8hq.slTileLive", { n: open.length })} accent="#1d3a8f" />
+        <Tile label={tr("p8hq.slTileForecast")} value={money(forecast)} sub={tr("p8hq.slTileOdds")} accent="#7c3aed" />
+        <Tile label={tr("p8hq.slTileNewCust", { period: pLabel })} value={String(wonP.length)} sub={tr("p8hq.slTileWon", { money: money(wonMrr), pct: Math.round(winRate * 100) })} accent="#0f7a43" />
+        <Tile label={tr("p8hq.slTileActivity", { period: pLabel })} value={String(activities.length)} sub={tr("p8hq.slTileActivitySub", { calls: byType.call ?? 0, emails: byType.email ?? 0, demos: byType.demo ?? 0 })} accent="#f0b100" />
       </div>
 
       <div className="mt-4">
-        <Card title={`This ${pLabel} vs the previous ${pLabel}`}>
+        <Card title={tr("p8hq.slCompareTitle", { period: pLabel })}>
           <div className="overflow-x-auto">
             <table className="w-full text-[12.5px]">
-              <thead><tr className="text-start text-[10.5px] uppercase tracking-wide text-[var(--ink-3)]"><th className="pb-2">Metric</th><th className="pb-2 text-end">Previous</th><th className="pb-2 text-end">This {pLabel}</th><th className="pb-2 text-end">Change</th></tr></thead>
+              <thead><tr className="text-start text-[10.5px] uppercase tracking-wide text-[var(--ink-3)]"><th className="pb-2">{tr("p8hq.slColMetric")}</th><th className="pb-2 text-end">{tr("p8hq.slColPrev")}</th><th className="pb-2 text-end">{tr("p8hq.slColThis")}</th><th className="pb-2 text-end">{tr("p8hq.slColChange")}</th></tr></thead>
               <tbody>
                 {COMPARE.map(([label, key]) => {
                   const c = cur[key], p = prev[key], delta = c - p;
@@ -603,7 +620,7 @@ function Dashboard({ leads }: { leads: Lead[] }) {
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card title="Pipeline funnel">
+        <Card title={tr("p8hq.slFunnel")}>
           <div className="flex flex-col gap-2">
             {STAGES.filter((s) => s.id !== "lost").map((st) => {
               const items = leads.filter((l) => l.stage === st.id);
@@ -617,31 +634,31 @@ function Dashboard({ leads }: { leads: Lead[] }) {
             })}
           </div>
         </Card>
-        <Card title={`New leads by source · ${pLabel}`}>
+        <Card title={tr("p8hq.slBySource", { period: pLabel })}>
           {bySource.length ? (
             <div className="flex flex-col gap-2.5">
               {bySource.map(([src, n]) => (
                 <div key={src}>
-                  <div className="mb-1 flex items-center justify-between text-[12px]"><span className="font-semibold">{srcLabel(src as Source)}</span><span className="text-[var(--ink-3)]">{n} lead{n === 1 ? "" : "s"}</span></div>
+                  <div className="mb-1 flex items-center justify-between text-[12px]"><span className="font-semibold">{srcLabel(src as Source)}</span><span className="text-[var(--ink-3)]">{tr("p8hq.slLeadsN", { n })}</span></div>
                   <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(n / bySourceMax) * 100}%`, background: "#3f78d8" }} /></div>
                 </div>
               ))}
             </div>
-          ) : <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">No new leads in this period.</div>}
+          ) : <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{tr("p8hq.slNoNewLeads")}</div>}
         </Card>
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card title={`Rep activity · ${pLabel}`}>
+        <Card title={tr("p8hq.slRepActivity", { period: pLabel })}>
           {Object.keys(byRep).length ? (
             <div className="flex flex-col divide-y divide-[var(--line)]">
               {Object.entries(byRep).sort((a, b) => b[1] - a[1]).map(([rep, n]) => (
-                <div key={rep} className="flex items-center justify-between py-2 text-[12.5px]"><span className="font-semibold">{rep}</span><span className="font-extrabold tabular-nums">{n} touches</span></div>
+                <div key={rep} className="flex items-center justify-between py-2 text-[12.5px]"><span className="font-semibold">{rep}</span><span className="font-extrabold tabular-nums">{tr("p8hq.slTouches", { n })}</span></div>
               ))}
             </div>
-          ) : <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">No activity in this period.</div>}
+          ) : <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{tr("p8hq.slNoActivity")}</div>}
         </Card>
-        <Card title={`Recent activity · ${pLabel}`}>
+        <Card title={tr("p8hq.slRecentActivity", { period: pLabel })}>
           <div className="flex flex-col divide-y divide-[var(--line)]">
             {activities.slice(0, 8).map((a) => (
               <div key={a.id} className="flex items-start gap-2 py-2 text-[12px]">
@@ -660,6 +677,7 @@ function Dashboard({ leads }: { leads: Lead[] }) {
 // ── Lead modal (add / edit / activity) ──────────────────────────────────────
 function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead: Lead | null; onClose: () => void; onSave: (l: Lead, newActs: NewActivity[]) => void; onDelete?: () => void; onAnswerQuestion: (id: string, answer: string) => Promise<void> }) {
   const router = useRouter();
+  const tr = useT();
   const [f, setF] = useState<Lead>(() => lead ?? {
     id: "", business: "", kind: "business", contactName: "", email: "", phone: "", location: "", source: "cold_call", owner: "", plan: "company", estMrr: PLAN_MRR.company, stage: "new", notes: "", activities: [], createdAt: nowIso(), updatedAt: nowIso(),
   });
@@ -724,8 +742,8 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
     <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/40 p-4" onClick={onClose}>
       <div className="my-6 w-[min(640px,96vw)] rounded-2xl bg-[var(--surface)] shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-2 rounded-t-2xl px-5 py-3.5 text-white" style={{ background: HERO }}>
-          <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{lead ? f.business || "Lead" : "New lead"}</div>
-          <button type="button" onClick={onClose} className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-bold">✕ Close</button>
+          <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{lead ? f.business || tr("p8hq.slLead") : tr("p8hq.slNewLead")}</div>
+          <button type="button" onClick={onClose} className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-bold">{tr("p8hq.slClose")}</button>
         </div>
         {f.interest === "website-design-question" && (() => {
           // The thread: their original message first, then every "in"/"out"
@@ -743,18 +761,18 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
           );
           return (
             <div className="border-b border-[var(--line)] bg-[#fff8ee] p-5">
-              <div className="mb-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#a5670a]">💬 Question &amp; reply thread</div>
+              <div className="mb-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#a5670a]">{tr("p8hq.slThreadTitle")}</div>
               <div className="flex flex-col gap-2">
-                {bubble("in", f.message || "(no message included)", "Them")}
-                {thread.map((a) => bubble(a.direction!, a.note, a.direction === "out" ? "You" : "Them", a.at))}
+                {bubble("in", f.message || tr("p8hq.slNoMsgIncluded"), tr("p8hq.slThem"))}
+                {thread.map((a) => bubble(a.direction!, a.note, a.direction === "out" ? tr("p8hq.slYou") : tr("p8hq.slThem"), a.at))}
               </div>
-              <textarea rows={2} value={answerDraft} onChange={(e) => setAnswerDraft(e.target.value)} placeholder="Type a reply — this emails it to them, and they can reply back into this same thread."
+              <textarea rows={2} value={answerDraft} onChange={(e) => setAnswerDraft(e.target.value)} placeholder={tr("p8hq.slReplyPh")}
                 className="mt-3 w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
               <div className="mt-2 flex items-center gap-2">
                 <button type="button" onClick={() => void sendAnswer()} disabled={!answerDraft.trim() || answerBusy} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">
-                  {answerBusy ? "Sending…" : "Send"}
+                  {answerBusy ? tr("p8hq.slSending") : tr("p8hq.slSend")}
                 </button>
-                <span className="text-[11px] text-[var(--ink-3)]">Emails {f.email || "them"} this reply, with a Book a demo link.</span>
+                <span className="text-[11px] text-[var(--ink-3)]">{tr("p8hq.slEmailsThem", { who: f.email || tr("p8hq.slThemFallback") })}</span>
               </div>
             </div>
           );
@@ -762,86 +780,86 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
         {f.videoRoom && (
           <div className="border-b border-[var(--line)] bg-[#eef4fd] p-5">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">📹 Video call{f.slotAt ? ` · ${slotFmt.format(new Date(f.slotAt))}` : ""}</span>
+              <span className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">{tr("p8hq.slVideoCallHead")}{f.slotAt ? ` · ${slotFmt.format(new Date(f.slotAt))}` : ""}</span>
               {/* A real portal page (/platform/call/<id>), not a modal iframe
                   or an external tab — the call, and a place to take notes on
                   it, live inside the app the same as everything else. */}
               <button type="button" onClick={() => { onClose(); router.push(`/platform/call/${f.id}`); }} className="ms-auto rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-bold text-white hover:brightness-110">
-                Join call →
+                {tr("p8hq.slJoinCall")}
               </button>
             </div>
           </div>
         )}
         <div className="border-b border-[var(--line)] bg-[var(--panel)] p-5">
-          <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">📝 Call notes</div>
-          <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">Your own notes on this person — saved here for next time. Choose to email a note to them, or keep it internal.</p>
+          <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">{tr("p8hq.slCallNotes")}</div>
+          <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">{tr("p8hq.slCallNotesHelp")}</p>
           {f.activities.filter((a) => a.type === "note").length > 0 && (
             <div className="mb-3 flex flex-col gap-1.5">
               {f.activities.filter((a) => a.type === "note").map((a) => (
                 <div key={a.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] text-[var(--ink)]">
                   <div className="mb-0.5 flex items-center gap-1.5 text-[10.5px] font-bold text-[var(--ink-3)]">
                     {a.by} · {fmtDay(a.at)}
-                    {a.shared ? <span className="rounded-full bg-[#eafaf0] px-1.5 py-0.5 font-extrabold text-[#127a3e]">✓ Shared with them</span> : <span className="rounded-full bg-[var(--panel)] px-1.5 py-0.5 font-extrabold text-[var(--ink-3)]">Internal only</span>}
+                    {a.shared ? <span className="rounded-full bg-[#eafaf0] px-1.5 py-0.5 font-extrabold text-[#127a3e]">{tr("p8hq.slSharedWith")}</span> : <span className="rounded-full bg-[var(--panel)] px-1.5 py-0.5 font-extrabold text-[var(--ink-3)]">{tr("p8hq.slInternalOnly")}</span>}
                   </div>
                   {a.note}
                 </div>
               ))}
             </div>
           )}
-          <textarea rows={2} value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Notes from the call — what was said, what's next…"
+          <textarea rows={2} value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder={tr("p8hq.slNotesPh")}
             className="w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Share with them?</span>
-            <button type="button" onClick={() => setNoteShare(false)} className={`rounded-full border px-3 py-1 text-[11.5px] font-bold ${!noteShare ? "border-[#1d3a8f] bg-[#eaf0fc] text-[#1d3a8f]" : "border-[var(--line)] text-[var(--ink-2)]"}`}>No — internal only</button>
-            <button type="button" onClick={() => setNoteShare(true)} className={`rounded-full border px-3 py-1 text-[11.5px] font-bold ${noteShare ? "border-[#127a3e] bg-[#eafaf0] text-[#127a3e]" : "border-[var(--line)] text-[var(--ink-2)]"}`}>Yes — email it to them</button>
+            <span className="text-[11.5px] font-bold text-[var(--ink-3)]">{tr("p8hq.slShareQ")}</span>
+            <button type="button" onClick={() => setNoteShare(false)} className={`rounded-full border px-3 py-1 text-[11.5px] font-bold ${!noteShare ? "border-[#1d3a8f] bg-[#eaf0fc] text-[#1d3a8f]" : "border-[var(--line)] text-[var(--ink-2)]"}`}>{tr("p8hq.slShareNo")}</button>
+            <button type="button" onClick={() => setNoteShare(true)} className={`rounded-full border px-3 py-1 text-[11.5px] font-bold ${noteShare ? "border-[#127a3e] bg-[#eafaf0] text-[#127a3e]" : "border-[var(--line)] text-[var(--ink-2)]"}`}>{tr("p8hq.slShareYes")}</button>
             <button type="button" onClick={() => void saveCallNote()} disabled={!noteDraft.trim() || noteBusy} className="ms-auto rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">
-              {noteBusy ? "Saving…" : "Save note"}
+              {noteBusy ? tr("p8hq.slSaving") : tr("p8hq.slSaveNote")}
             </button>
           </div>
         </div>
         <div className="p-5">
           {!!f.businessTypes?.length && (
-            <div className="mb-3 text-[12.5px] text-[var(--ink-2)]"><span className="font-bold text-[var(--ink-3)]">Runs:</span> {f.businessTypes.map((t) => BIZ_TYPE_LABEL[t] || t).join(", ")}</div>
+            <div className="mb-3 text-[12.5px] text-[var(--ink-2)]"><span className="font-bold text-[var(--ink-3)]">{tr("p8hq.slRuns")}</span> {f.businessTypes.map((t) => BIZ_TYPE_LABEL[t] || t).join(", ")}</div>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
             {/* Selects use htmlFor/id, not a wrapping <label>, so their accessible name is
                 just the label text — a wrapped <select>'s computed name also picks up
                 whichever <option> is currently selected (e.g. "Type" + "Business"), which
                 collided with the real "Business name" field's label in strict-mode lookups. */}
-            <div className="block"><label htmlFor="lead-kind" className={lbl}>Type</label>
+            <div className="block"><label htmlFor="lead-kind" className={lbl}>{tr("p8hq.slFType")}</label>
               <select id="lead-kind" className={fld} value={f.kind ?? "business"} onChange={(e) => set({ kind: e.target.value as Kind })}>
                 {KIND_ORDER.map((k) => <option key={k} value={k}>{KINDS[k].icon} {KINDS[k].label}</option>)}
               </select>
             </div>
             <label className="block"><span className={lbl}>{KINDS[f.kind ?? "business"].nameLabel}</span><input className={fld} value={f.business} onChange={(e) => set({ business: e.target.value })} /></label>
-            <label className="block"><span className={lbl}>Contact name</span><input className={fld} value={f.contactName} onChange={(e) => set({ contactName: e.target.value })} /></label>
-            <label className="block"><span className={lbl}>Location</span><input className={fld} value={f.location} onChange={(e) => set({ location: e.target.value })} /></label>
-            <label className="block"><span className={lbl}>Email</span><input className={fld} value={f.email} onChange={(e) => set({ email: e.target.value })} /></label>
-            <label className="block"><span className={lbl}>Phone</span><input className={fld} value={f.phone} onChange={(e) => set({ phone: e.target.value })} /></label>
-            <div className="block"><label htmlFor="lead-source" className={lbl}>Source</label><select id="lead-source" className={fld} value={f.source} onChange={(e) => set({ source: e.target.value as Source })}>{SOURCES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-            <label className="block"><span className={lbl}>Owner (rep)</span><input className={fld} value={f.owner} onChange={(e) => set({ owner: e.target.value })} placeholder="e.g. Priya" /></label>
-            <div className="block"><label htmlFor="lead-plan" className={lbl}>Likely plan</label><select id="lead-plan" className={fld} value={f.plan} onChange={(e) => set({ plan: e.target.value as Lead["plan"], estMrr: PLAN_MRR[e.target.value as Lead["plan"]] })}>{(["freelancer", "company", "franchise"] as const).map((p) => <option key={p} value={p} className="capitalize">{p}</option>)}</select></div>
-            <div className="block"><label htmlFor="lead-stage" className={lbl}>Stage</label><select id="lead-stage" className={fld} value={f.stage} onChange={(e) => set({ stage: e.target.value as Stage })}>{STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+            <label className="block"><span className={lbl}>{tr("p8hq.slFContact")}</span><input className={fld} value={f.contactName} onChange={(e) => set({ contactName: e.target.value })} /></label>
+            <label className="block"><span className={lbl}>{tr("p8hq.slFLocation")}</span><input className={fld} value={f.location} onChange={(e) => set({ location: e.target.value })} /></label>
+            <label className="block"><span className={lbl}>{tr("p8hq.slFEmail")}</span><input className={fld} value={f.email} onChange={(e) => set({ email: e.target.value })} /></label>
+            <label className="block"><span className={lbl}>{tr("p8hq.slFPhone")}</span><input className={fld} value={f.phone} onChange={(e) => set({ phone: e.target.value })} /></label>
+            <div className="block"><label htmlFor="lead-source" className={lbl}>{tr("p8hq.slFSource")}</label><select id="lead-source" className={fld} value={f.source} onChange={(e) => set({ source: e.target.value as Source })}>{SOURCES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+            <label className="block"><span className={lbl}>{tr("p8hq.slFOwner")}</span><input className={fld} value={f.owner} onChange={(e) => set({ owner: e.target.value })} placeholder={tr("p8hq.slFOwnerPh")} /></label>
+            <div className="block"><label htmlFor="lead-plan" className={lbl}>{tr("p8hq.slFPlan")}</label><select id="lead-plan" className={fld} value={f.plan} onChange={(e) => set({ plan: e.target.value as Lead["plan"], estMrr: PLAN_MRR[e.target.value as Lead["plan"]] })}>{(["freelancer", "company", "franchise"] as const).map((p) => <option key={p} value={p}>{tr(`p8hq.slPlan${p === "freelancer" ? "Freelancer" : p === "franchise" ? "Franchise" : "Company"}`)}</option>)}</select></div>
+            <div className="block"><label htmlFor="lead-stage" className={lbl}>{tr("p8hq.slFStage")}</label><select id="lead-stage" className={fld} value={f.stage} onChange={(e) => set({ stage: e.target.value as Stage })}>{STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
             {!!f.interestedFeatures?.length && (
               <div className="block sm:col-span-2">
-                <span className={lbl}>Wants to see (ticked on the demo page)</span>
+                <span className={lbl}>{tr("p8hq.slFWants")}</span>
                 <ul className="mt-1 list-disc space-y-0.5 ps-4 text-[13px] text-[var(--ink)]">
                   {f.interestedFeatures.map((x) => <li key={x}>{x}</li>)}
                 </ul>
               </div>
             )}
-            <label className="block sm:col-span-2"><span className={lbl}>Notes</span><textarea rows={2} className={`${fld} resize-y`} value={f.notes} onChange={(e) => set({ notes: e.target.value })} /></label>
+            <label className="block sm:col-span-2"><span className={lbl}>{tr("p8hq.slFNotes")}</span><textarea rows={2} className={`${fld} resize-y`} value={f.notes} onChange={(e) => set({ notes: e.target.value })} /></label>
           </div>
 
           {/* Activity log */}
           <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-            <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#1d3a8f]">Activity — log a touch</div>
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#1d3a8f]">{tr("p8hq.slActLog")}</div>
             <div className="flex flex-wrap gap-2">
               <select className={`${fld} w-auto`} value={act.type} onChange={(e) => setAct({ ...act, type: e.target.value as Activity["type"] })}>{ACT.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</select>
-              <input className={`${fld} min-w-[120px] flex-1`} placeholder="What happened" value={act.note} onChange={(e) => setAct({ ...act, note: e.target.value })} />
-              <input className={`${fld} w-[170px]`} list="sales-outcomes" placeholder="Outcome — pick or type" value={act.outcome} onChange={(e) => setAct({ ...act, outcome: e.target.value })} />
-              <datalist id="sales-outcomes">{OUTCOMES.map((o) => <option key={o} value={o} />)}</datalist>
-              <button type="button" onClick={logActivity} className="rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-bold text-white">Log</button>
+              <input className={`${fld} min-w-[120px] flex-1`} placeholder={tr("p8hq.slWhatHappened")} value={act.note} onChange={(e) => setAct({ ...act, note: e.target.value })} />
+              <input className={`${fld} w-[170px]`} list="sales-outcomes" placeholder={tr("p8hq.slOutcomePh")} value={act.outcome} onChange={(e) => setAct({ ...act, outcome: e.target.value })} />
+              <datalist id="sales-outcomes">{OUTCOMES.map((o, i) => <option key={o} value={o} label={tr(`p8hq.slOut${i + 1}`)} />)}</datalist>
+              <button type="button" onClick={logActivity} className="rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-bold text-white">{tr("p8hq.slLog")}</button>
             </div>
             {f.activities.length > 0 && (
               <div className="mt-2.5 flex flex-col divide-y divide-[var(--line)]">
@@ -853,10 +871,10 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
           </div>
 
           <div className="mt-4 flex items-center justify-between">
-            {onDelete ? <button type="button" onClick={onDelete} className="text-[12px] font-bold text-[var(--red)] hover:underline">Delete lead</button> : <span />}
+            {onDelete ? <button type="button" onClick={onDelete} className="text-[12px] font-bold text-[var(--red)] hover:underline">{tr("p8hq.slDeleteLead")}</button> : <span />}
             <div className="flex gap-2">
-              <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-3)]">Cancel</button>
-              <button type="button" onClick={() => onSave({ ...f, business: f.business.trim() || "Untitled", updatedAt: nowIso() }, pending)} className="rounded-full bg-[#1d3a8f] px-5 py-2 text-[12.5px] font-extrabold text-white">{lead ? "Save" : "Add lead"}</button>
+              <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-3)]">{tr("p8hq.slCancel")}</button>
+              <button type="button" onClick={() => onSave({ ...f, business: f.business.trim() || "Untitled", updatedAt: nowIso() }, pending)} className="rounded-full bg-[#1d3a8f] px-5 py-2 text-[12.5px] font-extrabold text-white">{lead ? tr("p8hq.slSave") : tr("p8hq.slAddLead").replace(/^\+\s*/, "")}</button>
             </div>
           </div>
         </div>
@@ -927,6 +945,7 @@ const normPlan = (v: string): Lead["plan"] => { const k = v.toLowerCase(); if (k
 const normStage = (v: string): Stage => { const k = v.toLowerCase(); if (k.includes("won") || k.includes("customer") || k.includes("signed")) return "won"; if (k.includes("lost") || k.includes("dead")) return "lost"; if (k.includes("trial")) return "trial"; if (k.includes("demo")) return "demo"; if (k.includes("contact")) return "contacted"; return "new"; };
 
 function ImportModal({ existing, onClose, onImport }: { existing: Lead[]; onClose: () => void; onImport: (l: Lead[]) => void }) {
+  const tr = useT();
   const [parsed, setParsed] = useState<{ leads: Lead[]; skipped: number; fileName: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -934,11 +953,11 @@ function ImportModal({ existing, onClose, onImport }: { existing: Lead[]; onClos
     setErr(null); setParsed(null);
     try {
       const rows = parseCsv(await file.text());
-      if (rows.length < 2) { setErr("That file has no data rows."); return; }
+      if (rows.length < 2) { setErr(tr("p8hq.slCsvNoRows")); return; }
       const headers = rows[0];
       const col: Partial<Record<Field, number>> = {};
       headers.forEach((h, i) => { const f = fieldForHeader(h); if (f && col[f] == null) col[f] = i; });
-      if (col.business == null && col.contactName == null && col.email == null) { setErr("Couldn't find a Business, Name or Email column."); return; }
+      if (col.business == null && col.contactName == null && col.email == null) { setErr(tr("p8hq.slCsvNoCol")); return; }
       const seen = new Set(existing.map((l) => l.email.trim().toLowerCase()).filter(Boolean));
       const leads: Lead[] = []; let skipped = 0;
       for (const r of rows.slice(1)) {
@@ -951,9 +970,9 @@ function ImportModal({ existing, onClose, onImport }: { existing: Lead[]; onClos
         const now = nowIso();
         leads.push({ id: uid(), business: g("business") || g("contactName") || email || "Untitled", contactName: g("contactName"), email, phone: g("phone"), location: g("location"), source: col.source != null ? normSource(g("source")) : "cold_call", owner: g("owner"), plan, estMrr: est > 0 ? est : PLAN_MRR[plan], stage: col.stage != null ? normStage(g("stage")) : "new", notes: g("notes"), activities: [], createdAt: now, updatedAt: now });
       }
-      if (!leads.length) { setErr(skipped ? `All ${skipped} rows are already in your pipeline (matched by email).` : "No valid rows found."); return; }
+      if (!leads.length) { setErr(skipped ? tr("p8hq.slCsvAllDup", { n: skipped }) : tr("p8hq.slCsvNoValid")); return; }
       setParsed({ leads, skipped, fileName: file.name });
-    } catch { setErr("Couldn't read that file — is it a .csv?"); }
+    } catch { setErr(tr("p8hq.slCsvReadFail")); }
   };
 
   const template = "data:text/csv;charset=utf-8," + encodeURIComponent("Business,Contact name,Email,Phone,Location,Source,Owner,Plan,Est MRR,Stage,Notes\nSunrise Camps,Jo Bloggs,jo@sunrise.example,07700 900000,Leeds,Cold call,Priya,Company,69,New,Met at expo\n");
@@ -962,19 +981,19 @@ function ImportModal({ existing, onClose, onImport }: { existing: Lead[]; onClos
     <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/40 p-4" onClick={onClose}>
       <div className="my-6 w-[min(600px,96vw)] rounded-2xl bg-[var(--surface)] shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-2 rounded-t-2xl px-5 py-3.5 text-white" style={{ background: HERO }}>
-          <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Import leads from CSV</div>
-          <button type="button" onClick={onClose} className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-bold">✕ Close</button>
+          <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{tr("p8hq.slCsvTitle")}</div>
+          <button type="button" onClick={onClose} className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-bold">{tr("p8hq.slClose")}</button>
         </div>
         <div className="p-5">
-          <p className="text-[12.5px] text-[var(--ink-3)]">Upload your spreadsheet (CSV) — we read the columns automatically (Business, Contact name, Email, Phone, Location, Source, Owner, Plan, Est MRR, Stage, Notes). Rows already in your pipeline (same email) are skipped.</p>
+          <p className="text-[12.5px] text-[var(--ink-3)]">{tr("p8hq.slCsvHelp")}</p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <label className="cursor-pointer rounded-full bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-bold text-white hover:brightness-110">Choose CSV file<input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onFile(f); e.target.value = ""; }} /></label>
-            <a href={template} download="activityos-leads-template.csv" className="text-[12px] font-bold text-[#1d3a8f] hover:underline">⬇ Download template</a>
+            <label className="cursor-pointer rounded-full bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-bold text-white hover:brightness-110">{tr("p8hq.slCsvChoose")}<input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onFile(f); e.target.value = ""; }} /></label>
+            <a href={template} download="activityos-leads-template.csv" className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{tr("p8hq.slCsvTemplate")}</a>
           </div>
           {err && <div className="mt-3 rounded-lg bg-[#fdebec] px-3 py-2 text-[12px] font-bold text-[var(--red)]">{err}</div>}
           {parsed && (
             <div className="mt-4">
-              <div className="rounded-lg bg-[#eaf0fc] px-3 py-2 text-[12.5px] font-bold text-[#1d3a8f]">✓ {parsed.fileName}: {parsed.leads.length} lead{parsed.leads.length === 1 ? "" : "s"} ready{parsed.skipped ? ` · ${parsed.skipped} skipped` : ""}</div>
+              <div className="rounded-lg bg-[#eaf0fc] px-3 py-2 text-[12.5px] font-bold text-[#1d3a8f]">{tr("p8hq.slCsvReady", { file: parsed.fileName, n: parsed.leads.length, skipped: parsed.skipped ? tr("p8hq.slCsvSkipped", { n: parsed.skipped }) : "" })}</div>
               <div className="mt-2 overflow-hidden rounded-xl border border-[var(--line)]">
                 <div className="max-h-[220px] overflow-y-auto">
                   {parsed.leads.slice(0, 25).map((l) => (
@@ -985,11 +1004,11 @@ function ImportModal({ existing, onClose, onImport }: { existing: Lead[]; onClos
                     </div>
                   ))}
                 </div>
-                {parsed.leads.length > 25 && <div className="px-3 py-1.5 text-[10.5px] text-[var(--ink-3)]">+ {parsed.leads.length - 25} more…</div>}
+                {parsed.leads.length > 25 && <div className="px-3 py-1.5 text-[10.5px] text-[var(--ink-3)]">{tr("p8hq.slCsvMore", { n: parsed.leads.length - 25 })}</div>}
               </div>
               <div className="mt-3 flex justify-end gap-2">
-                <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-3)]">Cancel</button>
-                <button type="button" onClick={() => onImport(parsed.leads)} className="rounded-full bg-[#0f7a43] px-5 py-2 text-[12.5px] font-extrabold text-white">Import {parsed.leads.length}</button>
+                <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-3)]">{tr("p8hq.slCancel")}</button>
+                <button type="button" onClick={() => onImport(parsed.leads)} className="rounded-full bg-[#0f7a43] px-5 py-2 text-[12.5px] font-extrabold text-white">{tr("p8hq.slCsvImportN", { n: parsed.leads.length })}</button>
               </div>
             </div>
           )}
