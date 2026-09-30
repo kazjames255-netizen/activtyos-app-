@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import { ROLE_CAPS, DEFAULT_ROLES, type StaffRole, type CapLevel } from "@/lib/settings";
 import { Button, Input } from "@/components/ui";
 import { useT } from "@/lib/i18n/provider";
+import { Rich, tr, slug } from "./Rich";
 
 const levelKey = (v: CapLevel) => (v === "none" ? "setup.levelNone" : v === "view" ? "setup.levelView" : "setup.levelEdit");
 
@@ -84,9 +85,7 @@ export function RolesPermissions({ roles, onChange, areas, defaultRoles }: { rol
       {/* Intro + legend */}
       <div className="rounded-2xl border border-[#dbe6fb] bg-gradient-to-b from-[#f6faff] to-[#eef4fd] px-4 py-3.5">
         <div className="text-[12.5px] leading-relaxed text-[#1d3a8f]">
-          Set what each role can reach, then give each person a role when you invite them.
-          Each role also has a <b>scope</b> — <b>All sites</b> or <b>Assigned only</b> (they see just the listings they&rsquo;re on).
-          Booking <b>cost</b> and dashboard <b>money tiles</b> show only to roles with Finances access.
+          <Rich k="p8set.rcIntro" slots={{}} />
         </div>
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
           {LEVELS.map((l) => (
@@ -149,7 +148,7 @@ export function RolesPermissions({ roles, onChange, areas, defaultRoles }: { rol
                 <tr>
                   <td colSpan={1 + list.length} className="sticky start-0 border-t border-[var(--line)] bg-gradient-to-r from-[#eef3fb] to-transparent px-4 py-1.5">
                     <span className="text-[10.5px] font-extrabold uppercase tracking-[0.09em] text-[var(--ink-2)]">
-                      <span className="me-1.5">{GROUP_ICON[group] ?? "•"}</span>{group}
+                      <span className="me-1.5">{GROUP_ICON[group] ?? "•"}</span>{tr(t, "p8set.rcg_" + slug(group), group)}
                     </span>
                   </td>
                 </tr>
@@ -158,10 +157,10 @@ export function RolesPermissions({ roles, onChange, areas, defaultRoles }: { rol
                     <td className="sticky start-0 z-10 min-w-[240px] bg-[var(--surface)] px-4 py-2.5 shadow-[6px_0_10px_-8px_rgba(20,35,90,.18)] group-hover:bg-[color-mix(in_srgb,var(--brand)_4%,var(--surface))]">
                       <div className="text-[13px] font-semibold text-[var(--ink)]">
                         {cap.sensitive && <span title={t("setup.sensitiveData")} className="me-1 text-[10.5px]">🔒</span>}
-                        {cap.label}
+                        {tr(t, "p8set.rca_" + slug(cap.label), cap.label)}
                         {cap.scoped && <span title={t("setup.honoursScope")} className="ms-1.5 text-[10px] text-[#2f6bd8]">◎</span>}
                       </div>
-                      {cap.note && <div className="mt-0.5 text-[10.5px] leading-tight text-[var(--ink-3)]">{cap.note}</div>}
+                      {cap.note && <div className="mt-0.5 text-[10.5px] leading-tight text-[var(--ink-3)]">{tr(t, "p8set.rcn_" + slug(cap.note), cap.note)}</div>}
                     </td>
                     {list.map((r) => (
                       <td key={r.id} className="border-s border-[var(--line-2,#eef2f8)] px-3 py-2 text-center">
