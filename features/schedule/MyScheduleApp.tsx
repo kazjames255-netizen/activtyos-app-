@@ -266,7 +266,7 @@ export function MyScheduleApp() {
                       )}
                       {s.note && <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">📝 {s.note}</div>}
                       <div className="relative mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel)]">
-                        <span className="absolute inset-y-0 rounded-full" style={{ left: pos.left, width: pos.width, background: col }} />
+                        <span className="absolute inset-y-0 rounded-full" style={{ insetInlineStart: pos.left, width: pos.width, background: col }} />
                       </div>
                     </div>
                   </li>
@@ -337,9 +337,9 @@ export function MyScheduleApp() {
           {/* header: week stepper + scope */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1">
-              <button type="button" onClick={() => setWeekOff((w) => w - 1)} className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-[15px] text-[var(--ink-2)] shadow-sm transition hover:bg-[var(--panel)] hover:text-[var(--ink)]" aria-label={t("schedule.previousWeek")}>‹</button>
+              <button type="button" onClick={() => setWeekOff((w) => w - 1)} className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-[15px] text-[var(--ink-2)] shadow-sm transition hover:bg-[var(--panel)] hover:text-[var(--ink)]" aria-label={t("schedule.previousWeek")}><span className="inline-block rtl:-scale-x-100">‹</span></button>
               <span className="min-w-[112px] px-2 text-center text-[13px] font-extrabold text-[var(--ink)]">{weekOff === 0 ? t("schedule.thisWeek") : weekLabel}</span>
-              <button type="button" onClick={() => setWeekOff((w) => w + 1)} className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-[15px] text-[var(--ink-2)] shadow-sm transition hover:bg-[var(--panel)] hover:text-[var(--ink)]" aria-label={t("schedule.nextWeek")}>›</button>
+              <button type="button" onClick={() => setWeekOff((w) => w + 1)} className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-[15px] text-[var(--ink-2)] shadow-sm transition hover:bg-[var(--panel)] hover:text-[var(--ink)]" aria-label={t("schedule.nextWeek")}><span className="inline-block rtl:-scale-x-100">›</span></button>
               {weekOff !== 0 && <button type="button" onClick={() => setWeekOff(0)} className="ms-1 rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-extrabold text-[#1d3a8f] hover:brightness-95">{t("schedule.jumpToToday")}</button>}
             </div>
             <span className="rounded-full bg-[var(--panel)] px-3 py-1 text-[11px] font-bold text-[var(--ink-3)]">{vis === "team" ? t("schedule.yourListings") : t("schedule.wholeTeam")}</span>
@@ -418,7 +418,7 @@ export function MyScheduleApp() {
                               </div>
                               {/* mini timeline bar */}
                               <div className="relative mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel)]">
-                                <span className="absolute inset-y-0 rounded-full" style={{ left: pos.left, width: pos.width, background: col }} />
+                                <span className="absolute inset-y-0 rounded-full" style={{ insetInlineStart: pos.left, width: pos.width, background: col }} />
                               </div>
                             </div>
                           </li>

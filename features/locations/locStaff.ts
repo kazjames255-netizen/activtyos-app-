@@ -5,6 +5,7 @@
 // the operator's browser only (localStorage "aos.locstaff.v2") and nothing
 // read it. Team → Deployment edits it; the Schedule uses it to offer only the
 // people deployed at a shift's location (acceptance d23s1).
+import { tNow } from "@/lib/i18n/provider";
 import { get as apiGet, put as apiPut } from "@/lib/api";
 
 /** `unset` = on the team but never placed (no choice on their invite, not yet
@@ -23,7 +24,7 @@ export const fetchDeployment = () => apiGet<DeploymentRaw>("/api/location-staff"
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 export function saveDeployment(staff: LocStaff[], done: (err: string | null) => void) {
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => { apiPut("/api/location-staff", { staff }).then(() => done(null)).catch((e) => done(e instanceof Error ? e.message : "try again")); }, 400);
+  saveTimer = setTimeout(() => { apiPut("/api/location-staff", { staff }).then(() => done(null)).catch((e) => done(e instanceof Error ? e.message : tNow("p8set.lcTryAgain"))); }, 400);
 }
 
 /** The saved deployment, plus anyone on the team who isn't in it yet — placed

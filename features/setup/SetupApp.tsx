@@ -1499,7 +1499,7 @@ export function SetupApp() {
         <>
           {fromView && (
             <Link href={`/${portal}/${fromView}`} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface)] px-3.5 py-1.5 text-[12px] font-extrabold text-[#2f5fd0] shadow-sm transition hover:brightness-95">
-              <span className="text-[14px] leading-none">‹</span>{t("setup.backTo", { label: backLabel })}
+              <span className="inline-block text-[14px] leading-none rtl:-scale-x-100">‹</span>{t("setup.backTo", { label: backLabel })}
             </Link>
           )}
           <span className="rounded-full bg-white/15 px-3 py-1 text-[11.5px] font-semibold text-white backdrop-blur-sm">
@@ -1601,7 +1601,7 @@ export function SetupApp() {
               <span className="text-[12.5px] leading-relaxed text-[#7a5a12]">
                 <Rich k="p8set.staffRolesBanner" slots={{}} />
               </span>
-              <button type="button" onClick={() => setTab("roles")} className="ms-auto flex-none rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white hover:bg-[#16306e]">{t("setup.openRolesPermissions")} →</button>
+              <button type="button" onClick={() => setTab("roles")} className="ms-auto flex-none rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white hover:bg-[#16306e]">{t("setup.openRolesPermissions")} <span className="inline-block rtl:-scale-x-100">→</span></button>
             </div>
           )}
           <Row label={t("setup.whoAssignsStaff")} hint={t("setup.whoAssignsStaffHint")}>

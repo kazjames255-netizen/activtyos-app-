@@ -8,6 +8,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Input, Select } from "@/components/ui";
 import { useI18n } from "@/lib/i18n/provider";
+import { roleLabel } from "@/features/schedule/fmt";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/features/setup/Rich";
 import { LIGHT_PALETTE, SettingsLink } from "@/components/OperatorPage";
@@ -150,7 +151,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                       {here.map((s) => (
                         <div key={s.id} className="flex items-center gap-2.5 py-2">
                           <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
-                          <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-bold text-[var(--ink)]">{s.name}</div><div className="text-[11px] text-[var(--ink-3)]">{s.role ?? "—"} · {t("p8set.lcAllListingsHere")}</div></div>
+                          <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-bold text-[var(--ink)]">{s.name}</div><div className="text-[11px] text-[var(--ink-3)]">{s.role ? roleLabel(t, s.role) : "—"} · {t("p8set.lcAllListingsHere")}</div></div>
                           <button type="button" onClick={() => toggleSite(s.id, v.id)} title={t("p8set.lcRemoveLoc")} className="text-[16px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button>
                         </div>
                       ))}
@@ -166,7 +167,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                               : opts.map((s) => (
                                 <button key={s.id} type="button" onMouseDown={(e) => { e.preventDefault(); addSite(s.id, v.id); setAddFor(null); setAddQ(""); }} className="flex w-full items-center gap-2.5 border-b border-[var(--line-2,#eef2f8)] px-3 py-2 text-start hover:bg-[var(--panel)] last:border-b-0">
                                   <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[10px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
-                                  <span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-bold text-[var(--ink)]">{s.name}</span>{s.role && <span className="block text-[10.5px] text-[var(--ink-3)]">{s.role}</span>}</span>
+                                  <span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-bold text-[var(--ink)]">{s.name}</span>{s.role && <span className="block text-[10.5px] text-[var(--ink-3)]">{roleLabel(t, s.role)}</span>}</span>
                                   <span className="text-[12px] font-bold text-[#1d3a8f]">{t("p8set.lcAdd")}</span>
                                 </button>
                               ))}
@@ -203,7 +204,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
             <div key={s.id} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[12px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
-                <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{s.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{s.role ?? "—"}</div></div>
+                <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{s.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{s.role ? roleLabel(t, s.role) : "—"}</div></div>
                 <span className="text-[11px] font-bold text-[var(--ink-3)]">{summary}</span>
               </div>
 
@@ -259,7 +260,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                 </div>
                 <Select value="" onChange={(e) => { if (e.target.value) addListing(e.target.value, l.id); }} className="mt-2 w-full max-w-[280px] text-[12.5px]">
                   <option value="">{t("p8set.lcAddStaffListing")}</option>
-                  {[...off].sort((a, b) => a.name.localeCompare(b.name)).map((s) => <option key={s.id} value={s.id}>{s.name}{s.role ? ` · ${s.role}` : ""}</option>)}
+                  {[...off].sort((a, b) => a.name.localeCompare(b.name)).map((s) => <option key={s.id} value={s.id}>{s.name}{s.role ? ` · ${roleLabel(t, s.role)}` : ""}</option>)}
                 </Select>
               </div>
             );

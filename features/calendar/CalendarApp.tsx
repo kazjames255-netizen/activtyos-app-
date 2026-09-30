@@ -252,14 +252,14 @@ export function CalendarApp() {
               <div className="flex-1 border-t border-[var(--line)]" />
             </div>
           ))}
-          {nowTop != null && <div className="absolute z-10 flex w-full items-center" style={{ top: nowTop, left: 0 }}><div className="w-12 flex-none" /><div className="h-[2px] flex-1" style={{ background: "#C81E5E" }} /></div>}
-          <div className="absolute bottom-0 top-0" style={{ left: 48, right: 0 }}>
+          {nowTop != null && <div className="absolute z-10 flex w-full items-center" style={{ top: nowTop, insetInlineStart: 0 }}><div className="w-12 flex-none" /><div className="h-[2px] flex-1" style={{ background: "#C81E5E" }} /></div>}
+          <div className="absolute bottom-0 top-0" style={{ insetInlineStart: 48, insetInlineEnd: 0 }}>
             {placed.map(({ it, s, e, col }, i) => {
               const top = (s - lo * 60) / 60 * rowH, height = Math.max(24, (e - s) / 60 * rowH - 3);
               const w = 100 / ncol, isEv = it.kind === "event";
               const pct = it.cap ? Math.round((it.booked ?? 0) / it.cap * 100) : 0;
               return (
-                <div key={i} className="absolute" style={{ top, height, left: `calc(${col * w}% + 2px)`, width: `calc(${w}% - 4px)` }}>
+                <div key={i} className="absolute" style={{ top, height, insetInlineStart: `calc(${col * w}% + 2px)`, width: `calc(${w}% - 4px)` }}>
                 {isEv && linksIn(it.event?.notes).length > 0 && <span className="absolute end-1 top-1 z-[2]"><LinkBadge links={linksIn(it.event?.notes)} compact /></span>}
                 <button type="button" onClick={() => isEv && it.event ? setEditing(it.event) : undefined} className={`h-full w-full overflow-hidden rounded-lg border p-1.5 text-start ${isEv ? "cursor-pointer" : "cursor-default"}`} style={{ background: isEv ? "var(--surface)" : it.color, border: isEv ? `1.5px dashed ${it.color}` : "none", color: isEv ? it.color : "#fff" }} title={`${it.title} · ${it.start}–${it.end}`}>
                   <div className="truncate text-[11.5px] font-extrabold leading-tight">{isEv ? "📌 " : ""}{it.title}</div>
@@ -305,9 +305,9 @@ export function CalendarApp() {
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <div className="min-w-[150px] text-[18px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{label}</div>
         <div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)]">
-          <button type="button" onClick={() => step(-1)} className="bg-[var(--panel)] px-3 py-1.5 text-[15px] font-extrabold text-[var(--ink)] hover:bg-[var(--line)]">‹</button>
+          <button type="button" onClick={() => step(-1)} className="bg-[var(--panel)] px-3 py-1.5 text-[15px] font-extrabold text-[var(--ink)] hover:bg-[var(--line)]"><span className="inline-block rtl:-scale-x-100">‹</span></button>
           <button type="button" onClick={goToday} className="border-x border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--line)]">{t("p8set.clToday")}</button>
-          <button type="button" onClick={() => step(1)} className="bg-[var(--panel)] px-3 py-1.5 text-[15px] font-extrabold text-[var(--ink)] hover:bg-[var(--line)]">›</button>
+          <button type="button" onClick={() => step(1)} className="bg-[var(--panel)] px-3 py-1.5 text-[15px] font-extrabold text-[var(--ink)] hover:bg-[var(--line)]"><span className="inline-block rtl:-scale-x-100">›</span></button>
         </div>
         <label className="inline-flex items-center gap-2 text-[12px] font-bold text-[var(--ink-2)]">{mode === "month" ? t("p8set.clChooseMonth") : mode === "week" ? t("p8set.clChooseWeek") : t("p8set.clChooseDate")}
           {mode === "month"

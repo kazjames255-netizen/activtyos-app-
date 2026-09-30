@@ -259,7 +259,7 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
                           <div className="text-[11px] font-semibold text-[var(--ink-3)]">{dNum(dt)} {dMon(dt)}</div>
                         </div>
                         <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11px] font-extrabold text-[#1d3a8f]">{t("schedule.onRotaRange", { open: camp.open, close: camp.close })}</span>
-                        <Link href="/staff/holiday" className="ms-auto flex-none rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:bg-[#eef4fd]">{t("schedule.requestTimeOff")} →</Link>
+                        <Link href="/staff/holiday" className="ms-auto flex-none rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:bg-[#eef4fd]">{t("schedule.requestTimeOff")} <span className="inline-block rtl:-scale-x-100">→</span></Link>
                       </li>
                     );
                   }

@@ -652,9 +652,9 @@ export function ScheduleApp() {
         <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 ps-1 pe-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]"><span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#ffe9ed", color: "#e11d48" }}>📍</span><Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none"><option value="all">{t("schedule.allLocations")}</option>{sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 ps-1 pe-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]"><span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#e5eefe", color: "#2563eb" }}>🎟</span><Select value={listingF} onChange={(e) => setListingF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none"><option value="all">{t("schedule.allListings")}</option>{listingOpts.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1 rounded-full bg-white px-1 py-1 shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
-          <button type="button" onClick={() => nav(-1)} className="grid h-7 w-7 place-items-center rounded-full text-[15px] text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[#1d3a8f]">‹</button>
+          <button type="button" onClick={() => nav(-1)} className="grid h-7 w-7 place-items-center rounded-full text-[15px] text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[#1d3a8f]"><span className="inline-block rtl:-scale-x-100">‹</span></button>
           <span className="min-w-[116px] text-center text-[12.5px] font-extrabold text-[var(--ink)]">{label}</span>
-          <button type="button" onClick={() => nav(1)} className="grid h-7 w-7 place-items-center rounded-full text-[15px] text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[#1d3a8f]">›</button>
+          <button type="button" onClick={() => nav(1)} className="grid h-7 w-7 place-items-center rounded-full text-[15px] text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[#1d3a8f]"><span className="inline-block rtl:-scale-x-100">›</span></button>
         </div>
         {checkinAutoAlert && <button type="button" onClick={() => setShowAlerts(true)} className="relative inline-flex items-center gap-2 rounded-full bg-white py-1 ps-1 pe-3.5 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">
           <span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#fdeecf", color: "#b45309" }}>🔔</span>{t("schedule.checkinAlerts")}{alerts.length > 0 && <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#c0392b] px-1 text-[10px] font-extrabold text-white">{alerts.length}</span>}</button>}
@@ -975,7 +975,7 @@ export function ScheduleApp() {
             ) : assignOpen ? (
             /* ── Assign staff sub-panel ── */
             <div className="px-5 py-4">
-              <div className="mb-3 flex items-center gap-2"><button type="button" onClick={() => setAssignOpen(false)} className="text-[16px] text-[var(--ink-3)] hover:text-[var(--ink)]">‹</button><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.assignStaff")}</div><div className="ms-auto text-[12.5px] font-bold" style={{ color: filled >= need ? "#0f7a43" : "var(--ink-3)" }}>{t("schedule.filledOfNeed", { filled, need })}</div></div>
+              <div className="mb-3 flex items-center gap-2"><button type="button" onClick={() => setAssignOpen(false)} className="text-[16px] text-[var(--ink-3)] hover:text-[var(--ink)]"><span className="inline-block rtl:-scale-x-100">‹</span></button><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.assignStaff")}</div><div className="ms-auto text-[12.5px] font-bold" style={{ color: filled >= need ? "#0f7a43" : "var(--ink-3)" }}>{t("schedule.filledOfNeed", { filled, need })}</div></div>
               <button type="button" onClick={autoFillDraft} className="mb-3 w-full rounded-xl bg-[#eef4fd] px-4 py-2.5 text-[13.5px] font-extrabold text-[#1d3a8f] hover:bg-[#e2edfb]">⚡ {t("schedule.autoFillAvailable")}</button>
               <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">{t("schedule.noDoubleBook")}</p>
               <div className="flex max-h-[46vh] flex-col divide-y divide-[var(--line-2,#eef2f8)] overflow-y-auto">
@@ -1004,7 +1004,7 @@ export function ScheduleApp() {
             ) : (
             /* ── Shift actions ── */
             <div className="px-5 py-4">
-              <div className="mb-3 flex items-center gap-2"><button type="button" onClick={() => setActionsOpen(false)} className="text-[16px] text-[var(--ink-3)] hover:text-[var(--ink)]">‹</button><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.shiftActions")}</div></div>
+              <div className="mb-3 flex items-center gap-2"><button type="button" onClick={() => setActionsOpen(false)} className="text-[16px] text-[var(--ink-3)] hover:text-[var(--ink)]"><span className="inline-block rtl:-scale-x-100">‹</span></button><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.shiftActions")}</div></div>
               <div className="flex flex-col gap-2">
                 <button type="button" onClick={() => { autoFillDraft(); setActionsOpen(false); }} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-start text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">⚡</span>{t("schedule.autoFillAvailable")}</button>
                 <button type="button" onClick={copyToAllDays} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-start text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">📋</span>{t("schedule.copyToAllDays")}</button>
@@ -1032,7 +1032,7 @@ export function ScheduleApp() {
                 {WDAYS.map(([k, lbl]) => { const w = st.week?.[k]; return (
                   <div key={k} className="flex items-center gap-3">
                     <span className="w-9 flex-none text-[12.5px] font-extrabold text-[var(--ink)]">{wdShortKey(k)}</span>
-                    <div className="relative h-2 flex-1 rounded-full bg-[var(--panel)]">{w && <div className="absolute top-0 h-2 rounded-full" style={{ left: `${(mins(w.from) - WIN_A) / WIN * 100}%`, width: `${(mins(w.to) - mins(w.from)) / WIN * 100}%`, background: "#22b365" }} />}</div>
+                    <div className="relative h-2 flex-1 rounded-full bg-[var(--panel)]">{w && <div className="absolute top-0 h-2 rounded-full" style={{ insetInlineStart: `${(mins(w.from) - WIN_A) / WIN * 100}%`, width: `${(mins(w.to) - mins(w.from)) / WIN * 100}%`, background: "#22b365" }} />}</div>
                     <span className="w-[112px] flex-none text-end text-[12px] font-bold" style={{ color: w ? "#0f7a43" : "var(--ink-3)" }}>{w ? `${to12(w.from)}–${to12(w.to)}` : t("schedule.unavailable")}</span>
                   </div>
                 ); })}
