@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui";
+import { PlannedBadge, PlannedNote, PlannedUntil } from "./PlannedText";
 
 // ─────────────────────────────────────────────────────────────────────────
 // An honest page for a feature that's on the roadmap but not built yet.
@@ -25,20 +26,19 @@ export function Planned({ title, blurb, links = [] }: PlannedSpec) {
     <div className="mx-auto max-w-[560px] pt-6 text-[var(--ink)]">
       <Card className="p-6">
         <span className="rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--brand-strong)]">
-          Planned
+          <PlannedBadge />
         </span>
         <h2 className="mt-3 text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           {title}
         </h2>
         <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--ink-2)]">{blurb}</p>
         <p className="mt-3 text-[12px] text-[var(--ink-3)]">
-          Nothing here is live yet — this page is a placeholder so you know where the feature will
-          live, not a preview of it.
+          <PlannedNote />
         </p>
         {links.length > 0 && (
           <div className="mt-4 border-t border-[var(--line)] pt-3.5">
             <div className="mb-2 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">
-              Until then
+              <PlannedUntil />
             </div>
             <div className="flex flex-col gap-2">
               {links.map((l) => (
