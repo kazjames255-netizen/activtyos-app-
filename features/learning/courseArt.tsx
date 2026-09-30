@@ -58,7 +58,7 @@ export const courseMotif = (cover: string): ReactNode => MOTIFS[MOTIF_FOR[cover]
 
 // Large catalogue hero: category gradient + fine texture + soft glow + the
 // subject motif, with an optional frosted level tag.
-export function CourseHero({ cover, grad, level, height = 150 }: { cover: string; grad: string; level?: string; height?: number }) {
+export function CourseHero({ cover, grad, level, levelLabel, height = 150 }: { cover: string; grad: string; level?: string; levelLabel?: string; height?: number }) {
   return (
     <div className="relative w-full overflow-hidden" style={{ height, background: grad }}>
       {/* fine dot texture */}
@@ -78,7 +78,7 @@ export function CourseHero({ cover, grad, level, height = 150 }: { cover: string
       </div>
       {/* bottom scrim for a premium, grounded finish */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14" style={{ background: "linear-gradient(to top, rgba(6,12,35,.28), transparent)" }} />
-      {level && <span className="absolute end-3 top-3 rounded-full bg-white/22 px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-white backdrop-blur-sm">{level}</span>}
+      {level && <span className="absolute end-3 top-3 rounded-full bg-white/22 px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-white backdrop-blur-sm">{levelLabel ?? level}</span>}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { tNow, useT } from "@/lib/i18n/provider";
 import { isDemoMode, post as apiPost, put as apiPut } from "@/lib/api";
 import { syncLearning, useLearnRefresh, completionsFor, rolesCover, withoutDemoAssignments } from "./courseCompletions";
 import { useTeam } from "@/features/team/useTeam";
@@ -42,8 +43,15 @@ const STATUS_TONE: Record<string, Tone> = {
   Overdue: "red", Expired: "red", Due: "red", Required: "red",
   Mandatory: "red", Recommended: "blue", Course: "blue",
 };
+// Stored status words stay English (they drive the tone); shown translated.
+const BADGE_KEY: Record<string, string> = {
+  Complete: "lcStComplete", Valid: "lcStValid", Passed: "lcStPassed", "In progress": "lcStInProgress", Expiring: "lcStExpiring", "Quiz pending": "lcStQuizPending",
+  "Not started": "lcStNotStarted", Pending: "lcStPending", Optional: "lcStOptional", Quiz: "lcStQuiz", Overdue: "lcStOverdue", Expired: "lcStExpired", Due: "lcStDue",
+  Required: "lcStRequired", Mandatory: "lcStMandatory", Recommended: "lcStRecommended", Course: "lcStCourse",
+};
+const statusWord = (text: string) => (BADGE_KEY[text] ? tNow("p8lrn." + BADGE_KEY[text]) : text);
 const Badge = ({ text, tone }: { text: string; tone?: Tone }) => (
-  <span className={"inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold " + TONES[tone ?? STATUS_TONE[text] ?? "grey"]}>{text}</span>
+  <span className={"inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold " + TONES[tone ?? STATUS_TONE[text] ?? "grey"]}>{statusWord(text)}</span>
 );
 
 // ——— topical categories, difficulty & cover art (catalogue theming) ———
@@ -57,6 +65,10 @@ const CATEGORIES: { key: CatKey; label: string; icon: string; ink: string; soft:
   { key: "digital", label: "Digital & data", icon: "🌐", ink: "#0f766e", soft: "#e1f5ee", grad: "linear-gradient(135deg,#0f766e,#22b4a6)" },
   { key: "together", label: "Working together", icon: "🤝", ink: "#475569", soft: "#eef1f6", grad: "linear-gradient(135deg,#475569,#94a3b8)" },
 ];
+const CAT_NAME_KEY: Record<CatKey, string> = { saf: "Saf", inclusion: "Inclusion", send: "Send", medical: "Medical", health: "Health", digital: "Digital", together: "Together" };
+const catName = (k: CatKey) => tNow("p8lrn.lcCat" + CAT_NAME_KEY[k]);
+const catShort = (k: CatKey) => tNow("p8lrn.lcCatShort" + CAT_NAME_KEY[k]);
+const levelName = (l: Level) => tNow("p8lrn.lcLvl" + l);
 const CAT_BY_KEY = Object.fromEntries(CATEGORIES.map((c) => [c.key, c])) as Record<CatKey, (typeof CATEGORIES)[number]>;
 const LABEL_TO_KEY: Record<string, CatKey> = Object.fromEntries(CATEGORIES.map((c) => [c.label.toLowerCase(), c.key]));
 // tolerate a stored key OR a free-text category label (for company-created custom categories)
@@ -150,6 +162,7 @@ interface Assignment { course: string; title: string; kind: "all" | "roles" | "s
 
 const FALLBACK_ROLES = ["Lifeguard", "Coach / instructor", "Lead / manager", "Playworker", "First-aider", "Volunteer", "Administrator"];
 const OPS: [string, string][] = [["all", "All locations"], ["Company-owned", "Company-owned (Head Office)"], ["Milton Keynes", "Milton Keynes"], ["Northampton", "Northampton"], ["Bedford", "Bedford"]];
+const opLabel = (v: string, l: string) => (v === "all" ? tNow("p8lrn.lcAllLocations") : v === "Company-owned" ? tNow("p8lrn.lcCompanyOwnedHO") : l);
 const SEED_STAFF: Staff[] = [
   { name: "Marcus Bell", role: "Lead", op: "Company-owned", sg: "Complete", sgq: 92, fa: "In progress", dbs: "Valid", pfa: "Expiring" },
   { name: "Jess Patel", role: "Coach", op: "Company-owned", sg: "Complete", sgq: 84, fa: "Overdue", dbs: "Valid", pfa: "Valid" },
@@ -163,7 +176,7 @@ const SEED_ASSIGNMENTS: Assignment[] = [
   { course: "c2", title: "Paediatric First Aid Refresher", kind: "roles", roles: ["First-aider", "Lead / manager"], staff: [], locs: [], due: "15 Jul", required: true, version: 0, renewMonths: 36 },
   { course: "c26", title: "Water Safety & Supervision", kind: "roles", roles: ["Lifeguard"], staff: [], locs: [], due: "15 Jul", required: true, version: 0, renewMonths: 12 },
 ];
-const targetLabel = (a: Assignment) => a.kind === "all" ? "All staff" : a.kind === "roles" ? (a.roles.join(", ") || "no roles") : (a.staff.join(", ") || "no staff");
+const targetLabel = (a: Assignment) => a.kind === "all" ? tNow("p8lrn.docAllStaff") : a.kind === "roles" ? (a.roles.join(", ") || tNow("p8lrn.lcTargetNoRoles")) : (a.staff.join(", ") || tNow("p8lrn.lcTargetNoStaff"));
 
 // ——— Documents & Policies (read-and-confirm) ———
 // Share a policy; each person reads it and ticks "I have read and understood",
@@ -213,6 +226,7 @@ async function notifyLearning(kind: "assign" | "remind", a: { title?: string; co
 }
 
 export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "franchise" }) {
+  const tr = useT();
   const isCo = scope === "company";
   const { settings } = useSettings();
   const [tab, setTab] = useState<"cat" | "assign" | "comp" | "cert" | "docs">("cat");
@@ -307,7 +321,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   const persistA = (a: Assignment[]) => {
     setAssignments(a);
     try { localStorage.setItem(KEY, JSON.stringify({ assignments: a })); } catch { /* ignore */ }
-    if (!isDemoMode()) apiPut("/api/learning/assignments", { assignments: a }).catch((e) => alert(`Couldn't save the assignment to the server: ${e instanceof Error ? e.message : "try again"}`));
+    if (!isDemoMode()) apiPut("/api/learning/assignments", { assignments: a }).catch((e) => alert(tr("p8lrn.lcErrSaveAssign", { msg: e instanceof Error ? e.message : tr("p8lrn.lcTryAgainLc") })));
   };
   // The team, their passes and their certificates — the real ones. The demo
   // cast (with made-up progress) is for the demo only; it used to be what
@@ -325,17 +339,17 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   const realScore = (id: string): number | null => { const xs = STAFF.flatMap((x) => completionsFor(x.name).filter((d) => d.courseId === id).map((d) => d.score)); return xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null; };
   const completedCount = (id: string) => STAFF.filter((x) => completionsFor(x.name).some((d) => d.courseId === id)).length;
   const persistP = (pol: PolicyDoc[], ak: PolicyAck[]) => { setPolicies(pol); setAcks(ak); try { localStorage.setItem(PKEY, JSON.stringify({ policies: pol, acks: ak })); } catch { /* ignore */ } };
-  const savePolicy = (p: PolicyDoc) => { persistP(policies.some((x) => x.id === p.id) ? policies.map((x) => (x.id === p.id ? p : x)) : [...policies, p], acks); setPolicyForm(null); flash("✅ Policy saved"); };
-  const deletePolicy = (id: string) => { if (typeof window !== "undefined" && !window.confirm("Delete this policy? This can't be undone.")) return; persistP(policies.filter((x) => x.id !== id), acks.filter((a) => a.docId !== id)); flash("Policy deleted"); };
-  const confirmRead = (doc: PolicyDoc) => { if (!acks.some((a) => a.docId === doc.id && a.staff === ME)) persistP(policies, [...acks, { docId: doc.id, staff: ME, date: todayISO() }]); setReadingDoc(null); flash("✅ Confirmed — thank you"); };
+  const savePolicy = (p: PolicyDoc) => { persistP(policies.some((x) => x.id === p.id) ? policies.map((x) => (x.id === p.id ? p : x)) : [...policies, p], acks); setPolicyForm(null); flash(tr("p8lrn.lcPolicySaved")); };
+  const deletePolicy = (id: string) => { if (typeof window !== "undefined" && !window.confirm(tr("p8lrn.lcConfirmDelPolicy"))) return; persistP(policies.filter((x) => x.id !== id), acks.filter((a) => a.docId !== id)); flash(tr("p8lrn.lcPolicyDeleted")); };
+  const confirmRead = (doc: PolicyDoc) => { if (!acks.some((a) => a.docId === doc.id && a.staff === ME)) persistP(policies, [...acks, { docId: doc.id, staff: ME, date: todayISO() }]); setReadingDoc(null); flash(tr("p8lrn.lcConfirmedThanks")); };
   const myPending = policies.filter((p) => !acks.some((a) => a.docId === p.id && a.staff === ME));
   const persistCourses = (list: CourseDoc[]) => { setCourses(list); try { localStorage.setItem(CKEY, JSON.stringify(list)); } catch { /* ignore */ } };
-  const saveCourse = (c: CourseDoc) => { persistCourses(courses.some((x) => x.id === c.id) ? courses.map((x) => (x.id === c.id ? c : x)) : [...courses, c]); setEditing(null); flash("✅ Course saved"); };
+  const saveCourse = (c: CourseDoc) => { persistCourses(courses.some((x) => x.id === c.id) ? courses.map((x) => (x.id === c.id ? c : x)) : [...courses, c]); setEditing(null); flash(tr("p8lrn.lcCourseSaved")); };
   const newCourse = () => setEditing({ ...blankCourse("c" + Date.now().toString(36)), pass: settings.learning?.passMark ?? 80, renewMonths: settings.learning?.renewMonths ?? 0 });
   const requireConfirm = settings.learning?.requirePolicyConfirm ?? true;
-  const deleteCourse = (id: string) => { if (typeof window !== "undefined" && !window.confirm("Delete this course? This can't be undone.")) return; persistCourses(courses.filter((x) => x.id !== id)); flash("Course deleted"); };
+  const deleteCourse = (id: string) => { if (typeof window !== "undefined" && !window.confirm(tr("p8lrn.lcConfirmDelCourse"))) return; persistCourses(courses.filter((x) => x.id !== id)); flash(tr("p8lrn.lcCourseDeleted")); };
   const courseMins = (c: CourseDoc) => c.lessons.reduce((n, l) => n + l.mins, 0);
-  const setQuizVersion = (id: string, v: number) => { persistCourses(courses.map((c) => (c.id === id ? { ...c, activeQuiz: v } : c))); flash(`✅ Quiz set to ${QUIZ_VERSION_LABELS[v]}`); };
+  const setQuizVersion = (id: string, v: number) => { persistCourses(courses.map((c) => (c.id === id ? { ...c, activeQuiz: v } : c))); flash(tr("p8lrn.lcQuizSetTo", { label: tr("p8lrn.lcVersionN", { n: v + 1 }) })); };
   const titleOf = (id: string) => courses.find((c) => c.id === id)?.title ?? id;
   const assignmentsFor = (id: string) => assignments.filter((a) => a.course === id);
   const removeAssignment = (idx: number) => persistA(assignments.filter((_, i) => i !== idx));
@@ -358,6 +372,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   }, [shownCourses, catFilter]);
   const companyAll = useMemo(() => shownCourses.filter((c) => !isPlatform(c.id)), [shownCourses]);
   const companyCats = useMemo(() => Array.from(new Set(companyAll.map((c) => (c.category || "Uncategorised")))), [companyAll]);
+  const uncatLabel = (v: string) => (v === "Uncategorised" ? tr("p8lrn.lcUncategorised") : v);
   const companyCourses = useMemo(() => companyCatFilter === "all" ? companyAll : companyAll.filter((c) => (c.category || "Uncategorised") === companyCatFilter), [companyAll, companyCatFilter]);
   const assignedStaffN = useMemo(() => { const s = new Set<string>(); if (assignments.some((a) => a.kind === "all")) STAFF.forEach((x) => s.add(x.name)); assignments.forEach((a) => a.kind === "staff" && a.staff.forEach((n) => s.add(n))); return s.size; }, [assignments]);
   const overdueN = STAFF.filter((x) => x.sg === "Overdue" || x.fa === "Overdue").length;
@@ -378,12 +393,12 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   // ——— Activity feed: a narrative of learning activity, derived live from the data ———
   const feed = useMemo(() => {
     const ev: { icon: string; tone: string; head: string; meta: string }[] = [];
-    if (overdueN > 0) ev.push({ icon: "⏰", tone: "#c0392b", head: `${overdueN} training overdue`, meta: `${overduePct}% of assigned staff have missed a deadline` });
-    assignments.slice(-3).reverse().forEach((a) => ev.push({ icon: "📌", tone: "#1d3a8f", head: `${titleOf(a.course)} assigned to ${targetLabel(a)}`, meta: a.due && a.due !== "—" ? `Due ${a.due} · ${a.required ? "Required" : "Optional"}` : a.required ? "Required" : "Optional" }));
-    Object.entries(progress).filter(([, p]) => p.passed).slice(0, 3).forEach(([id]) => ev.push({ icon: "✅", tone: "#0f7a43", head: `${titleOf(id)} completed`, meta: "Passed the end-of-course quiz" }));
-    assignments.forEach((a) => { const dl = daysLeft(a.due); if (dl == null) return; if (dl < 0) ev.push({ icon: "⏰", tone: "#c0392b", head: `${titleOf(a.course)} has expired`, meta: `Renew for ${targetLabel(a)}` }); else if (dl <= 30) ev.push({ icon: "🔄", tone: "#b45309", head: `${titleOf(a.course)} due in ${dl} day${dl === 1 ? "" : "s"}`, meta: `${targetLabel(a)} — ${a.renewMonths ? "renewal" : "deadline"} approaching` }); });
-    if (requireConfirm) policies.forEach((p) => { if (!p.required) return; const left = STAFF.length - STAFF.filter((s) => acks.some((a) => a.docId === p.id && a.staff === s.name)).length; if (left > 0) ev.push({ icon: "📄", tone: "#1d3a8f", head: `${p.title} — ${left} still to confirm`, meta: "Required policy" }); });
-    if (certAttN > 0) ev.push({ icon: "🎖", tone: "#b7791f", head: `${certAttN} certificate${certAttN === 1 ? "" : "s"} need attention`, meta: "DBS or Paediatric First Aid due — see Team → Staff certificates" });
+    if (overdueN > 0) ev.push({ icon: "⏰", tone: "#c0392b", head: tr("p8lrn.lcFeedOverdue", { n: overdueN }), meta: tr("p8lrn.lcFeedOverdueMeta", { pct: overduePct }) });
+    assignments.slice(-3).reverse().forEach((a) => ev.push({ icon: "📌", tone: "#1d3a8f", head: tr("p8lrn.lcFeedAssigned", { course: titleOf(a.course), target: targetLabel(a) }), meta: a.due && a.due !== "—" ? tr("p8lrn.lcFeedDueKind", { due: a.due, kind: statusWord(a.required ? "Required" : "Optional") }) : statusWord(a.required ? "Required" : "Optional") }));
+    Object.entries(progress).filter(([, p]) => p.passed).slice(0, 3).forEach(([id]) => ev.push({ icon: "✅", tone: "#0f7a43", head: tr("p8lrn.lcFeedCompleted", { course: titleOf(id) }), meta: tr("p8lrn.lcFeedPassed") }));
+    assignments.forEach((a) => { const dl = daysLeft(a.due); if (dl == null) return; if (dl < 0) ev.push({ icon: "⏰", tone: "#c0392b", head: tr("p8lrn.lcFeedExpired", { course: titleOf(a.course) }), meta: tr("p8lrn.lcFeedRenewFor", { target: targetLabel(a) }) }); else if (dl <= 30) ev.push({ icon: "🔄", tone: "#b45309", head: tr("p8lrn.lcFeedDueIn", { course: titleOf(a.course), n: dl }), meta: tr(a.renewMonths ? "p8lrn.lcFeedApproachRenew" : "p8lrn.lcFeedApproachDeadline", { target: targetLabel(a) }) }); });
+    if (requireConfirm) policies.forEach((p) => { if (!p.required) return; const left = STAFF.length - STAFF.filter((s) => acks.some((a) => a.docId === p.id && a.staff === s.name)).length; if (left > 0) ev.push({ icon: "📄", tone: "#1d3a8f", head: tr("p8lrn.lcFeedToConfirm", { title: p.title, n: left }), meta: tr("p8lrn.lcFeedReqPolicy") }); });
+    if (certAttN > 0) ev.push({ icon: "🎖", tone: "#b7791f", head: tr("p8lrn.lcFeedCerts", { n: certAttN }), meta: tr("p8lrn.lcFeedCertsMeta") });
     return ev.slice(0, 6);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignments, progress, overdueN, overduePct, certAttN, policies, acks, requireConfirm]);
@@ -400,10 +415,10 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
     setAOpen(false);
     // Really notify them (server bells + emails each person covered) and say how
     // many that reached — it used to claim "they'll be notified" and send nothing.
-    notifyLearning("assign", a).then((n) => flash(n == null ? `✅ Assigned to ${targetLabel(a)}` : n > 0 ? `✅ Assigned to ${targetLabel(a)} — ${n} ${n === 1 ? "person" : "people"} notified` : `✅ Assigned to ${targetLabel(a)} — nobody on your team with an account matched, so no one was notified`));
+    notifyLearning("assign", a).then((n) => flash(n == null ? tr("p8lrn.lcAssigned", { target: targetLabel(a) }) : n > 0 ? tr("p8lrn.lcAssignedNotified", { target: targetLabel(a), n }) : tr("p8lrn.lcAssignedNobody", { target: targetLabel(a) })));
   };
   const remind = (a: Assignment) => {
-    notifyLearning("remind", a).then((n) => flash(n == null ? "Couldn't send the reminder" : n > 0 ? `🔔 Reminder sent to ${n} ${n === 1 ? "person" : "people"}` : "Nobody on your team with an account matched — no reminder sent"));
+    notifyLearning("remind", a).then((n) => flash(n == null ? tr("p8lrn.lcRemindFail") : n > 0 ? (n === 1 ? tr("p8lrn.docReminderOne") : tr("p8lrn.docReminderMany", { n })) : tr("p8lrn.lcRemindNone")));
   };
   // Quick-assign every course in a set to all staff as OPTIONAL; courses already set Required stay compulsory (not overridden).
   const quickAssignAll = (which: "platform" | "company" | "both") => {
@@ -418,7 +433,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
       added++;
     });
     persistA(next);
-    flash(`✅ ${added} set optional for all staff · ${keptReq} kept compulsory (not overridden) · ${already} already optional`);
+    flash(tr("p8lrn.lcQuickDone", { added, kept: keptReq, already }));
   };
 
   const courseCard = (c: CourseDoc) => {
@@ -428,33 +443,33 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
     const pr = progress[c.id];
     const mine = myCourses.some((x) => x.id === c.id);
     const cat = CAT_BY_KEY[catOf(c)] ?? CATEGORIES[0];
-    const catLabel = !isPlatform(c.id) && c.category ? c.category : cat.label;
+    const catLabel = !isPlatform(c.id) && c.category ? c.category : catName(cat.key);
     return (
       <div key={c.id} className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition-all hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-24px_rgba(16,32,90,.5)]">
-        <button type="button" onClick={() => setPlayer(c)} title="Preview course" className="block w-full overflow-hidden text-start">
-          <div className="transition-transform duration-300 group-hover:scale-[1.04]"><CourseHero cover={c.cover} grad={cat.grad} level={m.level} /></div>
+        <button type="button" onClick={() => setPlayer(c)} title={tr("p8lrn.lcPreviewTitle")} className="block w-full overflow-hidden text-start">
+          <div className="transition-transform duration-300 group-hover:scale-[1.04]"><CourseHero cover={c.cover} grad={cat.grad} level={m.level} levelLabel={levelName(m.level)} /></div>
         </button>
         <div className="flex min-w-0 flex-1 flex-col p-3.5">
           <div className="min-w-0 flex-1">
             <button type="button" onClick={() => setPlayer(c)} className="min-w-0 text-start"><div className="text-[15px] font-extrabold leading-tight text-[var(--ink)]" style={{ textWrap: "balance" } as React.CSSProperties}>{c.title}</div></button>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: cat.soft, color: cat.ink }}>{cat.icon} {catLabel}</span>
-              <span className="text-[11px] text-[var(--ink-3)]">{c.lessons.length} lessons · ~{courseMins(c)} min{aq.qs.length > 0 ? ` · ${aq.qs.length}-Q quiz` : ""} · 🔊</span>
+              <span className="text-[11px] text-[var(--ink-3)]">{tr("p8lrn.lcMetaLessons", { n: c.lessons.length, m: courseMins(c) })}{aq.qs.length > 0 ? ` · ${tr("p8lrn.lcMetaQuiz", { n: aq.qs.length })}` : ""} · 🔊</span>
             </div>
             {c.blurb && <div className="mt-1.5 line-clamp-2 text-[12px] leading-snug text-[var(--ink-2)]">{c.blurb}</div>}
             {asn.length > 0 ? (
               <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                {asn.map((a) => <span key={assignments.indexOf(a)} className={"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold " + (a.required ? "bg-[#fdecec] text-[#c0392b]" : "bg-[#eef1f6] text-[#5f6076]")}>{a.required ? "Required" : "Optional"}: {targetLabel(a)}{a.due !== "—" ? ` · by ${a.due}` : ""}<button type="button" title="Remove assignment" onClick={() => removeAssignment(assignments.indexOf(a))} className="hover:text-[#c0392b]">×</button></span>)}
+                {asn.map((a) => <span key={assignments.indexOf(a)} className={"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold " + (a.required ? "bg-[#fdecec] text-[#c0392b]" : "bg-[#eef1f6] text-[#5f6076]")}>{statusWord(a.required ? "Required" : "Optional")}: {targetLabel(a)}{a.due !== "—" ? ` · ${tr("p8lrn.lcAsnBy", { due: a.due })}` : ""}<button type="button" title={tr("p8lrn.lcRemoveAssignment")} onClick={() => removeAssignment(assignments.indexOf(a))} className="hover:text-[#c0392b]">×</button></span>)}
               </div>
-            ) : <div className="mt-1.5 text-[10.5px] font-semibold text-[var(--ink-3)]">Optional — not assigned to anyone yet</div>}
+            ) : <div className="mt-1.5 text-[10.5px] font-semibold text-[var(--ink-3)]">{tr("p8lrn.lcOptionalUnassigned")}</div>}
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-              <Button variant="primary" onClick={() => setPlayer(c)}>{mine ? (pr?.passed ? "✓ Review" : pr?.pct ? "▶ Continue" : "▶ Start") : "Preview"}</Button>
-              <Button onClick={() => setEditing(c)}>Edit</Button>
-              <button type="button" onClick={() => deleteCourse(c.id)} title="Delete course" className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>
-              <Button onClick={() => openAssign(c.id)}>Assign</Button>
-              <button type="button" onClick={() => setInsight(c)} title="Insights — scores, best-answered & topics to revisit" className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-3)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]">📊</button>
+              <Button variant="primary" onClick={() => setPlayer(c)}>{mine ? (pr?.passed ? tr("p8lrn.lcBtnReview") : pr?.pct ? tr("p8lrn.lcBtnContinue") : tr("p8lrn.lcBtnStart")) : tr("p8lrn.lcBtnPreview")}</Button>
+              <Button onClick={() => setEditing(c)}>{tr("p8lrn.gEdit")}</Button>
+              <button type="button" onClick={() => deleteCourse(c.id)} title={tr("p8lrn.lcDeleteCourse")} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>
+              <Button onClick={() => openAssign(c.id)}>{tr("p8lrn.lcAssignBtn")}</Button>
+              <button type="button" onClick={() => setInsight(c)} title={tr("p8lrn.lcInsightsTitle")} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-3)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]">📊</button>
               {(isPlatform(c.id) || (c.quizzes?.length ?? 0) > 1) && (
-                <span className="ms-auto flex items-center gap-1 rounded-full bg-[var(--panel)] p-0.5" title="Live end-of-course quiz version — Assign lets you set a version per group">
+                <span className="ms-auto flex items-center gap-1 rounded-full bg-[var(--panel)] p-0.5" title={tr("p8lrn.lcQuizVersionTitle")}>
                   {Array.from({ length: quizVersions(c).length }).map((_, v) => (
                     <button key={v} type="button" onClick={() => setQuizVersion(c.id, v)} className={"rounded-full px-2 py-0.5 text-[10.5px] font-extrabold transition-colors " + (aq.idx === v ? "bg-[#6d28d9] text-white" : "text-[var(--ink-3)] hover:text-[#6d28d9]")}>V{v + 1}</button>
                   ))}
@@ -469,24 +484,24 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
 
   const OpSelect = isCo ? (
     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-      <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Filter by listing</span>
-      <Select value={op} onChange={(e) => setOp(e.target.value)} className="max-w-[280px]">{OPS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>
-      {op !== "all" && <span className="text-[11.5px] text-[var(--ink-3)]">Showing <b className="text-[var(--ink-2)]">{op}</b> only</span>}
+      <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcFilterByListing")}</span>
+      <Select value={op} onChange={(e) => setOp(e.target.value)} className="max-w-[280px]">{OPS.map(([v, l]) => <option key={v} value={v}>{opLabel(v, l)}</option>)}</Select>
+      {op !== "all" && <span className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lrn.lcShowingOnly", { name: opLabel(op, op) })}</span>}
     </div>
-  ) : <div className="mb-3 text-[12.5px] text-[var(--ink-3)]">Scope: <b className="text-[var(--ink-2)]">Milton Keynes</b> (your franchise)</div>;
+  ) : <div className="mb-3 text-[12.5px] text-[var(--ink-3)]">{tr("p8lrn.lcScopeFranchise", { name: "Milton Keynes" })}</div>;
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="Learning Centre" icon="🎓" lede={`Courses, quizzes, assignments, completion & certificates — ${isCo ? "your company" : "your franchise"}`} />
+      <PageHero title={tr("p8lrn.lcTitle")} icon="🎓" lede={tr(isCo ? "p8lrn.lcLedeCo" : "p8lrn.lcLedeFr")} />
 
       <Card className="mb-3 overflow-hidden">
-        <button type="button" onClick={() => setHelp((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-start"><span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--panel)] text-[12px]">ⓘ</span><span className="text-[14px] font-extrabold text-[var(--ink)]">How it works</span><span className="ms-auto text-[12px] text-[var(--ink-3)]">{help ? "▲" : "▼"}</span></button>
-        {help && <ul className="ms-9 list-disc space-y-1 px-4 pb-3.5 text-[13px] leading-relaxed text-[var(--ink-2)]"><li><b>Catalogue</b> — two folders: <b>Platform courses</b> (ready-made, in category sub-folders) and <b>{companyName} courses</b> (build your own). Preview, edit, set the live end-of-course quiz version (V1/V2/V3), and <b>Assign</b>.</li><li><b>Assign</b> — to <b>all staff</b>, to <b>job roles</b> (e.g. Lifeguard) or to <b>named staff</b> (tick several), with a Complete-by date, Required or Optional, and which quiz version that group gets. Staff and admins are notified until it's complete. Assigned courses show a <b>Start / Continue</b> button to the staff they're set for.</li><li><b>Completion</b> — a live picture of who's done their training, with quiz scores.</li><li><b>Certificates</b> (DBS / First-Aid) now live under <b>Team → Staff certificates</b>. Staff upload theirs in their own area; the manager keeps the single verified record there.</li>{isCo && <li>The <b>Location</b> dropdown scopes Completion across all your sites and franchises.</li>}</ul>}
+        <button type="button" onClick={() => setHelp((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-start"><span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--panel)] text-[12px]">ⓘ</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{tr("p8lrn.lcHowItWorks")}</span><span className="ms-auto text-[12px] text-[var(--ink-3)]">{help ? "▲" : "▼"}</span></button>
+        {help && <ul className="ms-9 list-disc space-y-1 px-4 pb-3.5 text-[13px] leading-relaxed text-[var(--ink-2)]"><li>{tr("p8lrn.lcHelp1", { company: companyName })}</li><li>{tr("p8lrn.lcHelp2")}</li><li>{tr("p8lrn.lcHelp3")}</li><li>{tr("p8lrn.lcHelp4")}</li>{isCo && <li>{tr("p8lrn.lcHelp5")}</li>}</ul>}
       </Card>
 
       <Card className="p-0">
         <div className="flex gap-1 border-b border-[var(--line)] px-3 pt-2">
-          {([["cat", "Catalogue"], ["assign", "Assignments"], ["comp", "Completion"]] as const).map(([t, l]) => (
+          {([["cat", tr("p8lrn.lcTabCat")], ["assign", tr("p8lrn.lcTabAssign")], ["comp", tr("p8lrn.lcTabComp")]] as const).map(([t, l]) => (
             <button key={t} type="button" onClick={() => setTab(t)} className={"relative px-3.5 py-2.5 text-[13.5px] font-bold transition-colors " + (tab === t ? "text-[#1d3a8f]" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}{tab === t && <span className="absolute inset-x-2 -bottom-px h-[2.5px] rounded-full bg-[#1d3a8f]" />}</button>
           ))}
         </div>
@@ -499,10 +514,10 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                 <button type="button" onClick={() => setActivityOpen((v) => !v)} className="flex w-full items-center gap-3 px-4 py-3 text-start hover:bg-[var(--panel)]">
                   <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[#eef4fd] text-[16px]">📣</span>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[14.5px] font-extrabold text-[var(--ink)]">Recent activity</div>
-                    <div className="text-[11.5px] text-[var(--ink-3)]">{feed.length} update{feed.length === 1 ? "" : "s"}{activityOpen ? "" : " — tap to view"}</div>
+                    <div className="text-[14.5px] font-extrabold text-[var(--ink)]">{tr("p8lrn.lcRecentActivity")}</div>
+                    <div className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lrn.lcUpdatesN", { n: feed.length })}{activityOpen ? "" : tr("p8lrn.lcTapToView")}</div>
                   </div>
-                  {overdueN > 0 && <span className="rounded-full bg-[#fdebec] px-2.5 py-1 text-[11px] font-extrabold text-[#c0392b]">⏰ {overdueN} overdue</span>}
+                  {overdueN > 0 && <span className="rounded-full bg-[#fdebec] px-2.5 py-1 text-[11px] font-extrabold text-[#c0392b]">{tr("p8lrn.lcOverdueChip", { n: overdueN })}</span>}
                   <span className={`grid h-7 w-7 flex-none place-items-center rounded-full bg-[var(--panel)] text-[13px] text-[var(--ink-3)] transition-transform ${activityOpen ? "rotate-180" : ""}`}>▾</span>
                 </button>
                 {activityOpen && (
@@ -520,10 +535,10 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
             {/* At-a-glance stats — rich gradient KPI tiles */}
             <CollapsibleStats id="learning-overview">
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-              <Tile label="Total courses" icon="📚" grad={GRAD.blue} value={String(courses.length)} sub="in your library" />
-              <Tile label="Staff on a course" icon="👥" grad={GRAD.green} value={String(assignedStaffN)} sub="have training assigned" />
-              <Tile label="Missed a deadline" icon="⏰" grad={overdueN > 0 ? GRAD.pink : GRAD.green} value={String(overdueN)} sub={overdueN > 0 ? `${overduePct}% of assigned staff` : "all on track"} aside={<Ring pct={overduePct} label={`${overduePct}%`} />} />
-              <Tile label="Avg quiz score" icon="🎯" grad={GRAD.violet} value={`${avgScore}%`} sub="across passed quizzes" aside={<Ring pct={avgScore} label={`${avgScore}%`} />} />
+              <Tile label={tr("p8lrn.lcTileTotal")} icon="📚" grad={GRAD.blue} value={String(courses.length)} sub={tr("p8lrn.lcTileTotalSub")} />
+              <Tile label={tr("p8lrn.lcTileStaff")} icon="👥" grad={GRAD.green} value={String(assignedStaffN)} sub={tr("p8lrn.lcTileStaffSub")} />
+              <Tile label={tr("p8lrn.lcTileMissed")} icon="⏰" grad={overdueN > 0 ? GRAD.pink : GRAD.green} value={String(overdueN)} sub={overdueN > 0 ? tr("p8lrn.lcTileMissedSub", { pct: overduePct }) : tr("p8lrn.lcAllOnTrack")} aside={<Ring pct={overduePct} label={`${overduePct}%`} />} />
+              <Tile label={tr("p8lrn.lcTileAvgScore")} icon="🎯" grad={GRAD.violet} value={`${avgScore}%`} sub={tr("p8lrn.lcTileAvgSub")} aside={<Ring pct={avgScore} label={`${avgScore}%`} />} />
             </div>
             </CollapsibleStats>
 
@@ -531,7 +546,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
             {myCourses.length > 0 && (
               <div className="mb-3 rounded-xl border border-[#bcd0f5] bg-[#eef4fd] p-3.5">
                 <div className="mb-2 flex flex-wrap items-center gap-3">
-                  <div className="flex-none"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">🎯 Your training — {myCourses.length} course{myCourses.length === 1 ? "" : "s"} assigned to you</div><div className="text-[12px] text-[var(--ink-3)]">{myCourses.filter((c) => progress[c.id]?.passed).length}/{myCourses.length} complete</div></div>
+                  <div className="flex-none"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">{tr("p8lrn.lcYourTraining", { n: myCourses.length })}</div><div className="text-[12px] text-[var(--ink-3)]">{tr("p8lrn.lcCompleteOf", { a: myCourses.filter((c) => progress[c.id]?.passed).length, b: myCourses.length })}</div></div>
                   <div className="min-w-[120px] flex-1"><div className="h-2 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-[#0f9d58] transition-all" style={{ width: `${Math.round((myCourses.filter((c) => progress[c.id]?.passed).length / myCourses.length) * 100)}%` }} /></div></div>
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -539,10 +554,10 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                     <div key={c.id} className="flex items-center gap-2 rounded-lg bg-white px-3 py-2">
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[13px] font-bold text-[var(--ink)]">{c.title}</div>
-                        <div className="text-[11px] text-[var(--ink-3)]">⏱ ~{courseMins(c)} min{a && a.due !== "—" ? ` · deadline ${a.due}` : ""}{dl != null ? (dl < 0 ? ` · ${-dl} day${dl === -1 ? "" : "s"} overdue` : ` · ${dl} day${dl === 1 ? "" : "s"} to complete`) : ""}</div>
+                        <div className="text-[11px] text-[var(--ink-3)]">{tr("p8lrn.lcMinApprox", { n: courseMins(c) })}{a && a.due !== "—" ? tr("p8lrn.lcDeadlineBy", { due: a.due }) : ""}{dl != null ? (dl < 0 ? tr("p8lrn.lcOverdueByD", { n: -dl }) : tr("p8lrn.lcToCompleteD", { n: dl })) : ""}</div>
                       </div>
                       <Badge text={st} />
-                      <button type="button" onClick={() => setPlayer(c)} className="flex-none rounded-full bg-[#1d3a8f] px-3.5 py-1 text-[12px] font-extrabold text-white hover:brightness-110">{pr?.passed ? "Review" : pr && pr.pct > 0 ? "▶ Continue" : "▶ Start"}</button>
+                      <button type="button" onClick={() => setPlayer(c)} className="flex-none rounded-full bg-[#1d3a8f] px-3.5 py-1 text-[12px] font-extrabold text-white hover:brightness-110">{pr?.passed ? tr("p8lrn.lcBtnReviewPlain") : pr && pr.pct > 0 ? tr("p8lrn.lcBtnContinue") : tr("p8lrn.lcBtnStart")}</button>
                     </div>
                   ); })}
                 </div>
@@ -553,12 +568,12 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
             {courses.some((c) => progress[c.id]?.passed) && (
               <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-[#0f7a43]">🎓 Your certificates</span>
-                  <input value={certName} onChange={(e) => { setCertName(e.target.value); try { localStorage.setItem("aos.learn.name", e.target.value); } catch { /* ignore */ } }} placeholder="Name on certificate" className="ms-auto w-[200px] rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
+                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-[#0f7a43]">{tr("p8lrn.lcYourCerts")}</span>
+                  <input value={certName} onChange={(e) => { setCertName(e.target.value); try { localStorage.setItem("aos.learn.name", e.target.value); } catch { /* ignore */ } }} placeholder={tr("p8lrn.lcNameOnCert")} className="ms-auto w-[200px] rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {courses.filter((c) => progress[c.id]?.passed).map((c) => (
-                    <button key={c.id} type="button" onClick={() => { const now = new Date(); const rm = c.renewMonths ?? settings.learning?.renewMonths ?? 0; const exp = rm ? new Date(now.getFullYear(), now.getMonth() + rm, now.getDate()) : null; const fmt = (dt: Date) => dt.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }); openCertificate({ name: certName || "Team member", course: c.title, pct: progress[c.id]?.pct ?? 100, date: fmt(now), expiry: exp ? fmt(exp) : undefined, provider: companyName, logo: settings.learning?.certLogo === false ? undefined : c.logo, ref: makeRef(c.title + certName + fmt(now)), signImg: settings.learning?.certSignature, signName: settings.learning?.certSignatory, signRole: settings.learning?.certSignatoryRole, accent: settings.learning?.certColor, title: settings.learning?.certTitle || undefined, showScore: settings.learning?.certShowScore, showQr: settings.learning?.certShowQr }, settings.learning?.certTemplate); }} title="Download certificate (PDF)" className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#0f7a43] hover:text-[#0f7a43]">🖨️ {c.title}</button>
+                    <button key={c.id} type="button" onClick={() => { const now = new Date(); const rm = c.renewMonths ?? settings.learning?.renewMonths ?? 0; const exp = rm ? new Date(now.getFullYear(), now.getMonth() + rm, now.getDate()) : null; const fmt = (dt: Date) => dt.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }); openCertificate({ name: certName || tr("p8lrn.lcTeamMember"), course: c.title, pct: progress[c.id]?.pct ?? 100, date: fmt(now), expiry: exp ? fmt(exp) : undefined, provider: companyName, logo: settings.learning?.certLogo === false ? undefined : c.logo, ref: makeRef(c.title + certName + fmt(now)), signImg: settings.learning?.certSignature, signName: settings.learning?.certSignatory, signRole: settings.learning?.certSignatoryRole, accent: settings.learning?.certColor, title: settings.learning?.certTitle || undefined, showScore: settings.learning?.certShowScore, showQr: settings.learning?.certShowQr }, settings.learning?.certTemplate); }} title={tr("p8lrn.lcCertDownload")} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#0f7a43] hover:text-[#0f7a43]">🖨️ {c.title}</button>
                   ))}
                 </div>
               </div>
@@ -566,32 +581,32 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
 
             {/* Create + search */}
             <div className="mb-2.5 flex flex-wrap items-center gap-2">
-              <Button variant="primary" onClick={newCourse}>+ New {companyName} course</Button>
+              <Button variant="primary" onClick={newCourse}>{tr("p8lrn.lcNewCourse", { company: companyName })}</Button>
               <div className="ms-auto flex items-center gap-1.5">
-                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Search courses…" className="w-[210px]" />
-                <Select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value as Level | "all")} className="max-w-[130px]"><option value="all">All levels</option><option value="Intro">Intro</option><option value="Core">Core</option><option value="Advanced">Advanced</option></Select>
+                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("p8lrn.lcSearchCourses")} className="w-[210px]" />
+                <Select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value as Level | "all")} className="max-w-[130px]"><option value="all">{tr("p8lrn.lcAllLevels")}</option><option value="Intro">{tr("p8lrn.lcLvlIntro")}</option><option value="Core">{tr("p8lrn.lcLvlCore")}</option><option value="Advanced">{tr("p8lrn.lcLvlAdvanced")}</option></Select>
               </div>
             </div>
 
 
             {/* Folder tabs: Platform ↔ Company (flick between) */}
             <div className="mb-3 inline-flex flex-wrap gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
-              {([["platform", "📚 Platform courses", shownCourses.filter((c) => isPlatform(c.id)).length], ["company", `🏢 ${companyName} courses`, companyCourses.length]] as const).map(([k, l, n]) => (
+              {([["platform", tr("p8lrn.lcPlatformCourses"), shownCourses.filter((c) => isPlatform(c.id)).length], ["company", tr("p8lrn.lcCompanyCourses", { company: companyName }), companyCourses.length]] as const).map(([k, l, n]) => (
                 <button key={k} type="button" onClick={() => setSubTab(k)} className={"rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors " + (subTab === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l} ({n})</button>
               ))}
             </div>
 
             {subTab === "platform" && (<>
               <div className="mb-3 flex flex-wrap gap-1.5">
-                <button type="button" onClick={() => setCatFilter("all")} className={"rounded-full border px-3 py-1 text-[12px] font-bold transition-colors " + (catFilter === "all" ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>All ({courses.filter((c) => isPlatform(c.id)).length})</button>
+                <button type="button" onClick={() => setCatFilter("all")} className={"rounded-full border px-3 py-1 text-[12px] font-bold transition-colors " + (catFilter === "all" ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{tr("p7tk.allWord")} ({courses.filter((c) => isPlatform(c.id)).length})</button>
                 {CATEGORIES.map((cat) => {
                   const n = courses.filter((c) => isPlatform(c.id) && catOf(c) === cat.key).length;
                   if (n === 0) return null;
                   const on = catFilter === cat.key;
-                  return <button key={cat.key} type="button" onClick={() => setCatFilter(on ? "all" : cat.key)} className={"rounded-full border px-3 py-1 text-[12px] font-bold transition-colors " + (on ? "border-transparent text-white" : "border-[var(--line)] hover:border-current")} style={on ? { background: cat.ink } : { color: cat.ink }}>{cat.icon} {cat.label.split(" & ")[0]} ({n})</button>;
+                  return <button key={cat.key} type="button" onClick={() => setCatFilter(on ? "all" : cat.key)} className={"rounded-full border px-3 py-1 text-[12px] font-bold transition-colors " + (on ? "border-transparent text-white" : "border-[var(--line)] hover:border-current")} style={on ? { background: cat.ink } : { color: cat.ink }}>{cat.icon} {catShort(cat.key)} ({n})</button>;
                 })}
               </div>
-              {shownCourses.filter((c) => isPlatform(c.id) && (catFilter === "all" || catOf(c) === catFilter)).length === 0 && <p className="mb-4 rounded-xl bg-[var(--panel)] px-4 py-8 text-center text-[13px] text-[var(--ink-3)]">No platform courses match. <button type="button" onClick={() => { setQ(""); setCatFilter("all"); setLevelFilter("all"); }} className="font-bold text-[#1d3a8f] underline">Clear filters</button></p>}
+              {shownCourses.filter((c) => isPlatform(c.id) && (catFilter === "all" || catOf(c) === catFilter)).length === 0 && <p className="mb-4 rounded-xl bg-[var(--panel)] px-4 py-8 text-center text-[13px] text-[var(--ink-3)]">{tr("p8lrn.lcNoPlatformMatch")} <button type="button" onClick={() => { setQ(""); setCatFilter("all"); setLevelFilter("all"); }} className="font-bold text-[#1d3a8f] underline">{tr("p8lrn.lcClearFilters")}</button></p>}
               {CATEGORIES.map((cat) => {
                 const list = platformByCat.get(cat.key) ?? [];
                 if (list.length === 0) return null;
@@ -599,7 +614,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                   <div key={cat.key} className="mb-4 ms-1 border-s-2 ps-3" style={{ borderColor: cat.soft }}>
                     <div className="mb-2 flex items-center gap-2">
                       <span className="grid h-6 w-6 flex-none place-items-center rounded-lg text-[13px]" style={{ background: cat.soft }}>{cat.icon}</span>
-                      <h3 className="text-[12.5px] font-extrabold" style={{ color: cat.ink }}>{cat.label}</h3>
+                      <h3 className="text-[12.5px] font-extrabold" style={{ color: cat.ink }}>{catName(cat.key)}</h3>
                       <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)]">{list.length}</span>
                       <span className="ms-1 h-px flex-1 bg-[var(--line)]" />
                     </div>
@@ -610,18 +625,18 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
             </>)}
 
             {subTab === "company" && (<>
-              <p className="mb-3 rounded-xl bg-[#f3effe] px-3.5 py-2.5 text-[12px] leading-relaxed text-[#5b21b6]">Build your own bespoke courses — add lessons with <b>videos</b>, <b>images</b> and your <b>logo</b>, plus a <b>final quiz</b>. Kept separate from the platform library, with your own categories.</p>
+              <p className="mb-3 rounded-xl bg-[#f3effe] px-3.5 py-2.5 text-[12px] leading-relaxed text-[#5b21b6]">{tr("p8lrn.lcCompanyIntro")}</p>
               {companyCats.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-1.5">
-                  <button type="button" onClick={() => setCompanyCatFilter("all")} className={"rounded-full border px-3 py-1 text-[12px] font-bold transition-colors " + (companyCatFilter === "all" ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>All ({companyAll.length})</button>
-                  {companyCats.map((cc) => { const n = companyAll.filter((c) => (c.category || "Uncategorised") === cc).length; const on = companyCatFilter === cc; return <button key={cc} type="button" onClick={() => setCompanyCatFilter(on ? "all" : cc)} className={"rounded-full border px-3 py-1 text-[12px] font-bold transition-colors " + (on ? "border-transparent bg-[#c2410c] text-white" : "border-[var(--line)] text-[#c2410c] hover:border-current")}>{cc} ({n})</button>; })}
+                  <button type="button" onClick={() => setCompanyCatFilter("all")} className={"rounded-full border px-3 py-1 text-[12px] font-bold transition-colors " + (companyCatFilter === "all" ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{tr("p7tk.allWord")} ({companyAll.length})</button>
+                  {companyCats.map((cc) => { const n = companyAll.filter((c) => (c.category || "Uncategorised") === cc).length; const on = companyCatFilter === cc; return <button key={cc} type="button" onClick={() => setCompanyCatFilter(on ? "all" : cc)} className={"rounded-full border px-3 py-1 text-[12px] font-bold transition-colors " + (on ? "border-transparent bg-[#c2410c] text-white" : "border-[var(--line)] text-[#c2410c] hover:border-current")}>{uncatLabel(cc)} ({n})</button>; })}
                 </div>
               )}
               {companyCourses.length === 0 ? (
                 <div className="mb-4 rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-8 text-center">
-                  <div className="text-[13px] font-semibold text-[var(--ink-2)]">No {companyName} courses yet</div>
-                  <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">Create one and add videos, images, your logo and a final quiz.</div>
-                  <div className="mt-3"><Button variant="primary" onClick={newCourse}>+ Create a course</Button></div>
+                  <div className="text-[13px] font-semibold text-[var(--ink-2)]">{tr("p8lrn.lcNoCompanyCourses", { company: companyName })}</div>
+                  <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{tr("p8lrn.lcCreateOneHint")}</div>
+                  <div className="mt-3"><Button variant="primary" onClick={newCourse}>{tr("p8lrn.lcCreateCourse")}</Button></div>
                 </div>
               ) : (
                 <div className="mb-4 grid gap-2.5 lg:grid-cols-2">{companyCourses.map((c) => courseCard(c))}</div>
@@ -631,15 +646,15 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
 
           {/* Assignments */}
           {tab === "assign" && (<>
-            <div className="mb-3 flex flex-wrap items-center gap-2"><Button variant="primary" onClick={() => openAssign("")}>+ New assignment</Button><span className="text-[11.5px] text-[var(--ink-3)]">Assign to all staff, to roles/job titles (e.g. Lifeguard) or to named staff. Staff — and admins — get notified until it's complete.</span></div>
+            <div className="mb-3 flex flex-wrap items-center gap-2"><Button variant="primary" onClick={() => openAssign("")}>{tr("p8lrn.lcNewAssignment")}</Button><span className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lrn.lcAssignHelp")}</span></div>
             {/* Quick-assign whole sets */}
             <div className="mb-3 rounded-xl border border-[#bcd0f5] bg-[#eef4fd] p-3.5">
-              <div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">⚡ Quick assign to all staff (optional)</div>
-              <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">Make a whole set available to everyone as optional. Any course already set <b>compulsory</b> is kept as-is and not overridden.</div>
+              <div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">{tr("p8lrn.lcQuickTitle")}</div>
+              <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{tr("p8lrn.lcQuickHelp")}</div>
               <div className="mt-2.5 flex flex-wrap gap-1.5">
-                <Button onClick={() => quickAssignAll("platform")}>Platform courses</Button>
-                <Button onClick={() => quickAssignAll("company")}>{companyName} courses</Button>
-                <Button variant="primary" onClick={() => quickAssignAll("both")}>All courses</Button>
+                <Button onClick={() => quickAssignAll("platform")}>{tr("p8lrn.lcPlatformCoursesPlain")}</Button>
+                <Button onClick={() => quickAssignAll("company")}>{tr("p8lrn.lcCompanyCoursesPlain", { company: companyName })}</Button>
+                <Button variant="primary" onClick={() => quickAssignAll("both")}>{tr("p8lrn.lcAllCourses")}</Button>
               </div>
             </div>
             <div className="flex flex-col gap-2.5">
@@ -647,13 +662,13 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                 <div key={i} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
                   <div className="min-w-0 flex-1">
                     <div className="text-[14px] font-extrabold text-[var(--ink)]">{a.title}</div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-[var(--ink-3)]"><Badge text={a.required ? "Required" : "Optional"} /><span>{targetLabel(a)}</span><span>·</span><span>due {a.due}</span><span>·</span><span>Quiz {QUIZ_VERSION_LABELS[a.version] ?? "Version 1"}</span>{a.renewMonths ? <><span>·</span><span className="font-semibold text-[#6d28d9]">🔄 Renews {a.renewMonths === 12 ? "yearly" : a.renewMonths === 24 ? "every 2 yrs" : a.renewMonths === 36 ? "every 3 yrs" : `every ${a.renewMonths}mo`}</span></> : null}{(() => { const dl = daysLeft(a.due); if (dl == null) return null; if (dl < 0) return <><span>·</span><span className="font-bold text-[#c0392b]">Expired</span></>; if (dl <= 30) return <><span>·</span><span className="font-bold text-[#b45309]">Due in {dl}d</span></>; return null; })()}{a.locs.length > 0 && <><span>·</span><span>{a.locs.map((v) => OPS.find((o) => o[0] === v)?.[1]).join(", ")}</span></>}</div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-[var(--ink-3)]"><Badge text={a.required ? "Required" : "Optional"} /><span>{targetLabel(a)}</span><span>·</span><span>{tr("p8lrn.lcDueLbl", { due: a.due })}</span><span>·</span><span>{tr("p8lrn.lcQuizVerLbl", { ver: tr("p8lrn.lcVersionN", { n: (QUIZ_VERSION_LABELS[a.version] ? a.version : 0) + 1 }) })}</span>{a.renewMonths ? <><span>·</span><span className="font-semibold text-[#6d28d9]">{a.renewMonths === 12 ? tr("p8lrn.lcRenewsYearly") : a.renewMonths === 24 ? tr("p8lrn.lcRenews2y") : a.renewMonths === 36 ? tr("p8lrn.lcRenews3y") : tr("p8lrn.lcRenewsNmo", { n: a.renewMonths })}</span></> : null}{(() => { const dl = daysLeft(a.due); if (dl == null) return null; if (dl < 0) return <><span>·</span><span className="font-bold text-[#c0392b]">{statusWord("Expired")}</span></>; if (dl <= 30) return <><span>·</span><span className="font-bold text-[#b45309]">{tr("p8lrn.lcDueInD", { n: dl })}</span></>; return null; })()}{a.locs.length > 0 && <><span>·</span><span>{a.locs.map((v) => { const o = OPS.find((x) => x[0] === v); return o ? opLabel(o[0], o[1]) : v; }).join(", ")}</span></>}</div>
                   </div>
-                  <Button onClick={() => remind(a)}>🔔 Remind</Button>
-                  <button type="button" title="Remove assignment" onClick={() => removeAssignment(i)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>
+                  <Button onClick={() => remind(a)}>{tr("p8lrn.lcRemind")}</Button>
+                  <button type="button" title={tr("p8lrn.lcRemoveAssignment")} onClick={() => removeAssignment(i)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>
                 </div>
               ))}
-              {assignments.length === 0 && <p className="rounded-xl bg-[var(--panel)] px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No assignments yet — create one above.</p>}
+              {assignments.length === 0 && <p className="rounded-xl bg-[var(--panel)] px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{tr("p8lrn.lcNoAssignments")}</p>}
             </div>
           </>)}
 
@@ -661,32 +676,32 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
           {tab === "comp" && (<>
             {OpSelect}
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <Button onClick={() => downloadCSV(`training-report-${todayISO()}.csv`, ["Staff", "Location", "Role", "Safeguarding", "S/G quiz %", "First aid", "DBS", "Paediatric First Aid"], staff.map((s) => [s.name, s.op, s.role, s.sg, s.sgq ?? "", s.fa, s.dbs, s.pfa]))}>⬇ Export CSV</Button>
-              <Button onClick={() => setRemOpen((v) => !v)}>🔔 Reminders</Button>
-              <span className="text-[11.5px] text-[var(--ink-3)]">Tip: click a staff name below for their full record.</span>
+              <Button onClick={() => downloadCSV(`training-report-${todayISO()}.csv`, [tr("p8lrn.docColStaff"), tr("p8lrn.lcColLocation"), tr("p8lrn.lcColRole"), tr("p8lrn.lcColSafeguarding"), tr("p8lrn.lcCsvSgQuizPct"), tr("p8lrn.lcColFirstAid"), "DBS", tr("p8lrn.lcCsvPfa")], staff.map((s) => [s.name, s.op, s.role, s.sg, s.sgq ?? "", s.fa, s.dbs, s.pfa]))}>{tr("p8lrn.lcExportCsv")}</Button>
+              <Button onClick={() => setRemOpen((v) => !v)}>{tr("p8lrn.lcRemindersBtn")}</Button>
+              <span className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lrn.lcTipClickName")}</span>
             </div>
             {remOpen && (
               <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
-                <div className="mb-1 text-[12px] font-extrabold text-[var(--ink)]">🔔 Automated reminders</div>
-                <p className="mb-2.5 text-[11px] text-[var(--ink-3)]">Choose when staff and admins are chased. Emails and in-app alerts are sent by your platform.</p>
+                <div className="mb-1 text-[12px] font-extrabold text-[var(--ink)]">{tr("p8lrn.lcAutoReminders")}</div>
+                <p className="mb-2.5 text-[11px] text-[var(--ink-3)]">{tr("p8lrn.lcAutoHelp")}</p>
                 <div className="grid gap-1.5 sm:grid-cols-2">
-                  {([["courseDue", "Course due soon — remind the learner"], ["overdueChase", "Overdue — chase the learner + admin"], ["renewalDue", "Renewal due — annual refresher reminder"], ["unreadPolicy", "Unread policy — remind until confirmed"], ["weeklyDigest", "Weekly summary to the manager"]] as const).map(([k, l]) => (
+                  {([["courseDue", tr("p8lrn.lcRemCourseDue")], ["overdueChase", tr("p8lrn.lcRemOverdue")], ["renewalDue", tr("p8lrn.lcRemRenewal")], ["unreadPolicy", tr("p8lrn.lcRemUnreadPolicy")], ["weeklyDigest", tr("p8lrn.lcRemWeekly")]] as const).map(([k, l]) => (
                     <label key={k} className="flex items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={reminders[k]} onChange={(e) => setRem({ [k]: e.target.checked } as Partial<ReminderPrefs>)} /> {l}</label>
                   ))}
-                  <label className="flex items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] font-semibold text-[var(--ink-2)]">Digest day<Select value={reminders.digestDay} onChange={(e) => setRem({ digestDay: e.target.value })} className="ms-auto max-w-[130px]">{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((d) => <option key={d} value={d}>{d}</option>)}</Select></label>
+                  <label className="flex items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] font-semibold text-[var(--ink-2)]">{tr("p8lrn.lcDigestDay")}<Select value={reminders.digestDay} onChange={(e) => setRem({ digestDay: e.target.value })} className="ms-auto max-w-[130px]">{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((d, di) => <option key={d} value={d}>{new Date(Date.UTC(2024, 0, 1 + di)).toLocaleDateString(dl(), { weekday: "long", timeZone: "UTC" })}</option>)}</Select></label>
                 </div>
               </div>
             )}
             <CollapsibleStats id="learning-safeguarding">
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-              <Tile label="Staff in scope" icon="👥" grad={GRAD.blue} value={String(staff.length)} sub="assigned safeguarding" />
-              <Tile label="Safeguarding complete" icon="🛡️" grad={GRAD.green} value={String(compN)} sub={`${staff.length ? Math.round((compN / staff.length) * 100) : 0}% of staff`} aside={<Ring pct={staff.length ? (compN / staff.length) * 100 : 0} label={`${staff.length ? Math.round((compN / staff.length) * 100) : 0}%`} />} />
-              <Tile label="Overdue" icon="⏰" grad={overN > 0 ? GRAD.pink : GRAD.green} value={String(overN)} sub={overN > 0 ? "past their deadline" : "nobody overdue"} aside={<Ring pct={staff.length ? (overN / staff.length) * 100 : 0} label={`${staff.length ? Math.round((overN / staff.length) * 100) : 0}%`} />} />
+              <Tile label={tr("p8lrn.lcTileInScope")} icon="👥" grad={GRAD.blue} value={String(staff.length)} sub={tr("p8lrn.lcTileInScopeSub")} />
+              <Tile label={tr("p8lrn.lcTileSgComplete")} icon="🛡️" grad={GRAD.green} value={String(compN)} sub={tr("p8lrn.lcPctOfStaff", { pct: staff.length ? Math.round((compN / staff.length) * 100) : 0 })} aside={<Ring pct={staff.length ? (compN / staff.length) * 100 : 0} label={`${staff.length ? Math.round((compN / staff.length) * 100) : 0}%`} />} />
+              <Tile label={tr("p8lrn.lcTileOverdue")} icon="⏰" grad={overN > 0 ? GRAD.pink : GRAD.green} value={String(overN)} sub={overN > 0 ? tr("p8lrn.lcPastDeadline") : tr("p8lrn.lcNobodyOverdue")} aside={<Ring pct={staff.length ? (overN / staff.length) * 100 : 0} label={`${staff.length ? Math.round((overN / staff.length) * 100) : 0}%`} />} />
             </div>
             </CollapsibleStats>
             {/* Top & bottom courses by average score */}
             <div className="mb-3 grid gap-2.5 md:grid-cols-2">
-              {([["🏆 Top 5 courses — highest average score", ranked.slice(0, 5), "#0f7a43"], ["⚠ Bottom 5 — need revisiting & retraining", ranked.slice(-5).reverse(), "#c0392b"]] as const).map(([title, list, col], i) => (
+              {([[tr("p8lrn.lcTop5"), ranked.slice(0, 5), "#0f7a43"], [tr("p8lrn.lcBottom5"), ranked.slice(-5).reverse(), "#c0392b"]] as const).map(([title, list, col], i) => (
                 <div key={i} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
                   <div className="mb-2 text-[12px] font-extrabold" style={{ color: col }}>{title}</div>
                   <div className="flex flex-col gap-1.5">
@@ -695,7 +710,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                         <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-[var(--ink)]">{c.title}</span>
                         <div className="h-1.5 w-16 flex-none overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${s}%`, background: col }} /></div>
                         <span className="w-9 flex-none text-end text-[12px] font-extrabold tabular-nums" style={{ color: col }}>{s}%</span>
-                        <button type="button" onClick={() => setInsight(c)} title="View course insights" className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]">📊</button>
+                        <button type="button" onClick={() => setInsight(c)} title={tr("p8lrn.lcViewInsights")} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]">📊</button>
                       </div>
                     ))}
                   </div>
@@ -711,17 +726,17 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                 <div className="mb-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,32,90,.04)]">
                   <button type="button" onClick={() => setFocusOpen((v) => !v)} className="flex w-full items-center gap-3 px-4 py-3 text-start hover:bg-[var(--panel)]">
                     <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[#f3effe] text-[16px]">🎯</span>
-                    <div className="min-w-0 flex-1"><div className="text-[14.5px] font-extrabold text-[var(--ink)]">Individual focus</div><div className="text-[11.5px] text-[var(--ink-3)]">Strengths &amp; areas to practise · {staff.length} staff</div></div>
+                    <div className="min-w-0 flex-1"><div className="text-[14.5px] font-extrabold text-[var(--ink)]">{tr("p8lrn.lcIndFocus")}</div><div className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lrn.lcIndFocusSub", { n: staff.length })}</div></div>
                     <span className={`grid h-7 w-7 flex-none place-items-center rounded-full bg-[var(--panel)] text-[13px] text-[var(--ink-3)] transition-transform ${focusOpen ? "rotate-180" : ""}`}>▾</span>
                   </button>
                   {focusOpen && (
                     <div className="border-t border-[var(--line)] p-4">
                       <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <input value={focusQ} onChange={(e) => setFocusQ(e.target.value)} placeholder="🔍 Filter by name…" className="h-9 w-full max-w-[260px] rounded-lg border border-[var(--line)] bg-white px-3 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
-                        <span className="text-[11px] text-[var(--ink-3)]">{list.length} of {staff.length}</span>
-                        <span className="ms-auto text-[11px] text-[var(--ink-3)]">Illustrative from quiz scores — full per-question breakdown appears once answers are recorded (backend).</span>
+                        <input value={focusQ} onChange={(e) => setFocusQ(e.target.value)} placeholder={tr("p8lrn.lcFilterByName")} className="h-9 w-full max-w-[260px] rounded-lg border border-[var(--line)] bg-white px-3 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+                        <span className="text-[11px] text-[var(--ink-3)]">{tr("p8lrn.lcNofM", { a: list.length, b: staff.length })}</span>
+                        <span className="ms-auto text-[11px] text-[var(--ink-3)]">{tr("p8lrn.lcIllustrative")}</span>
                       </div>
-                      {list.length === 0 ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No staff match &ldquo;{focusQ}&rdquo;.</div> : (
+                      {list.length === 0 ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">{tr("p8lrn.lcNoStaffMatch", { q: focusQ })}</div> : (
                         <div className="grid gap-2.5 sm:grid-cols-2">
                           {list.map((s) => { const col = avc[[...s.name].reduce((n, c) => n + c.charCodeAt(0), 0) % avc.length]; return (
                             <div key={s.name} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
@@ -730,8 +745,8 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                                 <div className="min-w-0"><div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{s.name}</div><div className="truncate text-[10.5px] text-[var(--ink-3)]">{s.role}{s.op ? ` · ${s.op}` : ""}</div></div>
                               </div>
                               <div className="flex flex-col gap-1.5">
-                                <div className="flex items-start gap-2"><span className="mt-[1px] flex-none rounded-md bg-[#e6f4ea] px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase text-[#0f7a43]">✓ Strong</span><span className="text-[12px] font-semibold text-[#0f7a43]">{strong}</span></div>
-                                <div className="flex items-start gap-2"><span className="mt-[1px] flex-none rounded-md bg-[#fdecec] px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase text-[#c0392b]">◎ Practise</span><span className="text-[12px] font-semibold text-[#c0392b]">{practise}</span></div>
+                                <div className="flex items-start gap-2"><span className="mt-[1px] flex-none rounded-md bg-[#e6f4ea] px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase text-[#0f7a43]">{tr("p8lrn.lcStrong")}</span><span className="text-[12px] font-semibold text-[#0f7a43]">{strong}</span></div>
+                                <div className="flex items-start gap-2"><span className="mt-[1px] flex-none rounded-md bg-[#fdecec] px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase text-[#c0392b]">{tr("p8lrn.lcPractise")}</span><span className="text-[12px] font-semibold text-[#c0392b]">{practise}</span></div>
                               </div>
                             </div>
                           ); })}
@@ -743,7 +758,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
               );
             })()}
             <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-              <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-start text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Location</th><th className="px-3 py-2.5 font-extrabold">Role</th><th className="px-3 py-2.5 font-extrabold">Safeguarding</th><th className="px-3 py-2.5 font-extrabold">S/G quiz</th><th className="px-3 py-2.5 font-extrabold">First aid</th></tr></thead>
+              <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-start text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{tr("p8lrn.docColStaff")}</th><th className="px-3 py-2.5 font-extrabold">{tr("p8lrn.lcColLocation")}</th><th className="px-3 py-2.5 font-extrabold">{tr("p8lrn.lcColRole")}</th><th className="px-3 py-2.5 font-extrabold">{tr("p8lrn.lcColSafeguarding")}</th><th className="px-3 py-2.5 font-extrabold">{tr("p8lrn.lcColSgQuiz")}</th><th className="px-3 py-2.5 font-extrabold">{tr("p8lrn.lcColFirstAid")}</th></tr></thead>
                 <tbody>{staff.map((s) => (
                   <tr key={s.name} onClick={() => setRecordStaff(s)} className="cursor-pointer border-t border-[var(--line-2,#eef2f8)] hover:bg-[var(--panel)]"><td className="px-3 py-2.5 font-bold text-[#1d3a8f]">{s.name}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.op}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.role}</td><td className="px-3 py-2.5"><Badge text={s.sg} /></td><td className="px-3 py-2.5 tabular-nums text-[var(--ink-2)]">{s.sgq != null ? `${s.sgq}%` : "—"}</td><td className="px-3 py-2.5"><Badge text={s.fa} /></td></tr>
                 ))}</tbody>
@@ -759,63 +774,63 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
               const cells = staff.flatMap((s) => cred.types.map((t) => ({ req: t.required, applies: appliesTo(t, s.name, s.role), st: credStatus(cred.recordFor(s.name, t.id)) })));
               const cnt = (st: CredStatus) => st === "Missing" ? cells.filter((c) => c.st === "Missing" && c.req && c.applies).length : cells.filter((c) => c.st === st).length;
               const rows = staff.filter((s) => credStatusFilter === "all" || visTypes.some((t) => { const st = credStatus(cred.recordFor(s.name, t.id)); if (st !== credStatusFilter) return false; return credStatusFilter === "Missing" ? t.required && appliesTo(t, s.name, s.role) : true; }));
-              const csv = () => downloadCSV(`credentials-${todayISO()}.csv`, ["Staff", "Location", ...cred.types.map((t) => t.name)], staff.map((s) => [s.name, s.op, ...cred.types.map((t) => credStatus(cred.recordFor(s.name, t.id)))]));
+              const csv = () => downloadCSV(`credentials-${todayISO()}.csv`, [tr("p8lrn.docColStaff"), tr("p8lrn.lcColLocation"), ...cred.types.map((t) => t.name)], staff.map((s) => [s.name, s.op, ...cred.types.map((t) => credStatus(cred.recordFor(s.name, t.id)))]));
               return (<>
-                <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">Staff upload &amp; renew certificates in <b className="text-[var(--ink-2)]">their own area</b>; this is the single verified record. Click a cell to view, verify or add on their behalf.</p>
+                <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">{tr("p8lrn.lcCertsIntro")}</p>
                 <CollapsibleStats id="learning-certs">
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                  {([["Expiring", "expiring soon", "#b45309", "#fdf3e0", "⏳"], ["Expired", "expired", "#c0392b", "#fdeceb", "⛔"], ["Pending", "to verify", "#1d54c4", "#eaf1ff", "🔎"], ["Missing", "required missing", "#5b6577", "#eef1f6", "➖"]] as const).map(([st, lbl, col, bg, icon]) => { const on = credStatusFilter === st; return (
+                  {([["Expiring", tr("p8lrn.lcStatExpiringSoon"), "#b45309", "#fdf3e0", "⏳"], ["Expired", tr("p8lrn.lcStatExpiredLower"), "#c0392b", "#fdeceb", "⛔"], ["Pending", tr("p8lrn.lcStatToVerify"), "#1d54c4", "#eaf1ff", "🔎"], ["Missing", tr("p8lrn.lcStatRequiredMissing"), "#5b6577", "#eef1f6", "➖"]] as const).map(([st, lbl, col, bg, icon]) => { const on = credStatusFilter === st; return (
                     <button key={st} type="button" onClick={() => setCredStatusFilter(on ? "all" : st)} className={"flex items-center gap-3 rounded-2xl border border-transparent px-3.5 py-3 text-start transition-all " + (on ? "ring-2 ring-offset-1" : "hover:-translate-y-0.5 hover:shadow-md")} style={{ background: bg, ...(on ? ({ "--tw-ring-color": col } as React.CSSProperties) : {}) }}><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/70 text-[17px]">{icon}</span><div><div className="text-[22px] font-extrabold leading-none tabular-nums" style={{ color: col }}>{cnt(st)}</div><div className="mt-0.5 text-[11px] font-semibold" style={{ color: col }}>{lbl}</div></div></button>
                   ); })}
                 </div>
                 </CollapsibleStats>
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <div className="relative">
-                    <Button onClick={() => setCertExportOpen((v) => !v)}>⬇ Export ▾</Button>
+                    <Button onClick={() => setCertExportOpen((v) => !v)}>{tr("p8lrn.lcExportMenu")}</Button>
                     {certExportOpen && (
                       <div className="absolute z-20 mt-1 w-[240px] rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
-                        {([["CSV (spreadsheet)", () => csv()], ["PDF — register only", () => exportCredsPdf(staff, cred.types, cred.recordFor, companyName, false)], ["PDF — with certificate docs", () => exportCredsPdf(staff, cred.types, cred.recordFor, companyName, true)]] as const).map(([lbl, fn]) => (
+                        {([[tr("p8lrn.lcExpCsv"), () => csv()], [tr("p8lrn.lcExpPdfReg"), () => exportCredsPdf(staff, cred.types, cred.recordFor, companyName, false)], [tr("p8lrn.lcExpPdfDocs"), () => exportCredsPdf(staff, cred.types, cred.recordFor, companyName, true)]] as const).map(([lbl, fn]) => (
                           <button key={lbl} type="button" onClick={() => { fn(); setCertExportOpen(false); }} className="block w-full rounded-lg px-3 py-2 text-start text-[12.5px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{lbl}</button>
                         ))}
                       </div>
                     )}
                   </div>
-                  <Button variant="primary" onClick={() => setCertEdit(blankRecord(staff[0]?.name ?? "", cred.types[0]?.id ?? ""))}>+ Add certificate</Button>
-                  <Select value={credTypeFilter} onChange={(e) => setCredTypeFilter(e.target.value)} className="max-w-[200px]"><option value="all">All credentials</option>{cred.types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
-                  {credStatusFilter !== "all" && <button type="button" onClick={() => setCredStatusFilter("all")} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Clear ✕</button>}
+                  <Button variant="primary" onClick={() => setCertEdit(blankRecord(staff[0]?.name ?? "", cred.types[0]?.id ?? ""))}>{tr("p8lrn.lcAddCert")}</Button>
+                  <Select value={credTypeFilter} onChange={(e) => setCredTypeFilter(e.target.value)} className="max-w-[200px]"><option value="all">{tr("p8lrn.lcAllCreds")}</option>{cred.types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
+                  {credStatusFilter !== "all" && <button type="button" onClick={() => setCredStatusFilter("all")} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{tr("p8lrn.lcClearX")}</button>}
                 </div>
                 <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-                  <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-start text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Location</th>{visTypes.map((t) => <th key={t.id} title={t.required ? "Required for: " + credTargetLabel(t) : "Optional"} className="px-3 py-2.5 font-extrabold whitespace-nowrap">{t.name}{t.required && <span className="ms-0.5 text-[#c0392b]">*</span>}</th>)}</tr></thead>
+                  <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-start text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{tr("p8lrn.docColStaff")}</th><th className="px-3 py-2.5 font-extrabold">{tr("p8lrn.lcColLocation")}</th>{visTypes.map((t) => <th key={t.id} title={t.required ? tr("p8lrn.lcRequiredFor", { who: credTargetLabel(t) }) : statusWord("Optional")} className="px-3 py-2.5 font-extrabold whitespace-nowrap">{t.name}{t.required && <span className="ms-0.5 text-[#c0392b]">*</span>}</th>)}</tr></thead>
                     <tbody>{rows.map((s) => (
-                      <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]"><td className="px-3 py-2.5 font-bold text-[var(--ink)]">{s.name}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.op}</td>{visTypes.map((t) => { const r = cred.recordFor(s.name, t.id); if (!appliesTo(t, s.name, s.role) && !r) return <td key={t.id} className="px-3 py-2 text-[var(--ink-3)]" title="Not required for this staff member">—</td>; return <td key={t.id} className="px-3 py-2"><button type="button" onClick={() => setCertCell({ staff: s.name, typeId: t.id })} className="transition-opacity hover:opacity-70"><CredBadge s={credStatus(r)} /></button></td>; })}</tr>
+                      <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]"><td className="px-3 py-2.5 font-bold text-[var(--ink)]">{s.name}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.op}</td>{visTypes.map((t) => { const r = cred.recordFor(s.name, t.id); if (!appliesTo(t, s.name, s.role) && !r) return <td key={t.id} className="px-3 py-2 text-[var(--ink-3)]" title={tr("p8lrn.lcNotRequiredFor")}>—</td>; return <td key={t.id} className="px-3 py-2"><button type="button" onClick={() => setCertCell({ staff: s.name, typeId: t.id })} className="transition-opacity hover:opacity-70"><CredBadge s={credStatus(r)} /></button></td>; })}</tr>
                     ))}
-                    {rows.length === 0 && <tr><td colSpan={visTypes.length + 2} className="px-3 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No staff match this filter.</td></tr>}</tbody>
+                    {rows.length === 0 && <tr><td colSpan={visTypes.length + 2} className="px-3 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{tr("p8lrn.lcNoStaffFilter")}</td></tr>}</tbody>
                   </table>
                 </div>
-                <p className="mt-2 text-[11px] text-[var(--ink-3)]"><span className="text-[#c0392b]">*</span> required. Manage credential types &amp; who they apply to in <button type="button" onClick={() => router.push(`/${scope}/setup?tab=learning#credtypes`)} className="font-bold text-[#1d3a8f] underline hover:text-[#16297a]">Setup → Learning</button>.</p>
+                <p className="mt-2 text-[11px] text-[var(--ink-3)]"><span className="text-[#c0392b]">*</span> {tr("p8lrn.lcLegendRequired")} <button type="button" onClick={() => router.push(`/${scope}/setup?tab=learning#credtypes`)} className="font-bold text-[#1d3a8f] underline hover:text-[#16297a]">{tr("p8lrn.lcSetupLearning")}</button>.</p>
               </>);
             })()}
           </>)}
 
           {/* Documents & Policies — read-and-confirm */}
           {tab === "docs" && (<>
-            <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">Share policies your team must read. Each person ticks <b>“I have read and understood”</b> and you get a dated record — ideal for Ofsted and inspections.</p>
+            <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">{tr("p8lrn.lcDocsIntro")}</p>
 
             {requireConfirm && myPending.length > 0 && (
               <div className="mb-3 rounded-xl border border-[#bcd0f5] bg-[#eef4fd] p-3.5">
-                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">📋 To confirm — {myPending.length} {myPending.length === 1 ? "policy" : "policies"} awaiting you</div>
+                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">{tr("p8lrn.lcToConfirm", { n: myPending.length })}</div>
                 <div className="flex flex-col gap-1.5">
                   {myPending.map((p) => (
                     <div key={p.id} className="flex items-center gap-2 rounded-lg bg-white px-3 py-2">
-                      <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-bold text-[var(--ink)]">{p.title}</div><div className="text-[11px] text-[var(--ink-3)]">{p.required ? "Required" : "Recommended"} · added {fmtDate(p.added)}</div></div>
-                      <Button variant="primary" onClick={() => setReadingDoc(p)}>Read &amp; confirm</Button>
+                      <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-bold text-[var(--ink)]">{p.title}</div><div className="text-[11px] text-[var(--ink-3)]">{tr("p8lrn.lcKindAddedDate", { kind: statusWord(p.required ? "Required" : "Recommended"), date: fmtDate(p.added) })}</div></div>
+                      <Button variant="primary" onClick={() => setReadingDoc(p)}>{tr("p8lrn.lcReadConfirm")}</Button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="mb-2.5 flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">All policies &amp; documents</span><Button variant="primary" className="ms-auto" onClick={() => setPolicyForm(blankPolicy())}>+ Add policy</Button></div>
+            <div className="mb-2.5 flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">{tr("p8lrn.lcAllPolicies")}</span><Button variant="primary" className="ms-auto" onClick={() => setPolicyForm(blankPolicy())}>{tr("p8lrn.lcAddPolicy")}</Button></div>
             <div className="flex flex-col gap-2">
               {policies.map((p) => {
                 const done = STAFF.filter((s) => acks.some((a) => a.docId === p.id && a.staff === s.name));
@@ -825,29 +840,29 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                   <div key={p.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2"><span className="truncate text-[13.5px] font-extrabold text-[var(--ink)]">{p.title || "Untitled policy"}</span><Badge text={p.required ? "Required" : "Recommended"} /></div>
-                        <div className="text-[11px] text-[var(--ink-3)]">{p.category ? p.category + " · " : ""}added {fmtDate(p.added)}</div>
+                        <div className="flex items-center gap-2"><span className="truncate text-[13.5px] font-extrabold text-[var(--ink)]">{p.title || tr("p8lrn.lcUntitledPolicy")}</span><Badge text={p.required ? "Required" : "Recommended"} /></div>
+                        <div className="text-[11px] text-[var(--ink-3)]">{p.category ? p.category + " · " : ""}{tr("p8lrn.lcAddedDate", { date: fmtDate(p.added) })}</div>
                       </div>
-                      <div className="text-end"><div className="text-[14px] font-extrabold tabular-nums text-[var(--ink)]">{done.length}/{STAFF.length}</div><div className="text-[10.5px] text-[var(--ink-3)]">confirmed</div></div>
+                      <div className="text-end"><div className="text-[14px] font-extrabold tabular-nums text-[var(--ink)]">{done.length}/{STAFF.length}</div><div className="text-[10.5px] text-[var(--ink-3)]">{tr("p8lrn.lcConfirmedLbl")}</div></div>
                       <div className="flex gap-0.5">
-                        <button type="button" title="Read" onClick={() => setReadingDoc(p)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]">👁</button>
-                        <button type="button" title="Edit" onClick={() => setPolicyForm(p)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]">✏️</button>
-                        <button type="button" title="Delete" onClick={() => deletePolicy(p.id)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
+                        <button type="button" title={tr("p8lrn.lcRead")} onClick={() => setReadingDoc(p)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]">👁</button>
+                        <button type="button" title={tr("p8lrn.gEdit")} onClick={() => setPolicyForm(p)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]">✏️</button>
+                        <button type="button" title={tr("p8lrn.gDelete")} onClick={() => deletePolicy(p.id)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
                       </div>
                     </div>
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full bg-[#0f9d58] transition-all" style={{ width: `${pct}%` }} /></div>
-                    <button type="button" onClick={() => setExpandedPolicy(open ? null : p.id)} className="mt-2 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{open ? "Hide who's confirmed" : "Who's confirmed?"}</button>
+                    <button type="button" onClick={() => setExpandedPolicy(open ? null : p.id)} className="mt-2 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{open ? tr("p8lrn.lcHideWho") : tr("p8lrn.lcWhoConfirmed")}</button>
                     {open && (
                       <div className="mt-2 grid gap-1 sm:grid-cols-2">
                         {STAFF.map((s) => { const a = acks.find((x) => x.docId === p.id && x.staff === s.name); return (
-                          <div key={s.name} className="flex items-center gap-2 rounded-lg bg-[var(--surface)] px-2.5 py-1.5 text-[12px]"><span className={a ? "text-[#0f7a43]" : "text-[var(--ink-3)]"}>{a ? "✓" : "○"}</span><span className="flex-1 truncate font-semibold text-[var(--ink)]">{s.name}</span><span className="text-[11px] text-[var(--ink-3)]">{a ? fmtDate(a.date) : "Not yet"}</span></div>
+                          <div key={s.name} className="flex items-center gap-2 rounded-lg bg-[var(--surface)] px-2.5 py-1.5 text-[12px]"><span className={a ? "text-[#0f7a43]" : "text-[var(--ink-3)]"}>{a ? "✓" : "○"}</span><span className="flex-1 truncate font-semibold text-[var(--ink)]">{s.name}</span><span className="text-[11px] text-[var(--ink-3)]">{a ? fmtDate(a.date) : tr("p8lrn.lcNotYet")}</span></div>
                         ); })}
                       </div>
                     )}
                   </div>
                 );
               })}
-              {policies.length === 0 && <p className="rounded-xl bg-[var(--panel)] px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No policies yet — add your first with “+ Add policy”.</p>}
+              {policies.length === 0 && <p className="rounded-xl bg-[var(--panel)] px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{tr("p8lrn.lcNoPolicies")}</p>}
             </div>
           </>)}
         </div>
@@ -857,21 +872,21 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
       {aOpen && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={() => setAOpen(false)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
-            <div className="mb-3 flex items-center gap-2"><div className="text-[15px] font-extrabold text-[var(--ink)]">Assign course</div><button type="button" onClick={() => setAOpen(false)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <div className="mb-3 flex items-center gap-2"><div className="text-[15px] font-extrabold text-[var(--ink)]">{tr("p8lrn.lcAssignCourse")}</div><button type="button" onClick={() => setAOpen(false)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <div className="flex flex-col gap-3">
-              <div><label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Course</label><Select value={aCourse} onChange={(e) => { setACourse(e.target.value); setAVer(courses.find((c) => c.id === e.target.value)?.activeQuiz ?? 0); }} className="w-full">{courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</Select></div>
+              <div><label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcFldCourse")}</label><Select value={aCourse} onChange={(e) => { setACourse(e.target.value); setAVer(courses.find((c) => c.id === e.target.value)?.activeQuiz ?? 0); }} className="w-full">{courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</Select></div>
               <div>
-                <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Assign to</label>
+                <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcAssignTo")}</label>
                 <div className="flex gap-1.5">
-                  {([["all", "All staff"], ["roles", "Job roles"], ["staff", "Specific staff"]] as const).map(([k, l]) => (
+                  {([["all", tr("p8lrn.docAllStaff")], ["roles", tr("p8lrn.lcKindRoles")], ["staff", tr("p8lrn.lcKindStaff")]] as const).map(([k, l]) => (
                     <button key={k} type="button" onClick={() => setAKind(k)} className={"flex-1 rounded-lg border px-2 py-1.5 text-[12px] font-bold transition-colors " + (aKind === k ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{l}</button>
                   ))}
                 </div>
               </div>
               {aKind === "roles" && (
                 <div className="rounded-xl border border-[var(--line)] p-2.5">
-                  <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Tick one or more roles / job titles</div>
-                  {roleOptions.length === 0 ? <div className="text-[12px] text-[var(--ink-3)]">No roles added yet — add them in Setup → Staff roles &amp; permissions.</div> : (
+                  <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcTickRoles")}</div>
+                  {roleOptions.length === 0 ? <div className="text-[12px] text-[var(--ink-3)]">{tr("p8lrn.lcNoRolesYet")}</div> : (
                     <div className="flex flex-wrap gap-1.5">
                       {roleOptions.map((r) => { const on = aRoles.includes(r); return <button key={r} type="button" onClick={() => setARoles(toggle(aRoles, r))} className={"rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition-colors " + (on ? "border-transparent bg-[#1d3a8f] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[#1d3a8f]")}>{on ? "✓ " : ""}{r}</button>; })}
                     </div>
@@ -880,29 +895,29 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
               )}
               {aKind === "staff" && (
                 <div className="rounded-xl border border-[var(--line)] p-2.5">
-                  <div className="mb-1.5 flex items-center gap-2"><span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Tick one or more staff</span><Input value={aStaffQ} onChange={(e) => setAStaffQ(e.target.value)} placeholder="🔍 Search names…" className="ms-auto w-[150px]" /></div>
+                  <div className="mb-1.5 flex items-center gap-2"><span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcTickStaff")}</span><Input value={aStaffQ} onChange={(e) => setAStaffQ(e.target.value)} placeholder={tr("p8lrn.lcSearchNames")} className="ms-auto w-[150px]" /></div>
                   <div className="max-h-[180px] overflow-y-auto">
                     {STAFF.filter((s) => s.name.toLowerCase().includes(aStaffQ.trim().toLowerCase())).map((s) => { const on = aStaff.includes(s.name); return <label key={s.name} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12.5px] text-[var(--ink-2)] hover:bg-[var(--panel)]"><input type="checkbox" checked={on} onChange={() => setAStaff(toggle(aStaff, s.name))} /> <b className="font-semibold text-[var(--ink)]">{s.name}</b> <span className="text-[11px] text-[var(--ink-3)]">· {s.role} · {s.op}</span></label>; })}
-                    {STAFF.filter((s) => s.name.toLowerCase().includes(aStaffQ.trim().toLowerCase())).length === 0 && <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">No staff match “{aStaffQ}”.</div>}
+                    {STAFF.filter((s) => s.name.toLowerCase().includes(aStaffQ.trim().toLowerCase())).length === 0 && <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">{tr("p8lrn.lcNoStaffMatch", { q: aStaffQ })}</div>}
                   </div>
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Locations — tick any (leave blank for all)</label>
+                <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcLocTick")}</label>
                 <div className="flex flex-wrap gap-1.5">
-                  {OPS.filter(([v]) => v !== "all").map(([v, l]) => { const on = aLocs.includes(v); return <button key={v} type="button" onClick={() => setALocs(toggle(aLocs, v))} className={"rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition-colors " + (on ? "border-transparent bg-[#0f7a43] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[#0f7a43]")}>{on ? "✓ " : ""}{l}</button>; })}
+                  {OPS.filter(([v]) => v !== "all").map(([v, l]) => { const on = aLocs.includes(v); return <button key={v} type="button" onClick={() => setALocs(toggle(aLocs, v))} className={"rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition-colors " + (on ? "border-transparent bg-[#0f7a43] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[#0f7a43]")}>{on ? "✓ " : ""}{opLabel(v, l)}</button>; })}
                 </div>
               </div>
               {(isPlatform(aCourse) || ((courses.find((c) => c.id === aCourse)?.quizzes?.length ?? 0) > 1)) && (
-                <div><label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Quiz version for this group</label><Select value={aVer} onChange={(e) => setAVer(Number(e.target.value))} className="w-full">{QUIZ_VERSION_LABELS.map((l, v) => <option key={v} value={v}>{l}</option>)}</Select></div>
+                <div><label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcQuizVerGroup")}</label><Select value={aVer} onChange={(e) => setAVer(Number(e.target.value))} className="w-full">{QUIZ_VERSION_LABELS.map((_l, v) => <option key={v} value={v}>{tr("p8lrn.lcVersionN", { n: v + 1 })}</option>)}</Select></div>
               )}
               <div className="grid grid-cols-2 gap-2">
-                <div><label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Complete by</label><Input type="date" value={aDue} onChange={(e) => setADue(e.target.value)} className="w-full" /></div>
-                <div><label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Renews every</label><Select value={aRenew} onChange={(e) => setARenew(Number(e.target.value))} className="w-full"><option value={0}>Never</option><option value={6}>6 months</option><option value={12}>12 months (annual)</option><option value={24}>2 years</option><option value={36}>3 years</option></Select></div>
+                <div><label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcCompleteBy")}</label><Input type="date" value={aDue} onChange={(e) => setADue(e.target.value)} className="w-full" /></div>
+                <div><label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcRenewsEvery")}</label><Select value={aRenew} onChange={(e) => setARenew(Number(e.target.value))} className="w-full"><option value={0}>{tr("p8lrn.lcNever")}</option><option value={6}>{tr("p8lrn.lcMonths6")}</option><option value={12}>{tr("p8lrn.lcMonths12")}</option><option value={24}>{tr("p8lrn.lcYears2")}</option><option value={36}>{tr("p8lrn.lcYears3")}</option></Select></div>
               </div>
-              <label className="flex items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={aReq} onChange={(e) => setAReq(e.target.checked)} /> Required — untick to assign as optional</label>
+              <label className="flex items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={aReq} onChange={(e) => setAReq(e.target.checked)} /> {tr("p8lrn.lcReqUntick")}</label>
             </div>
-            <div className="mt-4 flex justify-end gap-2"><Button onClick={() => setAOpen(false)}>Cancel</Button><Button variant="primary" onClick={saveAssign} disabled={!aCourse || (aKind === "roles" && aRoles.length === 0) || (aKind === "staff" && aStaff.length === 0)}>Assign &amp; notify</Button></div>
+            <div className="mt-4 flex justify-end gap-2"><Button onClick={() => setAOpen(false)}>{tr("p8lrn.gCancel")}</Button><Button variant="primary" onClick={saveAssign} disabled={!aCourse || (aKind === "roles" && aRoles.length === 0) || (aKind === "staff" && aStaff.length === 0)}>{tr("p8lrn.lcAssignNotify")}</Button></div>
           </div>
         </div>
       )}
@@ -914,25 +929,25 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
             <div className="mb-3 flex items-center gap-3">
               <div className="grid h-11 w-11 flex-none place-items-center rounded-full bg-[#eef4fd] text-[14px] font-extrabold text-[#1d3a8f]">{recordStaff.name.split(" ").map((w) => w[0]).join("").slice(0, 2)}</div>
               <div className="min-w-0 flex-1"><div className="text-[15px] font-extrabold text-[var(--ink)]">{recordStaff.name}</div><div className="text-[12px] text-[var(--ink-3)]">{recordStaff.role} · {recordStaff.op}</div></div>
-              <button type="button" title="Export this record" onClick={() => { const s = recordStaff; downloadCSV(`${s.name.replace(/\s+/g, "-")}-record.csv`, ["Field", "Value"], [["Safeguarding", s.sg], ["S/G quiz", s.sgq != null ? `${s.sgq}%` : "—"], ["First aid", s.fa], ["DBS", s.dbs], ["Paediatric First Aid", s.pfa]]); }} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬇</button>
+              <button type="button" title={tr("p8lrn.lcExportRecord")} onClick={() => { const s = recordStaff; downloadCSV(`${s.name.replace(/\s+/g, "-")}-record.csv`, [tr("p8lrn.lcCsvField"), tr("p8lrn.lcCsvValue")], [[tr("p8lrn.lcColSafeguarding"), statusWord(s.sg)], [tr("p8lrn.lcColSgQuiz"), s.sgq != null ? `${s.sgq}%` : "—"], [tr("p8lrn.lcColFirstAid"), statusWord(s.fa)], ["DBS", statusWord(s.dbs)], [tr("p8lrn.lcCsvPfa"), statusWord(s.pfa)]]); }} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬇</button>
               <button type="button" onClick={() => setRecordStaff(null)} className="text-[18px] leading-none text-[var(--ink-3)]">×</button>
             </div>
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {([["Safeguarding", recordStaff.sg, true], ["First aid", recordStaff.fa, true], ["S/G quiz", recordStaff.sgq != null ? `${recordStaff.sgq}%` : "—", false], ["DBS", recordStaff.dbs, true], ["Paediatric First Aid", recordStaff.pfa, true]] as const).map(([l, v, isBadge]) => (
+              {([[tr("p8lrn.lcColSafeguarding"), recordStaff.sg, true], [tr("p8lrn.lcColFirstAid"), recordStaff.fa, true], [tr("p8lrn.lcColSgQuiz"), recordStaff.sgq != null ? `${recordStaff.sgq}%` : "—", false], ["DBS", recordStaff.dbs, true], [tr("p8lrn.lcCsvPfa"), recordStaff.pfa, true]] as const).map(([l, v, isBadge]) => (
                 <div key={l} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{l}</div><div className="mt-1">{isBadge ? <Badge text={v} /> : <span className="text-[13px] font-bold text-[var(--ink)]">{v}</span>}</div></div>
               ))}
             </div>
-            <div className="mb-3"><div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Assigned courses</div>
+            <div className="mb-3"><div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcAssignedCourses")}</div>
               {coursesForStaff(recordStaff).length ? <div className="flex flex-col gap-1.5">{coursesForStaff(recordStaff).map((a, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-lg bg-[var(--surface)] px-3 py-2 text-[12.5px]"><span className="min-w-0 flex-1 truncate font-semibold text-[var(--ink)]">{titleOf(a.course)}</span><Badge text={a.required ? "Required" : "Optional"} />{a.due !== "—" && <span className="text-[11px] text-[var(--ink-3)]">due {a.due}</span>}{a.renewMonths ? <span title="Renews" className="text-[11px] font-semibold text-[#6d28d9]">🔄</span> : null}</div>
-              ))}</div> : <div className="text-[12px] text-[var(--ink-3)]">No courses assigned yet.</div>}
+                <div key={i} className="flex items-center gap-2 rounded-lg bg-[var(--surface)] px-3 py-2 text-[12.5px]"><span className="min-w-0 flex-1 truncate font-semibold text-[var(--ink)]">{titleOf(a.course)}</span><Badge text={a.required ? "Required" : "Optional"} />{a.due !== "—" && <span className="text-[11px] text-[var(--ink-3)]">{tr("p8lrn.lcDueLbl", { due: a.due })}</span>}{a.renewMonths ? <span title={tr("p8lrn.lcRenewsTitle")} className="text-[11px] font-semibold text-[#6d28d9]">🔄</span> : null}</div>
+              ))}</div> : <div className="text-[12px] text-[var(--ink-3)]">{tr("p8lrn.lcNoCoursesYet")}</div>}
             </div>
-            <div className="mb-3"><div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Policies</div>
+            <div className="mb-3"><div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcPolicies")}</div>
               <div className="flex flex-col gap-1.5">{policies.map((p) => { const a = acks.find((x) => x.docId === p.id && x.staff === recordStaff.name); return (
-                <div key={p.id} className="flex items-center gap-2 rounded-lg bg-[var(--surface)] px-3 py-2 text-[12.5px]"><span className={a ? "text-[#0f7a43]" : "text-[var(--ink-3)]"}>{a ? "✓" : "○"}</span><span className="min-w-0 flex-1 truncate font-semibold text-[var(--ink)]">{p.title}</span><span className="text-[11px] text-[var(--ink-3)]">{a ? `Confirmed ${fmtDate(a.date)}` : "Not yet"}</span></div>
+                <div key={p.id} className="flex items-center gap-2 rounded-lg bg-[var(--surface)] px-3 py-2 text-[12.5px]"><span className={a ? "text-[#0f7a43]" : "text-[var(--ink-3)]"}>{a ? "✓" : "○"}</span><span className="min-w-0 flex-1 truncate font-semibold text-[var(--ink)]">{p.title}</span><span className="text-[11px] text-[var(--ink-3)]">{a ? tr("p8lrn.lcConfirmedOnDate", { date: fmtDate(a.date) }) : tr("p8lrn.lcNotYet")}</span></div>
               ); })}</div>
             </div>
-            <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-3)]">📝 Notes &amp; full attempt history appear here once the backend records per-question results.</div>
+            <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-3)]">{tr("p8lrn.lcRecordNote")}</div>
           </div>
         </div>, document.body)}
 
@@ -942,21 +957,21 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
           <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
             <div className="mb-1 flex items-start gap-2"><span className="text-[16px]">📄</span><h3 className="flex-1 text-[15px] font-extrabold leading-tight text-[var(--ink)]">{readingDoc.title}</h3><button type="button" onClick={() => setReadingDoc(null)} className="text-[18px] leading-none text-[var(--ink-3)]">×</button></div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] text-[var(--ink-3)]">{readingDoc.category ? readingDoc.category + " · " : ""}{readingDoc.required ? "Required" : "Recommended"} · added {fmtDate(readingDoc.added)}</span>
-              {readingDoc.body && <button type="button" onClick={speakPolicy} className={"ms-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-extrabold transition-colors " + (speaking ? "bg-[#1d3a8f] text-white" : "border border-[#bcd0f5] bg-[#eef4fd] text-[#1d3a8f]")}>{speaking ? "⏹ Stop" : "🔊 Read aloud"}</button>}
+              <span className="text-[11px] text-[var(--ink-3)]">{readingDoc.category ? readingDoc.category + " · " : ""}{statusWord(readingDoc.required ? "Required" : "Recommended")} · {tr("p8lrn.lcAddedDate", { date: fmtDate(readingDoc.added) })}</span>
+              {readingDoc.body && <button type="button" onClick={speakPolicy} className={"ms-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-extrabold transition-colors " + (speaking ? "bg-[#1d3a8f] text-white" : "border border-[#bcd0f5] bg-[#eef4fd] text-[#1d3a8f]")}>{speaking ? tr("p8lrn.lcStopRead") : tr("p8lrn.lcReadAloud")}</button>}
             </div>
             <div onScroll={(e) => { const el = e.currentTarget; if (el.scrollTop + el.clientHeight >= el.scrollHeight - 28) setReachedEnd(true); }} className="max-h-[54vh] overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
               {readingDoc.fileData && <iframe src={pdfUrl ?? undefined} title={readingDoc.title} className="mb-3 h-[440px] w-full rounded-lg border border-[var(--line)] bg-white" />}
               {readingDoc.body && <div className="whitespace-pre-wrap px-0.5 text-[13.5px] leading-relaxed text-[var(--ink-2)]">{readingDoc.body}</div>}
-              {!readingDoc.body && !readingDoc.fileData && <div className="p-4 text-[13px] text-[var(--ink-3)]">No content yet.</div>}
-              <div className="mt-3 border-t border-dashed border-[var(--line)] pt-2 text-center text-[10.5px] font-bold uppercase tracking-wide text-[#0f7a43]">— end of document —</div>
+              {!readingDoc.body && !readingDoc.fileData && <div className="p-4 text-[13px] text-[var(--ink-3)]">{tr("p8lrn.lcNoContent")}</div>}
+              <div className="mt-3 border-t border-dashed border-[var(--line)] pt-2 text-center text-[10.5px] font-bold uppercase tracking-wide text-[#0f7a43]">{tr("p8lrn.lcEndOfDoc")}</div>
             </div>
             {acks.some((a) => a.docId === readingDoc.id && a.staff === ME) ? (
-              <div className="mt-3 rounded-lg bg-[#e2f4ea] px-3 py-2 text-[12.5px] font-bold text-[#0f7a43]">✓ You confirmed this on {fmtDate(acks.find((a) => a.docId === readingDoc.id && a.staff === ME)!.date)}</div>
+              <div className="mt-3 rounded-lg bg-[#e2f4ea] px-3 py-2 text-[12.5px] font-bold text-[#0f7a43]">{tr("p8lrn.lcYouConfirmedOn", { date: fmtDate(acks.find((a) => a.docId === readingDoc.id && a.staff === ME)!.date) })}</div>
             ) : (<>
-              {!reachedEnd && <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">👆 Scroll to the end{readingDoc.body ? " (or press Read aloud)" : ""} to enable confirmation.</p>}
-              <label className={"mt-2 flex items-start gap-2 rounded-lg py-1 text-[12.5px] font-semibold " + (reachedEnd ? "text-[var(--ink-2)]" : "cursor-not-allowed text-[var(--ink-3)] opacity-60")}><input type="checkbox" disabled={!reachedEnd} checked={readConfirm} onChange={(e) => setReadConfirm(e.target.checked)} className="mt-0.5" /> <span>I confirm I have read and understood <b className="font-bold text-[var(--ink)]">{readingDoc.title}</b>.</span></label>
-              <div className="mt-3 flex justify-end gap-2"><Button onClick={() => setReadingDoc(null)}>Close</Button><Button variant="primary" disabled={!readConfirm} onClick={() => confirmRead(readingDoc)}>Confirm</Button></div>
+              {!reachedEnd && <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">{tr(readingDoc.body ? "p8lrn.lcScrollEndAudio" : "p8lrn.lcScrollEnd")}</p>}
+              <label className={"mt-2 flex items-start gap-2 rounded-lg py-1 text-[12.5px] font-semibold " + (reachedEnd ? "text-[var(--ink-2)]" : "cursor-not-allowed text-[var(--ink-3)] opacity-60")}><input type="checkbox" disabled={!reachedEnd} checked={readConfirm} onChange={(e) => setReadConfirm(e.target.checked)} className="mt-0.5" /> <span>{tr("p8lrn.lcIConfirm", { title: readingDoc.title })}</span></label>
+              <div className="mt-3 flex justify-end gap-2"><Button onClick={() => setReadingDoc(null)}>{tr("p8lrn.gClose")}</Button><Button variant="primary" disabled={!readConfirm} onClick={() => confirmRead(readingDoc)}>{tr("p8lrn.lcConfirmBtn")}</Button></div>
             </>)}
           </div>
         </div>, document.body)}
@@ -965,29 +980,29 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
       {policyForm && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[137] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={() => setPolicyForm(null)}>
           <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
-            <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{policies.some((x) => x.id === policyForm.id) ? "Edit policy" : "Add policy"}</h3><button type="button" onClick={() => setPolicyForm(null)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{policies.some((x) => x.id === policyForm.id) ? tr("p8lrn.lcEditPolicy") : tr("p8lrn.lcAddPolicyTitle")}</h3><button type="button" onClick={() => setPolicyForm(null)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <div className="grid gap-2.5">
-              <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Title</span><Input value={policyForm.title} onChange={(e) => setPolicyForm({ ...policyForm, title: e.target.value })} placeholder="e.g. Safeguarding Policy" className="w-full" /></label>
+              <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.docFldTitle")}</span><Input value={policyForm.title} onChange={(e) => setPolicyForm({ ...policyForm, title: e.target.value })} placeholder={tr("p8lrn.docPhTitle")} className="w-full" /></label>
               <div className="grid grid-cols-[1fr_auto] gap-2">
-                <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Category (optional)</span><Input value={policyForm.category ?? ""} onChange={(e) => setPolicyForm({ ...policyForm, category: e.target.value })} placeholder="e.g. Safeguarding" className="w-full" /></label>
-                <label className="flex items-end gap-2 pb-2 text-[12.5px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={policyForm.required} onChange={(e) => setPolicyForm({ ...policyForm, required: e.target.checked })} /> Required reading</label>
+                <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcCategoryOpt")}</span><Input value={policyForm.category ?? ""} onChange={(e) => setPolicyForm({ ...policyForm, category: e.target.value })} placeholder={tr("p8lrn.lcPhCategory")} className="w-full" /></label>
+                <label className="flex items-end gap-2 pb-2 text-[12.5px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={policyForm.required} onChange={(e) => setPolicyForm({ ...policyForm, required: e.target.checked })} /> {tr("p8lrn.lcRequiredReading")}</label>
               </div>
               <div>
-                <span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">PDF document (optional)</span>
+                <span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcPdfOpt")}</span>
                 <div className="flex flex-wrap items-center gap-2">
-                  <label className="cursor-pointer rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ Upload PDF<input type="file" accept="application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = () => setPolicyForm({ ...policyForm, fileData: String(r.result), fileName: f.name }); r.readAsDataURL(f); }} /></label>
+                  <label className="cursor-pointer rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">{tr("p8lrn.lcUploadPdfBtn")}<input type="file" accept="application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = () => setPolicyForm({ ...policyForm, fileData: String(r.result), fileName: f.name }); r.readAsDataURL(f); }} /></label>
                   {policyForm.fileName && <span className="max-w-[220px] truncate text-[12px] font-semibold text-[var(--ink-2)]">📄 {policyForm.fileName}</span>}
-                  {policyForm.fileData && <button type="button" onClick={() => setPolicyForm({ ...policyForm, fileData: undefined, fileName: undefined })} className="text-[12px] font-semibold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button>}
+                  {policyForm.fileData && <button type="button" onClick={() => setPolicyForm({ ...policyForm, fileData: undefined, fileName: undefined })} className="text-[12px] font-semibold text-[var(--ink-3)] hover:text-[#c0392b]">{tr("p8lrn.lcRemove")}</button>}
                 </div>
               </div>
-              <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Policy text {policyForm.fileData ? "(read aloud + audio)" : ""}</span><textarea rows={policyForm.fileData ? 4 : 9} value={policyForm.body} onChange={(e) => setPolicyForm({ ...policyForm, body: e.target.value })} placeholder={policyForm.fileData ? "Optional — add text so the policy can be read aloud (audio)…" : "Paste or write the policy staff must read and confirm…"} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 text-[13px] leading-relaxed text-[var(--ink)] outline-none focus:border-[#1d3a8f]" /></label>
+              <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8lrn.lcPolicyText")} {policyForm.fileData ? tr("p8lrn.lcReadAloudAudio") : ""}</span><textarea rows={policyForm.fileData ? 4 : 9} value={policyForm.body} onChange={(e) => setPolicyForm({ ...policyForm, body: e.target.value })} placeholder={policyForm.fileData ? tr("p8lrn.lcPhPolicyOpt") : tr("p8lrn.lcPhPolicyPaste")} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 text-[13px] leading-relaxed text-[var(--ink)] outline-none focus:border-[#1d3a8f]" /></label>
             </div>
-            <div className="mt-3 flex justify-end gap-2"><Button onClick={() => setPolicyForm(null)}>Cancel</Button><Button variant="primary" disabled={!policyForm.title.trim()} onClick={() => savePolicy(policyForm)}>Save policy</Button></div>
+            <div className="mt-3 flex justify-end gap-2"><Button onClick={() => setPolicyForm(null)}>{tr("p8lrn.gCancel")}</Button><Button variant="primary" disabled={!policyForm.title.trim()} onClick={() => savePolicy(policyForm)}>{tr("p8lrn.lcSavePolicy")}</Button></div>
           </div>
         </div>, document.body)}
 
       {/* Certificate record editor */}
-      {certEdit && <CredEditor rec={certEdit} types={cred.types} onSave={(r) => { cred.upsertRecord(r); setCertEdit(null); flash("✅ Certificate saved"); }} onClose={() => setCertEdit(null)} />}
+      {certEdit && <CredEditor rec={certEdit} types={cred.types} onSave={(r) => { cred.upsertRecord(r); setCertEdit(null); flash(tr("p8lrn.lcCertSaved")); }} onClose={() => setCertEdit(null)} />}
 
       {/* Certificate detail / verify drawer */}
       {certCell && typeof document !== "undefined" && createPortal((() => {
@@ -995,26 +1010,26 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
         return (
           <div className="fixed inset-0 z-[138] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={() => setCertCell(null)}>
             <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
-              <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t?.name ?? "Credential"}</h3><CredBadge s={st} /><button type="button" onClick={() => setCertCell(null)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+              <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t?.name ?? tr("p8lrn.lcCredentialWord")}</h3><CredBadge s={st} /><button type="button" onClick={() => setCertCell(null)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
               <div className="mb-3 text-[12px] text-[var(--ink-3)]">{certCell.staff}</div>
               {r ? (<>
                 <div className="grid grid-cols-2 gap-2 text-[12.5px]">
-                  <div className="rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Issued</div><div className="font-bold text-[var(--ink)]">{fmtCredDate(r.issue)}</div></div>
-                  <div className="rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Expires</div><div className="font-bold text-[var(--ink)]">{fmtCredDate(r.expiry)}{dl != null && dl >= 0 && dl <= 60 ? <span className="text-[#b45309]"> · {dl}d</span> : null}{dl != null && dl < 0 ? <span className="text-[#c0392b]"> · expired</span> : null}</div></div>
-                  {r.issuer && <div className="rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Issuer</div><div className="font-bold text-[var(--ink)]">{r.issuer}</div></div>}
-                  {r.number && <div className="rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Number</div><div className="font-bold text-[var(--ink)]">{r.number}</div></div>}
-                  {t?.dbs && r.dbsLevel && <div className="col-span-2 rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">DBS</div><div className="font-bold text-[var(--ink)]">{r.dbsLevel}{r.dbsUpdate ? " · on Update Service" : ""}{r.dbsUpdateNo ? " · " + r.dbsUpdateNo : ""}</div></div>}
+                  <div className="rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{tr("p8lrn.cmpFldIssued")}</div><div className="font-bold text-[var(--ink)]">{fmtCredDate(r.issue)}</div></div>
+                  <div className="rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{tr("p8lrn.cmpFldExpires")}</div><div className="font-bold text-[var(--ink)]">{fmtCredDate(r.expiry)}{dl != null && dl >= 0 && dl <= 60 ? <span className="text-[#b45309]"> · {dl}d</span> : null}{dl != null && dl < 0 ? <span className="text-[#c0392b]">{tr("p8lrn.lcExpiredSuffix")}</span> : null}</div></div>
+                  {r.issuer && <div className="rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{tr("p8lrn.lcIssuer")}</div><div className="font-bold text-[var(--ink)]">{r.issuer}</div></div>}
+                  {r.number && <div className="rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{tr("p8lrn.lcNumber")}</div><div className="font-bold text-[var(--ink)]">{r.number}</div></div>}
+                  {t?.dbs && r.dbsLevel && <div className="col-span-2 rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">DBS</div><div className="font-bold text-[var(--ink)]">{r.dbsLevel}{r.dbsUpdate ? tr("p8lrn.lcOnUpdateService") : ""}{r.dbsUpdateNo ? " · " + r.dbsUpdateNo : ""}</div></div>}
                 </div>
-                {r.fileData && <button type="button" onClick={() => openCredFile(r.fileData)} className="mt-2 w-full rounded-lg border border-[var(--line)] px-3 py-2 text-[12.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">📎 View {r.fileName || "certificate"}</button>}
+                {r.fileData && <button type="button" onClick={() => openCredFile(r.fileData)} className="mt-2 w-full rounded-lg border border-[var(--line)] px-3 py-2 text-[12.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">{tr("p8lrn.lcViewFile", { name: r.fileName || tr("p8lrn.lcCertificateWord") })}</button>}
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {r.verified !== "verified" && <Button variant="primary" onClick={() => { cred.upsertRecord({ ...r, verified: "verified" }); flash("✅ Verified"); }}>✓ Verify</Button>}
-                  {r.verified !== "rejected" && <Button onClick={() => { cred.upsertRecord({ ...r, verified: "rejected" }); flash("Marked rejected"); }}>Reject</Button>}
-                  <Button onClick={() => { setCertEdit(r); setCertCell(null); }}>Edit</Button>
-                  <button type="button" title="Delete" onClick={() => { if (typeof window !== "undefined" && window.confirm("Delete this certificate record?")) { cred.deleteRecord(r.id); setCertCell(null); flash("Deleted"); } }} className="ms-auto text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
+                  {r.verified !== "verified" && <Button variant="primary" onClick={() => { cred.upsertRecord({ ...r, verified: "verified" }); flash(tr("p8lrn.lcVerifiedToast")); }}>{tr("p8lrn.lcVerify")}</Button>}
+                  {r.verified !== "rejected" && <Button onClick={() => { cred.upsertRecord({ ...r, verified: "rejected" }); flash(tr("p8lrn.lcMarkedRejected")); }}>{tr("p8lrn.lcReject")}</Button>}
+                  <Button onClick={() => { setCertEdit(r); setCertCell(null); }}>{tr("p8lrn.gEdit")}</Button>
+                  <button type="button" title={tr("p8lrn.gDelete")} onClick={() => { if (typeof window !== "undefined" && window.confirm(tr("p8lrn.lcConfirmDelCert"))) { cred.deleteRecord(r.id); setCertCell(null); flash(tr("p8lrn.lcDeletedToast")); } }} className="ms-auto text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
                 </div>
               </>) : (<>
-                <p className="rounded-lg bg-[#fdecec] px-3 py-2.5 text-[12.5px] font-semibold text-[#c0392b]">No {t?.name} on file for {certCell.staff}.</p>
-                <div className="mt-3 flex justify-end gap-2"><Button onClick={() => setCertCell(null)}>Close</Button><Button variant="primary" onClick={() => { setCertEdit(blankRecord(certCell.staff, certCell.typeId)); setCertCell(null); }}>+ Add on their behalf</Button></div>
+                <p className="rounded-lg bg-[#fdecec] px-3 py-2.5 text-[12.5px] font-semibold text-[#c0392b]">{tr("p8lrn.lcNoCredOnFile", { type: t?.name ?? tr("p8lrn.lcCredentialWord"), staff: certCell.staff })}</p>
+                <div className="mt-3 flex justify-end gap-2"><Button onClick={() => setCertCell(null)}>{tr("p8lrn.gClose")}</Button><Button variant="primary" onClick={() => { setCertEdit(blankRecord(certCell.staff, certCell.typeId)); setCertCell(null); }}>{tr("p8lrn.lcAddOnBehalf")}</Button></div>
               </>)}
             </div>
           </div>);
@@ -1029,13 +1044,13 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
             <div className="mb-2 flex items-center gap-2"><div className="text-[15px] font-extrabold text-[var(--ink)]">📊 {insight.title}</div><button type="button" onClick={() => setInsight(null)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <div className="mb-3 flex gap-2">
-              {[[`${courseScore(insight.id)}%`, "team avg score"], [`${STAFF.length}`, "assigned"], [`${demo ? Math.round(STAFF.length * 0.7) : completedCount(insight.id)}`, "completed"]].map(([n, l], i) => (
+              {[[`${courseScore(insight.id)}%`, tr("p8lrn.lcInsTeamAvg")], [`${STAFF.length}`, tr("p8lrn.lcInsAssigned")], [`${demo ? Math.round(STAFF.length * 0.7) : completedCount(insight.id)}`, tr("p8lrn.lcInsCompleted")]].map(([n, l], i) => (
                 <div key={i} className="flex-1 rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[18px] font-extrabold text-[#1d3a8f]">{n}</div><div className="text-[10.5px] text-[var(--ink-3)]">{l}</div></div>
               ))}
             </div>
-            <div className="mb-2 rounded-lg bg-[#eaf8f0] p-2.5"><div className="text-[11px] font-extrabold text-[#0f7a43]">✅ Best-answered question</div><div className="text-[12px] text-[var(--ink-2)]">{insight.quiz?.[0]?.q ?? "—"}</div></div>
-            <div className="rounded-lg bg-[#fdecec] p-2.5"><div className="text-[11px] font-extrabold text-[#c0392b]">⚠ Topic to revisit / retrain</div><div className="text-[12px] text-[var(--ink-2)]">{insight.quiz?.[insight.quiz.length - 1]?.q ?? "—"}</div></div>
-            <p className="mt-2.5 text-[11px] text-[var(--ink-3)]">Once every assigned staff member has completed, the completion date and the full per-question, per-person breakdown appear here (recorded by the backend).</p>
+            <div className="mb-2 rounded-lg bg-[#eaf8f0] p-2.5"><div className="text-[11px] font-extrabold text-[#0f7a43]">{tr("p8lrn.lcBestAnswered")}</div><div className="text-[12px] text-[var(--ink-2)]">{insight.quiz?.[0]?.q ?? "—"}</div></div>
+            <div className="rounded-lg bg-[#fdecec] p-2.5"><div className="text-[11px] font-extrabold text-[#c0392b]">{tr("p8lrn.lcTopicRevisit")}</div><div className="text-[12px] text-[var(--ink-2)]">{insight.quiz?.[insight.quiz.length - 1]?.q ?? "—"}</div></div>
+            <p className="mt-2.5 text-[11px] text-[var(--ink-3)]">{tr("p8lrn.lcInsNote")}</p>
           </div>
         </div>, document.body)}
     </div>
