@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useT } from "@/lib/i18n/provider";
 import { PLAN } from "@/lib/testing/plan";
 import { loadRun, saveResult, type Run, type Verdict } from "@/lib/testing/store";
 
@@ -30,6 +31,7 @@ export function setTestLoggerOn(on: boolean) {
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export function TestLogger() {
+  const t = useT();
   const [on, setOn] = useState(false);
   const [run, setRun] = useState<Run>({});
   const [open, setOpen] = useState(false);
@@ -68,34 +70,34 @@ export function TestLogger() {
       {open && (
         <div className="mb-2 rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_24px_60px_-24px_rgba(16,35,86,.5)]">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-extrabold uppercase tracking-[.1em] text-[#2f6bd8]">Day {day.day} · {doneToday}/{day.steps.length}</span>
-            <Link href="/platform/testing" className="ms-auto text-[12px] font-bold text-[var(--ink-3)] underline">Open plan</Link>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-[16px] leading-none text-[var(--ink-3)]">×</button>
+            <span className="text-[11px] font-extrabold uppercase tracking-[.1em] text-[#2f6bd8]">{t("p8tst.dayN", { n: day.day })} · {doneToday}/{day.steps.length}</span>
+            <Link href="/platform/testing" className="ms-auto text-[12px] font-bold text-[var(--ink-3)] underline">{t("p8tst.openPlan")}</Link>
+            <button type="button" onClick={() => setOpen(false)} aria-label={t("p8tst.close")} className="text-[16px] leading-none text-[var(--ink-3)]">×</button>
           </div>
 
           {!next ? (
-            <p className="mt-3 text-[13.5px] font-bold text-[#0b7a52]">Day {day.day} complete. </p>
+            <p className="mt-3 text-[13.5px] font-bold text-[#0b7a52]">{t("p8tst.dayComplete", { n: day.day })}</p>
           ) : (
             <>
               <div className="mt-2 text-[13.5px] font-extrabold text-[var(--ink)]">{next.action}</div>
-              <div className="mt-1 text-[12px] text-[var(--ink-2)]"><b>Where:</b> {next.where}</div>
-              <div className="mt-0.5 text-[12px] text-[var(--ink-2)]"><b>Expect:</b> {next.expect}</div>
+              <div className="mt-1 text-[12px] text-[var(--ink-2)]"><b>{t("p8tst.whereLbl")}</b> {next.where}</div>
+              <div className="mt-0.5 text-[12px] text-[var(--ink-2)]"><b>{t("p8tst.expectLbl")}</b> {next.expect}</div>
 
               {failing && (
                 <>
                   <textarea value={actual} onChange={(e) => setActual(e.target.value)} rows={2} autoFocus
-                    placeholder="What actually happened?"
+                    placeholder={t("p8tst.whatHappenedQ")}
                     className="mt-2 w-full rounded-[10px] border border-[var(--line)] p-2 text-[13px]" />
                   <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">
-                    Routes to <b>{next.needsBackend ? "Amir" : "triage"}</b> automatically.
+                    {next.needsBackend ? t("p8tst.routesAmir") : t("p8tst.routesTriage")}
                   </div>
                 </>
               )}
 
               <div className="mt-3 flex gap-2">
-                {!failing && <button type="button" onClick={() => log("pass")} className="flex-1 rounded-full bg-[#e4f7ed] px-3 py-2 text-[13px] font-extrabold text-[#0b7a52]">✓ Pass</button>}
-                <button type="button" onClick={() => log("fail")} className="flex-1 rounded-full bg-[#fdeaee] px-3 py-2 text-[13px] font-extrabold text-[#b3123c]">{failing ? "Log fail" : "✗ Fail"}</button>
-                {!failing && <button type="button" onClick={() => { setFailing(true); }} className="rounded-full bg-[#fdf1dc] px-3 py-2 text-[13px] font-extrabold text-[#a5760a]">Blocked</button>}
+                {!failing && <button type="button" onClick={() => log("pass")} className="flex-1 rounded-full bg-[#e4f7ed] px-3 py-2 text-[13px] font-extrabold text-[#0b7a52]">{t("p8tst.passMark")}</button>}
+                <button type="button" onClick={() => log("fail")} className="flex-1 rounded-full bg-[#fdeaee] px-3 py-2 text-[13px] font-extrabold text-[#b3123c]">{failing ? t("p8tst.logFail") : t("p8tst.failMark")}</button>
+                {!failing && <button type="button" onClick={() => { setFailing(true); }} className="rounded-full bg-[#fdf1dc] px-3 py-2 text-[13px] font-extrabold text-[#a5760a]">{t("p8tst.vBlocked")}</button>}
               </div>
             </>
           )}
@@ -105,7 +107,7 @@ export function TestLogger() {
       <button type="button" onClick={() => setOpen((o) => !o)}
         className="ms-auto flex items-center gap-2 rounded-full px-4 py-3 text-[13px] font-extrabold text-white shadow-[0_18px_40px_-18px_rgba(16,35,86,.8)]"
         style={{ background: "linear-gradient(135deg,#16306e,#3f78d8)" }}>
-        🧪 Day {day.day} · {doneToday}/{day.steps.length}
+        🧪 {t("p8tst.dayN", { n: day.day })} · {doneToday}/{day.steps.length}
       </button>
     </div>
   );

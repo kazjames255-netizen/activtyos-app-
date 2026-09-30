@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n/provider";
 import { MASCOT_NAME, MASCOT_POSES, Mascot, MascotSpeech, MascotSettingsProvider } from "@/features/learninghub/mascot";
 
 // Dev-only review page for the mascot: every pose at 24/48/120/240 on light and dark. Not linked from anywhere.
@@ -30,6 +31,7 @@ function Board({ dark, still }: { dark: boolean; still?: boolean }) {
 }
 
 export default function MascotShowcase() {
+  const t = useT();
   // ?only=<pose>&size=<px> renders a single still pose on transparent (used by scripts/render-mascot.mjs).
   const q = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const only = q?.get("only");
@@ -45,7 +47,7 @@ export default function MascotShowcase() {
       <h1>Mascot showcase ({MASCOT_NAME})</h1>
       <Board dark={false} />
       <Board dark />
-      <h2>Calm mode (forced still)</h2>
+      <h2>{t("p8tst.calmMode")}</h2>
       <MascotSettingsProvider calm><div style={{ display: "flex", gap: 12 }}><Mascot pose="wave" size={96} /><Mascot pose="dance" size={96} /></div></MascotSettingsProvider>
     </main>
   );

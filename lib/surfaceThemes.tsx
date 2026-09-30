@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useT } from "@/lib/i18n/provider";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Gmail-style bright backgrounds for an operator surface (Messages, Email, …).
@@ -10,6 +11,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 // per-surface so each area can have its own look. "App default" is no wash
 // at all — the house light ground and navy hero the rest of the app uses.
 // ─────────────────────────────────────────────────────────────────────────
+const THEME_NAME_KEY: Record<string, string> = { default: "p8tst.themeDefault", ocean: "p8tst.themeOcean", sunset: "p8tst.themeSunset", aurora: "p8tst.themeAurora", candy: "p8tst.themeCandy", citrus: "p8tst.themeCitrus", lagoon: "p8tst.themeLagoon", bubblegum: "p8tst.themeBubblegum", coral: "p8tst.themeCoral", meadow: "p8tst.themeMeadow", grape: "p8tst.themeGrape" };
 export interface SurfaceTheme { id: string; name: string; swatch: string; page: string; hero: string }
 
 export const SURFACE_THEMES: SurfaceTheme[] = [
@@ -122,6 +124,7 @@ function readThemeId(storageKey: string): string {
  * saved pick from localStorage (no SSR mismatch).
  */
 export function useSurfaceTheme(storageKey: string): { theme: SurfaceTheme; control: React.ReactNode } {
+  const tr = useT();
   const themeId = useSyncExternalStore(subscribeTheme, () => readThemeId(storageKey), () => "default");
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -152,26 +155,26 @@ export function useSurfaceTheme(storageKey: string): { theme: SurfaceTheme; cont
 
   const control = (
     <div className="relative">
-      <button ref={btnRef} type="button" onClick={toggle} aria-haspopup="true" aria-expanded={open} title="Change the background theme"
-        className="rounded-full border border-white/70 bg-white/10 px-4 py-2 text-[13px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20">🎨 Theme</button>
+      <button ref={btnRef} type="button" onClick={toggle} aria-haspopup="true" aria-expanded={open} title={tr("p8tst.themeChange")}
+        className="rounded-full border border-white/70 bg-white/10 px-4 py-2 text-[13px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20">{tr("p8tst.themeBtn")}</button>
       {open && (
         <>
           {/* click-away backdrop */}
-          <button type="button" aria-label="Close theme picker" onClick={() => setOpen(false)} className="fixed inset-0 z-40 cursor-default" />
-          <div style={{ position: "fixed", top: pos.top, right: pos.right }} className="z-50 w-[280px] rounded-2xl border border-[var(--line)] bg-white p-3 text-left shadow-[0_18px_40px_-12px_rgba(20,20,60,.4)]">
+          <button type="button" aria-label={tr("p8tst.themeClose")} onClick={() => setOpen(false)} className="fixed inset-0 z-40 cursor-default" />
+          <div style={{ position: "fixed", top: pos.top, right: pos.right }} className="z-50 w-[280px] rounded-2xl border border-[var(--line)] bg-white p-3 text-start shadow-[0_18px_40px_-12px_rgba(20,20,60,.4)]">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[12px] font-extrabold text-[var(--ink)]">Pick a theme</span>
-              <span className="text-[10.5px] text-[var(--ink-3)]">Saved on this device</span>
+              <span className="text-[12px] font-extrabold text-[var(--ink)]">{tr("p8tst.themePick")}</span>
+              <span className="text-[10.5px] text-[var(--ink-3)]">{tr("p8tst.themeSaved")}</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {SURFACE_THEMES.map((t) => {
                 const on = t.id === themeId;
                 return (
-                  <button key={t.id} type="button" onClick={() => pick(t.id)} className="group flex flex-col gap-1 rounded-xl p-1 text-left transition-colors hover:bg-[var(--panel)]">
+                  <button key={t.id} type="button" onClick={() => pick(t.id)} className="group flex flex-col gap-1 rounded-xl p-1 text-start transition-colors hover:bg-[var(--panel)]">
                     <span className="relative block h-11 w-full overflow-hidden rounded-lg ring-1 ring-black/5" style={{ background: t.swatch, boxShadow: on ? `0 0 0 2px ${ACCENT}` : undefined }}>
-                      {on && <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold shadow" style={{ color: ACCENT }}>✓</span>}
+                      {on && <span className="absolute end-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold shadow" style={{ color: ACCENT }}>✓</span>}
                     </span>
-                    <span className={`px-0.5 text-[11px] ${on ? "font-extrabold text-[var(--ink)]" : "font-semibold text-[var(--ink-2)]"}`}>{t.name}</span>
+                    <span className={`px-0.5 text-[11px] ${on ? "font-extrabold text-[var(--ink)]" : "font-semibold text-[var(--ink-2)]"}`}>{THEME_NAME_KEY[t.id] ? tr(THEME_NAME_KEY[t.id]) : t.name}</span>
                   </button>
                 );
               })}

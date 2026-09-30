@@ -1,6 +1,7 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { useT } from "@/lib/i18n/provider";
 import { useEffect, useMemo, useState } from "react";
 import { PLAN, PLAN_START, AMIR_DUE, PREREQS, type Day, type Step } from "@/lib/testing/plan";
 import { PLAN2, PLAN2_START, PREREQS2 } from "@/lib/testing/plan2";
@@ -12,32 +13,34 @@ import {
 import { testLoggerOn, setTestLoggerOn } from "./TestLogger";
 import { AGENT_RESULTS, type AgentResult } from "@/lib/testing/agentResults";
 
-const METHOD_LABEL: Record<AgentResult["method"], string> = {
-  api: "real route code, run against a throwaway tenant",
-  "live-read": "read-only check against the running app/data",
-  code: "established by reading the code",
-  browser: "clicked through in the browser",
+const METHOD_KEY: Record<AgentResult["method"], string> = {
+  api: "p8tst.methodApi",
+  "live-read": "p8tst.methodLive",
+  code: "p8tst.methodCode",
+  browser: "p8tst.methodBrowser",
 };
+const VERDICT_KEY: Record<Verdict, string> = { pass: "p8tst.vPass", fail: "p8tst.vFail", blocked: "p8tst.vBlocked" };
 
 /** What Claude's test agents found for a step — shown beside your own verdict,
  *  never instead of it. */
 function AgentLine({ a, onAdopt, adopted }: { a: AgentResult; onAdopt?: () => void; adopted: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(a.verdict === "fail");
   return (
     <div className="mt-3 rounded-[12px] border px-3 py-2" style={{ borderColor: a.verdict === "fail" ? "#f3c1cc" : a.verdict === "blocked" ? "#f3dfb4" : "#bfe6cf", background: a.verdict === "fail" ? "#fff6f8" : a.verdict === "blocked" ? "#fffaf0" : "#f3fbf6" }}>
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full flex-wrap items-center gap-2 text-start">
-        <span className="text-[12px] font-extrabold text-[var(--ink)]">🤖 Checked by Claude</span>
-        <Chip bg={VERDICT[a.verdict].bg} fg={VERDICT[a.verdict].fg}>{VERDICT[a.verdict].label}</Chip>
-        <span className="text-[11px] text-[var(--ink-3)]">{METHOD_LABEL[a.method] ?? a.method}</span>
-        <span className="ms-auto text-[11px] font-bold text-[var(--ink-3)]">{open ? "▲" : "▼ details"}</span>
+        <span className="text-[12px] font-extrabold text-[var(--ink)]">{t("p8tst.checkedByClaude")}</span>
+        <Chip bg={VERDICT[a.verdict].bg} fg={VERDICT[a.verdict].fg}>{t(VERDICT_KEY[a.verdict])}</Chip>
+        <span className="text-[11px] text-[var(--ink-3)]">{METHOD_KEY[a.method] ? t(METHOD_KEY[a.method]) : a.method}</span>
+        <span className="ms-auto text-[11px] font-bold text-[var(--ink-3)]">{open ? "▲" : t("p8tst.details")}</span>
       </button>
       {open && (
         <div className="mt-1.5 space-y-1 text-[12.5px] text-[var(--ink-2)]">
-          <div><b>What actually happened:</b> {a.actual}</div>
-          {a.notes && <div><b>Notes:</b> {a.notes}</div>}
-          {a.evidence && <div className="break-all text-[11.5px] text-[var(--ink-3)]"><b>Evidence:</b> {a.evidence}</div>}
-          <div className="text-[11px] text-[var(--ink-3)]">{new Date(a.at).toLocaleString(dl())}{a.agent ? ` · agent ${a.agent}` : ""}</div>
-          {onAdopt && !adopted && <button type="button" onClick={onAdopt} className="mt-1 rounded-full bg-[#16306e] px-3 py-1 text-[11.5px] font-extrabold text-white">Copy into my run</button>}
+          <div><b>{t("p8tst.actualHappened")}</b> {a.actual}</div>
+          {a.notes && <div><b>{t("p8tst.notesLbl")}</b> {a.notes}</div>}
+          {a.evidence && <div className="break-all text-[11.5px] text-[var(--ink-3)]"><b>{t("p8tst.evidenceLbl")}</b> {a.evidence}</div>}
+          <div className="text-[11px] text-[var(--ink-3)]">{new Date(a.at).toLocaleString(dl())}{a.agent ? t("p8tst.agentSuffix", { name: a.agent }) : ""}</div>
+          {onAdopt && !adopted && <button type="button" onClick={onAdopt} className="mt-1 rounded-full bg-[#16306e] px-3 py-1 text-[11.5px] font-extrabold text-white">{t("p8tst.copyIntoRun")}</button>}
         </div>
       )}
     </div>
@@ -63,10 +66,11 @@ const saveTick = (id: string, on: boolean) => {
 
 const WHO: Record<Who, { label: string; bg: string; fg: string }> = {
   amir: { label: "Amir", bg: "rgba(47,107,216,.12)", fg: "#2f6bd8" },
-  claude: { label: "Front-end", bg: "rgba(107,77,230,.12)", fg: "#6b4de6" },
-  kaz: { label: "You", bg: "#fdf1dc", fg: "#a5760a" },
-  decision: { label: "Needs a decision", bg: "rgba(200,30,94,.10)", fg: "#b3123c" },
+  claude: { label: "p8tst.whoFrontend", bg: "rgba(107,77,230,.12)", fg: "#6b4de6" },
+  kaz: { label: "p8tst.whoYou", bg: "#fdf1dc", fg: "#a5760a" },
+  decision: { label: "p8tst.whoDecision", bg: "rgba(200,30,94,.10)", fg: "#b3123c" },
 };
+const SEV_KEY: Record<string, string> = { critical: "p8tst.sevCritical", high: "p8tst.sevHigh", medium: "p8tst.sevMedium" };
 const SEV: Record<string, { bg: string; fg: string }> = {
   critical: { bg: "#fdeaee", fg: "#b3123c" },
   high: { bg: "#fdf1dc", fg: "#a5760a" },
@@ -89,6 +93,7 @@ function StepRow({ day, step, result, onSave, onClear }: {
   onSave: (v: Verdict, owner: Owner, actual: string, notes: string) => void;
   onClear: () => void;
 }) {
+  const t = useT();
   const agent = AGENT_RESULTS[step.id];
   const [open, setOpen] = useState(false);
   const [actual, setActual] = useState(result?.actual ?? "");
@@ -110,26 +115,26 @@ function StepRow({ day, step, result, onSave, onClear }: {
         <code className="mt-0.5 shrink-0 rounded-md bg-[var(--panel)] px-2 py-1 text-[11px] font-bold text-[var(--ink-2)]">{step.id}</code>
         <div className="min-w-[240px] flex-1">
           <div className="text-[13.5px] font-extrabold text-[var(--ink)]">{step.action}</div>
-          <div className="mt-1 text-[12.5px] text-[var(--ink-2)]"><b>Where:</b> {step.where}</div>
-          <div className="mt-0.5 text-[12.5px] text-[var(--ink-2)]"><b>Expect:</b> {step.expect}</div>
+          <div className="mt-1 text-[12.5px] text-[var(--ink-2)]"><b>{t("p8tst.whereLbl")}</b> {step.where}</div>
+          <div className="mt-0.5 text-[12.5px] text-[var(--ink-2)]"><b>{t("p8tst.expectLbl")}</b> {step.expect}</div>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {step.regression && <Chip bg="rgba(200,30,94,.12)" fg="#b3123c">Known bug — verify the fix</Chip>}
-            {step.needsBackend && <Chip bg="rgba(47,107,216,.12)" fg="#2f6bd8">Needs Amir&rsquo;s backend</Chip>}
+            {step.regression && <Chip bg="rgba(200,30,94,.12)" fg="#b3123c">{t("p8tst.knownBugVerify")}</Chip>}
+            {step.needsBackend && <Chip bg="rgba(47,107,216,.12)" fg="#2f6bd8">{t("p8tst.needsAmir")}</Chip>}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {result
             ? (
               <>
-                <Chip bg={VERDICT[result.verdict].bg} fg={VERDICT[result.verdict].fg}>{VERDICT[result.verdict].label}</Chip>
-                <button type="button" onClick={onClear} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Redo</button>
+                <Chip bg={VERDICT[result.verdict].bg} fg={VERDICT[result.verdict].fg}>{t(VERDICT_KEY[result.verdict])}</Chip>
+                <button type="button" onClick={onClear} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8tst.redo")}</button>
               </>
             )
             : (["pass", "fail", "blocked"] as Verdict[]).map((v) => (
               <button key={v} type="button" onClick={() => commit(v)}
                 className="rounded-full px-3 py-1.5 text-[12px] font-extrabold"
                 style={{ background: VERDICT[v].bg, color: VERDICT[v].fg }}>
-                {VERDICT[v].label}
+                {t(VERDICT_KEY[v])}
               </button>
             ))}
         </div>
@@ -139,21 +144,21 @@ function StepRow({ day, step, result, onSave, onClear }: {
 
       {open && pending && (
         <div className="mt-3 rounded-[12px] border border-[var(--line)] bg-[var(--panel)] p-3">
-          <label className="block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">What actually happened?</label>
+          <label className="block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8tst.whatHappenedQ")}</label>
           <textarea value={actual} onChange={(e) => setActual(e.target.value)} rows={2}
-            placeholder="Be specific — this is what gets handed over"
+            placeholder={t("p8tst.beSpecific")}
             className="mt-1 w-full rounded-[10px] border border-[var(--line)] bg-white p-2 text-[13px]" />
-          <label className="mt-2 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Notes (optional)</label>
+          <label className="mt-2 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8tst.notesOptional")}</label>
           <input value={notes} onChange={(e) => setNotes(e.target.value)}
             className="mt-1 w-full rounded-[10px] border border-[var(--line)] bg-white p-2 text-[13px]" />
           <div className="mt-2 rounded-[10px] bg-white px-3 py-2 text-[12px] text-[var(--ink-2)]">
-            Routing to <b>{owner === "amir" ? "Amir (backend)" : "triage"}</b> — you don&rsquo;t have to decide.
+            {owner === "amir" ? t("p8tst.routeAmir") : t("p8tst.routeTriage")}
           </div>
           <div className="mt-3 flex gap-2">
             <button type="button" onClick={() => { onSave(pending, owner, actual, notes); setOpen(false); setPending(null); }}
-              className="rounded-full bg-[#b3123c] px-4 py-2 text-[12.5px] font-extrabold text-white">Log {VERDICT[pending].label.toLowerCase()}</button>
+              className="rounded-full bg-[#b3123c] px-4 py-2 text-[12.5px] font-extrabold text-white">{pending === "fail" ? t("p8tst.logFail") : t("p8tst.logBlocked")}</button>
             <button type="button" onClick={() => { setOpen(false); setPending(null); }}
-              className="rounded-full border border-[var(--line)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button>
+              className="rounded-full border border-[var(--line)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)]">{t("p8tst.cancel")}</button>
           </div>
         </div>
       )}
@@ -162,6 +167,7 @@ function StepRow({ day, step, result, onSave, onClear }: {
 }
 
 function HandoverPanel({ run, owner, title, lede }: { run: Run; owner: Owner; title: string; lede: string }) {
+  const t = useT();
   const items = openFor(run, owner);
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -176,11 +182,11 @@ function HandoverPanel({ run, owner, title, lede }: { run: Run; owner: Owner; ti
         </div>
         <button type="button" onClick={copy} disabled={!items.length}
           className="rounded-full bg-[#2f6bd8] px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-40">
-          {copied ? "Copied ✓" : `Copy ${items.length} item${items.length === 1 ? "" : "s"} as markdown`}
+          {copied ? t("p8tst.copied") : items.length === 1 ? t("p8tst.copyOne") : t("p8tst.copyMany", { n: items.length })}
         </button>
       </div>
       {!items.length
-        ? <p className="mt-5 rounded-[14px] border border-dashed border-[var(--line)] p-6 text-center text-[13.5px] text-[var(--ink-3)]">Nothing open here.</p>
+        ? <p className="mt-5 rounded-[14px] border border-dashed border-[var(--line)] p-6 text-center text-[13.5px] text-[var(--ink-3)]">{t("p8tst.nothingOpen")}</p>
         : (
           <ul className="mt-4 flex flex-col gap-2.5">
             {items.map((r) => {
@@ -189,14 +195,14 @@ function HandoverPanel({ run, owner, title, lede }: { run: Run; owner: Owner; ti
                 <li key={r.stepId} className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <code className="rounded-md bg-[var(--panel)] px-2 py-1 text-[11px] font-bold text-[var(--ink-2)]">{r.stepId}</code>
-                    <Chip bg={VERDICT[r.verdict].bg} fg={VERDICT[r.verdict].fg}>{VERDICT[r.verdict].label}</Chip>
-                    {s && <span className="text-[12px] text-[var(--ink-3)]">Day {s.day} · {s.dayTitle}</span>}
+                    <Chip bg={VERDICT[r.verdict].bg} fg={VERDICT[r.verdict].fg}>{t(VERDICT_KEY[r.verdict])}</Chip>
+                    {s && <span className="text-[12px] text-[var(--ink-3)]">{t("p8tst.dayNTitle", { n: s.day, title: s.dayTitle })}</span>}
                     <button type="button" onClick={() => saveResult({ ...r, resolved: true })}
-                      className="ms-auto rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Mark done</button>
+                      className="ms-auto rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8tst.markDone")}</button>
                   </div>
                   {s && <div className="mt-2 text-[13.5px] font-extrabold text-[var(--ink)]">{s.step.action}</div>}
-                  {s && <div className="mt-1 text-[12.5px] text-[var(--ink-2)]"><b>Expected:</b> {s.step.expect}</div>}
-                  <div className="mt-1 text-[12.5px] text-[var(--ink-2)]"><b>Got:</b> {r.actual || <i>not recorded</i>}</div>
+                  {s && <div className="mt-1 text-[12.5px] text-[var(--ink-2)]"><b>{t("p8tst.expectedLbl")}</b> {s.step.expect}</div>}
+                  <div className="mt-1 text-[12.5px] text-[var(--ink-2)]"><b>{t("p8tst.gotLbl")}</b> {r.actual || <i>{t("p8tst.notRecorded")}</i>}</div>
                   {r.notes && <div className="mt-1 text-[12.5px] text-[var(--ink-3)]">{r.notes}</div>}
                 </li>
               );
@@ -208,6 +214,7 @@ function HandoverPanel({ run, owner, title, lede }: { run: Run; owner: Owner; ti
 }
 
 export function TestingApp() {
+  const t = useT();
   // Plan 1 = the 28-day acceptance run (done); Plan 2 = the 244 checks it never covered.
   const [planNo, setPlanNo] = useState<1 | 2>(2);
   const plan = planNo === 2 ? PLAN2 : PLAN;
@@ -245,35 +252,35 @@ export function TestingApp() {
   return (
     <div className="mx-auto w-full max-w-[1180px] px-4 py-6">
       <header className="rounded-[20px] p-6 text-white" style={{ background: "linear-gradient(120deg,#16306e,#274ba3 58%,#3f78d8)" }}>
-        <div className="text-[11px] font-extrabold uppercase tracking-[.12em] text-[#f5b81f]">Acceptance testing</div>
+        <div className="text-[11px] font-extrabold uppercase tracking-[.12em] text-[#f5b81f]">{t("p8tst.acceptanceTesting")}</div>
         <div className="mt-3 flex flex-wrap gap-2">
           {([1, 2] as const).map((n) => (
             <button key={n} type="button" onClick={() => setPlanNo(n)} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold"
               style={planNo === n ? { background: "#f5b81f", color: "#12224e" } : { background: "rgba(255,255,255,.16)", color: "#fff" }}>
-              {n === 1 ? `Plan 1 · 28-day run · ${PLAN.reduce((a, d) => a + d.steps.length, 0)} checks` : `Plan 2 · what plan 1 never covered · ${PLAN2.reduce((a, d) => a + d.steps.length, 0)} checks`}
+              {n === 1 ? t("p8tst.plan1Btn", { n: PLAN.reduce((a, d) => a + d.steps.length, 0) }) : t("p8tst.plan2Btn", { n: PLAN2.reduce((a, d) => a + d.steps.length, 0) })}
             </button>
           ))}
         </div>
-        <h1 className="mt-3 text-[30px] font-extrabold leading-tight">{plan.length} days, {plan.reduce((a, d) => a + d.steps.length, 0)} checks.</h1>
+        <h1 className="mt-3 text-[30px] font-extrabold leading-tight">{t("p8tst.headline", { days: plan.length, n: plan.reduce((a, d) => a + d.steps.length, 0) })}</h1>
         <p className="mt-2 max-w-[70ch] text-[14.5px] text-white/80">
           {planNo === 1
-            ? <>{PLAN_START} to 2026-10-08. Days 1&ndash;7 need nothing from Amir; his work is due {AMIR_DUE} and Day 8 is the Tax-Free Childcare reconciliation.</>
-            : <>From {PLAN2_START}. Built from an inventory of every route, view and sweep minus what plan 1 exercised: money and safeguarding first, then permissions, franchise isolation, HR, comms, HQ, i18n, mobile and robustness. Each step says how it runs (api / code / browser) and what it needs.</>}
-          {" "}Log every step as you do it &mdash; a fail is only useful if you write down what actually happened.
+            ? t("p8tst.intro1", { start: PLAN_START, due: AMIR_DUE })
+            : t("p8tst.intro2", { start: PLAN2_START })}
+          {" "}{t("p8tst.logEvery")}
         </p>
         <button type="button"
           onClick={() => { const next = !logger; setTestLoggerOn(next); setLogger(next); }}
           className="mt-4 rounded-full px-4 py-2 text-[13px] font-extrabold"
           style={logger ? { background: "#f5b81f", color: "#12224e" } : { background: "rgba(255,255,255,.16)", color: "#fff" }}>
-          {logger ? "🧪 Floating logger ON — showing in every portal" : "Turn on the floating logger"}
+          {logger ? t("p8tst.loggerOn") : t("p8tst.loggerTurnOn")}
         </button>
         <div className="mt-4 flex flex-wrap gap-2.5 text-[12.5px] font-bold">
-          <Chip bg="rgba(255,255,255,.16)" fg="#fff">{p.done}/{p.total} logged &middot; {pct}%</Chip>
-          <Chip bg="#e4f7ed" fg="#0b7a52">{p.pass} pass</Chip>
-          <Chip bg="#fdeaee" fg="#b3123c">{p.fail} fail</Chip>
-          <Chip bg="#fdf1dc" fg="#a5760a">{p.blocked} blocked</Chip>
-          <Chip bg="rgba(255,255,255,.16)" fg="#fff">{p.openForAmir} open for Amir</Chip>
-          <Chip bg="rgba(255,255,255,.16)" fg="#fff">{p.openForTriage} to triage</Chip>
+          <Chip bg="rgba(255,255,255,.16)" fg="#fff">{t("p8tst.loggedPct", { done: p.done, total: p.total, pct })}</Chip>
+          <Chip bg="#e4f7ed" fg="#0b7a52">{t("p8tst.nPass", { n: p.pass })}</Chip>
+          <Chip bg="#fdeaee" fg="#b3123c">{t("p8tst.nFail", { n: p.fail })}</Chip>
+          <Chip bg="#fdf1dc" fg="#a5760a">{t("p8tst.nBlocked", { n: p.blocked })}</Chip>
+          <Chip bg="rgba(255,255,255,.16)" fg="#fff">{t("p8tst.openForAmir", { n: p.openForAmir })}</Chip>
+          <Chip bg="rgba(255,255,255,.16)" fg="#fff">{t("p8tst.toTriage", { n: p.openForTriage })}</Chip>
         </div>
         {(() => {
           const ag = Object.values(AGENT_RESULTS);
@@ -282,20 +289,20 @@ export function TestingApp() {
           const adoptable = Object.entries(AGENT_RESULTS).filter(([id]) => !run[id]);
           return (
             <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-[14px] bg-white/10 px-3 py-2 text-[12.5px] font-bold ring-1 ring-white/20">
-              <span>🤖 Claude has checked {ag.length}/{p.total}</span>
-              <Chip bg="#e4f7ed" fg="#0b7a52">{n("pass")} pass</Chip>
-              <Chip bg="#fdeaee" fg="#b3123c">{n("fail")} fail</Chip>
-              <Chip bg="#fdf1dc" fg="#a5760a">{n("blocked")} blocked</Chip>
+              <span>{t("p8tst.claudeChecked", { n: ag.length, total: p.total })}</span>
+              <Chip bg="#e4f7ed" fg="#0b7a52">{t("p8tst.nPass", { n: n("pass") })}</Chip>
+              <Chip bg="#fdeaee" fg="#b3123c">{t("p8tst.nFail", { n: n("fail") })}</Chip>
+              <Chip bg="#fdf1dc" fg="#a5760a">{t("p8tst.nBlocked", { n: n("blocked") })}</Chip>
               {adoptable.length > 0 && (
                 <button type="button" onClick={() => {
-                  if (!confirm(`Copy Claude's result into your run for the ${adoptable.length} step(s) you haven't logged yourself? Your own results are never overwritten.`)) return;
+                  if (!confirm(t("p8tst.adoptConfirm", { n: adoptable.length }))) return;
                   let r = run;
                   for (const [id, a] of adoptable) {
                     const st = [...PLAN, ...PLAN2].flatMap((d) => d.steps).find((x) => x.id === id);
                     r = saveResult({ stepId: id, verdict: a.verdict, owner: st?.needsBackend ? "amir" : "triage", actual: a.actual, notes: `[Claude · ${a.method}] ${a.notes ?? ""}`.trim(), at: a.at });
                   }
                   setRun(r);
-                }} className="ms-auto rounded-full bg-[#f5b81f] px-3 py-1 text-[12px] font-extrabold text-[#12224e]">Copy into my run ({adoptable.length} not yet logged)</button>
+                }} className="ms-auto rounded-full bg-[#f5b81f] px-3 py-1 text-[12px] font-extrabold text-[#12224e]">{t("p8tst.adoptBtn", { n: adoptable.length })}</button>
               )}
             </div>
           );
@@ -303,7 +310,7 @@ export function TestingApp() {
       </header>
 
       <nav className="mt-5 flex flex-wrap gap-2">
-        {([["start", "Before you start"], ["plan", "The 28 days"], ["backlog", `Known issues (${BACKLOG.filter((b) => !ticks[b.id]).length})`], ["amir", `For Amir (${p.openForAmir})`], ["frontend", `To triage (${p.openForTriage})`], ["export", "Export"]] as const).map(([k, label]) => (
+        {([["start", t("p8tst.tabStart")], ["plan", t("p8tst.tabPlan")], ["backlog", t("p8tst.tabBacklog", { n: BACKLOG.filter((b) => !ticks[b.id]).length })], ["amir", t("p8tst.tabAmir", { n: p.openForAmir })], ["frontend", t("p8tst.tabTriage", { n: p.openForTriage })], ["export", t("p8tst.tabExport")]] as const).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setTab(k)}
             className="rounded-full px-4 py-2 text-[13px] font-extrabold"
             style={tab === k ? { background: "#16306e", color: "#fff" } : { background: "var(--panel)", color: "var(--ink-2)" }}>
@@ -314,11 +321,8 @@ export function TestingApp() {
 
       {tab === "start" && (
         <section className="mt-6">
-          <h3 className="text-[18px] font-extrabold text-[var(--ink)]">Do these before Day 1</h3>
-          <p className="mt-1 max-w-[75ch] text-[13.5px] text-[var(--ink-2)]">
-            Not optional. Without them a large part of the run cannot fail: mail is off by default and a skipped send
-            reports success, Stripe has no key set, and there is no deployed environment to test on.
-          </p>
+          <h3 className="text-[18px] font-extrabold text-[var(--ink)]">{t("p8tst.doBefore")}</h3>
+          <p className="mt-1 max-w-[75ch] text-[13.5px] text-[var(--ink-2)]">{t("p8tst.doBeforeLede")}</p>
           <ul className="mt-4 flex flex-col gap-2.5">
             {prereqs.map((q) => (
               <li key={q.id} className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] p-4">
@@ -343,12 +347,8 @@ export function TestingApp() {
         <section className="mt-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-[18px] font-extrabold text-[var(--ink)]">Known issues, before you test anything</h3>
-              <p className="mt-1 max-w-[75ch] text-[13.5px] text-[var(--ink-2)]">
-                Every item here is confirmed — verified adversarially by the portal audit, or found by the five-reviewer
-                critique reading the code. Nothing speculative. Tick them off as they land; anything still open on the
-                11th is something the run will hit, and the step that catches it is named.
-              </p>
+              <h3 className="text-[18px] font-extrabold text-[var(--ink)]">{t("p8tst.knownTitle")}</h3>
+              <p className="mt-1 max-w-[75ch] text-[13.5px] text-[var(--ink-2)]">{t("p8tst.knownLede")}</p>
             </div>
             <button type="button"
               onClick={() => navigator.clipboard.writeText(
@@ -356,7 +356,7 @@ export function TestingApp() {
                   .map((b) => `## ${b.title}\n${b.detail}${b.file ? `\n\nWhere: ${b.file}` : ""}${b.step ? `\nTest step: ${b.step}` : ""}`)
                   .join("\n\n"))}
               className="rounded-full bg-[#2f6bd8] px-4 py-2 text-[13px] font-extrabold text-white">
-              Copy Amir&rsquo;s list
+              {t("p8tst.copyAmirList")}
             </button>
           </div>
           <ul className="mt-4 flex flex-col gap-2.5">
@@ -368,8 +368,8 @@ export function TestingApp() {
                     className="mt-1 h-5 w-5 shrink-0 accent-[#0b7a52]" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Chip bg={SEV[b.severity].bg} fg={SEV[b.severity].fg}>{b.severity}</Chip>
-                      <Chip bg={WHO[b.who].bg} fg={WHO[b.who].fg}>{WHO[b.who].label}</Chip>
+                      <Chip bg={SEV[b.severity].bg} fg={SEV[b.severity].fg}>{SEV_KEY[b.severity] ? t(SEV_KEY[b.severity]) : b.severity}</Chip>
+                      <Chip bg={WHO[b.who].bg} fg={WHO[b.who].fg}>{b.who === "amir" ? WHO[b.who].label : t(WHO[b.who].label)}</Chip>
                       {b.step && <code className="rounded-md bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{b.step}</code>}
                     </div>
                     <div className="mt-1.5 text-[14px] font-extrabold text-[var(--ink)]">{b.title}</div>
@@ -407,10 +407,10 @@ export function TestingApp() {
 
           <section className="mt-5">
             <div className="flex flex-wrap items-baseline gap-3">
-              <h2 className="text-[22px] font-extrabold text-[var(--ink)]">Day {day.day} &middot; {day.title}</h2>
+              <h2 className="text-[22px] font-extrabold text-[var(--ink)]">{t("p8tst.dayNTitle", { n: day.day, title: day.title })}</h2>
               <span className="text-[13px] font-bold text-[var(--ink-3)]">{day.label}</span>
-              <Chip bg="var(--panel)" fg="var(--ink-2)">{day.portal} portal</Chip>
-              {day.date === today && <Chip bg="#fdf1dc" fg="#a5760a">Today</Chip>}
+              <Chip bg="var(--panel)" fg="var(--ink-2)">{t("p8tst.portalSuffix", { portal: day.portal })}</Chip>
+              {day.date === today && <Chip bg="#fdf1dc" fg="#a5760a">{t("p8tst.today")}</Chip>}
             </div>
             <p className="mt-2 max-w-[80ch] text-[14px] text-[var(--ink-2)]">{day.intent}</p>
             <ul className="mt-4 flex flex-col gap-2.5">
@@ -427,28 +427,25 @@ export function TestingApp() {
       {tab === "amir" && (
         <section className="mt-6">
           <HandoverPanel run={run} owner="amir"
-            title="Backend findings for Amir"
-            lede="Copy this as markdown and send it. Each item carries the exact step, what you expected and what you got." />
+            title={t("p8tst.backendFindings")}
+            lede={t("p8tst.backendLede")} />
         </section>
       )}
 
       {tab === "frontend" && (
         <section className="mt-6">
           <HandoverPanel run={run} owner="triage"
-            title="To triage"
-            lede="Everything that isn't obviously backend. Hand this list over and it gets sorted into front-end fixes and backend work for Amir — you don't have to know which." />
+            title={t("p8tst.triageTitle")}
+            lede={t("p8tst.triageLede")} />
         </section>
       )}
 
       {tab === "export" && (
         <section className="mt-6 rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-6">
-          <h3 className="text-[18px] font-extrabold text-[var(--ink)]">Export the run</h3>
-          <p className="mt-2 max-w-[70ch] text-[13.5px] text-[var(--ink-2)]">
-            This run lives in <b>this browser only</b> &mdash; there is no server store behind it yet. Export at the end of every day so
-            25 days of work can&rsquo;t be lost to a cleared cache or a different laptop.
-          </p>
+          <h3 className="text-[18px] font-extrabold text-[var(--ink)]">{t("p8tst.exportTitle")}</h3>
+          <p className="mt-2 max-w-[70ch] text-[13.5px] text-[var(--ink-2)]">{t("p8tst.exportLede")}</p>
           <button type="button" onClick={download}
-            className="mt-4 rounded-full bg-[#2f6bd8] px-5 py-2.5 text-[13.5px] font-extrabold text-white">Download full report (.md)</button>
+            className="mt-4 rounded-full bg-[#2f6bd8] px-5 py-2.5 text-[13.5px] font-extrabold text-white">{t("p8tst.downloadReport")}</button>
         </section>
       )}
     </div>
