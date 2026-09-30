@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Hanken_Grotesk, Noto_Naskh_Arabic, Noto_Nastaliq_Urdu, Noto_Sans_Bengali, Noto_Sans_Gurmukhi } from "next/font/google";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { LanguageProvider } from "@/lib/i18n/provider";
+import { PublicLanguagePicker } from "@/components/i18n/PublicLanguagePicker";
+import { dirFor, requestLocale, serverT } from "@/lib/i18n/server";
+import { BRAND } from "@/lib/i18n/config";
 import "./globals.css";
 
 // Self-hosted equivalents of the legacy prototype's fonts, exposed as the
@@ -37,21 +40,23 @@ const scriptCss = [
   // Nastaliq has tall ascenders and deep descenders: give Urdu body copy the extra leading it needs so lines do not collide.
   + "html:lang(ur) body{line-height:1.9}";
 
-export const metadata: Metadata = {
-  title: "ActivityOS",
-  description: "Booking / CRM / ops platform",
-};
+// The tab title + description follow the language the visitor picked (cookie), so a Polish parent does not see an English meta description.
+export async function generateMetadata(): Promise<Metadata> {
+  const loc = await requestLocale();
+  return { title: BRAND, description: serverT(loc, "p8pub.metaDescription") };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await requestLocale(); // first paint already in the picked language + direction (no English flash)
   return (
-    <html lang="en" className={`${bricolageGrotesque.variable} ${hankenGrotesk.variable}`}>
+    <html lang={locale} dir={dirFor(locale)} suppressHydrationWarning className={`${bricolageGrotesque.variable} ${hankenGrotesk.variable}`}>
       <head><style dangerouslySetInnerHTML={{ __html: scriptCss }} /></head>
       <body>
-        <AuthProvider><LanguageProvider>{children}</LanguageProvider></AuthProvider>
+        <AuthProvider><LanguageProvider initialLocale={locale}>{children}<PublicLanguagePicker /></LanguageProvider></AuthProvider>
       </body>
     </html>
   );

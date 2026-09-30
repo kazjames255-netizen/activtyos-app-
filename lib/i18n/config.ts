@@ -33,3 +33,11 @@ export const localeDef = (code: string): LocaleDef =>
   LOCALES.find((l) => l.code === code) ?? LOCALES[0];
 
 export const isRTL = (code: string): boolean => !!localeDef(code).rtl;
+
+/** The product name, shown in user-facing text. The product is being renamed: change it HERE only. Catalogue strings use the {brand} token (filled automatically by translate()). */
+export const BRAND = "ActivityOS";
+
+/** Cookie mirror of the picked language, so the server can render the first paint in the right language + direction (no English flash). */
+export const LOCALE_COOKIE = "aos.locale";
+
+export const isLocaleCode = (v: unknown): v is LocaleCode => typeof v === "string" && LOCALES.some((l) => l.code === v);

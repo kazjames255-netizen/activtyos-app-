@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { LOCALES, type LocaleCode } from "@/lib/i18n/config";
 import { useI18n } from "@/lib/i18n/provider";
 import { api } from "@/lib/api";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 // Language picker for the top bar of every portal. Sets the locale in context
 // (instant) + localStorage (persists), and best-effort saves it to the account
 // so it follows the user (backend: users.locale). Compact by default.
 export function LanguageSelector() {
   const { locale, setLocale, t } = useI18n();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const cur = LOCALES.find((l) => l.code === locale) ?? LOCALES[0];
@@ -24,7 +26,7 @@ export function LanguageSelector() {
   const pick = (code: LocaleCode) => {
     setLocale(code);
     setOpen(false);
-    api("/api/account", { method: "PUT", body: JSON.stringify({ locale: code }) }).catch(() => {});
+    if (user) api("/api/account", { method: "PUT", body: JSON.stringify({ locale: code }) }).catch(() => {}); // signed out: browser-only
   };
 
   return (

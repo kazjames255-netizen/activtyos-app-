@@ -1,13 +1,12 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, isRTL, type LocaleCode } from "./config";
-import { CATALOGS } from "./messages";
+import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALE_STORAGE_KEY, isLocaleCode, isRTL, type LocaleCode } from "./config";
+import { translate, type Vars } from "./translate";
 import { currentLocaleCode, setDateLocale } from "./format";
 import { translateWord } from "./words";
-import { hubReady, isHubKey, loadHub, lookupHub, subscribeHub } from "./hubMessages";
+import { subscribeHub } from "./hubMessages";
 
-type Vars = Record<string, string | number>;
 interface Ctx {
   locale: LocaleCode;
   setLocale: (l: LocaleCode) => void;
@@ -18,27 +17,12 @@ interface Ctx {
 
 const I18nContext = createContext<Ctx | null>(null);
 
-// Resolve a dotted key ("header.myBookings") against a nested catalogue.
-function resolve(obj: unknown, path: string): string | undefined {
-  const out = path.split(".").reduce<unknown>((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), obj);
-  return typeof out === "string" ? out : undefined;
+function writeCookie(l: LocaleCode) {
+  try { document.cookie = `${LOCALE_COOKIE}=${l}; path=/; max-age=31536000; samesite=lax`; } catch { /* ignore */ }
 }
 
-function translate(locale: LocaleCode, key: string, vars?: Vars): string {
-  const cat = CATALOGS[locale] ?? CATALOGS.en;
-  let s = resolve(cat, key) ?? resolve(CATALOGS.en, key);
-  if (s === undefined && isHubKey(key)) {
-    // Teaching Hub words load on demand (lib/i18n/hubMessages.ts): until they land, blank — never the raw key — and ask for them.
-    s = lookupHub(locale, key);
-    if (s === undefined && !hubReady(locale)) { void loadHub(locale); return ""; }
-  }
-  if (s === undefined) s = key;
-  if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
-  return s;
-}
-
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<LocaleCode>(DEFAULT_LOCALE);
+export function LanguageProvider({ children, initialLocale = DEFAULT_LOCALE }: { children: ReactNode; initialLocale?: LocaleCode }) {
+  const [locale, setLocaleState] = useState<LocaleCode>(initialLocale);
   // Re-render every consumer when a lazily-loaded catalogue (the Teaching Hub's) arrives.
   const [, setHubVer] = useState(0);
   useEffect(() => subscribeHub(() => setHubVer((n) => n + 1)), []);
@@ -46,8 +30,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   // Restore the saved language on first paint.
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(LOCALE_STORAGE_KEY) as LocaleCode | null;
-      if (saved && CATALOGS[saved]) setLocaleState(saved);
+      const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
+      if (isLocaleCode(saved) && saved !== initialLocale) setLocaleState(saved); // older sessions / e2e seed only localStorage; the cookie (read by the server) wins otherwise
+      if (isLocaleCode(saved)) writeCookie(saved);
     } catch { /* storage blocked */ }
   }, []);
 
@@ -61,6 +46,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLocale = (l: LocaleCode) => {
     setLocaleState(l);
     try { localStorage.setItem(LOCALE_STORAGE_KEY, l); } catch { /* ignore */ }
+    writeCookie(l);
   };
 
   // Keep the shared date/number tag in step with the picker during render, so every child formats with the same language.
