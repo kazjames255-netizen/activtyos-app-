@@ -1,6 +1,10 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { useT, useI18n, tNow } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
+import { richT } from "@/components/shell/richT";
+import { isRTL } from "@/lib/i18n/config";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -96,13 +100,14 @@ const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.r
 const staffForLine = (children: number, ratio: number) => (children > 0 ? Math.ceil(children / Math.max(1, ratio)) : 0);
 // Colours for the synthesized "by time" cards (age cards use their own colour).
 const TIME_CARD_COLOURS = ["#2f6bd8", "#0f9488", "#7a5af8", "#e0692a", "#d6336c", "#0ea5e9"];
-const ageRange = (g: RatioGroup) => `${g.ageFrom}-${g.ageTo} yrs`;
+const ageRange = (g: RatioGroup) => tNow("p8ops.rtAgeRange", { from: g.ageFrom, to: g.ageTo });
 /** "1:8" for a round ratio, "1:8.5" only when there's actually a fraction. */
 const fmtRatio = (n: number) => `1:${Number.isInteger(n) ? n : n.toFixed(1)}`;
 /** "09:00" -> "9am", "15:30" -> "3:30pm" for the time-period buttons. */
 const to12h = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);
   if (Number.isNaN(h)) return hhmm;
+  if (!dl().startsWith("en")) return new Date(2000, 0, 1, h, m || 0).toLocaleTimeString(dl(), { hour: "numeric", minute: "2-digit" });
   const ap = h < 12 ? "am" : "pm";
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return m ? `${h12}:${String(m).padStart(2, "0")}${ap}` : `${h12}${ap}`;
@@ -137,38 +142,38 @@ const EYFS_3TO5_QT = 13;
 // edited only in Setup → Age groups & rooms; the board here just reads them so
 // there's no second place that could contradict Setup.
 function PolicyTable({ groups }: { groups: RatioGroup[] }) {
+  const t = useT();
   return (
     <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]" open>
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
         <span className="inline-block transition-transform group-open:rotate-90">▸</span>
-        Your ratio policy <span className="font-normal text-[var(--ink-3)]">— set in Setup → Age groups &amp; rooms; shown here for reference</span>
+        {t("p8ops.rtPolicyTitle")} <span className="font-normal text-[var(--ink-3)]">{t("p8ops.rtPolicySub", { where: t("p8ops.rtSetupAgeGroups") })}</span>
       </summary>
       <div className="overflow-x-auto px-3.5 pb-3.5">
         <table className="w-full border-collapse text-[12.5px]">
           <thead>
             <tr className="text-[10.5px] uppercase tracking-[0.04em] text-[var(--ink-3)]">
-              <th className="px-2 py-1.5 text-start font-extrabold">Colour</th>
-              <th className="px-2 py-1.5 text-start font-extrabold">Group</th>
-              <th className="px-2 py-1.5 text-start font-extrabold">Age</th>
-              <th className="px-2 py-1.5 text-start font-extrabold">Target ratio</th>
-              <th className="px-2 py-1.5 text-start font-extrabold">Room size</th>
+              <th className="px-2 py-1.5 text-start font-extrabold">{t("p8ops.rtColColour")}</th>
+              <th className="px-2 py-1.5 text-start font-extrabold">{t("p8ops.rtColGroup")}</th>
+              <th className="px-2 py-1.5 text-start font-extrabold">{t("p8ops.rgColAge")}</th>
+              <th className="px-2 py-1.5 text-start font-extrabold">{t("p8ops.rtColTarget")}</th>
+              <th className="px-2 py-1.5 text-start font-extrabold">{t("p8ops.rtColRoom")}</th>
             </tr>
           </thead>
           <tbody>
             {groups.map((g) => (
               <tr key={g.id} className="border-t border-[var(--line)]">
-                <td className="px-2 py-1.5"><span className="inline-block h-5 w-8 rounded" style={{ background: g.colour }} aria-label={`${g.name} colour`} /></td>
+                <td className="px-2 py-1.5"><span className="inline-block h-5 w-8 rounded" style={{ background: g.colour }} aria-label={t("p8ops.rtColourOf", { name: g.name })} /></td>
                 <td className="px-2 py-1.5 font-bold">{g.name}</td>
-                <td className="px-2 py-1.5 text-[var(--ink-2)]">{g.ageFrom}–{g.ageTo} yrs</td>
+                <td className="px-2 py-1.5 text-[var(--ink-2)]">{t("p8ops.rtAgeRange", { from: g.ageFrom, to: g.ageTo })}</td>
                 <td className="px-2 py-1.5 text-[var(--ink-2)]">1:{g.targetRatio}</td>
-                <td className="px-2 py-1.5 text-[var(--ink-2)]">{g.maxSize > 0 ? g.maxSize : <span className="text-[var(--ink-3)]">no cap</span>}</td>
+                <td className="px-2 py-1.5 text-[var(--ink-2)]">{g.maxSize > 0 ? g.maxSize : <span className="text-[var(--ink-3)]">{t("p8ops.rtNoCap")}</span>}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <div className="mt-2 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-          Colours, names, age bands, ratios and room sizes are your one master record — change them in
-          <b> Setup → Age groups &amp; rooms</b> and every board here and every listing updates at once.
+          {richT(t, "p8ops.rtPolicyNote", { where: <b>{t("p8ops.rtSetupAgeGroups")}</b> })}
         </div>
       </div>
     </details>
@@ -182,13 +187,14 @@ function PolicyTable({ groups }: { groups: RatioGroup[] }) {
 // listing builder's Step 9 uses. Gives freelancers (who have no standalone
 // team screen) a place to manage staff, and it flows everywhere.
 function TeamManager({ staff, onChange, holderId }: { staff: StaffMember[]; onChange: (s: StaffMember[]) => void; holderId?: string }) {
+  const t = useT();
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const add = () => {
-    const t = name.trim();
-    if (!t) return;
-    const [first, ...rest] = t.split(" ");
+    const nm = name.trim();
+    if (!nm) return;
+    const [first, ...rest] = nm.split(" ");
     const entry = { first, last: rest.join(" "), ...(role.trim() ? { role: role.trim() } : {}) };
     onChange(editId
       ? staff.map((x) => (x.id === editId ? { ...x, ...entry } : x))
@@ -199,7 +205,7 @@ function TeamManager({ staff, onChange, holderId }: { staff: StaffMember[]; onCh
   return (
     <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]" open>
       <summary className="cursor-pointer list-none px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
-        🧑‍🏫 Your team <span className="font-normal text-[var(--ink-3)]">— {staff.length ? `${staff.length} to assign` : "add staff to assign them below"} · shared with your listings&rsquo; Staff step</span>
+        {t("p8ops.rtYourTeam")} <span className="font-normal text-[var(--ink-3)]">{t("p8ops.rtTeamSub", { detail: staff.length ? t("p8ops.rtToAssign", { n: staff.length }) : t("p8ops.rtAddStaffToAssign") })}</span>
       </summary>
       <div className="px-3.5 pb-3.5">
         <div className="mb-2.5 flex flex-wrap gap-1.5">
@@ -207,22 +213,22 @@ function TeamManager({ staff, onChange, holderId }: { staff: StaffMember[]; onCh
             <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] py-1 ps-1.5 pe-1.5 text-[12px] font-semibold">
               <StaffAvatar m={m} size={20} />
               <span className="leading-tight">
-                {`${m.first} ${m.last}`.trim() || "Staff"}
-                <span className="ms-1 font-normal text-[var(--ink-3)]">{m.role ? `· ${m.role}` : ""}{m.id === holderId ? " · you" : ""}</span>
+                {`${m.first} ${m.last}`.trim() || t("p8ops.rtStaffWord")}
+                <span className="ms-1 font-normal text-[var(--ink-3)]">{m.role ? `· ${m.role}` : ""}{m.id === holderId ? ` ${t("p8ops.rtYouSuffix")}` : ""}</span>
               </span>
-              <button type="button" aria-label={`Edit ${m.first}`} onClick={() => edit(m)} className="px-1 text-[var(--ink-3)] hover:text-[var(--brand-ink,#1d3a8f)]" title="Edit">✎</button>
-              <button type="button" aria-label={`Remove ${m.first}`} onClick={() => onChange(staff.filter((x) => x.id !== m.id))} className="px-1 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+              <button type="button" aria-label={t("p8ops.rtEditX", { name: m.first })} onClick={() => edit(m)} className="px-1 text-[var(--ink-3)] hover:text-[var(--brand-ink,#1d3a8f)]" title={t("p8ops.rtEdit")}>✎</button>
+              <button type="button" aria-label={t("p8ops.rtRemoveX", { name: m.first })} onClick={() => onChange(staff.filter((x) => x.id !== m.id))} className="px-1 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
             </span>
           ))}
-          {staff.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No staff yet — add yourself and any helpers.</span>}
+          {staff.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">{t("p8ops.rtNoStaffYet")}</span>}
         </div>
         <div className="flex flex-wrap items-end gap-1.5">
-          <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Name — e.g. Alex Rivera"
+          <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder={t("p8ops.rtNamePh")}
             className="w-[200px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
-          <input value={role} onChange={(e) => setRole(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Role — e.g. Coach (optional)"
+          <input value={role} onChange={(e) => setRole(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder={t("p8ops.rtRolePh")}
             className="w-[180px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
-          <Button sm variant="primary" onClick={add}>{editId ? "Save" : "＋ Add"}</Button>
-          {editId && <Button sm onClick={() => { setEditId(null); setName(""); setRole(""); }}>Cancel</Button>}
+          <Button sm variant="primary" onClick={add}>{editId ? t("p8ops.rtSave") : t("p8ops.rtAdd")}</Button>
+          {editId && <Button sm onClick={() => { setEditId(null); setName(""); setRole(""); }}>{t("p8ops.rtCancel")}</Button>}
         </div>
       </div>
     </details>
@@ -235,6 +241,9 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
   onCover?: (c: { onDuty: number; needed: number; within: boolean }) => void;
   listing?: string; seasonName?: string;
 }) {
+  const t = useT();
+  const { locale } = useI18n();
+  const rtl = isRTL(locale);
   // Child → group. Default is by age; a manual drag overrides it. Both the
   // overrides and each group's staffing persist per (tenant, day) via
   // /api/ratios/board/:date, so the board survives a refresh and is shared
@@ -267,13 +276,13 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
   // fetch would overwrite the saved board with an empty one.
   useEffect(() => {
     if (!boardLoaded.current) return;
-    const t = setTimeout(() => {
+    const tm = setTimeout(() => {
       void api(`/api/ratios/board/${date}`, {
         method: "PUT",
         body: JSON.stringify({ overrides: override, groupStaff }),
       }).catch(() => {});
     }, 700);
-    return () => clearTimeout(t);
+    return () => clearTimeout(tm);
   }, [override, groupStaff, date]);
 
   // In time mode the cards are the distinct arrival→departure windows,
@@ -354,43 +363,43 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
       {/* The child's hours on site — from their booked timing (block window until §V). */}
       <span className="rounded px-1 text-[9px] font-bold" style={{ background: colour ? `${colour}1f` : "var(--panel)", color: colour ?? "var(--ink-3)" }}>{to12h(c.ws)}–{to12h(c.we)}</span>
       {/* Age, so staff can sanity-check the grouping at a glance. */}
-      {!misfit && <span className="text-[9.5px] font-semibold opacity-70">aged {c.age}</span>}
-      {misfit && <span className="rounded px-1 text-[9px] font-extrabold" style={{ background: "#f6c9cc" }}>⚠ aged {c.age}</span>}
+      {!misfit && <span className="text-[9.5px] font-semibold opacity-70">{t("p8ops.rtAgedN", { n: c.age })}</span>}
+      {misfit && <span className="rounded px-1 text-[9px] font-extrabold" style={{ background: "#f6c9cc" }}>⚠ {t("p8ops.rtAgedN", { n: c.age })}</span>}
       {c.send && <span className="rounded px-1 text-[9px]" style={{ background: colour ? `${colour}22` : "var(--brand-soft)" }}>SEND</span>}
-      {c.allergies && <span title="Allergy on file">⚠</span>}
-      {onRemove && <button type="button" onClick={onRemove} aria-label={`Remove ${c.name}`} className="text-[13px] leading-none opacity-60">×</button>}
+      {c.allergies && <span title={t("p8ops.rtAllergyOnFile")}>⚠</span>}
+      {onRemove && <button type="button" onClick={onRemove} aria-label={t("p8ops.rtRemoveX", { name: c.name })} className="text-[13px] leading-none opacity-60">×</button>}
     </span>
   );
 
   return (
     <div>
       <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-        <div className="text-[15px] font-extrabold" style={{ color: "var(--brand-ink,#1d3a8f)" }}>{mode === "age" ? "Cover by age group" : "Cover by time"}</div>
+        <div className="text-[15px] font-extrabold" style={{ color: "var(--brand-ink,#1d3a8f)" }}>{mode === "age" ? t("p8ops.rtCoverAge") : t("p8ops.rtCoverTime")}</div>
         {/* Flick between grouping by age band and by the hours children are in. */}
         <div className="inline-flex rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5 text-[12px] font-bold">
           {(["age", "time"] as const).map((mo) => (
             <button key={mo} type="button" onClick={() => setMode(mo)}
               className="rounded-full px-3.5 py-1 transition-colors"
               style={mode === mo ? { background: "var(--brand-2,#2f6bd8)", color: "#fff" } : { color: "var(--ink-2)" }}>
-              {mo === "age" ? "By age group" : "By time"}
+              {mo === "age" ? t("p8ops.rtByAge") : t("p8ops.rtByTime")}
             </button>
           ))}
         </div>
       </div>
       <p className="mb-2 text-[11px] text-[var(--ink-3)]">{mode === "age"
-        ? <><b>Target</b> is the ratio you&rsquo;re aiming for; <b>Live</b> is children ÷ staff assigned. Drag a child to move them.</>
-        : <>Cards are the <b>hours children are in</b>. Assign staff to each window so every timing is covered.</>}</p>
+        ? richT(t, "p8ops.rtHelpAge", { target: <b>{t("p8ops.rtTargetWord")}</b>, live: <b>{t("p8ops.rtLiveWord")}</b> })
+        : richT(t, "p8ops.rtHelpTime", { hours: <b>{t("p8ops.rtHoursChildrenIn")}</b> })}</p>
 
       <div className="overflow-hidden rounded-2xl border border-[var(--line)]">
         {/* Board header bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ background: "linear-gradient(120deg,#1d3a8f,#2f6bd8)", color: "#fff" }}>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => onDay(-1)} aria-label="Previous day" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-[16px]">‹</button>
+            <button type="button" onClick={() => onDay(-1)} aria-label={t("p8ops.rtPrevDay")} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-[16px]">{rtl ? "›" : "‹"}</button>
             <div>
-              <div className="text-[15px] font-extrabold leading-none">{isToday ? "Today" : shortDay(date)}</div>
+              <div className="text-[15px] font-extrabold leading-none">{isToday ? t("p8ops.dbToday") : shortDay(date)}</div>
               {isToday && <div className="text-[11.5px] opacity-85">{shortDay(date)}</div>}
             </div>
-            <button type="button" onClick={() => onDay(1)} aria-label="Next day" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-[16px]">›</button>
+            <button type="button" onClick={() => onDay(1)} aria-label={t("p8ops.rtNextDay")} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-[16px]">{rtl ? "‹" : "›"}</button>
             {listing && (
               <div className="ms-1 flex flex-wrap items-center gap-1.5">
                 <span className="whitespace-nowrap rounded-full bg-white/20 px-2.5 py-1 text-[11.5px] font-extrabold" title={listing}>🎟 {listing}</span>
@@ -401,25 +410,25 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
           <div className="flex flex-wrap items-center gap-4" style={{ fontVariantNumeric: "tabular-nums" }}>
             <div className="text-center leading-none">
               <div className="text-[18px] font-extrabold">{totalChildren}</div>
-              <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">children</div>
+              <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">{t("p8ops.rtChildrenLbl")}</div>
             </div>
             {totalCapacity > 0 && (
-              <div className="text-center leading-none" title={`Room capacity across your groups — ${capped.length} of ${groups.length} groups have a room size`}>
+              <div className="text-center leading-none" title={t("p8ops.rtRoomCapTip", { n: capped.length, total: groups.length })}>
                 <div className="text-[18px] font-extrabold" style={overGroups.length ? { color: "#ffd3d3" } : undefined}>{totalChildren}<span className="text-[12px] opacity-70">/{totalCapacity}</span></div>
-                <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">room space</div>
+                <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">{t("p8ops.rtRoomSpace")}</div>
               </div>
             )}
             <div className="h-9 w-px bg-white/20" />
             <div className="text-center leading-none">
               <div className="text-[18px] font-extrabold">{staffNeeded}</div>
-              <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">staff needed</div>
+              <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">{t("p8ops.rtStaffNeededLbl")}</div>
             </div>
             <div className="text-center leading-none">
               <div className="text-[18px] font-extrabold">{staffOnDuty}</div>
-              <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">on duty</div>
+              <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">{t("p8ops.rtOnDutyLbl")}</div>
             </div>
-            <span className="rounded-full px-3 py-1.5 text-[11px] font-extrabold" title={within ? undefined : `You've assigned ${staffOnDuty}, this session/day needs ${staffNeeded} — one adult per occupied group.`} style={within ? { background: "rgba(255,255,255,.22)" } : { background: "#fee2e2", color: "#c0392b" }}>
-              {within ? "✓ WITHIN TARGET" : `NEEDS ${staffNeeded - staffOnDuty} MORE STAFF ON THIS DAY`}
+            <span className="rounded-full px-3 py-1.5 text-[11px] font-extrabold" title={within ? undefined : t("p8ops.rtNeedsTip", { have: staffOnDuty, need: staffNeeded })} style={within ? { background: "rgba(255,255,255,.22)" } : { background: "#fee2e2", color: "#c0392b" }}>
+              {within ? t("p8ops.rtWithinTarget") : t("p8ops.rtNeedsMore", { n: staffNeeded - staffOnDuty })}
             </span>
           </div>
         </div>
@@ -430,9 +439,7 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
           <div className="flex items-start gap-2 border-b border-[#f6c9cc] bg-[#fdebec] px-4 py-2 text-[11.5px] leading-[1.45] text-[#c0392b]">
             <span className="text-[13px]">⚠</span>
             <span>
-              <b>{doubleBooked.map((m) => `${m.first} ${m.last}`.trim() || "Staff").join(", ")}</b>{" "}
-              {doubleBooked.length === 1 ? "is" : "are"} assigned to more than one group. One adult can&rsquo;t cover two rooms at once —
-              any group leaning on them isn&rsquo;t really staffed. Assign someone else, or move them to a single group.
+              {richT(t, "p8ops.rtDoubleBooked", { names: <b>{doubleBooked.map((m) => `${m.first} ${m.last}`.trim() || t("p8ops.rtStaffWord")).join(", ")}</b> })}
             </span>
           </div>
         )}
@@ -442,8 +449,7 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
           <div className="flex items-start gap-2 border-b border-[#f6c9cc] bg-[#fdebec] px-4 py-2 text-[11.5px] leading-[1.45] text-[#c0392b]">
             <span className="text-[13px]">⚠</span>
             <span>
-              <b>{misplaced.map((m) => `${m.name} (age ${m.age}) in ${m.group}`).join(", ")}</b>{" "}
-              {misplaced.length === 1 ? "is" : "are"} outside their age group — moved by hand. Fine if it&rsquo;s deliberate; drag them back if not.
+              {richT(t, "p8ops.rtMisplaced", { list: <b>{misplaced.map((m) => t("p8ops.rtMisplacedItem", { name: m.name, age: m.age, group: m.group })).join(", ")}</b> })}
             </span>
           </div>
         )}
@@ -453,11 +459,11 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
           <aside className="lg:w-[240px] lg:flex-none">
             <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
               <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Your team</span>
-                <span className="text-[10px] text-[var(--ink-3)]">{staffOnDuty}/{staff.length} on duty</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("p8ops.rtYourTeamPlain")}</span>
+                <span className="text-[10px] text-[var(--ink-3)]">{t("p8ops.rtOnDutyOf", { n: staffOnDuty, total: staff.length })}</span>
               </div>
               {staff.length === 0 ? (
-                <div className="text-[11px] leading-[1.5] text-[var(--ink-3)]">No staff yet — add your team in <b>Your team</b> above.</div>
+                <div className="text-[11px] leading-[1.5] text-[var(--ink-3)]">{richT(t, "p8ops.rtNoStaffAdd", { where: <b>{t("p8ops.rtYourTeamPlain")}</b> })}</div>
               ) : (
                 <div className="flex flex-col gap-2">
                   {staff.map((m) => {
@@ -468,13 +474,13 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
                         <div className="flex items-center gap-2">
                           <StaffAvatar m={m} />
                           <div className="min-w-0 flex-1 leading-tight">
-                            <div className="truncate text-[12px] font-extrabold">{`${m.first} ${m.last}`.trim() || "Staff"}</div>
-                            <div className="truncate text-[10px] text-[var(--ink-3)]">{m.role || "Team member"}{m.id === HOLDER_ID ? " · you" : ""}</div>
+                            <div className="truncate text-[12px] font-extrabold">{`${m.first} ${m.last}`.trim() || t("p8ops.rtStaffWord")}</div>
+                            <div className="truncate text-[10px] text-[var(--ink-3)]">{m.role || t("p8ops.rtTeamMember")}{m.id === HOLDER_ID ? ` ${t("p8ops.rtYouSuffix")}` : ""}</div>
                           </div>
                         </div>
                         <select value="" onChange={(e) => { if (e.target.value) setStaffFor(e.target.value, m.id); }}
                           className="mt-1.5 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11px] text-[var(--ink-2)]">
-                          <option value="">＋ Assign to {mode === "time" ? "time" : "group"}…</option>
+                          <option value="">{mode === "time" ? t("p8ops.rtAssignTime") : t("p8ops.rtAssignGroup")}</option>
                           {displayGroups.filter((g) => !(groupStaff[g.id] ?? []).includes(m.id)).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                         </select>
                         {assignedTo.length > 0 && (
@@ -483,10 +489,10 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
                               <span key={g.id}
                                 className="inline-flex items-center gap-1 rounded-full py-[2px] ps-2 pe-1 text-[10px] font-bold text-white" style={{ background: g.colour }}>
                                 {g.name}
-                                <button type="button" onClick={() => setStaffFor(g.id, m.id)} aria-label={`Unassign from ${g.name}`} className="text-[11px] leading-none opacity-80">×</button>
+                                <button type="button" onClick={() => setStaffFor(g.id, m.id)} aria-label={t("p8ops.rtUnassignFrom", { name: g.name })} className="text-[11px] leading-none opacity-80">×</button>
                               </span>
                             ))}
-                            {clash && <span title="One adult can't cover two rooms at once" className="text-[10px] font-bold text-[#c0392b]">⚠ 2 rooms</span>}
+                            {clash && <span title={t("p8ops.rtTwoRoomsTip")} className="text-[10px] font-bold text-[#c0392b]">{t("p8ops.rtTwoRooms")}</span>}
                           </div>
                         )}
                       </div>
@@ -515,17 +521,17 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
                 <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2" style={{ background: `${g.colour}14` }}>
                   <div>
                     <div className="text-[15px] font-extrabold" style={{ color: g.colour }}>{mode === "time" ? `🕘 ${g.name}` : g.name}</div>
-                    <div className="text-[11.5px] text-[var(--ink-3)]">{mode === "time" ? `${kids.length} ${kids.length === 1 ? "child" : "children"} on this timing` : ageRange(g)}</div>
+                    <div className="text-[11.5px] text-[var(--ink-3)]">{mode === "time" ? t("p8ops.rtOnThisTiming", { cnt: pickPlural(t, locale, "p8ops.rtChildN", kids.length) }) : ageRange(g)}</div>
                   </div>
                   <div className="flex items-center gap-3 text-center">
                     {mode === "age" && (
                       <div>
-                        <div className="text-[9.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Target</div>
+                        <div className="text-[9.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8ops.rtTargetWord")}</div>
                         <div className="text-[13px] font-extrabold">1:{g.targetRatio}</div>
                       </div>
                     )}
                     <div>
-                      <div className="text-[9.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{mode === "time" ? "Staff" : "Live"}</div>
+                      <div className="text-[9.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{mode === "time" ? t("p8ops.rtStaffWord") : t("p8ops.rtLiveLbl")}</div>
                       <div className="text-[13px] font-extrabold">{mode === "time" ? need : (live > 0 ? fmtRatio(live) : "—")}</div>
                     </div>
                   </div>
@@ -533,28 +539,25 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
                 <div className="p-3">
                   {kids.length === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-1 py-3 text-center">
-                      <div className="text-[15px] font-extrabold text-[#1d3a8f]">✓ No staff required</div>
-                      <div className="text-[11px] text-[var(--ink-3)]">No children in this group today — drag one here to place them.</div>
+                      <div className="text-[15px] font-extrabold text-[#1d3a8f]">{t("p8ops.rtNoStaffRequired")}</div>
+                      <div className="text-[11px] text-[var(--ink-3)]">{t("p8ops.rtNoChildrenDrag")}</div>
                     </div>
                   ) : (
                     <>
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-[3px] text-[11.5px] font-extrabold" style={met ? { background: "#eaf0fc", color: "#1d3a8f" } : { background: "#fdebec", color: "#c0392b" }}>
-                      {met ? "🙂 In ratio" : `😟 ${need - have} staff short`}
+                      {met ? t("p8ops.rtInRatio") : t("p8ops.rtStaffShort", { n: need - have })}
                     </span>
                     {/* Needed vs got, read at a glance. */}
                     <span className="inline-flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">
-                      <b className="text-[13px]" style={{ color: met ? "#1d3a8f" : "#c0392b" }}>{have}</b>
-                      <span className="opacity-70">of</span>
-                      <b className="text-[13px] text-[var(--ink-2)]">{need}</b>
-                      <span>needed</span>
+                      {richT(t, "p8ops.rtHaveOfNeed", { have: <b className="text-[13px]" style={{ color: met ? "#1d3a8f" : "#c0392b" }}>{have}</b>, need: <b className="text-[13px] text-[var(--ink-2)]">{need}</b> })}
                     </span>
-                    {over && <span className="rounded-full bg-[#fdebec] px-2 py-[2px] text-[10.5px] font-bold text-[#c0392b]">Over max ({kids.length}/{g.maxSize})</span>}
+                    {over && <span className="rounded-full bg-[#fdebec] px-2 py-[2px] text-[10.5px] font-bold text-[#c0392b]">{t("p8ops.rtOverMax", { n: kids.length, max: g.maxSize })}</span>}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {kids.map((c) => {
                       const misfit = c.age < g.ageFrom || c.age > g.ageTo
-                        ? `Age ${c.age} is outside ${g.name} (${g.ageFrom}–${g.ageTo} yrs) — moved here manually`
+                        ? t("p8ops.rtMisfit", { age: c.age, group: g.name, from: g.ageFrom, to: g.ageTo })
                         : undefined;
                       return <Chip key={c.ref} c={c} colour={g.colour} misfit={misfit} onRemove={mode === "age" ? () => setOverride((o) => ({ ...o, [c.childId ?? c.ref]: "__unplaced" })) : undefined} />;
                     })}
@@ -567,23 +570,23 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
                   {(assignedStaff.length > 0 || kids.length > 0) && (
                     <div className="mt-2.5 border-t border-[var(--line)] pt-2">
                       <div className="mb-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">
-                        Staff on this group{kids.length === 0 && assignedStaff.length > 0 ? " · none needed today" : ""}
+                        {t("p8ops.rtStaffOnGroup")}{kids.length === 0 && assignedStaff.length > 0 ? t("p8ops.rtNoneNeededToday") : ""}
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {assignedStaff.map((m) => {
                           const clash = (staffGroupCount[m.id] ?? 0) > 1;
                           return (
-                            <span key={m.id} title={clash ? "Also assigned to another group — one adult can't cover two rooms at once" : undefined}
+                            <span key={m.id} title={clash ? t("p8ops.rtAlsoAssignedTip") : undefined}
                               className="inline-flex items-center gap-1 rounded-full py-[3px] ps-1 pe-1 text-[11px] font-bold text-white"
                               style={{ background: g.colour, boxShadow: clash ? "0 0 0 1.5px #c0392b" : undefined }}>
                               <StaffAvatar m={m} size={18} />
-                              {`${m.first} ${m.last}`.trim() || "Staff"}
-                              {clash && <span aria-label="assigned to more than one group">⚠</span>}
-                              <button type="button" onClick={() => setStaffFor(g.id, m.id)} aria-label={`Unassign ${m.first}`} className="text-[12px] leading-none opacity-80">×</button>
+                              {`${m.first} ${m.last}`.trim() || t("p8ops.rtStaffWord")}
+                              {clash && <span aria-label={t("p8ops.rtAssignedMore")}>⚠</span>}
+                              <button type="button" onClick={() => setStaffFor(g.id, m.id)} aria-label={t("p8ops.rtUnassignX", { name: m.first })} className="text-[12px] leading-none opacity-80">×</button>
                             </span>
                           );
                         })}
-                        {assignedStaff.length === 0 && <span className="text-[11px] text-[var(--ink-3)]">None yet — assign from the team panel on the left.</span>}
+                        {assignedStaff.length === 0 && <span className="text-[11px] text-[var(--ink-3)]">{t("p8ops.rtNoneYetAssign")}</span>}
                       </div>
                     </div>
                   )}
@@ -597,13 +600,13 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover,
         {/* Unplaced */}
         {unplaced.length > 0 && (
           <div className="border-t border-[var(--line)] bg-[var(--panel)] px-3 py-2.5" onDragOver={(e) => { e.preventDefault(); setDragOver("__unplaced"); }} onDrop={() => drop("__unplaced")}>
-            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[#9a5a00]">Outside every group ({unplaced.length}) — drag into a group, or widen an age range above</div>
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[#9a5a00]">{t("p8ops.rtOutsideEvery", { n: unplaced.length })}</div>
             <div className="flex flex-wrap gap-1.5">{unplaced.map((c) => <Chip key={c.ref} c={c} />)}</div>
           </div>
         )}
       </div>
 
-      <p className="mt-2 text-[10.5px] text-[var(--ink-3)]">Everything here saves as you go — group setup to your settings, today&rsquo;s staffing and drags to the day&rsquo;s board.</p>
+      <p className="mt-2 text-[10.5px] text-[var(--ink-3)]">{t("p8ops.rtSavesAsYouGo")}</p>
     </div>
   );
 }
@@ -625,6 +628,7 @@ function NumInput({ value, onChange, label, hint, ratio }: { value: number; onCh
 }
 
 function RatioCalculator({ groups, dayChildren, dateText }: { groups: RatioGroup[]; dayChildren: SessionChild[]; dateText: string }) {
+  const t = useT();
   const [eyfs, setEyfs] = useState<Record<string, number>>({ u2: 0, twos: 0, threeFive: 0 });
   const [qt, setQt] = useState(0);
   const [groupN, setGroupN] = useState<Record<string, number>>({});
@@ -632,10 +636,10 @@ function RatioCalculator({ groups, dayChildren, dateText }: { groups: RatioGroup
   const threeFiveRatio = qt > 0 ? EYFS_3TO5_QT : 8;
   // Per-line ceilings, summed — the manual's maths (24/8=3 · … = 10).
   const lines = [
-    { label: "Under 2s · 1:3", n: eyfs.u2, ratio: 3, staff: staffForLine(eyfs.u2, 3) },
-    { label: "Two-year-olds · 1:5", n: eyfs.twos, ratio: 5, staff: staffForLine(eyfs.twos, 5) },
-    { label: `Three to five · 1:${threeFiveRatio}`, n: eyfs.threeFive, ratio: threeFiveRatio, staff: staffForLine(eyfs.threeFive, threeFiveRatio) },
-    ...groups.map((g) => ({ label: `${g.name} ${ageRange(g)} · 1:${g.targetRatio}`, n: groupN[g.id] ?? 0, ratio: g.targetRatio, staff: staffForLine(groupN[g.id] ?? 0, g.targetRatio) })),
+    { label: t("p8ops.rtLineU2"), n: eyfs.u2, ratio: 3, staff: staffForLine(eyfs.u2, 3) },
+    { label: t("p8ops.rtLineTwos"), n: eyfs.twos, ratio: 5, staff: staffForLine(eyfs.twos, 5) },
+    { label: t("p8ops.rtLineThreeFive", { r: threeFiveRatio }), n: eyfs.threeFive, ratio: threeFiveRatio, staff: staffForLine(eyfs.threeFive, threeFiveRatio) },
+    ...groups.map((g) => ({ label: t("p8ops.rtLineGroup", { name: g.name, range: ageRange(g), r: g.targetRatio }), n: groupN[g.id] ?? 0, ratio: g.targetRatio, staff: staffForLine(groupN[g.id] ?? 0, g.targetRatio) })),
   ];
   const totalChildren = lines.reduce((s, l) => s + l.n, 0);
   const totalStaff = lines.reduce((s, l) => s + l.staff, 0);
@@ -663,45 +667,45 @@ function RatioCalculator({ groups, dayChildren, dateText }: { groups: RatioGroup
   return (
     <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
       <summary className="cursor-pointer list-none px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
-        🧮 Staffing ratio calculator <span className="font-normal text-[var(--ink-3)]">— model any mix, or drop in a live day · EYFS bands + your targets</span>
+        {t("p8ops.rtCalcTitle")} <span className="font-normal text-[var(--ink-3)]">{t("p8ops.rtCalcSub")}</span>
       </summary>
       <div className="px-3.5 pb-3.5">
         <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--brand-ink,#1d3a8f)]">Check {dateText} against the guidance</div>
+          <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--brand-ink,#1d3a8f)]">{t("p8ops.rtCheckDate", { date: dateText })}</div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={showLive} disabled={liveCount === 0} className="rounded-lg px-3 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40" style={{ background: "var(--brand-ink,#1d3a8f)" }}>Drop in {dateText} ({liveCount})</button>
-            <span className="text-[11px] text-[var(--ink-3)]">Drops the children booked for {dateText} into the calculator above.</span>
+            <button type="button" onClick={showLive} disabled={liveCount === 0} className="rounded-lg px-3 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40" style={{ background: "var(--brand-ink,#1d3a8f)" }}>{t("p8ops.rtDropIn", { date: dateText, n: liveCount })}</button>
+            <span className="text-[11px] text-[var(--ink-3)]">{t("p8ops.rtDropInHelp", { date: dateText })}</span>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-[1fr_240px]">
           <div>
-            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Early years — statutory EYFS</div>
-            <NumInput label="Under 2 year olds" ratio="1 : 3" value={eyfs.u2} onChange={(n) => setEyfs((x) => ({ ...x, u2: n }))} />
-            <NumInput label="2 to under 3 year olds" ratio="1 : 5" value={eyfs.twos} onChange={(n) => setEyfs((x) => ({ ...x, twos: n }))} />
-            <NumInput label="3 to 5 year olds (pre-Reception)" ratio={qt > 0 ? "1 : 13" : "1 : 8"} value={eyfs.threeFive} onChange={(n) => setEyfs((x) => ({ ...x, threeFive: n }))} />
-            <NumInput label="Qualified teacher / level 6 with the 3–5s" hint="Only count them if they work directly with the 3–5s — each lifts that group toward 1:13." value={qt} onChange={setQt} />
+            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8ops.rtEyTitle")}</div>
+            <NumInput label={t("p8ops.rtUnder2")} ratio="1 : 3" value={eyfs.u2} onChange={(n) => setEyfs((x) => ({ ...x, u2: n }))} />
+            <NumInput label={t("p8ops.rtTwoToThree")} ratio="1 : 5" value={eyfs.twos} onChange={(n) => setEyfs((x) => ({ ...x, twos: n }))} />
+            <NumInput label={t("p8ops.rtThreeToFive")} ratio={qt > 0 ? "1 : 13" : "1 : 8"} value={eyfs.threeFive} onChange={(n) => setEyfs((x) => ({ ...x, threeFive: n }))} />
+            <NumInput label={t("p8ops.rtQt")} hint={t("p8ops.rtQtHint")} value={qt} onChange={setQt} />
             {groups.length > 0 && (
               <>
-                <div className="mb-1 mt-3 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">School age — your targets</div>
+                <div className="mb-1 mt-3 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8ops.rtSchoolAge")}</div>
                 {groups.map((g) => (
                   <NumInput key={g.id} label={`${g.name} (${ageRange(g)})`} value={groupN[g.id] ?? 0} onChange={(n) => setGroupN((x) => ({ ...x, [g.id]: n }))} />
                 ))}
               </>
             )}
             <div className="mt-3 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11px] leading-[1.5] text-[var(--ink-2)]">
-              <b>Ratios used</b> · 1:3 under 2 · 1:5 two-year-olds · 1:8 three to five · 1:13 three to five with a qualified teacher · then each school-age group at the target you set.
+              {richT(t, "p8ops.rtRatiosUsed", { lead: <b>{t("p8ops.rtRatiosUsedLead")}</b> })}
             </div>
             <div className="mt-2 text-[10.5px] leading-[1.5] text-[var(--ink-3)]">
-              <b className="text-[var(--ink-2)]">EYFS bands are statutory; school-age targets are your policy.</b> A minimum-staffing guide only — also weigh staff qualifications, breaks, deployment, SEND and tighter activity ratios (e.g. swimming).
+              {richT(t, "p8ops.rtEyfsNote", { lead: <b className="text-[var(--ink-2)]">{t("p8ops.rtEyfsLead")}</b> })}
             </div>
           </div>
           <div className="self-start rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-            <div className="text-[12.5px] font-extrabold text-[var(--brand-ink,#1d3a8f)]">Minimum staff needed</div>
+            <div className="text-[12.5px] font-extrabold text-[var(--brand-ink,#1d3a8f)]">{t("p8ops.rtMinStaff")}</div>
             <div className="mt-2 flex items-baseline justify-between border-b border-[var(--line)] pb-2">
-              <span className="text-[12px] text-[var(--ink-2)]">Total children</span><span className="text-[22px] font-extrabold">{totalChildren}</span>
+              <span className="text-[12px] text-[var(--ink-2)]">{t("p8ops.rtTotalChildren")}</span><span className="text-[22px] font-extrabold">{totalChildren}</span>
             </div>
             <div className="mt-2 flex items-baseline justify-between border-b border-[var(--line)] pb-2">
-              <span className="text-[12px] text-[var(--ink-2)]">Total staff needed</span><span className="text-[22px] font-extrabold" style={{ color: "#6a4fd0" }}>{totalStaff}</span>
+              <span className="text-[12px] text-[var(--ink-2)]">{t("p8ops.rtTotalStaff")}</span><span className="text-[22px] font-extrabold" style={{ color: "#6a4fd0" }}>{totalStaff}</span>
             </div>
             <div className="mt-2 flex flex-col gap-1">
               {lines.map((l, i) => (
@@ -719,6 +723,8 @@ function RatioCalculator({ groups, dayChildren, dateText }: { groups: RatioGroup
 
 // ────────────────────────────────────────────────────────────────────────
 export function RatiosApp() {
+  const t = useT();
+  const { locale } = useI18n();
   const [date, setDate] = useState(todayIso);
   const [sessions, setSessions] = useState<RatioSession[] | null>(null);
   const [loadedDate, setLoadedDate] = useState<string | null>(null);
@@ -734,7 +740,7 @@ export function RatiosApp() {
   const refresh = useCallback(() => {
     apiGet<{ sessions: RatioSession[] }>(`/api/ratios?date=${date}`)
       .then((r) => { setSessions(r.sessions); setLoadedDate(date); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load ratios"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("p8ops.rtFailedLoad")));
   }, [date]);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ staff?: StaffMember[] } | null>("/api/library").then((l) => setStaffLib(l?.staff ?? [])).catch(() => {}).finally(() => setStaffLoaded(true)); }, []);
@@ -769,7 +775,7 @@ export function RatiosApp() {
   const saveStaff = useCallback((next: StaffMember[]) => {
     setStaffLib(next);
     api("/api/library", { method: "PUT", body: JSON.stringify({ staff: next }) }).catch(() =>
-      setError("Couldn’t save your team — try again"),
+      setError(t("p8ops.rtCouldntSaveTeam")),
     );
   }, []);
 
@@ -857,9 +863,9 @@ export function RatiosApp() {
 
   return (
     <OperatorPage
-      title="Ratios & groups"
+      title={t("p8ops.rtPageTitle")}
       icon="🏅"
-      lede="Set your groups and target ratios, and track live cover as you take registers"
+      lede={t("p8ops.rtPageLede")}
     >
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c0392b]">{error}</div>}
 
@@ -871,11 +877,11 @@ export function RatiosApp() {
         <div className="mb-3 flex flex-wrap items-center gap-3 text-[12.5px]">
           {seasons.length > 0 && (
             <label className="flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">📅 Season</span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8ops.rtSeasonLbl")}</span>
               <span className="relative inline-flex items-center">
                 <select value={season} onChange={(e) => setSeason(e.target.value)}
                   className="appearance-none rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-4 pe-9 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_2px_rgba(20,30,60,.06)] transition-colors hover:border-[var(--brand-2,#2f6bd8)] focus:border-[var(--brand-2,#2f6bd8)] focus:outline-none">
-                  <option value="">All seasons</option>
+                  <option value="">{t("p8ops.rtAllSeasons")}</option>
                   {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
                 <span aria-hidden className="pointer-events-none absolute end-3.5 text-[10px] text-[var(--ink-3)]">▼</span>
@@ -883,13 +889,13 @@ export function RatiosApp() {
             </label>
           )}
           <label className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">🎟 Listing</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8ops.rtListingLbl")}</span>
             <span className="relative inline-flex items-center">
               <select value={listing} onChange={(e) => setListing(e.target.value)}
                 className="appearance-none rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-4 pe-9 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_2px_rgba(20,30,60,.06)] transition-colors hover:border-[var(--brand-2,#2f6bd8)] focus:border-[var(--brand-2,#2f6bd8)] focus:outline-none">
                 {visibleListings.map((l) => {
                   const n = listingCounts.get(l)?.size ?? 0;
-                  return <option key={l} value={l}>{l} · {n} {n === 1 ? "child" : "kids"}</option>;
+                  return <option key={l} value={l}>{t("p8ops.rtListingOpt", { name: l, cnt: pickPlural(t, locale, "p8ops.rtChildN", n) })}</option>;
                 })}
               </select>
               <span aria-hidden className="pointer-events-none absolute end-3.5 text-[10px] text-[var(--ink-3)]">▼</span>
@@ -901,18 +907,18 @@ export function RatiosApp() {
       {/* Showing … with a fancy day navigator */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[var(--panel)] px-3.5 py-2 text-[12.5px]">
         <span className="flex items-center gap-2 text-[var(--ink-3)]">
-          Showing
-          <b className="rounded-full bg-[var(--brand-soft,#eef3fc)] px-2.5 py-0.5 text-[var(--brand-ink,#1d3a8f)]">{isToday ? `Today · ${compactDay(date)}` : shortDay(date)}</b>
+          {t("p8ops.rtShowing")}
+          <b className="rounded-full bg-[var(--brand-soft,#eef3fc)] px-2.5 py-0.5 text-[var(--brand-ink,#1d3a8f)]">{isToday ? t("p8ops.rtTodayDate", { date: compactDay(date) }) : shortDay(date)}</b>
         </span>
         <div className="inline-flex items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 shadow-[0_1px_2px_rgba(20,30,60,.06)]">
-          <button type="button" onClick={() => setDate((d) => shiftDay(d, -1))} aria-label="Previous day" className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-2)] transition-colors hover:bg-[var(--panel)]">‹</button>
+          <button type="button" onClick={() => setDate((d) => shiftDay(d, -1))} aria-label={t("p8ops.rtPrevDay")} className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-2)] transition-colors hover:bg-[var(--panel)]">{isRTL(locale) ? "›" : "‹"}</button>
           <label className="relative inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 font-bold text-[var(--ink)] transition-colors hover:bg-[var(--panel)]">
             <span aria-hidden>📅</span>
             <span className="tabular-nums">{compactDay(date)}</span>
-            <input type="date" value={date} onClick={(e) => (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()} onChange={(e) => e.target.value && setDate(e.target.value)} className="absolute inset-0 cursor-pointer opacity-0" aria-label="Pick a date" />
+            <input type="date" value={date} onClick={(e) => (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()} onChange={(e) => e.target.value && setDate(e.target.value)} className="absolute inset-0 cursor-pointer opacity-0" aria-label={t("p8ops.rtPickDate")} />
           </label>
-          <button type="button" onClick={() => setDate((d) => shiftDay(d, 1))} aria-label="Next day" className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-2)] transition-colors hover:bg-[var(--panel)]">›</button>
-          {!isToday && <button type="button" onClick={() => setDate(todayIso())} className="ms-0.5 rounded-full bg-[var(--brand-2,#2f6bd8)] px-2.5 py-1 text-[11.5px] font-bold text-white">Today</button>}
+          <button type="button" onClick={() => setDate((d) => shiftDay(d, 1))} aria-label={t("p8ops.rtNextDay")} className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-2)] transition-colors hover:bg-[var(--panel)]">{isRTL(locale) ? "‹" : "›"}</button>
+          {!isToday && <button type="button" onClick={() => setDate(todayIso())} className="ms-0.5 rounded-full bg-[var(--brand-2,#2f6bd8)] px-2.5 py-1 text-[11.5px] font-bold text-white">{t("p8ops.dbToday")}</button>}
         </div>
       </div>
 
@@ -920,16 +926,16 @@ export function RatiosApp() {
           when there's a single timing, so it always states the day's hours. */}
       {ready && periods.length === 1 && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-[var(--panel)] px-3.5 py-2 text-[12px]">
-          <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">By time</span>
+          <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8ops.rtByTime")}</span>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 font-bold text-[var(--ink-2)]">
-            🕘 You have {periods[0].here} {periods[0].here === 1 ? "child" : "children"} in, {to12h(periods[0].start)}–{to12h(periods[0].end)}
+            {t("p8ops.rtYouHaveIn", { cnt: pickPlural(t, locale, "p8ops.rtChildN", periods[0].here), range: `${to12h(periods[0].start)}–${to12h(periods[0].end)}` })}
           </span>
-          <span className="ms-auto text-[10.5px] text-[var(--ink-3)]">split buttons appear once children arrive or leave at different times</span>
+          <span className="ms-auto text-[10.5px] text-[var(--ink-3)]">{t("p8ops.rtSplitHint")}</span>
         </div>
       )}
       {ready && periods.length > 1 && (
         <div className="mb-3 flex flex-wrap items-center gap-1.5 rounded-xl bg-[var(--panel)] px-3.5 py-2 text-[12px]">
-          <span className="me-0.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">By time</span>
+          <span className="me-0.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8ops.rtByTime")}</span>
           {[{ start: "", end: "", here: wholeDayCount, whole: true }, ...periods.map((p) => ({ ...p, whole: false }))].map((p) => {
             const k = p.whole ? "" : `${p.start}|${p.end}`;
             const on = activeKey === k;
@@ -937,21 +943,21 @@ export function RatiosApp() {
               <button key={k || "all"} type="button" onClick={() => setPeriod(k)}
                 className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-bold"
                 style={on ? { borderColor: "transparent", background: "var(--brand-2,#2f6bd8)", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
-                {p.whole ? "Whole day" : `${to12h(p.start)}–${to12h(p.end)}`}
+                {p.whole ? t("p8ops.rtWholeDay") : `${to12h(p.start)}–${to12h(p.end)}`}
                 <span className="rounded-full px-1.5 text-[10px] font-extrabold" style={{ background: on ? "rgba(255,255,255,.25)" : "var(--surface)", color: on ? "#fff" : "var(--ink-3)" }}>{p.here}</span>
               </button>
             );
           })}
-          <span className="ms-auto text-[10.5px] text-[var(--ink-3)]">shows who&rsquo;s on site in that window — the board &amp; ratios recheck for it</span>
+          <span className="ms-auto text-[10.5px] text-[var(--ink-3)]">{t("p8ops.rtWindowHint")}</span>
         </div>
       )}
 
       {/* Hero tiles */}
       {ready && (
         <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          <HeroTile icon="children" tint="#2f6bd8" label={activeKey ? `Children ${to12h(activeKey.split("|")[0])}–${to12h(activeKey.split("|")[1])}` : "Children on site"} value={children.length} sub={`across ${groupCount} group${groupCount === 1 ? "" : "s"}${sendCount ? ` · ${sendCount} SEND` : ""}`} />
-          <HeroTile icon="staff" tint="#6a4fd0" label="Staff on duty" value={cover.onDuty} sub={cover.needed > 0 ? `${cover.needed} needed · ${cover.within ? "within target ✓" : `${cover.needed - cover.onDuty} short`}` : "no staff needed"} />
-          <HeroTile icon="groups" tint="#1d3a8f" label="Groups today" value={groupCount} sub={groupCount ? "every child placed by age" : "no children in range"} />
+          <HeroTile icon="children" tint="#2f6bd8" label={activeKey ? t("p8ops.rtChildrenRange", { range: `${to12h(activeKey.split("|")[0])}–${to12h(activeKey.split("|")[1])}` }) : t("p8ops.rtChildrenOnSite")} value={children.length} sub={`${t("p8ops.rtAcrossGroups", { cnt: pickPlural(t, locale, "p8ops.rtGroupN", groupCount) })}${sendCount ? ` · ${t("p8ops.rtSendN", { n: sendCount })}` : ""}`} />
+          <HeroTile icon="staff" tint="#6a4fd0" label={t("p8ops.rtStaffOnDuty")} value={cover.onDuty} sub={cover.needed > 0 ? (cover.within ? t("p8ops.rtNeededWithin", { n: cover.needed }) : t("p8ops.rtNeededShort", { n: cover.needed, short: cover.needed - cover.onDuty })) : t("p8ops.rtNoStaffNeeded")} />
+          <HeroTile icon="groups" tint="#1d3a8f" label={t("p8ops.rtGroupsToday")} value={groupCount} sub={groupCount ? t("p8ops.rtEveryPlaced") : t("p8ops.rtNoChildrenRange")} />
         </div>
       )}
 
@@ -963,15 +969,15 @@ export function RatiosApp() {
 
       {/* Cover by group board — the day-to-day workspace */}
       {!ready ? (
-        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8ops.shLoading")}</div>
       ) : shown.length === 0 ? (
-        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">Nothing runs on {dayLabel(date)}{listing ? ` for ${listing}` : ""}.</Card>
+        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{listing ? t("p8ops.rtNothingRunsFor", { date: dayLabel(date), listing }) : t("p8ops.rtNothingRuns", { date: dayLabel(date) })}</Card>
       ) : (
         <CoverBoard date={date} isToday={isToday} dayChildren={children} groups={groups} staff={staffLib} onDay={(by) => setDate((d) => shiftDay(d, by))} onCover={setCover} listing={listing} seasonName={curSeasonName} />
       )}
 
       {/* Staff ratio calculator — occasional planning tool, kept at the bottom. */}
-      <RatioCalculator groups={groups} dayChildren={children} dateText={isToday ? "today" : dayLabel(date)} />
+      <RatioCalculator groups={groups} dayChildren={children} dateText={isToday ? t("p8ops.rtTodayLower") : dayLabel(date)} />
     </OperatorPage>
   );
 }
