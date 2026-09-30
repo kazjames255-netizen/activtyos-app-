@@ -353,6 +353,12 @@ registers.post("/:blockId/:date/mark", async (req, res) => {
     res.status(400).json({ error: `This block has no session on ${date}` });
     return;
   }
+  // A child can't be signed in or collected on a day that hasn't started — the mark is stamped with the server's clock, so a future-dated
+  // "in" would be a false record of who was on site (absent / reset for a future day stay allowed: that's an absence notice).
+  if ((parsed.data.action === "in" || parsed.data.action === "collect") && date > todayIso()) {
+    res.status(400).json({ error: "That session hasn't happened yet — you can't sign a child in or out for a future day." });
+    return;
+  }
   // Staff mark the registers for sessions they're on. When this session has
   // been rostered (shifts for its listing that day), a staff member who isn't
   // one of them can't mark it; leads and managers always can, and a session
