@@ -12,6 +12,7 @@ import em4 from "./p8em-parts/em4";
 import em5 from "./p8em-parts/em5";
 import em6 from "./p8em-parts/em6";
 import em7 from "./p8em-parts/em7";
+import ctpl from "./p8em-parts/ctpl";
 
 export default fromRows({
   ...common,
@@ -26,4 +27,5 @@ export default fromRows({
   ...em5,
   ...em6,
   ...em7,
+  ...ctpl,
 });
