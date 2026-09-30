@@ -1,0 +1,114 @@
+{
+ "agent": "P6",
+ "scope": "Platform/HQ portal: every nav view + action, live (browser via e2e-locked.sh + API)",
+ "at": "2026-09-30",
+ "views_swept": [
+  "analytics",
+  "tasks",
+  "testing",
+  "providers(+pricing)",
+  "engagement",
+  "at-risk",
+  "leads",
+  "venture-lakes",
+  "international-expansion",
+  "activly-site",
+  "sales(pipeline/dashboard/demo slots/video calls/import CSV)",
+  "features",
+  "ai",
+  "privacy(planned placeholder)",
+  "messages",
+  "support-review",
+  "email(planned placeholder)",
+  "open-account",
+  "bell",
+  "mobile 375px",
+  "authz matrix (parent/company/freelancer/staff/franchise/no-auth vs 12 GET + 11 write platform routes: all 403/401)"
+ ],
+ "fixed": [
+  {
+   "id": "P6-1",
+   "what": "Support: PUT /platform/support/:id accepted duplicateOf = itself or a nonexistent thread, and any category string (showed raw id as a bucket in Support review); HQ reply accepted whitespace-only body",
+   "fix": "validated server-side (400/404); reply trimmed",
+   "commit": "8562bacd, 4e4bcd6f"
+  },
+  {
+   "id": "P6-2",
+   "what": "Page engagement listed 'Dashboard' twice (view keys dash + dashboard) and 'Learninghub'",
+   "fix": "rows with the same label merged; label 'Learning hub'",
+   "commit": "4e4bcd6f"
+  },
+  {
+   "id": "P6-3",
+   "what": "HQ Tasks fired /api/listings and /api/bookings (tenant-only) -> 403 console errors",
+   "fix": "skipped for the platform portal",
+   "commit": "4e4bcd6f"
+  },
+  {
+   "id": "P6-4",
+   "what": "PUT /subscription/pricing accepted a catalogue missing (or repeating) freelancer/company/franchise",
+   "fix": "schema refine",
+   "commit": "875ecfc2"
+  },
+  {
+   "id": "P6-5",
+   "what": "Leads stage enum allowed 'interested' which the Sales board has no tab for (lead invisible)",
+   "fix": "removed from write enum",
+   "commit": "see git log"
+  },
+  {
+   "id": "P6-6",
+   "what": "HQ inbox: a thread with status in_progress showed 'Reopen' (couldn't be resolved) and was excluded from Open/Bug counts (inbox 7 vs support review 9)",
+   "fix": "anything not resolved is open",
+   "commit": "see git log"
+  },
+  {
+   "id": "P6-7",
+   "what": "PATCH /api/leads/:id on a missing id minted a phantom lead (inPipeline -> nameless Sales card)",
+   "fix": "404",
+   "commit": "see git log"
+  },
+  {
+   "id": "P6-8",
+   "what": "Prospective leads header said 'whole database' for the capped newest-5000 list (db is ~50k)",
+   "fix": "label says list is capped when server reports truncated",
+   "commit": "see git log"
+  },
+  {
+   "id": "P6-9",
+   "what": "Support review 'Manage categories' could be opened before categories loaded -> empty list, Save would wipe every category; inbox thread list overflowed at 375px",
+   "fix": "button disabled until loaded; grid-cols-[minmax(0,1fr)] on mobile",
+   "commit": "a9955224"
+  },
+  {
+   "id": "P6-10",
+   "what": "Demo slots: duplicate weekday+time templates (3x Mon 10:00 in live data) made the PUBLIC /api/demo-slots list the same slot 3 times (17 vs 14 unique); blackout accepted 2026-13-45; PATCH of a stale template id minted a half-empty template",
+   "fix": "public feed dedupes by iso; POST rejects duplicate (409); real-date check; PATCH 404",
+   "commit": "see git log"
+  },
+  {
+   "id": "P6-11",
+   "what": "HQ providers list did one Firebase Auth lookup per tenant (~138) for owner email",
+   "fix": "read from users collection, Auth only as fallback (identical output, verified 138/138 rows)",
+   "commit": "see git log"
+  },
+  {
+   "id": "P6-12",
+   "what": "Impersonation audit: only the 'open' click was logged; every change HQ made while acting as an account went unrecorded",
+   "fix": "non-GET requests under x-act-as now append to impersonationLog (verified)",
+   "commit": "see git log"
+  }
+ ],
+ "open": [
+  "MRR disagreement: Providers & billing 'Monthly recurring' = GBP 3,037 (falls back to catalogue price for tenants with no snapshotted price) vs Analytics MRR GBP 813 (only snapshotted prices). Product decision which is right.",
+  "Lead email is unvalidated (API + UI): 'not-an-email' saved; later demo-booked/answer emails silently no-op. Not fixed because PUT of an old lead re-sends its stored email and would start failing.",
+  "Existing duplicate demo-slot templates remain in live data (feed now dedupes, but Templates list shows dupes) - left for Kaz to tidy.",
+  "HQ bell poll (60s/tab) reads all tenants + all support threads + demo leads + tasks each time; a TTL cache doesn't help a single tab. Needs narrower queries or a slower poll (Firestore cost).",
+  "Providers & billing still shows 'Loading providers...' ~4s+ under load (full tenants/users/libraries reads).",
+  "Email and Data & privacy nav items are 'Planned' placeholders (deletion requests only surface in the bell/support).",
+  "Impersonation lets HQ perform writes as the tenant (by design) - now logged, but no read-only mode.",
+  "International Expansion is a static report with a frozen snapshot (50,489 leads / 0% contacted) that disagrees with the live Sales dashboard.",
+  "venture-lakes renders all 1,256 rows at once (~130k chars DOM)."
+ ],
+ "notes": "API dev server (tsx watch) restarts on any server edit; three sweep failures (connection refused) were caused by that and re-verified. A different agent's mid-edit TimeClockApp compile error stalled one run for 25 min (holding the e2e lock) - I added per-step timeouts afterwards. All throwaway data (leads, tasks, support threads, demo slot template, features toggle, at-risk contacted flag) removed/restored."
+}
