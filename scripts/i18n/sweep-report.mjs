@@ -4,7 +4,7 @@
 import fs from "node:fs"; import path from "node:path";
 const dir = process.argv[2]; const top = Number((process.argv.find((a) => a.startsWith("--top=")) || "--top=25").slice(6)); const pages = process.argv.includes("--pages");
 const DATA = /\bE2E\b|\bmun[a-z0-9]{4,}\b|@activityos-test/;
-const ALLOW = /\b(Activ|ActivityOS|Activly|Stripe|HMRC|DBS|Ofsted|PayPal|Xero|Sage|QuickBooks|WhatsApp|Google|Gmail|Trustpilot|PAYE|Tax-Free Childcare|KCSIE|SEND|EHCP|VAT|PDF|CSV|Excel|Word|Zoom|Meta|Facebook|Instagram|Canva)\b/g;
+const ALLOW = /\b(Activ|ActivityOS|Activly|Stripe|HMRC|DBS|Ofsted|PayPal|Xero|Sage|QuickBooks|WhatsApp|Google|Gmail|Trustpilot|PAYE|Tax-Free Childcare|KCSIE|SEND|EHCP|VAT|PDF|CSV|Excel|Word|Zoom|Meta|Facebook|Instagram|Canva|Teaching Hub|My Classroom)\b/g;
 const clean = (s) => (DATA.test(s) ? "" : s).replace(ALLOW, " ").replace(/\s+/g, " ").trim();
 const NON = new Set(["ur", "pa", "bn", "ar"]);
 const STOP = /\b(the|and|your|you|you're|to|for|with|of|is|are|this|that|from|in|on|no|not|yet|will|can|have|has|all|new|add|edit|delete|save|cancel|view|search|select)\b/i;

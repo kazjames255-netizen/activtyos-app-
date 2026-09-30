@@ -20,7 +20,9 @@ const STRICT = process.env.OVERNIGHT_STRICT === "1";
 const NON_LATIN = new Set(["ur", "pa", "bn", "ar"]);
 // Text the detector must not count as "untranslated English": this run's own test data, product/brand and official UK terms.
 const DATA = /\bE2E\b|\bmun[a-z0-9]{4,}\b|@activityos-test/;
-const ALLOW = /\b(Activ|ActivityOS|Activly|Stripe|HMRC|DBS|Ofsted|PayPal|Xero|Sage|QuickBooks|WhatsApp|Google|Gmail|Trustpilot|PAYE|Tax-Free Childcare|KCSIE|SEND|EHCP|VAT|PDF|CSV|Excel|Word|Zoom|Meta|Facebook|Instagram|Canva)\b/g;
+const ALLOW = /\b(Activ|ActivityOS|Activly|Stripe|HMRC|DBS|Ofsted|PayPal|Xero|Sage|QuickBooks|WhatsApp|Google|Gmail|Trustpilot|PAYE|Tax-Free Childcare|KCSIE|SEND|EHCP|VAT|PDF|CSV|Excel|Word|Zoom|Meta|Facebook|Instagram|Canva|Teaching Hub|My Classroom)\b/g;
+// Next.js dev-server / dev-tools noise that is not an application error.
+const NOISE = /Failed to execute 'measure' on 'Performance'|Router action dispatched before initialization|ResizeObserver loop/;
 const STOP = /\b(the|and|your|you|you're|to|for|with|of|is|are|this|that|from|in|on|no|not|yet|will|can|have|has|all|new|add|edit|delete|save|cancel|view|search|select)\b/i;
 const PUBLIC_PATHS = ["/login", "/signup", "/how-it-works", "/how-it-works/parent", "/how-it-works/operator", "/demo", "/no-such-page-xyz", "/pay/invalid-token", "/book/invalid-id", "/plan/invalid-id", "/reference/invalid-token", "/v/invalid-ref", "/store/invalid-tenant", "/call-ended"];
 
@@ -90,7 +92,7 @@ for (const loc of LOCALES) {
   if (ONLY.includes("public")) test(`overnight public ${loc}`, async ({ browser }) => {
     test.setTimeout(1_800_000);
     const ctx = await newCtx(browser, loc); const page = await ctx.newPage();
-    const errs: string[] = []; page.on("pageerror", (e) => errs.push(e.message.slice(0, 150)));
+    const errs: string[] = []; page.on("pageerror", (e) => { if (!NOISE.test(e.message)) errs.push(e.message.slice(0, 150)); });
     const res: any[] = []; const fails: string[] = [];
     for (const p of PUBLIC_PATHS) { try { await visit(page, { name: `public${p}`, url: p, loc }, errs, res); } catch (e) { fails.push(String((e as Error).message).split("\n")[0]); } }
     fs.mkdirSync(OUT, { recursive: true }); fs.writeFileSync(`${OUT}/public-${loc}.json`, JSON.stringify(res, null, 1));
@@ -101,7 +103,7 @@ for (const loc of LOCALES) {
     test(`overnight ${portal} ${loc}`, async ({ browser }) => {
       test.setTimeout(2_400_000);
       const ctx = await newCtx(browser, loc, statePath(ROLE[portal])); const page = await ctx.newPage();
-      const errs: string[] = []; page.on("pageerror", (e) => errs.push(e.message.slice(0, 150)));
+      const errs: string[] = []; page.on("pageerror", (e) => { if (!NOISE.test(e.message)) errs.push(e.message.slice(0, 150)); });
       // A stored state that has gone signed out (freelancer, 30 Sep): sign in through the real form with the manifest account.
       await page.goto(`/${portal}`, { waitUntil: "load" }).catch(() => undefined); await page.waitForTimeout(2500);
       if (/\/login/.test(page.url())) {
