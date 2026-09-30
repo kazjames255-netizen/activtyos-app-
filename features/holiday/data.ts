@@ -12,6 +12,7 @@
 // decides what this account is allowed to do (staff: ask for themselves,
 // cancel their own; managers: record, edit, decide).
 import { DEMO_STAFF } from "@/features/learning/credentials";
+import { tNow } from "@/lib/i18n/provider";
 import { api, get as apiGet, isDemoMode, post as apiPost, put as apiPut } from "@/lib/api";
 import {
   type Absence, type LeaveProfile, type HolidayPolicy, DEFAULT_POLICY,
@@ -34,7 +35,7 @@ const fail = (msg: string) => { if (typeof window !== "undefined") window.dispat
 export const loadPolicy = (): HolidayPolicy => ({ ...DEFAULT_POLICY, ...(read<Partial<HolidayPolicy>>(HOLIDAY_POLICY_KEY) || {}) });
 export const savePolicy = (p: HolidayPolicy) => {
   write(HOLIDAY_POLICY_KEY, p);
-  if (!isDemoMode()) void apiPut("/api/leave/config", { policy: p }).catch((e) => fail(e instanceof Error ? e.message : "Couldn't save the leave policy"));
+  if (!isDemoMode()) void apiPut("/api/leave/config", { policy: p }).catch((e) => fail(e instanceof Error ? e.message : tNow("p8wf.hlSavePolicyErr")));
 };
 
 // ── Profiles (per-employee allowance layer) ─────────────────────────────────
@@ -63,7 +64,7 @@ export const loadProfiles = (): LeaveProfile[] => {
 };
 export const saveProfiles = (p: LeaveProfile[]) => {
   write(HOLIDAY_PROFILES_KEY, p);
-  if (!isDemoMode()) void apiPut("/api/leave/config", { profiles: p }).catch((e) => fail(e instanceof Error ? e.message : "Couldn't save allowances"));
+  if (!isDemoMode()) void apiPut("/api/leave/config", { profiles: p }).catch((e) => fail(e instanceof Error ? e.message : tNow("p8wf.hlSaveAllowErr")));
 };
 
 // ── Absences ────────────────────────────────────────────────────────────────
@@ -170,7 +171,7 @@ function sendDiff(prev: Absence[], next: Absence[]) {
   // back on screen, and new requests pick up their real ids.
   void Promise.allSettled(ops).then((results) => {
     const bad = results.find((x) => x.status === "rejected") as PromiseRejectedResult | undefined;
-    if (bad) fail(bad.reason instanceof Error ? bad.reason.message : "Couldn't save that change");
+    if (bad) fail(bad.reason instanceof Error ? bad.reason.message : tNow("p8wf.hlSaveChangeErr"));
     return syncLeave();
   }).catch(() => {});
 }

@@ -16,6 +16,7 @@ import { isDemoMode } from "@/lib/api";
 import { getMe, peekMe } from "@/components/auth/PortalGuard";
 import { loadClock, type ClockRecord, hhmm as clockHhmm } from "@/features/timeclock/data";
 import { useTenantSettings } from "@/lib/settings";
+import { dateLocale as dl } from "@/lib/i18n/format";
 import { useI18n } from "@/lib/i18n/provider";
 
 type Tr = (key: string, vars?: Record<string, string | number>) => string;
@@ -62,8 +63,8 @@ function Ring({ value, total, label }: { value: number; total: number; label: st
 }
 
 export function MyHolidayApp() {
-  const { t, locale: appLocale } = useI18n();
-  const locale = appLocale === "en" ? "en-GB" : appLocale; // for dates — plain "en" formats US-style
+  const { t } = useI18n();
+  const locale = dl(); // BCP-47 tag for dates/numbers in the active language (en-GB, Latin digits for ar/ur/bn/pa)
   const [ME, setME] = useState<string>(() => (isDemoMode() ? DEMO_ME : ((peekMe() as { name?: string; email?: string } | null)?.name?.trim() || (peekMe() as { email?: string } | null)?.email || "")));
   const ME_ID = slug(ME || "me");
   const [profiles, setProfiles] = useState<LeaveProfile[]>([]);
