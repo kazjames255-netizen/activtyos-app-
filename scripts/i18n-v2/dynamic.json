@@ -1,0 +1,17 @@
+{
+ "js.loading-times": "Loading available times…",
+ "js.no-times": "No open times right now — leave your details and we'll reach out to find one.",
+ "js.book-my-call": "Book my call →",
+ "js.send-to-brand": "Send to {brand}",
+ "js.ph-anything-else": "Anything else we should know? (optional)",
+ "js.ph-your-question": "What's your question?",
+ "js.pick-a-time": "Pick a time above so we know when to call.",
+ "js.tick-one": "Tick at least one of \"What do you run?\" above.",
+ "js.sending": "Sending…",
+ "js.booked-confirm": "Booked — we'll email you a confirmation.",
+ "js.sent-touch": "Sent — we'll be in touch shortly.",
+ "js.send-failed": "Couldn't send that — please try again in a moment.",
+ "js.legal-notice": "Translation notice: this page has been translated for your convenience only. The English version is the legally binding version and prevails if there is any difference between the two.",
+ "js.pricing-notice": "Translation notice: this page has been translated for your convenience. The English version is the authoritative version of our prices and plan terms and prevails if there is any difference.",
+ "js.legal-notice-link": "Read the English version"
+}
