@@ -171,8 +171,8 @@ timeclock.post("/event", async (req, res) => {
   const self = await ownName(req.user?.uid);
   const onBehalf = canManage(auth.role) || auth.lead === true;
   const name = (onBehalf && p.name ? p.name : self).trim();
-  if (!name) { res.status(400).json({ error: "Your account has no name on it — ask your manager to add one in Team & invites." }); return; }
   if (auth.role === "staff" && !auth.lead && p.name && slug(p.name) !== slug(self)) { res.status(403).json({ error: "You can only clock yourself in and out." }); return; }
+  if (!name) { res.status(400).json({ error: "Your account has no name on it — ask your manager to add one in Team & invites." }); return; }
   const key = keyOf(auth.tenantId, auth.franchiseId);
   const id = slug(name);
   const ref = db.collection("clockRecords").doc(docId(key, p.day, id));
@@ -185,6 +185,8 @@ timeclock.post("/event", async (req, res) => {
     const r: ClockRecord = cur ? strip(cur) : { id, name, status: "out", breakMs: 0, events: [], day: p.day };
     r.events = [...(r.events ?? [])];
     if (p.role && !r.role) r.role = p.role;
+    // A manager-approved row feeds payroll: staff must not silently rewrite it (only a manager edits an approved day).
+    if (manual && r.approved) throw new BadCorrection("A manager has already approved that day. Ask your manager to change it.");
     if (manual && p.kind === "out") {
       if (!r.clockInAt) throw new BadCorrection("There's no clock-in on that day to clock out of.");
       if (!(Date.parse(now) > Date.parse(r.clockInAt))) throw new BadCorrection("Clock-out must be after your clock-in.");
@@ -227,8 +229,9 @@ timeclock.post("/event", async (req, res) => {
 timeclock.get("/review", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Only a manager can review staff corrections" }); return; }
-  const snap = await db.collection("clockRecords").where("key", "==", keyOf(auth.tenantId, auth.franchiseId)).where("day", ">=", ukTodayPlus(-15)).get();
-  res.json(snap.docs.map((d) => strip(d.data())).filter((r) => r.needsReview).sort((a, b) => a.day.localeCompare(b.day)));
+  const snap = await db.collection("clockRecords").where("key", "==", keyOf(auth.tenantId, auth.franchiseId)).where("needsReview", "==", true).get(); // two equalities: no composite index needed (key + a day range 500s without one)
+  const since = ukTodayPlus(-15);
+  res.json(snap.docs.map((d) => strip(d.data())).filter((r) => r.needsReview && r.day >= since).sort((a, b) => a.day.localeCompare(b.day)));
 });
 
 // PATCH /api/timeclock/:id?day= — a manager edits a timesheet row (times,
