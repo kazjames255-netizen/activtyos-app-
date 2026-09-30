@@ -73,7 +73,7 @@ function toRows(grid: string[][]): Row[] {
   return rows;
 }
 
-type Result = { created: number; invited: number; noEmail: number; failed: number };
+type Result = { created: number; invited: number; noEmail: number; failed: number; skipped: number };
 
 export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const t = useT();
@@ -102,7 +102,7 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
   async function run() {
     if (!rows.length) return;
     setRunning(true); setProgress(0); setResult(null);
-    let created = 0, invited = 0, noEmail = 0, failed = 0;
+    let created = 0, invited = 0, noEmail = 0, failed = 0, skipped = 0;
     for (const row of rows) {
       try {
         const body = { name: [row.firstName, row.lastName].filter(Boolean).join(" "), firstName: row.firstName, lastName: row.lastName, email: row.email, phone: row.phone, children: [] };
@@ -112,10 +112,13 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
           if (EMAIL_RE.test(row.email)) { try { await apiPost(`/api/customers/${encodeURIComponent(saved.id)}/invite`, {}); invited++; } catch { /* invite can be re-sent from the row */ } }
           else noEmail++;
         }
-      } catch { failed++; }
-      setProgress(created + failed);
+      } catch (e) {
+        // Already on the list (server: 409 duplicate_family) — not a failure, and not invited a second time.
+        if ((e as { body?: { code?: string } })?.body?.code === "duplicate_family") skipped++; else failed++;
+      }
+      setProgress(created + failed + skipped);
     }
-    setResult({ created, invited, noEmail, failed });
+    setResult({ created, invited, noEmail, failed, skipped });
     setRunning(false);
     onDone();
   }
@@ -140,6 +143,7 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
             <div className="mt-1 text-[var(--ink-2)]">
               {result.created} famil{result.created === 1 ? "y" : "ies"} added{result.invited ? ` · ${result.invited} sign-up invite${result.invited === 1 ? "" : "s"} sent` : ""}
               {result.noEmail ? ` · ${result.noEmail} had no email (added, not invited)` : ""}
+              {result.skipped ? ` · ${result.skipped} already on your list (skipped)` : ""}
               {result.failed ? ` · ${result.failed} failed` : ""}.
             </div>
             <div className="mt-3 text-end"><Button variant="primary" onClick={onClose}>{t("customers.close")}</Button></div>

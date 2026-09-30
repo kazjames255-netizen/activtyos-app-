@@ -282,7 +282,16 @@ customers.post("/", async (req, res) => {
   }
   // A family a franchise adds is that franchise's (the Families list shows a franchise
   // only its own); head office / freelancer records carry no franchiseId.
-  const doc = { ...withConsentStamp(parsed.data), tenantId: auth.tenantId, franchiseId: franchiseStamp({ role: auth.role, franchiseId: auth.franchiseId ?? null }) };
+  const doc = { ...withConsentStamp(parsed.data), email: parsed.data.email.trim().toLowerCase() /* stored lower-case so the duplicate check below (an indexed equality) is case-insensitive */, tenantId: auth.tenantId, franchiseId: franchiseStamp({ role: auth.role, franchiseId: auth.franchiseId ?? null }) };
+  // One family per email per book: adding (or re-importing a spreadsheet with) an address already on the list used to create a second
+  // record and re-send its sign-up invite. Compared case-insensitively, within the same franchise scope.
+  const emailKey = parsed.data.email.trim().toLowerCase();
+  if (emailKey) {
+    const variants = [...new Set([parsed.data.email.trim(), emailKey])];
+    const same = await Promise.all(variants.map((v) => col.where("tenantId", "==", auth.tenantId).where("email", "==", v).get()));
+    const dupe = same.flatMap((q) => q.docs).find((d) => ((d.data().franchiseId as string | null) ?? null) === (doc.franchiseId ?? null));
+    if (dupe) { res.status(409).json({ error: "That family is already on your list.", code: "duplicate_family", id: dupe.id }); return; }
+  }
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
