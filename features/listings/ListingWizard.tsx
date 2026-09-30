@@ -3560,16 +3560,17 @@ function resolveTheme(t?: string): PageTheme {
 // The colour-theme picker — lives in the listing editor (not on the preview), so
 // the parent only ever sees the chosen theme for that listing.
 function ThemePicker({ value, onChange }: { value: PageTheme; onChange: (t: PageTheme) => void }) {
+  const tr = useT();
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {Object.values(THEMES).map((t) => {
         const on = value === t.key;
         return (
-          <button key={t.key} type="button" onClick={() => onChange(t.key)} title={t.label}
+          <button key={t.key} type="button" onClick={() => onChange(t.key)} title={tr("p8lst.wbTheme_" + t.key)}
             className="flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-bold transition-all"
             style={on ? { borderColor: t.swatch, background: `${t.swatch}1f`, color: "var(--ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
             <span className="h-3.5 w-3.5 flex-none rounded-full ring-1 ring-black/10" style={{ background: t.swatch }} />
-            {t.label}{on ? " ✓" : ""}
+            {tr("p8lst.wbTheme_" + t.key)}{on ? " ✓" : ""}
           </button>
         );
       })}
@@ -3578,6 +3579,7 @@ function ThemePicker({ value, onChange }: { value: PageTheme; onChange: (t: Page
 }
 // Rolling hero carousel — auto-advances + arrows/dots when there's >1 photo.
 function HeroImages({ imgs, fallback }: { imgs: ListingImage[]; fallback: string }) {
+  const tr = useT();
   const [i, setI] = useState(0);
   const n = imgs.length;
   useEffect(() => {
@@ -3592,10 +3594,10 @@ function HeroImages({ imgs, fallback }: { imgs: ListingImage[]; fallback: string
       {imgs.map((im, idx) => <CroppedImage key={idx} im={im} className="absolute inset-0 h-full w-full transition-opacity duration-700" style={{ opacity: idx === cur ? 1 : 0 }} />)}
       {n > 1 && (
         <>
-          <button type="button" aria-label="Previous photo" onClick={() => setI((x) => (x - 1 + n) % n)} className="absolute start-2 top-1/2 z-[3] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-[18px] text-white backdrop-blur-sm hover:bg-black/55">‹</button>
-          <button type="button" aria-label="Next photo" onClick={() => setI((x) => (x + 1) % n)} className="absolute end-2 top-1/2 z-[3] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-[18px] text-white backdrop-blur-sm hover:bg-black/55">›</button>
+          <button type="button" aria-label={tr("p8lst.wbPrevPhoto")} onClick={() => setI((x) => (x - 1 + n) % n)} className="absolute start-2 top-1/2 z-[3] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-[18px] text-white backdrop-blur-sm hover:bg-black/55">‹</button>
+          <button type="button" aria-label={tr("p8lst.wbNextPhoto")} onClick={() => setI((x) => (x + 1) % n)} className="absolute end-2 top-1/2 z-[3] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-[18px] text-white backdrop-blur-sm hover:bg-black/55">›</button>
           <div className="absolute inset-x-0 bottom-3 z-[3] flex justify-center gap-1.5">
-            {imgs.map((_, idx) => <button key={idx} type="button" aria-label={`Photo ${idx + 1}`} onClick={() => setI(idx)} className="h-1.5 rounded-full transition-all" style={{ width: idx === cur ? 18 : 6, background: idx === cur ? "#fff" : "rgba(255,255,255,.55)" }} />)}
+            {imgs.map((_, idx) => <button key={idx} type="button" aria-label={tr("p8lst.wbPhotoN", { n: idx + 1 })} onClick={() => setI(idx)} className="h-1.5 rounded-full transition-all" style={{ width: idx === cur ? 18 : 6, background: idx === cur ? "#fff" : "rgba(255,255,255,.55)" }} />)}
           </div>
         </>
       )}
@@ -3711,7 +3713,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
                         <span className="block text-[11.5px] font-extrabold leading-tight" style={{ color: INKp }}>{p.name}</span>
                         {p.days ? <span className="text-[10px] font-semibold" style={{ color: MUTp }}>{pickPlural(tr, locale, "p7pg.daysN", p.days)}{canOpen ? " " + tr("p7pg.tapDetails") : ""}</span> : null}
                       </span>
-                      <span className="flex-none text-[13px] font-black tracking-[-0.01em]" style={{ color: DEEP, fontVariantNumeric: "tabular-nums" }}><span className="text-[8.5px] font-bold" style={{ color: MUTp }}>FROM </span>{money(p.price)}</span>
+                      <span className="flex-none text-[13px] font-black tracking-[-0.01em]" style={{ color: DEEP, fontVariantNumeric: "tabular-nums" }}><span className="text-[8.5px] font-bold uppercase" style={{ color: MUTp }}>{tr("p7bw.fromWord")} </span>{money(p.price)}</span>
                       {canOpen && <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full text-[12px] font-extrabold text-white transition-transform" style={{ background: BLUE, transform: isOpen ? "rotate(180deg)" : "none" }}>⌄</span>}
                     </button>
                     {isOpen && (
@@ -3971,7 +3973,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   going without being shown a running total. */}
               {d.showSpaces && (
               <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
-                <div className={lab} style={{ color: MUTs }}>spaces</div>
+                <div className={lab} style={{ color: MUTs }}>{tr("p8lst.wbSpacesLbl")}</div>
                 {(() => {
                   // Totals come from the real runs when there are any. They
                   // legitimately differ by scope: 20/day over ten days is 200
@@ -4052,7 +4054,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                       onClick={() => document.getElementById("aos-book")?.scrollIntoView({ behavior: "smooth", block: "center" })}
                       className="mt-2 w-full px-2 py-1.5 text-[11px] font-black uppercase tracking-[0.08em]"
                       style={{ background: LIME, color: INK }}>
-                      Join the waiting list
+                      {tr("p8lst.wbJoinWaitlist")}
                     </button>
                   ) : (
                     <div className="mt-1.5 text-[11px]" style={{ color: MUTs }}>{tr("p7pg.noWaitlist")}</div>
@@ -4068,7 +4070,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
               )}
               {passSummary.length > 0 && (
                 <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
-                  <div className={lab} style={{ color: MUTs }}>passes</div>
+                  <div className={lab} style={{ color: MUTs }}>{tr("p8lst.wbPassesLbl")}</div>
                   <div className="mt-1.5 flex flex-col gap-1">
                     {passesShown.map((pp) => {
                       const isOpen = openPass === pp.name;
@@ -4078,7 +4080,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                           <button type="button" onClick={() => canOpen && setOpenPass(isOpen ? null : pp.name)} className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-start">
                             <span className="min-w-0">
                               <span className={`block truncate text-[10.5px] font-bold text-white ${cond}`}>{pp.name}</span>
-                              {pp.days ? <span className="block whitespace-nowrap text-[9px]" style={{ color: MUTs }}>{pp.days} day{pp.days === 1 ? "" : "s"}{canOpen ? " · details" : ""}</span> : null}
+                              {pp.days ? <span className="block whitespace-nowrap text-[9px]" style={{ color: MUTs }}>{pickPlural(tr, locale, "p8lst.wbDaysN", pp.days)}{canOpen ? ` ${tr("p8lst.wbDetailsSfx")}` : ""}</span> : null}
                             </span>
                             <span className="flex flex-none items-center gap-1">
                               <b className="text-[12px] font-black" style={{ color: LIME, fontVariantNumeric: "tabular-nums" }}>{money(pp.price)}</b>
@@ -4102,7 +4104,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                 </div>
               )}
               <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
-                <div className={lab} style={{ color: MUTs }}>discounts</div>
+                <div className={lab} style={{ color: MUTs }}>{tr("p8lst.wbDiscountsLbl")}</div>
                 {live.length === 0 ? (
                   <div className="mt-1.5 text-[11.5px]" style={{ color: MUTs }}>{tr("p7pg.noneListing")}</div>
                 ) : (
@@ -4110,7 +4112,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                     {live.slice(0, 3).map((r) => (
                       <div key={r.id} className="flex items-start justify-between gap-2">
                         <span className="min-w-0">
-                          <span className="block text-[11px] leading-snug" style={{ color: "#c3ccdb" }}>{r.name.trim() || ruleSummary(r)}</span>
+                          <span className="block text-[11px] leading-snug" style={{ color: "#c3ccdb" }}>{r.name.trim() || ruleSummary(r, { tr, locale })}</span>
                           {/* Which tickets it covers — a rule on one pass shouldn't look universal. */}
                           <span className="block text-[9.5px]" style={{ color: MUTs }}>
                             {r.passNames.length === 0 ? tr("p7pg.allPasses") : r.passNames.join(", ")}
