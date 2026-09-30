@@ -131,7 +131,7 @@ export function TeamApp() {
     apiGet<Me>("/api/me").then(setMe).catch(() => {});
     apiGet<{ id: string; title?: string; name?: string; venueId?: string | null; seasonId?: string | null }[]>("/api/listings?mine=1").then((rows) => setListings(rows.map((r) => ({ id: r.id, title: r.title || r.name || "Untitled listing", venueId: r.venueId ?? null, seasonId: r.seasonId ?? null })))).catch(() => {});
     apiGet<{ venues?: Venue[] } | null>("/api/library").then((lib) => setVenues(lib?.venues ?? [])).catch(() => {});
-    apiGet<{ current: SubCurrent }>("/api/subscription").then((p) => setSub(p.current)).catch(() => {});
+    if (hoPortal !== "franchise") apiGet<{ current: SubCurrent }>("/api/subscription").then((p) => setSub(p.current)).catch(() => {}); // a franchise's plan is head office's: the API refuses it (403)
     refresh();
   }, [refresh]);
   useRealtime(["invites"], refresh);
