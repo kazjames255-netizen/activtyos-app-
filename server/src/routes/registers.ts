@@ -7,7 +7,7 @@ import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { franchiseListingIds } from "../lib/franchiseScope";
 import { staffSiteScope } from "../lib/siteScope";
 import { bookingExpectedOn, bookingRefOfKey, entryFor, registerRows } from "../lib/registerRows";
-import { ukToday } from "../lib/ukDate";
+import { ukToday, ukTodayPlus } from "../lib/ukDate";
 import { realPhone } from "../../../features/bookings/helpers";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -355,8 +355,8 @@ registers.post("/:blockId/:date/mark", async (req, res) => {
   }
   // A child can't be signed in or collected on a day that hasn't started — the mark is stamped with the server's clock, so a future-dated
   // "in" would be a false record of who was on site (absent / reset for a future day stay allowed: that's an absence notice).
-  if ((parsed.data.action === "in" || parsed.data.action === "collect") && date > todayIso()) {
-    res.status(400).json({ error: "That session hasn't happened yet — you can't sign a child in or out for a future day." });
+  if ((parsed.data.action === "in" || parsed.data.action === "collect") && date > ukTodayPlus(1)) { // +1: the device may be a time zone ahead of the UK
+    res.status(400).json({ error: "That session is more than a day away — you can't sign a child in or out that far ahead." });
     return;
   }
   // Staff mark the registers for sessions they're on. When this session has
