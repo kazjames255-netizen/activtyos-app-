@@ -112,10 +112,12 @@ test("Money out overview: 'spent this month' follows the cash basis (Pending isn
     for (let i = 0; i < 40 && same < 3; i++) { const v = await spent(); same = v === last ? same + 1 : 0; last = v; await page.waitForTimeout(700); }
     return last;
   };
-  await page.goto("/company/expenses");
-  const before = await settledSpent();
   const ids: string[] = [];
   try {
+    // An empty ledger shows an empty state instead of the overview tiles, so make sure there is at least one paid row first.
+    ids.push((await api("POST", "/api/expenses", { date: today, category: "P1fin", amount: 1, status: "paid" })).id);
+    await page.goto("/company/expenses");
+    const before = await settledSpent();
     ids.push((await api("POST", "/api/expenses", { date: today, category: "P1fin", amount: 77, status: "pending" })).id);
     await page.reload();
     expect(await settledSpent(), "a Pending £77 bill is owed, not spent").toBe(before);
