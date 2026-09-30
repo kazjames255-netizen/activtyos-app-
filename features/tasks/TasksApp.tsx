@@ -234,7 +234,7 @@ function QuickLinks({ tasks, me, onOpen }: { tasks: Task[]; me: string; onOpen: 
                     <span className="text-[11px] text-[#1d3a8f]">↗</span>
                   </a>
                   <button type="button" onClick={() => { onOpen(nt.id); setOpen(false); }} title={tr("p8lrn.tskOpenTask")} className="block w-full truncate rounded px-1 pb-0.5 text-start text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">
-                    📋 {names.slice(0, 2).join(", ")}{names.length > 2 ? ` +${names.length - 2}` : ""}{ts.length > 1 ? ` · ${ts.length} dates` : ""}{nt.due ? ` · next ${fmtDay(nt.due)}` : ""}
+                    📋 {names.slice(0, 2).join(", ")}{names.length > 2 ? ` +${names.length - 2}` : ""}{ts.length > 1 ? tr("p8lrn.tskDatesN", { n: ts.length }) : ""}{nt.due ? tr("p8lrn.tskNextDate", { date: fmtDay(nt.due) }) : ""}
                   </button>
                 </div>
               ); })}
@@ -462,7 +462,7 @@ export function TasksApp() {
     const m = new Map<string, { ref: string; sub: string }>();
     for (const b of bookings) {
       const kids = b.kids?.length ? b.kids : (b.child ? [{ name: b.child, age: undefined }] : []);
-      for (const k of kids) if (k.name && !m.has(k.name)) m.set(k.name, { ref: b.ref, sub: [k.age != null ? `age ${k.age}` : null, b.booker ? `parent ${b.booker}` : null, b.listing].filter(Boolean).join(" · ") });
+      for (const k of kids) if (k.name && !m.has(k.name)) m.set(k.name, { ref: b.ref, sub: [k.age != null ? tr("p8lrn.tskAgeN", { n: k.age }) : null, b.booker ? tr("p8lrn.tskParentName", { name: b.booker }) : null, b.listing].filter(Boolean).join(" · ") });
     }
     return [...m.entries()].map(([name, x]) => ({ name, ref: x.ref, sub: x.sub }));
   }, [bookings]);
@@ -477,7 +477,7 @@ export function TasksApp() {
       if (!cur) m.set(b.booker, { ref: b.ref, email: b.email, phone: b.phone, postcode: b.postcode, listings: b.listing ? [b.listing] : [] });
       else { if (b.listing && !cur.listings.includes(b.listing)) cur.listings.push(b.listing); if (!cur.postcode && b.postcode) cur.postcode = b.postcode; }
     }
-    return [...m.entries()].map(([name, x]) => ({ name, ref: x.ref, sub: [x.email, x.phone, x.postcode, x.listings.length ? `booked: ${x.listings.slice(0, 3).join(", ")}` : null].filter(Boolean).join(" · ") }));
+    return [...m.entries()].map(([name, x]) => ({ name, ref: x.ref, sub: [x.email, x.phone, x.postcode, x.listings.length ? tr("p8lrn.tskBookedList", { list: x.listings.slice(0, 3).join(", ") }) : null].filter(Boolean).join(" · ") }));
   }, [bookings]);
 
   const everything = useMemo(() => tasks ?? [], [tasks]);
@@ -630,8 +630,8 @@ export function TasksApp() {
       const hit = exact.length === 1 ? exact[0] : byFirst.length === 1 ? byFirst[0] : null;
       if (hit) { who = hit.name; whoEmail = hit.email || undefined; }
       else if (roster.length && !window.confirm(byFirst.length > 1
-        ? `"@${p.who}" matches more than one person (${byFirst.map((r) => r.name).join(", ")}). Save it for "${p.who}" anyway? Choose Cancel to type their full name.`
-        : `"@${p.who}" isn't anyone on your team. Save the task for "${p.who}" anyway?`)) return;
+        ? tr("p8lrn.tskWhoAmbiguous", { who: p.who ?? "", names: byFirst.map((r) => r.name).join(", ") })
+        : tr("p8lrn.tskWhoUnknown", { who: p.who ?? "" }))) return;
     }
     create({ t: p.t, who, ...(whoEmail ? { whoEmail } : {}), prio: p.prio ?? "med", link: p.link ?? null, due: qaDue || p.due || null, ...(p.urls ? { urls: p.urls.map((url) => ({ url, by: me, at })) } : {}) });
     setQa(""); setQaDue("");
@@ -1037,7 +1037,7 @@ function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task
           <div className="text-[8px] font-bold uppercase tracking-[0.1em] text-white/80">{mon}</div>
           <div className="text-[19px] font-extrabold">{Number(t.due.slice(-2))}</div>
           <div className="mt-0.5 text-[7.5px] font-bold uppercase tracking-wide text-white/85">{rel}</div>
-        </> : <div className="text-[9px] font-bold uppercase leading-tight tracking-wide text-white/90">No<br />date</div>}
+        </> : <div className="text-[9px] font-bold uppercase leading-tight tracking-wide text-white/90">{tr("p8lrn.tskNoDate")}</div>}
       </div>
       {/* Body — single row */}
       <div className="flex min-w-0 flex-1 items-center gap-2 px-2.5">
@@ -1872,7 +1872,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
           <div className="relative flex items-center gap-2">
             <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-white/75">{tr("p8lrn.tskColTask")}</span>
             {task.seriesId && <span className="rounded-full bg-white/18 px-2 py-0.5 text-[10.5px] font-extrabold ring-1 ring-white/25">🔁 {FREQ_WORD[task.seriesFreq ?? ""] ?? "Repeats"}</span>}
-            {task.spawn && <span className="rounded-full bg-[#fde68a] px-2 py-0.5 text-[10px] font-extrabold uppercase text-[#7c5a06]">auto</span>}
+            {task.spawn && <span className="rounded-full bg-[#fde68a] px-2 py-0.5 text-[10px] font-extrabold uppercase text-[#7c5a06]">{tr("p8lrn.tskAuto")}</span>}
             <button type="button" onClick={closeGuarded} aria-label={tr("p8lrn.gClose")} className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px] font-bold text-white ring-1 ring-white/30 transition hover:bg-white/30">×</button>
           </div>
           <input value={task.t} onChange={(e) => save({ t: e.target.value })} aria-label={tr("p7tk.ariaTaskTitle")}
