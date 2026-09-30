@@ -7,6 +7,8 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Button } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
+import { RichB } from "@/features/common/richB";
 import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
 import { StaffNotifyComposer } from "./StaffNotifyComposer";
@@ -53,6 +55,12 @@ const TPL: Record<Tpl, { label: string; color: string; hint: string }> = {
   newsletter: { label: "Newsletter", color: "#1d3a8f", hint: "A designed, multi-section update" },
 };
 const TPL_ORDER: Tpl[] = ["announce", "event", "reminder", "urgent", "celebrate", "booking"];
+// Display label/hint for a template (the English TPL.label stays for the emailed HTML / PDF export).
+type TFn = (k: string, v?: Record<string, string | number>) => string;
+const tplLabel = (t: TFn, k: Tpl) => t("p8em.nfTpl_" + k);
+const tplHint = (t: TFn, k: Tpl) => t("p8em.nfHint_" + k);
+// Stored audience labels are English; show them translated.
+const audShown = (t: TFn, label: string) => (label === "All families" ? t("p8em.nfAudAll") : label.startsWith("Listings: ") ? t("p8em.nfAudListings", { list: label.slice(10) }) : label);
 
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 
@@ -137,6 +145,7 @@ const draftFor = (tpl: Tpl, listings: { id: string; title: string }[]): Draft =>
 });
 
 export function NewsfeedApp() {
+  const t = useT();
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
@@ -166,8 +175,8 @@ export function NewsfeedApp() {
   const scopedFr = hoScope && hoScope !== HO_OWN ? hoScope : "";
 
   const refresh = useCallback(() => {
-    apiGet<Post[]>("/api/posts").then((p) => { setPosts(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-  }, []);
+    apiGet<Post[]>("/api/posts").then((p) => { setPosts(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : t("p8em.cLoadFailed")));
+  }, [t]);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing" })))).catch(() => {}); }, []);
@@ -199,14 +208,14 @@ export function NewsfeedApp() {
   // schedules, PDF and email hand-off don't (nothing hits families yet).
   function publish(d: Draft, channel: "page" | "email" | "both" | "download") {
     if (channel === "page" && d.when === "now") {
-      if (!d.title.trim() || !d.body.trim()) { setError("Add a title and a message."); return; }
-      setPending({ label: d.editId ? "Updating your post" : "Posting to the Newsfeed", run: () => commitPublish(d, channel) });
+      if (!d.title.trim() || !d.body.trim()) { setError(t("p8em.nfAddTitleMsg")); return; }
+      setPending({ label: d.editId ? t("p8em.nfUpdatingPost") : t("p8em.nfPostingToFeed"), run: () => commitPublish(d, channel) });
       return;
     }
     commitPublish(d, channel);
   }
   async function commitPublish(d: Draft, channel: "page" | "email" | "both" | "download") {
-    if (!d.title.trim() || !d.body.trim()) { setError("Add a title and a message."); return; }
+    if (!d.title.trim() || !d.body.trim()) { setError(t("p8em.nfAddTitleMsg")); return; }
     if (channel === "download") { printPost(d); return; }
     const chosen = d.audScope === "listing" ? listings.filter((l) => d.audIds.includes(l.id)) : [];
     const audLabel = d.audScope === "all" ? "All families" : `Listings: ${chosen.map((l) => l.title).join(", ") || "—"}`;
@@ -236,28 +245,28 @@ export function NewsfeedApp() {
         setDraft(null); router.push(`/${portal}/email`); return;
       }
       setDraft(null); setError(null); refresh();
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t post"); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("p8em.nfCouldntPost")); }
   }
   const patch = async (id: string, f: Partial<Post>) => {
     setPosts((ps) => (ps ?? []).map((p) => (p.id === id ? { ...p, ...f } : p)));
-    try { await api(`/api/posts/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(f) }); } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); refresh(); }
+    try { await api(`/api/posts/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(f) }); } catch (e) { setError(e instanceof Error ? e.message : t("p8em.nfCouldntSave")); refresh(); }
   };
   // Delete a folder = un-file everything in it (posts are NOT deleted, just moved
   // to Unfiled). Confirmed first because it touches several posts at once.
   const deleteFolder = (f: string) => {
     const inside = all.filter((p) => (p.folder ?? "") === f);
-    if (!confirm(`Delete the folder “${f}”?\n\nThe ${inside.length} item${inside.length === 1 ? "" : "s"} inside will move to Unfiled — they won’t be deleted.`)) return;
+    if (!confirm(t("p8em.nfDeleteFolderConfirm", { folder: f, n: inside.length }))) return;
     inside.forEach((p) => patch(p.id, { folder: "" }));
     if (folderFilter === f) setFolderFilter("");
   };
   async function remove(p: Post) {
-    if (!confirm("Delete this post? Families will no longer see it.")) return;
+    if (!confirm(t("p8em.nfDeletePostConfirm"))) return;
     try { await api(`/api/posts/${encodeURIComponent(p.id)}`, { method: "DELETE" }); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p8em.nfFailed")); }
   }
   function saveNewsletter(nl: Newsletter, meta: NlMeta, channel: "page" | "email" | "both", editId?: string) {
     if (channel === "page" && meta.when === "now") {
-      setPending({ label: editId ? "Updating your newsletter" : "Posting to the Newsfeed", run: () => commitNewsletter(nl, meta, channel, editId) });
+      setPending({ label: editId ? t("p8em.nfUpdatingNl") : t("p8em.nfPostingToFeed"), run: () => commitNewsletter(nl, meta, channel, editId) });
       return;
     }
     commitNewsletter(nl, meta, channel, editId);
@@ -290,7 +299,7 @@ export function NewsfeedApp() {
         setNlOpen(null); router.push(`/${portal}/email`); return;
       }
       setNlOpen(null); setError(null); refresh();
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save the newsletter"); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("p8em.nfCouldntSaveNl")); }
   }
   const metaFromPost = (p: Post): NlMeta => ({ ...newMeta(), name: p.title ?? "", folder: p.folder ?? "", audScope: p.audience === "listing" ? "listing" : "all", audIds: p.audIds ?? (p.audId ? [p.audId] : []), pinned: !!p.pinned, ackRequired: !!p.ackRequired, react: p.react !== false, priority: p.priority ?? "normal" });
   const draftFromPost = (p: Post): Draft => ({
@@ -320,17 +329,17 @@ export function NewsfeedApp() {
       ...(p.tpl === "newsletter" && p.newsletter ? { newsletter: p.newsletter } : {}),
     };
     try { await apiPost("/api/posts", payload); setFilter("draft"); setFolderFilter(""); setError(null); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t duplicate"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p8em.tplDupFailed")); }
   };
 
-  if (!posts) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">Loading the newsfeed…</div></div>;
+  if (!posts) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8em.nfLoading")}</div></div>;
 
-  const kpis: [string, number][] = [["Published", live.length], ["Pinned", pinnedCount], ["Scheduled", scheduledCount]];
+  const kpis: [string, number][] = [[t("p8em.nfPublished"), live.length], [t("p8em.cPinned"), pinnedCount], [t("p8em.nfScheduled"), scheduledCount]];
 
   // Parents (this newsfeed) vs Staff (internal notices → their Announcements board).
   const audienceSwitch = (
     <div className="mb-3.5 inline-flex rounded-full border border-[#E4E9F5] bg-[var(--surface)] p-1 shadow-sm">
-      {([["parents", "👪 To parents"], ["staff", "🧑‍🏫 To staff"]] as const).map(([a, label]) => (
+      {([["parents", t("p8em.nfToParents")], ["staff", t("p8em.nfToStaff")]] as const).map(([a, label]) => (
         <button key={a} type="button" onClick={() => setAudience(a)} className={"rounded-full px-4 py-1.5 text-[12.5px] font-extrabold transition-colors " + (audience === a ? "bg-[#1d3a8f] text-white" : "text-[var(--ink-3)] hover:text-[var(--ink)]")}>{label}</button>
       ))}
     </div>
@@ -340,8 +349,8 @@ export function NewsfeedApp() {
     return (
       <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
         <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
-          <div className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Notifications</div>
-          <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">Send updates to families or to your own team. Staff notices land on every team member’s Announcements board — never seen by parents.</p>
+          <div className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8em.nfNotifications")}</div>
+          <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">{t("p8em.nfNotifSub")}</p>
         </div>
         {audienceSwitch}
         <StaffNotifyComposer listings={listings} authorName={settings.providerName || settings.billing?.businessName} />
@@ -356,10 +365,10 @@ export function NewsfeedApp() {
       {/* Hero */}
       <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Newsfeed</div>
+          <div className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8em.nfTitle")}</div>
           <div className="flex flex-none flex-wrap items-center gap-2"><TourLauncher view="newsfeed" compact /><SettingsLink /></div>
         </div>
-        <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">Post an update and every family with a booking sees it in their app — from a quick reminder to an event with RSVPs or an urgent closure.</p>
+        <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">{t("p8em.nfHeroSub")}</p>
         <div className="mt-3.5 flex flex-wrap gap-2.5">
           {kpis.map(([label, n]) => (
             <div key={label} className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none" style={{ fontVariantNumeric: "tabular-nums" }}>{n}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{label}</div></div>
@@ -372,14 +381,14 @@ export function NewsfeedApp() {
       {canManage && (
         <div className="mb-4 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">
           <div className="mb-2 flex items-center justify-between">
-            <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">New post — pick a type</div>
-            <button type="button" onClick={() => setNlOpen({})} className="rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition hover:-translate-y-px">✨ Design a newsletter</button>
+            <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.nfPickType")}</div>
+            <button type="button" onClick={() => setNlOpen({})} className="rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition hover:-translate-y-px">{t("p8em.nfDesignNl")}</button>
           </div>
           <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
             {TPL_ORDER.map((k) => (
               <button key={k} type="button" onClick={() => setDraft({ ...draftFor(k, listings), frTarget: scopedFr })} className="flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-start transition hover:-translate-y-0.5 hover:shadow-md" style={{ borderColor: `${TPL[k].color}44`, background: `${TPL[k].color}0c` }}>
-                <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: TPL[k].color, color: "#fff" }}>{TPL[k].label}</span>
-                <span className="text-[10.5px] text-[var(--ink-3)]">{TPL[k].hint}</span>
+                <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: TPL[k].color, color: "#fff" }}>{tplLabel(t, k)}</span>
+                <span className="text-[10.5px] text-[var(--ink-3)]">{tplHint(t, k)}</span>
               </button>
             ))}
           </div>
@@ -388,36 +397,36 @@ export function NewsfeedApp() {
 
       {/* Filters + quick search */}
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
-        {([["all", "All"], ...TPL_ORDER.map((k) => [k, TPL[k].label] as const), ["newsletter", "Newsletter"], ["draft", "Drafts"], ["scheduled", "Scheduled"], ["archived", "Archived"]] as [typeof filter, string][]).map(([k, label]) => (
+        {([["all", t("p8em.cAll")], ...TPL_ORDER.map((k) => [k, tplLabel(t, k)] as const), ["newsletter", t("p8em.nfTpl_newsletter")], ["draft", t("p8em.nfDrafts")], ["scheduled", t("p8em.nfScheduled")], ["archived", t("p8em.nfArchived")]] as [typeof filter, string][]).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setFilter(k)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={filter === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
         ))}
         <div className="relative ms-auto">
           <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search posts…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1 ps-7 pe-7 text-[12px] text-[var(--ink)] outline-none focus:border-[color:var(--brand,#1d3a8f)]" />
-          {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="absolute end-2 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">×</button>}
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("p8em.nfSearchPh")} className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1 ps-7 pe-7 text-[12px] text-[var(--ink)] outline-none focus:border-[color:var(--brand,#1d3a8f)]" />
+          {query && <button type="button" onClick={() => setQuery("")} aria-label={t("p8em.nfClearSearch")} className="absolute end-2 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">×</button>}
         </div>
       </div>
       {folders.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Folders</span>
-          <button type="button" onClick={() => { setFolderFilter(""); setFolderKind("all"); }} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={!folderFilter ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>All</button>
+          <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.nfFolders")}</span>
+          <button type="button" onClick={() => { setFolderFilter(""); setFolderKind("all"); }} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={!folderFilter ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t("p8em.cAll")}</button>
           {folders.map((f) => (
             <span key={f} className="inline-flex items-center overflow-hidden rounded-full border" style={folderFilter === f ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
               <button type="button" onClick={() => { setFolderFilter(folderFilter === f ? "" : f); setFolderKind("all"); }} className="py-1 ps-2.5 pe-1.5 text-[11.5px] font-bold">📁 {f}</button>
-              {canManage && <button type="button" onClick={() => deleteFolder(f)} title={`Delete folder “${f}”`} aria-label={`Delete folder ${f}`} className="py-1 ps-1 pe-2 text-[11px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}
+              {canManage && <button type="button" onClick={() => deleteFolder(f)} title={t("p8em.nfDeleteFolderTitle", { folder: f })} aria-label={t("p8em.nfDeleteFolderTitle", { folder: f })} className="py-1 ps-1 pe-2 text-[11px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}
             </span>
           ))}
         </div>
       )}
       {folderFilter && (
         <div className="mb-3 -mt-1 flex flex-wrap items-center gap-1.5 ps-1">
-          <span className="text-[11px] font-bold text-[var(--ink-3)]">In “{folderFilter}”:</span>
-          {([["all", "All"], ["post", "Posts"], ["newsletter", "Newsletters"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setFolderKind(k)} className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold" style={folderKind === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+          <span className="text-[11px] font-bold text-[var(--ink-3)]">{t("p8em.nfInFolder", { folder: folderFilter })}</span>
+          {([["all", t("p8em.cAll")], ["post", t("p8em.nfPosts")], ["newsletter", t("p8em.nfNewsletters")]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setFolderKind(k)} className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold" style={folderKind === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
         </div>
       )}
 
       {shown.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">{query.trim() ? `No posts match “${query.trim()}”.` : `Nothing here yet — ${canManage ? "pick a post type above to write your first update." : "your provider hasn’t posted yet."}`}</div>
+        <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">{query.trim() ? t("p8em.nfNoMatch", { q: query.trim() }) : canManage ? t("p8em.nfEmptyManage") : t("p8em.nfEmptyParent")}</div>
       ) : (
         <div className="grid items-start gap-3 md:grid-cols-2">
           {shown.map((p) => <PostCard key={p.id} p={p} canManage={canManage} folders={folders} onMove={(f) => patch(p.id, { folder: f || undefined })} onEdit={() => (p.tpl === "newsletter" && p.newsletter ? setNlOpen({ initial: p.newsletter, editId: p.id, meta: metaFromPost(p) }) : editPost(p))} onDuplicate={() => duplicate(p)} onPin={() => patch(p.id, { pinned: !p.pinned })} onArchive={() => patch(p.id, { status: p.status === "archived" ? "published" : "archived" })} onDelete={() => remove(p)} />)}
@@ -434,10 +443,11 @@ export function NewsfeedApp() {
 // A big, unmissable 5-second countdown before anything goes live to families.
 // Tap Cancel any time in those 5 seconds and nothing is sent.
 function PostCountdown({ label, onSend, onCancel }: { label: string; onSend: () => void; onCancel: () => void }) {
+  const t = useT();
   const [left, setLeft] = useState(5);
   useEffect(() => {
-    const t = setInterval(() => setLeft((n) => (n <= 1 ? 0 : n - 1)), 1000);
-    return () => clearInterval(t);
+    const iv = setInterval(() => setLeft((n) => (n <= 1 ? 0 : n - 1)), 1000);
+    return () => clearInterval(iv);
   }, []);
   useEffect(() => { if (left === 0) onSend(); }, [left, onSend]);
   return (
@@ -453,60 +463,62 @@ function PostCountdown({ label, onSend, onCancel }: { label: string; onSend: () 
           <span className="text-[110px] font-black leading-none text-white" style={{ fontVariantNumeric: "tabular-nums" }}>{left}</span>
         </div>
       </div>
-      <div className="text-[14px] text-white/85">Going to families in <b>{left}</b> second{left === 1 ? "" : "s"}…</div>
-      <button type="button" onClick={onCancel} className="mt-6 rounded-full bg-[var(--surface)] px-10 py-4 text-[18px] font-black text-[#2f5fd0] shadow-xl transition hover:scale-105 active:scale-95">✋ Cancel</button>
-      <div className="mt-3 text-[12px] text-white/60">Tap Cancel to stop — nothing is sent until the count reaches zero.</div>
+      <div className="text-[14px] text-white/85"><RichB text={t("p8em.nfGoingIn", { n: left })} /></div>
+      <button type="button" onClick={onCancel} className="mt-6 rounded-full bg-[var(--surface)] px-10 py-4 text-[18px] font-black text-[#2f5fd0] shadow-xl transition hover:scale-105 active:scale-95">{t("p8em.nfCancelCountdown")}</button>
+      <div className="mt-3 text-[12px] text-white/60">{t("p8em.nfCancelHint")}</div>
     </div>
   );
 }
 
 function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onPin, onArchive, onDelete }: { p: Post; canManage: boolean; folders?: string[]; onMove?: (f: string) => void; onEdit: () => void; onDuplicate: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void }) {
+  const t = useT();
   const tpl = TPL[p.tpl ?? "announce"];
+  const tplName = tplLabel(t, p.tpl ?? "announce");
   // One clear line saying who this was shared to and when (or its pre-share state).
-  const audience = p.audLabel || (p.audience === "listing" ? "Chosen listings" : "All families");
+  const audience = p.audLabel ? audShown(t, p.audLabel) : (p.audience === "listing" ? t("p8em.nfAudChosen") : t("p8em.nfAudAll"));
   const sharedLine = p.status === "draft"
-    ? <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[10px] font-extrabold text-[#92600a]">📝 Draft — not shared yet</span>
+    ? <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[10px] font-extrabold text-[#92600a]">{t("p8em.nfDraftNotShared")}</span>
     : p.status === "scheduled"
-    ? <span className="rounded-full bg-[#efeaff] px-2 py-0.5 text-[10px] font-extrabold text-[#5b3fd8]">⏰ Will share to {audience} · {p.publishAt || "later"}</span>
+    ? <span className="rounded-full bg-[#efeaff] px-2 py-0.5 text-[10px] font-extrabold text-[#5b3fd8]">{t("p8em.nfWillShare", { aud: audience, when: p.publishAt || t("p8em.nfLater") })}</span>
     : p.status === "archived"
-    ? <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-3)]">🗄 Was shared to {audience} · {when(p.createdAt)}</span>
-    : <span className="rounded-full bg-[#e7f6ee] px-2 py-0.5 text-[10px] font-extrabold text-[#0f8a4a]">✅ Shared to {audience} · {when(p.createdAt)}</span>;
+    ? <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-3)]">{t("p8em.nfWasShared", { aud: audience, when: when(p.createdAt) })}</span>
+    : <span className="rounded-full bg-[#e7f6ee] px-2 py-0.5 text-[10px] font-extrabold text-[#0f8a4a]">{t("p8em.nfShared", { aud: audience, when: when(p.createdAt) })}</span>;
   // Who sent it + where it landed across the network (HO / franchise posts only).
   const frBadge = (p.authorScope === "network" || p.authorScope === "franchise") ? (
     <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-[10px] font-extrabold text-[#3730a3]">
-      📣 {p.authorLabel || "Head office"}
-      {p.authorScope === "network" ? " → All franchises across the network" : p.targetName ? ` → ${p.targetName}` : ""}
+      📣 {p.authorLabel || t("p8em.nfHeadOffice")}
+      {p.authorScope === "network" ? ` → ${t("p8em.snAllNetwork")}` : p.targetName ? ` → ${p.targetName}` : ""}
     </span>
   ) : null;
   const manageBar = canManage && (
     <span className="ms-auto flex flex-wrap items-center gap-1.5">
-      <button type="button" onClick={onPin} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.pinned ? "Unpin" : "Pin"}</button>
-      <button type="button" onClick={onEdit} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button>
-      <button type="button" onClick={onDuplicate} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Duplicate</button>
-      <button type="button" onClick={onArchive} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.status === "archived" ? "Restore" : "Archive"}</button>
-      <button type="button" onClick={onDelete} className="rounded-md border border-[#f6c9cc] px-2 py-0.5 text-[10.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button>
+      <button type="button" onClick={onPin} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.pinned ? t("p8em.nfUnpin") : t("p8em.nfPin")}</button>
+      <button type="button" onClick={onEdit} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.cEdit")}</button>
+      <button type="button" onClick={onDuplicate} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.cDuplicate")}</button>
+      <button type="button" onClick={onArchive} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.status === "archived" ? t("p8em.nfRestore") : t("p8em.nfArchive")}</button>
+      <button type="button" onClick={onDelete} className="rounded-md border border-[#f6c9cc] px-2 py-0.5 text-[10.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">{t("p8em.cDelete")}</button>
     </span>
   );
   if (p.tpl === "newsletter" && p.newsletter) {
     return (
       <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
         <div className="flex flex-wrap items-center gap-1.5 px-3.5 pt-3">
-          <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: `${tpl.color}18`, color: tpl.color }}>Newsletter</span>
+          <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: `${tpl.color}18`, color: tpl.color }}>{t("p8em.nfTpl_newsletter")}</span>
           {p.folder && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-2)]">📁 {p.folder}</span>}
-          {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10px] font-extrabold text-[#8a6d1a]">Pinned</span>}
+          {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10px] font-extrabold text-[#8a6d1a]">{t("p8em.cPinned")}</span>}
           {frBadge}
           {sharedLine}
         </div>
         {p.title && <div className="px-3.5 pt-2 text-[15px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>🔖 {p.title}</div>}
         <div className="p-3.5 pt-2"><NewsletterView data={p.newsletter} /></div>
         <div className="flex flex-wrap items-center gap-3 border-t border-[var(--line)] px-3.5 py-2 text-[11px] text-[var(--ink-3)]">
-          <span>{p.postedByName} · {when(p.createdAt)}{p.editedAt ? " · edited" : ""}</span>
+          <span>{p.postedByName} · {when(p.createdAt)}{p.editedAt ? t("p8em.nfEdited") : ""}</span>
           {p.ref && <span className="rounded bg-[var(--panel)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink-2)]">🔖 {p.ref}</span>}
-          <span>Seen {p.seen ?? 0} · ♥ {p.reactions ?? 0}</span>
+          <span>{t("p8em.nfSeen", { n: p.seen ?? 0 })} · ♥ {p.reactions ?? 0}</span>
           {canManage && onMove && (
             <label className="flex items-center gap-1">📁
               <select value={p.folder ?? ""} onChange={(e) => onMove(e.target.value)} className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] outline-none">
-                <option value="">Unfiled</option>
+                <option value="">{t("p8em.nfUnfiled")}</option>
                 {folders.map((f) => <option key={f} value={f}>{f}</option>)}
               </select>
             </label>
@@ -524,10 +536,10 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
         : <div className="h-1.5 w-full" style={{ background: accent }} />}
       <div className="p-4">
         <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-          <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide text-white" style={{ background: accent }}>{tpl.label}</span>
-          {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10.5px] font-extrabold text-[#8a6d1a]">Pinned</span>}
-          {p.priority === "urgent" && <span className="rounded-full bg-[#fde2e4] px-2 py-0.5 text-[10.5px] font-extrabold text-[#c02636]">Urgent</span>}
-          {p.ackRequired && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">Acknowledge</span>}
+          <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide text-white" style={{ background: accent }}>{tplName}</span>
+          {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10.5px] font-extrabold text-[#8a6d1a]">{t("p8em.cPinned")}</span>}
+          {p.priority === "urgent" && <span className="rounded-full bg-[#fde2e4] px-2 py-0.5 text-[10.5px] font-extrabold text-[#c02636]">{t("p8em.cUrgent")}</span>}
+          {p.ackRequired && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">{t("p8em.nfAck")}</span>}
           {frBadge}
           <span className="ms-auto">{sharedLine}</span>
         </div>
@@ -540,21 +552,21 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
         {p.cta && <div className="mt-2.5"><span className="inline-flex rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm" style={{ background: accent }}>{p.cta.label} →</span></div>}
 
         <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[var(--line)] pt-2.5 text-[11px] text-[var(--ink-3)]">
-          <span>{p.postedByName} · {when(p.createdAt)}{p.editedAt ? " · edited" : ""}</span>
+          <span>{p.postedByName} · {when(p.createdAt)}{p.editedAt ? t("p8em.nfEdited") : ""}</span>
           {p.ref && <span className="rounded bg-[var(--panel)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink-2)]">🔖 {p.ref}</span>}
           <span className="flex items-center gap-2.5">
-            <span title="Seen / acknowledged">Seen {p.seen ?? 0}</span>
-            {p.react !== false && <span title="Reactions">♥ {p.reactions ?? 0}</span>}
-            {p.rsvp && <span title="RSVPs">Going {p.rsvp.yes} · Maybe {p.rsvp.maybe} · No {p.rsvp.no}</span>}
+            <span title={t("p8em.nfSeenTitle")}>{t("p8em.nfSeen", { n: p.seen ?? 0 })}</span>
+            {p.react !== false && <span title={t("p8em.nfReactions")}>♥ {p.reactions ?? 0}</span>}
+            {p.rsvp && <span title={t("p8em.nfRsvps")}>{t("p8em.nfRsvpLine", { yes: p.rsvp.yes, maybe: p.rsvp.maybe, no: p.rsvp.no })}</span>}
           </span>
           {canManage && (
             <span className="ms-auto flex flex-wrap items-center gap-1.5">
-              {onMove && <label className="flex items-center gap-1">📁<select value={p.folder ?? ""} onChange={(e) => onMove(e.target.value)} className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] outline-none"><option value="">Unfiled</option>{folders.map((f) => <option key={f} value={f}>{f}</option>)}</select></label>}
-              <button type="button" onClick={onPin} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.pinned ? "Unpin" : "Pin"}</button>
-              <button type="button" onClick={onEdit} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button>
-              <button type="button" onClick={onDuplicate} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Duplicate</button>
-              <button type="button" onClick={onArchive} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.status === "archived" ? "Restore" : "Archive"}</button>
-              <button type="button" onClick={onDelete} className="rounded-md border border-[#f6c9cc] px-2 py-0.5 text-[10.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button>
+              {onMove && <label className="flex items-center gap-1">📁<select value={p.folder ?? ""} onChange={(e) => onMove(e.target.value)} className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] outline-none"><option value="">{t("p8em.nfUnfiled")}</option>{folders.map((f) => <option key={f} value={f}>{f}</option>)}</select></label>}
+              <button type="button" onClick={onPin} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.pinned ? t("p8em.nfUnpin") : t("p8em.nfPin")}</button>
+              <button type="button" onClick={onEdit} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.cEdit")}</button>
+              <button type="button" onClick={onDuplicate} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.cDuplicate")}</button>
+              <button type="button" onClick={onArchive} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.status === "archived" ? t("p8em.nfRestore") : t("p8em.nfArchive")}</button>
+              <button type="button" onClick={onDelete} className="rounded-md border border-[#f6c9cc] px-2 py-0.5 text-[10.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">{t("p8em.cDelete")}</button>
             </span>
           )}
         </div>
@@ -565,9 +577,10 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
 
 // Live preview of the post exactly as a family sees it.
 function PostPreview({ d }: { d: Draft }) {
+  const t = useT();
   const tpl = TPL[d.tpl];
   const accent = d.colour || tpl.color;
-  const tag = <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide text-white" style={{ background: accent }}>{tpl.label}</span>;
+  const tag = <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide text-white" style={{ background: accent }}>{tplLabel(t, d.tpl)}</span>;
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
       {d.image
@@ -576,16 +589,17 @@ function PostPreview({ d }: { d: Draft }) {
       <div className="p-4">
         <div className="mb-1.5">{tag}</div>
         {d.title && <div className="text-[19px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{d.title}</div>}
-        <div className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-[var(--ink-2)]">{d.body || "Your message…"}</div>
+        <div className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-[var(--ink-2)]">{d.body || t("p8em.nfYourMessage")}</div>
         {d.tpl === "event" && (d.date || d.time || d.location) && <div className="mt-2.5 inline-flex flex-wrap items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-bold text-white" style={{ background: accent }}>{[d.date, d.time, d.location].filter(Boolean).join(" · ")}</div>}
         {d.ctaKind !== "none" && d.ctaLabel && <div className="mt-2.5"><span className="inline-flex rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm" style={{ background: accent }}>{d.ctaLabel} →</span></div>}
-        <div className="mt-2.5"><span className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)]">💬 Message us for more info</span></div>
+        <div className="mt-2.5"><span className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)]">{t("p8em.nfMsgUs")}</span></div>
       </div>
     </div>
   );
 }
 
 function Composer({ draft, setDraft, listings, folders = [], franchises = [], onClose, onPublish }: { draft: Draft; setDraft: (d: Draft) => void; listings: { id: string; title: string }[]; folders?: string[]; franchises?: { franchiseId: string; name: string; area: string | null }[]; onClose: () => void; onPublish: (d: Draft, channel: "page" | "email" | "both" | "download") => void }) {
+  const t = useT();
   const tpl = TPL[draft.tpl];
   const set = (f: Partial<Draft>) => setDraft({ ...draft, ...f });
   const inputCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]";
@@ -598,7 +612,7 @@ function Composer({ draft, setDraft, listings, folders = [], franchises = [], on
       const dataUrl = await downscaleImage(file);
       const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl });
       set({ image: url, imageAspect: "full", imageX: 0, imageY: 0, imageZoom: 1 });
-    } catch (e) { setImgErr(e instanceof Error ? e.message : "Couldn’t upload that image — try again."); }
+    } catch (e) { setImgErr(e instanceof Error ? e.message : t("p8em.nfUploadFail")); }
     finally { setImgBusy(false); }
   }
   const setAspect = (a: string) => set({ imageAspect: a, imageX: 0, imageY: 0, imageZoom: a === "full" ? 1 : 1.2 });
@@ -621,15 +635,15 @@ function Composer({ draft, setDraft, listings, folders = [], franchises = [], on
   const [aiBusy, setAiBusy] = useState(false);
   const [aiErr, setAiErr] = useState("");
   const aiPrompt: Partial<Record<Tpl, string>> = {
-    announce: "What’s the news? e.g. new term dates, a staffing update, a policy change…",
-    event: "What’s the event, and why should families come? Fill the date/time/location below too.",
-    reminder: "What should families remember, and by when? e.g. bring wellies + a packed lunch tomorrow.",
-    urgent: "What’s happening and what must parents do? e.g. closing at 3pm today due to the heat — collect by 3pm.",
-    celebrate: "Who or what are you celebrating? e.g. Mia’s brilliant teamwork all week.",
-    booking: "What are you promoting and any hook? e.g. summer camp open, early-bird ends Sunday, limited spaces. Pick the listing below.",
+    announce: t("p8em.nfAiHint_announce"),
+    event: t("p8em.nfAiHint_event"),
+    reminder: t("p8em.nfAiHint_reminder"),
+    urgent: t("p8em.nfAiHint_urgent"),
+    celebrate: t("p8em.nfAiHint_celebrate"),
+    booking: t("p8em.nfAiHint_booking"),
   };
   async function generate() {
-    if (!aiNotes.trim()) { setAiErr("Tell the AI what you want to say first."); return; }
+    if (!aiNotes.trim()) { setAiErr(t("p8em.nfAiNeedNotes")); return; }
     setAiBusy(true); setAiErr("");
     const fields: Record<string, string> = {};
     if (draft.tpl === "event") { if (draft.date) fields.date = draft.date; if (draft.time) fields.time = draft.time; if (draft.location) fields.location = draft.location; }
@@ -638,69 +652,69 @@ function Composer({ draft, setDraft, listings, folders = [], franchises = [], on
     try {
       const r = await apiPost<{ title: string; body: string }>("/api/ai/compose", { kind: draft.tpl, notes: aiNotes.trim(), fields, length: aiLen });
       set({ title: r.title || draft.title, body: r.body || draft.body });
-    } catch (e) { setAiErr(e instanceof Error ? e.message : "The writer couldn’t draft that — try again."); }
+    } catch (e) { setAiErr(e instanceof Error ? e.message : t("p8em.nfAiFail")); }
     finally { setAiBusy(false); }
   }
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[5vh]" onClick={onClose}>
       <div className="w-full max-w-[560px] overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3.5 text-white" style={{ background: `linear-gradient(120deg, ${tpl.color}, ${tpl.color}bb)` }}>
-          <div className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{draft.editId ? "Edit" : "New"} · {tpl.label}</div>
+          <div className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t(draft.editId ? "p8em.nfEditHdr" : "p8em.nfNewHdr", { label: tplLabel(t, draft.tpl) })}</div>
           <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold">×</button>
         </div>
         <div className="max-h-[72vh] space-y-2.5 overflow-y-auto p-4">
           <div className="flex flex-wrap gap-1.5">
-            {TPL_ORDER.map((k) => <button key={k} type="button" onClick={() => set({ tpl: k })} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={draft.tpl === k ? { borderColor: TPL[k].color, background: `${TPL[k].color}18`, color: TPL[k].color } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{TPL[k].label}</button>)}
+            {TPL_ORDER.map((k) => <button key={k} type="button" onClick={() => set({ tpl: k })} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={draft.tpl === k ? { borderColor: TPL[k].color, background: `${TPL[k].color}18`, color: TPL[k].color } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{tplLabel(t, k)}</button>)}
           </div>
 
           {/* AI assist */}
           <div className="rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] p-2.5">
-            <div className="mb-1 text-[11.5px] font-extrabold text-[#1d3a8f]">✨ Help me write</div>
+            <div className="mb-1 text-[11.5px] font-extrabold text-[#1d3a8f]">{t("p8em.nfHelpWrite")}</div>
             <textarea value={aiNotes} onChange={(e) => setAiNotes(e.target.value)} rows={2} placeholder={aiPrompt[draft.tpl]} className={inputCls} />
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              {(draft.tpl === "event" || draft.tpl === "booking") && <input value={aiCost} onChange={(e) => setAiCost(e.target.value)} placeholder="Cost (optional) e.g. £30" className="w-[150px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] outline-none" />}
+              {(draft.tpl === "event" || draft.tpl === "booking") && <input value={aiCost} onChange={(e) => setAiCost(e.target.value)} placeholder={t("p8em.nfCostPh")} className="w-[150px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] outline-none" />}
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)]">
-                {(["short", "medium", "long"] as const).map((l) => <button key={l} type="button" onClick={() => setAiLen(l)} className="px-2.5 py-1 text-[11px] font-bold capitalize transition-colors" style={aiLen === l ? { background: "#2f5fd0", color: "#fff" } : { color: "var(--ink-2)" }}>{l}</button>)}
+                {(["short", "medium", "long"] as const).map((l) => <button key={l} type="button" onClick={() => setAiLen(l)} className="px-2.5 py-1 text-[11px] font-bold transition-colors" style={aiLen === l ? { background: "#2f5fd0", color: "#fff" } : { color: "var(--ink-2)" }}>{t(l === "short" ? "p8em.nfLenShort" : l === "medium" ? "p8em.nfLenMedium" : "p8em.nfLenLong")}</button>)}
               </div>
-              <button type="button" onClick={generate} disabled={aiBusy} className="ms-auto rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{aiBusy ? "Writing…" : "Write it for me"}</button>
+              <button type="button" onClick={generate} disabled={aiBusy} className="ms-auto rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{aiBusy ? t("p8em.nfWriting") : t("p8em.nfWriteForMe")}</button>
             </div>
             {aiErr && <div className="mt-1 text-[11px] font-bold text-[#c02636]">{aiErr}</div>}
           </div>
 
-          {field("Colour", (
+          {field(t("p8em.nfColour"), (
             <div className="flex flex-wrap items-center gap-1.5">
-              <button type="button" onClick={() => set({ colour: "" })} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={!draft.colour ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>Auto</button>
+              <button type="button" onClick={() => set({ colour: "" })} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={!draft.colour ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t("p8em.nfAuto")}</button>
               {NL_PALETTES.map((pl) => <button key={pl.id} type="button" title={pl.name} onClick={() => set({ colour: pl.accent })} className="h-7 w-7 rounded-full" style={{ background: pl.accent, boxShadow: draft.colour === pl.accent ? "0 0 0 2px #fff, 0 0 0 4px #111" : "none" }} />)}
             </div>
           ))}
-          {field("Title", <input autoFocus value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="e.g. Early pick-up today at 3pm" className={inputCls} />)}
-          {field("Message", <textarea value={draft.body} onChange={(e) => set({ body: e.target.value })} rows={4} placeholder="Write the update families will see…" className={inputCls} />)}
-          {field("Image (optional)", (
+          {field(t("p8em.nfTitleLbl"), <input autoFocus value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder={t("p8em.nfTitlePh")} className={inputCls} />)}
+          {field(t("p8em.cMessage"), <textarea value={draft.body} onChange={(e) => set({ body: e.target.value })} rows={4} placeholder={t("p8em.nfBodyPh")} className={inputCls} />)}
+          {field(t("p8em.nfImage"), (
             draft.image ? (
               <div>
                 <div className={draft.imageAspect !== "full" ? "cursor-move touch-none select-none" : ""} onPointerDown={draft.imageAspect !== "full" ? onImgDown : undefined} onPointerMove={draft.imageAspect !== "full" ? onImgMove : undefined} onPointerUp={onImgUp} onPointerCancel={onImgUp}>
                   <PostImage url={draft.image} aspect={draft.imageAspect} x={draft.imageX} y={draft.imageY} zoom={draft.imageZoom} />
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] font-bold text-[var(--ink-3)]">Shape</span>
-                  {([["full", "Full photo"], ["16/9", "Wide"], ["4/5", "Portrait"], ["1/1", "Square"]] as const).map(([a, label]) => <button key={a} type="button" onClick={() => setAspect(a)} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={draft.imageAspect === a ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+                  <span className="text-[11px] font-bold text-[var(--ink-3)]">{t("p8em.nfShape")}</span>
+                  {([["full", t("p8em.nfShapeFull")], ["16/9", t("p8em.nfShapeWide")], ["4/5", t("p8em.nfShapePortrait")], ["1/1", t("p8em.nfShapeSquare")]] as const).map(([a, label]) => <button key={a} type="button" onClick={() => setAspect(a)} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={draft.imageAspect === a ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
                 </div>
                 {draft.imageAspect !== "full" && (
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-bold text-[var(--ink-3)]">Zoom</span>
+                    <span className="text-[11px] font-bold text-[var(--ink-3)]">{t("p8em.nfZoom")}</span>
                     <input type="range" min={1} max={4} step={0.02} value={draft.imageZoom} onChange={(e) => setZoom(parseFloat(e.target.value))} className="h-1 flex-1 accent-[#1d3a8f]" />
                   </div>
                 )}
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                  <label className="inline-flex cursor-pointer items-center rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{imgBusy ? "Uploading…" : "Replace"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} /></label>
-                  <button type="button" onClick={() => set({ image: "" })} className="text-[11px] font-bold text-[#c02636]">Remove</button>
-                  <span className="text-[10.5px] text-[var(--ink-3)]">{draft.imageAspect === "full" ? "Whole photo shown — nothing cropped." : "Drag to move · zoom to crop. Exactly how families see it."}</span>
+                  <label className="inline-flex cursor-pointer items-center rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{imgBusy ? t("p8em.nfUploading") : t("p8em.nfReplace")}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} /></label>
+                  <button type="button" onClick={() => set({ image: "" })} className="text-[11px] font-bold text-[#c02636]">{t("p8em.cRemove")}</button>
+                  <span className="text-[10.5px] text-[var(--ink-3)]">{draft.imageAspect === "full" ? t("p8em.nfFullHint") : t("p8em.nfCropHint")}</span>
                 </div>
                 {imgErr && <div className="mt-1 text-[11px] font-bold text-[#c02636]">{imgErr}</div>}
               </div>
             ) : (
               <div>
-                <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{imgBusy ? "Uploading…" : "Upload image"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} /></label>
+                <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{imgBusy ? t("p8em.nfUploading") : t("p8em.nfUploadImage")}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} /></label>
                 {imgErr && <div className="mt-1 text-[11px] font-bold text-[#c02636]">{imgErr}</div>}
               </div>
             )
@@ -708,83 +722,83 @@ function Composer({ draft, setDraft, listings, folders = [], franchises = [], on
 
           {draft.tpl === "event" && (
             <div className="grid grid-cols-3 gap-2.5">
-              {field("Date", <input type="date" value={draft.date} onChange={(e) => set({ date: e.target.value })} className={inputCls} />)}
-              {field("Time", <input type="time" value={draft.time} onChange={(e) => set({ time: e.target.value })} className={inputCls} />)}
-              {field("Location", <input value={draft.location} onChange={(e) => set({ location: e.target.value })} placeholder="Main field" className={inputCls} />)}
+              {field(t("p8em.nfDate"), <input type="date" value={draft.date} onChange={(e) => set({ date: e.target.value })} className={inputCls} />)}
+              {field(t("p8em.nfTime"), <input type="time" value={draft.time} onChange={(e) => set({ time: e.target.value })} className={inputCls} />)}
+              {field(t("p8em.nfLocation"), <input value={draft.location} onChange={(e) => set({ location: e.target.value })} placeholder={t("p8em.nfLocationPh")} className={inputCls} />)}
             </div>
           )}
-          {field("Link (optional)", (
+          {field(t("p8em.nfLink"), (
             <div className="space-y-2">
               <div className="flex flex-wrap gap-1.5">
-                {([["none", "No link"], ["listing", "To a listing"], ["url", "To a web link"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => set({ ctaKind: k })} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={draft.ctaKind === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+                {([["none", t("p8em.nfNoLink")], ["listing", t("p8em.nfLinkListing")], ["url", t("p8em.nfLinkWeb")]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => set({ ctaKind: k })} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={draft.ctaKind === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
               </div>
               {draft.ctaKind !== "none" && (
                 <div className="grid grid-cols-2 gap-2.5">
-                  <input value={draft.ctaLabel} onChange={(e) => set({ ctaLabel: e.target.value })} placeholder={draft.tpl === "booking" ? "Book now" : "Button label"} className={inputCls} />
+                  <input value={draft.ctaLabel} onChange={(e) => set({ ctaLabel: e.target.value })} placeholder={draft.tpl === "booking" ? t("p8em.nfBookNow") : t("p8em.nfButtonLabel")} className={inputCls} />
                   {draft.ctaKind === "listing"
-                    ? <select value={draft.ctaListingId} onChange={(e) => { const l = listings.find((x) => x.id === e.target.value); set({ ctaListingId: e.target.value, ctaTarget: l?.title ?? "" }); }} className={inputCls}><option value="">Choose a listing…</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select>
+                    ? <select value={draft.ctaListingId} onChange={(e) => { const l = listings.find((x) => x.id === e.target.value); set({ ctaListingId: e.target.value, ctaTarget: l?.title ?? "" }); }} className={inputCls}><option value="">{t("p8em.nfChooseListing")}</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select>
                     : <input value={draft.ctaUrl} onChange={(e) => set({ ctaUrl: e.target.value })} placeholder="https://…" className={inputCls} />}
                 </div>
               )}
             </div>
           ))}
 
-          {franchises.length > 0 && field("Send to (across your network)", (
+          {franchises.length > 0 && field(t("p8em.nfSendAcross"), (
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <button type="button" onClick={() => set({ frTarget: "" })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.frTarget === "" ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>🌐 All franchises across the network</button>
+                <button type="button" onClick={() => set({ frTarget: "" })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.frTarget === "" ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>🌐 {t("p8em.snAllNetwork")}</button>
                 {franchises.map((f) => <button key={f.franchiseId} type="button" onClick={() => set({ frTarget: f.franchiseId })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.frTarget === f.franchiseId ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{f.name}{f.area ? ` · ${f.area}` : ""}</button>)}
               </div>
-              <span className="block text-[10.5px] text-[var(--ink-3)]">{draft.frTarget === "" ? "Reaches every family (and staff) with a booking anywhere in the network." : `Only ${franchises.find((f) => f.franchiseId === draft.frTarget)?.name ?? "this franchise"}’s families and staff will see it. Posted as “Head office”.`}</span>
+              <span className="block text-[10.5px] text-[var(--ink-3)]">{draft.frTarget === "" ? t("p8em.nfReachAll") : t("p8em.nfReachOne", { name: franchises.find((f) => f.franchiseId === draft.frTarget)?.name ?? t("p8em.snThisFranchise") })}</span>
             </div>
           ))}
 
-          {field("Who sees it", (
+          {field(t("p8em.nfWhoSees"), (
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                {([["all", "All families"], ["listing", "Chosen listings’ families"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => set({ audScope: k, audIds: [] })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.audScope === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+                {([["all", t("p8em.nfAudAll")], ["listing", t("p8em.nfChosenFamilies")]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => set({ audScope: k, audIds: [] })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.audScope === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
               </div>
               {draft.audScope === "listing" && (
                 <div className="flex flex-wrap gap-1.5">
-                  {listings.length === 0 ? <span className="text-[11px] text-[var(--ink-3)]">No listings yet.</span>
+                  {listings.length === 0 ? <span className="text-[11px] text-[var(--ink-3)]">{t("p8em.nfNoListings")}</span>
                     : listings.map((l) => { const on = draft.audIds.includes(l.id); return <button key={l.id} type="button" onClick={() => toggleListing(l.id)} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={on ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{l.title}</button>; })}
                 </div>
               )}
             </div>
           ))}
 
-          {field("Save as (a name to find it later)", (
-            <><input value={draft.ref} onChange={(e) => set({ ref: e.target.value })} placeholder={`e.g. ${draft.title.trim() || "Summer camp reminder"}`} className={inputCls} /><span className="mt-1 block text-[10.5px] text-[var(--ink-3)]">Just for your search — families don’t see this. Set it now and it’s saved even if you send by email.</span></>
+          {field(t("p8em.nfSaveAs"), (
+            <><input value={draft.ref} onChange={(e) => set({ ref: e.target.value })} placeholder={t("p8em.nfSaveAsPh", { name: draft.title.trim() || t("p8em.nfSaveAsDefault") })} className={inputCls} /><span className="mt-1 block text-[10.5px] text-[var(--ink-3)]">{t("p8em.nfSaveAsHint")}</span></>
           ))}
 
-          {field("Folder (optional)", (
-            <><input list="post-folders" value={draft.folder} onChange={(e) => set({ folder: e.target.value })} placeholder="File it — type a new folder or pick one" className={inputCls} /><datalist id="post-folders">{folders.map((f) => <option key={f} value={f} />)}</datalist></>
+          {field(t("p8em.nfFolderOpt"), (
+            <><input list="post-folders" value={draft.folder} onChange={(e) => set({ folder: e.target.value })} placeholder={t("p8em.nfFolderPh")} className={inputCls} /><datalist id="post-folders">{folders.map((f) => <option key={f} value={f} />)}</datalist></>
           ))}
 
           <div className="flex flex-wrap gap-1.5">
-            {([["pinned", "Pin to top"], ["ackRequired", "Ask to acknowledge"], ["react", "Allow reactions"]] as const).map(([f, label]) => <button key={f} type="button" onClick={() => set({ [f]: !draft[f] } as Partial<Draft>)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft[f] ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{draft[f] ? "✓ " : ""}{label}</button>)}
-            <button type="button" onClick={() => set({ priority: draft.priority === "urgent" ? "normal" : "urgent" })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.priority === "urgent" ? { borderColor: "#c02636", background: "#fde2e4", color: "#c02636" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{draft.priority === "urgent" ? "✓ " : ""}High priority</button>
+            {([["pinned", t("p8em.nfTogglePin")], ["ackRequired", t("p8em.nfToggleAck")], ["react", t("p8em.nfToggleReact")]] as const).map(([f, label]) => <button key={f} type="button" onClick={() => set({ [f]: !draft[f] } as Partial<Draft>)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft[f] ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{draft[f] ? "✓ " : ""}{label}</button>)}
+            <button type="button" onClick={() => set({ priority: draft.priority === "urgent" ? "normal" : "urgent" })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.priority === "urgent" ? { borderColor: "#c02636", background: "#fde2e4", color: "#c02636" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{draft.priority === "urgent" ? "✓ " : ""}{t("p8em.nfHighPriority")}</button>
           </div>
 
-          {field("When (for the Newsfeed)", (
+          {field(t("p8em.nfWhen"), (
             <div className="flex flex-wrap items-center gap-2">
-              {([["now", "Publish now"], ["later", "Schedule"], ["draft", "Save as draft"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => set({ when: k })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.when === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+              {([["now", t("p8em.nfPublishNow")], ["later", t("p8em.nfSchedule")], ["draft", t("p8em.nfSaveDraftOpt")]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => set({ when: k })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.when === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
               {draft.when === "later" && <input type="datetime-local" value={draft.publishAt} onChange={(e) => set({ publishAt: e.target.value })} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[12px] outline-none" />}
             </div>
           ))}
 
           <div className="border-t border-[var(--line)] pt-2.5">
-            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Preview — exactly what families see</div>
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8em.nfPreviewHdr")}</div>
             <PostPreview d={draft} />
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
-          <Button sm onClick={onClose}>Cancel</Button>
-          <span className="me-auto text-[11px] text-[var(--ink-3)]">Do one now — reopen to do another</span>
-          <button type="button" onClick={() => downloadPostImage(draft)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⬇ Image</button>
+          <Button sm onClick={onClose}>{t("p8em.cCancel")}</Button>
+          <span className="me-auto text-[11px] text-[var(--ink-3)]">{t("p8em.nfDoOne")}</span>
+          <button type="button" onClick={() => downloadPostImage(draft)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("p8em.nfBtnImage")}</button>
           <button type="button" onClick={() => onPublish(draft, "download")} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⬇ PDF</button>
-          <button type="button" onClick={() => onPublish(draft, "email")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">✉ Email</button>
-          <button type="button" onClick={() => onPublish(draft, "page")} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white">{draft.editId ? "Save changes" : draft.when === "draft" ? "Save draft" : draft.when === "later" ? "Schedule" : "Post to Newsfeed"}</button>
+          <button type="button" onClick={() => onPublish(draft, "email")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">{t("p8em.nfBtnEmail")}</button>
+          <button type="button" onClick={() => onPublish(draft, "page")} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white">{draft.editId ? t("p8em.nfSaveChanges") : draft.when === "draft" ? t("p8em.nfSaveDraft") : draft.when === "later" ? t("p8em.nfSchedule") : t("p8em.nfPostToFeed")}</button>
         </div>
       </div>
     </div>
