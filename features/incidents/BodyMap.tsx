@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
+import { useT } from "@/lib/i18n/provider";
 
 // A body map — tap the child silhouette to drop a numbered pin marking an injury
 // or area of concern. Marks store percentage coordinates (0–100, 1dp) against the
@@ -41,7 +42,9 @@ function Silhouette({ view }: { view: "front" | "back" }) {
 }
 
 export function BodyMap({ value, onChange, readOnly = false, startOpen = false }: { value: BodyMark[]; onChange?: (marks: BodyMark[]) => void; readOnly?: boolean; startOpen?: boolean }) {
+  const tr = useT();
   const [view, setView] = useState<"front" | "back">("front");
+  const vw = (v: "front" | "back") => (v === "front" ? tr("p8ops.bmFront") : tr("p8ops.bmBack"));
   const [open, setOpen] = useState(startOpen || value.length > 0);
   const marks = value ?? [];
   const here = marks.filter((m) => m.view === view);
@@ -60,17 +63,17 @@ export function BodyMap({ value, onChange, readOnly = false, startOpen = false }
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)]">
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-start">
-        <span className="text-[12.5px] font-extrabold">⛑️ Body map{marks.length ? ` (${marks.length})` : readOnly ? "" : " (optional)"}</span>
+        <span className="text-[12.5px] font-extrabold">{tr("p8ops.bmTitle")}{marks.length ? ` (${marks.length})` : readOnly ? "" : tr("p8ops.bmOptional")}</span>
         <span className="text-[16px] leading-none text-[var(--ink-3)]">{open ? "−" : "+"}</span>
       </button>
       {open && (
         <div className="border-t border-[var(--line)] p-3">
-          {!readOnly && <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">Tap the figure to mark an injury or area of concern — each mark is numbered.</p>}
+          {!readOnly && <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">{tr("p8ops.bmHint")}</p>}
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="flex flex-col items-center">
               <div className="mb-1.5 flex gap-1">
                 {(["front", "back"] as const).map((v) => (
-                  <button key={v} type="button" onClick={() => setView(v)} className="rounded-full border px-3 py-0.5 text-[11px] font-bold capitalize" style={view === v ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{v}</button>
+                  <button key={v} type="button" onClick={() => setView(v)} className="rounded-full border px-3 py-0.5 text-[11px] font-bold" style={view === v ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{vw(v)}</button>
                 ))}
               </div>
               <div onClick={drop} className="relative h-[300px] w-[140px] rounded-lg bg-[var(--panel)]" style={{ cursor: readOnly ? "default" : "crosshair" }}>
@@ -81,16 +84,16 @@ export function BodyMap({ value, onChange, readOnly = false, startOpen = false }
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              {marks.length === 0 ? <div className="text-[12px] text-[var(--ink-3)]">No marks yet.</div> : (
+              {marks.length === 0 ? <div className="text-[12px] text-[var(--ink-3)]">{tr("p8ops.bmNoMarks")}</div> : (
                 <div className="flex flex-col gap-1.5">
                   {[...marks].sort((a, b) => a.n - b.n).map((m) => (
                     <div key={m.n} className="flex items-center gap-2">
                       <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: "#c02636" }}>{m.n}</span>
-                      <span className="flex-none text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{m.view}</span>
+                      <span className="flex-none text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{vw(m.view)}</span>
                       {readOnly
                         ? <span className="flex-1 text-[12px] text-[var(--ink-2)]">{m.note || <span className="text-[var(--ink-3)]">—</span>}</span>
-                        : <input value={m.note ?? ""} onChange={(e) => setNote(m.n, e.target.value)} placeholder={`${m.view} — note`} className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px]" />}
-                      {!readOnly && <button type="button" onClick={() => del(m.n)} className="flex-none text-[12px] font-bold text-[var(--ink-3)]" aria-label="remove">✕</button>}
+                        : <input value={m.note ?? ""} onChange={(e) => setNote(m.n, e.target.value)} placeholder={tr("p8ops.bmNotePh", { view: vw(m.view) })} className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px]" />}
+                      {!readOnly && <button type="button" onClick={() => del(m.n)} className="flex-none text-[12px] font-bold text-[var(--ink-3)]" aria-label={tr("p8ops.bmRemove")}>✕</button>}
                     </div>
                   ))}
                 </div>

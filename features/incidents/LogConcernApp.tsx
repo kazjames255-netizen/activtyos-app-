@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 import type { CSSProperties } from "react";
 import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
@@ -19,14 +20,15 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 
 const TABS = [
-  { id: "behaviour", label: "Behaviour", icon: "🧩", sub: "Behaviour & near-misses — share with the parent when you choose." },
-  { id: "safeguarding", label: "Safeguarding", icon: "🛡️", sub: "Confidential concerns, routed to your DSL. Facts only." },
+  { id: "behaviour", label: "p8ops.lcBehaviour", icon: "🧩", sub: "p8ops.lcBehaviourSub" },
+  { id: "safeguarding", label: "p8ops.lcSafeguarding", icon: "🛡️", sub: "p8ops.lcSafeguardingSub" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
 export function LogConcernApp() {
+  const tr = useT();
   const [tab, setTab] = useState<TabId>("behaviour");
-  const active = TABS.find((t) => t.id === tab)!;
+  const active = TABS.find((x) => x.id === tab)!;
 
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -34,16 +36,16 @@ export function LogConcernApp() {
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">⚑</span>Log a concern
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">⚑</span>{tr("p8ops.lcTitle")}
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2"><TourLauncher view="incidents" compact /><SettingsLink /></div>
         </div>
-        <p className="mt-1.5 max-w-[620px] text-[12.5px] leading-[1.5] text-white/85">{active.sub}</p>
+        <p className="mt-1.5 max-w-[620px] text-[12.5px] leading-[1.5] text-white/85">{tr(active.sub)}</p>
         <div className="mt-4 flex flex-wrap gap-1.5">
-          {TABS.map((t) => (
-            <button key={t.id} type="button" onClick={() => setTab(t.id)} className="rounded-full px-4 py-2 text-[13px] font-extrabold transition-colors"
-              style={tab === t.id ? { background: "#fff", color: "#1d3a8f" } : { background: "rgba(255,255,255,0.16)", color: "#fff" }}>
-              {t.icon} {t.label}
+          {TABS.map((x) => (
+            <button key={x.id} type="button" onClick={() => setTab(x.id)} className="rounded-full px-4 py-2 text-[13px] font-extrabold transition-colors"
+              style={tab === x.id ? { background: "#fff", color: "#1d3a8f" } : { background: "rgba(255,255,255,0.16)", color: "#fff" }}>
+              {x.icon} {tr(x.label)}
             </button>
           ))}
         </div>

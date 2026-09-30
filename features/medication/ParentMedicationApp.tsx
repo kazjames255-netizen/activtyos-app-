@@ -73,11 +73,11 @@ export function ParentMedicationApp() {
   const toggleMute = () => {
     const n = !muted;
     setMuted(n);
-    apiPut("/api/notifications/prefs", { category: "medication", muted: n }).catch((e) => { setMuted(!n); setError(e instanceof Error ? e.message : "Couldn’t change that"); });
+    apiPut("/api/notifications/prefs", { category: "medication", muted: n }).catch((e) => { setMuted(!n); setError(e instanceof Error ? e.message : t("p8ops.pmCouldntChange")); });
   };
 
   const load = useCallback(() => {
-    apiGet<Med[]>("/api/medications").then(setMeds).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Med[]>("/api/medications").then(setMeds).catch((e) => setError(e instanceof Error ? e.message : t("p8ops.dbFailedLoad")));
     apiGet<Dose[]>("/api/medications/administrations").then(setDoses).catch(() => {});
     // Booked days feed the "days I pick" list — refreshed on the realtime hook
     // below so a new booking appears here without a reload.
@@ -127,21 +127,21 @@ export function ParentMedicationApp() {
       setF((p) => ({ ...p, name: "", dose: "", condition: "", storage: "", notes: "", consent: false }));
       setFreq("booked"); setDates([]); setTimes([]); setTimeInput("");
       setOpen(false); setOk(t("care.authorisedOk", { who: childIds.length > 1 ? t("care.nChildren", { n: childIds.length }) : selectedNames })); load();
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t authorise"); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("p8ops.pmCouldntAuthorise")); }
   }
   async function saveNote(id: string, note: string) {
     try { await apiPost(`/api/medications/${encodeURIComponent(id)}/note`, { note: note.trim() }); setNoteEdit(null); load(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save note"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p8ops.pmCouldntSaveNote")); }
   }
   async function giveConsent(m: Med) {
     if (!confirm(t("care.giveConsentConfirm", { provider: m.tenantId ? providerName(m.tenantId) : t("care.yourProvider"), name: m.name, child: m.childName }))) return;
     try { await apiPost(`/api/medications/${encodeURIComponent(m.id)}/consent`, {}); setOk(t("care.consentGivenOk", { name: m.name })); load(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p8ops.tpFailed")); }
   }
   async function withdraw(m: Med) {
     if (!confirm(t("care.withdrawConfirm", { name: m.name }))) return;
     try { await apiPost(`/api/medications/${encodeURIComponent(m.id)}/withdraw`, {}); load(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p8ops.tpFailed")); }
   }
 
   return (
