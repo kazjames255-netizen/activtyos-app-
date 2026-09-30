@@ -20,3 +20,5 @@ html.i18n-wait body{visibility:hidden}
 [dir=rtl] .wrap .carr.prev{left:auto;right:-2px}
 [dir=rtl] .wrap .carr.next{right:auto;left:-2px}
 [dir=rtl] .carr{transform:scaleX(-1)}
+/* taller headings for scripts with stacked marks */
+:lang(bn) h1,:lang(bn) h2,:lang(pa) h1,:lang(pa) h2,:lang(ur) h1,:lang(ur) h2{line-height:1.3}
