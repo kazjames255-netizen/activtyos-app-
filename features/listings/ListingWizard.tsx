@@ -1080,7 +1080,7 @@ export function ListingWizard({
       if (!quiet) setBusy(false);
       return true;
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409 && e.message.includes("changed elsewhere")) {
+      if (e instanceof ApiError && e.status === 409 && e.rawMessage.includes("changed elsewhere")) {
         setConflicted(true);
         setMsg(tr("p8lst.waConflictTab"));
         if (!quiet) setBusy(false);
