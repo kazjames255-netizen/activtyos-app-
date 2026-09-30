@@ -193,6 +193,7 @@
   html body .wrap header.nav .navtab,html body .wrap header.nav .navdrop-btn,html body .wrap header.nav .nav-cta .signin{min-height:44px;display:inline-flex;align-items:center}
   html body .wrap header.nav .navdrop-btn{margin:0}
   html body .wrap header.nav .navtab{min-width:44px;justify-content:center}
+  html body .wrap header.nav .pa-auth a{min-height:44px}
 }
 /* ---------- pricing on tablets: three plan cards stacked in a 440px column left half the iPad empty ---------- */
 @media (min-width:640px) and (max-width:900px){
