@@ -213,10 +213,14 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
     });
   }, [allItems, now]);
 
-  const sumWhere = (pred: (x: Expense) => boolean) => allItems.filter(pred).reduce((s, x) => s + x.amount, 0);
-  const thisMonthTotal = useMemo(() => sumWhere((x) => (x.date || "").slice(0, 7) === thisMonthKey), [allItems, thisMonthKey]);
-  const lastMonthTotal = useMemo(() => sumWhere((x) => (x.date || "").slice(0, 7) === lastMonthKey), [allItems, lastMonthKey]);
-  const yearTotal = useMemo(() => sumWhere((x) => (x.date || "").slice(0, 4) === thisYear), [allItems, thisYear]);
+  // The headline "spent" tiles follow the same basis as the Money out header above them (Setup → money.basis): on the default CASH basis a
+  // Pending bill is owed, not spent, so it isn't in "spent this month". (They summed every row, pending included, and disagreed with the header.)
+  const cashBasis = (settings.money?.basis ?? "cash") === "cash";
+  const spentItems = useMemo(() => (cashBasis ? allItems.filter((x) => x.virtual || statusOf(x) === "paid") : allItems), [allItems, cashBasis]);
+  const sumWhere = (pred: (x: Expense) => boolean) => spentItems.filter(pred).reduce((s, x) => s + x.amount, 0);
+  const thisMonthTotal = useMemo(() => sumWhere((x) => (x.date || "").slice(0, 7) === thisMonthKey), [spentItems, thisMonthKey]);
+  const lastMonthTotal = useMemo(() => sumWhere((x) => (x.date || "").slice(0, 7) === lastMonthKey), [spentItems, lastMonthKey]);
+  const yearTotal = useMemo(() => sumWhere((x) => (x.date || "").slice(0, 4) === thisYear), [spentItems, thisYear]);
   const grandTotal = useMemo(() => allItems.reduce((s, x) => s + x.amount, 0), [allItems]);
   const count = allItems.length;
   const avg = count ? grandTotal / count : 0;

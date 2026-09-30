@@ -80,3 +80,41 @@ test("HO finance totals only money that has moved, and owed = sent invoices", as
     for (const id of invoiceIds) await api("DELETE", `/api/invoices/${id}`).catch(() => {});
   }
 });
+
+test("Money out overview: 'spent this month' follows the cash basis (Pending isn't spent)", async ({ page }) => {
+  test.setTimeout(240_000);
+  const a = loadAccounts().accounts;
+  const tok = (await fbSignIn(a.company.email)).idToken as string;
+  const api = async (method: string, path: string, body?: unknown) => {
+    const r = await fetch(`${API_URL}${path}`, { method, headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const text = await r.text();
+    if (!r.ok) throw new Error(`${method} ${path} → ${r.status} ${text.slice(0, 200)}`);
+    return text ? JSON.parse(text) : {};
+  };
+  const d = new Date();
+  const p2 = (n: number) => String(n).padStart(2, "0");
+  const today = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+  const spent = async () => {
+    const el = page.getByText("spent this month", { exact: true }).first().locator("xpath=preceding-sibling::div[1]");
+    await expect(el).toBeVisible({ timeout: 60_000 });
+    return num((await el.innerText()).trim());
+  };
+  const settledSpent = async () => {
+    let last = NaN, same = 0;
+    for (let i = 0; i < 40 && same < 3; i++) { const v = await spent(); same = v === last ? same + 1 : 0; last = v; await page.waitForTimeout(700); }
+    return last;
+  };
+  await page.goto("/company/expenses");
+  const before = await settledSpent();
+  const ids: string[] = [];
+  try {
+    ids.push((await api("POST", "/api/expenses", { date: today, category: "P1fin", amount: 77, status: "pending" })).id);
+    await page.reload();
+    expect(await settledSpent(), "a Pending £77 bill is owed, not spent").toBe(before);
+    ids.push((await api("POST", "/api/expenses", { date: today, category: "P1fin", amount: 5, status: "paid" })).id);
+    await page.reload();
+    await expect.poll(async () => (await spent()) - before, { timeout: 45_000 }).toBe(5);
+  } finally {
+    for (const id of ids) await api("DELETE", `/api/expenses/${id}`).catch(() => {});
+  }
+});
