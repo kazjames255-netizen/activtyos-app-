@@ -401,7 +401,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
     if (certAttN > 0) ev.push({ icon: "🎖", tone: "#b7791f", head: tr("p8lrn.lcFeedCerts", { n: certAttN }), meta: tr("p8lrn.lcFeedCertsMeta") });
     return ev.slice(0, 6);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignments, progress, overdueN, overduePct, certAttN, policies, acks, requireConfirm]);
+  }, [assignments, progress, overdueN, overduePct, certAttN, policies, acks, requireConfirm, tr]);
 
   const openAssign = (courseId: string) => { const cid = courseId || courses[0]?.id || ""; setACourse(cid); setAKind("all"); setARoles([]); setAStaff([]); setALocs([]); setAStaffQ(""); setADue(""); setAReq(true); setARenew(courses.find((c) => c.id === cid)?.renewMonths ?? settings.learning?.renewMonths ?? 0); setAVer(courses.find((c) => c.id === cid)?.activeQuiz ?? 0); setAOpen(true); };
   // courses a given staff member is on (all-staff assignments, their job-role, or named)

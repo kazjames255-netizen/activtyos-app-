@@ -32,6 +32,9 @@ const CATS: DocCat[] = ["Policy", "Risk assessment", "Handbook", "Procedure", "I
 const CAT_KEY: Record<DocCat, string> = { Policy: "staffp.docCatPolicy", "Risk assessment": "staffp.docCatRisk", Handbook: "staffp.docCatHandbook", Procedure: "staffp.docCatProcedure", Insurance: "staffp.docCatInsurance", Form: "staffp.docCatForm", Certificate: "staffp.docCatCertificate", Other: "staffp.docCatOther" };
 // Categories are stored in English; shown translated.
 const catLabel = (c: string) => (CAT_KEY[c as DocCat] ? tNow(CAT_KEY[c as DocCat]) : c);
+// The sample library's titles are shown translated until the provider edits them (stored titles stay English).
+const SEED_TITLE_KEY: Record<string, string> = { "Safeguarding & Child Protection Policy": "docSeedSafeguarding", "Health & Safety Policy": "docSeedHealthSafety", "Staff Handbook": "docSeedHandbook", "General Risk Assessment": "docSeedRisk", "Fire Evacuation Procedure": "docSeedFire", "Code of Conduct": "docSeedConduct", "Privacy Notice (GDPR)": "docSeedPrivacy", "Public Liability Insurance": "docSeedInsurance", "Accident / Incident Report Form": "docSeedIncident", "Behaviour Management Policy": "docSeedBehaviour" };
+export const docTitleName = (title: string): string => (SEED_TITLE_KEY[title] ? tNow("p8lrn." + SEED_TITLE_KEY[title]) : title);
 const CAT_ICON: Record<DocCat, string> = { Policy: "📘", "Risk assessment": "⚠️", Handbook: "📗", Procedure: "🧭", Insurance: "🛡️", Form: "🗒️", Certificate: "🎖️", Other: "📄" };
 
 export interface DocVersion { version: number; fileName?: string; fileData?: string; fileId?: string; at: string }
@@ -129,7 +132,7 @@ export const openDoc = (d: DocItem) => {
   if (typeof window === "undefined") return;
   if (d.fileId) { void openDocFile(d.fileId); return; }
   if (d.fileData) { const w = window.open(); if (w) w.document.write(`<iframe src="${d.fileData}" style="border:0;width:100vw;height:100vh"></iframe>`); return; }
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(d.title)}</title><style>body{font-family:'Times New Roman',Georgia,serif;color:#1a1c2b;max-width:720px;margin:0 auto;padding:54px 40px;line-height:1.6}.ey{font-family:-apple-system,Arial;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#3f7ae0;font-weight:800}h1{font-size:26px;margin:.1em 0 .1em}.meta{font-family:-apple-system,Arial;color:#6b7086;font-size:12px;border-bottom:1px solid #e5e7f0;padding-bottom:12px;margin-bottom:18px}pre{white-space:pre-wrap;font-family:inherit;font-size:15px}.wm{position:fixed;top:44%;left:0;right:0;text-align:center;font-family:-apple-system,Arial;font-size:60px;color:#eef1f6;font-weight:800;transform:rotate(-18deg);z-index:-1}</style></head><body><div class="wm">${esc(tNow("p8lrn.docPrintSample"))}</div><div class="ey">${esc(catLabel(d.category))}</div><h1>${esc(d.title)}</h1><div class="meta">${esc(tNow("p8lrn.docPrintMeta", { v: d.version, date: fmt(d.uploadedAt) }))}${d.expiry ? esc(tNow("p8lrn.docPrintReview", { date: fmt(d.expiry) })) : ""}</div><pre>${esc(d.seededBody || "")}</pre><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(docTitleName(d.title))}</title><style>body{font-family:'Times New Roman',Georgia,serif;color:#1a1c2b;max-width:720px;margin:0 auto;padding:54px 40px;line-height:1.6}.ey{font-family:-apple-system,Arial;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#3f7ae0;font-weight:800}h1{font-size:26px;margin:.1em 0 .1em}.meta{font-family:-apple-system,Arial;color:#6b7086;font-size:12px;border-bottom:1px solid #e5e7f0;padding-bottom:12px;margin-bottom:18px}pre{white-space:pre-wrap;font-family:inherit;font-size:15px}.wm{position:fixed;top:44%;left:0;right:0;text-align:center;font-family:-apple-system,Arial;font-size:60px;color:#eef1f6;font-weight:800;transform:rotate(-18deg);z-index:-1}</style></head><body><div class="wm">${esc(tNow("p8lrn.docPrintSample"))}</div><div class="ey">${esc(catLabel(d.category))}</div><h1>${esc(docTitleName(d.title))}</h1><div class="meta">${esc(tNow("p8lrn.docPrintMeta", { v: d.version, date: fmt(d.uploadedAt) }))}${d.expiry ? esc(tNow("p8lrn.docPrintReview", { date: fmt(d.expiry) })) : ""}</div><pre>${esc(d.seededBody || "")}</pre><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
   const w = window.open(); if (w) { w.document.write(html); w.document.close(); }
 };
 
@@ -197,7 +200,7 @@ export function DocumentsApp() {
               </div>
               <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
                 <table className="w-full text-[12.5px]">
-                  <thead><tr className="bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{t("p8lrn.docColStaff")}</th>{docs.map((d) => <th key={d.id} title={d.title} className="px-2 py-2.5 font-extrabold"><div className="w-[64px] truncate">{d.title}</div></th>)}</tr></thead>
+                  <thead><tr className="bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{t("p8lrn.docColStaff")}</th>{docs.map((d) => <th key={d.id} title={docTitleName(d.title)} className="px-2 py-2.5 font-extrabold"><div className="w-[64px] truncate">{docTitleName(d.title)}</div></th>)}</tr></thead>
                   <tbody>{people.map((s) => (
                     <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]">
                       <td className="whitespace-nowrap px-3 py-2.5 font-bold text-[var(--ink)]">{s.name}<span className="ms-1 text-[10.5px] font-normal text-[var(--ink-3)]">{s.role}</span></td>
@@ -231,14 +234,14 @@ export function DocumentsApp() {
             <div key={d.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] p-3">
               <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--panel)] text-[19px]">{CAT_ICON[d.category]}</span>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{d.title}</span><span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[10px] font-bold text-[#5b6577]">{catLabel(d.category)}</span><span className={"rounded-full px-2 py-0.5 text-[10px] font-bold " + st.tone}>{st.label}</span></div>
+                <div className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{docTitleName(d.title)}</span><span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[10px] font-bold text-[#5b6577]">{catLabel(d.category)}</span><span className={"rounded-full px-2 py-0.5 text-[10px] font-bold " + st.tone}>{st.label}</span></div>
                 <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{t("staffp.docUpdated", { v: d.version, date: fmt(d.uploadedAt) })}{d.expiry ? ` · ${t("staffp.docReviewBy", { date: fmt(d.expiry) })}` : ""}{d.history.length ? ` · ${pickPlural(t, locale, "p8lrn.docPastN", d.history.length)}` : ""}</div>
                 <div className="mt-1 flex flex-wrap gap-1">{assignSummary(d).map((a, i) => <span key={i} className="rounded-full bg-[#eaf1ff] px-1.5 py-0.5 text-[10px] font-bold text-[#1d54c4]">{a}</span>)}</div>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 <Button onClick={() => openDoc(d)}>{t("p8lrn.docView")}</Button>
                 <Button onClick={() => setEdit(d)}>{t("p8lrn.gEdit")}</Button>
-                <button type="button" title={t("p8lrn.gDelete")} onClick={() => { if (window.confirm(t("p8lrn.docConfirmDelete", { title: d.title }))) remove(d.id); }} className="rounded-full border border-[var(--line)] px-2.5 py-1.5 text-[13px] text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>
+                <button type="button" title={t("p8lrn.gDelete")} onClick={() => { if (window.confirm(t("p8lrn.docConfirmDelete", { title: docTitleName(d.title) }))) remove(d.id); }} className="rounded-full border border-[var(--line)] px-2.5 py-1.5 text-[13px] text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>
               </div>
             </div>
           ); })}

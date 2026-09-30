@@ -11,7 +11,7 @@ import { isDemoMode } from "@/lib/api";
 import { confirmRead, fetchLibrary } from "./docStore";
 import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
-import { DOCS_KEY, seedDocs, openDoc, docDaysUntil, statusOf, type DocItem } from "./DocumentsApp";
+import { DOCS_KEY, seedDocs, openDoc, docDaysUntil, statusOf, docTitleName, type DocItem } from "./DocumentsApp";
 import { useI18n } from "@/lib/i18n/provider";
 
 // Same as DocumentsApp's docFmt, in the reader's language.
@@ -74,7 +74,7 @@ export function StaffDocsApp() {
     return (
     <div key={d.id} className={"flex flex-wrap items-center gap-3 rounded-xl border p-3 " + (isRead ? "border-[#cfe8d7] bg-[#f4fbf6]" : "border-[var(--line)]")}>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{d.title}</span><span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[10px] font-bold text-[#5b6577]">{CAT_KEY[d.category] ? t(CAT_KEY[d.category]) : d.category}</span>{d.listings.length > 0 && !d.all && d.listings.map((l) => <span key={l} className="rounded-full bg-[#eaf1ff] px-2 py-0.5 text-[10px] font-bold text-[#1d54c4]">📋 {l}</span>)}</div>
+        <div className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{docTitleName(d.title)}</span><span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[10px] font-bold text-[#5b6577]">{CAT_KEY[d.category] ? t(CAT_KEY[d.category]) : d.category}</span>{d.listings.length > 0 && !d.all && d.listings.map((l) => <span key={l} className="rounded-full bg-[#eaf1ff] px-2 py-0.5 text-[10px] font-bold text-[#1d54c4]">📋 {l}</span>)}</div>
         <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{t("staffp.docUpdated", { v: d.version, date: docFmt(d.uploadedAt, locale) })}{d.expiry ? ` · ${t("staffp.docReviewBy", { date: docFmt(d.expiry, locale) })}` : ""}{isRead ? ` · ${t("staffp.docYouConfirmed", { date: docFmt(read[d.id].slice(0, 10), locale) })}` : ""}</div>
       </div>
       <span className={"rounded-full px-2 py-0.5 text-[10px] font-bold " + st.tone}>{stLabel}</span>
