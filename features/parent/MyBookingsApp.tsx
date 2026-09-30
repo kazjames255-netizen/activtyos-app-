@@ -264,7 +264,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
           // it still shows as pending. Any other error is real.
           if (!/404|not found/i.test(e instanceof Error ? e.message : "")) throw e;
         }
-        try { localStorage.setItem(`aos.pendingMove.${booking.ref}`, JSON.stringify({ moves, at: new Date().toISOString() })); } catch { /* ignore */ }
+        try { localStorage.setItem(`aos.pendingMove.${booking.tenantId ?? ""}.${booking.ref}`, JSON.stringify({ moves, at: new Date().toISOString() })); } catch { /* ignore */ }
         onDone();
         return;
       }
@@ -872,7 +872,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
     setWithdrawing(true);
     try {
       await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/amend/withdraw${b.tenantId ? `?tenantId=${encodeURIComponent(b.tenantId)}` : ""}`, {});
-      try { localStorage.removeItem(`aos.pendingMove.${b.ref}`); } catch { /* ignore */ }
+      try { localStorage.removeItem(`aos.pendingMove.${b.tenantId ?? ""}.${b.ref}`); } catch { /* ignore */ }
       refresh();
     } catch (e) { alert(e instanceof Error ? e.message : t("parent.errCancelDateChange")); }
     finally { setWithdrawing(false); }
@@ -897,7 +897,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
     if (be?.status) return { moves: be.moves ?? [], status: be.status, reason: be.reason };
     if (typeof window !== "undefined") {
       try {
-        const raw = localStorage.getItem(`aos.pendingMove.${b.ref}`);
+        const raw = localStorage.getItem(`aos.pendingMove.${b.tenantId ?? ""}.${b.ref}`);
         if (raw) return { moves: (JSON.parse(raw).moves ?? []) as Move[], status: "pending" };
       } catch { /* ignore */ }
     }
@@ -906,7 +906,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
   // Once the provider has resolved it, drop the local optimistic marker.
   useEffect(() => {
     const st = (b as Booking & { dateChangeRequest?: { status?: string } }).dateChangeRequest?.status;
-    if (st && st !== "pending") { try { localStorage.removeItem(`aos.pendingMove.${b.ref}`); } catch { /* ignore */ } }
+    if (st && st !== "pending") { try { localStorage.removeItem(`aos.pendingMove.${b.tenantId ?? ""}.${b.ref}`); } catch { /* ignore */ } }
   }, [b]);
   const pendingMove = dateChange?.status === "pending";
   // Only prefix the child name on each swap line when the booking has more than

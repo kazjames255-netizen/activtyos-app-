@@ -21,6 +21,9 @@ import { Badge, Button, Card } from "@/components/ui";
 // ─────────────────────────────────────────────────────────────────────────
 
 const OWED = new Set(["Unpaid", "Invoice sent", "Partially paid"]);
+// Booking numbers repeat across providers, so a row's identity is tenant + ref (keying by ref alone dropped/duplicated rows
+// and ticking one receipt ticked its namesake at another provider).
+const rowKey = (b: Booking) => `${b.tenantId ?? ""}|${b.ref}`;
 const methodOf = (b: Booking) => (b.method && b.method !== "—" ? b.method : "Card");
 
 function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: {
@@ -166,11 +169,11 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
       else n.add(ref);
       return n;
     });
-  const paidRefs = paid.map((b) => b.ref);
+  const paidRefs = paid.map(rowKey);
   const selectedShown = paidRefs.filter((r) => selected.has(r));
   const allSelected = paidRefs.length > 0 && selectedShown.length === paidRefs.length;
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(paidRefs));
-  const downloadSelected = () => void downloadReceipts(paid.filter((b) => selected.has(b.ref)), ctx);
+  const downloadSelected = () => void downloadReceipts(paid.filter((b) => selected.has(rowKey(b))), ctx);
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!bookings) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{tr("parent.loadingPayments")}</div>;
@@ -235,7 +238,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
       {owed.length > 0 && (
         <Card className="mb-3 p-4" style={{ borderInlineStartWidth: "4px", borderInlineStartColor: "var(--red,#e21d27)" }}>
           <div className="mb-1.5 text-[13px] font-extrabold">{tr("parent.waitingOnPayment")}</div>
-          {owed.map((b) => <Row key={b.ref} b={b} action onPay={() => { setPayingTenant(b.tenantId); setPaying([b.ref]); }} />)}
+          {owed.map((b) => <Row key={rowKey(b)} b={b} action onPay={() => { setPayingTenant(b.tenantId); setPaying([b.ref]); }} />)}
         </Card>
       )}
 
@@ -264,11 +267,11 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
         ) : (
           paid.map((b) => (
             <Row
-              key={b.ref}
+              key={rowKey(b)}
               b={b}
               selectable
-              selected={selected.has(b.ref)}
-              onToggleSelect={() => toggleSel(b.ref)}
+              selected={selected.has(rowKey(b))}
+              onToggleSelect={() => toggleSel(rowKey(b))}
               onPdf={() => void downloadReceipts([b], ctx)}
             />
           ))
