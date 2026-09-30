@@ -8,7 +8,7 @@ import { staffSiteScope } from "../lib/siteScope";
 import type { BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { onSite, registerRows } from "../lib/registerRows";
-import { ukToday } from "../lib/ukDate";
+import { ukToday, isRealDay } from "../lib/ukDate";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Meals & allergies (Pupils). Two things that only matter together:
@@ -74,6 +74,7 @@ meals.get("/", async (req, res) => {
     return;
   }
   const date = typeof req.query.date === "string" && req.query.date ? req.query.date : todayIso();
+  if (!isRealDay(date)) { res.status(400).json({ error: "date must be a real day (YYYY-MM-DD)" }); return; }
 
   const [menuSnap, blocksSnap] = await Promise.all([
     menusCol.doc(menuId(tenantId, date)).get(),
@@ -191,6 +192,7 @@ meals.put("/:date", async (req, res) => {
     return;
   }
   const date = req.params.date;
+  if (!isRealDay(date)) { res.status(400).json({ error: "date must be a real day (YYYY-MM-DD)" }); return; }
   await menusCol.doc(menuId(auth.tenantId, date)).set({
     tenantId: auth.tenantId,
     date,
