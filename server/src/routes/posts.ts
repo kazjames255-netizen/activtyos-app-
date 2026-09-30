@@ -104,7 +104,7 @@ async function parentTenantIds(email: string) {
   const snap = await db.collection("bookings").where("email", "==", email).get();
   const ids = new Set<string>();
   for (const d of snap.docs) { const t = (d.data() as { tenantId?: string }).tenantId; if (t) ids.add(t); }
-  return [...ids].slice(0, 10); // Firestore `in` cap
+  return [...ids];
 }
 
 // pinned first, then newest.
@@ -124,7 +124,10 @@ posts.get("/", async (req, res) => {
     const onFlags = await Promise.all(all.map((t) => customerAreaOn(t, "newsfeed")));
     const tenantIds = all.filter((_, i) => onFlags[i]);
     if (!tenantIds.length) { res.json([]); return; }
-    const snap = await col.where("tenantId", "in", tenantIds).get();
+    // Firestore's `in` takes at most 10 values — a family with more providers than that is queried in chunks, not silently cut off.
+    const chunks = Array.from({ length: Math.ceil(tenantIds.length / 10) }, (_, i) => tenantIds.slice(i * 10, i * 10 + 10));
+    const snaps = await Promise.all(chunks.map((c) => col.where("tenantId", "in", c).get()));
+    const snap = { docs: snaps.flatMap((x) => x.docs) };
     // A parent sees a post if it's network-wide (no franchiseId) OR targeted to
     // a franchise they belong to.
     const franSet = await parentFranchiseIds(email);
