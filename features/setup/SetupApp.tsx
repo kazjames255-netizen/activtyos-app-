@@ -1363,6 +1363,8 @@ function QuestionsEditor({
 
 export function SetupApp() {
   const t = useT();
+  const tx = t; // alias for blocks whose .map callback shadows `t`
+  const { locale } = useI18n();
   const { settings, questions, loading, save, error } = useSettings();
   const [tmplPreview, setTmplPreview] = useState(false);
   const [poPreview, setPoPreview] = useState(false);
@@ -1402,7 +1404,7 @@ export function SetupApp() {
   // browse feed, which would offer other providers' listings to scope to.
   useEffect(() => {
     apiGet<{ id: string; title?: string; name?: string }[]>("/api/listings?mine=1")
-      .then((rows) => setListings(rows.map((r) => ({ id: r.id, title: r.title || r.name || "Untitled listing" }))))
+      .then((rows) => setListings(rows.map((r) => ({ id: r.id, title: r.title || r.name || t("p8set.untitledListing") }))))
       .catch(() => setListings([]));
   }, []);
 
@@ -1529,10 +1531,7 @@ export function SetupApp() {
           referrals, memberships and reviews. Say so — precisely. */}
       {portal === "franchise" && (
         <div className="mb-3 rounded-xl border border-[#f0d9a8] bg-[#fdf6e6] px-4 py-3 text-[12.5px] leading-[1.6] text-[#7a5b06]">
-          <b>Your settings here apply to your franchise</b> — including the safety gates (medication
-          witness and leads-only doses, trip consent), your cancellation policies, meals and your
-          notifications. A few areas still follow <b>head office&rsquo;s</b> settings for now:
-          automatic emails and reminders, referrals, memberships and reviews.
+          <Rich k="p8set.frBanner" slots={{}} />
         </div>
       )}
 
@@ -1552,12 +1551,12 @@ export function SetupApp() {
               else void apiGet<{ name?: string }>("/api/account").then((a) => saveBoth(a?.name?.trim())).catch(() => saveBoth());
             }} className="w-full"><option value="business">{t("setup.businessName")}</option><option value="person">{t("setup.myOwnName")}</option></Select></div>
             {([
-              ["businessName", "Legal / business name", "Little Kickers Ltd"],
-              ["email", "Contact email", "hello@yourbiz.co.uk"],
-              ["phone", "Phone", "07700 900000"],
-              ["address", "Registered address", "12 High St, Townsville, AB1 2CD"],
-              ["vatNumber", "VAT number (if any)", "GB123456789"],
-              ["companyReg", "Company registration no.", "133950"],
+              ["businessName", t("p8set.coLegal"), "Little Kickers Ltd"],
+              ["email", t("p8set.coEmail"), "hello@yourbiz.co.uk"],
+              ["phone", t("p8set.coPhone"), "07700 900000"],
+              ["address", t("p8set.coAddress"), "12 High St, Townsville, AB1 2CD"],
+              ["vatNumber", t("p8set.coVat"), "GB123456789"],
+              ["companyReg", t("p8set.coReg"), "133950"],
             ] as const).map(([k, label, ph]) => (
               <div key={k}><FieldLabel>{label}</FieldLabel><Input value={settings.billing?.[k] ?? ""} placeholder={ph} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), [k]: e.target.value } } })} className="w-full" /></div>
             ))}
@@ -1570,8 +1569,8 @@ export function SetupApp() {
           <Row label={t("setup.logo")} hint={t("setup.logoHint")}>
             <div>
             <div className="flex items-center gap-2">
-              {settings.billing?.logoUrl && <img src={settings.billing.logoUrl} alt="logo" className="h-9 max-w-[120px] rounded border border-[var(--line)] object-contain" />}
-              <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ {t("setup.upload")}<input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — most image files work (PNG, JPG, SVG, WebP, GIF…). iPhone HEIC photos: export as JPG first."); } e.target.value = ""; }} /></label>
+              {settings.billing?.logoUrl && <img src={settings.billing.logoUrl} alt={t("p8set.logoAlt")} className="h-9 max-w-[120px] rounded border border-[var(--line)] object-contain" />}
+              <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ {t("setup.upload")}<input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error(t("p8set.logoReadErr"))); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? t("p8set.logoFailed", { msg: err.message }) : t("p8set.logoFailedGeneric")); } e.target.value = ""; }} /></label>
               {settings.billing?.logoUrl && <button type="button" onClick={() => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } })} className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("setup.remove")}</button>}
             </div>
             <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("setup.logoFormatsNote")}</div>
@@ -1599,7 +1598,7 @@ export function SetupApp() {
           {portal === "company" && (
             <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#f3d98a] bg-[#fdf6e3] px-4 py-3">
               <span className="text-[12.5px] leading-relaxed text-[#7a5a12]">
-                <b>Looking for roles &amp; who-can-see-what?</b> Name your roles and set View / Edit per area — Dashboard, Listings, Bookings, Finances and the rest — in the <b>Roles &amp; permissions</b> tab.
+                <Rich k="p8set.staffRolesBanner" slots={{}} />
               </span>
               <button type="button" onClick={() => setTab("roles")} className="ms-auto flex-none rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white hover:bg-[#16306e]">{t("setup.openRolesPermissions")} →</button>
             </div>
@@ -1668,8 +1667,8 @@ export function SetupApp() {
           <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">{t("setup.bothCompliant")}</p>
           <div className="mb-4 grid gap-2.5 sm:grid-cols-2">
             {([
-              { k: "inhouse", icon: "🛡️", title: "In-house first", tag: "Recommended", benefits: ["Catch a problem privately and fix it before it's public", "Captures feedback from every parent, even the quiet ones", "No accounts to set up — works today", "Still invites happy parents to Google/Trustpilot afterwards"] },
-              { k: "external", icon: "🌟", title: "Send straight to Google / Trustpilot", tag: "Most public reviews", benefits: ["More public reviews → better search ranking & trust", "No double entry — one review, on the big sites", "Trustpilot reviews link back to the booking automatically", "Note: unhappy reviews go public too (no gating allowed)"] },
+              { k: "inhouse", icon: "🛡️", title: t("p8set.rvInhouseTitle"), tag: t("p8set.rvInhouseTag"), benefits: [t("p8set.rvInhouseB1"), t("p8set.rvInhouseB2"), t("p8set.rvInhouseB3"), t("p8set.rvInhouseB4")] },
+              { k: "external", icon: "🌟", title: t("p8set.rvExtTitle"), tag: t("p8set.rvExtTag"), benefits: [t("p8set.rvExtB1"), t("p8set.rvExtB2"), t("p8set.rvExtB3"), t("p8set.rvExtB4")] },
             ] as { k: "inhouse" | "external"; icon: string; title: string; tag: string; benefits: string[] }[]).map((o) => {
               const on = (rv.captureMode ?? "inhouse") === o.k;
               return (
@@ -1677,7 +1676,7 @@ export function SetupApp() {
                   <div className="flex items-center gap-2">
                     <span className="text-[18px]">{o.icon}</span>
                     <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{o.title}</span>
-                    <span className={"ms-auto rounded-full px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wide " + (on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")}>{on ? "Selected" : o.tag}</span>
+                    <span className={"ms-auto rounded-full px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wide " + (on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")}>{on ? t("p8set.rvSelected") : o.tag}</span>
                   </div>
                   <ul className="mt-2 flex flex-col gap-1">
                     {o.benefits.map((b) => <li key={b} className="flex gap-1.5 text-[11.5px] leading-[1.4] text-[var(--ink-2)]"><span className="flex-none text-[#0f7a43]">✓</span>{b}</li>)}
@@ -1690,7 +1689,7 @@ export function SetupApp() {
           <div className="mb-1 text-[12.5px] font-extrabold text-[var(--ink)]">{t("setup.whichReviewSites")}</div>
           <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">{t("setup.whichReviewSitesHint")}</p>
           <div className="mb-4 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef4fd] px-3 py-1.5 text-[12.5px] font-bold text-[#1d3a8f]"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#1d3a8f" }} />In-house · always on</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef4fd] px-3 py-1.5 text-[12.5px] font-bold text-[#1d3a8f]"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#1d3a8f" }} />{t("p8set.rvInhouseOn")}</span>
             {([["google", "Google", "#ea4335"], ["trustpilot", "Trustpilot", "#00b67a"]] as [("google" | "trustpilot"), string, string][]).map(([k, label, col]) => (
               <button key={k} type="button" onClick={() => toggleSrc(k)} className={"inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition " + (has(k) ? "border-transparent text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:bg-[var(--panel)]")} style={has(k) ? { background: col } : undefined}>
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: has(k) ? "#fff" : col }} />{has(k) ? `✓ ${label}` : label}
@@ -1713,18 +1712,18 @@ export function SetupApp() {
             const precise = (p: Place) => !!p.placeId || /writereview/i.test(p.reviewUrl || ""); // true one-tap star box (ChIJ) vs listing link
             const FINDER = "https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder";
             return (<>
-              <div className="mb-2 mt-1 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wide text-[#ea4335]">Google{multi && <span className="rounded-full bg-[#fdece9] px-2 py-0.5 text-[9.5px] font-black tracking-wide text-[#b3261e]">{places.length} locations</span>}</div>
+              <div className="mb-2 mt-1 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wide text-[#ea4335]">Google{multi && <span className="rounded-full bg-[#fdece9] px-2 py-0.5 text-[9.5px] font-black tracking-wide text-[#b3261e]">{pickPlural(t, locale, "p8set.rvLocations", places.length)}</span>}</div>
 
               {/* Grab the Place ID from Google's finder — a visual shows exactly what to copy. */}
               <div className="mb-3 rounded-xl border border-[#f6d3cd] bg-[#fdf3f1] p-3.5">
                 <div className="mb-2 flex flex-wrap items-center gap-2.5">
-                  <a href={FINDER} target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#ea4335] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition hover:brightness-110">🔎 Get my Place ID from Google ↗</a>
-                  <span className="text-[12px] font-extrabold text-[#b3261e]">then copy your ChIJ… code</span>
+                  <a href={FINDER} target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#ea4335] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition hover:brightness-110">{t("p8set.rvGetPlaceId")}</a>
+                  <span className="text-[12px] font-extrabold text-[#b3261e]">{t("p8set.rvThenCopy")}</span>
                 </div>
                 <ol className="ms-4 list-decimal space-y-0.5 text-[12px] leading-relaxed text-[#7a2a22]">
-                  <li>In the map&rsquo;s search box, type your business name <b>+ town</b>, spelled exactly (e.g. <b>Kings Camps Sheffield</b>), and pick it from the list.</li>
-                  <li>A white box pops up on the pin. Copy the <b>ChIJ…</b> code shown after <b>Place ID:</b> — like the highlighted bit below.</li>
-                  <li>Paste it into your location&rsquo;s box underneath.</li>
+                  <li><Rich k="p8set.rvStep1" slots={{}} /></li>
+                  <li><Rich k="p8set.rvStep2" slots={{}} /></li>
+                  <li>{t("p8set.rvStep3")}</li>
                 </ol>
                 {/* Visual: a mock of Google's info window, with the Place ID highlighted. */}
                 <div className="mt-2.5 flex flex-wrap items-center gap-3">
@@ -1734,9 +1733,9 @@ export function SetupApp() {
                     <div className="mt-1 text-[11.5px] text-[#3c4043]"><span className="font-bold">Place ID:</span> <mark className="rounded bg-[#fff2a8] px-1 py-0.5 font-mono text-[11px] font-bold text-[#7a2a22] ring-1 ring-[#efcf3d]">ChIJSbBEmHOCeUgRTzxu9F_YMUg</mark></div>
                     <div className="mt-1 text-[10.5px] text-[#70757a]">High School, 10 Rutland Park, Broomhall, Sheffield S10 2PE, UK</div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-[12px] font-black text-[#0f7a43]"><span className="text-[16px]">👈</span> copy this bit</div>
+                  <div className="flex items-center gap-1.5 text-[12px] font-black text-[#0f7a43]"><span className="text-[16px]">👈</span> {t("p8set.rvCopyThis")}</div>
                 </div>
-                <p className="mt-2 text-[10.5px] text-[#9a5148]"><b>Map opens in Sydney?</b> Ignore it — putting your <b>town</b> in the search (as above) finds you in the UK.</p>
+                <p className="mt-2 text-[10.5px] text-[#9a5148]"><Rich k="p8set.rvSydney" slots={{}} /></p>
               </div>
 
               <div className="mb-3 flex flex-col gap-2.5">
@@ -1744,18 +1743,18 @@ export function SetupApp() {
                   <div key={p.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
                       {multi ? (
-                        <input value={p.label} placeholder={`Location ${i + 1} name — e.g. Ashford`} onChange={(e) => patch(p.id, { label: e.target.value })} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] font-bold text-[var(--ink)]" />
+                        <input value={p.label} placeholder={t("p8set.rvLocPh", { n: i + 1 })} onChange={(e) => patch(p.id, { label: e.target.value })} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] font-bold text-[var(--ink)]" />
                       ) : (
-                        <span className="flex-1 text-[12px] font-extrabold text-[var(--ink-2)]">Your Google listing</span>
+                        <span className="flex-1 text-[12px] font-extrabold text-[var(--ink-2)]">{t("p8set.rvYourListing")}</span>
                       )}
-                      {multi && <button type="button" onClick={() => writePlaces(places.filter((x) => x.id !== p.id))} className="flex-none rounded-full border border-[var(--line)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--ink-3)] transition hover:bg-[var(--panel)]" aria-label="Remove location">✕</button>}
+                      {multi && <button type="button" onClick={() => writePlaces(places.filter((x) => x.id !== p.id))} className="flex-none rounded-full border border-[var(--line)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--ink-3)] transition hover:bg-[var(--panel)]" aria-label={t("p8set.rvRemoveLoc")}>✕</button>}
                     </div>
-                    <input value={p.placeId || p.reviewUrl || ""} placeholder="Paste your ChIJ… Place ID here" onChange={(e) => { const g = parseGoogle(e.target.value); patch(p.id, { placeId: g.googlePlaceId, reviewUrl: g.googleReviewUrl }); }} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)]" />
-                    {connected(p) && <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-[#0f7a43]">✓ Connected{multi && p.label ? ` — ${p.label}` : ""} — {precise(p) ? "parents get a one-tap review box." : "parents land on your listing (one extra tap)."}<button type="button" onClick={() => patch(p.id, { placeId: "", reviewUrl: "" })} className="text-[var(--ink-3)] underline hover:text-[var(--ink)]">Clear</button></div>}
+                    <input value={p.placeId || p.reviewUrl || ""} placeholder={t("p8set.rvPastePh")} onChange={(e) => { const g = parseGoogle(e.target.value); patch(p.id, { placeId: g.googlePlaceId, reviewUrl: g.googleReviewUrl }); }} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)]" />
+                    {connected(p) && <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-[#0f7a43]">{t(precise(p) ? "p8set.rvConnPrecise" : "p8set.rvConnLink", { label: multi && p.label ? ` — ${p.label}` : "" })}<button type="button" onClick={() => patch(p.id, { placeId: "", reviewUrl: "" })} className="text-[var(--ink-3)] underline hover:text-[var(--ink)]">{t("p8set.clear")}</button></div>}
                   </div>
                 ))}
               </div>
-              <button type="button" onClick={() => writePlaces([...places, { id: "loc" + (places.length + 1) + Date.now().toString(36), label: "", placeId: "", reviewUrl: "" }])} className="mb-4 rounded-full border border-dashed border-[#c9d6f5] bg-[#f5f8ff] px-3.5 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] transition hover:bg-[#eef4ff]">+ Add another location</button>
+              <button type="button" onClick={() => writePlaces([...places, { id: "loc" + (places.length + 1) + Date.now().toString(36), label: "", placeId: "", reviewUrl: "" }])} className="mb-4 rounded-full border border-dashed border-[#c9d6f5] bg-[#f5f8ff] px-3.5 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] transition hover:bg-[#eef4ff]">+ {t("p8set.rvAddLoc")}</button>
 
               <Row label={t("setup.showGoogleRating")} hint={t("setup.showGoogleRatingHint")}>
                 <Toggle on={rv.showGoogleRating ?? true} onChange={(v) => set("reviews", { ...rv, showGoogleRating: v })} labels={[t("setup.on"), t("setup.off")]} />
@@ -1764,7 +1763,7 @@ export function SetupApp() {
                 <Toggle on={rv.inviteToGoogle ?? true} onChange={(v) => set("reviews", { ...rv, inviteToGoogle: v })} labels={[t("setup.on"), t("setup.off")]} />
               </Row>
               <div className="mb-4 rounded-lg border border-[#cde0f7] bg-[#eef5ff] px-3.5 py-2.5 text-[11.5px] leading-relaxed text-[#1d3a8f]">
-                Want to <b>pull every Google review + reply from ActivityOS</b>? That needs a one-time <b>Connect Google Business Profile</b> from the <b>Reviews</b> page (enabled once the platform link is live). The links above already show your rating and invite reviews without it.
+                <Rich k="p8set.rvPullBox" slots={{}} />
               </div>
             </>);
           })()}
@@ -1775,22 +1774,22 @@ export function SetupApp() {
             {/* Precise steps to find the Trustpilot Business Unit ID, with a visual. */}
             <div className="mb-3 rounded-xl border border-[#bfeadb] bg-[#e9f9f2] p-3.5">
               <div className="mb-2 flex flex-wrap items-center gap-2.5">
-                <a href="https://www.trustpilot.com/" target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#00b67a] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition hover:brightness-110">🔎 Open my Trustpilot page ↗</a>
-                <span className="text-[12px] font-extrabold text-[#05603a]">then grab your Business Unit ID</span>
+                <a href="https://www.trustpilot.com/" target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#00b67a] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition hover:brightness-110">{t("p8set.rvOpenTp")}</a>
+                <span className="text-[12px] font-extrabold text-[#05603a]">{t("p8set.rvGrabBuid")}</span>
               </div>
               <ol className="ms-4 list-decimal space-y-0.5 text-[12px] leading-relaxed text-[#0b5a3f]">
-                <li>Go to your own Trustpilot page — <b>trustpilot.com/review/yourwebsite.co.uk</b> (swap in your domain).</li>
-                <li>Press <b>Ctrl+U</b> (Mac: <b>⌥⌘U</b>) to view the page source, then <b>Ctrl/⌘+F</b> and search <b>businessUnitId</b>.</li>
-                <li>Copy the <b>24-character code</b> right after it (letters + numbers) and paste it below.</li>
+                <li><Rich k="p8set.rvTpStep1" slots={{}} /></li>
+                <li><Rich k="p8set.rvTpStep2" slots={{}} /></li>
+                <li><Rich k="p8set.rvTpStep3" slots={{}} /></li>
               </ol>
               {/* Visual: a mock of the page-source line, with the ID highlighted. */}
               <div className="mt-2.5 flex flex-wrap items-center gap-3">
                 <div className="w-[360px] max-w-full overflow-x-auto rounded-md border border-[#cfe9df] bg-[#0b2b22] p-2.5 font-mono text-[11px] leading-relaxed text-[#9fe7cd] shadow-[0_4px_16px_rgba(0,0,0,.16)]">
                   <span className="text-[#7fb8a6]">…,</span>&quot;<span className="text-[#e6f6ef]">businessUnitId</span>&quot;:&quot;<mark className="rounded bg-[#fff2a8] px-1 py-0.5 font-bold text-[#0b2b22] ring-1 ring-[#efcf3d]">4b2f1a9c00006400051a3c4e</mark>&quot;<span className="text-[#7fb8a6]">,&quot;displayName&quot;:…</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[12px] font-black text-[#05603a]"><span className="text-[16px]">👈</span> copy this bit</div>
+                <div className="flex items-center gap-1.5 text-[12px] font-black text-[#05603a]"><span className="text-[16px]">👈</span> {t("p8set.rvCopyThis")}</div>
               </div>
-              <p className="mt-2 text-[10.5px] text-[#3a6a58]"><b>Got a Trustpilot Business login?</b> It&rsquo;s also under Settings → Integrations, or in your <b>businessapp.b2b.trustpilot.com</b> address bar.</p>
+              <p className="mt-2 text-[10.5px] text-[#3a6a58]"><Rich k="p8set.rvTpLogin" slots={{}} /></p>
             </div>
 
             <Row label={t("setup.trustpilotBUID")} hint={t("setup.trustpilotBUIDHint")} note={t("setup.needsPlatformKey")}>
@@ -1840,70 +1839,70 @@ export function SetupApp() {
           <Row label={t("setup.selfEnrol")} hint={t("setup.selfEnrolHint")}>
             <Toggle on={settings.learning?.selfEnrol ?? false} onChange={(v) => set("learning", { ...settings.learning, selfEnrol: v })} labels={[t("setup.on"), t("setup.off")]} />
           </Row>
-          <div className="mt-5 mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Certificate design</div>
-          <p className="mb-2.5 text-[12px] text-[var(--ink-3)]">Pick the certificate staff receive when they pass a course. It auto-fills their name, the course, the score, the completion date and — if the course renews — the expiry date.</p>
+          <div className="mt-5 mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8set.certDesign")}</div>
+          <p className="mb-2.5 text-[12px] text-[var(--ink-3)]">{t("p8set.certDesignLede")}</p>
           <div className="mb-3 flex flex-wrap gap-2.5">
             {CERT_TEMPLATES.map((t) => { const on = (settings.learning?.certTemplate ?? "gold") === t.id; return (
               <button key={t.id} type="button" onClick={() => set("learning", { ...settings.learning, certTemplate: t.id })} className={"w-[196px] overflow-hidden rounded-xl border text-start transition-all " + (on ? "border-transparent ring-2 ring-[#1d3a8f] ring-offset-1" : "border-[var(--line)] hover:-translate-y-0.5 hover:shadow-md")}>
                 <div className="relative h-[139px] w-full overflow-hidden bg-[#eef1f6]"><iframe title={t.name} tabIndex={-1} scrolling="no" srcDoc={certificateDoc(certPreview, t.id, false)} className="pointer-events-none absolute left-0 top-0 origin-top-left" style={{ width: 1000, height: 710, transform: "scale(0.196)" }} /></div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5"><span className="truncate text-[11.5px] font-bold text-[var(--ink)]">{t.name}</span>{on && <span className="ms-auto text-[11px] font-extrabold text-[#1d3a8f]">✓ Chosen</span>}</div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5"><span className="truncate text-[11.5px] font-bold text-[var(--ink)]">{t.name}</span>{on && <span className="ms-auto text-[11px] font-extrabold text-[#1d3a8f]">{tx("p8set.certChosen")}</span>}</div>
               </button>
             ); })}
           </div>
-          <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Accent colour</div>
+          <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8set.certAccent")}</div>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             {CERT_ACCENTS.map(([name, hex]) => { const on = settings.learning?.certColor === hex; return (
               <button key={hex} type="button" title={name} aria-label={name} onClick={() => set("learning", { ...settings.learning, certColor: hex })} className={"h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 " + (on ? "border-[var(--ink)]" : "border-white shadow-[0_0_0_1px_var(--line)]")} style={{ background: hex }} />
             ); })}
-            <button type="button" onClick={() => set("learning", { ...settings.learning, certColor: undefined })} className={"rounded-full border px-2.5 py-1 text-[11px] font-bold " + (settings.learning?.certColor ? "border-[var(--line)] text-[var(--ink-2)] hover:border-[#1d3a8f]" : "border-[#1d3a8f] text-[#1d3a8f]")}>Template default</button>
+            <button type="button" onClick={() => set("learning", { ...settings.learning, certColor: undefined })} className={"rounded-full border px-2.5 py-1 text-[11px] font-bold " + (settings.learning?.certColor ? "border-[var(--line)] text-[var(--ink-2)] hover:border-[#1d3a8f]" : "border-[#1d3a8f] text-[#1d3a8f]")}>{t("p8set.certTplDefault")}</button>
           </div>
           <div className="mb-3 grid gap-3 sm:grid-cols-2">
-            <div><FieldLabel>Heading text</FieldLabel><Input value={settings.learning?.certTitle ?? ""} placeholder="Certificate of Achievement" onChange={(e) => set("learning", { ...settings.learning, certTitle: e.target.value })} className="w-full" /></div>
+            <div><FieldLabel>{t("p8set.certHeading")}</FieldLabel><Input value={settings.learning?.certTitle ?? ""} placeholder="Certificate of Achievement" onChange={(e) => set("learning", { ...settings.learning, certTitle: e.target.value })} className="w-full" /></div>
             <div className="flex items-end gap-5 pb-1.5">
-              <label className="flex items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={settings.learning?.certShowScore !== false} onChange={(e) => set("learning", { ...settings.learning, certShowScore: e.target.checked })} /> Show score</label>
-              <label className="flex items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={settings.learning?.certShowQr !== false} onChange={(e) => set("learning", { ...settings.learning, certShowQr: e.target.checked })} /> Show QR</label>
+              <label className="flex items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={settings.learning?.certShowScore !== false} onChange={(e) => set("learning", { ...settings.learning, certShowScore: e.target.checked })} /> {t("p8set.certShowScore")}</label>
+              <label className="flex items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={settings.learning?.certShowQr !== false} onChange={(e) => set("learning", { ...settings.learning, certShowQr: e.target.checked })} /> {t("p8set.certShowQr")}</label>
             </div>
           </div>
           <div className="mb-3 grid gap-3 sm:grid-cols-2">
-            <div><FieldLabel>Signatory name</FieldLabel><Input value={settings.learning?.certSignatory ?? ""} placeholder="e.g. Alex Morgan" onChange={(e) => set("learning", { ...settings.learning, certSignatory: e.target.value })} className="w-full" /></div>
-            <div><FieldLabel>Signatory role</FieldLabel><Input value={settings.learning?.certSignatoryRole ?? ""} placeholder="e.g. Training Manager" onChange={(e) => set("learning", { ...settings.learning, certSignatoryRole: e.target.value })} className="w-full" /></div>
+            <div><FieldLabel>{t("p8set.certSigName")}</FieldLabel><Input value={settings.learning?.certSignatory ?? ""} placeholder={t("p8set.egAlex")} onChange={(e) => set("learning", { ...settings.learning, certSignatory: e.target.value })} className="w-full" /></div>
+            <div><FieldLabel>{t("p8set.certSigRole")}</FieldLabel><Input value={settings.learning?.certSignatoryRole ?? ""} placeholder={t("p8set.egTrainMgr")} onChange={(e) => set("learning", { ...settings.learning, certSignatoryRole: e.target.value })} className="w-full" /></div>
           </div>
           <div className="mb-3">
-            <FieldLabel>Signature image (optional)</FieldLabel>
+            <FieldLabel>{t("p8set.certSigImg")}</FieldLabel>
             <div className="flex flex-wrap items-center gap-2">
-              <label className="cursor-pointer rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ Upload signature<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = () => set("learning", { ...settings.learning, certSignature: String(r.result) }); r.readAsDataURL(f); }} /></label>
+              <label className="cursor-pointer rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ {t("p8set.certUploadSig")}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = () => set("learning", { ...settings.learning, certSignature: String(r.result) }); r.readAsDataURL(f); }} /></label>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {settings.learning?.certSignature && <img src={settings.learning.certSignature} alt="Signature" className="h-9 w-auto rounded border border-[var(--line)] bg-[var(--surface)] object-contain px-1" />}
-              {settings.learning?.certSignature && <button type="button" onClick={() => set("learning", { ...settings.learning, certSignature: undefined })} className="text-[12px] font-semibold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button>}
+              {settings.learning?.certSignature && <img src={settings.learning.certSignature} alt={t("p8set.certSigAlt")} className="h-9 w-auto rounded border border-[var(--line)] bg-[var(--surface)] object-contain px-1" />}
+              {settings.learning?.certSignature && <button type="button" onClick={() => set("learning", { ...settings.learning, certSignature: undefined })} className="text-[12px] font-semibold text-[var(--ink-3)] hover:text-[#c0392b]">{t("setup.remove")}</button>}
             </div>
           </div>
-          <Button variant="primary" onClick={() => openCertificate(certPreview, settings.learning?.certTemplate)}>👁 Preview full certificate</Button>
+          <Button variant="primary" onClick={() => openCertificate(certPreview, settings.learning?.certTemplate)}>👁 {t("p8set.certPreview")}</Button>
 
-          <div id="credtypes" className="mt-5 mb-1 scroll-mt-28 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Staff credential types</div>
-          <p className="mb-2.5 text-[12px] text-[var(--ink-3)]">Certificates staff upload in their own area and you verify (DBS, First Aid, etc.). Add your own or delete any you don’t use.</p>
+          <div id="credtypes" className="mt-5 mb-1 scroll-mt-28 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8set.credTypes")}</div>
+          <p className="mb-2.5 text-[12px] text-[var(--ink-3)]">{t("p8set.credTypesLede")}</p>
           <div className="grid gap-2">
             {cred.types.map((t) => (
               <div key={t.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                   <Input value={t.name} onChange={(e) => cred.upsertType({ ...t, name: e.target.value })} className="w-[190px] font-semibold" />
-                  {t.dbs && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]" title="Captures DBS level + Update Service number">DBS extras</span>}
-                  <label className="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={t.required} onChange={(e) => cred.upsertType({ ...t, required: e.target.checked })} /> Required</label>
-                  <label className="flex items-center gap-1.5 text-[12px] text-[var(--ink-2)]">Renew every <Input type="number" min={0} value={t.renewMonths} onChange={(e) => cred.upsertType({ ...t, renewMonths: Number(e.target.value) })} className="w-[62px]" /> months <span className="text-[var(--ink-3)]">(0 = never)</span></label>
-                  <button type="button" title="Delete credential type" onClick={() => cred.deleteType(t.id)} className="ms-auto text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
+                  {t.dbs && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]" title={tx("p8set.credDbsTip")}>{tx("p8set.credDbsExtras")}</span>}
+                  <label className="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={t.required} onChange={(e) => cred.upsertType({ ...t, required: e.target.checked })} /> {tx("p8set.credRequired")}</label>
+                  <label className="flex items-center gap-1.5 text-[12px] text-[var(--ink-2)]"><Rich k="p8set.credRenew" slots={{ input: <Input type="number" min={0} value={t.renewMonths} onChange={(e) => cred.upsertType({ ...t, renewMonths: Number(e.target.value) })} className="w-[62px]" /> }} /></label>
+                  <button type="button" title={tx("p8set.credDelete")} onClick={() => cred.deleteType(t.id)} className="ms-auto text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
                 </div>
                 {t.required && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-[var(--line-2,#eef2f8)] pt-2">
-                    <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Required for</span>
-                    <Select value={t.applyKind ?? "all"} onChange={(e) => cred.upsertType({ ...t, applyKind: e.target.value as "all" | "roles" | "staff" })} className="max-w-[170px]"><option value="all">All staff</option><option value="roles">Role or job title</option><option value="staff">Named people</option></Select>
+                    <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tx("p8set.credRequiredFor")}</span>
+                    <Select value={t.applyKind ?? "all"} onChange={(e) => cred.upsertType({ ...t, applyKind: e.target.value as "all" | "roles" | "staff" })} className="max-w-[170px]"><option value="all">{tx("p8set.credAllStaff")}</option><option value="roles">{tx("p8set.credRoleOrTitle")}</option><option value="staff">{tx("p8set.credNamed")}</option></Select>
                     {(t.applyKind ?? "all") === "roles" && (() => {
                       const access = (settings.roles ?? []).map((r) => r.name).filter(Boolean);
                       const titles = (settings.staffRoles ?? []).filter(Boolean);
-                      if (!access.length && !titles.length) return <span className="text-[11px] text-[var(--ink-3)]">Add access roles in Setup → Roles &amp; permissions, or job titles in Setup → Staff roles first.</span>;
+                      if (!access.length && !titles.length) return <span className="text-[11px] text-[var(--ink-3)]">{tx("p8set.credAddRolesFirst")}</span>;
                       const chip = (r: string) => { const on = (t.applyRoles ?? []).includes(r); return <button key={r} type="button" onClick={() => cred.upsertType({ ...t, applyRoles: toggleIn(t.applyRoles, r) })} className={"rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-colors " + (on ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{r}</button>; };
                       return (
                         <div className="w-full space-y-1.5">
-                          {access.length > 0 && <div className="flex flex-wrap items-center gap-1.5"><span className="me-0.5 inline-flex items-center rounded bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#5b6577]" title="Access role / permission — what the person can do in ActivityOS">🔑 Access role</span>{access.map(chip)}</div>}
-                          {titles.length > 0 && <div className="flex flex-wrap items-center gap-1.5"><span className="me-0.5 inline-flex items-center rounded bg-[#eaf1ff] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#1d54c4]" title="Job title — the person's role on the ground">🧑‍🏫 Job title</span>{titles.map(chip)}</div>}
+                          {access.length > 0 && <div className="flex flex-wrap items-center gap-1.5"><span className="me-0.5 inline-flex items-center rounded bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#5b6577]" title={tx("p8set.credAccessRoleTip")}>{tx("p8set.credAccessRole")}</span>{access.map(chip)}</div>}
+                          {titles.length > 0 && <div className="flex flex-wrap items-center gap-1.5"><span className="me-0.5 inline-flex items-center rounded bg-[#eaf1ff] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#1d54c4]" title={tx("p8set.credJobTitleTip")}>{tx("p8set.credJobTitle")}</span>{titles.map(chip)}</div>}
                         </div>
                       );
                     })()}
@@ -1913,9 +1912,9 @@ export function SetupApp() {
               </div>
             ))}
           </div>
-          <Button className="mt-2" onClick={() => cred.upsertType({ id: "ct" + Date.now().toString(36), name: "New credential", required: false, renewMonths: 12, needsFile: true })}>+ Add credential type</Button>
+          <Button className="mt-2" onClick={() => cred.upsertType({ id: "ct" + Date.now().toString(36), name: t("p8set.credNew"), required: false, renewMonths: 12, needsFile: true })}>+ {t("p8set.credAdd")}</Button>
 
-          <p className="mt-4 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-3)]">🔔 Reminder emails (course due, overdue chase, renewal due, unread policy, weekly manager digest) are set in the <b className="text-[var(--ink-2)]">Learning Centre → Completion → Reminders</b>.</p>
+          <p className="mt-4 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-3)]"><Rich k="p8set.credReminders" slots={{}} /></p>
         </Section>
       )}
 
@@ -1961,8 +1960,8 @@ export function SetupApp() {
             <Toggle on={settings.medication?.requireWitness ?? false} onChange={(v) => set("medication", { ...settings.medication, requireWitness: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
           {portal !== "freelancer" && (
-            <Row label="Only leads can record doses" hint="Restrict recording to leads/managers rather than all staff.">
-              <Toggle on={settings.medication?.leadsOnly ?? false} onChange={(v) => set("medication", { ...settings.medication, leadsOnly: v })} labels={["Yes", "No"]} />
+            <Row label={t("p8set.medLeadsOnly")} hint={t("p8set.medLeadsOnlyHint")}>
+              <Toggle on={settings.medication?.leadsOnly ?? false} onChange={(v) => set("medication", { ...settings.medication, leadsOnly: v })} labels={[t("p8set.yes"), t("p8set.no")]} />
             </Row>
           )}
         </Section>
@@ -1970,49 +1969,49 @@ export function SetupApp() {
 
       {activeTab === "safeguarding" && (
         <Section
-          title="Safeguarding"
-          lede="Accidents and incidents. How parents are kept informed when something is logged for their child."
+          title={t("p8set.sgTitle")}
+          lede={t("p8set.sgLede")}
         >
-          <Row label="Notify the parent when an accident is logged" hint="Email + a bell in their area, with a timestamp, each time an accident is recorded for their child.">
-            <Toggle on={settings.safeguarding?.notifyParentAccident ?? true} onChange={(v) => set("safeguarding", { ...settings.safeguarding, notifyParentAccident: v })} labels={["Yes", "No"]} />
+          <Row label={t("p8set.sgNotifyAcc")} hint={t("p8set.sgNotifyAccHint")}>
+            <Toggle on={settings.safeguarding?.notifyParentAccident ?? true} onChange={(v) => set("safeguarding", { ...settings.safeguarding, notifyParentAccident: v })} labels={[t("p8set.yes"), t("p8set.no")]} />
           </Row>
-          <Row label="Notify the parent for incidents too" hint="Incidents are often internal (behaviour, near-misses) — leave off to keep them staff-only, or on to share them.">
-            <Toggle on={settings.safeguarding?.notifyParentIncident ?? false} onChange={(v) => set("safeguarding", { ...settings.safeguarding, notifyParentIncident: v })} labels={["Yes", "No"]} />
+          <Row label={t("p8set.sgNotifyInc")} hint={t("p8set.sgNotifyIncHint")}>
+            <Toggle on={settings.safeguarding?.notifyParentIncident ?? false} onChange={(v) => set("safeguarding", { ...settings.safeguarding, notifyParentIncident: v })} labels={[t("p8set.yes"), t("p8set.no")]} />
           </Row>
-          <Row label="Tell staff when a parent acknowledges" hint="Parents can confirm they've seen a logged accident. When they do, email + ring the bell for your staff so you know it landed. Turn off if you don't need the confirmation.">
-            <Toggle on={settings.safeguarding?.notifyStaffAcknowledged ?? true} onChange={(v) => set("safeguarding", { ...settings.safeguarding, notifyStaffAcknowledged: v })} labels={["Yes", "No"]} />
+          <Row label={t("p8set.sgTellStaff")} hint={t("p8set.sgTellStaffHint")}>
+            <Toggle on={settings.safeguarding?.notifyStaffAcknowledged ?? true} onChange={(v) => set("safeguarding", { ...settings.safeguarding, notifyStaffAcknowledged: v })} labels={[t("p8set.yes"), t("p8set.no")]} />
           </Row>
-          <Row label="Require parents to acknowledge" hint="On: un-acknowledged accidents show a persistent reminder in the parent's area until they confirm (nothing is blocked). Off: acknowledging is optional.">
-            <Toggle on={settings.safeguarding?.requireAcknowledgement ?? false} onChange={(v) => set("safeguarding", { ...settings.safeguarding, requireAcknowledgement: v })} labels={["Yes", "No"]} />
+          <Row label={t("p8set.sgReqAck")} hint={t("p8set.sgReqAckHint")}>
+            <Toggle on={settings.safeguarding?.requireAcknowledgement ?? false} onChange={(v) => set("safeguarding", { ...settings.safeguarding, requireAcknowledgement: v })} labels={[t("p8set.yes"), t("p8set.no")]} />
           </Row>
 
-          <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Designated Safeguarding Lead (DSL)</div>
-          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">As a sole provider you are the DSL — you record a concern and decide the external action yourself. Your name appears on records and the PDF.</p>
+          <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8set.sgDslHead")}</div>
+          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">{t("p8set.sgDslLede")}</p>
           {!settings.safeguarding?.dslName?.trim() && (
             // Not a hard block — a concern must always be loggable — but nobody
             // named as DSL is a gap an inspector asks about first.
             <div className="mb-2.5 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] font-semibold text-[#c02636]">
-              ⚠ No DSL is named. Concerns can still be logged, but every record and PDF will say nobody was named as the safeguarding lead. Add a name below.
+              {t("p8set.sgNoDsl")}
             </div>
           )}
-          <Row label="Your name (the DSL)" hint="Shown on records and exports as the safeguarding lead.">
-            <Input value={settings.safeguarding?.dslName ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, dslName: e.target.value })} placeholder="e.g. Sam Taylor" className="w-full" />
+          <Row label={t("p8set.sgYourName")} hint={t("p8set.sgYourNameHint")}>
+            <Input value={settings.safeguarding?.dslName ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, dslName: e.target.value })} placeholder={t("p8set.egSam")} className="w-full" />
           </Row>
-          <Row label="Role title" hint="What you call the role (e.g. DSL, Safeguarding Lead, Welfare Officer).">
+          <Row label={t("p8set.sgRoleTitle")} hint={t("p8set.sgRoleTitleHint")}>
             <Input value={settings.safeguarding?.dslTitle ?? "Designated Safeguarding Lead (DSL)"} onChange={(e) => set("safeguarding", { ...settings.safeguarding, dslTitle: e.target.value })} className="w-full" />
           </Row>
-          <Row label="DSL's email" hint="Alerted (bell + an email with no details) on every safeguarding concern and staff allegation. Use the email they sign in with — on a team account, that login gets full access to concerns and allegations. Blank = the account holder.">
-            <Input type="email" value={settings.safeguarding?.dslEmail ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, dslEmail: e.target.value.trim() })} placeholder="e.g. sam@yourcompany.co.uk" className="w-full" />
+          <Row label={t("p8set.sgDslEmail")} hint={t("p8set.sgDslEmailHint")}>
+            <Input type="email" value={settings.safeguarding?.dslEmail ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, dslEmail: e.target.value.trim() })} placeholder={t("p8set.egSamEmail")} className="w-full" />
           </Row>
-          <Row label="Deputy DSL (optional)" hint="Name and sign-in email of a deputy. They're alerted with the DSL and get the same access. An allegation about the DSL or deputy goes to the account holder only.">
+          <Row label={t("p8set.sgDeputy")} hint={t("p8set.sgDeputyHint")}>
             <div className="grid w-full gap-2 sm:grid-cols-2">
-              <Input value={settings.safeguarding?.deputyDslName ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, deputyDslName: e.target.value })} placeholder="Deputy's name" className="w-full" />
-              <Input type="email" value={settings.safeguarding?.deputyDslEmail ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, deputyDslEmail: e.target.value.trim() })} placeholder="Deputy's sign-in email" className="w-full" />
+              <Input value={settings.safeguarding?.deputyDslName ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, deputyDslName: e.target.value })} placeholder={t("p8set.sgDeputyName")} className="w-full" />
+              <Input type="email" value={settings.safeguarding?.deputyDslEmail ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, deputyDslEmail: e.target.value.trim() })} placeholder={t("p8set.sgDeputyEmail")} className="w-full" />
             </div>
           </Row>
 
-          <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Your local safeguarding contacts</div>
-          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">The agencies you actually report to. These show on the concern form (you pick which council applies) and the PDF, ready to call.</p>
+          <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8set.sgContactsHead")}</div>
+          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">{t("p8set.sgContactsLede")}</p>
           {(() => {
             const c = settings.safeguarding?.contacts ?? {};
             const setC = (patch: Partial<NonNullable<TenantSettings["safeguarding"]>["contacts"]>) => set("safeguarding", { ...settings.safeguarding, contacts: { ...c, ...patch } });
@@ -2021,138 +2020,138 @@ export function SetupApp() {
             const extra = c.extra ?? [];
             return (
               <>
-                <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">If a child is in immediate danger</div>
-                <Row label="Police"><Input value={c.policePhone ?? "999 (emergency) / 101"} onChange={(e) => setC({ policePhone: e.target.value })} className="w-full" /></Row>
-                <Row label="NSPCC helpline"><Input value={c.nspccPhone ?? "0808 800 5000"} onChange={(e) => setC({ nspccPhone: e.target.value })} className="w-full" /></Row>
+                <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8set.sgImmediate")}</div>
+                <Row label={t("p8set.sgPolice")}><Input value={c.policePhone ?? "999 (emergency) / 101"} onChange={(e) => setC({ policePhone: e.target.value })} className="w-full" /></Row>
+                <Row label={t("p8set.sgNspcc")}><Input value={c.nspccPhone ?? "0808 800 5000"} onChange={(e) => setC({ nspccPhone: e.target.value })} className="w-full" /></Row>
 
-                <div className="mt-4 mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Local authorities you work in</div>
-                <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">Add each council whose area you run in. When you log a concern you pick the authority, and its LADO &amp; social-care numbers appear.</p>
+                <div className="mt-4 mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("p8set.sgLocalAuth")}</div>
+                <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">{t("p8set.sgLocalAuthLede")}</p>
                 <div className="flex flex-col gap-2.5">
                   {auths.map((a, i) => (
                     <div key={a.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
                       <div className="mb-1.5 flex items-center gap-1.5">
-                        <Input value={a.name} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder="Council name — e.g. Milton Keynes Council" className="flex-1 font-bold" />
-                        <button type="button" aria-label="Remove authority" onClick={() => setAuths(auths.filter((_, j) => j !== i))} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+                        <Input value={a.name} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder={t("p8set.sgCouncilPh")} className="flex-1 font-bold" />
+                        <button type="button" aria-label={t("p8set.sgRemoveAuth")} onClick={() => setAuths(auths.filter((_, j) => j !== i))} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
                       </div>
                       <div className="grid gap-1.5 sm:grid-cols-2">
-                        <Input value={a.ladoName ?? ""} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, ladoName: e.target.value } : x)))} placeholder="LADO name" />
-                        <Input value={a.ladoPhone ?? ""} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, ladoPhone: e.target.value } : x)))} placeholder="LADO phone" />
-                        <Input value={a.socialCarePhone ?? ""} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, socialCarePhone: e.target.value } : x)))} placeholder="Children's social care (MASH) phone" />
-                        <Input value={a.outOfHoursPhone ?? ""} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, outOfHoursPhone: e.target.value } : x)))} placeholder="Out-of-hours / EDT phone" />
+                        <Input value={a.ladoName ?? ""} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, ladoName: e.target.value } : x)))} placeholder={t("p8set.sgLadoName")} />
+                        <Input value={a.ladoPhone ?? ""} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, ladoPhone: e.target.value } : x)))} placeholder={t("p8set.sgLadoPhone")} />
+                        <Input value={a.socialCarePhone ?? ""} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, socialCarePhone: e.target.value } : x)))} placeholder={t("p8set.sgMash")} />
+                        <Input value={a.outOfHoursPhone ?? ""} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, outOfHoursPhone: e.target.value } : x)))} placeholder={t("p8set.sgEdt")} />
                       </div>
                     </div>
                   ))}
                 </div>
-                <button type="button" onClick={() => setAuths([...auths, { id: `la_${new Date().toISOString()}`, name: "" }])} className="mt-1.5 rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[#1d3a8f]">＋ Add a local authority</button>
+                <button type="button" onClick={() => setAuths([...auths, { id: `la_${new Date().toISOString()}`, name: "" }])} className="mt-1.5 rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[#1d3a8f]">{t("p8set.sgAddAuth")}</button>
 
                 <div className="mt-4">
-                  <FieldLabel>More contacts</FieldLabel>
+                  <FieldLabel>{t("p8set.sgMoreContacts")}</FieldLabel>
                   <div className="flex flex-col gap-1.5">
                     {extra.map((x, i) => (
                       <div key={i} className="flex flex-wrap items-center gap-1.5">
-                        <Input value={x.label} onChange={(e) => setC({ extra: extra.map((y, j) => (j === i ? { ...y, label: e.target.value } : y)) })} placeholder="Label — e.g. Diocese safeguarding" className="min-w-[180px] flex-1" />
-                        <Input value={x.phone} onChange={(e) => setC({ extra: extra.map((y, j) => (j === i ? { ...y, phone: e.target.value } : y)) })} placeholder="Phone" className="w-40" />
-                        <button type="button" aria-label="Remove contact" onClick={() => setC({ extra: extra.filter((_, j) => j !== i) })} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+                        <Input value={x.label} onChange={(e) => setC({ extra: extra.map((y, j) => (j === i ? { ...y, label: e.target.value } : y)) })} placeholder={t("p8set.sgLabelPh")} className="min-w-[180px] flex-1" />
+                        <Input value={x.phone} onChange={(e) => setC({ extra: extra.map((y, j) => (j === i ? { ...y, phone: e.target.value } : y)) })} placeholder={t("p8set.sgPhonePh")} className="w-40" />
+                        <button type="button" aria-label={t("p8set.sgRemoveContact")} onClick={() => setC({ extra: extra.filter((_, j) => j !== i) })} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
                       </div>
                     ))}
                   </div>
-                  <button type="button" onClick={() => setC({ extra: [...extra, { label: "", phone: "" }] })} className="mt-1.5 rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[#1d3a8f]">＋ Add a contact</button>
+                  <button type="button" onClick={() => setC({ extra: [...extra, { label: "", phone: "" }] })} className="mt-1.5 rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[#1d3a8f]">{t("p8set.sgAddContact")}</button>
                 </div>
               </>
             );
           })()}
 
-          <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Concern categories</div>
-          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">The list staff choose from when logging a concern. Edit, add or remove — the special legal prompts (LADO, FGM, 999) still apply to matching categories.</p>
-          <ListEditor items={settings.safeguarding?.categories ?? [...SG_CATEGORIES]} onChange={(next) => set("safeguarding", { ...settings.safeguarding, categories: next })} placeholder="Add a category…" />
+          <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8set.sgCategories")}</div>
+          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">{t("p8set.sgCategoriesLede")}</p>
+          <ListEditor items={settings.safeguarding?.categories ?? [...SG_CATEGORIES]} onChange={(next) => set("safeguarding", { ...settings.safeguarding, categories: next })} placeholder={t("p8set.sgAddCat")} />
 
-          <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>“What to do now” protocol</div>
-          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">The default guidance staff see on the form. Category-specific overrides (LADO, FGM, 999, NRM) are layered on top automatically.</p>
-          <Row label="Timescale" hint="e.g. Same day.">
+          <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8set.sgProtocol")}</div>
+          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">{t("p8set.sgProtocolLede")}</p>
+          <Row label={t("p8set.sgTimescale")} hint={t("p8set.egSameDay")}>
             <Input value={settings.safeguarding?.protocol?.due ?? DEFAULT_PROTOCOL.due} onChange={(e) => set("safeguarding", { ...settings.safeguarding, protocol: { ...settings.safeguarding?.protocol, due: e.target.value } })} className="w-full" />
           </Row>
-          <Row label="Reference" hint="The standard you follow, shown as a tag (e.g. KCSIE).">
+          <Row label={t("p8set.sgReference")} hint={t("p8set.sgReferenceHint")}>
             <Input value={settings.safeguarding?.protocol?.ref ?? DEFAULT_PROTOCOL.ref} onChange={(e) => set("safeguarding", { ...settings.safeguarding, protocol: { ...settings.safeguarding?.protocol, ref: e.target.value } })} className="w-full" />
           </Row>
-          <FieldLabel>Steps</FieldLabel>
-          <ListEditor items={settings.safeguarding?.protocol?.steps ?? [...DEFAULT_PROTOCOL.steps]} onChange={(next) => set("safeguarding", { ...settings.safeguarding, protocol: { ...settings.safeguarding?.protocol, steps: next } })} placeholder="Add a step…" />
+          <FieldLabel>{t("p8set.sgSteps")}</FieldLabel>
+          <ListEditor items={settings.safeguarding?.protocol?.steps ?? [...DEFAULT_PROTOCOL.steps]} onChange={(next) => set("safeguarding", { ...settings.safeguarding, protocol: { ...settings.safeguarding?.protocol, steps: next } })} placeholder={t("p8set.sgAddStep")} />
         </Section>
       )}
 
       {activeTab === "registers" && (
-        <Section title="Register" lede="How the daily attendance register behaves — sign-in/out timestamps and which details show when you tap a child.">
-          <Row label="Show sign-in / collection times" hint="On: each ✓ In and ✓ Collected shows the time it was tapped. Off: just the tick.">
-            <Toggle on={settings.registers?.timestamps ?? true} onChange={(v) => set("registers", { ...settings.registers, timestamps: v })} labels={["On", "Off"]} />
+        <Section title={t("p8set.regTitle")} lede={t("p8set.regLede")}>
+          <Row label={t("p8set.regTimes")} hint={t("p8set.regTimesHint")}>
+            <Toggle on={settings.registers?.timestamps ?? true} onChange={(v) => set("registers", { ...settings.registers, timestamps: v })} labels={[t("p8set.on"), t("p8set.off")]} />
           </Row>
-          <Row label="Show the collection-PIN reminder" hint="On: a banner reminds staff to check the family's collection PIN before releasing a child. (The 4-digit PIN itself is Phase 2 — for now use the collection password.)">
-            <Toggle on={settings.registers?.requireCollectionPin ?? false} onChange={(v) => set("registers", { ...settings.registers, requireCollectionPin: v })} labels={["On", "Off"]} />
+          <Row label={t("p8set.regPin")} hint={t("p8set.regPinHint")}>
+            <Toggle on={settings.registers?.requireCollectionPin ?? false} onChange={(v) => set("registers", { ...settings.registers, requireCollectionPin: v })} labels={[t("p8set.on"), t("p8set.off")]} />
           </Row>
-          <div className="mt-3 mb-1 text-[12px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Show on a child&rsquo;s card</div>
-          <p className="mb-2 -mt-0.5 text-[12px] text-[var(--ink-3)]">Every detail on the tap-through card. Turn off anything your staff don&rsquo;t need on the day. Keeping allergies, medical and SEND on is strongly recommended for safeguarding.</p>
-          {([["allergies", "Allergies"], ["medical", "Medical"], ["dietary", "Dietary"], ["send", "SEND / needs"], ["swimming", "Swimming ability"], ["likes", "Likes / what settles them"], ["dislikes", "Dislikes / avoid"], ["careNotes", "Care notes"], ["answers", "Parent's question answers"], ["consents", "Consents (photos, suncream…)"], ["mainContact", "Main contact (name & number)"], ["emergency", "Emergency contact"], ["password", "Collection password"], ["school", "School"], ["bookingNotes", "Booking notes"], ["attending", "Attending days & times"]] as [string, string][]).map(([k, label]) => (
+          <div className="mt-3 mb-1 text-[12px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8set.regCardHead")}</div>
+          <p className="mb-2 -mt-0.5 text-[12px] text-[var(--ink-3)]">{t("p8set.regCardLede")}</p>
+          {([["allergies", t("p8set.regc_allergies")], ["medical", t("p8set.regc_medical")], ["dietary", t("p8set.regc_dietary")], ["send", t("p8set.regc_send")], ["swimming", t("p8set.regc_swimming")], ["likes", t("p8set.regc_likes")], ["dislikes", t("p8set.regc_dislikes")], ["careNotes", t("p8set.regc_carenotes")], ["answers", t("p8set.regc_answers")], ["consents", t("p8set.regc_consents")], ["mainContact", t("p8set.regc_maincontact")], ["emergency", t("p8set.regc_emergency")], ["password", t("p8set.regc_password")], ["school", t("p8set.regc_school")], ["bookingNotes", t("p8set.regc_bookingnotes")], ["attending", t("p8set.regc_attending")]] as [string, string][]).map(([k, label]) => (
             <Row key={k} label={label}>
-              <Toggle on={settings.registers?.card?.[k as keyof NonNullable<NonNullable<typeof settings.registers>["card"]>] ?? true} onChange={(v) => set("registers", { ...settings.registers, card: { ...settings.registers?.card, [k]: v } })} labels={["Show", "Hide"]} />
+              <Toggle on={settings.registers?.card?.[k as keyof NonNullable<NonNullable<typeof settings.registers>["card"]>] ?? true} onChange={(v) => set("registers", { ...settings.registers, card: { ...settings.registers?.card, [k]: v } })} labels={[t("p8set.show"), t("p8set.hide")]} />
             </Row>
           ))}
-          <div className="mt-4 mb-1 text-[12px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Quick actions on each row</div>
-          <p className="mb-2 -mt-0.5 text-[12px] text-[var(--ink-3)]">The one-tap links beside each child — each jumps straight to the right page with the child already filled in.</p>
-          {([["firstAid", "First aid"], ["incident", "Report incident"], ["medication", "Give medication"], ["moments", "Add moment"], ["message", "Message parent"], ["email", "Email parent"], ["whatsapp", "WhatsApp parent"]] as [string, string][]).map(([k, label]) => (
+          <div className="mt-4 mb-1 text-[12px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8set.regActHead")}</div>
+          <p className="mb-2 -mt-0.5 text-[12px] text-[var(--ink-3)]">{t("p8set.regActLede")}</p>
+          {([["firstAid", t("p8set.rega_firstaid")], ["incident", t("p8set.rega_incident")], ["medication", t("p8set.rega_medication")], ["moments", t("p8set.rega_moments")], ["message", t("p8set.rega_message")], ["email", t("p8set.rega_email")], ["whatsapp", t("p8set.rega_whatsapp")]] as [string, string][]).map(([k, label]) => (
             <Row key={k} label={label}>
-              <Toggle on={settings.registers?.actions?.[k as keyof NonNullable<NonNullable<typeof settings.registers>["actions"]>] ?? true} onChange={(v) => set("registers", { ...settings.registers, actions: { ...settings.registers?.actions, [k]: v } })} labels={["On", "Off"]} />
+              <Toggle on={settings.registers?.actions?.[k as keyof NonNullable<NonNullable<typeof settings.registers>["actions"]>] ?? true} onChange={(v) => set("registers", { ...settings.registers, actions: { ...settings.registers?.actions, [k]: v } })} labels={[t("p8set.on"), t("p8set.off")]} />
             </Row>
           ))}
         </Section>
       )}
 
       {activeTab === "trips" && (
-        <Section title="Trips & visits" lede="Off-site trips — how parents are kept informed and the safety guardrails.">
-          <Row label="Ask parents to consent when their child is on a trip" hint="Email + a bell in their area with the trip details (destination, times, transport), and a consent request — reminded until they give it.">
-            <Toggle on={settings.trips?.notifyParent ?? true} onChange={(v) => set("trips", { ...settings.trips, notifyParent: v })} labels={["Yes", "No"]} />
+        <Section title={t("p8set.tripTitle")} lede={t("p8set.tripLede")}>
+          <Row label={t("p8set.tripNotify")} hint={t("p8set.tripNotifyHint")}>
+            <Toggle on={settings.trips?.notifyParent ?? true} onChange={(v) => set("trips", { ...settings.trips, notifyParent: v })} labels={[t("p8set.yes"), t("p8set.no")]} />
           </Row>
-          <Row label="Require parental consent before a trip runs" hint="A trip can't be marked ready/completed until every child on it has consent. Off = consent is tracked but not enforced.">
-            <Toggle on={settings.trips?.requireConsent ?? true} onChange={(v) => set("trips", { ...settings.trips, requireConsent: v })} labels={["Yes", "No"]} />
+          <Row label={t("p8set.tripRequire")} hint={t("p8set.tripRequireHint")}>
+            <Toggle on={settings.trips?.requireConsent ?? true} onChange={(v) => set("trips", { ...settings.trips, requireConsent: v })} labels={[t("p8set.yes"), t("p8set.no")]} />
           </Row>
-          <Row label="Target staff-to-child ratio" hint="The most children per staff member you're happy with on a trip. A trip over this is flagged so you can add staff or split it.">
+          <Row label={t("p8set.tripRatio")} hint={t("p8set.tripRatioHint")}>
             <NumberBox value={settings.trips?.ratioTarget ?? 8} onChange={(n) => set("trips", { ...settings.trips, ratioTarget: Math.max(1, n) })} min={1} max={30} suffix=":1" />
           </Row>
-          <Row label="Who can plan a trip" hint="Who is allowed to create an off-site trip. Managers/owners can always plan; this controls staff. (Enforcement of leads-only on the staff side needs the roles system — backend.)" note="Enforcement: backend">
+          <Row label={t("p8set.tripWhoPlan")} hint={t("p8set.tripWhoPlanHint")} note={t("p8set.tripEnforcement")}>
             <Select value={settings.trips?.whoCanPlan ?? "all"} onChange={(e) => set("trips", { ...settings.trips, whoCanPlan: e.target.value as "all" | "leads" | "managers" })}>
-              <option value="all">All staff</option>
-              <option value="leads">Leads &amp; managers only</option>
-              <option value="managers">Managers &amp; owners only</option>
+              <option value="all">{t("p8set.tripAll")}</option>
+              <option value="leads">{t("p8set.tripLeads")}</option>
+              <option value="managers">{t("p8set.tripManagers")}</option>
             </Select>
           </Row>
-          <Row label="Who can send the trip message to parents" hint="Step 8's parent message/payment request. Managers/owners can always send this; this controls staff.">
+          <Row label={t("p8set.tripWhoSend")} hint={t("p8set.tripWhoSendHint")}>
             <Select value={settings.trips?.whoCanSend ?? "all"} onChange={(e) => set("trips", { ...settings.trips, whoCanSend: e.target.value as "all" | "lead" })}>
-              <option value="all">Any staff who can see the trip</option>
-              <option value="lead">Only the trip lead / organiser</option>
+              <option value="all">{t("p8set.tripAnyStaff")}</option>
+              <option value="lead">{t("p8set.tripLeadOnly")}</option>
             </Select>
           </Row>
         </Section>
       )}
 
       {activeTab === "calendar" && (
-        <Section title="Calendar" lede="Event reminders and how your calendar behaves. Event categories & colours are managed on the Calendar itself.">
-          <Row label="Remind before an event starts" hint="Sends an email + an in-app bell to the staff on an event before it begins, so nothing gets missed.">
-            <Toggle on={settings.calendar?.reminderOn ?? true} onChange={(v) => set("calendar", { ...settings.calendar, reminderOn: v })} labels={["On", "Off"]} />
+        <Section title={t("p8set.calTitle")} lede={t("p8set.calLede")}>
+          <Row label={t("p8set.calRemind")} hint={t("p8set.calRemindHint")}>
+            <Toggle on={settings.calendar?.reminderOn ?? true} onChange={(v) => set("calendar", { ...settings.calendar, reminderOn: v })} labels={[t("p8set.on"), t("p8set.off")]} />
           </Row>
-          <Row label="How long before" hint="Minutes before the start time to send the reminder.">
-            <NumberBox value={settings.calendar?.reminderMinutes ?? 30} onChange={(n) => set("calendar", { ...settings.calendar, reminderMinutes: Math.max(0, n) })} min={0} max={1440} suffix=" min" />
+          <Row label={t("p8set.calHowLong")} hint={t("p8set.calHowLongHint")}>
+            <NumberBox value={settings.calendar?.reminderMinutes ?? 30} onChange={(n) => set("calendar", { ...settings.calendar, reminderMinutes: Math.max(0, n) })} min={0} max={1440} suffix={" " + t("p8set.sfxMin")} />
           </Row>
-          <NotWired>Sending the reminder (email + in-app bell) is wired up by the backend.</NotWired>
+          <NotWired>{t("p8set.calNotWired")}</NotWired>
         </Section>
       )}
 
       {activeTab === "inventory" && (
-        <Section title="Inventory" lede="How stock checks and reorders behave. Categories, storage locations and seasons are managed on the Inventory page itself.">
-          <Row label="When a reorder is logged to Expenses, mark it as" hint="Placing an order on the Inventory page creates a matching expense. Choose whether it lands already Paid, or Owed (pending) so you can pay it later.">
-            <Toggle on={(settings.inventory?.orderExpenseStatus ?? "paid") === "paid"} onChange={(v) => set("inventory", { ...settings.inventory, orderExpenseStatus: v ? "paid" : "pending" })} labels={["Paid", "Owed"]} />
+        <Section title={t("p8set.invTitle")} lede={t("p8set.invLede")}>
+          <Row label={t("p8set.invMark")} hint={t("p8set.invMarkHint")}>
+            <Toggle on={(settings.inventory?.orderExpenseStatus ?? "paid") === "paid"} onChange={(v) => set("inventory", { ...settings.inventory, orderExpenseStatus: v ? "paid" : "pending" })} labels={[t("p8set.paid"), t("p8set.owed")]} />
           </Row>
-          <Row label="Flag an item for a stock check after" hint="An item not counted within this many days shows as 'due a check' and counts toward the 'To check' tile.">
-            <NumberBox value={settings.inventory?.checkEveryDays ?? 30} onChange={(n) => set("inventory", { ...settings.inventory, checkEveryDays: Math.max(1, n) })} min={1} max={365} suffix=" days" />
+          <Row label={t("p8set.invCheck")} hint={t("p8set.invCheckHint")}>
+            <NumberBox value={settings.inventory?.checkEveryDays ?? 30} onChange={(n) => set("inventory", { ...settings.inventory, checkEveryDays: Math.max(1, n) })} min={1} max={365} suffix={" " + t("p8set.sfxDays")} />
           </Row>
-          <Row label="Warn when an item hits its reorder level" hint="Show a Low badge (and, once wired, notify) when stock drops to or below an item's reorder level.">
-            <Toggle on={settings.inventory?.lowStockAlert ?? true} onChange={(v) => set("inventory", { ...settings.inventory, lowStockAlert: v })} labels={["On", "Off"]} />
+          <Row label={t("p8set.invWarn")} hint={t("p8set.invWarnHint")}>
+            <Toggle on={settings.inventory?.lowStockAlert ?? true} onChange={(v) => set("inventory", { ...settings.inventory, lowStockAlert: v })} labels={[t("p8set.on"), t("p8set.off")]} />
           </Row>
         </Section>
       )}
@@ -2167,7 +2166,7 @@ export function SetupApp() {
               <AlwaysOn />
             </Row>
             <Row
-              label="Allergies"
+              label={t("p8set.regc_allergies")}
               hint="A blank allergy field and a genuinely allergy-free child look identical, so it always gets asked."
             >
               <span className="flex items-center gap-2">
@@ -2254,7 +2253,7 @@ export function SetupApp() {
               </Select>
             </Row>
             <Row
-              label="Emergency contact"
+              label={t("p8set.regc_emergency")}
               hint="Someone has to be reachable if you can't reach the parent, so at least one is always asked for. Set how many name-and-number pairs a family must give."
               note="Only the first is built so far"
             >
@@ -2461,7 +2460,7 @@ export function SetupApp() {
             </div>
           </Row>
           <Row label="We raise purchase orders" hint="On: the Bills page keeps a draft (PO) stage before a bill is received and paid. Off (common for smaller providers): you just track supplier bills — received, then paid.">
-            <Toggle on={!!settings.money?.usePurchaseOrders} onChange={(v) => void save({ settings: { ...settings, money: { ...(settings.money ?? {}), usePurchaseOrders: v } } })} labels={["Yes", "No"]} />
+            <Toggle on={!!settings.money?.usePurchaseOrders} onChange={(v) => void save({ settings: { ...settings, money: { ...(settings.money ?? {}), usePurchaseOrders: v } } })} labels={[t("p8set.yes"), t("p8set.no")]} />
           </Row>
 
           <div className="mt-4 border-t border-[var(--line)] pt-4">
@@ -2470,9 +2469,9 @@ export function SetupApp() {
             <div className="grid gap-2.5 sm:grid-cols-2">
               {([
                 ["businessName", "Business name", "Little Kickers Ltd"],
-                ["email", "Contact email", "hello@yourbiz.co.uk"],
-                ["phone", "Phone", "07700 900000"],
-                ["vatNumber", "VAT number (if any)", "GB123456789"],
+                ["email", t("p8set.coEmail"), "hello@yourbiz.co.uk"],
+                ["phone", t("p8set.coPhone"), "07700 900000"],
+                ["vatNumber", t("p8set.coVat"), "GB123456789"],
                 ["address", "Address", "12 High St, Townsville, AB1 2CD"],
                 ["paymentTerms", "Payment terms", "Due within 14 days"],
                 ["bankName", "Bank name", "Barclays"],
@@ -2496,8 +2495,8 @@ export function SetupApp() {
               <div>
                 <FieldLabel>Logo</FieldLabel>
                 <div className="flex items-center gap-2">
-                  {settings.billing?.logoUrl && <img src={settings.billing.logoUrl} alt="logo" className="h-9 max-w-[120px] rounded border border-[var(--line)] object-contain" />}
-                  <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ {t("setup.upload")}<input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — most image files work (PNG, JPG, SVG, WebP, GIF…). iPhone HEIC photos: export as JPG first."); } e.target.value = ""; }} /></label>
+                  {settings.billing?.logoUrl && <img src={settings.billing.logoUrl} alt={t("p8set.logoAlt")} className="h-9 max-w-[120px] rounded border border-[var(--line)] object-contain" />}
+                  <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ {t("setup.upload")}<input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error(t("p8set.logoReadErr"))); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? t("p8set.logoFailed", { msg: err.message }) : t("p8set.logoFailedGeneric")); } e.target.value = ""; }} /></label>
                   {settings.billing?.logoUrl && <button type="button" onClick={() => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } })} className="text-[11.5px] font-bold text-[var(--ink-3)]">Remove</button>}
                 </div>
                 <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">PNG, JPG, SVG, WebP, GIF, BMP or AVIF — up to 1MB, resized automatically. (iPhone HEIC: export as JPG first.)</div>
@@ -2726,7 +2725,7 @@ export function SetupApp() {
                         {FEATURE_HINTS[it.view] && <div className="mt-0.5 text-[11.5px] leading-[1.45] text-[var(--ink-2)]">{it.view === "learninghub" ? t("hubshell.su_learninghubHint") : FEATURE_HINTS[it.view]}</div>}
                         {keys && <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">👪 Families see this too</div>}
                       </div>
-                      <Toggle on={on} onChange={(v) => setFe(it.view, v)} labels={["On", "Off"]} />
+                      <Toggle on={on} onChange={(v) => setFe(it.view, v)} labels={[t("p8set.on"), t("p8set.off")]} />
                     </div>
                     {keys && on && (
                       <div className="mt-2 ms-3 flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
@@ -2744,7 +2743,7 @@ export function SetupApp() {
               lede="Extras in the family app. Simple mode strips their area right back to just booking, activities and account — overriding the switches above."
             >
               <Row label="✨ Simple mode" note="Overrides the rest" hint="On: families see only booking, activities and their account.">
-                <Toggle on={ca.simpleMode} onChange={(v) => setCAkey("simpleMode", v)} labels={["On", "Off"]} />
+                <Toggle on={ca.simpleMode} onChange={(v) => setCAkey("simpleMode", v)} labels={[t("p8set.on"), t("p8set.off")]} />
               </Row>
               <Row label="👛 Wallet / credit" hint="Store credit families can spend at checkout.">
                 <Toggle on={ca.simpleMode ? false : ca.wallet} disabled={ca.simpleMode} onChange={(v) => setCAkey("wallet", v)} labels={["Shown", "Hidden"]} />
@@ -2789,7 +2788,7 @@ export function SetupApp() {
             lede="Offer families up to three monthly plans. Each tier gives EITHER wallet credit every month, or a standing % off every booking (which stacks on top of any coupons). Toggle tiers on/off and set the price + benefit. Recurring billing is handled by Stripe."
           >
             <Row label="⭐ Memberships" hint="Off: no memberships page for families. On: families can join the tiers you switch on below.">
-              <Toggle on={m.enabled} onChange={(v) => setM({ enabled: v })} labels={["On", "Off"]} />
+              <Toggle on={m.enabled} onChange={(v) => setM({ enabled: v })} labels={[t("p8set.on"), t("p8set.off")]} />
             </Row>
             {m.tiers.map((t) => {
               const pct = t.benefitType === "percent";
@@ -2797,7 +2796,7 @@ export function SetupApp() {
                 <div key={t.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
                   <div className="flex items-center justify-between gap-2">
                     <Input value={t.name} onChange={(e) => setTier(t.id, { name: e.target.value })} className="w-[160px] font-bold" />
-                    <Toggle on={t.enabled} onChange={(v) => setTier(t.id, { enabled: v })} labels={["On", "Off"]} />
+                    <Toggle on={t.enabled} onChange={(v) => setTier(t.id, { enabled: v })} labels={[tx("p8set.on"), tx("p8set.off")]} />
                   </div>
                   <div className="mt-3 grid gap-2 sm:grid-cols-3">
                     <label className="text-[12px] font-semibold text-[var(--ink-2)]">Price / month
