@@ -14,7 +14,9 @@ import { Tile, GRAD } from "@/features/money/finance-kit";
 import { useSettings } from "@/lib/settings";
 import { DEFAULT_FIELDS } from "./OnboardingApp";
 import { ApplicationReferences } from "./ReferenceRequests";
-import { useT } from "@/lib/i18n/provider";
+import { tNow, useT } from "@/lib/i18n/provider";
+import { currentLocaleCode } from "@/lib/i18n/format";
+import { isRTL } from "@/lib/i18n/config";
 import { saveOnboardRecord } from "./onboardStore";
 
 type AField = { id: string; label: string; type: "text" | "textarea" | "email" | "tel" | "date" | "select" | "file" | "locations"; required: boolean; options?: string[]; mapsTo?: string };
@@ -24,24 +26,27 @@ const APP_LOCATIONS = ["Milton Keynes", "Northampton", "Bedford", "Company-owned
 interface AppForm { id: string; name: string; fields: AField[]; summary?: string; payKind?: string; payAmount?: string; logo?: string; accent?: string }
 const escH = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
 const PAY_KINDS = ["Not stated", "Per hour", "Per day", "Annual salary", "Range"];
-const payLabel = (f: AppForm) => f.payKind && f.payKind !== "Not stated" && f.payAmount ? `${f.payAmount}${f.payKind === "Per hour" ? "/hour" : f.payKind === "Per day" ? "/day" : f.payKind === "Annual salary" ? "/year" : ""}` : "";
+// payKind is a stored canonical value ("Per hour"...); it is translated only where shown.
+const PAY_KIND_KEY: Record<string, string> = { "Not stated": "p8wf.apNotStated", "Per hour": "team.perHour", "Per day": "team.perDay", "Annual salary": "team.annualSalary", Range: "p8wf.apRange" };
+const payLabel = (f: AppForm) => f.payKind && f.payKind !== "Not stated" && f.payAmount ? `${f.payAmount}${f.payKind === "Per hour" ? tNow("p8wf.apSfxHour") : f.payKind === "Per day" ? tNow("p8wf.apSfxDay") : f.payKind === "Annual salary" ? tNow("p8wf.apSfxYear") : ""}` : "";
 
 // Nice-looking applicant preview — opens the form branded as a candidate sees it.
 function previewForm(form: AppForm, provider: string) {
   if (typeof window === "undefined") return;
+  const tr = tNow; const loc = currentLocaleCode();
   const accent = form.accent || "#1d3a8f";
   const pay = payLabel(form);
   const field = (fl: AField) => {
     const req = fl.required ? '<span class="rq">*</span>' : "";
     let ctrl = "";
-    if (fl.type === "textarea") ctrl = '<textarea class="in" rows="3" placeholder="Your answer…"></textarea>';
-    else if (fl.type === "select") ctrl = `<select class="in"><option value="">Choose…</option>${(fl.options ?? []).map((o) => `<option>${escH(o)}</option>`).join("")}</select>`;
-    else if (fl.type === "file") ctrl = '<div class="file"><span class="fbtn">⬆ Upload</span> or drag a file here</div>';
+    if (fl.type === "textarea") ctrl = '<textarea class="in" rows="3" placeholder="${escH(tr("p8wf.apYourAnswer"))}"></textarea>';
+    else if (fl.type === "select") ctrl = `<select class="in"><option value="">${escH(tr("p8wf.apChoose"))}</option>${(fl.options ?? []).map((o) => `<option>${escH(o)}</option>`).join("")}</select>`;
+    else if (fl.type === "file") ctrl = `<div class="file"><span class="fbtn">${escH(tr("p8wf.apUpload"))}</span>${escH(tr("p8wf.apDragFile"))}</div>`;
     else if (fl.type === "locations") ctrl = `<div class="locs">${APP_LOCATIONS.map((l) => `<label class="lc"><input type="checkbox"> ${escH(l)}</label>`).join("")}</div>`;
     else ctrl = `<input class="in" type="${fl.type === "date" ? "date" : fl.type === "tel" ? "tel" : fl.type === "email" ? "email" : "text"}" placeholder="${fl.type === "email" ? "you@email.com" : fl.type === "tel" ? "07…" : ""}">`;
     return `<div class="fld"><label class="lb">${escH(fl.label)}${req}</label>${ctrl}</div>`;
   };
-  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escH(form.name)} — Apply</title><style>
+  const html = `<!doctype html><html lang="${loc}" dir="${isRTL(loc) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escH(tr("p8wf.apPreviewTitle", { name: form.name }))}</title><style>
     :root{--a:${accent}}*{box-sizing:border-box}body{margin:0;background:#eef2f9;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b}
     .wrap{max-width:680px;margin:0 auto;padding:30px 16px 60px}
     .card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 30px 70px -40px rgba(16,32,90,.5)}
@@ -52,16 +57,16 @@ function previewForm(form: AppForm, provider: string) {
     .pay{display:inline-block;background:rgba(255,255,255,.22);border-radius:99px;padding:4px 12px;font-size:12.5px;font-weight:800;margin-top:6px}
     .sum{font-size:13.5px;line-height:1.55;opacity:.95;margin-top:8px}
     form{padding:22px 28px}
-    .fld{margin-bottom:16px}.lb{display:block;font-size:12.5px;font-weight:800;color:#3a4a68;margin-bottom:6px}.rq{color:#c0392b;margin-left:3px}
+    .fld{margin-bottom:16px}.lb{display:block;font-size:12.5px;font-weight:800;color:#3a4a68;margin-bottom:6px}.rq{color:#c0392b;margin-inline-start:3px}
     .in{width:100%;border:1px solid #d9e0ee;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;background:#fff}.in:focus{outline:none;border-color:var(--a)}textarea.in{resize:vertical}
     .file{border:1.5px dashed #cdd6e8;border-radius:10px;padding:12px;font-size:12.5px;color:#8a92a8}.fbtn{color:var(--a);font-weight:800}
     .locs{display:flex;flex-wrap:wrap;gap:8px}.lc{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;background:#f4f6fb;border:1px solid #e6ebf5;border-radius:10px;padding:7px 11px}
     .submit{width:100%;background:var(--a);color:#fff;border:0;border-radius:12px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;margin-top:6px}
     .foot{text-align:center;font-size:11px;color:#8a92a8;margin-top:14px}
     .badge{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#111634;color:#fff;font-size:11.5px;font-weight:800;padding:6px 14px;border-radius:99px;opacity:.92;z-index:9}
-  </style></head><body><div class="badge">👁 Applicant preview — what candidates see</div><div class="wrap"><div class="card">
+  </style></head><body><div class="badge">${escH(tr("p8wf.apBadge"))}</div><div class="wrap"><div class="card">
     <div class="hero">${form.logo ? `<img class="logo" src="${form.logo}"/>` : ""}<div class="prov">${escH(provider)}</div><h1>${escH(form.name)}</h1>${pay ? `<span class="pay">💷 ${escH(pay)}</span>` : ""}${form.summary ? `<div class="sum">${escH(form.summary)}</div>` : ""}</div>
-    <form onsubmit="return false">${form.fields.map(field).join("")}<button class="submit" type="button">Submit application</button><div class="foot">Powered by ActivityOS</div></form>
+    <form onsubmit="return false">${form.fields.map(field).join("")}<button class="submit" type="button">${escH(tr("p8wf.apSubmit"))}</button><div class="foot">${escH(tr("p8wf.apPowered"))}</div></form>
   </div></div></body></html>`;
   const w = window.open(); if (w) { w.document.write(html); w.document.close(); }
 }
@@ -163,7 +168,7 @@ function carryOver(app: Application, form: AppForm) {
 export function ApplicationsPanel() {
   const { settings } = useSettings();
   const t = useT();
-  const provider = settings.providerName || settings.billing?.businessName || "Your company";
+  const provider = settings.providerName || settings.billing?.businessName || t("p8wf.prYourCompany");
   const [tab, setTab] = useState<"received" | "forms">("received");
   const [forms, setForms] = useState<AppForm[]>([defaultForm()]);
   const [apps, setApps] = useState<Application[]>(seedApps);
@@ -187,7 +192,7 @@ export function ApplicationsPanel() {
   const formOf = (id: string) => forms.find((f) => f.id === id) || forms[0];
   const setStatus = (id: string, patch: Partial<Application>) => saveApps(apps.map((a) => (a.id === id ? { ...a, ...patch } : a)));
   const accept = (a: Application) => { setStatus(a.id, { status: "accepted", rejectReason: undefined }); };
-  const reject = (a: Application) => { setStatus(a.id, { status: "rejected", rejectReason: reason.trim() || "Not suitable at this time." }); setReason(""); };
+  const reject = (a: Application) => { setStatus(a.id, { status: "rejected", rejectReason: reason.trim() || t("p8wf.apRejectDefault") }); setReason(""); };
   const sendOnboarding = (a: Application) => { const f = formOf(a.formId); carryOver({ ...a, status: "accepted" }, f); setStatus(a.id, { status: "accepted", onboardingSent: true }); flash(t("team.onboardingSentToast", { name: a.name })); };
   const newCount = apps.filter((a) => a.status === "new").length;
   const filtered = locFilter === "all" ? apps : apps.filter((a) => (a.locations ?? []).includes(locFilter));
@@ -203,7 +208,7 @@ export function ApplicationsPanel() {
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {f.fields.map((fl) => { const v = app.answers[fl.id]; const file = app.files?.[fl.id]; if (!v && !file) return null; return (
           <div key={fl.id} className={"rounded-lg bg-[var(--panel)] px-3 py-2 " + (fl.type === "textarea" ? "sm:col-span-2" : "")}>
-            <div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{fl.label}{fl.mapsTo && <span title="Carries into onboarding" className="ms-1 text-[#0f7a43]">↳</span>}</div>
+            <div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{fl.label}{fl.mapsTo && <span title={t("p8wf.apCarries")} className="ms-1 text-[#0f7a43]">↳</span>}</div>
             {file ? <button type="button" onClick={() => openFile(file.data)} className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">📎 {file.name} · View</button> : <div className="text-[12.5px] font-semibold text-[var(--ink)]">{v}</div>}
           </div>
         ); })}
@@ -406,7 +411,7 @@ function FormEditor({ form, jobTitles, provider, onSave, onClose }: { form: AppF
             <div className="mb-1.5 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.jobSummaryPay")}</div>
             <textarea value={f.summary ?? ""} onChange={(e) => setF({ ...f, summary: e.target.value })} rows={2} placeholder={t("team.roleDescPlaceholder")} className="mb-2 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
             <div className="flex flex-wrap items-center gap-2">
-              <label className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink-3)]">{t("team.payWord")}<Select value={f.payKind ?? "Not stated"} onChange={(e) => setF({ ...f, payKind: e.target.value })} className="max-w-[150px]">{PAY_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}</Select></label>
+              <label className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink-3)]">{t("team.payWord")}<Select value={f.payKind ?? "Not stated"} onChange={(e) => setF({ ...f, payKind: e.target.value })} className="max-w-[150px]">{PAY_KINDS.map((k) => <option key={k} value={k}>{t(PAY_KIND_KEY[k] ?? k)}</option>)}</Select></label>
               {f.payKind && f.payKind !== "Not stated" && <div className="flex items-center gap-1"><span className="text-[13px] font-bold text-[var(--ink-3)]">£</span><Input value={(f.payAmount ?? "").replace(/^£/, "")} onChange={(e) => setF({ ...f, payAmount: e.target.value ? "£" + e.target.value.replace(/^£/, "") : "" })} placeholder={f.payKind === "Annual salary" ? "24,000" : f.payKind === "Range" ? "12–14/hour" : "12.50"} className="w-[130px]" /></div>}
             </div>
           </div>

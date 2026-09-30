@@ -16,7 +16,11 @@ import { useSettings } from "@/lib/settings";
 import { DEMO_STAFF, useCredentials, credStatus, CredBadge, appliesTo as credAppliesTo, openCredFile } from "@/features/learning/credentials";
 import { Tile, GRAD } from "@/features/money/finance-kit";
 import { ReferencesStep } from "./ReferenceRequests";
-import { useT } from "@/lib/i18n/provider";
+import { tNow, useT } from "@/lib/i18n/provider";
+import { currentLocaleCode } from "@/lib/i18n/format";
+import { isRTL } from "@/lib/i18n/config";
+import { pickPlural } from "@/lib/i18n/plural";
+import { obDay, obHint, obLabel, obOpt, obSection, obSlot, obStatus } from "./onboardI18n";
 import { get as apiGet, isDemoMode } from "@/lib/api";
 import { useTeam, type TeamMember } from "./useTeam";
 import { fetchOnboarding, saveOnboardFields, saveOnboardRecord, hydrateFiles, stashLocalOnce, localBackup, importLocalBackup, discardLocalBackup, type StoredRecord } from "./onboardStore";
@@ -56,7 +60,7 @@ const fmtStamp = (iso?: string) => { if (!iso) return ""; const d = new Date(iso
 // DBS certs don't legally "expire", but employers re-check on their own cycle
 // (commonly ~3 years). Show how old a certificate is from its issue date.
 const monthsSince = (iso?: string) => { if (!iso) return null; const d = new Date(iso + "T00:00:00"); if (isNaN(+d)) return null; const n = new Date(); return (n.getFullYear() - d.getFullYear()) * 12 + (n.getMonth() - d.getMonth()) - (n.getDate() < d.getDate() ? 1 : 0); };
-const dbsAgeLabel = (iso?: string) => { const m = monthsSince(iso); if (m == null || m < 0) return ""; const y = Math.floor(m / 12), mo = m % 12; const age = y ? `${y} year${y > 1 ? "s" : ""}${mo ? ` ${mo} month${mo > 1 ? "s" : ""}` : ""}` : `${mo} month${mo !== 1 ? "s" : ""}`; return `Issued ${age} ago${m >= 36 ? " — over 3 years old, consider re-checking" : ""}`; };
+const dbsAgeLabel = (iso?: string) => { const m = monthsSince(iso); if (m == null || m < 0) return ""; const y = Math.floor(m / 12), mo = m % 12; const loc = currentLocaleCode(); const age = y ? `${pickPlural(tNow, loc, "p8wf.obYears", y)}${mo ? ` ${pickPlural(tNow, loc, "p8wf.obMonths", mo)}` : ""}` : pickPlural(tNow, loc, "p8wf.obMonths", mo); return `${tNow("p8wf.obDbsIssued", { age })}${m >= 36 ? tNow("p8wf.obDbsOld") : ""}`; };
 const dbsAgeColor = (iso?: string) => { const m = monthsSince(iso); return m != null && m >= 36 ? "#b45309" : "#0f7a43"; };
 // pay value = { basis, amount, hpw, auto }
 interface PayVal { basis: "hour" | "day" | "year"; amount: string; hpw: string; auto: boolean }
@@ -244,10 +248,10 @@ function useOnboarding() {
   const load = useCallback(() => {
     fetchOnboarding<OnboardField>()
       .then((r) => { if (r.fields?.length) setFields(r.fields); setRecords(r.records as OnboardRecord[]); })
-      .catch((e) => setError(e instanceof Error ? e.message : "Couldn't load onboarding records"));
+      .catch((e) => setError(e instanceof Error ? e.message : tNow("p8wf.obErrLoad")));
   }, []);
   useEffect(() => { load(); }, [load]);
-  const saveFields = (f: OnboardField[]) => { setFields(f); saveOnboardFields(f).catch((e) => setError(e instanceof Error ? e.message : "Couldn't save the requirements")); };
+  const saveFields = (f: OnboardField[]) => { setFields(f); saveOnboardFields(f).catch((e) => setError(e instanceof Error ? e.message : tNow("p8wf.obErrSaveReq"))); };
   const recordFor = (name: string): OnboardRecord => records.find((r) => r.staff === name) ?? { staff: name, values: {}, extra: [] };
   // Fields save as they're typed, so saves are debounced and run one at a time
   // per person — the latest version always wins.
@@ -262,7 +266,7 @@ function useOnboarding() {
         // Keep the new file ids, without undoing anything typed since.
         setRecords((rs) => rs.map((r) => (r.staff !== saved.staff ? r : { ...r, values: Object.fromEntries(Object.entries(r.values).map(([k, v]) => [k, saved.values[k]?.fileId && v?.fileData === saved.values[k]?.fileData ? { ...v, fileId: saved.values[k].fileId } : v])) })));
         setError(null);
-      }).catch((e) => setError(e instanceof Error ? e.message : "Couldn't save — check your connection")));
+      }).catch((e) => setError(e instanceof Error ? e.message : tNow("p8wf.obErrSave"))));
     }
   }, []);
   const upsertRecord = (rec: OnboardRecord) => {
@@ -280,7 +284,7 @@ function useOnboarding() {
     if (!r || !Object.values(r.values).some((v) => v?.fileId && !v.fileData)) return;
     void hydrateFiles(r).then((h) => setRecords((cur) => cur.map((x) => (x.staff === name ? { ...x, values: Object.fromEntries(Object.entries(x.values).map(([k, v]) => [k, v?.fileId && !v.fileData && h.values[k]?.fileData ? { ...v, fileData: h.values[k].fileData } : v])) } : x))));
   }, []);
-  const importBackup = async () => { try { const n = await importLocalBackup(); setBackup([]); load(); return n; } catch (e) { setError(e instanceof Error ? e.message : "Import failed"); return 0; } };
+  const importBackup = async () => { try { const n = await importLocalBackup(); setBackup([]); load(); return n; } catch (e) { setError(e instanceof Error ? e.message : tNow("p8wf.obErrImport")); return 0; } };
   const discardBackup = () => { discardLocalBackup(); setBackup([]); };
   return { fields, saveFields, records, recordFor, upsertRecord, error, hydrate, backup, importBackup, discardBackup };
 }
@@ -288,7 +292,7 @@ function useOnboarding() {
 const openFile = (dataUrl?: string) => { if (!dataUrl || typeof window === "undefined") return; const w = window.open(); if (w) w.document.write(`<iframe src="${dataUrl}" style="border:0;width:100vw;height:100vh"></iframe>`); };
 const STATUS_TONE: Record<string, string> = { todo: "bg-[#eef1f6] text-[#64748b]", requested: "bg-[#fef3d6] text-[#8a5a09]", received: "bg-[#e6efff] text-[#1d54c4]", verified: "bg-[#e6f4ea] text-[#0f7a43]" };
 const STATUS_SEQ = ["todo", "requested", "received", "verified"] as const;
-const CHECK_LABEL: Record<string, string> = { todo: "To do", requested: "Requested", received: "Received", verified: "Verified" };
+const CHECK_LABEL = { get todo() { return obStatus(tNow, "todo"); }, get requested() { return obStatus(tNow, "requested"); }, get received() { return obStatus(tNow, "received"); }, get verified() { return obStatus(tNow, "verified"); } } as Record<string, string>;
 
 const esc = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
 const printWindow = (html: string) => { if (typeof window === "undefined") return; const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); } };
@@ -296,11 +300,11 @@ const displayVal = (f: OnboardField, val?: OnboardValue): string => {
   if (f.type === "certs") return ""; // shown in its own area, not the pack table
   if (!val) return "";
   if (f.type === "check") return CHECK_LABEL[val.status ?? "todo"] + (val.at ? " · " + fmtStamp(val.at) : "");
-  if (f.type === "checkbox") return val.v === "yes" ? "Yes" : "";
-  if (f.type === "readdoc") return (val.v === "yes" ? "Read & confirmed" : "Not read yet") + (val.fileName ? " · 📎 " + val.fileName : "");
-  if (f.type === "pay") { const p = parsePay(val.v); if (!p.amount) return ""; const d = payDerived(p); return `${gbp(parseFloat(p.amount))} ${p.basis === "year" ? "/year" : p.basis === "day" ? "/day" : "/hour"}${p.auto ? ` (≈ ${gbp(d.hourly)}/hr · ${gbp(d.annual)}/yr)` : ""}`; }
-  if (f.type === "availability") { const av = parseAvail(val.v); const on = AVAIL_DAYS.filter((d) => av[d]?.length); return on.length ? on.map((d) => `${d} ${av[d].join("/")}`).join(", ") : ""; }
-  if (f.type === "file") return val.fileName ? "📎 " + val.fileName : val.fileData ? "uploaded" : "";
+  if (f.type === "checkbox") return val.v === "yes" ? tNow("p8wf.obYes") : "";
+  if (f.type === "readdoc") return (tNow(val.v === "yes" ? "p8wf.obReadConfirmed" : "p8wf.obNotRead")) + (val.fileName ? " · 📎 " + val.fileName : "");
+  if (f.type === "pay") { const p = parsePay(val.v); if (!p.amount) return ""; const d = payDerived(p); return `${gbp(parseFloat(p.amount))} ${tNow(p.basis === "year" ? "p8wf.apSfxYear" : p.basis === "day" ? "p8wf.apSfxDay" : "p8wf.apSfxHour")}${p.auto ? tNow("p8wf.obApproxShort", { hr: gbp(d.hourly), yr: gbp(d.annual) }) : ""}`; }
+  if (f.type === "availability") { const av = parseAvail(val.v); const on = AVAIL_DAYS.filter((d) => av[d]?.length); return on.length ? on.map((d) => `${obDay(tNow, d)} ${av[d].map((sl) => obSlot(tNow, sl)).join("/")}`).join(", ") : ""; }
+  if (f.type === "file") return val.fileName ? "📎 " + val.fileName : val.fileData ? tNow("p8wf.obUploaded") : "";
   if (f.type === "addresses") { const a = parseAddrs(val.v); return a.length ? a.map((x) => `${x.line1}, ${x.town} ${x.postcode} (${x.from}–${x.to})`).join("; ") : ""; }
   return val.v ?? "";
 };
@@ -353,7 +357,7 @@ export function OnboardingPanel() {
   const router = useRouter();
   const portal = (usePathname() || "/company").split("/")[1] || "company";
   const jobTitles = settings.staffRoles ?? [];
-  const provider = settings.providerName || settings.billing?.businessName || "Your company";
+  const provider = settings.providerName || settings.billing?.businessName || t("p8wf.prYourCompany");
 
   const staffOf = (name: string) => TEAM.find((s) => s.name === name);
   // Job title / name / email are captured when the sign-up link is sent — pre-fill
@@ -388,27 +392,27 @@ export function OnboardingPanel() {
   // ——— export one staff member's full onboarding pack ———
   const exportPack = () => {
     const clr = cleared;
-    const secs = SECTIONS.map(([sid, slabel]) => { const fs = appl.filter((f) => f.section === sid); if (!fs.length) return ""; const rows = fs.map((f) => { const v = rec.values[f.id]; const d = displayVal(f, v); const ok = satisfied(f, v); return `<tr><td class="k">${esc(f.label)}${f.required ? " *" : ""}</td><td class="v ${d ? (ok ? "ok" : "") : "miss"}">${d ? esc(d) : "—"}</td></tr>`; }).join(""); return `<h2>${esc(slabel)}</h2><table>${rows}</table>`; }).join("");
-    const docs = appl.map((f) => { const v = rec.values[f.id]; if (!v?.fileData) return ""; const img = v.fileData.startsWith("data:image"); return `<div class="doc"><h2>${esc(f.label)} — ${esc(v.fileName || "file")}</h2>${img ? `<img src="${v.fileData}"/>` : `<object data="${v.fileData}" type="application/pdf"><iframe src="${v.fileData}"></iframe></object>`}</div>`; }).join("");
-    printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Onboarding — ${esc(sel)}</title><style>${PRINT_CSS}</style></head><body><h1>${esc(provider)} — Onboarding record</h1><div class="sub">${esc(sel)} · ${esc(staff?.role ?? "")} · ${esc(staff?.op ?? "")} · <span class="badge ${clr ? "cleared" : "hold"}">${clr ? "Cleared to start" : "Start on hold"}</span> · Generated ${new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" })}</div>${secs}${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
+    const secs = SECTIONS.map(([sid, slabel]) => { const fs = appl.filter((f) => f.section === sid); if (!fs.length) return ""; const rows = fs.map((f) => { const v = rec.values[f.id]; const d = displayVal(f, v); const ok = satisfied(f, v); return `<tr><td class="k">${esc(obLabel(t, f))}${f.required ? " *" : ""}</td><td class="v ${d ? (ok ? "ok" : "") : "miss"}">${d ? esc(d) : "—"}</td></tr>`; }).join(""); return `<h2>${esc(obSection(t, sid, slabel))}</h2><table>${rows}</table>`; }).join("");
+    const docs = appl.map((f) => { const v = rec.values[f.id]; if (!v?.fileData) return ""; const img = v.fileData.startsWith("data:image"); return `<div class="doc"><h2>${esc(obLabel(t, f))} — ${esc(v.fileName || t("p8wf.obFileFallback"))}</h2>${img ? `<img src="${v.fileData}"/>` : `<object data="${v.fileData}" type="application/pdf"><iframe src="${v.fileData}"></iframe></object>`}</div>`; }).join("");
+    printWindow(`<!doctype html><html lang="${currentLocaleCode()}" dir="${isRTL(currentLocaleCode()) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${esc(t("p8wf.obPackTitle", { name: sel }))}</title><style>${PRINT_CSS}</style></head><body><h1>${esc(t("p8wf.obPackH1", { provider }))}</h1><div class="sub">${esc(sel)} · ${esc(staff?.role ?? "")} · ${esc(staff?.op ?? "")} · <span class="badge ${clr ? "cleared" : "hold"}">${esc(t(clr ? "p8wf.obClearedToStart" : "p8wf.obStartOnHold"))}</span> · ${esc(t("p8wf.obGenerated", { date: new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }) }))}</div>${secs}${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
   };
 
   // ——— Single Central Record: one row per staff, the Ofsted checks ———
   const SCR_COLS: [string, string][] = [["idCheck", t("team.scrIdentity")], ["rtwCheck", t("team.scrRightToWork")], ["dbsCheck", t("team.scrDbsCleared")], ["overseas", t("team.scrOverseas")], ["refsCheck", t("team.scrReferences")], ["disqual", t("team.scrDisqualDecl")]];
   const scrCell = (name: string, role: string | undefined, extra: string[], id: string, detail = false) => {
     const f = ob.fields.find((x) => x.id === id); if (!f) return { txt: "—", cls: "na" };
-    if (!fieldApplies(f, name, role, extra)) return { txt: "N/A", cls: "na" };
+    if (!fieldApplies(f, name, role, extra)) return { txt: t("p8wf.obNA"), cls: "na" };
     const v = ob.recordFor(name).values[id];
-    if (f.type === "check") return v?.status === "verified" ? { txt: "Verified" + (detail && v.at ? " · " + fmtStamp(v.at) : ""), cls: "verified" } : { txt: CHECK_LABEL[v?.status ?? "todo"], cls: "miss" };
-    if (f.type === "checkbox" || f.type === "readdoc") return v?.v === "yes" ? { txt: "Yes", cls: "ok" } : { txt: "No", cls: "miss" };
+    if (f.type === "check") return v?.status === "verified" ? { txt: obStatus(t, "verified") + (detail && v.at ? " · " + fmtStamp(v.at) : ""), cls: "verified" } : { txt: obStatus(t, v?.status ?? "todo"), cls: "miss" };
+    if (f.type === "checkbox" || f.type === "readdoc") return v?.v === "yes" ? { txt: t("p8wf.obYes"), cls: "ok" } : { txt: t("p8wf.obNo"), cls: "miss" };
     return v?.v ? { txt: v.v, cls: "ok" } : { txt: "—", cls: "miss" };
   };
   const METHOD_COLS: [string, string][] = [["idMethod", t("team.scrIdMethod")], ["rtwMethod", t("team.scrRtwMethod")]];
   const exportSCR = () => {
     const cols = scrDetail ? [...SCR_COLS, ...METHOD_COLS] : SCR_COLS;
-    const head = `<tr><td class="k">Staff</td><td class="k">Role</td><td class="k">Location</td>${cols.map(([, l]) => `<td class="k">${esc(l)}</td>`).join("")}<td class="k">DBS no.</td><td class="k">Cleared</td></tr>`;
-    const body = TEAM.map((s) => { const r = ob.recordFor(s.name); const cells = SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id, scrDetail); return `<td class="v"><span class="${c.cls}">${esc(c.txt)}</span></td>`; }).join(""); const methods = scrDetail ? METHOD_COLS.map(([id]) => `<td>${esc(r.values[id]?.v || "—")}</td>`).join("") : ""; const dbsNo = r.values.dbsCert?.v || "—"; const clr = clearedOf(s.name); return `<tr><td class="v">${esc(s.name)}</td><td>${esc(s.role)}</td><td>${esc(s.op)}</td>${cells}${methods}<td>${esc(dbsNo)}</td><td><span class="badge ${clr ? "cleared" : "hold"}">${clr ? "Yes" : "On hold"}</span></td></tr>`; }).join("");
-    printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Single Central Record — ${esc(provider)}</title><style>${PRINT_CSS} td{font-size:11px} .k{color:#6b7086;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}</style></head><body><h1>${esc(provider)} — Single Central Record</h1><div class="sub">Safer-recruitment checks${scrDetail ? " · with verified dates & methods" : ""} · Generated ${new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" })}</div><table>${head}${body}</table><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
+    const head = `<tr><td class="k">${esc(t("team.staffCol"))}</td><td class="k">${esc(t("team.roleCol"))}</td><td class="k">${esc(t("p8wf.obLocation"))}</td>${cols.map(([, l]) => `<td class="k">${esc(l)}</td>`).join("")}<td class="k">${esc(t("p8wf.obDbsNo"))}</td><td class="k">${esc(t("p8wf.obCleared"))}</td></tr>`;
+    const body = TEAM.map((s) => { const r = ob.recordFor(s.name); const cells = SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id, scrDetail); return `<td class="v"><span class="${c.cls}">${esc(c.txt)}</span></td>`; }).join(""); const methods = scrDetail ? METHOD_COLS.map(([id]) => `<td>${esc(r.values[id]?.v || "—")}</td>`).join("") : ""; const dbsNo = r.values.dbsCert?.v || "—"; const clr = clearedOf(s.name); return `<tr><td class="v">${esc(s.name)}</td><td>${esc(s.role)}</td><td>${esc(s.op)}</td>${cells}${methods}<td>${esc(dbsNo)}</td><td><span class="badge ${clr ? "cleared" : "hold"}">${esc(clr ? t("p8wf.obYes") : t("team.onHold"))}</span></td></tr>`; }).join("");
+    printWindow(`<!doctype html><html lang="${currentLocaleCode()}" dir="${isRTL(currentLocaleCode()) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${esc(t("p8wf.obScrTitle", { provider }))}</title><style>${PRINT_CSS} td{font-size:11px} .k{color:#6b7086;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}</style></head><body><h1>${esc(t("p8wf.obScrH1", { provider }))}</h1><div class="sub">${esc(t("p8wf.obScrSub"))}${scrDetail ? esc(t("p8wf.obScrDetail")) : ""} · ${esc(t("p8wf.obGenerated", { date: new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }) }))}</div><table>${head}${body}</table><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
   };
 
   // ——— slideshow (one section per step) ———
@@ -422,9 +426,9 @@ export function OnboardingPanel() {
 
   const fieldCard = (f: OnboardField) => { const val = rec.values[f.id]; const ok = satisfied(f, val); const longSelect = f.type === "select" && (f.options ?? []).some((o) => o.length > 60); return (
     <div key={f.id} className={"rounded-xl border p-3 " + (f.type === "textarea" || f.type === "addresses" || f.type === "certs" || f.type === "availability" || longSelect ? "sm:col-span-2 " : "") + (ok ? "border-[#cfe8d7] bg-[#f4fbf6]" : "border-[var(--line)] bg-[var(--surface)]")}>
-      <label className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[12px] font-bold text-[var(--ink-2)]">{ok && <span className="text-[#0f7a43]">✓</span>}{f.label}{f.required && <span className="text-[#c0392b]">*</span>}{f.sensitive && <span title={t("team.sensitiveTitle")} className="text-[10px]">🔒</span>}{f.fromInvite && <span title={t("team.fromInviteTitle")} className="rounded bg-[#eaf1ff] px-1 text-[8.5px] font-bold uppercase text-[#1d54c4]">{t("team.fromInviteBadge")}</span>}{rec.extra.includes(f.id) && <span className="rounded bg-[#eef1f6] px-1 text-[8.5px] font-bold uppercase text-[#64748b]">{t("team.addedBadge")}</span>}</label>
+      <label className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[12px] font-bold text-[var(--ink-2)]">{ok && <span className="text-[#0f7a43]">✓</span>}{obLabel(t, f)}{f.required && <span className="text-[#c0392b]">*</span>}{f.sensitive && <span title={t("team.sensitiveTitle")} className="text-[10px]">🔒</span>}{f.fromInvite && <span title={t("team.fromInviteTitle")} className="rounded bg-[#eaf1ff] px-1 text-[8.5px] font-bold uppercase text-[#1d54c4]">{t("team.fromInviteBadge")}</span>}{rec.extra.includes(f.id) && <span className="rounded bg-[#eef1f6] px-1 text-[8.5px] font-bold uppercase text-[#64748b]">{t("team.addedBadge")}</span>}</label>
       {f.type === "check" ? (
-        <div><div className="flex flex-wrap gap-1">{STATUS_SEQ.map((st) => <button key={st} type="button" onClick={() => setVal(f.id, { status: st, at: st === "verified" ? nowIso() : val?.at })} className={"rounded-full px-2.5 py-1 text-[11px] font-bold capitalize " + ((val?.status ?? "todo") === st ? STATUS_TONE[st] : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{st}</button>)}</div>{val?.status === "verified" && val?.at && <div className="mt-1 text-[10px] text-[var(--ink-3)]">Verified {fmtStamp(val.at)}</div>}</div>
+        <div><div className="flex flex-wrap gap-1">{STATUS_SEQ.map((st) => <button key={st} type="button" onClick={() => setVal(f.id, { status: st, at: st === "verified" ? nowIso() : val?.at })} className={"rounded-full px-2.5 py-1 text-[11px] font-bold capitalize " + ((val?.status ?? "todo") === st ? STATUS_TONE[st] : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{obStatus(t, st)}</button>)}</div>{val?.status === "verified" && val?.at && <div className="mt-1 text-[10px] text-[var(--ink-3)]">{t("p8wf.obVerifiedOn", { date: fmtStamp(val.at) })}</div>}</div>
       ) : f.type === "jobtitle" ? (() => {
         const v = val?.v ?? ""; const inList = jobTitles.includes(v); const selectVal = inList ? v : (v ? "Other" : "");
         return (<div className="space-y-1.5">{jobTitles.length ? <Select value={selectVal} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">{t("team.chooseJobTitle")}</option>{jobTitles.map((o) => <option key={o} value={o}>{o}</option>)}<option value="Other">{t("team.otherEllipsis")}</option></Select> : <Input value={v} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full" />}{selectVal === "Other" && <Input value={inList ? "" : v} onChange={(e) => setVal(f.id, { v: e.target.value })} placeholder={t("team.typeJobTitle")} className="w-full" />}<div className="text-[10px] text-[var(--ink-3)]">{t("team.manageJobTitles")}</div></div>);
@@ -438,7 +442,7 @@ export function OnboardingPanel() {
               <div className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]"><Input inputMode="decimal" value={p.hpw} onChange={(e) => write({ hpw: e.target.value })} placeholder={t("team.hrsPlaceholder")} className="w-[64px]" />{t("team.hrsPerWeek")}</div>
               <label className="flex cursor-pointer items-center gap-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"><span onClick={() => write({ auto: !p.auto })} className={"grid h-4 w-7 items-center rounded-full px-0.5 transition-colors " + (p.auto ? "bg-[#1d3a8f]" : "bg-[var(--line)]")}><span className={"h-3 w-3 rounded-full bg-white transition-transform " + (p.auto ? "translate-x-3 rtl:-translate-x-3" : "")} /></span>{t("team.autoCalc")}</label>
             </div>
-            {p.auto && p.amount && <div className="rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]">≈ {gbp(d.hourly)}/hour · {gbp(d.annual)}/year · {gbp(d.monthly)}/month</div>}
+            {p.auto && p.amount && <div className="rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]">{t("p8wf.obApproxLong", { hr: gbp(d.hourly), yr: gbp(d.annual), mo: gbp(d.monthly) })}</div>}
           </div>
         );
       })() : f.type === "readdoc" ? (
@@ -448,7 +452,7 @@ export function OnboardingPanel() {
             <label className="cursor-pointer rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">{val?.fileData ? t("team.replaceWord") : t("team.attachWord")}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setVal(f.id, { fileData: String(r.result), fileId: undefined, fileName: file.name }); r.readAsDataURL(file); }} /></label>
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-[13px] font-semibold text-[var(--ink)]"><input type="checkbox" checked={val?.v === "yes"} onChange={(e) => setVal(f.id, { v: e.target.checked ? "yes" : "", at: e.target.checked ? nowIso() : undefined })} className="h-4 w-4 accent-[#0f7a43]" /> {t("team.readAndUnderstood")}</label>
-          {val?.v === "yes" && val?.at && <div className="text-[10px] text-[var(--ink-3)]">Confirmed {fmtStamp(val.at)}</div>}
+          {val?.v === "yes" && val?.at && <div className="text-[10px] text-[var(--ink-3)]">{t("p8wf.obConfirmedOn", { date: fmtStamp(val.at) })}</div>}
         </div>
       ) : f.type === "file" ? (
         <div className="flex flex-wrap items-center gap-2"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">{t("team.uploadBtn")}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setVal(f.id, { fileData: String(r.result), fileId: undefined, fileName: file.name }); r.readAsDataURL(file); }} /></label>{val?.fileName && <button type="button" onClick={() => openFile(val.fileData)} className="max-w-[170px] truncate text-[12px] font-bold text-[#1d3a8f] hover:underline">📎 {val.fileName}</button>}</div>
@@ -458,8 +462,8 @@ export function OnboardingPanel() {
         // Long options (e.g. the HMRC employee statement) truncate when the native
         // select is collapsed — show the full chosen text wrapped underneath, with
         // any leading "A — " / "Plan 1 — " marker emphasised so it reads at a glance.
-        const readback = inList && v.length > 48 ? (() => { const m = v.match(/^(\S+)\s+—\s+([\s\S]+)/); return <div className="rounded-lg bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-snug text-[var(--ink-2)]">{m ? <><span className="me-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[10px] font-extrabold text-white">{m[1]}</span>{m[2]}</> : v}</div>; })() : null;
-        return (<div className="space-y-1.5"><Select value={selectVal} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">{t("team.chooseEllipsis")}</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</Select>{readback}{showOther && <Input value={v === "Other" ? "" : v} onChange={(e) => setVal(f.id, { v: e.target.value })} placeholder={t("team.typeItHere")} className="w-full" />}</div>);
+        const readback = inList && v.length > 48 ? (() => { const vd = obOpt(t, v); const m = vd.match(/^(\S+)\s+—\s+([\s\S]+)/); return <div className="rounded-lg bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-snug text-[var(--ink-2)]">{m ? <><span className="me-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[10px] font-extrabold text-white">{m[1]}</span>{m[2]}</> : vd}</div>; })() : null;
+        return (<div className="space-y-1.5"><Select value={selectVal} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">{t("team.chooseEllipsis")}</option>{opts.map((o) => <option key={o} value={o}>{obOpt(t, o)}</option>)}</Select>{readback}{showOther && <Input value={v === "Other" ? "" : v} onChange={(e) => setVal(f.id, { v: e.target.value })} placeholder={t("team.typeItHere")} className="w-full" />}</div>);
       })() : f.type === "availability" ? (() => {
         const av = parseAvail(val?.v);
         const write = (next: Record<string, string[]>) => { setVal(f.id, { v: JSON.stringify(next) }); try { const all = JSON.parse(localStorage.getItem(AVAIL_KEY) || "{}"); all[sel] = next; localStorage.setItem(AVAIL_KEY, JSON.stringify(all)); } catch { /* ignore */ } };
@@ -468,8 +472,8 @@ export function OnboardingPanel() {
           <div className="space-y-1">
             {AVAIL_DAYS.map((day) => (
               <div key={day} className="flex items-center gap-1.5">
-                <span className="w-9 text-[11.5px] font-bold text-[var(--ink-2)]">{day}</span>
-                {AVAIL_SLOTS.map((slot) => { const on = (av[day] || []).includes(slot); return <button key={slot} type="button" onClick={() => toggle(day, slot)} className={"rounded-lg px-3 py-1 text-[11px] font-bold transition-colors " + (on ? "bg-[#0369a1] text-white" : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{slot}</button>; })}
+                <span className="w-9 text-[11.5px] font-bold text-[var(--ink-2)]">{obDay(t, day)}</span>
+                {AVAIL_SLOTS.map((slot) => { const on = (av[day] || []).includes(slot); return <button key={slot} type="button" onClick={() => toggle(day, slot)} className={"rounded-lg px-3 py-1 text-[11px] font-bold transition-colors " + (on ? "bg-[#0369a1] text-white" : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{obSlot(t, slot)}</button>; })}
               </div>
             ))}
             <div className="pt-0.5 text-[10px] text-[var(--ink-3)]">{t("team.tapTimesPre")}<b>{t("team.scheduleWord")}</b>.</div>
@@ -483,11 +487,11 @@ export function OnboardingPanel() {
         const also = cred.types.filter((t) => alsoIds.includes(t.id) && !roleReq.some((r) => r.id === t.id));
         const remaining = cred.types.filter((t) => !roleReq.some((r) => r.id === t.id) && !alsoIds.includes(t.id));
         const setAlso = (ids: string[]) => setVal(f.id, { v: JSON.stringify(ids) });
-        const chip = (t: { id: string; name: string }, removable: boolean) => { const rr = cred.recordFor(sel, t.id); return (
-          <span key={t.id} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5">
-            <button type="button" onClick={() => rr?.fileData && openCredFile(rr.fileData)} title={rr?.fileData ? "View uploaded certificate" : ""} className="text-[11.5px] font-bold text-[var(--ink)]">{t.name}</button>
+        const chip = (ct: { id: string; name: string }, removable: boolean) => { const rr = cred.recordFor(sel, ct.id); return (
+          <span key={ct.id} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5">
+            <button type="button" onClick={() => rr?.fileData && openCredFile(rr.fileData)} title={rr?.fileData ? t("p8wf.obViewCert") : ""} className="text-[11.5px] font-bold text-[var(--ink)]">{ct.name}</button>
             <CredBadge s={credStatus(rr)} />
-            {removable && <button type="button" onClick={() => setAlso(alsoIds.filter((x) => x !== t.id))} className="text-[var(--ink-3)] hover:text-[#c0392b]">×</button>}
+            {removable && <button type="button" onClick={() => setAlso(alsoIds.filter((x) => x !== ct.id))} className="text-[var(--ink-3)] hover:text-[#c0392b]">×</button>}
           </span>); };
         return (
           <div className="space-y-2">
@@ -506,7 +510,7 @@ export function OnboardingPanel() {
       ) : (
         <Input type={f.type === "date" ? "date" : f.type === "tel" ? "tel" : f.type === "email" ? "email" : "text"} value={val?.v ?? ""} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full" />
       )}
-      {f.hint && <div className="mt-1 text-[10.5px] text-[var(--ink-3)]">{f.hint}</div>}
+      {f.hint && <div className="mt-1 text-[10.5px] text-[var(--ink-3)]">{obHint(t, f)}</div>}
     </div>
   ); };
 
@@ -605,7 +609,7 @@ export function OnboardingPanel() {
           {/* step rail */}
           <div className="flex flex-wrap gap-1.5 px-4 pt-3">
             {activeSections.map(([sid, slabel, sicon], i) => { const sd = sectionDone(sid); const done = sd.t > 0 && sd.d === sd.t; const on = i === curStep; const st = SECTION_STYLE[sid] ?? SECTION_STYLE.personal; return (
-              <button key={sid} type="button" onClick={() => setStep(i)} className={"flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold transition-all " + (on ? "text-white shadow-md" : done ? "bg-[#e6f4ea] text-[#0f7a43]" : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")} style={on ? { background: st.grad } : undefined}><span>{done && !on ? "✓" : sicon}</span><span className="hidden md:inline">{slabel}</span></button>
+              <button key={sid} type="button" onClick={() => setStep(i)} className={"flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold transition-all " + (on ? "text-white shadow-md" : done ? "bg-[#e6f4ea] text-[#0f7a43]" : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")} style={on ? { background: st.grad } : undefined}><span>{done && !on ? "✓" : sicon}</span><span className="hidden md:inline">{obSection(t, sid, slabel)}</span></button>
             ); })}
           </div>
 
@@ -614,14 +618,14 @@ export function OnboardingPanel() {
             <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 400 120" preserveAspectRatio="xMidYMid slice" aria-hidden><circle cx="372" cy="16" r="60" fill="#fff" opacity="0.09" /><circle cx="330" cy="120" r="40" fill="#fff" opacity="0.07" /></svg>
             <div className="relative flex items-center gap-3">
               <div className="grid h-14 w-14 flex-none place-items-center rounded-2xl bg-white/20 text-[28px] leading-none backdrop-blur">{curIcon}</div>
-              <div className="min-w-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-white/80">Step {curStep + 1} of {activeSections.length}</div><div className="text-[20px] font-extrabold leading-tight" style={{ textWrap: "balance" } as React.CSSProperties}>{curLabel}</div></div>
-              <div className="ms-auto flex-none text-end"><div className="text-[24px] font-extrabold leading-none tabular-nums">{sectionDone(curSid).d}/{sectionDone(curSid).t}</div><div className="mt-0.5 text-[10px] text-white/80">completed</div></div>
+              <div className="min-w-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-white/80">{t("p8wf.obStepOf", { n: curStep + 1, total: activeSections.length })}</div><div className="text-[20px] font-extrabold leading-tight" style={{ textWrap: "balance" } as React.CSSProperties}>{obSection(t, curSid, curLabel)}</div></div>
+              <div className="ms-auto flex-none text-end"><div className="text-[24px] font-extrabold leading-none tabular-nums">{sectionDone(curSid).d}/{sectionDone(curSid).t}</div><div className="mt-0.5 text-[10px] text-white/80">{t("p8wf.obCompleted")}</div></div>
             </div>
           </div>
 
           {/* specific cleared / on-hold banner */}
           {cleared ? <div className="mx-4 mb-3 rounded-xl border border-[#cfe8d7] bg-[#f4fbf6] px-3.5 py-2 text-[12px] font-semibold text-[#0f7a43]">{t("team.allChecksVerified")}</div>
-            : gateOutstanding.length > 0 && <div className="mx-4 mb-3 rounded-xl border border-[#f3cfa6] bg-[#fdf3e0] px-3.5 py-2 text-[12px] font-semibold text-[#8a4b09]">{t("team.notClearedYet", { labels: gateOutstanding.map((f) => f.label).join(" · ") })}</div>}
+            : gateOutstanding.length > 0 && <div className="mx-4 mb-3 rounded-xl border border-[#f3cfa6] bg-[#fdf3e0] px-3.5 py-2 text-[12px] font-semibold text-[#8a4b09]">{t("team.notClearedYet", { labels: gateOutstanding.map((f) => obLabel(t, f)).join(" · ") })}</div>}
 
           {/* this step's fields. References is the one step that isn't just a
               form: behind the referee's contact details sits the actual exchange
@@ -639,12 +643,12 @@ export function OnboardingPanel() {
               <Button onClick={() => setAddOpen((v) => !v)}>{t("team.addItem")}</Button>
               {addOpen && (
                 <div className="absolute bottom-full z-20 mb-1 max-h-[260px] w-[280px] overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
-                  {hiddenFields.length ? hiddenFields.map((f) => <button key={f.id} type="button" onClick={() => { ob.upsertRecord({ ...rec, extra: [...rec.extra, f.id] }); setAddOpen(false); }} className="block w-full truncate rounded-lg px-3 py-1.5 text-start text-[12px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.label} <span className="text-[10px] text-[var(--ink-3)]">· {SECTIONS.find((s) => s[0] === f.section)?.[1]}</span></button>) : <div className="px-3 py-2 text-[12px] text-[var(--ink-3)]">{t("team.everyItemApplies", { name: sel.split(" ")[0] })}</div>}
+                  {hiddenFields.length ? hiddenFields.map((f) => <button key={f.id} type="button" onClick={() => { ob.upsertRecord({ ...rec, extra: [...rec.extra, f.id] }); setAddOpen(false); }} className="block w-full truncate rounded-lg px-3 py-1.5 text-start text-[12px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{obLabel(t, f)} <span className="text-[10px] text-[var(--ink-3)]">· {obSection(t, f.section, SECTIONS.find((s) => s[0] === f.section)?.[1] ?? "")}</span></button>) : <div className="px-3 py-2 text-[12px] text-[var(--ink-3)]">{t("team.everyItemApplies", { name: sel.split(" ")[0] })}</div>}
                 </div>
               )}
             </div>
             {curStep < activeSections.length - 1
-              ? <Button variant="primary" className="ms-auto" onClick={() => setStep((s) => Math.min(activeSections.length - 1, s + 1))}>{t("team.nextColon")} {activeSections[curStep + 1][1]} →</Button>
+              ? <Button variant="primary" className="ms-auto" onClick={() => setStep((s) => Math.min(activeSections.length - 1, s + 1))}>{t("team.nextColon")} {obSection(t, activeSections[curStep + 1][0], activeSections[curStep + 1][1])} {isRTL(currentLocaleCode()) ? "←" : "→"}</Button>
               : <span className="ms-auto text-[12px] font-bold text-[var(--ink-3)]">{t("team.finalStep")}</span>}
           </div>
           <p className="px-4 pb-4 text-[11px] text-[var(--ink-3)]">{t("team.certsTrackedPre")}<b>{t("team.teamStaffCerts")}</b>{t("team.certsTrackedPost")}</p>
@@ -658,7 +662,7 @@ export function OnboardingPanel() {
           <div className="flex max-h-[86vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("team.disqualExampleTitle")}</h3><button type="button" onClick={() => setShowDecl(false)} className="ms-auto text-[18px] text-[var(--ink-3)]">×</button></div><p className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{t("team.disqualPrintNote")}</p></div>
             <div className="flex-1 overflow-y-auto px-5 py-4"><pre className="whitespace-pre-wrap font-sans text-[12.5px] leading-relaxed text-[var(--ink)]">{DISQUAL_DECLARATION}</pre></div>
-            <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><span className="text-[11px] text-[var(--ink-3)]">{provider}</span><Button className="ms-auto" onClick={() => setShowDecl(false)}>{t("team.close")}</Button><Button variant="primary" onClick={() => printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Disqualification declaration</title><style>body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:34px;max-width:720px;margin:0 auto}h1{font-size:16px}pre{white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.7}</style></head><body><h1>${esc(provider)}</h1><pre>${esc(DISQUAL_DECLARATION)}</pre><script>window.onload=function(){setTimeout(function(){window.print()},300)}</script></body></html>`)}>{t("team.print")}</Button></div>
+            <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><span className="text-[11px] text-[var(--ink-3)]">{provider}</span><Button className="ms-auto" onClick={() => setShowDecl(false)}>{t("team.close")}</Button><Button variant="primary" onClick={() => printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(t("p8wf.obDeclTitle"))}</title><style>body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:34px;max-width:720px;margin:0 auto}h1{font-size:16px}pre{white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.7}</style></head><body><h1>${esc(provider)}</h1><pre>${esc(DISQUAL_DECLARATION)}</pre><script>window.onload=function(){setTimeout(function(){window.print()},300)}</script></body></html>`)}>{t("team.print")}</Button></div>
           </div>
         </div>
       )}
@@ -685,12 +689,12 @@ function RequirementsModal({ team, fields, onSave, onClose, accessRoles, jobTitl
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {SECTIONS.map(([sid, slabel, sicon]) => { const fs = list.filter((f) => f.section === sid); if (!fs.length) return null; return (
             <div key={sid} className="mb-4">
-              <h4 className="mb-1.5 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">{sicon} {slabel}</h4>
+              <h4 className="mb-1.5 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">{sicon} {obSection(t, sid, slabel)}</h4>
               <div className="space-y-1.5">
                 {fs.map((f) => (
                   <div key={f.id} className="rounded-lg border border-[var(--line)] p-2.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[12.5px] font-semibold text-[var(--ink)]">{f.label}{f.gate && <span title={t("team.gatesClearedTitle")} className="ms-1 text-[10px]">🚦</span>}</span>
+                      <span className="text-[12.5px] font-semibold text-[var(--ink)]">{obLabel(t, f)}{f.gate && <span title={t("team.gatesClearedTitle")} className="ms-1 text-[10px]">🚦</span>}</span>
                       <label className="ms-auto flex cursor-pointer items-center gap-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={f.required} onChange={(e) => patch(f.id, { required: e.target.checked })} className="h-3.5 w-3.5 accent-[#1d3a8f]" />{t("team.required")}</label>
                       <Select value={f.applyKind} onChange={(e) => patch(f.id, { applyKind: e.target.value as OnboardField["applyKind"] })} className="max-w-[130px]"><option value="all">{t("team.allStaff")}</option><option value="roles">{t("team.certainRoles")}</option><option value="staff">{t("team.namedPeople")}</option></Select>
                       {f.custom && <button type="button" onClick={() => del(f.id)} title={t("team.deleteWord")} className="text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>}
@@ -714,7 +718,7 @@ function RequirementsModal({ team, fields, onSave, onClose, accessRoles, jobTitl
             <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("team.addCustomItem")}</div>
             <div className="flex flex-wrap items-center gap-2">
               <Input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder={t("team.itemLabel")} className="min-w-[160px] flex-1" />
-              <Select value={newSection} onChange={(e) => setNewSection(e.target.value)} className="max-w-[170px]">{SECTIONS.map(([id, l]) => <option key={id} value={id}>{l}</option>)}</Select>
+              <Select value={newSection} onChange={(e) => setNewSection(e.target.value)} className="max-w-[170px]">{SECTIONS.map(([id, l]) => <option key={id} value={id}>{obSection(t, id, l)}</option>)}</Select>
               <Select value={newType} onChange={(e) => setNewType(e.target.value as FieldType)} className="max-w-[130px]"><option value="text">{t("team.ftText")}</option><option value="date">{t("team.ftDate")}</option><option value="textarea">{t("team.ftLongText")}</option><option value="file">{t("team.ftFileUpload")}</option><option value="checkbox">{t("team.ftTickBox")}</option><option value="check">{t("team.ftStatusCheck")}</option></Select>
               <Button variant="primary" onClick={addField}>{t("team.add")}</Button>
             </div>
