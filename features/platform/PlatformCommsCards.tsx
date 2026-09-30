@@ -14,6 +14,8 @@ import { useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { CommsCard, SHOWN, TONES, type Row } from "@/features/dashboard/CommsCards";
+import { useT } from "@/lib/i18n/provider";
+import { hq } from "./hqText";
 
 // The support thread fields this card shows — the full model lives in
 // SupportInboxApp (backed by /api/platform/support).
@@ -32,6 +34,7 @@ interface SupportThread {
 
 /** Messages & support — providers and their customers waiting on HQ. */
 export function SupportInboxCard() {
+  useT(); // re-render on language change
   const router = useRouter();
   const [threads, setThreads] = useState<SupportThread[] | null>(null);
   const load = useCallback(() => {
@@ -66,12 +69,12 @@ export function SupportInboxCard() {
 
   return (
     <CommsCard
-      glyph="🎧" title="Support & messages" tone={TONES.blue}
+      glyph="🎧" title={hq("Support & messages")} tone={TONES.blue}
       unread={open.filter((th) => th.unreadByHq).length}
       rows={rows}
-      loading="Loading support…"
-      empty="Nothing open — all answered" emptyGlyph="✅"
-      actionLabel="Open support"
+      loading={hq("Loading support…")}
+      empty={hq("Nothing open — all answered")} emptyGlyph="✅"
+      actionLabel={hq("Open support")}
       onOpen={() => router.push("/platform/messages")}
       onRow={(r) => router.push(`/platform/messages?thread=${encodeURIComponent(r.id)}`)}
     />
@@ -85,6 +88,7 @@ const GLYPH: Record<NType, string> = { signup: "🎉", cancel: "🚫", support: 
 
 /** HQ notifications — signups, cancellations, support and bug reports. */
 export function PlatformNotificationsCard() {
+  useT();
   const router = useRouter();
   const [data, setData] = useState<{ items: HqNotif[]; unread: number } | null>(null);
   const load = useCallback(() => {
@@ -113,11 +117,11 @@ export function PlatformNotificationsCard() {
 
   return (
     <CommsCard
-      glyph="🔔" title="Notifications" tone={TONES.amber}
+      glyph="🔔" title={hq("Notifications")} tone={TONES.amber}
       unread={data?.unread ?? 0}
       rows={rows}
-      loading="Loading notifications…"
-      empty="Nothing new" emptyGlyph="🌤️"
+      loading={hq("Loading notifications…")}
+      empty={hq("Nothing new")} emptyGlyph="🌤️"
       // These hrefs are written platform-side and already absolute
       // (/platform/support?thread=…), so they need no portal rewrite.
       onRow={(r) => { if (r.href) router.push(r.href); }}
@@ -130,6 +134,7 @@ interface NetworkMail { id: string; tenantId: string; providerName: string; from
 
 /** Provider email, network-wide — what's landing in the inboxes HQ supports. */
 export function NetworkInboxCard() {
+  useT();
   const router = useRouter();
   const [data, setData] = useState<{ items: NetworkMail[]; unread: number } | null>(null);
   const load = useCallback(() => {
@@ -155,14 +160,14 @@ export function NetworkInboxCard() {
 
   return (
     <CommsCard
-      glyph="📬" title="New emails" tone={TONES.violet}
+      glyph="📬" title={hq("New emails")} tone={TONES.violet}
       unread={data?.unread ?? 0}
       rows={rows}
-      loading="Loading provider mail…"
-      empty="No mail in the last window" emptyGlyph="📭"
+      loading={hq("Loading provider mail…")}
+      empty={hq("No mail in the last window")} emptyGlyph="📭"
       // No HQ mailbox to open — the providers list is where you pick an account
       // to open and read it in their own Inbox.
-      actionLabel="Providers"
+      actionLabel={hq("Providers")}
       onOpen={() => router.push("/platform/providers")}
       onRow={() => router.push("/platform/providers")}
     />

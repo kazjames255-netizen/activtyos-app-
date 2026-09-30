@@ -8,6 +8,10 @@ import { useRealtime } from "@/lib/realtime";
 import { SupportInboxCard, PlatformNotificationsCard, NetworkInboxCard } from "@/features/platform/PlatformCommsCards";
 import { PipelineSummaryCard } from "@/features/platform/PipelineSummaryCard";
 import { FalloffCard } from "@/features/platform/FalloffCard";
+import { useT } from "@/lib/i18n/provider";
+import { hq } from "./hqText";
+
+const titleWord = (k: string) => k.charAt(0).toUpperCase() + k.slice(1);
 
 interface Analytics {
   summary: { mrr: number; arr: number; mrrPaying: number; mrrTrial: number; arrPaying: number; totalProviders: number; active: number; trialing: number; canceling: number; canceled: number; avgTenureDays: number; churnRate: number; trialConversion: number; newThisMonth: number; gmvBooked: number; gmvPaid: number };
@@ -30,7 +34,7 @@ const money = (n: number) => (Math.abs(n) >= 1000 ? `£${(n / 1000).toFixed(n >=
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" });
 const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-const tenure = (d: number) => (d >= 365 ? `${(d / 365).toFixed(1)} yrs` : d >= 30 ? `${Math.round(d / 30)} mo` : `${d} days`);
+const tenure = (d: number) => (d >= 365 ? hq("{n} yrs", { n: (d / 365).toFixed(1) }) : d >= 30 ? hq("{n} mo", { n: Math.round(d / 30) }) : hq("{n} days", { n: d }));
 const PLAN_C: Record<string, string> = { freelancer: "#3f78d8", company: "#1d3a8f", franchise: "#7c3aed" };
 const STATUS_C: Record<string, string> = { active: "#0f7a43", trialing: "#1d3a8f", canceling: "#a5670a", canceled: "#c02636", none: "#8a86a3" };
 const GRADS = ["linear-gradient(135deg,#1d3a8f,#3f78d8)", "linear-gradient(135deg,#3f78d8,#5aa0f0)", "linear-gradient(135deg,#274ba3,#4f8bf5)", "linear-gradient(135deg,#6d28d9,#a855f7)", "linear-gradient(135deg,#0f7a43,#34c17b)"];
@@ -40,15 +44,16 @@ const grad = (s: string) => GRADS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0
 interface RecentProv { id: string; name: string; type: string; createdAt: string | null; subscription: Record<string, unknown> | null }
 const kindOf = (p: RecentProv) => ((p.subscription?.plan as string) === "franchise" ? "franchise" : p.type === "company" ? "company" : "freelancer");
 function sinceLabel(iso: string | null, nowMs: number) {
-  if (!iso) return "just joined";
+  if (!iso) return hq("just joined");
   const days = Math.floor((nowMs - Date.parse(iso)) / 86400000);
-  if (days <= 0) return "joined today";
-  if (days === 1) return "joined yesterday";
-  if (days < 30) return `joined ${days} days ago`;
-  return "since " + new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" });
+  if (days <= 0) return hq("joined today");
+  if (days === 1) return hq("joined yesterday");
+  if (days < 30) return hq("joined {n} days ago", { n: days });
+  return hq("since {date}", { date: new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) });
 }
 
 export function PlatformAnalyticsApp() {
+  useT(); // re-render on language change (labels are translated at render time)
   const [d, setD] = useState<Analytics | null>(null);
   const [recent, setRecent] = useState<RecentProv[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +66,7 @@ export function PlatformAnalyticsApp() {
     // "recently joined" strip, so it must not hold the whole page on "Loading analytics…".
     apiGet<Analytics>("/api/platform/analytics")
       .then((a) => { setD(a); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+      .catch((e) => setError(e instanceof Error ? e.message : hq("Failed to load")));
     apiGet<{ providers: RecentProv[] }>("/api/platform/providers")
       .then((p) => setRecent([...p.providers].sort((x, y) => (y.createdAt ?? "").localeCompare(x.createdAt ?? "")).slice(0, 6)))
       .catch(() => {});
@@ -102,7 +107,7 @@ export function PlatformAnalyticsApp() {
   const isDash = (usePathname() ?? "").split("/")[2] !== "analytics";
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
-  if (!d || !view) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading analytics…</div>;
+  if (!d || !view) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{hq("Loading analytics…")}</div>;
   const s = d.summary;
 
   return (
@@ -110,16 +115,16 @@ export function PlatformAnalyticsApp() {
       <div className="overflow-hidden rounded-2xl text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex flex-wrap items-end justify-between gap-3 px-6 py-5">
           <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>Platform · Head office</div>
-            <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>{isDash ? "🏠 Dashboard" : "📈 Provider analytics"}</h2>
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>{hq("Platform · Head office")}</div>
+            <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>{isDash ? hq("🏠 Dashboard") : hq("📈 Provider analytics")}</h2>
             <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">
               {isDash
-                ? <>What&rsquo;s waiting on you, then the numbers — recurring revenue, growth, churn and the money flowing through your providers.</>
-                : <>Recurring revenue, growth, churn and where it&rsquo;s heading — plus the money flowing through your providers.</>}
+                ? hq("What’s waiting on you, then the numbers — recurring revenue, growth, churn and the money flowing through your providers.")
+                : hq("Recurring revenue, growth, churn and where it’s heading — plus the money flowing through your providers.")}
             </p>
           </div>
-          <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold" title="Applies to the money figures — includes or excludes providers still on their free trial">
-            {([["incl", "Incl. trials"], ["paying", "Paying only"]] as const).map(([m, label]) => (
+          <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold" title={hq("Applies to the money figures — includes or excludes providers still on their free trial")}>
+            {([["incl", hq("Incl. trials")], ["paying", hq("Paying only")]] as const).map(([m, label]) => (
               <button key={m} type="button" onClick={() => setMode(m)} className="rounded-full px-3 py-1 transition-colors" style={mode === m ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.8)" }}>{label}</button>
             ))}
           </div>
@@ -139,25 +144,25 @@ export function PlatformAnalyticsApp() {
 
       {/* KPI tiles */}
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="Monthly recurring" icon="💷" grad={GRAD.blue}
+        <Tile label={hq("Monthly recurring")} icon="💷" grad={GRAD.blue}
           value={money(mode === "paying" ? s.mrrPaying : s.mrr)}
-          sub={`${money(mode === "paying" ? s.arrPaying : s.arr)}/yr · ${mode === "paying" ? "paying only" : "incl. trials"}`}>
+          sub={`${hq("{amount}/yr", { amount: money(mode === "paying" ? s.arrPaying : s.arr) })} · ${mode === "paying" ? hq("paying only") : hq("incl. trials")}`}>
           <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px]">
-            <span className="font-bold text-white">{money(s.mrrPaying)}<span className="font-normal text-white/70"> paying</span></span>
-            <span className="font-bold text-white">{money(s.mrrTrial)}<span className="font-normal text-white/70"> on trial</span></span>
+            <span className="font-bold text-white">{money(s.mrrPaying)}<span className="font-normal text-white/70"> {hq("paying")}</span></span>
+            <span className="font-bold text-white">{money(s.mrrTrial)}<span className="font-normal text-white/70"> {hq("on trial")}</span></span>
           </div>
         </Tile>
-        <ActiveTile value={s.active + s.canceling} sub={`${s.trialing} on trial · ${s.totalProviders} total`} series={d.activeByMonth.slice(-6)} />
-        <Tile label="Avg. time with us" icon="⏳" grad={GRAD.green} value={tenure(s.avgTenureDays)} sub={`${s.newThisMonth} joined this month`} />
-        <Tile label="Trial → paid" icon="🎯" grad={GRAD.amber} value={pct(s.trialConversion)} sub={`Churn ${pct(s.churnRate)}`} aside={<Ring pct={s.trialConversion * 100} label={pct(s.trialConversion)} />} />
+        <ActiveTile value={s.active + s.canceling} sub={hq("{n} on trial · {t} total", { n: s.trialing, t: s.totalProviders })} series={d.activeByMonth.slice(-6)} />
+        <Tile label={hq("Avg. time with us")} icon="⏳" grad={GRAD.green} value={tenure(s.avgTenureDays)} sub={hq("{n} joined this month", { n: s.newThisMonth })} />
+        <Tile label={hq("Trial → paid")} icon="🎯" grad={GRAD.amber} value={pct(s.trialConversion)} sub={hq("Churn {pct}", { pct: pct(s.churnRate) })} aside={<Ring pct={s.trialConversion * 100} label={pct(s.trialConversion)} />} />
       </div>
 
       {/* Trend period — controls the charts below, not the KPI cards above. */}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
-        <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Trends over time</div>
+        <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{hq("Trends over time")}</div>
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12px] font-bold">
           {[3, 6, 12].map((m) => (
-            <button key={m} type="button" onClick={() => setMonths(m)} className="rounded-full px-3 py-1 transition-colors" style={months === m ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{m}m</button>
+            <button key={m} type="button" onClick={() => setMonths(m)} className="rounded-full px-3 py-1 transition-colors" style={months === m ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{hq("{n} mo", { n: m })}</button>
           ))}
         </div>
       </div>
@@ -165,7 +170,7 @@ export function PlatformAnalyticsApp() {
       {/* MRR trend (2/3) + long-range projections (1/3) */}
       <div className="mt-3 grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <Card title="Recurring revenue" right={<Legend items={[[mode === "paying" ? "Paying MRR" : "MRR incl. trials", BLUE], ["Projected", PINK]]} />} className="h-full">
+          <Card title={hq("Recurring revenue")} right={<Legend items={[[mode === "paying" ? hq("Paying MRR") : hq("MRR incl. trials"), BLUE], [hq("Projected"), PINK]]} />} className="h-full">
             <TrendChart series={view.mrr.map((x) => ({ label: x.month, value: x.mrr }))} projection={view.projection.map((x) => ({ label: x.month, value: x.mrr }))} fmt={money} color={BLUE} />
           </Card>
         </div>
@@ -173,50 +178,50 @@ export function PlatformAnalyticsApp() {
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card title="New signups" right={<span className="text-[11.5px] text-[var(--ink-3)]">bars = joined · line = total</span>}>
+        <Card title={hq("New signups")} right={<span className="text-[11.5px] text-[var(--ink-3)]">{hq("bars = joined · line = total")}</span>}>
           <SignupBars data={view.signups} />
         </Card>
-        <Card title="Booking value through providers" right={<Legend items={[["Booked", LIGHTB], ["Paid", "#0f7a43"]]} />}>
+        <Card title={hq("Booking value through providers")} right={<Legend items={[[hq("Booked"), LIGHTB], [hq("Paid"), "#0f7a43"]]} />}>
           <TrendChart series={view.gmv.map((x) => ({ label: x.month, value: x.booked }))} series2={view.gmv.map((x) => ({ label: x.month, value: x.paid }))} fmt={money} color={LIGHTB} color2="#0f7a43" />
-          <div className="mt-2 flex gap-4 text-[12px] text-[var(--ink-3)]"><span>All-time booked <b className="text-[var(--ink)]">{money(s.gmvBooked)}</b></span><span>Paid <b className="text-[var(--ink)]">{money(s.gmvPaid)}</b></span></div>
+          <div className="mt-2 flex gap-4 text-[12px] text-[var(--ink-3)]"><span>{hq("All-time booked")} <b className="text-[var(--ink)]">{money(s.gmvBooked)}</b></span><span>{hq("Paid")} <b className="text-[var(--ink)]">{money(s.gmvPaid)}</b></span></div>
         </Card>
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <Card title="Revenue by plan">
-          <Breakdown entries={Object.entries(d.byPlan).map(([k, v]) => ({ label: k, value: v.mrr, sub: `${v.count} · ${money(v.mrr)}/mo`, color: PLAN_C[k] ?? BLUE }))} />
+        <Card title={hq("Revenue by plan")}>
+          <Breakdown entries={Object.entries(d.byPlan).map(([k, v]) => ({ label: hq(titleWord(k)), value: v.mrr, sub: `${v.count} · ${hq("{amount}/mo", { amount: money(v.mrr) })}`, color: PLAN_C[k] ?? BLUE }))} />
         </Card>
-        <Card title="Providers by status">
+        <Card title={hq("Providers by status")}>
           {Object.values(d.byStatus).some((v) => v > 0)
             ? <Donut
-                segments={Object.entries(d.byStatus).map(([k, v]) => ({ label: k, value: v, color: STATUS_C[k] ?? "#8a86a3" }))}
+                segments={Object.entries(d.byStatus).map(([k, v]) => ({ label: hq(titleWord(k)), value: v, color: STATUS_C[k] ?? "#8a86a3" }))}
                 center={String(Object.values(d.byStatus).reduce((s2, v) => s2 + v, 0))}
-                sub="providers"
+                sub={hq("providers")}
               />
-            : <Empty>No providers yet.</Empty>}
+            : <Empty>{hq("No providers yet.")}</Empty>}
         </Card>
-        <Card title="How they heard about us">
+        <Card title={hq("How they heard about us")}>
           {Object.keys(d.attribution).length
-            ? <Breakdown entries={Object.entries(d.attribution).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: k, value: v, sub: String(v), color: LIGHTB }))} />
-            : <Empty>No attribution yet — new signups record this.</Empty>}
+            ? <Breakdown entries={Object.entries(d.attribution).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: hq(titleWord(k)), value: v, sub: String(v), color: LIGHTB }))} />
+            : <Empty>{hq("No attribution yet — new signups record this.")}</Empty>}
         </Card>
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <NewestProviders items={recent} nowMs={nowMs} />
-        <Card title="Top providers by fee">
+        <Card title={hq("Top providers by fee")}>
           {d.topProviders.length ? (
             <div className="flex flex-col divide-y divide-[var(--line)]">
               {d.topProviders.map((p) => (
                 <div key={p.id} className="flex items-center gap-2 py-2 text-[12.5px]">
                   <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
-                  <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[10.5px] font-bold capitalize text-[#1d3a8f]">{p.plan}{p.band ? ` · ${p.band}` : ""}</span>
+                  <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">{hq(titleWord(p.plan))}{p.band ? ` · ${p.band}` : ""}</span>
                   <span className="text-[11px] text-[var(--ink-3)]">{tenure(p.tenureDays)}</span>
-                  <span className="w-16 text-end font-extrabold tabular-nums">{money(p.fee)}/mo</span>
+                  <span className="w-16 text-end font-extrabold tabular-nums">{hq("{amount}/mo", { amount: money(p.fee) })}</span>
                 </div>
               ))}
             </div>
-          ) : <Empty>No paying providers yet.</Empty>}
+          ) : <Empty>{hq("No paying providers yet.")}</Empty>}
         </Card>
       </div>
     </div>
@@ -228,7 +233,7 @@ export function PlatformAnalyticsApp() {
 // retired Overview page.)
 function NewestProviders({ items, nowMs }: { items: RecentProv[]; nowMs: number }) {
   return (
-    <Card title="🆕 Newest providers">
+    <Card title={hq("🆕 Newest providers")}>
       {items.length ? (
         <div className="flex flex-col gap-2">
           {items.map((p) => {
@@ -242,13 +247,13 @@ function NewestProviders({ items, nowMs }: { items: RecentProv[]; nowMs: number 
                   <div className="truncate text-[13px] font-bold">{p.name}</div>
                   <div className="text-[11px] text-[var(--ink-3)]">{sinceLabel(p.createdAt, nowMs)}</div>
                 </div>
-                {days <= 14 && <span className="rounded-full px-2 py-0.5 text-[9.5px] font-extrabold tracking-wide text-[#3a2a00]" style={{ background: GOLD }}>NEW</span>}
-                <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold capitalize" style={{ background: `${c}1f`, color: c }}>{kind}</span>
+                {days <= 14 && <span className="rounded-full px-2 py-0.5 text-[9.5px] font-extrabold tracking-wide text-[#3a2a00]" style={{ background: GOLD }}>{hq("NEW")}</span>}
+                <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold capitalize" style={{ background: `${c}1f`, color: c }}>{hq(titleWord(kind))}</span>
               </div>
             );
           })}
         </div>
-      ) : <Empty>No providers yet.</Empty>}
+      ) : <Empty>{hq("No providers yet.")}</Empty>}
     </Card>
   );
 }
@@ -321,7 +326,7 @@ function Donut({ segments, center, sub, valueFmt = (n) => String(n), size = 116 
         {segments.map((s) => (
           <div key={s.label} className="flex items-center gap-2 text-[11.5px]">
             <span className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: s.color }} />
-            <span className="min-w-0 flex-1 font-semibold capitalize leading-tight">{s.label}</span>
+            <span className="min-w-0 flex-1 font-semibold leading-tight">{s.label}</span>
             <span className="flex-none tabular-nums font-bold text-[var(--ink-3)]">{valueFmt(s.value)}</span>
           </div>
         ))}
@@ -333,10 +338,10 @@ function Donut({ segments, center, sub, valueFmt = (n) => String(n), size = 116 
 function ActiveTile({ value, sub, series }: { value: number; sub: string; series: { month: string; count: number }[] }) {
   const max = Math.max(1, ...series.map((x) => x.count));
   return (
-    <Tile label="Active providers" icon="👥" grad={GRAD.teal} value={String(value)} sub={sub}>
+    <Tile label={hq("Active providers")} icon="👥" grad={GRAD.teal} value={String(value)} sub={sub}>
       <div className="mt-2.5 flex items-end gap-1" style={{ height: 30 }}>
         {series.map((x, i) => (
-          <div key={x.month} className="flex flex-1 flex-col items-center justify-end" style={{ height: "100%" }} title={`${monthLabel(x.month)}: ${x.count} live`}>
+          <div key={x.month} className="flex flex-1 flex-col items-center justify-end" style={{ height: "100%" }} title={hq("{month}: {n} live", { month: monthLabel(x.month), n: x.count })}>
             <span className="mb-0.5 text-[8.5px] font-extrabold tabular-nums" style={{ opacity: i === series.length - 1 ? 1 : 0.75 }}>{x.count}</span>
             <div className="w-full rounded-t-[3px] bg-white" style={{ height: `${Math.max(8, (x.count / max) * 100)}%`, opacity: i === series.length - 1 ? 1 : 0.5 }} />
           </div>
@@ -359,29 +364,29 @@ function Card({ title, right, children, className = "" }: { title: string; right
 }
 // Long-range MRR/ARR projection at 1/2/3/5 years from recent monthly growth.
 function Projections({ lastMrr, avgDelta, mode }: { lastMrr: number; avgDelta: number; mode: "incl" | "paying" }) {
-  const horizons: [number, string][] = [[12, "1 year"], [24, "2 years"], [36, "3 years"], [60, "5 years"]];
+  const horizons: [number, string][] = [[12, hq("1 year")], [24, hq("2 years")], [36, hq("3 years")], [60, hq("5 years")]];
   const rows = horizons.map(([h, label]) => { const mrr = Math.max(0, Math.round(lastMrr + avgDelta * h)); return { label, mrr, arr: mrr * 12 }; });
   const max = Math.max(1, ...rows.map((r) => r.mrr));
   return (
     <div className="flex h-full flex-col rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
       <div className="mb-1 flex items-center gap-2">
-        <div className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>🚀 Where it could go</div>
-        <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold text-white" style={{ background: `linear-gradient(90deg,${PINK},#ff6aa0)` }}>Projection</span>
+        <div className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{hq("🚀 Where it could go")}</div>
+        <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold text-white" style={{ background: `linear-gradient(90deg,${PINK},#ff6aa0)` }}>{hq("Projection")}</span>
       </div>
-      <p className="mb-3 text-[11px] leading-snug text-[var(--ink-3)]">If recent growth holds ({mode === "paying" ? "paying" : "incl. trials"}), projected recurring revenue:</p>
+      <p className="mb-3 text-[11px] leading-snug text-[var(--ink-3)]">{hq("If recent growth holds ({mode}), projected recurring revenue:", { mode: mode === "paying" ? hq("paying") : hq("incl. trials") })}</p>
       <div className="flex flex-1 flex-col justify-between gap-3">
         {rows.map((r) => (
           <div key={r.label}>
             <div className="flex items-baseline justify-between">
               <span className="text-[12.5px] font-bold text-[var(--ink-2)]">{r.label}</span>
-              <span className="text-[17px] font-extrabold tabular-nums" style={{ fontFamily: "var(--ff-display)", color: PINK }}>{money(r.mrr)}<span className="text-[11px] font-normal text-[var(--ink-3)]">/mo</span></span>
+              <span className="text-[17px] font-extrabold tabular-nums" style={{ fontFamily: "var(--ff-display)", color: PINK }}>{money(r.mrr)}<span className="text-[11px] font-normal text-[var(--ink-3)]">{hq("/mo")}</span></span>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(r.mrr / max) * 100}%`, background: `linear-gradient(90deg,${PINK},#ff8ab6)`, boxShadow: "0 1px 6px rgba(238,31,99,.35)" }} /></div>
-            <div className="mt-0.5 text-end text-[10.5px] text-[var(--ink-3)]">{money(r.arr)}/yr</div>
+            <div className="mt-0.5 text-end text-[10.5px] text-[var(--ink-3)]">{hq("{amount}/yr", { amount: money(r.arr) })}</div>
           </div>
         ))}
       </div>
-      <p className="mt-3 text-[10px] leading-snug text-[var(--ink-3)]">Straight-line from recent average monthly growth — a guide, not a guarantee.</p>
+      <p className="mt-3 text-[10px] leading-snug text-[var(--ink-3)]">{hq("Straight-line from recent average monthly growth — a guide, not a guarantee.")}</p>
     </div>
   );
 }
@@ -475,7 +480,7 @@ function SignupBars({ data }: { data: { month: string; count: number; cumulative
           if (x.count === 0) return <rect key={i} x={cx(i) - 10} y={H - BOT - 3} width={20} height={3} rx={1.5} fill="var(--line)" />;
           const h = (x.count / maxC) * plot; const top = H - BOT - h;
           return <g key={i}>
-            <rect x={cx(i) - barW / 2} y={top} width={barW} height={h} rx={6} fill="url(#sgbar)"><title>{`${monthLabel(x.month)}: ${x.count} joined`}</title></rect>
+            <rect x={cx(i) - barW / 2} y={top} width={barW} height={h} rx={6} fill="url(#sgbar)"><title>{hq("{month}: {n} joined", { month: monthLabel(x.month), n: x.count })}</title></rect>
             {h > 22
               ? <text x={cx(i)} y={top + 15} fontSize="11" fontWeight="800" fill="#fff" textAnchor="middle">{x.count}</text>
               : <text x={cx(i)} y={top - 5} fontSize="10" fontWeight="800" fill={LIGHTB} textAnchor="middle">{x.count}</text>}
@@ -485,7 +490,7 @@ function SignupBars({ data }: { data: { month: string; count: number; cumulative
         <path d={`${cumPath} L${cx(data.length - 1)},${H - BOT} L${cx(0)},${H - BOT} Z`} fill="url(#sgarea)" />
         <path d={cumPath} fill="none" stroke={BLUE} strokeWidth="2.5" strokeLinejoin="round" />
         <circle cx={cx(data.length - 1)} cy={cy(total)} r="3.5" fill={BLUE} />
-        <text x={Math.min(W - 2, cx(data.length - 1))} y={cy(total) - 9} fontSize="11" fontWeight="800" fill={BLUE} stroke="#fff" strokeWidth="3" paintOrder="stroke" textAnchor="end">{total} total</text>
+        <text x={Math.min(W - 2, cx(data.length - 1))} y={cy(total) - 9} fontSize="11" fontWeight="800" fill={BLUE} stroke="#fff" strokeWidth="3" paintOrder="stroke" textAnchor="end">{hq("{n} total", { n: total })}</text>
       </svg>
       <div className="mt-1 flex justify-between text-[10px] text-[var(--ink-3)]">{data.filter((_, i) => i % Math.ceil(data.length / 6) === 0 || i === data.length - 1).map((x, i) => <span key={i}>{monthLabel(x.month)}</span>)}</div>
     </div>
@@ -495,7 +500,7 @@ function SignupBars({ data }: { data: { month: string; count: number; cumulative
 
 function Breakdown({ entries }: { entries: { label: string; value: number; sub: string; color: string }[] }) {
   const max = Math.max(1, ...entries.map((e) => e.value));
-  if (!entries.length) return <Empty>Nothing yet.</Empty>;
+  if (!entries.length) return <Empty>{hq("Nothing yet.")}</Empty>;
   return (
     <div className="flex flex-col gap-3">
       {entries.map((e, i) => (
@@ -503,7 +508,7 @@ function Breakdown({ entries }: { entries: { label: string; value: number; sub: 
           <div className="mb-1.5 flex items-center justify-between gap-2 text-[12.5px]">
             <span className="flex min-w-0 items-center gap-2">
               <span className="grid h-5 w-5 flex-none place-items-center rounded-md text-[10px] font-extrabold text-white" style={{ background: e.color }}>{i + 1}</span>
-              <span className="truncate font-semibold capitalize">{e.label}</span>
+              <span className="truncate font-semibold">{e.label}</span>
             </span>
             <span className="whitespace-nowrap font-extrabold tabular-nums text-[var(--ink-2)]">{e.sub}</span>
           </div>

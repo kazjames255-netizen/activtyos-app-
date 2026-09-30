@@ -28,6 +28,10 @@ import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
+import { H, hq } from "./hqText";
+import { currentLocaleCode } from "@/lib/i18n/format";
+import { isRTL } from "@/lib/i18n/config";
 
 type Stage = "new" | "contacted" | "interested" | "demo" | "trial" | "won" | "lost";
 interface Activity { type: "call" | "email" | "social" | "demo" | "note"; at: string }
@@ -55,11 +59,11 @@ const movedTo = (l: Lead, stage: Stage, from: number, to: number) =>
   (l.stageLog ?? []).some((m) => m.to === stage && inWin(m.at, from, to));
 
 const METRICS: Metric[] = [
-  { key: "new", label: "New leads", glyph: "✨", colour: "#2f5fd0", match: (l, f, t) => inWin(l.createdAt, f, t) },
-  { key: "contacted", label: "Contacted", glyph: "📞", colour: "#0e7490", match: (l, f, t) => (l.activities ?? []).some((a) => OUTREACH.has(a.type) && inWin(a.at, f, t)) || movedTo(l, "contacted", f, t) },
-  { key: "demo", label: "Demos", glyph: "🖥️", colour: "#5a3fd0", match: (l, f, t) => (l.activities ?? []).some((a) => a.type === "demo" && inWin(a.at, f, t)) || movedTo(l, "demo", f, t) },
-  { key: "trial", label: "Trials", glyph: "🎁", colour: "#b45309", match: (l, f, t) => movedTo(l, "trial", f, t) },
-  { key: "won", label: "Won", glyph: "🏆", colour: "#0f7a43", match: (l, f, t) => movedTo(l, "won", f, t) },
+  { key: "new", label: H("New leads"), glyph: "✨", colour: "#2f5fd0", match: (l, f, t) => inWin(l.createdAt, f, t) },
+  { key: "contacted", label: H("Contacted"), glyph: "📞", colour: "#0e7490", match: (l, f, t) => (l.activities ?? []).some((a) => OUTREACH.has(a.type) && inWin(a.at, f, t)) || movedTo(l, "contacted", f, t) },
+  { key: "demo", label: H("Demos"), glyph: "🖥️", colour: "#5a3fd0", match: (l, f, t) => (l.activities ?? []).some((a) => a.type === "demo" && inWin(a.at, f, t)) || movedTo(l, "demo", f, t) },
+  { key: "trial", label: H("Trials"), glyph: "🎁", colour: "#b45309", match: (l, f, t) => movedTo(l, "trial", f, t) },
+  { key: "won", label: H("Won"), glyph: "🏆", colour: "#0f7a43", match: (l, f, t) => movedTo(l, "won", f, t) },
 ];
 
 // ── Periods ────────────────────────────────────────────────────────────────
@@ -68,12 +72,12 @@ const METRICS: Metric[] = [
 // anything logged in the evening lands on the wrong day.
 type PeriodId = "7d" | "3w" | "3m" | "6m" | "12m" | "yoy";
 const PERIODS: { id: PeriodId; tab: string; note: string }[] = [
-  { id: "7d", tab: "7 days", note: "Day by day" },
-  { id: "3w", tab: "3 weeks", note: "Week by week" },
-  { id: "3m", tab: "3 months", note: "Month by month" },
-  { id: "6m", tab: "6 months", note: "Month by month" },
-  { id: "12m", tab: "12 months", note: "Month by month" },
-  { id: "yoy", tab: "Year on year", note: "Calendar years" },
+  { id: "7d", tab: H("7 days"), note: H("Day by day") },
+  { id: "3w", tab: H("3 weeks"), note: H("Week by week") },
+  { id: "3m", tab: H("3 months"), note: H("Month by month") },
+  { id: "6m", tab: H("6 months"), note: H("Month by month") },
+  { id: "12m", tab: H("12 months"), note: H("Month by month") },
+  { id: "yoy", tab: H("Year on year"), note: H("Calendar years") },
 ];
 
 interface Bucket { from: number; to: number; label: string; current: boolean }
@@ -92,7 +96,7 @@ function buildBuckets(nowMs: number, period: PeriodId): Bucket[] {
       const to = new Date(from); to.setDate(to.getDate() + 1);
       out.push({
         from: from.getTime(), to: to.getTime(), current: back === 0,
-        label: back === 0 ? "Today" : back === 1 ? "Yest." : `${from.toLocaleDateString(dl(), { weekday: "short" })} ${from.getDate()}`,
+        label: back === 0 ? hq("Today") : back === 1 ? hq("Yest.") : `${from.toLocaleDateString(dl(), { weekday: "short" })} ${from.getDate().toLocaleString(dl())}`,
       });
     }
     return out;
@@ -104,7 +108,7 @@ function buildBuckets(nowMs: number, period: PeriodId): Bucket[] {
       const to = new Date(from); to.setDate(to.getDate() + 7);
       out.push({
         from: from.getTime(), to: to.getTime(), current: back === 0,
-        label: back === 0 ? "This week" : back === 1 ? "Last week" : `w/c ${from.toLocaleDateString(dl(), { day: "numeric", month: "short" })}`,
+        label: back === 0 ? hq("This week") : back === 1 ? hq("Last week") : hq("w/c {date}", { date: from.toLocaleDateString(dl(), { day: "numeric", month: "short" }) }),
       });
     }
     return out;
@@ -137,6 +141,7 @@ function buildBuckets(nowMs: number, period: PeriodId): Bucket[] {
 }
 
 export function PipelineSummaryCard() {
+  const tr = useT(); // re-render on language change; also a dependency of the memo below (labels are translated when built)
   const router = useRouter();
   const [leads, setLeads] = useState<Lead[] | null>(null);
   const [period, setPeriod] = useState<PeriodId>("7d");
@@ -162,7 +167,8 @@ export function PipelineSummaryCard() {
       open: live.length,
       openValue: live.reduce((s, l) => s + (l.estMrr ?? 0), 0),
     };
-  }, [leads, nowMs, period]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leads, nowMs, period, tr]);
 
   const note = PERIODS.find((p) => p.id === period)?.note ?? "";
   // 13 columns of months need more room than 7 of days before scrolling starts.
@@ -173,14 +179,14 @@ export function PipelineSummaryCard() {
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--line)] px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <span aria-hidden className="flex h-7 w-7 flex-none items-center justify-center rounded-xl text-[14px] leading-none shadow-sm" style={{ background: "linear-gradient(150deg,#4f8bf5,#1d3a8f)" }}>💼</span>
-          <h3 className="m-0 truncate text-[14px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Sales pipeline</h3>
-          <span className="flex-none rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-extrabold text-[var(--ink-2)]">{note}</span>
+          <h3 className="m-0 truncate text-[14px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{hq("Sales pipeline")}</h3>
+          <span className="flex-none rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-extrabold text-[var(--ink-2)]">{hq(note)}</span>
         </div>
         <div className="flex flex-none items-center gap-3">
           <span className="hidden text-[11px] font-bold text-[var(--ink-3)] sm:inline">
-            {leads === null ? "…" : <>{open} open · <span className="text-[var(--ink-2)]">{money(openValue)}</span>/mo in play</>}
+            {leads === null ? "…" : <>{hq("{n} open", { n: open })} · <span className="text-[var(--ink-2)]">{money(openValue)}</span>{hq("/mo in play")}</>}
           </span>
-          <button type="button" onClick={() => router.push("/platform/sales")} className="text-[11px] font-bold text-[var(--brand)] hover:underline">Open pipeline →</button>
+          <button type="button" onClick={() => router.push("/platform/sales")} className="text-[11px] font-bold text-[var(--brand)] hover:underline">{hq("Open pipeline")} {isRTL(currentLocaleCode()) ? "←" : "→"}</button>
         </div>
       </div>
 
@@ -199,14 +205,14 @@ export function PipelineSummaryCard() {
                 ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" }
                 : { color: "var(--ink-2)", background: "var(--panel)" }}
             >
-              {p.tab}
+              {hq(p.tab)}
             </button>
           );
         })}
       </div>
 
       {leads === null ? (
-        <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Loading the pipeline…</div>
+        <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{hq("Loading the pipeline…")}</div>
       ) : (
         // Wide runs don't fit a phone: the grid scrolls inside itself rather
         // than pushing the whole dashboard sideways.
@@ -224,7 +230,7 @@ export function PipelineSummaryCard() {
                     {b.label}
                   </th>
                 ))}
-                <th className="px-3 py-2 text-center text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Total</th>
+                <th className="px-3 py-2 text-center text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{hq("Total")}</th>
               </tr>
             </thead>
             <tbody>
@@ -236,14 +242,14 @@ export function PipelineSummaryCard() {
                     <td className="sticky start-0 z-10 whitespace-nowrap bg-[var(--surface)] px-4 py-2">
                       <span className="flex items-center gap-1.5 text-[12px] font-bold">
                         <span aria-hidden>{m.glyph}</span>
-                        <span style={{ color: m.colour }}>{m.label}</span>
+                        <span style={{ color: m.colour }}>{hq(m.label)}</span>
                       </span>
                     </td>
                     {row.map((n, i) => (
                       <td
                         key={i}
                         className="px-2 py-2 text-center"
-                        title={`${n} ${m.label.toLowerCase()} · ${buckets[i].label}`}
+                        title={`${n} ${hq(m.label).toLocaleLowerCase(dl())} · ${buckets[i].label}`}
                         // Heat by the row's own busiest bucket, so a row with
                         // small numbers still shows its shape instead of blank.
                         style={{ background: n > 0 ? `color-mix(in srgb, ${m.colour} ${Math.round((n / peak) * 16) + 4}%, transparent)` : undefined }}
@@ -260,7 +266,7 @@ export function PipelineSummaryCard() {
               {/* Every bit of pipeline movement in that bucket — the single
                   number that answers "was today busier than yesterday". */}
               <tr className="border-t-2 border-[var(--line)] bg-[var(--panel)]">
-                <td className="sticky start-0 z-10 whitespace-nowrap bg-[var(--panel)] px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Total</td>
+                <td className="sticky start-0 z-10 whitespace-nowrap bg-[var(--panel)] px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{hq("Total")}</td>
                 {colTotals.map((n, i) => (
                   <td key={i} className="px-2 py-2 text-center" style={{ background: buckets[i].current ? "rgba(47,95,208,.06)" : undefined }}>
                     <span className="text-[14px] font-extrabold tabular-nums" style={{ color: n > 0 ? "var(--ink)" : "var(--ink-3)", opacity: n > 0 ? 1 : 0.45 }}>{n}</span>
@@ -275,7 +281,7 @@ export function PipelineSummaryCard() {
         </div>
       )}
       <div className="border-t border-[var(--line)] px-4 py-2 text-[10.5px] text-[var(--ink-3)]">
-        Contacted and demos count activity logged in the period; trials and won count stage moves. Moves made before stage history was recorded aren&rsquo;t dated, so they don&rsquo;t appear here.
+        {hq("Contacted and demos count activity logged in the period; trials and won count stage moves. Moves made before stage history was recorded aren’t dated, so they don’t appear here.")}
       </div>
     </div>
   );

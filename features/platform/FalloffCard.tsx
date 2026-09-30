@@ -13,6 +13,10 @@ import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
+import { H, hq } from "./hqText";
+import { currentLocaleCode } from "@/lib/i18n/format";
+import { isRTL } from "@/lib/i18n/config";
 
 interface Provider {
   id: string;
@@ -24,10 +28,10 @@ interface Provider {
 // The four states a provider can be in, in the order they appear on the bar:
 // still paying, still trying, on their way out, gone.
 const BANDS = [
-  { key: "active", label: "Paying", colour: "#0f7a43" },
-  { key: "trialing", label: "On trial", colour: "#2f5fd0" },
-  { key: "canceling", label: "Leaving", colour: "#b45309" },
-  { key: "canceled", label: "Cancelled", colour: "#c02636" },
+  { key: "active", label: H("Paying"), colour: "#0f7a43" },
+  { key: "trialing", label: H("On trial"), colour: "#2f5fd0" },
+  { key: "canceling", label: H("Leaving"), colour: "#b45309" },
+  { key: "canceled", label: H("Cancelled"), colour: "#c02636" },
 ] as const;
 
 const MONTHS = 6;
@@ -37,6 +41,7 @@ const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).pad
 const fmtPct = (n: number) => (n === 0 ? "0%" : `${n < 10 ? Math.round(n * 10) / 10 : Math.round(n)}%`);
 
 export function FalloffCard() {
+  const tr = useT(); // re-render on language change; also a dependency of the memo below (month names follow the language)
   const router = useRouter();
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -105,7 +110,8 @@ export function FalloffCard() {
       worst: Math.max(1, ...months.map((m) => m.count)),
       lostThisMonth: months[months.length - 1]?.count ?? 0,
     };
-  }, [providers, nowMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [providers, nowMs, tr]);
 
   const prevMonth = months[months.length - 2]?.count ?? 0;
   const trend = lostThisMonth - prevMonth;
@@ -115,30 +121,30 @@ export function FalloffCard() {
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--line)] px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <span aria-hidden className="flex h-7 w-7 flex-none items-center justify-center rounded-xl text-[14px] leading-none shadow-sm" style={{ background: "linear-gradient(150deg,#f0768a,#a31427)" }}>📉</span>
-          <h3 className="m-0 truncate text-[14px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Fall-off</h3>
-          <span className="flex-none rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-extrabold text-[var(--ink-2)]">Live vs cancelled</span>
+          <h3 className="m-0 truncate text-[14px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{hq("Fall-off")}</h3>
+          <span className="flex-none rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-extrabold text-[var(--ink-2)]">{hq("Live vs cancelled")}</span>
         </div>
-        <button type="button" onClick={() => router.push("/platform/providers")} className="flex-none text-[11px] font-bold text-[var(--brand)] hover:underline">Providers &amp; billing →</button>
+        <button type="button" onClick={() => router.push("/platform/providers")} className="flex-none text-[11px] font-bold text-[var(--brand)] hover:underline">{hq("Providers & billing")} {isRTL(currentLocaleCode()) ? "←" : "→"}</button>
       </div>
 
       {providers === null ? (
-        <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Loading providers…</div>
+        <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{hq("Loading providers…")}</div>
       ) : total === 0 ? (
-        <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{failed ? <>Couldn&apos;t load providers — is the server running? <button type="button" onClick={load} className="font-bold text-[var(--brand)] underline">Try again</button></> : "No providers yet."}</div>
+        <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{failed ? <>{hq("Couldn’t load providers — is the server running?")} <button type="button" onClick={load} className="font-bold text-[var(--brand)] underline">{hq("Try again")}</button></> : hq("No providers yet.")}</div>
       ) : (
         <div className="grid gap-4 p-4 lg:grid-cols-[1.35fr_1fr]">
           {/* The whole book in one bar — how much of it is still yours. */}
           <div>
             <div className="flex items-end justify-between gap-3">
               <div>
-                <div className="text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Still with us</div>
+                <div className="text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{hq("Still with us")}</div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-[27px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{live}</span>
-                  <span className="text-[12.5px] font-bold text-[var(--ink-3)]">of {total} · {retention}% retained</span>
+                  <span className="text-[12.5px] font-bold text-[var(--ink-3)]">{hq("of {total} · {pct}% retained", { total, pct: retention })}</span>
                 </div>
               </div>
               <div className="text-end">
-                <div className="text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Cancelled</div>
+                <div className="text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{hq("Cancelled")}</div>
                 <span className="text-[27px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", color: "#c02636" }}>{gone}</span>
               </div>
             </div>
@@ -147,7 +153,7 @@ export function FalloffCard() {
               {BANDS.map((b) => counts[b.key] > 0 && (
                 <span
                   key={b.key}
-                  title={`${counts[b.key]} ${b.label.toLowerCase()}`}
+                  title={`${counts[b.key]} ${hq(b.label).toLocaleLowerCase(dl())}`}
                   style={{ width: `${(counts[b.key] / total) * 100}%`, background: b.colour }}
                 />
               ))}
@@ -156,13 +162,13 @@ export function FalloffCard() {
               {BANDS.map((b) => (
                 <span key={b.key} className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]">
                   <span className="h-2 w-2 rounded-full" style={{ background: b.colour }} aria-hidden />
-                  {b.label} <span className="font-extrabold tabular-nums text-[var(--ink)]">{counts[b.key]}</span>
+                  {hq(b.label)} <span className="font-extrabold tabular-nums text-[var(--ink)]">{counts[b.key]}</span>
                 </span>
               ))}
             </div>
             {counts.canceling > 0 && (
               <div className="mt-2.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-semibold" style={{ background: "rgba(180,83,9,.08)", color: "#8a5a09" }}>
-                {counts.canceling} {counts.canceling === 1 ? "provider has" : "providers have"} given notice — still paying until their term ends.
+                {hq("Providers who have given notice: {n} — still paying until their term ends.", { n: counts.canceling })}
               </div>
             )}
           </div>
@@ -170,14 +176,14 @@ export function FalloffCard() {
           {/* Is the leak getting worse? Six months of cancellations. */}
           <div className="rounded-xl border border-[var(--line)] p-3">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Cancellations by month</span>
+              <span className="text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{hq("Cancellations by month")}</span>
               <span className="text-[11px] font-extrabold" style={{ color: trend > 0 ? "#c02636" : trend < 0 ? "#0f7a43" : "var(--ink-3)" }}>
-                {trend === 0 ? "level" : `${trend > 0 ? "▲" : "▼"} ${Math.abs(trend)} vs last month`}
+                {trend === 0 ? hq("level") : `${trend > 0 ? "▲" : "▼"} ${hq("{n} vs last month", { n: Math.abs(trend) })}`}
               </span>
             </div>
             <div className="mt-3 flex items-end gap-1.5" style={{ height: 64 }}>
               {months.map((m, i) => (
-                <div key={m.key} className="flex flex-1 flex-col items-center justify-end" style={{ height: "100%" }} title={`${m.count} of ${m.base} cancelled in ${m.label} — ${fmtPct(m.pct)}`}>
+                <div key={m.key} className="flex flex-1 flex-col items-center justify-end" style={{ height: "100%" }} title={hq("{n} of {base} cancelled in {month} — {pct}", { n: m.count, base: m.base, month: m.label, pct: fmtPct(m.pct) })}>
                   <span className="mb-1 text-[10px] font-extrabold tabular-nums text-[var(--ink-2)]">{m.count}</span>
                   <div
                     className="w-full rounded-t-[3px]"
@@ -208,7 +214,7 @@ export function FalloffCard() {
         </div>
       )}
       <div className="border-t border-[var(--line)] px-4 py-2 text-[10.5px] text-[var(--ink-3)]">
-        Retention is providers still on the books against every provider ever signed up. A card problem (past due) counts as still with us; only a cancelled subscription counts as gone. The percentage under each month is that month&rsquo;s churn rate — cancellations against the providers who were on the books when the month opened.
+        {hq("Retention is providers still on the books against every provider ever signed up. A card problem (past due) counts as still with us; only a cancelled subscription counts as gone. The percentage under each month is that month’s churn rate — cancellations against the providers who were on the books when the month opened.")}
       </div>
     </div>
   );
