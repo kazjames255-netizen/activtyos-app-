@@ -342,7 +342,11 @@ my.get("/meal-days", async (req, res) => {
     .map((d) => fromDoc(d.data() as BookingDoc))
     // Only bookings that hold a place: a waitlisted / declined / merely-offered one has no day to feed a child on.
     .filter((b) => b.listingId && b.status !== "Cancelled" && b.status !== "Declined" && b.status !== "Waitlisted" && b.status !== "Offered");
-  const listingIds = [...new Set(bookings.map((b) => b.listingId).filter(Boolean) as string[])].slice(0, 50);
+  // Meals are ordered for days still to come. Only those bookings feed the listing look-up — a family with years of history used to
+  // fill the (then 50-listing) cap with finished camps and never see the menu of the one running this week.
+  const mealToday = ukToday();
+  const upcoming = bookings.filter((b) => !(b.days?.length) || b.days.some((d) => d >= mealToday));
+  const listingIds = [...new Set(upcoming.map((b) => b.listingId).filter(Boolean) as string[])].slice(0, 300);
   if (!listingIds.length) { res.json([]); return; }
 
   const listingSnaps = await db.getAll(...listingIds.map((id) => db.collection("listings").doc(id)));
@@ -373,7 +377,7 @@ my.get("/meal-days", async (req, res) => {
 
   // Merge siblings on the same (listing,date) into one entry.
   const byKey = new Map<string, { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: unknown[] }; served: boolean; canOrder: boolean; cutoffLabel: string; closesToday: boolean; allergenNote: string }>();
-  for (const b of bookings) {
+  for (const b of upcoming) {
     const l = listings.get(b.listingId!);
     if (!l || l.archived || !l.mealsEnabled || !l.mealPlan) continue; // active listings with a menu only
     const plan = l.mealPlan as Record<string, unknown>;
