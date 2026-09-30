@@ -169,7 +169,7 @@ function AttendeeCard({ booking, kid, ki, blockAvail }: { booking: Booking; kid:
         </span>
         <div className="flex-1">
           <div className="text-[13px] font-extrabold text-[var(--ink)]">
-            {kid.name || `Child ${ki + 1}`}
+            {kid.name || t("p8lst.bsChildN", { n: ki + 1 })}
           </div>
           <div className="text-[11.5px] text-[var(--ink-3)]">
             {kid.age != null ? t("p7bd.ageYrs", { n: kid.age }) : ""}
@@ -758,7 +758,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
               style={{ background: "var(--brand-2)" }}
             >
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M3.5 7l8.5 6 8.5-6" /></svg>
-              Message family
+              {t("p8lst.bsMessageFamily")}
             </button>
           )}
           {ACTION_BUTTONS}

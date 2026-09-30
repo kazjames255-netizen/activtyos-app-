@@ -1,7 +1,7 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
-import { useT, useWord } from "@/lib/i18n/provider";
+import { useT, useWord, useI18n } from "@/lib/i18n/provider";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, get as apiGet } from "@/lib/api";
@@ -45,6 +45,7 @@ const fmtDay = (iso: string) =>
 export function BookingPanel({ listing, signedIn }: { listing: ServerListing; signedIn: boolean }) {
   const t = useT();
   const w = useWord();
+  const { locale } = useI18n();
   const blocks = ((listing.blocks ?? []) as Block[]).filter((b) => b.open && (b.sessions?.length ?? 0) > 0);
   const bundle = listing.bundle;
   const passes = bundle?.passes?.length
@@ -109,6 +110,8 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
       discounts,
       [{ name: pass.name, price: unitPrice, days: dates.length }],
       validKids.length,
+      undefined,
+      { tr: t, locale },
     );
     return { lines, total: Math.round((total + addonsPerChild * validKids.length) * 100) / 100 };
   })();

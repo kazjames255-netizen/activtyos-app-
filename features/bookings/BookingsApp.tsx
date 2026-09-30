@@ -9,6 +9,7 @@ import { BookingsList } from "./BookingsList";
 import { BookingDetail } from "./BookingDetail";
 import { TakeBookingModal } from "./TakeBookingModal";
 import { BulkEmailModal } from "./BulkEmailModal";
+import { useT } from "@/lib/i18n/provider";
 
 const FILTER_VALUES: BookingFilter[] = ["all", "approval", "confirmed", "waitlisted", "unpaid", "unreconciled", "cancelled", "requests", "refunds"];
 
@@ -19,6 +20,7 @@ const FILTER_VALUES: BookingFilter[] = ["all", "approval", "confirmed", "waitlis
  * freelancer accounts.
  */
 export function BookingsApp() {
+  const t = useT();
   const refresh = useBookingsStore((s) => s.refresh);
   const loading = useBookingsStore((s) => s.loading);
   const error = useBookingsStore((s) => s.error);
@@ -164,7 +166,7 @@ export function BookingsApp() {
       )}
       {loading ? (
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">
-          Loading bookings…
+          {t("p8lst.bsLoading")}
         </div>
       ) : (
         // List and pane. Opening a booking used to replace the list entirely,

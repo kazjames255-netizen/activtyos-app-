@@ -6,15 +6,15 @@ import {
   EXPORT_COLUMNS,
   EXPORT_PRESETS,
   bookingKids,
-  bookingsToCsv,
   columnsFor,
   csvFilename,
   inDateRange,
   money,
-  payLabel,
 } from "./helpers";
-import { downloadCsv, printBookings } from "./exportFile";
+import { downloadCsv, printRows, localizedColumns, localizedCsv } from "./exportFile";
 import { Button } from "@/components/ui";
+import { useT, useWord, useI18n } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Export wizard — narrow the bookings, choose the columns, pick a format.
@@ -36,16 +36,21 @@ const PAYMENTS = ["Paid", "Unpaid", "Invoice sent", "Awaiting voucher payment", 
  * what the booking records. Anything else is self-funded.
  */
 const FUNDING = [
-  { key: "tfc", label: "Tax-Free Childcare", match: (m: string) => /tax-?free/i.test(m) },
-  { key: "haf", label: "HAF funded", match: (m: string) => /\bhaf\b/i.test(m) },
+  { key: "tfc", label: "bxFundTfc", match: (m: string) => /tax-?free/i.test(m) },
+  { key: "haf", label: "bxFundHaf", match: (m: string) => /\bhaf\b/i.test(m) },
   {
     key: "self",
-    label: "Self-funded",
+    label: "bxFundSelf",
     match: (m: string) => !/tax-?free/i.test(m) && !/\bhaf\b/i.test(m),
   },
 ];
 
 export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClose: () => void }) {
+  const t = useT();
+  const w = useWord();
+  const { locale } = useI18n();
+  const isRTL = locale === "ar" || locale === "ur";
+  const allSfx = t("p8lst.bxAllSuffix");
   const [text, setText] = useState("");
   const [listings, setListings] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
@@ -100,6 +105,7 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
   const total = rows.reduce((s, b) => s + (typeof b.amount === "number" ? b.amount : 0), 0);
   const heads = rows.reduce((s, b) => s + bookingKids(b).length, 0);
   const cols = columnsFor(keys);
+  const colLabel = (k: string, en: string) => { const r = t("p8lst.bxCol_" + k); return r === "p8lst.bxCol_" + k ? en : r; };
   const ordered = EXPORT_COLUMNS.filter((c) => keys.includes(c.key));
 
   const toggle = (arr: string[], v: string, set: (a: string[]) => void) =>
@@ -110,10 +116,11 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
     (pays.length ? 1 : 0) + (funds.length ? 1 : 0) + (methods.length ? 1 : 0) +
     (from || to ? 1 : 0) + (min || max ? 1 : 0);
 
+  const countsText = `${pickPlural(t, locale, "p8lst.bxBookingN", rows.length)} · ${pickPlural(t, locale, "p8lst.bxAttendeeN", heads)}`;
   const subtitle = [
-    `${rows.length} booking${rows.length === 1 ? "" : "s"}`,
-    `${heads} attendee${heads === 1 ? "" : "s"}`,
-    from || to ? `${from || "start"} → ${to || "end"}` : null,
+    pickPlural(t, locale, "p8lst.bxBookingN", rows.length),
+    pickPlural(t, locale, "p8lst.bxAttendeeN", heads),
+    from || to ? `${from || t("p8lst.bxStart")} ${isRTL ? "←" : "→"} ${to || t("p8lst.bxEnd")}` : null,
     listings.length ? listings.join(", ") : null,
   ]
     .filter(Boolean)
@@ -121,8 +128,8 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
 
   const run = () => {
     if (!rows.length || !keys.length) return;
-    if (format === "csv") downloadCsv(csvFilename("bookings"), bookingsToCsv(rows, keys));
-    else printBookings(rows, keys, "Bookings", subtitle);
+    if (format === "csv") downloadCsv(csvFilename("bookings"), localizedCsv(rows, keys));
+    else printRows(rows, localizedColumns(keys), t("p8lst.bxPdfTitle"), subtitle, (b) => (typeof b.amount === "number" ? b.amount : 0));
     onClose();
   };
 
@@ -144,9 +151,9 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
       <div className="w-full max-w-[1000px] rounded-2xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
         <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-5 py-3.5">
           <div>
-            <h3 className="m-0 font-[var(--ff-display)] text-[17px] font-extrabold">Export bookings</h3>
+            <h3 className="m-0 font-[var(--ff-display)] text-[17px] font-extrabold">{t("p8lst.bxTitle")}</h3>
             <div className="text-[11.5px] text-[var(--ink-3)]">
-              Narrow them down, choose what goes in, pick a format.
+              {t("p8lst.bxSub")}
             </div>
           </div>
           <span onClick={onClose} className="ms-auto cursor-pointer text-[22px] text-[var(--ink-3)]">
@@ -158,7 +165,7 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
           {/* ── 1. Which bookings ─────────────────────────────────────── */}
           <div>
             <div className="mb-2 flex items-baseline gap-2">
-              <b className="text-[13px]">1 · Which bookings</b>
+              <b className="text-[13px]">{t("p8lst.bxStep1")}</b>
               {activeFilters > 0 && (
                 <button
                   type="button"
@@ -176,44 +183,44 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
                   }}
                   className="text-[11px] font-semibold text-[var(--ink-3)] hover:underline"
                 >
-                  Clear {activeFilters}
+                  {t("p8lst.bxClear", { n: activeFilters })}
                 </button>
               )}
             </div>
 
-            <label className={lab}>Name, email, ref or listing</label>
+            <label className={lab}>{t("p8lst.bxSearchLbl")}</label>
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="e.g. Doyle, or APF-103"
+              placeholder={t("p8lst.bxSearchPh")}
               className={`${field} mb-3`}
             />
 
             <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div>
-                <label className={lab}>Runs on or after</label>
+                <label className={lab}>{t("p8lst.bxFrom")}</label>
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={field} />
               </div>
               <div>
-                <label className={lab}>and on or before</label>
+                <label className={lab}>{t("p8lst.bxTo")}</label>
                 <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={field} />
               </div>
             </div>
 
             <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div>
-                <label className={lab}>Price from £</label>
+                <label className={lab}>{t("p8lst.bxPriceFrom")}</label>
                 <input type="number" min={0} step="0.01" value={min} onChange={(e) => setMin(e.target.value)} placeholder="0" className={field} />
               </div>
               <div>
-                <label className={lab}>up to £</label>
-                <input type="number" min={0} step="0.01" value={max} onChange={(e) => setMax(e.target.value)} placeholder="any" className={field} />
+                <label className={lab}>{t("p8lst.bxPriceTo")}</label>
+                <input type="number" min={0} step="0.01" value={max} onChange={(e) => setMax(e.target.value)} placeholder={t("p8lst.bxAny")} className={field} />
               </div>
             </div>
 
             {listingNames.length > 1 && (
               <>
-                <label className={lab}>Listings {listings.length ? `(${listings.length})` : "— all"}</label>
+                <label className={lab}>{t("p8lst.bxListings")} {listings.length ? `(${listings.length})` : allSfx}</label>
                 <div className="mb-3 flex flex-wrap gap-1.5">
                   {listingNames.map((n) => (
                     <button key={n} type="button" onClick={() => toggle(listings, n, setListings)} className={chip(listings.includes(n))}>
@@ -224,42 +231,42 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
               </>
             )}
 
-            <label className={lab}>Status {statuses.length ? `(${statuses.length})` : "— all"}</label>
+            <label className={lab}>{t("p8lst.bxStatus")} {statuses.length ? `(${statuses.length})` : allSfx}</label>
             <div className="mb-3 flex flex-wrap gap-1.5">
               {STATUSES.map((s) => (
                 <button key={s} type="button" onClick={() => toggle(statuses, s, setStatuses)} className={chip(statuses.includes(s))}>
-                  {s}
+                  {w(s)}
                 </button>
               ))}
             </div>
 
-            <label className={lab}>Payment {pays.length ? `(${pays.length})` : "— all"}</label>
+            <label className={lab}>{t("p8lst.bxPayment")} {pays.length ? `(${pays.length})` : allSfx}</label>
             <div className="mb-3 flex flex-wrap gap-1.5">
               {PAYMENTS.map((p) => (
                 <button key={p} type="button" onClick={() => toggle(pays, p, setPays)} className={chip(pays.includes(p))}>
-                  {payLabel(p)}
+                  {p === "Awaiting voucher payment" ? w("Voucher pending") : p === "Funded" ? w("Funded") : w(p)}
                 </button>
               ))}
             </div>
 
             {methodNames.length > 1 && (
               <>
-                <label className={lab}>Booking type {methods.length ? `(${methods.length})` : "— all"}</label>
+                <label className={lab}>{t("p8lst.bxBookingType")} {methods.length ? `(${methods.length})` : allSfx}</label>
                 <div className="mb-3 flex flex-wrap gap-1.5">
                   {methodNames.map((m) => (
                     <button key={m} type="button" onClick={() => toggle(methods, m, setMethods)} className={chip(methods.includes(m))}>
-                      {m}
+                      {w(m)}
                     </button>
                   ))}
                 </div>
               </>
             )}
 
-            <label className={lab}>Childcare funding {funds.length ? `(${funds.length})` : "— all"}</label>
+            <label className={lab}>{t("p8lst.bxFunding")} {funds.length ? `(${funds.length})` : allSfx}</label>
             <div className="flex flex-wrap gap-1.5">
               {FUNDING.map((f) => (
                 <button key={f.key} type="button" onClick={() => toggle(funds, f.key, setFunds)} className={chip(funds.includes(f.key))}>
-                  {f.label}
+                  {t("p8lst." + f.label)}
                 </button>
               ))}
             </div>
@@ -268,21 +275,21 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
           {/* ── 2. Which columns ──────────────────────────────────────── */}
           <div>
             <div className="mb-2 flex items-baseline gap-2">
-              <b className="text-[13px]">2 · What goes in</b>
-              <span className="text-[11px] text-[var(--ink-3)]">{keys.length} columns</span>
+              <b className="text-[13px]">{t("p8lst.bxStep2")}</b>
+              <span className="text-[11px] text-[var(--ink-3)]">{t("p8lst.bxColumnsN", { n: keys.length })}</span>
             </div>
 
             <div className="mb-2.5 flex flex-wrap gap-1.5">
               {EXPORT_PRESETS.map((p) => {
                 const on = p.keys.length === keys.length && p.keys.every((k) => keys.includes(k));
                 return (
-                  <button key={p.name} type="button" title={p.hint} onClick={() => setKeys(p.keys)} className={chip(on)}>
-                    {p.name}
+                  <button key={p.name} type="button" title={t("p8lst.bxPre" + p.name + "Hint")} onClick={() => setKeys(p.keys)} className={chip(on)}>
+                    {t("p8lst.bxPre" + p.name)}
                   </button>
                 );
               })}
               <button type="button" onClick={() => setKeys([])} className={chip(false)}>
-                None
+                {t("p8lst.bxNone")}
               </button>
             </div>
 
@@ -290,7 +297,7 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
               {(["Booking", "Family", "Children", "Activity", "Extras", "Cancellation"] as const).map((g) => (
                 <div key={g} className="mb-2 last:mb-0">
                   <div className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.07em] text-[var(--ink-3)]">
-                    {g}
+                    {t("p8lst.bxGrp" + g)}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {EXPORT_COLUMNS.filter((c) => c.group === g).map((c) => (
@@ -300,7 +307,7 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
                         onClick={() => toggle(keys, c.key, setKeys)}
                         className={chip(keys.includes(c.key))}
                       >
-                        {c.label}
+                        {colLabel(c.key, c.label)}
                       </button>
                     ))}
                   </div>
@@ -313,15 +320,15 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
         {/* ── Preview ─────────────────────────────────────────────────── */}
         <div className="px-5 pb-1">
           <div className="mb-1.5 flex items-baseline gap-2">
-            <b className="text-[13px]">3 · Check it</b>
+            <b className="text-[13px]">{t("p8lst.bxStep3")}</b>
             <span className="text-[11px] text-[var(--ink-3)]">
-              first {Math.min(3, rows.length)} of {rows.length}
+              {t("p8lst.bxShowing", { n: Math.min(3, rows.length), total: rows.length })}
             </span>
           </div>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)]">
             {rows.length === 0 || cols.length === 0 ? (
               <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">
-                {cols.length === 0 ? "Choose at least one column." : "No bookings match those filters."}
+                {cols.length === 0 ? t("p8lst.bxPickCol") : t("p8lst.bxNoMatch")}
               </div>
             ) : (
               <table className="w-full border-collapse text-[11.5px]">
@@ -332,7 +339,7 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
                         key={c.key}
                         className="whitespace-nowrap border-b border-[var(--line)] px-2.5 py-1.5 text-start text-[9.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]"
                       >
-                        {c.label}
+                        {colLabel(c.key, c.label)}
                       </th>
                     ))}
                   </tr>
@@ -360,8 +367,8 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
         <div className="flex flex-wrap items-center gap-2.5 px-5 py-4">
           <div className="inline-flex rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5">
             {([
-              ["csv", "CSV / Excel"],
-              ["pdf", "PDF / print"],
+              ["csv", t("p8lst.bxFmtCsv")],
+              ["pdf", t("p8lst.bxFmtPdf")],
             ] as [Format, string][]).map(([f, l]) => (
               <button
                 key={f}
@@ -376,14 +383,14 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
           </div>
 
           <div className="text-[11.5px] text-[var(--ink-3)]">
-            {rows.length} booking{rows.length === 1 ? "" : "s"} · {heads} attendee{heads === 1 ? "" : "s"} ·{" "}
+            {countsText} ·{" "}
             <b className="text-[var(--ink)]">{money(total)}</b>
           </div>
 
           <div className="ms-auto flex gap-2">
-            <Button onClick={onClose}>Cancel</Button>
+            <Button onClick={onClose}>{t("p8lst.bxCancel")}</Button>
             <Button variant="primary" disabled={!rows.length || !keys.length} onClick={run}>
-              {format === "csv" ? "⬇ Download CSV" : "🖨 Open print / PDF"}
+              {format === "csv" ? t("p8lst.bxDownload") : t("p8lst.bxPrint")}
             </Button>
           </div>
         </div>

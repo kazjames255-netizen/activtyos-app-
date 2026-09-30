@@ -5,7 +5,21 @@
 
 import { dateLocale as dl } from "@/lib/i18n/format";
 import type { Booking } from "./types";
-import { columnsFor, money, type Col } from "./helpers";
+import { EXPORT_COLUMNS, columnsFor, money, toCsv, type Col, type ExportColumn } from "./helpers";
+import { tNow } from "@/lib/i18n/provider";
+import { BRAND } from "@/lib/i18n/config";
+
+/** The export columns with their headings in the language the picker is on (keys and values are unchanged). */
+export function localizedColumns(keys?: string[]): ExportColumn[] {
+  return (keys ? columnsFor(keys) : EXPORT_COLUMNS).map((c) => {
+    const k = "p8lst.bxCol_" + c.key;
+    const l = tNow(k);
+    return { ...c, label: l === k ? c.label : l };
+  });
+}
+
+/** Bookings to a CSV whose heading row is translated. */
+export const localizedCsv = (rows: Booking[], keys?: string[]) => toCsv(rows, localizedColumns(keys));
 
 const esc = (v: unknown) =>
   String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -30,7 +44,7 @@ export function downloadCsv(filename: string, csv: string): void {
  * paper too, which a generated PDF often doesn't.
  */
 export function printBookings(rows: Booking[], keys: string[], title: string, subtitle: string): void {
-  printRows(rows, columnsFor(keys), title, subtitle, (b) => (typeof b.amount === "number" ? b.amount : 0));
+  printRows(rows, localizedColumns(keys), title, subtitle, (b) => (typeof b.amount === "number" ? b.amount : 0));
 }
 
 /** The same, for anything with columns — families, and whatever comes next. */
@@ -73,11 +87,11 @@ export function printRows<T>(
       <tbody>${body}</tbody>
       ${
         amountOf && cols.some((c) => c.key === "amount")
-          ? `<tfoot><tr><td colspan="${cols.length - 1}">Total — ${rows.length} booking${rows.length === 1 ? "" : "s"}</td><td class="n">${money(total)}</td></tr></tfoot>`
+          ? `<tfoot><tr><td colspan="${cols.length - 1}">${esc(tNow("p8lst.bxTotalRow", { n: rows.length }))}</td><td class="n">${money(total)}</td></tr></tfoot>`
           : ""
       }
     </table>
-    <div class="foot">Generated ${new Date().toLocaleString(dl())} · ActivityOS</div>
+    <div class="foot">${esc(tNow("p8lst.bxGenerated", { when: new Date().toLocaleString(dl()), brand: BRAND }))}</div>
   </body></html>`;
 
   // An iframe rather than window.open: popup blockers eat the latter, and a

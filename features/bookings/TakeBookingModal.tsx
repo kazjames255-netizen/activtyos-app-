@@ -7,6 +7,7 @@ import { BookingOnly, type ServerListing } from "@/features/listings/ListingWiza
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { blockOn } from "@/features/listings/capacity";
 import { money } from "./helpers";
+import { useT } from "@/lib/i18n/provider";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Take a booking — the same booking flow a parent gets, run by an operator.
@@ -23,6 +24,7 @@ import { money } from "./helpers";
 // ─────────────────────────────────────────────────────────────────────────
 
 export function TakeBookingModal() {
+  const t = useT();
   const show = useBookingsStore((s) => s.showCreate);
   // Set when opened from a listing card ("Book for a customer") — preselect it.
   const preId = useBookingsStore((s) => s.createListingId);
@@ -73,11 +75,11 @@ export function TakeBookingModal() {
         }
         for (const [child, dates] of perChild) {
           const blk = blockOn(full.blocks, dates[0]);
-          if (!blk) throw new Error("Those dates aren't open for booking any more.");
+          if (!blk) throw new Error(t("p8lst.btDatesClosed"));
           lines.push({ blockId: blk.id, pass: item.name, dates, child, itemId: item.id, periodId: item.periodId });
         }
       }
-      if (!lines.length) throw new Error("Nobody is on any of these days yet.");
+      if (!lines.length) throw new Error(t("p8lst.btNobody"));
       // The family the booking belongs to: an existing customer by id, or the
       // details typed in "Anyone else" — the server finds-or-creates by email.
       const onBehalfOf = p.parent
@@ -226,15 +228,15 @@ export function TakeBookingModal() {
       <div className="flex max-h-[calc(100vh-1.5rem)] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
         {/* Fixed header — the body below scrolls, so the page never does. */}
         <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-[22px] py-3">
-          <h3 className="m-0 font-[var(--ff-display)] text-[18px] font-extrabold">Take a booking</h3>
-          <span className="text-[11.5px] text-[var(--ink-3)]">· phone / walk-in · we email a payment link (Invoice sent)</span>
+          <h3 className="m-0 font-[var(--ff-display)] text-[18px] font-extrabold">{t("p8lst.btTitle")}</h3>
+          <span className="text-[11.5px] text-[var(--ink-3)]">{t("p8lst.btSub")}</span>
           <span onClick={dismiss} className="ms-auto cursor-pointer text-[22px] leading-none text-[var(--ink-3)]">×</span>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-[22px] py-4">
 
         {error && <div className="mb-3 text-[12.5px] text-[var(--red)]">{error}</div>}
 
-        <div className="text-[11.5px] font-bold text-[var(--ink)]">Which listing?</div>
+        <div className="text-[11.5px] font-bold text-[var(--ink)]">{t("p8lst.btWhich")}</div>
 
         {(listings?.length ?? 0) > 1 && (
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -242,24 +244,24 @@ export function TakeBookingModal() {
               <svg viewBox="0 0 16 16" fill="none" className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-3)] opacity-60">
                 <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.7" /><path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
               </svg>
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search listings…"
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p8lst.btSearchPh")}
                 className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] ps-[32px] pe-3 text-[12.5px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-2)] focus:border-[var(--brand-2)]" />
             </div>
             {venueOpts.length > 0 && (
               <Pill active={!!venue} onClear={() => setVenue("")}>
-                <PillSelect active={!!venue} value={venue} onChange={setVenue} title="Filter by location"
-                  options={[["", "Location"], ...venueOpts.map((v) => [v.id, `${v.name} (${v.n})`] as [string, string])]} />
+                <PillSelect active={!!venue} value={venue} onChange={setVenue} title={t("p8lst.btFilterLoc")}
+                  options={[["", t("p8lst.btLocation")], ...venueOpts.map((v) => [v.id, `${v.name} (${v.n})`] as [string, string])]} />
               </Pill>
             )}
             {catOpts.length > 0 && (
               <Pill active={!!cat} onClear={() => setCat("")}>
-                <PillSelect active={!!cat} value={cat} onChange={setCat} title="Filter by category"
-                  options={[["", "Category"], ...catOpts.map((c) => [c.id, `${c.name} (${c.n})`] as [string, string])]} />
+                <PillSelect active={!!cat} value={cat} onChange={setCat} title={t("p8lst.btFilterCat")}
+                  options={[["", t("p8lst.btCategory")], ...catOpts.map((c) => [c.id, `${c.name} (${c.n})`] as [string, string])]} />
               </Pill>
             )}
             {(q || venue || cat) && (
               <button type="button" onClick={() => { setQ(""); setVenue(""); setCat(""); }}
-                className="h-8 px-1 text-[11.5px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline">Reset</button>
+                className="h-8 px-1 text-[11.5px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline">{t("p8lst.btReset")}</button>
             )}
           </div>
         )}
@@ -275,32 +277,31 @@ export function TakeBookingModal() {
         </select>
         {(listings?.length ?? 0) > 0 && shown.length === 0 && (
           <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">
-            No listing matches those filters.
+            {t("p8lst.btNoMatch")}
           </div>
         )}
 
         {(!listings || loading) && !error && (
-          <div className="mt-3 text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+          <div className="mt-3 text-[12.5px] text-[var(--ink-3)]">{t("p8lst.btLoading")}</div>
         )}
         {listings?.length === 0 && (
           <div className="mt-3 text-[12.5px] leading-[1.5] text-[var(--ink-3)]">
-            Nothing bookable yet. A listing shows up here once it&rsquo;s published and has its
-            dates and pricing set — Tickets &amp; pricing in the listing builder.
+            {t("p8lst.btNothing")}
           </div>
         )}
 
         {done ? (
           <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 text-center">
             <div className="text-[28px]">✓</div>
-            <div className="mt-1 text-[15px] font-extrabold">Booking created — ref {done.refs.join(", ")}</div>
+            <div className="mt-1 text-[15px] font-extrabold">{t("p8lst.btCreated", { refs: done.refs.join(", ") })}</div>
             <div className="mt-1 text-[12.5px] text-[var(--ink-2)]">
               {done.total > 0
-                ? `It sits as Invoice sent for ${money(done.total)} — the payment-link email is on its way${done.email ? ` to ${done.email}` : ""}.`
-                : "Nothing to collect — the booking is confirmed."}
+                ? (done.email ? t("p8lst.btInvoiceSentTo", { amount: money(done.total), email: done.email }) : t("p8lst.btInvoiceSent", { amount: money(done.total) }))
+                : t("p8lst.btNothingToCollect")}
             </div>
             <button type="button" onClick={dismiss}
               className="mt-3 rounded-full bg-[var(--brand-2,#2f6bd8)] px-4 py-2 text-[12.5px] font-extrabold text-white">
-              Done
+              {t("p8lst.btDone")}
             </button>
           </div>
         ) : (

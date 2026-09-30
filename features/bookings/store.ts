@@ -8,8 +8,9 @@ import type { BulkAction, CreateBookingInput, RefundType, RowAction } from "./mu
 export type TakeBookingInput = Omit<CreateBookingInput, "dates"> &
   ({ blockId: string; dates?: undefined } | { dates: string; blockId?: undefined });
 import { get as apiGet, post as apiPost } from "@/lib/api";
-import { bookingsToCsv, csvFilename } from "./helpers";
-import { downloadCsv } from "./exportFile";
+import { csvFilename } from "./helpers";
+import { downloadCsv, localizedCsv } from "./exportFile";
+import { tNow } from "@/lib/i18n/provider";
 
 // The store no longer owns booking mutations — every change is a call to the
 // Express API (which runs the shared logic from ./mutations inside a
@@ -123,7 +124,7 @@ export const useBookingsStore = create<BookingsState>()(
       try {
         await fn();
       } catch (e) {
-        set((s) => void (s.error = e instanceof Error ? e.message : "Request failed"));
+        set((s) => void (s.error = e instanceof Error ? e.message : tNow("p8lst.bsReqFailed")));
       }
     };
 
@@ -159,7 +160,7 @@ export const useBookingsStore = create<BookingsState>()(
         } catch (e) {
           set((s) => {
             s.loading = false;
-            s.error = e instanceof Error ? e.message : "Failed to load bookings";
+            s.error = e instanceof Error ? e.message : tNow("p8lst.bsLoadFailed");
           });
         }
       },
@@ -188,7 +189,7 @@ export const useBookingsStore = create<BookingsState>()(
           const byEmail = new Map<string, string>();
           for (const b of picked) if (b.email?.includes("@")) byEmail.set(b.email.toLowerCase(), b.booker || b.email);
           if (!byEmail.size) {
-            set((s) => void (s.error = "None of the selected bookings has an email address"));
+            set((s) => void (s.error = tNow("p8lst.bsNoEmail")));
             return;
           }
           set((s) => void (s.emailCompose = { emails: [...byEmail.keys()], names: [...byEmail.values()] }));
@@ -197,7 +198,7 @@ export const useBookingsStore = create<BookingsState>()(
         if (action === "export") {
           // The selected ones, in the order they appear on screen.
           const picked = get().bookings.filter((b) => refs.includes(b.ref));
-          downloadCsv(csvFilename("bookings-selected"), bookingsToCsv(picked));
+          downloadCsv(csvFilename("bookings-selected"), localizedCsv(picked));
           set((s) => void (s.selected = {}));
           return;
         }
@@ -231,7 +232,7 @@ export const useBookingsStore = create<BookingsState>()(
         } catch (e) {
           set((s) => {
             s.emailSending = false;
-            s.error = e instanceof Error ? e.message : "Couldn’t send the message";
+            s.error = e instanceof Error ? e.message : tNow("p8lst.bsSendFailed");
           });
           return false;
         }
@@ -294,7 +295,7 @@ export const useBookingsStore = create<BookingsState>()(
           applyServer(await apiPost<Booking>(actionsUrl(ref), { type: action, ...(reason?.trim() ? { reason: reason.trim() } : {}) }));
           if (action === "resend") {
             const b = get().bookings.find((x) => x.ref === ref);
-            if (b) setTimeout(() => alert(`Payment link / invoice re-sent to ${b.email}.`), 20);
+            if (b) setTimeout(() => alert(tNow("p8lst.bsResent", { email: b.email })), 20);
           }
         });
       },
