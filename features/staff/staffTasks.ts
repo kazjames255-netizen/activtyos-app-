@@ -9,6 +9,8 @@ import { DEFAULT_FIELDS, fieldApplies, satisfied, type OnboardRecord } from "@/f
 import { isDemoMode } from "@/lib/api";
 import { rolesCover, withoutDemoAssignments } from "@/features/learning/courseCompletions";
 import { fetchLibrary } from "@/features/documents/docStore";
+import { peekMe } from "@/components/auth/PortalGuard";
+import { capLevel } from "@/lib/accessMap";
 
 export const ME = "Marcus Bell";
 const ME_ROLE = "Lead";
@@ -62,6 +64,8 @@ export function outstandingDocs(): number {
 /** Real accounts: ask the server which assigned documents this person still has to confirm (same rule as the Documents page). */
 export async function syncOutstandingDocs(): Promise<number> {
   if (isDemoMode()) return outstandingDocs();
+  // A role at None on Documents is refused the library (403) and sees no Documents page — nothing to read, and don't ask on every screen.
+  if (capLevel(peekMe()?.caps, "documents") === "none") { docsOutstandingCache = 0; return 0; }
   try {
     const r = await fetchLibrary<DocItem>();
     const list = r.docs ?? [];
