@@ -159,6 +159,14 @@ async function applyImpersonation(req: Request, realUser: NonNullable<Request["u
   req.user = { ...realUser, uid: actAs, email: (t.email as string) ?? realUser.email, name: (t.name as string) ?? realUser.name } as typeof realUser;
   req.impersonating = { byUid: realUser.uid, byEmail: realUser.email ?? null, uid: actAs };
   console.warn(`[impersonate] platform ${realUser.email ?? realUser.uid} acting as ${(t.email as string) ?? actAs} (${t.role ?? "parent"})`);
+  // "Open an account" is logged once when HQ picks it, but everything HQ then DOES as that account went nowhere but the console.
+  // Record every change (not reads — that would be a write per page view) so the audit trail covers what was done, not just who was opened.
+  if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") {
+    void db.collection("impersonationLog").add({
+      byUid: realUser.uid, byEmail: realUser.email ?? null, targetUid: actAs, targetEmail: (t.email as string) ?? null, targetRole: t.role ?? "parent",
+      action: `${req.method} ${req.originalUrl.split("?")[0].slice(0, 200)}`, at: new Date().toISOString(),
+    }).catch(() => {});
+  }
 }
 
 // After optionalAuth: signed-in users get their real role, anonymous
