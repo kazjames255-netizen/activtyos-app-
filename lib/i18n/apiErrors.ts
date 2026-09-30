@@ -2,7 +2,7 @@
 // received through translateApiMessage() before the UI renders err.message (the original stays on ApiError.rawMessage).
 // Catalogue: area "p8api", keyed by apiErrorKey(english message). Template messages ("Please wait {v1}s before requesting another code.")
 // are matched with a regex built from the English template, and the captured parts are re-inserted into the translated template.
-import { CATALOGS } from "./messages";
+import { hubNamespace } from "./hubMessages";
 import { currentLocaleCode } from "./format";
 import { apiErrorKey } from "./apiErrorKey";
 import { BRAND } from "./config";
@@ -11,7 +11,8 @@ type Dict = Record<string, string>;
 let templates: { re: RegExp; key: string }[] | null = null;
 function loadTemplates() {
   if (templates) return templates;
-  const en = ((CATALOGS.en as unknown as Record<string, Dict>).p8api ?? {}) as Dict;
+  const en = hubNamespace("en", "p8api");
+  if (!en) return []; // the lazily-loaded catalogue has not arrived yet: show the server's English this time (see lib/i18n/lazyAreas.ts)
   templates = Object.entries(en).filter(([, v]) => /\{v\d+\}/.test(v)).map(([key, v]) => ({
     key,
     re: new RegExp("^" + v.replace(/[.*+?^$()|[\]\\]/g, "\\$&").replace(/\{v\d+\}/g, "(.+?)") + "$", "s"),
@@ -23,7 +24,8 @@ export function translateApiMessage(message: string): string {
   if (!message) return message;
   const loc = currentLocaleCode();
   if (loc === "en") return message.split("{brand}").join(BRAND);
-  const cat = (CATALOGS[loc] as unknown as Record<string, Dict>).p8api ?? {};
+  const cat = hubNamespace(loc, "p8api");
+  if (!cat) return message;
   const direct = cat[apiErrorKey(message)];
   if (direct && !/\{v\d+\}/.test(direct)) return direct.split("{brand}").join(BRAND);
   for (const { re, key } of loadTemplates()) {

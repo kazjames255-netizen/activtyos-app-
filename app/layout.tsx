@@ -54,7 +54,11 @@ export default async function RootLayout({
   const locale = await requestLocale(); // first paint already in the picked language + direction (no English flash)
   return (
     <html lang={locale} dir={dirFor(locale)} suppressHydrationWarning className={`${bricolageGrotesque.variable} ${hankenGrotesk.variable}`}>
-      <head><style dangerouslySetInnerHTML={{ __html: scriptCss }} /></head>
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: scriptCss }} />
+        {/* The on-demand catalogue (lib/i18n/lazyAreas.ts) for English and the picked language starts downloading with the HTML, not after the JS boots. */}
+        {[...new Set(["en", locale])].map((l) => <link key={l} rel="preload" as="fetch" href={`/i18n/hub/${l}${process.env.NEXT_PUBLIC_BUILD_ID ? `?v=${process.env.NEXT_PUBLIC_BUILD_ID}` : ""}`} crossOrigin="anonymous" />)}
+      </head>
       <body>
         <AuthProvider><LanguageProvider initialLocale={locale}>{children}<PublicLanguagePicker /></LanguageProvider></AuthProvider>
       </body>

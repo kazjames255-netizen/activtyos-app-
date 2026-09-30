@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DEFAULT_LOCALE, type LocaleCode } from "./config";
+import { LAZY_KEY_RE } from "./lazyAreas";
 
 // The Teaching Hub's message catalogues load ON DEMAND, one locale at a time (+ English, the fallback), instead of riding in the main
 // bundle of every page: they are about half of all message text (~7MB source across 11 locales). `t("hub…")` calls that arrive before
@@ -15,7 +16,7 @@ const failed = new Set<LocaleCode>();
 const subs = new Set<() => void>();
 const notify = () => { for (const f of subs) f(); };
 
-export const isHubKey = (key: string) => /^hub[a-z]*\./.test(key);
+export const isHubKey = (key: string) => /^hub[a-z]*\./.test(key) || LAZY_KEY_RE.test(key);
 export const subscribeHub = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
 /** True once English and `locale` are both here (or the load failed for good — then keys fall back to English / the key). */
 export const hubReady = (locale: LocaleCode) => (!!loaded.en || failed.has("en")) && (!!loaded[locale] || failed.has(locale));
@@ -30,6 +31,12 @@ function refreshOnMiss(locale: LocaleCode): void {
     refreshedAt[l] = Date.now();
     void fetchOne(l).finally(notify);
   }
+}
+
+/** A whole lazily-loaded namespace for `locale` (falls back to English's); undefined until the catalogue has loaded (and starts the load). */
+export function hubNamespace(locale: LocaleCode, ns: string): Record<string, string> | undefined {
+  if (!hubReady(locale)) { void loadHub(locale); return undefined; }
+  return loaded[locale]?.[ns] ?? loaded.en?.[ns];
 }
 
 export function lookupHub(locale: LocaleCode, key: string): string | undefined {

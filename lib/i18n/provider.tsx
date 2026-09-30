@@ -5,7 +5,7 @@ import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALE_STORAGE_KEY, isLocaleCode, isRTL,
 import { translate, type Vars } from "./translate";
 import { currentLocaleCode, setDateLocale } from "./format";
 import { translateWord } from "./words";
-import { subscribeHub } from "./hubMessages";
+import { loadHub, subscribeHub } from "./hubMessages";
 
 interface Ctx {
   locale: LocaleCode;
@@ -26,6 +26,8 @@ export function LanguageProvider({ children, initialLocale = DEFAULT_LOCALE }: {
   // Re-render every consumer when a lazily-loaded catalogue (the Teaching Hub's) arrives.
   const [, setHubVer] = useState(0);
   useEffect(() => subscribeHub(() => setHubVer((n) => n + 1)), []);
+  // Start fetching the on-demand catalogue (Teaching Hub + the lazily-loaded app areas, see lazyAreas.ts) as early as possible for the active
+  // language, so it is usually in before the first signed-in screen has its data.
 
   // Restore the saved language on first paint.
   useEffect(() => {
@@ -35,6 +37,8 @@ export function LanguageProvider({ children, initialLocale = DEFAULT_LOCALE }: {
       if (isLocaleCode(saved)) writeCookie(saved);
     } catch { /* storage blocked */ }
   }, []);
+
+  useEffect(() => { void loadHub(locale); }, [locale]);
 
   // Reflect the language + text direction on <html> (RTL for Arabic/Urdu).
   useEffect(() => {

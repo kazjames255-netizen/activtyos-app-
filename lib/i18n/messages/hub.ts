@@ -18,6 +18,7 @@ import hubextras from "./areas/hubextras";
 import hubtoolsui from "./areas/hubtoolsui";
 import hubplurals from "./areas/hubplurals";
 import hubwidgetnames from "./areas/hubwidgetnames";
+import { lazyCatalog } from "./lazy";
 
 type Dict = Record<string, string>;
 type ByLocale = Partial<Record<LocaleCode, Dict>>;
@@ -29,5 +30,5 @@ for (const [area, byLoc] of [...Object.entries(hubplurals), ...Object.entries(hu
 export function hubCatalog(L: LocaleCode): Record<string, Dict> {
   const out: Record<string, Dict> = {};
   for (const [area, byLocale] of Object.entries(HUB_AREAS)) out[area] = byLocale[L] ?? byLocale.en ?? {};
-  return out;
+  return { ...out, ...lazyCatalog(L) }; // + the lazily-loaded app areas (../lazyAreas.ts): one fetch per locale serves both
 }

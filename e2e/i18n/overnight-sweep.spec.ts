@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { NAV_GROUPS, PORTALS, type PortalKey } from "../../lib/nav/config";
 import { CATALOGS } from "../../lib/i18n/messages";
+import { lazyCatalog } from "../../lib/i18n/messages/lazy";
 import { loadAccounts, statePath, type Role } from "../helpers/env";
 
 // Overnight full-site i18n sweep. For every public page and every nav view of every portal, in each chosen locale, it asserts:
@@ -23,7 +24,7 @@ const PUBLIC_PATHS = ["/login", "/signup", "/how-it-works", "/how-it-works/paren
 // English catalogue values (2+ words, no placeholders) -> exact-match set, used by the page detector.
 function englishValues(): string[] {
   const out = new Set<string>();
-  for (const ns of Object.values(CATALOGS.en as Record<string, Record<string, string>>)) for (const v of Object.values(ns)) {
+  for (const ns of [...Object.values(CATALOGS.en as Record<string, Record<string, string>>), ...Object.values(lazyCatalog("en"))]) for (const v of Object.values(ns)) {
     if (typeof v !== "string" || v.includes("{")) continue;
     const s = v.replace(/\s+/g, " ").trim();
     if (s.split(" ").length >= 2 && /[A-Za-z]{3}/.test(s) && s.length < 160) out.add(s);
