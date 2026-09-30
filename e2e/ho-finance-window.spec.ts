@@ -52,18 +52,16 @@ test("HO finance totals only money that has moved, and owed = sent invoices", as
     void outstandingBefore; void inTwoYears;
 
     await page.reload();
-    const outAfter = await kpi(page, "Money out (own)");
-    const inAfter = await kpi(page, "Money in (own)");
-    expect(outAfter - outBefore, "paid £37 + today's £100 only (not the £61 pending, not the future months)").toBe(137);
-    expect(inAfter - inBefore, "today's £20 only (not the future months)").toBe(20);
+    // The KPI tiles render as £0 before the ledgers arrive, so poll until they settle (a wrong total never converges on the right delta).
+    await expect.poll(async () => (await kpi(page, "Money out (own)")) - outBefore, { timeout: 45_000, message: "paid £37 + today's £100 only (not the £61 pending, not the future months)" }).toBe(137);
+    await expect.poll(async () => (await kpi(page, "Money in (own)")) - inBefore, { timeout: 45_000, message: "today's £20 only (not the future months)" }).toBe(20);
 
     // Overview 'Outstanding' shows sent-and-unpaid only.
     const outstanding = page.getByText("Outstanding", { exact: true }).first().locator("xpath=following-sibling::div[1]");
     await expect(outstanding).toBeVisible();
-    const shown = num((await outstanding.innerText()).trim());
     const invs = await api("GET", "/api/invoices");
     const sentTotal = (invs.items as { status: string; amount: number }[]).filter((i) => i.status === "sent").reduce((s, i) => s + i.amount, 0);
-    expect(Math.round(shown)).toBe(Math.round(sentTotal));
+    await expect.poll(async () => Math.round(num((await outstanding.innerText()).trim())), { timeout: 45_000 }).toBe(Math.round(sentTotal));
   } finally {
     for (const id of expenseIds) await api("DELETE", `/api/expenses/${id}`).catch(() => {});
     for (const id of incomeIds) await api("DELETE", `/api/income/${id}`).catch(() => {});
