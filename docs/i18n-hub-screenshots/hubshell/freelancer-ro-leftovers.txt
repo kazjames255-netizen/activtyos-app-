@@ -1,30 +1,11 @@
-[home] Run the day
-[home] The unfair advantage for camps, clubs & coaches
-[home] Atinge oriunde pentru a continua
-[home] How it works
-[top-lessons] Run the day
-[top-lessons] The unfair advantage for camps, clubs & coaches
-[top-lessons] How it works
-[top-lessons] Watch: lessons and the curriculum
-[top-lessons] Geometry and measures
-[top-lessons] Ratio and proportion
-[top-lessons] Ratio, proportion and rates of change
-[top-lessons] Position and direction
-[top-lessons] Properties of shapes
-[top-lessons] Addition and subtraction
-[top-lessons] Addition, subtraction, multiplication and division
-[top-lessons] Fractions (including decimals and percentages)
-[top-lessons] Multiplication and division
-[top-lessons] Number and place value
-[top-students] Run the day
-[top-students] The unfair advantage for camps, clubs & coaches
-[top-students] How it works
-[top-students] Watch: getting families on your roster
+[home] Are nevoie de un imbold
+[home] Toți sunt activi și pe drumul cel bun. Bravo!
+[top-lessons] Mastery and results
 [top-students] Opțional — un singur clic pentru a da temă, un test sau o lecție unui grup întreg.
 [top-students] Pune-i într-un grup — de exemplu „Matematică clasa a V-a” — apoi dă temă sau programează o lecție live pentru 
-[top-quizzes] Run the day
-[top-quizzes] The unfair advantage for camps, clubs & coaches
-[top-quizzes] How it works
+[top-quizzes] Lesson quiz — Neurones and synapses mulhmncs
+[top-quizzes] Lesson quiz — Neurones and synapses mulhu7s6
+[top-quizzes] Lesson quiz — Neurones and synapses mulhxz95
 [top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 1: Meeting Marley's ghost
 [top-quizzes] A Christmas Carol: Scrooge's redemption › Year 10
 [top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 1: Scrooge the Miser
@@ -41,21 +22,12 @@
 [top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: death in the novella
 [top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: Scrooge's fears
 [top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: the last of the three spirits
-[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 5: the change in Scrooge
-[top-quizzes] Lesson quiz — 'A Christmas Carol': a comparison of social class
-[top-quizzes] ‘A Christmas Carol’: a critique of Victorian values › Year 11
-[top-quizzes] Lesson quiz — 'A Christmas Carol': a hopeful tale
-[top-quizzes] A Christmas Carol: a Christian parable › Year 11
-[top-homework] Run the day
-[top-homework] The unfair advantage for camps, clubs & coaches
-[top-homework] How it works
-[top-homework] Tot ce s-a predat
-[top-homework] Watch: set, collect and mark homework
-[top-messages] Run the day
-[top-messages] The unfair advantage for camps, clubs & coaches
-[top-messages] How it works
-[top-progress] Run the day
-[top-progress] The unfair advantage for camps, clubs & coaches
-[top-progress] How it works
-[setup-hub] Run the day
-[setup-hub] The unfair advantage for camps, clubs & coaches
+[setup-hub] ℹ️ How it works
+[setup-hub] Fiecare filă are o singură treabă. Dacă o setare nu este încă aici, înseamnă că este încă fixată în produs — s
+[setup-hub] Walkthrough — to record
+[setup-hub] · aim for 2 min
+[setup-hub] Personal și forță de muncă
+[setup-hub] Dacă un elev poate da din nou un test sau un test de plasare după ce l-a predat. Poți schimba asta pentru fiec
+[setup-hub] Cu reluări nelimitate: după atâtea încercări la rând sub nota de trecere, fiecare încercare următoare așteaptă
+[setup-hub] Activat (implicit): anul de studiu al fiecărui elev se schimbă singur la 1 septembrie — cel automat după data 
+[setup-hub] Dă fiecărei materii culoarea ei. O folosesc toate cardurile, etichetele și plăcile acelei materii — în Centrul

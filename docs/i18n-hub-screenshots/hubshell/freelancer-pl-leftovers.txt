@@ -1,0 +1,38 @@
+[home] Jak to działa
+[top-lessons] Jak to działa
+[top-lessons] Mastery and results
+[top-students] Jak to działa
+[top-students] Wstaw ich do grupy — np. „Matematyka klasa 5” — a potem zadaj pracę domową lub zaplanuj lekcję na żywo dla wsz
+[top-quizzes] Jak to działa
+[top-quizzes] Lesson quiz — Neurones and synapses mulhmncs
+[top-quizzes] Lesson quiz — Neurones and synapses mulhu7s6
+[top-quizzes] Lesson quiz — Neurones and synapses mulhxz95
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 1: Meeting Marley's ghost
+[top-quizzes] A Christmas Carol: Scrooge's redemption › Year 10
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 1: Scrooge the Miser
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 1: The Characterisation of Scrooge
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 2: Belle
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 2: Scrooge's childhood and Fezziwig
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 2: the first of the three spirits
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: Christmas around the world
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: Ignorance and Want
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: Scrooge and Fred as opposite characters
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: the Cratchits' Christmas
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: the second of the three spirits
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: a significant death
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: death in the novella
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: Scrooge's fears
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: the last of the three spirits
+[top-homework] Jak to działa
+[top-homework] Zadaj ćwiczenia, a potem oceń, co wróci. Rodziny dostają powiadomienie na każdym etapie.
+[top-messages] Jak to działa
+[setup-hub] Jak działa Twoje konto — ustaw raz, używaj wszędzie
+[setup-hub] ℹ️ How it works
+[setup-hub] Wszystko na tej stronie możesz zmieniać i dotyczy to całego Twojego konta. Nie ma przycisku Zapisz — każda zmi
+[setup-hub] Każda zakładka to jedno zadanie. Jeśli jakiegoś ustawienia jeszcze tu nie ma, to znaczy, że jest nadal wpisane
+[setup-hub] Walkthrough — to record
+[setup-hub] · aim for 2 min
+[setup-hub] Czy uczeń może ponownie podejść do quizu lub testu poziomującego po jego oddaniu. Możesz to zmienić dla poszcz
+[setup-hub] Liczba dni między zadaniem pracy domowej a domyślnym terminem oddania.
+[setup-hub] Cotygodniowe podsumowanie i delikatne przypomnienia o pracy domowej dla rodziców. Oba są wyłączone, dopóki ich
+[setup-hub] Rodzaje pytań, które możesz tworzyć. Zmieniaj nazwy i kolejność dowolnie; reguła oceniania decyduje, jak odpow

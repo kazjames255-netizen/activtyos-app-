@@ -1,0 +1,57 @@
+[home] Y fantais annheg i wersylloedd, clybiau a hyfforddwyr
+[home] Gwersi byw, gwersi yn eich amser eich hun, cwisiau a gwaith cartref i’ch disgyblion — wedi’u creu unwaith, mew
+[home] Ychwanegwch eich sesiwn 1:1 neu grŵp bach nesaf — bydd disgyblion yn ei gweld yma ar unwaith, gyda chyfrif i l
+[home] Bydd canlyniadau cwisiau, cyflwyniadau a gwaith wedi’i farcio yn ymddangos yma wrth iddyn nhw ddigwydd, yn fyw
+[top-lessons] Y fantais annheg i wersylloedd, clybiau a hyfforddwyr
+[top-lessons] Gwersi a chwricwlwm
+[top-lessons] Mastery and results
+[top-lessons] Geometreg a mesurau
+[top-lessons] Cymhareb a chyfrannedd
+[top-lessons] Cymhareb, cyfrannedd a chyfraddau newid
+[top-lessons] Safle a chyfeiriad
+[top-lessons] Adio a thynnu
+[top-lessons] Adio, tynnu, lluosi a rhannu
+[top-lessons] Ffracsiynau (gan gynnwys degolion a chanrannau)
+[top-lessons] Lluosi a rhannu
+[top-lessons] Rhif a gwerth lle
+[top-students] Y fantais annheg i wersylloedd, clybiau a hyfforddwyr
+[top-students] Rhestr a grwpiau
+[top-quizzes] Y fantais annheg i wersylloedd, clybiau a hyfforddwyr
+[top-quizzes] Lesson quiz — Neurones and synapses mulhmncs
+[top-quizzes] Lesson quiz — Neurones and synapses mulhu7s6
+[top-quizzes] Lesson quiz — Neurones and synapses mulhxz95
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 1: Meeting Marley's ghost
+[top-quizzes] A Christmas Carol: Scrooge's redemption › Year 10
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 1: Scrooge the Miser
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 1: The Characterisation of Scrooge
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 2: Belle
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 2: Scrooge's childhood and Fezziwig
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 2: the first of the three spirits
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: Christmas around the world
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: Ignorance and Want
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: Scrooge and Fred as opposite characters
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: the Cratchits' Christmas
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: the second of the three spirits
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: a significant death
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: death in the novella
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: Scrooge's fears
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: the last of the three spirits
+[top-homework] Y fantais annheg i wersylloedd, clybiau a hyfforddwyr
+[top-messages] Y fantais annheg i wersylloedd, clybiau a hyfforddwyr
+[setup-hub] Y fantais annheg i wersylloedd, clybiau a hyfforddwyr
+[setup-hub] Gosodiad a nodweddion
+[setup-hub] ℹ️ How it works
+[setup-hub] Walkthrough — to record
+[setup-hub] Ble mae pob gosodiad yn ymddangos: cwestiwn a ychwanegwyd yma yn ymddangos wrth i'r rhiant dalu, ar broffil y 
+[setup-hub] · aim for 2 min
+[setup-hub] Staff a gweithlu
+[setup-hub] Marcio a chynnydd
+[setup-hub] Sut mae cwisiau’n cael eu pasio, pryd mae disgyblion yn gweld yr atebion, a beth yw pwrpas prawf lleoli.
+[setup-hub] Pryd mae disgybl yn gweld yr atebion cywir a’r esboniadau ar ôl cwis. Yn ddiofyn cânt eu cadw’n ôl nes bod y c
+[setup-hub] P’un a all disgybl ailsefyll cwis neu brawf lleoli ar ôl ei gyflwyno. Gallwch ddiystyru hyn ar gyfer pob cwis,
+[setup-hub] Nifer y diwrnodau rhwng gosod gwaith cartref a’i ddyddiad cau rhagosodedig.
+[setup-hub] Y lefelau y mae disgyblion a rhieni yn eu gweld ar gyfer pa mor dda maen nhw’n gwybod testun neu bwnc, o’r isa
+[setup-hub] Y blynyddoedd ysgol (neu raddau, lefelau…) y gallwch anelu cwis neu brawf lleoli atynt, a thagio pob disgybl â
+[setup-hub] Ymlaen (rhagosodiad): mae blwyddyn ysgol pob myfyriwr yn symud i fyny ar ei phen ei hun ar 1 Medi — yr awtomat
+[setup-hub] Rhowch ei liw ei hun i bob pwnc. Mae pob cerdyn, sglodyn a theilsen ar gyfer y pwnc hwnnw — yn yr Hyb Addysgu 
+[setup-hub] Crynodeb wythnosol a nodiadau atgoffa tyner am waith cartref i rieni. Mae'r ddau i ffwrdd nes i chi eu troi ym

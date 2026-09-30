@@ -1,0 +1,116 @@
+[curriculum] Mastery and results
+[curriculum-search] Mastery and results
+[curriculum-search] Se afișează 1 potrivite cu „Neurones and synapses mumcbgcu”
+[curriculum-search] Loc greșit?
+[curriculum-search] Neurones and synapses mumcbgcu
+[curriculum-search] I can describe the structures and functions of neurones and the synapses between neurones.
+[curriculum-search] Sau găsește una dintre lecțiile tale pentru a o plasa aici
+[reader] Mastery and results
+[reader] Neurones and synapses mumcbgcu
+[reader] Warm-up and goal
+[reader] Start with the warm-up questions.
+[reader] Read the lesson goal aloud together.
+[reader] I can describe the structures and functions of neurones and the synapses between neurones.
+[reader] A nerve cell which transmits electrical impulses between different parts of the body.
+[reader] The part of a neurone which carries the signal.
+[reader] A fatty coating on the neurone which insulates it.
+[reader] The junction between two neurones.
+[reader] A chemical transmitter which crosses the synapse and triggers the onward response.
+[reader] Go through the key ideas below, one at a time.
+[reader] Neurones are specialised cells that transmit nerve impulses
+[reader] The common structures of neurones, including cell body and axon
+[reader] Can you explain “Neurone structure” in your own words?
+[reader] The myelin sheath
+[reader] A myelin sheath on some neurones increases the speed of the nerve impulse
+[reader] Nerve impulses pass from one neurone to another across a gap called a synapse
+[reader] Can you explain “The myelin sheath” in your own words?
+[reader] An impulse arriving at a synapse releases neurotransmitters that diffuse across the gap to receptors on the ne
+[reader] Can you explain “Synapses” in your own words?
+[reader] Practise the key ideas together, using the key words.
+[reader] Try it on your own
+[reader] Ask the student to do the lesson quiz on their own.
+[reader] Recap and finish
+[reader] Ask the student to tell you the main ideas of the lesson in their own words.
+[reader] There is usually a lot of confusion over the synapse and how the signal moves from electrical, to chemical, to
+[reader] The synapse has been broken down into several stages with clear diagrams and carefully used key words. There a
+[reader] Consider using a line of dominos vs a pair of dominoes with a heavy ruler balanced across the gap, to simulate
+[reader] : A nerve cell which transmits electrical impulses between different parts of the body.
+[reader] : The part of a neurone which carries the signal.
+[reader] : A fatty coating on the neurone which insulates it.
+[reader] : The junction between two neurones.
+[reader] : A chemical transmitter which crosses the synapse and triggers the onward response.
+[reader-plan] Mastery and results
+[reader-plan] Neurones and synapses mumcbgcu
+[reader-plan] Warm-up and goal
+[reader-plan] Start with the warm-up questions.
+[reader-plan] Read the lesson goal aloud together.
+[reader-plan] I can describe the structures and functions of neurones and the synapses between neurones.
+[reader-plan] A nerve cell which transmits electrical impulses between different parts of the body.
+[reader-plan] The part of a neurone which carries the signal.
+[reader-plan] A fatty coating on the neurone which insulates it.
+[reader-plan] The junction between two neurones.
+[reader-plan] A chemical transmitter which crosses the synapse and triggers the onward response.
+[reader-plan] Go through the key ideas below, one at a time.
+[reader-plan] Neurones are specialised cells that transmit nerve impulses
+[reader-plan] The common structures of neurones, including cell body and axon
+[reader-plan] Can you explain “Neurone structure” in your own words?
+[reader-plan] The myelin sheath
+[reader-plan] A myelin sheath on some neurones increases the speed of the nerve impulse
+[reader-plan] Nerve impulses pass from one neurone to another across a gap called a synapse
+[reader-plan] Can you explain “The myelin sheath” in your own words?
+[reader-plan] An impulse arriving at a synapse releases neurotransmitters that diffuse across the gap to receptors on the ne
+[reader-plan] Can you explain “Synapses” in your own words?
+[reader-plan] Practise the key ideas together, using the key words.
+[reader-plan] Try it on your own
+[reader-plan] Ask the student to do the lesson quiz on their own.
+[reader-plan] Recap and finish
+[reader-plan] Ask the student to tell you the main ideas of the lesson in their own words.
+[reader-plan] There is usually a lot of confusion over the synapse and how the signal moves from electrical, to chemical, to
+[reader-plan] The synapse has been broken down into several stages with clear diagrams and carefully used key words. There a
+[reader-plan] Consider using a line of dominos vs a pair of dominoes with a heavy ruler balanced across the gap, to simulate
+[reader-plan] : A nerve cell which transmits electrical impulses between different parts of the body.
+[reader-plan] : The part of a neurone which carries the signal.
+[reader-plan] : A fatty coating on the neurone which insulates it.
+[reader-plan] : The junction between two neurones.
+[reader-plan] : A chemical transmitter which crosses the synapse and triggers the onward response.
+[player-start] Previzualizare — așa văd elevii. Nimic din ce faci aici nu se salvează și nu se contorizează.
+[player-start] Biology · Year 10 · Neurones and synapses mumcbgcu
+[player-start] Coordination and control: the human nervous system
+[player-start] Neurones and synapses mumcbgcu
+[player-start] describe the structures and functions of neurones and the synapses between neurones
+[player-start] The myelin sheath
+[player-learn] Previzualizare — așa văd elevii. Nimic din ce faci aici nu se salvează și nu se contorizează.
+[player-learn] Biology · Year 10 · Neurones and synapses mumcbgcu
+[player-learn] Neurones are specialised cells that transmit nerve impulses
+[player-words] Previzualizare — așa văd elevii. Nimic din ce faci aici nu se salvează și nu se contorizează.
+[player-words] Biology · Year 10 · Neurones and synapses mumcbgcu
+[player-words] Spune mai întâi sensul cu voce tare, apoi atinge pentru a verifica. Aceste cuvinte sunt și în cartonașele tale
+[player-words] atinge pentru a întoarce
+[player-words] A nerve cell which transmits electrical impulses between different parts of the body.
+[player-words] The part of a neurone which carries the signal.
+[player-words] A fatty coating on the neurone which insulates it.
+[player-words] The junction between two neurones.
+[player-words] A chemical transmitter which crosses the synapse and triggers the onward response.
+[player-warm] Previzualizare — așa văd elevii. Nimic din ce faci aici nu se salvează și nu se contorizează.
+[player-warm] Biology · Year 10 · Neurones and synapses mumcbgcu
+[player-warm] What are nerve cells called?
+[player-quiz] Previzualizare — așa văd elevii. Nimic din ce faci aici nu se salvează și nu se contorizează.
+[player-quiz] Biology · Year 10 · Neurones and synapses mumcbgcu
+[player-quiz] Lesson quiz — Neurones and synapses mumcbgcu
+[player-done] Previzualizare — așa văd elevii. Nimic din ce faci aici nu se salvează și nu se contorizează.
+[player-done] Biology · Year 10 · Neurones and synapses mumcbgcu
+[player-done] Warm-up and goal
+[player-done] Our goal: “I can describe the structures and functions of neurones and the synapses between neurones.”
+[player-done] Neurones are specialised cells that transmit nerve impulses
+[player-done] The common structures of neurones, including cell body and axon
+[player-done] The myelin sheath
+[player-done] A myelin sheath on some neurones increases the speed of the nerve impulse
+[player-done] Nerve impulses pass from one neurone to another across a gap called a synapse
+[player-done] An impulse arriving at a synapse releases neurotransmitters that diffuse across the gap to receptors on the ne
+[player-done] Practise the ideas with a little help.
+[player-done] Try it on your own
+[player-done] Do the quiz questions on your own.
+[player-done] Recap and finish
+[player-done] Can you do it now? “I can describe the structures and functions of neurones and the synapses between neurones.
+[editor] Mastery and results
+[editor] pentru a colora un cuvânt.

@@ -1,36 +1,20 @@
-[home] Run the day
-[home] The unfair advantage for camps, clubs & coaches
-[home] How it works
-[top-lessons] Run the day
-[top-lessons] The unfair advantage for camps, clubs & coaches
-[top-lessons] How it works
-[top-lessons] Watch: lessons and the curriculum
-[top-lessons] Geometry and measures
-[top-lessons] Ratio and proportion
-[top-lessons] Ratio, proportion and rates of change
-[top-lessons] Position and direction
-[top-lessons] Properties of shapes
-[top-lessons] Addition and subtraction
-[top-lessons] Addition, subtraction, multiplication and division
-[top-lessons] Fractions (including decimals and percentages)
-[top-lessons] Multiplication and division
-[top-lessons] Number and place value
-[top-students] Run the day
-[top-students] The unfair advantage for camps, clubs & coaches
-[top-students] How it works
-[top-students] Watch: getting families on your roster
-[top-quizzes] Run the day
-[top-quizzes] The unfair advantage for camps, clubs & coaches
-[top-quizzes] How it works
-[top-homework] Run the day
-[top-homework] The unfair advantage for camps, clubs & coaches
-[top-homework] How it works
-[top-homework] Watch: set, collect and mark homework
-[top-messages] Run the day
-[top-messages] The unfair advantage for camps, clubs & coaches
-[top-messages] How it works
-[top-progress] Run the day
-[top-progress] The unfair advantage for camps, clubs & coaches
-[top-progress] How it works
-[setup-hub] Run the day
-[setup-hub] The unfair advantage for camps, clubs & coaches
+[top-lessons] Mastery and results
+[top-quizzes] Lesson quiz — Neurones and synapses mulhmncs
+[top-quizzes] Lesson quiz — Neurones and synapses mulhu7s6
+[top-quizzes] Lesson quiz — Neurones and synapses mulhxz95
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 1: Meeting Marley's ghost
+[top-quizzes] A Christmas Carol: Scrooge's redemption › Year 10
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 1: Scrooge the Miser
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 1: The Characterisation of Scrooge
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 2: Belle
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 2: Scrooge's childhood and Fezziwig
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 2: the first of the three spirits
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: Christmas around the world
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: Ignorance and Want
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: Scrooge and Fred as opposite characters
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: the Cratchits' Christmas
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 3: the second of the three spirits
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: a significant death
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: death in the novella
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: Scrooge's fears
+[top-quizzes] Lesson quiz — 'A Christmas Carol' Stave 4: the last of the three spirits

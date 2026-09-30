@@ -1,0 +1,151 @@
+[catalogue] Jak to działa
+[catalogue] Mastery and results
+[catalogue] To jest obszar podglądu.
+[catalogue] : otwórz lekcję, a potem użyj
+[catalogue] Łańcuchy i sieci pokarmowe
+[catalogue] Powiedz to liczbami
+[catalogue] Ściana i koła ułamków
+[catalogue] Tła papieru
+[catalogue] Układy ciała
+[catalogue] Załam promień światła
+[tool-S-05] Jak to działa
+[tool-S-05] Mastery and results
+[tool-S-05] To jest obszar podglądu.
+[tool-S-05] : otwórz lekcję, a potem użyj
+[tool-S-05] Łańcuchy i sieci pokarmowe
+[tool-S-05] Powiedz to liczbami
+[tool-S-05] Ściana i koła ułamków
+[tool-S-05] Tła papieru
+[tool-S-05] Układy ciała
+[tool-S-05] Załam promień światła
+[tool-S-05] Tylko podgląd — to służy do wypróbowania narzędzia. Aby udostępnić je uczniom, dodaj je do lekcji lub pytania 
+[tool-S-01] Jak to działa
+[tool-S-01] Mastery and results
+[tool-S-01] To jest obszar podglądu.
+[tool-S-01] : otwórz lekcję, a potem użyj
+[tool-S-01] Łańcuchy i sieci pokarmowe
+[tool-S-01] Powiedz to liczbami
+[tool-S-01] Ściana i koła ułamków
+[tool-S-01] Tła papieru
+[tool-S-01] Układy ciała
+[tool-S-01] Załam promień światła
+[tool-S-01] Tylko podgląd — to służy do wypróbowania narzędzia. Aby udostępnić je uczniom, dodaj je do lekcji lub pytania 
+[tool-S-01] Dotknij etykiety, a potem jej numeru (albo przeciągnij ją). Dotknij numeru bez wybranej etykiety, aby wybrać z
+[tool-S-03] Jak to działa
+[tool-S-03] Mastery and results
+[tool-S-03] To jest obszar podglądu.
+[tool-S-03] : otwórz lekcję, a potem użyj
+[tool-S-03] Łańcuchy i sieci pokarmowe
+[tool-S-03] Powiedz to liczbami
+[tool-S-03] Ściana i koła ułamków
+[tool-S-03] Tła papieru
+[tool-S-03] Układy ciała
+[tool-S-03] Załam promień światła
+[tool-S-03] Tylko podgląd — to służy do wypróbowania narzędzia. Aby udostępnić je uczniom, dodaj je do lekcji lub pytania 
+[tool-E-06] Jak to działa
+[tool-E-06] Mastery and results
+[tool-E-06] To jest obszar podglądu.
+[tool-E-06] : otwórz lekcję, a potem użyj
+[tool-E-06] Łańcuchy i sieci pokarmowe
+[tool-E-06] Powiedz to liczbami
+[tool-E-06] Ściana i koła ułamków
+[tool-E-06] Tła papieru
+[tool-E-06] Układy ciała
+[tool-E-06] Załam promień światła
+[tool-E-06] Tylko podgląd — to służy do wypróbowania narzędzia. Aby udostępnić je uczniom, dodaj je do lekcji lub pytania 
+[E-01] tool card not found
+[tool-L-03] Jak to działa
+[tool-L-03] Mastery and results
+[tool-L-03] To jest obszar podglądu.
+[tool-L-03] : otwórz lekcję, a potem użyj
+[tool-L-03] Łańcuchy i sieci pokarmowe
+[tool-L-03] Powiedz to liczbami
+[tool-L-03] Ściana i koła ułamków
+[tool-L-03] Tła papieru
+[tool-L-03] Układy ciała
+[tool-L-03] Załam promień światła
+[tool-L-03] Tylko podgląd — to służy do wypróbowania narzędzia. Aby udostępnić je uczniom, dodaj je do lekcji lub pytania 
+[tool-L-03] to begin
+[tool-L-04] Jak to działa
+[tool-L-04] Mastery and results
+[tool-L-04] To jest obszar podglądu.
+[tool-L-04] : otwórz lekcję, a potem użyj
+[tool-L-04] Łańcuchy i sieci pokarmowe
+[tool-L-04] Powiedz to liczbami
+[tool-L-04] Ściana i koła ułamków
+[tool-L-04] Tła papieru
+[tool-L-04] Układy ciała
+[tool-L-04] Załam promień światła
+[tool-L-04] Tylko podgląd — to służy do wypróbowania narzędzia. Aby udostępnić je uczniom, dodaj je do lekcji lub pytania 
+[tool-L-04] I like playing tennis at the weekend.
+[tool-L-01] Jak to działa
+[tool-L-01] Mastery and results
+[tool-L-01] To jest obszar podglądu.
+[tool-L-01] : otwórz lekcję, a potem użyj
+[tool-L-01] Łańcuchy i sieci pokarmowe
+[tool-L-01] Powiedz to liczbami
+[tool-L-01] Ściana i koła ułamków
+[tool-L-01] Tła papieru
+[tool-L-01] Układy ciała
+[tool-L-01] Załam promień światła
+[tool-L-01] Tylko podgląd — to służy do wypróbowania narzędzia. Aby udostępnić je uczniom, dodaj je do lekcji lub pytania 
+[tool-L-01] Skróty: e' → é · a` → à · a^ → â · c, → ç · n~ → ñ · a: → ä · ss! → ß. Możesz też po prostu dotknąć litery pow
+[tool-w.balance] Jak to działa
+[tool-w.balance] Mastery and results
+[tool-w.balance] To jest obszar podglądu.
+[tool-w.balance] : otwórz lekcję, a potem użyj
+[tool-w.balance] Łańcuchy i sieci pokarmowe
+[tool-w.balance] Powiedz to liczbami
+[tool-w.balance] Ściana i koła ułamków
+[tool-w.balance] Tła papieru
+[tool-w.balance] Układy ciała
+[tool-w.balance] Załam promień światła
+[tool-w.balance] Tylko podgląd — to służy do wypróbowania narzędzia. Aby udostępnić je uczniom, dodaj je do lekcji lub pytania 
+[tool-w.balance] Worek x ma tajną wagę. Przeciągaj bloki 1 na szalki i z nich albo naciskaj przyciski, aby zrobić to samo z obi
+[tool-w.langGender] Jak to działa
+[tool-w.langGender] Mastery and results
+[tool-w.langGender] To jest obszar podglądu.
+[tool-w.langGender] : otwórz lekcję, a potem użyj
+[tool-w.langGender] Łańcuchy i sieci pokarmowe
+[tool-w.langGender] Powiedz to liczbami
+[tool-w.langGender] Ściana i koła ułamków
+[tool-w.langGender] Tła papieru
+[tool-w.langGender] Układy ciała
+[tool-w.langGender] Załam promień światła
+[tool-w.langGender] Tylko podgląd — to służy do wypróbowania narzędzia. Aby udostępnić je uczniom, dodaj je do lekcji lub pytania 
+[tool-w.langGender] Każdy rzeczownik ma rodzaj. Przeciągnij (lub kliknij, a potem kliknij pole) każdy rzeczownik do pola, do które
+[w.tenseTimeline] tool card not found
+[tool-w.storyMountain] Jak to działa
+[tool-w.storyMountain] Mastery and results
+[tool-w.storyMountain] To jest obszar podglądu.
+[tool-w.storyMountain] : otwórz lekcję, a potem użyj
+[tool-w.storyMountain] Łańcuchy i sieci pokarmowe
+[tool-w.storyMountain] Powiedz to liczbami
+[tool-w.storyMountain] Ściana i koła ułamków
+[tool-w.storyMountain] Tła papieru
+[tool-w.storyMountain] Układy ciała
+[tool-w.storyMountain] Załam promień światła
+[tool-w.storyMountain] Tylko podgląd — to służy do wypróbowania narzędzia. Aby udostępnić je uczniom, dodaj je do lekcji lub pytania 
+[tool-w.storyMountain] Tych pięć wydarzeń jest pomieszanych. Przeciągnij każde (lub kliknij je, a potem kliknij część góry) na właści
+[tool-w.storyMountain] The Runaway Balloon
+[tool-w.storyMountain] The Lost Robot
+[tool-w.storyMountain] The Midnight Dragon
+[tool-w.storyMountain] meet the character and the place
+[tool-w.storyMountain] jak to wszystko się kończy
+[tool-w.storyMountain] A small robot called Pip wakes up alone in a quiet junkyard.
+[tool-w.storyMountain] A huge crane swings down and threatens to scoop Pip up!
+[tool-w.storyMountain] The driver takes Pip home and mends his wobbly wheel.
+[tool-w.storyMountain] Pip follows a trail of glowing screws towards a strange humming sound.
+[tool-w.storyMountain] Pip scrambles into a tunnel, and the driver spots him and stops.
+[w.foodWeb] tool card not found
+[tool-S-13] Jak to działa
+[tool-S-13] Mastery and results
+[tool-S-13] To jest obszar podglądu.
+[tool-S-13] : otwórz lekcję, a potem użyj
+[tool-S-13] Łańcuchy i sieci pokarmowe
+[tool-S-13] Powiedz to liczbami
+[tool-S-13] Ściana i koła ułamków
+[tool-S-13] Tła papieru
+[tool-S-13] Układy ciała
+[tool-S-13] Załam promień światła
+[tool-S-13] Tylko podgląd — to służy do wypróbowania narzędzia. Aby udostępnić je uczniom, dodaj je do lekcji lub pytania 

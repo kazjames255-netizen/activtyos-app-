@@ -1,0 +1,98 @@
+[catalogue] Mastery and results
+[catalogue] Mergi la Lecții pentru a adăuga un instrument
+[catalogue] Antrenor de conjugare a verbelor
+[catalogue] Atelier de ordine a cuvintelor
+[catalogue] Diagrame de forțe
+[catalogue] Hartă a personajelor și a cadrului
+[tool-S-05] Mastery and results
+[tool-S-05] Mergi la Lecții pentru a adăuga un instrument
+[tool-S-05] Antrenor de conjugare a verbelor
+[tool-S-05] Atelier de ordine a cuvintelor
+[tool-S-05] Diagrame de forțe
+[tool-S-05] Hartă a personajelor și a cadrului
+[tool-S-05] Doar vizualizare — este doar pentru a încerca instrumentul. Ca să îl dai elevilor, adaugă-l la o lecție sau la
+[tool-S-01] Mastery and results
+[tool-S-01] Mergi la Lecții pentru a adăuga un instrument
+[tool-S-01] Antrenor de conjugare a verbelor
+[tool-S-01] Atelier de ordine a cuvintelor
+[tool-S-01] Diagrame de forțe
+[tool-S-01] Hartă a personajelor și a cadrului
+[tool-S-01] Doar vizualizare — este doar pentru a încerca instrumentul. Ca să îl dai elevilor, adaugă-l la o lecție sau la
+[tool-S-03] Mastery and results
+[tool-S-03] Mergi la Lecții pentru a adăuga un instrument
+[tool-S-03] Antrenor de conjugare a verbelor
+[tool-S-03] Atelier de ordine a cuvintelor
+[tool-S-03] Diagrame de forțe
+[tool-S-03] Hartă a personajelor și a cadrului
+[tool-S-03] Doar vizualizare — este doar pentru a încerca instrumentul. Ca să îl dai elevilor, adaugă-l la o lecție sau la
+[tool-E-06] Mastery and results
+[tool-E-06] Mergi la Lecții pentru a adăuga un instrument
+[tool-E-06] Antrenor de conjugare a verbelor
+[tool-E-06] Atelier de ordine a cuvintelor
+[tool-E-06] Diagrame de forțe
+[tool-E-06] Hartă a personajelor și a cadrului
+[tool-E-06] Doar vizualizare — este doar pentru a încerca instrumentul. Ca să îl dai elevilor, adaugă-l la o lecție sau la
+[E-01] tool card not found
+[tool-L-03] Mastery and results
+[tool-L-03] Mergi la Lecții pentru a adăuga un instrument
+[tool-L-03] Antrenor de conjugare a verbelor
+[tool-L-03] Atelier de ordine a cuvintelor
+[tool-L-03] Diagrame de forțe
+[tool-L-03] Hartă a personajelor și a cadrului
+[tool-L-03] Doar vizualizare — este doar pentru a încerca instrumentul. Ca să îl dai elevilor, adaugă-l la o lecție sau la
+[tool-L-03] to begin
+[tool-L-04] Mastery and results
+[tool-L-04] Mergi la Lecții pentru a adăuga un instrument
+[tool-L-04] Antrenor de conjugare a verbelor
+[tool-L-04] Atelier de ordine a cuvintelor
+[tool-L-04] Diagrame de forțe
+[tool-L-04] Hartă a personajelor și a cadrului
+[tool-L-04] Doar vizualizare — este doar pentru a încerca instrumentul. Ca să îl dai elevilor, adaugă-l la o lecție sau la
+[tool-L-04] I like playing tennis at the weekend.
+[tool-L-01] Mastery and results
+[tool-L-01] Mergi la Lecții pentru a adăuga un instrument
+[tool-L-01] Antrenor de conjugare a verbelor
+[tool-L-01] Atelier de ordine a cuvintelor
+[tool-L-01] Diagrame de forțe
+[tool-L-01] Hartă a personajelor și a cadrului
+[tool-L-01] Doar vizualizare — este doar pentru a încerca instrumentul. Ca să îl dai elevilor, adaugă-l la o lecție sau la
+[tool-L-01] Scurtături: e' → é · a` → à · a^ → â · c, → ç · n~ → ñ · a: → ä · ss! → ß. Sau atinge direct o literă de mai s
+[tool-w.balance] Mastery and results
+[tool-w.balance] Mergi la Lecții pentru a adăuga un instrument
+[tool-w.balance] Antrenor de conjugare a verbelor
+[tool-w.balance] Atelier de ordine a cuvintelor
+[tool-w.balance] Diagrame de forțe
+[tool-w.balance] Hartă a personajelor și a cadrului
+[tool-w.balance] Doar vizualizare — este doar pentru a încerca instrumentul. Ca să îl dai elevilor, adaugă-l la o lecție sau la
+[tool-w.balance] Sacul x are o greutate secretă. Trage blocuri de 1 pe talere și de pe talere sau apasă butoanele ca să faci ac
+[tool-w.langGender] Mastery and results
+[tool-w.langGender] Mergi la Lecții pentru a adăuga un instrument
+[tool-w.langGender] Antrenor de conjugare a verbelor
+[tool-w.langGender] Atelier de ordine a cuvintelor
+[tool-w.langGender] Diagrame de forțe
+[tool-w.langGender] Hartă a personajelor și a cadrului
+[tool-w.langGender] Doar vizualizare — este doar pentru a încerca instrumentul. Ca să îl dai elevilor, adaugă-l la o lecție sau la
+[tool-w.langGender] Fiecare substantiv are un gen. Trage (sau atinge, apoi atinge o casetă) fiecare substantiv în caseta potrivită
+[w.tenseTimeline] tool card not found
+[tool-w.storyMountain] Mastery and results
+[tool-w.storyMountain] Mergi la Lecții pentru a adăuga un instrument
+[tool-w.storyMountain] Antrenor de conjugare a verbelor
+[tool-w.storyMountain] Atelier de ordine a cuvintelor
+[tool-w.storyMountain] Diagrame de forțe
+[tool-w.storyMountain] Hartă a personajelor și a cadrului
+[tool-w.storyMountain] Doar vizualizare — este doar pentru a încerca instrumentul. Ca să îl dai elevilor, adaugă-l la o lecție sau la
+[tool-w.storyMountain] Aceste cinci evenimente sunt amestecate. Trage fiecare eveniment (sau atinge-l, apoi atinge o parte a muntelui
+[tool-w.storyMountain] meet the character and the place
+[tool-w.storyMountain] One evening he creeps down the steps, holding a candle.
+[tool-w.storyMountain] From then on, the dragon heats the bakery ovens every morning.
+[tool-w.storyMountain] Every night, Sam hears scratching from the cellar under the bakery.
+[tool-w.storyMountain] Sam offers the dragon a warm bun and it calms right down.
+[tool-w.storyMountain] In the dark corner two glowing eyes blink open and a tiny dragon sneezes fire!
+[w.foodWeb] tool card not found
+[tool-S-13] Mastery and results
+[tool-S-13] Mergi la Lecții pentru a adăuga un instrument
+[tool-S-13] Antrenor de conjugare a verbelor
+[tool-S-13] Atelier de ordine a cuvintelor
+[tool-S-13] Diagrame de forțe
+[tool-S-13] Hartă a personajelor și a cadrului
+[tool-S-13] Doar vizualizare — este doar pentru a încerca instrumentul. Ca să îl dai elevilor, adaugă-l la o lecție sau la

@@ -179,7 +179,7 @@ test.describe("v2 site i18n", () => {
         };
         const a = await grab(`/v2/_orig/${p}.html`, 1440), b = await grab(`/v2/${p}.html`, 1440);
         // two deliberate source fixes: the parents page language strip had Urdu in Devanagari and a garbled Punjabi
-        const fixA = a.text.replace("\u0909\u0930\u094d\u0926\u0942", "\u0627\u0631\u062f\u0648").replace("\u092a\u0a70\u0a1c\u093e\u092c\u0940", "\u0a2a\u0a70\u0a1c\u0a3e\u0a2c\u0a40");
+        const fixA = a.text.replace("\u0909\u0930\u094d\u0926\u0942", "\u0627\u0631\u062f\u0648").replace("\u092a\u0a70\u0a1c\u0a3e\u092c\u0a40", "\u0a2a\u0a70\u0a1c\u0a3e\u0a2c\u0a40");
         expect(b.text).toBe(fixA);
         for (const w of [1440, 390]) {
           const x = w === 1440 ? a : await grab(`/v2/_orig/${p}.html`, w), y = w === 1440 ? b : await grab(`/v2/${p}.html`, w);

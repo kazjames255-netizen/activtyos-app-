@@ -1,27 +1,27 @@
 L-01	btn=22	in=1	sel=0	à â æ ç é è ê ë î ï ô œ ù û ü ÿ « » É È À Ç
-L-12	btn=23	in=1	sel=0	les théâtres ? theatre · masculine · plural à â æ ç é è ê ë î ï ô œ ù û ü ÿ « » É È À Ç Ch
-w.langAgree	btn=23	in=0	sel=0	petit grand content intelligent français vert blanc heureux sportif rouge garçon chat ami 
+L-12	btn=23	in=1	sel=0	la grand-mère ? grandmother · feminine · singular à â æ ç é è ê ë î ï ô œ ù û ü ÿ « » É È 
+w.langAgree	btn=23	in=0	sel=0	👀 Viewing only — this is just to try the tool. To give it to pupils, add it to a lesson o
 M-09	btn=2	in=2	sel=0	Parallel lines Triangle a b c d e f g h Turn the crossing line (58°) Show the angle sizes
-w.areaPerimeter	btn=4	in=0	sel=0	4×3 L-shape Clear Challenge me
+w.areaPerimeter	btn=3	in=0	sel=0	4×3 L-shape Clear
 S-14	btn=0	in=1	sel=0	Electrons
 w.equationBalancer	btn=15	in=0	sel=0	1 2 3 4 5 6 7 8 9 − 1 + H2 + − 1 + O2 → − 1 + H2O → H: 2 → 2 ✓ O: 2 → 1 ✗
-w.balance	btn=5	in=0	sel=0	2x + 1 = 15 x x 1 − 1 both sides + 1 both sides ÷ both sides New puzzle Reveal x
+w.balance	btn=3	in=0	sel=0	x + 1 = 6 x 1 − 1 both sides + 1 both sides ÷ both sides
 M-10	btn=2	in=0	sel=0	Tap an instrument to flip it ↶ ↷ 0 10 350 20 340 30 330 40 320 50 310 60 300 70 290 80 280
 w.lightRays	btn=3	in=0	sel=0	air mirror normal i r Mirror Air → glass Glass → air
-S-25	btn=19	in=0	sel=0	1 2 3 4 5 6 optic nerve pupil cornea lens iris retina 1 Choose a label… 2 Choose a label… 
+S-25	btn=19	in=0	sel=0	1 2 3 4 5 6 lens retina iris pupil optic nerve cornea 1 Choose a label… 2 Choose a label… 
 w.chartBuilder	btn=20	in=0	sel=0	Club survey Temperature Pictogram Bar chart Pie chart ★=1 ★=2 ★=5 Art 4 Chess 2 Dance 6 Fo
 w.placeValue	btn=13	in=0	sel=0	Whole numbers Decimals × 10 ÷ 10 Clear Thousands − + Hundreds 100 100 100 − + Tens 10 10 1
 w.langVerbs	btn=19	in=0	sel=1	parler jouer aimer habiter finir choisir vendre entendre être avoir aller faire prendre vo
 w.arrayBuilder	btn=5	in=0	sel=0	Dots Area squares ↻ Turn − + 5 10 15 3 × 5 = 15
 w.atomBuilder	btn=26	in=0	sel=0	Protons (+) − 6 + Neutrons (0) − 6 + Electrons (−) − 6 + Carbon (C) Atomic number (protons
-X-05	btn=11	in=0	sel=0	Mushroom Oak tree Water Plastic bag Rock Bee Dog Chair Living Non-living Start again
+X-05	btn=11	in=0	sel=0	Mushroom Pine tree Water Plastic bag Rock Bee Dog Chair Living Non-living Start again
 w.probSim	btn=8	in=1	sel=0	Coin Dice Spinner ? Roll ×1 ×10 ×100 ×1000 Ready to roll Make it unfair Clear 0.00 0.25 0.
-N-07	btn=7	in=5	sel=0	Text size A Normal A+ Large A++ Extra large Line spacing A Normal A+ Roomy A++ Extra roomy
-M-60	btn=5	in=4	sel=0	x-axis top x step y-axis top y step Plot Rub out ↶ ↷ Clear 0 1 2 3 4 5 6 7 8 9 10 0 1 2 3 
+N-07	btn=1	in=5	sel=0	Clear writing Appearance Appearance: write here Personality Personality: write here Wants 
+M-60	btn=5	in=0	sel=0	Plot Rub out ↶ ↷ Clear 0 1 2 3 4 5 6 7 8 9 10 0 1 2 3 4 5 6 7 8 9 10
 H-H02	btn=11	in=0	sel=0	1 Step 1: Battle of Waterloo (1815) ▲ ▼ 2 Step 2: Spanish Armada defeated (1588) ▲ ▼ 3 Ste
 S-04	btn=6	in=0	sel=0	0.13 A 0.13 A + − 1.5 V switch closed Series Parallel − 1 + − 2 +
-w.storyMountain	btn=9	in=0	sel=0	The Runaway Balloon The Lost Robot The Midnight Dragon 1. OPENING meet the character and t
-w.wordClass	btn=15	in=0	sel=0	Noun Verb Adjective Adverb A huge wave crashed noisily over the small boat Check my colour
+w.storyMountain	btn=8	in=0	sel=0	The Runaway Balloon The Lost Robot The Midnight Dragon 1. OPENING meet the character and t
+w.wordClass	btn=14	in=0	sel=0	Noun Verb Adjective Adverb A brave firefighter climbed slowly up the tall ladder Clear
 H-G05	btn=2	in=0	sel=0	Tap an instrument to flip it ↶ ↷ 0 10 350 20 340 30 330 40 320 50 310 60 300 70 290 80 280
 M-04	btn=2	in=0	sel=0	Tap an instrument to flip it ↶ ↷ 1 2 3 4 5 6 7 8 9 10 11 12 13 14 cm 40 mm
 M-07	btn=2	in=0	sel=0	Tap an instrument to flip it ↶ ↷ 1 2 3 4 5 6 7 8 9 10 11 12 13 14 cm 40 mm
@@ -30,73 +30,73 @@ w.coordGrid	btn=8	in=0	sel=0	-6 -6 -4 -4 -2 -2 2 2 4 4 6 6 x y II I III IV A B C
 L-25	btn=6	in=1	sel=0	At the café Meeting a new friend Show English LE SERVEUR Bonjour ! Qu'est-ce que vous dési
 M-64	btn=1	in=0	sel=1	1 die 2 dice Roll
 S-05	btn=7	in=3	sel=0	− + H₂ + − + O₂ → − + H₂O Element Left Right Match H 2 2 ✓ O 2 1 ✗ Reset numbers
-E-05	btn=7	in=6	sel=0	Text size A Normal A+ Large A++ Extra large Line spacing A Normal A+ Roomy A++ Extra roomy
+E-05	btn=1	in=6	sel=0	Clear writing Thesis (your argument) Thesis (your argument): write here Paragraph 1: idea 
 w.angleExplorer	btn=5	in=0	sel=0	Measure On a line Round a point Triangle Quadrilateral 0 30 60 90 120 150 180 210 240 270 
-w.cellExplorer	btn=4	in=0	sel=0	Animal cell Plant cell Bacterium Animal cells have a nucleus but no cell wall, chloroplast
+w.cellExplorer	btn=3	in=0	sel=0	Animal cell Plant cell Bacterium Animal cells have a nucleus but no cell wall, chloroplast
 w.fractionWall	btn=54	in=0	sel=0	A (blue) B (orange) 1/1 1/2 2/2 1/3 2/3 3/3 1/4 2/4 3/4 4/4 1/5 2/5 3/5 4/5 5/5 1/6 2/6 3/
 w.tenFrame	btn=4	in=0	sel=0	10 20 Fill Clear 0 0 0
-w.langFlash	btn=11	in=0	sel=0	Greetings Family School Colours Days Food & drink oui tap to flip yes 🔊 Hear it 🐢 Slowly
+w.langFlash	btn=11	in=0	sel=0	Greetings Family School Colours Days Food & drink non tap to flip no 🔊 Hear it 🐢 Slowly 
 S-08	btn=3	in=0	sel=0	Build a food chain What if it disappears? 🌱 Grass ☘️ Clover 🦗 Grasshopper 🐇 Rabbit 🐸 F
 S-06	btn=5	in=0	sel=0	1 kg push 4 N friction 2 N 5 0 speed (m/s) time (s) 1 kg 2 kg 5 kg Friction: constant Rese
 S-03	btn=1	in=2	sel=4	Formula Speed Acceleration Force (Newton's second law) Weight Pressure Moment of a force S
-M-44	btn=16	in=1	sel=0	Shade Label parts Smaller Bigger + Second bar Parts in each whole − ＋ Wholes − 1 ＋ Split e
+M-44	btn=14	in=1	sel=0	Shade Label parts + Second bar Parts in each whole − ＋ Wholes − 1 ＋ Split every part into 
 w.percentGrid	btn=7	in=1	sel=0	FRACTION 7 20 DECIMAL 0.35 PERCENT 35% ½ ¼ ¾ ⅕ ⅒ ⅛ 3/20
-M-61	btn=5	in=4	sel=0	x-axis top x step y-axis top y step Plot Rub out ↶ ↷ Clear 0 1 2 3 4 5 6 7 8 9 10 0 1 2 3 
+M-61	btn=5	in=0	sel=0	Plot Rub out ↶ ↷ Clear 0 1 2 3 4 5 6 7 8 9 10 0 1 2 3 4 5 6 7 8 9 10
 w.functionMachine	btn=9	in=2	sel=0	+ 5 × 3 − 2 × 2 + 1 × 4 − 3 n² ÷ 2 Hide the rule RULE + 5 Send it through ▶ Clear table In
-L-10	btn=2	in=0	sel=0	serveur meaning: waiter un une
-w.langGender	btn=12	in=0	sel=0	the a / an trousse pencil case garçon boy porte door père father pomme apple sac bag froma
-L-11	btn=3	in=0	sel=0	gegenüber + Kino opposite · cinema (neuter) Accusative Dative Genitive
+L-10	btn=2	in=0	sel=0	équipe meaning: team un une
+w.langGender	btn=11	in=0	sel=0	the a / an mère mother sœur sister chien dog fille girl trousse pencil case cahier exercis
+L-11	btn=3	in=0	sel=0	in + Museum in / into · museum (neuter) · position (wo?) Accusative Dative Genitive
 w.numberLine	btn=13	in=0	sel=0	0–20 0–100 −10–10 0–1000 − 1 + 1s 2s 5s 10s 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18
 D.apparatus	btn=22	in=0	sel=0	🧪 Test tube ⚗️ Flask 🔥 Bunsen burner 🥽 Goggles 🧫 Petri dish ⚖️ Balance 🌡️ Thermometer
-S-01	btn=13	in=0	sel=0	1 2 3 4 cytoplasm mitochondrion nucleus cell membrane 1 Choose a label… 2 Choose a label… 
+S-01	btn=13	in=0	sel=0	1 2 3 4 nucleus mitochondrion cell membrane cytoplasm 1 Choose a label… 2 Choose a label… 
 E-10	btn=17	in=0	sel=0	Suffixes Prefixes Plurals ‹ special + › -ing -ed -er -est -ly -ful -less -ness -ment -able
 S-16	btn=9	in=0	sel=0	1 Step 1: Adult butterfly comes out ▲ ▼ 2 Step 2: Caterpillar hatches and eats ▲ ▼ 3 Step 
-L-09	btn=16	in=0	sel=0	Greetings Family School Colours Days Food & drink Pick it Type it 🐢 Slow 🔊 ? salut bonjo
+L-09	btn=16	in=0	sel=0	Greetings Family School Colours Days Food & drink Pick it Type it 🐢 Slow 🔊 ? au revoir b
 w.averagesDots	btn=7	in=0	sel=0	0 1 2 3 4 5 6 7 8 9 10 range 5 median 3 mean 4 Mean 4 Median 3 Mode 3 Range 5 Shuffle data
-L-21	btn=10	in=0	sel=0	Je parle français… Elle joue au… Il aime le… J'ai un frère… Nous mangeons du… Il y a… Ils 
+L-21	btn=9	in=0	sel=0	Je parle français… Elle joue au… Il aime le… J'ai un frère… Nous mangeons du… Il y a… Ils 
 M-40	btn=8	in=0	sel=0	Mark Jump Label Undo Clear Zoom in Zoom out Fractions 0 10 20 30 40 50 60 70 80 90 100
-L-16	btn=23	in=1	sel=0	96 à â æ ç é è ê ë î ï ô œ ù û ü ÿ « » É È À Ç Check
+L-16	btn=23	in=1	sel=0	94 à â æ ç é è ê ë î ï ô œ ù û ü ÿ « » É È À Ç Check
 M-20	btn=2	in=0	sel=0	Tap an instrument to flip it ↶ ↷ 1 2 3 4 5 6 7 8 9 10 11 12 13 14 cm
-E-04	btn=7	in=3	sel=0	Text size A Normal A+ Large A++ Extra large Line spacing A Normal A+ Roomy A++ Extra roomy
+E-04	btn=1	in=3	sel=0	Clear writing Point Point: write here Evidence Evidence: write here Explain Explain: write
 S-09	btn=3	in=1	sel=0	20 °C Solid (ice) Liquid (water) Gas (steam)
-S-13	btn=120	in=1	sel=0	− ＋ Zoom 1 H 2 He 3 Li 4 Be 5 B 6 C 7 N 8 O 9 F 10 Ne 11 Na 12 Mg 13 Al 14 Si 15 P 16 S 17
+S-13	btn=118	in=1	sel=0	1 H 2 He 3 Li 4 Be 5 B 6 C 7 N 8 O 9 F 10 Ne 11 Na 12 Mg 13 Al 14 Si 15 P 16 S 17 Cl 18 Ar
 N-01	btn=34	in=0	sel=0	Sound buttons Which spelling? ship chop thin frog clap cake kite rain moon night boat shee
 M-02	btn=2	in=0	sel=0	Tap an instrument to flip it ↶ ↷ 0 180 10 170 20 160 30 150 40 140 50 130 60 120 70 110 80
 M-03	btn=2	in=0	sel=0	Tap an instrument to flip it ↶ ↷ 0 10 350 20 340 30 330 40 320 50 310 60 300 70 290 80 280
-E-08	btn=21	in=0	sel=0	Capitals & full stops Apostrophes Speech marks Commas Colons & semi-colons Brackets & dash
+E-08	btn=20	in=0	sel=0	Capitals & full stops Apostrophes Speech marks Commas Colons & semi-colons Brackets & dash
 w.ratioBar	btn=4	in=1	sel=0	A − 2 + B − 3 + 1 part 1 part 1 part 1 part 1 part 50 20 30 × 1 × 2 × 3 × 4 × 5 A 2 4 6 8 
 S-12	btn=0	in=0	sel=0	
 w.measure	btn=3	in=0	sel=0	Length Capacity Mass 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 cm 7 cm 5 mm = 7.5 cm
-S-02	btn=5	in=4	sel=0	x-axis top x step y-axis top y step Plot Rub out ↶ ↷ Clear 0 1 2 3 4 5 6 7 8 9 10 0 1 2 3 
+S-02	btn=5	in=0	sel=0	Plot Rub out ↶ ↷ Clear 0 1 2 3 4 5 6 7 8 9 10 0 1 2 3 4 5 6 7 8 9 10
 M-01	btn=2	in=0	sel=0	Tap an instrument to flip it ↶ ↷ 1 2 3 4 5 6 7 8 9 10 11 12 13 14 cm
 w.langNumbers	btn=17	in=2	sel=0	− + 7 16 21 31 71 80 91 99 100 200 1999 2024 vingt et un “et un” — with 21, 31, 41, 51, 61
 M-80	btn=37	in=0	sel=0	0 sin cos tan ( ) sin⁻¹ cos⁻¹ tan⁻¹ π DEG x² x³ xʸ √ ⌫ 7 8 9 ÷ AC 4 5 6 × % 1 2 3 − ANS 0 
 w.neurone	btn=1	in=1	sel=0	cell body axon myelin sheath (fatty insulation) Myelin sheath ⚡ Send impulse
 L-04	btn=14	in=0	sel=0	● J'aime Je n'aime pas J'adore Je déteste ● jouer au tennis jouer au foot lire des livres 
-N-03	btn=13	in=0	sel=0	and but or so because when if although while after before until the baby giggled CLAUSE dr
-X-15	btn=7	in=6	sel=0	Text size A Normal A+ Large A++ Extra large Line spacing A Normal A+ Roomy A++ Extra roomy
+N-03	btn=13	in=0	sel=0	and but or so because when if although while after before until the dog barked CLAUSE drop
+X-15	btn=1	in=6	sel=0	Clear writing Opening Opening: write here Build-up Build-up: write here Problem Problem: w
 w.separation	btn=5	in=1	sel=0	Filtration Evaporation Distillation Chromatography mixture of sand and water filter paper 
 M-05	btn=2	in=0	sel=0	Tap an instrument to flip it ↶ ↷ 45° 1 2 3 4 5 6 7 8 9 10 11 12 13 14 cm
 w.clockFace	btn=6	in=1	sel=0	12-hour 24-hour Snap to 5 min 1 2 3 4 5 6 7 8 9 10 11 12 9:45 am quarter to ten o'clock qu
 w.sharing	btn=9	in=0	sel=0	Share between groups Make groups of a size − 14 + − 4 + 1 2 3 4 Deal one Deal all Reset 0 
 w.fractionBar	btn=5	in=0	sel=0	Shaded − 6 + Equal parts − 8 + 6 8 ÷ 2
-S-15	btn=11	in=0	sel=0	Mushroom Oak tree Water Plastic bag Rock Bee Dog Chair Living Non-living Start again
+S-15	btn=11	in=0	sel=0	Mushroom Pine tree Water Plastic bag Rock Bee Dog Chair Living Non-living Start again
 L-07	btn=23	in=0	sel=0	🐢 Slow ou u on an / en in / ain eu oi ch j / ge / gi gn é è / ê qu h final letters liaiso
-E-09	btn=6	in=0	sel=0	Homophones Silent letters Compound words Tricky words LOOK COVER WRITE CHECK believe never
+E-09	btn=6	in=0	sel=0	Homophones Silent letters Compound words Tricky words LOOK COVER WRITE CHECK favourite fav
 D.spinner	btn=1	in=0	sel=1	2 sections 3 sections 4 sections 6 sections 8 sections Spin
-N-06	btn=7	in=6	sel=0	Text size A Normal A+ Large A++ Extra large Line spacing A Normal A+ Roomy A++ Extra roomy
+N-06	btn=1	in=6	sel=0	Clear writing Opening Opening: write here Build-up Build-up: write here Problem Problem: w
 M-06	btn=2	in=0	sel=0	Tap an instrument to flip it ↶ ↷ 40 mm
 w.linearGraph	btn=0	in=1	sel=0	-8 -8 -6 -6 -4 -4 -2 -2 2 2 4 4 6 6 8 8 x y 1 across up 2 (0, 1) y = 2x + 1 Show y = x x -
 D.symbols	btn=0	in=0	sel=0	+ plus − minus × times ÷ divide = equals ≠ not equal ≈ approx < less than > greater than ≤
 D.tally	btn=3	in=0	sel=0	0 − + Clear
 N-04	btn=16	in=0	sel=0	Simple Progressive Perfect Modal verbs walk go eat bake swim play write run sing PAST NOW 
-E-06	btn=7	in=2	sel=0	Text size A Normal A+ Large A++ Extra large Line spacing A Normal A+ Roomy A++ Extra roomy
+E-06	btn=1	in=1	sel=0	Your writing 0 words Clear
 H-H01	btn=1	in=2	sel=0	1066 Battle of Hastings Add
 X-03	btn=2	in=1	sel=0	05:00 Start Reset Minutes
-M-46	btn=0	in=0	sel=1	The 1 2 3 4 5 6 7 8 9 10 11 12 times table 2 × 1 = 2 2 × 2 = 4 2 × 3 = 6 2 × 4 = 8 2 × 5 =
+M-46	btn=0	in=0	sel=1	Times table 1 2 3 4 5 6 7 8 9 10 11 12 2 × 1 = 2 2 × 2 = 4 2 × 3 = 6 2 × 4 = 8 2 × 5 = 10 
 w.transformGrid	btn=9	in=0	sel=0	Reflect Rotate Enlarge -6 -6 -4 -4 -2 -2 2 2 4 4 6 6 A B C D E F A′ B′ C′ D′ E′ F′ vertica
 X-07	btn=12	in=0	sel=0	Plant cell both Animal cell Large permanent vacuole Chloroplasts Stores energy as glycogen
 L-03	btn=24	in=6	sel=0	commencer — Présent(to begin) je tu il/elle nous vous ils/elles à â æ ç é è ê ë î ï ô œ ù 
 S-11	btn=3	in=0	sel=0	amplitude wavelength wave travels this way Transverse Longitudinal Pause
-w.langOrder	btn=10	in=0	sel=0	Adjectives Negation Questions “I have a black cat” J'ai chat noir un Check 🔊 Next sentenc
-N-08	btn=7	in=6	sel=0	Text size A Normal A+ Large A++ Extra large Line spacing A Normal A+ Roomy A++ Extra roomy
+w.langOrder	btn=8	in=0	sel=0	Adjectives Negation Questions “I have a black cat” un noir chat J'ai 🔊
+N-08	btn=1	in=6	sel=0	Clear writing Opening Opening: write here Build-up Build-up: write here Problem Problem: w
