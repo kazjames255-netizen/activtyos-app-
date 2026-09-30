@@ -1,4 +1,5 @@
 import { displayName } from "@/lib/display-name";
+import { tNow } from "@/lib/i18n/provider";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Shared task presentation rules.
@@ -53,7 +54,7 @@ export function hasMySub(t: { subs?: Assigned[] }, me: Person): boolean {
 export function whoLabel(t: Assigned, me: Person): string {
   const who = (t.who ?? "").trim();
   if (!who && !(t.whoEmail ?? "").trim()) return "";
-  if (isMine(t, me)) return "Me";
+  if (isMine(t, me)) return tNow("p8lrn.tskMe");
   // A `who` that IS an email goes in as the email, so it comes out name-shaped
   // instead of printing the domain.
   return who.includes("@") ? displayName("", who) : displayName(who, t.whoEmail);
@@ -64,7 +65,7 @@ export function personLabel(who: string, me: Person): string {
   const w = who.trim();
   const lower = w.toLowerCase();
   const { emails, names } = meKeys(me);
-  if (names.has(lower) || emails.has(lower)) return "Me";
+  if (names.has(lower) || emails.has(lower)) return tNow("p8lrn.tskMe");
   return w.includes("@") ? displayName("", w) : w;
 }
 
@@ -95,5 +96,5 @@ export function foldRepeats<T extends Repeatable>(list: T[]): { lead: T; rest: T
 
 /** How a repeat's frequency reads in a sentence. */
 export const REPEAT_WORD: Record<string, string> = {
-  daily: "every day", weekdays: "every weekday", weekly: "every week", monthly: "every month",
+  get daily() { return tNow("p8lrn.tskRepDaily"); }, get weekdays() { return tNow("p8lrn.tskRepWeekdays"); }, get weekly() { return tNow("p8lrn.tskRepWeekly"); }, get monthly() { return tNow("p8lrn.tskRepMonthly"); },
 };

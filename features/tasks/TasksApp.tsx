@@ -218,13 +218,13 @@ function QuickLinks({ tasks, me, onOpen }: { tasks: Task[]; me: string; onOpen: 
           <div className="fixed inset-0 z-[150]" onClick={() => setOpen(false)} />
           <div className="absolute end-0 top-full z-[151] mt-1.5 w-[min(420px,90vw)] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-[0_24px_60px_-20px_rgba(15,23,42,.5)]">
             <div className="mb-2 flex items-center gap-2">
-              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search links or tasks…" className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
-              <label className="flex flex-none items-center gap-1 text-[11.5px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />Added by me</label>
+              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("p8lrn.tskSearchPh")} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+              <label className="flex flex-none items-center gap-1 text-[11.5px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />{tr("p8lrn.tskAddedByMe")}</label>
             </div>
             <div className="max-h-[360px] space-y-1 overflow-auto">
               {rows.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-[var(--line)] px-3 py-6 text-center text-[12px] text-[var(--ink-3)]">
-                  {byUrl.size ? "No links match." : "No links yet — open a task and paste one under Links, or paste a link straight into Quick add."}
+                  {byUrl.size ? tr("p8lrn.tskNoLinksMatch") : tr("p8lrn.tskNoLinksYet")}
                 </div>
               ) : rows.map(({ u, tasks: ts }) => { const k = urlKind(u.url); const nt = nextOf(ts); const names = [...new Set(ts.map((t) => t.t))]; return (
                 <div key={u.url} className="rounded-xl border border-[var(--line)] px-1.5 py-1">
@@ -233,7 +233,7 @@ function QuickLinks({ tasks, me, onOpen }: { tasks: Task[]; me: string; onOpen: 
                     <span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-bold text-[#1d3a8f]">{u.title || k.label}</span><span className="block truncate text-[10.5px] text-[var(--ink-3)]">{u.title ? k.label : u.url}{u.by ? ` · ${u.by}` : ""}</span></span>
                     <span className="text-[11px] text-[#1d3a8f]">↗</span>
                   </a>
-                  <button type="button" onClick={() => { onOpen(nt.id); setOpen(false); }} title="Open the task" className="block w-full truncate rounded px-1 pb-0.5 text-start text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">
+                  <button type="button" onClick={() => { onOpen(nt.id); setOpen(false); }} title={tr("p8lrn.tskOpenTask")} className="block w-full truncate rounded px-1 pb-0.5 text-start text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">
                     📋 {names.slice(0, 2).join(", ")}{names.length > 2 ? ` +${names.length - 2}` : ""}{ts.length > 1 ? ` · ${ts.length} dates` : ""}{nt.due ? ` · next ${fmtDay(nt.due)}` : ""}
                   </button>
                 </div>
@@ -263,7 +263,7 @@ function LinkChip({ link, size = "sm" }: { link: TaskLink; size?: "sm" | "xs" })
   const c = isCat ? catCol(link.v) : null;
   const style: CSSProperties = c ? { background: c.bg, color: c.fg } : { background: m.bg, color: m.fg };
   const label = <><span className="opacity-70">{m.label}</span> {link.v}</>;
-  if (link.href) return <button type="button" title={`Open ${m.label.toLowerCase()}`} onClick={(e) => { e.stopPropagation(); router.push(link.href!); }} className={`${cls} underline decoration-transparent hover:decoration-current`} style={style}>{label} <span className="font-black">↗</span></button>;
+  if (link.href) return <button type="button" title={tNow("p8lrn.tskOpenKind", { kind: m.label.toLowerCase() })} onClick={(e) => { e.stopPropagation(); router.push(link.href!); }} className={`${cls} underline decoration-transparent hover:decoration-current`} style={style}>{label} <span className="font-black">↗</span></button>;
   return <span className={cls} style={style}>{label}</span>;
 }
 // Avatar chips. These were near-white pastels (#fde2e4 etc) carried over from
@@ -414,7 +414,7 @@ export function TasksApp() {
   const noAssignee = isFreelancer;
 
   const refresh = useCallback(() => {
-    apiGet<Task[]>("/api/tasks").then((t) => { setTasks(t); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Task[]>("/api/tasks").then((t) => { setTasks(t); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : tr("p7tk.errLoad")));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => {
@@ -445,7 +445,7 @@ export function TasksApp() {
     apiGet<{ id: string; business?: string; contactName?: string; name?: string; stage?: string; owner?: string }[]>("/api/platform/leads")
       .then((ls) => setSalesOpts(ls.map((l) => ({
         id: l.id,
-        v: l.business || l.contactName || l.name || "Untitled lead",
+        v: l.business || l.contactName || l.name || tr("p8lrn.tskUntitledLead"),
         sub: [l.stage, l.owner].filter(Boolean).join(" · "),
       }))))
       .catch(() => {});
@@ -550,7 +550,7 @@ export function TasksApp() {
 
   async function create(fields: Partial<Task>, toCal = false) {
     try { const created = await apiPost<Task>("/api/tasks", { status: "todo", prio: "med", ...fields }); rememberCat(fields.link); if (toCal && created?.due) await syncToCalendar(created); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t add the task"); }
+    catch (e) { setError(e instanceof Error ? e.message : tr("p7tk.errAdd")); }
   }
   // Mirror a task onto the Events calendar. First sync creates the event and
   // stamps its id on the task; later syncs UPDATE it (no duplicates), so labels,
@@ -602,16 +602,16 @@ export function TasksApp() {
         if (Object.keys(own).length) await api(`/api/tasks/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(own) });
       }
     }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); refresh(); }
+    catch (e) { setError(e instanceof Error ? e.message : tr("p7tk.errSave")); refresh(); }
   }
   const flashDone = () => { setFlash(true); setTimeout(() => setFlash(false), 1300); };
   // Set a task's status from a dropdown; flash "logged" when it newly becomes Done.
   const setStatus = (t: Task, s: Status) => { patch(t.id, { status: s }); if (s === "done" && t.status !== "done") flashDone(); };
   async function remove(id: string, alreadyConfirmed = false) {
-    if (!alreadyConfirmed && !confirm("Delete this task?")) return;
+    if (!alreadyConfirmed && !confirm(tr("p7tk.deleteThisTask"))) return;
     setOpenId(null);
     try { await api(`/api/tasks/${encodeURIComponent(id)}`, { method: "DELETE" }); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t delete"); }
+    catch (e) { setError(e instanceof Error ? e.message : tr("p7tk.errDelete")); }
   }
   function addQuick() {
     if (!qa.trim()) return;
@@ -842,7 +842,7 @@ export function TasksApp() {
                 </div>
               ))}
               <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">
-                These are the same settings as Setup → Notifications. Everything else lives there.
+                {tr("p8lrn.tskSettingsNote")}
               </p>
             </div>
           </div>
@@ -888,7 +888,7 @@ export function TasksApp() {
           if (!openTask.seriesId) return;
           if (!confirm(tr("p7tk.delRepeatConfirm"))) return;
           try { await api(`/api/tasks/series/${encodeURIComponent(openTask.seriesId)}`, { method: "DELETE" }); setOpenId(null); refresh(); }
-          catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); }
+          catch (e) { setError(e instanceof Error ? e.message : tr("p7tk.errDelete")); }
         }} />}
     </div>
   );
@@ -912,7 +912,7 @@ function ArchiveView({ tasks, onOpen, onUnarchive, onDelete, canDelete }: { task
           {canDelete && (
             <button type="button" onClick={() => onDelete(t)} title={tr("p7tk.deletePerm")}
               className="flex-none rounded-lg border border-[#f6c9cc] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdeaee]">
-              Delete
+              {tr("p8lrn.gDelete")}
             </button>
           )}
         </div>
@@ -1024,7 +1024,7 @@ function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task
   // Left date rail — the prominent, listing-card style block.
   const railBg = done ? "linear-gradient(160deg,#0f7a3d,#16b364)" : isOverdue ? "linear-gradient(160deg,#8f1420,#c02636)" : "linear-gradient(160deg,#16307a,#3f78d8)";
   const mon = t.due ? new Date(`${t.due}T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" }).toUpperCase() : "";
-  const rel = done ? "Done" : isOverdue ? "Overdue" : (dueLabel(t.due, today)?.text ?? "");
+  const rel = done ? tr("p7tk.gDone") : isOverdue ? tr("p7tk.gOverdue") : (dueLabel(t.due, today)?.text ?? "");
   return (
     // Was a fixed h-[52px] flex row. Now a column so the subtask list can drop
     // out underneath — the row itself keeps the same 52px so a collapsed card
@@ -1059,7 +1059,7 @@ function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task
         )}
         {t.time && <span className="flex-none text-[10.5px] font-bold text-[var(--ink-3)]">{t.time}</span>}
         {t.link && <LinkChip link={t.link} size="xs" />}<UrlsBadge t={t} />
-        {t.calEventId && <span className="flex-none rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[9.5px] font-bold text-[#1d3a8f]">Cal</span>}
+        {t.calEventId && <span className="flex-none rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[9.5px] font-bold text-[#1d3a8f]">{tr("p8lrn.tskCalBadge")}</span>}
         {!noAssignee && whoLabel(t) && <span className="flex-none text-[10.5px] font-semibold text-[var(--ink-3)]">{whoLabel(t)}</span>}
       </div>
       </div>
@@ -1208,9 +1208,9 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
     // `border-transparent` matches the rows' 1px border, or the header's 1fr
     // column resolves 2px wider and every label sits just off its column.
     <div className={`hidden ${DAY_COLS} gap-2 border border-transparent px-2.5 pb-1 text-[9.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)] md:grid`}>
-      <span>Task</span>
+      <span>{tr("p8lrn.tskColTask")}</span>
       <span>{tr("p7tk.linkCategory")}</span>
-      <span>Progress</span>
+      <span>{tr("p8lrn.tskColProgress")}</span>
       <span>{noAssignee ? "" : tr("p7tk.assignedTo")}</span>
       <span className="text-end">{tr("p7tk.ariaStatus")}</span>
     </div>
@@ -1462,7 +1462,7 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
           <div className="relative flex items-center gap-2">
             <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-white/75">{tr("p7tk.newTask")}</span>
             {repeatOn && <span className="rounded-full bg-white/18 px-2 py-0.5 text-[10.5px] font-extrabold ring-1 ring-white/25">{tr("p7tk.repeatsBadge")}</span>}
-            <button type="button" onClick={onClose} aria-label="Close" className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px] font-bold text-white ring-1 ring-white/30 transition hover:bg-white/30">×</button>
+            <button type="button" onClick={onClose} aria-label={tr("p8lrn.gClose")} className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px] font-bold text-white ring-1 ring-white/30 transition hover:bg-white/30">×</button>
           </div>
           <input autoFocus value={t} onChange={(e) => setT(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }} placeholder={tr("p7tk.whatNeedsDoing")} aria-label={tr("p7tk.ariaTaskTitle")}
             className="relative mt-1 w-full rounded-lg bg-white/10 px-2.5 py-1.5 text-[20px] font-extrabold leading-tight text-white outline-none ring-1 ring-white/25 placeholder:text-white/60 focus:bg-white/15 focus:ring-white/60" style={{ fontFamily: "var(--ff-display)" }} />
@@ -1511,7 +1511,7 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
                           <option value="monthly">{tr("p7tk.fMonthly")}</option>
                         </select>
                       </label>
-                      <label className="block"><DLabel>Until</DLabel><input type="date" value={rptUntil} min={start} disabled={!repeatOn} onChange={(e) => setRptUntil(e.target.value)} className={`${inputCls} disabled:opacity-40`} /></label>
+                      <label className="block"><DLabel>{tr("p8lrn.tskUntil")}</DLabel><input type="date" value={rptUntil} min={start} disabled={!repeatOn} onChange={(e) => setRptUntil(e.target.value)} className={`${inputCls} disabled:opacity-40`} /></label>
                     </div>
                     {repeatOn && (
                       <p className={`mt-2 text-[11.5px] ${repeatBad ? "font-bold text-[#c0392b]" : "text-[var(--ink-3)]"}`}>
@@ -1519,10 +1519,10 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
                       </p>
                     )}
                   </div>
-                  <div><DLabel>Priority</DLabel><PrioButtons value={prio} onChange={setPrio} /></div>
+                  <div><DLabel>{tr("p7tk.priorityLbl")}</DLabel><PrioButtons value={prio} onChange={setPrio} /></div>
                   <div><DLabel>{tr("p7tk.dLinked")}</DLabel><LinkedPicker link={link} onChange={setLink} opts={opts} inputCls={inputCls} /></div>
                   <div>
-                    <DLabel>Labels</DLabel>
+                    <DLabel>{tr("p8lrn.tskLabels")}</DLabel>
                     <div className="flex flex-wrap items-center gap-1.5">
                       {labels.map((l, i) => { const c = avatarTint(l); return (
                         <span key={i} className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-bold" style={{ background: `${c}18`, color: c, boxShadow: `inset 0 0 0 1px ${c}33` }}>
@@ -1552,7 +1552,7 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
                 <div className="flex gap-1.5">
                   <input value={subIn} onChange={(e) => setSubIn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }} placeholder={tr("p7tk.phAddStep")} className={inputCls} />
                   {!noAssignee && <input list="team-list-c" value={subWho} onChange={(e) => setSubWho(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }} placeholder={tr("p7tk.phAssignTo")} className="w-[118px] shrink-0 rounded-xl border border-[var(--line)] bg-[#f8fafc] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#0f8a4a]" />}
-                  <button type="button" onClick={addSub} disabled={!subIn.trim()} className="shrink-0 rounded-xl bg-[#0f8a4a] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm disabled:opacity-35">Add</button>
+                  <button type="button" onClick={addSub} disabled={!subIn.trim()} className="shrink-0 rounded-xl bg-[#0f8a4a] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm disabled:opacity-35">{tr("p8lrn.gAdd")}</button>
                 </div>
               </DSection>
 
@@ -1575,7 +1575,7 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
         <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] bg-white px-4 py-3">
           <span className="hidden text-[11px] text-[var(--ink-3)] @2xl:inline">{tr("p7tk.tipCmdEnter")}</span>
           <div className="ms-auto flex gap-2">
-            <button type="button" onClick={onClose} className="rounded-xl border border-[var(--line)] bg-white px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Cancel</button>
+            <button type="button" onClick={onClose} className="rounded-xl border border-[var(--line)] bg-white px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{tr("p8lrn.gCancel")}</button>
             <button type="button" onClick={submit} disabled={!t.trim() || repeatBad} className="rounded-xl bg-[#1d3a8f] px-5 py-2 text-[12.5px] font-extrabold text-white shadow-[0_6px_16px_-8px_rgba(29,58,143,.8)] hover:brightness-110 disabled:opacity-40">{tr("p7tk.createTask")}</button>
           </div>
         </div>
@@ -1601,7 +1601,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
   // box upstream). One pass buckets every task by its owner instead; `team`
   // has at most one entry whose identity is "Me" (the roster excludes your
   // own aliases — see `team` in TasksApp), so it's resolved once up front.
-  const meKey = team.find((w) => personLabel(w) === "Me");
+  const meKey = team.find((w) => personLabel(w) === tr("p8lrn.tskMe"));
   const buckets = useMemo(() => {
     const m = new Map<string, Task[]>();
     const add = (k: string, t: Task) => { const a = m.get(k); if (a) a.push(t); else m.set(k, [t]); };
@@ -1618,7 +1618,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
   return (
     <div>
       <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
-        <button type="button" onClick={() => setFilter("")} className="rounded-full border px-3 py-1 text-[12px] font-bold" style={!filter ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>All</button>
+        <button type="button" onClick={() => setFilter("")} className="rounded-full border px-3 py-1 text-[12px] font-bold" style={!filter ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{tr("p7tk.allWord")}</button>
         {/* The chip's VALUE stays the raw `who` the tasks were filed under; only
             the label is tidied, so filtering still matches. */}
         {team.map((w) => <button key={w} type="button" onClick={() => setFilter(w)} className="rounded-full border px-3 py-1 text-[12px] font-bold" style={filter === w ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{personLabel(w)} <span className="text-[var(--ink-3)]">{openCount(w)}</span></button>)}
@@ -1627,7 +1627,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
             a group further down the page, never a chip to filter to. Always
             shown, including at zero, so "is anything unclaimed?" is answerable
             without scrolling. */}
-        <button type="button" onClick={() => setFilter("__unassigned")} className="rounded-full border px-3 py-1 text-[12px] font-bold" style={filter === "__unassigned" ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>Unassigned <span className="text-[var(--ink-3)]">{openCount("__unassigned")}</span></button>
+        <button type="button" onClick={() => setFilter("__unassigned")} className="rounded-full border px-3 py-1 text-[12px] font-bold" style={filter === "__unassigned" ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{tr("p7tk.unassigned")} <span className="text-[var(--ink-3)]">{openCount("__unassigned")}</span></button>
         <button type="button" onClick={() => setSort(sort === "up" ? "down" : "up")} className="ms-auto rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--ink-2)]">Due {sort === "up" ? "↑" : "↓"}</button>
       </div>
       <div className="space-y-4">
@@ -1761,7 +1761,7 @@ function StepsOnlyDrawer({ task, me, myEmail, comment, setComment, onAddComment,
       <div className="relative flex h-full w-full max-w-[560px] flex-col overflow-y-auto bg-[#f4f7fc] p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-[var(--ink-3)]">{tr("p7tk.yourStep")}</span>
-          <button type="button" onClick={onClose} aria-label="Close" className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white text-[17px] font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]">×</button>
+          <button type="button" onClick={onClose} aria-label={tr("p8lrn.gClose")} className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white text-[17px] font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]">×</button>
         </div>
         <h2 className="mt-1 text-[19px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{task.t}</h2>
         <div className="mt-1 text-[12px] text-[var(--ink-3)]">
@@ -1785,7 +1785,7 @@ function StepsOnlyDrawer({ task, me, myEmail, comment, setComment, onAddComment,
         </div>
         <div className="mt-2 flex gap-1.5">
           <input value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onAddComment(); }} placeholder={tr("p7tk.phAddComment")} className={D_INPUT} />
-          <button type="button" onClick={onAddComment} disabled={!comment.trim()} className="shrink-0 rounded-xl bg-[#ea580c] px-3.5 py-2 text-[12.5px] font-extrabold text-white disabled:opacity-35">Post</button>
+          <button type="button" onClick={onAddComment} disabled={!comment.trim()} className="shrink-0 rounded-xl bg-[#ea580c] px-3.5 py-2 text-[12.5px] font-extrabold text-white disabled:opacity-35">{tr("p8lrn.tskPost")}</button>
         </div>
       </div>
     </div>
@@ -1870,10 +1870,10 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
         <div className="relative flex-none overflow-hidden px-5 pb-4 pt-3.5 text-white" style={{ background: STATUS_HERO[status] }}>
           <div aria-hidden className="pointer-events-none absolute -end-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
           <div className="relative flex items-center gap-2">
-            <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-white/75">Task</span>
+            <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-white/75">{tr("p8lrn.tskColTask")}</span>
             {task.seriesId && <span className="rounded-full bg-white/18 px-2 py-0.5 text-[10.5px] font-extrabold ring-1 ring-white/25">🔁 {FREQ_WORD[task.seriesFreq ?? ""] ?? "Repeats"}</span>}
             {task.spawn && <span className="rounded-full bg-[#fde68a] px-2 py-0.5 text-[10px] font-extrabold uppercase text-[#7c5a06]">auto</span>}
-            <button type="button" onClick={closeGuarded} aria-label="Close" className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px] font-bold text-white ring-1 ring-white/30 transition hover:bg-white/30">×</button>
+            <button type="button" onClick={closeGuarded} aria-label={tr("p8lrn.gClose")} className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px] font-bold text-white ring-1 ring-white/30 transition hover:bg-white/30">×</button>
           </div>
           <input value={task.t} onChange={(e) => save({ t: e.target.value })} aria-label={tr("p7tk.ariaTaskTitle")}
             className="relative mt-1 w-full rounded-lg bg-transparent px-1 py-0.5 text-[20px] font-extrabold leading-tight text-white outline-none placeholder:text-white/60 hover:bg-white/10 focus:bg-white/15" style={{ fontFamily: "var(--ff-display)" }} />
@@ -1926,7 +1926,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                   </div>
                   <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]">{tr("p7tk.rangeNote")}</p>
                   <div className="mt-2.5 flex items-center justify-end gap-2">
-                    <button type="button" onClick={() => setRangeEdit(null)} className="rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Cancel</button>
+                    <button type="button" onClick={() => setRangeEdit(null)} className="rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{tr("p8lrn.gCancel")}</button>
                     <button type="button" disabled={rangeBusy || !rangeEdit.from || !rangeEdit.until || rangeEdit.until < rangeEdit.from}
                       onClick={async () => { setRangeBusy(true); const msg = await onEditSeries(rangeEdit); setRangeBusy(false); setRangeMsg(msg); if (msg && !msg.startsWith("⚠")) setRangeEdit(null); }}
                       className="rounded-lg bg-[#0e7490] px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40">{rangeBusy ? tr("p7tk.savingWord") : tr("p7tk.saveDates")}</button>
@@ -1939,7 +1939,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
               {scope && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]">
                   <span><Rich text={tr("p7tk.editsApply", { scope: scope === "all" ? tr("p7tk.scopeAll") : tr("p7tk.scopeOne") })} bClass="" /></span>
-                  <button type="button" onClick={() => setScope(null)} className="ms-auto font-extrabold text-[#0e7490] underline">Change</button>
+                  <button type="button" onClick={() => setScope(null)} className="ms-auto font-extrabold text-[#0e7490] underline">{tr("p8lrn.tskChange")}</button>
                 </div>
               )}
             </DSection>
@@ -1984,7 +1984,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                 }} className={inputCls} /></label>
               </div>
               <div>
-                {lbl("Priority")}
+                {lbl(tr("p7tk.priorityLbl"))}
                 <PrioButtons value={prio} onChange={(p) => save({ prio: p })} />
               </div>
               <div>
@@ -1992,7 +1992,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                 <LinkedPicker link={task.link} onChange={(l) => save({ link: l })} opts={opts} inputCls={inputCls} />
               </div>
               <div>
-                {lbl("Labels")}
+                {lbl(tr("p8lrn.tskLabels"))}
                 <div className="flex flex-wrap items-center gap-1.5">
                   {(task.labels ?? []).map((l, i) => { const c = avatarTint(l); return (
                     <span key={i} className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-bold" style={{ background: `${c}18`, color: c, boxShadow: `inset 0 0 0 1px ${c}33` }}>
@@ -2034,7 +2034,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                   className="w-[118px] shrink-0 rounded-xl border border-[var(--line)] bg-[#f8fafc] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#0f8a4a]" />
               )}
               <button type="button" onClick={addSub} disabled={!sub.trim()}
-                className="shrink-0 rounded-xl bg-[#0f8a4a] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm disabled:opacity-35">Add</button>
+                className="shrink-0 rounded-xl bg-[#0f8a4a] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm disabled:opacity-35">{tr("p8lrn.gAdd")}</button>
             </div>
           </DSection>
 
@@ -2071,7 +2071,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
             <div className="flex gap-1.5">
               <input value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addComment(); }} placeholder={tr("p7tk.phWriteComment")} className={inputCls} />
               <button type="button" onClick={addComment} disabled={!comment.trim()}
-                className="shrink-0 rounded-xl bg-[#ea580c] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm disabled:opacity-35">Post</button>
+                className="shrink-0 rounded-xl bg-[#ea580c] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm disabled:opacity-35">{tr("p8lrn.tskPost")}</button>
             </div>
           </DSection>
 
@@ -2123,7 +2123,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
             <div className="max-h-[calc(100vh-24px)] w-full max-w-[460px] overflow-y-auto rounded-2xl bg-[var(--surface)] p-4 shadow-2xl">
               <div className="text-[14.5px] font-extrabold text-[var(--ink)]">{tr("p7tk.repeatingTask")}</div>
               <p className="mt-1 text-[12.5px] text-[var(--ink-2)]">
-                Apply this change to just <b>{task.due ? fmtDay(task.due) : "this date"}</b>, or to every date in the repeat?
+                {tr("p8lrn.tskApplyChange", { date: task.due ? fmtDay(task.due) : tr("p8lrn.tskThisDate") })}
               </p>
               <div className="mt-3 flex flex-col gap-2">
                 <button type="button" onClick={() => answer("one")} className="rounded-xl border border-[var(--line)] px-3 py-2.5 text-start">
@@ -2137,7 +2137,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
               </div>
               <div className="mt-2 flex items-center gap-2">
                 <p className="min-w-0 flex-1 text-[11px] text-[var(--ink-3)]">{tr("p7tk.askedOnce")}</p>
-                <button type="button" onClick={() => setPending(null)} className="flex-none rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Cancel</button>
+                <button type="button" onClick={() => setPending(null)} className="flex-none rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{tr("p8lrn.gCancel")}</button>
               </div>
             </div>
           </div>
