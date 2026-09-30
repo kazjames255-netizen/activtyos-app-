@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { FieldValue } from "firebase-admin/firestore";
 import { librarySnap } from "../lib/tenantLibrary";
 import { canWrite } from "../middleware/role";
 import { isFranchise, visibleToFranchise } from "../lib/franchiseScope";
@@ -724,6 +725,24 @@ listings.put("/:id", async (req, res) => {
     }
   }
   await own.snap.ref.update(patch);
+  // Reassigning a listing to another franchise (or back to head office) moves its EXISTING bookings with it: bookings
+  // carry their own franchiseId (the franchise Bookings / Families / register lists filter on it), so without this the
+  // new owner is credited the royalty and sessions but can't see or run the children already booked on them.
+  if ("franchiseId" in patch && ((patch.franchiseId as string | null) ?? null) !== ((own.snap.data()!.franchiseId as string | null | undefined) ?? null)) {
+    // Parent checkouts carry listingId; operator-taken bookings carry only blockId — match both.
+    const tid = req.auth!.tenantId!;
+    const blockIds = (await db.collection("blocks").where("tenantId", "==", tid).where("listingId", "==", own.snap.id).get()).docs.map((d) => d.id);
+    const found = new Map<string, FirebaseFirestore.DocumentReference>();
+    for (const d of (await db.collection("bookings").where("tenantId", "==", tid).where("listingId", "==", own.snap.id).get()).docs) found.set(d.id, d.ref);
+    for (let i = 0; i < blockIds.length; i += 30)
+      for (const d of (await db.collection("bookings").where("tenantId", "==", tid).where("blockId", "in", blockIds.slice(i, i + 30)).get()).docs) found.set(d.id, d.ref);
+    const refs = [...found.values()];
+    for (let i = 0; i < refs.length; i += 400) {
+      const batch = db.batch();
+      for (const r of refs.slice(i, i + 400)) batch.update(r, { franchiseId: (patch.franchiseId as string | null) ?? FieldValue.delete() });
+      await batch.commit();
+    }
+  }
   if (RUN_FIELDS.some((f) => f in data)) {
     await syncListingBlocks(own.snap.id, req.auth!.tenantId!, runRecipeOf(merged));
   }
