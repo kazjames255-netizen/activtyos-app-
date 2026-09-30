@@ -14,6 +14,18 @@ async function kpi(page: Page, label: string): Promise<number> {
   return num((await el.innerText()).trim());
 }
 
+// The tiles show £0 until the ledgers arrive: read until the value has stopped changing.
+async function settled(page: Page, label: string): Promise<number> {
+  let last = NaN, same = 0;
+  for (let i = 0; i < 40 && same < 3; i++) {
+    const v = await kpi(page, label);
+    same = v === last ? same + 1 : 0;
+    last = v;
+    await page.waitForTimeout(700);
+  }
+  return last;
+}
+
 test("HO finance totals only money that has moved, and owed = sent invoices", async ({ page }) => {
   test.setTimeout(240_000);
   const a = loadAccounts().accounts;
@@ -30,8 +42,8 @@ test("HO finance totals only money that has moved, and owed = sent invoices", as
   const inTwoYears = `${d.getFullYear() + 2}-01-15`;
 
   await page.goto("/company/finance");
-  const outBefore = await kpi(page, "Money out (own)");
-  const inBefore = await kpi(page, "Money in (own)");
+  const outBefore = await settled(page, "Money out (own)");
+  const inBefore = await settled(page, "Money in (own)");
 
   const expenseIds: string[] = [];
   const incomeIds: string[] = [];
