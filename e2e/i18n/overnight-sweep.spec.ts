@@ -18,6 +18,8 @@ const ONLY = (process.env.OVERNIGHT_PORTALS ?? `public,${PORTALS.join(",")}`).sp
 const OUT = process.env.OVERNIGHT_OUT ?? "/tmp/overnight";
 const STRICT = process.env.OVERNIGHT_STRICT === "1";
 const NON_LATIN = new Set(["ur", "pa", "bn", "ar"]);
+// Text the detector must not count as "untranslated English": this run's own test data, product/brand and official UK terms.
+const ALLOW = /\bE2E\b|\bmun[a-z0-9]{4,}\b|@activityos-test|\b(Activ|ActivityOS|Activly|Stripe|HMRC|DBS|Ofsted|PayPal|Xero|Sage|QuickBooks|WhatsApp|Google|Gmail|Trustpilot|PAYE|Tax-Free Childcare|KCSIE|SEND|EHCP|VAT|PDF|CSV|Excel|Word|Zoom|Meta|Facebook|Instagram|Canva)\b/g;
 const STOP = /\b(the|and|your|you|you're|to|for|with|of|is|are|this|that|from|in|on|no|not|yet|will|can|have|has|all|new|add|edit|delete|save|cancel|view|search|select)\b/i;
 const PUBLIC_PATHS = ["/login", "/signup", "/how-it-works", "/how-it-works/parent", "/how-it-works/operator", "/demo", "/no-such-page-xyz", "/pay/invalid-token", "/book/invalid-id", "/plan/invalid-id", "/reference/invalid-token", "/v/invalid-ref", "/store/invalid-tenant", "/call-ended"];
 
@@ -34,12 +36,12 @@ function englishValues(): string[] {
 const EN = englishValues();
 
 async function measure(page: Page, loc: string) {
-  return page.evaluate(({ nonLatin, stop, en }) => {
+  return page.evaluate(({ nonLatin, stop, en, allow }) => {
     const enSet = new Set<string>(en); const re = new RegExp(stop, "i");
     const cat = new Set<string>(), heur = new Set<string>(), keys = new Set<string>();
     const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let n = w.nextNode(); n; n = w.nextNode()) {
-      const el = n.parentElement; const s = (n.textContent ?? "").replace(/\s+/g, " ").trim();
+      const el = n.parentElement; const s0 = (n.textContent ?? "").replace(/\s+/g, " ").trim(); const s = s0.replace(new RegExp(allow, "g"), " ").replace(/\s+/g, " ").trim();
       if (!el || !s || /^(SCRIPT|STYLE|NOSCRIPT|OPTION)$/.test(el.tagName)) continue;
       const rc = el.getBoundingClientRect(); if (!rc.width || !rc.height) continue;
       if (/^[a-z]+[A-Za-z0-9]*\.[a-zA-Z_0-9]+(\.[a-zA-Z_0-9]+)*$/.test(s) && !/\s/.test(s) && !/\.(com|co|uk|org|io|net)$/.test(s)) keys.add(s);
@@ -51,7 +53,7 @@ async function measure(page: Page, loc: string) {
     }
     const de = document.documentElement;
     return { cat: [...cat], heur: [...heur], keys: [...keys], dir: de.dir, lang: de.lang, overflow: de.scrollWidth - de.clientWidth };
-  }, { nonLatin: NON_LATIN.has(loc), stop: STOP.source, en: EN });
+  }, { nonLatin: NON_LATIN.has(loc), stop: STOP.source, en: EN, allow: ALLOW.source });
 }
 
 const rows: string[] = [];
