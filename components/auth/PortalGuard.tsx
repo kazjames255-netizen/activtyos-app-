@@ -6,7 +6,7 @@ import { startClockSync } from "@/features/timeclock/data";
 import { fetchOnboarding } from "@/features/team/onboardStore";
 import { syncLearning } from "@/features/learning/courseCompletions";
 import { useRouter } from "next/navigation";
-import { ApiError, get as apiGet, getActAs, isTwoFaRequired } from "@/lib/api";
+import { ApiError, get as apiGet, getActAs, isTwoFaRequired, rawErrorMessage } from "@/lib/api";
 import { PORTAL_ACCESS, ROLE_HOME, type Me } from "@/lib/roles";
 import { useT } from "@/lib/i18n/provider";
 
@@ -47,7 +47,7 @@ export function getMe(): Promise<Me> {
         .catch((e) => {
           if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
             clearMeCache();
-            window.dispatchEvent(new CustomEvent(ME_INVALID_EVENT, { detail: { status: e.status, message: e.message, twoFaRequired: isTwoFaRequired(e) } }));
+            window.dispatchEvent(new CustomEvent(ME_INVALID_EVENT, { detail: { status: e.status, message: e.message, raw: rawErrorMessage(e), twoFaRequired: isTwoFaRequired(e) } }));
           }
         });
     }
@@ -116,13 +116,13 @@ export function PortalGuard({ portal, children }: { portal: string; children: Re
   // signed out elsewhere) — act on it now rather than on the next full sign-in.
   useEffect(() => {
     const h = (ev: Event) => {
-      const d = (ev as CustomEvent<{ status: number; message: string; twoFaRequired?: boolean }>).detail;
+      const d = (ev as CustomEvent<{ status: number; message: string; raw?: string; twoFaRequired?: boolean }>).detail;
       // A platform account's 12h 2FA verification lapsed mid-session (see
       // middleware/role.ts). No in-place re-verify UI here — just bounce to
       // login, where signing in again runs the 2FA step fresh.
       if (d.twoFaRequired) router.replace("/login?notice=2fa");
       else if (d.status === 401) router.replace("/login");
-      else if (/switched off|closed this account/i.test(d.message)) setSwitchedOff(d.message);
+      else if (/switched off|closed this account/i.test(d.raw ?? d.message)) setSwitchedOff(d.message);
     };
     window.addEventListener(ME_INVALID_EVENT, h);
     return () => window.removeEventListener(ME_INVALID_EVENT, h);
@@ -170,7 +170,7 @@ export function PortalGuard({ portal, children }: { portal: string; children: Re
         else if (e instanceof ApiError && e.status === 401) router.replace("/login");
         // The account was switched off (Team → Deactivate) — say so plainly
         // instead of opening a shell where every screen fails.
-        else if (e instanceof ApiError && e.status === 403 && /switched off|closed this account/i.test(e.message)) setSwitchedOff(e.message);
+        else if (e instanceof ApiError && e.status === 403 && /switched off|closed this account/i.test(e.rawMessage)) setSwitchedOff(e.message);
         // API unreachable — don't lock the user out of the UI shell.
         else setAllowed(true);
       });

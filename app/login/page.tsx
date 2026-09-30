@@ -7,7 +7,7 @@ import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from "fir
 import { firebaseAuth } from "@/lib/firebase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { fetchRoleHome } from "@/lib/roles";
-import { ApiError, get as apiGet, isTwoFaRequired, post as apiPost, withTimeout } from "@/lib/api";
+import { ApiError, get as apiGet, isTwoFaRequired, post as apiPost, rawErrorMessage, withTimeout } from "@/lib/api";
 import { FieldLabel, Input } from "@/components/ui";
 import { useI18n } from "@/lib/i18n/provider";
 import { AUTH_LIGHT, AosMark, AosWordmark } from "@/components/auth/AuthBrand";
@@ -147,7 +147,7 @@ function LoginForm() {
   async function stopForClosedAccount(): Promise<boolean> {
     const st: { closed?: boolean; closedAt?: string | null } | Error = await apiGet<{ closed: boolean; closedAt: string | null }>("/api/account/reactivate").catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
     // Switched off by the provider — that's theirs to undo; say so.
-    if (st instanceof Error && /switched off/i.test(st.message)) { setError(st.message); setBusy(false); return true; }
+    if (st instanceof Error && /switched off/i.test(rawErrorMessage(st))) { setError(st.message); setBusy(false); return true; }
     if (!(st instanceof Error) && st.closed) { setClosedAt(st.closedAt ?? ""); setBusy(false); return true; }
     return false;
   }

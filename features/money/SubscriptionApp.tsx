@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { portalOf } from "@/lib/portal-href";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { api, get as apiGet, post as apiPost } from "@/lib/api";
+import { api, get as apiGet, post as apiPost, rawErrorMessage } from "@/lib/api";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useT } from "@/lib/i18n/provider";
@@ -189,7 +189,7 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
     catch (e) {
       // Reactivating with no usable saved card → capture one, then /start
       // takes over (no second trial server-side).
-      if (path === "reactivate" && e instanceof Error && /card/i.test(e.message) && data) {
+      if (path === "reactivate" && e instanceof Error && /card/i.test(rawErrorMessage(e)) && data) {
         setPayFor(data.current.details);
         return;
       }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
-import { post as apiPost, get as apiGet, api } from "@/lib/api";
+import { post as apiPost, get as apiGet, api, rawErrorMessage } from "@/lib/api";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { AUTH_LIGHT, AosMark } from "@/components/auth/AuthBrand";
 import { useI18n, tNow } from "@/lib/i18n/provider";
@@ -274,7 +274,7 @@ function SignupForm() {
       window.location.href = url;
     } catch (err) {
       setStripeMsg(
-        err instanceof Error && /configured/i.test(err.message)
+        err instanceof Error && /configured/i.test(rawErrorMessage(err))
           ? t("p8pub.suEStripeOff")
           : err instanceof Error ? err.message : t("p8pub.suEStripe"),
       );

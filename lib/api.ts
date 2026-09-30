@@ -249,6 +249,9 @@ function readableIssues(err: unknown): string | null {
 export const isTwoFaRequired = (e: unknown): boolean =>
   e instanceof ApiError && (e.body as { code?: string } | undefined)?.code === "2fa_required";
 
+/** The error text as the SERVER sent it (English), for code that recognises a message: `Error.message` is shown to the user and is translated (lib/i18n/apiErrors.ts). */
+export const rawErrorMessage = (e: unknown): string => (e instanceof ApiError ? e.rawMessage : e instanceof Error ? e.message : "");
+
 export const get = <T>(path: string) => api<T>(path);
 export const post = <T>(path: string, body: unknown) =>
   api<T>(path, { method: "POST", body: JSON.stringify(body) });

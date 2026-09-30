@@ -4,7 +4,7 @@ import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { get as apiGet, post as apiPost, apiPublic } from "@/lib/api";
+import { get as apiGet, post as apiPost, apiPublic, rawErrorMessage } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useI18n, useT, useWord, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
@@ -265,7 +265,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
         } catch (e) {
           // Amend endpoint isn't live yet (§U) — record the intent locally so
           // it still shows as pending. Any other error is real.
-          if (!/404|not found/i.test(e instanceof Error ? e.message : "")) throw e;
+          if (!/404|not found/i.test(rawErrorMessage(e))) throw e;
         }
         try { localStorage.setItem(`aos.pendingMove.${booking.tenantId ?? ""}.${booking.ref}`, JSON.stringify({ moves, at: new Date().toISOString() })); } catch { /* ignore */ }
         onDone();
