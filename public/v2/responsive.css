@@ -99,7 +99,7 @@
 }
 
 /* ---------- inline two-column grids with a fixed px column (e.g. parent-app block) ---------- */
-@media (max-width:860px){
+@media (max-width:640px){
   .wrap .tfc-grid[style*="grid-template-columns"]{grid-template-columns:minmax(0,1fr)!important;gap:28px!important}
 }
 
@@ -143,9 +143,10 @@
   html body .wrap > footer a{min-height:44px}
   html body .wrap #who .ptxt .plink{display:inline-flex;align-items:center;min-height:44px}
   html body .wrap .brand{min-height:44px}
-  html body .wrap .cdot{position:relative}
-  html body .wrap .cdot::after,html body .wrap .hs-dots button::after{content:"";position:absolute;inset:-14px -8px}
-  html body .wrap .hs-dots button{position:relative}
+  html body .wrap .hs-dots button::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:30px;height:44px}
+  html body .wrap .hs-dots button,html body .wrap .rd-dots button{position:relative}
+  html body .wrap .rd-dots button::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:30px;height:44px}
+  html body .wrap a[href="#websiteAddon"]{min-height:44px}
 }
 /* dev-only "Live · auto-updates" badge (fixed, bottom-left) covers content on touch screens; hidden there only */
 @media (max-width:1024px), (hover:none) and (pointer:coarse){
@@ -182,5 +183,20 @@
 /* ---------- platform-bookings: #booking .bk-top stayed 2-column on phones (text in a 117px column) ---------- */
 @media (max-width:860px){
   html body .wrap #booking .bk-top{grid-template-columns:minmax(0,1fr)!important;gap:26px!important}
+}
+/* ---------- more touch targets: legal TOC, footer socials, desktop-width nav on touch tablets ---------- */
+@media (max-width:1024px), (hover:none) and (pointer:coarse){
+  html body .wrap .toc a{display:inline-block;padding:12px 6px 12px 0}
+  html body .wrap footer .ft-soc{width:44px;height:44px}
+}
+@media (min-width:960px) and (hover:none){
+  html body .wrap header.nav .navtab,html body .wrap header.nav .navdrop-btn,html body .wrap header.nav .nav-cta .signin{min-height:44px;display:inline-flex;align-items:center}
+  html body .wrap header.nav .navdrop-btn{margin:0}
+  html body .wrap header.nav .navtab{min-width:44px;justify-content:center}
+}
+/* ---------- pricing on tablets: three plan cards stacked in a 440px column left half the iPad empty ---------- */
+@media (min-width:640px) and (max-width:900px){
+  html body .wrap .price{grid-template-columns:repeat(2,minmax(0,1fr));max-width:780px;gap:20px}
+  html body .wrap .price > :nth-child(3){grid-column:1 / -1}
 }
 /* @@END@@ */
