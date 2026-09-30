@@ -7,6 +7,7 @@ import { portalOf } from "@/lib/portal-href";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { api, get as apiGet, post as apiPost, rawErrorMessage } from "@/lib/api";
+import { planText } from "./finI18n";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useT } from "@/lib/i18n/provider";
@@ -228,7 +229,7 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
         {recommended && <div className="absolute end-3 top-3 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white" style={{ background: tier.c }}>{gate ? t("money.subYourPlan") : t("money.subCurrentPlan")}</div>}
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl text-[15px]" style={{ background: `${tier.c}1f` }}>{tier.icon}</span>
-          <span className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{p.name}</span>
+          <span className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{planText(t, p.name)}</span>
         </div>
         <div className="mt-1 flex items-baseline gap-1">
           <span className="text-[24px] font-extrabold">{annual ? gbp(annualTotal) : gbp(m)}</span>
@@ -240,17 +241,17 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
             {t("money.subFranchiseEstimate", { price: gbp(data.franchise.total), count: data.franchise.count, label: data.franchise.count === 1 ? t("money.subFranchiseOne") : t("money.subFranchiseMany") })}
           </div>
         )}
-        <p className="mt-2 text-[12px] leading-snug text-[var(--ink-3)]">{p.blurb}</p>
+        <p className="mt-2 text-[12px] leading-snug text-[var(--ink-3)]">{planText(t, p.blurb)}</p>
         {p.bands && (
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             {p.bands.map((b) => {
               const on = bandFor(p) === b.id;
-              return <button key={b.id} type="button" onClick={() => setBand((s) => ({ ...s, [p.id]: b.id }))} className="rounded-full border px-2.5 py-1 text-[10.5px] font-bold transition-colors" style={on ? { borderColor: tier.c, background: tier.c, color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{b.label}</button>;
+              return <button key={b.id} type="button" onClick={() => setBand((s) => ({ ...s, [p.id]: b.id }))} className="rounded-full border px-2.5 py-1 text-[10.5px] font-bold transition-colors" style={on ? { borderColor: tier.c, background: tier.c, color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{planText(t, b.label)}</button>;
             })}
           </div>
         )}
         <ul className="mt-3 flex flex-1 flex-col gap-1.5">
-          {p.features.map((f, i) => <li key={i} className={`flex gap-1.5 text-[12px] ${f.endsWith(":") ? "font-bold text-[var(--ink-2)]" : "text-[var(--ink-2)]"}`}>{!f.endsWith(":") && <span style={{ color: tier.c }}>✓</span>}{f}</li>)}
+          {p.features.map((f, i) => <li key={i} className={`flex gap-1.5 text-[12px] ${f.endsWith(":") ? "font-bold text-[var(--ink-2)]" : "text-[var(--ink-2)]"}`}>{!f.endsWith(":") && <span style={{ color: tier.c }}>✓</span>}{planText(t, f)}</li>)}
         </ul>
         {opts?.cta !== false && (
           <div className="mt-3.5">
@@ -359,7 +360,7 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
       {c.status !== "none" && (
         <div className="mb-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{c.details?.name}{c.band ? ` · ${c.band}` : ""}</span>
+            <span className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{planText(t, c.details?.name ?? "")}{c.band ? ` · ${c.band}` : ""}</span>
             <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: sm.bg, color: sm.fg }}>{statusLabel[c.status] ?? statusLabel.none}</span>
             <span className="ms-auto text-[13px] font-bold">{/* The stored price is MONTHLY; annual is billed at ×10 (lib/billing.ts).
                 Showing the monthly figure with "/yr" understated the charge. */}
