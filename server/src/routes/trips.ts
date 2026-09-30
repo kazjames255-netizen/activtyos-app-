@@ -110,7 +110,8 @@ async function canSendTripMessage(req: Request, trip: Record<string, unknown>): 
   if (whoCanSend !== "lead") return true;
   const email = req.user?.email;
   if (email && trip.createdBy === email) return true;
-  const name = req.user?.name;
+  // The name the manager put on the account — never the token's display name, which the user can change to the trip lead's.
+  const name = req.user?.uid ? String((await db.collection("users").doc(req.user.uid).get()).get("name") ?? "").trim() : "";
   if (name && typeof trip.lead === "string" && trip.lead.trim().toLowerCase() === name.trim().toLowerCase()) return true;
   return false;
 }
