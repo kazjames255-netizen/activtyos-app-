@@ -1,5 +1,5 @@
 import { money } from "../bookings/helpers";
-import { pickPlural } from "@/lib/i18n/plural";
+import { pickPlural } from "../../lib/i18n/plural";
 
 /** Optional display translator. The server calls these functions without it (English, stored as before); the browser
  *  passes `{ tr: useT(), locale }` so the summaries/terms/scope it SHOWS follow the picked language. Pure: no React import. */

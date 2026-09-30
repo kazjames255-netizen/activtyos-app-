@@ -1456,51 +1456,36 @@ const EMOJI_BANK = ("⭐ 🌟 ✨ 🎯 🏆 🥇 🎖️ 🏅 🎗️ 🎉 🎊 
 const AI_STOP = new Set("a an and the of for to in on at with is are our we you your they it this that be will can each every day days week weeks child children kids age ages fun great good very really".split(" "));
 function aiKeywords(text: string, max = 6): string[] {
   const seen = new Set<string>();
-  return text.toLowerCase().replace(/[^a-z0-9 &-]/g, " ").split(/\s+/)
+  return text.toLowerCase().replace(/[^\p{L}\p{N} &-]/gu, " ").split(/\s+/)
     .filter((w) => w.length > 2 && !AI_STOP.has(w) && !seen.has(w) && seen.add(w))
     .slice(0, max);
 }
 const cap1 = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+// The writing templates live in the catalogue (p8lst.waAi*) so the generated paragraph comes out in the picker's language.
+const aiPick = (base: string, variant: number, vars: Record<string, string | number>) => tNow(`p8lst.${base}${(variant % 3) + 1}`, vars).slice(0, 300);
 function genDescription(prompt: string, section: string, d: WizardDraft, cats: string[], variant: number): string {
   const kws = aiKeywords(prompt);
-  const cat = (cats[0] || "activity").toLowerCase();
-  const kw = kws.length ? kws.join(", ") : `${cat} sessions`;
-  const age = d.ageFrom && d.ageTo ? ` (ages ${d.ageFrom}–${d.ageTo})` : "";
+  const cat = (cats[0] || tNow("p8lst.waAiActivity")).toLowerCase();
+  const kw = kws.length ? kws.join(", ") : tNow("p8lst.waAiSessions", { cat });
+  const age = d.ageFrom && d.ageTo ? tNow("p8lst.waAiAges", { from: d.ageFrom, to: d.ageTo }) : "";
   const sec = section.trim().toLowerCase();
-  let arr: string[];
-  if (sec.includes("arrive")) arr = [
-    `On arrival our team welcome your child, sign them in and settle them fast — calm, friendly drop-off, then straight into ${kw}.`,
-    `When you arrive a familiar face meets you at the door: bags away, name badge on, and into the morning's ${kw}.`,
-    `The first hour is all about settling in — a warm welcome, a quick register and gentle group games. Think ${kw}.`,
-  ];
-  else if (sec.includes("curriculum") || sec.includes("learn")) arr = [
-    `Our programme builds real skills — ${kw} — through structured, age-appropriate sessions led by qualified coaches.`,
-    `Children progress through ${kw}, growing in confidence, teamwork and technique at every single session.`,
-    `Every session maps to clear outcomes: ${kw}. Coaches track progress and celebrate each and every win.`,
-  ];
-  else if (sec.includes("what")) arr = [
-    `Each day we dive into ${kw} — games, challenges and team play that keep every child moving and laughing.`,
-    `Expect ${kw} and lots more: skills in the morning, team games and free play after lunch, all fully supervised.`,
-    `From ${kw} to big group games, every session is planned to be active, inclusive and genuinely fun.`,
-  ];
-  else arr = [
-    `A fun-packed ${cat}${age} — ${kw}. Active, safe and full of new friends. Book early, places go fast!`,
-    `Join us${age} for a brilliant week of ${kw}. Expert coaches, big smiles and a safe, welcoming setting throughout.`,
-    `${cap1(kw)}${age}. Non-stop fun from drop-off to pick-up, with friendly, qualified staff every step of the way.`,
-  ];
-  return arr[variant % arr.length].slice(0, 300);
+  // A section name is matched in English (the stored preset) and in the current language (translated preset / the operator's own words).
+  const isSec = (en: string, key: string) => sec.includes(en) || sec.includes(tNow("p8lst." + key).toLowerCase());
+  const vars = { kw, cat, age };
+  if (isSec("arrive", "waSec_arrive")) return aiPick("waAiArrive", variant, vars);
+  if (sec.includes("curriculum") || sec.includes("learn") || sec.includes(tNow("p8lst.waSec_curriculum").toLowerCase())) return aiPick("waAiCurr", variant, vars);
+  if (sec.includes("what") || sec.includes(tNow("p8lst.waSec_do").toLowerCase())) return aiPick("waAiWhat", variant, vars);
+  return aiPick("waAiDef", variant, { ...vars, kw: variant % 3 === 2 ? cap1(kw) : kw });
 }
 function genBio(prompt: string, m: StaffMember, variant: number): string {
-  const first = m.first || "They";
-  const name = [m.first, m.last].filter(Boolean).join(" ") || "This coach";
+  const first = m.first || tNow("p8lst.waAiThey");
+  const name = [m.first, m.last].filter(Boolean).join(" ") || tNow("p8lst.waAiThisCoach");
   const kws = aiKeywords(prompt, 5);
   const kw = kws.join(", ");
-  const arr = [
-    `${name} is a friendly, experienced coach who ${kw ? "loves " + kw : "loves getting every child involved"}. DBS-checked and first-aid trained, ${first} makes sure everyone joins in.`,
-    `With a real gift for ${kw || "working with children"}, ${name} brings energy and patience to every session — qualified, first-aid trained and endlessly encouraging.`,
-    `${name} specialises in ${kw || "fun, inclusive activities"} and is brilliant with first-timers. Safe hands, big smiles, and a coach the children adore.`,
-  ];
-  return arr[variant % arr.length].slice(0, 300);
+  const v = variant % 3;
+  if (v === 0) return tNow(kw ? "p8lst.waAiBio1a" : "p8lst.waAiBio1b", { name, first, kw }).slice(0, 300);
+  if (v === 1) return tNow("p8lst.waAiBio2", { name, kw: kw || tNow("p8lst.waAiWorkKids") }).slice(0, 300);
+  return tNow("p8lst.waAiBio3", { name, kw: kw || tNow("p8lst.waAiFunActs") }).slice(0, 300);
 }
 
 // ── Step: Basics ───────────────────────────────────────────────────────────
