@@ -410,23 +410,23 @@ export function publishBlockers(d: WizardDraft, ticketCount: number, visibleTick
   // would send someone to the wrong screen without failing.
   const at = (key: string) => Math.max(0, STEPS.findIndex((x) => x.key === key));
   const out: { step: number; what: string }[] = [];
-  if (!d.title.trim()) out.push({ step: at("basics"), what: "Give the listing a name" });
+  if (!d.title.trim()) out.push({ step: at("basics"), what: tNow("p8lst.waBlkName") });
   const homeVisit = d.deliveryMode === "home-visit" || d.deliveryMode === "both";
-  if (d.deliveryMode !== "home-visit" && !d.venueId) out.push({ step: at("details"), what: "Choose where it runs (or pick your online option)" });
-  if (homeVisit && !d.coverageArea) out.push({ step: at("details"), what: "Set the area you'll travel to for home visits" });
+  if (d.deliveryMode !== "home-visit" && !d.venueId) out.push({ step: at("details"), what: tNow("p8lst.waBlkVenue") });
+  if (homeVisit && !d.coverageArea) out.push({ step: at("details"), what: tNow("p8lst.waBlkArea") });
   else if (homeVisit && d.coverageArea?.mode === "postcodePrefixes" && !(d.coverageArea.postcodePrefixes ?? []).length)
-    out.push({ step: at("details"), what: "Add at least one postcode area you cover" });
+    out.push({ step: at("details"), what: tNow("p8lst.waBlkPrefix") });
   else if (homeVisit && d.coverageArea?.mode === "radius" && (!d.coverageArea.basePostcode || !d.coverageArea.radiusMiles))
-    out.push({ step: at("details"), what: "Set your base postcode and travel radius" });
-  if (!d.runFrom || !d.runTo) out.push({ step: at("run"), what: "Set the dates it runs between" });
-  else if (d.runTo < d.runFrom) out.push({ step: at("run"), what: "The end date is before the start date" });
+    out.push({ step: at("details"), what: tNow("p8lst.waBlkRadius") });
+  if (!d.runFrom || !d.runTo) out.push({ step: at("run"), what: tNow("p8lst.waBlkDates") });
+  else if (d.runTo < d.runFrom) out.push({ step: at("run"), what: tNow("p8lst.waBlkEndBefore") });
   else if (!genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x)).length) {
     // The trap: a range that only covers days the operator has unticked.
-    out.push({ step: at("run"), what: "Those dates don't include any running days — check which weekdays are ticked" });
+    out.push({ step: at("run"), what: tNow("p8lst.waBlkNoDays") });
   }
-  if (!d.blockId) out.push({ step: at("tickets"), what: "Pick a block so the listing has passes and prices" });
-  else if (ticketCount === 0) out.push({ step: at("tickets"), what: "That block has no passes — add some in the Blocks area" });
-  else if (visibleTicketCount === 0) out.push({ step: at("tickets"), what: "Every ticket is hidden — show at least one, or parents have nothing to book" });
+  if (!d.blockId) out.push({ step: at("tickets"), what: tNow("p8lst.waBlkPickBlock") });
+  else if (ticketCount === 0) out.push({ step: at("tickets"), what: tNow("p8lst.waBlkNoPasses") });
+  else if (visibleTicketCount === 0) out.push({ step: at("tickets"), what: tNow("p8lst.waBlkAllHidden") });
   // Capacity is deliberately not required — left blank the listing just
   // doesn't show capacity anywhere, which is a legitimate way to run one.
   return out;
@@ -1003,6 +1003,8 @@ export function ListingWizard({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tr = useT();
+  const { locale: loc } = useI18n();
   const [d, setD] = useState<WizardDraft>(() => {
     const norm = (arr: unknown) =>
       ((arr as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
@@ -1036,7 +1038,7 @@ export function ListingWizard({
   const [conflicted, setConflicted] = useState(false);
 
   async function syncApi(status: "draft" | "live", quiet = false): Promise<boolean> {
-    if (conflicted) { setMsg("This listing changed elsewhere — reload the page before saving again."); return false; }
+    if (conflicted) { setMsg(tr("p8lst.waConflictReload")); return false; }
     if (!quiet) setBusy(true);
     setMsg(null);
     try {
@@ -1066,7 +1068,7 @@ export function ListingWizard({
     } catch (e) {
       if (e instanceof ApiError && e.status === 409 && e.message.includes("changed elsewhere")) {
         setConflicted(true);
-        setMsg("This listing changed in another tab. Reload the page to see the latest version before saving again.");
+        setMsg(tr("p8lst.waConflictTab"));
         if (!quiet) setBusy(false);
         return false;
       }
@@ -1080,7 +1082,7 @@ export function ListingWizard({
         const raw = rawMsg;
         // Server validation comes back as a raw JSON issues array — never show that.
         const looksLikeValidation = /\[\{|"code"|too_small|"path"/.test(raw);
-        setMsg(looksLikeValidation ? (d.title.trim() ? "Couldn’t save — please check your entries." : "Give the listing a name first.") : (raw || "Save failed"));
+        setMsg(looksLikeValidation ? (d.title.trim() ? tr("p8lst.waSaveCheck") : tr("p8lst.waGiveName")) : (raw || tr("p8lst.waSaveFailed")));
         setBusy(false);
       }
       return false;
@@ -1130,7 +1132,7 @@ export function ListingWizard({
     if (blockers.length) {
       // Send them to the first thing that's missing rather than making them hunt.
       setStep(blockers[0].step);
-      setMsg(`${blockers.length} thing${blockers.length === 1 ? "" : "s"} to finish before this can be published`);
+      setMsg(pickPlural(tr, loc, "p8lst.waThingsToFinish", blockers.length));
       return;
     }
     if (await syncApi("live")) { onSaved(); onClose(); }
@@ -1147,24 +1149,24 @@ export function ListingWizard({
       <div className="flex-none px-5 py-4 text-white sm:px-6" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
         <div className="mx-auto flex max-w-[1160px] flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{d.id ? "Edit listing" : "Create a listing"}</div>
-            <div className="truncate text-[12.5px] text-white/80">Step {step + 1} of {STEPS.length} · {STEPS[step].label}</div>
+            <div className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{d.id ? tr("p8lst.waEditListing") : tr("p8lst.waCreateListing")}</div>
+            <div className="truncate text-[12.5px] text-white/80">{tr("p8lst.waStepOf", { n: step + 1, total: STEPS.length, label: tr("p8lst.waStep_" + STEPS[step].key) })}</div>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             {msg && <span className="me-0.5 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white">{msg}</span>}
             {(() => {
-              const label = { idle: "", dirty: "", saving: "Saving…", saved: "Saved", error: "" }[saveState];
+              const label = { idle: "", dirty: "", saving: tr("p8lst.waSaving"), saved: tr("p8lst.waSaved"), error: "" }[saveState];
               return label ? <span className="me-0.5 text-[11.5px] font-semibold text-white/85">{saveState === "saved" ? "✓ " : ""}{label}</span> : null;
             })()}
-            <button type="button" disabled={busy} onClick={saveDraftAction} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25 disabled:opacity-40">Save draft</button>
-            <button type="button" onClick={() => setFullPreview(true)} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25">👁 Preview</button>
-            <button type="button" disabled={busy} onClick={publishAction} title={blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} left to do` : undefined} className="rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#16306e] shadow-sm hover:bg-white/90 disabled:opacity-60">Publish{blockers.length > 0 && <span className="ms-1 opacity-70">({blockers.length})</span>}</button>
-            <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px] font-bold hover:bg-white/30">×</button>
+            <button type="button" disabled={busy} onClick={saveDraftAction} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25 disabled:opacity-40">{tr("p8lst.waSaveDraft")}</button>
+            <button type="button" onClick={() => setFullPreview(true)} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25">{tr("p8lst.waPreviewBtn")}</button>
+            <button type="button" disabled={busy} onClick={publishAction} title={blockers.length ? pickPlural(tr, loc, "p8lst.waThingsLeft", blockers.length) : undefined} className="rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#16306e] shadow-sm hover:bg-white/90 disabled:opacity-60">{tr("p8lst.waPublish")}{blockers.length > 0 && <span className="ms-1 opacity-70">({blockers.length})</span>}</button>
+            <button type="button" onClick={onClose} aria-label={tr("p8lst.waClose")} className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px] font-bold hover:bg-white/30">×</button>
           </div>
         </div>
         <div className="mx-auto mt-3 flex max-w-[1160px] items-center gap-1">
           {STEPS.map((s, i) => (
-            <button key={s.key} type="button" onClick={() => setStep(i)} title={`${i + 1}. ${s.label}`} className="group flex-1">
+            <button key={s.key} type="button" onClick={() => setStep(i)} title={`${i + 1}. ${tr("p8lst.waStep_" + s.key)}`} className="group flex-1">
               <div className={`h-1.5 rounded-full transition ${i <= step ? "bg-white" : "bg-white/25 group-hover:bg-white/50"}`} />
             </button>
           ))}
@@ -1185,10 +1187,10 @@ export function ListingWizard({
             {stepKey === "details" && <DetailsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "capacity" && <CapacityStep d={d} upd={upd} />}
             {stepKey === "content" && <ContentStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
-            {stepKey === "provided" && <ChipStep n={3} kicker="STEP 3 · PROVIDED" title="What is provided" cardTitle="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }}
+            {stepKey === "provided" && <ChipStep n={3} kicker={tr("p8lst.waKickProvided")} title={tr("p8lst.waProvidedTitle")} cardTitle={tr("p8lst.waProvidedTitle")} lede={tr("p8lst.waProvidedLede")} options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }}
               extra={
                 <div className="mt-4">
-                  <RichCard icon="🧳" title="What to bring" subtitle="What families should pack — shown on the listing and in the confirmation email">
+                  <RichCard icon="🧳" title={tr("p8lst.waBringTitle")} subtitle={tr("p8lst.waBringSub")}>
                     <EditableChips options={local.toBring} sel={d.toBring} emojis={local.emojis} showEmoji check
                       onToggle={(v) => upd({ toBring: toggle(d.toBring, v) })}
                       onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, toBring: [...s.toBring, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ toBring: [...d.toBring, name] }); }}
@@ -1200,7 +1202,7 @@ export function ListingWizard({
             {stepKey === "run" && <RunStep d={d} upd={upd} />}
             {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} />}
             {stepKey === "discounts" && <DiscountsStep d={d} upd={upd} tickets={tickets} />}
-            {stepKey === "preview" && <div><StepHead n={10} kicker="STEP 10 · PREVIEW" title="Preview" lede="Exactly what parents see — the full customer page." /><HeadingsEditor d={d} upd={upd} /><ParentPreview {...previewProps} full /></div>}
+            {stepKey === "preview" && <div><StepHead n={10} kicker={tr("p8lst.waKickPreview")} title={tr("p8lst.waStep_preview")} lede={tr("p8lst.waPreviewLede")} /><HeadingsEditor d={d} upd={upd} /><ParentPreview {...previewProps} full /></div>}
             {stepKey === "addons" && <AddonsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "staff" && <StaffStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "policy" && (
@@ -1208,20 +1210,20 @@ export function ListingWizard({
                 {blockers.length > 0 && (
                   <div className="mb-3 max-w-[720px] rounded-xl border p-3.5" style={{ borderColor: "#fed7aa", background: "#fff7ed" }}>
                     <div className="text-[12.5px] font-extrabold" style={{ color: "#9a3412" }}>
-                      Before this can be published ({blockers.length})
+                      {tr("p8lst.waBeforePublish", { n: blockers.length })}
                     </div>
                     <ul className="mt-1.5 flex flex-col gap-1">
                       {blockers.map((bl, i) => (
                         <li key={i} className="flex items-start gap-2 text-[12px]" style={{ color: "#9a3412" }}>
                           <span className="mt-[2px]">•</span>
                           <button type="button" onClick={() => setStep(bl.step)} className="text-start underline underline-offset-2">
-                            {bl.what} <span className="opacity-70">— step {bl.step + 1}</span>
+                            {bl.what} <span className="opacity-70">{tr("p8lst.waStepN", { n: bl.step + 1 })}</span>
                           </button>
                         </li>
                       ))}
                     </ul>
                     <div className="mt-2 text-[11px]" style={{ color: "#9a3412" }}>
-                      You can still <b>Save draft</b> — it stays unpublished until these are done.
+                      <Rich text={tr("p8lst.waStillSave")} />
                     </div>
                   </div>
                 )}
@@ -1236,22 +1238,22 @@ export function ListingWizard({
       {/* Footer nav — big, fixed. */}
       <div className="flex-none border-t border-[var(--line)] bg-[var(--surface)] px-5 py-3 sm:px-6">
         <div className="mx-auto flex max-w-[1160px] items-center justify-between gap-3">
-          <Button disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>‹ Back</Button>
+          <Button disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>{tr("p8lst.waBack")}</Button>
           {step < STEPS.length - 1 ? (
             <div className="flex items-center gap-2">
               {/* When editing an existing listing, let them save from any step
                   instead of walking to the end every time. */}
               {d.id && (
                 <Button variant="solid" disabled={busy || blockers.length > 0} onClick={publishAction}
-                  title={blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} left to finish first` : "Save your changes now"}>
-                  {blockers.length ? `Save (${blockers.length} left)` : d.status === "live" ? "Save changes" : "Save & publish"}
+                  title={blockers.length ? pickPlural(tr, loc, "p8lst.waLeftFinish", blockers.length) : tr("p8lst.waSaveNow")}>
+                  {blockers.length ? tr("p8lst.waSaveLeft", { n: blockers.length }) : d.status === "live" ? tr("p8lst.waSaveChanges") : tr("p8lst.waSavePublish")}
                 </Button>
               )}
-              <Button variant="primary" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))} className="min-w-[130px]">Next ›</Button>
+              <Button variant="primary" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))} className="min-w-[130px]">{tr("p8lst.waNext")}</Button>
             </div>
           ) : (
             <Button variant="primary" disabled={busy || blockers.length > 0} onClick={publishAction} className="min-w-[130px]">
-              {blockers.length ? `${blockers.length} to finish` : "🎉 Publish"}
+              {blockers.length ? tr("p8lst.waToFinish", { n: blockers.length }) : tr("p8lst.waPublishParty")}
             </Button>
           )}
         </div>
@@ -1262,7 +1264,7 @@ export function ListingWizard({
           className="fixed inset-0 z-[10000] flex items-start justify-center overflow-auto bg-black/60 p-4 sm:p-6">
           <div className="w-full max-w-[1040px]">
             <div className="mb-2 flex items-center justify-between text-white">
-              <span className="text-[13px] font-bold">Customer view — {venue?.name || "your listing"}</span>
+              <span className="text-[13px] font-bold">{tr("p8lst.waCustomerView", { name: venue?.name || tr("p8lst.waYourListing") })}</span>
               <button type="button" onClick={() => setFullPreview(false)} className="text-[22px] leading-none">×</button>
             </div>
             <ParentPreview {...previewProps} full />
@@ -1275,6 +1277,7 @@ export function ListingWizard({
 
 // ── Reusable editable chip group (options carry across all listings) ───────
 function EditableChips({ options, sel, onToggle, onAdd, onDelete, emojis, showEmoji, check }: { options: string[]; sel: string[]; onToggle: (v: string) => void; onAdd: (v: string, emoji: string) => void; onDelete?: (v: string) => void; emojis?: Record<string, string>; showEmoji?: boolean; check?: boolean }) {
+  const tr = useT();
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("⭐");
@@ -1289,16 +1292,16 @@ function EditableChips({ options, sel, onToggle, onAdd, onDelete, emojis, showEm
         return (
           <span key={o} className="inline-flex items-center overflow-hidden rounded-full border" style={on ? { borderColor: "transparent", background: "linear-gradient(120deg,#3f78d8,#1b3f8f)", boxShadow: "0 4px 12px -3px rgba(31,84,163,.55)" } : { borderColor: "var(--line)", background: "#fff" }}>
             <button type="button" onClick={() => onToggle(o)} className="py-1.5 ps-3 text-[12px] font-bold" style={{ color: on ? "#fff" : "var(--ink-2)" }}>{on && check ? "✓ " : ""}{em ? em + " " : ""}{o}</button>
-            {onDelete && <button type="button" onClick={() => onDelete(o)} aria-label={`Delete ${o}`} className="px-2 text-[11px]" style={{ color: on ? "rgba(255,255,255,.7)" : "var(--ink-3)" }}>✕</button>}
+            {onDelete && <button type="button" onClick={() => onDelete(o)} aria-label={tr("p8lst.waDeleteX", { name: o })} className="px-2 text-[11px]" style={{ color: on ? "rgba(255,255,255,.7)" : "var(--ink-3)" }}>✕</button>}
             {!onDelete && <span className="pe-3" />}
           </span>
         );
       })}
       {adding ? (
         <span className="relative inline-flex items-center gap-1">
-          <button type="button" onClick={() => setPicker((p) => !p)} title="Pick an emoji" className="flex h-[30px] w-[34px] items-center justify-center rounded-lg border border-[var(--line)] text-[16px]">{emoji}</button>
-          <Input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="New option" className="w-[150px]" autoFocus />
-          <Button sm variant="primary" onClick={add}>Add</Button>
+          <button type="button" onClick={() => setPicker((p) => !p)} title={tr("p8lst.waPickEmoji")} className="flex h-[30px] w-[34px] items-center justify-center rounded-lg border border-[var(--line)] text-[16px]">{emoji}</button>
+          <Input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder={tr("p8lst.waNewOption")} className="w-[150px]" autoFocus />
+          <Button sm variant="primary" onClick={add}>{tr("p8lst.waAdd")}</Button>
           {picker && (
             <div className="absolute start-0 top-[36px] z-20 max-h-[190px] w-[248px] overflow-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-[0_12px_30px_rgba(0,0,0,.18)]">
               <div className="grid grid-cols-8 gap-0.5">
@@ -1308,17 +1311,18 @@ function EditableChips({ options, sel, onToggle, onAdd, onDelete, emojis, showEm
           )}
         </span>
       ) : (
-        <button type="button" onClick={() => setAdding(true)} className="rounded-full border border-dashed border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-3)]">＋ Add option</button>
+        <button type="button" onClick={() => setAdding(true)} className="rounded-full border border-dashed border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-3)]">{tr("p8lst.waAddOption")}</button>
       )}
     </div>
   );
 }
 
-function ChipStep({ n, kicker, title, lede, options, sel, onToggle, onAdd, onDelete, emojis, headings, cardIcon = "🎒", cardTitle, cardSubtitle = "Tick everything included — saved for every listing", extra }: { n: number; kicker: string; title: string; lede: string; options: string[]; sel: string[]; onToggle: (v: string) => void; onAdd: (v: string, emoji: string) => void; onDelete: (v: string) => void; emojis: Record<string, string>; headings?: React.ReactNode; cardIcon?: string; cardTitle?: string; cardSubtitle?: string; extra?: React.ReactNode }) {
+function ChipStep({ n, kicker, title, lede, options, sel, onToggle, onAdd, onDelete, emojis, headings, cardIcon = "🎒", cardTitle, cardSubtitle, extra }: { n: number; kicker: string; title: string; lede: string; options: string[]; sel: string[]; onToggle: (v: string) => void; onAdd: (v: string, emoji: string) => void; onDelete: (v: string) => void; emojis: Record<string, string>; headings?: React.ReactNode; cardIcon?: string; cardTitle?: string; cardSubtitle?: string; extra?: React.ReactNode }) {
+  const tr = useT();
   return (
     <div className="mx-auto max-w-[900px]">
       <StepHead n={n} kicker={kicker} title={title} lede={lede} />
-      <RichCard icon={cardIcon} title={cardTitle ?? title} subtitle={cardSubtitle}>
+      <RichCard icon={cardIcon} title={cardTitle ?? title} subtitle={cardSubtitle ?? tr("p8lst.waChipSubDefault")}>
         <EditableChips options={options} sel={sel} onToggle={onToggle} onAdd={onAdd} onDelete={onDelete} emojis={emojis} showEmoji check />
         {headings}
       </RichCard>
@@ -1377,6 +1381,7 @@ export function CroppedImage({ im, className, style, contain }: { im: ListingIma
 }
 
 function ImageManager({ images, onChange, addLabel, previewAspect = "16 / 9", contain = false }: { images: ListingImage[]; onChange: (imgs: ListingImage[]) => void; addLabel: string; previewAspect?: string; contain?: boolean }) {
+  const tr = useT();
   const fileRef = useRef<HTMLInputElement>(null);
   // In a walkthrough, the main photo is pre-seeded — open its crop panel on
   // mount so the tour can show the crop-and-move controls straight away.
@@ -1412,16 +1417,16 @@ function ImageManager({ images, onChange, addLabel, previewAspect = "16 / 9", co
       {!contain && im && editIdx !== null && (
         <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-[12px] font-extrabold">✂ Crop &amp; move — drag the sliders (this is exactly what parents see)</span>
-            <Button sm variant="primary" onClick={() => setEditIdx(null)}>Done</Button>
+            <span className="text-[12px] font-extrabold">{tr("p8lst.waCropMove")}</span>
+            <Button sm variant="primary" onClick={() => setEditIdx(null)}>{tr("p8lst.waDone")}</Button>
           </div>
           <CroppedImage im={im} className="w-full max-w-[420px] rounded-lg border border-[var(--line)]" style={{ aspectRatio: previewAspect }} />
           <div className="mt-2 flex max-w-[320px] flex-col gap-1.5 text-[11.5px] text-[var(--ink-3)]">
-            <label className="flex items-center gap-2">Zoom<input type="range" min={100} max={300} value={im.zoom} onChange={(e) => setCrop(editIdx, { zoom: +e.target.value })} className="flex-1" /></label>
-            <label className="flex items-center gap-2">Left ⇄ Right<input type="range" min={0} max={100} value={im.x} onChange={(e) => setCrop(editIdx, { x: +e.target.value })} className="flex-1" /></label>
-            <label className="flex items-center gap-2">Up ⇅ Down<input type="range" min={0} max={100} value={im.y} onChange={(e) => setCrop(editIdx, { y: +e.target.value })} className="flex-1" /></label>
-            <div className="text-[10.5px]">Tip: zoom in first, then Left/Right + Up/Down move the photo inside the frame.</div>
-            <Button sm onClick={() => setCrop(editIdx, { x: 50, y: 50, zoom: 100 })}>Reset</Button>
+            <label className="flex items-center gap-2">{tr("p8lst.waZoom")}<input type="range" min={100} max={300} value={im.zoom} onChange={(e) => setCrop(editIdx, { zoom: +e.target.value })} className="flex-1" /></label>
+            <label className="flex items-center gap-2">{tr("p8lst.waLeftRight")}<input type="range" min={0} max={100} value={im.x} onChange={(e) => setCrop(editIdx, { x: +e.target.value })} className="flex-1" /></label>
+            <label className="flex items-center gap-2">{tr("p8lst.waUpDown")}<input type="range" min={0} max={100} value={im.y} onChange={(e) => setCrop(editIdx, { y: +e.target.value })} className="flex-1" /></label>
+            <div className="text-[10.5px]">{tr("p8lst.waCropTip")}</div>
+            <Button sm onClick={() => setCrop(editIdx, { x: 50, y: 50, zoom: 100 })}>{tr("p8lst.waReset")}</Button>
           </div>
         </div>
       )}
@@ -1494,32 +1499,33 @@ function genBio(prompt: string, m: StaffMember, variant: number): string {
 
 // ── Step: Basics ───────────────────────────────────────────────────────────
 function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
+  const tr = useT();
   return (
     <div className="max-w-[1120px]">
-      <StepHead n={1} kicker="STEP 1 · BASICS" title="Make a great first impression" lede="A clear name and a big, bright photo — pick a layout to see how it looks." />
-      <FieldLabel>Listing title · up to 70 characters</FieldLabel>
-      <Input value={d.title} maxLength={70} onChange={(e) => upd({ title: e.target.value })} placeholder="e.g. Summer Multi-Activity Camp" className="mb-3 w-full" />
+      <StepHead n={1} kicker={tr("p8lst.waKickBasics")} title={tr("p8lst.waBasicsTitle")} lede={tr("p8lst.waBasicsLede")} />
+      <FieldLabel>{tr("p8lst.waTitleLbl")}</FieldLabel>
+      <Input value={d.title} maxLength={70} onChange={(e) => upd({ title: e.target.value })} placeholder={tr("p8lst.waTitlePh")} className="mb-3 w-full" />
 
       <div className="grid items-start gap-4 md:grid-cols-2">
-        <RichCard icon="🖼️" title="Main image" subtitle="Layout + the hero photo">
+        <RichCard icon="🖼️" title={tr("p8lst.waMainImage")} subtitle={tr("p8lst.waMainImageSub")}>
           <div className="mb-2 flex flex-wrap gap-1.5">
             {LAYOUTS.map((l) => (
               <button key={l.key} type="button" onClick={() => upd({ layout: l.key })} className="rounded-lg border px-2.5 py-1.5 text-[11px] font-bold"
                 style={d.layout === l.key ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)" }}>
-                {l.label}
+                {tr("p8lst.waLayout_" + l.key)}
               </button>
             ))}
           </div>
-          <ImageManager images={d.images} onChange={(imgs) => upd({ images: imgs })} addLabel="＋ Add main photo" previewAspect={d.layout === "wide" ? "3 / 1" : "16 / 9"} />
-          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Pick the shape (tall <b>16:9</b> or short-wide <b>banner</b>) — the crop preview matches the customer hero exactly. <b>Add more than one photo and they rotate as a carousel.</b></div>
+          <ImageManager images={d.images} onChange={(imgs) => upd({ images: imgs })} addLabel={tr("p8lst.waAddMainPhoto")} previewAspect={d.layout === "wide" ? "3 / 1" : "16 / 9"} />
+          <div className="mt-1 text-[11px] text-[var(--ink-3)]"><Rich text={tr("p8lst.waShapeHint")} /></div>
         </RichCard>
-        <RichCard icon="📸" title="Gallery" subtitle="Extra photos for the page" tint="teal">
-          <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" previewAspect="1 / 1" />
-          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Shown as square tiles at the bottom of the customer page — click a photo to crop it to fit.</div>
+        <RichCard icon="📸" title={tr("p8lst.waGallery")} subtitle={tr("p8lst.waGallerySub")} tint="teal">
+          <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel={tr("p8lst.waAddGallery")} previewAspect="1 / 1" />
+          <div className="mt-1 text-[11px] text-[var(--ink-3)]">{tr("p8lst.waGalleryHint")}</div>
         </RichCard>
       </div>
       <div className="mt-4 rounded-2xl border border-[var(--line)] bg-white p-3.5">
-        <FieldLabel>🎨 Page colour theme <span className="font-normal text-[var(--ink-3)]">— the look parents see for this listing (each listing can have its own)</span></FieldLabel>
+        <FieldLabel>{tr("p8lst.waThemeLbl")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.waThemeNote")}</span></FieldLabel>
         <div className="mt-1"><ThemePicker value={resolveTheme(d.pageStyle)} onChange={(t) => upd({ pageStyle: t })} /></div>
       </div>
     </div>
@@ -1985,6 +1991,8 @@ function SafetyStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
 
 // ── Step: When it runs ─────────────────────────────────────────────────────
 function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
+  const tr = useT();
+  const { locale } = useI18n();
   const weekly = d.blockMode === "weekly";
   const dates = useMemo(() => genDates(d.runFrom, d.runTo, d.days), [d.runFrom, d.runTo, d.days]);
   const weeks = useMemo(() => groupWeeks(dates), [dates]);
@@ -1993,26 +2001,27 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
   // & pricing step re-validates each rule against the new dates (falling back and
   // flagging any that no longer fit), and the booking engine guards them too — so
   // still-valid rules survive and only the impossible ones self-correct there.
-  const dayLabel = <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">Days it runs{weekly ? " · locked to Mon–Fri" : ""}</span>;
+  const dayLabel = <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">{weekly ? tr("p8lst.wbDaysLocked") : tr("p8lst.wbDaysItRuns")}</span>;
   return (
     <div className="max-w-[1120px]">
-      <StepHead n={5} kicker="STEP 5 · WHEN IT RUNS" title="When it runs" lede="Pick the block size and which days run — the calendar builds itself." />
+      <StepHead n={5} kicker={tr("p8lst.wbKickRun")} title={tr("p8lst.wbRunTitle")} lede={tr("p8lst.wbRunLede")} />
       <div className="grid items-start gap-4 md:grid-cols-2">
-        <RichCard icon="🗓️" title="Dates & pattern" subtitle="When it runs and on which days">
+        <RichCard icon="🗓️" title={tr("p8lst.wbRunDatesTitle")} subtitle={tr("p8lst.wbRunDatesSub")}>
           <div className="mb-3 flex gap-3">
-            <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">Runs from</FieldLabel><Input id="wiz-run-from" type="date" value={d.runFrom} onChange={(e) => upd({ runFrom: e.target.value })} className="w-full" /></div>
-            <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">Runs to</FieldLabel><Input id="wiz-run-to" type="date" value={d.runTo} onChange={(e) => upd({ runTo: e.target.value })} className="w-full" /></div>
+            <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">{tr("p8lst.wbRunsFrom")}</FieldLabel><Input id="wiz-run-from" type="date" value={d.runFrom} onChange={(e) => upd({ runFrom: e.target.value })} className="w-full" /></div>
+            <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">{tr("p8lst.wbRunsTo")}</FieldLabel><Input id="wiz-run-to" type="date" value={d.runTo} onChange={(e) => upd({ runTo: e.target.value })} className="w-full" /></div>
           </div>
-          <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">Block size</span>
+          <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">{tr("p8lst.wbBlockSize")}</span>
           <div className="mb-3 flex flex-wrap gap-1.5">
-            {[["weekly", "Weekly (Mon–Fri)"], ["custom", "Custom days (incl. weekends)"]].map(([k, label]) => (
+            {[["weekly", tr("p8lst.wbBlockWeekly")], ["custom", tr("p8lst.wbBlockCustom")]].map(([k, label]) => (
               <button key={k} type="button" onClick={() => upd({ blockMode: k as "weekly" | "custom", days: k === "weekly" ? [1, 2, 3, 4, 5] : d.days })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold"
                 style={d.blockMode === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)" }}>{label}</button>
             ))}
           </div>
           {dayLabel}
           <div className="flex flex-wrap gap-1.5">
-            {WEEKDAYS.map(([n, label]) => {
+            {WEEKDAYS.map(([n]) => {
+              const label = tr("p8lst.wbDay_" + n);
               const on = d.days.includes(n);
               return (
                 <button key={n} type="button" disabled={weekly} onClick={() => upd({ days: toggle(d.days.map(String), String(n)).map(Number) })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold disabled:opacity-50"
@@ -2022,10 +2031,10 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
           </div>
         </RichCard>
 
-        <RichCard icon="📆" title={`Calendar · ${weeks.length} ${weeks.length === 1 ? "week" : "weeks"}`} subtitle={`${live} bookable dates live · tap a day to switch it off`} tint="teal">
+        <RichCard icon="📆" title={pickPlural(tr, locale, "p8lst.wbCalTitle", weeks.length)} subtitle={tr("p8lst.wbCalSub", { n: live })} tint="teal">
           {dates.length === 0 ? (
             <div className="rounded-lg border border-dashed border-[var(--line)] p-4 text-center text-[12px] text-[var(--ink-3)]">
-              Set the from/to dates (and pick weekdays) and the calendar builds itself here.
+              {tr("p8lst.wbCalEmpty")}
             </div>
           ) : (
             <div className="flex max-h-[300px] flex-col gap-2 overflow-y-auto pe-1">
@@ -2034,7 +2043,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
                 return (
                   <div key={w.mon} className="shrink-0 overflow-hidden rounded-xl border border-[var(--line)]">
                     <div className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-extrabold text-white" style={{ background: col }}>
-                      Week {w.n} <span className="font-semibold opacity-80">· from {fmtDate(w.mon)}</span>
+                      {tr("p8lst.wbWeekN", { n: w.n })} <span className="font-semibold opacity-80">{tr("p8lst.wbWeekFrom", { date: fmtDate(w.mon) })}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5 p-2.5">
                       {w.days.map((iso) => {
@@ -2061,6 +2070,8 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
 
 // ── Step: Tickets & pricing (pulls from Blocks) ────────────────────────────
 function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; blocks: BlocksStore; tickets: { name: string; days: number; price: number }[] }) {
+  const tr = useT();
+  const { locale } = useI18n();
   const portalHref = usePortalHref();
   const ovUpd = (name: string, field: keyof TicketOverride, value: string) =>
     upd({ ticketOverrides: { ...d.ticketOverrides, [name]: { ...d.ticketOverrides[name], [field]: value } } });
@@ -2081,21 +2092,21 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
   const anyRuleReset = multiDay.some((t) => { const s = (d.bookRules ?? {})[t.name]; return s && !ruleValid(t.days, s); });
   return (
     <div className="mx-auto max-w-[1120px]">
-      <StepHead n={6} kicker="STEP 6 · TICKETS & PRICING" title="Tickets & pricing" lede="Pick a block you built in the Blocks area — its passes & prices become this listing's tickets." />
-      <RichCard icon="🎟️" title="Choose a block" subtitle="Its passes & prices become this listing's tickets">
+      <StepHead n={6} kicker={tr("p8lst.wbKickTickets")} title={tr("p8lst.wbTicketsTitle")} lede={tr("p8lst.wbTicketsLede")} />
+      <RichCard icon="🎟️" title={tr("p8lst.wbChooseBlock")} subtitle={tr("p8lst.wbChooseBlockSub")}>
         <div>
       {blocks.loading ? (
-        <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">Loading your blocks…</Card>
+        <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">{tr("p8lst.wbBlocksLoading")}</Card>
       ) : blocks.error ? (
         <Card className="p-4 text-[12.5px]" style={{ borderColor: "#f4c7c7", background: "#fdf2f2", color: "#b91c1c" }}>
-          <b>Couldn’t load your blocks.</b> {blocks.error}
+          <b>{tr("p8lst.wbBlocksLoadFail")}</b> {blocks.error}
         </Card>
       ) : blocks.library.length === 0 ? (
         <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">
-          <div className="font-bold text-[var(--ink)]">You haven&rsquo;t built a block yet.</div>
-          <p className="mt-1">A block is the pattern parents book — set your periods (times) and passes once, price it, and reuse it on any listing.</p>
-          <a href={portalHref("/blocks")} target="_blank" rel="noreferrer" className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white hover:bg-[#16306e]">Build a block in Blocks ↗</a>
-          <p className="mt-2.5 text-[11.5px]">No need to lose your work — press <b>Save draft</b> up top, go build your block, then come back and finish this listing.</p>
+          <div className="font-bold text-[var(--ink)]">{tr("p8lst.wbNoBlockTitle")}</div>
+          <p className="mt-1">{tr("p8lst.wbNoBlockBody")}</p>
+          <a href={portalHref("/blocks")} target="_blank" rel="noreferrer" className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white hover:bg-[#16306e]">{tr("p8lst.wbBuildBlock")}</a>
+          <p className="mt-2.5 text-[11.5px]"><Rich text={tr("p8lst.wbNoBlockNote")} /></p>
         </Card>
       ) : (
         <div className="flex flex-col gap-2">
@@ -2108,18 +2119,18 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
               <div key={b.id} className="rounded-xl border-2 p-3" style={{ borderColor: "var(--brand-2)", background: "var(--brand-soft)" }}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5">
-                    <span className="whitespace-nowrap rounded-full bg-[var(--brand-2,#2f6bd8)] px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">✓ Selected</span>
+                    <span className="whitespace-nowrap rounded-full bg-[var(--brand-2,#2f6bd8)] px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">{tr("p8lst.wbSelected")}</span>
                     <div>
                       <div className="text-[13.5px] font-extrabold text-[var(--brand-ink)]">{b.name}</div>
-                      <div className="text-[11.5px] text-[var(--ink-3)]">{b.periodIds.length} period{b.periodIds.length === 1 ? "" : "s"} · {b.passIds.length} pass{b.passIds.length === 1 ? "" : "es"}</div>
+                      <div className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.wbPeriodsPasses", { p: b.periodIds.length, q: b.passIds.length })}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={openBlocks} className="whitespace-nowrap rounded-full border border-[var(--brand-2)] bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--brand-ink)] hover:bg-[var(--brand-soft)]">✎ Edit block ↗</button>
-                    <button type="button" onClick={() => upd({ blockId: null })} className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">✕ Unselect</button>
+                    <button type="button" onClick={openBlocks} className="whitespace-nowrap rounded-full border border-[var(--brand-2)] bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--brand-ink)] hover:bg-[var(--brand-soft)]">{tr("p8lst.wbEditBlock")}</button>
+                    <button type="button" onClick={() => upd({ blockId: null })} className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">{tr("p8lst.wbUnselect")}</button>
                   </div>
                 </div>
-                <div className="mt-2.5 rounded-lg bg-white/60 px-2.5 py-1.5 text-[11px] font-semibold text-[var(--brand-ink)]">↓ Its passes are now the editable tickets below — set each one&rsquo;s age, capacity, or close/hide it. Change the periods &amp; passes themselves in <b>Edit block</b>.</div>
+                <div className="mt-2.5 rounded-lg bg-white/60 px-2.5 py-1.5 text-[11px] font-semibold text-[var(--brand-ink)]"><Rich text={tr("p8lst.wbPassesNow")} /></div>
               </div>
             );
             return (
@@ -2128,9 +2139,9 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                 style={{ borderColor: "var(--line)" }}>
                 <div>
                   <div className="text-[13.5px] font-extrabold">▥ {b.name}</div>
-                  <div className="text-[11.5px] text-[var(--ink-3)]">{b.periodIds.length} period{b.periodIds.length === 1 ? "" : "s"} · {b.passIds.length} pass{b.passIds.length === 1 ? "" : "es"}</div>
+                  <div className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.wbPeriodsPasses", { p: b.periodIds.length, q: b.passIds.length })}</div>
                 </div>
-                <span className="whitespace-nowrap rounded-full border border-[var(--brand-2)] px-3 py-1 text-[11.5px] font-bold text-[var(--brand-ink)]">Use this block</span>
+                <span className="whitespace-nowrap rounded-full border border-[var(--brand-2)] px-3 py-1 text-[11.5px] font-bold text-[var(--brand-ink)]">{tr("p8lst.wbUseBlock")}</span>
               </button>
             );
           })}
@@ -2138,18 +2149,18 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
       )}
       {tickets.length > 0 && (
         <div className="mt-3">
-          <SectionHead icon="🎟️">Tickets on this listing — each can amend its own age &amp; capacity</SectionHead>
+          <SectionHead icon="🎟️">{tr("p8lst.wbTicketsHead")}</SectionHead>
           <p className="mb-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
-            <b>Capacity is per day</b> — the max for this pass each day, separate from the listing total. Handy for capping a <b>1:1 / SEND</b> pass to your staff. <b>Blank</b> = listing default · <b>0</b> = closed.
+            <Rich text={tr("p8lst.wbCapPerDay")} />
           </p>
           {anyRuleReset && (
             <div className="mb-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] font-semibold text-[#7a5b06]">
-              ⚠️ Your dates changed, so a pass&rsquo;s booking option no longer fits and was reset — check the highlighted pass below.
+              {tr("p8lst.wbRuleReset")}
             </div>
           )}
           <div className="mb-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[10.5px] text-[var(--ink-3)]">
-            <span><b className="text-[#c0392b]">Close</b> = parents still see it, marked <b>Closed</b> — can&rsquo;t book.</span>
-            <span><b className="text-[var(--ink-2)]">Hide</b> = removed from this listing entirely — parents never see it.</span>
+            <span><Rich text={tr("p8lst.wbCloseNote")} /></span>
+            <span><Rich text={tr("p8lst.wbHideNote")} /></span>
           </div>
           {tickets.map((t) => {
             const ov = d.ticketOverrides[t.name] || {};
@@ -2169,39 +2180,39 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="flex items-center gap-2">
                       <span className="text-[14px] font-extrabold">{t.name}</span>
-                      <span className="rounded-full bg-[var(--panel)] px-2 py-[1px] text-[10.5px] font-bold text-[var(--ink-3)]">{t.days} day{t.days === 1 ? "" : "s"}</span>
-                      {hidden && <span className="rounded-full bg-[var(--panel)] px-2 py-[1px] text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Hidden</span>}
-                      {unfit && !hidden && <span className="rounded-full bg-[#fdebec] px-2 py-[1px] text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#c0392b]">Won&rsquo;t fit</span>}
-                      {closed && !hidden && !unfit && <span className="rounded-full bg-[#fdebec] px-2 py-[1px] text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#c0392b]">Closed</span>}
+                      <span className="rounded-full bg-[var(--panel)] px-2 py-[1px] text-[10.5px] font-bold text-[var(--ink-3)]">{pickPlural(tr, locale, "p8lst.wbDaysN", t.days)}</span>
+                      {hidden && <span className="rounded-full bg-[var(--panel)] px-2 py-[1px] text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("p8lst.wbHidden")}</span>}
+                      {unfit && !hidden && <span className="rounded-full bg-[#fdebec] px-2 py-[1px] text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#c0392b]">{tr("p8lst.wbWontFit")}</span>}
+                      {closed && !hidden && !unfit && <span className="rounded-full bg-[#fdebec] px-2 py-[1px] text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#c0392b]">{tr("p8lst.wbClosed")}</span>}
                     </span>
                     <span className="flex items-center gap-2.5">
                       <span className="text-[16px] font-black tracking-[-0.01em]" style={{ fontVariantNumeric: "tabular-nums", color: (closed || unfit) && !hidden ? "#c0392b" : "var(--ink)", textDecoration: unfit ? "line-through" : undefined }}>{money(t.price)}</span>
                       {!hidden && !unfit && (
-                        <button type="button" onClick={() => toggleClosed(t.name, !closed)} title={closed ? "Reopen — parents can book again" : "Close — shows as Closed, can't be booked"}
+                        <button type="button" onClick={() => toggleClosed(t.name, !closed)} title={closed ? tr("p8lst.wbReopenTip") : tr("p8lst.wbCloseTip")}
                           className="rounded-full border px-3 py-[4px] text-[11px] font-bold transition-colors"
                           style={closed ? { borderColor: "#e21d27", background: "#e21d27", color: "#fff" } : { borderColor: "#f0b8b8", color: "#c0392b" }}>
-                          {closed ? "Reopen" : "Close"}
+                          {closed ? tr("p8lst.wbReopen") : tr("p8lst.wbClose")}
                         </button>
                       )}
                       <button type="button" onClick={() => toggleHidden(t.name, !hidden)} className="rounded-full border border-[var(--line)] px-3 py-[4px] text-[11px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]">
-                        {hidden ? "Show" : "Hide"}
+                        {hidden ? tr("p8lst.wbShow") : tr("p8lst.wbHide")}
                       </button>
                     </span>
                   </div>
                   {!hidden && unfit && (
                     <div className="mt-2 rounded-lg bg-[#fdecec] px-2.5 py-2 text-[11.5px] font-semibold leading-[1.5] text-[#c0392b]">
-                      ⚠ <b>Not available for this run</b> — a {t.days}-day pass needs {t.days} days, but this run only offers {totalRun}. Parents can&rsquo;t book it. Lengthen the run/days, or <b>Hide</b> this pass.
+                      <Rich text={tr("p8lst.wbUnfit", { days: t.days, total: totalRun })} />
                     </div>
                   )}
                   {!hidden && !unfit && (
                     <div className="mt-2.5 flex flex-wrap items-end gap-2">
-                      <div className="w-[84px]"><FieldLabel>Age from</FieldLabel><Input type="number" min={0} value={ov.ageFrom ?? ""} onChange={(e) => ovUpd(t.name, "ageFrom", e.target.value)} placeholder={d.ageFrom || "—"} className="w-full" /></div>
-                      <div className="w-[84px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={ov.ageTo ?? ""} onChange={(e) => ovUpd(t.name, "ageTo", e.target.value)} placeholder={d.ageTo || "—"} className="w-full" /></div>
-                      <div className="w-[110px]"><FieldLabel>Capacity / day</FieldLabel><Input type="number" min={0} value={ov.capacity ?? ""} onChange={(e) => ovUpd(t.name, "capacity", e.target.value)} placeholder={d.maxAttendees} className="w-full" style={closed ? { borderColor: "#f0b8b8", color: "#c0392b", fontWeight: 700 } : undefined} /></div>
-                      <span className="pb-[6px] text-[10.5px] text-[var(--ink-3)]"><b>Per day.</b> <b>Blank</b> = listing default · <b className={closed ? "text-[#c0392b]" : undefined}>0 = closed</b>.</span>
+                      <div className="w-[84px]"><FieldLabel>{tr("p8lst.wbAgeFrom")}</FieldLabel><Input type="number" min={0} value={ov.ageFrom ?? ""} onChange={(e) => ovUpd(t.name, "ageFrom", e.target.value)} placeholder={d.ageFrom || "—"} className="w-full" /></div>
+                      <div className="w-[84px]"><FieldLabel>{tr("p8lst.wbAgeTo")}</FieldLabel><Input type="number" min={0} value={ov.ageTo ?? ""} onChange={(e) => ovUpd(t.name, "ageTo", e.target.value)} placeholder={d.ageTo || "—"} className="w-full" /></div>
+                      <div className="w-[110px]"><FieldLabel>{tr("p8lst.wbCapDay")}</FieldLabel><Input type="number" min={0} value={ov.capacity ?? ""} onChange={(e) => ovUpd(t.name, "capacity", e.target.value)} placeholder={d.maxAttendees} className="w-full" style={closed ? { borderColor: "#f0b8b8", color: "#c0392b", fontWeight: 700 } : undefined} /></div>
+                      <span className="pb-[6px] text-[10.5px] text-[var(--ink-3)]"><Rich text={tr("p8lst.wbPerDayNote")} /></span>
                     </div>
                   )}
-                  {hidden && <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Not offered on this listing. The pass still exists in your block — <b>Show</b> to bring it back.</div>}
+                  {hidden && <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]"><Rich text={tr("p8lst.wbHiddenNote")} /></div>}
                   {/* How parents can book this pass — on the card itself (multi-day
                       passes only; a single day is always just picked per day). */}
                   {!hidden && !unfit && t.days > 1 && (() => {
@@ -2214,24 +2225,24 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                     const wasReset = !!stored && !okFor(stored);
                     return (
                       <div className="mt-2.5 border-t border-dashed border-[var(--line)] pt-2">
-                        <FieldLabel>🧭 How parents book it{wasReset && <span className="ms-1 font-bold text-[#c0392b]">· reset — please confirm</span>}</FieldLabel>
+                        <FieldLabel>{tr("p8lst.wbHowBook")}{wasReset && <span className="ms-1 font-bold text-[#c0392b]"> {tr("p8lst.wbResetConfirm")}</span>}</FieldLabel>
                         <div className="flex flex-wrap gap-1.5">
                           {BOOK_RULES.map((r) => {
                             const disabled = !okFor(r.key);
                             const sel = rule === r.key;
-                            const why = r.key === "week" ? `A ${t.days}-day pass is longer than one week (${weekLen} days)`
-                              : `Only for a whole week (${weekLen} days) or the whole run (${totalRun} days)`;
+                            const why = r.key === "week" ? tr("p8lst.wbRuleWhyWeek", { days: t.days, week: weekLen })
+                              : tr("p8lst.wbRuleWhyOther", { week: weekLen, total: totalRun });
                             return (
                               <button key={r.key} type="button" disabled={disabled} onClick={() => setBookRule(t.name, r.key)}
                                 title={disabled ? why : undefined}
                                 className="flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors disabled:cursor-not-allowed disabled:opacity-35"
                                 style={sel ? { background: r.color, borderColor: r.color, color: "#fff" } : { borderColor: `${r.color}59`, color: r.color, background: "#fff" }}>
-                                <span className="text-[13px]">{r.icon}</span>{r.label(t.days)}
+                                <span className="text-[13px]">{r.icon}</span>{tr("p8lst.wbRuleLabel_" + r.key, { d: t.days })}
                               </button>
                             );
                           })}
                         </div>
-                        <div className="mt-1 text-[11px] font-semibold text-[var(--ink-2)]">{(BOOK_RULES.find((r) => r.key === rule) ?? BOOK_RULES[0]).hint(t.days)}</div>
+                        <div className="mt-1 text-[11px] font-semibold text-[var(--ink-2)]">{tr("p8lst.wbRuleHint_" + (BOOK_RULES.find((r) => r.key === rule) ?? BOOK_RULES[0]).key, { d: t.days })}</div>
                       </div>
                     );
                   })()}
