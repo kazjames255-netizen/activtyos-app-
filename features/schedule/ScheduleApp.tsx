@@ -1029,7 +1029,7 @@ export function ScheduleApp() {
             <div className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t("schedule.weeklyAvailability")}</div>
             {st.avail !== "confirmed" ? <p className="py-2 text-[12.5px] text-[var(--ink-3)]">{t("schedule.notSubmittedReminder")}</p> : (
               <div className="flex flex-col gap-2">
-                {WDAYS.map(([k, lbl]) => { const w = st.week?.[k]; return (
+                {WDAYS.map(([k]) => { const w = st.week?.[k]; return (
                   <div key={k} className="flex items-center gap-3">
                     <span className="w-9 flex-none text-[12.5px] font-extrabold text-[var(--ink)]">{wdShortKey(k)}</span>
                     <div className="relative h-2 flex-1 rounded-full bg-[var(--panel)]">{w && <div className="absolute top-0 h-2 rounded-full" style={{ insetInlineStart: `${(mins(w.from) - WIN_A) / WIN * 100}%`, width: `${(mins(w.to) - mins(w.from)) / WIN * 100}%`, background: "#22b365" }} />}</div>
@@ -1087,7 +1087,7 @@ export function ScheduleApp() {
                 </div>
                 {/* per-day */}
                 <div className="mt-2.5 flex flex-col gap-1.5">
-                  {WDAYS.map(([k, lbl]) => { const w = target[k]; return (
+                  {WDAYS.map(([k]) => { const w = target[k]; return (
                     <div key={k} className="flex flex-wrap items-center gap-2.5 rounded-xl border px-3 py-2" style={{ borderColor: w ? "#c9e7d5" : "var(--line)", background: w ? "#f2faf5" : "var(--surface)" }}>
                       <button type="button" onClick={() => setDay(k, w ? null : { from: "09:00", to: "17:00" })} role="switch" aria-checked={!!w} className="relative h-[22px] w-[40px] flex-none rounded-full transition-colors" style={{ background: w ? "#22b365" : "var(--line)" }}><span className="absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white transition-all" style={{ left: w ? "21px" : "3px" }} /></button>
                       <span className="w-[40px] flex-none text-[13px] font-extrabold text-[var(--ink)]">{wdShortKey(k)}</span>

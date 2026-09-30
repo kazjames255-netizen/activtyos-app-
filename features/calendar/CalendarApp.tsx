@@ -1,7 +1,7 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
-import { useT } from "@/lib/i18n/provider";
+import { useT, tNow } from "@/lib/i18n/provider";
 import { Rich } from "@/features/setup/Rich";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
@@ -36,7 +36,6 @@ const PALETTE = ["#6d28d9", "#0369a1", "#be1259", "#047857", "#b45309", "#c2410c
 const soft = (hex: string) => `color-mix(in srgb,${hex} 14%,var(--surface))`;
 
 /** Month / weekday names in the active language (0 = January; 0 = Sunday). */
-const monthName = (m: number, width: "long" | "short" = "long") => new Date(2024, m, 1).toLocaleDateString(dl(), { month: width });
 const dowName = (d: number, width: "long" | "short" = "long") => new Date(2024, 0, 7 + d).toLocaleDateString(dl(), { weekday: width });
 const pad = (n: number) => String(n).padStart(2, "0");
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -76,7 +75,7 @@ export function CalendarApp() {
         for (const li of l) for (const b of li.blocks ?? []) for (const s of b.sessions ?? []) dates.push(s.date);
         if (dates.length) { const now = new Date(); if (!dates.some((d) => d.slice(0, 7) === monthKey(now))) { const sorted = [...dates].sort(); const target = sorted.find((d) => d >= iso(now)) ?? sorted[sorted.length - 1]; if (target) setCursor(fromIso(target)); } }
       }
-    }).catch((e) => setError(e instanceof Error ? e.message : t("p8set.failedToLoad")));
+    }).catch((e) => setError(e instanceof Error ? e.message : tNow("p8set.failedToLoad")));
     apiGet<CalEvent[]>("/api/calendar-events").then(setEvents).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);

@@ -359,7 +359,7 @@ function StandingWeekly({ pendingReq, lastReq, pattern, onSubmitted }: { request
 
       <Card className="p-4">
         <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
-          {DAYS.map(([k, label]) => {
+          {DAYS.map(([k]) => {
             const day = a.days[k];
             return (
               <div key={k} className="flex flex-wrap items-center gap-3 py-2.5">

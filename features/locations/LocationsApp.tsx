@@ -7,7 +7,7 @@ import { get as apiGet, isDemoMode } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Input, Select } from "@/components/ui";
-import { useI18n } from "@/lib/i18n/provider";
+import { useI18n, tNow } from "@/lib/i18n/provider";
 import { roleLabel } from "@/features/schedule/fmt";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/features/setup/Rich";
@@ -73,7 +73,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
     // Locations + listings alongside: an invite's "all locations" / listings need them to place someone.
     Promise.all([fetchDeployment(), apiGet<{ venues?: Venue[] }>("/api/library"), apiGet<Listing[]>("/api/listings?mine=1")])
       .then(([raw, lib, ls]) => setStore({ staff: resolveDeployment(raw, (lib.venues ?? []).map((v) => v.id), ls) }))
-      .catch((e) => setSaveErr(t("p8set.lcLoadErr", { msg: e instanceof Error ? e.message : t("p8set.lcCheckConn") })));
+      .catch((e) => setSaveErr(tNow("p8set.lcLoadErr", { msg: e instanceof Error ? e.message : tNow("p8set.lcCheckConn") })));
   }, []);
 
   const persist = (next: Store) => {

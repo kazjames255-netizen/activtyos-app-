@@ -8,7 +8,7 @@ import { api, get as apiGet } from "@/lib/api";
 import { NAV_GROUPS, type PortalKey } from "@/lib/nav/config";
 import { CORE_VIEWS, featureOff } from "@/lib/use-customer-area";
 import { Button, Card, FieldLabel, Input, Select, inputCls } from "@/components/ui";
-import { useI18n, useT, useWord } from "@/lib/i18n/provider";
+import { useI18n, useT, useWord, tNow } from "@/lib/i18n/provider";
 import { Rich, tr, slug } from "./Rich";
 import { pickPlural } from "@/lib/i18n/plural";
 import { navLabel } from "@/lib/i18n/words";
@@ -1405,7 +1405,7 @@ export function SetupApp() {
   // browse feed, which would offer other providers' listings to scope to.
   useEffect(() => {
     apiGet<{ id: string; title?: string; name?: string }[]>("/api/listings?mine=1")
-      .then((rows) => setListings(rows.map((r) => ({ id: r.id, title: r.title || r.name || t("p8set.untitledListing") }))))
+      .then((rows) => setListings(rows.map((r) => ({ id: r.id, title: r.title || r.name || tNow("p8set.untitledListing") }))))
       .catch(() => setListings([]));
   }, []);
 

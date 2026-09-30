@@ -62,7 +62,6 @@ function TimeAdder({ onAdd }: { onAdd: (t: string) => void }) {
 
 function DayCalendar() {
   const t = useT();
-  const { locale } = useI18n();
   const dateFrom = useTimetableStore((s) => s.dateFrom);
   const dateTo = useTimetableStore((s) => s.dateTo);
   const excluded = useTimetableStore((s) => s.excluded);
