@@ -7,6 +7,7 @@
 // Real per-user identity, device kiosk + geofence, and payroll posting are Amir's
 // (docs/timeclock-handoff.md). Matched to people by name (demo).
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { tNow } from "@/lib/i18n/provider";
 import { DEMO_STAFF } from "@/features/learning/credentials";
 import { useEffect } from "react";
 import { get as apiGet, isDemoMode, patch as apiPatch, post as apiPost, put as apiPut } from "@/lib/api";
@@ -48,10 +49,10 @@ const HOLIDAY_KEY = "aos.holiday.absences.v1";
 export const slug = (name: string) => name.trim().toLowerCase().replace(/\s+/g, "-");
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 export const hhmm = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" }) : "");
-export const fmtDur = (ms: number) => { const m = Math.max(0, Math.round(ms / 60000)); return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`; };
+export const fmtDur = (ms: number) => { const m = Math.max(0, Math.round(ms / 60000)); return tNow("p8wf.durHm", { h: Math.floor(m / 60), m: String(m % 60).padStart(2, "0") }); };
 // Same, but with live seconds — for the ticking "worked today" clock.
-export const fmtDurSec = (ms: number) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 3600)}h ${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}m ${String(s % 60).padStart(2, "0")}s`; };
-export function sinceLabel(iso?: string): string { if (!iso) return ""; const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000); if (min < 1) return "just now"; if (min < 60) return `${min}m ago`; return `${Math.floor(min / 60)}h ${min % 60}m ago`; }
+export const fmtDurSec = (ms: number) => { const s = Math.max(0, Math.floor(ms / 1000)); return tNow("p8wf.durHms", { h: Math.floor(s / 3600), m: String(Math.floor((s % 3600) / 60)).padStart(2, "0"), s: String(s % 60).padStart(2, "0") }); };
+export function sinceLabel(iso?: string): string { if (!iso) return ""; const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000); if (min < 1) return tNow("p8wf.agoJustNow"); if (min < 60) return tNow("p8wf.agoMin", { m: min }); return tNow("p8wf.agoHm", { h: Math.floor(min / 60), m: min % 60 }); }
 
 const read = <T,>(key: string): T | null => { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } };
 const write = (key: string, v: unknown) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* ignore */ } };
@@ -242,7 +243,7 @@ function sendEvent(kind: ClockEvent["kind"], name: string, extra: { role?: strin
     .then(() => syncClock())
     // Say so — a clocking that only this phone knows about is the failure this
     // whole store exists to prevent.
-    .catch((e: unknown) => { alert(`Your ${kind === "in" ? "clock-in" : kind === "out" ? "clock-out" : "break"} wasn't saved to the team board: ${e instanceof Error ? e.message : "no connection"}. Try again.`); });
+    .catch((e: unknown) => { alert(tNow(kind === "in" ? "p8wf.clockFailIn" : kind === "out" ? "p8wf.clockFailOut" : "p8wf.clockFailBreak", { err: e instanceof Error ? e.message : tNow("p8wf.noConnection") })); });
 }
 /** Staff correct their own clocking on an EARLIER day (only when the manager turned it on): the real time is supplied, not the server's clock. Rejects with the API's message. */
 export async function sendCorrection(kind: "in" | "out", day: string, time: string, name: string): Promise<void> {

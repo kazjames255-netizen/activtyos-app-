@@ -15,6 +15,9 @@
 // "Elsewhere / unassigned" rather than being silently dropped.
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
+import { useI18n } from "@/lib/i18n/provider";
+import { isRTL } from "@/lib/i18n/config";
+import { pickPlural } from "@/lib/i18n/plural";
 import { loadClock, hhmm, fmtDur, workedMs, rateFor, type ClockRecord, useClockRefresh } from "./data";
 
 const GREEN = "#0f7a43", AMBER = "#8a5a09", RED = "#c02636";
@@ -93,6 +96,8 @@ function Avatar({ name, tone, sm }: { name: string; tone: string; sm?: boolean }
 const staffTone = (s: ClockRecord) => (s.status === "break" ? "#f59e0b" : s.status === "in" ? "#12b76a" : "#cbd5e1");
 
 export function OnSiteNowCard() {
+  const { t, locale } = useI18n();
+  const rtl = isRTL(locale);
   const [regs, setRegs] = useState<RegSession[] | null>(null);
   const [clock, setClock] = useState<Record<string, ClockRecord>>({});
   useClockRefresh(setClock);
@@ -154,7 +159,7 @@ export function OnSiteNowCard() {
     const by = new Map<string, { key: string; name: string; ids: string[]; staff: ClockRecord[]; present: number; expected: number; absent: number }>();
     for (const r of rows.out) {
       const key = norm(r.venue) || "__none__";
-      const cur = by.get(key) ?? { key, name: r.venue || "No venue set", ids: [], staff: [], present: 0, expected: 0, absent: 0 };
+      const cur = by.get(key) ?? { key, name: r.venue || t("p8wf.osnNoVenue"), ids: [], staff: [], present: 0, expected: 0, absent: 0 };
       cur.ids.push(r.id);
       // A venue's staff are the same list for every listing on it — dedupe by id
       // or a site with two listings counts each coach twice.
@@ -163,7 +168,7 @@ export function OnSiteNowCard() {
       by.set(key, cur);
     }
     return [...by.values()].sort((a, b) => b.staff.length - a.staff.length || a.name.localeCompare(b.name));
-  }, [rows.out]);
+  }, [rows.out, t]);
 
   const [loc, setLoc] = useState("");
   const visible = loc ? rows.out.filter((r) => (norm(r.venue) || "__none__") === loc) : rows.out;
@@ -193,7 +198,7 @@ export function OnSiteNowCard() {
     const role = r.role || ros?.role;
     // On site / off site, stated plainly rather than implied by a timestamp.
     const here = r.status === "in" || r.status === "break";
-    const state = r.status === "break" ? "On break" : r.status === "in" ? "On site" : r.clockInAt ? "Left" : "Not on site";
+    const state = r.status === "break" ? t("p7tc.stBreak") : r.status === "in" ? t("p8wf.osnStOnSite") : r.clockInAt ? t("p8wf.osnStLeft") : t("p8wf.osnStNotOn");
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface)] px-2 py-1 text-[12px] ring-1 ring-[var(--line)]">
         <span className="grid h-5 w-5 flex-none place-items-center rounded-full text-[9px] font-extrabold text-white" style={{ background: tone }}>{initials}</span>
@@ -203,7 +208,7 @@ export function OnSiteNowCard() {
         <span className="rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold" style={here ? { background: r.status === "break" ? "#fff4e5" : "#e2f5ea", color: r.status === "break" ? "#b45309" : GREEN } : { background: "#eef1f6", color: "#64748b" }}>{state}</span>
         {/* !! matters: lateMin is 0 for an on-time staffer, and `false || 0`
             renders a literal "0" next to their name. */}
-        {!!r.lateMin && <span className="text-[10.5px] font-extrabold" style={{ color: RED }}>{r.lateMin} min late</span>}
+        {!!r.lateMin && <span className="text-[10.5px] font-extrabold" style={{ color: RED }}>{t("p8wf.osnLate", { n: r.lateMin })}</span>}
       </span>
     );
   };
@@ -212,9 +217,9 @@ export function OnSiteNowCard() {
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#12b76a] opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#12b76a]" /></span>
-        <div className="text-[14px] font-extrabold text-[var(--ink)]">On site now</div>
-        <span className="text-[11px] font-semibold text-[var(--ink-3)]">· updates live</span>
-        <a href="timesheets" className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Timesheets →</a>
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8wf.osnTitle")}</div>
+        <span className="text-[11px] font-semibold text-[var(--ink-3)]">{t("p8wf.osnLive")}</span>
+        <a href="timesheets" className="ms-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("p8wf.lccTimesheets")} {rtl ? "←" : "→"}</a>
       </div>
 
       {/* ── Location cards ──────────────────────────────────────────────────
@@ -234,7 +239,7 @@ export function OnSiteNowCard() {
               <button
                 key={l.key} type="button"
                 onClick={() => setLoc(on ? "" : l.key)}
-                title={on ? "Show every location" : `Show only ${l.name}`}
+                title={on ? t("p8wf.osnShowAll") : t("p8wf.osnShowOnly", { name: l.name })}
                 className="relative overflow-hidden rounded-2xl p-3.5 text-start transition hover:-translate-y-0.5"
                 style={{ background: c.bg, color: c.ink, boxShadow: on ? `0 0 0 3px var(--surface), 0 0 0 5px ${c.ring}` : "0 6px 18px -10px rgba(16,35,86,.55)" }}
               >
@@ -245,16 +250,16 @@ export function OnSiteNowCard() {
                     <div className="truncate text-[12px] font-bold opacity-90">📍 {l.name}</div>
                     <div className="mt-1 flex items-baseline gap-1.5">
                       <span className="text-[30px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{inNow}</span>
-                      <span className="text-[12px] font-bold opacity-90">on site</span>
+                      <span className="text-[12px] font-bold opacity-90">{t("p8wf.osnOnSite")}</span>
                     </div>
                     <div className="mt-0.5 text-[11.5px] font-semibold opacity-85">
-                      {onBreak > 0 ? `${onBreak} on break · ` : ""}{l.present}/{l.expected} children in
+                      {onBreak > 0 ? t("p8wf.osnBreakPre", { n: onBreak }) : ""}{t("p8wf.osnChildrenIn", { present: l.present, expected: l.expected })}
                     </div>
                   </div>
                   {/* Overlapping initials — who is actually there, not just how many */}
                   <div className="flex flex-none -space-x-2">
                     {l.staff.slice(0, 4).map((s) => (
-                      <span key={s.id} title={`${s.name}${s.status === "break" ? " (on break)" : ""}`}
+                      <span key={s.id} title={s.status === "break" ? t("p8wf.osnAvBreak", { name: s.name }) : s.name}
                         className="grid h-8 w-8 place-items-center rounded-full text-[10px] font-extrabold"
                         // A real box-shadow ring, not Tailwind's `ring-2`: that
                         // needs --tw-ring-color, which an inline style can't set.
@@ -269,9 +274,9 @@ export function OnSiteNowCard() {
                 </div>
                 <div className="relative mt-2.5 flex items-center gap-1.5">
                   <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: "rgba(255,255,255,.22)" }}>
-                    {inNow ? `1 adult : ${ratio} ${ratio === 1 ? "child" : "children"}` : "No staff clocked in"}
+                    {inNow ? pickPlural(t, locale, "p8wf.osnRatio", ratio) : t("p8wf.osnNoStaffClocked")}
                   </span>
-                  {on && <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: "rgba(255,255,255,.22)" }}>Filtered ✓</span>}
+                  {on && <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: "rgba(255,255,255,.22)" }}>{t("p8wf.osnFiltered")}</span>}
                 </div>
               </button>
             );
@@ -289,11 +294,11 @@ export function OnSiteNowCard() {
         return (
           <div className="mb-3">
             <div className="mb-2 flex items-center gap-2">
-              <button type="button" onClick={() => setLoc("")} className="rounded-full border border-[var(--line)] px-3 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">← All locations</button>
-              <span className="text-[11.5px] font-bold text-[var(--ink-3)]">{here.length} staff at {locations.find((l) => l.key === loc)?.name}</span>
+              <button type="button" onClick={() => setLoc("")} className="rounded-full border border-[var(--line)] px-3 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{rtl ? "→" : "←"} {t("p8wf.osnAllLocations")}</button>
+              <span className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("p8wf.osnStaffAt", { n: here.length, name: locations.find((l) => l.key === loc)?.name ?? "" })}</span>
             </div>
             {here.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-[var(--line)] py-6 text-center text-[12px] text-[var(--ink-3)]">Nobody is clocked in here yet.</div>
+              <div className="rounded-2xl border border-dashed border-[var(--line)] py-6 text-center text-[12px] text-[var(--ink-3)]">{t("p8wf.osnNobodyHere")}</div>
             ) : (
               // Portrait cards, like the reference: photo up top, details stacked
               // under it. More per row and each one narrower, so a big team reads
@@ -315,19 +320,19 @@ export function OnSiteNowCard() {
                         {s.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
                       </span>
                       <div className="relative mt-2 truncate text-[13px] font-extrabold leading-tight">{s.name}</div>
-                      <div className="relative truncate text-[11px] font-semibold opacity-90">{s.role || ros?.role || "Staff"}</div>
+                      <div className="relative truncate text-[11px] font-semibold opacity-90">{s.role || ros?.role || t("p8wf.osnStaffFallback")}</div>
                       <span className="relative mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: "rgba(255,255,255,.24)" }}>
-                        {onBreak ? "On break" : "On site"}{!!s.lateMin && ` · ${s.lateMin}m late`}
+                        {onBreak ? t("p7tc.stBreak") : t("p8wf.osnStOnSite")}{!!s.lateMin && ` · ${t("p8wf.osnLate", { n: s.lateMin })}`}
                       </span>
                       {/* Stacked label→value rows: at this width three tiles
                           side by side would clip "07:41–13:41". */}
                       <div className="relative mt-2.5 space-y-1">
                         {[
-                          ["Shift", ros ? `${ros.start}–${ros.end}` : s.clockInAt ? `${hhmm(s.clockInAt)}–?` : "—"],
-                          ["Worked", fmtDur(worked)],
+                          [t("p8wf.osnShift"), ros ? `${ros.start}–${ros.end}` : s.clockInAt ? `${hhmm(s.clockInAt)}–?` : "—"],
+                          [t("p8wf.tsThWorked"), fmtDur(worked)],
                           // 0 means nobody set one — saying "£0.00/hr" would be a
                           // statement about their pay rather than about the gap.
-                          ["Rate", rate ? `£${rate.toFixed(2)}` : "Not set"],
+                          [t("p8wf.osnRate"), rate ? `£${rate.toFixed(2)}` : t("p8wf.osnNotSet")],
                         ].map(([k, v]) => (
                           <div key={k} className="flex items-center justify-between gap-1 rounded-lg px-2 py-1" style={{ background: "rgba(255,255,255,.16)" }}>
                             <span className="text-[9px] font-bold uppercase tracking-wide opacity-80">{k}</span>
@@ -338,8 +343,8 @@ export function OnSiteNowCard() {
                       {/* Short form — the full sentence wrapped to three lines
                           at this width. The title carries the meaning. */}
                       {rate > 0 && (
-                        <div className="relative mt-1.5 text-[10.5px] font-semibold opacity-90" title="Earned so far today, at their rate for the hours worked">
-                          ≈ £{((worked / 3_600_000) * rate).toFixed(2)} today
+                        <div className="relative mt-1.5 text-[10.5px] font-semibold opacity-90" title={t("p8wf.osnEarnedTip")}>
+                          {t("p8wf.osnEarned", { amt: ((worked / 3_600_000) * rate).toFixed(2) })}
                         </div>
                       )}
                     </div>
@@ -367,8 +372,8 @@ export function OnSiteNowCard() {
         </div>
       )}
 
-      {regs === null ? <div className="py-8 text-center text-[12px] text-[var(--ink-3)]">Loading today…</div>
-        : rows.out.length === 0 ? <div className="py-8 text-center text-[12px] text-[var(--ink-3)]">Nothing running today.</div> : (
+      {regs === null ? <div className="py-8 text-center text-[12px] text-[var(--ink-3)]">{t("p8wf.osnLoading")}</div>
+        : rows.out.length === 0 ? <div className="py-8 text-center text-[12px] text-[var(--ink-3)]">{t("p8wf.osnNothing")}</div> : (
         <div className="space-y-3">
           {shown.map((r) => {
             const notArr = Math.max(0, r.notIn.length);
@@ -381,8 +386,8 @@ export function OnSiteNowCard() {
                   <span className="text-[15px] font-extrabold">{r.name}</span>
                   {r.venue
                     ? <span className="rounded-md bg-white/15 px-2 py-0.5 text-[11px] font-bold ring-1 ring-white/20">📍 {r.venue}</span>
-                    : <span className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white/70">No venue set</span>}
-                  <span className="ms-auto text-[13px] font-extrabold tabular-nums">{r.present}/{r.expected} in{r.absent ? ` · ${r.absent} absent` : ""}</span>
+                    : <span className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white/70">{t("p8wf.osnNoVenue")}</span>}
+                  <span className="ms-auto text-[13px] font-extrabold tabular-nums">{t("p8wf.osnInCount", { present: r.present, expected: r.expected })}{r.absent ? t("p8wf.osnAbsentSfx", { n: r.absent }) : ""}</span>
                 </div>
 
                 {/* ── visual summary: completion ring + segmented bar + staff avatars ── */}
@@ -392,28 +397,28 @@ export function OnSiteNowCard() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-[22px] font-extrabold tabular-nums text-[var(--ink)]">{r.present}<span className="text-[var(--ink-3)]">/{r.expected}</span></span>
-                        <span className="text-[12px] font-bold text-[var(--ink-3)]">children in</span>
+                        <span className="text-[12px] font-bold text-[var(--ink-3)]">{t("p8wf.osnChildrenInLbl")}</span>
                       </div>
                       <div className="mt-2"><SegBar segs={[{ value: r.present, color: GREEN }, { value: notArr, color: AMBER }, { value: r.absent, color: RED }]} /></div>
                       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11.5px]">
-                        <LegendDot color={GREEN}>{r.present} in</LegendDot>
-                        <LegendDot color={AMBER}>{notArr} not arrived</LegendDot>
-                        <LegendDot color={RED}>{r.absent} absent</LegendDot>
+                        <LegendDot color={GREEN}>{t("p8wf.osnLegIn", { n: r.present })}</LegendDot>
+                        <LegendDot color={AMBER}>{t("p8wf.osnLegNotArr", { n: notArr })}</LegendDot>
+                        <LegendDot color={RED}>{t("p8wf.osnLegAbsent", { n: r.absent })}</LegendDot>
                       </div>
                     </div>
                   </div>
                   <div className="sm:min-w-[150px] sm:border-s sm:border-[#eef1f6] sm:ps-4">
-                    <div className="text-[10.5px] font-extrabold uppercase tracking-[0.09em] text-[var(--ink-3)]">Staff on site</div>
-                    <div className="text-[22px] font-extrabold tabular-nums text-[#1d3a8f]">{staffIn}{staffBreak ? <span className="text-[13px] font-bold text-[#b45309]"> +{staffBreak} on break</span> : ""}</div>
+                    <div className="text-[10.5px] font-extrabold uppercase tracking-[0.09em] text-[var(--ink-3)]">{t("p8wf.osnStaffOnSite")}</div>
+                    <div className="text-[22px] font-extrabold tabular-nums text-[#1d3a8f]">{staffIn}{staffBreak ? <span className="text-[13px] font-bold text-[#b45309]">{t("p8wf.osnPlusBreak", { n: staffBreak })}</span> : ""}</div>
                     {r.staff.length > 0
                       ? <div className="mt-1.5 flex flex-wrap items-center ps-1.5">{r.staff.map((s) => <span key={s.id} className="-ms-1.5"><Avatar name={s.name} tone={staffTone(s)} sm /></span>)}</div>
-                      : <div className="mt-1 text-[11px] text-[var(--ink-3)]">{r.venue ? "None clocked in here" : "No venue → can’t match staff"}</div>}
+                      : <div className="mt-1 text-[11px] text-[var(--ink-3)]">{r.venue ? t("p8wf.osnNoneClocked") : t("p8wf.osnNoVenueMatch")}</div>}
                   </div>
                 </div>
 
                 {/* per-session mini bars */}
                 <div className="bg-[var(--surface)] px-4 py-3">
-                  <div className="mb-2"><span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.09em]" style={{ background: "#e2f5ea", color: GREEN }}>🧒 By session</span></div>
+                  <div className="mb-2"><span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.09em]" style={{ background: "#e2f5ea", color: GREEN }}>{t("p8wf.osnBySession")}</span></div>
                   <div className="flex flex-col gap-2">
                     {r.sessions.map((s) => {
                       const na = Math.max(0, s.counts.notArrived ?? (s.counts.expected - s.counts.present - s.counts.absent));
@@ -421,14 +426,14 @@ export function OnSiteNowCard() {
                         <div key={s.blockId} className="flex items-center gap-3">
                           <span className="w-[104px] flex-none rounded-md bg-[var(--panel)] px-2 py-1 text-center text-[11.5px] font-bold tabular-nums text-[var(--ink-2)] ring-1 ring-[var(--line)]">{s.start}–{s.end}</span>
                           <div className="min-w-0 flex-1"><SegBar h={8} segs={[{ value: s.counts.present, color: GREEN }, { value: na, color: AMBER }, { value: s.counts.absent, color: RED }]} /></div>
-                          <span className="w-[118px] flex-none whitespace-nowrap text-end text-[11.5px] font-semibold tabular-nums text-[var(--ink-2)]"><b style={{ color: GREEN }}>{s.counts.present}</b>/{s.counts.expected} in{s.counts.absent ? ` · ${s.counts.absent} abs` : ""}</span>
+                          <span className="w-[118px] flex-none whitespace-nowrap text-end text-[11.5px] font-semibold tabular-nums text-[var(--ink-2)]"><b style={{ color: GREEN }}>{s.counts.present}</b>/{s.counts.expected} {t("p8wf.osnInWord")}{s.counts.absent ? t("p8wf.osnAbsShort", { n: s.counts.absent }) : ""}</span>
                         </div>
                       );
                     })}
                   </div>
                   {r.notIn.length > 0 && (
                     <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                      <span className="text-[11.5px] font-extrabold" style={{ color: "var(--ink-2)" }}>⏳ Not signed in:</span>
+                      <span className="text-[11.5px] font-extrabold" style={{ color: "var(--ink-2)" }}>{t("p8wf.osnNotSigned")}</span>
                       {r.notIn.map((n, i) => (
                         <span key={`${n}-${i}`} className="rounded-md px-2 py-0.5 text-[12px] font-bold" style={{ background: "#FCF1DC", color: "var(--ink-2)", boxShadow: "inset 0 0 0 1px #f5d9a8" }}>{n}</span>
                       ))}
@@ -438,9 +443,9 @@ export function OnSiteNowCard() {
 
                 {/* staff band — full detail (role · shift · status · late) */}
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-                  <span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.09em]" style={{ background: "#e7f0ff", color: "#1d3a8f" }}>👤 Staff</span>
+                  <span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.09em]" style={{ background: "#e7f0ff", color: "#1d3a8f" }}>{t("p8wf.osnStaffTag")}</span>
                   {r.staff.length === 0
-                    ? <span className="text-[12px] text-[var(--ink-3)]">{r.venue ? "None clocked in here" : "No venue set — staff can’t be matched to this listing"}</span>
+                    ? <span className="text-[12px] text-[var(--ink-3)]">{r.venue ? t("p8wf.osnNoneClocked") : t("p8wf.osnNoVenueLong")}</span>
                     : r.staff.map((s) => <StaffDot key={s.id} r={s} />)}
                 </div>
               </div>
@@ -448,7 +453,7 @@ export function OnSiteNowCard() {
           })}
           {rows.rest.length > 0 && (
             <div className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-3">
-              <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">Elsewhere / unassigned</div>
+              <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t("p8wf.osnElsewhere")}</div>
               <div className="flex flex-wrap gap-1.5">{rows.rest.map((s) => <StaffDot key={s.id} r={s} />)}</div>
             </div>
           )}

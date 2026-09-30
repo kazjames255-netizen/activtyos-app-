@@ -68,7 +68,7 @@ export function TimeClockApp() {
   const submitFix = async () => {
     setFixMsg(null);
     try { await sendCorrection(fixKind, fixDay, fixTime, ME); setFixMsg({ ok: true, text: tr("p7tc.fixDone") }); setFixTime(""); }
-    catch (e) { setFixMsg({ ok: false, text: e instanceof Error ? e.message : "Failed" }); }
+    catch (e) { setFixMsg({ ok: false, text: e instanceof Error ? e.message : tr("p8wf.failedLbl") }); }
   };
   const isLead = (me.role || "").toLowerCase() === leadLabel.toLowerCase();
   const teamHere = others.filter((r) => r.op && r.op === me.op && r.status !== "out");
@@ -87,7 +87,7 @@ export function TimeClockApp() {
           <div className="flex items-center gap-3">
             <span className="grid h-12 w-12 place-items-center rounded-full bg-[#eef4fd] text-[16px] font-extrabold text-[#1d3a8f]">{(ME || "Me").split(" ").map((w) => w[0]).join("").slice(0, 2)}</span>
             <div>
-              <div className="text-[15px] font-extrabold text-[var(--ink)]">{ME || "Me"}</div>
+              <div className="text-[15px] font-extrabold text-[var(--ink)]">{ME || tr("p8wf.meLbl")}</div>
               <span className="mt-0.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-bold" style={{ background: statusMeta.bg, color: statusMeta.tone }}><span className="h-2 w-2 rounded-full" style={{ background: statusMeta.dot }} />{statusMeta.label}{status !== "out" && me.clockInAt ? ` · ${tr("p7tc.sinceAt", { time: hhmm(me.clockInAt) })}` : ""}</span>
             </div>
           </div>
@@ -133,7 +133,7 @@ export function TimeClockApp() {
             <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p7tc.whoIn")}</div>
             <div className="flex gap-4 text-[12.5px]"><span className="font-bold text-[#0f7a43]">{tr("p7tc.nIn", { n: inNow })}</span><span className="font-bold text-[#8a5a09]">{tr("p7tc.nOnBreak", { n: onBreak })}</span></div>
             <div className="mt-2 space-y-1">{others.filter((r) => r.status !== "out").slice(0, 5).map((r) => (
-              <div key={r.id} className="flex items-center gap-2 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-semibold text-[var(--ink)]">{r.name}</span>{r.op && <span className="text-[var(--ink-3)]">· {r.op}</span>}<span className="ms-auto text-[var(--ink-3)]">{r.status === "break" ? "on break" : sinceLabel(r.clockInAt)}</span></div>
+              <div key={r.id} className="flex items-center gap-2 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-semibold text-[var(--ink)]">{r.name}</span>{r.op && <span className="text-[var(--ink-3)]">· {r.op}</span>}<span className="ms-auto text-[var(--ink-3)]">{r.status === "break" ? tr("p8wf.onBreakLc") : sinceLabel(r.clockInAt)}</span></div>
             ))}</div>
           </Card>
 
@@ -158,7 +158,7 @@ export function TimeClockApp() {
               <p className="mb-2 text-[11px] text-[var(--ink-3)]"><Rich text={tr("p7tc.asLeadSee", { role: leadLabel, where: me.op || tr("p7tc.yourListing") })} /></p>
               {teamHere.length === 0 ? <div className="text-[12px] text-[var(--ink-3)]">{tr("p7tc.noneClocked")}</div> : (
                 <div className="divide-y divide-[var(--line)]">{teamHere.map((r) => (
-                  <div key={r.id} className="flex items-center gap-2 py-1.5 text-[12.5px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-bold text-[var(--ink)]">{r.name}</span><span className="text-[var(--ink-3)]">{r.role}</span><span className="ms-auto text-[var(--ink-3)]">{r.status === "break" ? "on break" : tr("p7tc.inAt", { time: hhmm(r.clockInAt) })}{r.lateMin ? <span className="ms-1 text-[#c0392b]">late</span> : ""}</span></div>
+                  <div key={r.id} className="flex items-center gap-2 py-1.5 text-[12.5px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-bold text-[var(--ink)]">{r.name}</span><span className="text-[var(--ink-3)]">{r.role}</span><span className="ms-auto text-[var(--ink-3)]">{r.status === "break" ? tr("p8wf.onBreakLc") : tr("p7tc.inAt", { time: hhmm(r.clockInAt) })}{r.lateMin ? <span className="ms-1 text-[#c0392b]">{tr("p8wf.lateLc")}</span> : ""}</span></div>
                 ))}</div>
               )}
             </Card>
