@@ -22,7 +22,7 @@ const plain = (s: string) => brand(s).replace(/<br\s*\/?>/g, " ").replace(/<\/?\
 test.use({ reducedMotion: "reduce" });
 
 async function open(page: Page, p: string, lang: string | null, w = 1440) {
-  await page.addInitScript((l) => { try { if (l) localStorage.setItem("aos-lang", l); else localStorage.setItem("aos-lang", "en"); } catch {} }, lang);
+  await page.addInitScript((l) => { try { if (!sessionStorage.getItem("v2seed")) { sessionStorage.setItem("v2seed", "1"); localStorage.setItem("aos-lang", l || "en"); } } catch {} }, lang);
   await page.setViewportSize({ width: w, height: 900 });
   await page.goto(`/v2/${p}.html`, { waitUntil: "load" });
   await page.waitForFunction(() => !document.documentElement.classList.contains("i18n-wait"), null, { timeout: 8000 });
@@ -66,6 +66,7 @@ async function unhooked(page: Page) {
       const el = n.parentElement!; if (!el || /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA)$/.test(el.tagName)) continue;
       if (el.closest("[data-i18n],.lang-sw,#aosLegalNote,canvas,svg defs")) continue;
       if (el.closest("option[lang]")) continue;
+      if (/^(Activ|ly|Activly|TFC|[A-Z]{1,3}|English|Polski|Română|Português|Español|Français|Cymraeg|العربية|اردو|বাংলা|ਪੰਜਾਬੀ)$/.test(t)) continue; // brand/logo, initials, native language names
       const r = el.getBoundingClientRect(); const cs = getComputedStyle(el);
       if (cs.display === "none" || cs.visibility === "hidden") continue;
       if (!r.width && !r.height) continue;
@@ -177,7 +178,9 @@ test.describe("v2 site i18n", () => {
           return { text, shot };
         };
         const a = await grab(`/v2/_orig/${p}.html`, 1440), b = await grab(`/v2/${p}.html`, 1440);
-        expect(b.text).toBe(a.text);
+        // two deliberate source fixes: the parents page language strip had Urdu in Devanagari and a garbled Punjabi
+        const fixA = a.text.replace("\u0909\u0930\u094d\u0926\u0942", "\u0627\u0631\u062f\u0648").replace("\u092a\u0a70\u0a1c\u093e\u092c\u0940", "\u0a2a\u0a70\u0a1c\u0a3e\u0a2c\u0a40");
+        expect(b.text).toBe(fixA);
         for (const w of [1440, 390]) {
           const x = w === 1440 ? a : await grab(`/v2/_orig/${p}.html`, w), y = w === 1440 ? b : await grab(`/v2/${p}.html`, w);
           const ia = await sharp(x.shot).raw().toBuffer({ resolveWithObject: true }), ib = await sharp(y.shot).raw().toBuffer({ resolveWithObject: true });
