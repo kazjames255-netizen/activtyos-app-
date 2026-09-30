@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Card } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
 
 export interface Venue {
   id: string;
@@ -19,19 +20,18 @@ export interface Venue {
 }
 
 type LocTab = "timesheets" | "notifications";
-const TABS: [LocTab, string][] = [
-  ["timesheets", "Timesheets"], ["notifications", "Notifications & extensions"],
-];
+const TABS: LocTab[] = ["timesheets", "notifications"];
 
 // A location's own bits — staff assignment now lives in the Deployment overview.
 // This page holds Timesheets and Notifications for the venue.
 export function LocationDetail({ venue, onBack }: { venue: Venue; venues: Venue[]; onBack: () => void }) {
+  const t = useT();
   const [tab, setTab] = useState<LocTab>("timesheets");
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <button type="button" onClick={onBack} className="mb-1 text-[13px] font-bold text-[#1d3a8f] hover:underline">‹ Deployment</button>
+          <button type="button" onClick={onBack} className="mb-1 text-[13px] font-bold text-[#1d3a8f] hover:underline">{t("p8set.ldBack")}</button>
           <h2 className="text-[26px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{venue.name}</h2>
         </div>
       </div>
@@ -39,10 +39,10 @@ export function LocationDetail({ venue, onBack }: { venue: Venue; venues: Venue[
       <div className="flex flex-col gap-4 lg:flex-row">
         <div className="lg:w-[180px] lg:flex-none">
           <div className="flex gap-1.5 overflow-x-auto lg:flex-col">
-            {TABS.map(([t, lbl]) => (
-              <button key={t} type="button" onClick={() => setTab(t)}
-                className={"whitespace-nowrap rounded-xl px-3.5 py-2.5 text-start text-[13.5px] font-bold transition-colors " + (tab === t ? "bg-[#eef4fd] text-[#1d3a8f]" : "text-[var(--ink-2)] hover:bg-[var(--panel)]")}
-                style={tab === t ? { boxShadow: "inset 3px 0 0 #2f6bd8" } : undefined}>{lbl}</button>
+            {TABS.map((k) => (
+              <button key={k} type="button" onClick={() => setTab(k)}
+                className={"whitespace-nowrap rounded-xl px-3.5 py-2.5 text-start text-[13.5px] font-bold transition-colors " + (tab === k ? "bg-[#eef4fd] text-[#1d3a8f]" : "text-[var(--ink-2)] hover:bg-[var(--panel)]")}
+                style={tab === k ? { boxShadow: "inset 3px 0 0 #2f6bd8" } : undefined}>{t(k === "timesheets" ? "p8set.ldTimesheets" : "p8set.ldNotifExt")}</button>
             ))}
           </div>
         </div>
@@ -57,30 +57,32 @@ export function LocationDetail({ venue, onBack }: { venue: Venue; venues: Venue[
 }
 
 function TimesheetsTab({ venueName }: { venueName: string }) {
+  const t = useT();
   return (
     <Card className="p-5">
-      <div className="text-[16px] font-extrabold text-[var(--ink)]">Timesheets</div>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--ink-2)]">Once staff check in and out on the register, their hours at {venueName} roll up here and feed Payroll (hours × rate, plus on-cost). Check-in / check-out is wired on the schedule; the timesheet roll-up and export are on the backend list.</p>
-      <div className="mt-3 rounded-xl bg-[var(--panel)] px-3 py-3 text-center text-[12.5px] text-[var(--ink-3)]">No approved hours yet this period.</div>
+      <div className="text-[16px] font-extrabold text-[var(--ink)]">{t("p8set.ldTimesheets")}</div>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--ink-2)]">{t("p8set.ldTsBody", { venue: venueName })}</p>
+      <div className="mt-3 rounded-xl bg-[var(--panel)] px-3 py-3 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8set.ldNoHours")}</div>
     </Card>
   );
 }
 function NotificationsTab() {
+  const t = useT();
   const [flags, setFlags] = useState({ shiftPublished: true, checkinMissed: true, weeklySummary: false });
   const rows: [keyof typeof flags, string, string][] = [
-    ["shiftPublished", "Shifts published", "Tell staff at this location when their rota is published."],
-    ["checkinMissed", "Missed check-in", "Alert a manager when someone assigned here hasn't checked in by their start time."],
-    ["weeklySummary", "Weekly summary", "Email a manager a Monday summary of the week's hours and gaps."],
+    ["shiftPublished", t("p8set.ldShiftsPub"), t("p8set.ldShiftsPubD")],
+    ["checkinMissed", t("p8set.ldMissed"), t("p8set.ldMissedD")],
+    ["weeklySummary", t("p8set.ldWeekly"), t("p8set.ldWeeklyD")],
   ];
   return (
     <Card className="p-5">
-      <div className="text-[16px] font-extrabold text-[var(--ink)]">Notifications & extensions</div>
-      <p className="mt-1 text-[12.5px] text-[var(--ink-3)]">What this location tells staff and managers. Saved locally for now.</p>
+      <div className="text-[16px] font-extrabold text-[var(--ink)]">{t("p8set.ldNotifExt")}</div>
+      <p className="mt-1 text-[12.5px] text-[var(--ink-3)]">{t("p8set.ldNotifLede")}</p>
       <div className="mt-3 flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
         {rows.map(([k, title, desc]) => (
           <div key={k} className="flex items-center gap-3 py-3">
             <div className="min-w-0 flex-1"><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{title}</div><div className="text-[11.5px] text-[var(--ink-3)]">{desc}</div></div>
-            <button type="button" onClick={() => setFlags((f) => ({ ...f, [k]: !f[k] }))} role="switch" aria-checked={flags[k]} className="relative h-[22px] w-[40px] flex-none rounded-full transition-colors" style={{ background: flags[k] ? "#2f6bd8" : "var(--line)" }}><span className="absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white transition-all" style={{ left: flags[k] ? "21px" : "3px" }} /></button>
+            <button type="button" onClick={() => setFlags((f) => ({ ...f, [k]: !f[k] }))} role="switch" aria-checked={flags[k]} className="relative h-[22px] w-[40px] flex-none rounded-full transition-colors" style={{ background: flags[k] ? "#2f6bd8" : "var(--line)" }}><span className="absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white transition-all" style={{ insetInlineStart: flags[k] ? "21px" : "3px" }} /></button>
           </div>
         ))}
       </div>
