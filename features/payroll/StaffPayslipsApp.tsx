@@ -27,7 +27,7 @@ const gbp = (n: number) => "£" + (n || 0).toLocaleString(dl(), { minimumFractio
 
 export function StaffPayslipsApp() {
   const { t, locale: appLocale } = useI18n();
-  const locale = appLocale === "en" ? "en-GB" : appLocale; // for dates — plain "en" formats US-style
+  const locale = dl(); // for dates — plain "en" formats US-style
   const { settings } = useSettings();
   const provider = settings.providerName || settings.billing?.businessName || t("p8wf.prYourEmployer");
   const [runs, setRuns] = useState<PayRun[]>([]);

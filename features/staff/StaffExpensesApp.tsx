@@ -33,7 +33,7 @@ const FIELD_STYLE = { backgroundColor: "#f5f3fb", boxShadow: "inset 0 0 0 1.5px 
 
 export function StaffExpensesApp() {
   const { t, locale: appLocale } = useI18n();
-  const locale = appLocale === "en" ? "en-GB" : appLocale; // for dates — plain "en" formats US-style
+  const locale = dl(); // for dates — plain "en" formats US-style
   const catLabel = (c: string) => (CAT_KEY[c] ? t(CAT_KEY[c]) : c);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [open, setOpen] = useState(false);

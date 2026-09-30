@@ -5,6 +5,7 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { PublishedDayGrid, localDayName as dayName, type PublishedWeek } from "./PublishedTimetable";
 import { useI18n } from "@/lib/i18n/provider";
+import { dateLocale } from "@/lib/i18n/format";
 
 const fmt = (iso: string, loc = "en-GB") => {
   const d = new Date(iso + "T00:00:00");
@@ -21,7 +22,7 @@ const fmt = (iso: string, loc = "en-GB") => {
 export function ParentTimetableApp() {
   const { t, locale } = useI18n();
   // Plain "en" would format US-style; English users keep the UK date format.
-  const dateLoc = locale === "en" ? "en-GB" : locale;
+  const dateLoc = dateLocale();
   const [weeks, setWeeks] = useState<PublishedWeek[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sel, setSel] = useState(0);

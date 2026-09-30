@@ -13,6 +13,7 @@ import { type Review, type Rating, type ReviewKind, type ReviewStatus, type Goal
 import { loadReviews, saveReviews, templateFor, slug, syncAppraisals, submitSelfAssessment } from "./data";
 import { isDemoMode } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/provider";
+import { dateLocale } from "@/lib/i18n/format";
 
 // Display labels (the stored values stay English) — mirror lib/appraisals' *_LABEL maps.
 const KIND_KEY: Record<ReviewKind, string> = { probation: "staffp.aprKindProbation", "3-month": "staffp.aprKind3m", "6-month": "staffp.aprKind6m", annual: "staffp.aprKindAnnual", supervision: "staffp.aprKindSupervision" };
@@ -26,7 +27,7 @@ const ME = "Marcus Bell";
 
 export function MyAppraisalsApp() {
   const { t, locale: appLocale } = useI18n();
-  const locale = appLocale === "en" ? "en-GB" : appLocale; // for dates — plain "en" formats US-style
+  const locale = dateLocale(); // for dates — plain "en" formats US-style
   const [reviews, setReviews] = useState<Review[]>([]);
   const [self, setSelf] = useState<Review | null>(null);
   const [toast, setToast] = useState<string | null>(null);

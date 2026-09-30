@@ -5,6 +5,7 @@ import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Card } from "@/components/ui";
 import { useI18n } from "@/lib/i18n/provider";
+import { dateLocale } from "@/lib/i18n/format";
 
 // The parent's view — "My child's day". Moments featuring their own children,
 // across every provider. Only consented children ever appear (enforced when the
@@ -21,7 +22,7 @@ const when = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleStrin
 export function ParentMomentsApp() {
   const { t, locale } = useI18n();
   // Plain "en" would format US-style; English users keep the UK date format.
-  const dateLoc = locale === "en" ? "en-GB" : locale;
+  const dateLoc = dateLocale();
   const [moments, setMoments] = useState<Moment[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [folder, setFolder] = useState<"all" | "child" | "work">("all");

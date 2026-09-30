@@ -15,6 +15,7 @@ import { SEED_LIBRARY, type CourseDoc } from "./courseContent";
 import { CoursePlayer } from "./CoursePlayer";
 import { useI18n } from "@/lib/i18n/provider";
 import { get as apiGet, isDemoMode } from "@/lib/api";
+import { dateLocale } from "@/lib/i18n/format";
 
 // Same as credentials' fmtDate, in the reader's language.
 const fmtDate = (s?: string, locale = "en-GB") => { if (!s) return "—"; const d = new Date(s + "T00:00:00"); return isNaN(d.getTime()) ? s : d.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" }); };
@@ -40,7 +41,7 @@ const roleMatch = (roles: string[], myRole: string) => rolesCover(roles, myRole)
 
 export function StaffCertsApp() {
   const { t, locale: appLocale } = useI18n();
-  const locale = appLocale === "en" ? "en-GB" : appLocale; // for dates — plain "en" formats US-style
+  const locale = dateLocale(); // for dates — plain "en" formats US-style
   const { settings } = useSettings();
   const cred = useCredentials(SEED);
   const [me, setMe] = useState(() => (isDemoMode() ? DEMO_ME : { name: "", role: "" }));

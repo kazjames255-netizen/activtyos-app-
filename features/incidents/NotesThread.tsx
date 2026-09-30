@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { post as apiPost } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/provider";
+import { dateLocale } from "@/lib/i18n/format";
 
 export interface Note { by: string; role: string; text: string; at: string }
 
@@ -22,7 +23,7 @@ export function NotesThread({ id, notes, side, onAdded }: {
   const [err, setErr] = useState<string | null>(null);
   // Parents read this in their language (the accident screen is translated).
   const { t: tr, locale } = useI18n();
-  const loc = locale === "en" ? "en-GB" : locale;
+  const loc = dateLocale();
 
   async function send() {
     const t = text.trim();

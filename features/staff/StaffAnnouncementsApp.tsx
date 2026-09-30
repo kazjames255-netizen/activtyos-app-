@@ -13,13 +13,14 @@ import { useSettings } from "@/lib/settings";
 import { fetchAnnouncements, markAnnouncementRead, postAnnouncement, type Announcement } from "./announcements";
 import { getMe } from "@/components/auth/PortalGuard";
 import { useI18n } from "@/lib/i18n/provider";
+import { dateLocale } from "@/lib/i18n/format";
 
 // Render **bold** markers from a translated string.
 const rich = (s: string) => s.split("**").map((p, i) => (i % 2 ? <b key={i}>{p}</b> : p));
 
 export function StaffAnnouncementsApp() {
   const { t, locale: appLocale } = useI18n();
-  const locale = appLocale === "en" ? "en-GB" : appLocale; // for dates — plain "en" formats US-style
+  const locale = dateLocale(); // for dates — plain "en" formats US-style
   const { settings } = useSettings();
   const [role, setRole] = useState("");
   const [myName, setMyName] = useState("");

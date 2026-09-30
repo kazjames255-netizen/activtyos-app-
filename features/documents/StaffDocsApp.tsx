@@ -13,6 +13,7 @@ import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { DOCS_KEY, seedDocs, openDoc, docDaysUntil, statusOf, docTitleName, type DocItem } from "./DocumentsApp";
 import { useI18n } from "@/lib/i18n/provider";
+import { dateLocale } from "@/lib/i18n/format";
 
 // Same as DocumentsApp's docFmt, in the reader's language.
 const docFmt = (d?: string, locale = "en-GB") => { if (!d) return "—"; const x = new Date(d + "T00:00:00"); return isNaN(+x) ? d : x.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }); };
@@ -31,7 +32,7 @@ const RKEY = "aos.docs.read.v1";
 
 export function StaffDocsApp() {
   const { t, locale: appLocale } = useI18n();
-  const locale = appLocale === "en" ? "en-GB" : appLocale; // for dates — plain "en" formats US-style
+  const locale = dateLocale(); // for dates — plain "en" formats US-style
   const [docs, setDocs] = useState<DocItem[]>(seedDocs);
   // docId → when I confirmed the CURRENT version
   const [read, setRead] = useState<Record<string, string>>({});

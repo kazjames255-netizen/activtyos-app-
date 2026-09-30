@@ -8,6 +8,7 @@ import { BRAND } from "@/lib/i18n/config";
 import { useI18n } from "@/lib/i18n/provider";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, Input, Select } from "@/components/ui";
+import { dateLocale } from "@/lib/i18n/format";
 
 // Matches the light surface the Messages view uses (mirror of the custdash palette).
 const LIGHT_PALETTE = {
@@ -51,7 +52,7 @@ const when = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleStrin
 export function SupportApp() {
   const { t, locale } = useI18n();
   // Plain "en" formats dates US-style; the app's English is British.
-  const dateLoc = locale === "en" ? "en-GB" : locale;
+  const dateLoc = dateLocale();
   const [msgs, setMsgs] = useState<SupportMsg[] | null>(null);
   const [topic, setTopic] = useState("general");
   const [subject, setSubject] = useState("");

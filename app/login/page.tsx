@@ -11,6 +11,7 @@ import { ApiError, get as apiGet, isTwoFaRequired, post as apiPost, rawErrorMess
 import { FieldLabel, Input } from "@/components/ui";
 import { useI18n } from "@/lib/i18n/provider";
 import { AUTH_LIGHT, AosMark, AosWordmark } from "@/components/auth/AuthBrand";
+import { dateLocale } from "@/lib/i18n/format";
 
 function LoginForm() {
   const router = useRouter();
@@ -228,7 +229,7 @@ function LoginForm() {
       {closedAt !== null ? (
         <div className="rounded-xl border border-[#cfe0f7] bg-[#f5f9ff] p-4">
           <div className="text-[15px] font-extrabold text-[var(--ink)]">
-            {closedAt ? t("p7login.closedOnQ", { date: new Date(closedAt).toLocaleDateString(locale === "en" ? "en-GB" : locale, { day: "numeric", month: "long", year: "numeric" }) }) : t("p7login.closedQ")}
+            {closedAt ? t("p7login.closedOnQ", { date: new Date(closedAt).toLocaleDateString(dateLocale(), { day: "numeric", month: "long", year: "numeric" }) }) : t("p7login.closedQ")}
           </div>
           <p className="mt-1.5 text-[12.5px] leading-[1.5] text-[var(--ink-3)]">{t("p7login.closedBody")}</p>
           {error && <div className="mt-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}

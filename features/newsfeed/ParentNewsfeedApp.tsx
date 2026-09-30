@@ -7,6 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { Badge, Card } from "@/components/ui";
 import { NewsletterView, PostImage, type Newsletter } from "./newsletter";
 import { useI18n } from "@/lib/i18n/provider";
+import { dateLocale } from "@/lib/i18n/format";
 
 // The parent's newsfeed — updates from every provider they've booked with.
 // Events can be RSVP'd, urgent notices acknowledged, and posts reacted to. Since
@@ -40,7 +41,7 @@ const readMine = (): Record<string, Mine> => { try { return JSON.parse(localStor
 export function ParentNewsfeedApp() {
   const { t, locale } = useI18n();
   // Plain "en" would format US-style; English users keep the UK date format.
-  const dateLoc = locale === "en" ? "en-GB" : locale;
+  const dateLoc = dateLocale();
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mine, setMine] = useState<Record<string, Mine>>(() => (typeof window === "undefined" ? {} : readMine()));

@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Card } from "@/components/ui";
 import { NotesThread } from "./NotesThread";
+import { dateLocale } from "@/lib/i18n/format";
 
 interface Rec {
   id: string; kind: string; childName: string; date?: string; time?: string; location?: string;
@@ -32,7 +33,7 @@ const stamp = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleStri
 export function ParentAccidentsApp() {
   const { t, locale } = useI18n();
   // English keeps its UK date format; other languages format in their own locale.
-  const loc = locale === "en" ? "en-GB" : locale;
+  const loc = dateLocale();
   const [records, setRecords] = useState<Rec[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);

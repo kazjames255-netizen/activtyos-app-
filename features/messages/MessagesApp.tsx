@@ -12,6 +12,7 @@ import { SettingsLink } from "@/components/OperatorPage";
 import { useSurfaceTheme } from "@/lib/surfaceThemes";
 import { useHoScope, HO_OWN } from "@/components/franchise/HoScope";
 import { useI18n, useT } from "@/lib/i18n/provider";
+import { dateLocale } from "@/lib/i18n/format";
 
 type Tr = ReturnType<typeof useT>;
 
@@ -90,7 +91,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   // `tr`, not `t` — `t` is the thread/template variable all through this file.
   const { t: tr, locale } = useI18n();
   // Plain "en" formats dates the American way (Sep 12) — UK English is en-GB.
-  const dateLoc = locale === "en" ? "en-GB" : locale;
+  const dateLoc = dateLocale();
   const searchParams = useSearchParams();
   // Deep-link from the Register (and elsewhere): ?compose=1&emails=a@b,c@d opens
   // the composer pre-addressed to those families. Operator only — a parent

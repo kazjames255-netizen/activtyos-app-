@@ -6,6 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { OperatorPage } from "@/components/OperatorPage";
 import type { DayInfo, PlanRow } from "./types";
 import { useI18n } from "@/lib/i18n/provider";
+import { dateLocale } from "@/lib/i18n/format";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Read-only rendering of a PUBLISHED timetable (GET /api/timetables/published)
@@ -116,7 +117,7 @@ export function PublishedDayGrid({ rows, groups, dayLabel }: { rows: PlanRow[]; 
 export function StaffTimetableApp() {
   const { t, locale } = useI18n();
   // Plain "en" would format US-style; English users keep the UK date format.
-  const dateLoc = locale === "en" ? "en-GB" : locale;
+  const dateLoc = dateLocale();
   const [weeks, setWeeks] = useState<PublishedWeek[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wi, setWi] = useState(0);

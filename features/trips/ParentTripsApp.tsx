@@ -6,6 +6,7 @@ import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/provider";
 import { useRealtime } from "@/lib/realtime";
 import { Card } from "@/components/ui";
+import { dateLocale } from "@/lib/i18n/format";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Trips (parent side) — the trips their children are on, with the consent
@@ -43,7 +44,7 @@ const CONSENT_META: Record<TripChild["consent"], { labelKey: string; bg: string;
 export function ParentTripsApp() {
   const { t, locale } = useI18n();
   // English keeps its UK date format; other languages format in their own locale.
-  const loc = locale === "en" ? "en-GB" : locale;
+  const loc = dateLocale();
   const [trips, setTrips] = useState<Trip[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null); // `${tripId}_${childId}`
