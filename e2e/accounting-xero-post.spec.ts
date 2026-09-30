@@ -88,7 +88,7 @@ test("post an approved pay run to Xero: gates, mapping, balanced journal, idempo
     expect(again.body.alreadyPosted).toBe(true);
 
     // fetch back from Xero: narration, balanced, amounts
-    const j = xero(co.tenantId, "get", journalId);
+    const j = xero(co.tenantId!, "get", journalId);
     expect(j.Narration).toBe(`ActivityOS payroll — ${period}`);
     const amt = (desc: string) => j.JournalLines.find((l: any) => l.Description === desc).LineAmount as number;
     expect(amt("Gross wages")).toBe(1000);
@@ -107,7 +107,7 @@ test("post an approved pay run to Xero: gates, mapping, balanced journal, idempo
     const refused = await post(flRun, flTok);
     expect(refused.status, JSON.stringify(refused.body)).toBe(409);
   } finally {
-    if (journalId) expect(xero(co.tenantId, "void", journalId).Status).toBe("VOIDED");
+    if (journalId) expect(xero(co.tenantId!, "void", journalId).Status).toBe("VOIDED");
     // PUT merges nested keys, so restore both tenants' mappings wholesale via the Admin helper
     patchDoc("accountingMappings", `${co.tenantId}__xero`, { mapping: priorMapping });
     patchDoc("accountingMappings", `${fl.tenantId}__xero`, { mapping: {} });
