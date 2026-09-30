@@ -6,6 +6,9 @@
 // Google Fonts (Cinzel / Cormorant Garamond / Great Vibes / Montserrat / Josefin
 // Sans) loaded in certificateDoc, falling back to system serif/sans offline.
 import { qrSvg } from "./qr";
+import { tNow } from "@/lib/i18n/provider";
+import { dateLocale } from "@/lib/i18n/format";
+const T = (k: string) => tNow("p8lrn." + k);
 
 export interface CertData {
   name: string;          // staff member's name
@@ -41,7 +44,7 @@ const soft = (a: string, p = 8) => mix(a, "#fff", p);
 const dark = (a: string, p = 78) => mix(a, "#000", p);
 const titleOf = (d: CertData, fallback: string) => esc(d.title || fallback);
 const logoImg = (d: CertData, cls = "logo") => (d.logo ? `<img class="${cls}" src="${d.logo}" alt="${esc(d.provider)}"/>` : "");
-const sig = (d: CertData) => `<div class="sig">${d.signImg ? `<img class="sigimg" src="${d.signImg}" alt="Signature"/>` : ""}<div class="sigline"></div><div class="signame">${esc(d.signName || d.provider)}</div><div class="sigrole">${esc(d.signRole || "Authorised signatory")}</div></div>`;
+const sig = (d: CertData) => `<div class="sig">${d.signImg ? `<img class="sigimg" src="${d.signImg}" alt="${T("certSignatureAlt")}"/>` : ""}<div class="sigline"></div><div class="signame">${esc(d.signName || d.provider)}</div><div class="sigrole">${esc(d.signRole || T("certAuthorisedSignatory"))}</div></div>`;
 
 const starPts = (cx: number, cy: number, outer: number, inner: number) => { let p = ""; for (let i = 0; i < 10; i++) { const ang = -Math.PI / 2 + (i * Math.PI) / 5; const r = i % 2 ? inner : outer; p += `${(cx + Math.cos(ang) * r).toFixed(1)},${(cy + Math.sin(ang) * r).toFixed(1)} `; } return p.trim(); };
 // clean classic medallion — ribbon tails, smooth double ring, a subtle bead ring
@@ -67,9 +70,9 @@ const metaCell = (label: string, val: string) => `<div class="mcell"><span class
 const qrFoot = (d: CertData) => {
   if (d.showQr === false || !d.verifyUrl) return "";
   const url = d.verifyUrl;
-  return `<div style="display:flex;align-items:center;gap:11px;font-family:${F_SANS}"><span style="display:inline-block;background:#fff;padding:6px;border-radius:9px;box-shadow:0 1px 5px rgba(0,0,0,.22)">${qrSvg(url, 74)}</span><div style="text-align:left;line-height:1.4"><div style="font-size:8.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;opacity:.55">Scan to verify</div><div style="font-size:10px;opacity:.85">${esc(url)}</div><div style="font-size:10px;opacity:.6">Ref ${esc(d.ref)}</div></div></div>`;
+  return `<div style="display:flex;align-items:center;gap:11px;font-family:${F_SANS}"><span style="display:inline-block;background:#fff;padding:6px;border-radius:9px;box-shadow:0 1px 5px rgba(0,0,0,.22)">${qrSvg(url, 74)}</span><div style="text-align:left;line-height:1.4"><div style="font-size:8.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;opacity:.55">${T("certScan")}</div><div style="font-size:10px;opacity:.85">${esc(url)}</div><div style="font-size:10px;opacity:.6">Ref ${esc(d.ref)}</div></div></div>`;
 };
-const metaRow = (d: CertData) => `<div class="meta">${[d.showScore === false ? "" : metaCell("Score", d.pct + "%"), metaCell("Completed", d.date), d.showExpiry === false || !d.expiry ? "" : metaCell("Renew by", d.expiry)].join("")}</div>`;
+const metaRow = (d: CertData) => `<div class="meta">${[d.showScore === false ? "" : metaCell(T("certScore"), d.pct + "%"), metaCell(T("certCompleted"), d.date), d.showExpiry === false || !d.expiry ? "" : metaCell(T("certRenewBy"), d.expiry)].join("")}</div>`;
 
 export interface CertTemplate { id: string; name: string; desc: string; accent: string; render: (d: CertData, a: string) => string }
 
@@ -89,7 +92,7 @@ export const CERT_TEMPLATES: CertTemplate[] = [
     .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:34px}
     .sig{text-align:center;min-width:210px;font-family:${F_SANS}}.sigimg{max-height:44px;display:block;margin:0 auto -2px}.sigline{border-top:1.4px solid #4a3f22;width:200px;margin:0 auto 6px}.signame{font-weight:700;font-size:14px}.sigrole{font-size:11px;color:${dark(a, 60)}}
     .seal{width:96px;height:100px}
-  </style><div class="page"><div class="frame"><span class="cn tl"></span><span class="cn tr"></span><span class="cn bl"></span><span class="cn br"></span>${logoImg(d)}<div class="provider">${esc(d.provider)}</div><h1>${titleOf(d, "Certificate of Achievement")}</h1><div class="pres">This certificate is proudly presented to</div><div class="name">${esc(d.name)}</div><div class="rule"></div><div class="for">for successfully completing</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}${seal(a)}</div></div></div>` },
+  </style><div class="page"><div class="frame"><span class="cn tl"></span><span class="cn tr"></span><span class="cn bl"></span><span class="cn br"></span>${logoImg(d)}<div class="provider">${esc(d.provider)}</div><h1>${titleOf(d, T("certTitleAchievement"))}</h1><div class="pres">${T("certProudlyPresented")}</div><div class="name">${esc(d.name)}</div><div class="rule"></div><div class="for">${T("certForSuccessfully")}</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}${seal(a)}</div></div></div>` },
 
   // 2 — Sovereign · navy panel + gold seal (the 2026 blue+gold classic)
   { id: "navy", name: "Sovereign — Navy & Gold", desc: "Deep panel header, gold seal, formal", accent: "#c39a3f", render: (d, a) => `<style>
@@ -106,7 +109,7 @@ export const CERT_TEMPLATES: CertTemplate[] = [
     .for{font-size:17px;color:#5a627e}.course{font-family:${F_TITLE};font-weight:600;font-size:22px;margin:4px 0;color:#141b33}
     .meta{display:flex;justify-content:center;gap:40px;margin-top:24px;font-family:${F_SANS}}.mk{font-size:10px;color:#8b93ad;text-transform:uppercase;letter-spacing:.1em}.mv{display:block;font-size:15px;margin-top:3px;color:#1f2a52}
     .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px}.sig{text-align:center;min-width:220px;font-family:${F_SANS}}.sigimg{max-height:44px;display:block;margin:0 auto -2px}.sigline{border-top:1.4px solid #141b33;width:210px;margin:0 auto 6px}.signame{font-weight:700;font-size:14px}.sigrole{font-size:11px;color:#8b93ad}
-  </style><div class="page"><div class="top">${logoImg(d)}<div class="pv">${esc(d.provider)}</div><h1>${titleOf(d, "Certificate of Completion")}</h1></div><div class="body">${seal(a)}<div class="pres">This is presented to</div><div class="name">${esc(d.name)}</div><div class="rule"></div><div class="for">in recognition of successfully completing</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}<div class="sig"><div class="sigline"></div><div class="signame">${esc(d.date)}</div><div class="sigrole">Date of completion</div></div></div></div></div>` },
+  </style><div class="page"><div class="top">${logoImg(d)}<div class="pv">${esc(d.provider)}</div><h1>${titleOf(d, T("certTitleCompletion"))}</h1></div><div class="body">${seal(a)}<div class="pres">${T("certIsPresented")}</div><div class="name">${esc(d.name)}</div><div class="rule"></div><div class="for">${T("certInRecognition")}</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}<div class="sig"><div class="sigline"></div><div class="signame">${esc(d.date)}</div><div class="sigrole">${T("certDateCompletion")}</div></div></div></div></div>` },
 
   // 3 — Aria · elegant minimal, generous whitespace
   { id: "elegant", name: "Aria — Elegant", desc: "Airy, refined serif, hairline accent", accent: "#8a7b52", render: (d, a) => `<style>
@@ -120,7 +123,7 @@ export const CERT_TEMPLATES: CertTemplate[] = [
     .meta{display:flex;justify-content:center;gap:52px;margin-top:34px;font-family:${F_SANS}}.mk{font-size:10px;color:${dark(a, 52)};text-transform:uppercase;letter-spacing:.12em}.mv{display:block;font-size:15px;margin-top:4px}
     .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:44px}.sig{text-align:center;min-width:230px;font-family:${F_SANS}}.sigimg{max-height:44px;display:block;margin:0 auto -2px}.sigline{border-top:1px solid #2b2a27;width:220px;margin:0 auto 6px}.signame{font-size:14px;font-weight:600}.sigrole{font-size:11px;color:${dark(a, 52)};font-style:italic}
     .seal{width:78px;height:82px}
-  </style><div class="page"><div class="frame">${logoImg(d)}<div class="provider">${esc(d.provider)}</div><h1>${titleOf(d, "Certificate of Excellence")}</h1><div class="name">${esc(d.name)}</div><div class="flo">&#10022; &#10022; &#10022;</div><div class="for">has successfully completed</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}${seal(a)}</div></div></div>` },
+  </style><div class="page"><div class="frame">${logoImg(d)}<div class="provider">${esc(d.provider)}</div><h1>${titleOf(d, T("certTitleExcellence"))}</h1><div class="name">${esc(d.name)}</div><div class="flo">&#10022; &#10022; &#10022;</div><div class="for">${T("certHasCompleted")}</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}${seal(a)}</div></div></div>` },
 
   // 4 — Meridian · clean corporate, accent side rule
   { id: "corporate", name: "Meridian — Corporate", desc: "Modern sans, accent rail, structured", accent: "#2352c9", render: (d, a) => `<style>
@@ -135,7 +138,7 @@ export const CERT_TEMPLATES: CertTemplate[] = [
     .meta{display:flex;gap:38px;margin-top:34px;font-family:${F_SANS}}.mk{font-size:10px;color:#8b93ad;text-transform:uppercase;letter-spacing:.08em}.mv{display:block;font-size:15px;margin-top:3px;font-weight:600}
     .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:34px}.sig{min-width:220px}.sigimg{max-height:42px;display:block;margin-bottom:-2px}.sigline{border-top:1.5px solid #161d2e;width:210px;margin-bottom:6px}.signame{font-weight:700;font-size:14px}.sigrole{font-size:11px;color:#8b93ad}
     .meta{justify-content:flex-start}
-  </style><div class="page"><div class="rail"></div><div class="body"><div class="head">${d.logo ? logoImg(d) : `<div style="font-size:20px;font-weight:800;color:var(--a)">${esc(d.provider)}</div>`}<div class="pv">${esc(d.provider)}</div></div><h1>${titleOf(d, "Certificate of Completion")}</h1><div class="pres">This certifies that</div><div class="name">${esc(d.name)}</div><div class="nb"></div><div class="for">has successfully completed</div><div class="course">${esc(d.course)}</div><div style="text-align:left">${metaRow(d)}</div><div class="foot">${qrFoot(d)}${sig(d)}<div style="text-align:right;font-size:12px;color:#8b93ad;font-family:${F_SANS}">Issued ${esc(d.date)}</div></div></div></div>` },
+  </style><div class="page"><div class="rail"></div><div class="body"><div class="head">${d.logo ? logoImg(d) : `<div style="font-size:20px;font-weight:800;color:var(--a)">${esc(d.provider)}</div>`}<div class="pv">${esc(d.provider)}</div></div><h1>${titleOf(d, T("certTitleCompletion"))}</h1><div class="pres">${T("certCertifies")}</div><div class="name">${esc(d.name)}</div><div class="nb"></div><div class="for">${T("certHasCompleted")}</div><div class="course">${esc(d.course)}</div><div style="text-align:left">${metaRow(d)}</div><div class="foot">${qrFoot(d)}${sig(d)}<div style="text-align:right;font-size:12px;color:#8b93ad;font-family:${F_SANS}">Issued ${esc(d.date)}</div></div></div></div>` },
 
   // 5 — Laurel · centred wreath emblem, celebratory
   { id: "ribbon", name: "Laurel — Achievement", desc: "Laurel wreath emblem, refined & warm", accent: "#b98a2e", render: (d, a) => `<style>
@@ -148,7 +151,7 @@ export const CERT_TEMPLATES: CertTemplate[] = [
     .for{font-size:16px;color:#7a6a40}.course{font-family:${F_TITLE};font-weight:600;font-size:22px;margin-top:4px}
     .meta{display:flex;justify-content:center;gap:40px;margin-top:24px;font-family:${F_SANS}}.mk{font-size:10px;color:${dark(a, 58)};text-transform:uppercase;letter-spacing:.1em}.mv{display:block;font-size:15px;margin-top:3px}
     .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px}.sig{text-align:center;min-width:210px;font-family:${F_SANS}}.sigimg{max-height:42px;display:block;margin:0 auto -2px}.sigline{border-top:1.4px solid #33280f;width:200px;margin:0 auto 6px}.signame{font-weight:700;font-size:14px}.sigrole{font-size:11px;color:${dark(a, 58)}}
-  </style><div class="page">${logoImg(d)}<div class="provider">${esc(d.provider)}</div>${laurel(a)}<h1>${titleOf(d, "Certificate of Achievement")}</h1><div class="pres">Awarded to</div><div class="name">${esc(d.name)}</div><div class="rule"></div><div class="for">for successfully completing</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}<div class="sig"><div class="sigline"></div><div class="signame">${esc(d.date)}</div><div class="sigrole">Date awarded</div></div></div></div>` },
+  </style><div class="page">${logoImg(d)}<div class="provider">${esc(d.provider)}</div>${laurel(a)}<h1>${titleOf(d, T("certTitleAchievement"))}</h1><div class="pres">${T("certAwardedTo")}</div><div class="name">${esc(d.name)}</div><div class="rule"></div><div class="for">${T("certForSuccessfully")}</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}<div class="sig"><div class="sigline"></div><div class="signame">${esc(d.date)}</div><div class="sigrole">${T("certDateAwarded")}</div></div></div></div>` },
 
   // 6 — Monolith · minimal, huge type
   { id: "minimal", name: "Monolith — Minimal", desc: "Bold type, generous whitespace, accent underline", accent: "#111318", render: (d, a) => `<style>
@@ -159,7 +162,7 @@ export const CERT_TEMPLATES: CertTemplate[] = [
     .for{font-size:15px;color:#555;margin-top:22px}.course{font-size:27px;font-weight:700;margin-top:4px}
     .meta{display:flex;gap:46px;margin-top:auto;padding-top:30px;border-top:1px solid #ececec}.mk{font-size:10px;color:#9a9a9a;text-transform:uppercase;letter-spacing:.1em}.mv{display:block;font-size:16px;margin-top:3px;font-weight:700}
     .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:22px}.sig{min-width:240px}.sigimg{max-height:40px;display:block;margin-bottom:-2px}.sigline{border-top:1.6px solid #0e0f12;width:230px;margin-bottom:6px}.signame{font-weight:700;font-size:14px}.sigrole{font-size:11px;color:#9a9a9a}
-  </style><div class="page"><div class="top">${d.logo ? logoImg(d) : `<div class="pv">${esc(d.provider)}</div>`}<div class="pv">${titleOf(d, "Certificate")}</div></div><div class="eyebrow">This certifies that</div><div class="name">${esc(d.name)}</div><div class="for">has successfully completed</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}<div style="text-align:right;font-size:11px;color:#9a9a9a">${esc(d.provider)}</div></div></div>` },
+  </style><div class="page"><div class="top">${d.logo ? logoImg(d) : `<div class="pv">${esc(d.provider)}</div>`}<div class="pv">${titleOf(d, T("certTitlePlain"))}</div></div><div class="eyebrow">${T("certCertifies")}</div><div class="name">${esc(d.name)}</div><div class="for">${T("certHasCompleted")}</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}<div style="text-align:right;font-size:11px;color:#9a9a9a">${esc(d.provider)}</div></div></div>` },
 
   // 7 — Gatsby · art deco linework
   { id: "deco", name: "Gatsby — Art Deco", desc: "Geometric deco lines, ink & accent, luxe", accent: "#c8a24a", render: (d, a) => `<style>
@@ -175,7 +178,7 @@ export const CERT_TEMPLATES: CertTemplate[] = [
     .meta{display:flex;justify-content:center;gap:42px;margin-top:24px;font-family:${F_SANS}}.mk{font-size:9.5px;color:var(--a);text-transform:uppercase;letter-spacing:.16em}.mv{display:block;font-size:15px;margin-top:4px;color:#f6efd6}
     .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px}.sig{text-align:center;min-width:210px;font-family:${F_SANS}}.sigimg{max-height:42px;display:block;margin:0 auto -2px;filter:brightness(0) invert(1)}.sigline{border-top:1px solid var(--a);width:200px;margin:0 auto 6px}.signame{font-weight:600;font-size:14px;color:#f6efd6}.sigrole{font-size:11px;color:var(--a)}
     .seal{width:84px;height:88px}
-  </style><div class="page"><div class="frame">${logoImg(d)}<div class="provider">${esc(d.provider)}</div><h1>${titleOf(d, "Certificate of Distinction")}</h1><div class="fan">&#9670;&nbsp;&#9670;&nbsp;&#9670;</div><div class="name">${esc(d.name)}</div><div class="rule"></div><div class="for">is hereby recognised for completing</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}${seal(a)}</div></div></div>` },
+  </style><div class="page"><div class="frame">${logoImg(d)}<div class="provider">${esc(d.provider)}</div><h1>${titleOf(d, T("certTitleDistinction"))}</h1><div class="fan">&#9670;&nbsp;&#9670;&nbsp;&#9670;</div><div class="name">${esc(d.name)}</div><div class="rule"></div><div class="for">${T("certHerebyRecognised")}</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}${seal(a)}</div></div></div>` },
 
   // 8 — Sunbeam · tasteful, warm, soft shapes
   { id: "playful", name: "Sunbeam — Warm", desc: "Soft rounded frame, friendly yet smart", accent: "#e08a2b", render: (d, a) => `<style>
@@ -188,7 +191,7 @@ export const CERT_TEMPLATES: CertTemplate[] = [
     .for{font-size:15px;color:#7a869c}.course{font-size:23px;font-weight:800;margin-top:2px}
     .meta{display:flex;justify-content:center;gap:26px;margin-top:22px}.mcell{background:${soft(a, 10)};border-radius:14px;padding:9px 18px}.mk{font-size:10px;color:#7a869c;text-transform:uppercase;letter-spacing:.06em}.mv{display:block;font-size:15px;margin-top:2px;color:#26303f}
     .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px}.sig{text-align:center;min-width:210px}.sigimg{max-height:42px;display:block;margin:0 auto -2px}.sigline{border-top:2px dotted #9aa6bc;width:200px;margin:0 auto 6px}.signame{font-weight:800;font-size:14px}.sigrole{font-size:11px;color:#7a869c}
-  </style><div class="page"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><div class="in">${logoImg(d)}<div class="provider">${esc(d.provider)}</div><h1>${titleOf(d, "Certificate of Achievement")}</h1><div class="pres">This is awarded to</div><div class="name">${esc(d.name)}</div><div class="for">for brilliantly completing</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}<div class="sig"><div class="sigline"></div><div class="signame">${esc(d.date)}</div><div class="sigrole">Awarded on</div></div></div></div></div>` },
+  </style><div class="page"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><div class="in">${logoImg(d)}<div class="provider">${esc(d.provider)}</div><h1>${titleOf(d, T("certTitleAchievement"))}</h1><div class="pres">${T("certIsAwarded")}</div><div class="name">${esc(d.name)}</div><div class="for">${T("certForBrilliantly")}</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}<div class="sig"><div class="sigline"></div><div class="signame">${esc(d.date)}</div><div class="sigrole">${T("certAwardedOn")}</div></div></div></div></div>` },
 
   // 9 — Verdant · fresh, formal, subtle emblem
   { id: "health", name: "Verdant — Fresh", desc: "Clean band + emblem — ideal for compliance", accent: "#1f9d57", render: (d, a) => `<style>
@@ -203,7 +206,7 @@ export const CERT_TEMPLATES: CertTemplate[] = [
     .meta{display:flex;justify-content:center;gap:38px;margin-top:24px}.mk{font-size:10px;color:${dark(a, 55)};text-transform:uppercase;letter-spacing:.08em}.mv{display:block;font-size:15px;margin-top:3px}
     .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px}.sig{text-align:center;min-width:210px}.sigimg{max-height:42px;display:block;margin:0 auto -2px}.sigline{border-top:1.4px solid #122b1e;width:200px;margin:0 auto 6px}.signame{font-weight:700;font-size:14px}.sigrole{font-size:11px;color:${dark(a, 55)}}
     .seal{width:84px;height:88px}
-  </style><div class="page"><div class="top"><span class="badge">✓</span>${d.logo ? logoImg(d) : ""}<h1>${titleOf(d, "Certificate of Completion")}</h1><div class="pv">${esc(d.provider)}</div></div><div class="body"><div class="pres">This certifies that</div><div class="name">${esc(d.name)}</div><div class="nb"></div><div class="for">has successfully completed the training</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}${seal(a)}</div></div></div>` },
+  </style><div class="page"><div class="top"><span class="badge">✓</span>${d.logo ? logoImg(d) : ""}<h1>${titleOf(d, T("certTitleCompletion"))}</h1><div class="pv">${esc(d.provider)}</div></div><div class="body"><div class="pres">${T("certCertifies")}</div><div class="name">${esc(d.name)}</div><div class="nb"></div><div class="for">${T("certHasCompletedTraining")}</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}${seal(a)}</div></div></div>` },
 
   // 10 — Regalia · charcoal + gold prestige
   { id: "prestige", name: "Regalia — Prestige", desc: "Charcoal & gold, laurel, premium dark", accent: "#c9a24a", render: (d, a) => `<style>
@@ -217,7 +220,7 @@ export const CERT_TEMPLATES: CertTemplate[] = [
     .for{font-size:16px;color:#c3bca8}.course{font-family:${F_TITLE};font-weight:600;font-size:21px;margin-top:4px;color:#fff}
     .meta{display:flex;justify-content:center;gap:44px;margin-top:24px;font-family:${F_SANS}}.mk{font-size:9.5px;color:var(--a);text-transform:uppercase;letter-spacing:.16em}.mv{display:block;font-size:15px;margin-top:4px;color:#fff}
     .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px}.sig{text-align:center;min-width:210px;font-family:${F_SANS}}.sigimg{max-height:42px;display:block;margin:0 auto -2px;filter:brightness(0) invert(1)}.sigline{border-top:1px solid #efe9db;width:200px;margin:0 auto 6px}.signame{font-weight:600;font-size:14px;color:#fff}.sigrole{font-size:11px;color:var(--a)}
-  </style><div class="page"><div class="frame">${logoImg(d)}<div class="provider">${esc(d.provider)}</div>${laurel(a)}<h1>${titleOf(d, "Certificate of Achievement")}</h1><div class="name">${esc(d.name)}</div><div class="rule"></div><div class="for">is hereby awarded this certificate for completing</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}<div class="sig"><div class="sigline"></div><div class="signame">${esc(d.date)}</div><div class="sigrole">Date of completion</div></div></div></div></div>` },
+  </style><div class="page"><div class="frame">${logoImg(d)}<div class="provider">${esc(d.provider)}</div>${laurel(a)}<h1>${titleOf(d, T("certTitleAchievement"))}</h1><div class="name">${esc(d.name)}</div><div class="rule"></div><div class="for">${T("certHerebyAwarded")}</div><div class="course">${esc(d.course)}</div>${metaRow(d)}<div class="foot">${qrFoot(d)}${sig(d)}<div class="sig"><div class="sigline"></div><div class="signame">${esc(d.date)}</div><div class="sigrole">${T("certDateCompletion")}</div></div></div></div></div>` },
 ];
 
 export const certTemplateOf = (id?: string): CertTemplate => CERT_TEMPLATES.find((t) => t.id === id) ?? CERT_TEMPLATES[0];
@@ -238,7 +241,7 @@ export function renderCert(d: CertData, templateId?: string): string {
 }
 
 export function certificateDoc(d: CertData, templateId?: string, print = true): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Certificate — ${esc(d.course)}</title>${CERT_FONTS}<style>*{margin:0;box-sizing:border-box}html,body{background:#eef1f6}body{padding:18px}@media print{body{background:#fff;padding:0}}@page{size:landscape;margin:8mm}</style></head><body>${renderCert(d, templateId)}${print ? `<script>window.onload=function(){setTimeout(function(){window.print()},450)}</script>` : ""}</body></html>`;
+  return `<!doctype html><html lang="${dateLocale().split("-u-")[0]}"><head><meta charset="utf-8"><title>${esc(T("certTitlePlain"))} — ${esc(d.course)}</title>${CERT_FONTS}<style>*{margin:0;box-sizing:border-box}html,body{background:#eef1f6}body{padding:18px}@media print{body{background:#fff;padding:0}}@page{size:landscape;margin:8mm}</style></head><body>${renderCert(d, templateId)}${print ? `<script>window.onload=function(){setTimeout(function(){window.print()},450)}</script>` : ""}</body></html>`;
 }
 
 export function openCertificate(d: CertData, templateId?: string) {
