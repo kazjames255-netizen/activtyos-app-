@@ -1,5 +1,6 @@
 "use client";
 
+import { DirGlyph } from "@/components/shell/DirGlyph";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -473,7 +474,7 @@ export function StaffDashApp() {
                       </span>
                     ))}
                   </span>
-                  <span className="ms-auto flex items-center gap-1.5 text-[11px] text-[var(--ink-3)]">{k.where}<span className="text-[var(--brand,#1d3a8f)]">›</span></span>
+                  <span className="ms-auto flex items-center gap-1.5 text-[11px] text-[var(--ink-3)]">{k.where}<span className="text-[var(--brand,#1d3a8f)]"><DirGlyph>›</DirGlyph></span></span>
                 </button>
               ))}
       </Section>

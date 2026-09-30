@@ -150,7 +150,7 @@ export function ParentAccidentsApp() {
                         </>
                       )}
                       {r.followUp && <div><b className="text-[var(--ink)]">{t("care.accFollowUp")}</b> {r.followUp}</div>}
-                      {(r.attachments?.length ?? 0) > 0 && <div><b className="text-[var(--ink)]">{t("care.accAttached")}</b> {r.attachments!.map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer" className="mr-2 font-bold text-[#1d3a8f] underline">{t("care.accFile", { n: i + 1 })}</a>)}</div>}
+                      {(r.attachments?.length ?? 0) > 0 && <div><b className="text-[var(--ink)]">{t("care.accAttached")}</b> {r.attachments!.map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer" className="me-2 font-bold text-[#1d3a8f] underline">{t("care.accFile", { n: i + 1 })}</a>)}</div>}
                     </div>
                   )}
 

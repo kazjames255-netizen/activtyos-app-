@@ -12,6 +12,7 @@
 // fetches, and Notifications reads the same feed as the bell — so no count can
 // disagree with the thing it summarises and nothing is fetched twice.
 
+import { DirGlyph } from "@/components/shell/DirGlyph";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -174,7 +175,7 @@ export function CommsCard({ glyph, title, tone, unread, rows, empty, emptyGlyph,
             type="button" onClick={onOpen}
             className="mt-2.5 flex-none rounded-lg py-1 text-[11px] font-extrabold text-[var(--brand)] transition-colors hover:bg-[var(--panel)]"
           >
-            {actionLabel} →
+            {actionLabel} <DirGlyph>→</DirGlyph>
           </button>
         )}
       </div>

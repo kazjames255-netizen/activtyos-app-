@@ -3,6 +3,7 @@
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useT, useI18n, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
+import { DirGlyph } from "@/components/shell/DirGlyph";
 import { richT } from "@/components/shell/richT";
 import { isRTL } from "@/lib/i18n/config";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
@@ -146,7 +147,7 @@ function PolicyTable({ groups }: { groups: RatioGroup[] }) {
   return (
     <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]" open>
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
-        <span className="inline-block transition-transform group-open:rotate-90">▸</span>
+        <DirGlyph className="transition-transform group-open:rotate-90">▸</DirGlyph>
         {t("p8ops.rtPolicyTitle")} <span className="font-normal text-[var(--ink-3)]">{t("p8ops.rtPolicySub", { where: t("p8ops.rtSetupAgeGroups") })}</span>
       </summary>
       <div className="overflow-x-auto px-3.5 pb-3.5">

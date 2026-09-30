@@ -1,5 +1,6 @@
 "use client";
 
+import { DirGlyph } from "./DirGlyph";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n/provider";
@@ -90,7 +91,7 @@ export function PlatformBell() {
                     {it.body && <span className="block truncate text-[11.5px] text-[var(--ink-2)]">{it.body}</span>}
                     <span className="block text-[10.5px] text-[var(--ink-3)]">{agoLabel(t, it.at)}</span>
                   </span>
-                  <span className="mt-1 text-[11px] text-[var(--ink-3)]">›</span>
+                  <span className="mt-1 text-[11px] text-[var(--ink-3)]"><DirGlyph>›</DirGlyph></span>
                 </button>
               ))}
           </div>
