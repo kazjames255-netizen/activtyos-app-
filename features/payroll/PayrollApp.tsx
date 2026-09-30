@@ -23,9 +23,10 @@ import { loadAbsences as loadHolidayAbsences, loadProfiles as loadHolidayProfile
 import { hhmm, loadClockSettings } from "@/features/timeclock/data";
 import { isoDate, KIND_META, type AbsenceKind } from "@/lib/holiday";
 import { csvCell } from "@/lib/csv";
+import { AccountingIntegrations } from "./AccountingIntegrations";
 import {
   type AdjItem, type Adjust, type ClockRec, type Emp, type Freq, type LeaveAbsence, type LeaveSum, type Line, type SickPay, type TimesheetSum,
-  computeLine, grossMonthly, leaveForPeriod, PPY, FREQ_LABEL, r2, staffSlug, timesheetHours, clockPayHours, londonMs, ukShiftHours,
+  computeLine, employmentShare, grossMonthly, leaveForPeriod, PPY, FREQ_LABEL, r2, staffSlug, timesheetHours, clockPayHours, londonMs, ukShiftHours,
 } from "./payCalc";
 export type { AdjItem, Adjust, Freq, Line } from "./payCalc";
 
@@ -35,7 +36,7 @@ const escH = (s: unknown = "") => String(s ?? "").replace(/[<>&"]/g, (c) => ({ "
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "no connection");
 const leaveLabel = (lv: LeaveSum) => Object.entries(lv.byKind).map(([k, d]) => `${d} day${d === 1 ? "" : "s"} ${(KIND_META[k as AbsenceKind]?.label ?? k).toLowerCase()}`).join(" · ");
 
-export interface PayRun { id: string; period: string; paidOn: string; lines: Line[]; status: "draft" | "approved"; hoursBasis?: "contracted" | "rota" | "timesheet"; freq?: Freq; window?: { start: string; end: string }; createdAt?: string; publishedAt?: string | null }
+export interface PayRun { id: string; period: string; paidOn: string; lines: Line[]; status: "draft" | "approved"; hoursBasis?: "contracted" | "rota" | "timesheet"; freq?: Freq; window?: { start: string; end: string }; createdAt?: string; publishedAt?: string | null; accounting?: { provider?: string; status?: string; journalId?: string; error?: string } }
 export const PAYROLL_RUNS_KEY = "aos.payroll.runs.v1";
 
 // Standalone payslip window — shared by the operator Payroll view and the staff
@@ -46,7 +47,7 @@ export function openPayslip(l: Line, period: string, paidOn: string, provider: s
   const taxMonth = ((mo - 3 + 12) % 12) + 1; const taxYearStart = mo >= 3 ? paid.getFullYear() : paid.getFullYear() - 1;
   // YTD = this tax year's runs up to and including this one (not every run ever)
   const tyFrom = `${taxYearStart}-04-06`;
-  const ytdL = runs.filter((r) => r.paidOn >= tyFrom && r.paidOn <= paidOn).flatMap((r) => r.lines).filter((x) => x.id === l.id);
+  const ytdL = runs.filter((r) => r.status !== "draft" && r.paidOn >= tyFrom && r.paidOn <= paidOn).flatMap((r) => r.lines).filter((x) => x.id === l.id);
   const ytd = (k: keyof Line) => ytdL.reduce((a, x) => a + (typeof x[k] === "number" ? (x[k] as number) : 0), 0);
   const ty = `${taxYearStart}/${String((taxYearStart + 1) % 100).padStart(2, "0")}`;
   const freqLabel = l.freqLabel || "Monthly";
@@ -72,7 +73,7 @@ export function openPayslip(l: Line, period: string, paidOn: string, provider: s
     <div class="grid"><div><h3>Payments</h3><table>${pays}${(l.additions || []).length || ((unpaidM > 0 || sickM > 0) && l.basis === "year") ? row("Gross pay", gbp(l.grossM), true) : ""}</table></div><div><h3>Deductions</h3><table>${deds}</table></div></div>
     <div class="net"><span>Net pay · BACS</span><b>${gbp(l.netM)}</b></div>
     <div class="grid"><div><h3>Year to date (${escH(ty)})</h3><table>${row("Gross", gbp(ytd("grossM")))}${row("PAYE", gbp(ytd("payeM")))}${row("Employee NI", gbp(ytd("eeNiM")))}${row("Pension", gbp(ytd("eePenM")))}${row("Net", gbp(ytd("netM")), true)}</table></div><div><h3>Employer costs</h3><table>${row("Employer NI (est.)", gbp(l.erNiM))}${row("Employer pension", gbp(l.erPenM))}${row("Total cost to employer", gbp(l.grossM + l.erNiM + l.erPenM), true)}</table></div></div>
-    <div class="est">⚠ This is an ESTIMATE for planning, not a statutory itemised pay statement. PAYE, NI and pension are computed on simplified UK 2026/27 rest-of-UK bands using tax code ${escH(l.taxCode)}; pension is 5%/3% of qualifying earnings. Your real payslip is produced by the payroll provider from the RTI/HMRC submission (student loans, statutory pay, Scottish/Welsh bands etc. not modelled here).${statNote}</div>
+    <div class="est">⚠ This is an ESTIMATE for planning, not a statutory itemised pay statement. PAYE, NI and pension are computed on simplified UK 2026/27 rest-of-UK bands using tax code ${escH(l.taxCode)}; pension is 5%/3% of qualifying earnings. Your real payslip is produced by the payroll provider from the RTI/HMRC submission (statutory pay and P45/YTD-cumulative tax are not modelled here; student loans are).${statNote}</div>
     <script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
   const w = window.open(); if (w) { w.document.write(html); w.document.close(); }
 }
@@ -233,7 +234,7 @@ export function PayrollApp() {
   }, [demo]);
   const loaded = stored !== null;
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3200); };
-  const cleanEmp = (e: Emp): Emp => ({ id: e.id, name: e.name, role: e.role || "", op: e.op || "", basis: e.basis, rate: Math.max(0, Number(e.rate) || 0), hpw: Math.min(100, Math.max(0, Number(e.hpw) || 0)), weeks: Math.min(53, Math.max(1, Number(e.weeks) || 52)), taxCode: (e.taxCode || "1257L").trim(), niCat: e.niCat || "A", pension: !!e.pension, ...(e.paidFrom ? { paidFrom: e.paidFrom === "rota" ? "timesheet" : e.paidFrom } : {}), ...(e.source ? { source: e.source } : {}) });
+  const cleanEmp = (e: Emp): Emp => ({ id: e.id, name: e.name, role: e.role || "", op: e.op || "", basis: e.basis, rate: Math.max(0, Number(e.rate) || 0), hpw: Math.min(100, Math.max(0, Number(e.hpw) || 0)), weeks: Math.min(53, Math.max(1, Number(e.weeks) || 52)), taxCode: (e.taxCode || "1257L").trim(), niCat: e.niCat || "A", pension: !!e.pension, ...(e.paidFrom ? { paidFrom: e.paidFrom === "rota" ? "timesheet" : e.paidFrom } : {}), ...(e.source ? { source: e.source } : {}), ...(e.startDate ? { startDate: e.startDate } : {}), ...(e.leaveDate ? { leaveDate: e.leaveDate } : {}), ...(e.studentLoanPlan && e.studentLoanPlan !== "none" ? { studentLoanPlan: e.studentLoanPlan } : {}), ...(e.director ? { director: true } : {}), ...(e.taxRegime && e.taxRegime !== "uk" ? { taxRegime: e.taxRegime } : {}) });
   const saveEmps = (next: Emp[]) => {
     if (demo) { setStored(next); try { localStorage.setItem(EKEY, JSON.stringify(next)); } catch { /* ignore */ } return; }
     if (!loaded) { flash("Payroll is still loading — try again in a moment."); return; }
@@ -325,15 +326,18 @@ export function PayrollApp() {
     const manualH = a?.hours != null && e.basis === "hour";
     const hours = manualH ? (a!.hours as number) : e.basis === "hour" && src === "timesheet" ? tsFor(e).approvedH : undefined;
     const hoursFrom = e.basis !== "hour" ? undefined : manualH ? "manual" : src === "timesheet" ? "timesheet" : "contracted";
-    return computeLine(e, { hours, taxCode: a?.taxCode, niCat: a?.niCat, additions: a?.additions, deductions: a?.deductions, override: a?.override, rolledUp: isRolledUp(e), hoursFrom, leave: leaveOf(e), sickPay }, freq);
+    return computeLine(e, { hours, taxCode: a?.taxCode, niCat: a?.niCat, additions: a?.additions, deductions: a?.deductions, override: a?.override, rolledUp: isRolledUp(e), hoursFrom, leave: leaveOf(e), sickPay, share: employmentShare(e, win.start, win.end).share }, freq);
   };
-  const lines = emps.map((e) => lineFor(e));
+  // Who is on THIS run: a leaver drops out after their last day, a new starter only from their first (part-period = pro-rata)
+  const payEmps = emps.filter((e) => employmentShare(e, win.start, win.end).employed);
+  const notInRun = emps.filter((e) => !employmentShare(e, win.start, win.end).employed);
+  const lines = payEmps.map((e) => lineFor(e));
   const isAdjusted = (e: Emp) => { const a = adjOf(e.id); return !!a && (a.hours != null || !!a.taxCode || !!a.niCat || !!(a.additions?.length) || !!(a.deductions?.length) || a.override?.paye != null || a.override?.eeNi != null || a.override?.eePen != null); };
-  const tsEmps = emps.filter((e) => empSource(e) === "timesheet");
+  const tsEmps = payEmps.filter((e) => empSource(e) === "timesheet");
   const tsSum: Record<string, TimesheetSum> = Object.fromEntries(tsEmps.map((e) => [e.id, tsFor(e)]));
   const zeroHourNames = tsEmps.filter((e) => adjOf(e.id)?.hours == null && !(tsSum[e.id].approvedH > 0)).map((e) => e.name);
   const pendingEmps = tsEmps.filter((e) => tsSum[e.id].pendingH > 0 || tsSum[e.id].openDays > 0);
-  const noRateNames = emps.filter((e) => !(e.rate > 0)).map((e) => e.name);
+  const noRateNames = payEmps.filter((e) => !(e.rate > 0)).map((e) => e.name);
   const setEmpAdjust = (id: string, a: Adjust | null) => { const next = { ...adjust, [period]: { ...periodAdj } }; if (a) next[period][id] = a; else delete next[period][id]; if (Object.keys(next[period]).length === 0) delete next[period]; saveAdjust(next, period); };
   const totalGross = lines.reduce((a, l) => a + l.grossM, 0);
   const totalNet = lines.reduce((a, l) => a + l.netM, 0);
@@ -346,14 +350,15 @@ export function PayrollApp() {
     if (noRateNames.length && !window.confirm(`No pay rate set for ${noRateNames.join(", ")} — they'll be paid £0. Set it on the Employees tab, or approve anyway?`)) return;
     if (zeroHourNames.length && !window.confirm(`${zeroHourNames.length} timesheet-paid staff have no APPROVED hours for ${period} (${zeroHourNames.join(", ")}). They'll be paid £0. Approve anyway?`)) return;
     if (pendingEmps.length && !window.confirm(`Timesheet hours not yet approved for ${period}: ${pendingEmps.map((e) => `${e.name} ${tsSum[e.id].pendingH}h${tsSum[e.id].openDays ? ` + ${tsSum[e.id].openDays} shift(s) never clocked out` : ""}`).join(", ")}. They are NOT paid in this run. Approve anyway?`)) return;
-    if (runs.some((r) => r.period === period) && !window.confirm(`A payroll run for ${period} already exists. Approve another? Both are kept (a payroll record is never overwritten).`)) return;
+    const dup = runs.some((r) => r.period === period);
+    if (dup && !window.confirm(`A payroll run for ${period} already exists. Approve another? Both are kept (a payroll record is never overwritten).`)) return;
     const body = { period, paidOn: win.paidOn, lines, hoursBasis: (tsEmps.length ? "timesheet" : "contracted") as PayRun["hoursBasis"], freq, window: { start: win.start, end: win.end } };
     if (demo) {
       const next = [{ id: "pr_" + new Date().getTime().toString(36), status: "approved" as const, ...body }, ...runs];
       setRuns(next); try { localStorage.setItem(RKEY, JSON.stringify(next)); } catch { /* ignore */ }
     } else {
       setBusy(true);
-      try { const run = await apiPost<PayRun>("/api/payroll/runs", body); setRuns((rs) => [run, ...rs]); } // never delete a prior run — versioned history
+      try { const run = await apiPost<PayRun>("/api/payroll/runs", dup ? { ...body, allowDuplicate: true } : body); setRuns((rs) => [run, ...rs]); } // never delete a prior run — versioned history
       catch (e) { flash(`⚠ The pay run wasn't saved: ${errMsg(e)}`); return; }
       finally { setBusy(false); }
     }
@@ -370,6 +375,27 @@ export function PayrollApp() {
       setRuns((rs) => rs.map((x) => (x.id === r.id ? { ...x, status: run.status } : x)));
       flash("✅ Run approved — you can now publish it to staff.");
     } catch (e) { flash(`⚠ ${errMsg(e)}`); }
+  };
+  // Real accounting connections (live accounts only): which providers are connected, and posting an approved run's wages journal.
+  const [acctConn, setAcctConn] = useState<Record<string, { connected: boolean }>>({});
+  const [posting, setPosting] = useState<string | null>(null);
+  useEffect(() => { if (demo || tab !== "payslips") return; apiGet<Record<string, { connected: boolean }>>("/api/accounting/connections").then(setAcctConn).catch(() => setAcctConn({})); }, [demo, tab]);
+  const ACCT_NAME: Record<string, string> = { quickbooks: "QuickBooks Online", xero: "Xero", sage: "Sage" };
+  const postToAccounting = async (r: PayRun, provider: string) => {
+    if (!window.confirm(`Post ${r.period}'s wages journal to ${ACCT_NAME[provider]}? It appears as a manual journal in your books.`)) return;
+    setPosting(r.id);
+    try {
+      const res = await apiPost<{ provider: string; journalId: string; status: string }>(`/api/accounting/post/${encodeURIComponent(r.id)}?provider=${provider}`, {});
+      setRuns((rs) => rs.map((x) => (x.id === r.id ? { ...x, accounting: { provider: res.provider, journalId: res.journalId, status: res.status } } : x)));
+      flash(`✅ Wages journal posted to ${ACCT_NAME[provider]}.`);
+    } catch (e) { flash(`⚠ ${errMsg(e)}`); }
+    finally { setPosting(null); }
+  };
+  const acctBtn = (r: PayRun) => {
+    if (r.accounting?.status === "posted") return <span data-testid="acct-posted" className="ms-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">📒 Posted to {ACCT_NAME[r.accounting.provider ?? ""] ?? "accounting"}</span>;
+    const ready = Object.keys(ACCT_NAME).filter((p) => acctConn[p]?.connected);
+    if (!ready.length) return <button type="button" onClick={() => setTab("integrations")} className="ms-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">🔌 Connect accounting to post</button>;
+    return <span className="ms-auto flex items-center gap-1.5">{ready.map((p) => <button key={p} type="button" disabled={posting === r.id} onClick={() => postToAccounting(r, p)} className="rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f] disabled:opacity-50">{posting === r.id ? "Posting…" : `📒 Post to ${ACCT_NAME[p]}`}</button>)}</span>;
   };
   const publishRun = async (r: PayRun, on: boolean) => {
     if (on && !window.confirm(`Publish ${r.period}'s payslips to the ${r.lines.length} people on it? Each sees only their own estimated payslip under My payslips.`)) return;
@@ -413,7 +439,7 @@ export function PayrollApp() {
       {tab === "overview" && (<>
         <CollapsibleStats id="payroll">
         <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-          {tile(`This ${freq === "monthly" ? "month" : "period"} · gross`, gbp0(totalGross), `${emps.length} employees · ${FREQ_LABEL[freq]}`, "linear-gradient(135deg,#1d3a8f,#3f7ae0)")}
+          {tile(`This ${freq === "monthly" ? "month" : "period"} · gross`, gbp0(totalGross), `${payEmps.length} employees · ${FREQ_LABEL[freq]}`, "linear-gradient(135deg,#1d3a8f,#3f7ae0)")}
           {tile("Net to pay", gbp0(totalNet), "after tax, NI & pension", "linear-gradient(135deg,#166534,#37b26a)")}
           {tile("PAYE + NI to HMRC", gbp0(totalPaye + lines.reduce((a, l) => a + l.eeNiM + l.erNiM, 0)), "estimated liability", "linear-gradient(135deg,#9d174d,#f43f5e)")}
           {tile("Total employer cost", gbp0(totalErCost), "incl. employer NI & pension", "linear-gradient(135deg,#334155,#64748b)")}
@@ -442,7 +468,7 @@ export function PayrollApp() {
 
       {tab === "run" && (
         <Card className="p-4">
-          <div className="mb-3 flex flex-wrap items-center gap-2"><div><div className="text-[14px] font-extrabold text-[var(--ink)]">Pay run</div><div className="text-[12px] text-[var(--ink-3)]">Review, then approve to generate payslips. Figures are estimates.</div></div><div className="ms-auto flex gap-2"><Button onClick={exportCsv}>⬇ Export CSV</Button><Button variant="primary" onClick={runPayroll} disabled={busy || !loaded}>{busy ? "Saving…" : "✓ Approve & generate payslips"}</Button></div></div>
+          <div className="mb-3 flex flex-wrap items-center gap-2"><div><div className="text-[14px] font-extrabold text-[var(--ink)]">Pay run</div><div className="text-[12px] text-[var(--ink-3)]">Review, then create the pay run — a different manager approves it from the Payslips tab. Figures are estimates.</div></div><div className="ms-auto flex gap-2"><Button onClick={exportCsv}>⬇ Export CSV</Button><Button variant="primary" onClick={runPayroll} disabled={busy || !loaded}>{busy ? "Saving…" : "✓ Create pay run"}</Button></div></div>
 
           {/* Frequency + period picker */}
           <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
@@ -484,15 +510,16 @@ export function PayrollApp() {
             {tsEmps.length > 0 && (() => { const totH = tsEmps.reduce((n, e) => n + tsSum[e.id].approvedH, 0); const totW = tsEmps.reduce((n, e) => n + tsSum[e.id].approvedH * e.rate, 0); return <div className="mt-2 rounded-lg bg-[#eef4fd] px-3 py-2 text-[11.5px] font-semibold text-[#1d3a8f]">↩ From {demo ? "the Schedule" : "approved timesheets (Clock in/out)"} for {period}: <b>{r2(totH)}h</b> across {tsEmps.length} staff → <b>{gbp0(totW)}</b> basic pay (before leave, tax, NI &amp; pension). Hours are the Timesheets screen&rsquo;s own &ldquo;Pay hrs&rdquo; — breaks, rounding, lateness and overtime rules included.</div>; })()}
             {pendingEmps.length > 0 && <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">⏳ Not approved yet — <b>not paid in this run</b>: {pendingEmps.map((e) => `${e.name} ${tsSum[e.id].pendingH}h${tsSum[e.id].openDays ? ` (+${tsSum[e.id].openDays} shift${tsSum[e.id].openDays === 1 ? "" : "s"} never clocked out)` : ""}`).join(", ")}. Approve them from ✏️ Edit on the row, or in Timesheets.</div>}
             {tsEmps.length > 0 && zeroHourNames.length > 0 && <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">⚠ No approved hours for: {zeroHourNames.join(", ")} — they&rsquo;ll show £0. Approve their timesheets, set them to Contracted, or approve as-is.</div>}
+            {notInRun.length > 0 && <div data-testid="not-in-run" className="mt-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] font-semibold text-[var(--ink-3)]">Not in this run (not employed in {period}): {notInRun.map((e) => `${e.name} (${e.startDate && e.startDate > win.end ? `starts ${e.startDate}` : `left ${e.leaveDate}`})`).join(", ")}.</div>}
             {noRateNames.length > 0 && <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">⚠ No pay rate set for: {noRateNames.join(", ")} — set it on the <button type="button" onClick={() => setTab("employees")} className="underline">Employees</button> tab.</div>}
           </div>
 
           <div className="mb-2 text-[11.5px] text-[var(--ink-3)]">Everything is editable per person, per period — click <b>Edit</b> on a row to change hours, tax code, NI category, add overtime/bonus or deductions, or override PAYE/NI/pension. Net always recalculates. Nothing here changes the employee&rsquo;s master record. <b>Leave</b> comes from approved bookings in Leave &amp; absence: unpaid leave comes off contracted hours or salary; paid leave is paid at the normal rate (timesheet staff get it added); rolled-up staff are paid holiday as their 12.07% line instead.</div>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
             <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-start text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-end font-extrabold">Hours</th><th className="px-3 py-2.5 text-end font-extrabold">Gross</th><th className="px-3 py-2.5 text-end font-extrabold">PAYE</th><th className="px-3 py-2.5 text-end font-extrabold">NI</th><th className="px-3 py-2.5 text-end font-extrabold">Pension</th><th className="px-3 py-2.5 text-end font-extrabold">Net</th><th className="px-3 py-2.5 text-end font-extrabold">Er cost</th><th className="px-3 py-2.5 text-end font-extrabold"></th></tr></thead>
-              <tbody>{lines.map((l, i) => { const e = emps[i]; const ts = tsSum[e.id]; const lv = l.leave; const man = (on: boolean) => on ? <sup className="ms-0.5 text-[8px] font-black text-[#b45309]" title="Manual override">M</sup> : null; return (
+              <tbody>{lines.map((l, i) => { const e = payEmps[i]; const ts = tsSum[e.id]; const lv = l.leave; const man = (on: boolean) => on ? <sup className="ms-0.5 text-[8px] font-black text-[#b45309]" title="Manual override">M</sup> : null; return (
                 <tr key={l.id} className="border-t border-[var(--line-2,#eef2f8)]">
-                  <td className="px-3 py-2 font-bold text-[var(--ink)]">{l.name}{isAdjusted(e) && <span className="ms-1.5">{chip("adjusted", "bg-[#fdf3e0] text-[#8a5a09]")}</span>}{isRolledUp(e) && <span className="ms-1.5">{chip("holiday rolled-up", "bg-[#eef1f6] text-[#64748b]", "Holiday is included in pay at 12.07% — annual leave isn't paid again")}</span>}
+                  <td className="px-3 py-2 font-bold text-[var(--ink)]">{l.name}{isAdjusted(e) && <span className="ms-1.5">{chip("adjusted", "bg-[#fdf3e0] text-[#8a5a09]")}</span>}{l.proRata != null && <span className="ms-1.5">{chip(`pro-rata ${Math.round(l.proRata * 100)}%`, "bg-[#eef4fd] text-[#1d3a8f]", e.startDate && e.startDate > win.start ? `Started ${e.startDate}` : `Left ${e.leaveDate}`)}</span>}{isRolledUp(e) && <span className="ms-1.5">{chip("holiday rolled-up", "bg-[#eef1f6] text-[#64748b]", "Holiday is included in pay at 12.07% — annual leave isn't paid again")}</span>}
                     {(l.addM > 0 || l.dedM > 0) && <div className="mt-0.5 text-[10px] font-semibold text-[var(--ink-3)]">{l.addM > 0 && <span className="text-[#0f7a43]">+{gbp(l.addM)} additions</span>}{l.addM > 0 && l.dedM > 0 && " · "}{l.dedM > 0 && <span className="text-[#c0392b]">−{gbp(l.dedM)} deductions</span>}</div>}
                     {lv && <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] font-semibold">{Object.entries(lv.byKind).map(([k, d]) => <span key={k} className="rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[#1d3a8f]">{KIND_META[k as AbsenceKind]?.icon ?? "🗓️"} {d}d {(KIND_META[k as AbsenceKind]?.label ?? k).toLowerCase()}</span>)}{(l.unpaidLeaveM ?? 0) > 0 && <span className="text-[#c0392b]">−{gbp(l.unpaidLeaveM ?? 0)} unpaid leave</span>}{(l.sickLeaveM ?? 0) > 0 && <span className="text-[#c0392b]">−{gbp(l.sickLeaveM ?? 0)} sickness</span>}</div>}
                     {lv && lv.paidDays > 0 && l.hoursFrom === "timesheet" && !(e.hpw > 0) && !isRolledUp(e) && <div className="mt-0.5 text-[10px] font-bold text-[#b45309]">⚠ {lv.paidDays}d paid leave not valued — set their hours/week on the Employees tab (a day off is a fifth of it), or add holiday pay with Edit.</div>}
@@ -523,10 +550,11 @@ export function PayrollApp() {
 
       {tab === "payslips" && (
         <Card className="p-4">
-          {runs.length === 0 ? <div className="p-6 text-center text-[13px] text-[var(--ink-3)]">No pay runs yet — approve one from the <b>Pay run</b> tab.</div> : (
+          {runs.length === 0 ? <div className="p-6 text-center text-[13px] text-[var(--ink-3)]">No pay runs yet — create one from the <b>Pay run</b> tab.</div> : (
             <div className="space-y-4">{runs.map((r) => (
-              <div key={r.id}>
-                <div className="mb-1.5 flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{r.period}</span><span className="text-[11.5px] text-[var(--ink-3)]">paid {new Date(`${r.paidOn}T12:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })} · {gbp0(r.lines.reduce((a, l) => a + l.netM, 0))} net</span>
+              <div key={r.id} data-ui="card" data-testid="pay-run">
+                <div className="mb-1.5 flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{r.period}</span>{!demo && (r.status === "approved" ? chip("Approved", "bg-[#e6f4ea] text-[#0f7a43]") : chip("Draft · needs a second person to approve", "bg-[#fdf3e0] text-[#8a5a09]"))}<span className="text-[11.5px] text-[var(--ink-3)]">paid {new Date(`${r.paidOn}T12:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })} · {gbp0(r.lines.reduce((a, l) => a + l.netM, 0))} net</span>
+                  {!demo && r.status === "approved" && acctBtn(r)}
                   {!demo && (r.status !== "approved"
                     ? <button type="button" onClick={() => approveRun(r)} className="ms-auto rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold text-[#b9770e] hover:border-[#b9770e]">✅ Approve run</button>
                     : (r.publishedAt
@@ -542,7 +570,8 @@ export function PayrollApp() {
         </Card>
       )}
 
-      {tab === "integrations" && (
+      {tab === "integrations" && !demo && <AccountingIntegrations />}
+      {tab === "integrations" && demo && (
         <Card className="p-4">
           <div className="mb-3 text-[12px] text-[var(--ink-3)]">Connect your accounting software to post each approved pay run as a wages journal (gross, PAYE/NI liability, net, pension). One place, no re-keying.</div>
           <div className="grid gap-2.5 sm:grid-cols-3">
@@ -573,6 +602,7 @@ function EmpEditor({ emp, isNew, canRemove, takenIds, onSave, onRemove, onClose 
   const [e, setE] = useState<Emp>(emp);
   const [err, setErr] = useState<string | null>(null);
   const save = () => {
+    if (e.startDate && e.leaveDate && e.leaveDate < e.startDate) { setErr("The leaving date can't be before the start date."); return; }
     if (isNew) {
       const name = e.name.trim(); const id = staffSlug(name);
       if (!name) { setErr("Enter their name."); return; }
@@ -602,7 +632,13 @@ function EmpEditor({ emp, isNew, canRemove, takenIds, onSave, onRemove, onClose 
           {e.basis === "hour" && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Paid from <span className="normal-case text-[var(--ink-3)]">(admin/office staff → Contracted; coaches who clock in → Timesheets)</span></span><Select value={sourceOf(e)} onChange={(ev) => setE({ ...e, paidFrom: ev.target.value as "contracted" | "timesheet" })} className="w-full"><option value="contracted">Contracted hours</option><option value="timesheet">Approved timesheets (clock in/out)</option></Select><span className="mt-1 block text-[10.5px] text-[var(--ink-3)]">Hours / week also values leave: a day off is a fifth of it.</span></label>}
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Tax code</span><Input value={e.taxCode} onChange={(ev) => setE({ ...e, taxCode: ev.target.value })} className="w-full" /></label>
-            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">NI category</span><Select value={e.niCat} onChange={(ev) => setE({ ...e, niCat: ev.target.value })} className="w-full">{["A", "B", "C", "H", "M"].map((c) => <option key={c} value={c}>{c}</option>)}</Select></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">NI category</span><Select value={e.niCat} onChange={(ev) => setE({ ...e, niCat: ev.target.value })} className="w-full">{["A", "B", "C", "H", "J", "M", "V", "Z"].map((c) => <option key={c} value={c}>{c}</option>)}</Select></label>
+          </div>
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Student / postgraduate loan <span className="normal-case text-[var(--ink-3)]">(deducted after tax when pay is above the plan threshold)</span></span><Select value={e.studentLoanPlan || "none"} onChange={(ev) => setE({ ...e, studentLoanPlan: ev.target.value as Emp["studentLoanPlan"] })} className="w-full"><option value="none">None</option><option value="plan1">Plan 1</option><option value="plan2">Plan 2</option><option value="plan4">Plan 4</option><option value="plan5">Plan 5</option><option value="postgrad">Postgraduate loan</option></Select></label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Start date</span><Input type="date" data-testid="emp-start" value={e.startDate || ""} onChange={(ev) => { setE({ ...e, startDate: ev.target.value || undefined }); setErr(null); }} className="w-full" /></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Leaving date</span><Input type="date" data-testid="emp-leave" value={e.leaveDate || ""} onChange={(ev) => { setE({ ...e, leaveDate: ev.target.value || null }); setErr(null); }} className="w-full" /></label>
+            <div className="col-span-2 -mt-1 text-[10.5px] text-[var(--ink-3)]">Optional. A new starter is paid pro-rata for the part-period; a leaver is paid up to and including their last day, then drops out of later pay runs.</div>
           </div>
           <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2"><input type="checkbox" checked={e.pension} onChange={(ev) => setE({ ...e, pension: ev.target.checked })} className="h-4 w-4 accent-[#1d3a8f]" /><span className="text-[12.5px] font-bold text-[var(--ink)]">Enrolled in workplace pension (5% / 3%)</span></label>
           <div className="rounded-lg bg-[#eef4fd] px-3 py-2 text-[12px] font-semibold text-[#1d3a8f]">{e.basis === "hour" && sourceOf(e) === "timesheet" ? `Paid for approved timesheet hours at £${(e.rate || 0).toFixed(2)}/hr` : `Estimated gross: ${gbp0(grossMonthly(e))}/month`}</div>
@@ -705,7 +741,7 @@ function RunAdjust({ emp, period, freq, value, preview, ts, tsRows, hoursSource,
           )}
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className={lbl}>Tax code (this run)</span><Input value={d.taxCode} placeholder={emp.taxCode} onChange={(ev) => setD({ ...d, taxCode: ev.target.value })} className="w-full" /></label>
-            <label className="block"><span className={lbl}>NI category</span><Select value={d.niCat || ""} onChange={(ev) => setD({ ...d, niCat: ev.target.value })} className="w-full"><option value="">{emp.niCat} (default)</option>{["A", "B", "C", "H", "M"].map((c) => <option key={c} value={c}>{c}</option>)}</Select></label>
+            <label className="block"><span className={lbl}>NI category</span><Select value={d.niCat || ""} onChange={(ev) => setD({ ...d, niCat: ev.target.value })} className="w-full"><option value="">{emp.niCat} (default)</option>{["A", "B", "C", "H", "J", "M", "V", "Z"].map((c) => <option key={c} value={c}>{c}</option>)}</Select></label>
           </div>
           {itemRows("additions", "Additions (taxable — added to gross)", ["Overtime", "Bonus", "Holiday pay", "Backpay"], "border-[#bfe3cd] text-[#0f7a43] hover:bg-[#eafaf0]")}
           {itemRows("deductions", "Deductions (after tax — off net)", ["Salary advance", "Salary sacrifice", "Other"], "border-[#f0cfcf] text-[#c0392b] hover:bg-[#fdeeee]")}

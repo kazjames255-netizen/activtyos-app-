@@ -263,6 +263,9 @@ payroll.post("/runs", async (req, res) => {
   const now = new Date().toISOString();
   const id = "pr_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const doc = { ...JSON.parse(JSON.stringify(parsed.data)), id, status: "draft", createdAt: now, createdBy: req.user?.email ?? null, createdByUid: req.user?.uid ?? null, approvedAt: null, approvedBy: null, publishedAt: null, payKey: key, tenantId: req.auth!.tenantId, franchiseId: req.auth!.franchiseId ?? null };
+  // A run is ONE Firestore document (hard limit 1 MiB): an oversized one used to die inside .create() as a bare 500. Refuse it up front with advice.
+  const bytes = Buffer.byteLength(JSON.stringify(doc));
+  if (bytes > 900_000) { res.status(413).json({ error: `This pay run is too large to store (${Math.round(bytes / 1024)} KB for ${parsed.data.lines.length} people; the limit is about 900 KB). Split it into smaller runs, e.g. one per location or pay group.` }); return; }
   await runs.doc(`${key}_${id}`.replace(/\//g, "_")).create(doc);
   auditPayroll(req, key, "create-run", { runId: id, period: parsed.data.period, lines: parsed.data.lines.length });
   res.status(201).json(stripRun(doc));
