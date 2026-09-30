@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { usePortalHref } from "@/lib/portal-href";
 import { api, get as apiGet, post as apiPost, openFile } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
@@ -166,6 +167,7 @@ function ContactPane({
   onBack: () => void;
 }) {
   const t = useT();
+  const portalHref = usePortalHref();
   const digits = (phone ?? "").replace(/\D/g, "");
   // A UK mobile typed as 07… won't work on wa.me, which wants the country code.
   const intl = digits.startsWith("0") ? `44${digits.slice(1)}` : digits;
@@ -210,7 +212,7 @@ function ContactPane({
           <span className={dead}>{t("customers.noPhoneNumber")}</span>
         )}
         {email ? (
-          <a href={`/freelancer/messages?compose&emails=${encodeURIComponent(email)}&body=${encodeURIComponent(`Hi ${name.split(" ")[0] || "there"},\n\n`)}`} className={item}>
+          <a href={portalHref(`/messages?compose&emails=${encodeURIComponent(email)}&body=${encodeURIComponent(`Hi ${name.split(" ")[0] || "there"},\n\n`)}`)} className={item}>
             💌 <span className="min-w-0 flex-1 truncate">{t("customers.messageInApp")}</span>
           </a>
         ) : (

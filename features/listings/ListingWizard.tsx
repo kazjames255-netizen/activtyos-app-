@@ -1,6 +1,7 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { usePortalHref } from "@/lib/portal-href";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, get as apiGet, post as apiPost, isDemoMode, ApiError } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
@@ -2060,6 +2061,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
 
 // ── Step: Tickets & pricing (pulls from Blocks) ────────────────────────────
 function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; blocks: BlocksStore; tickets: { name: string; days: number; price: number }[] }) {
+  const portalHref = usePortalHref();
   const ovUpd = (name: string, field: keyof TicketOverride, value: string) =>
     upd({ ticketOverrides: { ...d.ticketOverrides, [name]: { ...d.ticketOverrides[name], [field]: value } } });
   const toggleHidden = (name: string, hidden: boolean) =>
@@ -2092,7 +2094,7 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
         <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">
           <div className="font-bold text-[var(--ink)]">You haven&rsquo;t built a block yet.</div>
           <p className="mt-1">A block is the pattern parents book — set your periods (times) and passes once, price it, and reuse it on any listing.</p>
-          <a href="/freelancer/blocks" target="_blank" rel="noreferrer" className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white hover:bg-[#16306e]">Build a block in Blocks ↗</a>
+          <a href={portalHref("/blocks")} target="_blank" rel="noreferrer" className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white hover:bg-[#16306e]">Build a block in Blocks ↗</a>
           <p className="mt-2.5 text-[11.5px]">No need to lose your work — press <b>Save draft</b> up top, go build your block, then come back and finish this listing.</p>
         </Card>
       ) : (

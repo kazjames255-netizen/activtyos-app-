@@ -1,5 +1,6 @@
 "use client";
 
+import { usePortalHref } from "@/lib/portal-href";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { ApiError, get as apiGet, put as apiPut, isDemoMode } from "@/lib/api";
@@ -174,6 +175,7 @@ function TimeSel({ value, onChange }: { value: string; onChange: (v: string) => 
 
 export function ScheduleApp() {
   const t = useT();
+  const portalHref = usePortalHref();
   const [rawStore, setStore] = useState<Store>(empty);
   const [anchor, setAnchor] = useState(() => iso(new Date()));
   const [span, setSpan] = useState<Span>("week");
@@ -771,7 +773,7 @@ export function ScheduleApp() {
 
                 {group === "area" ? (
                   <>
-                  {gridListings.length === 0 && <div className="border-b border-[var(--line)] px-3 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("schedule.noListingsForView")} <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">{t("schedule.listingsLink")}</a>{t("schedule.noListingsForViewTail")}</div>}
+                  {gridListings.length === 0 && <div className="border-b border-[var(--line)] px-3 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("schedule.noListingsForView")} <a href={portalHref("/listings")} className="font-bold text-[#1d3a8f] hover:underline">{t("schedule.listingsLink")}</a>{t("schedule.noListingsForViewTail")}</div>}
                   {gridListings.map((l) => {
                     const loc = venueNameOf(l.venueId), sn = seasonNameOf(l.seasonId);
                     const listingShifts = periodShifts.filter((s) => s.listing === l.title);

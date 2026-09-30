@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { usePortalHref } from "@/lib/portal-href";
 import { get as apiGet, post as apiPost, api } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
@@ -136,6 +137,11 @@ export function TeamApp() {
   useRealtime(["invites"], refresh);
 
   const canInviteFranchise = me?.role === "company";
+  // The plan belongs to the account holder: a franchise's staff sit on head office's plan (the API refuses it
+  // /api/subscription), and a freelancer's plan page lives under /freelancer — /company/subscription bounced both.
+  const isFranchiseAcct = me?.role === "franchise";
+  const portalHref = usePortalHref();
+  const subHref = portalHref("/subscription");
   const emailOk = /.+@.+\..+/.test(email.trim());
 
   // Active = accepted invites we haven't locally deactivated.
@@ -244,18 +250,20 @@ export function TeamApp() {
       <>
       {/* KPI tiles — dashboard style */}
       <CollapsibleStats id="team">
-      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+      <div className={"grid grid-cols-2 gap-2.5 " + (isFranchiseAcct ? "lg:grid-cols-3" : "lg:grid-cols-4")}>
+        {!isFranchiseAcct && (
         <Tile label={`${t("team.onYourPlan")}${sub?.details?.name ? ` · ${sub.details.name}` : ""}`} icon="👥" grad={atCap ? GRAD.amber : GRAD.violet}
           value={`${staffCount}${staffLimit != null ? ` / ${staffLimit}` : ""}`}
           sub={staffLimit != null ? (atCap ? t("team.atPlanLimit") : t("team.moreIncluded", { n: staffLimit - staffCount })) : t("team.extraBillMonthly")}
-          aside={<Link href="/company/subscription" className="inline-block rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold text-white hover:bg-white/30">{t("team.managePlan")}</Link>} />
+          aside={<Link href={subHref} className="inline-block rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold text-white hover:bg-white/30">{t("team.managePlan")}</Link>} />
+        )}
         <Tile label={t("team.activeTeam")} icon="✅" grad={GRAD.green} value={`${active.length}`} sub={t("team.activatedAccounts")} />
         <Tile label={t("team.pending")} icon="✉️" grad={GRAD.amber} value={`${pending.length}`} sub={t("team.awaitingFirstLogin")} />
         <Tile label={t("team.locations")} icon="📍" grad={GRAD.teal} value={`${venues.length}`} sub={t("team.sitesTheyWork")} aside={<button type="button" onClick={() => setTab("locations")} className="inline-block rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold text-white hover:bg-white/30">{t("team.deploymentArrow")}</button>} />
       </div>
       </CollapsibleStats>
 
-      {atCap && <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e3] px-3 py-2 text-[12.5px] text-[#7a5b06]"><span className="font-bold">{t("team.reachedStaffLimit")}</span><span>{t("team.inviteMoreTier")}</span><Link href="/company/subscription" className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white hover:bg-[#16306e]">{t("team.upgradePlan")}</Link></div>}
+      {atCap && <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e3] px-3 py-2 text-[12.5px] text-[#7a5b06]"><span className="font-bold">{t("team.reachedStaffLimit")}</span><span>{t("team.inviteMoreTier")}</span><Link href={subHref} className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white hover:bg-[#16306e]">{t("team.upgradePlan")}</Link></div>}
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
 
@@ -320,7 +328,7 @@ export function TeamApp() {
                 <div className="max-w-lg">
                   <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className="w-full !py-2.5 !text-[15px]">{roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</Select>
                   <div className="mt-3 flex items-center gap-2 rounded-xl bg-[var(--panel)] p-3"><span className="rounded-full px-3 py-1 text-[12px] font-extrabold" style={roleStyle(roleId)}>{roleNm}</span><span className="text-[12px] text-[var(--ink-2)]">{t("team.isWhatCanSeeDo", { name: nm.split(" ")[0] })}</span></div>
-                  <p className="mt-2 text-[12px] text-[var(--ink-3)]">{t("team.rolesSetInPre")}<Link href="/company/setup?tab=roles" className="font-bold text-[#1d3a8f] underline">{t("team.rolesAndPermissions")}</Link>.</p>
+                  <p className="mt-2 text-[12px] text-[var(--ink-3)]">{t("team.rolesSetInPre")}<Link href={portalHref("/setup?tab=roles")} className="font-bold text-[#1d3a8f] underline">{t("team.rolesAndPermissions")}</Link>.</p>
                 </div>
               )}
               {step === 3 && (
@@ -386,7 +394,7 @@ export function TeamApp() {
                     </div>
                     <p className="bg-white px-4 py-2.5 text-[11.5px] leading-relaxed text-[var(--ink-3)]">{t("team.willEmailPre")}<b>{email.trim() || t("team.themWord")}</b>{t("team.willEmailMid")}<b>{t("team.pending")}</b>{t("team.willEmailPost")}</p>
                   </div>
-                  {capNote && <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e3] px-3 py-2 text-[12.5px] text-[#7a5b06]"><span className="font-bold">{capNote}</span><Link href="/company/subscription" className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white hover:bg-[#16306e]">{t("team.upgradePlan")}</Link></div>}
+                  {capNote && <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e3] px-3 py-2 text-[12.5px] text-[#7a5b06]"><span className="font-bold">{capNote}</span><Link href={subHref} className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white hover:bg-[#16306e]">{t("team.upgradePlan")}</Link></div>}
                   {sentNote && <div className="mt-3 rounded-lg bg-[#eef8f1] px-3 py-2 text-[12.5px] font-bold text-[#0f7a43]">✓ {sentNote}</div>}
                 </div>
               )}

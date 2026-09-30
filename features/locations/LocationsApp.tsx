@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePortalHref } from "@/lib/portal-href";
 import { get as apiGet, isDemoMode } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
@@ -38,6 +39,7 @@ const DEMO_DEPLOY: LocStaff[] = [
 export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
+  const portalHref = usePortalHref();
   const id = useSearchParams().get("id");
   const { settings } = useSettings();
   const [venues, setVenues] = useState<Venue[] | null>(null);
@@ -108,7 +110,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
         <Tile label="Staff deployed" icon="👥" grad={GRAD.violet} value={String(staff.filter((s) => s.sites.length > 0).length)} sub={`of ${staff.length} on the team`} />
         <Tile label="Listings" icon="🎫" grad={GRAD.blue} value={String(deployListings.length)} sub="active programmes" />
       </div>
-      <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">Move staff across locations &amp; listings — turn one on and the schedule offers them for its shifts. Locations &amp; listings are edited in <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p>
+      <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">Move staff across locations &amp; listings — turn one on and the schedule offers them for its shifts. Locations &amp; listings are edited in <a href={portalHref("/listings")} className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p>
       {saveErr && <p className="mb-3 rounded-lg bg-[#fdecec] px-3 py-2 text-[12px] font-bold text-[#c0392b]">⚠ {saveErr}</p>}
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -125,7 +127,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
       /* ── BY LOCATION ── */
       : view === "loc" ? (
         <div className="flex flex-col gap-3">
-          {list.length === 0 && <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-6 text-center text-[12.5px] text-[var(--ink-3)]">No locations yet — add your venues under <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings → Locations</a>.</div>}
+          {list.length === 0 && <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-6 text-center text-[12.5px] text-[var(--ink-3)]">No locations yet — add your venues under <a href={portalHref("/listings")} className="font-bold text-[#1d3a8f] hover:underline">Listings → Locations</a>.</div>}
           {list.map((v) => {
             const here = staff.filter((s) => s.sites.includes(v.id));
             const notHere = staff.filter((s) => !s.sites.includes(v.id));
@@ -170,7 +172,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                     </div>
                   </div>
                   <div>
-                    <div className="mb-1.5 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Listings here · {vListings.length}<a href="/company/listings" className="ms-auto normal-case text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a></div>
+                    <div className="mb-1.5 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Listings here · {vListings.length}<a href={portalHref("/listings")} className="ms-auto normal-case text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a></div>
                     {vListings.length === 0 ? <p className="text-[12px] text-[var(--ink-3)]">No live listings run here yet.</p> : (
                       <div className="flex flex-col gap-1.5">{vListings.map((l) => { const sn = seasonName(l.seasonId); return (
                         <div key={l.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5"><span className="text-[13px]">🎟</span><span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-[var(--ink)]">{lTitle(l)}</span>{sn && <span className="flex-none rounded-full bg-white px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">📅 {sn}</span>}<Draft l={l} /></div>
@@ -232,7 +234,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
       /* ── BY LISTING ── */
       ) : (
         <div className="flex flex-col gap-2">
-          {deployListings.length === 0 ? <p className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No listings yet — create one in <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p> : deployListings.map((l) => {
+          {deployListings.length === 0 ? <p className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No listings yet — create one in <a href={portalHref("/listings")} className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p> : deployListings.map((l) => {
             const on = staff.filter((s) => s.listings.includes(l.id));
             const off = staff.filter((s) => !s.listings.includes(l.id));
             const sn = seasonName(l.seasonId);
@@ -243,7 +245,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                   <span className="text-[13px]">🎟</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{lTitle(l)}</span><Draft l={l} />
                   {sn && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">📅 {sn}</span>}
                   {venueName && <span className="text-[11.5px] text-[var(--ink-3)]">· 📍 {venueName}</span>}
-                  <a href="/company/listings" className="ms-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a>
+                  <a href={portalHref("/listings")} className="ms-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {on.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No one assigned to this listing yet.</span>}
