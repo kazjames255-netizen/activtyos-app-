@@ -12,6 +12,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { useI18n } from "@/lib/i18n/provider";
+import { isRTL } from "@/lib/i18n/config";
+import { Rich } from "@/components/i18n/Rich";
+import { obHint, obLabel, obOpt, obSection } from "@/features/team/onboardI18n";
 import { DEFAULT_FIELDS, SECTIONS, fieldApplies, satisfied, type OnboardField, type OnboardValue, type OnboardRecord } from "@/features/team/OnboardingApp";
 import { get as apiGet, isDemoMode } from "@/lib/api";
 import { fetchOnboarding, hydrateFiles, saveOnboardRecord } from "@/features/team/onboardStore";
@@ -89,6 +93,7 @@ const historyCovered = (currentMovedIn?: string, entries: Addr[] = []) => {
 const prettyDate = (iso: string) => { try { return new Date(iso + "T00:00:00").toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }); } catch { return iso; } };
 
 function AddressHistory({ value, onChange, currentMovedIn }: { value?: string; onChange: (json: string) => void; currentMovedIn?: string }) {
+  const { t: tr } = useI18n();
   const stored = parseAddr(value);
   const cut = isoYearsAgo(5);
   const needPrev = !!currentMovedIn && currentMovedIn > cut;
@@ -99,30 +104,30 @@ function AddressHistory({ value, onChange, currentMovedIn }: { value?: string; o
   const add = () => write([...list, blankAddr()]);
   const remove = (i: number) => write(list.filter((_, j) => j !== i));
 
-  if (!currentMovedIn) return <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--panel)] p-3 text-[12px] text-[var(--ink-3)]">Enter the date you moved into your current address (above) first.</div>;
-  if (!needPrev) return <div className="flex items-center gap-2 rounded-xl border border-[#cfe8d7] bg-[#f4fbf6] p-3 text-[12.5px] font-semibold text-[#0f7a43]"><span>✓</span> Your current address covers the last 5 years — no previous address needed.</div>;
+  if (!currentMovedIn) return <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--panel)] p-3 text-[12px] text-[var(--ink-3)]">{tr("p8wf.soEnterMovedFirst")}</div>;
+  if (!needPrev) return <div className="flex items-center gap-2 rounded-xl border border-[#cfe8d7] bg-[#f4fbf6] p-3 text-[12.5px] font-semibold text-[#0f7a43]"><span>✓</span> {tr("p8wf.soCoversFive")}</div>;
 
   return (
     <div className="space-y-2.5">
       <div className={"flex items-start gap-2 rounded-xl p-3 text-[12px] font-semibold " + (covered ? "bg-[#f4fbf6] text-[#0f7a43]" : "bg-[#fff4e5] text-[#9a3d00]")}>
         <span className="text-[14px]">{covered ? "✓" : "📍"}</span>
-        <span>{covered ? "5-year address history complete." : <>Your history must reach back to <b>{prettyDate(cut)}</b>. Add each previous address, with the date you moved in, until it's covered.</>}</span>
+        <span>{covered ? tr("p8wf.soHistoryComplete") : <Rich text={tr("p8wf.soHistoryMust", { date: prettyDate(cut) })} />}</span>
       </div>
       {list.map((a, i) => (
         <div key={i} className="rounded-xl border border-[var(--line)] bg-white p-3">
-          <div className="mb-1.5 flex items-center"><span className="text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">Previous address {i + 1}</span><button type="button" onClick={() => remove(i)} className="ms-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button></div>
+          <div className="mb-1.5 flex items-center"><span className="text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">{tr("p8wf.soPrevN", { n: i + 1 })}</span><button type="button" onClick={() => remove(i)} className="ms-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">{tr("team.remove")}</button></div>
           <div className="grid grid-cols-2 gap-2">
-            <Input value={a.line1} onChange={(e) => setField(i, "line1", e.target.value)} placeholder="Address line 1" className="col-span-2" style={FIELD_STYLE} />
-            <Input value={a.line2} onChange={(e) => setField(i, "line2", e.target.value)} placeholder="Address line 2 (optional)" className="col-span-2" style={FIELD_STYLE} />
-            <Input value={a.town} onChange={(e) => setField(i, "town", e.target.value)} placeholder="Town / city" style={FIELD_STYLE} />
-            <Input value={a.postcode} onChange={(e) => setField(i, "postcode", e.target.value)} placeholder="Postcode" style={FIELD_STYLE} />
-            <label className="col-span-2 block"><span className="mb-1 block text-[10.5px] font-bold uppercase text-[var(--ink-3)]">I moved into this address on</span><Input type="date" value={a.from} max={currentMovedIn} onChange={(e) => setField(i, "from", e.target.value)} className="w-full" style={FIELD_STYLE} /></label>
+            <Input value={a.line1} onChange={(e) => setField(i, "line1", e.target.value)} placeholder={tr("team.addressLine1")} className="col-span-2" style={FIELD_STYLE} />
+            <Input value={a.line2} onChange={(e) => setField(i, "line2", e.target.value)} placeholder={tr("p8wf.soAddr2Opt")} className="col-span-2" style={FIELD_STYLE} />
+            <Input value={a.town} onChange={(e) => setField(i, "town", e.target.value)} placeholder={tr("team.townCity")} style={FIELD_STYLE} />
+            <Input value={a.postcode} onChange={(e) => setField(i, "postcode", e.target.value)} placeholder={tr("team.postcode")} style={FIELD_STYLE} />
+            <label className="col-span-2 block"><span className="mb-1 block text-[10.5px] font-bold uppercase text-[var(--ink-3)]">{tr("p8wf.obl_movedIn")}</span><Input type="date" value={a.from} max={currentMovedIn} onChange={(e) => setField(i, "from", e.target.value)} className="w-full" style={FIELD_STYLE} /></label>
           </div>
         </div>
       ))}
       {covered
-        ? <button type="button" onClick={add} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">+ Add another (optional)</button>
-        : <button type="button" onClick={add} className="w-full rounded-xl border border-dashed border-[#1d3a8f] bg-[#f6f9ff] py-2 text-[12.5px] font-extrabold text-[#1d3a8f]">+ Add {list.length ? "an earlier" : "your previous"} address</button>}
+        ? <button type="button" onClick={add} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">{tr("p8wf.soAddAnother")}</button>
+        : <button type="button" onClick={add} className="w-full rounded-xl border border-dashed border-[#1d3a8f] bg-[#f6f9ff] py-2 text-[12.5px] font-extrabold text-[#1d3a8f]">{tr(list.length ? "p8wf.soAddEarlier" : "p8wf.soAddPrev")}</button>}
     </div>
   );
 }
@@ -132,6 +137,7 @@ const addMonthsIso = (iso: string, months: number): string | undefined => { cons
 // credential types are compulsory (Setup → Learning), assigned per role; this
 // reads the SAME store as My certificates, so uploads sync across both.
 function RoleQualifications({ onUploaded }: { onUploaded: () => void }) {
+  const { t: tr } = useI18n();
   const cred = useCredentials(CRED_SEED);
   const recFor = (id: string) => cred.recordFor(WHO.name, id);
   const [added, setAdded] = useState<string[]>([]);
@@ -165,23 +171,23 @@ function RoleQualifications({ onUploaded }: { onUploaded: () => void }) {
       <div key={t.id} className="rounded-xl border border-[var(--line)] bg-white p-2.5">
         <div className="flex items-center gap-2">
           <span className="min-w-0 flex-1 text-[13px] font-bold text-[var(--ink)]">{t.name}
-            <span className="ms-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase" style={req ? { background: "#fdecec", color: "#c0392b" } : { background: "#eef1f6", color: "#64748b" }}>{req ? "Required" : "Optional"}</span>
+            <span className="ms-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase" style={req ? { background: "#fdecec", color: "#c0392b" } : { background: "#eef1f6", color: "#64748b" }}>{tr(req ? "p8wf.soRequired" : "p8wf.soOptional")}</span>
           </span>
           <CredBadge s={s} />
         </div>
         <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-2">
           <label className="block">
-            <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Issue date</span>
+            <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8wf.soIssueDate")}</span>
             <input type="date" value={r?.issue ?? ""} max={isoYearsAgo(0)} onChange={(e) => setIssue(t.id, e.target.value)} style={FIELD_STYLE} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
           </label>
-          {r?.expiry && <span className="pb-1 text-[10.5px] font-semibold text-[var(--ink-3)]">Expires {fmtDate(r.expiry)}</span>}
+          {r?.expiry && <span className="pb-1 text-[10.5px] font-semibold text-[var(--ink-3)]">{tr("p8wf.soExpires", { date: fmtDate(r.expiry) })}</span>}
           <div className="ms-auto flex items-center gap-2 pb-0.5">
             {has ? (<>
-              <button type="button" onClick={() => openCredFile(r!.fileData)} className="max-w-[160px] truncate rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">📎 {r!.fileName || "View"}</button>
-              <label className="cursor-pointer text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">Replace<input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(t.id, f); }} /></label>
-              <button type="button" onClick={() => clear(t.id)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button>
+              <button type="button" onClick={() => openCredFile(r!.fileData)} className="max-w-[160px] truncate rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">📎 {r!.fileName || tr("p8wf.soView")}</button>
+              <label className="cursor-pointer text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">{tr("team.replaceWord")}<input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(t.id, f); }} /></label>
+              <button type="button" onClick={() => clear(t.id)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">{tr("team.remove")}</button>
             </>) : (
-              <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-[#1d3a8f] bg-[#f6f9ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">📷 Upload my {t.name}<input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(t.id, f); }} /></label>
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-[#1d3a8f] bg-[#f6f9ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">{tr("p8wf.soUploadMy", { name: t.name })}<input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(t.id, f); }} /></label>
             )}
           </div>
         </div>
@@ -192,34 +198,34 @@ function RoleQualifications({ onUploaded }: { onUploaded: () => void }) {
   return (
     <div className="space-y-2">
       {required.length === 0
-        ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--panel)] p-3 text-[12px] text-[var(--ink-3)]">Your provider hasn't set any compulsory qualifications for your role.</div>
+        ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--panel)] p-3 text-[12px] text-[var(--ink-3)]">{tr("p8wf.soNoCompulsory")}</div>
         : (<>
-            <div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Required for your role — {validReq}/{required.length} in place</div>
+            <div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8wf.soReqForRole", { ok: validReq, total: required.length })}</div>
             {required.map((t) => row(t, true))}
           </>)}
       {optionalTypes.length > 0 && (<>
-        <div className="mt-1.5 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Other qualifications you hold</div>
+        <div className="mt-1.5 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8wf.soOtherHold")}</div>
         {optionalTypes.map((t) => row(t, false))}
       </>)}
       <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--panel)] p-3">
-        <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Hold another qualification?</div>
+        <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{tr("p8wf.soHoldAnother")}</div>
         <Select value="" onChange={(e) => { const v = e.target.value; if (!v) return; if (v === "__other") setShowOther(true); else setAdded((a) => [...a, v]); }} className="w-full max-w-[320px]" style={FIELD_STYLE}>
-          <option value="">Add a qualification…</option>
+          <option value="">{tr("p8wf.soAddQual")}</option>
           {addable.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          <option value="__other">Other (type the name)…</option>
+          <option value="__other">{tr("p8wf.soOtherType")}</option>
         </Select>
         {showOther && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Input value={otherName} onChange={(e) => setOtherName(e.target.value)} placeholder="Qualification name" className="max-w-[240px]" style={FIELD_STYLE} />
-            <Button variant="primary" onClick={addOther}>Add</Button>
-            <button type="button" onClick={() => { setShowOther(false); setOtherName(""); }} className="text-[11.5px] font-bold text-[var(--ink-3)]">Cancel</button>
+            <Input value={otherName} onChange={(e) => setOtherName(e.target.value)} placeholder={tr("p8wf.soQualName")} className="max-w-[240px]" style={FIELD_STYLE} />
+            <Button variant="primary" onClick={addOther}>{tr("p8wf.prAddBtn")}</Button>
+            <button type="button" onClick={() => { setShowOther(false); setOtherName(""); }} className="text-[11.5px] font-bold text-[var(--ink-3)]">{tr("common.cancel")}</button>
           </div>
         )}
-        <p className="mt-1.5 text-[10px] text-[var(--ink-3)]">Choose from your provider's list — including qualifications required for other roles — or add your own. You'll be asked for the issue date and to upload it.</p>
+        <p className="mt-1.5 text-[10px] text-[var(--ink-3)]">{tr("p8wf.soChooseNote")}</p>
       </div>
       <div className="flex items-start gap-2 rounded-xl bg-[#eef4ff] p-3 text-[12px] text-[#1d3a8f]">
         <span className="text-[14px]">ℹ️</span>
-        <span>Don't have one of these yet, or can't get to it right now? No problem — just <b>move on and submit</b>. Your provider will see what's missing and get in touch to sort it out.</span>
+        <span><Rich text={tr("p8wf.soNoProblem")} /></span>
       </div>
     </div>
   );
@@ -257,6 +263,10 @@ const staffSat = (f: OnboardField, values: Record<string, OnboardValue>) => {
 };
 
 export function StaffOnboardingApp() {
+  const { t: tr, locale } = useI18n();
+  const rtl = isRTL(locale);
+  // swap directional glyphs for RTL languages
+  const fl = (s: string) => (rtl ? s.replace(/[‹›→←]/g, (c) => ({ "‹": "›", "›": "‹", "→": "←", "←": "→" } as Record<string, string>)[c]) : s);
   const router = useRouter();
   const portal = (usePathname() || "/staff").split("/")[1] || "staff";
   const [fields, setFields] = useState<OnboardField[]>(DEFAULT_FIELDS);
@@ -290,17 +300,17 @@ export function StaffOnboardingApp() {
       // preserve submission state so returning staff see their filled-in, submitted form
       setRec({ staff: mine?.staff || WHO.name, values, extra: mine?.extra || [], submittedAt: mine?.submittedAt, outstanding: mine?.outstanding, lastEditedAt: mine?.lastEditedAt });
       setSaved(true);
-    })().catch((e) => setErr(e instanceof Error ? e.message : "Couldn't load your onboarding"));
+    })().catch((e) => setErr(e instanceof Error ? e.message : tr("p8wf.soErrLoad")));
     return () => { off = true; };
   }, []);
 
   const set = (id: string, patch: Partial<OnboardValue>) => { setSaved(false); setSubmitted(null); setRec((r) => ({ ...r, values: { ...r.values, [id]: { ...r.values[id], ...patch, at: nowIso() } } })); };
   const writeRecord = (r: OnboardRecord) => {
-    if (!r.staff) { setSaved(false); setErr("Still loading your details — try again in a moment."); return; }
+    if (!r.staff) { setSaved(false); setErr(tr("p8wf.soErrStillLoading")); return; }
     setErr(null);
     saveOnboardRecord(r)
       .then((saved) => setRec((cur) => ({ ...cur, values: Object.fromEntries(Object.entries(cur.values).map(([k, v]) => [k, saved.values[k]?.fileId && v?.fileData === saved.values[k]?.fileData ? { ...v, fileId: saved.values[k].fileId } : v])) })))
-      .catch((e) => { setSaved(false); setErr(e instanceof Error ? e.message : "Couldn't save — check your connection and try again"); });
+      .catch((e) => { setSaved(false); setErr(e instanceof Error ? e.message : tr("p8wf.soErrSave")); });
   };
   const persist = () => {
     // saving a change AFTER submission flags the provider that the record was updated
@@ -333,7 +343,9 @@ export function StaffOnboardingApp() {
   const doneCount = mineToDo.filter((f) => staffSat(f, rec.values)).length;
   const pct = mineToDo.length ? Math.round((doneCount / mineToDo.length) * 100) : 100;
   // compulsory items still outstanding — the staffer can submit anyway; these get flagged to the employer
+  // niceLabel is what gets STORED on the record (outstanding list the employer reads) so it stays English; niceShown is for this screen.
   const niceLabel = (f: OnboardField) => f.id === "roleCerts" ? "Required qualifications for your role" : f.id === "addrHistory" ? "5-year address history" : f.id === "rtwEvidence" ? "Right-to-work evidence" : f.id === "addrProof" ? "Proof of current address" : f.id === "photo" ? "Profile photo" : f.label;
+  const niceShown = (f: OnboardField) => f.id === "roleCerts" ? tr("p8wf.soNiceQuals") : f.id === "addrHistory" ? tr("p8wf.soNiceAddr") : f.id === "rtwEvidence" ? tr("p8wf.soNiceRtw") : f.id === "addrProof" ? tr("p8wf.soNiceAddrProof") : f.id === "photo" ? tr("p8wf.soNicePhoto") : obLabel(tr, f);
   const outstandingFields = mineToDo.filter((f) => !staffSat(f, rec.values));
   const outstanding = outstandingFields.map(niceLabel);                     // everything not done (for the employer flag)
   const blocking = outstandingFields.filter((f) => f.id !== "roleCerts");   // must be done to submit — certificates may follow later
@@ -341,7 +353,7 @@ export function StaffOnboardingApp() {
   const submit = () => {
     if (!canSubmit) return;
     const next: OnboardRecord = { ...rec, submittedAt: nowIso(), outstanding };
-    setRec(next); writeRecord(next); setSaved(true); setSubmitted({ at: next.submittedAt!, outstanding });
+    setRec(next); writeRecord(next); setSaved(true); setSubmitted({ at: next.submittedAt!, outstanding: outstandingFields.map(niceShown) });
     try { window.scrollTo({ top: document.body.scrollHeight }); } catch { /* ignore */ }
   };
 
@@ -365,8 +377,8 @@ export function StaffOnboardingApp() {
   // one field's control — extracted so grouped layouts (e.g. references) can reuse it
   const renderField = (f: OnboardField, labelText?: string) => {
     const v = rec.values[f.id]; const editable = STAFF_EDITABLE.has(f.type) && !STAFF_READONLY.has(f.id);
-    const done = satisfied(f, v); const lbl = labelText ?? f.label;
-    const labelEl = <span className="mb-1 flex items-center gap-1.5 text-[11.5px] font-bold uppercase tracking-wide text-[var(--ink-2)]">{lbl}{staffRequired(f, rec.values) && <span className="text-[14px] font-black leading-none text-[#e11d48]">*</span>}{f.sensitive && <span className="rounded bg-[var(--panel)] px-1 py-0.5 text-[9px] font-bold normal-case text-[var(--ink-3)]">🔒 private</span>}{f.fromInvite && <span className="rounded bg-[#eaf1ff] px-1 py-0.5 text-[9px] font-bold normal-case text-[#1d54c4]">from invite</span>}</span>;
+    const done = satisfied(f, v); const lbl = labelText ?? obLabel(tr, f);
+    const labelEl = <span className="mb-1 flex items-center gap-1.5 text-[11.5px] font-bold uppercase tracking-wide text-[var(--ink-2)]">{lbl}{staffRequired(f, rec.values) && <span className="text-[14px] font-black leading-none text-[#e11d48]">*</span>}{f.sensitive && <span className="rounded bg-[var(--panel)] px-1 py-0.5 text-[9px] font-bold normal-case text-[var(--ink-3)]">{tr("p8wf.soPrivate")}</span>}{f.fromInvite && <span className="rounded bg-[#eaf1ff] px-1 py-0.5 text-[9px] font-bold normal-case text-[#1d54c4]">{tr("p8wf.soFromInvite")}</span>}</span>;
     const wide = f.type === "textarea" || f.type === "readdoc" || f.type === "addresses" || f.type === "availability" || f.type === "certs" || (f.type === "select" && (f.options ?? []).some((o) => o.length > 60));
     return (
       <div key={f.id} className={wide ? "sm:col-span-2" : ""}>
@@ -377,7 +389,7 @@ export function StaffOnboardingApp() {
         ) : f.type === "readdoc" ? (
           <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
             <input type="checkbox" className="mt-0.5 h-4 w-4 flex-none" checked={v?.v === "yes"} onChange={(e) => set(f.id, { v: e.target.checked ? "yes" : "" })} />
-            <span className="text-[12.5px] text-[var(--ink-2)]">I confirm I have read and understood the <b>{f.label}</b>.</span>
+            <span className="text-[12.5px] text-[var(--ink-2)]"><Rich text={tr("p8wf.soReadConfirm", { label: obLabel(tr, f) })} /></span>
           </label>
         ) : f.type === "checkbox" ? (
           <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-[var(--line)] bg-white p-3">
@@ -388,41 +400,41 @@ export function StaffOnboardingApp() {
           <div>{labelEl}
             {f.id === "photo" && v?.fileData ? (
               <div className="flex items-center gap-3">
-                <img src={v.fileData} alt="Profile" className="h-16 w-16 flex-none rounded-full border border-[var(--line)] object-cover" />
-                <label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">Change photo<input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(f.id, e)} /></label>
+                <img src={v.fileData} alt={tr("p8wf.soProfileAlt")} className="h-16 w-16 flex-none rounded-full border border-[var(--line)] object-cover" />
+                <label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">{tr("p8wf.soChangePhoto")}<input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(f.id, e)} /></label>
               </div>
             ) : (
               <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-[var(--line)] bg-[var(--panel)] p-3 text-center text-[12px] font-bold text-[#1d3a8f]">
-                {v?.fileName ? `📎 ${v.fileName}` : (f.id === "photo" ? "📷 Upload a professional photo" : "📷 Upload")}<input type="file" accept={f.id === "photo" ? "image/*" : "image/*,application/pdf"} className="hidden" onChange={(e) => onFile(f.id, e)} />
+                {v?.fileName ? `📎 ${v.fileName}` : (f.id === "photo" ? tr("p8wf.soUploadPhoto") : tr("p8wf.soUpload"))}<input type="file" accept={f.id === "photo" ? "image/*" : "image/*,application/pdf"} className="hidden" onChange={(e) => onFile(f.id, e)} />
               </label>
             )}
           </div>
         ) : f.type === "select" ? (
-          <div>{labelEl}<Select value={v?.v ?? ""} onChange={(e) => set(f.id, { v: e.target.value })} className="w-full" style={FIELD_STYLE}><option value="">— choose —</option>{(f.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}{f.other && <option value={v?.v && !(f.options ?? []).includes(v.v) ? v.v : "Other"}>Other…</option>}</Select>
-            {v?.v && (f.options ?? []).includes(v.v) && v.v.length > 48 && (() => { const m = v.v.match(/^(\S+)\s+—\s+([\s\S]+)/); return <div className="mt-1.5 rounded-lg bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-snug text-[var(--ink-2)]">{m ? <><span className="me-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[10px] font-extrabold text-white">{m[1]}</span>{m[2]}</> : v.v}</div>; })()}
+          <div>{labelEl}<Select value={v?.v ?? ""} onChange={(e) => set(f.id, { v: e.target.value })} className="w-full" style={FIELD_STYLE}><option value="">{tr("p8wf.soChoose")}</option>{(f.options ?? []).map((o) => <option key={o} value={o}>{obOpt(tr, o)}</option>)}{f.other && <option value={v?.v && !(f.options ?? []).includes(v.v) ? v.v : "Other"}>{tr("p8wf.soOther")}</option>}</Select>
+            {v?.v && (f.options ?? []).includes(v.v) && v.v.length > 48 && (() => { const vd = obOpt(tr, v.v!); const m = vd.match(/^(\S+)\s+—\s+([\s\S]+)/); return <div className="mt-1.5 rounded-lg bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-snug text-[var(--ink-2)]">{m ? <><span className="me-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[10px] font-extrabold text-white">{m[1]}</span>{m[2]}</> : vd}</div>; })()}
           </div>
         ) : f.type === "textarea" ? (
           <div>{labelEl}<textarea value={v?.v ?? ""} onChange={(e) => set(f.id, { v: e.target.value })} rows={3} style={FIELD_STYLE} className="w-full rounded-xl border border-[var(--line)] p-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" /></div>
         ) : editable ? (
-          <div>{labelEl}<Input type={f.type === "date" ? "date" : f.type === "email" ? "email" : f.type === "tel" ? "tel" : "text"} value={v?.v ?? ""} onChange={(e) => set(f.id, { v: e.target.value })} className="w-full" style={FIELD_STYLE} placeholder={f.hint} /></div>
+          <div>{labelEl}<Input type={f.type === "date" ? "date" : f.type === "email" ? "email" : f.type === "tel" ? "tel" : "text"} value={v?.v ?? ""} onChange={(e) => set(f.id, { v: e.target.value })} className="w-full" style={FIELD_STYLE} placeholder={obHint(tr, f)} /></div>
         ) : (
           <div>{labelEl}
             <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12px]">
               {(f.type === "jobtitle" || STAFF_READONLY.has(f.id)) && v?.v ? (
-                <><span className="inline-block h-2 w-2 flex-none rounded-full bg-[#0f7a43]" /><span className="font-bold text-[var(--ink)]">{v.v}</span><span className="text-[var(--ink-3)]">· set by your employer</span></>
+                <><span className="inline-block h-2 w-2 flex-none rounded-full bg-[#0f7a43]" /><span className="font-bold text-[var(--ink)]">{v.v}</span><span className="text-[var(--ink-3)]">{tr("p8wf.soSetByEmployer")}</span></>
               ) : (
-                <><span className={"inline-block h-2 w-2 flex-none rounded-full " + (done ? "bg-[#0f7a43]" : "bg-[#cbd5e1]")} /><span className="text-[var(--ink-3)]">{done ? "Completed by your employer" : "Your employer will complete this"}</span></>
+                <><span className={"inline-block h-2 w-2 flex-none rounded-full " + (done ? "bg-[#0f7a43]" : "bg-[#cbd5e1]")} /><span className="text-[var(--ink-3)]">{tr(done ? "p8wf.soCompletedByEmployer" : "p8wf.soEmployerWillComplete")}</span></>
               )}
             </div></div>
         )}
-        {f.hint && editable && <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">{f.hint}</p>}
+        {f.hint && editable && <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">{obHint(tr, f)}</p>}
       </div>
     );
   };
   // references grouped into two clear cards (Ref 1 / Ref 2) with short labels
-  const REF_GROUPS: [string, string[]][] = [["Reference 1", ["ref1Name", "ref1Org", "ref1Rel", "ref1Phone", "ref1Email"]], ["Reference 2", ["ref2Name", "ref2Org", "ref2Rel", "ref2Phone", "ref2Email"]]];
+  const REF_GROUPS: [number, string[]][] = [[1, ["ref1Name", "ref1Org", "ref1Rel", "ref1Phone", "ref1Email"]], [2, ["ref2Name", "ref2Org", "ref2Rel", "ref2Phone", "ref2Email"]]];
   const refIds = new Set(REF_GROUPS.flatMap(([, ids]) => ids));
-  const shortLabel = (l: string) => { const s = l.replace(/^Reference \d+\s*—\s*/i, ""); return /^name$/i.test(s) ? "Referee (name)" : s; };
+  const shortLabel = (f: OnboardField) => /Name$/.test(f.id) ? tr("p8wf.soRefereeName") : obLabel(tr, f).replace(/^[^—]*—\s*/, "");
   const renderRefs = (fs: OnboardField[], st: { ink: string }) => {
     const rest = fs.filter((f) => !refIds.has(f.id));
     return (
@@ -430,17 +442,15 @@ export function StaffOnboardingApp() {
         {/* Set expectations: the referee gets an email out of the blue, and the
             thing most likely to stall a start date is a referee who ignores it. */}
         <div className="rounded-xl border border-[#f3cfa6] bg-[#fdf3e0] px-3.5 py-2.5 text-[12px] leading-snug text-[#8a4b09]">
-          <b>We&rsquo;ll email your referees a short form.</b> Please give them a heads-up so it doesn&rsquo;t
-          go to junk — it&rsquo;s usually the last thing holding up a start date. Double-check the email
-          addresses below are ones they actually read.
+          <Rich text={tr("p8wf.soRefNotice")} />
         </div>
-        {REF_GROUPS.map(([title, ids]) => {
+        {REF_GROUPS.map(([refN, ids]) => {
           const gfields = ids.map((id) => fs.find((f) => f.id === id)).filter(Boolean) as OnboardField[];
           if (!gfields.length) return null;
           return (
-            <div key={title} className="rounded-xl border border-[var(--line)] p-3">
-              <div className="mb-2 flex items-center gap-1.5 text-[12.5px] font-extrabold" style={{ color: st.ink }}><span>👤</span>{title}</div>
-              <div className="grid gap-3 sm:grid-cols-2">{gfields.map((f) => renderField(f, shortLabel(f.label)))}</div>
+            <div key={refN} className="rounded-xl border border-[var(--line)] p-3">
+              <div className="mb-2 flex items-center gap-1.5 text-[12.5px] font-extrabold" style={{ color: st.ink }}><span>👤</span>{tr("p8wf.rrRefTitle", { n: refN })}</div>
+              <div className="grid gap-3 sm:grid-cols-2">{gfields.map((f) => renderField(f, shortLabel(f)))}</div>
             </div>
           );
         })}
@@ -451,12 +461,12 @@ export function StaffOnboardingApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="My onboarding" icon="🪪" lede="Complete your joining details so we can get you cleared to start. Save as you go — you don't have to do it all at once." actions={<Button variant="primary" onClick={persist}>{saved ? "Saved ✓" : "Save"}</Button>} />
+      <PageHero title={tr("p8wf.soTitle")} icon="🪪" lede={tr("p8wf.soLede")} actions={<Button variant="primary" onClick={persist}>{saved ? tr("p8wf.soSaved") : tr("common.save")}</Button>} />
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c0392b]">{err}</div>}
 
       {WHO.invite.jobTitle && (
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] shadow-sm">
-          <span className="text-[14px]">🎽</span>You're joining as <span className="rounded-full bg-[#eef4ff] px-2 py-0.5 font-extrabold text-[#1d3a8f]">{WHO.invite.jobTitle}</span><span className="font-semibold text-[var(--ink-3)]">— the qualifications below are set for this role</span>
+          <span className="text-[14px]">🎽</span>{(() => { const [a, b] = tr("p8wf.soJoining", { role: "\u0000" }).split("\u0000"); return <>{a}<span className="rounded-full bg-[#eef4ff] px-2 py-0.5 font-extrabold text-[#1d3a8f]">{WHO.invite.jobTitle}</span><span className="font-semibold text-[var(--ink-3)]">{b}</span></>; })()}
         </div>
       )}
 
@@ -465,8 +475,8 @@ export function StaffOnboardingApp() {
           <div className="grid h-[52px] w-[52px] place-items-center rounded-full bg-white text-[15px] font-extrabold text-[#1d3a8f] tabular-nums">{pct}%</div>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[14.5px] font-extrabold text-[var(--ink)]">{pct === 100 ? "All done — nice one! 🎉" : `You're ${pct}% of the way there 🎯`}</div>
-          <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{doneCount} of {mineToDo.length} of your details done — ID, DBS &amp; references are checked by your employer.</div>
+          <div className="text-[14.5px] font-extrabold text-[var(--ink)]">{pct === 100 ? tr("p8wf.soAllDone") : tr("p8wf.soPct", { pct })}</div>
+          <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{tr("p8wf.soDetailsDone", { done: doneCount, total: mineToDo.length })}</div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#eef1f6]"><div className="h-full rounded-full transition-all" style={{ width: pct + "%", background: "linear-gradient(90deg,#1d3a8f,#3f7ae0)" }} /></div>
         </div>
       </div>
@@ -478,12 +488,12 @@ export function StaffOnboardingApp() {
           return (
             <button key={key} type="button" onClick={() => goto(i)} style={active ? { background: stl.grad } : undefined} className={"flex flex-none items-center gap-1.5 rounded-full py-1.5 ps-1.5 pe-3 text-[11.5px] font-extrabold transition-colors " + (active ? "text-white shadow-sm" : "border border-[var(--line)] bg-white text-[var(--ink-2)] hover:bg-[var(--panel)]")}>
               <span className={"grid h-5 w-5 flex-none place-items-center rounded-full text-[10.5px] tabular-nums " + (active ? "bg-white/25 text-white" : s.complete ? "bg-[#0f7a43] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")}>{s.complete ? "✓" : i + 1}</span>
-              <span className="whitespace-nowrap">{label}</span>
+              <span className="whitespace-nowrap">{obSection(tr, key, label)}</span>
             </button>
           );
         })}
         <button type="button" onClick={() => goto(stepCount)} className={"flex flex-none items-center gap-1.5 rounded-full py-1.5 ps-1.5 pe-3 text-[11.5px] font-extrabold " + (step === stepCount ? "bg-[#0f7a43] text-white shadow-sm" : "border border-[var(--line)] bg-white text-[var(--ink-2)] hover:bg-[var(--panel)]")}>
-          <span className={"grid h-5 w-5 flex-none place-items-center rounded-full text-[11px] " + (step === stepCount ? "bg-white/25 text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")}>✓</span><span className="whitespace-nowrap">Review &amp; submit</span>
+          <span className={"grid h-5 w-5 flex-none place-items-center rounded-full text-[11px] " + (step === stepCount ? "bg-white/25 text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")}>✓</span><span className="whitespace-nowrap">{tr("p8wf.soReviewSubmit")}</span>
         </button>
       </div>
 
@@ -496,18 +506,18 @@ export function StaffOnboardingApp() {
             <div className="flex items-center gap-3.5 border-b border-[var(--line)] px-5 py-4" style={{ background: st.soft }}>
               <span className="grid h-12 w-12 flex-none place-items-center rounded-2xl text-[22px] shadow-sm" style={{ background: st.grad }}>{icon}</span>
               <div className="min-w-0">
-                <div className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: st.ink, opacity: 0.7 }}>Step {step + 1} of {stepCount}</div>
-                <div className="text-[18px] font-extrabold leading-tight" style={{ color: st.ink }}>{label}</div>
+                <div className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: st.ink, opacity: 0.7 }}>{tr("p8wf.obStepOf", { n: step + 1, total: stepCount })}</div>
+                <div className="text-[18px] font-extrabold leading-tight" style={{ color: st.ink }}>{obSection(tr, key, label)}</div>
               </div>
-              {reqN > 0 && <span className="ms-auto flex-none rounded-full px-2.5 py-1 text-[10.5px] font-extrabold" style={complete ? { background: "#0f7a43", color: "#fff" } : { background: "#fff", color: st.ink, boxShadow: "inset 0 0 0 1px " + st.ink + "33" }}>{complete ? "✓ Complete" : `${ok}/${reqN} done`}</span>}
+              {reqN > 0 && <span className="ms-auto flex-none rounded-full px-2.5 py-1 text-[10.5px] font-extrabold" style={complete ? { background: "#0f7a43", color: "#fff" } : { background: "#fff", color: st.ink, boxShadow: "inset 0 0 0 1px " + st.ink + "33" }}>{complete ? tr("p8wf.soComplete") : tr("p8wf.soNDone", { ok, req: reqN })}</span>}
             </div>
             {key === "refs"
               ? renderRefs(fs, st)
               : <div className="grid gap-4 p-5 sm:p-6 sm:grid-cols-2">{fs.map((f) => renderField(f))}</div>}
             <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] px-5 py-3.5">
-              <button type="button" onClick={() => goto(step - 1)} disabled={step === 0} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">‹ Back</button>
-              <button type="button" onClick={persist} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{saved ? "Saved ✓" : "Save progress"}</button>
-              <button type="button" onClick={() => goto(step + 1)} className="rounded-full bg-[#1d3a8f] px-5 py-2 text-[13px] font-extrabold text-white hover:brightness-110">{last ? "Review & submit ›" : "Next ›"}</button>
+              <button type="button" onClick={() => goto(step - 1)} disabled={step === 0} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{fl(tr("p8wf.soBack"))}</button>
+              <button type="button" onClick={persist} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{saved ? tr("p8wf.soSaved") : tr("p8wf.soSaveProgress")}</button>
+              <button type="button" onClick={() => goto(step + 1)} className="rounded-full bg-[#1d3a8f] px-5 py-2 text-[13px] font-extrabold text-white hover:brightness-110">{fl(tr(last ? "p8wf.soReviewSubmitArrow" : "p8wf.soNext"))}</button>
             </div>
           </div>
         );
@@ -515,48 +525,48 @@ export function StaffOnboardingApp() {
 
       {step === stepCount && (<>{submitted ? (
         <div className="space-y-3 rounded-2xl border border-[#cfe8d7] bg-[#f4fbf6] p-4">
-          <div className="text-[15px] font-extrabold text-[#0f7a43]">✓ Submitted to your employer</div>
+          <div className="text-[15px] font-extrabold text-[#0f7a43]">{tr("p8wf.soSubmittedTo")}</div>
           <div className="rounded-xl border border-[var(--line)] bg-white p-3">
-            <div className="text-[13px] font-extrabold text-[var(--ink)]">📄 Now: read your documents</div>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-3)]">There are policies and documents you need to read and confirm — please do these now.</p>
-            <button type="button" onClick={() => router.push(`/${portal}/documents`)} className="mt-2 rounded-full bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-extrabold text-white hover:brightness-110">Go to my documents →</button>
+            <div className="text-[13px] font-extrabold text-[var(--ink)]">{tr("p8wf.soNowRead")}</div>
+            <p className="mt-0.5 text-[12px] text-[var(--ink-3)]">{tr("p8wf.soPoliciesNote")}</p>
+            <button type="button" onClick={() => router.push(`/${portal}/documents`)} className="mt-2 rounded-full bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-extrabold text-white hover:brightness-110">{fl(tr("p8wf.soGoDocs"))}</button>
           </div>
           <div className="rounded-xl border border-[var(--line)] bg-white p-3 text-[12.5px] leading-[1.5] text-[var(--ink-2)]">
-            <b>📅 Availability</b> — once we've placed you into a setting, you'll get an <b>email</b> asking you to set your weekly availability. Keep an eye on your inbox and complete it soon in the <b>My availability</b> section.
+            <Rich text={tr("p8wf.soAvailNote")} />
           </div>
           {submitted.outstanding.length > 0 && (
-            <div className="rounded-xl bg-[#fff4e5] p-3 text-[12px] text-[#9a3d00]">Still outstanding: <b>{submitted.outstanding.join(", ")}</b>. Your provider can see these and will be in touch — you can add them any time.</div>
+            <div className="rounded-xl bg-[#fff4e5] p-3 text-[12px] text-[#9a3d00]"><Rich text={tr("p8wf.soStillOut", { list: submitted.outstanding.join(", ") })} /></div>
           )}
-          <button type="button" onClick={() => setSubmitted(null)} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Keep editing</button>
+          <button type="button" onClick={() => setSubmitted(null)} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{tr("p8wf.soKeepEditing")}</button>
         </div>
       ) : rec.submittedAt ? (
         <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
-          <div className="text-[14px] font-extrabold text-[#0f7a43]">✓ Submitted {new Date(rec.submittedAt).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}{rec.lastEditedAt ? ` · last updated ${new Date(rec.lastEditedAt).toLocaleDateString(dl(), { day: "numeric", month: "short" })}` : ""}</div>
-          <p className="mt-0.5 text-[12px] text-[var(--ink-3)]">You can change your details any time. When you save a change, your employer is notified so they can review it.</p>
-          {!saved && <div className="mt-2 flex items-start gap-2 rounded-xl bg-[#fff4e5] p-3 text-[12px] text-[#9a3d00]"><span>✏️</span><span>You've changed your details — <b>Save</b> to send the update to your employer.</span></div>}
-          <div className="mt-3 flex justify-end"><Button variant="primary" onClick={persist}>{saved ? "Saved &amp; notified ✓" : "Save changes"}</Button></div>
+          <div className="text-[14px] font-extrabold text-[#0f7a43]">{tr("p8wf.soSubmittedOn", { date: new Date(rec.submittedAt).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) })}{rec.lastEditedAt ? tr("p8wf.soLastUpdated", { date: new Date(rec.lastEditedAt).toLocaleDateString(dl(), { day: "numeric", month: "short" }) }) : ""}</div>
+          <p className="mt-0.5 text-[12px] text-[var(--ink-3)]">{tr("p8wf.soChangeAny")}</p>
+          {!saved && <div className="mt-2 flex items-start gap-2 rounded-xl bg-[#fff4e5] p-3 text-[12px] text-[#9a3d00]"><span>✏️</span><span><Rich text={tr("p8wf.soChangedSave")} /></span></div>}
+          <div className="mt-3 flex justify-end"><Button variant="primary" onClick={persist}>{saved ? tr("p8wf.soSavedNotified") : tr("p8wf.soSaveChanges")}</Button></div>
         </div>
       ) : (
         <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
-          <div className="text-[14px] font-extrabold text-[var(--ink)]">Ready to submit?</div>
+          <div className="text-[14px] font-extrabold text-[var(--ink)]">{tr("p8wf.soReady")}</div>
           {canSubmit ? (
-            <p className="mt-0.5 text-[12px] text-[var(--ink-3)]">Everything compulsory is done{outstanding.length ? " — your certificates can follow later" : ""}. Submit to send it to your employer.</p>
+            <p className="mt-0.5 text-[12px] text-[var(--ink-3)]">{tr("p8wf.soAllDoneSubmit", { later: outstanding.length ? tr("p8wf.soLater") : "" })}</p>
           ) : (
             <div className="mt-2 flex items-start gap-2 rounded-xl bg-[#fdecec] p-3 text-[12px] text-[#a12b2b]">
               <span className="text-[14px]">⛔</span>
-              <span>Please complete these compulsory items before you can submit: <b>{blocking.map(niceLabel).join(", ")}</b>.</span>
+              <span><Rich text={tr("p8wf.soCompleteFirst", { list: blocking.map(niceShown).join(", ") })} /></span>
             </div>
           )}
           {canSubmit && outstanding.length > 0 && (
-            <div className="mt-2 flex items-start gap-2 rounded-xl bg-[#fff4e5] p-3 text-[12px] text-[#9a3d00]"><span>ℹ️</span><span>Your certificates aren't all uploaded — that's fine, you can submit now and add them later; your provider will chase them.</span></div>
+            <div className="mt-2 flex items-start gap-2 rounded-xl bg-[#fff4e5] p-3 text-[12px] text-[#9a3d00]"><span>ℹ️</span><span>{tr("p8wf.soCertsNote")}</span></div>
           )}
           <div className="mt-3 flex justify-end gap-2">
-            <Button onClick={persist}>{saved ? "Saved ✓" : "Save progress"}</Button>
-            <Button variant="primary" onClick={submit} disabled={!canSubmit}>Submit to employer</Button>
+            <Button onClick={persist}>{saved ? tr("p8wf.soSaved") : tr("p8wf.soSaveProgress")}</Button>
+            <Button variant="primary" onClick={submit} disabled={!canSubmit}>{tr("p8wf.soSubmitEmp")}</Button>
           </div>
         </div>
       )}
-      <div className="mt-3"><button type="button" onClick={() => goto(stepCount - 1)} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">‹ Back to your details</button></div>
+      <div className="mt-3"><button type="button" onClick={() => goto(stepCount - 1)} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">{fl(tr("p8wf.soBackDetails"))}</button></div>
       </>)}
     </div>
   );
