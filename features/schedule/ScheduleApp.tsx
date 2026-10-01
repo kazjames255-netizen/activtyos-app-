@@ -155,9 +155,9 @@ function loadApprovedLeave(): Set<string> {
 
 type Span = "day" | "week" | "2w" | "4w" | "month";
 type Group = "area" | "staff";
-const SPANS: [Span, string][] = [["day", "Day"], ["week", "Week"], ["2w", "2 Weeks"], ["4w", "4 Weeks"], ["month", "Month"]];
-const GROUPS: [Group, string][] = [["area", "Area"], ["staff", "Team member"]];
-const SPAN_WORD: Record<Span, string> = { day: "today", week: "this week", "2w": "these 2 weeks", "4w": "these 4 weeks", month: "this month" };
+const SPANS: [Span, string][] = [["day", "p8set.scSpanDay"], ["week", "p8set.scSpanWeek"], ["2w", "p8set.scSpan2w"], ["4w", "p8set.scSpan4w"], ["month", "p8set.scSpanMonth"]]; // [id, catalogue key]
+const GROUPS: [Group, string][] = [["area", "p8set.scGrpArea"], ["staff", "p8set.scGrpStaff"]];
+const SPAN_WORD: Record<Span, string> = { day: "p8set.scWordDay", week: "p8set.scWordWeek", "2w": "p8set.scWord2w", "4w": "p8set.scWord4w", month: "p8set.scWordMonth" };
 // A grouped shift draft: one "shift" that needs `slots.length` staff, filled where slot != null.
 type Draft = { groupIds: string[]; site: string; role: string; listing: string; season: string; date: string; start: string; end: string; slots: (string | null)[]; brk: { from: string; to: string } | null; note: string };
 
@@ -610,7 +610,7 @@ export function ScheduleApp() {
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div>
             <div className="mb-1 inline-flex items-center gap-2 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white/90 backdrop-blur">💷 {t("schedule.payrollForecast")}</div>
-            <div className="text-[19px] font-extrabold leading-tight">{t("schedule.totalWages")} <span className="font-semibold text-white/70">· {SPAN_WORD[span]}</span></div>
+            <div className="text-[19px] font-extrabold leading-tight">{t("schedule.totalWages")} <span className="font-semibold text-white/70">· {t(SPAN_WORD[span])}</span></div>
           </div>
           <div className="flex items-stretch gap-3">
             <div className="rounded-xl bg-white/10 px-4 py-2.5 ring-1 ring-white/15 backdrop-blur">
@@ -662,7 +662,7 @@ export function ScheduleApp() {
         <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 ps-1 pe-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
           <span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#dcf5e8", color: "#059669" }}>🗓</span>
           <Select value={`${span}:${group}`} onChange={(e) => { const [sp, gr] = e.target.value.split(":"); setSpan(sp as Span); setGroup(gr as Group); }} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none">
-            {GROUPS.map(([g, gl]) => SPANS.map(([s, sl]) => <option key={`${s}:${g}`} value={`${s}:${g}`}>{sl} by {gl}</option>))}
+            {GROUPS.map(([g, gl]) => SPANS.map(([s, sl]) => <option key={`${s}:${g}`} value={`${s}:${g}`}>{t("p8set.scSpanBy", { span: t(sl), group: t(gl) })}</option>))}
           </Select>
         </div>
         {canManage && (
