@@ -266,3 +266,10 @@
   .wrap header.nav .nav-in:has(> .nav-cta) > .brand{font-size:16px;gap:6px}
   .wrap header.nav .nav-in:has(> .nav-cta) > .brand .logo{width:30px;height:30px}
 }
+
+/* ---------- phone spacing (1 Oct): section bands were 88px top and bottom, plus 72px above the footer = big blank stretches ---------- */
+@media (max-width:759.98px){
+  .wrap > section.band{padding-top:52px;padding-bottom:52px}
+  .wrap > section:has(+ footer){padding-bottom:30px}
+  .wrap > footer{margin-top:0}
+}

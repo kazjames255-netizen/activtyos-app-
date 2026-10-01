@@ -50,9 +50,13 @@
 .trim-sc #scfaq .fq details:nth-child(5){display:none}
 }
 
-/* phones: the laptop-frame mock-ups inside the hero slider cannot fit a 390px screen (clipped sidebar, overlapping rows, tall empty gap under the slide).
-   Keep each slide's heading, text and facts; drop the mock and the forced slide height. */
+/* phones: the hero slider's laptop-frame mock-ups cannot fit a 390px screen (clipped sidebar, overlapping rows) and a sideways slider keeps the
+   height of its tallest slide, leaving a big empty gap. Without their mock-ups slides 2-5 are only a headline and a paragraph (the sections further
+   down the page cover the same ground), so on phones the slider is just its first slide. */
 @media (max-width:759.98px){
-  .wrap .hero-slider .hs-art{display:none}
-  .wrap .hero-slider .hs-slide{min-height:0}
+  .wrap .hero-slider .hs-view{overflow:visible;height:auto}
+  .wrap .hero-slider .hs-track{display:block;transform:none!important;transition:none;height:auto}
+  .wrap .hero-slider .hs-slide{min-width:0;width:100%;min-height:0;height:auto}
+  .wrap .hero-slider .hs-slide:not(:first-child){display:none}
+  .wrap .hero-slider .hs-dots{display:none}
 }
