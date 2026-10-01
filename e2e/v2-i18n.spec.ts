@@ -19,7 +19,7 @@ const brand = (s: string) => s.split("{brand}").join("Activly");
 const plain = (s: string) => brand(s).replace(/<br\s*\/?>/g, " ").replace(/<\/?\d+\/?>/g, "").replace(/&lt;/g, "<").replace(/\s+/g, " ").trim();
 // strings that legitimately stay identical in every language (brand/proper nouns, acronyms, numbers)
 
-test.use({ reducedMotion: "reduce" });
+test.use({ contextOptions: { reducedMotion: "reduce" } });
 
 async function open(page: Page, p: string, lang: string | null, w = 1440) {
   await page.addInitScript((l) => { try { if (!sessionStorage.getItem("v2seed")) { sessionStorage.setItem("v2seed", "1"); localStorage.setItem("aos-lang", l || "en"); } } catch {} }, lang);
