@@ -49,3 +49,10 @@
 .trim-sc #scfaq .fq details:nth-child(2),
 .trim-sc #scfaq .fq details:nth-child(5){display:none}
 }
+
+/* phones: the laptop-frame mock-ups inside the hero slider cannot fit a 390px screen (clipped sidebar, overlapping rows, tall empty gap under the slide).
+   Keep each slide's heading, text and facts; drop the mock and the forced slide height. */
+@media (max-width:759.98px){
+  .wrap .hero-slider .hs-art{display:none}
+  .wrap .hero-slider .hs-slide{min-height:0}
+}
