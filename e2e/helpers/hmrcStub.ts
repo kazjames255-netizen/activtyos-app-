@@ -150,7 +150,7 @@ import { createRequire } from "node:module";
 const root = ${JSON.stringify(root)};
 const stubUrl = ${JSON.stringify(stubUrl)};
 process.env.HMRC_TFC_CLIENT_ID = "stub-client-id";
-process.env.HMRC_TFC_CLIENT_SECRET = "stub-client-secret";
+process.env.HMRC_TFC_CLIENT_SECRET = "stub-secret";
 process.env.HMRC_TFC_EPP_UNIQUE_CUSTOMER_ID = "12345678901";
 process.env.HMRC_TFC_EPP_REG_REFERENCE = "HMRC123456A";
 process.env.HMRC_TFC_BASE_URL = stubUrl;
