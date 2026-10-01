@@ -1641,7 +1641,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
         <SectionHead icon="📅">{tr("p8lst.waSeason")}</SectionHead>
         <Select value={d.seasonId ?? ""} onChange={(e) => upd({ seasonId: e.target.value || null })} className="mb-1 w-full max-w-[360px]">
           <option value="">{tr("p8lst.waNoSeason")}</option>
-          {seasons.map((s) => <option key={s.id} value={s.id}>{seasonDisplayName(t, s.name)}</option>)}
+          {seasons.map((s) => <option key={s.id} value={s.id}>{seasonDisplayName(tr, s.name)}</option>)}
         </Select>
         <div className="mb-3 text-[11px] text-[var(--ink-3)]"><Rich text={tr("p8lst.waSeasonHint")} /></div>
       </>)}

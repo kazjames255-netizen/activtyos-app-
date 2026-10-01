@@ -15,6 +15,7 @@ import { Button, Card } from "@/components/ui";
 import { OperatorPage } from "@/components/OperatorPage";
 import { useSettings, groupForAge, DEFAULT_RATIO_GROUPS, type RatioGroup } from "@/lib/settings";
 import type { ServerListing } from "@/features/listings/ListingWizard";
+import { seasonDisplayName } from "@/lib/seasons";
 
 // The account holder auto-seeded onto the team keeps a stable id, so the "· you"
 // marker survives edits and it's never seeded twice.
@@ -883,7 +884,7 @@ export function RatiosApp() {
                 <select value={season} onChange={(e) => setSeason(e.target.value)}
                   className="appearance-none rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 ps-4 pe-9 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_2px_rgba(20,30,60,.06)] transition-colors hover:border-[var(--brand-2,#2f6bd8)] focus:border-[var(--brand-2,#2f6bd8)] focus:outline-none">
                   <option value="">{t("p8ops.rtAllSeasons")}</option>
-                  {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {seasons.map((s) => <option key={s.id} value={s.id}>{seasonDisplayName(t, s.name)}</option>)}
                 </select>
                 <span aria-hidden className="pointer-events-none absolute end-3.5 text-[10px] text-[var(--ink-3)]">▼</span>
               </span>

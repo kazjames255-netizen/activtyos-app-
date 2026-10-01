@@ -30,6 +30,7 @@ import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { useSettings } from "@/lib/settings";
 import { ExportWizard } from "./ExportWizard";
 import { PageHero } from "@/components/OperatorPage";
+import { seasonDisplayName } from "@/lib/seasons";
 
 // Status → identity-panel gradient. Same hue family as the status pill, but a
 // brighter, friendlier version (with a text shadow so white stays legible).
@@ -258,7 +259,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 title={t("p7bkl.filterSeason")}
                 options={[
                   ["", t("p7bkl.allSeasons")],
-                  ...seasons.map((s) => [s.id, s.name] as [string, string]),
+                  ...seasons.map((s) => [s.id, seasonDisplayName(t, s.name)] as [string, string]),
                 ]}
               />
             </Pill>
