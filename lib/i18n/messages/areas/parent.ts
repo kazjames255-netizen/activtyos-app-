@@ -867,6 +867,18 @@ parent.pl = Object.assign(clone(), {
   onDateHint: "Wybierz dzień, w którym dziecko ma czas — pokażemy zajęcia odbywające się tego dnia",
   distancesFromAddress: "Odległości od Twojego adresu",
   appliedOnceBackend: "Zostanie zastosowane po zbudowaniu backendu (§U)",
+  myKidsAges: "Wiek moich dzieci",
+  singleSession: "Pojedyncze zajęcia (jednorazowo — około godziny)",
+  clearDate: "Wyczyść datę",
+  filterBySeason: "Filtruj według sezonu",
+  allSeasons: "Dowolny sezon",
+  fromMyAddress: "od mojego adresu",
+  tfcAccepted: "Akceptuje Tax-Free Childcare",
+  vouchersAccepted: "Bony na opiekę nad dziećmi",
+  datesItRuns: "{n} dat, w których się odbywa",
+  moreInfo: "Więcej informacji",
+  quickBook: "Szybka rezerwacja",
+  wordPlaceholder: "np. Bluebell",
 });
 
 // Romanian
@@ -1274,6 +1286,18 @@ parent.ro = Object.assign(clone(), {
   onDateHint: "Alege o zi în care copilul este liber — afișează activitățile din acea dată",
   distancesFromAddress: "Distanțe față de adresa ta",
   appliedOnceBackend: "Se aplică după ce backendul este construit (§U)",
+  myKidsAges: "Vârsta copiilor mei",
+  singleSession: "Sesiune unică (o singură dată — aproximativ o oră)",
+  clearDate: "Șterge data",
+  filterBySeason: "Filtrează după sezon",
+  allSeasons: "Orice sezon",
+  fromMyAddress: "de la adresa mea",
+  tfcAccepted: "Acceptă Tax-Free Childcare",
+  vouchersAccepted: "Vouchere pentru îngrijirea copiilor",
+  datesItRuns: "{n} date în care are loc",
+  moreInfo: "Mai multe informații",
+  quickBook: "Rezervare rapidă",
+  wordPlaceholder: "de ex. Bluebell",
 });
 
 // Spanish
@@ -1681,6 +1705,18 @@ parent.es = Object.assign(clone(), {
   onDateHint: "Elige un día en que tu hijo esté libre — muestra las actividades de esa fecha",
   distancesFromAddress: "Distancias desde tu dirección",
   appliedOnceBackend: "Se aplicará cuando se construya el backend (§U)",
+  myKidsAges: "Edades de mis hijos",
+  singleSession: "Sesión única (puntual: aproximadamente una hora)",
+  clearDate: "Borrar fecha",
+  filterBySeason: "Filtrar por temporada",
+  allSeasons: "Cualquier temporada",
+  fromMyAddress: "desde mi dirección",
+  tfcAccepted: "Acepta Tax-Free Childcare",
+  vouchersAccepted: "Vales de cuidado infantil",
+  datesItRuns: "{n} fechas en las que se celebra",
+  moreInfo: "Más información",
+  quickBook: "Reserva rápida",
+  wordPlaceholder: "p. ej. Bluebell",
 });
 
 // French
@@ -2088,6 +2124,18 @@ parent.fr = Object.assign(clone(), {
   onDateHint: "Choisissez un jour où votre enfant est libre — affiche les activités de cette date",
   distancesFromAddress: "Distances depuis votre adresse",
   appliedOnceBackend: "Appliqué une fois le backend construit (§U)",
+  myKidsAges: "L’âge de mes enfants",
+  singleSession: "Séance unique (ponctuelle — environ une heure)",
+  clearDate: "Effacer la date",
+  filterBySeason: "Filtrer par saison",
+  allSeasons: "Toutes saisons",
+  fromMyAddress: "depuis mon adresse",
+  tfcAccepted: "Accepte Tax-Free Childcare",
+  vouchersAccepted: "Chèques garde d’enfants",
+  datesItRuns: "{n} dates où elle a lieu",
+  moreInfo: "Plus d’informations",
+  quickBook: "Réservation rapide",
+  wordPlaceholder: "p. ex. Bluebell",
 });
 
 // Portuguese
