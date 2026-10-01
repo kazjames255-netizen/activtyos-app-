@@ -50,13 +50,11 @@
 .trim-sc #scfaq .fq details:nth-child(5){display:none}
 }
 
-/* phones: the hero slider's laptop-frame mock-ups cannot fit a 390px screen (clipped sidebar, overlapping rows) and a sideways slider keeps the
-   height of its tallest slide, leaving a big empty gap. Without their mock-ups slides 2-5 are only a headline and a paragraph (the sections further
-   down the page cover the same ground), so on phones the slider is just its first slide. */
+/* phones: the hero slider stays a slider. The laptop mock-ups are scaled down to fit the screen (they were 420px wide in a ~300px column and got clipped),
+   and companies.html sizes the slider to the slide that is showing, so there is no empty band under the shorter slides. */
 @media (max-width:759.98px){
-  .wrap .hero-slider .hs-view{overflow:visible;height:auto}
-  .wrap .hero-slider .hs-track{display:block;transform:none!important;transition:none;height:auto}
-  .wrap .hero-slider .hs-slide{min-width:0;width:100%;min-height:0;height:auto}
-  .wrap .hero-slider .hs-slide:not(:first-child){display:none}
-  .wrap .hero-slider .hs-dots{display:none}
+  .wrap .hero-slider .hs-art .ch-lap{width:600px !important;max-width:none;zoom:.49}
+}
+@media (max-width:379.98px){
+  .wrap .hero-slider .hs-art .ch-lap{width:600px !important;max-width:none;zoom:.44}
 }

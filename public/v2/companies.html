@@ -659,8 +659,10 @@
   /* every slide used to be forced to the tallest one's height, which left the
      short pitch slide floating in a band of empty blue. Size the view to
      whichever slide is showing instead. */
+  function fit(){view.style.height=window.innerWidth<760?slides[at].offsetHeight+'px':'';}
   function go(i){at=(i+n)%n;track.style.transform='translateX(-'+(at*100)+'%)';
-    btns.forEach(function(b,k){b.className=k===at?'on':''});}
+    btns.forEach(function(b,k){b.className=k===at?'on':''});fit();}
+  window.addEventListener('resize',fit);window.addEventListener('load',fit);
   function play(){stop();timer=setInterval(function(){go(at+1)},3000);}
   function stop(){if(timer){clearInterval(timer);timer=null}}
   btns.forEach(function(b,k){b.addEventListener('click',function(){go(k);play()})});
