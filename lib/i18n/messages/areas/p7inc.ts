@@ -85,7 +85,7 @@ export default fromRows({
   tileSerious: ["Serious", "Poważne", "Grave", "سنگین", "ਗੰਭੀਰ", "গুরুতর", "خطيرة", "Graves", "Graves", "Graves", "Difrifol"],
   tileInformed: ["Parent informed", "Rodzic poinformowany", "Părinte informat", "والدین کو مطلع کیا گیا", "ਮਾਪਿਆਂ ਨੂੰ ਸੂਚਿਤ ਕੀਤਾ", "অভিভাবককে জানানো হয়েছে", "أُبلغ ولي الأمر", "Pais informados", "Padres informados", "Parent informé", "Rhiant wedi’i hysbysu"],
   tileTotal: ["Total", "Razem", "Total", "کل", "ਕੁੱਲ", "মোট", "الإجمالي", "Total", "Total", "Total", "Cyfanswm"],
-  allWord: ["All", "Wszystkie", "Toate", "سب", "ਸਭ", "الكل", "الكل", "Todos", "Todos", "Tous", "Pob un"],
+  allWord: ["All", "Wszystkie", "Toate", "سب", "ਸਭ", "সব", "الكل", "Todos", "Todos", "Tous", "Pob un"],
   searchPh: ["Search child or details…", "Szukaj dziecka lub szczegółów…", "Caută copil sau detalii…", "بچہ یا تفصیلات تلاش کریں…", "ਬੱਚਾ ਜਾਂ ਵੇਰਵੇ ਖੋਜੋ…", "শিশু বা বিবরণ খুঁজুন…", "ابحث عن طفل أو تفاصيل…", "Pesquisar criança ou detalhes…", "Buscar niño o detalles…", "Rechercher un enfant ou des détails…", "Chwilio am blentyn neu fanylion…"],
   ariaFilterInjury: ["Filter by injury", "Filtruj według urazu", "Filtrează după vătămare", "چوٹ کے مطابق فلٹر کریں", "ਸੱਟ ਅਨੁਸਾਰ ਫਿਲਟਰ ਕਰੋ", "আঘাত অনুযায়ী ফিল্টার করুন", "تصفية حسب الإصابة", "Filtrar por lesão", "Filtrar por lesión", "Filtrer par blessure", "Hidlo yn ôl anaf"],
   allInjuries: ["All injuries", "Wszystkie urazy", "Toate vătămările", "تمام چوٹیں", "ਸਾਰੀਆਂ ਸੱਟਾਂ", "সব আঘাত", "كل الإصابات", "Todas as lesões", "Todas las lesiones", "Toutes les blessures", "Pob anaf"],

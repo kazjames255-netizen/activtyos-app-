@@ -4,7 +4,7 @@ const rows: Record<string, readonly string[]> = {
   cEdit: ["Edit", "Edytuj", "Editează", "ترمیم کریں", "ਸੋਧੋ", "সম্পাদনা", "تعديل", "Editar", "Editar", "Modifier", "Golygu"],
   cDelete: ["Delete", "Usuń", "Șterge", "حذف کریں", "ਮਿਟਾਓ", "মুছুন", "حذف", "Eliminar", "Eliminar", "Supprimer", "Dileu"],
   cDuplicate: ["Duplicate", "Duplikuj", "Duplică", "نقل بنائیں", "ਡੁਪਲੀਕੇਟ ਕਰੋ", "ডুপ্লিকেট করুন", "تكرار", "Duplicar", "Duplicar", "Dupliquer", "Dyblygu"],
-  cLoading: ["Loading…", "Ładowanie…", "Se încarcă…", "لوڈ ہو رہا ہے…", "ਲੋਡ ਹو ਰਿਹਾ ਹੈ…", "লোড হচ্ছে…", "جارٍ التحميل…", "A carregar…", "Cargando…", "Chargement…", "Yn llwytho…"],
+  cLoading: ["Loading…", "Ładowanie…", "Se încarcă…", "لوڈ ہو رہا ہے…", "ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ…", "লোড হচ্ছে…", "جارٍ التحميل…", "A carregar…", "Cargando…", "Chargement…", "Yn llwytho…"],
   cBack: ["← Back", "← Wstecz", "← Înapoi", "→ واپس", "← ਵਾਪਸ", "← ফিরে যান", "→ رجوع", "← Voltar", "← Atrás", "← Retour", "← Yn ôl"],
   cClose: ["Close", "Zamknij", "Închide", "بند کریں", "ਬੰਦ ਕਰੋ", "বন্ধ করুন", "إغلاق", "Fechar", "Cerrar", "Fermer", "Cau"],
   cRemove: ["Remove", "Usuń", "Elimină", "ہٹائیں", "ਹਟਾਓ", "সরান", "إزالة", "Remover", "Quitar", "Retirer", "Tynnu"],
