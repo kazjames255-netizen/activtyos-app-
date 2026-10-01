@@ -54,6 +54,13 @@ async function measure(page: Page, loc: string) {
       if (nonLatin) { if (/\b[A-Za-z]{4,}\b/.test(s)) heur.add(s.slice(0, 100)); }
       else if (words.length >= 2 && re.test(s)) heur.add(s.slice(0, 100));
     }
+    // <option> labels (closed selects have no box, so the walker above skips them): same checks.
+    for (const o of Array.from(document.querySelectorAll("option"))) {
+      const s0 = (o.textContent ?? "").replace(/\s+/g, " ").trim(); const s = (new RegExp(data).test(s0) ? "" : s0).replace(new RegExp(allow, "g"), " ").replace(/\s+/g, " ").trim();
+      if (!s || !/[A-Za-z]{3}/.test(s)) continue;
+      if (enSet.has(s)) cat.add("[option] " + s.slice(0, 90));
+      if (nonLatin ? /\b[A-Za-z]{4,}\b/.test(s) : (s.split(/\s+/).length >= 2 && re.test(s))) heur.add("[option] " + s.slice(0, 90));
+    }
     const de = document.documentElement;
     return { cat: [...cat], heur: [...heur], keys: [...keys], dir: de.dir, lang: de.lang, overflow: de.scrollWidth - de.clientWidth };
   }, { nonLatin: NON_LATIN.has(loc), stop: STOP.source, en: EN, allow: ALLOW.source, data: DATA.source });
