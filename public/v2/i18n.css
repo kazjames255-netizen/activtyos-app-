@@ -22,3 +22,9 @@ html.i18n-wait body{visibility:hidden}
 [dir=rtl] .carr{transform:scaleX(-1)}
 /* taller headings for scripts with stacked marks */
 :lang(bn) h1,:lang(bn) h2,:lang(pa) h1,:lang(pa) h2,:lang(ur) h1,:lang(ur) h2{line-height:1.3}
+
+/* Desktop: the language selector sits on its own at the far right of the header, after the sign-in buttons, set off by a divider.
+   (Under 960px the mobile layer in responsive.css moves it into the menu, so this is desktop only.) */
+@media (min-width:960px){
+  .nav-cta .lang-sw{order:99;margin-inline-start:6px;padding-inline-start:16px;border-inline-start:1px solid rgba(255,255,255,.28)}
+}
