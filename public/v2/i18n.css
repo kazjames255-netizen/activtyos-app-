@@ -28,3 +28,10 @@ html.i18n-wait body{visibility:hidden}
 @media (min-width:960px){
   .nav-cta .lang-sw{order:99;margin-inline-start:6px;padding-inline-start:16px;border-inline-start:1px solid rgba(255,255,255,.28)}
 }
+
+/* Wide screens: pin the selector to the far right edge of the page, on its own, clear of the nav buttons.
+   Below 1360px there isn't spare room beside the content, so it stays at the end of the button row (rule above). */
+@media (min-width:1360px){
+  header.nav{position:sticky}
+  header.nav .lang-sw{position:absolute;inset-inline-end:20px;top:50%;transform:translateY(-50%);order:0;margin:0;padding:0;border:0}
+}
