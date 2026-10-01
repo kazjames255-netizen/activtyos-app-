@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   /* config options here */
   // One id per build / dev-server start: versions the cached hub message catalogue URL (lib/i18n/hubMessages.ts).
   env: { NEXT_PUBLIC_BUILD_ID: Date.now().toString(36) },
+  // Build-only tsconfig: leaves out e2e/, whose server-side helpers can't resolve firebase-admin on Vercel.
+  typescript: { tsconfigPath: "tsconfig.build.json" },
 };
 
 export default nextConfig;

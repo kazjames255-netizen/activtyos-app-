@@ -1,0 +1,7 @@
+{
+  // `next build` type-checks with this file (next.config.ts → typescript.tsconfigPath). It also drops e2e/:
+  // several helpers import server/src, whose deps (firebase-admin…) aren't installed on a web build host.
+  // Local `npx tsc --noEmit` still uses tsconfig.json and checks e2e/ where server/node_modules exists.
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "server", "scratch", "e2e"]
+}
