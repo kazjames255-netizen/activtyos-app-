@@ -1,0 +1,32 @@
+/* Phone declutter for parents / security / safeguarding (site review D).
+   Hides secondary cards and decorative mock-ups on phones only; HTML is untouched.
+   Everything lives inside the max-width query so laptop/tablet+ rendering is unchanged. */
+@media (max-width:759.98px){
+  /* shared: tighter bands, compact cards (icon tiles dropped), calmer section heads */
+  #pahero~section.band,#measures,#compliance,#sgforce,#sgday,#sgconcern,#sgpeople,#sgdata,#sgown{padding-top:30px!important;padding-bottom:32px!important}
+  #pabook .fgrid .fic,#pachild .fgrid .fic,#paloop .fgrid .fic,#measures .fgrid .fic,#compliance .fgrid .fic,#sgday .fgrid .fic,#sgconcern .fgrid .fic,#sgpeople .fgrid .fic,#sgdata .fgrid .fic{display:none}
+  #pabook .fcard,#pachild .fcard,#paloop .fcard,#measures .fcard,#compliance .fcard,#sgday .fcard,#sgconcern .fcard,#sgpeople .fcard,#sgdata .fcard{padding:16px 18px}
+  #pabook .fgrid,#pachild .fgrid,#paloop .fgrid,#measures .fgrid,#sgday .fgrid,#sgconcern .fgrid,#sgpeople .fgrid,#sgdata .fgrid{gap:10px}
+  #compliance .fgrid{grid-template-columns:1fr!important;gap:10px}
+
+  /* ---------- parents ---------- */
+  #paswap .pa-swcol:not(.now){display:none}
+  #paswap .pa-sw{grid-template-columns:1fr!important}
+  #pabook .fgrid>.fcard:nth-child(n+7):nth-child(-n+8){display:none}
+    #papay .pay-grid>.pay-card:nth-child(2){display:none}
+  #papay .pay-ticks li:nth-child(n+5){display:none}
+  #paloop .fgrid>.fcard:nth-child(6){display:none}
+  #parentinside,#palang{display:none}
+
+  /* ---------- security ---------- */
+  .wrap>.shell:has(>figure.wk-img){display:none}
+  #measures .fgrid>.fcard:nth-child(5),#measures .fgrid>.fcard:nth-child(6),#measures .fgrid>.fcard:nth-child(9){display:none}
+  #compliance .fgrid>.fcard:nth-child(2){display:none}
+
+  /* ---------- safeguarding ---------- */
+  #sgday .fgrid>.fcard:nth-child(1),#sgday .fgrid>.fcard:nth-child(6){display:none}
+  #sgconcern .fgrid>.fcard:nth-child(2),#sgconcern .fgrid>.fcard:nth-child(3){display:none}
+  #sgpeople .fgrid>.fcard:nth-child(4),#sgpeople .fgrid>.fcard:nth-child(6){display:none}
+  #sgdata .fgrid>.fcard:nth-child(3){display:none}
+  #sgown p:nth-of-type(2){display:none}
+}

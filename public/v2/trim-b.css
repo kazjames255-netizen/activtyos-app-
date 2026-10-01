@@ -1,0 +1,79 @@
+/* trim-b.css - phone declutter for the six "B" pages (platform-bookings/comms/finance/safeguarding/staff, tour).
+   Everything lives inside the phone query, so laptop (and tablet >= 760px) rendering is untouched.
+   Nothing is removed from the HTML: secondary mock-ups, duplicates and decorative blocks are only hidden here. */
+@media (max-width:759.98px){
+
+  /* ---- shared: feature-card grids become compact, evenly spaced rows (icon | title + text) ---- */
+  html body .wrap .pwx{border-radius:18px}
+  html body .wrap .pwx-bar{display:none}
+  html body .wrap .pwx-body{padding:10px}
+  html body .wrap .pwx-body > .fgrid,
+  html body .wrap .fgrid{grid-template-columns:minmax(0,1fr);gap:8px}
+  html body .wrap .fgrid > a{display:block}
+  html body .wrap .fcard{display:grid;grid-template-columns:36px minmax(0,1fr);column-gap:12px;row-gap:2px;align-items:center;padding:11px 14px;border-radius:14px}
+  html body .wrap .fcard:hover{transform:none}
+  html body .wrap .fcard .fic{grid-row:1 / span 2;align-self:center;width:36px;height:36px;margin:0;border-radius:10px}
+  html body .wrap .fcard .fic svg{width:20px;height:20px}
+  html body .wrap .fcard h3{font-size:15.5px;line-height:1.25;margin:0}
+  html body .wrap .fcard > p{font-size:13px;line-height:1.42;margin:0}
+
+  /* section rhythm: tighter bands and headings */
+  html body .wrap .band{padding-top:46px!important;padding-bottom:46px!important}
+  html body .wrap .band .sec-head{margin-bottom:24px}
+  html body .wrap .sec-head p{font-size:15px;margin-top:8px}
+
+  /* decorative hero photo / phone pop-up: the headline and CTAs carry the hero on a phone */
+  html body .wrap .heroimg-pic{display:none}
+  html body .wrap .hero{padding-bottom:12px}
+
+  /* closing call-to-action card: same message, less air */
+  html body .wrap .final{padding:34px 20px;border-radius:22px}
+  html body .wrap .final p{margin:10px auto 18px}
+  html body .wrap .band:has(> .shell > .final){padding-top:14px!important;padding-bottom:34px!important}
+
+  /* footer: drop the brand blurb and the placeholder social icons; keep Pages + Legal lists */
+  html body .wrap footer .foot-grid > div:first-child p{display:none}
+  html body .wrap footer .foot-extra{display:none}
+  html body .wrap footer{padding-top:28px;padding-bottom:30px}
+  html body .wrap footer .foot-grid{gap:16px}
+  html body .wrap footer .foot-bot{margin-top:18px;padding-top:14px}
+
+  /* ================= platform-bookings ================= */
+  /* the checkout strip and third listing repeat what the cards below say */
+  html body.tb-bookings .wrap #booking .bk-screen .bk-listing:nth-of-type(3){display:none}
+  html body.tb-bookings .wrap #booking .bk-top{gap:18px!important;margin-bottom:26px!important}
+  html body.tb-bookings .wrap #booking .bk-top ul{margin-top:12px}
+
+  /* ================= platform-comms ================= */
+  /* the phone mock-up in the first band repeats the full parent-app mock-up below it */
+  html body.tb-comms .wrap #parentapp .pf-app{display:none}
+  html body.tb-comms .wrap #parentapp{padding-top:30px}
+  /* parent-app mock-up: keep Messages and My bookings, hide the other four panes */
+  html body.tb-comms .wrap #parentinside .pp-grid > .pp-pane:nth-child(2),
+  html body.tb-comms .wrap #parentinside .pp-grid > .pp-pane:nth-child(4),
+  html body.tb-comms .wrap #parentinside .pp-grid > .pp-pane:nth-child(5),
+  html body.tb-comms .wrap #parentinside .pp-grid > .pp-pane:nth-child(6){display:none}
+
+  /* ================= platform-finance ================= */
+  /* KPI + chart + payout mock-up: keep the KPI tiles and the payout card, drop the bar chart */
+  html body.tb-finance .wrap #money .pf-grid > .pf-card:first-child{display:none}
+  /* reconciliation table: keep the first three rows, hide the side rail's extras */
+  html body.tb-finance .wrap #tfcrec .rec tbody tr:nth-child(n+4){display:none}
+  html body.tb-finance .wrap #tfcrec .pw-rail > .pw-card:nth-child(1),
+  html body.tb-finance .wrap #tfcrec .pw-rail > .pw-card:nth-child(3){display:none}
+
+  /* ================= platform-safeguarding ================= */
+  /* portal snippets: keep register, accident log and safeguarding concern; ratios + medication are covered by the cards above */
+  html body.tb-safeguarding .wrap #snips .snip-grid > .snip:nth-child(3),
+  html body.tb-safeguarding .wrap #snips .snip-grid > .snip:nth-child(4){display:none}
+
+  /* ================= platform-staff ================= */
+  /* the weekly rota is a seven-column desktop grid that would be cut off on a phone; the cards above carry the same points */
+  html body.tb-staff .wrap #rota .pw-wrap{display:none}
+  /* Learning Centre mock-up: keep the course list, drop the compliance rail (the stats and checklist beside it say the same) */
+  html body.tb-staff .wrap #cpd .cpd-split > .pw .pw-rail{display:none}
+
+  /* ================= tour ================= */
+  html body.tb-tour .wrap #top{padding-bottom:30px!important}
+  html body.tb-tour .wrap #top [style*="min-height:460px"]{min-height:250px!important;padding:56px 20px 30px!important}
+}

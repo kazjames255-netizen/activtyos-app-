@@ -1,0 +1,40 @@
+/* Phone declutter for activly.html + pricing.html (agent A). Phones only: laptop is untouched.
+   Nothing is deleted from the HTML; secondary mock-ups and duplicate sections are only hidden here. */
+@media (max-width:759.98px){
+  /* ---------- HOME ---------- */
+  /* hero: keep headline, sub, CTAs, trust line; drop the audience chips */
+  #top .chips{display:none}
+  /* personas: keep text + link, drop the three decorative mock-ups */
+  #who .pvis{display:none}
+  /* orbit diagram + logo marquee duplicate the "one login" platform grid below */
+  #orbit,.mq{display:none!important}
+  /* saving teaser repeats the calculator below */
+  #save{display:none}
+  /* key features carousel: text only, no per-slide mock-ups */
+  #features .slide-in > div:nth-child(2){display:none}
+  /* finance hub + TFC mock-ups (the copy and bullets stay) */
+  #money .pf-grid{display:none}
+  #tfc .tfc-grid > .pf{display:none}
+  /* testimonials: the first two only */
+  .tgrid .quote:nth-child(n+3){display:none}
+  /* help & resources: three of four cards are "coming soon"; Security is in the nav + footer */
+  #resources{display:none}
+  /* anonymous logo strip */
+  #trusted{display:none}
+
+  /* ---------- PRICING ---------- */
+  /* the add-on link in the hero duplicates the add-on card right below the plans */
+  #top .sub + a{display:none!important}
+  /* plan cards: one primary button each (the header already has "Book a demo") */
+  .price .pbtns .btn-ghost{display:none}
+  /* reassurance chips repeat the FAQ + hero */
+  .price + div{display:none!important}
+  /* add-on header: icon + title + chevron on one row, price underneath (was squeezed into a 1-letter column) */
+  #websiteAddon .addon-head{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 12px}
+  .addon-head > :first-child{grid-row:1 / 3}
+  .addon-h{grid-column:2;grid-row:1;min-width:0}
+  .addon-chev{grid-column:3;grid-row:1}
+  .addon-price{grid-column:2 / 4;grid-row:2;display:flex;align-items:baseline;justify-content:flex-start;gap:6px}
+  /* compare table repeats the three plan cards above; the cards carry the full feature lists */
+  .wrap > section:nth-of-type(4){display:none}
+}

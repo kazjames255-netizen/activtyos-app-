@@ -1,0 +1,51 @@
+/* trim-c.css — phone declutter for freelancers / companies / franchises / schools.
+   Hides secondary cards and repeated mock-ups only (no HTML removed). Phones only. */
+@media (max-width:759.98px){
+
+/* ---------- FREELANCERS ---------- */
+.trim-fl .hero .heroimg-pic{display:none}
+.trim-fl section.hero + section.band{display:none}
+.trim-fl #booking .bk-card--photo{display:none}
+.trim-fl #booking .bk-card--text{margin-bottom:0}
+.trim-fl #booking .sec-head.center{display:none}
+.trim-fl #booking .pwx-body .fcard:nth-child(n+5){display:none}
+.trim-fl #runday .sec-head p{display:none}
+.trim-fl #parentapp .pf-app{display:none}
+.trim-fl #parentapp .tfc-grid{gap:0}
+
+/* ---------- COMPANIES ---------- */
+.trim-co section.hero + section.band{display:none}
+.trim-co #booking .bk-filmstrip .bk-ph{display:none}
+.trim-co #booking .bk-top-co > div:first-of-type p{display:none}
+.trim-co #booking .sec-head.center{display:none}
+.trim-co #booking .pwx-body .fcard:nth-child(n+5){display:none}
+.trim-co #runday .sec-head p{display:none}
+.trim-co #parentapp .pf-app{display:none}
+.trim-co #parentapp .tfc-grid{gap:0}
+
+/* ---------- FRANCHISES ---------- */
+.trim-fr .hero .heroimg-pic{display:none}
+.trim-fr section.hero + section.band{display:none}
+.trim-fr #netsites .ns-film{display:none}
+.trim-fr #dashboard .pf-card:not(.pf-grid .pf-card:last-child),
+.trim-fr #dashboard .pf-grid .pf-card:first-child{display:none}
+.trim-fr #dashboard .sec-head p{display:none}
+
+/* ---------- SCHOOLS ---------- */
+.trim-sc #schero .heroimg-pic{display:none}
+.trim-sc #scwhy .sec-head p{display:none}
+.trim-sc #scbook .bk-ticks,
+.trim-sc #scbook .bk-copy p{display:none}
+.trim-sc #scwhy .sc-item:nth-child(3){display:none}
+.trim-sc #sctrust .sc-panel li:nth-child(n+4){display:none}
+.trim-sc #scmoney .sec-head p,
+.trim-sc #scsafe .sec-head p{display:none}
+.trim-sc #scbook .bk-filmstrip{display:none}
+.trim-sc #scday .sc-slot:nth-child(2),
+.trim-sc #scday .sc-slot:nth-child(3){display:none}
+.trim-sc #scday .sec-head p{display:none}
+.trim-sc #scmoney .fgrid .fcard:nth-child(n+4){display:none}
+.trim-sc #scsafe .fgrid .fcard:nth-child(n+5){display:none}
+.trim-sc #scfaq .fq details:nth-child(2),
+.trim-sc #scfaq .fq details:nth-child(5){display:none}
+}
