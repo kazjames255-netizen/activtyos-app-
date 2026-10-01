@@ -19,8 +19,13 @@
   .wrap header.nav .nav-in{display:flex;flex-wrap:wrap;align-items:center;height:auto;min-height:60px;gap:0 8px;padding-top:0;padding-bottom:0;padding-left:max(22px,env(safe-area-inset-left));padding-right:max(22px,env(safe-area-inset-right))}
   .wrap header.nav .brand{order:1;min-height:44px;gap:9px}
   .wrap header.nav .nav-cta{display:contents}
-  .wrap header.nav .nav-cta .btn-primary{order:2;margin-left:auto;min-height:44px;display:inline-flex;align-items:center;padding:0 16px;white-space:nowrap}
-  .rsp-burger{order:3;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin-right:-8px;border:0;background:transparent;color:#fff;cursor:pointer;border-radius:12px;padding:0}
+  .wrap header.nav .nav-cta .btn-primary{order:2;margin-left:auto;min-height:44px;display:inline-flex;align-items:center;padding:0 14px;white-space:nowrap}
+  /* language selector: compact globe-only button between Provider sign up and the menu button (tap opens the language list) */
+  .wrap header.nav .nav-cta .lang-sw{order:3;margin:0;padding:0;border:0}
+  .wrap header.nav .nav-cta .lang-sel{width:42px;height:42px;padding:0;color:transparent;background-image:none;max-width:none}
+  .wrap header.nav .nav-cta .lang-globe{inset-inline-start:13px}
+  .wrap header.nav .nav-cta .lang-sel option{color:#171534}
+  .rsp-burger{order:4;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin-right:-8px;border:0;background:transparent;color:#fff;cursor:pointer;border-radius:12px;padding:0}
   .rsp-burger span,.rsp-burger span::before,.rsp-burger span::after{display:block;width:22px;height:2px;border-radius:2px;background:#fff;content:"";position:relative;transition:transform .2s ease,background .2s ease}
   .rsp-burger span::before{position:absolute;top:-7px;left:0}
   .rsp-burger span::after{position:absolute;top:7px;left:0}
@@ -31,9 +36,9 @@
   .wrap header.nav .nav-links,
   .wrap header.nav .nav-cta .navtab-parent,
   .wrap header.nav .nav-cta .signin{display:none}
-  .wrap header.nav.rsp-open .nav-links{display:flex;order:4;flex:1 0 100%;flex-direction:column;align-items:stretch;gap:0;margin:4px 0 0;border-top:1px solid rgba(255,255,255,.18)}
-  .wrap header.nav.rsp-open .nav-cta .navtab-parent{display:flex;order:5;flex:1 0 100%;justify-content:center;align-items:center;min-height:48px;margin:12px 0 0;border-radius:14px}
-  .wrap header.nav.rsp-open .nav-cta .signin{display:flex;order:6;flex:1 0 100%;justify-content:center;align-items:center;min-height:48px;margin:6px 0 16px;color:#fff;font-size:15px}
+  .wrap header.nav.rsp-open .nav-links{display:flex;order:5;flex:1 0 100%;flex-direction:column;align-items:stretch;gap:0;margin:4px 0 0;border-top:1px solid rgba(255,255,255,.18)}
+  .wrap header.nav.rsp-open .nav-cta .navtab-parent{display:flex;order:6;flex:1 0 100%;justify-content:center;align-items:center;min-height:48px;margin:12px 0 0;border-radius:14px}
+  .wrap header.nav.rsp-open .nav-cta .signin{display:flex;order:7;flex:1 0 100%;justify-content:center;align-items:center;min-height:48px;margin:6px 0 16px;color:#fff;font-size:15px}
   .wrap header.nav .nav-links > a,
   .wrap header.nav .navdrop-btn{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:52px;margin:0;padding:0 2px;font-size:16px;border-bottom:1px solid rgba(255,255,255,.12);border-radius:0;background:transparent}
   .wrap header.nav .navdrop{display:block;position:static}
@@ -77,7 +82,7 @@
   .wrap header.nav .pa-auth .pa-in{display:none}
   .wrap header.nav.rsp-open .pa-auth .pa-in{display:flex;order:6;flex:1 0 100%;justify-content:center;align-items:center;min-height:48px;margin:0 0 16px;font-size:15px;border:1px solid rgba(255,255,255,.3);border-radius:14px}
   .wrap header.nav .nav-in>.pa-navright{margin-left:0;justify-self:auto}
-  .wrap header.nav.rsp-open .nav-in>.pa-navright{order:4}
+  .wrap header.nav.rsp-open .nav-in>.pa-navright{order:5}
 }
 /* ---------- home: orbit diagram becomes a tidy laptop + wrapped chips on phones/small tablets ---------- */
 @media (max-width:900px){
@@ -201,3 +206,36 @@
   html body .wrap .price > :nth-child(3){grid-column:1 / -1}
 }
 /* @@END@@ */
+
+/* ---------- phone header fit, footer socials centred, footer lists in two columns (1 Oct) ---------- */
+@media (max-width:959.98px){
+  /* brand + Provider sign up + language globe + menu button must fit on ONE row at 360-430px */
+  .wrap header.nav .nav-in{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));gap:0 6px}
+  .wrap header.nav .nav-cta .btn-primary{padding:0 12px;font-size:14px}
+  .rsp-burger{margin-right:-10px}
+}
+@media (max-width:374px){
+  .wrap header.nav .nav-cta .btn-primary{padding:0 10px;font-size:12.5px}
+  .wrap header.nav .nav-cta .lang-sel{width:38px;height:38px}
+  .wrap header.nav .nav-cta .lang-globe{inset-inline-start:11px}
+}
+/* the 44px touch-target rule turns footer links into flex boxes, which left the social icons stuck top-left of their tiles */
+@media (max-width:1024px), (hover:none) and (pointer:coarse){
+  html body .wrap footer .ft-soc{display:grid;place-items:center;padding:0}
+}
+/* long footer lists (Pages, Get in touch...) read as one endless column on a phone: two columns, headings and blocks full width */
+@media (max-width:900px){
+  html body .wrap footer .foot-col{display:grid;grid-template-columns:1fr 1fr;column-gap:18px;align-items:center}
+  html body .wrap footer .foot-col > :not(a){grid-column:1/-1}
+  html body .wrap footer .foot-col > a{min-height:44px}
+}
+
+/* small phones (<=420px): no room for the language globe beside the sign-up button, so it lives in the menu as a full-width row */
+@media (max-width:420px){
+  .wrap header.nav .nav-cta .lang-sw{display:none}
+  .wrap header.nav.rsp-open .nav-cta .lang-sw{display:flex;order:8;flex:1 0 100%;margin:0 0 18px}
+  .wrap header.nav.rsp-open .nav-cta .lang-sel{width:100%;max-width:none;height:48px;padding:0 40px 0 44px;padding-inline:44px 40px;color:#fff;font-size:15px;
+    background:rgba(255,255,255,.1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 16px center/12px}
+  [dir=rtl] .wrap header.nav.rsp-open .nav-cta .lang-sel{background-position:left 16px center}
+  .wrap header.nav.rsp-open .nav-cta .lang-globe{inset-inline-start:16px}
+}
