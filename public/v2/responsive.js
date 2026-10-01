@@ -8,6 +8,13 @@
   btn.type='button'; btn.className='rsp-burger'; btn.setAttribute('aria-label','Menu');
   btn.setAttribute('aria-expanded','false'); btn.innerHTML='<span></span>';
   inner.appendChild(btn);
+  /* phones/tablets: a 'Book a demo' tab in the header bar (the demo banner card is hidden under 960px). Same translation key as the footer link. */
+  if(hdr.querySelector('.nav-cta')){
+    var demo=document.createElement('a');
+    demo.className='rsp-demo'; demo.href='/demo';
+    demo.setAttribute('data-i18n','g.book-a-demo-1lqj'); demo.textContent='Book a demo';
+    inner.appendChild(demo);
+  }
   var links=hdr.querySelector('.nav-links');
   if(links){ if(!links.id) links.id='rsp-nav'; btn.setAttribute('aria-controls',links.id); }
 

@@ -223,19 +223,46 @@
 @media (max-width:1024px), (hover:none) and (pointer:coarse){
   html body .wrap footer .ft-soc{display:grid;place-items:center;padding:0}
 }
-/* long footer lists (Pages, Get in touch...) read as one endless column on a phone: two columns, headings and blocks full width */
+/* long footer lists (Pages, Get in touch, Legal) read as one endless column on a phone: compact wrapping pills instead */
 @media (max-width:900px){
-  html body .wrap footer .foot-col{display:grid;grid-template-columns:1fr 1fr;column-gap:18px;align-items:center}
-  html body .wrap footer .foot-col > :not(a){grid-column:1/-1}
-  html body .wrap footer .foot-col > a{min-height:44px}
+  html body .wrap footer .foot-col{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  html body .wrap footer .foot-col > :not(a){flex:1 0 100%;margin-bottom:2px}
+  html body .wrap footer .foot-col > a{min-height:40px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.09);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);font-size:14px;white-space:nowrap}
+  html body .wrap footer .foot-col > a:hover{background:rgba(255,255,255,.16);text-decoration:none}
+  html body .wrap footer .foot-col{margin-bottom:6px}
 }
 
-/* small phones (<=420px): no room for the language globe beside the sign-up button, so it lives in the menu as a full-width row */
-@media (max-width:420px){
+/* phones + tablets (<960px): the language picker lives in the menu as a full-width row */
+@media (max-width:959.98px){
   .wrap header.nav .nav-cta .lang-sw{display:none}
   .wrap header.nav.rsp-open .nav-cta .lang-sw{display:flex;order:8;flex:1 0 100%;margin:0 0 18px}
   .wrap header.nav.rsp-open .nav-cta .lang-sel{width:100%;max-width:none;height:48px;padding:0 40px 0 44px;padding-inline:44px 40px;color:#fff;font-size:15px;
     background:rgba(255,255,255,.1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 16px center/12px}
   [dir=rtl] .wrap header.nav.rsp-open .nav-cta .lang-sel{background-position:left 16px center}
   .wrap header.nav.rsp-open .nav-cta .lang-globe{inset-inline-start:16px}
+}
+
+/* ---------- symmetrical phone header (1 Oct): [menu] [logo centred] [Book a demo]; banner card hidden; sign-up inside the menu ---------- */
+.rsp-demo{display:none}
+@media (max-width:959.98px){
+  .demo-banner{display:none}
+  .wrap header.nav .nav-in:has(> .nav-cta){display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;column-gap:6px;min-height:60px}
+  .wrap header.nav .nav-in:has(> .nav-cta) > .rsp-burger{grid-column:1;grid-row:1;justify-self:start;margin:0 0 0 -10px;order:0}
+  .wrap header.nav .nav-in:has(> .nav-cta) > .brand{grid-column:2;grid-row:1;justify-self:center;order:0}
+  .wrap header.nav .nav-in:has(> .nav-cta) > .rsp-demo{grid-column:3;grid-row:1;justify-self:end;order:0;display:inline-flex;align-items:center;justify-content:center;
+    min-height:44px;max-width:100%;overflow:hidden;text-overflow:ellipsis;padding:0 10px;border-radius:999px;background:var(--gold,#f5b81f);color:#241a00;font-size:12.5px;font-weight:800;line-height:1;white-space:nowrap;text-decoration:none;box-shadow:0 6px 16px -8px rgba(245,184,31,.6)}
+  /* drawer items span the full width underneath */
+  .wrap header.nav .nav-in:has(> .nav-cta) .nav-links,
+  .wrap header.nav .nav-in:has(> .nav-cta) .nav-cta > *{grid-column:1/-1;grid-row:auto}
+  /* Provider sign up: hidden in the bar, a full-width primary button in the menu */
+  html body .wrap header.nav .nav-cta .btn-primary{display:none}
+  html body .wrap header.nav.rsp-open .nav-cta .btn-primary{display:flex;order:6;justify-content:center;width:100%;margin:12px 0 0;min-height:48px;font-size:15px;grid-column:1/-1}
+  html body .wrap header.nav.rsp-open .nav-cta .navtab-parent{order:7}
+  html body .wrap header.nav.rsp-open .nav-cta .signin{order:8}
+  html body .wrap header.nav.rsp-open .nav-cta .lang-sw{order:9}
+}
+@media (max-width:374px){
+  .wrap header.nav .nav-in:has(> .nav-cta) > .rsp-demo{padding:0 8px;font-size:12px}
+  .wrap header.nav .nav-in:has(> .nav-cta) > .brand{font-size:16px;gap:6px}
+  .wrap header.nav .nav-in:has(> .nav-cta) > .brand .logo{width:30px;height:30px}
 }
