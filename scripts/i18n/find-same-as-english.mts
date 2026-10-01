@@ -10,4 +10,4 @@ for (const f of fs.readdirSync(dir).filter(x=>x.endsWith(".ts")&&!/^hub/.test(x)
 }
 console.log(JSON.stringify(tot)); for (const l of LOC) console.log(l, JSON.stringify(out[l]));
 
-if (process.argv.includes("--json")) fs.writeFileSync(process.argv.find((a) => a.startsWith("--json="))?.slice(7) ?? "/tmp/same-en.json", JSON.stringify(keys));
+if (process.argv.some((a) => a === "--json" || a.startsWith("--json="))) fs.writeFileSync(process.argv.find((a) => a.startsWith("--json="))?.slice(7) ?? "/tmp/same-en.json", JSON.stringify(keys));
