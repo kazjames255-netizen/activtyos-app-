@@ -4,7 +4,7 @@ import fs from "node:fs"; import path from "node:path";
 const dir = "lib/i18n/messages/areas";
 const LOC = ["pl", "ro", "pt", "es", "fr", "cy"]; const tot: Record<string, number> = {}; const out: any = {}; const keys: Record<string, string[]> = {};
 for (const f of fs.readdirSync(dir).filter(x=>x.endsWith(".ts")&&!/^hub/.test(x))) {
-  const n=f.slice(0,-3); let m:any; try{ m=(await import(path.join(dir,f))).default;}catch{continue}
+  const n=f.slice(0,-3); let m:any; try{ m=(await import(path.resolve(dir, f))).default;}catch{continue}
   const en=m?.en; if(!en) continue;
   for (const l of LOC){ const d=m[l]??{}; for (const [k,v] of Object.entries(en)) { if(typeof v!=="string") continue; if(d[k]===v && v.trim().split(/\s+/).length>=2 && v.replace(/\{[^}]+\}/g,"").replace(/[^A-Za-z ]/g,"").trim().length>=10 && /[a-z]{3}/.test(v)) { (out[l] ??= {})[n] = ((out[l] ??= {})[n] ?? 0) + 1; tot[l] = (tot[l] ?? 0) + 1; (keys[n + "." + k] ??= []).push(l); } } }
 }
