@@ -38,3 +38,14 @@ export function defaultSeasonNames(): Season[] {
     { id: "s-full-year", name: "Full year" },
   ];
 }
+
+const SEASON_KEY: Record<string, string> = {
+  "Autumn 1": "p8ops.seasonN_autumn1", "Oct Half Term": "p8ops.seasonN_octHalf", "Autumn 2": "p8ops.seasonN_autumn2", "Christmas Holidays": "p8ops.seasonN_christmas",
+  "Spring 1": "p8ops.seasonN_spring1", "Feb Half Term": "p8ops.seasonN_febHalf", "Spring 2": "p8ops.seasonN_spring2", "Easter Holidays": "p8ops.seasonN_easter",
+  "Summer 1": "p8ops.seasonN_summer1", "May Half Term": "p8ops.seasonN_mayHalf", "Summer 2": "p8ops.seasonN_summer2", "Summer Holidays": "p8ops.seasonN_summerHols", "Full year": "p8ops.seasonN_fullYear",
+};
+/** Display name of a season: the ready-made names above follow the active language; a name the provider typed or edited shows as typed. */
+export function seasonDisplayName(t: (key: string) => string, name: string): string {
+  const k = SEASON_KEY[name];
+  return k ? t(k) : name;
+}

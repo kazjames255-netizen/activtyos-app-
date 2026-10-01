@@ -1,6 +1,6 @@
 "use client";
 
-import { type Season } from "@/lib/seasons";
+import { seasonDisplayName, type Season } from "@/lib/seasons";
 import { useT } from "@/lib/i18n/provider";
 
 /**
@@ -33,7 +33,7 @@ export function SeasonPicker({
       <option value="">📅 {allLabel ?? t("p8ops.seasonAllTime")}</option>
       {seasons.map((s) => (
         <option key={s.id} value={s.id}>
-          {s.name}
+          {seasonDisplayName(t, s.name)}
         </option>
       ))}
     </select>

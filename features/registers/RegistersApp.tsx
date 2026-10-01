@@ -13,6 +13,7 @@ import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
 import { csvText } from "@/lib/csv";
 import { ChildCard, type ChildInfo } from "./ChildCard";
+import { seasonDisplayName } from "@/lib/seasons";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Register — rebuilt to the prototype's daily-register look: a white
@@ -1304,7 +1305,7 @@ export function RegistersApp() {
                   <span className="relative inline-flex items-center">
                     <select value={regSeason} onChange={(e) => { setRegSeason(e.target.value); setActiveListing(""); }} title={t("registers.filterBySeason")} className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 ps-3 pe-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
                       <option value="">📅 {t("registers.allSeasons")}</option>
-                      {seasons.map((s) => <option key={s.id} value={s.id}>📅 {s.name}</option>)}
+                      {seasons.map((s) => <option key={s.id} value={s.id}>📅 {seasonDisplayName(t, s.name)}</option>)}
                     </select>
                     <span aria-hidden className="pointer-events-none absolute end-2.5 text-[9px] text-white/70">▾</span>
                   </span>

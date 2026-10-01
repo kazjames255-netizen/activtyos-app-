@@ -369,6 +369,7 @@ import { emptyRule, ruleSummary, type DiscountKind, type DiscountRule } from "./
 import { useT, useI18n, useWord, tNow } from "@/lib/i18n/provider";
 import { Rich } from "@/components/i18n/Rich";
 import { pickPlural } from "@/lib/i18n/plural";
+import { seasonDisplayName } from "@/lib/seasons";
 
 // Every heading a parent sees, so the operator can reword all of them.
 // `about` falls back to the editable "Section title" from step 2.
@@ -1640,7 +1641,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
         <SectionHead icon="📅">{tr("p8lst.waSeason")}</SectionHead>
         <Select value={d.seasonId ?? ""} onChange={(e) => upd({ seasonId: e.target.value || null })} className="mb-1 w-full max-w-[360px]">
           <option value="">{tr("p8lst.waNoSeason")}</option>
-          {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          {seasons.map((s) => <option key={s.id} value={s.id}>{seasonDisplayName(t, s.name)}</option>)}
         </Select>
         <div className="mb-3 text-[11px] text-[var(--ink-3)]"><Rich text={tr("p8lst.waSeasonHint")} /></div>
       </>)}

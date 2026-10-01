@@ -10,6 +10,7 @@ import { Tile, GRAD, money } from "@/features/money/finance-kit";
 import { useI18n, useT, useWord } from "@/lib/i18n/provider";
 import { isRTL } from "@/lib/i18n/config";
 import { rich } from "@/features/money/rich";
+import { seasonDisplayName } from "@/lib/seasons";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Reconciliation — the full off-platform payment ledger. Card that settled
@@ -337,7 +338,7 @@ export function ReconciliationApp() {
         {seasons.length > 0 && (
           <select value={seasonId} onChange={(e) => setSeasonId(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
             <option value="">{t("p8fin.recAllSeasons")}</option>
-            {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            {seasons.map((s) => <option key={s.id} value={s.id}>{seasonDisplayName(t, s.name)}</option>)}
           </select>
         )}
         <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.recFrom")} <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px]" /></label>
