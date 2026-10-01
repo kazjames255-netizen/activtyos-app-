@@ -18,6 +18,7 @@ import { OnboardingPanel } from "@/features/team/OnboardingApp";
 import { ApplicationsPanel } from "@/features/team/ApplicationsApp";
 import { TourLauncher } from "@/features/common/TourLauncher";
 import { useT } from "@/lib/i18n/provider";
+import { roleLabel } from "@/features/schedule/fmt";
 
 // ── Team & invites (company / franchise) ──────────────────────────────────
 // Invite people, give each a role (from Setup → Roles & permissions) and the
@@ -326,7 +327,7 @@ export function TeamApp() {
               )}
               {step === 2 && (
                 <div className="max-w-lg">
-                  <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className="w-full !py-2.5 !text-[15px]">{roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</Select>
+                  <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className="w-full !py-2.5 !text-[15px]">{roles.map((r) => <option key={r.id} value={r.id}>{roleLabel(t, r.name)}</option>)}</Select>
                   <div className="mt-3 flex items-center gap-2 rounded-xl bg-[var(--panel)] p-3"><span className="rounded-full px-3 py-1 text-[12px] font-extrabold" style={roleStyle(roleId)}>{roleNm}</span><span className="text-[12px] text-[var(--ink-2)]">{t("team.isWhatCanSeeDo", { name: nm.split(" ")[0] })}</span></div>
                   <p className="mt-2 text-[12px] text-[var(--ink-3)]">{t("team.rolesSetInPre")}<Link href={portalHref("/setup?tab=roles")} className="font-bold text-[#1d3a8f] underline">{t("team.rolesAndPermissions")}</Link>.</p>
                 </div>

@@ -1117,4 +1117,8 @@ export default fromRows({
   scWord2w: ["these 2 weeks", "w tych 2 tygodniach", "aceste 2 săptămâni", "یہ 2 ہفتے", "ਇਹ 2 ਹਫ਼ਤੇ", "এই ২ সপ্তাহে", "هذان الأسبوعان", "estas 2 semanas", "estas 2 semanas", "ces 2 semaines", "y 2 wythnos hyn"],
   scWord4w: ["these 4 weeks", "w tych 4 tygodniach", "aceste 4 săptămâni", "یہ 4 ہفتے", "ਇਹ 4 ਹਫ਼ਤੇ", "এই ৪ সপ্তাহে", "هذه الأسابيع الأربعة", "estas 4 semanas", "estas 4 semanas", "ces 4 semaines", "y 4 wythnos hyn"],
   scWordMonth: ["this month", "w tym miesiącu", "luna aceasta", "اس مہینے", "ਇਸ ਮਹੀਨੇ", "এই মাসে", "هذا الشهر", "este mês", "este mes", "ce mois-ci", "y mis hwn"],
+  role_owner_admin: ["Owner / Admin", "Właściciel / administrator", "Proprietar / administrator", "مالک / ایڈمن", "ਮਾਲਕ / ਪ੍ਰਸ਼ਾਸਕ", "মালিক / অ্যাডমিন", "المالك / المسؤول", "Proprietário / administrador", "Propietario / administrador", "Propriétaire / administrateur", "Perchennog / gweinyddwr"],
+  role_manager: ["Manager", "Menedżer", "Manager", "مینیجر", "ਮੈਨੇਜਰ", "ম্যানেজার", "مدير", "Gestor", "Gestor", "Responsable", "Rheolwr"],
+  role_site_camp_lead: ["Site / Camp Lead", "Kierownik obiektu / obozu", "Responsabil de locație / tabără", "سائٹ / کیمپ لیڈ", "ਸਾਈਟ / ਕੈਂਪ ਲੀਡ", "সাইট / ক্যাম্প লিড", "مسؤول الموقع / المخيّم", "Responsável de local / campo", "Responsable de sede / campamento", "Responsable de site / camp", "Arweinydd safle / gwersyll"],
+  role_coach_staff: ["Coach / Staff", "Trener / pracownik", "Antrenor / angajat", "کوچ / اسٹاف", "ਕੋਚ / ਸਟਾਫ਼", "কোচ / স্টাফ", "مدرّب / موظف", "Treinador / colaborador", "Entrenador / personal", "Coach / personnel", "Hyfforddwr / staff"],
 });

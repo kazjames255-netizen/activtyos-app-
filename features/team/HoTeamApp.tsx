@@ -16,6 +16,7 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import { OnboardingPanel } from "@/features/team/OnboardingApp";
 import { AppraisalsApp } from "@/features/appraisals/AppraisalsApp";
+import { roleLabel } from "@/features/schedule/fmt";
 
 interface Invite { token: string; role: "franchise" | "staff"; createdAt: string; usedBy: string | null; sentTo?: string | null; franchiseId?: string | null }
 interface Franchise { franchiseId: string; name: string; area: string | null }
@@ -117,7 +118,7 @@ export function HoTeamApp() {
             <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8wf.hoEmailLbl")}</label>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@headoffice.co.uk" className="mb-3 w-full" />
             <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p8wf.hoRole")}</label>
-            <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className="mb-3 w-full">{roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</Select>
+            <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className="mb-3 w-full">{roles.map((r) => <option key={r.id} value={r.id}>{roleLabel(t, r.name)}</option>)}</Select>
             <div className="mb-3 rounded-xl bg-[var(--panel)] p-3 text-[12px] text-[var(--ink-2)]">{(() => { const [a, b] = t("p8wf.hoJoinsAs", { role: "\u0000" }).split("\u0000"); return <><Rich text={a} />{roleChip(roleId)}<Rich text={b} /></>; })()}</div>
             <Button variant="primary" onClick={invite} disabled={busy || !roleId}>{busy ? t("p8wf.hoSending") : t("p8wf.hoSendInvite")}</Button>
           </Card>
