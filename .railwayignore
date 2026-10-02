@@ -1,0 +1,8 @@
+# `railway up` uploads the repo (minus .gitignore) and Railway caps the upload — docs/ alone is ~480 MB
+# of screenshots/recordings, which got the upload refused (413). The API image only needs server/ plus
+# the shared features/ and lib/ code it imports, so leave out what it never reads.
+docs/
+public/
+e2e/
+test-results/
+playwright-report/
