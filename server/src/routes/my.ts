@@ -1195,7 +1195,8 @@ my.post("/bookings", async (req, res) => {
   // logic is explicitly out of scope here).
   {
     const tenantType = (await db.collection("tenants").doc(listing.tenantId).get()).data()?.type as string | undefined;
-    const gapMinutes = listing.minGapMinutes ?? 30;
+    // Off unless the provider set a gap on the listing (it is meant for coaches who travel between places); a group class at a venue must never be blocked by it.
+    const gapMinutes = listing.minGapMinutes ?? 0;
     if (tenantType === "freelancer" && gapMinutes > 0) {
       // This booking's own date → {start, end}, from the listing's blocks.
       const myRange = new Map<string, { start: string; end: string }>();

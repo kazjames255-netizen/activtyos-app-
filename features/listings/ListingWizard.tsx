@@ -467,7 +467,7 @@ export function emptyDraft(defaults?: {
     // Basics step can show the real crop-and-move panel (a file upload can't be
     // driven from the tour). Real accounts always start empty.
     id: null, title: "", images: isDemoMode() ? [{ src: "/mockups/listing-hero-sample.svg", x: 50, y: 50, zoom: 100 }] : [], gallery: [], layout: "big", ageFrom: "", ageTo: "",
-    categoryIds: [], venueId: null, deliveryMode: "venue", coverageArea: null, minGapMinutes: 30, seasonId: null, allowOutOfRange: false, maxAttendees: String(defaults?.defaultCapacity ?? 60), capacityScope: "listing", showSpaces: defaults?.showSpaces ?? true,
+    categoryIds: [], venueId: null, deliveryMode: "venue", coverageArea: null, minGapMinutes: 0, seasonId: null, allowOutOfRange: false, maxAttendees: String(defaults?.defaultCapacity ?? 60), capacityScope: "listing", showSpaces: defaults?.showSpaces ?? true,
     descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], toBring: [], safety: [], send: [],
     runFrom: "", runTo: "", blockMode: "weekly", days: defaults?.defaultRunningDays ?? [1, 2, 3, 4, 5], datesOff: [], blockId: null,
     mealsEnabled: false, mealPlan: {},
@@ -1631,7 +1631,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
           )}
           <div className="mt-2 text-[11px] text-[var(--ink-3)]">{tr("p8lst.waMinGap")}</div>
           <div className="mt-1 flex items-center gap-2">
-            <Input type="number" min={0} max={480} value={d.minGapMinutes ?? 30} onChange={(e) => upd({ minGapMinutes: e.target.value ? Number(e.target.value) : 0 })} className="w-[100px]" />
+            <Input type="number" min={0} max={480} value={d.minGapMinutes ?? 0} onChange={(e) => upd({ minGapMinutes: e.target.value ? Number(e.target.value) : 0 })} className="w-[100px]" />
             <span className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.waMinGapNote")}</span>
           </div>
         </div>
