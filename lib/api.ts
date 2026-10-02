@@ -176,7 +176,14 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
 // Public storefront reads (/api/listings, /book/{id}): attach the token when
 // a session exists (operators see their drafts), otherwise go anonymously.
 export async function apiPublic<T>(path: string, init?: RequestInit): Promise<T> {
-  const user = await signedInUser().catch(() => null);
+  // A public page must never sit waiting on sign-in. Inside another website's
+  // frame (the embed) the browser blocks Firebase's storage, so "is anyone
+  // signed in?" can hang for the whole timeout and the booking page stays on
+  // Loading. Give it a moment, then carry on as a signed-out visitor.
+  const user = await Promise.race([
+    signedInUser().catch(() => null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
+  ]);
   const token = user ? await withTimeout(user.getIdToken(), "Getting your sign-in token").catch(() => null) : null;
   return request<T>(path, token, init);
 }
