@@ -7,7 +7,11 @@
 import "../../server/node_modules/dotenv/config";
 import { db } from "../../server/src/firebase";
 import { apiFetch, apiPost, fbSignIn } from "./accounts";
-import { loadAccounts } from "./env";
+import { loadAccounts, ROOT } from "./env";
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 if (process.env.MAIL_LIVE === "1") throw new Error("refusing to seed with MAIL_LIVE set");
 
@@ -37,11 +41,11 @@ const kid = (n: string) => FAMILIES.flatMap((f) => f.kids.map((k) => ({ ...k, fa
 
 // listing, headline booked count, capacity
 const LISTINGS = [
-  { key: "camp", title: "October Half-Term Multi-Activity Camp", price: 45, cap: 50, booked: 41, from: 24, to: 28, days: [1, 2, 3, 4, 5], start: "09:00", end: "15:30", desc: "A full day of sport, crafts and games for ages 5-12." },
-  { key: "football", title: "After-School Football Club", price: 8, cap: 30, booked: 28, from: monday(), to: monday() + 25, days: [1, 2, 3, 4, 5], start: "15:30", end: "17:00", desc: "Coached football sessions after school." },
-  { key: "art", title: "Holiday Art Club", price: 30, cap: 30, booked: 22, from: 24, to: 28, days: [1, 2, 3, 4, 5], start: "10:00", end: "14:00", desc: "Painting, clay and collage." },
-  { key: "tennis", title: "Junior Tennis Camp", price: 40, cap: 24, booked: 17, from: 24, to: 28, days: [1, 2, 3, 4, 5], start: "09:30", end: "15:00", desc: "Coaching for beginners to improvers." },
-  { key: "ballet", title: "Ballet & Dance", price: 12, cap: 3, booked: 3, from: monday(), to: monday() + 25, days: [5], start: "16:00", end: "17:00", desc: "Weekly ballet and street-dance class.", waitlist: true },
+  { key: "camp", img: "company-1", policy: "standard", title: "October Half-Term Multi-Activity Camp", price: 45, cap: 50, booked: 41, from: 24, to: 28, days: [1, 2, 3, 4, 5], start: "09:00", end: "15:30", desc: "A full day of sport, crafts and games for ages 5-12." },
+  { key: "football", img: "company-3", policy: "flexible", title: "After-School Football Club", price: 8, cap: 30, booked: 28, from: monday(), to: monday() + 25, days: [1, 2, 3, 4, 5], start: "15:30", end: "17:00", desc: "Coached football sessions after school." },
+  { key: "art", img: "staff", policy: "standard", title: "Holiday Art Club", price: 30, cap: 30, booked: 22, from: 24, to: 28, days: [1, 2, 3, 4, 5], start: "10:00", end: "14:00", desc: "Painting, clay and collage." },
+  { key: "tennis", img: "freelancer-1", policy: "strict", title: "Junior Tennis Camp", price: 40, cap: 24, booked: 17, from: 24, to: 28, days: [1, 2, 3, 4, 5], start: "09:30", end: "15:00", desc: "Coaching for beginners to improvers." },
+  { key: "ballet", img: "freelancer-2", policy: "flexible", title: "Ballet & Dance", price: 12, cap: 3, booked: 3, from: monday(), to: monday() + 25, days: [5], start: "16:00", end: "17:00", desc: "Weekly ballet and street-dance class.", waitlist: true },
 ] as const;
 
 // who books what: [child, listing key, paid?, method]
@@ -68,7 +72,7 @@ const BOOKINGS: [string, string, "paid" | "unpaid" | "wait", string][] = [
 
   // ── reset: this tenant is a throwaway e2e fixture, so clear what earlier suites left behind (E2E-named junk) and any previous run of this seed.
   // Allow-list of tenant-scoped collections only; accounts, the tenant doc, library/settings, billing and the learning hub are never touched.
-  const WIPE = ["absences", "availabilityPatterns", "availabilityRequests", "blockBundles", "blocks", "bookings", "broadcasts", "calendarEvents", "certifications", "childFiles", "children", "clockRecords", "credentialRecords", "customerGroups", "customers", "discountCodes", "discountRedemptions", "docFiles", "emailMessages", "emails", "expenses", "groupings", "incidents", "incidentsOps", "income", "inventory", "invoices", "learningAssignments", "learningCompletions", "listings", "memberships", "messageFolders", "messageTemplates", "messages", "milestones", "moments", "notifications", "onboardFiles", "onboardRecords", "passes", "payments", "payrollAuditLog", "payrollConfig", "payrollRuns", "payrollYtd", "payrollYtdPosts", "payslipPdfs", "periods", "posts", "purchaseOrders", "ratioBoards", "references", "referrals", "registers", "reviews", "rotaShifts", "rotas", "scheduledEmails", "staffAnnouncements", "suppliers", "tasks", "threads", "timetables", "trips", "wallet", "walletEntries", "learningCourses", "learningAttempts", "learningCertificates"];
+  const WIPE = ["absences", "availabilityPatterns", "availabilityRequests", "blockBundles", "blocks", "bookings", "broadcasts", "calendarEvents", "certifications", "childFiles", "children", "clockRecords", "credentialRecords", "customerGroups", "customers", "discountCodes", "discountRedemptions", "docFiles", "emailMessages", "emails", "expenses", "groupings", "incidents", "incidentsOps", "income", "inventory", "invoices", "learningAssignments", "learningCompletions", "listings", "memberships", "messageFolders", "messageTemplates", "messages", "milestones", "moments", "notifications", "onboardFiles", "onboardRecords", "passes", "payments", "payrollAuditLog", "payrollConfig", "payrollRuns", "payrollYtd", "payrollYtdPosts", "payslipPdfs", "periods", "posts", "purchaseOrders", "ratioBoards", "references", "referrals", "registers", "reviews", "rotaShifts", "rotas", "scheduledEmails", "staffAnnouncements", "suppliers", "tasks", "threads", "timetables", "trips", "wallet", "walletEntries", "learningCourses", "learningAttempts", "learningCertificates", "medications", "medicationAdmin"];
   let wiped = 0;
   for (const c of WIPE) {
     const snap = await db.collection(c).where("tenantId", "==", tenantId).get();
@@ -82,9 +86,25 @@ const BOOKINGS: [string, string, "paid" | "unpaid" | "wait", string][] = [
   const lib = ((await A<Record<string, unknown> | null>("/api/library")) ?? {}) as { venues?: { id: string }[]; settings?: Record<string, unknown> };
   const venueId = "riverside-hall";
   const venues: { id: string }[] = [];
-  const settings = { ...(lib.settings ?? {}), providerName: BIZ, marketplaceListed: false, billing: { ...((lib.settings?.billing as object) ?? {}), businessName: BIZ } };
+  const settings = { ...(lib.settings ?? {}), providerName: BIZ, marketplaceListed: false, memberships: {
+    enabled: true,
+    tiers: [
+      { id: "silver", name: "Riverside Silver", enabled: true, priceMonthly: 0, benefitType: "percent", benefitValue: 10, perks: ["10% off every booking at checkout"] },
+      { id: "gold", name: "Riverside Gold", enabled: true, priceMonthly: 0, benefitType: "credit", benefitValue: 50, perks: ["GBP 50 wallet credit to spend on any booking"] },
+    ],
+  }, billing: { ...((lib.settings?.billing as object) ?? {}), businessName: BIZ } };
   await PUT("/api/library", { venues: [...venues, { id: venueId, name: "Riverside Sports Hall", address: "14 Mill Lane", city: "Northampton" }], settings });
   console.log("business + venue ok");
+
+  // ── cover photos: existing marketing photos from public/images, shrunk to ~640px and uploaded through the normal /api/uploads flow
+  const photoUrl: Record<string, string> = {};
+  const upload = async (name: string) => {
+    if (photoUrl[name]) return photoUrl[name];
+    const out = path.join(os.tmpdir(), `riverside-${name}.jpg`);
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", path.join(ROOT, "public/images", `${name}.jpg`), "-vf", "scale=640:-2", "-q:v", "6", out]);
+    const r = await P<{ url: string }>("/api/uploads", { dataUrl: `data:image/jpeg;base64,${fs.readFileSync(out).toString("base64")}`, purpose: "public" });
+    return (photoUrl[name] = r.url);
+  };
 
   // ── listings (+ blocks via bundle), reuse by title
   const existing = (await A<(Listing & { tenantId?: string })[]>("/api/listings")).filter((x) => x.tenantId === tenantId); // the endpoint also returns other tenants' public listings
@@ -99,6 +119,7 @@ const BOOKINGS: [string, string, "paid" | "unpaid" | "wait", string][] = [
         title: l.title, venueId, runFrom: day(l.from), runTo: day(l.to), blockMode: "weekly", days: [...l.days], maxAttendees: String(l.cap), capacityScope: "listing",
         ...("waitlist" in l ? { waitlist: true, waitlistMode: "manual" } : {}), showSpaces: true, ageFrom: "5", ageTo: "12", blockId: bundle.id,
         passes: [{ name: "Day pass", price: l.price, days: 1 }], bookingType: "auto", status: "live", visibility: "public", description: l.desc,
+        images: [{ src: await upload(l.img), x: 50, y: 50, zoom: 100 }], cancellationPolicyId: l.policy,
       });
       await PUT(`/api/block-bundles/${bundle.id}/listings`, { listingIds: [created.id] });
       found = { id: created.id, title: l.title };
@@ -162,6 +183,12 @@ const BOOKINGS: [string, string, "paid" | "unpaid" | "wait", string][] = [
   for (const [i, s] of STAFF.entries()) {
     await tryJson(PUT(`/api/credentials/records/seed-dbs-${i}`, { staff: s.name, typeId: "dbs", issue: day(-400 + i * 20), expiry: day(700 - i * 30), issuer: "DBS", number: `00${1234500 + i}`, verified: "verified", dbsLevel: "Enhanced", dbsUpdate: true }));
     await tryJson(PUT(`/api/credentials/records/seed-pfa-${i}`, { staff: s.name, typeId: "pfa", issue: day(-700 + i * 30), expiry: i === 5 ? day(21) : day(400 - i * 25), issuer: "St John Ambulance", number: `PFA-${5000 + i}`, verified: "verified" }));
+  }
+  // the other credential types on the Compliance grid, so it is not a wall of "Missing"
+  for (const [i, s] of STAFF.entries()) {
+    await tryJson(PUT(`/api/credentials/records/seed-sg-${i}`, { staff: s.name, typeId: "safeguarding", issue: day(-200 + i * 10), expiry: day(500 - i * 20), issuer: "Riverside (in-house, Level 2)", number: `SG-${700 + i}`, verified: "verified" }));
+    if (i % 2 === 0) await tryJson(PUT(`/api/credentials/records/seed-faw-${i}`, { staff: s.name, typeId: "faw", issue: day(-300 + i * 10), expiry: day(600 - i * 15), issuer: "St John Ambulance", number: `FAW-${300 + i}`, verified: "verified" }));
+    if (i % 3 !== 2) await tryJson(PUT(`/api/credentials/records/seed-food-${i}`, { staff: s.name, typeId: "food", issue: day(-150 + i * 10), expiry: day(800 - i * 20), issuer: "Highfield", number: `FH-${900 + i}`, verified: "verified" }));
   }
   console.log("certificates ok");
 
@@ -236,6 +263,45 @@ const BOOKINGS: [string, string, "paid" | "unpaid" | "wait", string][] = [
     await tryJson(P("/api/messages", { parentEmail: email, parentName: name, subject: "Your booking", body }));
   }
   console.log("messages ok");
+
+  // ── discount codes (two live codes)
+  for (const c of [
+    { code: "HALFTERM10", type: "percent", value: 10, expiry: day(30), listingId: L.camp.id, usageLimit: 40 },
+    { code: "WELCOME5", type: "amount", value: 5, minSpend: 20, perCustomerLimit: true },
+  ]) await tryJson(P("/api/discounts", c));
+  console.log("discount codes ok");
+
+  // ── email campaigns: two past sends written straight to the history (nothing is sent; MAIL_LIVE stays unset). The draft is seeded in the browser by the spec.
+  const fams = FAMILIES.map((f) => f.email);
+  const now = Date.now();
+  for (const [subject, body, daysAgo, opened] of [
+    ["Half-term camp: places are filling fast", "Hi there, our October half-term camp has only a few places left. Book your child's days online in a couple of minutes.", 5, 8],
+    ["Welcome back: your autumn club timetable", "Hello, the autumn timetable for football, ballet and art is now live. See you at the hall!", 12, 6],
+  ] as [string, string, number, number][]) {
+    await db.collection("emails").add({ tenantId, subject, body, audience: "all", recipientCount: fams.length, sentBy: acc.email, sentByName: "Riverside Sports Club", createdAt: new Date(now - daysAgo * 86400000).toISOString(), status: "sent", delivered: fams.length, openedBy: fams.slice(0, opened) });
+  }
+  console.log("email history ok");
+
+  // ── incidents / first aid, medication, tasks, newsfeed, moments
+  await tryJson(P("/api/incidents", { kind: "accident", date: day(-2), time: "11:20", childName: "Poppy Whitfield", location: "Riverside Sports Hall", description: "Tripped on the mat during the warm-up game and grazed her knee.", bodyPart: "Knee", injury: "Minor graze", treatment: "Cleaned with water, plaster applied, ice pack for 5 minutes", firstAider: "Hannah Clarke", actionTaken: "Parent told at collection" }));
+  await tryJson(P("/api/incidents", { kind: "accident", date: day(-1), time: "15:50", childName: "Alfie Pritchard", location: "Court 2", description: "Took a tennis ball to the forearm during a drill.", bodyPart: "Forearm", injury: "Bruise, no swelling", treatment: "Cold compress", firstAider: "Callum Reid" }));
+  await tryJson(P("/api/incidents", { kind: "incident", date: day(-3), time: "16:10", childName: "Daniel Okafor", incidentType: "Behaviour", location: "Riverside Sports Hall", description: "Disagreement over a football; both children calmed down and shook hands.", actionTaken: "Spoke with both children, reminded them of the club rules", witnesses: "Tom Beckett" }));
+  const med1 = await tryJson(P<{ id: string }>("/api/medications", { childName: "Zayn Rahman", name: "Salbutamol inhaler", dose: "2 puffs", route: "Inhaler", condition: "Asthma", schedule: "As needed", instructions: "Give 2 puffs if wheezy or short of breath; call parent if a second dose is needed.", asNeeded: true, heldOnSite: true, storage: "First-aid kit", startDate: day(-30), expiryDate: day(300), consentBy: "Mohammed Rahman", consentGranted: true }));
+  await tryJson(P("/api/medications", { childName: "Oliver Whitfield", name: "Adrenaline auto-injector (EpiPen)", dose: "1 injection", route: "Injection", condition: "Peanut allergy", schedule: "Emergency only", instructions: "Emergency use for anaphylaxis, then call 999.", asNeeded: true, heldOnSite: true, storage: "Camp lead bag", startDate: day(-30), expiryDate: day(200), consentBy: "Sarah Whitfield", consentGranted: true }));
+  if (med1) await tryJson(P(`/api/medications/${med1.id}/administer`, { date: day(-4), time: "15:45", doseGiven: "2 puffs", given: true, witnessedBy: "Tom Beckett", notes: "Settled within a few minutes" }));
+  for (const t of [
+    { t: "Print and check the half-term camp registers", who: "Hannah Clarke", prio: "urgent", due: day(2), status: "todo", labels: ["Camp"], subs: [{ t: "Print registers", done: true }, { t: "Check medical notes", done: false }] },
+    { t: "Order new football bibs and cones", who: "Tom Beckett", prio: "med", due: day(6), status: "prog" },
+    { t: "Send paediatric first aid refresher reminders", who: "Danny Okafor", prio: "high", due: day(4), status: "todo" },
+    { t: "Risk assessment for the tennis courts", who: "Callum Reid", prio: "high", due: day(8), status: "backlog" },
+    { t: "Upload the new art club photos", who: "Priya Shah", prio: "low", due: day(10), status: "backlog" },
+    { t: "Reconcile last week's card payments", who: "Hannah Clarke", prio: "med", due: day(-1), status: "done" },
+  ]) await tryJson(P("/api/tasks", t));
+  await tryJson(P("/api/posts", { tpl: "announce", title: "Half-term camp: what to bring", body: "Packed lunch (nut free please), a water bottle, trainers and a sunny-day hat. Drop-off is from 8:45am and pick-up from 3:30pm.", status: "published", pinned: true, audience: "all", priority: "normal" }));
+  await tryJson(P("/api/posts", { tpl: "event", title: "Junior Tennis Camp: a few places left", body: "Coached sessions for beginners to improvers, all week at Riverside Sports Hall.", photoUrl: await upload("freelancer-1"), status: "published", audience: "all", date: day(25), time: "09:30", location: "Riverside Sports Hall" }));
+  for (const [img, caption, activity, key] of [["company-1", "Sack race champions on day one of camp!", "Games", "camp"], ["freelancer-1", "Rally practice with Coach Callum", "Tennis", "tennis"], ["freelancer-2", "Rehearsing for the end-of-term showcase", "Dance", "ballet"], ["staff", "Sunny-day crafts and cheering", "Arts & crafts", "art"]] as const)
+    await tryJson(P("/api/moments", { photoUrl: await upload(img), caption, activity, photoType: "work", listingId: L[key].id, childIds: [] }));
+  console.log("incidents, medication, tasks, newsfeed, moments ok");
   console.log(`DONE tenant=${tenantId}`);
   process.exit(0);
 })().catch((e) => { console.error("SEED FAILED:", e.message); process.exit(1); });
