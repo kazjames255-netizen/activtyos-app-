@@ -18,13 +18,14 @@ export async function upsertCustomerFromBooking(
       .get();
     // The customer's thin child list keeps a childId when we have one, so the
     // Families page and §K family read can join to the real record.
-    const kid = booking.child?.trim()
-      ? [{
-          name: booking.child.trim(),
-          ...(booking.childId ? { childId: booking.childId } : {}),
-          ...(booking.age !== undefined ? { age: booking.age } : {}),
-        }]
-      : [];
+    // A multi-child booking carries one joined string ("Bella James, Ava James"): that is several children, never one. The id and age
+    // only belong to a single named child, so they are kept only when there is exactly one.
+    const names = (booking.child ?? "").split(/\s*(?:,|&|\band\b)\s*/i).map((n) => n.trim()).filter(Boolean);
+    const kid = names.map((name) => ({
+      name,
+      ...(names.length === 1 && booking.childId ? { childId: booking.childId } : {}),
+      ...(names.length === 1 && booking.age !== undefined ? { age: booking.age } : {}),
+    }));
     if (existing.empty) {
       await db.collection("customers").add({
         tenantId,

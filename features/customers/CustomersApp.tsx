@@ -262,6 +262,19 @@ const splitName = (name: string) => {
   return { firstName: parts[0] ?? "", lastName: parts.slice(1).join(" ") };
 };
 
+/** A family's children as chips: a joined entry ("Bella James, Ava James") is split into its children, and the same child never shows twice. */
+function tidyKids<T extends { name: string }>(kids: T[] | undefined): T[] {
+  const out: T[] = [];
+  const seen = new Set<string>();
+  const add = (k: T) => { const key = k.name.trim().toLowerCase(); if (key && !seen.has(key)) { seen.add(key); out.push(k); } };
+  const own = (kids ?? []).filter((k) => !/,|&|\band\b/i.test(k.name));
+  own.forEach(add);
+  for (const k of (kids ?? []).filter((k) => /,|&|\band\b/i.test(k.name))) {
+    for (const part of k.name.split(/\s*(?:,|&|\band\b)\s*/i).map((n) => n.trim()).filter(Boolean)) add({ ...k, name: part, age: undefined } as T);
+  }
+  return out;
+}
+
 export function CustomersApp() {
   const t = useT();
   const { locale } = useI18n();
@@ -1458,10 +1471,10 @@ export function CustomersApp() {
                     ) : c.invitedAt ? (
                       <span className="rounded-full bg-[#eef0f6] px-2 py-[2px] text-[10px] font-extrabold text-[#5b6478]">{t("customers.invited")}</span>
                     ) : null}
-                    {(c.children ?? []).length === 0 ? (
+                    {tidyKids(c.children).length === 0 ? (
                       <span className="text-[11px] text-[var(--ink-3)]">{t("customers.noChildrenShort")}</span>
                     ) : (
-                      (c.children ?? []).map((k) => (
+                      tidyKids(c.children).map((k) => (
                         <button
                           key={k.name}
                           type="button"
@@ -1492,7 +1505,7 @@ export function CustomersApp() {
                   >
                     {fa(t("customers.contactArrow"))}
                   </button>
-                  {canWrite && (c.email ?? "").includes("@") && (
+                  {canWrite && !c.joinedAt && (c.email ?? "").includes("@") && (
                     <button
                       type="button"
                       onClick={() => sendInvite(c)}
