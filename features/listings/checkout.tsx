@@ -2583,6 +2583,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           : shortPasses.length > 0 ? tr("p7ck.ctaShort", { n: shortPasses[0].dates.length, pass: shortPasses[0].name })
           // "Confirm & pay £0.00" and "Send payment link · £0.00" both promise
           // something that isn't going to happen.
+          : parentMode && b.waitlistOnly ? "Join the waiting list (nothing to pay)"
           : grandTotal <= 0 ? (parentMode ? tr("p7ck.ctaConfirm") : tr("p7ck.ctaCreateFree"))
           // Paying by voucher happens on the scheme's website, not here — so
           // the button confirms the booking, it doesn't take a payment.

@@ -229,15 +229,21 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // A basket line is one child, whichever dates it covers.
   // Where the server has generated dated runs, its spotsLeft is the truth and
   // the configured ceiling is only a fallback for the operator's preview.
-  const leftOn = (iso: string) => {
+  // Places left per the server/config, BEFORE this basket's own seats.
+  const rawLeft = (iso: string): number | null => {
     const blk = blockOn(blocks, iso);
     if (blk) {
       // Day scope: the block's own spotsLeft is its BUSIEST day, so one busy
       // Monday would mark Tue to Fri almost full. Use that date's own count.
       const own = blk.capacityScope === "day" ? blk.sessions?.find((x) => x.date === iso)?.spotsLeft : undefined;
-      return Math.max(0, (own ?? blk.spotsLeft) - seatsOn(iso));
+      return Math.max(0, own ?? blk.spotsLeft);
     }
-    return capacity === null ? null : Math.max(0, capacity - (perDay ? seatsOn(iso) : basket.length));
+    return capacity === null ? null : perDay ? capacity : Math.max(0, capacity - basket.length);
+  };
+  const leftOn = (iso: string) => {
+    const raw = rawLeft(iso);
+    if (raw === null) return null;
+    return Math.max(0, raw - (blockOn(blocks, iso) || perDay ? seatsOn(iso) : 0));
   };
   // Capacity that applies to a date — the run's, else the configured one.
   const capOn = (iso: string) => blockOn(blocks, iso)?.capacity ?? capacity;
@@ -258,6 +264,9 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // hitting zero only because the last place is already in this basket.
   const heldByBasket = (iso: string) => seatsOn(iso) > 0 && (leftOn(iso) ?? 1) < 1 && (leftOn(iso) ?? 0) + seatsOn(iso) > 0;
   const isFull = (iso: string) => { const left = leftOn(iso); return left !== null && left < 1; };
+  // Every basket date has no place left for ANYONE (not merely because this
+  // basket holds the last one): the server will queue it, never charge it.
+  const waitlistOnly = basket.length > 0 && basket.every((it) => it.dates.every((iso) => { const r = rawLeft(iso); return r !== null && r < 1; }));
   const toggleWait = (iso: string) => setWaitSel((w) => (w.includes(iso) ? w.filter((x) => x !== iso) : [...w, iso]));
   // Bulk: every full date across the run, for someone who'll take anything.
   // Every full day the parent could join the waiting list for.
@@ -477,5 +486,5 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
 
   return { passes, periods, passId, setPassId, pickPass, passClosed, passFits, runTotal, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, mealSel, pickMeal, mealFor, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, past, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
     roster, setRoster, childrenOn, toggleChild, clearRemovalsFor, headsOn, rosterNames,
-    waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, heldByBasket, waitDone, setWaitDone, joinWaitlist, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+    waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, heldByBasket, waitlistOnly, waitDone, setWaitDone, joinWaitlist, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
