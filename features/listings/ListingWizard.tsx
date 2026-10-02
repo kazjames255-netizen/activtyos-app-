@@ -368,6 +368,7 @@ export type { DiscountKind, DiscountLine, DiscountRule } from "./discounts";
 import { emptyRule, ruleSummary, type DiscountKind, type DiscountRule } from "./discounts";
 import { useT, useI18n, useWord, tNow } from "@/lib/i18n/provider";
 import { Rich } from "@/components/i18n/Rich";
+import { PayModal } from "@/features/payments/PayModal";
 import { pickPlural } from "@/lib/i18n/plural";
 import { seasonDisplayName } from "@/lib/seasons";
 
@@ -675,7 +676,9 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean } | null>(null);
+  const [done, setDone] = useState<{ refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean } | null>(null);
+  const [payClosed, setPayClosed] = useState(false);
+  const [paidNow, setPaidNow] = useState(false);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
   useEffect(() => {
     // Signed out this 401s, which just means there's nothing saved to match.
@@ -797,6 +800,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         voucherScheme,
         voucherDetails,
         needsApproval: heldForApproval,
+        payByCard: /^card$/i.test(String(method)),
       });
     } catch (e) {
       setBookState({ busy: false, error: e instanceof Error ? e.message : t("p7cl.errBooking") });
@@ -870,6 +874,22 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
             </div>
           </div>
         </div>
+
+        {/* Card booking that is confirmed: take the payment right here (the card form opens straight away, and the button reopens it if closed). */}
+        {done.payByCard && !needsApproval && !scheme && done.total > 0 && (
+          <div className="mt-3">
+            {paidNow ? (
+              <div className="rounded-xl bg-[#e8f8ee] px-4 py-3 text-[14px] font-extrabold text-[#0f6b34]">✓ {t("p7cl.paidThanks")}</div>
+            ) : (
+              <button type="button" onClick={() => setPayClosed(false)} className="w-full rounded-full px-5 py-3.5 text-[15px] font-extrabold text-white" style={{ background: "#1d3a8f", boxShadow: "0 10px 24px -12px rgba(29,58,143,.6)" }}>
+                {t("p7cl.payNowBtn", { amt: money(done.total) })}
+              </button>
+            )}
+            {!payClosed && !paidNow && (
+              <PayModal refs={done.refs} tenantId={listing.tenantId} onClose={() => setPayClosed(true)} onPaid={() => { setPaidNow(true); setPayClosed(true); }} />
+            )}
+          </div>
+        )}
 
         {scheme && (
           <div className="mt-3 rounded-2xl border border-[#f3d98a] bg-[#fdf6e3] p-4 text-start text-[12.5px] leading-relaxed text-[#7a5a12]">
