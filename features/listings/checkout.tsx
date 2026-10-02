@@ -293,8 +293,8 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
 
       {saved.length > 0 && (
         <div className="mt-1.5">
-          <div className="text-[11px]" style={{ color: tk.muted }}>
-            {tr("p7ck.clickToAdd")}
+          <div className="text-[13px] font-semibold" style={{ color: tk.muted }}>
+            {tr("p7ck.clickToAdd")}{" "}
             {/* State the range. Chips only said "out of age range", so a listing
                 whose ages were set wrong (4–4 rather than 4–11) looked like the
                 children were at fault, with no way to see why from this screen. */}
@@ -307,25 +307,36 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               return <Rich text={tr("p7ck.listingFor", { range, tail: d.allowOutOfRange ? tr("p7ck.tailOthers") : "." })} />;
             })()}
           </div>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {/* Every saved child stays on the row whether they're coming or
-                not — one dropping out of sight because it hasn't been added
-                yet looks like it's been lost. The chip just changes state. */}
+          <div className="mt-2 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Every saved child stays on the grid whether they're coming or not — one dropping out of sight because it hasn't been added
+                yet looks like it's been lost. Each is a big card: tap to put them on this booking, tap again to take them off. */}
             {[...new Map(saved.map((sv) => [sv.name.trim().toLowerCase(), sv])).values()].map((sv) => {
               const bad = ageProblem(d, sv, tr);
               const added = roster.some((r) => (r.id && r.id === sv.id) || r.name === sv.name);
               const c = sexTint(sv.sex, added);
+              const initial = (sv.name.trim()[0] ?? "?").toUpperCase();
               return (
                 <button key={sv.id ?? sv.name} type="button" disabled={!!bad}
+                  aria-pressed={added}
                   title={bad ?? (added ? tr("p7ck.takeOffBooking", { name: sv.name }) : tr("p7ck.addToBooking", { name: sv.name }))}
                   onClick={() => {
                     if (added) { setRoster(roster.filter((r) => !((r.id && r.id === sv.id) || r.name === sv.name))); return; }
                     onAdded(sv.name.trim());
                     setRoster([...roster, sv]);
                   }}
-                  className={`border-2 px-3 py-1.5 text-[12px] font-bold disabled:opacity-45 ${tk.round}`}
-                  style={{ borderColor: c.border, background: c.bg, color: c.ink }}>
-                  {added ? "✓ " : "+ "}{sv.name}{bad ? tr("p7ck.outOfAgeRange") : ""}
+                  className="flex items-center gap-3 rounded-2xl border-2 p-3 text-start transition active:scale-[0.99] disabled:opacity-45"
+                  style={{ borderColor: added ? "#16a34a" : c.border, background: added ? "#ecfdf3" : "#fff", boxShadow: added ? "0 8px 22px -12px rgba(22,163,74,.55)" : "0 6px 16px -12px rgba(20,30,90,.35)" }}>
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[19px] font-extrabold text-white" style={{ background: c.ink }} aria-hidden>{initial}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15.5px] font-extrabold" style={{ color: c.ink }}>{sv.name}</span>
+                    <span className="mt-0.5 block text-[12px] leading-snug" style={{ color: bad ? "#b91c1c" : tk.muted }}>
+                      {bad ?? (added ? tr("p7ck.takeOffBooking", { name: sv.name }) : tr("p7ck.addToBooking", { name: sv.name }))}
+                    </span>
+                  </span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-[17px] font-black"
+                    style={added ? { background: "#16a34a", borderColor: "#16a34a", color: "#fff" } : { borderColor: c.border, color: c.ink }} aria-hidden>
+                    {added ? "✓" : "+"}
+                  </span>
                 </button>
               );
             })}
