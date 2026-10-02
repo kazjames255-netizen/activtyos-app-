@@ -3180,7 +3180,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
                 const dOff = b.off(iso); const dPast = b.past(iso); const on = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
                 // Availability speaks only when it's bad news — a number on
                 // every cell turns the calendar into a spreadsheet.
-                const left = b.leftOn(iso); const full = !dOff && !dPast && left !== null && left < 1; const low = !full && left !== null && b.isLow(iso, left);
+                const left = b.leftOn(iso); const held = b.heldByBasket(iso); const full = !dOff && !dPast && left !== null && left < 1 && !held; const low = !full && left !== null && (held || b.isLow(iso, left));
                 const dot = dOff || dPast || left === null ? null : full ? "#dc2626" : low ? "#f59e0b" : "#3f78d8";
                 const waiting = b.waitSel.includes(iso);
                 const queueable = full && b.waitlistOn && !dOff;
@@ -3370,7 +3370,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
               <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">Week {w.n} · from {fmtDate(w.mon)}</div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
                 const dOff = b.off(iso); const dPast = b.past(iso); const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
-                const left = b.leftOn(iso); const full = !dOff && !dPast && left !== null && left < 1; const low = !full && left !== null && b.isLow(iso, left);
+                const left = b.leftOn(iso); const held = b.heldByBasket(iso); const full = !dOff && !dPast && left !== null && left < 1 && !held; const low = !full && left !== null && (held || b.isLow(iso, left));
                 const dot = dOff || dPast || left === null ? null : full ? "#ff5470" : low ? "#ffb020" : "#3ddc84";
                 const waiting = b.waitSel.includes(iso);
                 const queueable = full && b.waitlistOn && !dOff;

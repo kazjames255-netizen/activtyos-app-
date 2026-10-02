@@ -251,11 +251,14 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // is one, else the run as a whole.
   const hasCounts = !!blocks?.length || capacity !== null;
   const waitlistOn = !!d.waitlist;
+  // Full for EVERYONE (the server has no place left), as opposed to leftOn
+  // hitting zero only because the last place is already in this basket.
+  const heldByBasket = (iso: string) => seatsOn(iso) > 0 && (leftOn(iso) ?? 1) < 1 && (leftOn(iso) ?? 0) + seatsOn(iso) > 0;
   const isFull = (iso: string) => { const left = leftOn(iso); return left !== null && left < 1; };
   const toggleWait = (iso: string) => setWaitSel((w) => (w.includes(iso) ? w.filter((x) => x !== iso) : [...w, iso]));
   // Bulk: every full date across the run, for someone who'll take anything.
   // Every full day the parent could join the waiting list for.
-  const fullDays = weeks.flatMap((w) => w.days).filter((iso) => !off(iso) && isFull(iso));
+  const fullDays = weeks.flatMap((w) => w.days).filter((iso) => !off(iso) && isFull(iso) && !heldByBasket(iso));
   const waitAll = () => setWaitSel((w) => (w.length === fullDays.length ? [] : fullDays));
   const fullCount = fullDays.length;
   const seatsLeft = (() => {
@@ -459,5 +462,5 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
 
   return { passes, periods, passId, setPassId, pickPass, passClosed, passFits, runTotal, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, mealSel, pickMeal, mealFor, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, past, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
     roster, setRoster, childrenOn, toggleChild, clearRemovalsFor, headsOn, rosterNames,
-    waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+    waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, heldByBasket, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
