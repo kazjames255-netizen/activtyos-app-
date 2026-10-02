@@ -721,8 +721,15 @@ function ListingsTab({
     const dr = serverDraft(l) ?? allDrafts[l.id];
     const info = dr ? listingRowInfo(dr) : null;
     const apiBlocks = l.blocks ?? [];
-    const cap = apiBlocks.length ? apiBlocks.reduce((s2, b) => s2 + b.capacity, 0) : info?.capacity ?? null;
-    const spaces = apiBlocks.length ? apiBlocks.reduce((s2, b) => s2 + b.spotsLeft, 0) : cap;
+    // Per-day capacity is a daily limit, not a total: three weekly blocks of
+    // 10 a day is still 10 a day, so show the tightest block, never the sum.
+    const perDayScope = info?.capacityScope === "day";
+    const cap = apiBlocks.length
+      ? perDayScope ? Math.max(...apiBlocks.map((b) => b.capacity)) : apiBlocks.reduce((s2, b) => s2 + b.capacity, 0)
+      : info?.capacity ?? null;
+    const spaces = apiBlocks.length
+      ? perDayScope ? Math.min(...apiBlocks.map((b) => b.spotsLeft)) : apiBlocks.reduce((s2, b) => s2 + b.spotsLeft, 0)
+      : cap;
     const left = Math.max(0, spaces ?? cap ?? 0);
     const booked = Math.max(0, (cap ?? 0) - left);
     return {
