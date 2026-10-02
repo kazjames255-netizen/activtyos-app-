@@ -2946,7 +2946,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
       </div>
       {b.waitSel.length > 0 && (
         <>
-          <button type="button" onClick={() => b.setWaitDone(true)}
+          <button type="button" onClick={b.joinWaitlist}
             className="mt-2.5 w-full rounded-xl py-2.5 text-[12.5px] font-extrabold text-white"
             style={{ background: cta }}>
             {pickPlural(tr, locale, "p7bw.joinWaitN", b.waitSel.length)}

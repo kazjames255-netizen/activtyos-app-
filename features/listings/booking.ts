@@ -340,6 +340,18 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     }
     setSel([]);
   };
+  // "Join the waiting list" used to only flip a local flag, so nothing was
+  // saved: no child, no record, no email. A waitlist place is a real booking
+  // the server marks Waitlisted (no charge), so put the full days in the
+  // basket and go to checkout to say WHICH child. Single-day passes only.
+  const joinWaitlist = () => {
+    if (!pass || !isSingle || !waitSel.length) { setWaitDone(true); return; }
+    const items: BasketItem[] = [...waitSel].sort().map((day) => ({ id: uid() + day, name: pass.name, timing: period?.range ?? "", periodId: period?.id, price: unitPrice, dates: [day], rule, start: period?.start, finish: period?.finish }));
+    setBasket((b) => [...b, ...items]);
+    setWaitSel([]);
+    setSel([]);
+    setStage("checkout");
+  };
   const removeItem = (id: string) => setBasket((b) => b.filter((y) => y.id !== id));
   /**
    * Change which days a pass covers. A 5 day pass is 5 days — you don't drop
@@ -462,5 +474,5 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
 
   return { passes, periods, passId, setPassId, pickPass, passClosed, passFits, runTotal, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, mealSel, pickMeal, mealFor, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, past, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
     roster, setRoster, childrenOn, toggleChild, clearRemovalsFor, headsOn, rosterNames,
-    waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, heldByBasket, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+    waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, heldByBasket, waitDone, setWaitDone, joinWaitlist, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
