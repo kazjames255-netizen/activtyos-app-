@@ -843,7 +843,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
     return (
       <div className="mx-auto max-w-[540px] p-6 text-center">
         <div className="text-[44px]">{needsApproval ? "📩" : "🎉"}</div>
-        <h2 className="mt-2 text-[24px] font-extrabold tracking-[-0.01em] text-[#171534]">
+        <h2 className="mt-2 text-[24px] font-extrabold tracking-[-0.01em] text-[#171534]" style={{ color: "#171534" }}>
           {needsApproval
             ? (kids ? t("p7cl.reqReceivedFor", { kids }) : t("p7cl.reqReceived"))
             : (kids ? t(done.children.length > 1 ? "p7cl.bookedKidsMany" : "p7cl.bookedKids", { kids }) : t("p7cl.bookedYou"))}
