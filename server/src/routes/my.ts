@@ -10,6 +10,7 @@ import { notify } from "../lib/notify";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { entryFor, registerRows } from "../lib/registerRows";
+import { refPrefixFor } from "../lib/bookingRef";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/mealCutoff";
 import { money, paidSoFar as totalPaid, realPhone, refundableSoFar } from "../../../features/bookings/helpers";
@@ -1308,6 +1309,7 @@ my.post("/bookings", async (req, res) => {
   // Auto-confirm listings seat parents immediately; manual ones hold the
   // place pending the operator's approval. Operator-taken bookings are the
   // approval — Confirmed straight away, invoiced. Unpaid until paid.
+  const refPrefix = await refPrefixFor(listing.tenantId);
   const placedStatus = onBehalf ? "Confirmed" : listing.bookingType === "auto" ? "Confirmed" : "Approval needed";
 
   // Store credit the family holds with this provider is spent automatically,
@@ -1572,6 +1574,7 @@ my.post("/bookings", async (req, res) => {
                 phone: familyPhone,
               },
               nextBid + created.length,
+              refPrefix,
             ),
             ...(rc.childId ? { childId: rc.childId } : {}),
             ...(refByChild.get(rc.name.trim().toLowerCase()) ? { paymentRef: refByChild.get(rc.name.trim().toLowerCase()) } : {}),

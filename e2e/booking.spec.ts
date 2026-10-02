@@ -219,8 +219,8 @@ test.describe("parent books; operator sees it live", () => {
     await page.getByRole("button", { name: "Confirm booking" }).click();
     await expect(page.getByRole("heading", { name: /Congratulations/ })).toBeVisible({ timeout: 30_000 });
     // Capture OUR reference — the operator-side check must look for exactly it.
-    const refLine = await page.getByText(/Reference[s]? APF-\d+/).textContent();
-    const ref = refLine?.match(/APF-\d+/)?.[0];
+    const refLine = await page.getByText(/Reference[s]? [A-Z]{3}-\d+/).textContent();
+    const ref = refLine?.match(/[A-Z]{3}-\d+/)?.[0];
     expect(ref, "confirmation should show a booking reference").toBeTruthy();
 
     // Parent's own bookings list shows it. Anchor on OUR ref, not the listing

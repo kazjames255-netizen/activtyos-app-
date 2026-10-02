@@ -1,3 +1,4 @@
+import { refPrefixFor } from "../lib/bookingRef";
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
@@ -395,10 +396,12 @@ bookings.post("/", async (req, res) => {
       // the booker a payment link from the wrong brand.
       if (scope.role === "franchise" && block && listingFranchiseId !== scope.franchiseId)
         throw new BadRequest("Unknown block (must belong to your own listings)");
+      const refPrefix = await refPrefixFor(tenantId);
       const b: Booking = {
         ...buildBooking(
           { ...input, dates: block ? block.name : input.dates! },
           nextBid,
+          refPrefix,
         ),
         tenantId,
         ...(listingFranchiseId ? { franchiseId: listingFranchiseId } : {}),

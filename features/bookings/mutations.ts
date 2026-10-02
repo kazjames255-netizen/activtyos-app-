@@ -234,14 +234,14 @@ export function applyPartialCancel(b: Booking, releases: { childKey: string; day
   if (kids.length > 0 && kids.every((k) => k.cancelled)) b.status = "Cancelled";
 }
 
-export function buildBooking(input: CreateBookingInput, bid: number): Booking {
+export function buildBooking(input: CreateBookingInput, bid: number, refPrefix = "APF"): Booking {
   const haf = input.method.indexOf("HAF") > -1;
   return {
     // When it was taken. Nothing recorded this before, so "newest first" had
     // to be inferred from the ref number — which works, but can't answer
     // "what came in this week".
     createdAt: new Date().toISOString(),
-    ref: "APF-" + bid,
+    ref: refPrefix + "-" + bid,
     bid: "03073" + bid,
     booker: input.booker,
     email: input.email,
