@@ -266,10 +266,19 @@ export async function tenantSnapshot(tenantId: string, forStaff = false, franchi
   // own (payments.ts scopes a franchise the same way — by its bookings' refs).
   const scopedRefs = franchiseId ? new Set(bookings.map((b) => b.ref)) : null;
   const inFranchiseScope = (p: { refs?: string[] }) => !scopedRefs || (p.refs ?? []).some((r) => scopedRefs.has(r));
+  // A booking cancelled and marked Refunded in full has no refund payment row
+  // (the provider settles it themselves), so drop its payment from the week.
+  const refsWithRefundRow = new Set(paymentsSnap.docs.map((d) => d.data() as { type?: string; refs?: string[] }).filter((p) => p.type === "refund").flatMap((p) => p.refs ?? []));
+  const fullyRefundedRefs = new Set(bookings.filter((b) => b.status === "Cancelled" && String((b as { pay?: string }).pay) === "Refunded" && !refsWithRefundRow.has(b.ref)).map((b) => b.ref));
   const takenThisWeek = round2(
     paymentsSnap.docs
       .map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string; refs?: string[] })
-      .filter((p) => isMoneyIn(p) && inFranchiseScope(p) && (p.createdAt ?? "") >= weekAgo)
+      .filter((p) => isMoneyIn(p) && inFranchiseScope(p) && (p.createdAt ?? "") >= weekAgo && !fullyRefundedRefs.has((p.refs ?? [])[0] ?? ""))
+      .reduce((s, p) => s + (p.amount ?? 0), 0)
+    // …less any refund paid out this week, so a cancellation never counts.
+    - paymentsSnap.docs
+      .map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string; refs?: string[] })
+      .filter((p) => p.type === "refund" && p.status === "succeeded" && inFranchiseScope(p) && (p.createdAt ?? "") >= weekAgo)
       .reduce((s, p) => s + (p.amount ?? 0), 0),
   );
 
