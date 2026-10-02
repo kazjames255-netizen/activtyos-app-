@@ -809,14 +809,15 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       done.firstDate && done.lastDate && done.lastDate !== done.firstDate
         ? `${fmtDay(done.firstDate)} – ${fmtDay(done.lastDate)}`
         : fmtDay(done.firstDate);
-    const kids = done.children.join(", ");
+    const kids = done.children.length > 1 ? new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(done.children) : done.children.join(", ");
     const where = venue?.name ? [venue.name, venue.address].filter(Boolean).join(", ") : null;
     // Voucher bookings are NOT paid yet — the family pays through their scheme's
     // own site. Surface that + a link, instead of a false "paid".
     const scheme = done.voucherScheme;
     // A manual-approval listing holds the place until the provider says yes —
     // nothing is confirmed or charged until then.
-    const needsApproval = d.bookingType === "manual";
+    // same rule as the server: only a listing set to auto-confirm confirms straight away; anything else is a request the provider approves first
+    const needsApproval = d.bookingType !== "auto";
     const provider = scheme ? (tSettings.voucherProviders ?? []).find((v) => v.name === scheme) : undefined;
     // The right account/Ofsted/reference for this listing's setting — shown on
     // the card so the family can pay without hunting through the email.
@@ -837,7 +838,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         <h2 className="mt-2 text-[24px] font-extrabold tracking-[-0.01em] text-[#171534]">
           {needsApproval
             ? (kids ? t("p7cl.reqReceivedFor", { kids }) : t("p7cl.reqReceived"))
-            : (kids ? t("p7cl.bookedKids", { kids }) : t("p7cl.bookedYou"))}
+            : (kids ? t(done.children.length > 1 ? "p7cl.bookedKidsMany" : "p7cl.bookedKids", { kids }) : t("p7cl.bookedYou"))}
         </h2>
         <p className="mt-1.5 text-[13px] text-[#6a6785]">
           {needsApproval
