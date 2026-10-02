@@ -459,7 +459,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
               <p className="mt-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
                 <Rich text={t("p7bk.voucherNote", { scheme: scheme ?? t("p7bk.schemeDefault") })} />{" "}
                 {walletOn
-                  ? <>{t("p7bk.voucherWallet")}</>
+                  ? <><Rich text={t("p7bk.voucherWallet")} /></>
                   : <>{t("p7bk.voucherReimburse", { scheme: scheme ?? t("p7bk.schemeThe") })}</>}
               </p>
             )}
@@ -712,7 +712,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("parent.yourDates")}</div>
               {fixed ? (
                 <div className="rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2.5 text-[11.5px] leading-[1.5] text-[#7a5b06]">
-                  {t("p7bk.fixedBlock")}
+                  <Rich text={t("p7bk.fixedBlock")} />
                 </div>
               ) : listing && available.length === 0 ? (
                 <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-[11.5px] text-[var(--ink-3)]">{t("p7bk.noOtherDates")}</div>

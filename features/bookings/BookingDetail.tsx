@@ -744,7 +744,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
 
         {b.cardFailed && b.status !== "Cancelled" && b.status !== "Declined" && (
           <div className="mt-2.5 rounded-xl border border-[#f6c9cc] bg-[#fdebec] px-3.5 py-2.5 text-[12.5px] text-[#c02636]">
-            {t("p7bd.cardFailedBody")}
+            <Rich text={t("p7bd.cardFailedBody")} />
           </div>
         )}
 

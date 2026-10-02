@@ -119,7 +119,7 @@ export function TimeClockApp() {
         <div className="grid gap-4">
           <Card className="p-4">
             <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("p7tc.todayLbl")}</div>
-            {me.events.length === 0 ? <div className="py-3 text-[12.5px] text-[var(--ink-3)]">{tr("p7tc.noActivity")}</div> : (
+            {me.events.length === 0 ? <div className="py-3 text-[12.5px] text-[var(--ink-3)]"><Rich text={tr("p7tc.noActivity")} /></div> : (
               <div className="divide-y divide-[var(--line)]">{me.events.map((e, i) => (
                 <div key={i} className="flex items-center gap-2 py-1.5 text-[12.5px]">
                   <span>{e.kind === "in" ? "🟢" : e.kind === "out" ? "🔴" : e.kind === "break-start" ? "⏸" : "▶️"}</span>

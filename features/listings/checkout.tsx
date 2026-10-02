@@ -2456,11 +2456,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   owed. */}
               {grandTotal <= 0 ? (
                 <>
-                  {tr("p7ck.opNothingCollect")}
+                  <Rich text={tr("p7ck.opNothingCollect")} />
                 </>
               ) : (
                 <>
-                  {tr("p7ck.opInvoiceHeld")}
+                  <Rich text={tr("p7ck.opInvoiceHeld")} />
                 </>
               )}
             </div>

@@ -3202,7 +3202,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
             <div className="mt-4 flex items-start gap-2.5 rounded-2xl px-4 py-3" style={{ background: "#e4f8ee" }}>
               <span className="aos-point-inline text-[22px] leading-none" aria-hidden>👆</span>
               <p className="text-[12.5px] leading-[1.5]" style={{ color: "#0f5132" }}>
-                {tr("p7bw.inBasket")}
+                <Rich text={tr("p7bw.inBasket")} />
               </p>
             </div>
           ) : (
@@ -3387,7 +3387,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
               <div className="mt-4 flex items-start gap-2.5 border p-3" style={{ borderColor: LIME, background: CELL }}>
                 <span className="aos-point-inline text-[22px] leading-none" aria-hidden>👆</span>
                 <p className="text-[12.5px] leading-[1.5]" style={{ color: "#d7ffa8" }}>
-                  {tr("p7bw.inBasket")}
+                  <Rich text={tr("p7bw.inBasket")} />
                 </p>
               </div>
             ) : (

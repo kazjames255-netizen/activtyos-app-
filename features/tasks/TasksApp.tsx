@@ -789,7 +789,7 @@ export function TasksApp() {
       </div>
       </>}
 
-      {isFreelancer && tab === "mine" && <div className="mb-2 rounded-xl border border-[#dbe6fb] bg-[#f2f7ff] px-3 py-2 text-[12px] text-[var(--ink-2)]">{tr("p7tk.freelancerInbox")}</div>}
+      {isFreelancer && tab === "mine" && <div className="mb-2 rounded-xl border border-[#dbe6fb] bg-[#f2f7ff] px-3 py-2 text-[12px] text-[var(--ink-2)]"><Rich text={tr("p7tk.freelancerInbox")} /></div>}
 
       {/* Views */}
       {onMilestones ? (
@@ -797,7 +797,7 @@ export function TasksApp() {
       ) : all.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-14 text-center">
           <div className="text-[15px] font-extrabold">{tr("p7tk.noTasksYet")}</div>
-          <p className="mx-auto mt-1 max-w-[440px] text-[12.5px] text-[var(--ink-3)]">{tr("p7tk.addFirst")}</p>
+          <p className="mx-auto mt-1 max-w-[440px] text-[12.5px] text-[var(--ink-3)]"><Rich text={tr("p7tk.addFirst")} /></p>
         </div>
       ) : (<>
         {tab === "mine" && <MyTasks tasks={base.filter(mineOf)} today={today} noAssignee={noAssignee} onOpen={setOpenId} onStatus={setStatus} />}
