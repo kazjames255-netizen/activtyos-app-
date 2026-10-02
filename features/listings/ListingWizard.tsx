@@ -4016,8 +4016,11 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   // is "10 left", not 30, so show the busiest block, not a sum.
                   const perDay = d.capacityScope === "day";
                   const total = perDay ? Math.max(...blocks.map((x) => x.capacity)) : blocks.reduce((n, x) => n + x.capacity, 0);
-                  const left = perDay ? Math.min(...blocks.map((x) => x.spotsLeft)) : blocks.reduce((n, x) => n + x.spotsLeft, 0);
-                  const used = Math.max(0, total - left);
+                  // Headline "left" = the best day still bookable (sold out only
+                  // when EVERY date is full); "booked" = the busiest day.
+                  const dayLefts = blocks.flatMap((x) => (x.open ? (x.sessions?.length ? x.sessions.map((q) => q.spotsLeft) : [x.spotsLeft]) : [0]));
+                  const left = perDay ? Math.max(0, ...dayLefts) : blocks.reduce((n, x) => n + x.spotsLeft, 0);
+                  const used = perDay ? Math.max(0, total - Math.min(...blocks.map((x) => x.spotsLeft))) : Math.max(0, total - left);
                   const pct = total > 0 ? Math.round((used / total) * 100) : 0;
                   return (
                     <>
@@ -4038,7 +4041,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   // are among them.
                   const dates = genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x));
                   if (!dates.length || !blocks?.length) return null;
-                  const leftOnDate = (iso: string) => { const blk = blockOn(blocks, iso); return blk ? (blk.open ? blk.spotsLeft : 0) : null; };
+                  const leftOnDate = (iso: string) => { const blk = blockOn(blocks, iso); if (!blk) return null; if (!blk.open) return 0; return blk.capacityScope === "day" ? blk.sessions?.find((q) => q.date === iso)?.spotsLeft ?? blk.spotsLeft : blk.spotsLeft; };
                   const open = dates.filter((x) => (leftOnDate(x) ?? 1) > 0);
 
                   // Runs of consecutive dates sharing a count collapse to a
