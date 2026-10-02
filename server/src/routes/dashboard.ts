@@ -252,7 +252,16 @@ async function buildDashboard(tenantId: string, venueId: string | null, franchis
     if (sum.open && future.length) {
       openCapacity += sum.capacity; openBooked += sum.bookedCount;
       const cur = perListing.get(doc.listingId) ?? { listing, capacity: 0, booked: 0, spotsLeft: 0, nextDate: "9999-99-99" };
-      cur.capacity += sum.capacity; cur.booked += sum.bookedCount; cur.spotsLeft += sum.spotsLeft;
+      if (doc.capacityScope === "day") {
+        // 2 a day over three weeks is still 2 a day, not 6: show the daily
+        // limit and the busiest day, never a total across the weekly blocks.
+        const busiest = Math.max(0, ...Object.values(doc.dayCounts ?? {}));
+        cur.capacity = Math.max(cur.capacity, sum.capacity);
+        cur.booked = Math.max(cur.booked, busiest);
+        cur.spotsLeft = cur.capacity - cur.booked;
+      } else {
+        cur.capacity += sum.capacity; cur.booked += sum.bookedCount; cur.spotsLeft += sum.spotsLeft;
+      }
       const nd = future.map((s) => s.date).sort()[0];
       if (nd < cur.nextDate) cur.nextDate = nd;
       perListing.set(doc.listingId, cur);
@@ -310,15 +319,30 @@ async function buildDashboard(tenantId: string, venueId: string | null, franchis
     return total > 0 ? mine.reduce((n, r) => n + (priceOf.get(r) ?? 0), 0) / total : mine.length / refs.length;
   };
 
+  // A cancelled booking refunded in full has no refund payment row (the
+  // provider settles it themselves), but its money is gone: it must not count
+  // as taken. Refund rows paid out this week are taken off as well.
+  const weekPayRefs = [...new Set(payments.filter((p) => isMoneyIn(p) && (p.paidAt ?? p.createdAt ?? "") >= weekAgo).flatMap((p) => p.refs ?? []).filter(Boolean))];
+  const refsWithRefundRow = new Set(payments.filter((p) => p.type === "refund").flatMap((p) => p.refs ?? []));
+  const goneRefs = new Set<string>();
+  for (const d of weekPayRefs.length ? await whereInChunks(maskedBookings, "ref", "in", weekPayRefs) : []) {
+    const b = lite(d);
+    if (b.status === "Cancelled" && String(b.pay) === "Refunded" && !refsWithRefundRow.has(b.ref)) goneRefs.add(b.ref);
+  }
+  const refundedThisWeek = payments
+    .filter((p) => p.type === "refund" && p.status === "succeeded" && (p.paidAt ?? p.createdAt ?? "") >= weekAgo)
+    .filter((p) => !venueRefs || (p.refs ?? []).some((r) => venueRefs!.has(r)))
+    .reduce((s, p) => s + (p.amount ?? 0) * shareIn(p.refs ?? []), 0);
   const takenThisWeek = round2(
     payments
       // A card record is created when checkout STARTS; paidAt is when it paid.
       .filter((p) => isMoneyIn(p) && (p.paidAt ?? p.createdAt ?? "") >= weekAgo)
+      .filter((p) => !(p.refs ?? []).some((r) => goneRefs.has(r)))
       .filter((p) => !venueRefs || (p.refs ?? []).some((r) => venueRefs!.has(r)))
       // One card checkout can pay for bookings at several sites: under a site
       // lens, count only this site's share of it (by each booking's price) —
       // it was counted in full at every site it touched (acceptance d23s6).
-      .reduce((s, p) => s + (p.amount ?? 0) * shareIn(p.refs ?? []), 0),
+      .reduce((s, p) => s + (p.amount ?? 0) * shareIn(p.refs ?? []), 0) - refundedThisWeek,
   );
 
   return {
