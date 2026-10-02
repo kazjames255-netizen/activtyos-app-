@@ -747,7 +747,22 @@ bookings.post("/:ref/actions", async (req, res) => {
     if (updated.email.includes("@")) {
       if (action.type === "approve" || action.type === "promote")
         emailBookingConfirmed(updated, await tenantName());
-      else if (action.type === "offer") emailPlaceOffered(updated, await tenantName());
+      else if (action.type === "offer") {
+        emailPlaceOffered(updated, await tenantName());
+        // The email alone is easy to miss (and is held back while mail isn't
+        // live), so also raise the family's bell with the deadline.
+        const until = updated.offerExpiresAt ? new Date(updated.offerExpiresAt as string).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) : "";
+        void notify({
+          tenantId: scope.tenantId!,
+          to: { kind: "parent", email: updated.email },
+          category: "booking",
+          bellOnly: true,
+          title: `A place is available · ${updated.ref}`,
+          body: `${updated.listing}${updated.child ? ` · ${updated.child}` : ""} — a place has come up and is being held for you${until ? ` until ${until}` : ""}. Open it to accept.`,
+          href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
+          ref: updated.ref,
+        });
+      }
       else if (action.type === "decline") emailBookingDeclined(updated, await tenantName(), updated.declineReason);
       else if (action.type === "refund-approve") {
         emailRefundApproved(updated, await tenantName());
