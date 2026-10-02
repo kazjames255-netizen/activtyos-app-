@@ -103,8 +103,8 @@ function ParentAuth() {
           setBusy(false);
           return;
         }
-        // straight to the provider's booking page: the booking is what links the family to them
-        router.replace(`/store/${picked.id}`);
+        // into the parent portal (home = browse); the account already remembers the chosen provider
+        router.replace("/custdash/browse");
       } catch (err) {
         const code = (err as { code?: string })?.code ?? "";
         if (code === "auth/email-already-in-use") setError(t("p8par.lgEmailTaken"));

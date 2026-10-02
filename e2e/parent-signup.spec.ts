@@ -3,8 +3,8 @@ import { API_URL } from "./helpers/env";
 import { apiFetch, fbSignIn, TEST_EMAIL_DOMAIN, TEST_PASSWORD } from "./helpers/accounts";
 
 // A parent creates an account on /parent?tab=up: picks their provider from the directory, gets a login, is registered as a parent against
-// that provider and lands on the provider's storefront. Throwaway @activityos-test.com account, unique per run.
-test("parent sign-up picks a provider, creates the login and lands on that provider's storefront", async ({ page }) => {
+// that provider and lands in the parent portal (/custdash/browse). Throwaway @activityos-test.com account, unique per run.
+test("parent sign-up picks a provider, creates the login and lands in the parent portal", async ({ page }) => {
   test.setTimeout(120_000);
   // find a provider that the public directory actually returns
   let query = "", provider: { id: string; name: string } | null = null;
@@ -30,8 +30,7 @@ test("parent sign-up picks a provider, creates the login and lands on that provi
   await option.click();
 
   await page.getByRole("button", { name: "Create account", exact: true }).click();
-  await page.waitForURL(/\/store\//, { timeout: 60_000 });
-  expect(page.url()).toContain(`/store/${provider!.id}`);
+  await page.waitForURL(/\/custdash\//, { timeout: 60_000 });
 
   // the account really is a parent
   const tok = (await fbSignIn(email)).idToken;
