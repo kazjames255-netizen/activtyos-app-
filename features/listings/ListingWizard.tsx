@@ -4012,8 +4012,11 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                           <div className="mt-1 text-[10.5px]" style={{ color: MUTs }}>{tr("p7pg.bookingsShowOnce")}</div>
                         </>);
                   }
-                  const total = blocks.reduce((n, x) => n + x.capacity, 0);
-                  const left = blocks.reduce((n, x) => n + x.spotsLeft, 0);
+                  // Per-day capacity is a daily limit: 10 a day for three weeks
+                  // is "10 left", not 30, so show the busiest block, not a sum.
+                  const perDay = d.capacityScope === "day";
+                  const total = perDay ? Math.max(...blocks.map((x) => x.capacity)) : blocks.reduce((n, x) => n + x.capacity, 0);
+                  const left = perDay ? Math.min(...blocks.map((x) => x.spotsLeft)) : blocks.reduce((n, x) => n + x.spotsLeft, 0);
                   const used = Math.max(0, total - left);
                   const pct = total > 0 ? Math.round((used / total) * 100) : 0;
                   return (
