@@ -1032,9 +1032,9 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           <span>
             <b className="text-[var(--ink)]">{w("Cancelled")}</b>{b.cancel?.on ? " · " + t("p7bk.requestedOn", { date: b.cancel.on }) : ""}
             {refundIssued ? (
-              <> — <b className="text-[var(--brand)]">{isVoucher ? t("p7bk.refundedVoucher", { amt: money(refundAmt || b.amount) }) : t("p7bk.refundedCard", { amt: money(refundAmt || b.amount) })}</b>.</>
+              <> — <b className="text-[var(--brand)]">{isVoucher ? t("p7bk.refundedVoucher", { amt: money(refundAmt || b.amount) }) : t("p7bk.refundedCard", { amt: money(refundAmt || b.amount) })}</b>.{!isVoucher && b.cancel?.refundTo !== "wallet" && <> {t("p7bk.refundTiming")}</>}</>
             ) : refundOwed && refundAmt > 0 ? (
-              <> — <Rich text={isVoucher ? t("p7bk.refundDueVoucher", { amt: money(refundAmt) }) : t("p7bk.refundDueCard", { amt: money(refundAmt) })} /></>
+              <> — <Rich text={isVoucher ? t("p7bk.refundDueVoucher", { amt: money(refundAmt) }) : t("p7bk.refundDueCard", { amt: money(refundAmt) })} />{!isVoucher && b.cancel?.refundTo !== "wallet" && <> {t("p7bk.refundTiming")}</>}</>
             ) : (
               <> — {t("p7bk.noRefundWasDue")}</>
             )}
