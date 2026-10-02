@@ -2944,7 +2944,12 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
           ? tr("p7bw.tapFullDay")
           : pickPlural(tr, locale, "p7bw.onYourList", b.waitSel.length, { dates: b.datesPretty(b.waitSel) })}
       </div>
-      {b.waitSel.length > 0 && (
+      {b.waitSel.length > 0 && !b.isSingle && (
+        <div className="mt-2 text-[11.5px] font-bold leading-[1.45]">
+          Waiting lists work one day at a time. Choose the 1 day pass, pick this day, and join from there.
+        </div>
+      )}
+      {b.waitSel.length > 0 && b.isSingle && (
         <>
           <button type="button" onClick={b.joinWaitlist}
             className="mt-2.5 w-full rounded-xl py-2.5 text-[12.5px] font-extrabold text-white"
