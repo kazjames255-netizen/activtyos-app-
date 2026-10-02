@@ -1237,7 +1237,7 @@ function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
   );
 }
 
-type BookingFilter = "all" | "upcoming" | "past" | "cancelled";
+type BookingFilter = "all" | "topay" | "upcoming" | "past" | "cancelled";
 
 // Meals ordered from the Meals area after booking — folded back onto the
 // booking they belong to (same listing, a booked day, one of its children).
@@ -1361,8 +1361,11 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
         const lastDay = (b: Booking) => [...(b.days ?? [])].sort().at(-1) ?? "";
         const isPast = (b: Booking) => !isCancelled(b) && !!lastDay(b) && lastDay(b) < todayIso;
         const isUpcoming = (b: Booking) => !isCancelled(b) && !isPast(b);
+        // Still to pay: a live (not cancelled, not waitlisted) booking with money owing.
+        const isToPay = (b: Booking) => !isCancelled(b) && (b.status === "Confirmed" || b.pay === "Invoice sent") && owedOf(b) > 0.005;
         const match = (b: Booking) =>
           filter === "all" ? true
+          : filter === "topay" ? isToPay(b)
           : filter === "upcoming" ? isUpcoming(b)
           : filter === "past" ? isPast(b)
           : isCancelled(b);
@@ -1401,6 +1404,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
 
         const counts = {
           all: restF.length,
+          topay: restF.filter(isToPay).length,
           upcoming: restF.filter(isUpcoming).length,
           past: restF.filter(isPast).length,
           cancelled: restF.filter(isCancelled).length,
@@ -1408,6 +1412,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
         const shown = restF.filter(match);
         const tabs: { key: BookingFilter; label: string }[] = [
           { key: "all", label: tr("parent.tabAll") },
+          { key: "topay", label: "Still to pay" },
           { key: "upcoming", label: tr("parent.tabUpcoming") },
           { key: "past", label: tr("parent.tabPast") },
           { key: "cancelled", label: tr("parent.tabCancelledRefunded") },
