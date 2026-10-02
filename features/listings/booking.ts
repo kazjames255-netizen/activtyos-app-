@@ -146,6 +146,9 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const [priceEdit, setPriceEdit] = useState<Record<string, number>>({});
   const [totalOverride, setTotalOverride] = useState<number | null>(null);
   const pass = passes.find((t) => t.id === passId) || null;
+  // A waiting-list choice belongs to the pass it was made on: switching
+  // passes must not carry "you're on the waiting list" over to the new one.
+  useEffect(() => { setWaitDone(false); setWaitSel([]); }, [passId]);
   const period = periods.find((p) => p.id === periodId) || null;
   const need = pass?.days ?? 0;
   const rawRule: BookRule = pass ? ((d.bookRules ?? {})[pass.name] ?? "week") : "week";
