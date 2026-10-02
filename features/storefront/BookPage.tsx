@@ -30,6 +30,18 @@ export function BookPage({ id }: { id: string }) {
   // before window.location settles.
   const sp = useSearchParams();
   const embedded = sp.has("embed");
+  // Inside a provider's website we cannot be inspected from outside, so report
+  // what went wrong (errors, never data) to the embedding page's console.
+  useEffect(() => {
+    if (!embedded) return;
+    const send = (kind: string, msg: unknown) => window.parent?.postMessage({ type: "activityos:debug", kind, msg: String(msg).slice(0, 300) }, "*");
+    const onErr = (e: ErrorEvent) => send("error", e.message);
+    const onRej = (e: PromiseRejectionEvent) => send("rejection", (e.reason as { message?: string })?.message ?? e.reason);
+    window.addEventListener("error", onErr);
+    window.addEventListener("unhandledrejection", onRej);
+    send("mounted", "book page mounted");
+    return () => { window.removeEventListener("error", onErr); window.removeEventListener("unhandledrejection", onRej); };
+  }, [embedded]);
   // Arrived from an embedded storefront grid — offer the way back.
   const fromStore = sp.get("from") === "store";
   // ?preview=1 — the operator opened this from "View as parent". Show the exact
@@ -42,8 +54,8 @@ export function BookPage({ id }: { id: string }) {
 
   useEffect(() => {
     apiPublic<ServerListing>(`/api/listings/${encodeURIComponent(id)}`)
-      .then(setListing)
-      .catch((e) => setError(e instanceof Error ? e.message : t("p7pub.errLoadListing")));
+      .then((l) => { setListing(l); if (embedded) window.parent?.postMessage({ type: "activityos:debug", kind: "listing", msg: "listing loaded" }, "*"); })
+      .catch((e) => { setError(e instanceof Error ? e.message : t("p7pub.errLoadListing")); if (embedded) window.parent?.postMessage({ type: "activityos:debug", kind: "listing-error", msg: String(e?.message ?? e) }, "*"); });
   }, [id]);
   useEffect(() => firebaseAuth.onAuthStateChanged((u) => setSignedIn(!!u)), []);
   useEffect(() => {
