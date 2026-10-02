@@ -33,7 +33,7 @@ import type { WizardDraft } from "./ListingWizard";
 import { mealDayPlan, dishesForDay } from "@/features/meals/plan";
 import { useT } from "@/lib/i18n/provider";
 
-export type ParentRow = { id: string; name: string; email?: string; children?: ChildProfile[] };
+export type ParentRow = { id: string; name: string; email?: string; phone?: string; address?: string; children?: ChildProfile[] };
 
 export function useParents(skip = false) {
   const [list, setList] = useState<ParentRow[]>([]);
@@ -43,10 +43,10 @@ export function useParents(skip = false) {
   useEffect(() => {
     if (skip) return; // parents can't read /api/customers, and shouldn't
     let alive = true;
-    apiGet<{ id: string; name?: string; email?: string; children?: ChildProfile[] }[]>("/api/customers")
+    apiGet<{ id: string; name?: string; email?: string; phone?: string; address?: string; postcode?: string; children?: ChildProfile[] }[]>("/api/customers")
       .then((cs) => {
         if (!alive) return;
-        setList(cs.map((c) => ({ id: c.id, name: c.name || c.email || tNow("p8lst.ck8Unnamed"), email: c.email, children: c.children ?? [] })));
+        setList(cs.map((c) => ({ id: c.id, name: c.name || c.email || tNow("p8lst.ck8Unnamed"), email: c.email, phone: c.phone, address: [c.address, c.postcode].filter(Boolean).join(", ") || undefined, children: c.children ?? [] })));
         setState("ready");
       })
       // An empty address book and a failed request look identical otherwise.
@@ -836,7 +836,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const [np, setNp] = useState({ name: "", email: "", phone: "", address: "" });
   const npReady = np.name.trim().length > 1 && /.+@.+\..+/.test(np.email.trim()) && !!np.phone.trim() && !!np.address.trim();
   const matches = q.trim()
-    ? parents.filter((p) => `${p.name} ${p.email ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 6)
+    // Find a family by parent name, email, phone, address OR a child's name.
+    ? parents.filter((p) => `${p.name} ${p.email ?? ""} ${p.phone ?? ""} ${p.address ?? ""} ${(p.children ?? []).map((c) => c.name).join(" ")}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8)
     : [];
   useEffect(() => {
     if (!parentMode) return;
@@ -1266,7 +1267,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           <div className={`mt-1.5 border p-2.5 ${tk.round}`} style={{ borderColor: tk.line }}>
             <div className="text-[12px] font-extrabold" style={{ color: tk.ink }}>{tr("p7ck.optAlready")}</div>
             <div className="mb-1.5 mt-0.5 text-[11px] leading-[1.4]" style={{ color: tk.muted }}>{tr("p7ck.optAlreadyBody")} <span title={tr("p7ck.regOnlyTip")}>{tr("p7ck.regOnlyUse2")}</span></div>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("p7ck.phSearchNameEmail")}
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by parent, child, email, phone or address"
               className={`w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
             <div className="mt-1 text-[11px]" style={{ color: parentsState === "error" ? "#fca5a5" : tk.ink }}>
               {parentsState === "loading"
@@ -1283,6 +1284,14 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   <button key={p.id} type="button" onClick={() => { b.setParent(p); setQ(""); }}
                     className={`border px-3 py-2 text-start text-[12.5px] ${tk.round}`} style={{ borderColor: tk.line, color: tk.ink }}>
                     <b>{p.name}</b>{p.email ? <span className="ms-1.5 text-[11px]" style={{ color: tk.muted }}>{p.email}</span> : null}
+                    {(p.phone || p.address) && (
+                      <div className="mt-0.5 text-[11px]" style={{ color: tk.muted }}>{[p.phone, p.address].filter(Boolean).join(" · ")}</div>
+                    )}
+                    {(p.children?.length ?? 0) > 0 && (
+                      <div className="mt-0.5 text-[11px] font-semibold" style={{ color: tk.ink }}>
+                        Children: {(p.children ?? []).map((c) => c.name).join(", ")}
+                      </div>
+                    )}
                   </button>
                 ))}
                 {matches.length === 0 && (
