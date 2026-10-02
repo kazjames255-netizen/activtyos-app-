@@ -91,7 +91,7 @@ const PlatformEngagementApp = dynamic(() => import("@/features/platform/Platform
 const PlatformFeaturesApp = dynamic(() => import("@/features/platform/PlatformFeaturesApp").then((m) => m.PlatformFeaturesApp));
 const PlatformAtRiskApp = dynamic(() => import("@/features/platform/PlatformAtRiskApp").then((m) => m.PlatformAtRiskApp));
 const SalesApp = dynamic(() => import("@/features/platform/SalesApp").then((m) => m.SalesApp));
-const TestingApp = dynamic(() => import("@/features/testing/TestingApp").then((m) => m.TestingApp));
+const TestTrackerApp = dynamic(() => import("@/features/testTracker/TestTrackerApp").then((m) => m.TestTrackerApp));
 const LeadsApp = dynamic(() => import("@/features/platform/LeadsApp").then((m) => m.LeadsApp));
 const VentureLakesApp = dynamic(() => import("@/features/platform/VentureLakesApp").then((m) => m.VentureLakesApp));
 const InternationalExpansionApp = dynamic(() => import("@/features/platform/InternationalExpansionApp").then((m) => m.InternationalExpansionApp));
@@ -347,7 +347,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     dash: BrowseApp, // routable alias — parents' home is Browse
   },
   platform: {
-    testing: TestingApp,
+    testing: TestTrackerApp,
     tasks: TasksApp,
     dash: PlatformAnalyticsApp, // Overview retired — /platform/dash lands on Analytics
     providers: ProvidersApp,
