@@ -259,6 +259,11 @@ app.use("/api/demo-slots", demoSlotsPublic);
 // Provider directory for the parent sign-up picker — a parent has no account
 // yet, so this must sit above requireAuth. Name + rough location only.
 app.use("/api/providers", rateLimit("providers", 120), providersPublic);
+// Public "which version is running?" check: the Git commit Railway built from (when it deploys from Git) and when this process started.
+const STARTED_AT = new Date().toISOString();
+app.get("/api/version", (_req, res) => {
+  res.json({ commit: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.GIT_COMMIT || null, startedAt: STARTED_AT });
+});
 
 // Platform 2FA: `requireAuth` only, deliberately mounted ABOVE attachRole —
 // attachRole is what refuses an unverified platform account (see
