@@ -452,7 +452,7 @@ function SignupForm() {
                   className="rounded-2xl border-2 p-4 text-start transition-all"
                   style={on ? { borderColor: "#1d3a8f", background: "var(--brand-soft)", boxShadow: "0 8px 22px -12px rgba(29,58,143,.5)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                   <div className="text-[26px] leading-none">{at.icon}</div>
-                  <div className="mt-2 text-[15px] font-extrabold" style={{ color: on ? "var(--brand-ink)" : "var(--ink)" }}>{t(at.label)}</div>
+                  <div className="mt-2 text-[15px] font-extrabold" style={{ color: on ? "var(--brand-strong)" : "var(--ink)" }}>{t(at.label)}</div>
                   <div className="mt-0.5 text-[12px] leading-snug" style={{ color: on ? "var(--brand-strong)" : "var(--ink-3)" }}>{t(at.desc)}</div>
                 </button>
               );
@@ -523,7 +523,7 @@ function SignupForm() {
                     <button key={mode} type="button" onClick={() => setProviderNameMode(mode)} className="rounded-xl border-2 p-3 text-start transition-colors"
                       style={on ? { borderColor: "#1d3a8f", background: "var(--brand-soft)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                       <div className="text-[11px] font-bold" style={{ color: on ? "var(--brand-strong)" : "var(--ink-3)" }}>{heading}</div>
-                      <div className="truncate text-[14.5px] font-extrabold" style={{ color: on ? "var(--brand-ink)" : "var(--ink)" }}>{preview}</div>
+                      <div className="truncate text-[14.5px] font-extrabold" style={{ color: on ? "var(--brand-strong)" : "var(--ink)" }}>{preview}</div>
                     </button>
                   );
                 })}
@@ -557,7 +557,7 @@ function SignupForm() {
                   className="flex flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-3.5 text-center transition-all"
                   style={on ? { borderColor: "#1d3a8f", background: "var(--brand-soft)", boxShadow: "0 8px 22px -14px rgba(29,58,143,.55)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                   <span className="text-[22px] leading-none">{o.icon}</span>
-                  <span className="text-[12px] font-bold leading-tight" style={{ color: on ? "var(--brand-ink)" : "var(--ink-2)" }}>{t(o.k)}</span>
+                  <span className="text-[12px] font-bold leading-tight" style={{ color: on ? "var(--brand-strong)" : "var(--ink-2)" }}>{t(o.k)}</span>
                 </button>
               );
             })}
@@ -663,7 +663,7 @@ function Hero({ emoji, eyebrow, title, lede, steps, step }: { emoji: string; eye
       <div className="mb-4 flex items-center gap-2.5">
         <AosMark />
         <span className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          <span style={{ color: "#fff" }}>Activ</span><span style={{ color: "#FF3D7F" }}>ly</span>
+          <span style={{ color: "#fff" }}>Activ</span><span style={{ color: "var(--gold, #f5b81f)" }}>ly</span>
         </span>
       </div>
       {typeof step === "number" && steps && (
