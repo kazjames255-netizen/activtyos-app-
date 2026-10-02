@@ -952,8 +952,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const [phonePrefilled, setPhonePrefilled] = useState(false);
   useEffect(() => {
     if (!parentMode || !tenantId) return;
-    apiGet<{ phone: string }>(`/api/my/contact?tenantId=${encodeURIComponent(tenantId)}`)
-      .then((r) => { if (r?.phone?.trim()) { setPhone(r.phone.trim()); setPhonePrefilled(true); } })
+    apiGet<{ phone: string; from?: string }>(`/api/my/contact?tenantId=${encodeURIComponent(tenantId)}`)
+      .then((r) => { if (r?.phone?.trim()) { setPhone(r.phone.trim()); setPhonePrefilled(r.from !== "account"); } })
       .catch(() => {});
   }, [parentMode, tenantId]);
 

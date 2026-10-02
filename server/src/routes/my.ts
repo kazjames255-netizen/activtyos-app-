@@ -572,7 +572,14 @@ my.get("/contact", async (req, res) => {
     const cust = await db.collection("customers").where("tenantId", "==", tenantId).where("email", "==", e).limit(1).get();
     if (!cust.empty) { phone = ((cust.docs[0].data().phone as string | undefined) ?? "").trim(); break; }
   }
-  res.json({ phone });
+  // No number on the provider's file yet (a brand-new family): use the one saved in the parent's own account, so checkout never asks twice.
+  let from: "provider" | "account" = "provider";
+  if (!phone && req.user?.uid) {
+    const u = await db.collection("users").doc(req.user.uid).get();
+    phone = ((u.get("phone") as string | undefined) ?? "").trim();
+    if (phone) from = "account";
+  }
+  res.json({ phone, from });
 });
 
 // GET /api/my/wallet — the family's store credit, per provider, with the
