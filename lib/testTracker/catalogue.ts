@@ -18,7 +18,7 @@ function k(id: string, title: string, accounts: AccountKind[], setup: string, st
 }
 
 // ---- Shared facts, taken from the code (so every check states the same rule) ------------------------------------------
-const STD = "The Standard test camp built in LT-001 (Mon to Fri for 3 weeks, 10 places for the whole listing, Automatic approval, Public, Standard cancellation policy, every payment method ticked; passes '1 day' £20, '3 days' £54 any 3 days in one week, '5 days' £90 any 5 days in one week)";
+const STD = "The Standard test camp built in LT-001 (Mon to Fri for 3 weeks, 10 places PER DAY (never more than 10 children on any one day), Automatic approval, Public, Standard cancellation policy, every payment method ticked; passes '1 day' £20, '3 days' £54 any 3 days in one week, '5 days' £90 any 5 days in one week)";
 const AUTO_RULE = "Automatic discount rule (features/listings/discounts.ts, same code prices the server): 1) multi-person rule applies to EVERY child on a line when children on that line is more than the rule's number (price method: child pays the set price; subtract: min(price, amount) off each child; percent: price x % off each child); best single rule wins. 2) multi-session rule on the already-reduced total when sessions (days x children) is more than its number; best single rule wins. 3) early bird on the reduced total if today (UK date) is on or before its date; best single rule wins. Total never below £0.";
 const CODE_RULE = "Discount code rule (server/src/lib/discountCodes.ts): comes off AFTER automatic discounts and BEFORE add-ons. Percent = pass subtotal x %; amount = fixed £ off the whole order; per child = £ x number of booked child lines; never more than the subtotal (or the code's own cap); minimum spend is tested against the pass subtotal after automatic discounts; several codes ADD their amounts (they do not compound) unless one is marked 'Can't be used with any other code'.";
 const WALLET_RULE = "Wallet rule (server/src/routes/my.ts): credit is spent automatically AFTER every discount, up to the balance and up to the slider amount (walletCap); amount due = booking total minus wallet used; if nothing is due the payment shows Funded.";
@@ -32,14 +32,14 @@ k("LT-001", "Build the Standard test camp (used by most other checks)", OP,
   "A signed-in provider account with at least one venue under Locations.",
   ["Go to Blocks & listings and open the Blocks tab. Build a block with one period called 'Full day' (09:00 to 15:00) and three passes: '1 day' £20, '3 days' £54 (any 3 days in a week), '5 days' £90 (any 5 days in a week).",
    "Go back to the Listings tab and click ＋ New listing.",
-   "Basics: title 'Standard test camp'. Details: pick your venue, ages 5 to 11. Capacity: Maximum attendees 10, Whole listing, 'Allow children outside this age range' = No, Show remaining spaces = Yes.",
+   "Basics: title 'Standard test camp'. Details: pick your venue, ages 5 to 11. Capacity: Maximum attendees 10, PER DAY, 'Allow children outside this age range' = No, Show remaining spaces = Yes.",
    "When it runs: pick three consecutive weeks starting next Monday, Block size 'Weekly (Mon–Fri)'. Tickets & pricing: choose the block you built and click Use this block.",
    "Policy & publish: Who can see it = Public, Automatic approval, Waiting list on, 'You choose', Cancellation policy = Standard. Click Publish."],
   ["The wizard shows 'Step n of 13' style progress and no 'things left to do' warning before Publish.",
-   "The new card appears in Blocks & listings with a Published badge, 10 places, 3 weeks of dates and the three tickets.",
+   "The new card appears in Blocks & listings with a Published badge, 10 places per day, 3 weeks of dates and the three tickets.",
    "Opening the card's 🔗 Link in a private window shows the customer page with the three passes and prices."],
-  "Check prices shown to parents: 1 day £20, 3 days £54, 5 days £90. Places: 10 of 10 left.",
-  "Listing doc: status live, visibility public, bookingType auto, maxAttendees 10, capacityScope listing, waitlist true, waitlistMode manual, cancellationPolicyId standard; block has 15 sessions; passes priced 20/54/90.", 1),
+  "Check prices shown to parents: 1 day £20, 3 days £54, 5 days £90. Places: 10 left per day.",
+  "Listing doc: status live, visibility public, bookingType auto, maxAttendees 10, capacityScope day, waitlist true, waitlistMode manual, cancellationPolicyId standard; block has 15 sessions; passes priced 20/54/90.", 1),
 k("LT-002", "A listing held at a venue", OP, "Venue added under Locations.",
   ["Create a listing (as LT-001) and in Details choose 'At a venue' under How sessions are delivered, then Select a venue.", "Publish and open the customer page via 🔗 Link."],
   ["The customer page shows the venue name and address.", "Nothing asks the parent for a visit address at checkout."],
@@ -172,6 +172,14 @@ k("LT-034", "Listing pay-method choice", OP, "Tenant has several payment methods
   ["Edit the listing, Details, 'How can parents pay?', untick Cash on the day and Childcare vouchers (Card is always on)."],
   ["The parent checkout offers Card, Bank transfer, Tax-Free Childcare (and HAF) but not Cash on the day or Childcare vouchers."],
   NOMONEY, "listing.payMethods excludes the two; booking with an excluded method is refused or not offered (verify).", 1),
+
+k("LT-035", "CRITICAL: never more than 10 children on any one day (Standard test camp)", OP, STD + ". Two or three parent accounts and the operator's Book for a customer.",
+  ["Book 10 different children onto Monday of week 1, mixing passes (some 1 day, some 3 days, some 5 days that include Monday). Use the parent booking page, Quick book and Book for a customer so all three routes are covered.",
+   "Try to book an 11th child onto that same Monday by every route (booking page, Quick book, embed, Book for a customer).",
+   "Book the 11th child onto Tuesday of week 1 instead.",
+   "Cancel one Monday booking and try the 11th child on Monday again."],
+  ["Monday shows 'Full' after the 10th child; the 11th is offered the waiting list (or refused), never confirmed.", "Tuesday is still bookable with 10 places left.", "After the cancellation exactly one Monday place is free again.", "The listing card in Blocks & listings reads '10 left per day' and never 30."],
+  "Only the 10 confirmed children are charged; the 11th is not charged. " + PLACES_RULE, "Count seated bookings per date from the database: no date has more than 10 confirmed/approval-needed/offered children. Two simultaneous confirms for the last place must never produce 11.", 1),
 
 // ======================= PP: passes, timings, add-ons, meals =======================
 k("PP-001", "Pass sold as 'Any n days in a week'", OP, STD, ["As a parent choose the '3 days' pass and tick 3 days in week 1; then try ticking a 4th day."],
