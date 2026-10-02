@@ -228,7 +228,12 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // the configured ceiling is only a fallback for the operator's preview.
   const leftOn = (iso: string) => {
     const blk = blockOn(blocks, iso);
-    if (blk) return Math.max(0, blk.spotsLeft - seatsOn(iso));
+    if (blk) {
+      // Day scope: the block's own spotsLeft is its BUSIEST day, so one busy
+      // Monday would mark Tue to Fri almost full. Use that date's own count.
+      const own = blk.capacityScope === "day" ? blk.sessions?.find((x) => x.date === iso)?.spotsLeft : undefined;
+      return Math.max(0, (own ?? blk.spotsLeft) - seatsOn(iso));
+    }
     return capacity === null ? null : Math.max(0, capacity - (perDay ? seatsOn(iso) : basket.length));
   };
   // Capacity that applies to a date — the run's, else the configured one.
@@ -240,7 +245,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   });
   const listingFull = capacity !== null && !perDay && !blocks?.length && basket.length + 1 > capacity;
   const soldOut = (capacity !== null && capacity <= 0) || listingFull
-    || (!!blocks?.length && blocks.every((b) => !b.open || b.spotsLeft <= 0));
+    || (!!blocks?.length && blocks.every((b) => !b.open || (b.capacityScope === "day" && b.sessions?.length ? b.sessions.every((x) => x.spotsLeft <= 0) : b.spotsLeft <= 0)));
   const hasSpace = !soldOut && fullDates.length === 0;
   // Tightest count that applies to what's on screen — the selection if there
   // is one, else the run as a whole.

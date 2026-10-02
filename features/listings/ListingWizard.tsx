@@ -180,7 +180,7 @@ function blockTickets(store: BlocksStore, blockId: string | null) {
 // 12-hour time label, e.g. "09:00" -> "9:00 AM"
 export interface BookPass { id: string; name: string; days: number; basePrice: number; details?: string }
 export interface BookPeriod { id: string; title: string; start: string; finish: string; range: string }
-export type RunBlock = { id: string; name: string; startDate: string; endDate: string; capacity: number; spotsLeft: number; open: boolean };
+export type RunBlock = { id: string; name: string; startDate: string; endDate: string; capacity: number; spotsLeft: number; open: boolean; capacityScope?: "day" | "listing"; sessions?: { date: string; spotsLeft: number }[] };
 
 /**
  * What counts as "running low" on a date. Flat-5 was wrong for small groups —
