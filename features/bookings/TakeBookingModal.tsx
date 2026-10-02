@@ -266,10 +266,13 @@ export function TakeBookingModal() {
           </div>
         )}
 
+        <div className="mt-2 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">
+          Choose a live listing ({shown.length})
+        </div>
         <select
           value={activeId}
           onChange={(e) => setId(e.target.value)}
-          className="mt-1.5 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)] outline-none"
+          className="mt-1 w-full rounded-lg border-2 border-[var(--brand)] bg-[var(--surface)] px-3 py-2.5 text-[14px] font-bold text-[var(--ink)] outline-none"
         >
           {shown.map((l) => (
             <option key={l.id} value={l.id}>{l.title || l.name}</option>
