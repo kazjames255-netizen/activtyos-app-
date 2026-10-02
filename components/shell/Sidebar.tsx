@@ -231,7 +231,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   const { user } = useAuth();
   const groups = NAV_GROUPS[portal];
   const t = useT();
-  const groupText = (label: string | null) => { const k = label ? GROUP_KEY[label] : undefined; return k ? t(`chrome.g_${k}`) : navLabel(t, pluralLabel(label, portal, multiChild)); };
+  const groupText = (label: string | null) => { const k = label === "My child" && portal === "custdash" && multiChild ? "mychildren" : label ? GROUP_KEY[label] : undefined; return k ? t(`chrome.g_${k}`) : navLabel(t, pluralLabel(label, portal, multiChild)); };
   const activeView = pathname.split("/")[2];
   const activeGroupLabel = groups.find((g) => g.items.some((i) => i.view === activeView))?.label;
 

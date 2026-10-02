@@ -4,7 +4,7 @@ const chrome: Record<string, Record<string, string>> = {
   en: {
     g_account: "Account", g_activities: "Activities", g_ai: "AI", g_blocks: "Blocks and listings", g_communication: "Communication",
     g_firstaid: "First aid, medication & incidents", g_franchises: "Franchises", g_learndocs: "Learning & documents", g_marketing: "Marketing",
-    g_moneygrowth: "Money & growth", g_money: "Money", g_mychild: "My child", g_myschedule: "My schedule", g_onsession: "On session",
+    g_moneygrowth: "Money & growth", g_money: "Money", g_mychild: "My child", g_mychildren: "My children", g_myschedule: "My schedule", g_onsession: "On session",
     g_oversight: "Oversight", g_paypersonal: "Pay & personal", g_pupils: "Pupils", g_runday: "Run the day", g_safeguard: "Safeguarding & health",
     g_savings: "Savings & rewards", g_sell: "Sell & take bookings", g_settings: "Settings", g_team: "Team", g_tenants: "Tenants", g_yourteam: "Your team",
     g_overview: "Overview", g_peoplerev: "People & reviews", g_safeoversight: "Safeguarding oversight",
@@ -14,7 +14,7 @@ const chrome: Record<string, Record<string, string>> = {
   pl: {
     g_account: "Konto", g_activities: "Zajęcia", g_ai: "AI", g_blocks: "Bloki i oferty", g_communication: "Komunikacja",
     g_firstaid: "Pierwsza pomoc, leki i incydenty", g_franchises: "Franczyzy", g_learndocs: "Nauka i dokumenty", g_marketing: "Marketing",
-    g_moneygrowth: "Finanse i rozwój", g_money: "Finanse", g_mychild: "Moje dziecko", g_myschedule: "Mój grafik", g_onsession: "Podczas zajęć",
+    g_moneygrowth: "Finanse i rozwój", g_money: "Finanse", g_mychild: "Moje dziecko", g_mychildren: "Moje dzieci", g_myschedule: "Mój grafik", g_onsession: "Podczas zajęć",
     g_oversight: "Nadzór", g_paypersonal: "Wypłata i dane osobiste", g_pupils: "Uczniowie", g_runday: "Organizacja dnia", g_safeguard: "Bezpieczeństwo i zdrowie",
     g_savings: "Oszczędności i nagrody", g_sell: "Sprzedaż i rezerwacje", g_settings: "Ustawienia", g_team: "Zespół", g_tenants: "Najemcy", g_yourteam: "Twój zespół",
     g_overview: "Przegląd", g_peoplerev: "Ludzie i opinie", g_safeoversight: "Nadzór nad bezpieczeństwem",
@@ -24,7 +24,7 @@ const chrome: Record<string, Record<string, string>> = {
   ro: {
     g_account: "Cont", g_activities: "Activități", g_ai: "AI", g_blocks: "Blocuri și oferte", g_communication: "Comunicare",
     g_firstaid: "Prim ajutor, medicație și incidente", g_franchises: "Francize", g_learndocs: "Învățare și documente", g_marketing: "Marketing",
-    g_moneygrowth: "Bani și creștere", g_money: "Bani", g_mychild: "Copilul meu", g_myschedule: "Programul meu", g_onsession: "În timpul sesiunii",
+    g_moneygrowth: "Bani și creștere", g_money: "Bani", g_mychild: "Copilul meu", g_mychildren: "Copiii mei", g_myschedule: "Programul meu", g_onsession: "În timpul sesiunii",
     g_oversight: "Supraveghere", g_paypersonal: "Salariu și date personale", g_pupils: "Elevi", g_runday: "Organizarea zilei", g_safeguard: "Protecție și sănătate",
     g_savings: "Economii și recompense", g_sell: "Vânzări și rezervări", g_settings: "Setări", g_team: "Echipă", g_tenants: "Chiriași", g_yourteam: "Echipa ta",
     g_overview: "Prezentare generală", g_peoplerev: "Oameni și recenzii", g_safeoversight: "Supravegherea protecției",
@@ -34,7 +34,7 @@ const chrome: Record<string, Record<string, string>> = {
   ur: {
     g_account: "اکاؤنٹ", g_activities: "سرگرمیاں", g_ai: "اے آئی", g_blocks: "بلاکس اور فہرستیں", g_communication: "رابطہ",
     g_firstaid: "ابتدائی طبی امداد، دوائیں اور حادثات", g_franchises: "فرنچائزز", g_learndocs: "سیکھنا اور دستاویزات", g_marketing: "مارکیٹنگ",
-    g_moneygrowth: "رقم اور ترقی", g_money: "رقم", g_mychild: "میرا بچہ", g_myschedule: "میرا شیڈول", g_onsession: "سیشن کے دوران",
+    g_moneygrowth: "رقم اور ترقی", g_money: "رقم", g_mychild: "میرا بچہ", g_mychildren: "میرے بچے", g_myschedule: "میرا شیڈول", g_onsession: "سیشن کے دوران",
     g_oversight: "نگرانی", g_paypersonal: "تنخواہ اور ذاتی", g_pupils: "طلبہ", g_runday: "دن کا انتظام", g_safeguard: "تحفظ اور صحت",
     g_savings: "بچت اور انعامات", g_sell: "فروخت اور بکنگ", g_settings: "ترتیبات", g_team: "ٹیم", g_tenants: "کرایہ دار", g_yourteam: "آپ کی ٹیم",
     g_overview: "جائزہ", g_peoplerev: "افراد اور جائزے", g_safeoversight: "تحفظ کی نگرانی",
@@ -44,7 +44,7 @@ const chrome: Record<string, Record<string, string>> = {
   pa: {
     g_account: "ਖਾਤਾ", g_activities: "ਗਤੀਵਿਧੀਆਂ", g_ai: "ਏਆਈ", g_blocks: "ਬਲਾਕ ਅਤੇ ਸੂਚੀਆਂ", g_communication: "ਸੰਚਾਰ",
     g_firstaid: "ਮੁੱਢਲੀ ਸਹਾਇਤਾ, ਦਵਾਈਆਂ ਅਤੇ ਘਟਨਾਵਾਂ", g_franchises: "ਫ੍ਰੈਂਚਾਇਜ਼ੀਆਂ", g_learndocs: "ਸਿੱਖਣਾ ਅਤੇ ਦਸਤਾਵੇਜ਼", g_marketing: "ਮਾਰਕੀਟਿੰਗ",
-    g_moneygrowth: "ਪੈਸਾ ਅਤੇ ਵਾਧਾ", g_money: "ਪੈਸਾ", g_mychild: "ਮੇਰਾ ਬੱਚਾ", g_myschedule: "ਮੇਰੀ ਸਮਾਂ-ਸਾਰਣੀ", g_onsession: "ਸੈਸ਼ਨ ਦੌਰਾਨ",
+    g_moneygrowth: "ਪੈਸਾ ਅਤੇ ਵਾਧਾ", g_money: "ਪੈਸਾ", g_mychild: "ਮੇਰਾ ਬੱਚਾ", g_mychildren: "ਮੇਰੇ ਬੱਚੇ", g_myschedule: "ਮੇਰੀ ਸਮਾਂ-ਸਾਰਣੀ", g_onsession: "ਸੈਸ਼ਨ ਦੌਰਾਨ",
     g_oversight: "ਨਿਗਰਾਨੀ", g_paypersonal: "ਤਨਖਾਹ ਅਤੇ ਨਿੱਜੀ", g_pupils: "ਵਿਦਿਆਰਥੀ", g_runday: "ਦਿਨ ਦਾ ਪ੍ਰਬੰਧ", g_safeguard: "ਸੁਰੱਖਿਆ ਅਤੇ ਸਿਹਤ",
     g_savings: "ਬੱਚਤ ਅਤੇ ਇਨਾਮ", g_sell: "ਵਿਕਰੀ ਅਤੇ ਬੁਕਿੰਗਾਂ", g_settings: "ਸੈਟਿੰਗਾਂ", g_team: "ਟੀਮ", g_tenants: "ਕਿਰਾਏਦਾਰ", g_yourteam: "ਤੁਹਾਡੀ ਟੀਮ",
     g_overview: "ਸੰਖੇਪ ਝਲਕ", g_peoplerev: "ਲੋਕ ਅਤੇ ਸਮੀਖਿਆਵਾਂ", g_safeoversight: "ਸੁਰੱਖਿਆ ਨਿਗਰਾਨੀ",
@@ -54,7 +54,7 @@ const chrome: Record<string, Record<string, string>> = {
   bn: {
     g_account: "অ্যাকাউন্ট", g_activities: "কার্যক্রম", g_ai: "এআই", g_blocks: "ব্লক ও তালিকা", g_communication: "যোগাযোগ",
     g_firstaid: "প্রাথমিক চিকিৎসা, ওষুধ ও ঘটনা", g_franchises: "ফ্র্যাঞ্চাইজি", g_learndocs: "শেখা ও নথি", g_marketing: "মার্কেটিং",
-    g_moneygrowth: "অর্থ ও প্রবৃদ্ধি", g_money: "অর্থ", g_mychild: "আমার সন্তান", g_myschedule: "আমার সময়সূচি", g_onsession: "সেশন চলাকালীন",
+    g_moneygrowth: "অর্থ ও প্রবৃদ্ধি", g_money: "অর্থ", g_mychild: "আমার সন্তান", g_mychildren: "আমার সন্তানরা", g_myschedule: "আমার সময়সূচি", g_onsession: "সেশন চলাকালীন",
     g_oversight: "তত্ত্বাবধান", g_paypersonal: "বেতন ও ব্যক্তিগত", g_pupils: "শিক্ষার্থী", g_runday: "দিনের ব্যবস্থাপনা", g_safeguard: "নিরাপত্তা ও স্বাস্থ্য",
     g_savings: "সঞ্চয় ও পুরস্কার", g_sell: "বিক্রি ও বুকিং", g_settings: "সেটিংস", g_team: "দল", g_tenants: "ভাড়াটিয়া", g_yourteam: "আপনার দল",
     g_overview: "সংক্ষিপ্ত বিবরণ", g_peoplerev: "মানুষ ও পর্যালোচনা", g_safeoversight: "নিরাপত্তা তত্ত্বাবধান",
@@ -64,7 +64,7 @@ const chrome: Record<string, Record<string, string>> = {
   ar: {
     g_account: "الحساب", g_activities: "الأنشطة", g_ai: "الذكاء الاصطناعي", g_blocks: "الكتل والقوائم", g_communication: "التواصل",
     g_firstaid: "الإسعافات الأولية والأدوية والحوادث", g_franchises: "الامتيازات", g_learndocs: "التعلّم والمستندات", g_marketing: "التسويق",
-    g_moneygrowth: "المال والنمو", g_money: "المال", g_mychild: "طفلي", g_myschedule: "جدولي", g_onsession: "أثناء الجلسة",
+    g_moneygrowth: "المال والنمو", g_money: "المال", g_mychild: "طفلي", g_mychildren: "أطفالي", g_myschedule: "جدولي", g_onsession: "أثناء الجلسة",
     g_oversight: "الإشراف", g_paypersonal: "الراتب والبيانات الشخصية", g_pupils: "التلاميذ", g_runday: "إدارة اليوم", g_safeguard: "الحماية والصحة",
     g_savings: "المدخرات والمكافآت", g_sell: "البيع والحجوزات", g_settings: "الإعدادات", g_team: "الفريق", g_tenants: "المستأجرون", g_yourteam: "فريقك",
     g_overview: "نظرة عامة", g_peoplerev: "الأشخاص والتقييمات", g_safeoversight: "الإشراف على الحماية",
@@ -74,7 +74,7 @@ const chrome: Record<string, Record<string, string>> = {
   pt: {
     g_account: "Conta", g_activities: "Atividades", g_ai: "IA", g_blocks: "Blocos e anúncios", g_communication: "Comunicação",
     g_firstaid: "Primeiros socorros, medicação e incidentes", g_franchises: "Franquias", g_learndocs: "Aprendizagem e documentos", g_marketing: "Marketing",
-    g_moneygrowth: "Dinheiro e crescimento", g_money: "Dinheiro", g_mychild: "O meu filho", g_myschedule: "O meu horário", g_onsession: "Durante a sessão",
+    g_moneygrowth: "Dinheiro e crescimento", g_money: "Dinheiro", g_mychild: "O meu filho", g_mychildren: "Os meus filhos", g_myschedule: "O meu horário", g_onsession: "Durante a sessão",
     g_oversight: "Supervisão", g_paypersonal: "Pagamento e dados pessoais", g_pupils: "Alunos", g_runday: "Gerir o dia", g_safeguard: "Proteção e saúde",
     g_savings: "Poupança e recompensas", g_sell: "Vender e receber reservas", g_settings: "Definições", g_team: "Equipa", g_tenants: "Inquilinos", g_yourteam: "A sua equipa",
     g_overview: "Visão geral", g_peoplerev: "Pessoas e avaliações", g_safeoversight: "Supervisão da proteção",
@@ -84,7 +84,7 @@ const chrome: Record<string, Record<string, string>> = {
   es: {
     g_account: "Cuenta", g_activities: "Actividades", g_ai: "IA", g_blocks: "Bloques y anuncios", g_communication: "Comunicación",
     g_firstaid: "Primeros auxilios, medicación e incidentes", g_franchises: "Franquicias", g_learndocs: "Aprendizaje y documentos", g_marketing: "Marketing",
-    g_moneygrowth: "Dinero y crecimiento", g_money: "Dinero", g_mychild: "Mi hijo", g_myschedule: "Mi horario", g_onsession: "Durante la sesión",
+    g_moneygrowth: "Dinero y crecimiento", g_money: "Dinero", g_mychild: "Mi hijo", g_mychildren: "Mis hijos", g_myschedule: "Mi horario", g_onsession: "Durante la sesión",
     g_oversight: "Supervisión", g_paypersonal: "Pago y datos personales", g_pupils: "Alumnos", g_runday: "Gestionar el día", g_safeguard: "Protección y salud",
     g_savings: "Ahorros y recompensas", g_sell: "Vender y recibir reservas", g_settings: "Ajustes", g_team: "Equipo", g_tenants: "Inquilinos", g_yourteam: "Tu equipo",
     g_overview: "Resumen", g_peoplerev: "Personas y reseñas", g_safeoversight: "Supervisión de la protección",
@@ -94,7 +94,7 @@ const chrome: Record<string, Record<string, string>> = {
   fr: {
     g_account: "Compte", g_activities: "Activités", g_ai: "IA", g_blocks: "Blocs et annonces", g_communication: "Communication",
     g_firstaid: "Premiers secours, médicaments et incidents", g_franchises: "Franchises", g_learndocs: "Apprentissage et documents", g_marketing: "Marketing",
-    g_moneygrowth: "Argent et croissance", g_money: "Argent", g_mychild: "Mon enfant", g_myschedule: "Mon planning", g_onsession: "Pendant la séance",
+    g_moneygrowth: "Argent et croissance", g_money: "Argent", g_mychild: "Mon enfant", g_mychildren: "Mes enfants", g_myschedule: "Mon planning", g_onsession: "Pendant la séance",
     g_oversight: "Supervision", g_paypersonal: "Paie et infos personnelles", g_pupils: "Élèves", g_runday: "Gérer la journée", g_safeguard: "Protection et santé",
     g_savings: "Épargne et récompenses", g_sell: "Vendre et prendre des réservations", g_settings: "Paramètres", g_team: "Équipe", g_tenants: "Locataires", g_yourteam: "Votre équipe",
     g_overview: "Vue d’ensemble", g_peoplerev: "Personnes et avis", g_safeoversight: "Supervision de la protection",
@@ -104,7 +104,7 @@ const chrome: Record<string, Record<string, string>> = {
   cy: {
     g_account: "Cyfrif", g_activities: "Gweithgareddau", g_ai: "AI", g_blocks: "Blociau a rhestrau", g_communication: "Cyfathrebu",
     g_firstaid: "Cymorth cyntaf, meddyginiaeth a digwyddiadau", g_franchises: "Ffranswisiau", g_learndocs: "Dysgu a dogfennau", g_marketing: "Marchnata",
-    g_moneygrowth: "Arian a thwf", g_money: "Arian", g_mychild: "Fy mhlentyn", g_myschedule: "Fy amserlen", g_onsession: "Yn ystod y sesiwn",
+    g_moneygrowth: "Arian a thwf", g_money: "Arian", g_mychild: "Fy mhlentyn", g_mychildren: "Fy mhlant", g_myschedule: "Fy amserlen", g_onsession: "Yn ystod y sesiwn",
     g_oversight: "Goruchwylio", g_paypersonal: "Cyflog a phersonol", g_pupils: "Disgyblion", g_runday: "Rhedeg y dydd", g_safeguard: "Diogelu ac iechyd",
     g_savings: "Cynilion a gwobrau", g_sell: "Gwerthu a chymryd archebion", g_settings: "Gosodiadau", g_team: "Tîm", g_tenants: "Tenantiaid", g_yourteam: "Eich tîm",
     g_overview: "Trosolwg", g_peoplerev: "Pobl ac adolygiadau", g_safeoversight: "Goruchwylio diogelu",
