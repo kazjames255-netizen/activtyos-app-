@@ -204,7 +204,7 @@ export function Header({ portal }: { portal: PortalKey }) {
       {/* Bare text links spaced like the marketing site's nav — no pill
           container, no panel fill; the bar itself is the background. */}
       {(tabs.length > 0 || commItems.length > 0) && (
-        <nav className="flex min-w-0 items-center gap-4 px-1 sm:gap-6">
+        <nav className="flex min-w-0 items-center gap-2.5 px-1 sm:gap-3">
         {/* overflow-x-auto on just the plain tabs (not the Contact dropdown
             below): the tabs are shrink-0 (see below) so they never squeeze to
             an unreadable sliver, but that means a crowded bar (several tabs +
@@ -216,18 +216,23 @@ export function Header({ portal }: { portal: PortalKey }) {
             colliding with its neighbours. Contact stays OUTSIDE this scroll
             box (its dropdown panel is absolutely positioned off it — nesting
             it inside an overflow-x-auto ancestor would clip the popover). */}
-        <div className="flex min-w-0 items-center gap-4 overflow-x-auto sm:gap-6">
+        <div className="flex min-w-0 items-center gap-2.5 overflow-x-auto py-1 sm:gap-3">
           {tabs.map((t) => {
             const active = view === t.view;
             // The Memberships tab stays a solid pill so it draws the eye whether
             // or not it's the active view — in the site's pink CTA colour
             // (.btn-pink) rather than the old off-palette gold.
-            const fancyStyle = active
-              ? { background: "var(--brand-strong)", color: "#fff", boxShadow: "0 12px 26px -12px var(--brand)" }
-              : { background: "var(--brand)", color: "#fff", boxShadow: "0 12px 26px -12px var(--brand)" };
+            const fancyStyle = {
+              background: "linear-gradient(120deg,#d62f78,#f26a3d)",
+              color: "#fff",
+              boxShadow: active ? "0 0 0 3px rgba(214,47,120,.25), 0 12px 26px -12px #d62f78" : "0 12px 26px -12px #d62f78",
+            };
             // Marketing-site nav treatment: muted ink that goes pink on hover,
             // and the current view stays pink and heavier (.navtab/.navactive).
-            const colourStyle = { color: active ? "var(--brand)" : "var(--ink-2)" };
+            // Outlined pills so each tab reads as a button; the current one is filled.
+            const colourStyle = active
+              ? { background: "var(--brand-soft,#eaf0fc)", color: "var(--brand-ink,#102356)", border: "2px solid var(--brand,#1d3a8f)", boxShadow: "0 8px 18px -12px var(--brand,#1d3a8f)" }
+              : { background: "var(--surface,#fff)", color: "var(--ink-2)", border: "2px solid var(--line,#ece6f1)" };
             return (
               <Link
                 key={t.view}
@@ -236,7 +241,7 @@ export function Header({ portal }: { portal: PortalKey }) {
                 // shrink-0 so a crowded bar never squeezes a tab to an
                 // unreadable icon+sliver — the label always shows from sm up.
                 className={`relative inline-flex shrink-0 items-center gap-1.5 text-[14.5px] no-underline transition-colors duration-150 ${
-                  t.fancy ? "rounded-full px-4 py-1.5 text-[12.5px] font-extrabold" : `hover:text-[var(--brand)] ${active ? "font-extrabold" : "font-semibold"}`
+                  t.fancy ? "rounded-full px-4 py-1.5 text-[12.5px] font-extrabold" : `rounded-full px-3.5 py-1.5 hover:border-[var(--brand)] hover:text-[var(--brand)] ${active ? "font-extrabold" : "font-bold"}`
                 }`}
                 style={t.fancy ? fancyStyle : colourStyle}
               >
