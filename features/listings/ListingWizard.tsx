@@ -676,7 +676,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean } | null>(null);
+  const [done, setDone] = useState<{ waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean } | null>(null);
   const [payClosed, setPayClosed] = useState(false);
   const [paidNow, setPaidNow] = useState(false);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
@@ -738,6 +738,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       let total = 0;
       let voucherDetails: { label: string; value: string }[] | undefined;
       let heldForApproval = false;
+      let seated = false; // any booking the server actually placed (not Waitlisted)
       // A basket spanning two blocks POSTs twice; discount codes must ride on
       // just ONE of them, or they'd come off each block's subtotal (and count as
       // extra redemptions). They apply to the first — the server re-validates.
@@ -786,6 +787,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         refs.push(...res.bookings.map((x) => x.ref));
         // the server's own verdict: an auto-confirm listing still holds the place for approval when, say, a child is outside the listing's age range
         if (res.bookings.some((x) => x.status === "Approval needed")) heldForApproval = true;
+        if (res.bookings.some((x) => x.status !== "Waitlisted")) seated = true;
         total += res.total;
         if (res.voucher?.details?.length) voucherDetails = res.voucher.details;
       }
@@ -800,7 +802,8 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         voucherScheme,
         voucherDetails,
         needsApproval: heldForApproval,
-        payByCard: /^card$/i.test(String(method)),
+        waitlisted: !seated,
+        payByCard: /^card$/i.test(String(method)) && seated,
       });
     } catch (e) {
       setBookState({ busy: false, error: e instanceof Error ? e.message : t("p7cl.errBooking") });
@@ -842,14 +845,18 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
     const valCls = "font-semibold text-[#171534]";
     return (
       <div className="mx-auto max-w-[540px] p-6 text-center">
-        <div className="text-[44px]">{needsApproval ? "📩" : "🎉"}</div>
+        <div className="text-[44px]">{done.waitlisted ? "⏳" : needsApproval ? "📩" : "🎉"}</div>
         <h2 className="mt-2 text-[24px] font-extrabold tracking-[-0.01em] text-[#171534]" style={{ color: "#171534" }}>
-          {needsApproval
+          {done.waitlisted
+            ? `You're on the waiting list${kids ? ` for ${kids}` : ""}`
+            : needsApproval
             ? (kids ? t("p7cl.reqReceivedFor", { kids }) : t("p7cl.reqReceived"))
             : (kids ? t(done.children.length > 1 ? "p7cl.bookedKidsMany" : "p7cl.bookedKids", { kids }) : t("p7cl.bookedYou"))}
         </h2>
         <p className="mt-1.5 text-[13px] text-[#6a6785]">
-          {needsApproval
+          {done.waitlisted
+            ? "Nothing to pay now. We'll email you the moment a place comes up, and you'll only be charged if you take it."
+            : needsApproval
             ? t(scheme ? "p7cl.approvalBodyScheme" : "p7cl.approvalBody", { provider: listing.tenantName || t("p7cl.theProvider") })
             : t("p7cl.confirmEmail")}
         </p>
