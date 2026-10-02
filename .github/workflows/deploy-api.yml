@@ -1,0 +1,44 @@
+# Deploys the API (server/, built from the root Dockerfile) to Railway on every push to main
+# that touches it. Railway's own GitHub source can't read this repo from the project owner's
+# login ("Could not load branches"), so CI uploads with a Railway project token instead.
+# Needs repo secret: RAILWAY_TOKEN (Railway → project → Settings → Tokens, environment: production).
+name: Deploy API to Railway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+      - "Dockerfile"
+      - ".dockerignore"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: railway-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    steps:
+      - name: Check secret
+        id: secrets
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "::warning::RAILWAY_TOKEN not set — skipping API deploy."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ok == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ok == 'true'
+        with:
+          node-version: 24
+      - name: Deploy (builds on Railway)
+        if: steps.secrets.outputs.ok == 'true'
+        run: npx --yes @railway/cli@latest up --ci --service c23fdee0-383e-457a-841a-236655b1474e --environment production
