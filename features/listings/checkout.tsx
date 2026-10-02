@@ -325,16 +325,16 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                     setRoster([...roster, sv]);
                   }}
                   className="flex items-center gap-3 rounded-2xl border-2 p-3 text-start transition active:scale-[0.99] disabled:opacity-45"
-                  style={{ borderColor: added ? "#16a34a" : c.border, background: added ? "#ecfdf3" : "#fff", boxShadow: added ? "0 8px 22px -12px rgba(22,163,74,.55)" : "0 6px 16px -12px rgba(20,30,90,.35)" }}>
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[19px] font-extrabold text-white" style={{ background: c.ink }} aria-hidden>{initial}</span>
+                  style={{ borderColor: added ? "#16a34a" : "#c7d2f0", background: added ? "#ecfdf3" : "#fff", boxShadow: added ? "0 8px 22px -12px rgba(22,163,74,.55)" : "0 6px 16px -12px rgba(20,30,90,.35)" }}>
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[19px] font-extrabold text-white" style={{ background: added ? "#16a34a" : "#1d3a8f" }} aria-hidden>{initial}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15.5px] font-extrabold" style={{ color: c.ink }}>{sv.name}</span>
+                    <span className="block truncate text-[15.5px] font-extrabold" style={{ color: "#171534" }}>{sv.name}</span>
                     <span className="mt-0.5 block text-[12px] leading-snug" style={{ color: bad ? "#b91c1c" : tk.muted }}>
                       {bad ?? (added ? tr("p7ck.takeOffBooking", { name: sv.name }) : tr("p7ck.addToBooking", { name: sv.name }))}
                     </span>
                   </span>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-[17px] font-black"
-                    style={added ? { background: "#16a34a", borderColor: "#16a34a", color: "#fff" } : { borderColor: c.border, color: c.ink }} aria-hidden>
+                    style={added ? { background: "#16a34a", borderColor: "#16a34a", color: "#fff" } : { borderColor: "#1d3a8f", color: "#1d3a8f" }} aria-hidden>
                     {added ? "✓" : "+"}
                   </span>
                 </button>
