@@ -2488,7 +2488,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         </div>
       )}
 
-      {booking?.error && (
+      {booking?.error && !(() => {
+        // Once the named child has been taken off, their error is stale.
+        const m = /^(.+?) already has a place on/.exec(booking.error);
+        return !!m && !b.rosterNames.includes(m[1]);
+      })() && (
         <div className="mt-2 text-[11.5px] font-semibold" style={{ color: "#dc2626" }}>
           {booking.error}
           {(() => {
