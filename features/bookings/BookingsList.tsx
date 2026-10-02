@@ -81,6 +81,12 @@ function prettyBookedOn(b: { createdAt?: string }, t: (k: string) => string): st
   });
 }
 
+/** One accent per Bookings tab, so the row isn't a wall of identical pills. */
+const TAB_TONE: Record<string, string> = {
+  all: "#1d3a8f", approval: "#d97706", confirmed: "#15803d", waitlisted: "#0e7490", unpaid: "#c2410c",
+  unreconciled: "#7c3aed", cancelled: "#b91c1c", requests: "#be185d", refunds: "#4338ca",
+};
+
 export function BookingsList({ compact = false }: { compact?: boolean }) {
   const t = useT();
   const w = useWord();
@@ -208,14 +214,14 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={
-                "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-[5px] text-[12px] font-semibold transition-colors " +
-                (on
-                  ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                  : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--ink-3)]")
-              }
+              // Each tab has its own colour so they are told apart at a glance:
+              // outlined and tinted when idle, solid with a shadow when chosen.
+              style={on
+                ? { background: TAB_TONE[key], borderColor: TAB_TONE[key], color: "#fff", boxShadow: `0 4px 12px ${TAB_TONE[key]}55` }
+                : { borderColor: TAB_TONE[key], color: TAB_TONE[key], background: `${TAB_TONE[key]}12` }}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border-2 px-3.5 py-[6px] text-[12.5px] font-extrabold transition-colors hover:brightness-95"
             >
-              {t("p7bkl.tab_" + key)} <span className="opacity-60">{count}</span>
+              {t("p7bkl.tab_" + key)} <span className={on ? "opacity-80" : "rounded-full bg-white/70 px-1.5 text-[11px]"}>{count}</span>
             </button>
           );
         })}

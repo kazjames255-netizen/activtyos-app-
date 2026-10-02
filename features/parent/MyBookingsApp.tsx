@@ -1237,6 +1237,7 @@ function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
   );
 }
 
+const PARENT_TAB_TONE: Record<string, string> = { all: "#1d3a8f", topay: "#c2410c", upcoming: "#15803d", past: "#0e7490", cancelled: "#b91c1c" };
 type BookingFilter = "all" | "topay" | "upcoming" | "past" | "cancelled";
 
 // Meals ordered from the Meals area after booking — folded back onto the
@@ -1498,10 +1499,10 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                         key={t.key}
                         type="button"
                         onClick={() => setFilter(t.key)}
-                        className="cursor-pointer rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition-colors"
+                        className="cursor-pointer rounded-full border-2 px-3.5 py-1.5 text-[13px] font-extrabold transition-colors hover:brightness-95"
                         style={active
-                          ? { borderColor: "var(--brand-2)", background: "var(--brand-2)", color: "#fff" }
-                          : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}
+                          ? { borderColor: PARENT_TAB_TONE[t.key], background: PARENT_TAB_TONE[t.key], color: "#fff", boxShadow: `0 4px 12px ${PARENT_TAB_TONE[t.key]}55` }
+                          : { borderColor: PARENT_TAB_TONE[t.key], background: `${PARENT_TAB_TONE[t.key]}12`, color: PARENT_TAB_TONE[t.key] }}
                       >
                         {t.label}
                         <span className={active ? "ms-1.5 opacity-80" : "ms-1.5 text-[var(--ink-3)]"}>{counts[t.key]}</span>
