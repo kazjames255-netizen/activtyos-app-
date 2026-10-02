@@ -270,7 +270,14 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     catch (e) { setError(e instanceof Error ? e.message : tr("comms.moveFailed")); }
   }
 
+  // one send at a time: a double-click must never post the same message twice
+  const sendingRef = useRef(false);
   async function send() {
+    if (sendingRef.current) return;
+    sendingRef.current = true;
+    try { await sendNow(); } finally { sendingRef.current = false; }
+  }
+  async function sendNow() {
     if (!draft.trim()) return;
     try {
       if (composing && composeMode === "group") {

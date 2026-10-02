@@ -25,6 +25,17 @@ import { applyTokens, bookingCtx, hasMergeTokens, mergeContextForEmail, mergeCon
 export const messages = Router();
 const threadsCol = db.collection("threads");
 const msgsCol = db.collection("messages");
+
+/** True when the SAME sender already posted the SAME text into this thread in the last 10 seconds: a double-click or a retry, never two real messages. */
+async function isDuplicateSend(threadId: string, from: string, body: string, nowIso: string): Promise<boolean> {
+  try {
+    const recent = await msgsCol.where("threadId", "==", threadId).where("body", "==", body).limit(10).get();
+    const t = Date.parse(nowIso);
+    return recent.docs.some((d) => d.get("from") === from && Math.abs(t - Date.parse(String(d.get("createdAt")))) < 10_000);
+  } catch {
+    return false; // never block a real message because the check failed
+  }
+}
 const isOperator = (role: Role) => role === "staff" || role === "company" || role === "freelancer" || role === "franchise";
 
 const threadId = (tenantId: string, email: string) => `${tenantId}__${email.toLowerCase()}`;
@@ -254,6 +265,7 @@ messages.post("/", (req, res, next) => (req.auth?.role === "parent" ? parentSend
   const existing = await tRef.get();
   const senderName = from === "parent" ? parentName : (req.user?.name ?? "Provider");
 
+  if (await isDuplicateSend(id, from, body, now)) { res.status(200).json({ ok: true, duplicate: true, threadId: id }); return; }
   await tRef.set({
     tenantId,
     tenantName: existing.exists ? (existing.data()!.tenantName as string) : await tenantName(tenantId),
@@ -352,6 +364,7 @@ messages.post("/from-booking", async (req, res) => {
   const tRef = threadsCol.doc(id);
   const existing = await tRef.get();
   const senderName = req.user?.name ?? "Provider";
+  if (await isDuplicateSend(id, "operator", body, now)) { res.status(201).json({ ok: true, threadId: id, duplicate: true }); return; }
   await tRef.set({
     tenantId,
     tenantName: existing.exists ? (existing.data()!.tenantName as string) : pName,
