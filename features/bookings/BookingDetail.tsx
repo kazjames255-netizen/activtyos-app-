@@ -624,13 +624,20 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           </>
         );
       })()}
-      {(b.pay === "Invoice sent" || b.pay === "Unpaid") && (
+      {/* A cancelled booking with no refund waiting has nothing left to action: say so, and don't offer to chase a payment for it. */}
+      {b.status === "Cancelled" && !(b.cancel?.refund === "full" || b.cancel?.refund === "partial" || b.cancel?.refund === "pending") && (
+        <div className="w-full rounded-lg border border-[#e0e3ee] bg-[#f6f7fb] px-3 py-2 text-[12px] font-semibold leading-[1.5] text-[#4a4763]">
+          {t("p7bd.cancelledNothingToDo")}
+          {(b.pay === "Invoice sent" || b.pay === "Unpaid") && <> {t("p7bd.cancelledNoPayment")}</>}
+        </div>
+      )}
+      {(b.pay === "Invoice sent" || b.pay === "Unpaid") && b.status !== "Cancelled" && b.status !== "Declined" && (
         <>
           <Button onClick={() => act(b.ref, "paid")}>{t("p7bd.markPaid")}</Button>
           <Button onClick={() => act(b.ref, "resend")}>{t("p7bd.resendInvoice")}</Button>
         </>
       )}
-      {b.pay === "Awaiting voucher payment" && (
+      {b.pay === "Awaiting voucher payment" && b.status !== "Cancelled" && b.status !== "Declined" && (
         <Button variant="primary" onClick={() => act(b.ref, "paid")}>{pendingPayActionT(t, w, b)}</Button>
       )}
       {b.status !== "Cancelled" && b.status !== "Declined" && (
