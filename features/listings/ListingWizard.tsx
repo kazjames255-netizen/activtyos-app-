@@ -675,7 +675,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[] } | null>(null);
+  const [done, setDone] = useState<{ refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean } | null>(null);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
   useEffect(() => {
     // Signed out this 401s, which just means there's nothing saved to match.
@@ -734,6 +734,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       const refs: string[] = [];
       let total = 0;
       let voucherDetails: { label: string; value: string }[] | undefined;
+      let heldForApproval = false;
       // A basket spanning two blocks POSTs twice; discount codes must ride on
       // just ONE of them, or they'd come off each block's subtotal (and count as
       // extra redemptions). They apply to the first — the server re-validates.
@@ -748,7 +749,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         if (sendCodes) codesSent = true;
         const walletThisPost = walletCap === undefined ? undefined : walletSent ? 0 : walletCap;
         if (walletCap !== undefined) walletSent = true;
-        const res = await apiPost<{ bookings: { ref: string }[]; total: number; voucher?: { scheme: string; details: { label: string; value: string }[] } }>("/api/my/bookings", {
+        const res = await apiPost<{ bookings: { ref: string; status?: string }[]; total: number; voucher?: { scheme: string; details: { label: string; value: string }[] } }>("/api/my/bookings", {
           listingId: listing.id,
           blockId,
           method,
@@ -780,6 +781,8 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
           }),
         });
         refs.push(...res.bookings.map((x) => x.ref));
+        // the server's own verdict: an auto-confirm listing still holds the place for approval when, say, a child is outside the listing's age range
+        if (res.bookings.some((x) => x.status === "Approval needed")) heldForApproval = true;
         total += res.total;
         if (res.voucher?.details?.length) voucherDetails = res.voucher.details;
       }
@@ -793,6 +796,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         lastDate: allDates[allDates.length - 1],
         voucherScheme,
         voucherDetails,
+        needsApproval: heldForApproval,
       });
     } catch (e) {
       setBookState({ busy: false, error: e instanceof Error ? e.message : t("p7cl.errBooking") });
@@ -816,8 +820,8 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
     const scheme = done.voucherScheme;
     // A manual-approval listing holds the place until the provider says yes —
     // nothing is confirmed or charged until then.
-    // same rule as the server: only a listing set to auto-confirm confirms straight away; anything else is a request the provider approves first
-    const needsApproval = d.bookingType !== "auto";
+    // what the server actually decided (a manual listing, or an auto-confirm one that held the place, e.g. a child outside the age range)
+    const needsApproval = done.needsApproval ?? d.bookingType === "manual";
     const provider = scheme ? (tSettings.voucherProviders ?? []).find((v) => v.name === scheme) : undefined;
     // The right account/Ofsted/reference for this listing's setting — shown on
     // the card so the family can pay without hunting through the email.
