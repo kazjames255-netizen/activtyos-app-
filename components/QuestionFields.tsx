@@ -69,6 +69,7 @@ export function QuestionFields({
                   value={value}
                   onChange={(e) => set(key, e.target.value)}
                   title={value || undefined}
+                  placeholder={q.required ? undefined : t("parent.leaveBlankIfNone")}
                   maxLength={q.maxLength ?? DEFAULT_QUESTION_LENGTH}
                   className="w-full"
                 />

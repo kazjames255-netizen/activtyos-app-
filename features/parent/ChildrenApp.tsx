@@ -346,7 +346,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
           {/* Two columns throughout so the whole step fits without scrolling. */}
           <div className="grid gap-3 sm:grid-cols-2">
             <Area label={t("parent.allergies")} placeholder={t("parent.allergiesPlaceholder")} value={allergies} onChange={setAllergies} max={limitFor(settings, "allergies", CHILD_LIMITS)} rows={2} />
-            <Area label={t("parent.medicalLabel")} value={medical} onChange={setMedical} max={limitFor(settings, "medical", CHILD_LIMITS)} rows={2} />
+            <Area label={t("parent.medicalLabel")} placeholder={t("parent.medicalPlaceholder")} value={medical} onChange={setMedical} max={limitFor(settings, "medical", CHILD_LIMITS)} rows={2} />
             {/* Dietary sits here (the provider's "Dietary" question), not on the
                 separate questions page. */}
             {dietaryQ && (
