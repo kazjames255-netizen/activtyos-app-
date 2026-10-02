@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "../firebase";
 import { emailParentWelcome, emailProviderWelcome } from "../lib/emails";
+import { notify } from "../lib/notify";
 
 // Account provisioning at signup — one shot, then locked:
 //   {role: "parent"}                               → parent account
@@ -93,6 +94,17 @@ registerRole.post("/", async (req, res) => {
     });
     // Welcome email with a direct sign-in link (still behind the MAIL_LIVE gate; bell/email failures never block sign-up)
     if (user.email) emailParentWelcome({ to: user.email, firstName: user.name?.split(" ")[0], providerName: homeProviderName });
+    // Tell the provider a new parent has signed up with them (bell, and email if their notification settings allow). Never blocks sign-up.
+    if (homeTenantId) {
+      const who = user.name?.trim() || user.email || "A parent";
+      void notify({
+        tenantId: homeTenantId,
+        to: { kind: "tenant" },
+        category: "booking",
+        title: "New parent signed up",
+        body: `${who}${user.email && who !== user.email ? ` (${user.email})` : ""} created a parent account with you and can now book your activities.`,
+      }).catch(() => {});
+    }
     res.json({ role: "parent", tenantId: null, homeTenantId });
     return;
   }
