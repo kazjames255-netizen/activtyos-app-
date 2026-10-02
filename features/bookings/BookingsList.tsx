@@ -430,13 +430,14 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
             const refundPending = !!b.cancel && ["full", "partial", "pending"].includes(b.cancel.refund ?? "");
             const isVoucherBk = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
             const moveReq = b.dateChangeRequest?.status === "pending" ? b.dateChangeRequest : null;
-            const off = b.status === "Cancelled" && !moveReq;
+            // a cancelled row fades back, unless it still needs the provider to act (a refund to approve), which must stand out
+            const off = b.status === "Cancelled" && !moveReq && !refundPending;
             return (
               <div
                 key={b.ref}
                 className={
                   "overflow-hidden rounded-2xl border bg-[var(--surface)] transition-all " +
-                  (on ? "border-[var(--brand-2)]" : "border-[var(--line)]") +
+                  (on ? "border-[var(--brand-2)]" : refundPending ? "border-[#f59e0b] border-2" : "border-[var(--line)]") +
                   (off ? " opacity-60" : "")
                 }
                 style={{ boxShadow: "0 12px 28px -18px rgba(20,35,90,.4)" }}
@@ -481,7 +482,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     )}
                     {refundPending && (
                       <button onClick={(e) => { e.stopPropagation(); act(b.ref, "refund-approve"); }} title={isVoucherBk ? t("p7bkl.refundSchemeTip") : t("p7bkl.approveIssueTip")}
-                        className="flex-none whitespace-nowrap rounded-full bg-[var(--brand-2,#2f6bd8)] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{isVoucherBk ? t("p7bkl.markSent") : t("p7bkl.approveRefund")}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}</button>
+                        className="flex-none whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_10px_22px_-10px_rgba(194,100,0,.7)] hover:brightness-110" style={{ background: "linear-gradient(120deg,#d97706,#f59e0b)" }}>↩ {isVoucherBk ? t("p7bkl.markSent") : t("p7bkl.approveRefund")}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}</button>
                     )}
                     {!refundPending && b.cancel?.amount != null && b.cancel.amount > 0 && b.cancel.refund !== "none" && (
                       <span title={b.amount > 0 ? `${money(b.cancel.amount)} — ${Math.round((b.cancel.amount / b.amount) * 100)}% of ${money(b.amount)}` : undefined}
