@@ -1097,17 +1097,20 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           <DefRow label={t("parent.childDefLabel")} value={b.child} />
           <DefRow label={t("parent.passLabel")} value={b.pass} />
           {b.timing && <DefRow label={t("parent.timing")} value={b.timing} />}
-          {(info?.location || info?.address || times || b.serviceAddress || (detail?.staff && detail.staff.length > 0)) && (
+          {(loc.location || loc.address || times || b.serviceAddress || (detail?.staff && detail.staff.length > 0)) && (
             <>
               <SectionHead>{t("parent.whereWhen")}</SectionHead>
               {b.serviceAddress?.address || b.serviceAddress?.postcode ? (
                 <div className="py-[4px] text-[12.5px] font-semibold">{t("p8par.mbComeToYou", { addr: [b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ") })}</div>
               ) : (<>
-                {info?.location && <div className="py-[4px] text-[12.5px] font-semibold">📍 {info.location}</div>}
-                {(info?.address || info?.city) && (
-                  <div className="pb-[4px] text-[12px] text-[var(--ink-3)]">{[info.address, info.city].filter(Boolean).join(" · ")}</div>
+                {loc.location && <div className="py-[4px] text-[12.5px] font-semibold">📍 {loc.location}</div>}
+                {(loc.address || loc.city) && (
+                  <div className="pb-[4px] text-[12px] text-[var(--ink-3)]">{[loc.address, loc.city].filter(Boolean).join(" · ")}</div>
                 )}
               </>)}
+              {(b.sessions ?? []).length > 0 && (
+                <div className="py-[2px] text-[12.5px] font-semibold">📅 {(b.sessions ?? []).length === 1 ? (b.sessions ?? [])[0].split(" · ")[0] : `${(b.sessions ?? [])[0].split(" · ")[0]} to ${(b.sessions ?? [])[(b.sessions ?? []).length - 1].split(" · ")[0]}`}</div>
+              )}
               {times && <div className="py-[2px] text-[12.5px]">🕒 {times}</div>}
               {detail?.staff && detail.staff.length > 0 && (
                 <div className="py-[2px] text-[12.5px]">👤 {t("parent.staffOnsite")} {detail.staff.map((s) => s.name).join(", ")}</div>
