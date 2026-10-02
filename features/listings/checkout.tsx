@@ -2489,7 +2489,22 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       )}
 
       {booking?.error && (
-        <div className="mt-2 text-[11.5px] font-semibold" style={{ color: "#dc2626" }}>{booking.error}</div>
+        <div className="mt-2 text-[11.5px] font-semibold" style={{ color: "#dc2626" }}>
+          {booking.error}
+          {(() => {
+            // The server refuses a child who already holds a place that day.
+            // Let the parent take that child off this booking right here.
+            const m = /^(.+?) already has a place on/.exec(booking.error);
+            if (!m) return null;
+            const kid = m[1];
+            return (
+              <button type="button" onClick={() => b.setRoster((r) => r.filter((c) => c.name !== kid))}
+                className="ms-2 rounded-full border px-3 py-1 text-[11.5px] font-extrabold" style={{ borderColor: "#dc2626", color: "#dc2626" }}>
+                Remove {kid} from this booking
+              </button>
+            );
+          })()}
+        </div>
       )}
 
       {ckStage === "pay" && parentMode && (
