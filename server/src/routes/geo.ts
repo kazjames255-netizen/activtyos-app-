@@ -109,6 +109,47 @@ geo.get("/search", async (req, res) => {
   }
 });
 
+// GET /api/geo/address?q= — street-level address suggestions for forms ("find your address"). Uses Google Places Autocomplete (New) when
+// GOOGLE_PLACES_API_KEY is set (server-side, so the key never reaches the browser); without the key it falls back to the OS/Nominatim
+// search above, so the finder never goes dark. Returns only labels (the form fills address + postcode from the picked line).
+const GOOGLE_KEY = process.env.GOOGLE_PLACES_API_KEY;
+async function googleAddresses(q: string): Promise<{ label: string }[]> {
+  const r = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Goog-Api-Key": GOOGLE_KEY! },
+    body: JSON.stringify({ input: q, includedRegionCodes: ["gb"], languageCode: "en-GB" }),
+    signal: AbortSignal.timeout(GEO_TIMEOUT_MS),
+  });
+  if (!r.ok) throw new Error(`Google Places ${r.status}`);
+  const data = (await r.json()) as { suggestions?: { placePrediction?: { text?: { text?: string } } }[] };
+  return (data.suggestions ?? [])
+    .map((x) => x.placePrediction?.text?.text)
+    .filter((t): t is string => !!t)
+    .slice(0, 6)
+    .map((label) => ({ label }));
+}
+geo.get("/address", async (req, res) => {
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  if (q.length < 3) {
+    res.json([]);
+    return;
+  }
+  try {
+    if (GOOGLE_KEY) {
+      const rows = await googleAddresses(q).catch(() => null);
+      if (rows && rows.length) {
+        res.json(rows);
+        return;
+      }
+    }
+    // no key, or Google had nothing / failed: the postcode + place-name search
+    const hits = OS_KEY ? await osNames(q).catch(() => nominatimUK(q)) : await nominatimUK(q);
+    res.json(hits.map((h) => ({ label: h.label })));
+  } catch (e) {
+    res.status(502).json({ error: e instanceof Error ? e.message : "Address lookup failed" });
+  }
+});
+
 // GET /api/geo/tiles/:z/:x/:y.png — the map picture, proxied so the tile key
 // stays server-side and embeds on other sites keep working. OS Maps (Web
 // Mercator raster) when keyed; OSM tiles otherwise. Public + long-cached

@@ -56,6 +56,7 @@ Set these on the **API service** (`server/`). "Required" means the feature named
 | --- | --- | --- |
 | `TRUST_PROXY` | Hop count of proxies in front of the API (default `1` in production, which is right for Railway; `false` disables). Wrong value makes rate limits key on the proxy IP. | `server/src/index.ts:112` |
 | `PORT` | Railway injects this; do not set it. | `server/src/index.ts:425` |
+| `GOOGLE_PLACES_API_KEY` | Optional | Street-level address suggestions on the parent welcome form (`GET /api/geo/address`). Create a key in Google Cloud with Places API (New) enabled, restrict it to that API, and set it on Railway (server-side only). Unset: the finder falls back to postcode and place names. | `server/src/routes/geo.ts` |
 | `STRIPE_PLATFORM_FALLBACK` | **Must be unset or `0` live.** Dev-only: charges the platform account when a provider has not finished Stripe onboarding. The API now forces it off when `NODE_ENV=production` and logs a loud error. Still delete the variable. | `server/src/lib/stripe.ts` |
 | `PUBLIC_API_DOCS` | `1` exposes the interactive API docs in production. Leave unset. | `server/src/index.ts:192` |
 | `MAIL_ALLOWLIST`, `MAIL_PER_TENANT_FROM` | Allowlist for not-live mode; per-tenant From addresses (does not work on Gmail SMTP). | `server/src/lib/mailer.ts:101`, `server/src/lib/sender.ts:34` |

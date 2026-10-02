@@ -43,7 +43,7 @@ export function ParentWelcome() {
     if (timer.current) clearTimeout(timer.current);
     if (v.trim().length < 3) { setHits([]); setShowHits(false); return; }
     timer.current = setTimeout(() => {
-      apiGet<GeoHit[]>(`/api/geo/search?q=${encodeURIComponent(v.trim())}`)
+      apiGet<GeoHit[]>(`/api/geo/address?q=${encodeURIComponent(v.trim())}`)
         .then((r) => { setHits(r ?? []); setShowHits(true); })
         .catch(() => { setHits([]); setShowHits(false); });
     }, 300);
