@@ -4038,12 +4038,12 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                     <>
                       <div className={`mt-1 truncate text-[18px] font-black ${cond}`}
                         style={{ fontVariantNumeric: "tabular-nums", color: left <= 0 ? "#ff5470" : "#fff" }}>
-                        {left <= 0 ? tr("p7pg.soldOut") : tr("p7pg.leftOfTotal", { left, total })}
+                        {left <= 0 ? tr("p7pg.soldOut") : perDay ? `${total} places a day` : tr("p7pg.leftOfTotal", { left, total })}
                       </div>
                       <div className="mt-1.5 h-1 w-full" style={{ background: "#26304a" }}>
                         <div className="h-full" style={{ width: `${pct}%`, background: left <= 0 ? "#ff5470" : LIME }} />
                       </div>
-                      <div className="mt-1 text-[10.5px]" style={{ color: MUTs }}>{used} booked · {pct}% full</div>
+                      <div className="mt-1 text-[10.5px]" style={{ color: MUTs }}>{perDay ? `Busiest day: ${used} of ${total} booked` : `${used} booked · ${pct}% full`}</div>
                     </>
                   );
                 })()}

@@ -62,10 +62,10 @@
   function openOverlay(kind, id) {
     var overlay = document.createElement("div");
     overlay.style.cssText =
-      "position:fixed;inset:0;z-index:2147483000;background:rgba(10,14,25,.62);" +
-      "display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto;";
+      "position:fixed;inset:0;z-index:2147483000;background:rgba(8,11,20,.94);" +
+      "display:flex;align-items:flex-start;justify-content:center;padding:16px 0 0;overflow:auto;";
     var box = document.createElement("div");
-    box.style.cssText = "position:relative;width:100%;max-width:1080px;";
+    box.style.cssText = "position:relative;width:100%;max-width:1240px;";
     var close = document.createElement("button");
     close.type = "button";
     close.setAttribute("aria-label", "Close booking");
@@ -74,9 +74,9 @@
       "position:absolute;top:-4px;right:0;z-index:1;border:0;background:transparent;" +
       "color:#fff;font-size:30px;line-height:1;cursor:pointer;padding:4px 10px;";
     var frame = makeFrame(kind, id);
-    frame.style.height = "min(92vh, 1400px)";
-    frame.style.borderRadius = "18px";
-    frame.style.background = "#f4f7ff";
+    frame.style.height = "calc(100vh - 16px)";
+    frame.style.borderRadius = "14px 14px 0 0";
+    frame.style.background = "#0b0e14";
 
     function dismiss() {
       overlay.remove();
