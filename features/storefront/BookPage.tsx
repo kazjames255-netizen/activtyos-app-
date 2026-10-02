@@ -40,7 +40,14 @@ export function BookPage({ id }: { id: string }) {
     window.addEventListener("error", onErr);
     window.addEventListener("unhandledrejection", onRej);
     send("mounted", "book page mounted");
-    return () => { window.removeEventListener("error", onErr); window.removeEventListener("unhandledrejection", onRej); };
+    // A few seconds of what the page has actually drawn.
+    let n = 0;
+    const beat = setInterval(() => {
+      const b = document.body;
+      send("beat", `h=${b.scrollHeight} text=${b.innerText.length} imgs=${document.images.length} bg=${getComputedStyle(b).backgroundColor} op=${getComputedStyle(b).opacity} vis=${document.visibilityState}`);
+      if (++n >= 5) clearInterval(beat);
+    }, 2000);
+    return () => { clearInterval(beat); window.removeEventListener("error", onErr); window.removeEventListener("unhandledrejection", onRej); };
   }, [embedded]);
   // Arrived from an embedded storefront grid — offer the way back.
   const fromStore = sp.get("from") === "store";
