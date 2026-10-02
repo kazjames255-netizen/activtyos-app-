@@ -17,7 +17,12 @@ export const registerRole = Router();
 const schema = z.discriminatedUnion("role", [
   // Postcode is captured at signup so the customer browse can sort/filter by
   // distance without asking again. Optional — a parent can skip it.
-  z.object({ role: z.literal("parent"), postcode: z.string().trim().max(12).optional() }),
+  z.object({
+    role: z.literal("parent"),
+    postcode: z.string().trim().max(12).optional(),
+    // The provider the parent picked on the sign-up page (a tenant id from /api/providers). Remembered on the account as the parent's home provider.
+    providerId: z.string().trim().max(80).optional(),
+  }),
   z.object({
     role: z.enum(["company", "freelancer"]),
     businessName: z.string().trim().min(2).max(80),
@@ -72,13 +77,20 @@ registerRole.post("/", async (req, res) => {
   }
 
   if (parsed.data.role === "parent") {
+    // Only a provider that really exists can be a parent's home provider; an unknown id is ignored, not an error.
+    let homeTenantId: string | null = null;
+    if (parsed.data.providerId) {
+      const t = await db.collection("tenants").doc(parsed.data.providerId).get();
+      if (t.exists) homeTenantId = t.id;
+    }
     await userRef.set({
       email: user.email ?? null,
       role: "parent",
       chosen: true,
       ...(parsed.data.postcode ? { postcode: parsed.data.postcode } : {}),
+      ...(homeTenantId ? { homeTenantId } : {}),
     });
-    res.json({ role: "parent", tenantId: null });
+    res.json({ role: "parent", tenantId: null, homeTenantId });
     return;
   }
 

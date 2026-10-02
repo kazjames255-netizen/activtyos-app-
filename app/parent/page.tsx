@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { post as apiPost } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { FieldLabel, Input } from "@/components/ui";
 import { AUTH_LIGHT, AosMark, AosWordmark } from "@/components/auth/AuthBrand";
@@ -89,9 +90,29 @@ function ParentAuth() {
     setError(null);
 
     if (tab === "up") {
-      // The provider lookup and parent-account creation are not wired yet —
-      // say so rather than failing silently or pretending it worked.
-      setError(t("p8par.lgSignupOff"));
+      // A parent account only means something next to the club their child attends, so the provider must be picked from the directory first.
+      if (!picked) { setError(t("p8par.lgPickProvider")); return; }
+      if (password.length < 6) { setError(t("p8par.lgPwShort")); return; }
+      setBusy(true);
+      try {
+        await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
+        try {
+          await apiPost("/api/register-role", { role: "parent", providerId: picked.id });
+        } catch {
+          setError(t("p8par.lgCreateFailed"));
+          setBusy(false);
+          return;
+        }
+        // straight to the provider's booking page: the booking is what links the family to them
+        router.replace(`/store/${picked.id}`);
+      } catch (err) {
+        const code = (err as { code?: string })?.code ?? "";
+        if (code === "auth/email-already-in-use") setError(t("p8par.lgEmailTaken"));
+        else if (code === "auth/weak-password") setError(t("p8par.lgPwShort"));
+        else if (code === "auth/network-request-failed") setError(t("p8par.lgNetwork"));
+        else setError(t("p8par.lgCreateFailed"));
+        setBusy(false);
+      }
       return;
     }
 
@@ -116,7 +137,7 @@ function ParentAuth() {
     <button
       type="button"
       onClick={() => { setTab(id); setError(null); }}
-      className="flex-1 rounded-[10px] px-4 py-2 text-[13.5px] font-extrabold transition"
+      className="flex-1 rounded-[10px] px-4 py-3 text-[15.5px] font-extrabold transition"
       style={
         tab === id
           ? { background: "#fff", color: "var(--brand)", boxShadow: "0 1px 3px rgba(16,24,64,.10)" }
@@ -129,7 +150,7 @@ function ParentAuth() {
 
   return (
     <div
-      className="relative w-full max-w-[520px] rounded-[22px] bg-[var(--surface)] p-9 shadow-[0_24px_70px_-24px_rgba(20,30,90,.28)]"
+      className="relative w-full max-w-[720px] rounded-[22px] bg-[var(--surface)] p-12 shadow-[0_24px_70px_-24px_rgba(20,30,90,.28)]"
       style={{ borderInlineStart: "4px solid #1d3a8f" }}
     >
       <div className="mb-5 flex items-center gap-2.5">
@@ -137,10 +158,10 @@ function ParentAuth() {
         <AosWordmark className="text-[19px] font-extrabold" />
       </div>
 
-      <h1 className="text-[25px] font-extrabold tracking-[-0.01em]" style={{ fontFamily: "var(--ff-display)", color: "var(--ink)" }}>
+      <h1 className="text-[34px] font-extrabold tracking-[-0.01em]" style={{ fontFamily: "var(--ff-display)", color: "var(--ink)" }}>
         {t("p8par.lgTitle")}
       </h1>
-      <p className="mb-5 mt-1 text-[13.5px] text-[var(--ink-2)]">
+      <p className="mb-5 mt-1 text-[16px] text-[var(--ink-2)]">
         {t("p8par.lgSub")}
       </p>
 

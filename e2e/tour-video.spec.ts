@@ -22,6 +22,7 @@ const DEMO_DRAFT = { id: "cdraft-demo", name: "Autumn term reminder (draft)", su
 
 class Rec {
   t0 = 0; spans: [number, number][] = []; open = -1;
+  cues: { t: number; step: string; text: string }[] = [];
   constructor(public page: Page) {}
   now() { return (Date.now() - this.t0) / 1000; }
   start() { this.t0 = Date.now(); }
@@ -29,6 +30,8 @@ class Rec {
   show() { if (this.open < 0) this.open = this.now() + 0.2; }
   hide() { if (this.open >= 0) { const e = this.now() - 0.1; if (e > this.open + 0.5) this.spans.push([this.open, e]); this.open = -1; } }
   async cap(text: string, o: { step?: string } = {}) {
+    this.cues.push({ t: this.now(), step: o.step ?? "", text });
+    if (process.env.BURN_CAPTIONS !== "1") return; // the tour page shows captions in a panel beside the video (activly-tour-cues.json)
     await this.page.evaluate(({ text, step }) => {
       let d = document.getElementById("__cap"); if (!d) { d = document.createElement("div"); d.id = "__cap"; document.documentElement.appendChild(d); }
       d.setAttribute("style", "position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:rgba(10,18,50,.94);color:#fff;font:600 26px/1.35 system-ui,-apple-system,sans-serif;padding:20px 48px 20px 48px;display:flex;gap:20px;align-items:center;");
@@ -42,6 +45,7 @@ class Rec {
       d.setAttribute("style", "position:fixed;inset:0;z-index:2147483600;background:linear-gradient(135deg,#1d3a8f,#10195a);color:#fff;font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;justify-content:center;padding:0 140px;");
       d.innerHTML = (tag ? `<div style="align-self:flex-start;background:#ffb703;color:#111;font-weight:800;font-size:22px;border-radius:999px;padding:6px 20px;margin-bottom:28px">${tag}</div>` : "") + `<div style="font-size:60px;font-weight:800;line-height:1.15;margin-bottom:30px">${title}</div>` + lines.map((l) => `<div style="font-size:30px;line-height:1.5;margin:6px 0;color:#dfe7ff">${l}</div>`).join("");
     }, { title, lines, tag: o.tag ?? "" });
+    this.cues.push({ t: this.now(), step: o.tag ?? "", text: [title, ...lines].join(" ") });
     this.show();
     await this.page.waitForTimeout(PROBE ? 300 : o.ms);
     this.hide();
@@ -116,6 +120,12 @@ function finish(rec: Rec, webm: string, out: string, dir: string) {
   const args = ["-y", "-i", webm, ...(process.env.MUSIC_FILE ? ["-stream_loop", "-1"] : []), "-i", music, "-filter_complex", `${vf};${af}`, "-map", "[vout]", "-map", "[aout]", "-t", total.toFixed(2),
     "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-r", "25", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", out];
   execFileSync("ffmpeg", args, { stdio: "pipe" });
+  // caption cues on the FINAL timeline (the cut-out cover frames shift everything), for the side panel on the tour page
+  const mapT = (t: number) => { let off = 0; for (const [a, b] of spans) { if (t < a) return off; if (t <= b) return off + (t - a); off += b - a; } return off; };
+  const starts = rec.cues.map((c) => ({ ...c, t: +mapT(c.t).toFixed(2) })).sort((x, y) => x.t - y.t);
+  const cues = starts.map((c, i) => ({ start: c.t, end: +(i + 1 < starts.length ? starts[i + 1].t : total).toFixed(2), step: c.step, text: c.text })).filter((c) => c.end - c.start > 0.4);
+  fs.writeFileSync(path.join(path.dirname(out), "activly-tour-cues.json"), JSON.stringify(cues, null, 1));
+  const webDir = path.join(ROOT, "public/v2/video"); if (fs.existsSync(webDir)) fs.writeFileSync(path.join(webDir, "activly-tour-cues.json"), JSON.stringify(cues));
   console.log(`final length ${total.toFixed(1)} s from ${spans.length} spans`);
 }
 
@@ -261,7 +271,10 @@ const ALL_SCENES: Scene[] = [
     { cap: "Money in: parents pay into your own Stripe account, and Tax-Free Childcare and childcare vouchers are recorded against the booking by reference.", act: async ({ page }) => wander(page, [[500, 350], [800, 450], [600, 600]]) },
   ] },
   { view: "schedule", step: "Rota", expect: /Hannah/, beats: [
-    { cap: "Staff schedule: build the rota and publish it to your team.", act: async ({ page }) => wander(page, [[500, 350], [800, 450], [600, 600]]) },
+    { cap: "Staff schedule: build the rota by week, by area or by team member, with the wage cost worked out as you roster.", act: async ({ page }) => wander(page, [[500, 350], [800, 450], [600, 600]]) },
+    { cap: "Availability: ask your team when they can work. They answer from their own portal and you roster from their replies.", act: async ({ page }) => { await safe("availability", async () => { await clickAt(page, btn(page, /^availability$/i)); await page.waitForTimeout(1200); }); await wander(page, [[600, 420], [820, 520]]); } },
+    { cap: "Staff checks as you roster: lapsed DBS, first aid and training are flagged on the rota before anyone is put on a session.", act: async ({ page }) => { await safe("rota tab", async () => { await clickAt(page, btn(page, /^rota$/i)); await page.waitForTimeout(1200); }); await wander(page, [[520, 400], [900, 470], [700, 560]]); } },
+    { cap: "Happy with the week? Publish the rota to your team in one click.", act: async ({ page }) => wander(page, [[1180, 330], [900, 470]]) },
   ] },
   { view: "payroll", step: "Payroll", expect: /October 2026|Run payroll/, beats: [
     { cap: "Payroll: tax, National Insurance and pension, payslips, and journals you can post to Xero or QuickBooks.", act: async ({ page }) => wander(page, [[500, 350], [800, 450], [600, 600]]) },
