@@ -1745,6 +1745,22 @@ my.post("/bookings", async (req, res) => {
           accountCreated,
           passwordLink,
         });
+      // The email alone is easy to miss (and is held back while mail isn't
+      // live): raise the family's bell too, with a straight link to pay.
+      const owing = round2(bookings.filter((b) => b.status !== "Waitlisted").reduce((s, b) => s + (b.amount ?? 0), 0));
+      if (bookings[0].email.includes("@") && owing > 0 && listing.tenantId) {
+        const first = bookings.find((b) => b.status !== "Waitlisted") ?? bookings[0];
+        void notify({
+          tenantId: listing.tenantId,
+          to: { kind: "parent", email: bookings[0].email },
+          category: "billing",
+          bellOnly: true,
+          title: `Payment needed · ${first.ref}`,
+          body: `${listing.name} — ${listing.tenantName ?? "your provider"} has booked this for you. Pay £${owing.toFixed(2)} to complete it.`,
+          href: `/custdash/bookings?pay=${encodeURIComponent(first.ref)}`,
+          ref: first.ref,
+        });
+      }
     } else {
       // Match the email to what actually happened: a booking that's already
       // Confirmed (an auto-approve listing) must NOT be told it's "a request
