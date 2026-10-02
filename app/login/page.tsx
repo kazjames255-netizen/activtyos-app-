@@ -215,17 +215,17 @@ function LoginForm() {
 
   return (
     <div
-      className="relative w-full max-w-[520px] overflow-hidden rounded-[22px] bg-[var(--surface)] p-9 shadow-[0_24px_70px_-24px_rgba(20,30,90,.28)]"
+      className="relative w-full max-w-[720px] overflow-hidden rounded-[22px] bg-[var(--surface)] p-12 shadow-[0_24px_70px_-24px_rgba(20,30,90,.28)]"
       style={{ borderInlineStart: "4px solid #1d3a8f" }}
     >
       <div className="mb-5 flex items-center gap-2.5">
         <AosMark />
         <AosWordmark className="text-[19px] font-extrabold" />
       </div>
-      <h1 className="text-[25px] font-extrabold tracking-[-0.01em]" style={{ fontFamily: "var(--ff-display)", color: "var(--ink)" }}>
+      <h1 className="text-[34px] font-extrabold tracking-[-0.01em]" style={{ fontFamily: "var(--ff-display)", color: "var(--ink)" }}>
         {t("p7login.signIn")}
       </h1>
-      <p className="mb-5 mt-1 text-[13.5px] text-[var(--ink-3)]">{t("p7login.welcome")}</p>
+      <p className="mb-5 mt-1 text-[16px] text-[var(--ink-3)]">{t("p7login.welcome")}</p>
       {closedAt !== null ? (
         <div className="rounded-xl border border-[#cfe0f7] bg-[#f5f9ff] p-4">
           <div className="text-[15px] font-extrabold text-[var(--ink)]">
