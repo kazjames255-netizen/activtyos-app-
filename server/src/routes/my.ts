@@ -60,7 +60,6 @@ import { customerAreaOn } from "../lib/customerArea";
 import { NOT_TAKING_BOOKINGS, takesNewBookings } from "../middleware/subscription";
 import { checkCoverage, type CoverageArea } from "../lib/coverageArea";
 import { attachChildcareRefs, childcareOf, childcareRoute, type ChildcareBooking } from "../lib/childcare";
-import { sessionsClearGap } from "../lib/schedulingGap";
 import { autoEnrolFromBooking } from "../lib/hubAutoEnrol";
 
 // Parent ("my") endpoints. Identity comes exclusively from the verified
@@ -1184,63 +1183,7 @@ my.post("/bookings", async (req, res) => {
       }
   }
 
-  // ── Freelancer manual scheduling gap ────────────────────────────────────
-  // Product decision: freelancers get NO algorithmic travel-time buffer — just
-  // a plain "minimum gap between sessions" they set per listing (minutes,
-  // default 30). Enforced as a no-overlap-plus-gap check against the
-  // freelancer's OTHER bookings that day, across all their listings (a
-  // freelancer runs one calendar). Best-effort outside the write transaction —
-  // like the capacity checks above, a genuine photo-finish race is not this
-  // foundational build's concern (company/franchise smarter travel-buffer
-  // logic is explicitly out of scope here).
-  {
-    const tenantType = (await db.collection("tenants").doc(listing.tenantId).get()).data()?.type as string | undefined;
-    // Off unless the provider set a gap on the listing (it is meant for coaches who travel between places); a group class at a venue must never be blocked by it.
-    const gapMinutes = listing.minGapMinutes ?? 0;
-    if (tenantType === "freelancer" && gapMinutes > 0) {
-      // This booking's own date → {start, end}, from the listing's blocks.
-      const myRange = new Map<string, { start: string; end: string }>();
-      for (const d of blocksSnap.docs)
-        for (const s of (d.data() as BlockDoc).sessions)
-          if (blockOfDate.get(s.date) === d.id) myRange.set(s.date, { start: s.start, end: s.end });
-      const myDates = [...new Set(priced.flatMap((p) => p.days))];
-      if (myDates.length && myRange.size) {
-        const otherSnap = await bookingsCol.where("tenantId", "==", listing.tenantId).where("status", "in", ["Confirmed", "Approval needed"]).get();
-        const others = otherSnap.docs.map((d) => fromDoc(d.data() as BookingDoc)).filter((b) => (b.days ?? []).some((day) => myDates.includes(day)));
-        if (others.length) {
-          const otherBlockIds = [...new Set(others.map((b) => b.blockId).filter((id): id is string => !!id))];
-          const otherBlockSnaps = otherBlockIds.length ? await db.getAll(...otherBlockIds.map((id) => db.collection("blocks").doc(id))) : [];
-          const otherRangeByBlock = new Map(
-            otherBlockSnaps.filter((s) => s.exists).map((s) => [s.id, new Map(((s.data() as BlockDoc).sessions ?? []).map((sess) => [sess.date, { start: sess.start, end: sess.end }]))]),
-          );
-          for (const day of myDates) {
-            const mine = myRange.get(day);
-            if (!mine) continue;
-            for (const b of others) {
-              if (!(b.days ?? []).includes(day)) continue;
-              // Another family on the SAME session (same block) is just another attendee, not a second session the coach would have to be at.
-              if (b.blockId && b.blockId === blockOfDate.get(day)) continue;
-              const theirs = b.blockId ? otherRangeByBlock.get(b.blockId)?.get(day) : undefined;
-              if (!theirs) continue;
-              if (!sessionsClearGap(mine.start, mine.end, theirs.start, theirs.end, gapMinutes)) {
-                // Only name the booking (ref + times) when it is THIS family's own.
-                // The clash check spans the freelancer's whole calendar, so it is
-                // usually ANOTHER family's booking — whose ref and times must not
-                // be read out to a stranger (and isn't "your existing booking").
-                const mineToo = (b.email ?? "").trim().toLowerCase() === familyEmail.trim().toLowerCase();
-                res.status(409).json({
-                  error: mineToo
-                    ? `That clashes with your existing booking ${b.ref} (${theirs.start}–${theirs.end} on ${prettyDay(day)}) — you need at least ${gapMinutes} minutes between sessions.`
-                    : `${prettyDay(day)} isn't available at that time — the provider is already booked around then. Please pick another date.`,
-                });
-                return;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+  // (A freelancer "minimum gap between sessions" clash check used to run here. Removed: a provider can run several sessions and bookings at once; it must never block a booking.)
 
   // Automatic discounts across the basket, with the shared engine. The
   // engine prices "these pass lines × N attendees", so when every child has

@@ -1634,11 +1634,6 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
               </div>
             </div>
           )}
-          <div className="mt-2 text-[11px] text-[var(--ink-3)]">{tr("p8lst.waMinGap")}</div>
-          <div className="mt-1 flex items-center gap-2">
-            <Input type="number" min={0} max={480} value={d.minGapMinutes ?? 0} onChange={(e) => upd({ minGapMinutes: e.target.value ? Number(e.target.value) : 0 })} className="w-[100px]" />
-            <span className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.waMinGapNote")}</span>
-          </div>
         </div>
       )}
 
