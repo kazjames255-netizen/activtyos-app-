@@ -758,8 +758,8 @@ bookings.post("/:ref/actions", async (req, res) => {
           category: "booking",
           bellOnly: true,
           title: `A place is available · ${updated.ref}`,
-          body: `${updated.listing}${updated.child ? ` · ${updated.child}` : ""} — a place has come up and is being held for you${until ? ` until ${until}` : ""}. Open it to accept.`,
-          href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
+          body: `${updated.listing}${updated.child ? ` · ${updated.child}` : ""} — a place has come up and is being held for you${until ? ` until ${until}` : ""}. Accept and pay to take it.`,
+          href: `/custdash/bookings?pay=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
       }

@@ -554,8 +554,9 @@ export function emailPlaceOffered(b: Booking, providerName: string): void {
     "A place is yours if you want it",
     `<p style="font-size:14px">Good news ${escapeHtml(b.booker)} — a place has opened up on the dates you were
      waiting for, and it's being held for you <b>for 2 hours${until ? ` (until ${until})` : ""}</b>.</p>
-     <p style="font-size:14px">Sign in to <b>My bookings</b> and accept the offer to take the place —
-     if the hold runs out, it passes to the next family in the queue.</p>`,
+     <p style="font-size:14px"><b>One step to take it:</b> press the button, then accept and pay.
+     If the hold runs out, the place passes to the next family in the queue.</p>
+     <p><a href="${webUrl}/custdash/bookings?pay=${encodeURIComponent(b.ref)}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Accept and pay</a></p>`,
   );
 }
 
