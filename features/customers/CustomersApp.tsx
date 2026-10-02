@@ -32,6 +32,7 @@ import { FamiliesExport, type FamilyRow } from "./FamiliesExport";
 import { FamilyImport } from "./FamilyImport";
 import type { Booking } from "@/features/bookings/types";
 
+import { tidyKids } from "@/lib/tidyKids";
 // ─────────────────────────────────────────────────────────────────────────
 // Leads & customers — the tenant's parent records. SELF-FILLING: every
 // booking (taken or self-served) upserts the family server-side, so this
@@ -261,19 +262,6 @@ const splitName = (name: string) => {
   const parts = name.trim().split(/\s+/);
   return { firstName: parts[0] ?? "", lastName: parts.slice(1).join(" ") };
 };
-
-/** A family's children as chips: a joined entry ("Bella James, Ava James") is split into its children, and the same child never shows twice. */
-function tidyKids<T extends { name: string }>(kids: T[] | undefined): T[] {
-  const out: T[] = [];
-  const seen = new Set<string>();
-  const add = (k: T) => { const key = k.name.trim().toLowerCase(); if (key && !seen.has(key)) { seen.add(key); out.push(k); } };
-  const own = (kids ?? []).filter((k) => !/,|&|\band\b/i.test(k.name));
-  own.forEach(add);
-  for (const k of (kids ?? []).filter((k) => /,|&|\band\b/i.test(k.name))) {
-    for (const part of k.name.split(/\s*(?:,|&|\band\b)\s*/i).map((n) => n.trim()).filter(Boolean)) add({ ...k, name: part, age: undefined } as T);
-  }
-  return out;
-}
 
 export function CustomersApp() {
   const t = useT();

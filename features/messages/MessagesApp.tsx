@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { tidyKids } from "@/lib/tidyKids";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
@@ -63,7 +64,7 @@ interface Customer { id: string; name?: string; email?: string; locationName?: s
 const when = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 // Tidy one-line subtitle for a family: who they parent, where, and their email.
 const familySub = (c: Customer, tr: Tr) => {
-  const kids = (c.children ?? []).map((k) => k.name).filter(Boolean);
+  const kids = tidyKids(c.children).map((k) => k.name).filter(Boolean);
   return [kids.length ? tr("comms.parentOfSub", { kids: kids.join(", ") }) : null, c.locationName ? `📍 ${c.locationName}` : null, c.email || null]
     .filter(Boolean)
     .join("  ·  ");
@@ -301,7 +302,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
         }
         const email = familyTargets[0];
         const c1 = customers.find((c) => c.email === email);
-        const childName = c1?.children?.map((k) => k.name).filter(Boolean).join(" & ");
+        const childName = tidyKids(c1?.children).map((k) => k.name).filter(Boolean).join(" & ");
         const payload = { parentEmail: email, parentName: c1?.name, body: mergeText(draft, { parentName: c1?.name, providerName, childName }), ...(subject.trim() ? { subject: subject.trim() } : {}) };
         const res = await apiPost<{ threadId: string }>("/api/messages", payload);
         setDraft(""); setSubject(""); setComposing(false); setFamilyTargets([]); loadThreads(); open(res.threadId);
@@ -322,7 +323,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
         let body = draft;
         if (mode !== "parent") {
           const c1 = customers.find((c) => c.email === t.parentEmail);
-          const childName = c1?.children?.map((k) => k.name).filter(Boolean).join(" & ");
+          const childName = tidyKids(c1?.children).map((k) => k.name).filter(Boolean).join(" & ");
           body = mergeText(draft, { parentName: t.parentName, providerName, childName });
         }
         const payload = mode === "parent" ? { tenantId: t.tenantId, body } : { parentEmail: t.parentEmail, parentName: t.parentName, body };
@@ -337,7 +338,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   // and can tell families apart by the child, not just a common first name.
   const kidsByEmail = new Map<string, string[]>();
   for (const c of customers)
-    if (c.email) kidsByEmail.set(c.email.toLowerCase(), (c.children ?? []).map((k) => k.name).filter((n): n is string => !!n));
+    if (c.email) kidsByEmail.set(c.email.toLowerCase(), tidyKids(c.children).map((k) => k.name).filter((n): n is string => !!n));
   const withParent = (name: string, email?: string) => {
     if (mode !== "operator") return name;
     const kids = email ? kidsByEmail.get(email.toLowerCase()) ?? [] : [];
@@ -427,7 +428,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   // example names, so an operator sees the result before sending.
   const previewEmail = familyTargets[0] ?? threads?.find((x) => x.id === openId)?.parentEmail;
   const previewCust = previewEmail ? customers.find((c) => c.email === previewEmail) : undefined;
-  const previewChild = previewCust?.children?.map((k) => k.name).filter(Boolean).join(" & ");
+  const previewChild = tidyKids(previewCust?.children).map((k) => k.name).filter(Boolean).join(" & ");
   const previewText = mergeText(draft, {
     parentName: previewCust?.name || "Sarah Smith",
     providerName,
