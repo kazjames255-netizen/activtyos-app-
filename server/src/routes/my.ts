@@ -1217,6 +1217,8 @@ my.post("/bookings", async (req, res) => {
             if (!mine) continue;
             for (const b of others) {
               if (!(b.days ?? []).includes(day)) continue;
+              // Another family on the SAME session (same block) is just another attendee, not a second session the coach would have to be at.
+              if (b.blockId && b.blockId === blockOfDate.get(day)) continue;
               const theirs = b.blockId ? otherRangeByBlock.get(b.blockId)?.get(day) : undefined;
               if (!theirs) continue;
               if (!sessionsClearGap(mine.start, mine.end, theirs.start, theirs.end, gapMinutes)) {
