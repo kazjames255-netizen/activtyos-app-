@@ -281,7 +281,8 @@ async function buildDashboard(tenantId: string, venueId: string | null, franchis
 
   // ── Bookings ──
   const liveBookings = bookings.live.map(lite).filter(inLens);
-  const newThisWeek = bookings.week.map(lite).filter(inLens).length;
+  // Cancelled and declined bookings are not "new bookings".
+  const newThisWeek = bookings.week.map(lite).filter(inLens).filter((b) => b.status !== "Cancelled" && b.status !== "Declined").length;
   const waitlist = liveBookings.filter((b) => b.status === "Waitlisted").length;
   // Outstanding is deliberately an ALL-TIME figure (a debt doesn't age out),
   // and owedNow() is `max(0, amount − received)` per booking with `received`
