@@ -13,6 +13,7 @@ export type PayrollAction =
   | "create-run" | "approve-run" | "publish-run" | "unpublish-run"
   | "edit-settings" | "edit-adjust" | "view-ytd" | "view-timesheets"
   | "view-payslip" | "email-payslip" | "view-onboarding-sensitive" | "edit-onboarding-sensitive"
+  | "view-p60" | "issue-p45" | "view-p45" | "repost-ytd" | "reconcile-ytd"
   | "accounting-post" | "accounting-mapping" | "accounting-connect" | "accounting-disconnect";
 
 const col = db.collection("payrollAuditLog");

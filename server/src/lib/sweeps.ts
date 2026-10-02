@@ -985,6 +985,8 @@ export function startSweeps(): void {
   sweep("scheduled-emails", 60_000, scheduledEmailSends);
   // Learning Hub parent digest + homework nudges — inert unless HUB_DIGEST_ENABLED=1 (lib/hubDigestStore.ts).
   void import("./hubDigestStore").then((m) => m.startDigestSweeps());
+  // Caterer digest, schedule reminders, learning chasers (lib/octSends.ts).
+  void import("./octSends").then((m) => m.startOctSweeps());
   // Once a day is plenty for a retention purge — see the policy comment above.
   sweep("onboarding-retention", 24 * 60 * 60_000, onboardingRetentionPurge);
 }

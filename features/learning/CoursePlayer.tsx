@@ -8,6 +8,7 @@ import { activeQuizVersion, QUIZ_VERSION_LABELS } from "./courseContent";
 import { coursePaletteOf } from "./courseTheme";
 import { CourseBanner } from "./CourseBanner";
 import { openCertificate, makeRef } from "./certificates";
+import { recordAttempt } from "./courseCompletions";
 import { MotionBlock } from "./MotionPlayer";
 import { Figure } from "./CourseFigures";
 import { useSettings } from "@/lib/settings";
@@ -376,7 +377,7 @@ export function BlockView({ b, onDone }: { b: Block; onDone?: () => void }) {
 // builds a CertData from the course + provider settings and calls openCertificate.
 
 // ——— final quiz (~10 min) ———
-function QuizRunner({ qs, pass, versionLabel, courseTitle, onPass, makeCert }: { qs: QuizQ[]; pass: number; versionLabel: string; courseTitle: string; onPass: () => void; makeCert: (name: string, pct: number) => void }) {
+function QuizRunner({ qs, pass, versionLabel, courseTitle, courseId, quizVersion, onPass, makeCert }: { qs: QuizQ[]; pass: number; courseId?: string; quizVersion?: number; versionLabel: string; courseTitle: string; onPass: () => void; makeCert: (name: string, pct: number) => void }) {
   const { t: tr } = useI18n();
   const [ans, setAns] = useState<Record<number, number>>({});
   const [name, setName] = useState("");
@@ -384,7 +385,7 @@ function QuizRunner({ qs, pass, versionLabel, courseTitle, onPass, makeCert }: {
   const score = qs.filter((q, i) => ans[i] === q.a).length;
   const pctScore = qs.length ? Math.round((score / qs.length) * 100) : 0;
   const passed = pctScore >= pass;
-  const submit = () => { setSubmitted(true); if (pctScore >= pass) onPass(); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const submit = () => { setSubmitted(true); if (courseId) recordAttempt({ courseId, title: courseTitle, score: pctScore, correct: score, total: qs.length, quizVersion }); if (pctScore >= pass) onPass(); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }); };
   return (
     <article className="mx-auto max-w-[720px] px-5 py-7 sm:px-8">
       <div className="mb-1 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#6d28d9]">{tr("p8lrn.cpFinalAssessment")} <span className="rounded-full bg-[#f3effe] px-2 py-0.5 text-[10px] normal-case tracking-normal text-[#6d28d9]">{versionLabel}</span></div>
@@ -523,7 +524,7 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
         </aside>
         {/* content */}
         <main className="min-w-0 flex-1 overflow-y-auto">
-          {isQuiz ? <QuizRunner qs={activeQuiz.qs} pass={course.pass ?? 80} versionLabel={tr("p8lrn.cpVersionOfN", { a: (QUIZ_VERSION_LABELS[activeQuiz.idx] ? activeQuiz.idx : 0) + 1, n: activeQuiz.count })} courseTitle={course.title} onPass={() => setDone((d) => new Set(d).add(quizIdx))} makeCert={makeCert} /> : (
+          {isQuiz ? <QuizRunner courseId={course.id} quizVersion={activeQuiz.idx} qs={activeQuiz.qs} pass={course.pass ?? 80} versionLabel={tr("p8lrn.cpVersionOfN", { a: (QUIZ_VERSION_LABELS[activeQuiz.idx] ? activeQuiz.idx : 0) + 1, n: activeQuiz.count })} courseTitle={course.title} onPass={() => setDone((d) => new Set(d).add(quizIdx))} makeCert={makeCert} /> : (
           <article className="mx-auto max-w-[720px] px-5 py-7 sm:px-8">
             {course.theme
               ? <CourseBanner pal={pal} styleId="bubbles" subtitle={course.cat} title={course.title} className="mb-5 rounded-2xl" contentClassName="px-5 py-6 sm:px-6" />

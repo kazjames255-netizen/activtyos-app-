@@ -2652,11 +2652,21 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
   const tr = useT();
   const [q, setQ] = useState("");
   const [bioN, setBioN] = useState<Record<string, number>>({});
-  const updMember = (id: string, patch: Partial<StaffMember>) => patchLocal((s) => ({ ...s, staff: s.staff.map((m) => (m.id === id ? { ...m, ...patch } : m)) }));
-  const writeBio = (m: StaffMember) => { updMember(m.id, { bio: genBio(m.bio, m, bioN[m.id] || 0) }); setBioN((s) => ({ ...s, [m.id]: (s[m.id] || 0) + 1 })); };
+  // The tenant's real team (people who have joined through Team & invites) — so onboarding someone makes them
+  // tickable here without re-typing them into the library's own staff list. Managers only: anyone else gets a 403 and keeps the library list.
+  const [team, setTeam] = useState<{ uid: string; name: string }[]>([]);
+  useEffect(() => { apiGet<{ team?: { uid: string; name: string }[] }>("/api/location-staff").then((r) => setTeam(r.team ?? [])).catch(() => {}); }, []);
+  const teamId = (uid: string) => `u_${uid}`;
+  const toMember = (t: { uid: string; name: string }): StaffMember => { const [first, ...rest] = t.name.trim().split(/\s+/); return { id: teamId(t.uid), first: first || t.name, last: rest.join(" "), bio: "" }; };
+  const known = new Set(local.staff.map((m) => m.id));
+  const all: StaffMember[] = [...local.staff, ...team.filter((t) => !known.has(teamId(t.uid))).map(toMember)];
+  // A team member joins the library list (what customer pages read) the moment they're ticked or given a bio.
+  const adopt = (m: StaffMember, patch: Partial<StaffMember> = {}) => patchLocal((s) => (s.staff.some((x) => x.id === m.id) ? { ...s, staff: s.staff.map((x) => (x.id === m.id ? { ...x, ...patch } : x)) } : { ...s, staff: [...s.staff, { ...m, ...patch }] }));
+  const updMember = (m: StaffMember, patch: Partial<StaffMember>) => adopt(m, patch);
+  const writeBio = (m: StaffMember) => { updMember(m, { bio: genBio(m.bio, m, bioN[m.id] || 0) }); setBioN((s) => ({ ...s, [m.id]: (s[m.id] || 0) + 1 })); };
   const query = q.trim().toLowerCase();
-  const list = query ? local.staff.filter((m) => `${m.first} ${m.last}`.toLowerCase().includes(query)) : local.staff;
-  const assignedCount = local.staff.filter((m) => d.staffIds.includes(m.id)).length;
+  const list = query ? all.filter((m) => `${m.first} ${m.last}`.toLowerCase().includes(query)) : all;
+  const assignedCount = all.filter((m) => d.staffIds.includes(m.id)).length;
   return (
     <div className="mx-auto max-w-[1120px]">
       <StepHead n={9} kicker={tr("p8lst.wbKickStaff")} title={tr("p8lst.wbStaffTitle")} lede={tr("p8lst.wbStaffLede")} />
@@ -2666,7 +2676,7 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("p8lst.wbSearchStaffPh")} className="w-full max-w-[300px]" />
         <span className="text-[11.5px] font-semibold text-[var(--ink-3)]">{tr("p8lst.wbAssignedN", { n: assignedCount })}</span>
       </div>
-      {local.staff.length === 0 ? (
+      {all.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]"><Rich text={tr("p8lst.wbNoStaff")} /></div>
       ) : list.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]">{tr("p8lst.wbNoStaffMatch", { q })}</div>
@@ -2682,13 +2692,13 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
                     <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{m.first} {m.last}</div>
                     <div className="truncate text-[10.5px] text-[var(--ink-3)]">{m.bio ? m.bio : tr("p8lst.wbNoBio")}</div>
                   </div>
-                  <Button sm variant={on ? "primary" : "default"} onClick={() => upd({ staffIds: toggle(d.staffIds, m.id) })}>{on ? tr("p8lst.wbOnsite") : tr("p8lst.wbAssign")}</Button>
+                  <Button sm variant={on ? "primary" : "default"} onClick={() => { if (!on) adopt(m); upd({ staffIds: toggle(d.staffIds, m.id) }); }}>{on ? tr("p8lst.wbOnsite") : tr("p8lst.wbAssign")}</Button>
                 </div>
                 <div className="mb-1 flex items-center justify-between">
                   <FieldLabel>{tr("p8lst.wbBio")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.wbParentsSeeThis")}</span></FieldLabel>
                   <Button sm onClick={() => writeBio(m)}>{tr("p8lst.wbWriteAI")}</Button>
                 </div>
-                <textarea value={m.bio} maxLength={300} onChange={(e) => updMember(m.id, { bio: e.target.value })} placeholder={tr("p8lst.wbBioPh")}
+                <textarea value={m.bio} maxLength={300} onChange={(e) => updMember(m, { bio: e.target.value })} placeholder={tr("p8lst.wbBioPh")}
                   className="h-[58px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 text-[12.5px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
               </div>
             );

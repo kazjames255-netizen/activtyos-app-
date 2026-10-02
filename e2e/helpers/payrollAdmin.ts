@@ -26,10 +26,14 @@ async function assertTestTenant(tenantId: string) {
     out(snap.docs.map((d) => d.data()).sort((x, y) => String(x.at).localeCompare(String(y.at))));
   } else if (cmd === "rawconfig") {
     out((await db.collection("payrollConfig").doc(a.replace(/\//g, "_")).get()).data() ?? null);
+  } else if (cmd === "flag-repost") {
+    await assertTestTenant(a);
+    await db.collection("payrollRuns").doc(`${a}_${b}`).set({ ytdPostFailed: true }, { merge: true });
+    out({ ok: true });
   } else if (cmd === "wipe") {
     await assertTestTenant(a);
     let n = 0;
-    for (const col of ["payrollRuns", "payslipPdfs", "payrollYtd", "payrollAuditLog", "accountingMappings"]) {
+    for (const col of ["payrollRuns", "payslipPdfs", "payrollYtd", "payrollAuditLog", "accountingMappings", "payrollDocs", "payrollYtdPosts", "learningCourses", "learningAttempts", "learningCertificates", "learningCompletions", "mediaUploads"]) {
       const snap = await db.collection(col).where("tenantId", "==", a).get();
       await Promise.all(snap.docs.map((d) => d.ref.delete())); n += snap.size;
     }

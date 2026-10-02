@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { notify, notifyTenantMember } from "../lib/notify";
 import { ukToday, isRealDay } from "../lib/ukDate";
+import { planRollover, type RolloverPolicy, type RolloverProfile } from "../lib/leaveRollover";
 
 // Leave & absence (the holiday planner), on the server.
 //
@@ -259,6 +260,39 @@ leave.put("/config", async (req, res) => {
     ...(parsed.data.profiles ? { profiles: parsed.data.profiles } : {}),
   }, { merge: true });
   res.json({ ok: true });
+});
+
+// POST /api/leave/rollover {apply?, asOf?} — year-end carry-over (managers). DRY-RUN BY DEFAULT: returns, per
+// person, what would carry into the new leave year (capped at policy.carryOverMax) and what would expire.
+// With apply:true it stamps profile.carriedOver + rolledYearStart (so a second call is a no-op). Only this
+// team's own config is read or written; asOf in the future is refused when applying.
+leave.post("/rollover", async (req, res) => {
+  const auth = req.auth!;
+  if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Only a manager can roll leave over" }); return; }
+  const parsed = z.object({ apply: z.boolean().optional(), asOf: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDay, "Not a real calendar date").optional() }).safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const today = ukToday();
+  const asOf = parsed.data.asOf ?? today;
+  if (parsed.data.apply && asOf > today) { res.status(400).json({ error: "Can't roll over to a leave year that hasn't started yet" }); return; }
+  const key = keyOf(req);
+  const cfgRef = db.collection("leaveConfig").doc(key);
+  const run = async (tx: FirebaseFirestore.Transaction | null) => {
+    const cfg = tx ? await tx.get(cfgRef) : await cfgRef.get();
+    const policy = cfg.data()?.policy as RolloverPolicy | undefined;
+    const profiles = ((cfg.data()?.profiles ?? []) as RolloverProfile[]);
+    if (!policy || typeof policy.leaveYearStartMonth !== "number") return { error: "Set the leave policy in Setup first" as const };
+    const absSnap = await col.where("rotaKey", "==", key).get();
+    const plan = planRollover(policy, profiles, absSnap.docs.map((d) => d.data() as AbsenceDoc), asOf);
+    if (parsed.data.apply && tx) {
+      const byId = new Map(plan.rows.filter((r) => !r.skipped).map((r) => [r.id, r]));
+      const next = profiles.map((p) => { const r = byId.get(p.id); return r ? { ...p, carriedOver: r.carry, rolledYearStart: plan.newYearStart } : p; });
+      tx.set(cfgRef, { profiles: next, updatedAt: new Date().toISOString(), lastRollover: { at: new Date().toISOString(), by: req.user?.email ?? null, newYearStart: plan.newYearStart } }, { merge: true });
+    }
+    return { plan };
+  };
+  const out = parsed.data.apply ? await db.runTransaction((tx) => run(tx)) : await run(null);
+  if ("error" in out) { res.status(400).json({ error: out.error }); return; }
+  res.json({ dryRun: !parsed.data.apply, applied: !!parsed.data.apply, ...out.plan });
 });
 
 class HttpError extends Error {

@@ -45,6 +45,11 @@ export function syncLearning(): Promise<void> {
       if (!r.assignments) return; // nothing saved on the server yet — keep this device's list
       try { const cur = JSON.parse(localStorage.getItem(ASSIGN_KEY) || "{}"); localStorage.setItem(ASSIGN_KEY, JSON.stringify({ ...cur, assignments: r.assignments })); } catch { /* ignore */ }
     }),
+    // The manager's course-library edits (content + quizzes) — server-side now, this device keeps a copy.
+    apiGet<{ courses: unknown[] | null }>("/api/learning/courses").then((r) => {
+      if (!r.courses) return;
+      try { localStorage.setItem("aos.learn.courses.v10", JSON.stringify(r.courses)); } catch { /* ignore */ }
+    }),
   ]).then(() => { window.dispatchEvent(new Event(LEARN_EVENT)); }).catch(() => {}).finally(() => { learnSync = null; });
   return learnSync;
 }
@@ -75,6 +80,12 @@ export function useLearnRefresh(): number {
   return n;
 }
 function loadLive(): LiveStore { if (typeof window === "undefined") return {}; try { const v = JSON.parse(localStorage.getItem(LIVE_KEY) || "{}"); return v && typeof v === "object" ? v : {}; } catch { return {}; } }
+
+/** Log one quiz attempt (pass or fail) — the server judges pass/fail against the tenant pass mark. Quiet on failure. */
+export function recordAttempt(a: { courseId: string; title: string; score: number; correct?: number; total?: number; quizVersion?: number }) {
+  if (typeof window === "undefined" || isDemoMode()) return;
+  void apiPost("/api/learning/attempts", a).catch(() => {});
+}
 
 export function recordCompletion(staffName: string, done: CourseDone) {
   if (typeof window === "undefined" || !staffName) return;

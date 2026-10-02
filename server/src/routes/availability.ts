@@ -80,6 +80,7 @@ availability.post("/requests", async (req, res) => {
     body: doc.camp ? `You've been assigned to ${doc.camp.listingName}. Add the days & hours you can work across the ${doc.camp.weeks} weeks.` : `Please add your availability for ${doc.window.label}.`,
     href: "/staff/availability",
     ref: ref.id,
+    sendEmail: true, // the email half (item 25) — notifyTenantMember records emailStatus
   });
   res.status(201).json({ id: ref.id, ...doc });
 });

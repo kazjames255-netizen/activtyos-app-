@@ -317,7 +317,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   // Assignments live on the server (/api/learning/assignments) — staff read
   // them for My learning on their own phones. This device keeps a copy.
   const learnTick = useLearnRefresh();
-  useEffect(() => { void syncLearning().then(() => { try { const x = JSON.parse(localStorage.getItem(KEY) || "null"); if (x?.assignments) setAssignments(withoutDemoAssignments(x.assignments)); } catch { /* ignore */ } }); }, []);
+  useEffect(() => { void syncLearning().then(() => { try { const x = JSON.parse(localStorage.getItem(KEY) || "null"); if (x?.assignments) setAssignments(withoutDemoAssignments(x.assignments)); } catch { /* ignore */ } try { const c = JSON.parse(localStorage.getItem(CKEY) || "null"); if (Array.isArray(c) && c.length) { const seen = new Set(c.map((x: CourseDoc) => x.id)); setCourses([...c, ...SEED_LIBRARY.filter((s) => !seen.has(s.id))]); } } catch { /* ignore */ } }); }, []);
   const persistA = (a: Assignment[]) => {
     setAssignments(a);
     try { localStorage.setItem(KEY, JSON.stringify({ assignments: a })); } catch { /* ignore */ }
@@ -343,7 +343,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   const deletePolicy = (id: string) => { if (typeof window !== "undefined" && !window.confirm(tr("p8lrn.lcConfirmDelPolicy"))) return; persistP(policies.filter((x) => x.id !== id), acks.filter((a) => a.docId !== id)); flash(tr("p8lrn.lcPolicyDeleted")); };
   const confirmRead = (doc: PolicyDoc) => { if (!acks.some((a) => a.docId === doc.id && a.staff === ME)) persistP(policies, [...acks, { docId: doc.id, staff: ME, date: todayISO() }]); setReadingDoc(null); flash(tr("p8lrn.lcConfirmedThanks")); };
   const myPending = policies.filter((p) => !acks.some((a) => a.docId === p.id && a.staff === ME));
-  const persistCourses = (list: CourseDoc[]) => { setCourses(list); try { localStorage.setItem(CKEY, JSON.stringify(list)); } catch { /* ignore */ } };
+  const persistCourses = (list: CourseDoc[]) => { setCourses(list); try { localStorage.setItem(CKEY, JSON.stringify(list)); } catch { /* ignore */ } if (!isDemoMode()) apiPut("/api/learning/courses", { courses: list.filter((c) => { if ((c as { fromHo?: boolean }).fromHo) return false; const seed = SEED_LIBRARY.find((x) => x.id === c.id); return !seed || seed === c || JSON.stringify(seed) !== JSON.stringify(c); }).filter((c) => !SEED_LIBRARY.includes(c)) }).catch((e) => alert(e instanceof Error ? e.message : "Could not save your courses — try again.")); };
   const saveCourse = (c: CourseDoc) => { persistCourses(courses.some((x) => x.id === c.id) ? courses.map((x) => (x.id === c.id ? c : x)) : [...courses, c]); setEditing(null); flash(tr("p8lrn.lcCourseSaved")); };
   const newCourse = () => setEditing({ ...blankCourse("c" + Date.now().toString(36)), pass: settings.learning?.passMark ?? 80, renewMonths: settings.learning?.renewMonths ?? 0 });
   const requireConfirm = settings.learning?.requirePolicyConfirm ?? true;

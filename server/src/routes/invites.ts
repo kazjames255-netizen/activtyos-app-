@@ -7,6 +7,7 @@ import { webUrl } from "../lib/stripe";
 import { notifyBilling, staffHeadroom, takesStaffSeat, updateMeteredQuantities, type SubRecord } from "../lib/billing";
 import { forgetRevocation } from "../middleware/auth";
 import { ukToday } from "../lib/ukDate";
+import { loadSettings } from "../lib/tenantLibrary";
 
 // Invite links — how franchises and staff join a tenant. With an `email`
 // the invite is delivered directly; without one the operator copies the
@@ -121,10 +122,10 @@ invites.post("/", async (req, res) => {
         }),
   });
   if (sentTo) {
-    const lib = await db.collection("libraries").doc(auth.tenantId).get();
-    // Settings → Staff & workforce: a personal welcome line for staff invites.
+    // Settings → Staff & workforce: a personal welcome line for staff invites. A franchise's own
+    // copy applies to its own invites (falls back to head office's — lib/tenantLibrary).
     const inviteMessage = invitedRole === "staff"
-      ? (((lib.data()?.settings as { staff?: { inviteMessage?: string } } | undefined)?.staff?.inviteMessage ?? "").trim() || undefined)
+      ? ((((await loadSettings(auth.tenantId, auth.franchiseId)) as { staff?: { inviteMessage?: string } }).staff?.inviteMessage ?? "").trim() || undefined)
       : undefined;
     emailTeamInvite({
       to: sentTo,
@@ -358,6 +359,61 @@ invites.patch("/:token/lead", async (req, res) => {
     if (u.exists && u.get("tenantId") === req.auth!.tenantId && u.get("role") === "staff") await u.ref.set({ lead: parsed.data.lead }, { merge: true });
   }
   res.json({ ok: true, lead: parsed.data.lead });
+});
+
+// PATCH /api/invites/:token/access — change a member of staff's Roles &
+// permissions role (staffRole = a role id from Setup → Roles & permissions) and/or
+// the sites/listings they're assigned to, AFTER they've been invited or have
+// joined. Until now the role + assignment could only be set when the invite was
+// created; later edits lived in the managing browser's localStorage and never
+// reached the account, so the server-side caps (middleware/access.ts) and site
+// scope (lib/siteScope.ts) kept enforcing the old values. Account holders only
+// (ownPendingInvite); a franchisee only touches its own staff. Audited.
+const accessSchema = z.object({
+  staffRole: z.string().trim().min(1).max(80).optional(),
+  jobTitle: z.string().trim().max(120).optional(),
+  assignment: z.object({
+    mode: z.enum(["none", "all", "locations", "listings"]),
+    ids: z.array(z.string().max(80)).max(200).default([]),
+  }).optional(),
+});
+invites.patch("/:token/access", async (req, res) => {
+  const parsed = accessSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const auth = req.auth!;
+  const found = await ownPendingInvite(req.params.token, auth, res);
+  if (!found) return;
+  if (found.d.role !== "staff") { res.status(400).json({ error: "Only staff have a role and assignment" }); return; }
+  const { staffRole, jobTitle, assignment } = parsed.data;
+  if (staffRole !== undefined) {
+    // Once the tenant has defined roles, only one of them can be handed out — an
+    // unknown id would resolve to "no restrictions" in resolveCaps (fail-open).
+    const settings = await loadSettings(auth.tenantId!, (found.d.franchiseId as string | null) ?? null);
+    const roles = Array.isArray(settings.roles) ? (settings.roles as { id?: string }[]) : [];
+    if (settings.rolesSetAt && !roles.some((r) => r && r.id === staffRole)) {
+      res.status(400).json({ error: "That role doesn't exist in Setup → Roles & permissions" }); return;
+    }
+  }
+  const patch: Record<string, unknown> = {};
+  if (staffRole !== undefined) patch.staffRole = staffRole;
+  if (jobTitle !== undefined) patch.jobTitle = jobTitle || null;
+  if (assignment !== undefined) patch.assignment = assignment;
+  if (!Object.keys(patch).length) { res.status(400).json({ error: "Nothing to change" }); return; }
+  const before = { staffRole: found.d.staffRole ?? null, jobTitle: found.d.jobTitle ?? null, assignment: found.d.assignment ?? null };
+  await found.ref.set(patch, { merge: true });
+  const uid = (found.d.usedBy as string | null) ?? null;
+  if (uid) {
+    const u = await db.collection("users").doc(uid).get();
+    // Same tenant AND same team (head office vs a franchise) AND still staff.
+    if (u.exists && u.get("tenantId") === auth.tenantId && u.get("role") === "staff" && ((u.get("franchiseId") as string | undefined) ?? null) === ((found.d.franchiseId as string | null) ?? null)) {
+      await u.ref.set(patch, { merge: true });
+    }
+  }
+  await db.collection("auditLog").add({
+    tenantId: auth.tenantId, actorUid: req.user!.uid, actorEmail: req.user?.email ?? null, action: "staff.access.update",
+    target: { invite: req.params.token, uid }, before, after: { ...before, ...patch }, at: new Date().toISOString(),
+  }).catch((e) => console.error("[invites] audit:", (e as Error).message));
+  res.json({ ok: true, ...patch });
 });
 
 // DELETE /api/invites/:token — revoke a pending invite (link stops working).

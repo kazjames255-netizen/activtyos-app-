@@ -598,17 +598,20 @@ mealOrders.post("/:id/request", async (req, res) => {
     if (action === "decline" && !isOperator) { res.status(403).json({ error: "Not allowed" }); return; }
     await snap.ref.set({ changeRequest: null, cancelRequest: null }, { merge: true });
     res.json({ ok: true });
+    if (action === "decline") void import("../lib/octSends").then((m) => m.notifyMealRequestDecision({ tenantId: o.tenantId, parentEmail: o.parentEmail, childName: snap.get("childName"), date: o.date, id: snap.id }, "declined", o.cancelRequest ? "removal" : "change")).catch(() => {});
     return;
   }
   if (action === "approve") {
     if (!isOperator) { res.status(403).json({ error: "Requires an operator account" }); return; }
-    if (o.cancelRequest) { await snap.ref.set({ status: "cancelled", changeRequest: null, cancelRequest: null }, { merge: true }); res.json({ ok: true }); return; }
+    const tellParent = (kind: "change" | "removal") => void import("../lib/octSends").then((m) => m.notifyMealRequestDecision({ tenantId: o.tenantId, parentEmail: o.parentEmail, childName: snap.get("childName"), date: o.date, id: snap.id }, "approved", kind)).catch(() => {});
+    if (o.cancelRequest) { await snap.ref.set({ status: "cancelled", changeRequest: null, cancelRequest: null }, { merge: true }); res.json({ ok: true }); tellParent("removal"); return; }
     if (o.changeRequest && o.listingId) {
       const r = await resolveDishForDay(o.tenantId, o.listingId, o.date, o.changeRequest.menuItemId, snap.id);
       if ("error" in r) { res.status(r.code).json({ error: r.error }); return; }
       await snap.ref.set({ items: [r.line], total: r.line.price, changeRequest: null, cancelRequest: null }, { merge: true });
       const after = await snap.ref.get();
       res.json({ id: after.id, ...after.data() });
+      tellParent("change");
       return;
     }
     res.status(400).json({ error: "Nothing to approve" });

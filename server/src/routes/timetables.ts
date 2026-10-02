@@ -59,8 +59,8 @@ const publishSchema = z.object({
   parents: z.boolean(),
   audience: z.enum(["booked", "everyone"]).default("booked"),
   // Whether to actively notify parents when publishing to them. Captured here;
-  // the actual send (email digest + in-app notification to the booked/everyone
-  // audience) is TODO(amir) — see the handoff note. Not part of the frozen
+  // the send (email digest + in-app notification to the booked/everyone
+  // audience) is lib/octSends.ts notifyTimetablePublished. Not part of the frozen
   // `published` snapshot, so pulled off before it's stored.
   notifyEmail: z.boolean().optional(),
   notifyPush: z.boolean().optional(),
@@ -180,6 +180,13 @@ timetables.post("/:id/publish", async (req, res) => {
   await own.snap.ref.set({ published }, { merge: true });
   const after = await own.snap.ref.get();
   res.json(docOut(after.id, after.data()!));
+  // Publish-to-parents with notifyEmail/notifyPush: digest + bell to the audience (lib/octSends.ts).
+  if (published && published.parents && (parsed.data.notifyEmail || parsed.data.notifyPush)) {
+    void import("../lib/octSends").then((m) => m.notifyTimetablePublished(
+      { tenantId: d.tenantId, timetableId: own.snap.id, franchiseId: d.franchiseId ?? null, name: d.name, listingId: d.listingId ?? null, dateFrom: d.dateFrom, dateTo: d.dateTo, audience: parsed.data.audience },
+      { notifyEmail: parsed.data.notifyEmail, notifyPush: parsed.data.notifyPush },
+    )).catch((e) => console.error("[timetable] notify:", (e as Error).message));
+  }
 });
 
 // ── Audience side ───────────────────────────────────────────────────────

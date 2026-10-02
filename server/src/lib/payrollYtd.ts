@@ -85,3 +85,50 @@ export async function getYtd(payKey: string, empId: string, taxYear?: string): P
   const snap = await col.doc(docId(payKey, empId, ty)).get();
   return snap.exists ? (snap.data() as YtdRecord) : null;
 }
+
+// ── Idempotent, auditable posting (item 39a) ──────────────────────────────
+// One ledger doc per (run, employee) in `payrollYtdPosts`, created in the SAME
+// transaction that bumps the YTD total: a replay (retry, repost, double call)
+// finds the ledger doc and changes nothing. The ledger is also the audit trail
+// — it records what each run added, so the YTD can be re-derived/reconciled.
+const posts = db.collection("payrollYtdPosts");
+const postId = (payKey: string, runId: string, empId: string) => `${payKey}_${runId}_${empId}`.replace(/\//g, "_");
+
+export async function addRunToYtdOnce(
+  payKey: string, tenantId: string, franchiseId: string | null, runId: string, empId: string, paidOn: string, line: RunLineAmounts,
+): Promise<{ posted: boolean; record: YtdRecord }> {
+  const taxYear = ukTaxYearOf(paidOn);
+  const ref = col.doc(docId(payKey, empId, taxYear));
+  const pref = posts.doc(postId(payKey, runId, empId));
+  return db.runTransaction(async (tx) => {
+    const [snap, pSnap] = await Promise.all([tx.get(ref), tx.get(pref)]);
+    const prev = (snap.exists ? (snap.data() as YtdTotals) : null);
+    if (pSnap.exists) return { posted: false, record: snap.data() as YtdRecord };
+    const next: YtdRecord = {
+      payKey, tenantId, franchiseId, empId, taxYear,
+      gross: r2((prev?.gross ?? 0) + line.grossM),
+      taxable: r2((prev?.taxable ?? 0) + line.grossM),
+      paye: r2((prev?.paye ?? 0) + line.payeM),
+      eeNi: r2((prev?.eeNi ?? 0) + line.eeNiM),
+      erNi: r2((prev?.erNi ?? 0) + line.erNiM),
+      eePension: r2((prev?.eePension ?? 0) + line.eePenM),
+      erPension: r2((prev?.erPension ?? 0) + line.erPenM),
+      net: r2((prev?.net ?? 0) + line.netM),
+      runs: (prev?.runs ?? 0) + 1,
+      updatedAt: new Date().toISOString(),
+    };
+    tx.set(ref, next, { merge: true });
+    tx.set(pref, { payKey, tenantId, franchiseId, runId, empId, taxYear, paidOn, ...line, postedAt: next.updatedAt });
+    return { posted: true, record: next };
+  });
+}
+
+/** Every ledger entry for an employee+tax year (for reconciliation). */
+export async function ytdPostsFor(payKey: string, empId: string, taxYear: string) {
+  const s = await posts.where("payKey", "==", payKey).where("empId", "==", empId).get();
+  return s.docs.map((d) => d.data()).filter((p) => p.taxYear === taxYear);
+}
+/** Has this run/employee been posted to the ledger? */
+export async function ytdPostExists(payKey: string, runId: string, empId: string): Promise<boolean> {
+  return (await posts.doc(postId(payKey, runId, empId)).get()).exists;
+}

@@ -23,6 +23,9 @@ import { rateLimit } from "./lib/rateLimit";
 import { gzipResponses } from "./lib/gzip";
 import { staffAnnouncements } from "./routes/staffAnnouncements";
 import { learning } from "./routes/learning";
+import { learningCentre } from "./routes/learningCentre";
+import { payrollRecords } from "./routes/payrollRecords";
+import { media } from "./routes/mediaUploads";
 import { leave } from "./routes/leave";
 import { rota } from "./routes/rota";
 import { timeclock } from "./routes/timeclock";
@@ -315,11 +318,14 @@ app.use("/api/timeclock", timeclock);
 app.use("/api/payroll", payroll);
 app.use("/api/accounting", accounting);
 app.use("/api/payroll", payslips); // routes/payslips.ts — real PDF payslips + email, a separate router (no path collisions with the one above)
+app.use("/api/payroll", payrollRecords); // routes/payrollRecords.ts — P60/P45 + YTD reconcile/repost
 app.use("/api/onboarding", onboarding);
 app.use("/api/credentials", credentials);
 app.use("/api/staff-announcements", staffAnnouncements);
 app.use("/api/leave", leave);
 app.use("/api/learning", learning);
+app.use("/api/learning", learningCentre); // courses / attempts / certificates (routes/learningCentre.ts)
+app.use("/api/media", media); // image+video Storage uploads — 503 unless MEDIA_STORAGE_ENABLED=true (routes/mediaUploads.ts)
 app.use("/api/learning-hub", noOakResponse, learningHub);
 app.use("/api/reviews", reviews);
 app.use("/api/availability", availability);

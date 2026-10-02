@@ -5,7 +5,7 @@ import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { loadSettings } from "../lib/tenantLibrary";
 import { decryptField, encryptField } from "../lib/fieldCrypto";
-import { addRunToYtd, getYtd, ukTaxYearOf } from "../lib/payrollYtd";
+import { addRunToYtdOnce, getYtd, ukTaxYearOf } from "../lib/payrollYtd";
 import { auditPayroll } from "../lib/payrollAudit";
 import { rateLimit } from "../lib/rateLimit";
 import { createHash } from "node:crypto";
@@ -363,7 +363,7 @@ payroll.post("/runs/:id/approve", async (req, res) => {
   const paidOn = String(snap.get("paidOn"));
   const lines = (snap.get("lines") as { id?: string; grossM?: number; payeM?: number; eeNiM?: number; erNiM?: number; eePenM?: number; erPenM?: number; netM?: number }[] | undefined) ?? [];
   try {
-    await Promise.all(lines.filter((l) => l.id).map((l) => addRunToYtd(key, tenantId, franchiseId, String(l.id), paidOn, {
+    await Promise.all(lines.filter((l) => l.id).map((l) => addRunToYtdOnce(key, tenantId, franchiseId, String(req.params.id), String(l.id), paidOn, {
       grossM: l.grossM ?? 0, payeM: l.payeM ?? 0, eeNiM: l.eeNiM ?? 0, erNiM: l.erNiM ?? 0, eePenM: l.eePenM ?? 0, erPenM: l.erPenM ?? 0, netM: l.netM ?? 0,
     })));
   } catch (e) {
@@ -371,6 +371,7 @@ payroll.post("/runs/:id/approve", async (req, res) => {
     // shouldn't un-approve it or make the caller think the approval failed.
     // Logged loudly because a missed YTD update needs a human to fix it.
     console.error(`[payroll] YTD update failed for approved run ${req.params.id} (${key}):`, (e as Error).message);
+    await ref.set({ ytdPostFailed: true }, { merge: true }).catch(() => {}); // flags the run for POST /ytd/repost (idempotent per run+employee)
   }
   auditPayroll(req, key, "approve-run", { runId: req.params.id, createdBy: snap.get("createdBy") ?? null, before: { status: "draft" }, after: { status: "approved" } });
   const updated = await ref.get();

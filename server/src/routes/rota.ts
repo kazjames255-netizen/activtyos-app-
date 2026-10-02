@@ -206,6 +206,9 @@ rota.put("/", async (req, res) => {
     return;
   }
   const keep = new Set(shifts.map((s) => s.id));
+  // Newly published shifts (locked false -> true, with a person) → tell that staff member (Setup notifyOnPublish).
+  const justPublished = shifts.filter((s) => s.staffId && (s as { locked?: boolean }).locked === true && existing.get(s.id)?.get("locked") !== true);
+  if (justPublished.length) void import("../lib/octSends").then((m) => m.notifyRotaPublished(auth.tenantId!, auth.franchiseId ?? null, staff, justPublished as { staffId: string | null; date: string; start: string; end: string }[])).catch((e) => console.error("[rota] publish notify:", (e as Error).message));
   const ops: ((b: FirebaseFirestore.WriteBatch) => void)[] = [];
   for (const s of shifts) {
     const before = existing.get(s.id);
