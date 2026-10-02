@@ -313,7 +313,6 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
             {[...new Map(saved.map((sv) => [sv.name.trim().toLowerCase(), sv])).values()].map((sv) => {
               const bad = ageProblem(d, sv, tr);
               const added = roster.some((r) => (r.id && r.id === sv.id) || r.name === sv.name);
-              const c = sexTint(sv.sex, added);
               const initial = (sv.name.trim()[0] ?? "?").toUpperCase();
               return (
                 <button key={sv.id ?? sv.name} type="button" disabled={!!bad}
@@ -328,10 +327,18 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                   style={{ borderColor: added ? "#16a34a" : "#c7d2f0", background: added ? "#ecfdf3" : "#fff", boxShadow: added ? "0 8px 22px -12px rgba(22,163,74,.55)" : "0 6px 16px -12px rgba(20,30,90,.35)" }}>
                   <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[19px] font-extrabold text-white" style={{ background: added ? "#16a34a" : "#1d3a8f" }} aria-hidden>{initial}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15.5px] font-extrabold" style={{ color: "#171534" }}>{sv.name}</span>
-                    <span className="mt-0.5 block text-[12px] leading-snug" style={{ color: bad ? "#b91c1c" : tk.muted }}>
-                      {bad ?? (added ? tr("p7ck.takeOffBooking", { name: sv.name }) : tr("p7ck.addToBooking", { name: sv.name }))}
+                    <span className="block truncate text-[15.5px] font-extrabold" style={{ color: "#171534" }}>
+                      {sv.name}
+                      {sv.dob && <span className="ms-1.5 text-[12px] font-semibold" style={{ color: tk.muted }}>age {ageOn(sv.dob, d.runFrom) ?? "—"}</span>}
                     </span>
+                    <span className="mt-0.5 block text-[12px] leading-snug" style={{ color: bad ? "#b91c1c" : tk.muted }}>
+                      {bad ?? (added ? (comingCount(sv.name.trim()) > 0 ? tr("p7ck.addedAllDates") : tr("p7ck.notOnAnyDates")) : tr("p7ck.addToBooking", { name: sv.name }))}
+                    </span>
+                    {added && (
+                      <span role="button" tabIndex={0} className="mt-1 inline-block text-[12px] font-bold underline" style={{ color: "#1d3a8f" }}
+                        onClick={(e) => { e.stopPropagation(); const ri = roster.findIndex((r) => (r.id && r.id === sv.id) || r.name === sv.name); if (ri >= 0) { setDraft(roster[ri]); setEditing(ri); setOpen(true); } }}
+                        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.click(); }}>{tr("p7ck.editDetails")}</span>
+                    )}
                   </span>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-[17px] font-black"
                     style={added ? { background: "#16a34a", borderColor: "#16a34a", color: "#fff" } : { borderColor: "#1d3a8f", color: "#1d3a8f" }} aria-hidden>
@@ -344,9 +351,11 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
         </div>
       )}
 
-      {roster.length > 0 && (
+      {roster.some((c) => !saved.some((sv) => sv.name.trim().toLowerCase() === c.name.trim().toLowerCase())) && (
         <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
           {roster.map((c, i) => {
+            // children already shown as a card above are not repeated here
+            if (saved.some((sv) => sv.name.trim().toLowerCase() === c.name.trim().toLowerCase())) return null;
             const on = comingCount(c.name.trim());
             // Same two strengths as the chips below: soft while a child is only
             // listed, solid once they're on something.
