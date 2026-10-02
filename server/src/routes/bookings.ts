@@ -57,6 +57,22 @@ import { attachChildcareRefs, childcareOf, isChildcare, paymentRecordsOf, type C
 //   company/freelancer  → their whole tenant
 //   franchise           → their tenant AND their own franchiseId subset
 //   staff               → their tenant, read-only
+/** The email alone is easy to miss (and is held back while mail isn't live), so a
+ *  booking made on the family's behalf also raises their bell with the amount
+ *  and a straight link to the payment. */
+function bellPayLink(b: { tenantId?: string; email: string; ref: string; listing: string; child?: string; amount: number }, tenantId: string): void {
+  void notify({
+    tenantId: b.tenantId ?? tenantId,
+    to: { kind: "parent", email: b.email },
+    category: "billing",
+    bellOnly: true,
+    title: `Payment needed · ${b.ref}`,
+    body: `${b.listing}${b.child ? ` · ${b.child}` : ""} — your provider has booked this for you. Pay £${b.amount.toFixed(2)} to complete it.`,
+    href: `/custdash/bookings?pay=${encodeURIComponent(b.ref)}`,
+    ref: b.ref,
+  });
+}
+
 export const bookings = Router();
 
 const col = db.collection("bookings");
@@ -431,7 +447,7 @@ bookings.post("/", async (req, res) => {
     // Manual bookings sit unpaid until settled — the booker gets the
     // payment-link email. A £0 booking never gets a "pay this" email.
     if (booking.email.includes("@") && booking.status !== "Waitlisted" && booking.amount > 0)
-      emailPaymentLink(booking, tenantName);
+      { emailPaymentLink(booking, tenantName); bellPayLink(booking, tenantId); }
     void upsertCustomerFromBooking(tenantId, booking);
 
     // "3 people are waiting for this date" — the take-a-booking UI shows
@@ -483,9 +499,10 @@ bookings.post("/:ref/actions", async (req, res) => {
             // first email, and the reference is the point of it.
             payRefs: (childcareOf(b as ChildcareBooking).refs ?? []).map((r) => ({ child: r.child, reference: r.paymentReference })),
           });
-          else emailPaymentLink(b, await tenantName());
+          else { emailPaymentLink(b, await tenantName()); bellPayLink(b, b.tenantId ?? ""); }
         } else {
           emailPaymentLink(b, await tenantName());
+          bellPayLink(b, b.tenantId ?? "");
         }
       }
       res.json(b);
