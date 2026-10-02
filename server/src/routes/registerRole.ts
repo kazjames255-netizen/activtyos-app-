@@ -2,7 +2,7 @@ import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "../firebase";
-import { emailProviderWelcome } from "../lib/emails";
+import { emailParentWelcome, emailProviderWelcome } from "../lib/emails";
 
 // Account provisioning at signup — one shot, then locked:
 //   {role: "parent"}                               → parent account
@@ -79,9 +79,10 @@ registerRole.post("/", async (req, res) => {
   if (parsed.data.role === "parent") {
     // Only a provider that really exists can be a parent's home provider; an unknown id is ignored, not an error.
     let homeTenantId: string | null = null;
+    let homeProviderName: string | undefined;
     if (parsed.data.providerId) {
       const t = await db.collection("tenants").doc(parsed.data.providerId).get();
-      if (t.exists) homeTenantId = t.id;
+      if (t.exists) { homeTenantId = t.id; homeProviderName = (t.data() as { name?: string } | undefined)?.name; }
     }
     await userRef.set({
       email: user.email ?? null,
@@ -90,6 +91,8 @@ registerRole.post("/", async (req, res) => {
       ...(parsed.data.postcode ? { postcode: parsed.data.postcode } : {}),
       ...(homeTenantId ? { homeTenantId } : {}),
     });
+    // Welcome email with a direct sign-in link (still behind the MAIL_LIVE gate; bell/email failures never block sign-up)
+    if (user.email) emailParentWelcome({ to: user.email, firstName: user.name?.split(" ")[0], providerName: homeProviderName });
     res.json({ role: "parent", tenantId: null, homeTenantId });
     return;
   }

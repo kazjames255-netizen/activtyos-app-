@@ -676,6 +676,53 @@ export function emailProviderWelcome(p: {
   })().catch((e) => console.error("[mail] provider welcome build failed:", (e as Error).message));
 }
 
+/** Welcome for a parent who has just created an account (POST /api/register-role, role "parent"): confirms the account, names the provider they
+ *  picked and gives a direct link to sign in. Once-ever account email, so it is not gated by Setup -> Email toggles, but it still passes
+ *  the MAIL_LIVE gate in mailer.ts like every other send. */
+export function emailParentWelcome(p: { to: string; firstName?: string; providerName?: string }): void {
+  void (async () => {
+    const signInUrl = `${webUrl}/parent`;
+    const hi = p.firstName?.trim() ? `Hi ${escapeHtml(p.firstName.trim())},` : "Hi,";
+    const withProvider = p.providerName?.trim()
+      ? `Your account is set up with <b>${escapeHtml(p.providerName.trim())}</b>.`
+      : "Your account is set up.";
+    const step = (n: number, title: string, body: string) => `
+      <tr>
+        <td style="padding:10px 0;vertical-align:top;width:34px">
+          <div style="width:26px;height:26px;border-radius:50%;background:#eef4ff;color:#1d3a8f;font-size:13px;font-weight:800;text-align:center;line-height:26px">${n}</div>
+        </td>
+        <td style="padding:10px 0 10px 4px">
+          <div style="font-size:14px;font-weight:800;color:#171534">${escapeHtml(title)}</div>
+          <div style="font-size:13px;color:#4a4763;line-height:1.5;margin-top:2px">${body}</div>
+        </td>
+      </tr>`;
+    const html = `
+    <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
+      <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
+        <span style="font-size:22px;font-weight:800;color:#1d3a8f">ActivityOS</span>
+      </div>
+      <div style="padding:26px 22px">
+        <h2 style="font-size:21px;margin:0 0 12px;color:#171534">Welcome 🎉 you&rsquo;re all set</h2>
+        <p style="font-size:14px;line-height:1.6;margin:0 0 16px">${hi}<br>${withProvider} Use the button below any time to sign in with this email address and the password you chose.</p>
+        <div style="text-align:center;margin:22px 0 18px">
+          <a href="${signInUrl}" style="display:inline-block;background:#1d3a8f;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px">Sign in to your account</a>
+        </div>
+        <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin-bottom:6px">
+          ${step(1, "Book sessions", "Camps, clubs and classes &mdash; pick the dates, pay by card, and see your places at a glance.")}
+          ${step(2, "Add your children", "Save their details once so every booking is quick, and the team has what they need on the day.")}
+          ${step(3, "Message the team", "Ask a question or share a note straight from your account.")}
+        </table>
+        <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:18px 0 0;text-align:center">
+          Button not working? Copy this link into your browser:<br><span style="color:#4a4763">${escapeHtml(signInUrl)}</span><br>
+          If you didn&rsquo;t create this account, you can ignore this email.
+        </p>
+      </div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+    </div>`;
+    sendAs(undefined, "ActivityOS", p.to, "Welcome to ActivityOS — your account is ready", html);
+  })().catch((e) => console.error("[mail] parent welcome build failed:", (e as Error).message));
+}
+
 /** Immediate acknowledgement for the pricing page's "Website design &
  * maintenance" add-on — both its "Add website design & maintenance" (now a
  * real slot booking, sharing the same open-slot pool as /demo — see
