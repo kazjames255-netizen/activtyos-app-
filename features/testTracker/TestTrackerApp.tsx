@@ -56,6 +56,13 @@ function derive(byAccount: Partial<Record<AccountKind, Status>> | undefined, acc
   return "todo";
 }
 
+/** How many of a check's account types have passed (so a check done on Freelancer only reads "part done"). */
+function partOf(r: CheckResult | undefined, accounts: AccountKind[]): { passed: number; total: number } {
+  const accts = accounts.filter((a) => a !== "platform");
+  const passed = accts.filter((a) => r?.byAccount?.[a] === "pass" || r?.byAccount?.[a] === "na").length;
+  return { passed, total: accts.length };
+}
+
 const chip = (bg: string, fg: string): React.CSSProperties => ({ background: bg, color: fg, borderRadius: 999, padding: "2px 10px", fontSize: 12, fontWeight: 800, whiteSpace: "nowrap" });
 
 function Pill({ status }: { status: Status }) {
@@ -68,7 +75,7 @@ export function TestTrackerApp() {
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [area, setArea] = useState<Area | "all">("all");
   const [account, setAccount] = useState<AccountKind | "all">("all");
-  const [statusF, setStatusF] = useState<Status | "all" | "open">("all");
+  const [statusF, setStatusF] = useState<Status | "all" | "open" | "part">("all");
   const [q, setQ] = useState("");
   const [mustOnly, setMustOnly] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -95,19 +102,25 @@ export function TestTrackerApp() {
     return out;
   }, [statusOf]);
   const done = counts.pass + counts.na;
+  // Checks still "to do" overall but already passed on at least one account type.
+  const isPart = useCallback((c: TestCheck) => { const st = statusOf(c); if (st !== "todo") return false; const p = partOf(results[c.id], c.accounts); return p.passed > 0 && p.passed < p.total; }, [statusOf, results]);
+  const partCount = useMemo(() => CATALOGUE.filter(isPart).length, [isPart]);
+  // Account-by-account progress: every (check x account type) is one tick.
+  const slots = useMemo(() => { let t = 0, d = 0; for (const c of CATALOGUE) { const p = partOf(results[c.id], c.accounts); t += p.total; d += p.passed; } return { t, d }; }, [results]);
 
   const byArea = useMemo(() => {
-    const m = new Map<Area, { total: number; done: number; fail: number; open: number }>();
-    for (const a of AREAS) m.set(a.key, { total: 0, done: 0, fail: 0, open: 0 });
+    const m = new Map<Area, { total: number; done: number; fail: number; open: number; part: number }>();
+    for (const a of AREAS) m.set(a.key, { total: 0, done: 0, fail: 0, open: 0, part: 0 });
     for (const c of CATALOGUE) {
       const x = m.get(c.area)!;
       const s = statusOf(c);
       x.total++;
       if (s === "pass" || s === "na") x.done++;
       if (s === "fail" || s === "blocked" || s === "fixed") x.fail++;
+      if (isPart(c)) x.part++;
     }
     return m;
-  }, [statusOf]);
+  }, [statusOf, isPart]);
 
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -117,11 +130,12 @@ export function TestTrackerApp() {
       if (mustOnly && c.priority !== 1) return false;
       const s = statusOf(c);
       if (statusF === "open" && (s === "pass" || s === "na")) return false;
-      if (statusF !== "all" && statusF !== "open" && s !== statusF) return false;
+      if (statusF === "part" && !isPart(c)) return false;
+      if (statusF !== "all" && statusF !== "open" && statusF !== "part" && s !== statusF) return false;
       if (needle && !(`${c.id} ${c.title} ${c.steps.join(" ")} ${c.expected.join(" ")}`.toLowerCase().includes(needle))) return false;
       return true;
     });
-  }, [area, account, statusF, q, mustOnly, statusOf]);
+  }, [area, account, statusF, q, mustOnly, statusOf, isPart]);
 
   async function save(c: TestCheck, patch: { byAccount?: Partial<Record<AccountKind, Status>>; note?: string; bug?: string; fix?: string; status?: Status }) {
     const cur = results[c.id];
@@ -147,6 +161,7 @@ export function TestTrackerApp() {
           <div className="text-[15px] font-extrabold">{done} of {CATALOGUE.length} done</div>
           <div className="text-[13px]" style={{ color: "var(--ink-3,#8a86a3)" }}>{CATALOGUE.length ? Math.round((done / CATALOGUE.length) * 100) : 0}% complete</div>
         </div>
+        <div className="mt-1 text-[12.5px] font-semibold" style={{ color: "var(--ink-2,#4a4763)" }}>Account by account: {slots.d} of {slots.t} ticks done ({slots.t ? Math.round((slots.d / slots.t) * 100) : 0}%)</div>
         <div className="mt-2 h-3 overflow-hidden rounded-full" style={{ background: "var(--panel,#eef1f8)" }}>
           <div style={{ width: `${CATALOGUE.length ? (done / CATALOGUE.length) * 100 : 0}%`, height: "100%", background: "linear-gradient(90deg,#16a34a,#4ade80)" }} />
         </div>
@@ -157,6 +172,10 @@ export function TestTrackerApp() {
               {STATUS_META[s].label} · {counts[s]}
             </button>
           ))}
+          <button type="button" onClick={() => setStatusF(statusF === "part" ? "all" : "part")}
+            style={{ ...chip("#ddf3e4", "#0f6b34"), outline: statusF === "part" ? "2px solid var(--brand,#1d3a8f)" : "none", cursor: "pointer", border: 0 }}>
+            Part done (some account types ticked) · {partCount}
+          </button>
           <button type="button" onClick={() => setStatusF(statusF === "open" ? "all" : "open")}
             style={{ ...chip("var(--brand-soft,#eaf0fc)", "var(--brand-ink,#102356)"), outline: statusF === "open" ? "2px solid var(--brand,#1d3a8f)" : "none", cursor: "pointer", border: 0 }}>
             Everything still open
@@ -180,7 +199,7 @@ export function TestTrackerApp() {
               <div className="mt-2 h-2 overflow-hidden rounded-full" style={{ background: "var(--panel,#eef1f8)" }}>
                 <div style={{ width: `${x.total ? (x.done / x.total) * 100 : 0}%`, height: "100%", background: "#16a34a" }} />
               </div>
-              <div className="mt-1 text-[12px] font-bold">{x.done} of {x.total} done</div>
+              <div className="mt-1 text-[12px] font-bold">{x.done} of {x.total} done{x.part > 0 && <span style={{ color: "#0f6b34" }}> · {x.part} part done</span>}</div>
             </button>
           );
         })}
@@ -238,10 +257,15 @@ function CheckCard({ c, r, status, open, onToggle, onSave }: {
         <span className="flex flex-wrap gap-1">
           {accts.map((a) => {
             const s = r?.byAccount?.[a] ?? "todo";
-            return <span key={a} title={`${ACCOUNT_LABEL[a]}: ${STATUS_META[s].label}`} style={chip(STATUS_META[s].bg, STATUS_META[s].fg)}>{ACCOUNT_LABEL[a]}</span>;
+            return <span key={a} title={`${ACCOUNT_LABEL[a]}: ${STATUS_META[s].label}`} style={chip(STATUS_META[s].bg, STATUS_META[s].fg)}>{s === "pass" ? "✓ " : s === "fail" ? "✗ " : ""}{ACCOUNT_LABEL[a]}</span>;
           })}
         </span>
-        <Pill status={status} />
+        {(() => {
+          const p = partOf(r, c.accounts);
+          return status === "todo" && p.passed > 0 && p.passed < p.total
+            ? <span style={chip("#ddf3e4", "#0f6b34")}>Part done · {p.passed} of {p.total}</span>
+            : <Pill status={status} />;
+        })()}
         <span aria-hidden>{open ? "▲" : "▼"}</span>
       </button>
 
