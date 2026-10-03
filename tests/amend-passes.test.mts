@@ -424,3 +424,20 @@ test("amendNoticeError: Setup > Amending dates notice hours", async (t) => {
   await t.test("one close move in a batch refuses the request", () =>
     assert.ok(amendNoticeError([{ from: "2026-10-09", to: "2026-10-16" }, { from: "2026-10-05", to: "2026-10-12" }], 48, now)));
 });
+
+// ── Most moves per booking enforced (AM-011) ──────────────────────────────────────────────────────────────────────────────────────────
+import { amendLimitError } from "../server/src/lib/dateChange";
+test("amendLimitError: Setup > Amending dates most moves per booking", async (t) => {
+  const mv = [{ from: "2026-10-12", to: "2026-10-19" }];
+  await t.test("limit 2, none used, one move requested = allowed", () => assert.equal(amendLimitError(mv, 0, 2), null));
+  await t.test("limit 2, one used, one more = allowed (reaches the limit)", () => assert.equal(amendLimitError(mv, 1, 2), null));
+  await t.test("limit 2, two used = refused", () => assert.match(amendLimitError(mv, 2, 2) ?? "", /already had its 2 date changes/));
+  await t.test("limit 1 reads singular", () => assert.match(amendLimitError(mv, 1, 1) ?? "", /its 1 date change\./));
+  await t.test("a request for 2 moves with 1 left is refused with how many remain", () =>
+    assert.match(amendLimitError([...mv, { from: "2026-10-13", to: "2026-10-20" }], 1, 2) ?? "", /only 1 more/));
+  await t.test("limit 0/unset = no limit; an undated preferred date is not a move", () => {
+    assert.equal(amendLimitError(mv, 9, 0), null);
+    assert.equal(amendLimitError(mv, 9, undefined), null);
+    assert.equal(amendLimitError([{ from: "", to: "2026-10-19" }], 5, 2), null);
+  });
+});

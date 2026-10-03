@@ -199,6 +199,8 @@ export interface Booking {
   refundLog?: RefundLogEntry[];
   /** A parent's pending request to move day(s) to other dates — surfaced to the
    *  operator to approve/deny from the row. On approve the swaps are applied. */
+  /** How many date moves the provider has approved on this booking (for Setup > Amending dates "most moves per booking"). */
+  amendMovesApproved?: number;
   dateChangeRequest?: {
     moves: { childName?: string; childId?: string; from: string; to: string; approved?: boolean }[];
     /** A requested new time slot ("09:00 – 15:30"), separate from date moves. */

@@ -9,7 +9,7 @@ import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../l
 import { notify } from "../lib/notify";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
-import { amendMoveError, amendNoticeError } from "../lib/dateChange";
+import { amendMoveError, amendNoticeError, amendLimitError } from "../lib/dateChange";
 import { priceAddon } from "../lib/addonPricing";
 import { entryFor, registerRows } from "../lib/registerRows";
 import { refPrefixFor } from "../lib/bookingRef";
@@ -2117,6 +2117,8 @@ my.post("/bookings/:ref/amend", async (req, res) => {
   // The provider's own "notice" rule (Setup > Amending dates) — it used to be shown to families but never checked.
   const noticeErr = amendNoticeError(moves, Number((settings as Record<string, unknown>).amendNoticeHours) || 0, Date.now());
   if (noticeErr) { res.status(400).json({ error: noticeErr }); return; }
+  const limitErr = amendLimitError(moves, booking.amendMovesApproved ?? 0, Number((settings as Record<string, unknown>).amendLimit) || 0);
+  if (limitErr) { res.status(400).json({ error: limitErr }); return; }
   const onBooking = new Set(booking.days ?? []);
   for (const k of booking.kids ?? []) for (const d of k.dates ?? []) onBooking.add(d);
   // Some bookings carry no ISO days/kids dates — only session display strings

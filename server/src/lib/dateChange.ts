@@ -71,6 +71,7 @@ export function applyMoveApprove(b: Booking, approveIndexes?: number[], reason?:
       }
     }
   });
+  b.amendMovesApproved = (b.amendMovesApproved ?? 0) + req.moves.filter((m, i) => idxs.includes(i) && m.from && m.to).length;
   // Refresh the headline date range from whatever dates it now holds.
   const allIso = [...new Set([
     ...(b.days ?? []),
@@ -101,5 +102,18 @@ export function amendNoticeError(moves: AmendMove[], noticeHours: number | undef
     if (startMs - nowMs < noticeHours * 3_600_000)
       return `${prettyDay(mv.from)} is too close to move. This provider needs at least ${noticeHours} hours' notice to move a date.`;
   }
+  return null;
+}
+
+/**
+ * Setup > Amending dates > "most moves per booking". `used` is how many moves the provider has already approved on this booking;
+ * a new request that would take it past `limit` is refused. 0 / unset = no limit.
+ */
+export function amendLimitError(moves: AmendMove[], used: number, limit: number | undefined): string | null {
+  if (!limit || limit <= 0) return null;
+  const asking = moves.filter((m) => m.from).length;
+  if (asking === 0) return null;
+  if (used >= limit) return `This booking has already had its ${limit} date change${limit === 1 ? "" : "s"}. Please contact the provider.`;
+  if (used + asking > limit) return `This provider allows ${limit} date change${limit === 1 ? "" : "s"} per booking and ${used} ${used === 1 ? "has" : "have"} been used, so only ${limit - used} more can be requested.`;
   return null;
 }
