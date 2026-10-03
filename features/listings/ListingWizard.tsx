@@ -881,6 +881,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
             {done.passes.length > 0 && <div className={rowCls}><span className={labCls}>{t("p7cl.lblPass")}</span><span className={valCls}>{done.passes.join(", ")}</span></div>}
             {when && <div className={rowCls}><span className={labCls}>{t("p7cl.lblStarts")}</span><span className={valCls}>{when}</span></div>}
             {where && <div className={rowCls}><span className={labCls}>{t("p7cl.lblWhere")}</span><span className={valCls}>{where}</span></div>}
+            {done.refs.length > 1 && <div className="mt-2 rounded-lg bg-[#eef3ff] px-3 py-2 text-[12px] text-[#1d3a8f]">{t("p7cl.multiBookings", { n: String(done.refs.length) })}</div>}
             <div className="mt-2 flex items-center justify-between border-t border-[#eef0f5] pt-2.5 text-[13px]">
               <span className="text-[#8a86a3]">{done.refs.length === 1 ? t("p7cl.refOne") : t("p7cl.refMany")} {done.refs.join(", ")}</span>
               {scheme
