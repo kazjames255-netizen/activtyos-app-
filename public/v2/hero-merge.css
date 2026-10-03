@@ -3,7 +3,7 @@
    (alpha cutout) share ONE coordinate origin (.hv-phone = screen top-left) so they can never drift.
    Everything is in real px (no transform scaling) so text stays >= 10px on phones; --W (phone width)
    drives all the photo geometry. */
-.wrap .hv{--W:184px;--px:22px;--ov:40px;position:relative;width:100%;max-width:520px;margin:0 auto;isolation:isolate;text-align:left}
+.wrap .hv{--W:184px;--px:22px;--ov:40px;position:relative;width:100%;max-width:520px;margin:0 auto 34px;isolation:isolate;text-align:left}
 .wrap .hv-glow{position:absolute;z-index:-1;inset:8% -6% -4% 4%;border-radius:50%;
   background:radial-gradient(closest-side,rgba(245,184,31,.30),rgba(245,184,31,0) 62%),radial-gradient(closest-side at 70% 70%,rgba(47,107,216,.55),rgba(47,107,216,0) 70%);filter:blur(26px);pointer-events:none}
 
@@ -62,7 +62,7 @@
 .wrap .hv-ic.ok{background:#dff5ea;color:#0b6b4f}.wrap .hv-ic.gold{background:#fff1c9;color:#8a5d00}.wrap .hv-ic.blue{background:#e4ecfc;color:var(--brand)}
 .wrap .hv-fl-1{top:-34px;right:-14px}
 .wrap .hv-fl-2{right:-6px;bottom:34px}
-.wrap .hv-fl-3{left:calc(var(--px) + var(--W) + 30px);bottom:-14px}
+.wrap .hv-fl-3{left:calc(var(--px) + var(--W) + 30px);bottom:8px}
 
 @media (prefers-reduced-motion:no-preference){
   .wrap .hv-fl{animation:hv-bob 6s ease-in-out infinite}
@@ -71,7 +71,7 @@
 }
 
 @media (max-width:560px){
-  .wrap .hv{--W:140px;--px:6px;--ov:34px;max-width:420px}
+  .wrap .hv{--W:140px;--px:6px;--ov:34px;max-width:420px;margin-bottom:28px}
   .wrap .hv-bar{padding:9px 10px}
   .wrap .hv-sample,.wrap .hv-pill,.wrap .hv-tabs{display:none}
   .wrap .hv-k{padding:7px 8px}.wrap .hv-k b{font-size:17px}.wrap .hv-k span{font-size:10px;letter-spacing:.02em;white-space:normal;line-height:1.2}
