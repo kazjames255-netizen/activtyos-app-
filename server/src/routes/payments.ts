@@ -8,7 +8,7 @@ import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { bookingDocId } from "./bookings";
 import { settlePaymentRecord } from "../lib/settlePayment";
 import { bookingForToken } from "../lib/bookingPayToken";
-import { owedOf } from "../../../features/bookings/helpers";
+import { payable, balanceOf } from "../lib/payGate";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Payments — Stripe Connect (build item 7).
@@ -48,16 +48,6 @@ function stripeFail(res: Response, e: unknown) {
   res.status(502).json({ error: `Stripe: ${msg}` });
 }
 
-/** Bookings a parent may pay for: confirmed places, or operator invoices. */
-const payable = (b: { status: string; pay: string }) =>
-  b.pay !== "Paid" &&
-  b.pay !== "Refunded" &&
-  b.pay !== "Refund pending" &&
-  (b.status === "Confirmed" || b.pay === "Invoice sent");
-/** What a parent is asked for: the BALANCE (price − money already received), never the whole price again. A part-paid
- *  booking, or a fully-paid one where the family released a day ("Partially refunded", status still Confirmed), used to be
- *  charged its full price a second time. */
-const balanceOf = (b: Parameters<typeof owedOf>[0]) => Math.round(owedOf(b) * 100) / 100;
 
 // POST /api/payments/connect — create (or resume onboarding for) the
 // tenant's Express account; returns the hosted onboarding URL.
