@@ -2020,8 +2020,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           to the one they want, by name. */}
       {ckStage === "pay" && (
         <BackBtn tk={tk} onClick={() => { if (hasMeals) setCkStage("meals"); else if (addons.length) { setExtraIdx(ordered.length - 1); setCkStage("extras"); } else setCkStage("who"); }} className="mt-3">
-          {hasMeals ? tr("p8lst.ck8BackToMeals") : ordered.length ? tr("p7ck.backTo", { step: ordered[ordered.length - 1].name }) : tr("p8lst.ck8BackToChildren")}
+          {hasMeals ? tr("p8lst.ck8BackToMeals") : ordered.length ? tr("p7ck.backTo", { step: ordered[ordered.length - 1].name }) : "← Change children or who is on which day"}
         </BackBtn>
+      )}
+      {ckStage === "pay" && (
+        <BackBtn tk={tk} onClick={() => b.setStage("pick")} className="mt-2 w-full justify-center">← Change dates (clear or edit the basket)</BackBtn>
       )}
       {/* Nothing to pay: a parent isn't asked how they'd like to settle £0.
           The operator still picks one, because "HAF" and "Free place" are how
