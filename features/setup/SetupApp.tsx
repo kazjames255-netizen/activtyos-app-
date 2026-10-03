@@ -2312,7 +2312,7 @@ export function SetupApp() {
               <Row
                 label={t("p8set.cnPartial")}
                 hint={t("p8set.cnPartialHint")}
-                note={t("p8set.cnPartialNote")}
+                note={undefined}
               >
                 <Toggle on={settings.allowPartialCancel} onChange={(v) => set("allowPartialCancel", v)} />
               </Row>
