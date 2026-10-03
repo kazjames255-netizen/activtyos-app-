@@ -3230,6 +3230,9 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
           <WaitlistPanel b={b} d={d} tone="light" />
           {/* Once something's in the basket the button has nothing to do until
               more dates are picked, so it goes and says why instead. */}
+          {b.dupNote && (
+            <div className="mt-3 rounded-2xl px-4 py-3 text-[12.5px] font-semibold leading-[1.5]" style={{ background: "#fff3cd", color: "#7a4b00" }} role="alert">⚠ {b.dupNote}</div>
+          )}
           {b.basket.length > 0 && b.sel.length === 0 && !b.canAdd ? (
             <div className="mt-4 flex items-start gap-2.5 rounded-2xl px-4 py-3" style={{ background: "#e4f8ee" }}>
               <span className="aos-point-inline text-[22px] leading-none" aria-hidden>👆</span>
@@ -3415,6 +3418,9 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             })()}
             <MealsAtCheckout d={d} dates={b.sel} tone="dark" />
             <WaitlistPanel b={b} d={d} tone="dark" />
+            {b.dupNote && (
+              <div className="mt-3 border px-3 py-2.5 text-[12.5px] font-semibold leading-[1.5]" style={{ borderColor: "#ffb020", background: "#2a2008", color: "#ffd98a" }} role="alert">⚠ {b.dupNote}</div>
+            )}
             {b.basket.length > 0 && b.sel.length === 0 && !b.canAdd ? (
               <div className="mt-4 flex items-start gap-2.5 border p-3" style={{ borderColor: LIME, background: CELL }}>
                 <span className="aos-point-inline text-[22px] leading-none" aria-hidden>👆</span>

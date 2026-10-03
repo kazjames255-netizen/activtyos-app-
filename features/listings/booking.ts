@@ -341,8 +341,21 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     }
     return [...byMonth].map(([month, days]) => `${days.map(ordinal).join(", ")} ${month}`).join(", ");
   };
+  // The same pass on the same day can only be in the basket once: every child
+  // for that day goes on that one line, so a second copy only means paying twice.
+  const [dupNote, setDupNote] = useState<string | null>(null);
+  useEffect(() => { if (sel.length > 0) setDupNote(null); }, [sel.length]);
+  const inBasket = (name: string, periodKey: string | undefined, day: string) =>
+    basket.some((x) => x.name === name && (x.periodId ?? "") === (periodKey ?? "") && x.dates.includes(day));
   const addToBasket = () => {
     if (!canAdd || !pass) return;
+    const dups = [...sel].filter((day) => inBasket(pass.name, period?.id, day));
+    if (dups.length) {
+      setDupNote(`${pass.name} on ${datesPretty(dups)} is already in your basket. Add more children to it at the next step instead of adding it again.`);
+      setSel((cur) => cur.filter((d) => !dups.includes(d)));
+      return;
+    }
+    setDupNote(null);
     if (isSingle) {
       // One basket line per chosen day → as many 1-day passes as they want.
       const items: BasketItem[] = [...sel].sort().map((day) => ({ id: uid() + day, name: pass.name, timing: period?.range ?? "", periodId: period?.id, price: unitPrice, dates: [day], rule, start: period?.start, finish: period?.finish }));
@@ -486,5 +499,5 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
 
   return { passes, periods, passId, setPassId, pickPass, passClosed, passFits, runTotal, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, mealSel, pickMeal, mealFor, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, past, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
     roster, setRoster, childrenOn, toggleChild, clearRemovalsFor, headsOn, rosterNames,
-    waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, heldByBasket, waitlistOnly, waitDone, setWaitDone, joinWaitlist, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+    waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, heldByBasket, waitlistOnly, waitDone, setWaitDone, joinWaitlist, dupNote, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
