@@ -1,5 +1,6 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import type { Sender } from "./sender";
+import { db } from "../firebase";
 
 // Transactional email engine (product spec build item 9, minus per-provider
 // sending domains for now).
@@ -203,7 +204,24 @@ async function sendViaResend(to: string, subject: string, html: string, sender?:
   }
 }
 
+/** Every send leaves one row in `mailLog` (recipient, subject, outcome) so "why didn't it arrive?" is answerable
+ *  without server logs. Best-effort: a logging failure never affects the send. No bodies, no attachments. */
+async function recordMail(to: string, subject: string, o: MailOutcome): Promise<void> {
+  try {
+    await db.collection("mailLog").add({
+      to: to.trim().toLowerCase(), subject: subject.slice(0, 160), status: o.status, error: o.error ?? null,
+      live: MAIL_LIVE, at: new Date().toISOString(),
+    });
+  } catch { /* logging must never break mail */ }
+}
+
 export async function sendMailDetailed(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[]; headers?: Record<string, string> }): Promise<MailOutcome> {
+  const o = await sendMailDetailedRaw(to, subject, html, sender, opts);
+  void recordMail(to, subject, o);
+  return o;
+}
+
+async function sendMailDetailedRaw(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[]; headers?: Record<string, string> }): Promise<MailOutcome> {
   if (!looksLikeAddress(to)) {
     console.warn(`[mail] "${subject}" → ${JSON.stringify(to)} NOT AN ADDRESS — refused before sending`);
     return { status: "failed", error: "not an email address" };
