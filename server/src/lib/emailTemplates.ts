@@ -122,6 +122,17 @@ export function requestReceivedSpec(b: Booking, providerName: string): CustomerE
   };
 }
 
+export function waitlistJoinedSpec(b: Booking, providerName: string): CustomerEmailSpec {
+  return {
+    subject: `You're on the waiting list — ${b.listing}`,
+    title: "You're on the waiting list",
+    body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — the date you picked for ${escapeHtml(b.listing)} is full, so we've put you on ${escapeHtml(providerName)}'s waiting list.
+     <b>Nothing to pay now.</b> If a place opens up we'll email you straight away, and you'll have a short time to accept it.</p>
+     <p style="font-size:13px;color:#6a6785">You can leave the waiting list any time from My bookings.</p>`,
+    enrich: {},
+  };
+}
+
 export function paymentLinkSpec(b: Booking, providerName: string, payUrl: string): CustomerEmailSpec {
   return {
     subject: `Complete your booking — ${b.listing}`,
@@ -176,7 +187,7 @@ export function refundApprovedSpec(b: Booking, providerName: string): CustomerEm
         ? `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved the refund for this booking${amt ? ` (<b>${amt}</b>)` : ""}.
            ${b.voucherScheme ? `It will be returned through <b>${escapeHtml(b.voucherScheme)}</b>, the way you paid.` : "They'll return it the way you paid."} If you have questions, reply to this email.</p>`
         : `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved the refund for this booking.
-         ${amt ? `Amount: <b>${amt}</b>. It should reach your original payment method within a few days.` : ""}</p>`,
+         ${amt ? `Amount: <b>${amt}</b>. It usually reaches your original payment method within 5–10 working days, depending on your bank.` : ""}</p>`,
   };
 }
 

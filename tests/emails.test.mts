@@ -30,7 +30,7 @@ import {
   paymentLinkSpec,
   paymentReceivedSpec,
   placeOfferedSpec,
-  refundApprovedSpec,
+  refundApprovedSpec, waitlistJoinedSpec,
   requestReceivedSpec,
   type CustomerEmailSpec,
 } from "../server/src/lib/emailTemplates";
@@ -345,7 +345,7 @@ test("ME-006 refund approved: amount is omitted cleanly (no £0.00 / undefined) 
   noJunk("refund", render(refundApprovedSpec(booking({ cancel: undefined }), PROVIDER), booking()));
 });
 
-test("ME-006 card refund email says 5 to 10 working days (catalogue expects it)", { todo: "FINDING: emailRefundApproved says 'within a few days'; '5-10 working days' appears nowhere in server/, features/ or lib/" }, () => {
+test("ME-006 card refund email says 5 to 10 working days", () => {
   const s = refundApprovedSpec(booking({ cancel: { refundTo: "card", amount: 30 } }), PROVIDER);
   assert.match(text(s.body), /5\s*(to|-|–)\s*10 working days/i);
 });
@@ -373,8 +373,12 @@ test("ME-007 offered: pay link encodes an unusual booking ref", () => {
   assert.ok(placeOfferedSpec(booking({ ref: "A B&C" }), PROVIDER, WEB).body.includes("pay=A%20B%26C"));
 });
 
-test("ME-007 waiting list JOINED email exists", { todo: "FINDING: no 'you joined the waiting list' email builder exists - only emailPlaceOffered (server/src/lib/emails.ts, used by routes/bookings.ts + lib/waitlist.ts). Catalogue ME-007 expects a joined message." }, () => {
-  assert.fail("no joined-waitlist email builder exists");
+test("ME-007 waiting list JOINED email: says waiting list, nothing to pay, never 'approval'", () => {
+  const s = waitlistJoinedSpec(booking(), PROVIDER);
+  assert.match(s.subject, /on the waiting list/i);
+  assert.match(text(s.body), /nothing to pay now/i);
+  assert.doesNotMatch(text(s.body), /approval|approve/i);
+  assert.doesNotMatch(s.body, /undefined|null|NaN/);
 });
 
 // ───────────────────────── ME-008 payment received ─────────────────────────

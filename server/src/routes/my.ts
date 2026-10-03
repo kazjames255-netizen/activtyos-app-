@@ -45,6 +45,7 @@ import {
   type BankPayDetails,
   emailBookingRequestReceived,
   emailFamilyBookingCreated,
+  emailWaitlistJoined,
   emailVoucherInstructions,
   newBookingProviderEmail,
   aosLogoAttachment,
@@ -1766,6 +1767,8 @@ my.post("/bookings", async (req, res) => {
       // confirmed/request email, or the family gets two.
       if (voucher) { /* handled by the voucher email below */ }
       else if (b0.status === "Confirmed") emailBookingConfirmed(b0, provider, isBankMethod(input.method) ? await bankPayDetails(listing.tenantId, b0.ref, b0.amount) : null);
+      // A waiting-list place is NOT "a request pending approval" - it gets its own message.
+      else if (b0.status === "Waitlisted") emailWaitlistJoined(b0, provider);
       else emailBookingRequestReceived(b0, provider);
     }
     // Tell the PROVIDER a booking just came in — bell + email. This was never

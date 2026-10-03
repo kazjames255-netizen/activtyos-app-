@@ -11,7 +11,7 @@ import { AOS_MARK_PNG_B64 } from "./brandLogo";
 import { geocodeAddress } from "../routes/geo";
 import {
   gbp, escapeHtml, layout, bankPayHtml, type BankPayDetails,
-  requestReceivedSpec, paymentLinkSpec, bookingConfirmedSpec, bookingDeclinedSpec,
+  requestReceivedSpec, waitlistJoinedSpec, paymentLinkSpec, bookingConfirmedSpec, bookingDeclinedSpec,
   refundApprovedSpec, placeOfferedSpec, paymentReceivedSpec, familyBookingCreatedEmail,
 } from "./emailTemplates";
 
@@ -340,6 +340,11 @@ function sendCustomerEmail(
 export function emailBookingRequestReceived(b: Booking, providerName: string): void {
   const m = requestReceivedSpec(b, providerName);
   sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body, m.enrich);
+}
+
+export function emailWaitlistJoined(b: Booking, providerName: string): void {
+  const m = waitlistJoinedSpec(b, providerName);
+  sendCustomerEmail(b, providerName, "waitlist", m.subject, m.title, m.body, m.enrich);
 }
 
 export function emailPaymentLink(b: Booking, providerName: string): void {
