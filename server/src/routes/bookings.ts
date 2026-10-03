@@ -39,6 +39,7 @@ import {
 } from "../lib/emails";
 import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Booking } from "../../../features/bookings/types";
+import { applyMoveApprove } from "../lib/dateChange";
 import {
   applyBulkAction,
   applyCancel,
@@ -620,57 +621,7 @@ bookings.post("/:ref/actions", async (req, res) => {
           applyNote(b, action.text);
           break;
         case "move-approve":
-          if (b.dateChangeRequest) {
-            const req = b.dateChangeRequest;
-            const idxs = action.approveIndexes ?? req.moves.map((_, i) => i);
-            // Recover the ISO date from a session label ("Mon 27 Jul 2026 · …").
-            const isoOfLabel = (s: string): string | null => {
-              const mm = s.match(/(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/);
-              if (!mm) return null;
-              const d = new Date(`${mm[1]} ${mm[2]} ${mm[3]}`);
-              return Number.isNaN(d.getTime()) ? null : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-            };
-            const labelOfIso = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-            req.moves.forEach((m, i) => {
-              const ok = idxs.includes(i);
-              m.approved = ok;
-              if (ok && m.from && m.to) {
-                const kid = b.kids?.find((k) => (m.childId && k.childId === m.childId) || k.name === m.childName);
-                // Some kids[] rows (merged-basket bookings) only ever had `days`
-                // written, not `dates` — treat either as the child's booked days
-                // and always keep both in sync afterwards, or the child's own row
-                // goes stale (register/partial-cancel read `dates`).
-                const kidDays = kid?.dates?.length ? kid.dates : kid?.days;
-                if (kid && kidDays?.length) {
-                  const moved = kidDays.map((d) => (d === m.from ? m.to! : d));
-                  kid.dates = moved; kid.days = moved;
-                } else if (b.days?.length) b.days = b.days.map((d) => (d === m.from ? m.to! : d));
-                // Bookings whose dates live only in `sessions` strings — move the
-                // matching label, keeping its time suffix, so the change shows.
-                if (b.sessions?.length) {
-                  b.sessions = b.sessions.map((s) => {
-                    if (isoOfLabel(s) !== m.from) return s;
-                    const suffix = s.includes(" · ") ? s.slice(s.indexOf(" · ")) : "";
-                    return `${labelOfIso(m.to!)}${suffix}`;
-                  }).sort((a, c) => ((isoOfLabel(a) ?? a) < (isoOfLabel(c) ?? c) ? -1 : 1));
-                }
-              }
-            });
-            // Refresh the headline date range from whatever dates it now holds.
-            const allIso = [...new Set([
-              ...(b.days ?? []),
-              ...((b.kids ?? []).flatMap((k) => k.dates ?? [])),
-              ...((b.sessions ?? []).map(isoOfLabel).filter(Boolean) as string[]),
-            ])].sort();
-            if (allIso.length) {
-              const fmt = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-              b.dates = allIso.length === 1 ? fmt(allIso[0]) : `${fmt(allIso[0])} – ${fmt(allIso[allIso.length - 1])}`;
-            }
-            req.status = "approved";
-            req.resolvedAt = new Date().toISOString();
-            if (action.reason) req.reason = action.reason;
-            b.note = idxs.length === req.moves.length ? "Date change approved." : "Date change partly approved.";
-          }
+          applyMoveApprove(b, action.approveIndexes, action.reason);
           break;
         case "move-deny":
           if (b.dateChangeRequest) {
