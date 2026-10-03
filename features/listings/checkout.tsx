@@ -1356,10 +1356,15 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           )}
           <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{tr("p7ck.whosOnEachPass")}</div>
           {(
-            <div className="mt-1.5 text-[11px]" style={{ color: tk.muted }}>
+            <div className="mt-1.5 text-[12px] leading-[1.45]" style={{ color: tk.muted }}>
               {roster.length === 0
                 ? tr("p7ck.addChildAbove")
                 : tr("p7ck.tapNameOff")}
+              {roster.length > 0 && b.basket.length > 1 && (
+                <div className="mt-1.5 rounded-lg px-3 py-2 text-[12.5px] font-semibold" style={{ background: "rgba(200,255,0,.12)", color: tk.ink, border: `1px solid ${tk.line}` }}>
+                  Different children on different dates? Every child starts on every pass below. Tap a child's name on a pass to take them off it, and tap again to put them back.
+                </div>
+              )}
             </div>
           )}
 
