@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "../firebase";
 import { webUrl } from "./stripe";
+import { isPayTokenFormat } from "./payGate";
 
 // A no-login pay link for one booking. The unguessable token IS the authorisation (same idea as an invoice's
 // payToken): it can only ever pay THAT booking's outstanding balance, by card, to that provider. Kept in its own
@@ -17,7 +18,7 @@ export async function bookingPayToken(tenantId: string, ref: string): Promise<st
 }
 
 export async function bookingForToken(token: string): Promise<{ tenantId: string; ref: string } | null> {
-  if (!/^[0-9a-f-]{36}$/i.test(token)) return null;
+  if (!isPayTokenFormat(token)) return null;
   const s = await col.doc(token).get();
   return s.exists ? { tenantId: s.data()!.tenantId as string, ref: s.data()!.ref as string } : null;
 }
