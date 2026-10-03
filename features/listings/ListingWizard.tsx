@@ -944,7 +944,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
             )}
             {website && (
               <div className="mt-2.5">
-                <a href={website} target="_blank" rel="noreferrer" className="inline-flex rounded-lg px-4 py-2 text-[13px] font-bold text-white" style={{ background: "var(--brand-2,#2f6bd8)" }}>{t("p7cl.goToPay")}</a>
+                <a href={website} target="_blank" rel="noreferrer" className="inline-flex rounded-lg px-4 py-2 text-[13px] font-bold text-white" style={{ background: "var(--brand-2,#2f6bd8)" }}>{t("p7cl.goToPay", { scheme: scheme || t("p7cl.theProvider") })}</a>
               </div>
             )}
           </div>

@@ -1098,6 +1098,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // A pass is a block: a child is on all of its days or none. So the only
   // thing to check is that somebody is on each line.
   const shortPasses = b.basket.filter((x) => b.childrenOn(x.id).length === 0);
+  // Voucher/TFC references are asked only for children who are actually on a pass in the basket.
+  const refKids = roster.filter((c) => b.basket.some((x) => b.childrenOn(x.id).includes(c.name.trim())));
 
   // Overlapping passes: a 5 day pass covering the 27th–31st and a 4 day pass
   // covering the 28th–31st are easy to end up with, and nobody can attend the
@@ -2506,14 +2508,14 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   {/* Force the parent to give THEIR own reference so the provider
                       can match the money. One per child — siblings often pay under
                       two separate references. */}
-                  {roster.length > 0 && (
+                  {refKids.length > 0 && (
                     <div className="mt-3 border-t pt-3" style={{ borderColor: `${tk.ink}1a` }}>
-                      <div className="text-[12px] font-bold" style={{ color: tk.ink }}>{roster.length > 1 ? tr("p7ck.yourPayRefs") : tr("p7ck.yourPayRef")}</div>
-                      <div className="mt-0.5 text-[11px]" style={{ color: tk.muted }}>{tr("p7ck.refHelp", { scheme: chosenVoucher.name })} {roster.length > 1 ? tr("p7ck.refHelpSiblings") : ""}</div>
+                      <div className="text-[12px] font-bold" style={{ color: tk.ink }}>{refKids.length > 1 ? tr("p7ck.yourPayRefs") : tr("p7ck.yourPayRef")}</div>
+                      <div className="mt-0.5 text-[11px]" style={{ color: tk.muted }}>{tr("p7ck.refHelp", { scheme: chosenVoucher.name })} {refKids.length > 1 ? tr("p7ck.refHelpSiblings") : ""}</div>
                       <div className="mt-2 flex flex-col gap-2">
-                        {roster.map((c) => (
+                        {refKids.map((c) => (
                           <div key={c.name} className="flex flex-wrap items-center gap-2">
-                            {roster.length > 1 && <span className="min-w-[92px] text-[12px] font-semibold" style={{ color: tk.ink }}>{c.name}</span>}
+                            {refKids.length > 1 && <span className="min-w-[92px] text-[12px] font-semibold" style={{ color: tk.ink }}>{c.name}</span>}
                             <input value={voucherRefs[c.name] ?? ""} onChange={(e) => setVoucherRefs((r) => ({ ...r, [c.name]: e.target.value }))}
                               placeholder={tr("p7ck.phAcctRef")} className={`flex-1 border px-3 py-2 text-[13px] ${tk.round}`}
                               style={{ borderColor: (voucherRefs[c.name] ?? "").trim() ? `${tk.ink}33` : "#e0a020", background: tk.inputBg, color: tk.ink }} />
@@ -2651,7 +2653,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       )}
 
       {ckStage === "pay" && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || (parentMode && !phoneOk) || (homeVisit && !serviceAddress.postcode.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || existingClashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && roster.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
+        disabled={(!parentMode && !b.parent) || (parentMode && !phoneOk) || (homeVisit && !serviceAddress.postcode.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || existingClashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && refKids.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // With an onBook handler the confirm actually books — the parent
