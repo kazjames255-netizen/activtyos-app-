@@ -32,5 +32,5 @@
     ".next-test/types/**/*.ts",
     ".next-test/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "server", "scratch"]
+  "exclude": ["node_modules", "server", "scratch", "scripts/testTracker/reconcile.ts", "scripts/testTracker/progress.ts"]
 }
