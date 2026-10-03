@@ -72,3 +72,6 @@ server/serviceAccountKey.json
 # isolated e2e stack (npm run dev:test)
 /.next-test/
 /e2e/.auth-test/
+
+# per-agent / per-port dev build folders (Tailwind must not scan them)
+/.next-*/
