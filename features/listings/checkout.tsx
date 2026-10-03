@@ -960,6 +960,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // booking needs a contact number, so it's required before they can book.
   const [phone, setPhone] = useState("");
   const [phonePrefilled, setPhonePrefilled] = useState(false);
+  // A real number has at least 10 digits; "44" (just the UK code) came from sign-up and is not one.
+  const phoneOk = phone.replace(/\D/g, "").length >= 10;
+  const [editPhone, setEditPhone] = useState(false);
   useEffect(() => {
     if (!parentMode || !tenantId) return;
     apiGet<{ phone: string; from?: string }>(`/api/my/contact?tenantId=${encodeURIComponent(tenantId)}`)
@@ -2555,6 +2558,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
 
       {ckStage === "pay" && parentMode && (
         <div className="mt-3">
+          {phoneOk && !editPhone ? (
+            <div className="flex items-center justify-between gap-2 text-[12.5px]" style={{ color: tk.muted }}>
+              <span>📞 We&apos;ll use <b style={{ color: tk.ink }}>{phone.trim()}</b> to reach you about this booking.</span>
+              <button type="button" onClick={() => setEditPhone(true)} className="font-bold underline">Change</button>
+            </div>
+          ) : (<>
           <label className="mb-1 block text-[11px] font-bold" style={{ color: tk.muted }}>{tr("p7ck.contactPhone")}</label>
           <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={tr("p7ck.phPhone")}
             className={`w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
@@ -2563,7 +2572,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             {phone.trim()
               ? (phonePrefilled ? tr("p7ck.phoneFromProvider") : tr("p7ck.phoneReach"))
               : tr("p7ck.phoneNeed")}
+            {phone.trim() && !phoneOk && <b style={{ color: "#dc2626" }}> Please enter the full number, with at least 10 digits.</b>}
           </div>
+          </>)}
         </div>
       )}
 
@@ -2585,7 +2596,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       )}
 
       {ckStage === "pay" && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || (parentMode && !phone.trim()) || (homeVisit && !serviceAddress.postcode.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && roster.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
+        disabled={(!parentMode && !b.parent) || (parentMode && !phoneOk) || (homeVisit && !serviceAddress.postcode.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && roster.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // With an onBook handler the confirm actually books — the parent
@@ -2636,7 +2647,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         }}>
         {booking?.busy ? tr("p7ck.ctaBooking")
           : !parentMode && !b.parent ? tr("p7ck.findParentFirst")
-          : parentMode && !phone.trim() ? tr("p7ck.ctaAddPhone")
+          : parentMode && !phoneOk ? tr("p7ck.ctaAddPhone")
           : homeVisit && !serviceAddress.postcode.trim() ? tr("p7ck.ctaVisitAddr")
           : roster.length === 0 ? tr("p7ck.ctaAddChildFirst")
           : unassigned > 0 ? pickPlural(tr, locale, "p7ck.ctaNobody", unassigned)
