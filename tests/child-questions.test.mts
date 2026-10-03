@@ -199,7 +199,7 @@ test("CF-011: yes/no question holds the booking when answered No", async (t) => 
   await t.test("client heldForReview and the server rule agree on the same inputs", () => {
     const qs = [hold, noHold];
     const serverIds = qs.filter((x) => !x.hidden && x.reviewIfNo).map((x) => x.id);
-    for (const answers of [{ toilet: "No" }, { toilet: "Yes" }, { toilet: " NO " }, { swim: "No" }, {}]) {
+    for (const answers of [{ toilet: "No" }, { toilet: "Yes" }, { toilet: " NO " }, { swim: "No" }, {}] as Record<string, string>[]) {
       assert.equal(heldForReview(qs, answers).length > 0, heldByNoAnswer(serverIds, answers), JSON.stringify(answers));
     }
   });
