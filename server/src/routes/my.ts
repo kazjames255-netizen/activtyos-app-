@@ -290,7 +290,35 @@ my.get("/bookings", async (req, res) => {
   // `childcare.paymentReference` for a single child) any time — not only on the
   // done screen. A booking taken before minting existed has
   // `paymentReference: null` and shows the reference they typed themselves.
-  res.json(list.map((b) => (childcareRoute(b) ? { ...b, childcare: childcareOf(b as ChildcareBooking) } : b)));
+  // The caller's OWN place in each waiting-list queue (per date). Only the
+  // refs of this family's bookings are asked for, so nothing about other
+  // families leaves the server — just a number and the date it applies to.
+  const queuedByBlock = new Map<string, string[]>();
+  for (const b of list) if (b.status === "Waitlisted" && b.blockId) queuedByBlock.set(b.blockId, [...(queuedByBlock.get(b.blockId) ?? []), b.ref]);
+  const positions = new Map<string, { date: string; position: number }[]>();
+  const modes = new Map<string, "manual" | "auto">();
+  await Promise.all(
+    [...queuedByBlock].map(async ([blockId, refs]) => {
+      try {
+        for (const p of await queuePositions(blockId, refs)) positions.set(`${blockId}|${p.ref}`, [...(positions.get(`${blockId}|${p.ref}`) ?? []), { date: p.date, position: p.position }]);
+        const blk = await db.collection("blocks").doc(blockId).get();
+        const lid = (blk.data() as { listingId?: string } | undefined)?.listingId;
+        if (lid) {
+          const l = await db.collection("listings").doc(lid).get();
+          modes.set(blockId, (l.data() as { waitlistMode?: string } | undefined)?.waitlistMode === "auto" ? "auto" : "manual");
+        }
+      } catch (e) {
+        console.error("[my/bookings] queue position lookup failed:", (e as Error).message);
+      }
+    }),
+  );
+  res.json(
+    list.map((b) => {
+      const base = childcareRoute(b) ? { ...b, childcare: childcareOf(b as ChildcareBooking) } : b;
+      const pos = b.status === "Waitlisted" && b.blockId ? positions.get(`${b.blockId}|${b.ref}`) : undefined;
+      return pos?.length ? { ...base, waitlist: pos, waitlistMode: modes.get(b.blockId!) ?? "manual" } : base;
+    }),
+  );
 });
 
 // GET /api/my/bank-details?ref=AMI-1 — where to send a bank transfer for one of MY unpaid bookings.

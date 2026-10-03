@@ -100,6 +100,9 @@ export interface Booking {
   offerExpiresAt?: string;
   /** Set when an offer lapsed: the family goes to the BACK of the queue instead of being re-offered first (p2-o15). */
   requeuedAt?: string;
+  /** Parent view only (GET /api/my/bookings): THIS family's place in the queue, per date, and how the provider offers places. */
+  waitlist?: { date: string; position: number }[];
+  waitlistMode?: "manual" | "auto";
   /** Childcare voucher booking (§Q): the scheme the family pays through, and
    *  the dates they must send by / it must arrive by. pay is
    *  "Awaiting voucher payment" until the money lands. */
