@@ -2,8 +2,9 @@ import { Router } from "express";
 import { db } from "../firebase";
 import { managerScope } from "../middleware/role";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
-import { owedNow, isMoneyIn } from "../../../features/bookings/helpers";
-import type { Booking, BookingStatus } from "../../../features/bookings/types";
+import { isMoneyIn } from "../../../features/bookings/helpers";
+import { round2, owedLite, outstandingFigures, isGoneRefund, takenThisWeekFigure, addRunToListing, type PayLite } from "../lib/dashboardFigures";
+import type { BookingStatus } from "../../../features/bookings/types";
 import { ukToday } from "../lib/ukDate";
 import { indexMissing, noteIndexMissing, withIndexFallback } from "../lib/firestoreNarrow";
 import { whereInChunks } from "../lib/firestoreIn";
@@ -30,7 +31,7 @@ export const dashboard = Router();
 // owedNow() and isMoneyIn() in features/bookings/helpers.ts. This file had its
 // own copy (a pay-label list that counted waitlisted places and skipped "Pay
 // on the day"), and the two screens disagreed (acceptance d19s7).
-const round2 = (n: number) => Math.round(n * 100) / 100;
+// (round2 and the pure figure maths live in ../lib/dashboardFigures.ts)
 
 // Every BookingStatus, and whether it counts as a LIVE booking (anything not
 // cancelled or declined). The Record makes it exhaustive: add a status to the
@@ -77,16 +78,7 @@ const lite = (d: FirebaseFirestore.QueryDocumentSnapshot): BkLite => {
   return { ...b, ref: String(b.ref ?? "") };
 };
 /** owedNow's rules only touch status/amount/amountPaid/pay — all in the mask. */
-const owed = (b: BkLite) => owedNow(b as unknown as Booking);
-
-interface PayLite {
-  amount?: number;
-  status?: string;
-  type?: string;
-  createdAt?: string;
-  paidAt?: string;
-  refs?: string[];
-}
+const owed = owedLite;
 
 /**
  * The payment records that could count toward "taken this week", i.e. the ones
@@ -252,16 +244,7 @@ async function buildDashboard(tenantId: string, venueId: string | null, franchis
     if (sum.open && future.length) {
       openCapacity += sum.capacity; openBooked += sum.bookedCount;
       const cur = perListing.get(doc.listingId) ?? { listing, capacity: 0, booked: 0, spotsLeft: 0, nextDate: "9999-99-99" };
-      if (doc.capacityScope === "day") {
-        // 2 a day over three weeks is still 2 a day, not 6: show the daily
-        // limit and the busiest day, never a total across the weekly blocks.
-        const busiest = Math.max(0, ...Object.values(doc.dayCounts ?? {}));
-        cur.capacity = Math.max(cur.capacity, sum.capacity);
-        cur.booked = Math.max(cur.booked, busiest);
-        cur.spotsLeft = cur.capacity - cur.booked;
-      } else {
-        cur.capacity += sum.capacity; cur.booked += sum.bookedCount; cur.spotsLeft += sum.spotsLeft;
-      }
+      addRunToListing(cur, doc, sum);
       const nd = future.map((s) => s.date).sort()[0];
       if (nd < cur.nextDate) cur.nextDate = nd;
       perListing.set(doc.listingId, cur);
@@ -289,10 +272,7 @@ async function buildDashboard(tenantId: string, venueId: string | null, franchis
   // derived from three fields — there's no Firestore aggregation for that. So
   // this stays a scan; what it no longer reads is cancelled/declined history
   // (which owes nothing by definition) or any field but the ten in the mask.
-  const owing = liveBookings.filter((b) => owed(b) > 0);
-  const outstanding = round2(owing.reduce((s, b) => s + owed(b), 0));
-  const overdueVouchers = owing.filter((b) => b.pay === "Awaiting voucher payment" && !!b.voucherReceiveBy && b.voucherReceiveBy < today).length;
-  const awaitingVoucher = owing.filter((b) => b.pay === "Awaiting voucher payment").length;
+  const { outstanding, overdueVouchers, awaitingVoucher } = outstandingFigures(liveBookings, today);
 
   // ── Money in this week (payment records, refunds excluded) ──
   // Payments only reference bookings by ref — a payment counts for the venue if
@@ -328,23 +308,11 @@ async function buildDashboard(tenantId: string, venueId: string | null, franchis
   const goneRefs = new Set<string>();
   for (const d of weekPayRefs.length ? await whereInChunks(maskedBookings, "ref", "in", weekPayRefs) : []) {
     const b = lite(d);
-    if (b.status === "Cancelled" && String(b.pay) === "Refunded" && !refsWithRefundRow.has(b.ref)) goneRefs.add(b.ref);
+    if (isGoneRefund(b, refsWithRefundRow)) goneRefs.add(b.ref);
   }
-  const refundedThisWeek = payments
-    .filter((p) => p.type === "refund" && p.status === "succeeded" && (p.paidAt ?? p.createdAt ?? "") >= weekAgo)
-    .filter((p) => !venueRefs || (p.refs ?? []).some((r) => venueRefs!.has(r)))
-    .reduce((s, p) => s + (p.amount ?? 0) * shareIn(p.refs ?? []), 0);
-  const takenThisWeek = round2(
-    payments
-      // A card record is created when checkout STARTS; paidAt is when it paid.
-      .filter((p) => isMoneyIn(p) && (p.paidAt ?? p.createdAt ?? "") >= weekAgo)
-      .filter((p) => !(p.refs ?? []).some((r) => goneRefs.has(r)))
-      .filter((p) => !venueRefs || (p.refs ?? []).some((r) => venueRefs!.has(r)))
-      // One card checkout can pay for bookings at several sites: under a site
-      // lens, count only this site's share of it (by each booking's price) —
-      // it was counted in full at every site it touched (acceptance d23s6).
-      .reduce((s, p) => s + (p.amount ?? 0) * shareIn(p.refs ?? []), 0) - refundedThisWeek,
-  );
+  // (pure maths in lib/dashboardFigures.ts: under a site lens one card checkout
+  // counts only this site's share, by each booking's price — acceptance d23s6)
+  const takenThisWeek = takenThisWeekFigure(payments, weekAgo, goneRefs, venueRefs, shareIn);
 
   return {
     today: {
