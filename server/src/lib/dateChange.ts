@@ -86,3 +86,20 @@ export function applyMoveApprove(b: Booking, approveIndexes?: number[], reason?:
   if (reason) req.reason = reason;
   b.note = idxs.length === req.moves.length ? "Date change approved." : "Date change partly approved.";
 }
+
+/**
+ * Setup > Amending dates > "notice": a date can only be moved if it is at least `noticeHours` away. The family can still pick any
+ * future date to move TO; it is the day they are giving up that must be far enough off. Judged from the start of that day (UK),
+ * which is the strictest reading when a session time isn't known. Returns a plain-English reason, or null when allowed.
+ */
+export function amendNoticeError(moves: AmendMove[], noticeHours: number | undefined, nowMs: number): string | null {
+  if (!noticeHours || noticeHours <= 0) return null;
+  for (const mv of moves) {
+    if (!mv.from) continue; // an undated "preferred date" gives nothing up
+    const startMs = new Date(`${mv.from}T00:00:00Z`).getTime();
+    if (Number.isNaN(startMs)) continue;
+    if (startMs - nowMs < noticeHours * 3_600_000)
+      return `${prettyDay(mv.from)} is too close to move. This provider needs at least ${noticeHours} hours' notice to move a date.`;
+  }
+  return null;
+}

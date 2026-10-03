@@ -79,11 +79,12 @@ export function applyRowAction(b: Booking, action: RowAction): void {
   } else if (action === "move-approve") {
     const req = b.dateChangeRequest;
     if (req) {
-      const swap = (arr?: string[]) => arr?.map((d) => req.moves.find((m) => m.from === d)?.to ?? d);
+      // Each move changes only ITS child's day (matching on date alone moved the wrong child when two children shared a date).
+      const swapOne = (arr: string[] | undefined, from: string, to: string) => arr?.map((d) => (d === from ? to : d));
       for (const m of req.moves) {
         const kid = b.kids?.find((k) => (m.childId && k.childId === m.childId) || k.name === m.childName);
-        if (kid && kid.dates?.length) kid.dates = swap(kid.dates)!;
-        else b.days = swap(b.days);
+        if (kid && kid.dates?.length) kid.dates = swapOne(kid.dates, m.from, m.to)!;
+        else b.days = swapOne(b.days, m.from, m.to);
       }
       req.status = "approved";
       b.note = "Date change approved.";

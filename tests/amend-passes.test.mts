@@ -406,3 +406,21 @@ for (const [setting, label] of [
     assert.ok(new RegExp(setting).test(serverSrc), `${setting} is not referenced in server/src/routes/my.ts or bookings.ts`);
   });
 }
+
+// ── Notice rule actually enforced (AM-011) ────────────────────────────────────────────────────────────────────────────────────────────
+import { amendNoticeError } from "../server/src/lib/dateChange";
+test("amendNoticeError: Setup > Amending dates notice hours", async (t) => {
+  const now = new Date("2026-10-03T12:00:00Z").getTime(); // Sat 3 Oct noon
+  await t.test("48h notice: moving Mon 5 Oct (36h away) is refused with a plain reason", () => {
+    const r = amendNoticeError([{ from: "2026-10-05", to: "2026-10-12" }], 48, now);
+    assert.match(r ?? "", /too close to move.*48 hours/);
+  });
+  await t.test("48h notice: moving Wed 7 Oct is allowed", () => assert.equal(amendNoticeError([{ from: "2026-10-07", to: "2026-10-14" }], 48, now), null));
+  await t.test("notice 0 or unset = no rule", () => {
+    assert.equal(amendNoticeError([{ from: "2026-10-05", to: "2026-10-12" }], 0, now), null);
+    assert.equal(amendNoticeError([{ from: "2026-10-05", to: "2026-10-12" }], undefined, now), null);
+  });
+  await t.test("an undated 'preferred date' request gives nothing up, so it is not refused", () => assert.equal(amendNoticeError([{ from: "", to: "2026-10-05" }], 48, now), null));
+  await t.test("one close move in a batch refuses the request", () =>
+    assert.ok(amendNoticeError([{ from: "2026-10-09", to: "2026-10-16" }, { from: "2026-10-05", to: "2026-10-12" }], 48, now)));
+});
