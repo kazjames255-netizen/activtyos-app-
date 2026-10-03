@@ -332,7 +332,7 @@ export function NewsfeedApp() {
     catch (e) { setError(e instanceof Error ? e.message : t("p8em.tplDupFailed")); }
   };
 
-  if (!posts) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8em.nfLoading")}</div></div>;
+  if (!posts) return <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8em.nfLoading")}</div></div>;
 
   const kpis: [string, number][] = [[t("p8em.nfPublished"), live.length], [t("p8em.cPinned"), pinnedCount], [t("p8em.nfScheduled"), scheduledCount]];
 
@@ -347,7 +347,7 @@ export function NewsfeedApp() {
 
   if (audience === "staff") {
     return (
-      <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+      <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
         <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
           <div className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p8em.nfNotifications")}</div>
           <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">{t("p8em.nfNotifSub")}</p>
@@ -359,7 +359,7 @@ export function NewsfeedApp() {
   }
 
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{error}</div>}
 
       {/* Hero */}

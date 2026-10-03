@@ -42,9 +42,9 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
       {selectable && (
         <input type="checkbox" checked={!!selected} onChange={onToggleSelect} className="h-4 w-4 flex-none accent-[var(--brand)]" title={t("parent.selectForBatch")} />
       )}
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-[13px] font-bold">{b.listing}</div>
-        <div className="text-[11.5px] text-[var(--ink-3)]">
+      <div className="min-w-0 flex-1 max-sm:min-w-[60%]">
+        <div className="text-[14px] font-bold [overflow-wrap:anywhere] sm:truncate sm:text-[13px]">{b.listing}</div>
+        <div className="text-[12.5px] sm:text-[11.5px] text-[var(--ink-3)]">
           {b.child} · {bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))} · {t("p8par.mbRef", { ref: b.ref })}
         </div>
       </div>
@@ -60,10 +60,10 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
           {t("parent.pdfLabel")}
         </button>
       ) : (
-        <span className="w-[52px] text-end text-[10.5px] text-[var(--ink-3)]">{t("parent.receiptAfterPayment")}</span>
+        <span className="w-[52px] text-end text-[10.5px] text-[var(--ink-3)] max-sm:hidden">{t("parent.receiptAfterPayment")}</span>
       )}
       {action && (
-        <Button sm variant="primary" onClick={onPay}>
+        <Button sm variant="primary" className="max-sm:min-h-[44px] max-sm:w-full" onClick={onPay}>
           {t("parent.payNow")}
         </Button>
       )}
@@ -192,45 +192,45 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
       )}
 
       {/* Totals */}
-      <div className="mb-3.5 flex flex-wrap gap-2.5">
+      <div className="mb-3.5 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-2.5">
         {[
           { big: money(owedTotal), small: tr("parent.toPayNow"), hot: owedTotal > 0 },
           { big: money(paidTotal), small: tr("parent.paidToDate") },
           { big: money(refundTotal), small: tr("parent.refundedBack") },
         ].map((t) => (
-          <div key={t.small} className="min-w-[120px] flex-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3">
-            <div className="text-[20px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)", color: t.hot ? "var(--red,#e21d27)" : "var(--brand)" }}>{t.big}</div>
-            <div className="mt-1 text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t.small}</div>
+          <div key={t.small} className="min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-3 sm:min-w-[120px] sm:px-3.5">
+            <div className="text-[18px] sm:text-[20px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)", color: t.hot ? "var(--red,#e21d27)" : "var(--brand)" }}>{t.big}</div>
+            <div className="mt-1 text-[11px] font-bold uppercase sm:text-[10.5px] tracking-[0.04em] text-[var(--ink-3)]">{t.small}</div>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="mb-3.5 flex flex-wrap items-end gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.childLabel")}</span>
-          <select value={childF} onChange={(e) => setChildF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
+      <div className="mb-3.5 grid grid-cols-2 items-end gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 sm:flex sm:flex-wrap">
+        <label className="col-span-2 flex flex-col gap-1 sm:col-auto">
+          <span className="text-[12px] font-bold uppercase sm:text-[10.5px] tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.childLabel")}</span>
+          <select value={childF} onChange={(e) => setChildF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] w-full min-w-0 px-2.5 py-2 text-[14px] sm:w-auto sm:py-1.5 sm:text-[12.5px]">
             <option value="">{tr("parent.allChildren")}</option>
             {childOptions.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.activityFilterLabel")}</span>
-          <select value={listingF} onChange={(e) => setListingF(e.target.value)} className="max-w-[200px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
+        <label className="col-span-2 flex min-w-0 flex-col gap-1 sm:col-auto">
+          <span className="text-[12px] font-bold uppercase sm:text-[10.5px] tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.activityFilterLabel")}</span>
+          <select value={listingF} onChange={(e) => setListingF(e.target.value)} className="sm:max-w-[200px] rounded-lg border border-[var(--line)] bg-[var(--surface)] w-full min-w-0 px-2.5 py-2 text-[14px] sm:w-auto sm:py-1.5 sm:text-[12.5px]">
             <option value="">{tr("parent.allActivities")}</option>
             {listingOptions.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.fromLabel")}</span>
-          <input type="date" value={fromF} onChange={(e) => setFromF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
+        <label className="col-span-2 flex min-w-0 flex-col gap-1 sm:col-auto">
+          <span className="text-[12px] font-bold uppercase sm:text-[10.5px] tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.fromLabel")}</span>
+          <input type="date" value={fromF} onChange={(e) => setFromF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] w-full min-w-0 px-2.5 py-2 text-[14px] sm:w-auto sm:py-1.5 sm:text-[12.5px]" />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.toLabel")}</span>
-          <input type="date" value={toF} onChange={(e) => setToF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
+        <label className=" flex min-w-0 flex-col gap-1 sm:col-auto">
+          <span className="text-[12px] font-bold uppercase sm:text-[10.5px] tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.toLabel")}</span>
+          <input type="date" value={toF} onChange={(e) => setToF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] w-full min-w-0 px-2.5 py-2 text-[14px] sm:w-auto sm:py-1.5 sm:text-[12.5px]" />
         </label>
         {filtersOn && (
-          <button onClick={() => { setChildF(""); setListingF(""); setFromF(""); setToF(""); }} className="py-1.5 text-[12px] font-bold text-[var(--ink-3)] hover:underline">
+          <button onClick={() => { setChildF(""); setListingF(""); setFromF(""); setToF(""); }} className="col-span-2 py-2 sm:col-auto sm:py-1.5 text-[12px] font-bold text-[var(--ink-3)] hover:underline">
             {tr("parent.clearBtn")}
           </button>
         )}

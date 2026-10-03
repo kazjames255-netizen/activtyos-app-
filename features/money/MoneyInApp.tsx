@@ -81,7 +81,7 @@ export function MoneyInApp() {
   const toggleHero = () => setHeroOpen((v) => { const n = !v; try { localStorage.setItem("aos.hero.money-in", n ? "1" : "0"); } catch { /* ignore */ } return n; });
 
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Money-in hero — Invoices + Income folded into one headline */}
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(120deg,#16306e 0%,#3f78d8 100%)`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex items-start justify-between gap-3">

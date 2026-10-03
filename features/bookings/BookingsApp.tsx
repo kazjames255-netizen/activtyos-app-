@@ -144,7 +144,7 @@ export function BookingsApp() {
     // blue-white. Same values, same shape — until this moves to one place, a
     // fourth screen will drift the same way.
     <div
-      className="-m-5 min-h-[calc(100vh-3.5rem)] p-5"
+      className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5"
       style={
         {
           background: "var(--bg)",

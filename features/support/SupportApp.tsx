@@ -84,7 +84,7 @@ export function SupportApp() {
   }
 
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{isCustomer ? t("account.supReportTitle") : t("account.supOpTitle")}</h2>

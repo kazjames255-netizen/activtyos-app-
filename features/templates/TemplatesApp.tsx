@@ -121,7 +121,7 @@ export function TemplatesApp() {
   }
 
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
           <Link href={`/${portalSeg}/messages`} className="mb-1.5 inline-block text-[12px] font-bold text-[var(--brand-2)] no-underline">{t("p8em.tplBackToMessages")}</Link>

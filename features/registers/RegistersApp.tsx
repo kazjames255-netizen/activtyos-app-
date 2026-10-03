@@ -1275,10 +1275,10 @@ export function RegistersApp() {
     return { attend, siblings: [...sibs] };
   };
 
-  if (!ready) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">{t("registers.loadingRegister")}</div></div>;
+  if (!ready) return <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">{t("registers.loadingRegister")}</div></div>;
 
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{error}</div>}
       {outboxRefs.size > 0 && <div className="mb-3 rounded-lg border border-[#fdd9a0] bg-[#fff6e6] px-3 py-2 text-[12.5px] font-semibold text-[#8a5300]">{t("p8ops.rgOutbox", { n: outboxRefs.size })}</div>}
       {listingsAll.length === 0 ? (

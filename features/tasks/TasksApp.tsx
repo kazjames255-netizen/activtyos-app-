@@ -678,7 +678,7 @@ export function TasksApp() {
   const preview = qa.trim() ? parseQuick(qa, today) : null;
   const previewWhoUnknown = preview?.who && !teamNames.some((w) => w.toLowerCase() === preview.who!.toLowerCase());
 
-  if (!tasks) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">{tr("p7tk.loadingTM")}</div></div>;
+  if (!tasks) return <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">{tr("p7tk.loadingTM")}</div></div>;
 
   const openTask = openId ? all.find((t) => t.id === openId) ?? null : null;
   const TABS: [typeof tab, string][] = manager
@@ -690,7 +690,7 @@ export function TasksApp() {
     : tr("p7tk.subDefault");
 
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{error}</div>}
 
       {/* Hero */}

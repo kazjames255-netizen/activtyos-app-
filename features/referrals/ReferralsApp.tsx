@@ -100,7 +100,7 @@ export function ReferralsApp() {
   })();
 
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Hero — kept compact: title + inline stats on the left, small leaderboard on the right */}
       <div className="relative mb-4 overflow-hidden rounded-2xl p-4 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "var(--hero-grad)" }}>
         <div className="absolute end-4 top-4 z-10 flex items-center gap-2">

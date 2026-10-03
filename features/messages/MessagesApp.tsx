@@ -473,7 +473,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     // -m-5/p-5 bleeds the light surface to the edges of the (dark-shell) content
     // area so the whole Messages page reads light, like the customer dashboard.
     <div
-      className="-m-5 min-h-[calc(100vh-3.5rem)] p-5 text-[var(--ink)]"
+      className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]"
       style={{
         ...LIGHT_PALETTE,
         // Chosen bright theme wash (Gmail-style). White conversation cards read

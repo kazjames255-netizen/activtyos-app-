@@ -630,7 +630,7 @@ export function CustomersApp() {
     // navy "How it works" heading was all but invisible — and it sits in the
     // same sidebar group as three screens that are light.
     <div
-      className="-m-5 min-h-[calc(100vh-3.5rem)] p-5"
+      className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5"
       style={
         {
           background: "var(--bg)",

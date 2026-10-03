@@ -45,6 +45,12 @@ export function Header({ portal }: { portal: PortalKey }) {
   // Mobile nav drawer — the same Sidebar the desktop rail shows, slid over the
   // content. Navigating (pathname change) closes it.
   const [menuOpen, setMenuOpen] = useState(false);
+  // The parent bottom tab bar's "More" opens this same drawer.
+  useEffect(() => {
+    const open = () => setMenuOpen(true);
+    window.addEventListener("aos:open-menu", open);
+    return () => window.removeEventListener("aos:open-menu", open);
+  }, []);
   // Close the drawer on navigation — adjust during render (no effect) so it
   // stays in sync with pathname without a cascading re-render.
   const [menuPath, setMenuPath] = useState(pathname);
@@ -192,7 +198,7 @@ export function Header({ portal }: { portal: PortalKey }) {
       </button>
       {menuOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
-          <Sidebar portal={portal} />
+          <Sidebar portal={portal} drawer />
           <div className="flex-1 bg-black/50" onClick={() => setMenuOpen(false)} aria-hidden />
         </div>
       )}
@@ -204,7 +210,7 @@ export function Header({ portal }: { portal: PortalKey }) {
       {/* Bare text links spaced like the marketing site's nav — no pill
           container, no panel fill; the bar itself is the background. */}
       {(tabs.length > 0 || commItems.length > 0) && (
-        <nav className="flex min-w-0 items-center gap-2.5 px-1 sm:gap-3">
+        <nav className={`flex min-w-0 items-center gap-2.5 px-1 sm:gap-3${portal === "custdash" ? " max-sm:hidden" : ""}`}>
         {/* overflow-x-auto on just the plain tabs (not the Contact dropdown
             below): the tabs are shrink-0 (see below) so they never squeeze to
             an unreadable sliver, but that means a crowded bar (several tabs +
@@ -313,7 +319,7 @@ export function Header({ portal }: { portal: PortalKey }) {
         </button>
       )}
 
-      <div className="flex flex-none items-center gap-2 sm:gap-3">
+      <div className="flex flex-none items-center gap-2 max-sm:ms-auto sm:gap-3">
         {/* A person, not an address. displayName falls back to a name-shaped
             reading of the email's local part rather than printing the whole
             thing; the full address stays in the tooltip. */}

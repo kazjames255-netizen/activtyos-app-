@@ -226,7 +226,7 @@ function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHi
   );
 }
 
-export function Sidebar({ portal }: { portal: PortalKey }) {
+export function Sidebar({ portal, drawer }: { portal: PortalKey; drawer?: boolean }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const groups = NAV_GROUPS[portal];
@@ -236,7 +236,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   const activeGroupLabel = groups.find((g) => g.items.some((i) => i.view === activeView))?.label;
 
   const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
-  const isOpen = (label: string) => openOverrides[label] ?? label === activeGroupLabel;
+  const isOpen = (label: string) => openOverrides[label] ?? (label === activeGroupLabel || (!!drawer && portal === "custdash"));
 
   // The full rail always shows; users can still narrow it manually with the
   // « toggle if they want more room.

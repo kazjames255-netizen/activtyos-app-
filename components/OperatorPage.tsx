@@ -127,7 +127,7 @@ export function PageHero({
   return (
     <>
       <div
-        className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]"
+        className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-4 text-white sm:p-5 shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]"
         style={{
           // A white 18px dot grid layered over the gradient — matches the sidebar
           // and register header so every title card reads as the same surface.
@@ -140,11 +140,11 @@ export function PageHero({
           <div>
             {/* A real heading, not a div — screen readers (and tests) navigate by
                 page headings, and the migration to PageHero silently removed them. */}
-            <h2 className="m-0 flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+            <h2 className="m-0 flex items-center gap-2 text-[21px] font-extrabold sm:text-[22px]" style={{ fontFamily: "var(--ff-display)" }}>
               {icon && <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px]">{icon}</span>}
               {title}
             </h2>
-            {lede && <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">{lede}</p>}
+            {lede && <p className="mt-1.5 max-w-[640px] text-[14px] leading-[1.45] text-white/85 max-sm:line-clamp-2 sm:text-[12.5px] sm:leading-[1.5]">{lede}</p>}
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             <SettingsLink />
@@ -328,7 +328,7 @@ export function TabStrip<T extends string>({
   accent?: T;
 }) {
   return (
-    <div className="mb-3.5 flex flex-wrap gap-1.5">
+    <div className="-mx-3 mb-3.5 flex gap-1.5 overflow-x-auto px-3 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
       {tabs.map(([key, label]) => {
         const on = key === value;
         const isAccent = key === accent && !on;
@@ -337,7 +337,7 @@ export function TabStrip<T extends string>({
             key={key}
             type="button"
             onClick={() => onChange(key)}
-            className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-all duration-150 hover:-translate-y-px"
+            className="shrink-0 whitespace-nowrap rounded-full border px-4 py-2.5 text-[14px] font-bold transition-all duration-150 hover:-translate-y-px sm:px-3.5 sm:py-1.5 sm:text-[12.5px]"
             style={
               on
                 ? { borderColor: "transparent", background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 10px -2px rgba(47,107,216,.55)" }

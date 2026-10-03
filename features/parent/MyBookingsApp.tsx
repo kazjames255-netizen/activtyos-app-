@@ -49,7 +49,7 @@ const pHeroTone = (s: string) => PHERO_TONE[s] || { bg: "#e4e9fa", fg: "#2140a0"
 function PCol({ label, w, children }: { label: string; w: string; children: ReactNode }) {
   return (
     <div className={`flex flex-col gap-0.5 ${w}`}>
-      <span className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{label}</span>
+      <span className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)] sm:text-[8.5px]">{label}</span>
       <div>{children}</div>
     </div>
   );
@@ -976,19 +976,19 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
   return (
     <Card id={`booking-${b.ref}`} className="overflow-hidden p-0" style={{ boxShadow: "0 12px 28px -18px rgba(20,35,90,.4)" }}>
       {/* Identity hero row — colour = booking status (matches operator list) */}
-      <div className="flex items-stretch">
-        <div onClick={() => setExpanded((x) => !x)} className="relative flex w-[140px] flex-none cursor-pointer items-center gap-2.5 p-2.5 text-white sm:w-[210px]" style={{ background: pHeroGrad(b.status) }}>
+      <div className="flex flex-col items-stretch sm:flex-row">
+        <div onClick={() => setExpanded((x) => !x)} className="relative flex w-full flex-none cursor-pointer items-center gap-2.5 p-3 text-white sm:w-[210px] sm:p-2.5" style={{ background: pHeroGrad(b.status) }}>
           <span className={`flex h-9 min-w-9 flex-none items-center justify-center rounded-xl bg-white/25 px-1.5 font-extrabold ring-1 ring-white/25 ${kidNames.length > 1 ? "text-[11px]" : "text-[15px]"}`} style={{ textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>
             {initials}
           </span>
           <div className="min-w-0">
-            <div className="text-[13.5px] font-extrabold leading-[1.15] [overflow-wrap:anywhere]" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 3px rgba(0,0,0,.3)" }}>{kidNames.join(" & ") || "—"}</div>
-            <div className="truncate text-[10px] text-white/85" style={{ textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{t("p8par.mbRef", { ref: b.ref })}</div>
+            <div className="text-[16px] font-extrabold leading-[1.15] [overflow-wrap:anywhere] sm:text-[13.5px]" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 3px rgba(0,0,0,.3)" }}>{kidNames.join(" & ") || "—"}</div>
+            <div className="truncate text-[12px] text-white/85 sm:text-[10px]" style={{ textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{t("p8par.mbRef", { ref: b.ref })}</div>
           </div>
         </div>
-        <div onClick={() => setExpanded((x) => !x)} className="flex flex-1 cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 overflow-hidden px-4 py-2 hover:bg-[var(--panel)]">
-          <PCol label={t("parent.listingCol")} w="min-w-[120px] flex-1">
-            <span className="block text-[12.5px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere]" title={b.listing}>{b.listing || "—"}</span>
+        <div onClick={() => setExpanded((x) => !x)} className="flex flex-1 cursor-pointer flex-wrap items-center gap-x-4 gap-y-2.5 overflow-hidden px-4 py-3 hover:bg-[var(--panel)] sm:gap-y-1 sm:py-2">
+          <PCol label={t("parent.listingCol")} w="w-full min-w-[120px] sm:w-auto sm:flex-1">
+            <span className="block text-[15px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere] sm:text-[12.5px]" title={b.listing}>{b.listing || "—"}</span>
             {b.serviceAddress?.address || b.serviceAddress?.postcode ? (
               <span className="block text-[11px] font-semibold text-[var(--ink-2)]">{t("p8par.mbComeToYou", { addr: [b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ") })}</span>
             ) : (<>
@@ -1001,8 +1001,8 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           {!cancelled && <PCol label={t("parent.paymentCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{w(payLabelFor(b))}</span></PCol>}
           {attendLabel && <PCol label={t("p7bk.todayCol")} w="w-[130px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={attend?.status === "in" ? { background: "#dcfce7", color: "#166534" } : attend?.status === "absent" ? { background: "#fee2e2", color: "#991b1b" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{attendLabel}</span></PCol>}
           <div className="ms-auto flex-none text-end">
-            <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("parent.amountCol")}</div>
-            <div className="text-[15px] font-extrabold text-[var(--ink)]">{money(b.amount)}</div>
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)] sm:text-[8.5px]">{t("parent.amountCol")}</div>
+            <div className="text-[18px] sm:text-[15px] font-extrabold text-[var(--ink)]">{money(b.amount)}</div>
             {mealRows.length > 0 && <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-[#fff3e0] px-2 py-[2px] text-[10.5px] font-extrabold text-[#96631a]">🍽 {pickPlural(t, locale, "p7bk.mealN", mealRows.length)} · {money(mealTotal)}</div>}
           </div>
           <span className={`flex-none text-[13px] text-[var(--ink-3)] transition-transform ${expanded ? "rotate-180" : ""}`} title={expanded ? t("parent.close") : t("p7bk.openWord")}>▾</span>
@@ -1083,9 +1083,9 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
 
       <BankTransferBox b={b} />
 
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-2 flex flex-wrap gap-2 max-sm:[&_button]:min-h-[44px] max-sm:[&_button]:text-[14px]">
         {payable && (
-          <Button sm variant="primary" onClick={() => setPaying(true)}>
+          <Button sm variant="primary" className="max-sm:w-full" onClick={() => setPaying(true)}>
             {t("parent.payAmount", { amount: money(owedOf(b)) })}
           </Button>
         )}
@@ -1517,7 +1517,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
               <>
                 {waiting.length > 0 && <SectionHead>{tr("parent.myBookings")}</SectionHead>}
                 {childOptions.length > 1 && (
-                  <div className="mb-3 flex flex-wrap gap-1.5">
+                  <div className="mb-3 -mx-3 flex gap-1.5 overflow-x-auto px-3 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&_button]:shrink-0 [&_button]:whitespace-nowrap">
                     <button type="button" onClick={() => setChildF("")} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
                       style={!childF ? { borderColor: "var(--brand)", background: "var(--brand)", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
                       {tr("parent.allChildren")}
@@ -1534,29 +1534,29 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                     })}
                   </div>
                 )}
-                <div className="mb-3 flex flex-wrap items-end gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.activityFilterLabel")}</span>
-                    <select value={listingF} onChange={(e) => setListingF(e.target.value)} className="max-w-[190px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
+                <div className="mb-3 grid grid-cols-2 items-end gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 sm:flex sm:flex-wrap">
+                  <label className="col-span-2 flex flex-col gap-1 sm:col-auto">
+                    <span className="text-[12px] sm:text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.activityFilterLabel")}</span>
+                    <select value={listingF} onChange={(e) => setListingF(e.target.value)} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[14px] sm:w-auto sm:max-w-[190px] sm:py-1.5 sm:text-[12.5px]">
                       <option value="">{tr("parent.allActivities")}</option>
                       {listingOptions.map((l) => <option key={l} value={l}>{l}</option>)}
                     </select>
                   </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.fromLabel")}</span>
-                    <input type="date" value={fromF} onChange={(e) => setFromF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
+                  <label className="flex min-w-0 flex-col gap-1">
+                    <span className="text-[12px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)] sm:text-[10px]">{tr("parent.fromLabel")}</span>
+                    <input type="date" value={fromF} onChange={(e) => setFromF(e.target.value)} className="w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[14px] sm:w-auto sm:py-1.5 sm:text-[12.5px]" />
                   </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.toLabel")}</span>
-                    <input type="date" value={toF} onChange={(e) => setToF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
+                  <label className="flex min-w-0 flex-col gap-1">
+                    <span className="text-[12px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)] sm:text-[10px]">{tr("parent.toLabel")}</span>
+                    <input type="date" value={toF} onChange={(e) => setToF(e.target.value)} className="w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[14px] sm:w-auto sm:py-1.5 sm:text-[12.5px]" />
                   </label>
                   {filtersOn && (
-                    <button onClick={() => { setChildF(""); setListingF(""); setFromF(""); setToF(""); }} className="py-1.5 text-[12px] font-bold text-[var(--ink-3)] hover:underline">
+                    <button onClick={() => { setChildF(""); setListingF(""); setFromF(""); setToF(""); }} className="col-span-2 py-2 sm:col-auto sm:py-1.5 text-[12px] font-bold text-[var(--ink-3)] hover:underline">
                       {tr("parent.clearBtn")}
                     </button>
                   )}
                 </div>
-                <div className="mb-3.5 flex flex-wrap gap-1.5">
+                <div className="mb-3.5 -mx-3 flex gap-1.5 overflow-x-auto px-3 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&_button]:shrink-0 [&_button]:whitespace-nowrap">
                   {tabs.filter((t) => t.key === "all" || counts[t.key] > 0).map((t) => {
                     const active = filter === t.key;
                     return (

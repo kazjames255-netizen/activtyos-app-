@@ -15,6 +15,7 @@ import { ParentWelcome } from "@/features/parent/ParentWelcome";
 import { StaffWelcome } from "@/features/staff/StaffWelcome";
 import { StaffReminderBanner } from "@/features/staff/StaffReminderBanner";
 import { HoThemeSync } from "@/components/franchise/HoScope";
+import { ParentTabBar } from "@/components/shell/ParentTabBar";
 import { ParentBrandTheme } from "@/components/shell/ParentBrandTheme";
 
 // The customer dashboard runs the same light palette the operator screens sit
@@ -92,7 +93,8 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
             {/* The operator views each wrap themselves in the light palette, but
                 the main surface itself must be light too — otherwise the dark
                 --bg shows through as a black flash while a route loads. */}
-            <main className="aos-shell-main min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]" style={light ? undefined : LIGHT_PALETTE}><SubscriptionLock portal={portalKey}>{props.children}</SubscriptionLock></main>
+            <main className={`aos-shell-main min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]${portalKey === "custdash" ? " max-sm:pb-[calc(64px+env(safe-area-inset-bottom))]" : ""}`} style={light ? undefined : LIGHT_PALETTE}><SubscriptionLock portal={portalKey}>{props.children}</SubscriptionLock></main>
+            {portalKey === "custdash" && <ParentTabBar />}
           </div>
           </div>
         </div>

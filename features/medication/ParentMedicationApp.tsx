@@ -145,7 +145,7 @@ export function ParentMedicationApp() {
   }
 
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       <style>{`@keyframes medGlow{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--glow,#1d3a8f) 55%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--glow,#1d3a8f) 0%,transparent)}}.med-flicker{animation:medGlow 1.7s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.med-flicker{animation:none}}`}</style>
 
       {/* Hero — matches the other portal pages (blue → white). */}
