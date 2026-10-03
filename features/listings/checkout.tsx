@@ -1132,6 +1132,16 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   })();
   const clashesOn = (id: string) => clashes.filter((c) => c.itemIds.includes(id));
   const unassigned = shortPasses.length;
+  // A server error describes the basket as it was when Pay was pressed. The moment
+  // the basket, the dates or the children change it is out of date, so hide it
+  // (it comes back if Pay is pressed again and is still true).
+  const basketSig = JSON.stringify([b.basket.map((x) => [x.id, x.dates]), b.rosterNames, b.basket.map((x) => b.childrenOn(x.id))]);
+  const [errSeen, setErrSeen] = useState<{ err: string | null; sig: string }>({ err: null, sig: "" });
+  useEffect(() => {
+    const e = booking?.error ?? null;
+    setErrSeen((cur) => (cur.err === e ? cur : { err: e, sig: basketSig }));
+  }, [booking?.error, basketSig]);
+  const errFresh = errSeen.err !== (booking?.error ?? null) || errSeen.sig === basketSig;
   const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
 
   // Where we are in the sequence: dates, children, one step per extra, pay.
@@ -2502,7 +2512,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         </div>
       )}
 
-      {booking?.error && !(() => {
+      {booking?.error && errFresh && !(() => {
         // Once the named child has been taken off, their error is stale.
         const m = /^(.+?) already has a place on/.exec(booking.error);
         return !!m && !b.rosterNames.includes(m[1]);
