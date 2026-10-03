@@ -77,7 +77,9 @@
   .wrap .hv-k{padding:7px 8px}.wrap .hv-k b{font-size:17px}.wrap .hv-k span{font-size:10px;letter-spacing:.02em;white-space:normal;line-height:1.2}
   .wrap .hv-chart .hv-v text,.wrap .hv-chart .hv-m text{font-size:9.6px}
   .wrap .hv-card{margin:2px 7px 0;padding:8px 9px 9px}
-  .wrap .hv-card b{font-size:13px}.wrap .hv-card small{font-size:10px}.wrap .hv-cta{font-size:11px;padding:8px 0}
+  .wrap .hv-card b{font-size:13px}.wrap .hv-card small{font-size:10px;margin-top:1px}.wrap .hv-cta{font-size:11px;padding:6px 0;margin-top:6px}
+  .wrap .hv-img,.wrap .hv-clip .hv-img{top:calc(var(--W) * .06)}
+  .wrap .hv-card small span.hv-sub2{display:none}
   .wrap .hv-tabs{margin:0 7px 7px;padding:7px 8px}
   .wrap .hv-fl-1{top:-18px;right:6px}
   .wrap .hv-fl-2{right:0;bottom:18px}
@@ -85,3 +87,11 @@
   .wrap .hv-out{filter:drop-shadow(-10px 8px 12px rgba(5,14,44,.5))}
 }
 @media (min-width:561px) and (max-width:979px){.wrap .hv{max-width:500px}}
+@media (max-width:400px){
+  .wrap .hv-k{padding:7px 6px}
+  .wrap .hv-k span{letter-spacing:0;overflow-wrap:normal;word-break:normal;hyphens:none}
+  .wrap .hv-k b{font-size:16px}
+}
+@media (max-width:400px){
+  .wrap .hv-k span{text-transform:none;font-size:11px;font-weight:700}
+}
