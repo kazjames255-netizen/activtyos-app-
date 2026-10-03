@@ -17,6 +17,8 @@ export type PayStatus =
   | "Unpaid"
   | "Invoice sent"
   | "Refunded"
+  // Provider cancelled and a refund is owed, but it has not been approved/paid yet: the money is still held.
+  | "Refund pending"
   | "Partially refunded"
   | "Partially paid"
   | "Funded"

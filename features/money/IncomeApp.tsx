@@ -164,7 +164,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   // booking was taken; amountPaid wins over the headline amount.
   const bookingRows = useMemo<Income[]>(() => bookings
     .map((b) => {
-      const taken = b.amountPaid != null ? b.amountPaid : (b.pay === "Paid" ? (b.amount ?? 0) : 0);
+      const taken = b.amountPaid != null ? b.amountPaid : (b.pay === "Paid" || b.pay === "Refund pending" ? (b.amount ?? 0) : 0);
       // Net of money handed back — a refunded booking isn't money in
       // (acceptance d18s4). Older refunds without the running total count in full.
       const back = Math.min(taken, b.refundedApproved ?? (b.pay === "Refunded" ? taken : 0));

@@ -28,7 +28,7 @@ import { pickPlural } from "@/lib/i18n/plural";
 type Format = "csv" | "pdf";
 
 const STATUSES = ["Approval needed", "Confirmed", "Waitlisted", "Offered", "Cancelled", "Declined"];
-const PAYMENTS = ["Paid", "Unpaid", "Invoice sent", "Awaiting voucher payment", "Refunded", "Partially refunded", "Funded"];
+const PAYMENTS = ["Paid", "Unpaid", "Invoice sent", "Awaiting voucher payment", "Refund pending", "Refunded", "Partially refunded", "Funded"];
 
 /**
  * How the place was funded. Read from the payment method rather than a field

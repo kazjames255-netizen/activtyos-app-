@@ -950,7 +950,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
   // booking is paid OUTSIDE the app (through the scheme), then the provider
   // marks the money in — so no in-app card "Pay" button for it.
   const payable =
-    b.pay !== "Paid" && b.pay !== "Refunded" && b.pay !== "Awaiting voucher payment" &&
+    b.pay !== "Paid" && b.pay !== "Refund pending" && b.pay !== "Refunded" && b.pay !== "Awaiting voucher payment" &&
     (b.status === "Confirmed" || b.pay === "Invoice sent") && owedOf(b) > 0.005;
 
   const kidNames = (b.kids && b.kids.length ? b.kids.map((k) => k.name) : [b.child]).filter(Boolean);

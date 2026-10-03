@@ -51,6 +51,7 @@ function stripeFail(res: Response, e: unknown) {
 const payable = (b: { status: string; pay: string }) =>
   b.pay !== "Paid" &&
   b.pay !== "Refunded" &&
+  b.pay !== "Refund pending" &&
   (b.status === "Confirmed" || b.pay === "Invoice sent");
 /** What a parent is asked for: the BALANCE (price − money already received), never the whole price again. A part-paid
  *  booking, or a fully-paid one where the family released a day ("Partially refunded", status still Confirmed), used to be
