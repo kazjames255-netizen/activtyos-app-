@@ -676,7 +676,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean } | null>(null);
+  const [done, setDone] = useState<{ bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean } | null>(null);
   const [payClosed, setPayClosed] = useState(false);
   const [paidNow, setPaidNow] = useState(false);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
@@ -737,6 +737,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       const refs: string[] = [];
       let total = 0;
       let voucherDetails: { label: string; value: string }[] | undefined;
+      let bankPay: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number } | undefined;
       let heldForApproval = false;
       let seated = false; // any booking the server actually placed (not Waitlisted)
       // A basket spanning two blocks POSTs twice; discount codes must ride on
@@ -753,7 +754,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         if (sendCodes) codesSent = true;
         const walletThisPost = walletCap === undefined ? undefined : walletSent ? 0 : walletCap;
         if (walletCap !== undefined) walletSent = true;
-        const res = await apiPost<{ bookings: { ref: string; status?: string }[]; total: number; voucher?: { scheme: string; details: { label: string; value: string }[] } }>("/api/my/bookings", {
+        const res = await apiPost<{ bookings: { ref: string; status?: string }[]; total: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; voucher?: { scheme: string; details: { label: string; value: string }[] } }>("/api/my/bookings", {
           listingId: listing.id,
           blockId,
           method,
@@ -790,6 +791,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         if (res.bookings.some((x) => x.status !== "Waitlisted")) seated = true;
         total += res.total;
         if (res.voucher?.details?.length) voucherDetails = res.voucher.details;
+        if (res.bank) bankPay = res.bank;
       }
       const allDates = lines.flatMap((l) => l.dates).sort();
       setDone({
@@ -801,6 +803,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         lastDate: allDates[allDates.length - 1],
         voucherScheme,
         voucherDetails,
+        bank: bankPay,
         needsApproval: heldForApproval,
         waitlisted: !seated,
         payByCard: /^card$/i.test(String(method)) && seated,
@@ -881,6 +884,21 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
             </div>
           </div>
         </div>
+
+        {/* Bank transfer: the family is told exactly where to send the money and what to quote. */}
+        {done.bank && !needsApproval && !done.waitlisted && (
+          <div className="mt-3 rounded-2xl border-2 border-[#1d3a8f] bg-[#eef3ff] p-4 text-start">
+            <div className="text-[13px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">Pay by bank transfer · {money(done.bank.amount ?? done.total)}</div>
+            <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[14px]">
+              {done.bank.bankName && (<><span className="text-[#6a6785]">Bank</span><b className="text-[#171534]">{done.bank.bankName}</b></>)}
+              {done.bank.accountName && (<><span className="text-[#6a6785]">Account name</span><b className="text-[#171534]">{done.bank.accountName}</b></>)}
+              {done.bank.sortCode && (<><span className="text-[#6a6785]">Sort code</span><b className="text-[#171534]">{done.bank.sortCode}</b></>)}
+              {done.bank.accountNumber && (<><span className="text-[#6a6785]">Account number</span><b className="text-[#171534]">{done.bank.accountNumber}</b></>)}
+              <span className="text-[#6a6785]">Reference</span><b className="text-[#171534]">{done.bank.reference}</b>
+            </div>
+            <div className="mt-2 text-[12px] text-[#6a6785]">Please quote the reference exactly. Your booking is held; {listing.tenantName || "your provider"} marks it paid when the money arrives. These details are also in your confirmation email.</div>
+          </div>
+        )}
 
         {/* Card booking that is confirmed: take the payment right here (the card form opens straight away, and the button reopens it if closed). */}
         {done.payByCard && !needsApproval && !scheme && done.total > 0 && (

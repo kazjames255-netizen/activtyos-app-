@@ -434,7 +434,18 @@ export function emailPaymentLink(b: Booking, providerName: string): void {
   );
 }
 
-export function emailBookingConfirmed(b: Booking, providerName: string): void {
+/** How to pay by bank transfer: the provider's own account and the reference to quote. */
+export interface BankPayDetails { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }
+export function bankPayHtml(bank: BankPayDetails): string {
+  const row = (k: string, v?: string) => (v ? `<tr><td style="padding:3px 14px 3px 0;color:#6a6785;font-size:13px">${k}</td><td style="padding:3px 0;font-size:14px;font-weight:700;color:#171534">${escapeHtml(v)}</td></tr>` : "");
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:14px 0;border-collapse:separate"><tr><td style="background:#eef3ff;border-left:3px solid #1d3a8f;border-radius:6px;padding:12px 16px">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#1d3a8f;margin-bottom:6px">Pay by bank transfer</div>
+    <table role="presentation" cellpadding="0" cellspacing="0">${row("Bank", bank.bankName)}${row("Account name", bank.accountName)}${row("Sort code", bank.sortCode)}${row("Account number", bank.accountNumber)}${row("Payment reference", bank.reference)}${bank.amount != null ? row("Amount", `£${bank.amount.toFixed(2)}`) : ""}</table>
+    <div style="font-size:12px;color:#6a6785;margin-top:6px">Please quote the reference exactly so your payment can be matched.</div>
+  </td></tr></table>`;
+}
+
+export function emailBookingConfirmed(b: Booking, providerName: string, bank?: BankPayDetails | null): void {
   const closing = b.serviceAddress?.postcode
     ? `Great news ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has confirmed your booking. We'll come to you!`
     : `Great news ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has confirmed your booking. See you there!`;
@@ -442,7 +453,7 @@ export function emailBookingConfirmed(b: Booking, providerName: string): void {
     b, providerName, "bookings",
     `Booking confirmed — ${b.listing}`,
     "You're booked in ✓",
-    `<p style="font-size:14px">${closing}</p>`,
+    `<p style="font-size:14px">${closing}</p>${bank ? bankPayHtml(bank) : ""}`,
     { whatIncluded: true, map: true }, // hero + location + what's included / to bring + venue map (skipped automatically for home-visit — see listingContext)
   );
 }

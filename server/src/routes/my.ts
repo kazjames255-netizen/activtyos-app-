@@ -39,6 +39,7 @@ const prettyDay = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 import {
   emailBookingConfirmed,
+  type BankPayDetails,
   emailBookingRequestReceived,
   emailFamilyBookingCreated,
   emailVoucherInstructions,
@@ -563,6 +564,18 @@ my.get("/providers", async (req, res) => {
 // GET /api/my/contact?tenantId= — the family's own on-file phone with a
 // provider, to prefill checkout. Empty when they have none yet (the client then
 // requires them to enter one). Read-only.
+/** The provider's bank details (Setup > billing) for a family paying by bank transfer, with the reference to quote.
+ *  Only ever handed to the booker themselves (booking response / their own booking), never the public page. */
+async function bankPayDetails(tenantId: string, reference: string, amount?: number): Promise<BankPayDetails | null> {
+  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { billing?: Record<string, unknown> } } | undefined;
+  const b = lib?.settings?.billing ?? {};
+  const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  const out = { bankName: str(b.bankName), accountName: str(b.accountName), sortCode: str(b.sortCode), accountNumber: str(b.accountNumber) };
+  if (!out.sortCode || !out.accountNumber) return null;
+  return { ...out, reference, ...(amount != null ? { amount } : {}) };
+}
+const isBankMethod = (m: unknown) => /bank|transfer/i.test(String(m ?? ""));
+
 my.get("/contact", async (req, res) => {
   const email = tokenEmail(req);
   const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : "";
@@ -1791,7 +1804,7 @@ my.post("/bookings", async (req, res) => {
       // sent below via emailVoucherInstructions — so don't ALSO send the generic
       // confirmed/request email, or the family gets two.
       if (voucher) { /* handled by the voucher email below */ }
-      else if (b0.status === "Confirmed") emailBookingConfirmed(b0, provider);
+      else if (b0.status === "Confirmed") emailBookingConfirmed(b0, provider, isBankMethod(input.method) ? await bankPayDetails(listing.tenantId, b0.ref, b0.amount) : null);
       else emailBookingRequestReceived(b0, provider);
     }
     // Tell the PROVIDER a booking just came in — bell + email. This was never
@@ -2006,6 +2019,9 @@ my.post("/bookings", async (req, res) => {
               // re-resolving client-side, which can miss them).
               ...(voucher ? { voucher: { scheme: voucher.name, details: voucher.details } } : {}),
               ...(waitlist.length ? { waitlist } : {}),
+              ...(isBankMethod(input.method) && bookedTotal > 0
+                ? await (async () => { const bank = await bankPayDetails(listing.tenantId, bookings.filter((b) => b.status !== "Waitlisted").map((b) => b.ref).join(", "), bookedTotal); return bank ? { bank } : {}; })()
+                : {}),
             },
       );
   } catch (e) {

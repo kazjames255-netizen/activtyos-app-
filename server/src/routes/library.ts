@@ -294,6 +294,10 @@ libraryPublic.get("/:tenantId", async (req, res) => {
   // rest of billing (sort code, account number…) stays private.
   const logoUrl = (src.billing as { logoUrl?: unknown } | undefined)?.logoUrl;
   if (typeof logoUrl === "string" && logoUrl.trim()) settings.logoUrl = logoUrl.trim();
+  // Only WHETHER bank details exist (so the booking page can hide "Bank transfer" when there is nowhere to pay);
+  // the details themselves are shown to the booker after booking, never published here.
+  const bill = (src.billing ?? {}) as { sortCode?: unknown; accountNumber?: unknown };
+  settings.bankReady = typeof bill.sortCode === "string" && !!bill.sortCode.trim() && typeof bill.accountNumber === "string" && !!bill.accountNumber.trim();
 
   // Only the reasons a parent may be offered — "both" and "parent" scoped. The
   // full list carries provider-only wording ("Staffing") that isn't theirs to
