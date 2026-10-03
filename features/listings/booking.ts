@@ -377,6 +377,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     setSel([]);
     setStage("checkout");
   };
+  const clearBasket = () => { setBasket([]); setSel([]); setDupNote(null); };
   const removeItem = (id: string) => setBasket((b) => b.filter((y) => y.id !== id));
   /**
    * Change which days a pass covers. A 5 day pass is 5 days — you don't drop
@@ -499,5 +500,5 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
 
   return { passes, periods, passId, setPassId, pickPass, passClosed, passFits, runTotal, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, mealSel, pickMeal, mealFor, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, past, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
     roster, setRoster, childrenOn, toggleChild, clearRemovalsFor, headsOn, rosterNames,
-    waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, heldByBasket, waitlistOnly, waitDone, setWaitDone, joinWaitlist, dupNote, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+    waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, heldByBasket, waitlistOnly, waitDone, setWaitDone, joinWaitlist, dupNote, clearBasket, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
