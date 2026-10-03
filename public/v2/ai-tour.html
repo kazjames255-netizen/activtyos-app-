@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activly tour - with presenter (preview)</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f6f8fd; --ink:#171534; --muted:#6a6785; --brand:#1d3a8f; --card:#fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0e1230; --ink:#f2f4ff; --muted:#a9aed0; --brand:#7da2ff; --card:#171c45; } }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:20px 16px 40px; }
+  h1 { font-size:22px; margin:8px 0 4px; }
+  p { color:var(--muted); margin:4px 0 14px; }
+  .frame { position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:14px; overflow:hidden; }
+  .frame iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  a.btn { display:inline-block; margin:14px 8px 0 0; background:var(--brand); color:#fff; padding:12px 18px; border-radius:999px; text-decoration:none; font-weight:700; }
+  a.btn.alt { background:transparent; color:var(--brand); border:2px solid var(--brand); }
+  .note { background:var(--card); border-radius:12px; padding:12px 14px; margin-top:18px; font-size:14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Activly tour, with a presenter</h1>
+  <p>The first minute of the product tour, narrated by Zosia (voice: Caroline). Preview version for review.</p>
+  <div class="frame">
+    <iframe src="https://app.heygen.com/embeds/517eb94fcd864fdcb4a48cbd9ae12575" title="Activly tour with presenter" allow="encrypted-media; fullscreen; picture-in-picture;" allowfullscreen></iframe>
+  </div>
+  <a class="btn" href="https://app.heygen.com/videos/activly-product-tour-517eb94fcd864fdcb4a48cbd9ae12575">Watch on HeyGen</a>
+  <a class="btn alt" href="/v2/video/activly-tour.mp4">Watch the full 3-minute tour (no presenter)</a>
+  <div class="note">If the video above doesn't play on your phone, tap <b>Watch on HeyGen</b>. This is the free-plan version (it carries a HeyGen watermark).</div>
+</main>
+</body>
+</html>
