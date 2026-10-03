@@ -15,6 +15,7 @@ import { entryFor, registerRows } from "../lib/registerRows";
 import { refPrefixFor } from "../lib/bookingRef";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/mealCutoff";
+import { cancellationRequestNotice } from "../lib/emailTemplates";
 import { money, paidSoFar as totalPaid, realPhone, refundableSoFar } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
@@ -2564,31 +2565,16 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     // -booking cancel never notified anyone, so operators found out only by
     // chance.)
     if (updated.tenantId) {
-      const kids = [...new Set((updated.kids ?? []).map((k) => k.name).filter(Boolean))].join(", ") || updated.child || updated.booker;
-      const amt = updated.cancel?.amount ?? 0;
-      // Say WHERE the family asked the money to go — wallet (store credit),
-      // back to card, or (voucher/TFC) reimbursed via the scheme — so the
-      // operator knows what they're approving without opening the booking.
-      const vScheme = updated.voucherScheme;
-      // TFC / HAF / childcare methods too (same rule as isChildcare above) — a
-      // TFC booking with no voucherScheme read "back to their CARD" (d9s4).
-      const isVoucher = !!vScheme || /voucher|tax-?free|tfc|childcare|haf/i.test(updated.method ?? "");
-      const destTxt = updated.cancel?.refundTo === "wallet"
-        ? "to their WALLET (store credit)"
-        : isVoucher ? `via ${vScheme ?? (/tax-?free|tfc/i.test(updated.method ?? "") ? "Tax-Free Childcare" : "their voucher scheme")} (not a bank card)` : "back to their CARD";
-      const refundTxt = updated.cancel?.refund === "none" || amt <= 0
-        ? "No refund is due under your cancellation policy."
-        : `${money(amt)} refund requested ${destTxt} — approve or decline.`;
-      const reasonTxt = updated.cancel?.reason ? ` Reason: ${updated.cancel.reason}.` : "";
+      const notice = cancellationRequestNotice(updated, money);
       void notify({
         tenantId: updated.tenantId,
         to: { kind: "tenant" },
         category: "booking",
         // Bell headline names the family + activity; the ref lives in the body.
         key: "booking-cancel",
-        title: `${updated.booker} asked to cancel — ${updated.listing}`,
-        body: `Booking ${updated.ref} · ${updated.listing} · ${kids}${updated.dates ? ` · ${updated.dates}` : ""}.${reasonTxt} ${refundTxt} Open the booking to approve or decline.`,
-        subject: `${updated.booker} — cancellation request`,
+        title: notice.title,
+        body: notice.body,
+        subject: notice.subject,
         href: `/company/bookings?ref=${encodeURIComponent(updated.ref)}`,
         ref: updated.ref,
       });
