@@ -9,6 +9,11 @@ import { webUrl } from "./stripe";
 import { bookingPayUrl } from "./bookingPayToken";
 import { AOS_MARK_PNG_B64 } from "./brandLogo";
 import { geocodeAddress } from "../routes/geo";
+import {
+  gbp, escapeHtml, layout, bankPayHtml, type BankPayDetails,
+  requestReceivedSpec, paymentLinkSpec, bookingConfirmedSpec, bookingDeclinedSpec,
+  refundApprovedSpec, placeOfferedSpec, paymentReceivedSpec, familyBookingCreatedEmail,
+} from "./emailTemplates";
 
 /** A random, always-lowercase local part for a lead's reply address —
  * deliberately NOT the Firestore doc id: that's mixed-case, and real mail
@@ -96,8 +101,6 @@ export function aosLogoAttachment(): MailAttachment {
 // domains come with the white-label milestone; until then every send carries
 // the provider's name on the From line and their address on Reply-To
 // (lib/sender.ts).
-
-const gbp = (n: number) => `£${(Math.round(n * 100) / 100).toFixed(2)}`;
 
 /** Send unless the provider has switched this category of automatic email off
  *  (Setup → Email → Automatic emails). Same fire-and-forget contract as
@@ -299,85 +302,6 @@ async function listingContext(
   }
 }
 
-/** Every session date, 3-across (date over time) at small text. Session strings
- *  look like "Mon 20 Jul 2026 · 08:00 – 17:30". */
-function datesGridHtml(sessions: string[]): string {
-  if (!sessions.length) return "<span style='color:#a7a3bd'>Dates to be confirmed</span>";
-  const cell = (s: string) => {
-    const [day, time] = s.split(" · ");
-    return `<td width="33%" style="padding:3px 10px 6px 0;vertical-align:top">
-      <div style="font-size:12px;font-weight:700;color:#171534;white-space:nowrap">${escapeHtml(day ?? s)}</div>
-      ${time ? `<div style="font-size:11px;color:#8a86a3;white-space:nowrap">${escapeHtml(time)}</div>` : ""}
-    </td>`;
-  };
-  const rows: string[] = [];
-  for (let i = 0; i < sessions.length; i += 3) {
-    const cells = sessions.slice(i, i + 3).map(cell);
-    while (cells.length < 3) cells.push(`<td width="33%"></td>`);
-    rows.push(`<tr>${cells.join("")}</tr>`);
-  }
-  return `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">${rows.join("")}</table>`;
-}
-
-/** The customer booking-email shell: the PROVIDER's logo/name up top, all the
- *  session dates, a button straight to the booking, and "powered by ActivityOS"
- *  at the bottom. `hasLogo` gates the inline provider logo (cid:provider-logo).
- *  `title`/`bodyHtml` are HTML, inserted raw. */
-function layout(
-  brand: { name: string; hasLogo: boolean },
-  title: string,
-  bodyHtml: string,
-  b: Booking,
-  ctx: { heroCid?: string; location?: string; homeVisit?: boolean; provided?: string[]; toBring?: string[]; mapCid?: string } = {},
-): string {
-  const kids = b.kids?.length ? b.kids.map((k) => k.name).join(", ") : b.child;
-  const bookingUrl = `${webUrl}/custdash/bookings?open=${encodeURIComponent(b.ref)}`;
-  const row = (label: string, value: string) =>
-    `<tr>
-      <td style="padding:7px 16px 7px 0;font-size:12.5px;color:#8a86a3;white-space:nowrap;vertical-align:top">${escapeHtml(label)}</td>
-      <td style="padding:7px 0;font-size:13.5px;color:#171534;border-bottom:1px solid #eef0f5">${value}</td>
-    </tr>`;
-  const header = brand.hasLogo
-    ? `<img src="cid:provider-logo" alt="${escapeHtml(brand.name)}" style="max-height:48px;max-width:220px;display:inline-block" />`
-    : `<span style="font-size:22px;font-weight:800;color:#1d3a8f">${escapeHtml(brand.name)}</span>`;
-  const label = (t: string) => `<div style="font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#8a86a3;margin:20px 0 8px">${t}</div>`;
-  const chips = (items: string[]) =>
-    items.map((x) => `<span style="display:inline-block;background:#eef3ff;color:#1d3a8f;font-size:12.5px;font-weight:700;padding:5px 12px;border-radius:999px;margin:0 6px 6px 0">${escapeHtml(x)}</span>`).join("");
-  return `
-  <div style="margin:0;padding:0;background:#eef1f7">
-  <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#eef1f7;padding:24px 12px">
-    <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 34px -18px rgba(20,30,70,.4)">
-      <div style="padding:24px 28px 20px;text-align:center;border-bottom:1px solid #eef0f5">${header}</div>
-      ${ctx.heroCid ? `<img src="${ctx.heroCid}" alt="${escapeHtml(b.listing)}" width="600" style="display:block;width:100%;max-width:600px;height:auto;object-fit:cover;max-height:220px" />` : ""}
-      <div style="padding:24px 28px 28px">
-        <h1 style="font-size:22px;line-height:1.25;margin:0 0 14px;color:#171534">${title}</h1>
-        ${bodyHtml}
-        <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin-top:16px">
-          ${row("Activity", escapeHtml(b.listing))}
-          ${row("Pass", escapeHtml(b.pass))}
-          ${ctx.location ? row(ctx.homeVisit ? "We'll come to you at" : "Location", escapeHtml(ctx.location)) : ""}
-          ${row("Child", escapeHtml(kids || "—"))}
-          ${row("Total", `<b>${gbp(b.amount)}</b>`)}
-        </table>
-        ${label("Dates &amp; times")}
-        ${datesGridHtml(b.sessions ?? [])}
-        ${ctx.mapCid ? `${label("Where")}<img src="${ctx.mapCid}" alt="Map of ${escapeHtml(ctx.location ?? b.listing)}" width="544" style="display:block;width:100%;max-width:544px;height:auto;border-radius:12px;border:1px solid #eef0f5" />${ctx.location ? `<div style="font-size:12px;color:#8a86a3;margin-top:6px">📍 ${escapeHtml(ctx.location)}</div>` : ""}` : ""}
-        ${ctx.provided && ctx.provided.length ? `${label("What's included")}<div>${chips(ctx.provided)}</div>` : ""}
-        ${ctx.toBring && ctx.toBring.length ? `${label("What to bring")}<div>${chips(ctx.toBring)}</div>` : ""}
-        <div style="text-align:center;margin:26px 0 4px">
-          <a href="${bookingUrl}" style="display:inline-block;background:#15b364;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(21,179,100,.6)">View my booking →</a>
-        </div>
-      </div>
-      <div style="background:#f7f9fd;padding:16px 24px;text-align:center;border-top:1px solid #eef0f5">
-        <img src="cid:aos-mark" width="15" height="15" alt="" style="vertical-align:middle;margin-right:6px;border-radius:4px;opacity:.9" />
-        <span style="font-size:11.5px;color:#8a86a3;vertical-align:middle">Powered by <b style="color:#4a4763">ActivityOS</b></span>
-        <div style="font-size:11px;color:#a7a3bd;margin-top:5px">You're receiving this because a booking was made with ${escapeHtml(brand.name)}.</div>
-      </div>
-    </div>
-  </div>
-  </div>`;
-}
-
 /** Build + send a customer booking email through the branded shell — resolves
  *  the provider's logo, wraps the body in layout(), attaches the marks. */
 function sendCustomerEmail(
@@ -406,7 +330,7 @@ function sendCustomerEmail(
         provided: ctx.provided,
         toBring: ctx.toBring,
         mapCid: ctx.mapCid,
-      }),
+      }, webUrl),
       providerName,
       [...brandAttachments(brand), ...ctx.attachments],
     );
@@ -414,71 +338,30 @@ function sendCustomerEmail(
 }
 
 export function emailBookingRequestReceived(b: Booking, providerName: string): void {
-  sendCustomerEmail(
-    b, providerName, "bookings",
-    `Booking request received — ${b.listing}`,
-    "We've got your booking request",
-    `<p style="font-size:14px">Thanks ${escapeHtml(b.booker)} — your request is with ${escapeHtml(providerName)} for approval.
-     You'll get another email as soon as it's confirmed. Payment is collected after approval.</p>`,
-    {}, // hero photo + venue location
-  );
+  const m = requestReceivedSpec(b, providerName);
+  sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body, m.enrich);
 }
 
 export function emailPaymentLink(b: Booking, providerName: string): void {
   void (async () => {
     // A public pay page (no sign-in) — the unguessable link pays this one booking's balance by card.
     const payUrl = await bookingPayUrl(b.tenantId, b.ref);
-    sendCustomerEmail(
-      b, providerName, "bookings",
-      `Complete your booking — ${b.listing}`,
-      "Your booking is reserved — payment inside",
-      `<p style="font-size:14px">Hi ${escapeHtml(b.booker)}, ${escapeHtml(providerName)} has reserved this booking for you.</p>
-     <p><a href="${payUrl}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(b.amount)} securely</a></p>
-     <p style="color:#8a86a3;font-size:12px">No account or sign-in needed — the link opens a secure card payment for this booking.</p>`,
-    );
+    const m = paymentLinkSpec(b, providerName, payUrl);
+    sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body, m.enrich);
   })().catch((e) => console.error("[mail] payment link build failed:", (e as Error).message));
 }
 
-/** How to pay by bank transfer: the provider's own account and the reference to quote. */
-export interface BankPayDetails { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }
-export function bankPayHtml(bank: BankPayDetails): string {
-  const row = (k: string, v?: string) => (v ? `<tr><td style="padding:3px 14px 3px 0;color:#6a6785;font-size:13px">${k}</td><td style="padding:3px 0;font-size:14px;font-weight:700;color:#171534">${escapeHtml(v)}</td></tr>` : "");
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:14px 0;border-collapse:separate"><tr><td style="background:#eef3ff;border-left:3px solid #1d3a8f;border-radius:6px;padding:12px 16px">
-    <div style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#1d3a8f;margin-bottom:6px">Pay by bank transfer</div>
-    <table role="presentation" cellpadding="0" cellspacing="0">${row("Bank", bank.bankName)}${row("Account name", bank.accountName)}${row("Sort code", bank.sortCode)}${row("Account number", bank.accountNumber)}${row("Payment reference", bank.reference)}${bank.amount != null ? row("Amount", `£${bank.amount.toFixed(2)}`) : ""}</table>
-    <div style="font-size:12px;color:#6a6785;margin-top:6px">Please quote the reference exactly so your payment can be matched.</div>
-  </td></tr></table>`;
-}
+export { bankPayHtml };
+export type { BankPayDetails };
 
 export function emailBookingConfirmed(b: Booking, providerName: string, bank?: BankPayDetails | null): void {
-  const closing = b.serviceAddress?.postcode
-    ? `Great news ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has confirmed your booking. We'll come to you!`
-    : `Great news ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has confirmed your booking. See you there!`;
-  sendCustomerEmail(
-    b, providerName, "bookings",
-    `Booking confirmed — ${b.listing}`,
-    "You're booked in ✓",
-    `<p style="font-size:14px">${closing}</p>${bank ? bankPayHtml(bank) : ""}`,
-    { whatIncluded: true, map: true }, // hero + location + what's included / to bring + venue map (skipped automatically for home-visit — see listingContext)
-  );
+  const m = bookingConfirmedSpec(b, providerName, bank);
+  sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body, m.enrich);
 }
 
 export function emailBookingDeclined(b: Booking, providerName: string, reason?: string): void {
-  const note = reason?.trim()
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:14px 0;border-collapse:separate">
-         <tr><td style="background:#fbf1f1;border-left:3px solid #d9736b;border-radius:6px;padding:11px 14px">
-           <div style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#a1443c;margin-bottom:3px">Message from ${escapeHtml(providerName)}</div>
-           <div style="font-size:14px;color:#4a2b28;white-space:pre-wrap">${escapeHtml(reason.trim())}</div>
-         </td></tr>
-       </table>`
-    : "";
-  sendCustomerEmail(
-    b, providerName, "bookings",
-    `Booking update — ${b.listing}`,
-    "Your booking request was declined",
-    `<p style="font-size:14px">Sorry ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} couldn't take this booking.
-     Nothing has been charged. Feel free to browse other dates or activities.</p>${note}`,
-  );
+  const m = bookingDeclinedSpec(b, providerName, reason);
+  sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body, m.enrich);
 }
 
 /** The outcome of a family's date/time-change request — branded with the
@@ -541,39 +424,13 @@ export function emailDateChangeResolved(
 }
 
 export function emailRefundApproved(b: Booking, providerName: string): void {
-  const toWallet = b.cancel?.refundTo === "wallet";
-  const amt = b.cancel?.amount ? gbp(b.cancel.amount) : "";
-  sendCustomerEmail(
-    b, providerName, "payments",
-    toWallet ? `Wallet credit added — ${b.listing}` : `Refund approved — ${b.listing}`,
-    toWallet ? "Your wallet credit is ready" : "Your refund is on its way",
-    toWallet
-      ? `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved your refund${amt ? ` of <b>${amt}</b>` : ""} as <b>wallet credit</b>.
-         It&rsquo;s <b>already in your wallet</b> and ready to spend on your next booking — nothing else to do.</p>`
-      : b.cancel?.refundVia === "offline"
-        // A voucher / Tax-Free Childcare / cash booking: the app can't send it
-        // back, and it was never on a card — don't say it's going there.
-        ? `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved the refund for this booking${amt ? ` (<b>${amt}</b>)` : ""}.
-           ${b.voucherScheme ? `It will be returned through <b>${escapeHtml(b.voucherScheme)}</b>, the way you paid.` : "They'll return it the way you paid."} If you have questions, reply to this email.</p>`
-        : `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved the refund for this booking.
-         ${amt ? `Amount: <b>${amt}</b>. It should reach your original payment method within a few days.` : ""}</p>`,
-  );
+  const m = refundApprovedSpec(b, providerName);
+  sendCustomerEmail(b, providerName, "payments", m.subject, m.title, m.body, m.enrich);
 }
 
 export function emailPlaceOffered(b: Booking, providerName: string): void {
-  const until = b.offerExpiresAt
-    ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-    : "";
-  sendCustomerEmail(
-    b, providerName, "waitlist",
-    `A place has opened up — ${b.listing}`,
-    "A place is yours if you want it",
-    `<p style="font-size:14px">Good news ${escapeHtml(b.booker)} — a place has opened up on the dates you were
-     waiting for, and it's being held for you <b>for 2 hours${until ? ` (until ${until})` : ""}</b>.</p>
-     <p style="font-size:14px"><b>One step to take it:</b> press the button, then accept and pay.
-     If the hold runs out, the place passes to the next family in the queue.</p>
-     <p><a href="${webUrl}/custdash/bookings?pay=${encodeURIComponent(b.ref)}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Accept and pay</a></p>`,
-  );
+  const m = placeOfferedSpec(b, providerName, webUrl);
+  sendCustomerEmail(b, providerName, "waitlist", m.subject, m.title, m.body, m.enrich);
 }
 
 
@@ -1026,8 +883,7 @@ export function emailFamilyBookingCreated(
   opts: { accountCreated: boolean; passwordLink: string | null },
 ): void {
   const b = bookings[0];
-  const total = bookings.reduce((s, x) => s + x.amount, 0);
-  const refs = bookings.map((x) => x.ref).join(", ");
+  const total = bookings.reduce((sum, x) => sum + x.amount, 0);
   void (async () => {
   // One booking: a public no-sign-in pay page. Several at once: the signed-in page (it pays the whole basket).
   const payUrl = bookings.length === 1 && total > 0
@@ -1039,40 +895,8 @@ export function emailFamilyBookingCreated(
   const send = opts.accountCreated && opts.passwordLink
     ? (to: string, subject: string, html: string) => sendAs(b.tenantId, providerName, to, subject, html)
     : (to: string, subject: string, html: string) => sendGated(b.tenantId, "bookings", to, subject, html, providerName);
-  send(
-    b.email,
-    `Your booking with ${providerName} (${refs})`,
-    `
-  <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#171534">
-    <div style="padding:18px 0 10px;border-bottom:2px solid #1d3a8f">
-      <strong style="font-size:18px">${escapeHtml(providerName)}</strong>
-      <span style="color:#8a86a3;font-size:12px"> · via ActivityOS</span>
-    </div>
-    <h2 style="font-size:19px;margin:18px 0 6px">Your booking is confirmed</h2>
-    <p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has made this booking for you
-      (you spoke to them, or they took it over the phone), and it now lives in your own
-      ActivityOS account so you can see it, pay it, and manage it any time.</p>
-    <table style="margin:14px 0;border-collapse:collapse;font-size:13.5px" cellpadding="0">
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref${bookings.length > 1 ? "s" : ""}</td><td><b>${refs}</b></td></tr>
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Activity</td><td>${escapeHtml(b.listing)}</td></tr>
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Dates</td><td>${b.dates}</td></tr>
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Total</td><td><b>${gbp(total)}</b></td></tr>
-    </table>
-    ${total > 0
-      ? `<p style="font-size:14px">Pay securely by card — no sign-in needed:</p>
-    <p><a href="${payUrl}" style="display:inline-block;background:#15b364;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(total)}</a></p>`
-      : `<p style="font-size:14px">There's nothing to pay for this booking.</p>`}
-    ${
-      opts.accountCreated && opts.passwordLink
-        ? `<p style="font-size:14px"><b>Finish your details</b> — we created an account for you with this booking. Set a password to see your bookings and add your child&#39;s allergies, emergency contact and your address:</p>
-           <p><a href="${opts.passwordLink}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Set my password</a></p>`
-        : ""
-    }
-    <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">
-      You're receiving this because ${escapeHtml(providerName)} made a booking for this email address.
-      If that wasn't you, reply and tell them.</p>
-  </div>`,
-  );
+  const m = familyBookingCreatedEmail(bookings, providerName, opts, payUrl);
+  send(b.email, m.subject, m.html);
   })().catch((e) => console.error("[mail] family booking email failed:", (e as Error).message));
 }
 
@@ -1128,19 +952,8 @@ export function emailVoucherInstructions(
  *  bank transfer) against a booking — tell the family it's landed, with all the
  *  booking context (dates, venue, who's on it, the amount). */
 export function emailPaymentReceived(b: Booking, providerName: string, opts: { label: string; amount: number }): void {
-  sendCustomerEmail(
-    b, providerName, "payments",
-    `Payment received — ${b.listing}`,
-    "Payment received ✓",
-    `<p style="font-size:14px">Thanks ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has received your <b>${escapeHtml(opts.label)}</b>
-      payment of <b>${gbp(opts.amount)}</b>. Your booking is now fully paid. Thank you!</p>`,
-    {}, // hero photo + venue location; the details table shows dates / who / total
-  );
-}
-
-// Quotes too: this is also used inside attribute values (alt="…").
-function escapeHtml(s: string) {
-  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  const m = paymentReceivedSpec(b, providerName, opts);
+  sendCustomerEmail(b, providerName, "payments", m.subject, m.title, m.body, m.enrich);
 }
 
 // ── The provider's "new booking" email ────────────────────────────────────
