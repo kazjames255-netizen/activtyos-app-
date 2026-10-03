@@ -6,6 +6,7 @@ import { autoEmailOn, type AutoEmailPrefs } from "./autoEmails";
 import { sendMail, type MailAttachment } from "./mailer";
 import { tenantSender, inboundDomain, inboundConfigured } from "./sender";
 import { webUrl } from "./stripe";
+import { bookingPayUrl } from "./bookingPayToken";
 import { AOS_MARK_PNG_B64 } from "./brandLogo";
 import { geocodeAddress } from "../routes/geo";
 
@@ -424,14 +425,18 @@ export function emailBookingRequestReceived(b: Booking, providerName: string): v
 }
 
 export function emailPaymentLink(b: Booking, providerName: string): void {
-  sendCustomerEmail(
-    b, providerName, "bookings",
-    `Complete your booking — ${b.listing}`,
-    "Your booking is reserved — payment inside",
-    `<p style="font-size:14px">Hi ${escapeHtml(b.booker)}, ${escapeHtml(providerName)} has reserved this booking for you.</p>
-     <p><a href="${webUrl}/custdash/bookings?pay=${encodeURIComponent(b.ref)}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(b.amount)} securely</a></p>
-     <p style="color:#8a86a3;font-size:12px">Signing in from the link starts the card payment automatically.</p>`,
-  );
+  void (async () => {
+    // A public pay page (no sign-in) — the unguessable link pays this one booking's balance by card.
+    const payUrl = await bookingPayUrl(b.tenantId, b.ref);
+    sendCustomerEmail(
+      b, providerName, "bookings",
+      `Complete your booking — ${b.listing}`,
+      "Your booking is reserved — payment inside",
+      `<p style="font-size:14px">Hi ${escapeHtml(b.booker)}, ${escapeHtml(providerName)} has reserved this booking for you.</p>
+     <p><a href="${payUrl}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(b.amount)} securely</a></p>
+     <p style="color:#8a86a3;font-size:12px">No account or sign-in needed — the link opens a secure card payment for this booking.</p>`,
+    );
+  })().catch((e) => console.error("[mail] payment link build failed:", (e as Error).message));
 }
 
 /** How to pay by bank transfer: the provider's own account and the reference to quote. */
@@ -1023,7 +1028,11 @@ export function emailFamilyBookingCreated(
   const b = bookings[0];
   const total = bookings.reduce((s, x) => s + x.amount, 0);
   const refs = bookings.map((x) => x.ref).join(", ");
-  const payUrl = `${webUrl}/custdash/bookings?pay=${encodeURIComponent(b.ref)}`;
+  void (async () => {
+  // One booking: a public no-sign-in pay page. Several at once: the signed-in page (it pays the whole basket).
+  const payUrl = bookings.length === 1 && total > 0
+    ? await bookingPayUrl(b.tenantId, b.ref)
+    : `${webUrl}/custdash/bookings?pay=${encodeURIComponent(b.ref)}`;
   // When the booking just created their account this email carries the ONLY
   // set-password link the family will ever get — the bookings toggle can
   // silence a courtesy confirmation, never account access.
@@ -1064,6 +1073,7 @@ export function emailFamilyBookingCreated(
       If that wasn't you, reply and tell them.</p>
   </div>`,
   );
+  })().catch((e) => console.error("[mail] family booking email failed:", (e as Error).message));
 }
 
 /** §Q — childcare voucher instructions: the scheme, its reference(s), the

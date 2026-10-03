@@ -24,7 +24,7 @@ async function publicPost<T>(path: string): Promise<T> {
 }
 
 /** Stripe's Payment Element + the confirm round-trip, inside <Elements>. */
-function CardForm({ token, info, onPaid, onError }: { token: string; info: CheckoutInfo; onPaid: () => void; onError: (m: string) => void }) {
+function CardForm({ token, base, info, onPaid, onError }: { token: string; base: string; info: CheckoutInfo; onPaid: () => void; onError: (m: string) => void }) {
   const t = useT();
   const stripeJs = useStripe();
   const elements = useElements();
@@ -41,7 +41,7 @@ function CardForm({ token, info, onPaid, onError }: { token: string; info: Check
     }
     try {
       const res = await publicPost<{ paid: boolean; status: string }>(
-        `/api/public/invoice/${encodeURIComponent(token)}/confirm/${encodeURIComponent(info.paymentId)}`,
+        `/api/public/${base}/${encodeURIComponent(token)}/confirm/${encodeURIComponent(info.paymentId)}`,
       );
       if (res.paid) onPaid();
       else onError(t("p7pub.payStatus", { status: res.status }));
@@ -61,7 +61,8 @@ function CardForm({ token, info, onPaid, onError }: { token: string; info: Check
   );
 }
 
-export function PayPage({ token }: { token: string }) {
+/** `base` picks which public API serves the link: an invoice (/pay/{token}) or a single booking (/pay/b/{token}). */
+export function PayPage({ token, base = "invoice" }: { token: string; base?: "invoice" | "booking-pay" }) {
   const t = useT();
   const [inv, setInv] = useState<PublicInvoice | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "notfound" | "expired">("loading");
@@ -74,7 +75,7 @@ export function PayPage({ token }: { token: string }) {
   const [justPaid, setJustPaid] = useState(false);
 
   useEffect(() => {
-    fetch(`${API}/api/public/invoice/${encodeURIComponent(token)}`)
+    fetch(`${API}/api/public/${base}/${encodeURIComponent(token)}`)
       .then(async (r) => {
         if (r.status === 410) { setExpired(await r.json().catch(() => ({}))); setState("expired"); return; }
         if (!r.ok) throw new Error("not found");
@@ -88,7 +89,7 @@ export function PayPage({ token }: { token: string }) {
     setStarting(true);
     setPayError(null);
     try {
-      const i = await publicPost<CheckoutInfo>(`/api/public/invoice/${encodeURIComponent(token)}/checkout`);
+      const i = await publicPost<CheckoutInfo>(`/api/public/${base}/${encodeURIComponent(token)}/checkout`);
       setInfo(i);
       // Direct charges: Stripe.js must be initialised ON the provider's
       // connected account or the client secret won't match.
@@ -152,7 +153,7 @@ export function PayPage({ token }: { token: string }) {
                     info && stripePromise ? (
                       <div className="mt-4">
                         <Elements stripe={stripePromise} options={{ clientSecret: info.clientSecret }}>
-                          <CardForm token={token} info={info} onPaid={() => setJustPaid(true)} onError={setPayError} />
+                          <CardForm token={token} base={base} info={info} onPaid={() => setJustPaid(true)} onError={setPayError} />
                         </Elements>
                       </div>
                     ) : (

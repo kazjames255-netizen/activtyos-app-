@@ -93,7 +93,7 @@ import { ratios } from "./routes/ratios";
 import { registers } from "./routes/registers";
 import { children } from "./routes/children";
 import { platformNotifications } from "./routes/platformNotifications";
-import { payments } from "./routes/payments";
+import { payments, bookingPayPublic } from "./routes/payments";
 import { me, tenants } from "./routes/tenants";
 import { twoFa } from "./routes/twoFa";
 import { ai } from "./routes/ai";
@@ -239,6 +239,7 @@ app.use("/api/public/library", anonOnly(rateLimit("library-public", 300)), optio
 
 // Public invoice pay page — found by unguessable payToken, no account needed.
 app.use("/api/public/invoice", rateLimit("public-invoice", 60), invoicePublic);
+app.use("/api/public/booking-pay", rateLimit("public-booking-pay", 60), bookingPayPublic);
 
 // Employment-reference form — the referee is an outsider with no account, so
 // the whole exchange rides on the unguessable token. See routes/references.ts.

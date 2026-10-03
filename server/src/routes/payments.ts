@@ -7,6 +7,7 @@ import { autoEmailOn } from "../lib/autoEmails";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { bookingDocId } from "./bookings";
 import { settlePaymentRecord } from "../lib/settlePayment";
+import { bookingForToken } from "../lib/bookingPayToken";
 import { owedOf } from "../../../features/bookings/helpers";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -414,4 +415,102 @@ payments.post("/checkout/:id/confirm", async (req, res) => {
     return;
   }
   res.json({ status: "succeeded", paid: true, refs: rec.refs ?? [] });
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────
+// PUBLIC booking pay link — no sign-in. /pay/b/{token} in the web app. The unguessable token (bookingPayTokens) IS
+// the authorisation: it can only pay THAT booking's outstanding balance, by card, direct to that provider. Amounts
+// come from the booking record, never the client. Same response shape as the public invoice page so one page serves
+// both. Settlement is the shared path (also used by the Stripe webhook), so a closed tab still settles.
+// ─────────────────────────────────────────────────────────────────────────
+export const bookingPayPublic = Router();
+
+async function bookingByToken(token: string) {
+  const t = await bookingForToken(token);
+  if (!t) return null;
+  const snap = await db.collection("bookings").doc(bookingDocId(t.tenantId, t.ref)).get();
+  return snap.exists ? fromDoc(snap.data() as BookingDoc) : null;
+}
+
+bookingPayPublic.get("/:token", async (req, res) => {
+  const b = await bookingByToken(req.params.token);
+  if (!b) { res.status(404).json({ error: "This payment link isn’t valid." }); return; }
+  const tenant = await tenantsCol.doc(b.tenantId!).get();
+  const settings = (tenant.exists && (tenant.data()!.settings as Record<string, unknown>)) || {};
+  const provider = (settings.providerName as string) || (tenant.data()?.name as string) || "Your provider";
+  const due = balanceOf(b);
+  if (b.status === "Cancelled" || b.status === "Declined" || b.pay === "Paid" || due <= 0) {
+    res.json({
+      provider, status: b.pay === "Paid" ? "paid" : "cancelled", closed: true, amount: b.amount ?? 0, description: b.listing, reference: b.ref,
+      paidAt: null, dueDate: null, customerName: null, payMethods: [], cardEnabled: false,
+    });
+    return;
+  }
+  res.json({
+    provider, amount: due, description: `${b.listing}${b.dates ? ` · ${b.dates}` : ""}`, reference: b.ref, status: "sent", dueDate: null,
+    customerName: b.booker ?? null, payMethods: [],
+    cardEnabled: !!stripe && (!!tenant.data()?.stripeAccountId || platformFallback),
+  });
+});
+
+bookingPayPublic.post("/:token/checkout", async (req, res) => {
+  const s = needStripe(res);
+  if (!s) return;
+  const b = await bookingByToken(req.params.token);
+  if (!b) { res.status(404).json({ error: "This payment link isn’t valid." }); return; }
+  if (b.status === "Cancelled" || b.status === "Declined") { res.status(409).json({ error: "This booking was cancelled" }); return; }
+  if (b.pay === "Paid") { res.status(409).json({ error: "This booking is already paid" }); return; }
+  if (!payable(b)) { res.status(409).json({ error: `This booking isn't ready to pay (${b.status} / ${b.pay})` }); return; }
+  const amount = balanceOf(b);
+  if (!(amount > 0)) { res.status(409).json({ error: "Nothing to pay" }); return; }
+  const tenantId = b.tenantId!;
+  const tenant = await tenantsCol.doc(tenantId).get();
+  const accountId: string | undefined = tenant.data()?.stripeAccountId;
+  let stripeAccount: string | null = null;
+  if (accountId) {
+    const account = await s.accounts.retrieve(accountId);
+    if (account.charges_enabled && account.capabilities?.card_payments === "active") stripeAccount = accountId;
+  }
+  if (!stripeAccount && !platformFallback) {
+    res.status(409).json({ error: "This provider can't take card payments yet — pay by one of the listed methods instead" });
+    return;
+  }
+  let intent;
+  try {
+    intent = await s.paymentIntents.create(
+      {
+        amount: toPence(amount),
+        currency: "gbp",
+        automatic_payment_methods: { enabled: true },
+        description: `${tenant.data()?.name ?? "ActivityOS"} — booking ${b.ref}`,
+        metadata: { tenantId, refs: b.ref, email: b.email, via: "pay-link" },
+        ...((await autoEmailOn(tenantId, "payments")) && b.email.includes("@") ? { receipt_email: b.email } : {}),
+      },
+      stripeAccount ? { stripeAccount } : undefined,
+    );
+  } catch (e) { stripeFail(res, e); return; }
+  const ref = await paymentsCol.add({
+    tenantId, refs: [b.ref], email: b.email, amount, currency: "gbp", paymentIntentId: intent.id, stripeAccount,
+    platformFallback: !stripeAccount, status: "created", via: "pay-link", createdAt: new Date().toISOString(),
+  });
+  res.status(201).json({ paymentId: ref.id, clientSecret: intent.client_secret, stripeAccount, amount });
+});
+
+bookingPayPublic.post("/:token/confirm/:paymentId", async (req, res) => {
+  const s = needStripe(res);
+  if (!s) return;
+  const b = await bookingByToken(req.params.token);
+  if (!b) { res.status(404).json({ error: "This payment link isn’t valid." }); return; }
+  const snap = await paymentsCol.doc(req.params.paymentId).get();
+  const rec = snap.data() as { tenantId?: string; refs?: string[]; paymentIntentId: string; stripeAccount: string | null } | undefined;
+  // The payment must belong to THIS booking — a token can't settle someone else's payment.
+  if (!snap.exists || !rec || rec.tenantId !== b.tenantId || !(rec.refs ?? []).includes(b.ref) || (rec.refs ?? []).length !== 1) {
+    res.status(404).json({ error: "Payment not found" });
+    return;
+  }
+  const intent = await s.paymentIntents.retrieve(rec.paymentIntentId, {}, rec.stripeAccount ? { stripeAccount: rec.stripeAccount } : undefined);
+  if (intent.status !== "succeeded") { res.json({ status: intent.status, paid: false }); return; }
+  await settlePaymentRecord(snap.id, { auto: false, by: "pay link" });
+  res.json({ status: "succeeded", paid: true });
 });
