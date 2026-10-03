@@ -106,3 +106,11 @@
   .wrap .hv-fl-2{bottom:46px}
   .wrap .hv-tabs{display:none}
 }
+/* desktop: the audience chips sit UNDER the headline copy (left column), so the left side is filled and the right column is just the visual */
+@media (min-width:980px){
+  .wrap .hero-grid{grid-template-areas:"copy vis" "chips vis";grid-template-rows:auto 1fr;align-items:start}
+  .wrap .hero-grid > :first-child{grid-area:copy}
+  .wrap .hero-col{display:contents}
+  .wrap .hero-col .hv{grid-area:vis}
+  .wrap .hero-col .chips{grid-area:chips;align-self:start;margin-top:6px;justify-content:flex-start}
+}
