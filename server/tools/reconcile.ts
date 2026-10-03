@@ -14,7 +14,7 @@ const LISTING = process.argv[2] ?? "0FcHqQHPy8arkS4OdZRe"; // Standard test camp
   for (const b of bs.sort((a, c) => String(a.ref).localeCompare(String(c.ref)))) {
     const mine = ps.filter((p) => (p.refs ?? []).includes(b.ref));
     const inn = mine.filter((p) => p.type !== "refund" && (p.status === "succeeded" || p.status === "recorded")).reduce((s, p) => s + (p.amount ?? 0), 0);
-    const ref = mine.filter((p) => p.type === "refund" && (p.status === "succeeded" || p.status === "recorded")).reduce((s, p) => s + (p.amount ?? 0), 0);
+    const ref = mine.filter((p) => p.type === "refund" && (p.status === "succeeded" || p.status === "recorded" || p.status === "to-reimburse")).reduce((s, p) => s + (p.amount ?? 0), 0);
     const net = Math.round((inn - ref) * 100) / 100;
     const helper = collectedNet(b as never);
     const ok = Math.abs(net - helper) < 0.005;
