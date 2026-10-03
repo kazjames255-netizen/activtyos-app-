@@ -169,3 +169,30 @@ test("collectedNet / refundedGross", async (t) => {
     near(collectedNet(b), 20);
   });
 });
+
+// ── Discount rule variants (tracker DI-002, DI-003, DI-005, DI-007, DI-008) ────────────────────────────────────────────────────────────
+test("applyDiscounts: rule variants", async (t) => {
+  const two3day = [{ name: "3 days", price: 54, days: 3, heads: 2 }];
+  await t.test("DI-002 sibling by percentage: 10% off each child = 2 x £54 - £10.80 = £97.20", () => {
+    const r = rule("person", { name: "Sibling %", moreThan: 1, method: "percent", value: 10 });
+    assert.equal(total([r], two3day, 2, "2026-10-05"), 97.2);
+  });
+  await t.test("DI-003 sibling discounted price: each child pays £45 = £90", () => {
+    const r = rule("person", { name: "Sibling price", moreThan: 1, method: "price", value: 45 });
+    assert.equal(total([r], two3day, 2, "2026-10-05"), 90);
+  });
+  await t.test("DI-005 sibling limited to '5 days' gives nothing on '3 days' = £108", () => {
+    const r = rule("person", { name: "Sibling 5-day only", moreThan: 1, method: "subtract", value: 5, passNames: ["5 days"] });
+    assert.equal(total([r], two3day, 2, "2026-10-05"), 108);
+  });
+  await t.test("DI-007 multi-session counts days across children: 3 days x 2 children = 6 sessions, 10% of £108 = £97.20", () => {
+    assert.equal(total([multiSession], two3day, 2, "2026-10-05"), 97.2);
+  });
+  await t.test("DI-008 multi-session is not applied at the threshold: one child on 3 days = £54", () => {
+    assert.equal(total([multiSession], [{ name: "3 days", price: 54, days: 3, heads: 1 }], 1, "2026-10-05"), 54);
+  });
+  await t.test("display regression: 2 passes x 2 children on the Standard rules = £166.40 (sibling lands on both passes)", () => {
+    const pass = { name: "3-day", price: 54, days: 3, heads: 2 };
+    assert.equal(total(STANDARD, [pass, { ...pass }], 2, "2026-10-03"), 166.4);
+  });
+});
