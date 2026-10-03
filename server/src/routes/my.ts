@@ -1168,7 +1168,7 @@ my.post("/bookings", async (req, res) => {
   // the same lines we use it exactly (multi-person rules apply); a mixed
   // basket falls back to per-line pricing (attendees=1 — never overcharges).
   const attendees = new Set(input.items.map((i) => i.child.trim())).size;
-  const lineKey = (p: (typeof priced)[0]) => `${p.item.pass}|${p.item.periodId ?? ""}|${p.base}|${p.days.length}`;
+  const lineKey = (p: (typeof priced)[0]) => `${p.item.pass}|${p.item.periodId ?? ""}|${p.base}|${[...p.days].sort().join(",")}`;
   const byChild = new Map<string, string>();
   for (const p of priced) {
     const c = p.item.child.trim();
