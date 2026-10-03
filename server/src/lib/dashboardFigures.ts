@@ -46,7 +46,7 @@ export function takenThisWeekFigure(
 ): number {
   const refundedThisWeek = payments
     // Same statuses reconcileMath counts: an approved offline refund ("to-reimburse") and a recorded one are money going back too.
-    .filter((p) => p.type === "refund" && (p.status === "succeeded" || p.status === "recorded" || p.status === "to-reimburse") && (p.paidAt ?? p.createdAt ?? "") >= weekAgo)
+    .filter((p) => p.type === "refund" && (p.status === "succeeded" || p.status === "recorded" || p.status === "to-reimburse" || p.status === "credited") && (p.paidAt ?? p.createdAt ?? "") >= weekAgo)
     .filter((p) => !venueRefs || (p.refs ?? []).some((r) => venueRefs.has(r)))
     .reduce((s, p) => s + (p.amount ?? 0) * shareIn(p.refs ?? []), 0);
   return round2(

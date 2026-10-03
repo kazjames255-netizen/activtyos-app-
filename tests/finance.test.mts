@@ -187,6 +187,10 @@ test("FD-030: Dashboard 'Taken this week'", async (t) => {
     const ps = [pay({ amount: 54, status: "recorded", refs: ["A-1"] }), pay({ amount: 40, status: "to-reimburse", type: "refund", refs: ["A-1"] }), pay({ amount: 20, status: "recorded", type: "refund", refs: ["A-1"] })];
     assert.equal(takenThisWeekFigure(ps, WEEK, new Set()), -6);
   });
+  await t.test("a refund credited to the family's wallet also leaves 'Taken this week'", () => {
+    const ps = [pay({ amount: 54, status: "recorded", refs: ["A-2"] }), pay({ amount: 54, status: "credited", type: "refund", refs: ["A-2"] })];
+    assert.equal(takenThisWeekFigure(ps, WEEK, new Set()), 0);
+  });
   await t.test("unfinished ('created') and failed card attempts are not income", () => {
     const ps = [pay({ amount: 50, status: "created" }), pay({ amount: 60, status: "failed" }), pay({ amount: 5 })];
     assert.equal(takenThisWeekFigure(ps, WEEK, new Set()), 5);

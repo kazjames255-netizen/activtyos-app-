@@ -278,7 +278,7 @@ export async function tenantSnapshot(tenantId: string, forStaff = false, franchi
     // …less any refund paid out this week, so a cancellation never counts.
     - paymentsSnap.docs
       .map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string; refs?: string[] })
-      .filter((p) => p.type === "refund" && p.status === "succeeded" && inFranchiseScope(p) && (p.createdAt ?? "") >= weekAgo)
+      .filter((p) => p.type === "refund" && (p.status === "succeeded" || p.status === "recorded" || p.status === "to-reimburse" || p.status === "credited") && inFranchiseScope(p) && (p.createdAt ?? "") >= weekAgo)
       .reduce((s, p) => s + (p.amount ?? 0), 0),
   );
 
