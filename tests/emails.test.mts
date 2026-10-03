@@ -495,13 +495,13 @@ test("ME-001 provider-made confirmation names the CHILD", { todo: "FINDING: fami
   assert.match(text(html), /Asha/);
 });
 
-test("ME-001 provider-made confirmation shows session TIMES", { todo: "FINDING: only the raw b.dates string is shown (e.g. 'Mon 20 Jul - Fri 24 Jul 2026'); no per-session times." }, () => {
-  const { html } = familyBookingCreatedEmail([booking()], PROVIDER, { accountCreated: false, passwordLink: null }, `${WEB}/pay/b/x`);
+test("ME-001 provider-made confirmation shows session TIMES", () => {
+  const { html } = familyBookingCreatedEmail([{ ...booking(), sessions: ["Mon 20 Jul 2026 · 09:00 – 15:00"] }], PROVIDER, { accountCreated: false, passwordLink: null }, `${WEB}/pay/b/x`);
   assert.match(text(html), /09:00/);
 });
 
-test("ME-001 provider-made confirmation shows the VENUE", { todo: "FINDING: no venue/location row and no map in emailFamilyBookingCreated (it bypasses listingContext)." }, () => {
-  const { html } = familyBookingCreatedEmail([booking()], PROVIDER, { accountCreated: false, passwordLink: null }, `${WEB}/pay/b/x`);
+test("ME-001 provider-made confirmation shows the VENUE", () => {
+  const { html } = familyBookingCreatedEmail([booking()], PROVIDER, { accountCreated: false, passwordLink: null }, `${WEB}/pay/b/x`, "Riverside Hall, 1 High St, Milton Keynes");
   assert.match(text(html), /Location|Venue|Where/i);
 });
 

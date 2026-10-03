@@ -232,10 +232,14 @@ export function familyBookingCreatedEmail(
   providerName: string,
   opts: { accountCreated: boolean; passwordLink: string | null },
   payUrl: string,
+  /** Where it happens (venue address, or the family's own address for a home visit). */
+  venue?: string,
 ): { subject: string; html: string } {
   const b = bookings[0];
   const total = bookings.reduce((s, x) => s + x.amount, 0);
   const refs = bookings.map((x) => x.ref).join(", ");
+  // The per-session lines carry the times ("Mon 05 Oct 2026 · 09:00 – 15:00"); fall back to the date range.
+  const sessionLines = [...new Set(bookings.flatMap((x) => x.sessions ?? []))];
   return {
     subject: `Your booking with ${providerName} (${refs})`,
     html: `
@@ -252,6 +256,8 @@ export function familyBookingCreatedEmail(
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref${bookings.length > 1 ? "s" : ""}</td><td><b>${refs}</b></td></tr>
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Activity</td><td>${escapeHtml(b.listing)}</td></tr>
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Dates</td><td>${b.dates}</td></tr>
+      ${sessionLines.length ? `<tr><td style="color:#8a86a3;padding:3px 14px 3px 0;vertical-align:top">Times</td><td>${sessionLines.map((x) => escapeHtml(x)).join("<br>")}</td></tr>` : ""}
+      ${venue ? `<tr><td style="color:#8a86a3;padding:3px 14px 3px 0;vertical-align:top">Where</td><td>${escapeHtml(venue)}</td></tr>` : ""}
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Total</td><td><b>${gbp(total)}</b></td></tr>
     </table>
     ${total > 0

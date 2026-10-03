@@ -906,7 +906,8 @@ export function emailFamilyBookingCreated(
   const send = opts.accountCreated && opts.passwordLink
     ? (to: string, subject: string, html: string) => sendAs(b.tenantId, providerName, to, subject, html)
     : (to: string, subject: string, html: string) => sendGated(b.tenantId, "bookings", to, subject, html, providerName);
-  const m = familyBookingCreatedEmail(bookings, providerName, opts, payUrl);
+  const venue = (await listingContext(b, {})).location;
+  const m = familyBookingCreatedEmail(bookings, providerName, opts, payUrl, venue);
   send(b.email, m.subject, m.html);
   })().catch((e) => console.error("[mail] family booking email failed:", (e as Error).message));
 }
