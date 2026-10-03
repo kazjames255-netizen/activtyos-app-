@@ -1208,7 +1208,7 @@ my.post("/bookings", async (req, res) => {
     if (g) g.heads += 1;
     else grouped.set(key, { pass: p.item.pass, base: p.base, days: p.days.length, heads: 1 });
   }
-  const { total: discounted } = applyDiscounts(
+  const { total: discounted, lines: discountLines } = applyDiscounts(
     listing.discounts ?? [],
     [...grouped.values()].map((g) => ({ name: g.pass, price: g.base, days: g.days, heads: g.heads })),
     attendees,
@@ -1547,6 +1547,11 @@ my.post("/bookings", async (req, res) => {
           const fromWallet = placed && walletLeft > 0 && amount > 0 ? Math.min(walletLeft, amount) : 0;
           walletLeft = round2(walletLeft - fromWallet);
           const due = round2(amount - fromWallet);
+          // What the family would have paid with no discounts, and what came off
+          // (automatic rules + codes), so the booking can show subtotal, discount, total.
+          const segBase = round2(p.days.length ? p.base * (seg.days.length / p.days.length) : p.base);
+          const listPrice = round2(segBase + segAddonsTotal);
+          const offThisRow = Math.max(0, round2(listPrice - amount));
           let note = "";
           if (!placed) {
             const pos = queuePos.get(seg.blockId)!;
@@ -1580,6 +1585,11 @@ my.post("/bookings", async (req, res) => {
             ...(refByChild.get(rc.name.trim().toLowerCase()) ? { paymentRef: refByChild.get(rc.name.trim().toLowerCase()) } : {}),
             ...(fromWallet ? { walletApplied: fromWallet } : {}),
             ...(discountCodes.length ? { discountCode: discountCodes.join(", "), discountCodes } : {}),
+            ...(offThisRow > 0.004 ? {
+              listPrice,
+              discountOff: offThisRow,
+              discountNames: [...discountLines.filter((d) => d.amount > 0).map((d) => d.name), ...discountCodes.map((c) => `Code ${c}`)],
+            } : {}),
             ...(serviceAddress ? { serviceAddress } : {}),
             ...(familyPostcode ? { postcode: familyPostcode } : {}),
             tenantId: listing.tenantId,

@@ -850,6 +850,12 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         {/* Payment */}
         <SectionHead>{t("p7bd.secPayment")}</SectionHead>
         <DefRow label={t("p7bd.lblMethod")} value={b.method} />
+        {(b.discountOff ?? 0) > 0 && b.listPrice != null && (
+          <>
+            <DefRow label="Price before discount" value={money(b.listPrice)} />
+            <DefRow label={`Discount${b.discountNames?.length ? ` (${b.discountNames.join(", ")})` : ""}`} value={`− ${money(b.discountOff ?? 0)}`} />
+          </>
+        )}
         <DefRow label={t("p7bd.totalLbl")} value={money(b.amount)} />
         {b.method === "Tax-Free Childcare" && (
           <DefRow

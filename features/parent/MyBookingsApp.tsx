@@ -1148,6 +1148,12 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           )}
           <SectionHead>{t("parent.paymentSection")}</SectionHead>
           <DefRow label={t("parent.methodLabel")} value={b.method} />
+          {(b.discountOff ?? 0) > 0 && b.listPrice != null && (
+            <>
+              <DefRow label="Price before discount" value={money(b.listPrice)} />
+              <DefRow label={`Discount${b.discountNames?.length ? ` (${b.discountNames.join(", ")})` : ""}`} value={`− ${money(b.discountOff ?? 0)}`} />
+            </>
+          )}
           <DefRow label={t("parent.totalLabel")} value={money(b.amount)} />
           {/* Voucher payment received — the provider reconciled the money. */}
           {!cancelled && isVoucher && b.pay === "Paid" && (

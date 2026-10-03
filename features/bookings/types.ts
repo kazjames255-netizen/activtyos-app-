@@ -157,6 +157,10 @@ export interface Booking {
   /** How much has actually been received (reconciliation). Absent = 0 for
    *  Unpaid, treated as `amount` for Paid. Partial payments track it. */
   amountPaid?: number;
+  /** Before discounts, and what came off (automatic rules + codes). Only set when a discount applied. */
+  listPrice?: number;
+  discountOff?: number;
+  discountNames?: string[];
   /** Store credit taken off this booking at checkout. `amount` is already net
    *  of it — this is here so the money trail shows where the difference went. */
   walletApplied?: number;
