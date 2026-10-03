@@ -573,11 +573,14 @@ my.get("/contact", async (req, res) => {
     if (!cust.empty) { phone = ((cust.docs[0].data().phone as string | undefined) ?? "").trim(); break; }
   }
   // No number on the provider's file yet (a brand-new family): use the one saved in the parent's own account, so checkout never asks twice.
+  // A "number" with under 10 digits (just the dialling code, say "44") is not a number:
+  // treat it as missing so a real one on the account is used.
+  const realPhone = (p: string) => p.replace(/\D/g, "").length >= 10;
   let from: "provider" | "account" = "provider";
-  if (!phone && req.user?.uid) {
+  if (!realPhone(phone) && req.user?.uid) {
     const u = await db.collection("users").doc(req.user.uid).get();
-    phone = ((u.get("phone") as string | undefined) ?? "").trim();
-    if (phone) from = "account";
+    const acct = ((u.get("phone") as string | undefined) ?? "").trim();
+    if (realPhone(acct) || !phone) { phone = acct; if (phone) from = "account"; }
   }
   res.json({ phone, from });
 });
