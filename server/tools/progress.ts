@@ -1,6 +1,6 @@
 // Progress through the whole catalogue, using the same rule as the Test tracker page. Read-only.
-//   server/node_modules/.bin/tsx scripts/testTracker/progress.ts
-import { db } from "../../server/src/firebase";
+//   server/node_modules/.bin/tsx server/tools/progress.ts
+import { db } from "../src/firebase";
 import { CATALOGUE } from "../../lib/testTracker/catalogue";
 
 (async () => {

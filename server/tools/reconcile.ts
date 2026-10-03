@@ -1,7 +1,7 @@
 // Finance reconcile for the live co-testing: every booking on a tenant (or one listing) against its payment records and the dashboard's own
-// income helper. Run from the repo root:  server/node_modules/.bin/tsx scripts/testTracker/reconcile.ts [listingId]
+// income helper. Run from the repo root:  server/node_modules/.bin/tsx server/tools/reconcile.ts [listingId]
 // Default = Amir Coaching's Standard test camp. Read-only.
-import { db } from "../../server/src/firebase";
+import { db } from "../src/firebase";
 import { collectedNet } from "../../features/bookings/helpers";
 
 const TENANT = process.env.TENANT_ID ?? "VOiiaTnDNd03MLbZaVcM"; // Amir Coaching
