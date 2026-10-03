@@ -227,6 +227,9 @@ export function publishProblems(merged: Record<string, unknown>): string[] {
   // Tickets & pricing…") — the wizard blocks this client-side, this is the
   // control for API writes.
   if (!merged.blockId || !((merged.passes as unknown[]) ?? []).length) problems.push("a block with passes");
+  // Age range: judged at publish (not on every autosave, which would fail while someone is mid-typing "11").
+  const lo = parseFloat(String(merged.ageFrom ?? "")), hi = parseFloat(String(merged.ageTo ?? ""));
+  if (Number.isFinite(lo) && Number.isFinite(hi) && lo > hi) problems.push("a minimum age that is not higher than the maximum age");
   return problems;
 }
 

@@ -206,8 +206,14 @@ test("LT-022 age range + allowOutOfRange are accepted by the schema", () => {
   assert.equal(baseListingSchema.safeParse({ ageFrom: "5", ageTo: "11", allowOutOfRange: true }).success, true);
   assert.equal(baseListingSchema.safeParse({ allowOutOfRange: "yes" }).success, false);
 });
-test("ageFrom must not exceed ageTo (server-side)", { todo: "REAL GAP: the API accepts ageFrom 11 / ageTo 5; no server check exists" }, () => {
-  assert.equal(baseListingSchema.safeParse({ ageFrom: "11", ageTo: "5" }).success, false);
+test("ageFrom must not exceed ageTo: caught at publish (not on every autosave)", () => {
+  const base = { title: "x", venueId: "v", blockId: "b", passes: [{ name: "p", price: 1 }], runFrom: "2026-10-05", runTo: "2026-10-09", days: [1, 2, 3, 4, 5] };
+  const p = publishProblems({ ...base, ageFrom: "11", ageTo: "5" });
+  assert.ok(p.some((x) => /minimum age/.test(x)), JSON.stringify(p));
+  assert.ok(!publishProblems({ ...base, ageFrom: "5", ageTo: "11" }).some((x) => /minimum age/.test(x)));
+  assert.ok(!publishProblems({ ...base, ageFrom: "5", ageTo: "" }).some((x) => /minimum age/.test(x)));
+  // autosaving the draft still accepts a half-typed range
+  assert.equal(baseListingSchema.safeParse({ ageFrom: "11", ageTo: "5" }).success, true);
 });
 test("ticket override: per-ticket age + capacity + hidden flag, closing a pass", () => {
   const ok = baseListingSchema.safeParse({ ticketOverrides: { "1:1 session": { ageFrom: "6", ageTo: "9", capacity: "0", hidden: false }, "5 days": { hidden: true } } });
