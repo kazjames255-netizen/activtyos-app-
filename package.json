@@ -16,6 +16,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:money": "server/node_modules/.bin/tsx --test tests/money.test.mts",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "e2e:cleanup": "npm --prefix server run e2e-cleanup"
