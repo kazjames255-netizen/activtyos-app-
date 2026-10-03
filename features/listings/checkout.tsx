@@ -1140,6 +1140,42 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     return out;
   })();
   const clashesOn = (id: string) => clashes.filter((c) => c.itemIds.includes(id));
+
+  // Children who already hold a live place on a chosen date of THIS listing.
+  // The server refuses it at Pay time (kept as the backstop); catching it on the
+  // Children step saves the family a dead end. Signed-out / failed read = no warning.
+  const [myBookings, setMyBookings] = useState<{ ref: string; status?: string; listingId?: string; timing?: string; child?: string; days?: string[]; kids?: { name: string; dates?: string[]; days?: string[]; cancelled?: boolean; cancelledDays?: string[] }[] }[]>([]);
+  useEffect(() => {
+    if (!parentMode || !d.id) return;
+    let live = true;
+    apiGet<typeof myBookings>("/api/my/bookings").then((r) => { if (live && Array.isArray(r)) setMyBookings(r); }).catch(() => {});
+    return () => { live = false; };
+  }, [parentMode, d.id]);
+  const existingClashes = (() => {
+    if (!parentMode || !myBookings.length) return [] as { name: string; iso: string; itemIds: string[]; ref: string }[];
+    const dead = new Set(["cancelled", "declined", "waitlisted", "offered", "refunded"]);
+    const tm = (t?: string) => (t ?? "").trim().toLowerCase();
+    const held = new Map<string, string>(); // "child|iso|timing" -> booking ref
+    for (const bk of myBookings) {
+      if (bk.listingId !== d.id || dead.has(tm(bk.status))) continue;
+      const rows = bk.kids && bk.kids.length
+        ? bk.kids.filter((k) => !k.cancelled).map((k) => ({ child: k.name, days: (k.dates ?? k.days ?? bk.days ?? []).filter((x) => !(k.cancelledDays ?? []).includes(x)) }))
+        : [{ child: bk.child ?? "", days: bk.days ?? [] }];
+      for (const r of rows) for (const iso of r.days) held.set(`${tm(r.child)}|${iso}|${tm(bk.timing)}`, bk.ref);
+    }
+    const out: { name: string; iso: string; itemIds: string[]; ref: string }[] = [];
+    for (const x of b.basket) {
+      for (const name of b.childrenOn(x.id)) {
+        for (const iso of x.dates) {
+          // A different timing on the same day is a different session (as on the server).
+          const ref = held.get(`${tm(name)}|${iso}|${tm(x.timing)}`) ?? held.get(`${tm(name)}|${iso}|`);
+          if (ref) out.push({ name, iso, itemIds: [x.id], ref });
+        }
+      }
+    }
+    return out;
+  })();
+  const existingOn = (id: string) => existingClashes.filter((c) => c.itemIds.includes(id));
   const unassigned = shortPasses.length;
   // A server error describes the basket as it was when Pay was pressed. The moment
   // the basket, the dates or the children change it is out of date, so hide it
@@ -1460,6 +1496,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                           })}
                         </div>
                       )}
+                      {existingOn(x.id).length > 0 && (
+                        <div className="mt-1.5 border px-2.5 py-1.5 text-[11px] leading-[1.45]"
+                          style={{ borderColor: "#fcd34d", background: "#fffbeb", color: "#92400e" }}>
+                          {existingOn(x.id).map((c) => `${c.name} already has a place on ${fmtDate(c.iso)} (booking ${c.ref}).`).join(" ")}{" "}
+                          Take them off this pass to continue.
+                        </div>
+                      )}
                       {b.childrenOn(x.id).length === 0 && roster.length > 0 && (
                         <div className="mt-1 text-[11px]" style={{ color: "#c2410c" }}>
                           {tr(x.dates.length === 1 ? "p8lst.ck8NobodyDay" : "p8lst.ck8NobodyPass")}
@@ -1726,7 +1769,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           ).map((q) => ({ who: c.name.trim() || tr("p7ck.thisChildLower"), label: q.label })),
         );
         const ready =
-          roster.length > 0 && unassigned === 0 && shortPasses.length === 0 && clashes.length === 0 && outstanding.length === 0;
+          roster.length > 0 && unassigned === 0 && shortPasses.length === 0 && clashes.length === 0 && existingClashes.length === 0 && outstanding.length === 0;
         const next = tr("p7ck.ctaNext");
         return (
           <>
@@ -1753,6 +1796,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               style={{ background: tk.accent, color: tk.accentInk }}>
               {roster.length === 0 ? tr("p7ck.ctaAddChildFirst")
                 : clashes.length > 0 ? tr("p7ck.ctaClash", { name: clashes[0].name, date: fmtDate(clashes[0].iso) })
+                : existingClashes.length > 0 ? `${existingClashes[0].name} is already booked on ${fmtDate(existingClashes[0].iso)}`
                 : unassigned > 0 || shortPasses.length > 0 ? tr("p7ck.ctaPutChild")
                 : outstanding.length > 0 ? tr("p7ck.ctaAnswer", { label: outstanding[0].label, who: outstanding[0].who })
                 : next}
@@ -2607,7 +2651,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       )}
 
       {ckStage === "pay" && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || (parentMode && !phoneOk) || (homeVisit && !serviceAddress.postcode.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && roster.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
+        disabled={(!parentMode && !b.parent) || (parentMode && !phoneOk) || (homeVisit && !serviceAddress.postcode.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || existingClashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && roster.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // With an onBook handler the confirm actually books — the parent
@@ -2663,6 +2707,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           : roster.length === 0 ? tr("p7ck.ctaAddChildFirst")
           : unassigned > 0 ? pickPlural(tr, locale, "p7ck.ctaNobody", unassigned)
           : clashes.length > 0 ? tr("p7ck.ctaClash", { name: clashes[0].name, date: fmtDate(clashes[0].iso) })
+          : existingClashes.length > 0 ? `${existingClashes[0].name} is already booked on ${fmtDate(existingClashes[0].iso)}`
           : shortPasses.length > 0 ? tr("p7ck.ctaShort", { n: shortPasses[0].dates.length, pass: shortPasses[0].name })
           // "Confirm & pay £0.00" and "Send payment link · £0.00" both promise
           // something that isn't going to happen.
@@ -2671,6 +2716,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           // Paying by voucher happens on the scheme's website, not here — so
           // the button confirms the booking, it doesn't take a payment.
           : parentMode && method === "voucher" ? tr("p7ck.ctaConfirm")
+          // Only a card is charged at this moment; the other rails are honest about it.
+          : parentMode && method === "bank" ? `Confirm booking · ${money(amountDue)} to pay by bank transfer`
+          : parentMode && method === "cash" ? `Confirm booking · pay ${money(amountDue)} in cash on the day`
+          : parentMode && method === "tfc" ? `Confirm booking · ${money(amountDue)} to pay with Tax-Free Childcare`
+          : parentMode && method === "haf" ? tr("p7ck.ctaConfirm")
           : parentMode ? tr("p7ck.ctaConfirmPay", { amt: money(amountDue) })
           : tr("p7ck.ctaSendLink", { amt: money(amountDue) })}
       </button>}

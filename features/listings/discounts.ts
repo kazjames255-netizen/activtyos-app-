@@ -42,6 +42,17 @@ const newId = () =>
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
+/** "2026-10-04" -> "4 Oct". Display only; the stored rule/date never changes. */
+export function friendlyIso(iso: string, locale = "en-GB"): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  try { return d.toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: "UTC" }); } catch { return iso; }
+}
+/** Replace any raw ISO date inside a (possibly stored) rule name with a friendly one. */
+export function prettyRuleName(name: string, locale?: string): string {
+  return name.replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (m) => friendlyIso(m, locale));
+}
+
 export function emptyRule(kind: DiscountKind): DiscountRule {
   return {
     id: newId(),
@@ -52,7 +63,8 @@ export function emptyRule(kind: DiscountKind): DiscountRule {
     moreThan: kind === "session" ? 3 : 1,
     appliesTo: "all",
     method: kind === "session" ? "percent" : "subtract",
-    value: 0,
+    // Presets match their card copy ("10% off", "£10 off").
+    value: kind === "person" ? 0 : 10,
     beforeDate: "",
   };
 }
@@ -63,14 +75,14 @@ export function ruleSummary(r: DiscountRule, tx?: DiscountTx): string {
   if (tx) {
     if (r.kind === "person") return pickPlural(tx.tr, tx.locale, r.method === "price" ? "p8lst.lm8DscPersonPrice" : "p8lst.lm8DscPersonOff", r.moreThan, { amt: amount });
     if (r.kind === "session") return pickPlural(tx.tr, tx.locale, "p8lst.lm8DscSession", r.moreThan, { amt: amount });
-    return tx.tr("p8lst.lm8DscEarly", { date: r.beforeDate || tx.tr("p8lst.lm8DscCutoff"), amt: amount });
+    return tx.tr("p8lst.lm8DscEarly", { date: r.beforeDate ? friendlyIso(r.beforeDate, tx.locale) : tx.tr("p8lst.lm8DscCutoff"), amt: amount });
   }
   if (r.kind === "person")
     return r.method === "price"
       ? `More than ${r.moreThan} child${r.moreThan === 1 ? "" : "ren"} on a pass — every child pays ${amount} per ticket`
       : `More than ${r.moreThan} child${r.moreThan === 1 ? "" : "ren"} on a pass — ${amount} off every child`;
   if (r.kind === "session") return `Book more than ${r.moreThan} sessions — ${amount} off`;
-  return `Book by ${r.beforeDate || "the cut-off date"} — ${amount} off`;
+  return `Book by ${r.beforeDate ? friendlyIso(r.beforeDate) : "the cut-off date"} — ${amount} off`;
 }
 
 export interface DiscountLine {
@@ -134,7 +146,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestPerson || amount > bestPerson.amount)) bestPerson = { r, amount, perItem };
   }
   if (bestPerson) {
-    lines.push({ name: bestPerson.r.name || ruleSummary(bestPerson.r, tx), amount: bestPerson.amount, scope: scopeOf(bestPerson.r), terms: termsOf(bestPerson.r), perItem: bestPerson.perItem });
+    lines.push({ name: prettyRuleName(bestPerson.r.name, tx?.locale) || ruleSummary(bestPerson.r, tx), amount: bestPerson.amount, scope: scopeOf(bestPerson.r), terms: termsOf(bestPerson.r), perItem: bestPerson.perItem });
     running -= bestPerson.amount;
   }
 
@@ -167,7 +179,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestSession || amount > bestSession.amount)) bestSession = { r, amount };
   }
   if (bestSession) {
-    lines.push({ name: bestSession.r.name || ruleSummary(bestSession.r, tx), amount: bestSession.amount, scope: scopeOf(bestSession.r), terms: termsOf(bestSession.r), perItem: spread(bestSession.r, bestSession.amount) });
+    lines.push({ name: prettyRuleName(bestSession.r.name, tx?.locale) || ruleSummary(bestSession.r, tx), amount: bestSession.amount, scope: scopeOf(bestSession.r), terms: termsOf(bestSession.r), perItem: spread(bestSession.r, bestSession.amount) });
     running -= bestSession.amount;
   }
 
@@ -179,7 +191,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestEarly || amount > bestEarly.amount)) bestEarly = { r, amount };
   }
   if (bestEarly) {
-    lines.push({ name: bestEarly.r.name || ruleSummary(bestEarly.r, tx), amount: bestEarly.amount, scope: scopeOf(bestEarly.r), terms: termsOf(bestEarly.r), perItem: spread(bestEarly.r, bestEarly.amount) });
+    lines.push({ name: prettyRuleName(bestEarly.r.name, tx?.locale) || ruleSummary(bestEarly.r, tx), amount: bestEarly.amount, scope: scopeOf(bestEarly.r), terms: termsOf(bestEarly.r), perItem: spread(bestEarly.r, bestEarly.amount) });
     running -= bestEarly.amount;
   }
 
