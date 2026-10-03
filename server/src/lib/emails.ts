@@ -1058,16 +1058,16 @@ export function emailFamilyBookingCreated(
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Dates</td><td>${b.dates}</td></tr>
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Total</td><td><b>${gbp(total)}</b></td></tr>
     </table>
+    ${total > 0
+      ? `<p style="font-size:14px">Pay securely by card — no sign-in needed:</p>
+    <p><a href="${payUrl}" style="display:inline-block;background:#15b364;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(total)}</a></p>`
+      : `<p style="font-size:14px">There's nothing to pay for this booking.</p>`}
     ${
       opts.accountCreated && opts.passwordLink
-        ? `<p style="font-size:14px"><b>First, set your password</b> — we created your account for this booking:</p>
+        ? `<p style="font-size:14px"><b>Finish your details</b> — we created an account for you with this booking. Set a password to see your bookings and add your child&#39;s allergies, emergency contact and your address:</p>
            <p><a href="${opts.passwordLink}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Set my password</a></p>`
         : ""
     }
-    ${total > 0
-      ? `<p style="font-size:14px">Then pay securely by card:</p>
-    <p><a href="${payUrl}" style="display:inline-block;background:#15b364;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(total)}</a></p>`
-      : `<p style="font-size:14px">There's nothing to pay for this booking.</p>`}
     <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">
       You're receiving this because ${escapeHtml(providerName)} made a booking for this email address.
       If that wasn't you, reply and tell them.</p>

@@ -12,6 +12,7 @@
 // right.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { HowItWorks } from "@/components/HowItWorks";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useRef, useState } from "react";
 import { tNow, useI18n } from "@/lib/i18n/provider";
@@ -22,7 +23,7 @@ import { get as apiGet, api } from "@/lib/api";
 import { money, PAY_METHODS } from "@/features/bookings/helpers";
 import { fmtDate, ordinal } from "./format";
 import { uploadPlan, PLAN_MAX_BYTES } from "./planUpload";
-import { useTenantSettings, questionsFor, dobRequired, asksEveryBooking, limitFor, liveVouchers, detailsForListing } from "@/lib/settings";
+import { useTenantSettings, questionsFor, asksEveryBooking, limitFor, liveVouchers, detailsForListing } from "@/lib/settings";
 import { voucherWindow } from "@/lib/vouchers";
 import { HMRC_CONNECTED, TFC_FAILURE_COPY, balance as tfcBalance, referenceHint, referencePrefix, type TfcBalance, type TfcFailure } from "./tfc";
 import { TfcConnect } from "./TfcConnect";
@@ -244,7 +245,9 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   const askQuestions = questionsFor(allQuestions, d.id ?? undefined, ageOn(draft.dob, d.runFrom)).filter(
     (q) => !asksEveryBooking(q),
   );
-  const needDob = dobRequired(settings, allQuestions).required;
+  // A child's date of birth is always required: the age check and the register both depend on it, so a provider
+  // setting can no longer waive it (the server cannot judge an age without one).
+  const needDob = true;
   const pinMode = settings.collectionCheck === "pin";
   // Name, date of birth and boy/girl are required: the age gate can't judge a
   // booking without a birthday, and registers are drawn up from both. All of
@@ -840,7 +843,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // A family being created on the call. Held here until there's a server route
   // that can make the account — see §H of the backend handoff.
   const [np, setNp] = useState({ name: "", email: "", phone: "", address: "" });
-  const npReady = np.name.trim().length > 1 && /.+@.+\..+/.test(np.email.trim()) && !!np.phone.trim() && !!np.address.trim();
+  // Quick book needs only what is required to reserve the place and reach the family. Address is left to the parent.
+  const npReady = np.name.trim().length > 1 && /.+@.+\..+/.test(np.email.trim()) && !!np.phone.trim();
   const matches = q.trim()
     // Find a family by parent name, email, phone, address OR a child's name.
     ? parents.filter((p) => `${p.name} ${p.email ?? ""} ${p.phone ?? ""} ${p.address ?? ""} ${(p.children ?? []).map((c) => c.name).join(" ")}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8)
@@ -1368,16 +1372,22 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             )}
           </div>
 
+          <HowItWorks
+            minutes="1"
+            video="Take a booking for a family: what you enter (parent name, email, phone; each child's name and date of birth), what the parent receives (one email with a Pay button that needs no login, plus a link to set a password and add allergies, emergency contact and address), and when to send the listing's own booking link instead so the parent fills everything in themselves.">
+            <p><b>This is for bookings you take for a family</b> (phone, walk-in). It is not the same as sending a parent a sign-up link.</p>
+            <p>You enter only the parent&rsquo;s <b>name, email and phone</b>, then each child&rsquo;s <b>name and date of birth</b>. We create the parent&rsquo;s account for them and email the booking with a <b>Pay</b> button that needs no login, plus a link to set a password and fill in the rest (allergies, emergency contact, address). Want the parent to do all of it themselves? Send them the listing&rsquo;s <b>Link</b> from Blocks &amp; listings instead.</p>
+          </HowItWorks>
           <div className={`mt-2 border p-2.5 ${tk.round}`} style={{ borderColor: tk.line }}>
             <div className="flex flex-wrap items-baseline gap-x-2">
               <div className="text-[12px] font-extrabold" style={{ color: tk.ink }}>{tr("p7ck.optElse")}</div>
               <div className="text-[11px] leading-[1.4]" style={{ color: tk.muted }} title={tr("p7ck.optElseTip")}>{tr("p7ck.optElseBody")}</div>
             </div>
             <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-              {(["name", "email", "phone", "address"] as const).map((k) => (
-                <div key={k} className={k === "address" || k === "name" ? "col-span-2" : ""}>
+              {(["name", "email", "phone"] as const).map((k) => (
+                <div key={k} className={k === "name" ? "col-span-2" : ""}>
                   <div className="mb-0.5 text-[10px] font-bold" style={{ color: tk.muted }}>
-                    {{ name: tr("p7ck.fldName"), email: tr("p7ck.fldEmail"), phone: tr("p7ck.fldPhone"), address: tr("p7ck.fldAddress") }[k]}
+                    {{ name: tr("p7ck.fldName"), email: tr("p7ck.fldEmail"), phone: tr("p7ck.fldPhone") }[k]}
                   </div>
                   <input value={np[k]} onChange={(e) => setNp({ ...np, [k]: e.target.value })}
                     className={`aos-in w-full border px-2.5 py-1.5 text-[12.5px] outline-none ${tk.round}`}
@@ -1394,10 +1404,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               </div>
             )}
             <button type="button" disabled={!npReady}
-              onClick={() => b.setParent({ id: "new", name: np.name.trim(), email: np.email.trim(), phone: np.phone.trim(), address: np.address.trim() })}
+              onClick={() => b.setParent({ id: "new", name: np.name.trim(), email: np.email.trim(), phone: np.phone.trim() })}
               className={`w-full py-2 text-[12.5px] font-extrabold disabled:opacity-40 ${tk.round}`}
               style={{ background: tk.accent, color: tk.accentInk }}>
-              {npReady ? tr("p7ck.setUpName", { name: np.name.trim() }) : tr("p7ck.fillAllFour")}
+              {npReady ? tr("p7ck.setUpName", { name: np.name.trim() }) : "Fill in name, email and phone to carry on"}
             </button>
           </div>
         </>
