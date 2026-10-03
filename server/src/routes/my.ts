@@ -1938,7 +1938,7 @@ my.post("/bookings", async (req, res) => {
           category: "booking",
           key: "booking-new",
           title: `${kind} · ${primary.ref} · ${bookerName}`,
-          body: `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
+          body: `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(input.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
           subject: `ActivityOS: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
           href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
           ref: primary.ref,

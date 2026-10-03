@@ -849,7 +849,12 @@ export function BookingDetail({ booking }: { booking: Booking }) {
 
         {/* Payment */}
         <SectionHead>{t("p7bd.secPayment")}</SectionHead>
-        <DefRow label={t("p7bd.lblMethod")} value={b.method} />
+        <DefRow label={t("p7bd.lblMethod")} value={/bank|transfer/i.test(String(b.method ?? "")) ? "Bank transfer" : b.method} />
+        {/bank|transfer/i.test(String(b.method ?? "")) && b.pay !== "Paid" && b.status !== "Cancelled" && (
+          <div className="my-1.5 rounded-lg border border-[#c9d7f5] bg-[#eef3ff] px-3 py-2 text-[12.5px] text-[#171534]">
+            <b>Waiting for a bank transfer.</b> The family was told to quote the reference <b>{b.ref}</b>. Look for that reference on your bank statement, then press <b>Mark paid</b>.
+          </div>
+        )}
         {(b.discountOff ?? 0) > 0 && b.listPrice != null && (
           <>
             <DefRow label="Price before discount" value={money(b.listPrice)} />
