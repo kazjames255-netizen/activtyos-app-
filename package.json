@@ -23,6 +23,7 @@
     "test:public": "server/node_modules/.bin/tsx --test tests/public-access.test.mts",
     "test:finance": "server/node_modules/.bin/tsx --test tests/finance.test.mts",
     "test:amend": "server/node_modules/.bin/tsx --test tests/amend-passes.test.mts",
+    "test:listings": "server/node_modules/.bin/tsx --test tests/listings.test.mts",
     "test:questions": "server/node_modules/.bin/tsx --test tests/child-questions.test.mts",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
