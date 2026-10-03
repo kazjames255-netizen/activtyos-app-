@@ -1324,7 +1324,9 @@ function PricingCalculator({
     const master = masterPrice.trim() === "" ? null : num(masterPrice);
     const flat = Object.fromEntries(Object.entries(passFlat).map(([k, v]) => [k, num(v)]));
     const timings = Object.fromEntries(Object.entries(periodPrice).map(([k, v]) => [k, num(v)]));
-    const priced = (master ?? 0) > 0 || Object.values(flat).some((v) => v > 0);
+    // "Priced" means the provider set a price. A price they TYPED as £0 is a deliberate choice (a funded or free ticket, e.g. HAF),
+    // so it counts; an empty field does not.
+    const priced = master !== null || Object.values(flat).some((v) => v > 0);
     setBusy(true);
     await onSavePricing({
       masterPrice: master,
