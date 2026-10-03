@@ -98,3 +98,11 @@
 
 /* desktop: copy starts at the top of the hero, level with the visual, instead of floating down the middle of the tall visual column */
 @media (min-width:980px){.wrap .hero-grid{align-items:start}.wrap .hero-grid > :first-child{padding-top:34px}}
+/* narrow laptops (980-1180px): smaller phone, calmer labels, one fewer floating card so nothing collides */
+@media (min-width:980px) and (max-width:1180px){
+  .wrap .hv{--W:160px;--px:14px}
+  .wrap .hv-k span{text-transform:none;letter-spacing:0;font-size:11px;font-weight:700}
+  .wrap .hv-fl-3{display:none}
+  .wrap .hv-fl-2{bottom:46px}
+  .wrap .hv-tabs{display:none}
+}
