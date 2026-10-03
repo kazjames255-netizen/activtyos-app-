@@ -608,6 +608,13 @@ export function BookingDetail({ booking }: { booking: Booking }) {
                 <Rich text={dest === "wallet" ? t("p7bd.refAskWallet") : isVoucher ? t("p7bd.refAskVoucher", { scheme: b.voucherScheme ?? t("p7bd.theirScheme") }) : t("p7bd.refAskCard")} />
               </div>
             )}
+            {b.cancel?.amount != null && b.cancel.amount > 0 && (
+              <div className="w-full text-[12px] font-semibold leading-[1.5] text-[var(--ink)]">
+                Refund requested: {money(b.cancel.amount)}
+                {b.amount > 0 && <> of {money(b.amount)} paid ({Math.round((b.cancel.amount / b.amount) * 100)}%)</>}
+                {b.cancel.msg && <span className="font-normal text-[var(--ink-2)]"> · {b.cancel.msg}</span>}
+              </div>
+            )}
             {isVoucher && (
               <div className="w-full rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] leading-[1.5] text-[#7a5b06]">
                 <Rich text={t("p7bd.voucherBox", { scheme: b.voucherScheme ?? t("p7bd.voucherWord"), scheme2: b.voucherScheme ?? t("p7bk.schemeThe") })} />
@@ -849,7 +856,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
 
         {/* Payment */}
         <SectionHead>{t("p7bd.secPayment")}</SectionHead>
-        <DefRow label={t("p7bd.lblMethod")} value={/bank|transfer/i.test(String(b.method ?? "")) ? "Bank transfer" : b.method} />
+        <DefRow label={t("p7bd.lblMethod")} value={methodLabel(b.method)} />
         {/bank|transfer/i.test(String(b.method ?? "")) && b.pay !== "Paid" && b.status !== "Cancelled" && (
           <div className="my-1.5 rounded-lg border border-[#c9d7f5] bg-[#eef3ff] px-3 py-2 text-[12.5px] text-[#171534]">
             <b>Waiting for a bank transfer.</b> The family was told to quote the reference <b>{b.ref}</b>. Look for that reference on your bank statement, then press <b>Mark paid</b>.
@@ -997,6 +1004,18 @@ function ChildCardsPane({ booking }: { booking: Booking }) {
   if (!infos) return <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">{t("p7bd.loadingChild")}</div>;
   if (infos.length === 0) return <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">{t("p7bd.noChildLinked")}</div>;
   return <div className="space-y-4">{infos.map((info, i) => <ChildCard key={i} info={info} card={card} questions={questions} fields={fields} inline />)}</div>;
+}
+
+/** Friendly label for the stored payment method (display only). */
+function methodLabel(m?: string | null): string {
+  const v = String(m ?? "");
+  if (/bank|transfer/i.test(v)) return "Bank transfer";
+  if (/tax.?free/i.test(v)) return "Tax-Free Childcare";
+  if (/voucher/i.test(v)) return "Childcare vouchers";
+  if (/haf/i.test(v)) return "HAF funded";
+  if (/cash/i.test(v)) return "Cash on the day";
+  if (/card|stripe/i.test(v)) return "Card";
+  return v;
 }
 
 function RefundSummary({ booking }: { booking: Booking }) {
