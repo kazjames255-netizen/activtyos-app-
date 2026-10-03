@@ -2549,7 +2549,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               <button type="button"
                 onClick={() => (hits.length ? hits.forEach((x) => b.toggleChild(x.id, kid)) : b.setRoster((r) => r.filter((c) => c.name !== kid)))}
                 className="ms-2 rounded-full border px-3 py-1 text-[11.5px] font-extrabold" style={{ borderColor: "#dc2626", color: "#dc2626" }}>
-                {hits.length ? `Take ${kid} off ${m[2]} only` : `Remove ${kid} from this booking`}
+                {hits.length
+                  ? (hits.some((x) => x.dates.length > 1)
+                      // A 3 or 5 day pass is one pass: you cannot drop one day of it, so say so.
+                      ? `Take ${kid} off the ${hits.find((x) => x.dates.length > 1)!.name} (clashes on ${m[2]})`
+                      : `Take ${kid} off ${m[2]} only`)
+                  : `Remove ${kid} from this booking`}
               </button>
             );
           })()}
