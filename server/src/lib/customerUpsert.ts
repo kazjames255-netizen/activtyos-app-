@@ -5,6 +5,10 @@ import { tidyChildren, splitChildNames, type KidEntry } from "./tidyChildren";
 // updates) a customer record in the listing's tenant, and the booked child
 // is added to their children if new. Fire-and-forget from the booking
 // writes — a failed upsert must never fail a booking.
+/** A usable phone number has at least 10 digits. A stub like "44" (a country code typed alone) is treated as missing, so it never
+ *  blocks the real number from being saved and never gets saved itself. */
+const usablePhone = (p?: string | null): boolean => ((p ?? "").replace(/\D/g, "").length >= 10);
+
 export async function upsertCustomerFromBooking(
   tenantId: string,
   booking: { booker: string; email: string; phone?: string; postcode?: string; child?: string; childId?: string; age?: number; uid?: string | null },
@@ -32,7 +36,7 @@ export async function upsertCustomerFromBooking(
         tenantId,
         name: booking.booker,
         email: booking.email,
-        phone: booking.phone ?? "",
+        phone: usablePhone(booking.phone) ? booking.phone!.trim() : "",
         // The account link (§K): customer ↔ parent account is now a real uid,
         // not just an email match, whenever a booking gives us one.
         ...(booking.uid ? { uid: booking.uid } : {}),
@@ -48,6 +52,8 @@ export async function upsertCustomerFromBooking(
     const patch: Record<string, unknown> = {};
     if (JSON.stringify(merged) !== JSON.stringify(children)) patch.children = merged;
     if (booking.uid && doc.data().uid !== booking.uid) patch.uid = booking.uid;
+    // Fill a missing (or stub, e.g. "44") phone from the booking — never overwrite a usable one.
+    if (usablePhone(booking.phone) && !usablePhone(doc.data().phone as string | undefined)) patch.phone = booking.phone!.trim();
     // Fill a MISSING postcode from the booking — never overwrite one the
     // provider already has on file (same rule as phone in the basket upsert).
     if (booking.postcode && !((doc.data().postcode as string | undefined) ?? "").trim()) patch.postcode = booking.postcode;
@@ -96,7 +102,7 @@ export async function upsertFamilyFromBasket(
         tenantId,
         name: family.booker,
         email: family.email,
-        phone: family.phone ?? "",
+        phone: usablePhone(family.phone) ? family.phone!.trim() : "",
         ...(family.uid ? { uid: family.uid } : {}),
         ...(family.postcode ? { postcode: family.postcode } : {}),
         children: kids,
@@ -111,7 +117,7 @@ export async function upsertFamilyFromBasket(
     if (family.uid && doc.data().uid !== family.uid) patch.uid = family.uid;
     // Fill a MISSING phone from what the family gave at checkout — but never
     // overwrite one the provider already has on file.
-    if (family.phone?.trim() && !((doc.data().phone as string | undefined) ?? "").trim()) patch.phone = family.phone.trim();
+    if (usablePhone(family.phone) && !usablePhone(doc.data().phone as string | undefined)) patch.phone = family.phone!.trim();
     // Same rule for postcode — filled from the account's stored postcode,
     // never overwriting a value the provider already holds.
     if (family.postcode && !((doc.data().postcode as string | undefined) ?? "").trim()) patch.postcode = family.postcode;
