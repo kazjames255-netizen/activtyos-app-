@@ -1142,6 +1142,16 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     setErrSeen((cur) => (cur.err === e ? cur : { err: e, sig: basketSig }));
   }, [booking?.error, basketSig]);
   const errFresh = errSeen.err !== (booking?.error ?? null) || errSeen.sig === basketSig;
+  // A booking that has just been created must not leave its basket behind: the
+  // same days would clash with the bookings that now exist (and the family
+  // could pay twice). When a request finishes without an error, empty it.
+  const wasBusy = useRef(false);
+  useEffect(() => {
+    const busy = !!booking?.busy;
+    if (wasBusy.current && !busy && !booking?.error) b.reset();
+    wasBusy.current = busy;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booking?.busy, booking?.error]);
   const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
 
   // Where we are in the sequence: dates, children, one step per extra, pay.
@@ -2525,13 +2535,18 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           {(() => {
             // The server refuses a child who already holds a place that day.
             // Let the parent take that child off this booking right here.
-            const m = /^(.+?) already has a place on/.exec(booking.error);
+            const m = /^(.+?) already has a place on (.+?) \(booking/.exec(booking.error);
             if (!m) return null;
             const kid = m[1];
+            // Take the child off ONLY the clashing day(s), so the rest of the
+            // basket can still be booked straight away.
+            const pretty = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+            const hits = b.basket.filter((x) => x.dates.some((iso) => pretty(iso) === m[2]) && b.childrenOn(x.id).includes(kid));
             return (
-              <button type="button" onClick={() => b.setRoster((r) => r.filter((c) => c.name !== kid))}
+              <button type="button"
+                onClick={() => (hits.length ? hits.forEach((x) => b.toggleChild(x.id, kid)) : b.setRoster((r) => r.filter((c) => c.name !== kid)))}
                 className="ms-2 rounded-full border px-3 py-1 text-[11.5px] font-extrabold" style={{ borderColor: "#dc2626", color: "#dc2626" }}>
-                Remove {kid} from this booking
+                {hits.length ? `Take ${kid} off ${m[2]} only` : `Remove ${kid} from this booking`}
               </button>
             );
           })()}

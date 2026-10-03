@@ -1701,6 +1701,13 @@ my.post("/bookings", async (req, res) => {
           sessions: [...new Set(grp.flatMap((g) => g.sessions ?? []))],
           amount: sum((g) => g.amount ?? 0),
           amountPaid: sum((g) => g.amountPaid ?? 0),
+          // Rows merged into one booking: add up their list prices and discounts
+          // (taking `first`'s alone showed £20 / £5 off on a three-day £45 booking).
+          ...(grp.some((g) => g.discountOff) ? {
+            listPrice: sum((g) => g.listPrice ?? g.amount ?? 0),
+            discountOff: sum((g) => g.discountOff ?? 0),
+            discountNames: [...new Set(grp.flatMap((g) => g.discountNames ?? []))],
+          } : {}),
           addons: grp.flatMap((g) => g.addons ?? []),
           ...(payRefs.length ? { payRefs } : {}),
           ...(grp.some((g) => g.walletApplied) ? { walletApplied: sum((g) => g.walletApplied ?? 0) } : {}),
