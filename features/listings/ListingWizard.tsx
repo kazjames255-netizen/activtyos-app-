@@ -365,7 +365,7 @@ export type PageTheme = "playful" | "sport" | "emerald" | "teal" | "royal" | "au
 // prices every parent booking with it. Re-exported so existing imports hold.
 export { applyDiscounts, emptyRule, ruleSummary } from "./discounts";
 export type { DiscountKind, DiscountLine, DiscountRule } from "./discounts";
-import { emptyRule, ruleSummary, type DiscountKind, type DiscountRule } from "./discounts";
+import { emptyRule, ruleSummary, prettyRuleName, type DiscountKind, type DiscountRule } from "./discounts";
 import { useT, useI18n, useWord, tNow } from "@/lib/i18n/provider";
 import { Rich } from "@/components/i18n/Rich";
 import { PayModal } from "@/features/payments/PayModal";
@@ -676,7 +676,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean } | null>(null);
+  const [done, setDone] = useState<{ bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean } | null>(null);
   const [payClosed, setPayClosed] = useState(false);
   const [paidNow, setPaidNow] = useState(false);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
@@ -807,6 +807,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         needsApproval: heldForApproval,
         waitlisted: !seated,
         payByCard: /^card$/i.test(String(method)) && seated,
+        payCash: /^cash$/i.test(String(method)) && seated && total > 0,
       });
     } catch (e) {
       setBookState({ busy: false, error: e instanceof Error ? e.message : t("p7cl.errBooking") });
@@ -897,6 +898,14 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
               <span className="text-[#6a6785]">Reference</span><b className="text-[#171534]">{done.bank.reference}</b>
             </div>
             <div className="mt-2 text-[12px] text-[#6a6785]">Please quote the reference exactly. Your booking is held; {listing.tenantName || "your provider"} marks it paid when the money arrives. These details are also in your confirmation email.</div>
+          </div>
+        )}
+
+        {/* Cash on the day: nothing is taken now, so say what to bring. */}
+        {done.payCash && !needsApproval && !done.waitlisted && done.total > 0 && (
+          <div className="mt-3 rounded-2xl border-2 border-[#0f6b34] bg-[#e8f8ee] p-4 text-start">
+            <div className="text-[13px] font-extrabold uppercase tracking-wide text-[#0f6b34]">Pay in cash on the day · {money(done.total)}</div>
+            <div className="mt-1 text-[14px] text-[#171534]">Pay {money(done.total)} in cash on the day. Bring it with you.</div>
           </div>
         )}
 
@@ -2426,7 +2435,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
             </div>
 
             <div className="mt-3.5 rounded-lg border-s-4 bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]" style={{ borderInlineStartColor: kindOf(form.kind).colour }}>
-              <b>{tr("p8lst.wbParentsSee")}</b> {form.name.trim() || ruleSummary(form, tx)}
+              <b>{tr("p8lst.wbParentsSee")}</b> {prettyRuleName(form.name.trim()) || ruleSummary(form, tx)}
             </div>
 
             <div className="mt-3 flex gap-2">
@@ -2448,7 +2457,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
                 <div key={r.id} className="flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3" style={{ borderInlineStart: `4px solid ${k.colour}`, opacity: r.enabled ? 1 : 0.55 }}>
                   <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-[15px]" style={{ background: `${k.colour}1a` }}>{k.icon}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] font-bold">{r.name.trim() || ruleSummary(r, tx)}</span>
+                    <span className="block truncate text-[12.5px] font-bold">{prettyRuleName(r.name.trim()) || ruleSummary(r, tx)}</span>
                     <span className="block truncate text-[11px] text-[var(--ink-3)]">{tr("p8lst.wbDk_" + k.kind + "_title")} · {r.passNames.length ? r.passNames.join(", ") : tr("p8lst.wbAllTicketsLc")}</span>
                   </span>
                   <span className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold" style={{ background: `${k.colour}1a`, color: k.colour }}>
@@ -4177,7 +4186,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                     {live.slice(0, 3).map((r) => (
                       <div key={r.id} className="flex items-start justify-between gap-2">
                         <span className="min-w-0">
-                          <span className="block text-[11px] leading-snug" style={{ color: "#c3ccdb" }}>{r.name.trim() || ruleSummary(r, { tr, locale })}</span>
+                          <span className="block text-[11px] leading-snug" style={{ color: "#c3ccdb" }}>{prettyRuleName(r.name.trim()) || ruleSummary(r, { tr, locale })}</span>
                           {/* Which tickets it covers — a rule on one pass shouldn't look universal. */}
                           <span className="block text-[9.5px]" style={{ color: MUTs }}>
                             {r.passNames.length === 0 ? tr("p7pg.allPasses") : r.passNames.join(", ")}
