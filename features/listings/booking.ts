@@ -221,7 +221,11 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // the configured ceiling is only a fallback for the operator's preview.
   // Places left per the server/config, BEFORE this basket's own seats.
   // (pure maths lives in ./capacity so it can be unit-tested)
-  const rawLeft = (iso: string): number | null => rawLeftOn(blocks, iso, capacity, perDay, basket.length);
+  // A pass at its own per-listing capacity on a date is full for everyone on
+  // that date (the server lists those dates in passFullDates and enforces the
+  // same cap — it waitlists a booking that would exceed it).
+  const passFullOn = (iso: string) => !!pass && (d.passFullDates?.[pass.name] ?? []).includes(iso);
+  const rawLeft = (iso: string): number | null => (passFullOn(iso) ? 0 : rawLeftOn(blocks, iso, capacity, perDay, basket.length));
   const leftOn = (iso: string) => {
     const raw = rawLeft(iso);
     if (raw === null) return null;

@@ -2,7 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import { FieldValue } from "firebase-admin/firestore";
-import { librarySnap } from "../lib/tenantLibrary";
+import { librarySnap, libraryDocId } from "../lib/tenantLibrary";
 import { canWrite } from "../middleware/role";
 import { isFranchise, visibleToFranchise } from "../lib/franchiseScope";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
@@ -10,6 +10,8 @@ import { desiredRuns, syncListingBlocks, bookedDatesDropped } from "../lib/listi
 import { resolveBundlePricing, type BundleDoc, type PassDoc, type PeriodDoc } from "../lib/bundlePricing";
 import { mealDayPlan } from "../lib/mealPlan";
 import { ukToday } from "../lib/ukDate";
+import { passCap, bookingHasPass } from "../lib/passBooking";
+import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { isBrowsable, directLinkVisible } from "../lib/listingVisibility";
 import { accessFor, subscriptionState } from "../middleware/subscription";
 
@@ -70,9 +72,41 @@ async function withBlocks(
       }
     }
   }
+  // Per-pass caps: which dates each capped pass has no place left on, so the
+  // parent UI can show that pass as full (the booking API enforces the same).
+  const fullByListing = new Map<string, Record<string, string[]>>();
+  const capped = docs.filter((d) => Object.values((d.data.ticketOverrides as Record<string, { capacity?: string }> | undefined) ?? {}).some((o) => (passCap(o?.capacity) ?? 0) > 0));
+  const blockIds = capped.flatMap((d) => (byListing.get(d.id) ?? []).map((b) => b.id));
+  if (blockIds.length) {
+    const chunks: string[][] = [];
+    for (let i = 0; i < blockIds.length; i += IN_CHUNK) chunks.push(blockIds.slice(i, i + IN_CHUNK));
+    const live = new Set(["Confirmed", "Approval needed", "Offered"]);
+    const snaps = await Promise.all(chunks.map((c) => db.collection("bookings").where("blockId", "in", c).get()));
+    const bks = snaps.flatMap((sn) => sn.docs.map((x) => fromDoc(x.data() as BookingDoc))).filter((b) => live.has(b.status as string));
+    for (const d of capped) {
+      const ids = new Set((byListing.get(d.id) ?? []).map((b) => b.id));
+      const ov = d.data.ticketOverrides as Record<string, { capacity?: string }>;
+      const out: Record<string, string[]> = {};
+      for (const [name, o] of Object.entries(ov)) {
+        const cap = passCap(o?.capacity);
+        if (cap === null || cap <= 0) continue;
+        const held: Record<string, number> = {};
+        for (const b of bks) {
+          if (!b.blockId || !ids.has(b.blockId) || !bookingHasPass(b.pass, name)) continue;
+          const seats = Math.max(1, (b as { kids?: unknown[] }).kids?.length ?? 1);
+          const sess = (byListing.get(d.id) ?? []).find((x) => x.id === b.blockId)?.sessions.map((s) => s.date) ?? [];
+          for (const day of b.days ?? sess) held[day] = (held[day] ?? 0) + seats;
+        }
+        const full = Object.keys(held).filter((day) => held[day] >= cap).sort();
+        if (full.length) out[name] = full;
+      }
+      if (Object.keys(out).length) fullByListing.set(d.id, out);
+    }
+  }
   return docs.map((d) => ({
     id: d.id,
     ...d.data,
+    ...(fullByListing.has(d.id) ? { passFullDates: fullByListing.get(d.id) } : {}),
     blocks: (byListing.get(d.id) ?? []).sort((a, b) => (a.startDate < b.startDate ? -1 : 1)),
   }));
 }
@@ -149,8 +183,10 @@ listings.get("/", async (req, res) => {
   const payMethodsByTenant = new Map<string, string[]>();     // tenant → accepted payment methods
   const displayNameByTenant = new Map<string, string>();      // tenant → the name families see (Setup → Display name)
   // A franchise's seasons / categories / venues live in ITS OWN library, not head office's: read those too (keyed by franchise id).
-  const franchiseIds = [...new Set(visible.map((d) => d.data().franchiseId).filter((f): f is string => !!f && !tenantIds.includes(f)))];
-  const franchiseLibs = await Promise.all(franchiseIds.map((id) => db.collection("libraries").doc(id).get()));
+  // (The franchise doc id is `${tenantId}__fr__${franchiseId}` — see lib/tenantLibrary.libraryDocId — and a listing's franchiseId alone isn't that id.)
+  const frPairs = [...new Map(visible.filter((d) => !!d.data().franchiseId).map((d) => [d.data().franchiseId as string, d.data().tenantId as string])).entries()];
+  const franchiseIds = frPairs.map(([f]) => f);
+  const franchiseLibs = await Promise.all(frPairs.map(([f, t]) => db.collection("libraries").doc(libraryDocId(t, f)).get()));
   const libKeys = [...tenantIds, ...franchiseIds];
   const allLibs = [...libs, ...franchiseLibs];
   allLibs.forEach((snap, i) => {
@@ -501,7 +537,8 @@ listings.put("/:id", async (req, res) => {
   if (RUN_FIELDS.some((f) => f in data)) {
     const dropped = await bookedDatesDropped(own.snap.id, req.auth!.tenantId!, runRecipeOf(merged));
     if (dropped.length) {
-      const list = dropped.slice(0, 6).map((d) => `${d.date} (${d.booked} booked)`).join(", ");
+      const nice = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).replace(",", "");
+      const list = dropped.slice(0, 6).map((d) => `${nice(d.date)} (${d.booked} booked)`).join(", ");
       res.status(409).json({
         error: `This change removes ${dropped.length === 1 ? "a date" : "dates"} that children are booked on: ${list}${dropped.length > 6 ? "…" : ""}. Move or cancel those bookings first — removing the date would delete that day's register.`,
         droppedDates: dropped,

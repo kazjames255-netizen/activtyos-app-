@@ -337,6 +337,8 @@ export interface WizardDraft {
    *  without the operator-only menu endpoint. Read-only — never edited here. */
   mealMenus?: SavedMenu[];
   ticketOverrides: Record<string, TicketOverride>;
+  /** Server-computed (GET /api/listings): per pass name, the dates its own capacity is used up. Read-only. */
+  passFullDates?: Record<string, string[]>;
   bookRules: Record<string, BookRule>;
   addonIds: string[];
   staffIds: string[];
@@ -636,6 +638,7 @@ export function draftFromListing(l: ServerListing): WizardDraft {
     gallery: norm(l.gallery),
     bookRules: l.bookRules ?? {},
     ticketOverrides: l.ticketOverrides ?? {},
+    passFullDates: l.passFullDates ?? undefined,
   };
 }
 
@@ -1120,7 +1123,19 @@ export function ListingWizard({
   // hadn't. They have to explicitly reload to pick a side.
   const [conflicted, setConflicted] = useState(false);
 
-  async function syncApi(status: "draft" | "live", quiet = false): Promise<boolean> {
+  // Saves from THIS tab run one at a time. The debounced autosave doesn't set
+  // `busy`, so pressing Save changes while it was mid-flight sent a second PUT
+  // carrying the same (now stale) version: the autosave won and bumped it, and
+  // the explicit save was refused as a "change in another tab" (it was our own
+  // write). Queued, each save reads the latest version when it actually runs;
+  // a genuine cross-tab write still mismatches and still conflicts.
+  const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  function syncApi(status: "draft" | "live", quiet = false): Promise<boolean> {
+    const run = saveQueue.current.then(() => syncApiNow(status, quiet));
+    saveQueue.current = run.catch(() => undefined);
+    return run;
+  }
+  async function syncApiNow(status: "draft" | "live", quiet = false): Promise<boolean> {
     if (conflicted) { setMsg(tr("p8lst.waConflictReload")); return false; }
     if (!quiet) setBusy(true);
     setMsg(null);

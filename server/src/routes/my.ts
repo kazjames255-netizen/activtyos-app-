@@ -63,6 +63,7 @@ import { DEFAULT_POLICY, accumulatePendingRelease, noRefundCreditAmount, policyB
 import { bookingDocId } from "./bookings";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { grantPlanAccess } from "./childFiles";
+import { passCap, passClosedBy, passDaysProblem, passFullDay, bookingHasPass } from "../lib/passBooking";
 import { ukToday, ukTodayPlus, isRealDay, isBlankOrRealDay } from "../lib/ukDate";
 import { childSchema } from "../lib/childSchema";
 import { heldByNoAnswer } from "../lib/questionHold";
@@ -813,6 +814,8 @@ my.post("/bookings", async (req, res) => {
     deliveryMode?: "venue" | "home-visit" | "both";
     coverageArea?: CoverageArea | null;
     minGapMinutes?: number;
+    ticketOverrides?: Record<string, { capacity?: string }>;
+    bookRules?: Record<string, string>;
   };
   // An out-of-range child on a listing that ALLOWS them still can't be seated
   // automatically — the place is a request the provider approves or declines,
@@ -1128,6 +1131,8 @@ my.post("/bookings", async (req, res) => {
         timing = periodTitle.get(periodId);
       }
       const passDays = resolvedPass?.days ?? listedPass?.days;
+      // A pass the provider has shut (per-listing capacity "0") takes no family booking (LT-014).
+      if (!onBehalf && passClosedBy(listing.ticketOverrides?.[item.pass]?.capacity)) throw new HttpError(400, "That pass is closed");
       let days = item.dates ?? (passDays && passDays < sessionDates.length ? sessionDates.slice(0, passDays) : sessionDates);
       days = [...new Set(days)].sort();
       if (!onBehalf) {
@@ -1144,6 +1149,12 @@ my.post("/bookings", async (req, res) => {
       if (missing) throw new HttpError(400, `This activity doesn't run on ${missing}`);
       if (passDays && days.length > passDays)
         throw new HttpError(400, `"${item.pass}" covers ${passDays} day${passDays === 1 ? "" : "s"} — ${days.length} picked`);
+      // Exactly N days, and a "whole block" pass takes every date of the block (LT-016 / LT-008).
+      // Only explicit date picks are judged; a dateless body keeps its legacy default.
+      if (!onBehalf && item.dates) {
+        const problem = passDaysProblem({ need: passDays, picked: days, runDates: [...blockOfDate.keys()].sort(), rule: listing.bookRules?.[item.pass], today: todayIso });
+        if (problem) throw new HttpError(400, problem);
+      }
       const addons = (item.addons ?? []).map((a) => {
         const def = libAddons.get(a.id);
         if (!def) throw new HttpError(400, "Unknown add-on");
@@ -1401,8 +1412,10 @@ my.post("/bookings", async (req, res) => {
       // refuse the same way a full block would).
       const ageCapsOn = !!(listing as { ageCapsOn?: boolean }).ageCapsOn;
       const ageCaps = ((listing as { ageCaps?: Record<string, number> }).ageCaps ?? {}) as Record<string, number>;
+      // Age groups live in the library's Setup settings (PUT /api/library), franchise-aware
+      // via the listing's franchiseId — NOT on the tenants doc (LT-023).
       const ratioGroups = ageCapsOn
-        ? (((tenantSnap.data()?.settings as { ratioGroups?: { id: string; ageFrom: number; ageTo: number; name?: string }[] } | undefined)?.ratioGroups) ?? [])
+        ? ((((await loadSettings(listing.tenantId, (listing as { franchiseId?: string | null }).franchiseId)).ratioGroups) as { id: string; ageFrom: number; ageTo: number; name?: string }[] | undefined) ?? [])
         : [];
       const ageCapsActive = ageCapsOn && Object.keys(ageCaps).length > 0 && ratioGroups.length > 0;
       const groupForAge = (age: number): string | undefined => ratioGroups.find((g) => age >= g.ageFrom && age <= g.ageTo)?.id;
@@ -1428,6 +1441,32 @@ my.post("/bookings", async (req, res) => {
             }
           }
           ageBooked.set(id, byDay);
+        }
+      }
+
+      // Per-pass caps (listing.ticketOverrides[pass].capacity = max places of that
+      // pass per day). Live seats held per block → pass → day, read once and
+      // bumped in-memory as this basket claims seats (LT-013).
+      const capOfPass = (name: string) => passCap(listing.ticketOverrides?.[name]?.capacity);
+      const cappedPasses = [...new Set(priced.map((p) => p.item.pass))].filter((n) => capOfPass(n) !== null);
+      const passHeld = new Map<string, Map<string, Record<string, number>>>(); // blockId → pass → day → seats
+      if (cappedPasses.length) {
+        for (const [id, block] of blockById) {
+          const liveSnap = await tx.get(
+            bookingsCol.where("blockId", "==", id).where("status", "in", ["Confirmed", "Approval needed", "Offered"]),
+          );
+          const byPass = new Map<string, Record<string, number>>();
+          for (const d of liveSnap.docs) {
+            const bk = fromDoc(d.data() as BookingDoc);
+            const seats = Math.max(1, (bk as { kids?: unknown[] }).kids?.length ?? 1);
+            for (const name of cappedPasses) {
+              if (!bookingHasPass(bk.pass, name)) continue;
+              const rec = byPass.get(name) ?? {};
+              for (const day of bk.days ?? block.sessions.map((s) => s.date)) rec[day] = (rec[day] ?? 0) + seats;
+              byPass.set(name, rec);
+            }
+          }
+          passHeld.set(id, byPass);
         }
       }
 
@@ -1511,8 +1550,29 @@ my.post("/bookings", async (req, res) => {
             }
           }
 
+          // This group's seats per capped pass on this block's days.
+          const passWanted = new Map<string, Record<string, number>>();
+          let passFullMsg: string | undefined;
+          if (cappedPasses.length) {
+            for (const i of idxs) {
+              const name = priced[i].item.pass;
+              if (!cappedPasses.includes(name)) continue;
+              for (const sg of priced[i].segments) {
+                if (sg.blockId !== blockId) continue;
+                const rec = passWanted.get(name) ?? {};
+                for (const d of sg.days) rec[d] = (rec[d] ?? 0) + 1;
+                passWanted.set(name, rec);
+              }
+            }
+            for (const [name, w] of passWanted) {
+              const full = passFullDay(capOfPass(name), passHeld.get(blockId)?.get(name) ?? {}, w);
+              if (full) { passFullMsg = `${name} is full on ${prettyDay(full)}`; break; }
+            }
+          }
+          const passFits = !passFullMsg;
+
           const fits =
-            blk.open && ageFits &&
+            blk.open && ageFits && passFits &&
             (scope === "day"
               ? daysHaveSpace(blk, wanted).fits
               : blk.bookedCount + idxs.length <= blk.capacity);
@@ -1522,6 +1582,13 @@ my.post("/bookings", async (req, res) => {
             // each of those days (and the total) is exact.
             working.set(blockId, { ...blk, ...countsUpdate(blk, idxs.length, Object.keys(wanted)) });
             changed.add(blockId);
+            for (const [name, w] of passWanted) {
+              const byPass = passHeld.get(blockId) ?? new Map<string, Record<string, number>>();
+              const rec = byPass.get(name) ?? {};
+              for (const [d, n] of Object.entries(w)) rec[d] = (rec[d] ?? 0) + n;
+              byPass.set(name, rec);
+              passHeld.set(blockId, byPass);
+            }
             // Reflect these seats in the age tally so a LATER group in this
             // same basket can't also squeeze past the same day's cap.
             if (ageCapsActive && ageWanted.size) {
@@ -1536,7 +1603,7 @@ my.post("/bookings", async (req, res) => {
           } else {
             if (listing.waitlist === false) {
               const fullDay = scope === "day" ? ("fullDay" in daysHaveSpace(blk, wanted) ? daysHaveSpace(blk, wanted).fullDay : undefined) : undefined;
-              throw new HttpError(409, ageFullMsg ?? (fullDay ? `${prettyDay(fullDay)} is full and the waitlist is off` : "This block is full and the waitlist is off"));
+              throw new HttpError(409, ageFullMsg ?? (passFullMsg ? `${passFullMsg} and the waitlist is off` : fullDay ? `${prettyDay(fullDay)} is full and the waitlist is off` : "This block is full and the waitlist is off"));
             }
             if (queueCap !== null) {
               const depth = queueDepth.get(blockId) ?? {};
