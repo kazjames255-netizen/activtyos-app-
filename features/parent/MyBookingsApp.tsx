@@ -1233,6 +1233,13 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
 }
 
 /** custdash/bookings — the signed-in parent's own bookings. */
+// 1 -> "1st", 2 -> "2nd" (English); other languages get "#2".
+const placeInLine = (n: number) => {
+  if (!dl().toLowerCase().startsWith("en")) return `#${n}`;
+  const v = n % 100;
+  return `${n}${["th", "st", "nd", "rd"][(v - 20) % 10] ?? ["th", "st", "nd", "rd"][v] ?? "th"}`;
+};
+
 // A waitlisted place, shown up front so a parent can see exactly which dates
 // and times they're queued for — not buried in the general list.
 function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
@@ -1265,6 +1272,14 @@ function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
           <div key={i} className="text-[12.5px] font-semibold text-[#7c2d12]">{s}</div>
         ))}
       </div>
+      {b.waitlist && b.waitlist.length > 0 && (
+        <div className="mt-2 rounded-lg bg-white/70 px-2.5 py-1.5">
+          {b.waitlist.map((w) => (
+            <div key={w.date} className="text-[12.5px] font-extrabold text-[#7c2d12]">{t("parent.queueLine", { place: placeInLine(w.position), date: fmtIso(w.date) })}</div>
+          ))}
+          <div className="mt-0.5 text-[11px] leading-[1.5] text-[#b45309]">{b.waitlistMode === "auto" ? t("parent.queueAuto") : t("parent.queueManual")}</div>
+        </div>
+      )}
       <div className="mt-2 text-[11px] leading-[1.5] text-[#b45309]">
         {t("parent.waitlistNote")}
       </div>
