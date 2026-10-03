@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { money } from "@/features/bookings/helpers";
+import { money, receivedOf, refundedGross } from "@/features/bookings/helpers";
+import type { Booking as FullBooking } from "@/features/bookings/types";
 import { InvoicesApp } from "@/features/money/InvoicesApp";
 import { IncomeApp } from "@/features/money/IncomeApp";
 import { SettingsLink } from "@/components/OperatorPage";
@@ -18,7 +19,7 @@ const LIGHT_PALETTE = {
 
 interface Invoice { status?: string; amount?: number; date?: string; paidAt?: string }
 interface Income { date?: string; amount?: number }
-interface Booking { pay?: string; amount?: number; amountPaid?: number; createdAt?: string }
+interface Booking { pay?: string; amount?: number; amountPaid?: number; createdAt?: string; refundLog?: unknown; cancel?: unknown }
 const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 const sameLen = (a: unknown[], b: unknown[]) => { try { return a.length === b.length && JSON.stringify(a) === JSON.stringify(b); } catch { return false; } };
 
@@ -49,23 +50,30 @@ export function MoneyInApp() {
 
   const paidInv = useMemo(() => invoices.filter((v) => v.status === "paid").map((v) => ({ date: (v.paidAt || v.date || "").slice(0, 10), amount: v.amount ?? 0 })), [invoices]);
   const outstanding = useMemo(() => invoices.filter((v) => v.status === "sent").reduce((s, v) => s + (v.amount ?? 0), 0), [invoices]);
-  // Paid booking income (amountPaid wins), dated by when the booking was taken.
-  const bookingIn = useMemo(() => bookings.map((b) => ({ date: (b.createdAt || "").slice(0, 10), amount: b.amountPaid != null ? b.amountPaid : (b.pay === "Paid" ? (b.amount ?? 0) : 0) })).filter((r) => r.amount > 0), [bookings]);
+  // Booking money, dated by when the booking was taken. Same rule as the Dashboard's "Income
+  // collected" and the Income tab: NET of refunds (received - refunded); `back` is the refunded part.
+  const bookingIn = useMemo(() => bookings.map((b) => {
+    const got = receivedOf(b as unknown as FullBooking);
+    const back = Math.min(got, refundedGross(b as unknown as FullBooking));
+    return { date: (b.createdAt || "").slice(0, 10), amount: Math.round((got - back) * 100) / 100, got, back };
+  }).filter((r) => r.got > 0), [bookings]);
 
   const sumIn = (rows: { date?: string; amount?: number }[], key: string, byYear = false) =>
     rows.filter((r) => (byYear ? (r.date ?? "").slice(0, 4) : (r.date ?? "").slice(0, 7)) === key).reduce((s, r) => s + (r.amount ?? 0), 0);
 
   // `bookingIn` especially can span years of history — one pass per subset for the hero's
   // totals, not re-filtered/re-reduced six times on every render.
-  const { invMonth, incMonth, bkMonth, invYear, incYear, bkYear, inMonth, inYear } = useMemo(() => {
+  const { invMonth, incMonth, bkMonth, invYear, incYear, bkYear, refMonth, refYear, inMonth, inYear } = useMemo(() => {
     const invMonth = sumIn(paidInv, thisMonthKey), incMonth = sumIn(incomes, thisMonthKey), bkMonth = sumIn(bookingIn, thisMonthKey);
     const invYear = sumIn(paidInv, thisYear, true), incYear = sumIn(incomes, thisYear, true), bkYear = sumIn(bookingIn, thisYear, true);
-    return { invMonth, incMonth, bkMonth, invYear, incYear, bkYear, inMonth: invMonth + incMonth + bkMonth, inYear: invYear + incYear + bkYear };
+    const sumBack = (key: string, byYear: boolean) => bookingIn.filter((r) => (byYear ? r.date.slice(0, 4) : r.date.slice(0, 7)) === key).reduce((n, r) => n + r.back, 0);
+    const refMonth = sumBack(thisMonthKey, false), refYear = sumBack(thisYear, true);
+    return { invMonth, incMonth, bkMonth, invYear, incYear, bkYear, refMonth, refYear, inMonth: invMonth + incMonth + bkMonth, inYear: invYear + incYear + bkYear };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paidInv, incomes, bookingIn, thisMonthKey, thisYear]);
 
-  const Kpi = ({ big, sub }: { big: string; sub: string }) => (
-    <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{big}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{sub}</div></div>
+  const Kpi = ({ big, sub, note }: { big: string; sub: string; note?: string }) => (
+    <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{big}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{sub}</div>{note && <div className="mt-0.5 text-[10px] text-white/70">{note}</div>}</div>
   );
 
   const [heroOpen, setHeroOpen] = useState(true);
@@ -98,8 +106,8 @@ export function MoneyInApp() {
         </div>
         {heroOpen && (<>
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
-          <Kpi big={money(inMonth)} sub={t("p8fin.miInMonth")} />
-          <Kpi big={money(inYear)} sub={t("p8fin.miInYear", { year: thisYear })} />
+          <Kpi big={money(inMonth)} sub={t("p8fin.miInMonth")} note={t("p8fin.miNetNote", { got: money(inMonth + refMonth), ref: money(refMonth) })} />
+          <Kpi big={money(inYear)} sub={t("p8fin.miInYear", { year: thisYear })} note={t("p8fin.miNetNote", { got: money(inYear + refYear), ref: money(refYear) })} />
           <Kpi big={money(outstanding)} sub={t("p8fin.miAwaiting")} />
         </div>
         <div className="mt-2 text-[11px] text-white/75">{rich(t("p8fin.miReceivedLine", { bk: money(bkMonth), inv: money(invMonth), inc: money(incMonth) }))}</div>

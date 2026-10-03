@@ -6,7 +6,8 @@ import { get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
 import { useHoScope } from "@/components/franchise/HoScope";
 import { withHoNet } from "@/lib/ho-net";
 import { useRealtime } from "@/lib/realtime";
-import { money } from "@/features/bookings/helpers";
+import { money, receivedOf, refundedGross } from "@/features/bookings/helpers";
+import type { Booking as FullBooking } from "@/features/bookings/types";
 import { Card } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
 import { SeasonPicker } from "@/components/SeasonPicker";
@@ -25,7 +26,7 @@ interface Income { id: string; date: string; category: string; amount: number; s
 interface Payload { items: Income[]; summary: { total: number; count: number; byCategory: Record<string, number> } }
 interface Invoice { id: string; customerName: string; reference?: string; amount: number; date: string; dueDate?: string; status: string; paidAt?: string; paidVia?: "link" | "manual"; overdue?: boolean; bookingSettledAt?: string }
 interface InvPayload { items: Invoice[] }
-interface Booking { ref?: string; pay?: string; method?: string; amount?: number; amountPaid?: number; createdAt?: string; booker?: string; listing?: string; listingId?: string; refundedApproved?: number }
+interface Booking { refundLog?: unknown; cancel?: unknown; ref?: string; pay?: string; method?: string; amount?: number; amountPaid?: number; createdAt?: string; booker?: string; listing?: string; listingId?: string; refundedApproved?: number }
 
 const CATEGORIES = ["Sessions", "Camps", "Memberships", "Merchandise", "Grants", "Fundraising", "Deposits", "Other"];
 const INVOICE_CAT = "Invoices";
@@ -164,10 +165,10 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   // booking was taken; amountPaid wins over the headline amount.
   const bookingRows = useMemo<Income[]>(() => bookings
     .map((b) => {
-      const taken = b.amountPaid != null ? b.amountPaid : (b.pay === "Paid" ? (b.amount ?? 0) : 0);
-      // Net of money handed back — a refunded booking isn't money in
-      // (acceptance d18s4). Older refunds without the running total count in full.
-      const back = Math.min(taken, b.refundedApproved ?? (b.pay === "Refunded" ? taken : 0));
+      // Same rule as the Dashboard's "Income collected" (collectedNet): received
+      // minus refunded — a refunded booking isn't money in (acceptance d18s4).
+      const taken = receivedOf(b as unknown as FullBooking);
+      const back = Math.min(taken, refundedGross(b as unknown as FullBooking));
       return { b, paid: Math.round((taken - back) * 100) / 100, back };
     })
     .filter(({ paid }) => paid > 0)
