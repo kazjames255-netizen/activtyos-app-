@@ -15,6 +15,7 @@ import {
   payLabelFor,
   pendingPayActionT,
   payTone,
+  waitingForPlace,
   realPhone,
   refundedTotal,
   sessionCount,
@@ -631,13 +632,13 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {(b.pay === "Invoice sent" || b.pay === "Unpaid") && <> {t("p7bd.cancelledNoPayment")}</>}
         </div>
       )}
-      {(b.pay === "Invoice sent" || b.pay === "Unpaid") && b.status !== "Cancelled" && b.status !== "Declined" && (
+      {(b.pay === "Invoice sent" || b.pay === "Unpaid") && b.status !== "Cancelled" && b.status !== "Declined" && !waitingForPlace(b.status) && (
         <>
           <Button onClick={() => act(b.ref, "paid")}>{t("p7bd.markPaid")}</Button>
           <Button onClick={() => act(b.ref, "resend")}>{t("p7bd.resendInvoice")}</Button>
         </>
       )}
-      {b.pay === "Awaiting voucher payment" && b.status !== "Cancelled" && b.status !== "Declined" && (
+      {b.pay === "Awaiting voucher payment" && b.status !== "Cancelled" && b.status !== "Declined" && !waitingForPlace(b.status) && (
         <Button variant="primary" onClick={() => act(b.ref, "paid")}>{pendingPayActionT(t, w, b)}</Button>
       )}
       {b.status !== "Cancelled" && b.status !== "Declined" && (
@@ -742,7 +743,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {/* Once cancelled/declined the payment state is moot — a cancelled
               booking isn't "awaiting" anything. */}
           {b.status !== "Cancelled" && b.status !== "Declined" && (
-            <Badge tone={payTone(b.pay)}>{w(payLabelFor(b))}</Badge>
+            <Badge tone={payTone(b.pay, b.status)}>{w(payLabelFor(b))}</Badge>
           )}
           {b.cardFailed && b.status !== "Cancelled" && b.status !== "Declined" && (
             <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>{t("p7bd.cardFailedBadge")}</Badge>

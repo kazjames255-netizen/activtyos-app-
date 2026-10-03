@@ -18,6 +18,7 @@ import {
   pendingPayActionT,
   payMethodLabel,
   payTone,
+  waitingForPlace,
   bookedOn,
   byNewest,
   rangeDays,
@@ -396,7 +397,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                       "truncate text-[10.5px] " + (on ? "text-white/75" : "text-[var(--ink-3)]")
                     }
                   >
-                    {b.listing} · {w(payLabel(b.pay))}
+                    {b.listing} · {w(waitingForPlace(b.status) ? payLabelFor(b) : payLabel(b.pay))}
                   </div>
                 </button>
               );
@@ -476,13 +477,13 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   <span className="text-[var(--ink-3)]">·</span>
                   <span className="text-[12.5px] font-semibold text-[var(--ink-2)]"><span className="num font-extrabold text-[var(--ink)]">{bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))}</span> <span className="text-[var(--ink-3)]">· {pickPlural(t, locale, "p7bk.sessN", sessionCount(b))} · {pickPlural(t, locale, "p7bk.kidN", att)}</span></span>
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{w(payLabelFor(b))}</span>
+                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay, b.status).bg, color: payTone(b.pay, b.status).fg }}>{w(payLabelFor(b))}</span>
                     <span className="text-[11px] font-semibold text-[var(--ink-3)]">{w(payMethodLabel(b))}</span>
                   </span>
 
                   {/* Contextual actions, pushed to the right */}
                   <span className="ms-auto flex flex-wrap items-center justify-end gap-1.5">
-                    {b.pay === "Awaiting voucher payment" && !off && (
+                    {b.pay === "Awaiting voucher payment" && !off && !waitingForPlace(b.status) && (
                       <button onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }} title={t("p7bkl.confirmVoucherTip")}
                         className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{pendingPayActionT(t, w, b)}</button>
                     )}
