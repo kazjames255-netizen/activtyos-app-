@@ -43,8 +43,10 @@ export type ChildcareRoute = typeof TFC | typeof VOUCHERS;
 
 export function childcareRoute(b: Pick<Booking, "method" | "voucherScheme">): ChildcareRoute | null {
   const m = (b.method || "").toLowerCase();
+  // TFC first: a TFC booking carries the scheme name "HMRC Tax-Free Childcare"
+  // (so it shares the awaiting-payment flow), which must not read as a voucher.
+  if (/tax.?free|\btfc\b/.test(m) || /tax.?free|\btfc\b/i.test(b.voucherScheme || "")) return TFC;
   if (b.voucherScheme || /voucher/.test(m)) return VOUCHERS;
-  if (/tax.?free|\btfc\b/.test(m)) return TFC;
   return null;
 }
 

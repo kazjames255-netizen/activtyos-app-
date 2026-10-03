@@ -120,6 +120,11 @@ export interface Booking {
   /** Split payment: how much of `amount` was already taken by card at checkout
    *  (auto-settled); the remainder is the off-platform portion reconciled here. */
   cardPaid?: number;
+  /** Part-paid Tax-Free Childcare: the portion of `amount` that comes from HMRC.
+   *  The rest (`amount - tfcAmount`) is the remainder the family settles another
+   *  way (`tfcRemainderVia`, usually "card" — payable now). Absent = not a split. */
+  tfcAmount?: number;
+  tfcRemainderVia?: string;
   /** Provider-only reconciliation notes — never shown to the parent. A running
    *  log; each entry is time-stamped and attributed. */
   reconNotes?: { at: string; by?: string; text: string }[];

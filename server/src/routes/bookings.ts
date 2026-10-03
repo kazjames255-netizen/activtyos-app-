@@ -494,7 +494,8 @@ bookings.post("/:ref/actions", async (req, res) => {
         if (b.pay === "Awaiting voucher payment" && b.voucherScheme) {
           const lib = (await db.collection("libraries").doc(b.tenantId!).get()).data() ?? {};
           const providers = ((lib.settings as Record<string, unknown> | undefined)?.voucherProviders ?? []) as { name: string; details?: { label: string; value: string }[] }[];
-          const scheme = providers.find((v) => v.name === b.voucherScheme);
+          // TFC has no entry in the tenant's voucherProviders; it still gets its instructions, never a card pay link.
+          const scheme = providers.find((v) => v.name === b.voucherScheme) ?? (/tax.?free|\btfc\b/i.test(b.voucherScheme) ? { name: b.voucherScheme, details: [] } : undefined);
           if (scheme) emailVoucherInstructions(b, await tenantName(), { name: scheme.name, details: (scheme.details ?? []).filter((d) => d.value?.trim()) }, {
             // Re-sends carry OUR minted reference(s) too — the family lost the
             // first email, and the reference is the point of it.

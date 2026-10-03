@@ -1,3 +1,4 @@
+import { isTfcMethod } from "../lib/payMethods";
 import { Router } from "express";
 import { db } from "../firebase";
 import { managerScope, canWrite, type Role } from "../middleware/role";
@@ -77,7 +78,7 @@ type RefundRow = {
   label: string; amount: number; date: string | null;
 };
 function refundsOf(b: Booking): RefundRow[] {
-  const base = { ref: b.ref, booker: b.booker, listing: b.listing, listingId: b.listingId ?? null, method: b.voucherScheme ? `Voucher · ${b.voucherScheme}` : b.method };
+  const base = { ref: b.ref, booker: b.booker, listing: b.listing, listingId: b.listingId ?? null, method: b.voucherScheme && !isTfcMethod(b.voucherScheme) ? `Voucher · ${b.voucherScheme}` : b.method };
   const out: RefundRow[] = [];
   // An APPROVED cancellation refund — refundedApproved is what actually moved
   // (older bookings predate it: fall back to the approved cancel amount).
@@ -202,7 +203,7 @@ reconciliation.get("/", async (req, res) => {
   const awaiting = items.filter((i) => !i.reconciled && i.outstanding > 0);
   const byMethod: Record<string, { count: number; outstanding: number }> = {};
   for (const it of awaiting) {
-    const key = it.voucherScheme ? `Voucher · ${it.voucherScheme}` : it.method || "Other";
+    const key = it.voucherScheme && !isTfcMethod(it.voucherScheme) ? `Voucher · ${it.voucherScheme}` : it.method || "Other";
     const m = (byMethod[key] ??= { count: 0, outstanding: 0 });
     m.count += 1;
     m.outstanding = Math.round((m.outstanding + it.outstanding) * 100) / 100;

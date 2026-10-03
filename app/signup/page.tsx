@@ -9,6 +9,7 @@ import { post as apiPost, get as apiGet, api, rawErrorMessage } from "@/lib/api"
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { AUTH_LIGHT, AosMark } from "@/components/auth/AuthBrand";
 import { useI18n, tNow } from "@/lib/i18n/provider";
+import { safeNext } from "@/lib/safe-next";
 import { isRTL } from "@/lib/i18n/config";
 
 type AccountType = "parent" | "freelancer" | "company" | "franchise";
@@ -120,6 +121,9 @@ function SignupForm() {
   // Unlike ?invite (staff/franchise joining a tenant), this just creates a
   // normal provider account — we only keep the code for attribution.
   const referredBy = params.get("ref");
+  // Parents don't use this operator wizard: point them at the parent sign-up (keeping any ?next).
+  const nextRaw = safeNext(params.get("next"));
+  const parentSignupHref = `/parent?tab=up${nextRaw ? `&next=${encodeURIComponent(nextRaw)}` : ""}`;
   // A pricing-page button can preselect the account type, e.g. /signup?plan=company.
   const planParam = params.get("plan");
 
@@ -461,6 +465,9 @@ function SignupForm() {
           <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-[12px] leading-snug text-[var(--ink-2)]">
             <span className="me-1">🏬</span>{rich(t("p8pub.suSingleBranch"))}
           </div>
+          <p className="mt-3 text-center text-[13px] text-[var(--ink-2)]">
+            <Link href={parentSignupHref} data-testid="signup-im-parent" className="font-extrabold text-[var(--brand-2)]">{t("p8par.imParent")}</Link>
+          </p>
           </>
         )}
 

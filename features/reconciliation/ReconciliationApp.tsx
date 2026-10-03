@@ -47,8 +47,8 @@ const fmt = (iso?: string | null) => (iso ? new Date(`${iso.slice(0, 10)}T00:00:
 const PREF_ORDER = ["Card", "Childcare vouchers", "Tax-Free Childcare", "Cash", "Bank transfer", "HAF / funded", "Other"];
 function methodCat(it: Item): string {
   const m = (it.method || "").toLowerCase();
+  if (/tax.?free|tfc/.test(m) || /tax.?free|\btfc\b/i.test(it.voucherScheme || "")) return "Tax-Free Childcare";
   if (it.voucherScheme || /voucher/.test(m)) return "Childcare vouchers";
-  if (/tax.?free|tfc/.test(m)) return "Tax-Free Childcare";
   if (/cash/.test(m)) return "Cash";
   if (/bank|transfer/.test(m)) return "Bank transfer";
   if (/haf|funded/.test(m) || it.pay === "Funded") return "HAF / funded";

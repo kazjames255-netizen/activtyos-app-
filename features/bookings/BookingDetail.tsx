@@ -870,7 +870,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           </>
         )}
         <DefRow label={t("p7bd.totalLbl")} value={money(b.amount)} />
-        {b.method === "Tax-Free Childcare" && (
+        {(/tax.?free|\btfc\b/i.test(b.method ?? "") || /tax.?free|\btfc\b/i.test(b.voucherScheme ?? "")) && (
           <DefRow
             label={t("p7bd.lblTfcRecon")}
             value={

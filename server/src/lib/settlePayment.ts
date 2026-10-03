@@ -2,7 +2,8 @@ import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
 import { bookingDocId, notifyPaymentReceived } from "../routes/bookings";
-import { paidSoFar } from "../../../features/bookings/helpers";
+import { paidSoFar, receivedOf } from "../../../features/bookings/helpers";
+import { balanceOf } from "./payGate";
 import type { Booking } from "../../../features/bookings/types";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -88,10 +89,21 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
     const bSnap = await db.collection("bookings").doc(bookingDocId(claimed.tenantId, bookingRef)).get();
     if (!bSnap.exists) continue;
     const b = fromDoc(bSnap.data() as BookingDoc);
+    // Part-paid Tax-Free Childcare: the card took only the remainder. The HMRC
+    // portion is still awaited, so the booking stays "Awaiting voucher payment"
+    // (operator: Mark Tax-Free Childcare received) with the split recorded.
+    const tfcSplit = (b.tfcAmount ?? 0) > 0 && (b.amount ?? 0) > (b.tfcAmount ?? 0);
+    if (tfcSplit) {
+      const taken = balanceOf(b);
+      b.cardPaid = Math.round(((b.cardPaid ?? 0) + taken) * 100) / 100;
+      b.amountPaid = Math.round((receivedOf(b) + taken) * 100) / 100;
+      b.pay = b.amountPaid >= (b.amount ?? 0) - 0.005 ? "Paid" : "Awaiting voucher payment";
+    } else {
     b.pay = "Paid";
     // What was actually taken, so a later part-refund or cancel works from
     // real money rather than inferring it from the status word.
     b.amountPaid = b.amount;
+    }
     b.paymentIntentId = claimed.paymentIntentId;
     b.stripeAccount = claimed.stripeAccount;
     b.cardFailed = false;

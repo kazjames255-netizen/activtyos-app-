@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { safeNext } from "@/lib/safe-next";
 import { useRouter, useSearchParams } from "next/navigation";
 import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
@@ -16,6 +17,12 @@ import { dateLocale } from "@/lib/i18n/format";
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
+  // A visitor sent here from a parent-facing page (booking page, shared plan,
+  // parent portal) is a parent: "Create an account" goes to the PARENT
+  // sign-up and keeps `next` so they land back where they were.
+  const nextPath = safeNext(params.get("next"));
+  const parentFlow = params.get("role") === "parent" || (!!nextPath && /^\/(book|plan|custdash|parent)(\/|\?|$)/.test(nextPath));
+  const createHref = parentFlow ? `/parent?tab=up${nextPath ? `&next=${encodeURIComponent(nextPath)}` : ""}` : "/signup";
   const { user, loading } = useAuth();
   const { t, locale } = useI18n();
   const [email, setEmail] = useState("");
@@ -133,7 +140,7 @@ function LoginForm() {
       setBusy(false);
       return;
     }
-    const next = params.get("next");
+    const next = safeNext(params.get("next"));
     if (next) { router.replace(next); return; }
     const home = await fetchRoleHome();
     // No home = we couldn't ask the API who this is. Stay put and say so, rather
@@ -309,7 +316,7 @@ function LoginForm() {
       </form>
       <p className="mt-4 text-center text-[12.5px] text-[var(--ink-3)]">
         {t("p7login.newHere")}{" "}
-        <Link href="/signup" className="font-bold text-[var(--brand-2,#2f6bd8)]">
+        <Link href={createHref} className="font-bold text-[var(--brand-2,#2f6bd8)]">
           {t("p7login.create")}
         </Link>
       </p>

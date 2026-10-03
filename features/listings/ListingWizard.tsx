@@ -676,7 +676,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean } | null>(null);
+  const [done, setDone] = useState<{ cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean } | null>(null);
   const [payClosed, setPayClosed] = useState(false);
   const [paidNow, setPaidNow] = useState(false);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
@@ -700,7 +700,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   // The basket is per child and per date; the API takes one block per call, so
   // a basket spanning two weeks goes as two calls. Flagged to Amir — the server
   // is the better place to accept a mixed basket.
-  async function book(basket: BasketItem[], dayAssign: Record<string, Record<string, string[]>>, addonSel: Record<string, Record<string, string[]>>, method: string, children: ChildProfile[] = [], addonAns: Record<string, Record<string, string>> = {}, voucherScheme?: string, discountCodes?: string[], voucherRefs?: Record<string, string>, walletCap?: number, phone?: string, mealSel: Record<string, string> = {}, serviceAddress?: { address: string; postcode: string }) {
+  async function book(basket: BasketItem[], dayAssign: Record<string, Record<string, string[]>>, addonSel: Record<string, Record<string, string[]>>, method: string, children: ChildProfile[] = [], addonAns: Record<string, Record<string, string>> = {}, voucherScheme?: string, discountCodes?: string[], voucherRefs?: Record<string, string>, walletCap?: number, phone?: string, mealSel: Record<string, string> = {}, serviceAddress?: { address: string; postcode: string }, tfc?: { amount: number; remainderVia: string; references: Record<string, string> }) {
     setBookState({ busy: true, error: null });
     try {
       // Save children we haven't seen before, so next time is one tap. A
@@ -749,16 +749,20 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       // family never spends more than they chose. Undefined = auto-apply all
       // (omit it entirely and let the server draw it down across the blocks).
       let walletSent = false;
+      let tfcSent = false;
       for (const [blockId, items] of byBlock) {
         const sendCodes = discountCodes && discountCodes.length > 0 && !codesSent;
         if (sendCodes) codesSent = true;
         const walletThisPost = walletCap === undefined ? undefined : walletSent ? 0 : walletCap;
         if (walletCap !== undefined) walletSent = true;
+        const tfcThisPost = tfc && !tfcSent; if (tfcThisPost) tfcSent = true;
         const res = await apiPost<{ bookings: { ref: string; status?: string }[]; total: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; voucher?: { scheme: string; details: { label: string; value: string }[] } }>("/api/my/bookings", {
           listingId: listing.id,
           blockId,
           method,
           ...(voucherScheme ? { voucherScheme } : {}),
+          // Part-paid Tax-Free Childcare: HMRC's share and how the rest is settled (rides on the first POST only, like wallet/codes).
+          ...(tfcThisPost && tfc ? { tfc: { amount: tfc.amount, remainderVia: tfc.remainderVia } } : {}),
           ...(sendCodes ? { discountCodes } : {}),
           ...(walletThisPost !== undefined ? { walletCap: walletThisPost } : {}),
           ...(phone?.trim() ? { phone: phone.trim() } : {}),
@@ -806,7 +810,9 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         bank: bankPay,
         needsApproval: heldForApproval,
         waitlisted: !seated,
-        payByCard: /^card$/i.test(String(method)) && seated,
+        payByCard: (/^card$/i.test(String(method)) || (/^tfc$/i.test(String(method)) && /^card$/i.test(tfc?.remainderVia ?? "") && (tfc?.amount ?? 0) < total)) && seated,
+        // Part-paid TFC: the card remainder the family pays now (the HMRC share is awaited, shown via the scheme card).
+        ...(/^tfc$/i.test(String(method)) && /^card$/i.test(tfc?.remainderVia ?? "") && (tfc?.amount ?? 0) < total ? { cardDue: Math.round((total - (tfc?.amount ?? 0)) * 100) / 100 } : {}),
         payCash: /^cash$/i.test(String(method)) && seated && total > 0,
       });
     } catch (e) {
@@ -910,13 +916,13 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         )}
 
         {/* Card booking that is confirmed: take the payment right here (the card form opens straight away, and the button reopens it if closed). */}
-        {done.payByCard && !needsApproval && !scheme && done.total > 0 && (
+        {done.payByCard && !needsApproval && (!scheme || !!done.cardDue) && (done.cardDue ?? done.total) > 0 && (
           <div className="mt-3">
             {paidNow ? (
               <div className="rounded-xl bg-[#e8f8ee] px-4 py-3 text-[14px] font-extrabold text-[#0f6b34]">✓ {t("p7cl.paidThanks")}</div>
             ) : (
               <button type="button" onClick={() => setPayClosed(false)} className="w-full rounded-full px-5 py-3.5 text-[15px] font-extrabold text-white" style={{ background: "#1d3a8f", boxShadow: "0 10px 24px -12px rgba(29,58,143,.6)" }}>
-                {t("p7cl.payNowBtn", { amt: money(done.total) })}
+                {t("p7cl.payNowBtn", { amt: money(done.cardDue ?? done.total) })}
               </button>
             )}
             {!payClosed && !paidNow && (
@@ -966,7 +972,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       mode="parent"
       theme="playful"
       bookState={bookState}
-      onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children, p.addonAns, p.voucherScheme, p.discountCodes, p.voucherRefs, p.walletCap, p.phone, p.mealSel, p.serviceAddress)}
+      onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children, p.addonAns, p.voucherScheme, p.discountCodes, p.voucherRefs, p.walletCap, p.phone, p.mealSel, p.serviceAddress, p.tfc)}
     />
   );
 
@@ -984,7 +990,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       tenantId={listing.tenantId}
       mode="parent"
       bookState={bookState}
-      onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children, p.addonAns, p.voucherScheme, p.discountCodes, p.voucherRefs, p.walletCap, p.phone, p.mealSel, p.serviceAddress)}
+      onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children, p.addonAns, p.voucherScheme, p.discountCodes, p.voucherRefs, p.walletCap, p.phone, p.mealSel, p.serviceAddress, p.tfc)}
       topRight={topRight}
       full
     />
@@ -1001,7 +1007,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
  */
 export function BookingOnly({ listing, onBook, bookState, mode = "operator", theme }: {
   listing: ServerListing;
-  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; tfc?: { amount: number; remainderVia: string; references: Record<string, string> }; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void;
   bookState?: { busy: boolean; error: string | null };
   /** "operator" (Take booking) or "parent" (Quick book). */
   mode?: "operator" | "parent";
@@ -2923,7 +2929,7 @@ function myBrand() {
  * — so everyone gets the same starting gun on a popular run.
  */
 
-type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void; bookState?: { busy: boolean; error: string | null }; tenantId?: string };
+type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; tfc?: { amount: number; remainderVia: string; references: Record<string, string> }; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void; bookState?: { busy: boolean; error: string | null }; tenantId?: string };
 
 // Dispatcher — same logic, theme-specific presentation.
 /**
@@ -3001,7 +3007,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
 
 const BASKET_NOTE_KEY = "aos.basket.lastListing.v1";
 function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, onBook, bookState, theme = "playful", tenantId }: {
-  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme; tenantId?: string;
+  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; tfc?: { amount: number; remainderVia: string; references: Record<string, string> }; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme; tenantId?: string;
 }) {
   const tr = useT();
   const { locale } = useI18n();
@@ -3216,7 +3222,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
             {weeks.slice(0, 8).map((w) => <div key={w.mon}>
               <div className="mb-1.5 text-[11px] font-bold" style={{ color: BLUE }}>{tr("p7bw.weekN", { n: w.n })} <span className="font-semibold text-[#a6adba]">{tr("p7bw.fromDate", { date: fmtDate(w.mon) })}</span></div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
-                const dOff = b.off(iso); const dPast = b.past(iso); const on = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
+                const dOff = b.off(iso); const dClosed = !b.past(iso) && b.closed(iso); const dPast = b.past(iso) || dClosed; const on = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
                 // Availability speaks only when it's bad news — a number on
                 // every cell turns the calendar into a spreadsheet.
                 const left = b.leftOn(iso); const held = b.heldByBasket(iso); const full = !dOff && !dPast && left !== null && left < 1 && !held; const low = !full && left !== null && (held || b.isLow(iso, left));
@@ -3225,7 +3231,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
                 const queueable = full && b.waitlistOn && !dOff;
                 return <button key={iso} type="button" disabled={dPast || dOff || (full && !queueable)}
                   onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
-                  title={dPast ? tr("p7bw.dayPassed") : full ? (queueable ? (waiting ? tr("p7bw.onWaitTap") : tr("p7bw.fullTapJoin")) : tr("p7bw.fullWord")) : left === null ? undefined : d.showSpaces ? (low ? tr("p7bw.onlyLeft", { n: left }) : tr("p7bw.placesLeftN", { n: left })) : (low ? tr("p7bw.almostFull") : tr("p7bw.spaceAvail"))}
+                  title={dClosed ? "Bookings closed" : dPast ? tr("p7bw.dayPassed") : full ? (queueable ? (waiting ? tr("p7bw.onWaitTap") : tr("p7bw.fullTapJoin")) : tr("p7bw.fullWord")) : left === null ? undefined : d.showSpaces ? (low ? tr("p7bw.onlyLeft", { n: left }) : tr("p7bw.placesLeftN", { n: left })) : (low ? tr("p7bw.almostFull") : tr("p7bw.spaceAvail"))}
                   className="relative flex w-[44px] flex-col items-center rounded-xl border-2 py-1.5 disabled:cursor-not-allowed"
                   style={waiting ? { borderColor: "#c2410c", color: "#c2410c", background: "#fff7ed" }
                     : dPast ? { borderColor: LINEp, color: "#cdd2db", background: "#f3f4f7", opacity: 0.6 }
@@ -3233,6 +3239,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
                     : on ? { borderColor: BLUE, color: "#fff", background: BLUE } : { borderColor: LINEp, color: INKp, background: "#fff" }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString(dl(), { weekday: "short", timeZone: "UTC" })}</span>
                   <span className="text-[14px] font-extrabold leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
+                  {dClosed && <span className="mt-0.5 text-[7px] font-bold uppercase leading-none">closed</span>}
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5 rounded-full" style={{ background: dot }} />}
                 </button>; })}</div>
             </div>)}
@@ -3411,14 +3418,14 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             {weeks.length ? <div className="flex flex-col gap-3">{weeks.slice(0, 8).map((w) => <div key={w.mon}>
               <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">Week {w.n} · from {fmtDate(w.mon)}</div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
-                const dOff = b.off(iso); const dPast = b.past(iso); const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
+                const dOff = b.off(iso); const dClosed = !b.past(iso) && b.closed(iso); const dPast = b.past(iso) || dClosed; const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
                 const left = b.leftOn(iso); const held = b.heldByBasket(iso); const full = !dOff && !dPast && left !== null && left < 1 && !held; const low = !full && left !== null && (held || b.isLow(iso, left));
                 const dot = dOff || dPast || left === null ? null : full ? "#ff5470" : low ? "#ffb020" : "#3ddc84";
                 const waiting = b.waitSel.includes(iso);
                 const queueable = full && b.waitlistOn && !dOff;
                 return <button key={iso} type="button" disabled={dPast || dOff || (full && !queueable)}
                   onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
-                  title={dPast ? tr("p7bw.dayPassed") : full ? (queueable ? (waiting ? tr("p7bw.onWaitTap") : tr("p7bw.fullTapJoin")) : tr("p7bw.fullWord")) : left === null ? undefined : d.showSpaces ? (low ? tr("p7bw.onlyLeft", { n: left }) : tr("p7bw.placesLeftN", { n: left })) : (low ? tr("p7bw.almostFull") : tr("p7bw.spaceAvail"))}
+                  title={dClosed ? "Bookings closed" : dPast ? tr("p7bw.dayPassed") : full ? (queueable ? (waiting ? tr("p7bw.onWaitTap") : tr("p7bw.fullTapJoin")) : tr("p7bw.fullWord")) : left === null ? undefined : d.showSpaces ? (low ? tr("p7bw.onlyLeft", { n: left }) : tr("p7bw.placesLeftN", { n: left })) : (low ? tr("p7bw.almostFull") : tr("p7bw.spaceAvail"))}
                   className="relative flex w-[40px] flex-col items-center border py-1 disabled:cursor-not-allowed"
                   style={waiting ? { borderColor: "#ffb020", color: "#ffb020", background: "#2a2110" }
                     : dPast ? { borderColor: LINEs, color: "#454d5e", background: CELLOFF, opacity: 0.5 }
@@ -3426,6 +3433,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                     : sel ? { borderColor: LIME, color: INK, background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString(dl(), { weekday: "short", timeZone: "UTC" })}</span>
                   <span className="text-[13px] font-black leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
+                  {dClosed && <span className="mt-0.5 text-[7px] font-bold uppercase leading-none">closed</span>}
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5" style={{ background: dot }} />}
                 </button>; })}</div>
             </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>{tr("p7bw.setDatesWhen")}</div>}
@@ -3530,7 +3538,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
 function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook, bookState, full, theme = "playful", onTheme, brand, logo, tenantId, topRight }: {
   topRight?: React.ReactNode;
   d: WizardDraft; venue: Venue | null; local: LocalState; blocks?: RunBlock[];
-  mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void; bookState?: { busy: boolean; error: string | null };
+  mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; tfc?: { amount: number; remainderVia: string; references: Record<string, string> }; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void; bookState?: { busy: boolean; error: string | null };
   booking: BlockBooking | null; addons: LocalState["addons"]; full?: boolean;
   theme?: PageTheme; onTheme?: (t: PageTheme) => void;
   /** The provider's brand in the page header. Defaults to the signed-in

@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { safeNext } from "@/lib/safe-next";
 import { post as apiPost } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { FieldLabel, Input } from "@/components/ui";
@@ -35,6 +36,8 @@ function ParentAuth() {
   // The marketing "For parents" page links straight at the sign-up half
   // (/parent?tab=up), so honour that rather than always opening on sign in.
   const params = useSearchParams();
+  // Where to go after sign-up / sign-in (e.g. back to the booking page).
+  const next = safeNext(params.get("next"));
   const [tab, setTab] = useState<"in" | "up">(params.get("tab") === "up" ? "up" : "in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -104,7 +107,7 @@ function ParentAuth() {
           return;
         }
         // into the parent portal (home = browse); the account already remembers the chosen provider
-        router.replace("/custdash/browse");
+        router.replace(next ?? "/custdash/browse");
       } catch (err) {
         const code = (err as { code?: string })?.code ?? "";
         if (code === "auth/email-already-in-use") setError(t("p8par.lgEmailTaken"));
@@ -119,7 +122,7 @@ function ParentAuth() {
     setBusy(true);
     try {
       await signInWithEmailAndPassword(firebaseAuth, email, password);
-      router.replace("/");
+      router.replace(next ?? "/");
     } catch (err) {
       const code = (err as { code?: string })?.code ?? "";
       if (code === "auth/network-request-failed") {
@@ -269,7 +272,7 @@ function ParentAuth() {
 
       <p className="mt-5 text-center text-[12.5px] text-[var(--ink-2)]">
         {t("p8par.lgRunClub")}{" "}
-        <Link href="/login" className="font-extrabold" style={{ color: "var(--brand)" }}>
+        <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="font-extrabold" style={{ color: "var(--brand)" }}>
           {t("p8par.lgProviderSignIn")}
         </Link>
       </p>

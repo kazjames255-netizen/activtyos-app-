@@ -68,6 +68,7 @@ import { bookingCutoffLabel, cutoffHours, pastCutoff } from "../lib/bookingCutof
 import { customerAreaOn } from "../lib/customerArea";
 import { NOT_TAKING_BOOKINGS, takesNewBookings } from "../middleware/subscription";
 import { checkCoverage, type CoverageArea } from "../lib/coverageArea";
+import { TFC_SCHEME, canonicalMethod, isTfcMethod, methodAllowed, methodKey, splitTfc } from "../lib/payMethods";
 import { attachChildcareRefs, childcareOf, childcareRoute, type ChildcareBooking } from "../lib/childcare";
 import { autoEnrolFromBooking } from "../lib/hubAutoEnrol";
 
@@ -132,6 +133,16 @@ const basketSchema = z.object({
   // Childcare voucher booking (§Q): the scheme id the family picked. The
   // server computes the pay-by dates from the tenant's voucher settings.
   voucherScheme: z.string().max(60).optional(),
+  // Part-paid Tax-Free Childcare: how much comes from HMRC and how the rest is
+  // settled ("card" → payable straight away). Re-validated server-side; the
+  // split itself is computed in lib/payMethods.splitTfc.
+  tfc: z
+    .object({
+      amount: z.number().nonnegative().max(100000),
+      remainderVia: z.string().trim().max(60).optional(),
+      references: z.record(z.string().max(80)).optional(),
+    })
+    .optional(),
   // Marketing discount code (optional). Applied server-side to the pass
   // subtotal; validated the same way the preview endpoint validates it.
   discountCode: z.string().trim().max(40).optional(), // legacy single code
@@ -960,17 +971,34 @@ my.post("/bookings", async (req, res) => {
   }
 
   const needsAddons = input.items.some((i) => i.addons?.length);
-  const wantsVoucher = "voucherScheme" in input ? input.voucherScheme : undefined;
+  // TFC ("tfc" from the checkout, or the label) is a voucher-style rail: it
+  // lands in the same awaiting-payment state even when the tenant has no
+  // matching entry in voucherProviders.
+  const isTfcBooking = isTfcMethod(input.method) && methodKey(input.method) === "tfc";
+  const wantsVoucher = ("voucherScheme" in input ? input.voucherScheme : undefined) ?? (isTfcBooking ? TFC_SCHEME : undefined);
   const libAddons = new Map<string, LibAddon>();
   let voucher: { name: string; details: { label: string; value: string }[] } | null = null;
   let voucherWin: ReturnType<typeof voucherWindow> | null = null;
-  if (needsAddons || wantsVoucher) {
+  {
     const lib = (await librarySnap(listing.tenantId, (listing as { franchiseId?: string | null }).franchiseId)).data() ?? {};
+    // The method must be one this provider (and this listing) accepts. Parents
+    // only: an operator booking on a family's behalf records what actually happened.
+    if (!onBehalf) {
+      const tSettings = (lib.settings ?? {}) as { payMethods?: unknown };
+      const lm = (listing as { payMethods?: unknown }).payMethods;
+      const chk = methodAllowed(input.method, tSettings.payMethods, lm);
+      if (!chk.ok) { res.status(400).json({ error: chk.reason }); return; }
+      if ("tfc" in input && input.tfc?.remainderVia && isTfcBooking) {
+        const rv = methodAllowed(input.tfc.remainderVia, tSettings.payMethods, lm);
+        if (!rv.ok) { res.status(400).json({ error: rv.reason }); return; }
+      }
+    }
     for (const a of ((lib.addons ?? []) as LibAddon[])) libAddons.set(a.id, a);
     if (wantsVoucher) {
       const settings = (lib.settings ?? {}) as Record<string, unknown>;
       const providers = (settings.voucherProviders ?? []) as { id: string; name: string; details?: { label: string; value: string; listingId?: string | null; locationId?: string | null }[] }[];
-      const scheme = providers.find((v) => v.id === wantsVoucher || v.name === wantsVoucher);
+      const scheme = providers.find((v) => v.id === wantsVoucher || v.name === wantsVoucher)
+        ?? (isTfcBooking || isTfcMethod(wantsVoucher) ? { id: "tfc", name: TFC_SCHEME, details: [] } : undefined);
       if (scheme) {
         // Resolve the right account/Ofsted/reference for THIS listing's setting:
         // this listing → its location → unscoped (all), per detail label.
@@ -1554,7 +1582,7 @@ my.post("/bookings", async (req, res) => {
                 dates: block.name,
                 amount: due,
                 // A £0 place (HAF / free) took no payment of any kind — never label it "Card".
-                method: amount <= 0 ? "Funded" : input.method,
+                method: amount <= 0 ? "Funded" : canonicalMethod(input.method),
                 phone: familyPhone,
               },
               nextBid + created.length,
@@ -1706,6 +1734,22 @@ my.post("/bookings", async (req, res) => {
       // the booking that actually gets written. See lib/childcare.ts for the
       // format and the uniqueness argument.
       for (const b of created) attachChildcareRefs(b as ChildcareBooking, listing.tenantId);
+
+      // Part-paid Tax-Free Childcare (PY-012): HMRC covers `tfc.amount`, the
+      // family settles the remainder another way (card = payable now). Worked
+      // out here from the booking's own money — never trusted from the browser
+      // beyond the one number — and stored as tfcAmount / tfcRemainderVia;
+      // payGate.balanceOf then asks a card payment for the remainder only.
+      if (isTfcBooking && "tfc" in input && input.tfc) {
+        const live = created.filter((b) => b.status !== "Waitlisted" && b.pay === "Awaiting voucher payment");
+        const parts = splitTfc(live.map((b) => b.amount ?? 0), input.tfc.amount);
+        live.forEach((b, i) => {
+          if (parts[i] > 0 && parts[i] < (b.amount ?? 0)) {
+            b.tfcAmount = parts[i];
+            b.tfcRemainderVia = methodKey(input.tfc?.remainderVia || "card");
+          }
+        });
+      }
 
       if (walletSpends.length) spendWalletInTx(tx, listing.tenantId, familyEmail, walletHeld, walletSpends);
       // The booking exists (in this same write), so the codes are genuinely spent.
@@ -1940,7 +1984,8 @@ my.post("/bookings", async (req, res) => {
       const v = awaiting[0];
       if (v && v.email.includes("@"))
         emailVoucherInstructions(v, listing.tenantName ?? listing.name, voucher, {
-          total: round2(awaiting.reduce((s, b) => s + (b.amount ?? 0), 0)),
+          // A part-paid TFC booking asks HMRC for its TFC portion only.
+          total: round2(awaiting.reduce((s, b) => s + (b.tfcAmount ?? b.amount ?? 0), 0)),
           refs: awaiting.map((b) => b.ref),
           // The references WE minted, one per booking-and-child — what the
           // family must actually quote. Their own scheme account reference is

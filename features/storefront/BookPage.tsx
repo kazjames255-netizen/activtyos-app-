@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { apiPublic } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { CustomerPage, type ServerListing } from "@/features/listings/ListingWizard";
-import { confirmLeavingBasket } from "@/features/listings/booking";
+import { confirmLeavingBasket, keepBasketForAuth } from "@/features/listings/booking";
 import { DEFAULT_SETTINGS, useTenantSettings } from "@/lib/settings";
 import { brandAccent, brandLogo, brandVars } from "@/lib/brand-theme";
 
@@ -114,7 +114,7 @@ export function BookPage({ id }: { id: string }) {
     <button type="button" onClick={() => window.close()} className={linkCls}>{t("p7pub.closePreview")}</button>
   ) : signedIn === false ? (
     // Inside an embed, keep ?embed=1 through the sign-in round trip.
-    <Link href={`/login?next=${encodeURIComponent(`/book/${id}${embedded ? "?embed=1" : ""}`)}`} onClick={guardNav} className={linkCls}>{t("p7pub.signIn")}</Link>
+    <Link href={`/login?next=${encodeURIComponent(`/book/${id}${embedded ? "?embed=1" : ""}`)}`} onClick={keepBasketForAuth} className={linkCls}>{t("p7pub.signIn")}</Link>
   ) : signedIn && !embedded ? (
     // Not shown in embeds — navigating a provider's iframe into the dashboard
     // would trap the parent page's visitor.

@@ -18,6 +18,7 @@ import { applyDiscounts } from "./discounts";
 import { blockOn, lowAt, rawLeftOn } from "./capacity";
 import { money } from "@/features/bookings/helpers";
 import { ordinal, uid } from "./format";
+import { cutoffHours, insideCutoff } from "./cutoff";
 import { effectiveRule, pickDaySelection } from "./passRules";
 import type { BlockBooking, BookRule, RunBlock, WizardDraft } from "./ListingWizard";
 import type { ChildProfile } from "./checkout";
@@ -61,6 +62,23 @@ export function hasParentBasketItems() {
  * Shared by both basket implementations (this file and
  * features/storefront/BookingPanel.tsx) so parents see the same wording
  * wherever they're booking from. Returns true when it's fine to proceed. */
+/** Sign-in / create-account detours leave this page and come straight back, so
+ *  the parent's basket + children are kept in sessionStorage for that round
+ *  trip only: the detour link calls `keepBasketForAuth()`, and the booking panel
+ *  restores once on return. A normal fresh visit never restores. */
+const BASKET_KEEP = "aos.basket.keep";
+const basketKey = () => `aos.basket:${window.location.pathname}`;
+export function keepBasketForAuth() {
+  try { sessionStorage.setItem(BASKET_KEEP, window.location.pathname); } catch { /* storage blocked */ }
+}
+function readBasketStash(): { basket?: BasketItem[]; roster?: ChildProfile[]; removed?: Record<string, string[]> } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    if (sessionStorage.getItem(BASKET_KEEP) !== window.location.pathname) return null;
+    const raw = sessionStorage.getItem(basketKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
 export function confirmLeavingBasket(): boolean {
   if (!hasParentBasketItems()) return true;
   if (typeof window === "undefined") return true;
@@ -80,8 +98,8 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const { locale: loc } = useI18n();
   // The children on this booking, and who's been taken off which line. Stored
   // as exceptions so a child added is on everything immediately.
-  const [roster, setRoster] = useState<ChildProfile[]>([]);
-  const [removed, setRemoved] = useState<Record<string, string[]>>({});
+  const [roster, setRoster] = useState<ChildProfile[]>(() => (parentMode ? readBasketStash()?.roster ?? [] : []));
+  const [removed, setRemoved] = useState<Record<string, string[]>>(() => (parentMode ? readBasketStash()?.removed ?? {} : {}));
   const passes = booking?.passes ?? [];
   const periods = booking?.periods ?? [];
   // How many bookable days a single week offers, and the whole run. With past
@@ -117,7 +135,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // Dates the parent wants but can't have — queued, not booked.
   const [waitSel, setWaitSel] = useState<string[]>([]);
   const [waitDone, setWaitDone] = useState(false);
-  const [basket, setBasket] = useState<BasketItem[]>([]);
+  const [basket, setBasket] = useState<BasketItem[]>(() => (parentMode ? readBasketStash()?.basket ?? [] : []));
   // Report this listing's basket size to the module-level signal above, and
   // clear it again the moment this instance goes away — a full navigation
   // (unmount) or a completed booking (this component stops being rendered)
@@ -131,6 +149,14 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     return () => { parentBasketCount = 0; };
   }, [parentMode]);
   const [stage, setStage] = useState<"pick" | "checkout" | "done">("pick");
+  // Keep the basket for the sign-in / create-account round trip (see above).
+  useEffect(() => {
+    if (!parentMode) return;
+    try {
+      if (stage === "done" || (basket.length === 0 && roster.length === 0)) sessionStorage.removeItem(basketKey());
+      else sessionStorage.setItem(basketKey(), JSON.stringify({ basket, roster, removed }));
+    } catch { /* storage blocked */ }
+  }, [parentMode, stage, basket, roster, removed]);
   const [child, setChild] = useState("");
   // Operator-side checkout: which parent it's for, a child per pass, and any
   // add-ons. Attendees is derived from the children actually assigned.
@@ -167,9 +193,14 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // parents. Computed once so render stays pure.
   const [todayIso] = useState(() => new Date().toISOString().slice(0, 10));
   const past = (iso: string) => parentMode && iso < todayIso;
+  // Inside the listing's "stop taking bookings N hours before" window: families
+  // can't book the day (the server refuses it too; operators may override).
+  const cutoffH = cutoffHours(d.bookingCutoffHours);
+  const closed = (iso: string) => parentMode && insideCutoff(cutoffH, iso, period?.start);
+  const unbookable = (iso: string) => past(iso) || closed(iso);
   function pickDay(iso: string, weekMon: string) {
-    if (!pass || off(iso) || past(iso)) return;
-    setSel((prev) => pickDaySelection({ iso, weekMon, sel: prev, need, rule, isSingle, weeks, weekMax, datesOff: d.datesOff ?? [], past }));
+    if (!pass || off(iso) || unbookable(iso)) return;
+    setSel((prev) => pickDaySelection({ iso, weekMon, sel: prev, need, rule, isSingle, weeks, weekMax, datesOff: d.datesOff ?? [], past: unbookable }));
   }
   const { locked, countdown, opensLabel } = useOpensAt(d.opensAt);
   // Capacity. Two scopes: "day" caps how many children are on site on any one
@@ -236,11 +267,15 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const rosterNames = roster.map((c) => c.name.trim()).filter(Boolean);
   /** Who's on a given basket line. A multi-day pass is a block: on it or not. */
   const childrenOn = (id: string) => rosterNames.filter((n) => !(removed[id] ?? []).includes(n));
-  const toggleChild = (id: string, name: string) =>
+  const toggleChild = (id: string, name: string) => {
+    // Parent flow: taking the last child off a pass takes the pass out of the
+    // basket — an empty line would otherwise sit there at £0.00 and still count.
+    if (parentMode && childrenOn(id).length === 1 && childrenOn(id)[0] === name) { removeItem(id); return; }
     setRemoved((m) => {
       const list = m[id] ?? [];
       return { ...m, [id]: list.includes(name) ? list.filter((n) => n !== name) : [...list, name] };
     });
+  };
   /**
    * Forget every exception recorded against a child. A child added to the
    * booking is on everything — but taking them off the booking writes a
@@ -266,7 +301,9 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // against a line showing its price. Floor at one so the basket shows what
   // they're committing to; it recomputes upward the moment a second child is
   // put on the pass.
-  const headsOn = (x: BasketItem) => Math.max(1, childrenOn(x.id).length);
+  // Provider view keeps the floor of one. In the parent flow, once children
+  // are named the real count is used, so a pass with nobody on it adds nothing.
+  const headsOn = (x: BasketItem) => (parentMode && rosterNames.length > 0 ? childrenOn(x.id).length : Math.max(1, childrenOn(x.id).length));
   // Priced per child per line, so a second child doubles that line.
   // Priced per child per line, so a second child doubles that line — and the
   // engine now sees those head counts, so a sibling discount lands only where
@@ -452,7 +489,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     setMealSel((all) => { const key = mealKey(child, date); const next = { ...all }; if (menuItemId) next[key] = menuItemId; else delete next[key]; return next; });
   const mealFor = (child: string, date: string) => mealSel[mealKey(child, date)] ?? "";
 
-  return { passes, periods, passId, setPassId, pickPass, passClosed, passFits, runTotal, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, mealSel, pickMeal, mealFor, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, past, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
+  return { passes, periods, passId, setPassId, pickPass, passClosed, passFits, runTotal, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, mealSel, pickMeal, mealFor, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, past, closed, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
     roster, setRoster, childrenOn, toggleChild, clearRemovalsFor, headsOn, rosterNames,
     waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, heldByBasket, waitlistOnly, waitDone, setWaitDone, joinWaitlist, dupNote, clearBasket, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }

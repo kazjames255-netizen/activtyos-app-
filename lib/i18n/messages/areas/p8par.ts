@@ -238,6 +238,7 @@ export default fromRows({
   msgHi: ["Hi {name},", "Cześć {name},", "Bună {name},", "السلام علیکم {name}،", "ਹੈਲੋ {name},", "হ্যালো {name},", "مرحبًا {name}،", "Olá {name},", "Hola {name},", "Bonjour {name},", "Helo {name},"],
   msgHiNoName: ["Hi there,", "Cześć,", "Bună,", "السلام علیکم،", "ਹੈਲੋ,", "হ্যালো,", "مرحبًا،", "Olá,", "Hola,", "Bonjour,", "Helo,"],
   exYes: ["Yes", "Tak", "Da", "جی ہاں", "ਹਾਂ", "হ্যাঁ", "نعم", "Sim", "Sí", "Oui", "Ie"],
+  imParent: ["I’m a parent — create a parent account", "Jestem rodzicem — utwórz konto rodzica", "Sunt părinte — creează un cont de părinte", "میں والدین ہوں — والدین کا اکاؤنٹ بنائیں", "ਮੈਂ ਮਾਪੇ ਹਾਂ — ਮਾਪਿਆਂ ਦਾ ਖਾਤਾ ਬਣਾਓ", "আমি অভিভাবক — অভিভাবকের অ্যাকাউন্ট তৈরি করুন", "أنا ولي أمر — أنشئ حساب ولي أمر", "Sou pai/mãe — criar conta de pai/mãe", "Soy padre/madre — crear una cuenta de familia", "Je suis parent — créer un compte parent", "Rwy’n rhiant — creu cyfrif rhiant"],
   exNo: ["No", "Nie", "Nu", "نہیں", "ਨਹੀਂ", "না", "لا", "Não", "No", "Non", "Na"],
   exEgName: ["e.g. Doyle", "np. Kowalski", "ex. Popescu", "مثلاً احمد", "ਜਿਵੇਂ ਸਿੰਘ", "যেমন রহমান", "مثال: الحسن", "ex.: Silva", "p. ej., García", "p. ex. Martin", "e.e. Jones"],
 });

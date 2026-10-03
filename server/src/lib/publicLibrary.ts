@@ -31,6 +31,9 @@ export const PUBLIC_SETTINGS_KEYS = [
   "partialAllowWallet",
   "partialAllowChangeDate",
   "voucherProviders",
+  // Which payment rails the provider accepts (Setup). The parent checkout
+  // offers exactly these; without it every booker saw the six defaults.
+  "payMethods",
   // The provider identity a parent searches for inside their HMRC Tax-Free
   // Childcare account — setting name, registration number, postcode. It is
   // published ON PURPOSE: the parent cannot pay us until they have added us,
