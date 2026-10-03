@@ -148,16 +148,21 @@ listings.get("/", async (req, res) => {
   const seasonNames = new Map<string, Map<string, string>>(); // tenant → seasonId → name
   const payMethodsByTenant = new Map<string, string[]>();     // tenant → accepted payment methods
   const displayNameByTenant = new Map<string, string>();      // tenant → the name families see (Setup → Display name)
-  libs.forEach((snap, i) => {
+  // A franchise's seasons / categories / venues live in ITS OWN library, not head office's: read those too (keyed by franchise id).
+  const franchiseIds = [...new Set(visible.map((d) => d.data().franchiseId).filter((f): f is string => !!f && !tenantIds.includes(f)))];
+  const franchiseLibs = await Promise.all(franchiseIds.map((id) => db.collection("libraries").doc(id).get()));
+  const libKeys = [...tenantIds, ...franchiseIds];
+  const allLibs = [...libs, ...franchiseLibs];
+  allLibs.forEach((snap, i) => {
     const data = snap.data() ?? {};
     const cats = (data.categories ?? []) as { id: string; name: string }[];
     const venues = (data.venues ?? []) as { id: string; name: string; address?: string; city?: string; lat?: number; lng?: number }[];
     const settings = (data.settings ?? {}) as { seasons?: { id: string; name: string }[]; payMethods?: string[] };
-    catNames.set(tenantIds[i], new Map(cats.map((c) => [c.id, c.name])));
-    venueById.set(tenantIds[i], new Map(venues.map((v) => [v.id, { name: v.name, address: v.address, city: v.city, lat: v.lat, lng: v.lng }])));
-    seasonNames.set(tenantIds[i], new Map((settings.seasons ?? []).map((s) => [s.id, s.name])));
-    payMethodsByTenant.set(tenantIds[i], settings.payMethods ?? []);
-    if (typeof (settings as { providerName?: string }).providerName === "string" && (settings as { providerName?: string }).providerName!.trim()) displayNameByTenant.set(tenantIds[i], (settings as { providerName?: string }).providerName!.trim());
+    catNames.set(libKeys[i], new Map(cats.map((c) => [c.id, c.name])));
+    venueById.set(libKeys[i], new Map(venues.map((v) => [v.id, { name: v.name, address: v.address, city: v.city, lat: v.lat, lng: v.lng }])));
+    seasonNames.set(libKeys[i], new Map((settings.seasons ?? []).map((s) => [s.id, s.name])));
+    payMethodsByTenant.set(libKeys[i], settings.payMethods ?? []);
+    if (typeof (settings as { providerName?: string }).providerName === "string" && (settings as { providerName?: string }).providerName!.trim()) displayNameByTenant.set(libKeys[i], (settings as { providerName?: string }).providerName!.trim());
   });
 
   // Advertisable discounts live on the listing itself (`discounts` = the rules the
@@ -202,19 +207,20 @@ listings.get("/", async (req, res) => {
     .filter((l) => Array.isArray(l.blocks) && (l.blocks as unknown[]).length > 0 && hasUpcomingBlock(l.blocks as unknown[]));
   res.json(
     list.map((l) => {
+      const libOf = (m: Map<string, Map<string, any>>) => (l.franchiseId ? m.get(l.franchiseId as string) : undefined);
       const byCat = catNames.get(l.tenantId as string);
       // Prefer the names denormalised onto the listing at save; fall back to a
       // live id→name resolve for listings saved before that field existed.
       const stored = l.categoryNames as string[] | undefined;
       const categories = stored ?? ((l.categoryIds as string[]) ?? [])
-        .map((id) => byCat?.get(id))
+        .map((id) => libOf(catNames)?.get(id) ?? byCat?.get(id))
         .filter((n): n is string => !!n);
-      const venue = venueById.get(l.tenantId as string)?.get(l.venueId as string);
+      const venue = libOf(venueById)?.get(l.venueId as string) ?? venueById.get(l.tenantId as string)?.get(l.venueId as string);
       // Normalise the display title: older listings stored it as `name`, newer
       // ones as `title`. The browse UI reads `title`, so fall back to `name`
       // rather than showing a blank card.
       const title = ((l.title as string) ?? (l.name as string) ?? "").trim();
-      const season = l.seasonId ? (seasonNames.get(l.tenantId as string)?.get(l.seasonId as string) ?? null) : null;
+      const season = l.seasonId ? (libOf(seasonNames)?.get(l.seasonId as string) ?? seasonNames.get(l.tenantId as string)?.get(l.seasonId as string) ?? null) : null;
       // Advertisable discounts on this listing, best % first so the top chip
       // always matches the "SAVE %" ribbon.
       // An early-bird whose book-by date has passed isn't a saving on offer —
