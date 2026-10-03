@@ -1,6 +1,6 @@
 import { db } from "../firebase";
 import { notify } from "./notify";
-import type { Booking } from "../../../features/bookings/types";
+import type { Booking, Kid } from "../../../features/bookings/types";
 
 // What a cancellation leaves behind besides the seat.
 //
@@ -44,22 +44,63 @@ export async function cleanupAfterCancel(tenantId: string, b: Booking, releasedD
     console.error(`[cancel-cleanup] meals ${b.ref}:`, (e as Error).message);
   }
 
-  // 2 · Planned trips on a released day that list this child. Not removed
-  // automatically (a trip isn't tied to one booking) — the provider is told.
+  // 2 · Planned trips on a released day that list this child. The child comes
+  // OFF the trip's attendee/consent list (so they're no longer counted, chased
+  // for consent or taken on the day) — unless another live booking of the same
+  // family still covers that day for them — and the provider is told either way.
   try {
     if (!childIds.size) return;
     const trips = await db.collection("trips").where("tenantId", "==", tenantId).where("status", "==", "planned").get();
+    // Other live bookings of this family that might still cover the child (lazy: only read when a trip matches).
+    let others: Booking[] | null = null;
+    const stillCovered = async (childId: string | undefined, name: string, date: string) => {
+      if (others === null) {
+        const email = (b.email ?? "").trim();
+        const snap = email ? await db.collection("bookings").where("tenantId", "==", tenantId).where("email", "==", email).get() : null;
+        others = (snap?.docs ?? []).map((x) => x.data() as Booking).filter((o) => o.ref !== b.ref && !["Cancelled", "Declined", "Waitlisted"].includes(o.status));
+      }
+      return others.some((o) => {
+        const kidRows: Kid[] = o.kids?.length ? o.kids : [{ name: o.child, childId: o.childId, dates: o.days }];
+        return kidRows.some((k) => {
+          if (k.cancelled) return false;
+          const mine = (childId && k.childId === childId) || (k.name ?? "").trim().toLowerCase() === name.trim().toLowerCase();
+          const kd = k.dates?.length ? k.dates : k.days?.length ? k.days : o.days;
+          return mine && !!kd?.includes(date) && !(k.cancelledDays ?? []).includes(date);
+        });
+      });
+    };
     for (const d of trips.docs) {
-      const t = d.data() as { date?: string; destination?: string; childIds?: string[]; attendees?: { childId?: string; n?: string; consent?: string }[] };
+      const t = d.data() as { date?: string; destination?: string; childIds?: string[]; childNames?: string[]; headcount?: number; attendees?: { childId?: string; n?: string; consent?: string }[] };
       if (!t.date || !days.has(t.date)) continue;
-      const hit = (t.attendees ?? []).filter((a) => a.childId && childIds.has(a.childId) && a.consent !== "declined");
+      const hit = (t.attendees ?? []).filter((a) => a.childId && childIds.has(a.childId));
       if (!hit.length) continue;
+      const toRemove: typeof hit = [];
+      for (const a of hit) if (!(await stillCovered(a.childId, a.n ?? "", t.date))) toRemove.push(a);
+      if (toRemove.length) {
+        const gone = new Set(toRemove.map((a) => a.childId));
+        await db.runTransaction(async (tx) => {
+          const fresh = await tx.get(d.ref);
+          const cur = fresh.data() as typeof t | undefined;
+          if (!cur) return;
+          const attendees = (cur.attendees ?? []).filter((a) => !(a.childId && gone.has(a.childId)));
+          const removedNames = new Set(toRemove.map((a) => (a.n ?? "").trim().toLowerCase()));
+          tx.update(fresh.ref, {
+            attendees,
+            childIds: (cur.childIds ?? []).filter((id) => !gone.has(id)),
+            childNames: (cur.childNames ?? []).filter((n) => !removedNames.has(String(n).trim().toLowerCase())),
+            headcount: Math.max(0, (cur.headcount ?? (cur.attendees ?? []).length) - toRemove.length),
+          });
+        });
+      }
+      const alert = hit.filter((a) => a.consent !== "declined");
+      if (!alert.length) continue;
+      const removed = new Set(toRemove);
       await notify({
         tenantId,
         to: { kind: "tenant" },
         category: "trip",
-        title: `${hit.map((a) => a.n).join(" and ")} — booking cancelled for the trip day`,
-        body: `Booking ${b.ref} no longer covers ${t.date}, but they're still on the trip to ${t.destination ?? "a trip"}. Check whether they're still going and update the trip.`,
+        title: `${alert.map((a) => a.n).join(" and ")} — booking cancelled for the trip day`,
+        body: `Booking ${b.ref} no longer covers ${t.date}. ${alert.every((a) => removed.has(a)) ? `They have been taken off the trip to ${t.destination ?? "a trip"} and its consent list.` : `They're still on the trip to ${t.destination ?? "a trip"} (another booking covers that day) - check whether they're still going.`}`,
         href: "/company/trips",
         ref: d.id,
       });

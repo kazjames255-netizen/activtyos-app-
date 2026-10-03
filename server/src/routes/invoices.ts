@@ -1,3 +1,4 @@
+import { buildPayOptions } from "../lib/publicPayOptions";
 import { Router, type Request } from "express";
 import { isBlankOrWebUrl } from "../lib/safeUrl";
 import { webBase } from "../lib/emailSend";
@@ -211,6 +212,7 @@ invoicePublic.get("/:token", async (req, res) => {
     provider, amount: inv.amount ?? 0, description: inv.description ?? null, reference: inv.bookingRef ?? null,
     status: inv.status ?? "sent", dueDate: inv.dueDate ?? null, customerName: inv.customerName ?? null,
     payMethods,
+    payOptions: buildPayOptions(settings.payMethods, ((await db.collection("libraries").doc(inv.tenantId as string).get()).data() as { settings?: { billing?: Record<string, unknown> } } | undefined)?.settings?.billing ?? (settings.billing as Record<string, unknown> | undefined), (inv.bookingRef as string) || (inv.number as string) || "", ["Bank transfer", "Tax-Free Childcare", "Childcare vouchers"]),
     // Card is on when Stripe is configured and the provider has a connected
     // account (or the dev platform fallback). The checkout call re-checks
     // the account can actually charge before any intent is created.

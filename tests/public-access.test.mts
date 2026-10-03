@@ -116,7 +116,8 @@ test("public library: provider-only cancellation reasons are hidden from parents
 
 test("public library: no parent/child data keys are exposed (children, bookings, customers, emails)", () => {
   const out = publicLibrarySettings({ children: [{ name: "Tom" }], bookings: [1], customers: [1], parentEmails: ["p@x"], childQuestions: [1] });
-  assert.deepEqual(Object.keys(out).sort(), ["bankReady", "cancelReasons"]);
+  // Only the bank flag, reasons and the refund-term DEFAULTS - no parent/child data.
+  assert.deepEqual(Object.keys(out).sort(), ["allowCardRefund", "allowPartialCancel", "askReasonParent", "bankReady", "cancelReasons", "cancellationPolicies", "noRefundCredit", "partialAllowChangeDate", "partialAllowRefund", "partialAllowWallet", "refundLetCustomerChoose"]);
 });
 
 // ── Booking pay link ───────────────────────────────────────────────────────

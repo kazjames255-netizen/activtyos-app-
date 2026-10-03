@@ -134,7 +134,8 @@ const stored = (b: ChildcareBooking): ChildcarePayment => (b.childcare && typeof
  *  card/bank remainder is a first-class case, not an edge one). */
 export const childcareAmountOf = (b: Booking) => round2(Math.max(0, (b.amount ?? 0) - (b.cardPaid ?? 0)));
 
-const outstandingOf = (b: Booking) => round2(Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0)));
+// A waitlisted booking holds no place yet, so it owes nothing (AW-025) — its price stays on the record for when the offer is made.
+const outstandingOf = (b: Booking) => (b.status === "Waitlisted" ? 0 : round2(Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0))));
 
 /**
  * One booking's childcare block, filled in from the older flat fields where

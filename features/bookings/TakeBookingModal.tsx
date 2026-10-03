@@ -91,12 +91,15 @@ export function TakeBookingModal() {
       for (const l of lines) byBlock.set(l.blockId, [...(byBlock.get(l.blockId) ?? []), l]);
       const refs: string[] = [];
       let total = 0;
+      // The operator's agreed total (BQ-006) is one figure for the whole basket; the API takes one block per call, so it can't be split fairly across several.
+      if (p.overrideTotal !== undefined && byBlock.size > 1) throw new Error("Override the total works for one week at a time. Book each week separately, or clear the override.");
       for (const [blockId, items] of byBlock) {
         const res = await apiPost<{ bookings: { ref: string; email: string }[]; total: number }>("/api/my/bookings", {
           listingId: full.id,
           blockId,
           method: p.method,
           ...(onBehalfOf ? { onBehalfOf } : {}),
+          ...(onBehalfOf && p.overrideTotal !== undefined ? { overrideTotal: p.overrideTotal, ...(p.overrideReason ? { overrideReason: p.overrideReason } : {}) } : {}),
           items: items.map((l) => {
             const sel = p.addonSel[`${l.itemId}|${l.child}`] ?? {};
             const addons = Object.entries(sel).map(([aid, days]) => {

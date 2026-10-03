@@ -2306,7 +2306,6 @@ export function SetupApp() {
               <Row
                 label={t("p8set.cnCredit")}
                 hint={t("p8set.cnCreditHint")}
-                note={settings.noRefundCredit ? t("p8set.cnCreditNote") : undefined}
               >
                 <Toggle on={settings.noRefundCredit} onChange={(v) => set("noRefundCredit", v)} />
               </Row>

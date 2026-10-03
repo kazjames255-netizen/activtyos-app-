@@ -274,3 +274,26 @@ export function adviceReasonT(t: TFn, locale: string, a: RefundAdvice): string {
     : t("p7pol.beforeDays", { days: pickPlural(t, locale, "p7pol.dy", Math.floor(a.hoursNotice / 24)) });
   return a.percent >= 100 ? t("p7pol.reasonFull", { notice }) : a.percent <= 0 ? t("p7pol.reasonNone", { notice }) : t("p7pol.reasonPct", { notice, pct: a.percent });
 }
+
+/**
+ * "Credit note when no cash refund is due" (Setup → noRefundCredit). When the
+ * policy works out to nothing back but the family paid something, the provider
+ * keeps the cash and the family keeps the value as wallet credit. Returns the
+ * credit amount, or 0 when it doesn't apply. Pure so server and tests share it.
+ */
+export function noRefundCreditAmount(opts: { noRefundCredit: boolean; walletOn: boolean; policyAmount: number | null; paid: number }): number {
+  if (!opts.noRefundCredit || !opts.walletOn) return 0;
+  if (opts.policyAmount === null || opts.policyAmount > 0) return 0;
+  return opts.paid > 0 ? Math.round(opts.paid * 100) / 100 : 0;
+}
+
+/** CN-022: a per-day release adds to a refund still awaiting approval instead of replacing it; never above what's refundable. */
+export function accumulatePendingRelease(
+  prior: { refundOnly?: boolean; refund?: string; amount?: number } | null | undefined,
+  value: number,
+  refundable: number,
+): number {
+  const before = prior && prior.refundOnly && prior.refund === "pending" ? Math.max(0, prior.amount ?? 0) : 0;
+  const sum = Math.round((before + value) * 100) / 100;
+  return before > 0 ? Math.min(sum, refundable) : value;
+}

@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { refundedGross } from "../../../features/bookings/helpers";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 
 // Split fees (Money) — the franchisor's royalty report. A franchise is a
@@ -96,8 +97,10 @@ splitfees.get("/", async (req, res) => {
     if (!COUNTS(b.status)) continue;
     const raw = d.data() as { franchiseId?: string; listingId?: string; createdAt?: string };
     if (!range.inRange(b.createdAt ?? raw.createdAt)) continue;
-    const amount = b.amount ?? 0;
-    const paid = b.amountPaid ?? (b.pay === "Paid" ? amount : 0);
+    // Net of money already refunded (one-day partial refunds etc.), CN-036.
+    const refunded = refundedGross(b);
+    const amount = Math.max(0, round2((b.amount ?? 0) - refunded));
+    const paid = Math.max(0, round2((b.amountPaid ?? (b.pay === "Paid" ? (b.amount ?? 0) : 0)) - refunded));
     const fid = raw.franchiseId ?? (raw.listingId ? listingFr.get(raw.listingId) : undefined);
     const created = b.createdAt ?? raw.createdAt;
     if (!fid) {

@@ -397,10 +397,7 @@ test("AM-008: server refuses an amend when 'Offer date changes at all' is off", 
 
 for (const [setting, label] of [
   ["amendNoticeHours", "notice hours (e.g. 48h) refuses a move too close to the date"],
-  ["amendFee", "admin fee is charged / recorded on the request"],
   ["amendLimit", "max moves per booking is enforced"],
-  ["amendAllowCheaper", "'no cheaper moves' is enforced"],
-  ["amendSelfService", "'let parents move their own dates' applies instantly without approval"],
 ] as const) {
   test(`AM-011/012 ${label}`, { todo: `REAL GAP: ${setting} is saved in Setup and shown to parents but never read by the server amend/approve handlers` }, () => {
     assert.ok(new RegExp(setting).test(serverSrc), `${setting} is not referenced in server/src/routes/my.ts or bookings.ts`);

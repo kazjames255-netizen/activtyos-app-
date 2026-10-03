@@ -9,6 +9,7 @@ import { bookingDocId } from "./bookings";
 import { settlePaymentRecord } from "../lib/settlePayment";
 import { bookingForToken } from "../lib/bookingPayToken";
 import { payable, balanceOf } from "../lib/payGate";
+import { buildPayOptions } from "../lib/publicPayOptions";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Payments — Stripe Connect (build item 7).
@@ -437,9 +438,12 @@ bookingPayPublic.get("/:token", async (req, res) => {
     });
     return;
   }
+  const lib = (await db.collection("libraries").doc(b.tenantId!).get()).data() as { settings?: { billing?: Record<string, unknown> } } | undefined;
+  const billing = lib?.settings?.billing ?? (settings.billing as Record<string, unknown> | undefined);
+  const payOpts = buildPayOptions(settings.payMethods, billing, b.ref, ["Bank transfer", "Tax-Free Childcare", "Childcare vouchers"]);
   res.json({
     provider, amount: due, description: `${b.listing}${b.dates ? ` · ${b.dates}` : ""}`, reference: b.ref, status: "sent", dueDate: null,
-    customerName: b.booker ?? null, payMethods: [],
+    customerName: b.booker ?? null, payMethods: payOpts.methods, payOptions: payOpts,
     cardEnabled: !!stripe && (!!tenant.data()?.stripeAccountId || platformFallback),
   });
 });

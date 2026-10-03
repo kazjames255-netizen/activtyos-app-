@@ -7,7 +7,8 @@ import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-
 import { money } from "@/features/bookings/helpers";
 import { tNow, useT } from "@/lib/i18n/provider";
 
-interface PublicInvoice { provider: string; amount: number; description: string | null; reference: string | null; status: string; dueDate: string | null; customerName: string | null; payMethods: string[]; cardEnabled: boolean; closed?: boolean; paidAt?: string | null }
+interface PayOptions { methods: string[]; bank: { reference: string } | null; cash: boolean; vouchers: boolean; contact: { email?: string; phone?: string } | null }
+interface PublicInvoice { provider: string; amount: number; description: string | null; reference: string | null; status: string; dueDate: string | null; customerName: string | null; payMethods: string[]; payOptions?: PayOptions; cardEnabled: boolean; closed?: boolean; paidAt?: string | null }
 interface CheckoutInfo { paymentId: string; clientSecret: string; stripeAccount: string | null; amount: number }
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -58,6 +59,34 @@ function CardForm({ token, base, info, onPaid, onError }: { token: string; base:
         {busy ? t("p7pub.paying") : t("p7pub.payAmt", { amt: money(info.amount) })}
       </button>
     </>
+  );
+}
+
+
+/** Every non-card way to pay, with the details the payer needs (bank account + reference, cash, vouchers), or how to reach the provider. */
+function OtherWays({ o, provider }: { o: PayOptions; provider: string }) {
+  const t = useT();
+  const none = !o.bank && !o.cash && !o.vouchers;
+  return (
+    <div className="mt-4 space-y-2.5">
+      {o.bank && (
+        <div className="rounded-xl border-2 border-[#1d3a8f] bg-[#eef3ff] p-3 text-[12.5px]">
+          <div className="font-extrabold uppercase tracking-wide text-[#1d3a8f]">{t("p7pub.bankTitle")}</div>
+          <div className="mt-1.5 text-[#171534]">{t("p7pub.bankInEmail")}</div>
+          {o.bank.reference && <div className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 text-[#171534]"><span className="text-[#6a6785]">{t("p7pub.quoteRef")}</span><b>{o.bank.reference}</b></div>}
+        </div>
+      )}
+      {o.cash && <div className="rounded-xl border border-[#ece6f1] bg-[#fbf8fc] p-3 text-[12.5px] text-[#4a4763]"><b>{t("p7pub.cashTitle")}</b> {t("p7pub.cashBody")}</div>}
+      {o.vouchers && <div className="rounded-xl border border-[#ece6f1] bg-[#fbf8fc] p-3 text-[12.5px] text-[#4a4763]"><b>{t("p7pub.voucherTitle")}</b> {t("p7pub.voucherBody", { provider })}</div>}
+      {none && (
+        <div className="rounded-xl border border-[#ece6f1] bg-[#fbf8fc] p-3 text-[12.5px] text-[#4a4763]">
+          {t("p7pub.contactToPay", { provider })}
+          {o.contact?.email && <div className="mt-1 font-bold">{o.contact.email}</div>}
+          {o.contact?.phone && <div className="font-bold">{o.contact.phone}</div>}
+        </div>
+      )}
+      {!none && <div className="text-[11px] text-[#8a86a3]">{t("p7pub.providerConfirms")}</div>}
+    </div>
   );
 }
 
@@ -168,7 +197,8 @@ export function PayPage({ token, base = "invoice" }: { token: string; base?: "in
                   )}
                   {payError && <div className="mt-2 text-center text-[12px] font-bold text-[#e21d27]">{payError}</div>}
 
-                  {inv.payMethods.length > 0 && (
+                  {inv.payOptions && <OtherWays o={inv.payOptions} provider={inv.provider} />}
+                  {!inv.payOptions && inv.payMethods.length > 0 && (
                     <div className="mt-4 rounded-xl border border-[#ece6f1] bg-[#fbf8fc] p-3">
                       <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#8a86a3]">{t("p7pub.orPayBy", { provider: inv.provider })}</div>
                       <div className="mt-1.5 flex flex-wrap gap-1.5">

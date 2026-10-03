@@ -191,6 +191,16 @@ export function refundApprovedSpec(b: Booking, providerName: string): CustomerEm
   };
 }
 
+export function refundDeclinedSpec(b: Booking, providerName: string): CustomerEmailSpec {
+  const amt = b.cancel?.amount ? gbp(b.cancel.amount) : "";
+  return {
+    subject: `Refund update — ${b.listing}`,
+    title: "Your refund request was declined",
+    body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} couldn&rsquo;t approve the refund${amt ? ` of <b>${amt}</b>` : ""} for this booking.
+      Your cancellation still stands. If you&rsquo;d like to talk it through, reply to this email.</p>`,
+  };
+}
+
 export function placeOfferedSpec(b: Booking, providerName: string, baseUrl: string): CustomerEmailSpec {
   const until = b.offerExpiresAt
     ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })

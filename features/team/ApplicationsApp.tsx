@@ -380,7 +380,6 @@ function SendModal({ forms, onSent, onClose }: { forms: AppForm[]; onSent: (m: s
             <div className="flex items-center gap-2"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className="flex-1" /><Button variant="primary" disabled={!email.trim()} onClick={emailIt}>{t("team.send")}</Button></div>
           </div>
         </div>
-        <p className="mt-3 text-[11px] text-[var(--ink-3)]">{t("team.sendModalDemoPre")}<b>/apply</b>{t("team.sendModalDemoPost")}</p>
       </div>
     </div>
   );

@@ -16,6 +16,8 @@ export const payable = (b: { status: string; pay: string }) =>
  *  booking, or a fully-paid one where the family released a day ("Partially refunded", status still Confirmed), used to be
  *  charged its full price a second time. */
 export const balanceOf = (b: Parameters<typeof owedOf>[0]) => {
+  // AW-025: a waitlisted booking keeps its price visible (amount, pay "Unpaid") but owes nothing until a place is offered and accepted.
+  if (b.status === "Waitlisted") return 0;
   const owed = Math.round(owedOf(b) * 100) / 100;
   // Part-paid Tax-Free Childcare: the HMRC portion is NOT payable by card — the
   // family owes only the remainder (amount − tfcAmount, less any already paid by

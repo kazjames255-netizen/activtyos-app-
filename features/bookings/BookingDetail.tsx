@@ -20,8 +20,10 @@ import {
   refundedTotal,
   sessionCount,
   sessionIsoDates,
+  sessionDayLabel,
   statusTone,
   type BlockAvail,
+  refundButtonKind,
 } from "./helpers";
 import { Badge, Button, Card, DefRow, Input, SectionHead, Select } from "@/components/ui";
 import { useTenantSettings, reasonsFor } from "@/lib/settings";
@@ -202,7 +204,7 @@ function AttendeeCard({ booking, kid, ki, blockAvail }: { booking: Booking; kid:
                     key={dt}
                     className="flex items-center gap-2 border-b border-dashed border-[var(--line)] py-[5px] text-[12px] text-[var(--red)]"
                   >
-                    <span className="flex-1 line-through">{dt}</span>
+                    <span className="flex-1 line-through">{/^\d{4}-\d{2}-\d{2}$/.test(dt) ? sessionDayLabel(dt) : dt}</span>
                     <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>{t("p7bd.cancelledLower")}</Badge>
                   </div>
                 );
@@ -211,7 +213,7 @@ function AttendeeCard({ booking, kid, ki, blockAvail }: { booking: Booking; kid:
               return (
                 <div key={dt}>
                   <div className="flex items-center gap-2 border-b border-dashed border-[var(--line)] py-[5px] text-[12px]">
-                    <span className="flex-1">{dt}</span>
+                    <span className="flex-1">{/^\d{4}-\d{2}-\d{2}$/.test(dt) ? sessionDayLabel(dt) : dt}</span>
                     {/* "Move" and not "Change": nothing is cancelled and no
                         money moves — they still come, on another day. */}
                     <button
@@ -438,9 +440,6 @@ function CancelPanel({ booking }: { booking: Booking }) {
               className="mt-2 w-full max-w-[380px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none"
             />
           )}
-          <div className="mt-1.5 text-[10.5px] font-semibold text-[#8a5300]">
-            &#9888; Recorded on screen only — the API has no field for a reason yet (Amir).
-          </div>
         </div>
       )}
 
@@ -600,13 +599,16 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         </>
       )}
       {(b.cancel?.refund === "full" || b.cancel?.refund === "partial" || b.cancel?.refund === "pending") && (() => {
-        const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
+        // CN-006/009/011: the button follows how the booking was PAID first (refundButtonKind).
+        const kind = refundButtonKind(b);
+        const isVoucher = kind === "reimbursed";
+        const isCash = kind === "cash";
         const dest = b.cancel?.refundTo;
         return (
           <>
             {dest && (
               <div className="w-full rounded-lg border border-[#c9dcff] bg-[#eef4ff] px-3 py-2 text-[11.5px] font-semibold leading-[1.5] text-[#1d3a8f]">
-                <Rich text={dest === "wallet" ? t("p7bd.refAskWallet") : isVoucher ? t("p7bd.refAskVoucher", { scheme: b.voucherScheme ?? t("p7bd.theirScheme") }) : t("p7bd.refAskCard")} />
+                <Rich text={dest === "wallet" ? t("p7bd.refAskWallet") : isVoucher ? t("p7bd.refAskVoucher", { scheme: b.voucherScheme ?? t("p7bd.theirScheme") }) : isCash ? t("p7bd.cashSettle") : t("p7bd.refAskCard")} />
               </div>
             )}
             {b.cancel?.amount != null && b.cancel.amount > 0 && (
@@ -622,11 +624,13 @@ export function BookingDetail({ booking }: { booking: Booking }) {
               </div>
             )}
             <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>
-              {dest === "wallet"
+              {kind === "wallet"
                 ? t("p7bd.acceptWallet")
-                : dest === "card"
-                  ? t("p7bd.acceptBank")
-                  : isVoucher ? t("p7bd.markReimbursed") : t("p7bd.approveRefundBtn") + (b.paymentIntentId ? " " + t("p7bd.viaStripe") : "")}
+                : kind === "reimbursed" || kind === "cash"
+                  ? t("p7bd.markReimbursed")
+                  : kind === "stripe"
+                    ? t("p7bd.approveRefundBtn") + " " + t("p7bd.viaStripe")
+                    : kind === "bank" ? t("p7bd.acceptBank") : t("p7bd.approveRefundBtn")}
             </Button>
             <Button onClick={() => act(b.ref, "refund-decline")}>{t("p7bd.declineRefund")}</Button>
           </>
@@ -868,6 +872,9 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             <DefRow label="Price before discount" value={money(b.listPrice)} />
             <DefRow label={`Discount${b.discountNames?.length ? ` (${b.discountNames.join(", ")})` : ""}`} value={`− ${money(b.discountOff ?? 0)}`} />
           </>
+        )}
+        {b.priceOverride && (
+          <DefRow label="Price set by provider" value={`${money(b.priceOverride.originalAmount)} → ${money(b.priceOverride.amount)} · ${b.priceOverride.by}${b.priceOverride.reason ? ` · ${b.priceOverride.reason}` : ""}`} />
         )}
         <DefRow label={t("p7bd.totalLbl")} value={money(b.amount)} />
         {(/tax.?free|\btfc\b/i.test(b.method ?? "") || /tax.?free|\btfc\b/i.test(b.voucherScheme ?? "")) && (

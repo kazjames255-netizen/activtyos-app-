@@ -723,7 +723,7 @@ function parentMethodEntry(m: string): [string, string] | null {
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
-  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; tfc?: { amount: number; remainderVia: string; references: Record<string, string> }; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; tfc?: { amount: number; remainderVia: string; references: Record<string, string> }; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string }; /** Operator checkout "Override the total" (server accepts it only for a booking made on a family's behalf). */ overrideTotal?: number; overrideReason?: string }) => void;
   booking?: { busy: boolean; error: string | null };
   /** The listing's tenant, for the signed-out parent's public settings read. */
   tenantId?: string;
@@ -946,6 +946,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   };
   const calculated = b.total + addonTotal + mealTotal;
   const grandTotal = b.totalOverride ?? calculated;
+  const [overrideReason, setOverrideReason] = useState("");
 
   // Wallet credit the family holds with THIS provider. The server auto-applies
   // it at booking time (authoritative); here we just preview the reduction so
@@ -1771,6 +1772,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             )}
           </span>
         </div>}
+        {!parentMode && b.totalOverride !== null && (
+          <input type="text" maxLength={200} value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} placeholder="Reason (kept on the booking)"
+            className={`mt-1.5 w-full border px-2 py-1 text-[12px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
+        )}
       </div>
       )}
 
@@ -2711,6 +2716,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             // balance — otherwise the server auto-applies it all (authoritative).
             walletCap: walletUse === null ? undefined : walletApplied,
             serviceAddress: homeVisit && serviceAddress.postcode.trim() ? serviceAddress : undefined,
+            // Operator-only: the agreed total, applied by the server after discounts (never honoured for a parent's own booking).
+            overrideTotal: !parentMode && b.totalOverride !== null ? b.totalOverride : undefined,
+            overrideReason: !parentMode && b.totalOverride !== null ? overrideReason.trim() || undefined : undefined,
             basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, mealSel: b.mealSel, children: roster,
             // Resolved here so the caller gets plain "who's on what" rather than exceptions.
             dayAssign: Object.fromEntries(b.basket.map((x) => [x.id, Object.fromEntries(x.dates.map((iso) => [iso, b.childrenOn(x.id)]))])),

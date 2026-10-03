@@ -150,7 +150,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
           policies: s.cancellationPolicies ?? [],
           reasons: s.cancelReasons ?? [],
           askReason: !!s.askReasonParent,
-          letChoose: allowCard && !!s.refundLetCustomerChoose,
+          letChoose: allowCard && (s.refundLetCustomerChoose ?? true),
           walletEnabled: s.customerArea?.wallet ?? true,
           noRefundCredit: !!s.noRefundCredit,
           allowPartial: s.allowPartialCancel ?? true,
@@ -261,7 +261,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
       if (partialMode && res === "changedate") {
         const moves = pickedSlots.map((s) => ({ childName: s.childName, childId: s.childId, from: s.date, to: moveTo[s.key] }));
         try {
-          await apiPost(`/api/my/bookings/${encodeURIComponent(booking.ref)}/amend${booking.tenantId ? `?tenantId=${encodeURIComponent(booking.tenantId)}` : ""}`, { moves, msg: msg.trim() || undefined });
+          const out = await apiPost<{ amendApplied?: boolean; amendFee?: number }>(`/api/my/bookings/${encodeURIComponent(booking.ref)}/amend${booking.tenantId ? `?tenantId=${encodeURIComponent(booking.tenantId)}` : ""}`, { moves, msg: msg.trim() || undefined });
         } catch (e) {
           // Amend endpoint isn't live yet (§U) — record the intent locally so
           // it still shows as pending. Any other error is real.
@@ -407,7 +407,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
               <span className="font-semibold text-[var(--ink-2)]">{t("p7bk.policyName", { name: policy.name })}</span> {policyWordingT(t, locale, policy)}
             </div>
           )}
-          {advice.amount === 0 && cfg?.noRefundCredit && (
+          {advice.amount === 0 && paidNow > 0 && cfg?.noRefundCredit && cfg.walletEnabled && (
             <div className="mt-1 text-[11px] font-semibold text-[var(--brand)]">{t("p7bk.creditNote")}</div>
           )}
         </div>
@@ -581,6 +581,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
     setMoves((m) => { const n = { ...m }; if (newIso) n[oldIso] = newIso; else delete n[oldIso]; return n; });
 
   const selfService = policy.amendSelfService;
+  const [applied, setApplied] = useState<{ fee: number } | null>(null);
   const hasChanges = Object.keys(moves).length > 0 || !!preferredDate || !!newTiming || !!msg.trim();
   // Voucher / Tax-Free Childcare money can never go back to a bank card, so a
   // cheaper-date difference can only ever land in the wallet — never offer card.
@@ -600,7 +601,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
     setBusy(true);
     setError(null);
     try {
-      await apiPost(`/api/my/bookings/${encodeURIComponent(booking.ref)}/amend${booking.tenantId ? `?tenantId=${encodeURIComponent(booking.tenantId)}` : ""}`, {
+      const out = await apiPost<{ amendApplied?: boolean; amendFee?: number }>(`/api/my/bookings/${encodeURIComponent(booking.ref)}/amend${booking.tenantId ? `?tenantId=${encodeURIComponent(booking.tenantId)}` : ""}`, {
         // Per-child moves carry the child's name; a whole-booking change sends
         // the plain oldISO→newISO map.
         moves: who ? Object.entries(moves).map(([from, to]) => ({ from, to, childName: who })) : moves,
@@ -611,6 +612,9 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
         message: msg.trim() || undefined,
         ...(letChoose ? { refundTo } : {}),
       });
+      // The provider lets families move their own dates and this passed every rule: it is already done — say so
+      // (and any admin fee now owing) instead of closing as though a request had been sent.
+      if (out?.amendApplied) { setApplied({ fee: out.amendFee ?? 0 }); setBusy(false); return; }
       onDone(true);
     } catch (e) {
       const m = e instanceof Error ? e.message : "";
@@ -666,7 +670,15 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
         <div className="flex flex-col gap-3 px-5 py-4">
           <div className="text-[12px] text-[var(--ink-3)]">{booking.listing} · {booking.child} · {booking.pass}</div>
 
-          {!policy.allowDateChanges || !DATE_CHANGES_LIVE ? (
+          {applied ? (
+            <>
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3.5 py-3 text-[12.5px] leading-[1.6] text-[var(--ink)]">
+                <b>Your dates are changed.</b> It&rsquo;s confirmed, so there&rsquo;s nothing more to wait for.
+                {applied.fee > 0 && <> An admin fee of {money(applied.fee)} has been added to this booking and is due to pay.</>}
+              </div>
+              <div className="flex justify-end"><Button variant="primary" onClick={() => onDone(true)}>{t("parent.closeText")}</Button></div>
+            </>
+          ) : !policy.allowDateChanges || !DATE_CHANGES_LIVE ? (
             <>
               <div className="rounded-xl border border-[#f0d9a8] bg-[#fdf6e6] px-3.5 py-3 text-[12.5px] leading-[1.6] text-[#7a5b06]">
                 {!policy.allowDateChanges
@@ -795,10 +807,12 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
           )}
 
           {error && <div className="text-[12.5px] text-[var(--red)]">{error}</div>}
+          {policy.amendFee > 0 && hasChanges && (
+            <div className="text-center text-[12px] font-bold text-[var(--ink-2)]">{t("p7bk.amendFeeAdded", { fee: money(policy.amendFee) })}</div>
+          )}
           <Button variant="primary" disabled={busy || !hasChanges || !weekOk} onClick={submit} className="w-full justify-center">
             {busy ? t("parent.sending") : selfService ? t("parent.confirmChange") : t("parent.sendRequest")}
           </Button>
-          <div className="rounded-full bg-[#fff3e0] px-3 py-1 text-center text-[10.5px] font-extrabold text-[#8a5300]">{t("parent.appliedOnceBackend")}</div>
           </>
           )}
         </div>

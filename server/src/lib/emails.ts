@@ -12,7 +12,8 @@ import { geocodeAddress } from "../routes/geo";
 import {
   gbp, escapeHtml, layout, bankPayHtml, type BankPayDetails,
   requestReceivedSpec, waitlistJoinedSpec, paymentLinkSpec, bookingConfirmedSpec, bookingDeclinedSpec,
-  refundApprovedSpec, placeOfferedSpec, paymentReceivedSpec, familyBookingCreatedEmail,
+  refundApprovedSpec,
+  refundDeclinedSpec, placeOfferedSpec, paymentReceivedSpec, familyBookingCreatedEmail,
 } from "./emailTemplates";
 
 /** A random, always-lowercase local part for a lead's reply address —
@@ -430,6 +431,11 @@ export function emailDateChangeResolved(
 
 export function emailRefundApproved(b: Booking, providerName: string): void {
   const m = refundApprovedSpec(b, providerName);
+  sendCustomerEmail(b, providerName, "payments", m.subject, m.title, m.body, m.enrich);
+}
+
+export function emailRefundDeclined(b: Booking, providerName: string): void {
+  const m = refundDeclinedSpec(b, providerName);
   sendCustomerEmail(b, providerName, "payments", m.subject, m.title, m.body, m.enrich);
 }
 

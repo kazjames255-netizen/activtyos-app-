@@ -10,7 +10,8 @@ import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../l
 import { notify } from "../lib/notify";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
-import { amendMoveError, amendNoticeError, amendLimitError } from "../lib/dateChange";
+import { amendMoveError, amendNoticeError, amendLimitError, amendCheaperError, applyMoveApprove } from "../lib/dateChange";
+import { scaleToTotal, splitOriginal } from "../lib/priceOverride";
 import { priceAddon } from "../lib/addonPricing";
 import { entryFor, registerRows } from "../lib/registerRows";
 import { refPrefixFor } from "../lib/bookingRef";
@@ -35,9 +36,9 @@ import {
   countsTowardCapacity,
   countsUpdate,
   daysHaveSpace,
-  sessionLabel,
   type BlockDoc,
 } from "../lib/blockDomain";
+import { bookingSessionLabels } from "../lib/sessionLabels";
 
 const prettyDay = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -57,7 +58,7 @@ import { canWrite } from "../middleware/role";
 import { queuePositions, triggerWaitlist } from "../lib/waitlist";
 import { upsertFamilyFromBasket } from "../lib/customerUpsert";
 import { voucherWindow } from "../../../lib/vouchers";
-import { DEFAULT_POLICY, policyById, refundFor, type NamedPolicy } from "../../../lib/cancellation";
+import { DEFAULT_POLICY, accumulatePendingRelease, noRefundCreditAmount, policyById, refundFor, type NamedPolicy } from "../../../lib/cancellation";
 import { bookingDocId } from "./bookings";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { grantPlanAccess } from "./childFiles";
@@ -157,6 +158,11 @@ const basketSchema = z.object({
       phone: z.string().trim().max(40).optional(),
     })
     .optional(),
+  // Operators only, and only with onBehalfOf (BQ-006): the checkout "Override the total".
+  // Applied AFTER discounts/codes; the original price, who and why are stamped on the booking.
+  // Refused (403) from anyone who isn't an operator booking for a family.
+  overrideTotal: z.number().nonnegative().max(100000).optional(),
+  overrideReason: z.string().trim().max(200).optional(),
   // How much of their wallet the family chose to spend on this basket. Absent =
   // spend it all (the default). Capped server-side at the real balance, so a
   // stale/oversized value can never overdraw the wallet.
@@ -729,6 +735,10 @@ my.post("/bookings", async (req, res) => {
     res.status(400).json({ error: "Funded (HAF) places are arranged with the provider. Please contact them, or choose another way to pay." });
     return;
   }
+  if (!onBehalf && "overrideTotal" in input && input.overrideTotal !== undefined) {
+    res.status(403).json({ error: "Only a provider booking on a family's behalf can override the total" });
+    return;
+  }
   if (onBehalf) {
     const authCtx = req.auth!;
     if (!canWrite(authCtx.role) || !authCtx.tenantId) {
@@ -893,6 +903,7 @@ my.post("/bookings", async (req, res) => {
 
   let resolved: ResolvedPricing | null = null;
   let periodTitle = new Map<string, string>();
+  let periodHoursByTitle = new Map<string, { start: string; finish: string }>(); // timing title → its hours
   let periodStart = new Map<string, string>(); // timing id → its "HH:MM" start (for the booking cut-off)
   if (listing.blockId) {
     const bSnap = await db.collection("blockBundles").doc(listing.blockId).get();
@@ -911,6 +922,7 @@ my.post("/bookings", async (req, res) => {
       resolved = resolveBundlePricing(bundle, passesById, periodsById);
       periodTitle = new Map([...periodsById.values()].map((p) => [p.id, p.title]));
       periodStart = new Map([...periodsById.values()].map((p) => [p.id, p.start]));
+      periodHoursByTitle = new Map([...periodsById.values()].map((p) => [p.title, { start: p.start, finish: p.finish }]));
     }
   }
   // Resolve each item's child against the ACCOUNT's saved profiles (the
@@ -1293,6 +1305,20 @@ my.post("/bookings", async (req, res) => {
     codesToConsume = loaded.map((l) => ({ codeId: l.doc.id, code: l.code, perCustomer: !!l.data.perCustomerLimit }));
   }
 
+  // Operator's final say on the price (BQ-006). Only reachable with onBehalf (guarded above), so the listing is this
+  // operator's own. Spread over the lines in proportion to what they came to, last line absorbing rounding; the
+  // pre-override total is kept so the booking can show original -> agreed price, who set it and why.
+  let priceOverride: { originalTotal: number; total: number; by: string; reason: string; at: string } | null = null;
+  if (onBehalf && "overrideTotal" in input && input.overrideTotal !== undefined && amounts.length) {
+    const originalTotal = round2(amounts.reduce((s, a) => s + a, 0));
+    const wanted = round2(input.overrideTotal);
+    if (Math.abs(wanted - originalTotal) > 0.004) {
+      const scaled = scaleToTotal(amounts, wanted);
+      scaled.forEach((a, i) => { amounts[i] = a; });
+      priceOverride = { originalTotal, total: wanted, by: req.user?.email ?? req.user?.uid ?? "provider", reason: ("overrideReason" in input && input.overrideReason) || "", at: new Date().toISOString() };
+    }
+  }
+
   // The family's phone for the booking: what they gave at checkout, else the
   // number this provider already holds for them, else their own account's.
   // Every booking used to be stamped "—", which then hid the real number on
@@ -1622,7 +1648,7 @@ my.post("/bookings", async (req, res) => {
             // Structured meal purchases (for the operator meal report): dish +
             // date + price per meal bought on this segment.
             ...(() => { const mi = segAddons.filter((a) => a.meal).map((a) => ({ date: a.onDays[0], name: a.name, price: a.price })); return mi.length ? { mealItems: mi } : {}; })(),
-            sessions: block.sessions.filter((s) => seg.days.includes(s.date)).map(sessionLabel),
+            sessions: bookingSessionLabels(block.sessions, seg.days, p.timing ? periodHoursByTitle.get(p.timing) : null),
             // Out-of-range child on an allow-out-of-range listing → request a
             // place (Approval needed), overriding an otherwise auto-confirm. An
             // operator booking on-behalf is itself the approval, so it stands.
@@ -1734,6 +1760,15 @@ my.post("/bookings", async (req, res) => {
       // the booking that actually gets written. See lib/childcare.ts for the
       // format and the uniqueness argument.
       for (const b of created) attachChildcareRefs(b as ChildcareBooking, listing.tenantId);
+
+      // BQ-006: stamp the operator's price override on every booking it touched (original -> agreed, who, why).
+      if (priceOverride) {
+        const originals = splitOriginal(created.map((b) => b.amount ?? 0), priceOverride.originalTotal);
+        created.forEach((b, i) => {
+          b.priceOverride = { originalAmount: originals[i], amount: b.amount ?? 0, by: priceOverride!.by, reason: priceOverride!.reason, at: priceOverride!.at };
+          b.note = `${b.note ? `${b.note} · ` : ""}Price set by provider: £${(b.amount ?? 0).toFixed(2)} (was £${originals[i].toFixed(2)})${priceOverride!.reason ? ` — ${priceOverride!.reason}` : ""}`;
+        });
+      }
 
       // Part-paid Tax-Free Childcare (PY-012): HMRC covers `tfc.amount`, the
       // family settles the remainder another way (card = payable now). Worked
@@ -2136,6 +2171,87 @@ my.post("/bookings/:ref/amend", async (req, res) => {
     });
     if (err) { res.status(400).json({ error: err }); return; }
   }
+  // Setup > "allow moves to a cheaper session" (AM-011): per-day price where the block's sessions carry one.
+  const cheaperErr = amendCheaperError(moves, (date) => block?.sessions.find((x) => x.date === date)?.price, enabled(settings, "amendAllowCheaper"));
+  if (cheaperErr) { res.status(400).json({ error: cheaperErr }); return; }
+  const adminFee = Math.max(0, Number((settings as Record<string, unknown>).amendFee) || 0);
+
+  // Setup > "Let parents move their own dates" (AM-012): when ON and the move has passed every rule above (and is a plain
+  // dated swap on a confirmed booking with no clash), it is applied now for the parent, exactly as the provider's approval
+  // would. Anything else (a time change, a preferred date on an undated booking, a clash, a full day at the last moment)
+  // still queues as a request for the provider.
+  const isPlainMove = moves.length > 0 && moves.every((mv) => mv.from) && !parsed.data.timing;
+  if (enabled(settings, "amendSelfService") && isPlainMove && booking.status === "Confirmed") {
+    const clash = await (async () => {
+      // The same child already booked (with this provider, same family) on a day they're moving to.
+      const sibs = await bookingsCol.where("email", "==", email).where("tenantId", "==", booking.tenantId ?? "").get();
+      const names = new Set(moves.map((mv) => (mv.childName ?? booking.child).trim().toLowerCase()));
+      const targets = new Set(moves.map((mv) => mv.to));
+      return sibs.docs.some((d) => {
+        if (d.id === snap.id) return false;
+        const o = fromDoc(d.data() as BookingDoc);
+        if (["Cancelled", "Declined", "Waitlisted"].includes(o.status)) return false;
+        const rows = o.kids?.length ? o.kids.map((k) => ({ n: k.name, dates: k.dates?.length ? k.dates : (k.days ?? o.days ?? []) })) : [{ n: o.child, dates: o.days ?? [] }];
+        return rows.some((r) => (names.has(r.n.trim().toLowerCase()) || (booking.kids?.length ?? 0) > 1) && r.dates.some((x) => targets.has(x)));
+      });
+    })();
+    if (!clash) {
+      try {
+        const applied = await db.runTransaction(async (tx) => {
+          const fresh = await tx.get(snap.ref);
+          const cur = fromDoc(fresh.data() as BookingDoc);
+          if (cur.status !== "Confirmed") throw new HttpError(409, "This booking changed. Please refresh and try again.");
+          // Re-check the target days' room inside the transaction: availability moves under us.
+          const blkSnap = cur.blockId ? await tx.get(db.collection("blocks").doc(cur.blockId)) : null;
+          const blk = blkSnap?.exists ? (blkSnap.data() as BlockDoc) : null;
+          if (blk && (blk.capacityScope ?? "listing") === "day") {
+            const want: Record<string, number> = {};
+            for (const mv of moves) want[mv.to] = (want[mv.to] ?? 0) + 1;
+            const space = daysHaveSpace(blk, want);
+            if (!space.fits) throw new HttpError(409, `${prettyDay(space.fullDay!)} is full`);
+          }
+          cur.dateChangeRequest = {
+            moves: moves.map((mv) => ({ ...mv })),
+            ...(parsed.data.child ? { child: parsed.data.child } : {}),
+            status: "pending",
+            requestedAt: new Date().toISOString(),
+            ...(parsed.data.message || parsed.data.msg ? { note: (parsed.data.message || parsed.data.msg)!.trim() } : {}),
+          } as NonNullable<Booking["dateChangeRequest"]>;
+          applyMoveApprove(cur, undefined, undefined, { fee: adminFee, selfService: true });
+          // Keep the block's per-day places in step: each move frees its old day and takes the new one.
+          if (blk && blkSnap && countsTowardCapacity(cur.status)) {
+            let working = blk;
+            for (const mv of moves) {
+              working = { ...working, ...countsUpdate(working, -1, [mv.from]) };
+              working = { ...working, ...countsUpdate(working, 1, [mv.to]) };
+            }
+            tx.update(blkSnap.ref, { dayCounts: working.dayCounts ?? {} });
+          }
+          tx.set(snap.ref, toDoc(cur));
+          return cur;
+        });
+        if (booking.tenantId) {
+          void notify({
+            tenantId: booking.tenantId,
+            to: { kind: "tenant" },
+            category: "booking",
+            key: "booking-change",
+            title: `${booking.booker} moved their dates`,
+            body: `Booking ${booking.ref} · ${booking.listing} · ${booking.child}. ${moves.map((mv) => `${prettyDay(mv.from)} → ${prettyDay(mv.to)}`).join("; ")}.${applied.dateChangeRequest?.feeCharged ? ` Admin fee £${applied.dateChangeRequest.feeCharged.toFixed(2)} added to the booking.` : ""}`,
+            subject: `${booking.booker} — dates changed`,
+            href: `/company/bookings?ref=${encodeURIComponent(booking.ref)}`,
+            ref: booking.ref,
+            bellOnly: true,
+          });
+        }
+        res.status(201).json({ ...applied, amendApplied: true, ...(applied.dateChangeRequest?.feeCharged ? { amendFee: applied.dateChangeRequest.feeCharged } : {}) });
+        return;
+      } catch (e) {
+        if (e instanceof HttpError) { res.status(e.status).json({ error: e.message }); return; }
+        throw e;
+      }
+    }
+  }
 
   await snap.ref.set({
     dateChangeRequest: {
@@ -2440,11 +2556,14 @@ async function partialCancel(
     } else {
       // A request: the money only moves when the provider approves it, exactly
       // like a whole-booking cancel.
+      // A second release while the first is still awaiting approval ADDS to
+      // it (CN-022) — overwriting lost the earlier day's pending refund.
+      const total = accumulatePendingRelease(b.cancel, value, refundableSoFar(b));
       b.cancel = {
         on: ukToday(),
         by: "Booker",
-        refund: value > 0 ? "pending" : "none",
-        amount: value,
+        refund: total > 0 ? "pending" : "none",
+        amount: total,
         refundOnly: true, // days released, the booking itself stands
         msg: input.msg || `${label} released by the parent.`,
         ...(input.reason ? { reason: input.reason } : {}),
@@ -2541,6 +2660,7 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
   const firstSession = (existing.days ?? []).slice().sort()[0];
   let policyAmount: number | null = null;
   let policyReason: string | undefined;
+  let creditNote = 0; // CN-004: noRefundCredit → wallet credit in lieu of a £0 refund
   try {
     let policyId: string | undefined;
     let tenantId: string | undefined = existing.tenantId;
@@ -2563,6 +2683,12 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     if (advice) {
       policyAmount = advice.amount;
       policyReason = advice.reason;
+      creditNote = noRefundCreditAmount({
+        noRefundCredit: (settings as { noRefundCredit?: boolean } | undefined)?.noRefundCredit === true,
+        walletOn: tenantId ? await customerAreaOn(tenantId, "wallet", franchiseId) : false,
+        policyAmount: advice.amount,
+        paid,
+      });
     }
   } catch (e) {
     console.error("[cancel] policy refund calc failed:", (e as Error).message);
@@ -2585,6 +2711,14 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
         if (policyReason) b.cancel.msg = `${b.cancel.msg} (${policyReason})`;
       }
       if (parsed.data.refundPref && b.cancel) b.cancel.refundTo = parsed.data.refundPref;
+      // Credit note instead of a nil refund: the provider approves it like any
+      // refund, and approval pays it into the wallet (never to card).
+      if (creditNote > 0 && b.cancel) {
+        b.cancel.amount = creditNote;
+        b.cancel.refund = "full";
+        b.cancel.refundTo = "wallet";
+        b.cancel.msg = `${b.cancel.msg} (credit note in place of a refund)`;
+      }
       // Free the block places the booking held — total AND its days
       // (all reads before writes).
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;

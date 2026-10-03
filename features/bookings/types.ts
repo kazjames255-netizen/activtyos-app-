@@ -167,6 +167,9 @@ export interface Booking {
   /** How much has actually been received (reconciliation). Absent = 0 for
    *  Unpaid, treated as `amount` for Paid. Partial payments track it. */
   amountPaid?: number;
+  /** Set when the provider overrode the checkout total on a family's behalf (server-stamped, audit):
+   *  the price the rules gave, what was agreed, who set it and why. `amount` is already the agreed price. */
+  priceOverride?: { originalAmount: number; amount: number; by: string; reason: string; at: string };
   /** Before discounts, and what came off (automatic rules + codes). Only set when a discount applied. */
   listPrice?: number;
   discountOff?: number;
@@ -215,7 +218,13 @@ export interface Booking {
     /** Optional reason the provider gave when denying. */
     reason?: string;
     resolvedAt?: string;
+    /** Setup > Amending dates > admin fee added to the booking when this request was approved (once). */
+    feeCharged?: number;
+    /** Applied straight away for the parent (Setup > "let parents move their own dates") rather than approved by the provider. */
+    selfService?: boolean;
   } | null;
+  /** Total admin fees added to this booking for date changes (already inside `amount`). */
+  amendFeesCharged?: number;
 
   /** Optional free-text the provider gave when declining the booking; shown
    *  to the family in the decline email. */

@@ -7,6 +7,8 @@ export interface Session {
   date: string; // ISO "2027-07-28"
   start: string; // "09:00"
   end: string; // "15:30"
+  /** Optional per-day price: when set, Setup > Amending dates > "allow cheaper sessions" compares it between the day given up and the day moved to. */
+  price?: number;
 }
 
 export interface BlockDoc {

@@ -3,6 +3,7 @@
 // validation) and routes/bookings.ts (move-approve) so they can be unit-tested
 // without Firestore. Behaviour-preserving.
 import type { Booking } from "../../../features/bookings/types";
+import { receivedOf } from "../../../features/bookings/helpers";
 
 export const prettyDay = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -41,7 +42,7 @@ export const isoOfLabel = (s: string): string | null => {
 };
 
 /** Apply the provider's approval (all moves, or just approveIndexes) to the booking, in place. */
-export function applyMoveApprove(b: Booking, approveIndexes?: number[], reason?: string): void {
+export function applyMoveApprove(b: Booking, approveIndexes?: number[], reason?: string, opts: { fee?: number; selfService?: boolean } = {}): void {
   const req = b.dateChangeRequest;
   if (!req) return;
   const idxs = approveIndexes ?? req.moves.map((_, i) => i);
@@ -85,6 +86,12 @@ export function applyMoveApprove(b: Booking, approveIndexes?: number[], reason?:
   req.status = "approved";
   req.resolvedAt = new Date().toISOString();
   if (reason) req.reason = reason;
+  if (opts.selfService) req.selfService = true;
+  // Setup > Amending dates > admin fee: charged once, on a request that actually moved something.
+  if (!req.feeCharged && req.moves.some((m, i) => idxs.includes(i) && m.from && m.to)) {
+    const charged = addAmendFee(b, opts.fee);
+    if (charged > 0) req.feeCharged = charged;
+  }
   b.note = idxs.length === req.moves.length ? "Date change approved." : "Date change partly approved.";
 }
 
@@ -115,5 +122,37 @@ export function amendLimitError(moves: AmendMove[], used: number, limit: number 
   if (asking === 0) return null;
   if (used >= limit) return `This booking has already had its ${limit} date change${limit === 1 ? "" : "s"}. Please contact the provider.`;
   if (used + asking > limit) return `This provider allows ${limit} date change${limit === 1 ? "" : "s"} per booking and ${used} ${used === 1 ? "has" : "have"} been used, so only ${limit - used} more can be requested.`;
+  return null;
+}
+
+/**
+ * Setup > Amending dates > "admin fee": add the fee to the booking's price and leave it OWING — the amount the family has already
+ * paid is pinned in `amountPaid` first, so the new total shows a balance of exactly the fee (and the pay-link/Pay now ask for just that).
+ * Nothing is charged on a free / funded (£0 or HAF) place, a cancelled booking, or when no fee is set. Returns the fee actually added.
+ */
+export function addAmendFee(b: Booking, fee: number | undefined): number {
+  const f = Math.round((Number(fee) || 0) * 100) / 100;
+  if (f <= 0 || (b.amount ?? 0) <= 0 || b.pay === "Funded" || b.status === "Cancelled" || b.status === "Declined") return 0;
+  const received = receivedOf(b);
+  if (received > 0) b.amountPaid = received;
+  b.amount = Math.round(((b.amount ?? 0) + f) * 100) / 100;
+  if (b.pay === "Paid") b.pay = "Partially paid";
+  b.amendFeesCharged = Math.round(((b.amendFeesCharged ?? 0) + f) * 100) / 100;
+  return f;
+}
+
+/**
+ * Setup > Amending dates > "allow moves to a cheaper session": when OFF, a move onto a day that costs less than the day given up is refused.
+ * `priceOf(date)` is that day's per-day price, or undefined when the day carries no price of its own (then nothing can be compared and the move is allowed).
+ */
+export function amendCheaperError(moves: AmendMove[], priceOf: (date: string) => number | undefined, allowCheaper: boolean): string | null {
+  if (allowCheaper) return null;
+  for (const mv of moves) {
+    if (!mv.from) continue;
+    const was = priceOf(mv.from);
+    const now = priceOf(mv.to);
+    if (was === undefined || now === undefined) continue;
+    if (now < was - 0.004) return `${prettyDay(mv.to)} costs less than ${prettyDay(mv.from)}. This provider doesn't allow moves to a cheaper session.`;
+  }
   return null;
 }

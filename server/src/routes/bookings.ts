@@ -35,6 +35,7 @@ import {
   emailPaymentReceived,
   emailPlaceOffered,
   emailRefundApproved,
+  emailRefundDeclined,
   emailVoucherInstructions,
 } from "../lib/emails";
 import { applyHoNetFilter } from "../lib/franchiseScope";
@@ -622,7 +623,10 @@ bookings.post("/:ref/actions", async (req, res) => {
           applyNote(b, action.text);
           break;
         case "move-approve":
-          applyMoveApprove(b, action.approveIndexes, action.reason);
+          applyMoveApprove(b, action.approveIndexes, action.reason, {
+            // Setup > Amending dates > admin fee (AM-011), from the booking's own Setup (a franchise runs on its own).
+            fee: b.tenantId ? Number((await loadSettings(b.tenantId, b.franchiseId ?? null)).amendFee) || 0 : 0,
+          });
           break;
         case "move-deny":
           if (b.dateChangeRequest) {
@@ -733,6 +737,20 @@ bookings.post("/:ref/actions", async (req, res) => {
         });
       }
       else if (action.type === "decline") emailBookingDeclined(updated, await tenantName(), updated.declineReason);
+      else if (action.type === "refund-decline") {
+        emailRefundDeclined(updated, await tenantName());
+        const amt = updated.cancel?.amount ?? 0;
+        void notify({
+          tenantId: scope.tenantId!,
+          to: { kind: "parent", email: updated.email },
+          category: "billing",
+          bellOnly: true,
+          title: `Refund declined · ${updated.ref}`,
+          body: `Your provider couldn't approve the${amt > 0 ? ` £${amt.toFixed(2)}` : ""} refund for ${updated.listing}. Your cancellation still stands — message them if you'd like to talk it through.`,
+          href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
+          ref: updated.ref,
+        });
+      }
       else if (action.type === "refund-approve") {
         emailRefundApproved(updated, await tenantName());
         // …and raise the family's in-app bell (email-only before, so it never

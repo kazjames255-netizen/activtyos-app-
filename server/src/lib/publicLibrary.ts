@@ -1,3 +1,18 @@
+import { DEFAULT_POLICIES } from "../../../lib/cancellation";
+
+/** Parent-facing refund/cancel defaults, identical to lib/settings.ts DEFAULT_SETTINGS. A provider who never saved Setup has none of these
+ *  keys stored, and the parent's cancel screen used to read `undefined` as OFF (no entitlement line, no card/wallet chooser). */
+export const PUBLIC_REFUND_DEFAULTS: Record<string, unknown> = {
+  allowCardRefund: true,
+  refundLetCustomerChoose: true,
+  noRefundCredit: false,
+  askReasonParent: false,
+  allowPartialCancel: true,
+  partialAllowRefund: true,
+  partialAllowWallet: true,
+  partialAllowChangeDate: false,
+};
+
 export const PUBLIC_SETTINGS_KEYS = [
   "providerName",
   "requireDob",
@@ -69,6 +84,9 @@ export function publicLibrarySettings(src: Record<string, unknown>): Record<stri
   for (const k of PUBLIC_SETTINGS_KEYS) if (k in src) settings[k] = src[k];
   // Just the logo URL out of billing, lifted to a top-level public field — the
   // rest of billing (sort code, account number…) stays private.
+  for (const [k, v] of Object.entries(PUBLIC_REFUND_DEFAULTS)) if (settings[k] === undefined) settings[k] = v;
+  const pol = settings.cancellationPolicies;
+  if (!Array.isArray(pol) || !pol.length) settings.cancellationPolicies = DEFAULT_POLICIES;
   const logoUrl = (src.billing as { logoUrl?: unknown } | undefined)?.logoUrl;
   if (typeof logoUrl === "string" && logoUrl.trim()) settings.logoUrl = logoUrl.trim();
   // Only WHETHER bank details exist (so the booking page can hide "Bank transfer" when there is nowhere to pay);

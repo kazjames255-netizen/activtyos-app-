@@ -2,6 +2,7 @@
 import { fromRows } from "./_rows";
 
 export default fromRows({
+  amendFeeAdded: ["A {fee} admin fee will be added to this booking", "A {fee} admin fee will be added to this booking", "A {fee} admin fee will be added to this booking", "A {fee} admin fee will be added to this booking", "A {fee} admin fee will be added to this booking", "A {fee} admin fee will be added to this booking", "A {fee} admin fee will be added to this booking", "A {fee} admin fee will be added to this booking", "A {fee} admin fee will be added to this booking", "A {fee} admin fee will be added to this booking", "A {fee} admin fee will be added to this booking"],
   dayN_one: ["{n} day", "{n} dzień", "{n} zi", "{n} دن", "{n} ਦਿਨ", "{n} দিন", "يوم واحد", "{n} dia", "{n} día", "{n} jour", "{n} diwrnod"],
   dayN_two: ["{n} days", "{n} dni", "{n} zile", "{n} دن", "{n} ਦਿਨ", "{n} দিন", "يومان", "{n} dias", "{n} días", "{n} jours", "{n} diwrnod"],
   dayN_few: ["{n} days", "{n} dni", "{n} zile", "{n} دن", "{n} ਦਿਨ", "{n} দিন", "{n} أيام", "{n} dias", "{n} días", "{n} jours", "{n} diwrnod"],

@@ -610,3 +610,16 @@ export function pendingPayActionT(t: (k: string, v?: Record<string, string | num
   if (label === "Voucher" || label === "—") return t("p7bkl.act_voucher");
   return t("p7bkl.act_named", { label: w(label) });
 }
+
+/** CN-006/009/011: which refund button the provider sees. Decided by how the booking was PAID first, then by the family's chosen destination. */
+export function refundButtonKind(b: { voucherScheme?: string; method?: string; paymentIntentId?: string; cancel?: { refundTo?: string } | null }):
+  "wallet" | "reimbursed" | "cash" | "stripe" | "bank" | "plain" {
+  const m = (b.method ?? "").toLowerCase();
+  const voucher = !!b.voucherScheme || /voucher|tax.?free|tfc|haf|childcare/.test(m);
+  const dest = b.cancel?.refundTo;
+  if (dest === "wallet") return "wallet";
+  if (voucher) return "reimbursed";
+  if (!b.paymentIntentId && /cash|bank|bacs|transfer|cheque|paypal|offline/.test(m)) return "cash";
+  if (b.paymentIntentId) return "stripe";
+  return dest === "card" ? "bank" : "plain";
+}
