@@ -127,7 +127,7 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
     const booked = monthOf(b);
     const parts: [string | null, number][] = (b.refundLog ?? []).map((e) => [monthOfStamp(e.on) ?? booked, e.amount || 0]);
     const c = b.cancel;
-    if (c && (b.pay === "Refunded" || b.pay === "Partially refunded" || c.refund === "approved"))
+    if (c && c.refund !== "full" && c.refund !== "partial" && c.refund !== "pending" && (b.pay === "Refunded" || b.pay === "Partially refunded" || c.refund === "approved"))
       parts.push([monthOfStamp(c.refundedAt) ?? monthOfStamp(c.on) ?? booked, c.amount || 0]);
     return parts;
   };

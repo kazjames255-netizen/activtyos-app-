@@ -44,7 +44,7 @@ const BLUE = "#2f5fd0", LIGHTB = "#2f5fd0", GREEN = "#0f7a43";
 const ACT_C = ["#2f5fd0", "#0f7a43", "#C81E5E", "#5a3fd0", "#F5A524", "#0ea5a0", "#C81E5E", "#2f5fd0"];
 // Donut segments are marks on a dark card, so they take the light tones.
 const STATUS_C: Record<string, string> = { Confirmed: "#2f5fd0", "Approval needed": "#F5A524", Waitlisted: "#0f7a43", Offered: "#0e7a75", Cancelled: "#C81E5E", Declined: "#C81E5E" };
-const PAY_C: Record<string, string> = { Paid: "#0f7a43", Funded: "#0e7a75", Unpaid: "#F5A524", "Invoice sent": "#5a3fd0", Refunded: "#C81E5E", "Partially refunded": "#C81E5E" };
+const PAY_C: Record<string, string> = { Paid: "#0f7a43", Funded: "#0e7a75", Unpaid: "#F5A524", "Invoice sent": "#5a3fd0", "Refund pending": "#F5A524", Refunded: "#C81E5E", "Partially refunded": "#C81E5E" };
 const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" });
 const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });

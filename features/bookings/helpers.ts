@@ -366,6 +366,7 @@ export function payTone(pay: string, status?: string): BadgeTone {
     // yet, they're waiting on a third party to send money.
     "Awaiting voucher payment": BLUE,
     Refunded: GREY,
+    "Refund pending": AMBER,
     "Partially refunded": AMBER,
     "Partially paid": AMBER,
     Funded: BLUE,
@@ -477,7 +478,7 @@ export const refundedTotal = (b: Booking) =>
 export const receivedOf = (b: Booking) => {
   const paid = Number(b.amountPaid);
   if (Number.isFinite(paid) && paid > 0) return paid;
-  return b.pay === "Paid" || b.pay === "Funded" || b.pay === "Refunded" || b.pay === "Partially refunded"
+  return b.pay === "Paid" || b.pay === "Funded" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded"
     ? (b.amount || 0)
     : 0;
 };
@@ -489,7 +490,10 @@ export const receivedOf = (b: Booking) => {
 export const refundedGross = (b: Booking) => {
   const log = (b.refundLog || []).reduce((t, x) => t + (x.amount || 0), 0);
   const c = b.cancel;
-  const wholeRefunded = !!c && (b.pay === "Refunded" || b.pay === "Partially refunded" || c.refund === "approved");
+  // A cancellation whose refund hasn't been approved yet (full/partial/pending) has paid nothing back —
+  // even on older bookings already stamped "Refunded" at cancel time.
+  const awaiting = !!c && (c.refund === "full" || c.refund === "partial" || c.refund === "pending");
+  const wholeRefunded = !!c && !awaiting && (b.pay === "Refunded" || b.pay === "Partially refunded" || c.refund === "approved");
   // Approving a cancellation refund writes a "Refund approved…" line into the
   // log, so the log ALREADY holds that money. Adding the cancellation amount
   // as well took it off twice and showed a booking that kept £10 as £0.
@@ -572,7 +576,7 @@ export function altDates(k: Kid, block?: BlockAvail | null): { iso: string; labe
 export function paidSoFar(b: Pick<Booking, "pay" | "amount" | "amountPaid" | "walletApplied">): number {
   // "Refunded" / "Partially refunded" were paid before they were refunded —
   // the refund is taken off separately (refundableSoFar), not by the status.
-  const settled = b.pay === "Paid" || b.pay === "Refunded" || b.pay === "Partially refunded";
+  const settled = b.pay === "Paid" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded";
   const cash = settled ? Math.max(b.amount ?? 0, b.amountPaid ?? 0) : Math.max(0, b.amountPaid ?? 0);
   return Math.round((cash + Math.max(0, b.walletApplied ?? 0)) * 100) / 100;
 }

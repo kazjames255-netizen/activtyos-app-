@@ -75,6 +75,7 @@ export function applyRowAction(b: Booking, action: RowAction): void {
     b.pay = "Refunded";
   } else if (action === "refund-decline") {
     if (b.cancel) b.cancel.refund = "declined";
+    if (b.pay === "Refund pending") b.pay = "Paid";
   } else if (action === "move-approve") {
     const req = b.dateChangeRequest;
     if (req) {
@@ -116,7 +117,10 @@ export function applyCancel(b: Booking, refund: RefundType, partialAmount?: numb
     msg: b.past === true ? "Refund issued by provider." : "Cancelled by provider.",
     ...(reason ? { reason } : {}),
   };
-  b.pay = refund === "full" ? "Refunded" : refund === "partial" ? "Partially refunded" : b.pay;
+  // Nothing has been paid back yet: the refund still has to be approved (which
+  // moves the money). Until then the booking says so and the money still counts
+  // as received — it flips to Refunded / Partially refunded on refund-approve.
+  b.pay = refund !== "none" && amt > 0 ? "Refund pending" : b.pay;
 }
 
 export function applyCancelChild(b: Booking, ki: number): void {
