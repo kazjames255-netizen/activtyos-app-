@@ -301,9 +301,12 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
       Object.entries(m).map(([id, names]) => [id, names.filter((n) => n !== name)]),
     ));
 
+  // Both modes count the children actually put on the passes ("Who's on each pass"). The provider's Take a booking used to
+  // count the old per-line `assign` map, which is empty there — so a sibling discount never landed when staff booked two
+  // children, and the form showed a higher price than the family is charged.
   const attendees = parentMode
     ? Math.max(1, rosterNames.length)
-    : Math.max(1, new Set(Object.values(assign).map((n) => n.trim()).filter(Boolean)).size);
+    : Math.max(1, new Set(basket.flatMap((x) => childrenOn(x.id))).size);
 
   // Automatic discounts come off here so the basket shows what's really owed.
   const priceOf = (x: BasketItem) => priceEdit[x.id] ?? x.price;
@@ -312,7 +315,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // against a line showing its price. Floor at one so the basket shows what
   // they're committing to; it recomputes upward the moment a second child is
   // put on the pass.
-  const headsOn = (x: BasketItem) => (parentMode ? Math.max(1, childrenOn(x.id).length) : attendees);
+  const headsOn = (x: BasketItem) => Math.max(1, childrenOn(x.id).length);
   // Priced per child per line, so a second child doubles that line.
   // Priced per child per line, so a second child doubles that line — and the
   // engine now sees those head counts, so a sibling discount lands only where
