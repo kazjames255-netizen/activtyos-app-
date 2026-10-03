@@ -1,3 +1,4 @@
+import { mergeGroupKey } from "../lib/bookingMergeKey";
 import { Router } from "express";
 import { eraseChildLearning } from "../lib/hubPrivacy";
 import { z } from "zod";
@@ -1634,13 +1635,14 @@ my.post("/bookings", async (req, res) => {
       // different passes) — must arrive as a SINGLE booking with kids[] and one
       // reference, not a row per child-day. So merge everything on the same
       // block + status: each child appears once carrying the union of their
-      // days, days/sessions are unioned, amounts summed, per-child voucher refs
+      // days, days/sessions are unioned (rows with a different timing stay apart —
+      // a booking carries one timing; see lib/bookingMergeKey), amounts summed, per-child voucher refs
       // become payRefs. Capacity was reserved per placement above, so collapsing
       // the output rows changes nothing there.
       const preMergeCount = created.length;
       const bkGroups = new Map<string, Booking[]>();
       for (const b of created) {
-        const key = `${b.blockId ?? ""}|${b.status}`;
+        const key = mergeGroupKey(b);
         const arr = bkGroups.get(key) ?? [];
         arr.push(b); bkGroups.set(key, arr);
       }
