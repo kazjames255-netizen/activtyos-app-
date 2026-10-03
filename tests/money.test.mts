@@ -196,3 +196,18 @@ test("applyDiscounts: rule variants", async (t) => {
     assert.equal(total(STANDARD, [pass, { ...pass }], 2, "2026-10-03"), 166.4);
   });
 });
+
+// ── Home-visit coverage by postcode list (tracker LT-003) ───────────────────────────────────────────────────────────────────────────────
+import { checkCoverage } from "../server/src/lib/coverageArea";
+test("checkCoverage: postcode list SW1, SW2", async (t) => {
+  const area = { mode: "postcodePrefixes" as const, postcodePrefixes: ["SW1", "SW2"] };
+  await t.test("SW1A 1AA is inside", async () => assert.deepEqual(await checkCoverage(area, "SW1A 1AA"), { ok: true }));
+  await t.test("sw2 4qd (lower case) is inside", async () => assert.deepEqual(await checkCoverage(area, "sw2 4qd"), { ok: true }));
+  await t.test("N1 9GU is refused with the coverage message", async () => {
+    const r = await checkCoverage(area, "N1 9GU");
+    assert.equal(r.ok, false);
+    assert.match(r.ok ? "" : r.reason, /outside this provider's home-visit coverage area/);
+  });
+  await t.test("no postcode is refused", async () => assert.equal((await checkCoverage(area, "")).ok, false));
+  await t.test("no coverage area configured = nothing to enforce", async () => assert.deepEqual(await checkCoverage(null, "N1 9GU"), { ok: true }));
+});
