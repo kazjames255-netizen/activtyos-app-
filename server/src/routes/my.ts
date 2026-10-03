@@ -1638,7 +1638,8 @@ my.post("/bookings", async (req, res) => {
                 pass: p.timing ? `${p.item.pass} · ${p.timing}` : p.item.pass,
                 dates: block.name,
                 amount: due,
-                method: input.method,
+                // A £0 place (HAF / free) took no payment of any kind — never label it "Card".
+                method: amount <= 0 ? "Funded" : input.method,
                 phone: familyPhone,
               },
               nextBid + created.length,
