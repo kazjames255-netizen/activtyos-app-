@@ -1373,11 +1373,16 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           </div>
 
           <HowItWorks
-            minutes="1"
-            video="Take a booking for a family: what you enter (parent name, email, phone; each child's name and date of birth), what the parent receives (one email with a Pay button that needs no login, plus a link to set a password and add allergies, emergency contact and address), and when to send the listing's own booking link instead so the parent fills everything in themselves.">
-            <p><b>This is for bookings you take for a family</b> (phone, walk-in). It is not the same as sending a parent a sign-up link.</p>
-            <p>You enter only the parent&rsquo;s <b>name, email and phone</b>, then each child&rsquo;s <b>name and date of birth</b>. We create the parent&rsquo;s account for them and email the booking with a <b>Pay</b> button that needs no login, plus a link to set a password and fill in the rest (allergies, emergency contact, address). Want the parent to do all of it themselves? Send them the listing&rsquo;s <b>Link</b> from Blocks &amp; listings instead.</p>
-          </HowItWorks>
+            tour={
+              <div className="grid gap-4 md:grid-cols-[1fr_340px]">
+                <div className="max-w-[560px] text-[12.5px] leading-[1.6]">
+                  <p><b>This is for bookings you take for a family</b> (phone, walk-in). It is not the same as sending a parent a sign-up link.</p>
+                  <p className="mt-1.5">You enter only the parent&rsquo;s <b>name, email and phone</b>, then each child&rsquo;s <b>name and date of birth</b>. We create the parent&rsquo;s account for them and email the booking with a <b>Pay</b> button that needs no login, plus a link to set a password and fill in the rest (allergies, emergency contact, address). Want the parent to do all of it themselves? Send them the listing&rsquo;s <b>Link</b> from Blocks &amp; listings instead.</p>
+                </div>
+                <video src="/v2/video/take-a-booking.mp4" controls preload="metadata" className="w-full self-start rounded-lg border border-[var(--line)] bg-black" aria-label="How to take a booking for a family (about 1 minute 45)" />
+              </div>
+            }
+          />
           <div className={`mt-2 border p-2.5 ${tk.round}`} style={{ borderColor: tk.line }}>
             <div className="flex flex-wrap items-baseline gap-x-2">
               <div className="text-[12px] font-extrabold" style={{ color: tk.ink }}>{tr("p7ck.optElse")}</div>
