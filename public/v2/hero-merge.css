@@ -95,3 +95,6 @@
 @media (max-width:400px){
   .wrap .hv-k span{text-transform:none;font-size:11px;font-weight:700}
 }
+
+/* desktop: copy starts at the top of the hero, level with the visual, instead of floating down the middle of the tall visual column */
+@media (min-width:980px){.wrap .hero-grid{align-items:start}.wrap .hero-grid > :first-child{padding-top:34px}}
