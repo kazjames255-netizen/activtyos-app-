@@ -293,6 +293,20 @@ my.get("/bookings", async (req, res) => {
   res.json(list.map((b) => (childcareRoute(b) ? { ...b, childcare: childcareOf(b as ChildcareBooking) } : b)));
 });
 
+// GET /api/my/bank-details?ref=AMI-1 — where to send a bank transfer for one of MY unpaid bookings.
+// Only the booker (matched on email) gets it, and only while money is still owed by bank transfer.
+my.get("/bank-details", async (req, res) => {
+  const email = tokenEmail(req);
+  const ref = typeof req.query.ref === "string" ? req.query.ref : "";
+  if (!email || !ref) { res.json({ bank: null }); return; }
+  const snap = await bookingsCol.where("email", "==", email).where("ref", "==", ref).limit(1).get();
+  if (snap.empty) { res.json({ bank: null }); return; }
+  const b = fromDoc(snap.docs[0].data() as BookingDoc);
+  const owed = Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
+  if (!isBankMethod(b.method) || b.pay === "Paid" || b.status === "Cancelled" || owed <= 0 || !b.tenantId) { res.json({ bank: null }); return; }
+  res.json({ bank: await bankPayDetails(b.tenantId, b.ref, owed) });
+});
+
 // GET /api/my/attendance — has my child actually been signed in today? (d10s10:
 // there was no parent-facing read of the Registers staff mark at all — a
 // family had no way to see "signed in / present / collected" short of asking.)
