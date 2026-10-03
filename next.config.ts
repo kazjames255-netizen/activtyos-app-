@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
   env: { NEXT_PUBLIC_BUILD_ID: Date.now().toString(36) },
   // Build-only tsconfig: leaves out e2e/, whose server-side helpers can't resolve firebase-admin on Vercel.
   typescript: { tsconfigPath: "tsconfig.build.json" },
+  // The public product videos (tour + how-to) are marketing files: let other sites read them (e.g. importing the tour into a video tool
+  // such as HeyGen) instead of the browser blocking the request. Nothing private lives under /v2/video/.
+  async headers() {
+    return [{ source: "/v2/video/:path*", headers: [{ key: "Access-Control-Allow-Origin", value: "*" }] }];
+  },
 };
 
 export default nextConfig;
