@@ -15,18 +15,15 @@ import { emailPlaceOffered } from "./emails";
 // operator chooses whom to offer).
 // ─────────────────────────────────────────────────────────────────────────
 
-const refNum = (ref: string) => parseInt(ref.replace(/\D/g, ""), 10) || 0;
+import { positionsFrom, sortQueue } from "./waitlistQueue";
 
 /** Waitlisted bookings on a block, queue order (oldest ref first). */
 async function queuedBookings(blockId: string): Promise<Booking[]> {
   const snap = await db.collection("bookings").where("blockId", "==", blockId).get();
-  return snap.docs
-    .map((d) => fromDoc(d.data() as BookingDoc))
-    .filter((b) => b.status === "Waitlisted")
-    // FIFO by ref, except a family whose offer lapsed re-joins at the back
-    // (otherwise the oldest ref is re-offered every sweep and nobody else
-    // ever gets the place — p2-o15).
-    .sort((a, b) => (Date.parse(a.requeuedAt ?? "") || 0) - (Date.parse(b.requeuedAt ?? "") || 0) || refNum(a.ref) - refNum(b.ref));
+  // FIFO by ref, except a family whose offer lapsed re-joins at the back
+  // (otherwise the oldest ref is re-offered every sweep and nobody else
+  // ever gets the place — p2-o15). See waitlistQueue.ts.
+  return sortQueue(snap.docs.map((d) => fromDoc(d.data() as BookingDoc)).filter((b) => b.status === "Waitlisted"));
 }
 
 /** Per-date queue positions for the given refs ("2nd in line for 12 Aug"). */
@@ -37,19 +34,7 @@ export async function queuePositions(
   const queued = await queuedBookings(blockId);
   const blockSnap = await db.collection("blocks").doc(blockId).get();
   const block = blockSnap.exists ? (blockSnap.data() as BlockDoc) : null;
-  const perDate = new Map<string, string[]>();
-  for (const b of queued) {
-    const days = block ? bookingDays(b, block) : (b.days ?? []);
-    for (const d of days) perDate.set(d, [...(perDate.get(d) ?? []), b.ref]);
-  }
-  const out: { ref: string; date: string; position: number }[] = [];
-  for (const [date, order] of perDate) {
-    for (const ref of refs) {
-      const i = order.indexOf(ref);
-      if (i >= 0) out.push({ ref, date, position: i + 1 });
-    }
-  }
-  return out.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return positionsFrom(queued, refs, (b) => (block ? bookingDays(b as Booking, block) : (b as Booking).days ?? []));
 }
 
 /** How many are queued for a specific date (the overbook warning number). */

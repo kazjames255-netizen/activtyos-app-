@@ -22,6 +22,23 @@ export function capacityNote(d: WizardDraft, left: number | null, tr?: TFn, loca
   if (remaining <= lowAt(cap)) return { text: tr ? pickPlural(tr, locale ?? "en", "p7be.onlyPlaces", remaining) : `Only ${remaining} place${remaining === 1 ? "" : "s"} left that day`, tone: "low" };
   return { text: tr ? tr("p7be.lotsOfSpace") : "Lots of space left", tone: "calm" };
 }
+/** Places left on a date BEFORE this basket's own seats (server truth where a
+ * dated run exists; day-scope uses that date's own session count, not the
+ * block's busiest day). null = unlimited/unknown. */
+export function rawLeftOn(
+  blocks: RunBlock[] | undefined,
+  iso: string,
+  capacity: number | null,
+  perDay: boolean,
+  basketSize: number,
+): number | null {
+  const blk = blockOn(blocks, iso);
+  if (blk) {
+    const own = blk.capacityScope === "day" ? blk.sessions?.find((x) => x.date === iso)?.spotsLeft : undefined;
+    return Math.max(0, own ?? blk.spotsLeft);
+  }
+  return capacity === null ? null : perDay ? capacity : Math.max(0, capacity - basketSize);
+}
 export function blockOn(blocks: RunBlock[] | undefined, iso: string): RunBlock | null {
   return blocks?.find((b) => b.startDate <= iso && iso <= b.endDate) ?? null;
 }

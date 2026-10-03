@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import { tNow, useI18n, useT } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { applyDiscounts } from "./discounts";
-import { blockOn, lowAt } from "./capacity";
+import { blockOn, lowAt, rawLeftOn } from "./capacity";
 import { money } from "@/features/bookings/helpers";
 import { mondayOf, ordinal, uid } from "./format";
 import type { BlockBooking, BookRule, RunBlock, WizardDraft } from "./ListingWizard";
@@ -230,16 +230,8 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // Where the server has generated dated runs, its spotsLeft is the truth and
   // the configured ceiling is only a fallback for the operator's preview.
   // Places left per the server/config, BEFORE this basket's own seats.
-  const rawLeft = (iso: string): number | null => {
-    const blk = blockOn(blocks, iso);
-    if (blk) {
-      // Day scope: the block's own spotsLeft is its BUSIEST day, so one busy
-      // Monday would mark Tue to Fri almost full. Use that date's own count.
-      const own = blk.capacityScope === "day" ? blk.sessions?.find((x) => x.date === iso)?.spotsLeft : undefined;
-      return Math.max(0, own ?? blk.spotsLeft);
-    }
-    return capacity === null ? null : perDay ? capacity : Math.max(0, capacity - basket.length);
-  };
+  // (pure maths lives in ./capacity so it can be unit-tested)
+  const rawLeft = (iso: string): number | null => rawLeftOn(blocks, iso, capacity, perDay, basket.length);
   const leftOn = (iso: string) => {
     const raw = rawLeft(iso);
     if (raw === null) return null;
