@@ -739,6 +739,11 @@ my.post("/bookings", async (req, res) => {
   let accountCreated = false;
   let passwordLink: string | null = null;
   const onBehalf = "onBehalfOf" in input ? input.onBehalfOf : undefined;
+  // A funded (HAF) place is arranged by the provider: a parent cannot choose it for themselves.
+  if (!onBehalf && /haf|funded/i.test(String((input as { method?: unknown }).method ?? ""))) {
+    res.status(400).json({ error: "Funded (HAF) places are arranged with the provider. Please contact them, or choose another way to pay." });
+    return;
+  }
   if (onBehalf) {
     const authCtx = req.auth!;
     if (!canWrite(authCtx.role) || !authCtx.tenantId) {

@@ -756,7 +756,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const bankReady = !!(ckSettings as unknown as { bankReady?: boolean }).bankReady;
   const payList: readonly string[] = allMethods
     .filter((m) => /card/i.test(m) || !d.payMethods || d.payMethods.includes(m))
-    .filter((m) => !(parentMode && /bank|transfer/i.test(m) && !bankReady));
+    .filter((m) => !(parentMode && /bank|transfer/i.test(m) && !bankReady))
+    // HAF (funded) places are arranged by the provider, never self-selected by a parent: a funded place is £0 only once the provider confirms it.
+    .filter((m) => !(parentMode && /haf|funded/i.test(m)));
   // Voucher schemes with a reference filled in — the only ones a parent can
   // actually be sent to.
   const vouchers = liveVouchers(ckSettings.voucherProviders);
