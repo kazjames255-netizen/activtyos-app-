@@ -10,6 +10,7 @@ import { desiredRuns, syncListingBlocks, bookedDatesDropped } from "../lib/listi
 import { resolveBundlePricing, type BundleDoc, type PassDoc, type PeriodDoc } from "../lib/bundlePricing";
 import { mealDayPlan } from "../lib/mealPlan";
 import { ukToday } from "../lib/ukDate";
+import { isBrowsable, directLinkVisible } from "../lib/listingVisibility";
 import { accessFor, subscriptionState } from "../middleware/subscription";
 
 export const listings = Router();
@@ -339,8 +340,7 @@ listings.get("/", async (req, res) => {
     // half-built draft with no title never leaks to the marketplace. (The
     // `?? "live"` default stays for legacy titled listings; bookability — at
     // least one block — is enforced below, once blocks are joined.)
-    const title = ((l.title as string) ?? (l.name as string) ?? "").trim();
-    return !!title && (l.status ?? "live") === "live" && (l.visibility ?? "public") === "public" && !l.archived;
+    return isBrowsable(l);
   });
 
   // Marketplace opt-in. The cross-provider feed (no ?tenantId) shows only
@@ -477,7 +477,7 @@ listings.get("/:id", async (req, res) => {
   // "Own" = your tenant — but a franchise (and its staff) only owns ITS listings: drafts / hidden
   // ones of head office or a sibling franchise stay private to them.
   const own = auth.role === "platform" || (auth.tenantId && auth.tenantId === l.tenantId && (!isFranchise(auth) || (l.franchiseId ?? null) === auth.franchiseId));
-  if (((l.status ?? "live") !== "live" || l.archived) && !own) {
+  if (!directLinkVisible(l, !!own)) {
     res.status(404).json({ error: "Listing not found" });
     return;
   }

@@ -15,6 +15,7 @@ import { platformFallback, stripe, toPence } from "../lib/stripe";
 import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 import { addDays, ukToday, isRealDay } from "../lib/ukDate";
+import { linkExpiresOn, linkExpired } from "../lib/linkExpiry";
 import { splitClears, applyClears } from "../lib/patchClear";
 
 // PUBLIC_WEB_URL/APP_URL are this file's historic names; WEB_URL is what the
@@ -190,13 +191,6 @@ invoices.delete("/:id", async (req, res) => {
 // invoice's due date, issue date, last send and payment — so re-sending an
 // overdue invoice (or moving its due date) gives the family a working link
 // again, and an old link in an inbox stops showing who owed what.
-const LINK_DAYS = 90;
-function linkExpiresOn(inv: Record<string, unknown>): string {
-  const day = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : "");
-  const base = [inv.dueDate, inv.date, inv.emailedAt, inv.paidAt, inv.createdAt].map(day).filter(Boolean).sort().pop() ?? ukToday();
-  return addDays(base, LINK_DAYS); // calendar days — adding raw ms shifts the day across the 25 Oct clock change
-}
-const linkExpired = (inv: Record<string, unknown>) => ukToday() > linkExpiresOn(inv);
 
 invoicePublic.get("/:token", async (req, res) => {
   const snap = await col.where("payToken", "==", req.params.token).limit(1).get();
