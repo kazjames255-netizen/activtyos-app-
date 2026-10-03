@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { money, receivedOf, refundedGross } from "@/features/bookings/helpers";
+import { money } from "@/features/bookings/helpers";
+import { bookingNetIn } from "@/features/money/bookingIncome";
 import type { Booking as FullBooking } from "@/features/bookings/types";
 import { InvoicesApp } from "@/features/money/InvoicesApp";
 import { IncomeApp } from "@/features/money/IncomeApp";
@@ -53,9 +54,8 @@ export function MoneyInApp() {
   // Booking money, dated by when the booking was taken. Same rule as the Dashboard's "Income
   // collected" and the Income tab: NET of refunds (received - refunded); `back` is the refunded part.
   const bookingIn = useMemo(() => bookings.map((b) => {
-    const got = receivedOf(b as unknown as FullBooking);
-    const back = Math.min(got, refundedGross(b as unknown as FullBooking));
-    return { date: (b.createdAt || "").slice(0, 10), amount: Math.round((got - back) * 100) / 100, got, back };
+    const { got, back, net } = bookingNetIn(b as unknown as FullBooking);
+    return { date: (b.createdAt || "").slice(0, 10), amount: net, got, back };
   }).filter((r) => r.got > 0), [bookings]);
 
   const sumIn = (rows: { date?: string; amount?: number }[], key: string, byYear = false) =>

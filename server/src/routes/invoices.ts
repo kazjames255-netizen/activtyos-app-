@@ -16,6 +16,7 @@ import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 import { addDays, ukToday, isRealDay } from "../lib/ukDate";
 import { linkExpiresOn, linkExpired } from "../lib/linkExpiry";
+import { round2, grandTotal, isOverdue, statusAfterEmail, invoiceSummary, type LineItem } from "../lib/invoiceMath";
 import { splitClears, applyClears } from "../lib/patchClear";
 
 // PUBLIC_WEB_URL/APP_URL are this file's historic names; WEB_URL is what the
@@ -37,7 +38,6 @@ export const invoicePublic = Router();
 const col = db.collection("invoices");
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 const STATUSES = ["draft", "sent", "paid", "cancelled"] as const;
-const OWED = new Set(["sent"]); // sent-but-unpaid is money still to collect
 
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").refine(isRealDay, "Not a real calendar date");
 const lineItemSchema = z.object({
@@ -66,13 +66,7 @@ const invoiceSchema = z.object({
   notes: z.string().trim().max(2_000).optional(),
   emailedAt: z.string().max(40).optional(),
 });
-const round2 = (n: number) => Math.round(n * 100) / 100;
-type LineItem = z.infer<typeof lineItemSchema>;
-const subtotalOf = (lineItems: LineItem[] | undefined, fallback: number | undefined) =>
-  lineItems && lineItems.length ? round2(lineItems.reduce((s, li) => s + li.qty * li.unitPrice, 0)) : round2(fallback ?? 0);
-// The stored amount is the grand total (subtotal + VAT), so analytics stay right.
-const grandTotal = (lineItems: LineItem[] | undefined, fallback: number | undefined, taxRate: number | undefined) =>
-  round2(subtotalOf(lineItems, fallback) * (1 + (taxRate ?? 0) / 100));
+// round2 / grandTotal / overdue / summary maths: ../lib/invoiceMath.ts
 
 function scope(req: Request, res: import("express").Response): string | null {
   const auth = req.auth!;
@@ -94,14 +88,12 @@ invoices.get("/", async (req, res) => {
   const thisYear = today.slice(0, 4);
   let list = snap.docs
     .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Record<string, unknown> & { date?: string; dueDate?: string; amount?: number; status?: string; franchiseId?: string | null })
-    .map((p) => ({ ...p, overdue: OWED.has(p.status ?? "") && !!p.dueDate && (p.dueDate as string) < today }));
+    .map((p) => ({ ...p, overdue: isOverdue(p, today) }));
   // Franchise sees only its own invoices; head office sees the whole tenant.
   if (auth.role === "franchise") list = list.filter((p) => (p.franchiseId ?? null) === auth.franchiseId);
   list = applyHoNetFilter(list, auth.role, req.query.franchiseId); // head-office network scope
   list.sort((a, b) => (`${b.date ?? ""}` < `${a.date ?? ""}` ? -1 : 1));
-  const outstanding = round2(list.filter((p) => OWED.has(p.status ?? "")).reduce((s, p) => s + (p.amount ?? 0), 0));
-  const collected = round2(list.filter((p) => p.status === "paid" && (p.date ?? "").slice(0, 4) === thisYear).reduce((s, p) => s + (p.amount ?? 0), 0));
-  res.json({ items: list, summary: { count: list.length, outstanding, collected, overdue: list.filter((p) => p.overdue).length } });
+  res.json({ items: list, summary: invoiceSummary(list, today) });
 });
 
 invoices.post("/", async (req, res) => {
@@ -175,7 +167,7 @@ invoices.post("/:id/email", async (req, res) => {
   await sendMail(to, `Invoice${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`, html, sender);
   const emailedAt = new Date().toISOString();
   // Sending an invoice moves a draft to "sent" (now awaiting payment).
-  await o.snap.ref.set({ emailedAt, ...(doc.status === "draft" ? { status: "sent" } : {}) }, { merge: true });
+  await o.snap.ref.set({ emailedAt, ...(statusAfterEmail(doc.status as string) ? { status: statusAfterEmail(doc.status as string) } : {}) }, { merge: true });
   res.json({ ok: true, emailedAt, to });
 });
 

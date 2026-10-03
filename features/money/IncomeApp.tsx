@@ -6,7 +6,8 @@ import { get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
 import { useHoScope } from "@/components/franchise/HoScope";
 import { withHoNet } from "@/lib/ho-net";
 import { useRealtime } from "@/lib/realtime";
-import { money, receivedOf, refundedGross } from "@/features/bookings/helpers";
+import { money } from "@/features/bookings/helpers";
+import { bookingNetIn } from "@/features/money/bookingIncome";
 import type { Booking as FullBooking } from "@/features/bookings/types";
 import { Card } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
@@ -167,9 +168,8 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     .map((b) => {
       // Same rule as the Dashboard's "Income collected" (collectedNet): received
       // minus refunded — a refunded booking isn't money in (acceptance d18s4).
-      const taken = receivedOf(b as unknown as FullBooking);
-      const back = Math.min(taken, refundedGross(b as unknown as FullBooking));
-      return { b, paid: Math.round((taken - back) * 100) / 100, back };
+      const { net, back } = bookingNetIn(b as unknown as FullBooking);
+      return { b, paid: net, back };
     })
     .filter(({ paid }) => paid > 0)
     .map(({ b, paid, back }) => ({ id: `bk-${b.ref}`, date: (b.createdAt || "").slice(0, 10), category: BOOKINGS_CAT, amount: paid, source: b.booker || b.listing, notes: [b.listing, b.ref, back > 0 ? t("p8fin.inRefunded", { amount: `£${back.toFixed(2)}` }) : ""].filter(Boolean).join(" · "), method: normaliseMethod(b.method), virtual: true, listingId: b.listingId })), [bookings, t]);
