@@ -276,6 +276,8 @@ export function money(n: number): string {
  *  booking sitting in "unreconciled" reads as debt you're chasing, when there's
  *  nothing to chase until it's confirmed. */
 const NO_PLACE_YET = ["Waitlisted", "Offered", "Approval needed"];
+/** Waitlisted / Offered: the price is stored but nothing is owed until accepted. */
+export const waitingForPlace = (status: string) => status === "Waitlisted" || status === "Offered";
 
 export function isUnreconciled(b: Booking): boolean {
   if (b.status === "Cancelled" || b.status === "Declined") return false;
@@ -298,6 +300,8 @@ export function matchesFilter(b: Booking, f: BookingFilter): boolean {
     case "waitlisted":
       return b.status === "Waitlisted";
     case "unpaid":
+      // A waitlisted/offered place owes nothing until it is accepted.
+      if (!holdsPlace(b)) return false;
       return b.pay === "Unpaid" || b.pay === "Invoice sent" || b.pay === "Awaiting voucher payment";
     case "unreconciled":
       // Money that lands OFF-platform and hasn't been matched yet — vouchers,
@@ -352,7 +356,8 @@ export function statusTone(status: string): BadgeTone {
   return map[status] || GREY;
 }
 
-export function payTone(pay: string): BadgeTone {
+export function payTone(pay: string, status?: string): BadgeTone {
+  if (status && waitingForPlace(status)) return GREY;
   const map: Record<string, BadgeTone> = {
     Paid: INDIGO,
     Unpaid: AMBER,
@@ -380,7 +385,9 @@ export function payLabel(pay: string): string {
  * voucher booking reads "Voucher paid", not a bare "Paid", so an operator can
  * still tell how the money came in.
  */
-export function payLabelFor(b: { pay: string; voucherScheme?: string; method?: string }): string {
+export function payLabelFor(b: { pay: string; status?: string; voucherScheme?: string; method?: string }): string {
+  // Nothing is owed until a waitlisted place is offered and accepted.
+  if (b.status && waitingForPlace(b.status)) return "Waiting list - nothing owed";
   // Every off-platform route shares one status, so the words come from the method.
   if (b.pay === "Awaiting voucher payment") return pendingPayWords(b).chip;
   const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
