@@ -1,4 +1,5 @@
 import { db } from "../firebase";
+import { tidyChildren, splitChildNames, type KidEntry } from "./tidyChildren";
 
 // Every booking keeps Customers & families current: the booker becomes (or
 // updates) a customer record in the listing's tenant, and the booked child
@@ -20,7 +21,7 @@ export async function upsertCustomerFromBooking(
     // Families page and §K family read can join to the real record.
     // A multi-child booking carries one joined string ("Bella James, Ava James"): that is several children, never one. The id and age
     // only belong to a single named child, so they are kept only when there is exactly one.
-    const names = (booking.child ?? "").split(/\s*(?:,|&|\band\b)\s*/i).map((n) => n.trim()).filter(Boolean);
+    const names = splitChildNames(booking.child);
     const kid = names.map((name) => ({
       name,
       ...(names.length === 1 && booking.childId ? { childId: booking.childId } : {}),
@@ -36,19 +37,16 @@ export async function upsertCustomerFromBooking(
         // not just an email match, whenever a booking gives us one.
         ...(booking.uid ? { uid: booking.uid } : {}),
         ...(booking.postcode ? { postcode: booking.postcode } : {}),
-        children: kid,
+        children: tidyChildren(kid),
       });
       return;
     }
     const doc = existing.docs[0];
-    const children: { name?: string; childId?: string }[] = doc.data().children ?? [];
-    // Match on childId when present, else name — so a saved child isn't
-    // duplicated on the customer record just because the name shifted.
-    const missing = kid.filter(
-      (k) => !children.some((c) => (k.childId && c.childId === k.childId) || c.name === k.name),
-    );
+    const children: KidEntry[] = doc.data().children ?? [];
+    // Merge, then tidy: splits any joined entry already on the record and de-duplicates by childId, then case-insensitive name + dob.
+    const merged = tidyChildren([...children, ...kid]);
     const patch: Record<string, unknown> = {};
-    if (missing.length) patch.children = [...children, ...missing];
+    if (JSON.stringify(merged) !== JSON.stringify(children)) patch.children = merged;
     if (booking.uid && doc.data().uid !== booking.uid) patch.uid = booking.uid;
     // Fill a MISSING postcode from the booking — never overwrite one the
     // provider already has on file (same rule as phone in the basket upsert).
@@ -83,21 +81,16 @@ export async function upsertFamilyFromBasket(
       .where("email", "==", family.email)
       .limit(1)
       .get();
-    // Distinct children (by childId, else name).
-    const seen = new Set<string>();
-    const kids = family.children
-      .filter((k) => (k.name ?? "").trim())
-      .map((k) => ({
-        name: (k.name ?? "").trim(),
-        ...(k.childId ? { childId: k.childId } : {}),
-        ...(k.age !== undefined ? { age: k.age } : {}),
-      }))
-      .filter((k) => {
-        const key = k.childId ?? k.name;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
+    // Distinct children (childId, else name + dob), joined names split.
+    const kids = tidyChildren(
+      family.children
+        .filter((k) => (k.name ?? "").trim())
+        .map((k) => ({
+          name: (k.name ?? "").trim(),
+          ...(k.childId ? { childId: k.childId } : {}),
+          ...(k.age !== undefined ? { age: k.age } : {}),
+        })) as KidEntry[],
+    );
     if (existing.empty) {
       await db.collection("customers").add({
         tenantId,
@@ -111,12 +104,10 @@ export async function upsertFamilyFromBasket(
       return;
     }
     const doc = existing.docs[0];
-    const children: { name?: string; childId?: string }[] = doc.data().children ?? [];
-    const missing = kids.filter(
-      (k) => !children.some((c) => (k.childId && c.childId === k.childId) || c.name === k.name),
-    );
+    const children: KidEntry[] = doc.data().children ?? [];
+    const merged = tidyChildren([...children, ...kids]);
     const patch: Record<string, unknown> = {};
-    if (missing.length) patch.children = [...children, ...missing];
+    if (JSON.stringify(merged) !== JSON.stringify(children)) patch.children = merged;
     if (family.uid && doc.data().uid !== family.uid) patch.uid = family.uid;
     // Fill a MISSING phone from what the family gave at checkout — but never
     // overwrite one the provider already has on file.

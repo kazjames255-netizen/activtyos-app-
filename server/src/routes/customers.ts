@@ -5,6 +5,7 @@ import { canWrite, operatorScope } from "../middleware/role";
 import { franchiseFamilyEmails, familyFranchiseMap, isFranchise, franchiseStamp } from "../lib/franchiseScope";
 import { emailSignUpInvite } from "../lib/emails";
 import { webBase } from "../lib/emailSend";
+import { tidyChildren, splitChildNames } from "../lib/tidyChildren";
 import { siteFamilyEmails, staffSiteScope } from "../lib/siteScope";
 
 // Customers & families — the tenant's parent records. Mostly SELF-FILLING:
@@ -133,6 +134,8 @@ customers.get("/", async (req, res) => {
   let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as Array<
     Record<string, unknown> & { id: string; name?: string; email?: string; children?: Array<{ name?: string }> }
   >;
+  // Legacy records may hold a joined "A, B" child or the same child twice — serve them clean (the stored copy is fixed by tools/fixChildDuplicates.ts).
+  list = list.map((c) => (Array.isArray(c.children) ? { ...c, children: tidyChildren(c.children) } : c));
   // Staff assigned to certain sites (Team & invites) see only the families booked at those sites — the same rule bookings, registers and
   // the child card already apply. This list handed every site's families (names, emails, phones, children) to a one-site coach.
   if (scope.role === "staff" && scope.tenantId) {
@@ -196,7 +199,7 @@ customers.get("/", async (req, res) => {
       const e = b.email.toLowerCase();
       if (!e.includes("@") || have.has(e)) continue;
       const rec = derived.get(e) ?? { name: (b.booker || "").trim() || b.email, children: new Set<string>(), createdAt: b.createdAt };
-      if (b.child) rec.children.add(b.child);
+      for (const n of splitChildNames(b.child)) if (![...rec.children].some((x) => x.toLowerCase() === n.toLowerCase())) rec.children.add(n);
       if (b.createdAt && (!rec.createdAt || b.createdAt < rec.createdAt)) rec.createdAt = b.createdAt;
       derived.set(e, rec);
     }
@@ -237,11 +240,12 @@ customers.get("/", async (req, res) => {
         if (kids.empty) return;
         const booked = await tenantChildIdsFor(cTenantId);
         const have = new Set((c.children ?? []).map((k) => (k.name ?? "").trim().toLowerCase()));
+        const haveIds = new Set((c.children ?? []).map((k) => String((k as { childId?: string }).childId ?? "")).filter(Boolean));
         const extra = kids.docs
-          .filter((k) => booked.has(k.id))
+          .filter((k) => booked.has(k.id) && !haveIds.has(k.id))
           .map((k) => ({ id: k.id, ...(k.data() as Record<string, unknown>) }))
           .filter((k) => !have.has(String((k as { name?: string }).name ?? "").trim().toLowerCase()));
-        if (extra.length) c.children = [...(c.children ?? []), ...(extra as Array<{ name?: string }>)];
+        if (extra.length) c.children = tidyChildren([...(c.children ?? []), ...(extra as Array<{ name?: string }>)]);
       } catch { /* no account for this email yet — nothing to merge */ }
     }),
   );
@@ -283,7 +287,7 @@ customers.post("/", async (req, res) => {
   }
   // A family a franchise adds is that franchise's (the Families list shows a franchise
   // only its own); head office / freelancer records carry no franchiseId.
-  const doc = { ...withConsentStamp(parsed.data), email: parsed.data.email.trim().toLowerCase() /* stored lower-case so the duplicate check below (an indexed equality) is case-insensitive */, tenantId: auth.tenantId, franchiseId: franchiseStamp({ role: auth.role, franchiseId: auth.franchiseId ?? null }) };
+  const doc = { ...withConsentStamp(parsed.data), children: tidyChildren(parsed.data.children), email: parsed.data.email.trim().toLowerCase() /* stored lower-case so the duplicate check below (an indexed equality) is case-insensitive */, tenantId: auth.tenantId, franchiseId: franchiseStamp({ role: auth.role, franchiseId: auth.franchiseId ?? null }) };
   // One family per email per book: adding (or re-importing a spreadsheet with) an address already on the list used to create a second
   // record and re-send its sign-up invite. Compared case-insensitively, within the same franchise scope.
   const emailKey = parsed.data.email.trim().toLowerCase();
@@ -332,6 +336,7 @@ customers.put("/:id", async (req, res) => {
     return;
   }
   const patch = withConsentStamp(parsed.data, own.snap.data());
+  if (Array.isArray(patch.children)) patch.children = tidyChildren(patch.children);
   await own.snap.ref.set(patch, { merge: true });
   const after = await own.snap.ref.get();
   res.json({ id: after.id, ...after.data() });
