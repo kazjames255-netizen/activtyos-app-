@@ -1,6 +1,6 @@
 # Test tracker catalogue: notes (2 Oct 2026)
 
-Files: `lib/testTracker/catalogue.ts` (317 checks), `scripts/testTracker/verifyCatalogue.ts`. No app code or types.ts changed.
+Files: `lib/testTracker/catalogue.ts` (345 checks), `scripts/testTracker/verifyCatalogue.ts`. No app code or types.ts changed.
 Run: `server/node_modules/.bin/tsx scripts/testTracker/verifyCatalogue.ts --structure|--coverage|--selftest`.
 Plain `npx tsx` from the repo root fails on this Mac (the npx cache holds an x64 esbuild); the server's tsx works. G1-G3 should use the server binary.
 
