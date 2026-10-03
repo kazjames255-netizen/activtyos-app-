@@ -1706,10 +1706,13 @@ export function useSettings(): SettingsState {
  * tenant instead. Operator screens omit it — they're always signed in — and
  * fall straight through to the authed read.
  *
+ * `listingId` makes the public read use the settings of the franchise that runs
+ * that listing (falling back to head office's).
+ *
  * Falls back to the defaults on any error: a parent must never be blocked from
  * booking because a settings fetch failed.
  */
-export function useTenantSettings(tenantId?: string): { settings: TenantSettings; questions: ChildQuestion[]; ready: boolean } {
+export function useTenantSettings(tenantId?: string, listingId?: string): { settings: TenantSettings; questions: ChildQuestion[]; ready: boolean } {
   const [state, setState] = useState<{ settings: TenantSettings; questions: ChildQuestion[]; ready: boolean }>({
     settings: DEFAULT_SETTINGS,
     questions: SEEDED_QUESTIONS,
@@ -1728,7 +1731,7 @@ export function useTenantSettings(tenantId?: string): { settings: TenantSettings
     };
     const publicRead = () =>
       tenantId
-        ? apiGet<LibraryShape | null>(`/api/public/library/${tenantId}`).then(apply, () => live && setState((s) => ({ ...s, ready: true })))
+        ? apiGet<LibraryShape | null>(`/api/public/library/${tenantId}${listingId ? `?listingId=${encodeURIComponent(listingId)}` : ""}`).then(apply, () => live && setState((s) => ({ ...s, ready: true })))
         : (live && setState((s) => ({ ...s, ready: true })), Promise.resolve());
 
     // Signed-in read first; a parent (401, or no token) falls back to the
@@ -1737,7 +1740,7 @@ export function useTenantSettings(tenantId?: string): { settings: TenantSettings
     return () => {
       live = false;
     };
-  }, [tenantId]);
+  }, [tenantId, listingId]);
 
   return state;
 }

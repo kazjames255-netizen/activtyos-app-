@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import { franchiseFamilyEmails } from "../lib/franchiseScope";
+import { loadLibrary, franchiseOfFamily } from "../lib/tenantLibrary";
 import { normaliseCode } from "../lib/discountCodes";
 import { emailNewMessage } from "../lib/emails";
 import { webUrl } from "../lib/stripe";
@@ -26,7 +27,7 @@ referralsAdmin.get("/", async (req, res) => {
   if (auth.role !== "platform" && !canManage(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
   if (!tenantId) { res.status(400).json({ error: "No tenant" }); return; }
 
-  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number } } } | undefined;
+  const lib = (await loadLibrary(tenantId, auth.role === "franchise" ? auth.franchiseId : null)) as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number } } } | undefined;
   const ref = lib?.settings?.referral;
 
   const snap = await db.collection("referrals").where("tenantId", "==", tenantId).get();
@@ -124,10 +125,10 @@ export { referralCodeFor };
  *  tenant. Called both when the family opens their Refer page AND eagerly after
  *  a booking — so a link shared before the page is ever opened still validates
  *  (previously the doc only existed once the referrer viewed their page). */
-export async function ensureReferralCode(tenantId: string, email: string): Promise<string | null> {
+export async function ensureReferralCode(tenantId: string, email: string, franchiseId?: string | null): Promise<string | null> {
   const el = (email ?? "").trim().toLowerCase();
   if (!tenantId || !el) return null;
-  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; minSpend?: number } } } | undefined;
+  const lib = (await loadLibrary(tenantId, franchiseId ?? (await franchiseOfFamily(tenantId, el)))) as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; minSpend?: number } } } | undefined;
   const ref = lib?.settings?.referral;
   if (!ref?.enabled) return null;
   const type = ref.type === "percent" ? "percent" : "amount";
@@ -152,14 +153,14 @@ const hash = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = 
  *  code reserved to them + a "thanks" message/email. Called from the booking
  *  redemption. Idempotent per (referrer, friend) and a no-op if referrals are
  *  off or the reward is £0. Best-effort — never blocks the friend's booking. */
-export async function rewardReferrer(tenantId: string, referrerEmail: string, friendEmail: string, viaCode: string, friendSpend = 0, opts: { friendDiscount?: number; bookingRef?: string } = {}): Promise<void> {
+export async function rewardReferrer(tenantId: string, referrerEmail: string, friendEmail: string, viaCode: string, friendSpend = 0, opts: { friendDiscount?: number; bookingRef?: string; franchiseId?: string | null } = {}): Promise<void> {
   const rel = referrerEmail.trim().toLowerCase();
   const fel = friendEmail.trim().toLowerCase();
   if (!rel || rel === fel) return;
   const dupe = await db.collection("referrals").where("referrerEmail", "==", rel).where("friendEmail", "==", fel).limit(1).get();
   if (!dupe.empty) return; // already rewarded for this friend
 
-  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number; capToFriendSpend?: boolean } } } | undefined;
+  const lib = (await loadLibrary(tenantId, opts.franchiseId ?? (await franchiseOfFamily(tenantId, fel)))) as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number; capToFriendSpend?: boolean } } } | undefined;
   const ref = lib?.settings?.referral;
   if (!ref?.enabled) return;
   const type = ref.type === "percent" ? "percent" : "amount";
@@ -220,7 +221,7 @@ referral.get("/", async (req, res) => {
   const tenantId = bk.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean)[0];
   if (!tenantId) { res.json({ enabled: false, reason: "Book with a provider first to unlock referrals." }); return; }
 
-  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number; minSpend?: number; capToFriendSpend?: boolean } } } | undefined;
+  const lib = (await loadLibrary(tenantId, await franchiseOfFamily(tenantId, email))) as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number; minSpend?: number; capToFriendSpend?: boolean } } } | undefined;
   const ref = lib?.settings?.referral;
   if (!ref?.enabled || !(await customerAreaOn(tenantId, "refer"))) { res.json({ enabled: false }); return; }
 

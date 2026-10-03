@@ -6,6 +6,7 @@ import { forgetSettings } from "../middleware/access";
 import { geocodeAddress } from "./geo";
 import { normaliseChildcareSettings } from "../lib/childcare";
 import { publicLibrarySettings } from "../lib/publicLibrary";
+import { librarySnap } from "../lib/tenantLibrary";
 
 type Venue = { id: string; name?: string; address?: string; city?: string; kind?: string; lat?: number; lng?: number };
 
@@ -225,7 +226,17 @@ libraryPublic.get("/:tenantId", async (req, res) => {
     res.status(400).json({ error: "tenantId required" });
     return;
   }
-  const snap = await db.collection("libraries").doc(tenantId).get();
+  // A listing run by a franchise is governed by the franchise's OWN Setup
+  // (child questions, DOB required/optional, refer-a-friend, memberships…), so
+  // when the caller names the listing, read that franchise's library — falling
+  // back to head office's (librarySnap). The listing must belong to this tenant.
+  let franchiseId: string | null = null;
+  const listingId = typeof req.query.listingId === "string" ? req.query.listingId : "";
+  if (listingId) {
+    const l = await db.collection("listings").doc(listingId).get();
+    if (l.exists && l.get("tenantId") === tenantId) franchiseId = (l.get("franchiseId") as string | null | undefined) ?? null;
+  }
+  const snap = await librarySnap(tenantId, franchiseId);
   const data = (snap.data() ?? {}) as Record<string, unknown>;
   const src = (data.settings ?? {}) as Record<string, unknown>;
 

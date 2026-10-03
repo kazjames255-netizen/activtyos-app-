@@ -786,7 +786,9 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
               .filter((m) => m.id)
               .map((m) => ({ menuItemId: m.id, date: m.dt }));
             // periodId makes the server price the chosen timing, not the base pass.
-            return { pass: l.pass, dates: l.dates, child: l.child, ...(l.periodId ? { periodId: l.periodId } : {}), ...(voucherRefs?.[l.child]?.trim() ? { paymentRef: voucherRefs[l.child].trim() } : {}), ...(addons.length ? { addons } : {}), ...(meals.length ? { meals } : {}) };
+            // Their answers to the provider's "every booking" questions ride with the line (the server keeps only those).
+            const kidAnswers = children.find((c) => c.name.trim() === l.child)?.answers;
+            return { pass: l.pass, dates: l.dates, child: l.child, ...(kidAnswers && Object.keys(kidAnswers).length ? { answers: kidAnswers } : {}), ...(l.periodId ? { periodId: l.periodId } : {}), ...(voucherRefs?.[l.child]?.trim() ? { paymentRef: voucherRefs[l.child].trim() } : {}), ...(addons.length ? { addons } : {}), ...(meals.length ? { meals } : {}) };
           }),
         });
         refs.push(...res.bookings.map((x) => x.ref));

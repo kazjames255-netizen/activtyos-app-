@@ -238,7 +238,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   // age. `d.runFrom` rather than today, matching ageProblem above: the age
   // that matters is the one they'll be on the first day they attend, and two
   // age rules disagreeing on the same screen would be indefensible.
-  const { questions: allQuestions, settings } = useTenantSettings(tenantId);
+  const { questions: allQuestions, settings } = useTenantSettings(tenantId, d.id ?? undefined);
   // The form asks the "once" questions only. The every-booking ones are
   // rendered per child on the roster above, so listing them here too would
   // ask the same thing twice on the same screen.
@@ -676,7 +676,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           {tried && missing.length > 0 && !problem && (
             <div className={`mt-2.5 border px-3 py-2 text-[12px] font-bold ${tk.round}`}
               style={{ borderColor: "#f87171", background: "rgba(248,113,113,.12)", color: "#fca5a5" }}>
-              {tr("p7ck.stillNeed", { name: draft.name.trim() || tr("p7ck.thisChildLower"), list: new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(missing) })}
+              {tr("p7ck.stillNeed", { name: draft.name.trim() || tr("p7ck.thisChildLower"), list: new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(missing) }).replace(/([?!؟])\s*[.。۔।]$/, "$1")}
             </div>
           )}
           <div className="mt-3 flex gap-2">
@@ -746,7 +746,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const [openMealKid, setOpenMealKid] = useState<string | null>(null); // which child's meal picker is expanded
   // The provider's own child questions, for the every-booking ones this stage
   // both asks and enforces.
-  const { questions: ckQuestions, settings: ckSettings } = useTenantSettings(tenantId);
+  const { questions: ckQuestions, settings: ckSettings } = useTenantSettings(tenantId, d.id ?? undefined);
   // Settings arrive after first paint, so the state above starts on the
   // compiled-in default. Derive the one actually in force rather than
   // correcting the state afterwards: a booking must never be recorded against

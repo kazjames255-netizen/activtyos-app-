@@ -71,6 +71,7 @@ export function layout(
           ${row("Pass", escapeHtml(b.pass))}
           ${ctx.location ? row(ctx.homeVisit ? "We'll come to you at" : "Location", escapeHtml(ctx.location)) : ""}
           ${row("Child", escapeHtml(kids || "—"))}
+          ${b.listPrice != null && (b.discountOff ?? 0) > 0 ? `${row("Price before discount", gbp(b.listPrice))}${row(`Discount${b.discountNames?.length ? ` (${b.discountNames.join(", ")})` : ""}`, `− ${gbp(b.discountOff ?? 0)}`)}` : ""}
           ${row("Total", `<b>${gbp(b.amount)}</b>`)}
         </table>
         ${label("Dates &amp; times")}

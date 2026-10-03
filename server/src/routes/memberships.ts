@@ -5,6 +5,7 @@ import { creditWallet } from "../lib/wallet";
 import { notify } from "../lib/notify";
 import { customerAreaOn } from "../lib/customerArea";
 import { franchiseFamilyEmails, isFranchise } from "../lib/franchiseScope";
+import { loadLibrary, franchiseOfFamily } from "../lib/tenantLibrary";
 
 // Customer memberships (parent-facing). A provider offers up to three monthly
 // tiers; a family joins one and gets EITHER wallet credit each month (credit
@@ -28,8 +29,10 @@ interface TierCfg {
   perks?: string[]; blurb?: string;
 }
 
-async function membershipsCfg(tenantId: string): Promise<{ enabled: boolean; tiers: TierCfg[] }> {
-  const s = (await db.collection("libraries").doc(tenantId).get()).data()?.settings as
+/** The tiers on offer: the franchise's own Setup when one is given (its
+ *  families join ITS tiers), else head office's. */
+async function membershipsCfg(tenantId: string, franchiseId?: string | null): Promise<{ enabled: boolean; tiers: TierCfg[] }> {
+  const s = (await loadLibrary(tenantId, franchiseId)).settings as
     { memberships?: { enabled?: boolean; tiers?: TierCfg[] } } | undefined;
   const m = s?.memberships;
   return { enabled: !!m?.enabled, tiers: (m?.tiers ?? []).filter((t) => t && t.id) };
@@ -82,7 +85,7 @@ memberships.get("/", async (req, res) => {
     tenantId = (bk.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean)[0]) ?? "";
   }
   if (!tenantId) { res.json({ enabled: false, reason: "Book with a provider first to see their memberships." }); return; }
-  const { enabled, tiers } = await membershipsCfg(tenantId);
+  const { enabled, tiers } = await membershipsCfg(tenantId, await franchiseOfFamily(tenantId, email));
   if (!enabled || !(await customerAreaOn(tenantId, "memberships"))) { res.json({ enabled: false }); return; }
   const tName = (await db.collection("tenants").doc(tenantId).get()).data()?.name ?? "your provider";
   const mine = (await db.collection("memberships").doc(memDocId(tenantId, email)).get()).data() ?? null;
@@ -103,7 +106,7 @@ memberships.post("/join", async (req, res) => {
   const tenantId = String(body.tenantId ?? "");
   const tierId = String(body.tierId ?? "");
   if (!tenantId || !tierId) { res.status(400).json({ error: "tenantId and tierId are required" }); return; }
-  const { enabled, tiers } = await membershipsCfg(tenantId);
+  const { enabled, tiers } = await membershipsCfg(tenantId, await franchiseOfFamily(tenantId, email));
   const tier = tiers.find((t) => t.id === tierId && t.enabled);
   if (!enabled || !tier || !(await customerAreaOn(tenantId, "memberships"))) { res.status(400).json({ error: "That membership isn’t available" }); return; }
 
@@ -204,7 +207,7 @@ membershipsAdmin.get("/", async (req, res) => {
   const tenantId = auth.role === "platform" ? (typeof req.query.tenantId === "string" ? req.query.tenantId : null) : auth.tenantId;
   if (auth.role !== "platform" && !canManage(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
   if (!tenantId) { res.status(400).json({ error: "No tenant" }); return; }
-  const { tiers } = await membershipsCfg(tenantId);
+  const { tiers } = await membershipsCfg(tenantId, isFranchise(auth) ? auth.franchiseId : null);
   const snap = await db.collection("memberships").where("tenantId", "==", tenantId).get();
   // A franchise sees only members among the families booked on its own listings.
   const fam = isFranchise(auth) ? await franchiseFamilyEmails(tenantId, auth.franchiseId) : null;

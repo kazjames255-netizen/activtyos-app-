@@ -57,7 +57,7 @@ export function BookPage({ id }: { id: string }) {
   // isn't handed links that drop them into the parent app.
   const preview = sp.get("preview") === "1";
   // The listing's provider's public settings — for their logo + brand colour.
-  const { settings, ready } = useTenantSettings(listing?.tenantId);
+  const { settings, ready } = useTenantSettings(listing?.tenantId, listing?.id);
 
   useEffect(() => {
     apiPublic<ServerListing>(`/api/listings/${encodeURIComponent(id)}`)

@@ -9,6 +9,7 @@ import { redeemCodesInTx, releaseDiscountCodes, type CodeToRedeem } from "../lib
 import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../lib/wallet";
 import { notify } from "../lib/notify";
 import { ensureReferralCode, rewardReferrer } from "./referral";
+import { friendPaidAmount } from "../lib/referralSpend";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { amendMoveError, amendNoticeError, amendLimitError, amendCheaperError, applyMoveApprove } from "../lib/dateChange";
 import { scaleToTotal, splitOriginal } from "../lib/priceOverride";
@@ -103,6 +104,10 @@ const itemSchema = z.object({
   // stamp a real id on the booking so registers resolve the face/allergies/
   // SEND/collection-password rather than guessing from the name.
   childId: z.string().max(60).optional(),
+  // This child's answers to the provider's "every booking" questions (question id
+  // -> answer). Kept on THIS booking (and mirrored onto the child's record so staff
+  // read the latest); unknown ids and non-"every" questions are dropped server-side.
+  answers: z.record(z.string().max(60), z.string().trim().max(2_000)).optional(),
   // Optional: the checkout may only know the child's name — the server then
   // fills the age from the family's saved child profile (dob-derived).
   age: z.number().int().nonnegative().optional(),
@@ -948,10 +953,19 @@ my.post("/bookings", async (req, res) => {
   // place set to "Approval needed" even on an auto-confirm listing (see the
   // status line below). Ids only; a lookup failure must never block a booking.
   let reviewNoQ: string[] = [];
+  let everyQ: { id: string; label: string }[] = [];
   try {
-    const cq = ((await librarySnap(listing.tenantId, (listing as { franchiseId?: string | null }).franchiseId)).data()?.childQuestions ?? []) as { id: string; reviewIfNo?: boolean; hidden?: boolean }[];
+    const cq = ((await librarySnap(listing.tenantId, (listing as { franchiseId?: string | null }).franchiseId)).data()?.childQuestions ?? []) as { id: string; label?: string; ask?: string; reviewIfNo?: boolean; hidden?: boolean }[];
     reviewNoQ = cq.filter((q) => !q.hidden && q.reviewIfNo).map((q) => q.id);
+    everyQ = cq.filter((q) => !q.hidden && q.ask === "every").map((q) => ({ id: q.id, label: q.label ?? q.id }));
   } catch { /* skip the hold rather than fail the booking */ }
+  // Each child's every-booking answers sent with this basket, keyed by name and
+  // limited to questions the provider really has set to "every booking".
+  const everyAnsByChild = new Map<string, Record<string, string>>();
+  for (const i of input.items) {
+    const kept = Object.fromEntries(Object.entries(i.answers ?? {}).filter(([id, v]) => everyQ.some((q) => q.id === id) && v.trim()));
+    if (Object.keys(kept).length) everyAnsByChild.set(i.child.trim().toLowerCase(), { ...(everyAnsByChild.get(i.child.trim().toLowerCase()) ?? {}), ...kept });
+  }
   // The parent's per-child payment reference (voucher/TFC), keyed by name.
   const refByChild = new Map(input.items.filter((i) => i.paymentRef).map((i) => [i.child.trim().toLowerCase(), i.paymentRef!]));
   const resolveChild = (i: { child: string; childId?: string; age?: number }) => {
@@ -964,7 +978,10 @@ my.post("/bookings", async (req, res) => {
       age: known ?? 0,
       /** false = nothing tells us the age (stored as 0) — the age gate can't judge it, so it doesn't. */
       ageKnown: known !== undefined,
-      answers: rec?.answers,
+      // What they said on THIS booking overrides what's on file (hold-if-No reads this).
+      answers: { ...(rec?.answers ?? {}), ...(everyAnsByChild.get(i.child.trim().toLowerCase()) ?? {}) },
+      /** Just this booking's every-booking answers (question id -> answer). */
+      everyAnswers: everyAnsByChild.get(i.child.trim().toLowerCase()) ?? ({} as Record<string, string>),
     };
   };
 
@@ -1672,6 +1689,11 @@ my.post("/bookings", async (req, res) => {
                   ...(voucherWin?.receiveBy ? { voucherReceiveBy: voucherWin.receiveBy } : {}),
                 }
               : {}),
+            // The child's every-booking answers, shown to the provider under "Checkout answers".
+            ...(() => {
+              const pairs = everyQ.filter((q) => rc.everyAnswers[q.id]).map((q) => [`${rc.name} - ${q.label}`, rc.everyAnswers[q.id]] as [string, string]);
+              return pairs.length ? { answers: pairs } : {};
+            })(),
             note,
           });
           if (fromWallet)
@@ -1729,6 +1751,7 @@ my.post("/bookings", async (req, res) => {
           ...first,
           child: kids.map((k) => k.name).join(", "),
           kids,
+          answers: [...new Map(grp.flatMap((g) => g.answers ?? []).map((a) => [`${a[0]}|${a[1]}`, a] as const)).values()],
           seats: kids.length,
           pass: passes.join(" · "),
           days: [...new Set(grp.flatMap((g) => g.days ?? []))].sort(),
@@ -1798,19 +1821,32 @@ my.post("/bookings", async (req, res) => {
       return created;
     });
 
+    // Mirror each child's every-booking answers onto their record, so the child
+    // card shows the latest one. Best-effort; the booking already carries them.
+    if (everyAnsByChild.size) {
+      const done = new Set<string>();
+      for (const it of input.items) {
+        const rec = (it.childId && childById.get(it.childId)) || childByName.get(it.child.trim().toLowerCase());
+        const ans = everyAnsByChild.get(it.child.trim().toLowerCase());
+        if (!rec || !ans || done.has(rec.id)) continue;
+        done.add(rec.id);
+        void childrenCol.doc(rec.id).set({ answers: ans }, { merge: true }).catch(() => undefined);
+      }
+    }
     // Refer-a-friend: now the friend's booking exists, reward the referrer —
     // capped to what the friend paid — and link the booking for the dashboard.
     if (referralHit && familyEmail) {
       const placedBooking = bookings.find((b) => b.status !== "Waitlisted") ?? bookings[0];
-      void rewardReferrer(listing.tenantId, referralHit.referrerEmail, familyEmail, referralHit.code, target, {
+      void rewardReferrer(listing.tenantId, referralHit.referrerEmail, familyEmail, referralHit.code, friendPaidAmount(bookings), {
         friendDiscount: referralHit.friendDiscount,
         bookingRef: placedBooking?.ref,
+        franchiseId: (listing as { franchiseId?: string | null }).franchiseId ?? null,
       });
     }
     // Eagerly mint THIS family's own friend-facing referral code now they've
     // booked, so a link they share works immediately — even before they open
     // their Refer page (which used to be the only thing that created it).
-    if (familyEmail && !onBehalf) void ensureReferralCode(listing.tenantId, familyEmail);
+    if (familyEmail && !onBehalf) void ensureReferralCode(listing.tenantId, familyEmail, (listing as { franchiseId?: string | null }).franchiseId ?? null);
 
     // One email for the basket, not one per child. On-behalf bookings get
     // the account+pay email instead (no child data in it — a mistyped

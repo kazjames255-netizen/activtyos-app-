@@ -60,3 +60,21 @@ export async function librarySnap(tenantId: string, franchiseId?: string | null)
   }
   return db.collection("libraries").doc(tenantId).get();
 }
+
+/** The franchise (if any) a FAMILY deals with: the franchiseId on their most
+ *  recent booking with this tenant that has one. Customer-facing settings
+ *  (refer-a-friend, memberships…) follow this so a franchise's own Setup applies
+ *  to its families, falling back to head office's (loadLibrary) when none. */
+export async function franchiseOfFamily(tenantId: string, email: string | null | undefined): Promise<string | null> {
+  const el = (email ?? "").trim().toLowerCase();
+  if (!tenantId || !el) return null;
+  const snap = await db.collection("bookings").where("tenantId", "==", tenantId).where("email", "==", el).get();
+  let best: { f: string; at: string } | null = null;
+  for (const d of snap.docs) {
+    const b = d.data() as { franchiseId?: string | null; createdAt?: string };
+    if (!b.franchiseId) continue;
+    const at = String(b.createdAt ?? "");
+    if (!best || at >= best.at) best = { f: b.franchiseId, at };
+  }
+  return best?.f ?? null;
+}

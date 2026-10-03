@@ -116,6 +116,16 @@ test("ME-001 confirmed: amount equals the booking amount, formatted GBP", () => 
   assert.doesNotMatch(t, /£87\.5\b(?!0)/);
 });
 
+test("DI-043 confirmed: shows price before discount and discount rows only when discounted", () => {
+  const d = booking({ amount: 72, listPrice: 90, discountOff: 18 } as any);
+  const t = text(render(bookingConfirmedSpec(d, PROVIDER), d));
+  assert.match(t, /Price before discount\s+£90\.00/);
+  assert.match(t, /Discount\s+−\s*£18\.00/);
+  assert.match(t, /Total\s+£72\.00/);
+  const plain = booking({ amount: 87.5 });
+  assert.doesNotMatch(text(render(bookingConfirmedSpec(plain, PROVIDER), plain)), /Price before discount/);
+});
+
 test("ME-001 confirmed: every session date AND its time is listed", () => {
   const html = render(bookingConfirmedSpec(booking(), PROVIDER), booking());
   for (const d of ["Mon 20 Jul 2026", "Tue 21 Jul 2026", "Wed 22 Jul 2026"]) assert.ok(html.includes(d), d);
