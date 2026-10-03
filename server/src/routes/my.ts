@@ -9,6 +9,8 @@ import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../l
 import { notify } from "../lib/notify";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
+import { amendMoveError } from "../lib/dateChange";
+import { priceAddon } from "../lib/addonPricing";
 import { entryFor, registerRows } from "../lib/registerRows";
 import { refPrefixFor } from "../lib/bookingRef";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
@@ -1144,38 +1146,7 @@ my.post("/bookings", async (req, res) => {
       const addons = (item.addons ?? []).map((a) => {
         const def = libAddons.get(a.id);
         if (!def) throw new HttpError(400, "Unknown add-on");
-        const onDays = a.days ? [...new Set(a.days)] : days;
-        if (onDays.some((d) => !days.includes(d)))
-          throw new HttpError(400, `Add-on "${def.name}" is on a day the pass isn't`);
-        const price = def.type === "perday" ? round2(def.price * onDays.length) : def.price;
-        // Judge the answers against the library, not the client: a required
-        // question left blank, or a size that isn't one of the offered ones,
-        // is an order the provider can't fill.
-        const answers: { label: string; value: string }[] = [];
-        for (const q of def.questions ?? []) {
-          const value = (a.answers ?? {})[q.id]?.trim() ?? "";
-          if (!value) {
-            if (q.required) throw new HttpError(400, `"${def.name}" needs an answer for ${q.label} (${item.child})`);
-            continue;
-          }
-          if (q.type === "choice" && (q.options ?? []).length && !(q.options ?? []).includes(value))
-            throw new HttpError(400, `"${value}" isn't one of the options for ${q.label}`);
-          answers.push({ label: q.label, value });
-        }
-        const suffix = answers.length ? ` (${answers.map((x) => `${x.label}: ${x.value}`).join(", ")})` : "";
-        return {
-          name: def.name,
-          price,
-          label: (def.type === "perday" ? `${def.name} × ${onDays.length}` : def.name) + suffix,
-          // Kept for the per-block split below — a line spanning blocks
-          // becomes one booking per block, and its add-ons ride along.
-          perDay: def.type === "perday",
-          unit: def.price,
-          onDays,
-          suffix,
-          meal: false,
-          ...(answers.length ? { answers } : {}),
-        };
+        return priceAddon(def, a, days, item.child, (m) => { throw new HttpError(400, m); });
       });
       // Meals chosen for this child's days become per-day add-on lines priced
       // from that day's menu — so they split per block and total exactly like
@@ -2156,28 +2127,17 @@ my.post("/bookings/:ref/amend", async (req, res) => {
       if (!Number.isNaN(d.getTime())) onBooking.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
     }
   }
+  const todayUk = ukToday();
   for (const mv of moves) {
-    if (mv.from && !onBooking.has(mv.from)) {
-      res.status(400).json({ error: `${prettyDay(mv.from)} isn't on this booking` });
-      return;
-    }
-    if (mv.from === mv.to) { res.status(400).json({ error: "That's the same date" }); return; }
-    // Nothing moves off or onto a day that has already gone, or onto a day this booking already covers.
-    const todayUk = ukToday();
-    if (mv.from && mv.from < todayUk) { res.status(400).json({ error: `${prettyDay(mv.from)} has already passed` }); return; }
-    if (mv.to < todayUk) { res.status(400).json({ error: `${prettyDay(mv.to)} has already passed` }); return; }
-    // (Skipped for a multi-child booking, where another child may already be on that day, and for a swap of two of its own days.)
-    if ((booking.kids?.length ?? 0) <= 1 && onBooking.has(mv.to) && !moves.some((m) => m.from === mv.to)) { res.status(400).json({ error: `This booking already covers ${prettyDay(mv.to)}` }); return; }
     // The target must be a session this block actually runs, with room left.
     // Re-checked on approval too — availability moves while a request waits.
-    if (block) {
-      const session = block.sessions.find((s) => s.date === mv.to);
-      if (!session) { res.status(400).json({ error: `This activity doesn't run on ${prettyDay(mv.to)}` }); return; }
-      if ((block.capacityScope ?? "listing") === "day" && !daysHaveSpace(block, { [mv.to]: 1 }).fits) {
-        res.status(400).json({ error: `${prettyDay(mv.to)} is full` });
-        return;
-      }
-    }
+    // (The already-covered check is skipped for a multi-child booking and for a swap of two of its own days.)
+    const err = amendMoveError(mv, moves, {
+      onBooking, todayUk, kidCount: booking.kids?.length ?? 0,
+      sessionDates: block ? new Set(block.sessions.map((s) => s.date)) : null,
+      dayFull: block && (block.capacityScope ?? "listing") === "day" ? (date) => !daysHaveSpace(block, { [date]: 1 }).fits : undefined,
+    });
+    if (err) { res.status(400).json({ error: err }); return; }
   }
 
   await snap.ref.set({

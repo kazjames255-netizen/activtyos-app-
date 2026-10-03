@@ -17,7 +17,8 @@ import { pickPlural } from "@/lib/i18n/plural";
 import { applyDiscounts } from "./discounts";
 import { blockOn, lowAt, rawLeftOn } from "./capacity";
 import { money } from "@/features/bookings/helpers";
-import { mondayOf, ordinal, uid } from "./format";
+import { ordinal, uid } from "./format";
+import { effectiveRule, pickDaySelection } from "./passRules";
 import type { BlockBooking, BookRule, RunBlock, WizardDraft } from "./ListingWizard";
 import type { ChildProfile } from "./checkout";
 
@@ -155,10 +156,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // Guard impossible rules for old/edge data: a "week" pass longer than a week,
   // or a "fixed block" that's neither a week block nor the whole run — both
   // fall back to picking across the listing.
-  const rule: BookRule =
-    rawRule === "week" && weekMax > 0 && need > weekMax ? "listing"
-    : rawRule === "blocks" && weekMax > 0 && need !== weekMax && need !== runTotal ? "listing"
-    : rawRule;
+  const rule: BookRule = effectiveRule(rawRule, need, weekMax, runTotal);
   // A single-day pass isn't a fixed block: parents can pick as many days as they
   // like, and each selected day becomes its own 1-day pass in the basket.
   const isSingle = need === 1;
@@ -171,46 +169,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const past = (iso: string) => parentMode && iso < todayIso;
   function pickDay(iso: string, weekMon: string) {
     if (!pass || off(iso) || past(iso)) return;
-    if (isSingle) { setSel((prev) => (prev.includes(iso) ? prev.filter((x) => x !== iso) : [...prev, iso])); return; }
-    if (rule === "blocks") {
-      // A whole-run block (need spans more than a week) takes every day; a
-      // within-a-week block takes that week's days.
-      const avail = need > weekMax
-        ? weeks.flatMap((w) => w.days).filter((x) => !off(x) && !past(x)).slice(0, need)
-        : (weeks.find((w) => w.mon === weekMon)?.days ?? []).filter((x) => !off(x) && !past(x)).slice(0, need);
-      const same = avail.length === sel.length && avail.every((x) => sel.includes(x));
-      setSel(same ? [] : avail);
-      return;
-    }
-    // "Any N days in one week" where the pass needs the WHOLE week (N ≥ the
-    // week's running days) — picking any day takes the entire week, so a parent
-    // doesn't click all five. For a shorter pass (4/3/2/1) they still choose
-    // which days, so this only kicks in when N covers the week.
-    if (rule === "week") {
-      const wk = weeks.find((w) => w.mon === weekMon);
-      const avail = (wk?.days ?? []).filter((x) => !off(x));
-      if (avail.length > 0 && need >= avail.length) {
-        const same = avail.length === sel.length && avail.every((x) => sel.includes(x));
-        setSel(same ? [] : avail.slice(0, need));
-        return;
-      }
-    }
-    // "Any N days across the listing" where the pass needs the WHOLE run (a
-    // 16-day pass on a listing that runs 16 days) — any click takes them all.
-    if (rule === "listing") {
-      const allAvail = weeks.flatMap((w) => w.days).filter((x) => !off(x));
-      if (allAvail.length > 0 && need >= allAvail.length) {
-        const same = allAvail.length === sel.length && allAvail.every((x) => sel.includes(x));
-        setSel(same ? [] : allAvail.slice(0, need));
-        return;
-      }
-    }
-    setSel((prev) => {
-      if (prev.includes(iso)) return prev.filter((x) => x !== iso);
-      if (prev.length >= need) return prev;
-      if (rule === "week" && prev.length && mondayOf(prev[0]) !== weekMon) return prev;
-      return [...prev, iso];
-    });
+    setSel((prev) => pickDaySelection({ iso, weekMon, sel: prev, need, rule, isSingle, weeks, weekMax, datesOff: d.datesOff ?? [], past }));
   }
   const { locked, countdown, opensLabel } = useOpensAt(d.opensAt);
   // Capacity. Two scopes: "day" caps how many children are on site on any one
