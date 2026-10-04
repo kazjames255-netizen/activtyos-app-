@@ -113,7 +113,7 @@ test.describe("portal guard", () => {
 
     test("a parent deep-linking into an operator portal is bounced home", async ({ page }) => {
       await page.goto("/freelancer/listings");
-      await page.waitForURL("**/custdash/browse", { timeout: 20_000 });
+      await page.waitForURL("**/custdash/home", { timeout: 20_000 });
     });
   });
 

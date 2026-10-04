@@ -23,7 +23,7 @@ const ROLE_HOME: Record<Role, string> = {
   franchise: "/franchise/bookings",
   freelancer: "/freelancer/bookings",
   staff: "/staff/dash",
-  parent: "/custdash/browse",
+  parent: "/custdash/home",
 };
 
 // The pre-compile pass below can take several minutes cold (dozens of never-before-hit routes,

@@ -331,7 +331,7 @@ test.describe("Part 2: the parent checkout screen with the HMRC link switched on
     await page.getByPlaceholder("you@example.com").fill(parent().email);
     await page.locator('input[type="password"]').fill("E2etest!123");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await page.waitForURL("**/custdash/browse", { timeout: 120_000 });
+    await page.waitForURL("**/custdash/home", { timeout: 120_000 });
 
     // Browse -> this run's listing -> pass, date, basket, add a child (saved on the parent's account).
     await page.getByPlaceholder("Search by name or venue…").fill(title);

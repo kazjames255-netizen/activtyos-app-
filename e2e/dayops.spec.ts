@@ -119,7 +119,7 @@ test.describe("operator day ops", () => {
     await outPage.getByPlaceholder("you@example.com").fill(outsider);
     await outPage.locator('input[type="password"]').fill(TEST_PASSWORD);
     await outPage.getByRole("button", { name: "Sign in", exact: true }).click();
-    await outPage.waitForURL("**/custdash/browse", { timeout: 30_000 });
+    await outPage.waitForURL("**/custdash/home", { timeout: 30_000 });
     await outPage.goto("/custdash/newsfeed");
     // Same class of slow-load issue documented elsewhere in this suite —
     // this is the last of three page loads in the test, under load.
