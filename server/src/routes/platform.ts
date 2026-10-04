@@ -166,11 +166,15 @@ platform.get("/subscriptions", async (req, res) => {
 // GET /api/platform/providers — the FULL record for every provider: what they
 // chose and wrote at signup (from their library settings + tenant doc) plus
 // their subscription and owner. For the HQ Providers detail view.
+let providersCache: { at: number; providers: unknown[] } | null = null;
 platform.get("/providers", async (req, res) => {
   if (req.auth!.role !== "platform") {
     res.status(403).json({ error: "Requires the platform role" });
     return;
   }
+  // This reads whole collections (tenants + users + libraries): serve a recent copy instead of re-reading thousands of documents every
+  // time the page is opened or refreshed (Firestore bills per document read).
+  if (providersCache && Date.now() - providersCache.at < 60_000) { res.json({ providers: providersCache.providers }); return; }
   const [tenantsSnap, usersSnap, libsSnap] = await Promise.all([
     db.collection("tenants").get(),
     db.collection("users").get(),
@@ -227,6 +231,7 @@ platform.get("/providers", async (req, res) => {
     };
   }));
   providers.sort((a, b) => (`${b.createdAt ?? ""}` < `${a.createdAt ?? ""}` ? -1 : 1));
+  providersCache = { at: Date.now(), providers };
   res.json({ providers });
 });
 
@@ -234,6 +239,7 @@ platform.get("/providers", async (req, res) => {
 // off for one provider. Writes settings.features on the tenant's library, the
 // same store the operator app + Sidebar already read (featureOff = === false).
 platform.patch("/providers/:id/features", async (req, res) => {
+  providersCache = null; // an edit must show on the next read
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
   const parsed = z.object({ view: z.string().min(1).max(60), on: z.boolean() }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
