@@ -295,6 +295,11 @@ test("Finance & analytics page figures (financeFigures)", async (t) => {
     assert.equal(round2(f.collected), 151);
     assert.equal(round2(f.owed), 370);
   });
+  await t.test("an approved whole-booking refund counts once (the 'Refund approved' log line and cancel.amount are the same money)", () => {
+    const b = { ...AMI_24639, ref: "DUP-1", amount: 10, pay: "Refunded", status: "Cancelled", cancel: { refund: "approved", amount: 10, on: "03/10/2026, 10:00", refundedAt: "03/10/2026, 10:05" }, refundLog: [{ label: "Refund approved", amount: 10, on: "03/10/2026, 10:05", source: "card" }] } as never;
+    const g = financeFigures({ ...base, bookings: [b] });
+    assert.equal(round2(g.refunds), 10);
+  });
   await t.test("refunds in window = £20 (log £10 + cancelled £10)", () => {
     assert.equal(round2(f.refunds), 20);
   });

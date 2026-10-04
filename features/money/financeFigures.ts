@@ -127,7 +127,9 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
     const booked = monthOf(b);
     const parts: [string | null, number][] = (b.refundLog ?? []).map((e) => [monthOfStamp(e.on) ?? booked, e.amount || 0]);
     const c = b.cancel;
-    if (c && c.refund !== "full" && c.refund !== "partial" && c.refund !== "pending" && (b.pay === "Refunded" || b.pay === "Partially refunded" || c.refund === "approved"))
+    // Approving a whole-booking refund also writes a "Refund approved" log line for the same money (same guard as server/src/lib/refundRows.ts).
+    const approvalLogged = (b.refundLog ?? []).some((e) => /^refund approved/i.test(e.label || "") && (e.amount || 0) > 0);
+    if (c && !approvalLogged && c.refund !== "full" && c.refund !== "partial" && c.refund !== "pending" && (b.pay === "Refunded" || b.pay === "Partially refunded" || c.refund === "approved"))
       parts.push([monthOfStamp(c.refundedAt) ?? monthOfStamp(c.on) ?? booked, c.amount || 0]);
     return parts;
   };
