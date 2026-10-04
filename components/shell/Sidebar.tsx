@@ -7,7 +7,7 @@ import { BRAND } from "@/lib/i18n/config";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { NAV_GROUPS, type NavIcon, type NavItem, type PortalKey } from "@/lib/nav/config";
+import { NAV_GROUPS, type NavGroup, type NavIcon, type NavItem, type PortalKey } from "@/lib/nav/config";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getMe, peekMe } from "@/components/auth/PortalGuard";
 import { useHoScope } from "@/components/franchise/HoScope";
@@ -18,7 +18,7 @@ import { useHoScope } from "@/components/franchise/HoScope";
 // monitor network-wide with a per-franchise breakdown. The pure per-site
 // operational rest (listing editing, schedule, meals menu, per-site money, etc.)
 // is hidden until the HO drills into ONE franchise via the scope switcher.
-const HO_COMBINED_KEEP = new Set<string>([
+export const HO_COMBINED_KEEP = new Set<string>([
   "dashboard", "dash", "splitfees", "territories", "ho-framework",
   "tasks", "email", "messages", "activityos", "newsfeed",
   "reviews", "ai", "subscription", "getpaid",
@@ -226,7 +226,112 @@ function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHi
   );
 }
 
-export function Sidebar({ portal, drawer }: { portal: PortalKey; drawer?: boolean }) {
+// Phone "More" sheet (components/shell/MobileNav.tsx): the same groups, hidden /
+// "no info" / badge rules as the sidebar, as big tappable tiles on a full-screen
+// light sheet. Operator groups collapse (default open); parent groups stay open.
+function MoreSheet({ portal, onClose, groups, pathname, multiChild, unread, coupons, caHidden, faded, groupText, brandName, hoCombined }: { portal: PortalKey; onClose: () => void; groups: NavGroup[]; pathname: string; multiChild: boolean; unread: number; coupons: number; caHidden: Set<string>; faded: Set<string>; groupText: (l: string | null) => string; brandName: string; hoCombined: boolean }) {
+  const t = useT();
+  const tt = t;
+  const lbl = useLbl();
+  const router = useRouter();
+  const { signOutUser } = useAuth();
+  const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
+  const navText = (it: NavItem, text: string) => (it.view === "learninghub" ? lbl(text) : navLabel(tt, text));
+  const visible = (g: NavGroup) => g.items.filter((i) => !i.hidden && !caHidden.has(i.view) && i.view !== "auth");
+  const collapsible = portal !== "custdash";
+  const tile = "relative flex min-h-[56px] items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[14px] font-semibold leading-tight text-[var(--ink)] no-underline active:bg-[var(--brand-soft,#eaf0fc)]";
+  const signOut = async () => { await signOutUser(); router.replace("/login"); };
+  const hoActions: [string, string, string][] = hoCombined ? [["🔍", t("header.findChild"), "aos:find-child"], ["👪", t("header.families"), "aos:ho-families"]] : [];
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("p7shell.moreTitle")}
+      className="fixed inset-0 z-[1000] flex h-[100dvh] flex-col overflow-hidden bg-[var(--bg)] text-[var(--ink)] print:hidden"
+      data-ui="more-sheet"
+    >
+      <div className="flex flex-none items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 pb-3 pt-[calc(12px+env(safe-area-inset-top))]">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[17px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p7shell.moreTitle")}</div>
+          {brandName && <div className="truncate text-[12px] text-[var(--ink-2)]">{brandName}</div>}
+        </div>
+        <button type="button" onClick={onClose} aria-label={t("p7shell.close")} className="grid h-12 w-12 flex-none place-items-center rounded-full border border-[var(--line)] bg-[var(--bg)] text-[var(--ink)]">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-6 pt-3 [-webkit-overflow-scrolling:touch]">
+        {hoActions.length > 0 && (
+          <div className="mb-4 grid grid-cols-2 gap-2.5">
+            {hoActions.map(([icon, label, ev]) => (
+              <button key={ev} type="button" onClick={() => { onClose(); window.dispatchEvent(new Event(ev)); }} className={`${tile} text-start`}>
+                <span className="flex-none text-[18px]" aria-hidden>{icon}</span>
+                <span className="min-w-0 flex-1">{label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {groups.map((g, gi) => {
+          const items = visible(g);
+          if (g.footer || items.length === 0) return null;
+          const key = g.label ?? `__g${gi}`;
+          const open = !collapsible || !g.label || !closedGroups[key];
+          return (
+            <section key={key} className="mb-4">
+              {g.label && (
+                collapsible ? (
+                  <button type="button" aria-expanded={open} onClick={() => setClosedGroups((s) => ({ ...s, [key]: open }))} className="mb-2 flex min-h-[44px] w-full items-center justify-between text-start text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--ink-2)]">
+                    <span>{groupText(g.label)}</span>
+                    <span className={`transition-transform ${open ? "rotate-180" : ""}`} aria-hidden>▾</span>
+                  </button>
+                ) : (
+                  <h2 className="mb-2 text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--ink-2)]">{groupText(g.label)}</h2>
+                )
+              )}
+              {open && (
+                <div className="grid grid-cols-2 gap-2.5">
+                  {items.map((item) => {
+                    const active = pathname === `/${portal}/${item.view}` || pathname.startsWith(`/${portal}/${item.view}/`);
+                    const badge = item.view === "messages" ? (unread > 0 ? String(unread) : null) : item.view === "coupons" ? (coupons > 0 ? String(coupons) : null) : item.badge;
+                    const fade = faded.has(item.view);
+                    const tag = fade ? (NO_RECORDS_VIEWS.has(item.view) ? tt("p7shell.noRecords") : tt("p7shell.noInfo")) : null;
+                    return (
+                      <Link
+                        key={item.view}
+                        href={`/${portal}/${item.view}`}
+                        onClick={onClose}
+                        aria-current={active ? "page" : undefined}
+                        data-view={item.view}
+                        className={`${tile}${fade ? " opacity-60" : ""}`}
+                        style={active ? { borderColor: "var(--brand, #1d3a8f)", background: "var(--brand-soft,#eaf0fc)", color: "var(--brand, #1d3a8f)", fontWeight: 800 } : undefined}
+                      >
+                        <span className="flex w-6 flex-none items-center justify-center text-[18px] [&_svg]:h-[18px] [&_svg]:w-[18px]">
+                          {item.icon?.type === "svg" ? <span className="flex" dangerouslySetInnerHTML={{ __html: item.icon.markup }} /> : item.icon?.value}
+                        </span>
+                        <span className="min-w-0 flex-1 break-words">
+                          {navText(item, pluralLabel(item.label, portal, multiChild))}
+                          {tag && <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--ink-3)]">{tag}</span>}
+                        </span>
+                        {badge && <span className="flex h-[20px] min-w-[20px] flex-none items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold text-white" style={{ background: "var(--sem-crit, #ef4444)" }}>{badge}</span>}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+      <div className="flex-none border-t border-[var(--line)] bg-[var(--surface)] px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3">
+        <button type="button" onClick={signOut} className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--bg)] text-[15px] font-extrabold text-[var(--ink)]">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+          {t("common.signOut")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?: boolean; sheet?: { onClose: () => void } }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const groups = NAV_GROUPS[portal];
@@ -422,6 +527,25 @@ export function Sidebar({ portal, drawer }: { portal: PortalKey; drawer?: boolea
       .then((cs) => setMultiChild((cs?.length ?? 0) > 1))
       .catch(() => {});
   }, [portal]);
+
+  if (sheet) {
+    return (
+      <MoreSheet
+        portal={portal}
+        onClose={sheet.onClose}
+        groups={displayGroups}
+        pathname={pathname}
+        multiChild={multiChild}
+        unread={unread}
+        coupons={coupons}
+        caHidden={caHidden}
+        faded={faded}
+        groupText={groupText}
+        brandName={brandName}
+        hoCombined={hoCombined}
+      />
+    );
+  }
 
   return (
     <nav

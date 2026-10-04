@@ -45,12 +45,7 @@ export function Header({ portal }: { portal: PortalKey }) {
   // Mobile nav drawer — the same Sidebar the desktop rail shows, slid over the
   // content. Navigating (pathname change) closes it.
   const [menuOpen, setMenuOpen] = useState(false);
-  // The parent bottom tab bar's "More" opens this same drawer.
-  useEffect(() => {
-    const open = () => setMenuOpen(true);
-    window.addEventListener("aos:open-menu", open);
-    return () => window.removeEventListener("aos:open-menu", open);
-  }, []);
+  // Phones (<640px) have no drawer: the bottom tab bar + "More" sheet (MobileNav) replace it.
   // Close the drawer on navigation — adjust during render (no effect) so it
   // stays in sync with pathname without a cascading re-render.
   const [menuPath, setMenuPath] = useState(pathname);
@@ -192,12 +187,12 @@ export function Header({ portal }: { portal: PortalKey }) {
       <button
         onClick={() => setMenuOpen(true)}
         aria-label={t("p7shell.openMenu")}
-        className="inline-flex h-[34px] w-[34px] flex-none cursor-pointer items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] lg:hidden"
+        className="inline-flex h-[34px] w-[34px] flex-none cursor-pointer items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] max-sm:hidden lg:hidden"
       >
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
       </button>
       {menuOpen && (
-        <div className="fixed inset-0 z-[70] flex lg:hidden">
+        <div className="fixed inset-0 z-[70] flex max-sm:hidden lg:hidden">
           <Sidebar portal={portal} drawer />
           <div className="flex-1 bg-black/50" onClick={() => setMenuOpen(false)} aria-hidden />
         </div>

@@ -56,4 +56,12 @@ export default fromRows({
   tipChange: ["Date/time changes to review: {n}", "Zmiany terminu/godziny do sprawdzenia: {n}", "Modificări de dată/oră de revizuit: {n}", "جائزے کے لیے تاریخ/وقت کی تبدیلیاں: {n}", "ਸਮੀਖਿਆ ਲਈ ਤਾਰੀਖ/ਸਮੇਂ ਦੇ ਬਦਲਾਅ: {n}", "পর্যালোচনার জন্য তারিখ/সময় পরিবর্তন: {n}", "تغييرات التاريخ/الوقت للمراجعة: {n}", "Alterações de data/hora a rever: {n}", "Cambios de fecha/hora por revisar: {n}", "Changements de date/heure à examiner : {n}", "Newidiadau dyddiad/amser i’w hadolygu: {n}"],
   tipCancel: ["Cancellations to review: {n}", "Anulowania do sprawdzenia: {n}", "Anulări de revizuit: {n}", "جائزے کے لیے منسوخیاں: {n}", "ਸਮੀਖਿਆ ਲਈ ਰੱਦਗੀਆਂ: {n}", "পর্যালোচনার জন্য বাতিল: {n}", "إلغاءات للمراجعة: {n}", "Cancelamentos a rever: {n}", "Cancelaciones por revisar: {n}", "Annulations à examiner : {n}", "Canslo i’w hadolygu: {n}"],
   tipCard: ["Failed card payments: {n}", "Nieudane płatności kartą: {n}", "Plăți cu cardul eșuate: {n}", "ناکام کارڈ ادائیگیاں: {n}", "ਅਸਫਲ ਕਾਰਡ ਭੁਗਤਾਨ: {n}", "ব্যর্থ কার্ড পেমেন্ট: {n}", "مدفوعات بالبطاقة فاشلة: {n}", "Pagamentos por cartão falhados: {n}", "Pagos con tarjeta fallidos: {n}", "Paiements par carte échoués : {n}", "Taliadau cerdyn wedi methu: {n}"],
+  tabHome: ["Home", "Home", "Home", "Home", "Home", "Home", "Home", "Home", "Home", "Home", "Home"],
+  tabListings: ["Listings", "Listings", "Listings", "Listings", "Listings", "Listings", "Listings", "Listings", "Listings", "Listings", "Listings"],
+  tabRegister: ["Register", "Register", "Register", "Register", "Register", "Register", "Register", "Register", "Register", "Register", "Register"],
+  tabShifts: ["Shifts", "Shifts", "Shifts", "Shifts", "Shifts", "Shifts", "Shifts", "Shifts", "Shifts", "Shifts", "Shifts"],
+  tabOverview: ["Overview", "Overview", "Overview", "Overview", "Overview", "Overview", "Overview", "Overview", "Overview", "Overview", "Overview"],
+  tabTasks: ["Tasks", "Tasks", "Tasks", "Tasks", "Tasks", "Tasks", "Tasks", "Tasks", "Tasks", "Tasks", "Tasks"],
+  moreTitle: ["Menu", "Menu", "Menu", "Menu", "Menu", "Menu", "Menu", "Menu", "Menu", "Menu", "Menu"],
+  moreHint: ["All sections", "All sections", "All sections", "All sections", "All sections", "All sections", "All sections", "All sections", "All sections", "All sections", "All sections"],
 });

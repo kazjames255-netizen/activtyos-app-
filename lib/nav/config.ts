@@ -643,3 +643,48 @@ export function getDefaultView(portal: PortalKey): string {
 export function findNavItem(portal: PortalKey, view: string): NavItem | undefined {
   return NAV_CONFIG[portal].find((item) => item.view === view);
 }
+
+// Phone bottom tab bar (components/shell/MobileNav.tsx): the pinned slugs per
+// portal, shown left to right before "More". Everything else is reached through
+// the full-screen "More" sheet, which is driven by NAV_GROUPS above. `label` is
+// an i18n key; `icon` names a glyph in MobileNav; `also` are sibling views that
+// keep the tab highlighted. Parent tabs are further filtered by Customer-area
+// switches (browse / messaging / simple mode) inside MobileNav.
+export interface MobileTab { view: string; label: string; icon: "cal" | "search" | "mail" | "wallet" | "home" | "grid" | "check" | "clock" | "chart"; also?: string[] }
+export const MOBILE_TABS: Record<PortalKey, MobileTab[]> = {
+  custdash: [
+    { view: "bookings", label: "p7shell.tabBookings", icon: "cal", also: ["schedule", "payments"] },
+    { view: "browse", label: "p7shell.tabBrowse", icon: "search", also: ["dash"] },
+    { view: "messages", label: "header.messages", icon: "mail" },
+    { view: "wallet", label: "p7shell.tabWallet", icon: "wallet" },
+  ],
+  company: [
+    { view: "dashboard", label: "p7shell.tabHome", icon: "home" },
+    { view: "bookings", label: "p7shell.tabBookings", icon: "cal" },
+    { view: "listings", label: "p7shell.tabListings", icon: "grid", also: ["blocks"] },
+    { view: "messages", label: "header.messages", icon: "mail" },
+  ],
+  franchise: [
+    { view: "dash", label: "p7shell.tabHome", icon: "home" },
+    { view: "bookings", label: "p7shell.tabBookings", icon: "cal" },
+    { view: "listings", label: "p7shell.tabListings", icon: "grid", also: ["blocks"] },
+    { view: "messages", label: "header.messages", icon: "mail" },
+  ],
+  freelancer: [
+    { view: "dash", label: "p7shell.tabHome", icon: "home" },
+    { view: "bookings", label: "p7shell.tabBookings", icon: "cal" },
+    { view: "listings", label: "p7shell.tabListings", icon: "grid", also: ["blocks"] },
+    { view: "messages", label: "header.messages", icon: "mail" },
+  ],
+  staff: [
+    { view: "dash", label: "p7shell.tabHome", icon: "home" },
+    { view: "schedule", label: "p7shell.tabShifts", icon: "clock" },
+    { view: "registers", label: "p7shell.tabRegister", icon: "check" },
+    { view: "messages", label: "header.messages", icon: "mail" },
+  ],
+  platform: [
+    { view: "analytics", label: "p7shell.tabOverview", icon: "chart" },
+    { view: "tasks", label: "p7shell.tabTasks", icon: "check" },
+    { view: "messages", label: "header.messages", icon: "mail" },
+  ],
+};
