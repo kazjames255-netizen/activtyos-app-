@@ -237,7 +237,8 @@ function MoreSheet({ portal, onClose, groups, pathname, multiChild, unread, coup
   const { signOutUser } = useAuth();
   const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
   const navText = (it: NavItem, text: string) => (it.view === "learninghub" ? lbl(text) : navLabel(tt, text));
-  const visible = (g: NavGroup) => g.items.filter((i) => !i.hidden && !caHidden.has(i.view) && i.view !== "auth");
+  // Memberships is "hidden" from the desktop sidebar (it is a top-bar pill there) but phones have no pill row, so it must be a tile here.
+  const visible = (g: NavGroup) => g.items.filter((i) => (!i.hidden || i.view === "memberships") && !caHidden.has(i.view) && i.view !== "auth");
   const collapsible = portal !== "custdash";
   const tile = "relative flex min-h-[56px] items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[14px] font-semibold leading-tight text-[var(--ink)] no-underline active:bg-[var(--brand-soft,#eaf0fc)]";
   const signOut = async () => { await signOutUser(); router.replace("/login"); };
@@ -456,6 +457,8 @@ export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?:
     for (const [view, key] of Object.entries(CA_VIEW_KEY)) {
       if (customerArea[key] === false) caHidden.add(view);
     }
+    // Memberships is a top-bar pill on desktop and a tile on the phone sheet: only when the provider has switched on at least one tier.
+    if (customerArea.memberships !== true) caHidden.add("memberships");
     // On, but nothing in it yet → still shown, faded with "no info"/"no records"
     // (an unpublished timetable counts as empty). Never fade what's hidden.
     const empty = new Set<string>([...emptySections, ...(hasTimetable ? [] : ["timetable"])]);
