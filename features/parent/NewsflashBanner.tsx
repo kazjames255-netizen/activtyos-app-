@@ -77,21 +77,21 @@ export function NewsflashBanner() {
         return (
           <div className="nf-bar relative overflow-hidden text-white shadow-md" style={{ background: color }}>
             <div className="nf-shine pointer-events-none absolute inset-y-0 start-0 w-1/3" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)" }} />
-            <button type="button" onClick={openPost} className="relative flex w-full items-center gap-3 px-4 py-2.5 text-start">
+            <button type="button" onClick={openPost} className="relative flex w-full items-center gap-3 py-2.5 ps-4 pe-14 text-start max-sm:pe-12">
               {thumb
                 ? <img src={thumb} alt="" className="h-10 w-14 flex-none rounded-lg object-cover ring-2 ring-white/60" />
                 : <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-white/20 text-[18px] font-black">📣</span>}
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/90">
+                <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.14em] text-white/90 max-sm:tracking-[0.06em]">
                   <span className="nf-dot inline-block h-1.5 w-1.5 rounded-full bg-white" /> {tag}
-                  {p.tenantName && <span className="font-bold text-white/70">· {p.tenantName}</span>}
-                  {unseen.length > 1 && <span className="rounded-full bg-white/25 px-1.5 font-extrabold">{t("parent.plusMore", { count: unseen.length - 1 })}</span>}
+                  {p.tenantName && <span className="min-w-0 truncate font-bold text-white/70 max-sm:hidden">· {p.tenantName}</span>}
+                  {unseen.length > 1 && <span className="flex-none rounded-full bg-white/25 px-1.5 font-extrabold">{t("parent.plusMore", { count: unseen.length - 1 })}</span>}
                 </span>
                 <span className="truncate text-[15px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{headline}</span>
               </span>
-              <span className="flex-none rounded-full bg-white px-3 py-1 text-[12px] font-extrabold" style={{ color }}>{t("parent.viewArrow")}</span>
+              <span className="flex-none rounded-full bg-white px-3 py-1.5 text-[12px] font-extrabold max-sm:px-2.5" style={{ color }}>{t("parent.viewArrow")}</span>
             </button>
-            <button type="button" onClick={dismissOne} aria-label={t("parent.dismiss")} className="absolute end-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full text-[15px] font-bold text-white/80 hover:bg-white/20">×</button>
+            <button type="button" onClick={dismissOne} aria-label={t("parent.dismiss")} className="absolute end-0 top-0 flex h-11 w-11 items-center justify-center text-[22px] font-bold leading-none text-white/90 active:bg-white/20 sm:h-8 sm:w-8 sm:rounded-full sm:text-[15px] sm:hover:bg-white/20">×</button>
           </div>
         );
       })()}
