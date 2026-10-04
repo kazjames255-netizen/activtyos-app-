@@ -2,6 +2,7 @@
 import { fromRows } from "./_rows";
 
 export default fromRows({
+  home: ["Home", "Home", "Home", "Home", "Home", "Home", "Home", "Home", "Home", "Home", "Home"],
   dashboard: ["Dashboard", "Pulpit", "Panou de control", "ڈیش بورڈ", "ਡੈਸ਼ਬੋਰਡ", "ড্যাশবোর্ড", "لوحة التحكم", "Painel", "Panel", "Tableau de bord", "Dangosfwrdd"],
   newsfeed: ["Newsfeed", "Aktualności", "Noutăți", "نیوز فیڈ", "ਨਿਊਜ਼ਫੀਡ", "নিউজফিড", "آخر الأخبار", "Novidades", "Novedades", "Fil d’actualité", "Ffrwd newyddion"],
   messages: ["Messages", "Wiadomości", "Mesaje", "پیغامات", "ਸੁਨੇਹੇ", "বার্তা", "الرسائل", "Mensagens", "Mensajes", "Messages", "Negeseuon"],

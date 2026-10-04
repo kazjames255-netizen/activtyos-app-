@@ -83,6 +83,7 @@ const CouponsApp = dynamic(() => import("@/features/parent/CouponsApp").then((m)
 const ReferApp = dynamic(() => import("@/features/parent/ReferApp").then((m) => m.ReferApp));
 const MembershipsApp = dynamic(() => import("@/features/parent/MembershipsApp").then((m) => m.MembershipsApp));
 const FeedbackApp = dynamic(() => import("@/features/parent/FeedbackApp").then((m) => m.FeedbackApp));
+const ParentHomeApp = dynamic(() => import("@/features/parent/ParentHomeApp").then((m) => m.ParentHomeApp));
 const ChildrenApp = dynamic(() => import("@/features/parent/ChildrenApp").then((m) => m.ChildrenApp));
 const BookingsHubApp = dynamic(() => import("@/features/parent/BookingsHub").then((m) => m.BookingsHubApp));
 const ProvidersApp = dynamic(() => import("@/features/platform/ProvidersApp").then((m) => m.ProvidersApp));
@@ -321,6 +322,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     moments2: MomentsApp, // routable alias of Moments
   },
   custdash: {
+    home: ParentHomeApp,
     learninghub: StudentLearningHubApp,
     browse: BrowseApp,
     timetable: ParentTimetableApp,

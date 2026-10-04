@@ -26,7 +26,7 @@ export const featureOff = (features: Features | undefined, view: string) => isFe
 // The only custdash views kept when the provider turns on Simple mode — the
 // booking essentials: home, view/book activities, bookings, child profiles,
 // account/privacy, and "report a problem". Everything else is hidden.
-export const SIMPLE_ALLOWED = new Set(["dash", "browse", "bookings", "children", "account", "privacy", "activityos"]);
+export const SIMPLE_ALLOWED = new Set(["dash", "home", "browse", "bookings", "children", "account", "privacy", "activityos"]);
 
 /** A family's provider's customer area, as the family nav applies it (one
  *  providers read + one public-library read). Also used by ViewGate to refuse

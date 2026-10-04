@@ -500,6 +500,15 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
   ],
   custdash: [
     {
+      // The parent's landing page: needs-attention, next up, children, quick tiles (features/parent/ParentHomeApp.tsx).
+      label: null,
+      pinned: true,
+      footer: false,
+      items: [
+        { view: "home", legacyView: "custdash-home", label: "Home", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 11l9-8 9 8\"></path><path d=\"M5 10v10h14V10\"></path></svg>" }, badge: null },
+      ],
+    },
+    {
       label: "My child",
       pinned: false,
       footer: false,
@@ -634,9 +643,8 @@ export const NAV_CONFIG: Record<PortalKey, NavItem[]> = Object.fromEntries(
 ) as Record<PortalKey, NavItem[]>;
 
 export function getDefaultView(portal: PortalKey): string {
-  // The parent portal's home is Browse (same as ROLE_HOME) — it lives in
-  // the top bar (hidden from the sidebar), so "first nav item" is wrong.
-  if (portal === "custdash") return "browse";
+  // The parent portal's home is the Home dashboard (same as ROLE_HOME).
+  if (portal === "custdash") return "home";
   return NAV_CONFIG[portal][0].view;
 }
 
@@ -653,10 +661,10 @@ export function findNavItem(portal: PortalKey, view: string): NavItem | undefine
 export interface MobileTab { view: string; label: string; icon: "cal" | "search" | "mail" | "wallet" | "home" | "grid" | "check" | "clock" | "chart"; also?: string[] }
 export const MOBILE_TABS: Record<PortalKey, MobileTab[]> = {
   custdash: [
+    { view: "home", label: "p7shell.tabHome", icon: "home", also: ["dash"] },
     { view: "bookings", label: "p7shell.tabBookings", icon: "cal", also: ["schedule", "payments"] },
-    { view: "browse", label: "p7shell.tabBrowse", icon: "search", also: ["dash"] },
+    { view: "browse", label: "p7shell.tabBrowse", icon: "search" },
     { view: "messages", label: "header.messages", icon: "mail" },
-    { view: "wallet", label: "p7shell.tabWallet", icon: "wallet" },
   ],
   company: [
     { view: "dashboard", label: "p7shell.tabHome", icon: "home" },

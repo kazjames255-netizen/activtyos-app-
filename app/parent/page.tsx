@@ -106,8 +106,8 @@ function ParentAuth() {
           setBusy(false);
           return;
         }
-        // into the parent portal (home = browse); the account already remembers the chosen provider
-        router.replace(next ?? "/custdash/browse");
+        // into the parent portal (home = the Home dashboard); the account already remembers the chosen provider
+        router.replace(next ?? "/custdash/home");
       } catch (err) {
         const code = (err as { code?: string })?.code ?? "";
         if (code === "auth/email-already-in-use") setError(t("p8par.lgEmailTaken"));

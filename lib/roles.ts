@@ -37,7 +37,7 @@ export const ROLE_HOME: Record<Me["role"], string> = {
   franchise: "/franchise/bookings",
   freelancer: "/freelancer/bookings",
   staff: "/staff/dash",
-  parent: "/custdash/browse",
+  parent: "/custdash/home",
 };
 
 // Which portals each role may open ("all" = platform's cross-portal preview).
