@@ -15,6 +15,7 @@ import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { PageHero } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
 import { useTenantSettings } from "@/lib/settings";
+import { useFranchises } from "@/components/franchise/HoScope";
 import { VenueMap } from "./VenueMap";
 import { BlocksApp } from "@/features/blocks/BlocksApp";
 import { DEMO_STAFF } from "@/features/learning/credentials";
@@ -602,6 +603,11 @@ function ListingsTab({
   const t = useT();
   const { locale } = useI18n();
   const rtl = isRTL(locale);
+  // Head office only (the API sends franchiseId only to it, and only an HO has franchises): who owns each listing.
+  const hoFranchises = useFranchises();
+  const ownerOf = hoFranchises && hoFranchises.length > 0
+    ? (l: Listing) => (l.franchiseId ? hoFranchises.find((x) => x.franchiseId === l.franchiseId)?.name ?? l.franchiseId : t("p8lst.ownerHq"))
+    : null;
   const [q, setQ] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "live" | "ended" | "draft">("all");
@@ -919,6 +925,7 @@ function ListingsTab({
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12.5px] text-[var(--ink-3)]">
                     <span>{vn || t("p8lst.flNoVenue")}</span>
+                    {ownerOf && <span data-testid="listing-owner" title={t("p8lst.ownerLabel")} className="rounded-full bg-[var(--panel)] px-1.5 py-[1px] text-[10.5px] font-semibold text-[var(--ink-2)] ring-1 ring-[var(--line)]">{t("p8lst.ownerLabel")}: {ownerOf(l)}</span>}
                     {season && <span title={t("p8lst.flSeason")} className="rounded-full bg-[var(--panel)] px-1.5 py-[1px] text-[10.5px] font-semibold text-[var(--ink-2)] ring-1 ring-[var(--line)]">🗓 {season}</span>}
                   </div>
 

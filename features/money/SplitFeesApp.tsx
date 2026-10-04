@@ -9,6 +9,7 @@ import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { MoneyMovesNote } from "@/features/franchise/FranchiseRoyaltiesApp";
 import { useI18n, useT } from "@/lib/i18n/provider";
 import { isRTL } from "@/lib/i18n/config";
+import { pickPlural } from "@/lib/i18n/plural";
 
 interface Settings { basis: "revenue" | "perBooking"; rate?: number; perBookingFee?: number }
 interface Row { franchiseId: string; name: string; count: number; revenue: number; collected: number; fee: number }
@@ -95,7 +96,8 @@ const PRESETS: [string, string][] = [["1m", "split1m"], ["3m", "split3m"], ["6m"
 
 export function SplitFeesApp() {
   const t = useT();
-  const arrow = isRTL(useI18n().locale) ? "←" : "→";
+  const { locale } = useI18n();
+  const arrow = isRTL(locale) ? "←" : "→";
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [edit, setEdit] = useState(false);
@@ -208,7 +210,7 @@ export function SplitFeesApp() {
       )}
 
       {data.direct.count > 0 && (
-        <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">{t("money.splitDirectNote", { amount: money(data.direct.revenue), count: data.direct.count })}</div>
+        <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">{pickPlural(t, locale, "money.splitDirectNote", data.direct.count, { amount: money(data.direct.revenue), count: data.direct.count })}</div>
       )}
     </div>
   );

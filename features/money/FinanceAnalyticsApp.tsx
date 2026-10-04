@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { WalletOwedCard } from "@/features/money/WalletOwedCard";
 import { collectedNet, owedNow } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { CollapsibleStats, LIGHT_PALETTE, PageHero, TabStrip } from "@/components/OperatorPage";
@@ -291,6 +292,7 @@ export function FinanceAnalyticsApp() {
             <Tile label={t("p8fin.faEstNet")} icon="🏦" grad={GRAD.blue} value={money(a.net)} sub={t("p8fin.faAfterFees", { fees: money(a.fees) })} />
           </div>
           </CollapsibleStats>
+          <WalletOwedCard />
           <div className="grid gap-4 lg:grid-cols-3">
             <Panel title={t("p8fin.faRevOverTime")} right={<Legend items={[[t("p8fin.faBooked"), LIGHTB], [t("p8fin.faCollected"), GREEN]]} />} className="lg:col-span-2">
               <TrendChart series={a.bookedByMonth} series2={a.collectedByMonth} fmt={compactMoney} color={LIGHTB} color2={GREEN} />
@@ -400,6 +402,7 @@ export function FinanceAnalyticsApp() {
             <Tile label={t("p8fin.faRefundsIssued")} icon="↩️" grad={GRAD.violet} value={money(a.refunds)} sub={t("p8fin.faRefundsGiven", { n: months })} />
           </div>
           </CollapsibleStats>
+          <WalletOwedCard />
           <Panel title={t("p8fin.faWhoOwes")} right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{t("p8fin.faBookingsOwed", { n: a.owing.length, amount: money(a.owed) })}</span>}>
             {a.owing.length ? (
               <div className="flex flex-col divide-y divide-[var(--line)]">

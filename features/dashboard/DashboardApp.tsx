@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { WalletOwedCard } from "@/features/money/WalletOwedCard";
 import { money, collectedNet } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { useSettings } from "@/lib/settings";
@@ -563,6 +564,8 @@ export function DashboardApp() {
         />
       </div>
       </CollapsibleStats>
+
+      <WalletOwedCard className="mt-3" />
 
       {!(freshAccount && bookings) && <EnableHubCard portal={portal} settings={settings} loading={settingsLoading} save={saveSettings} />}
 

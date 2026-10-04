@@ -1,4 +1,5 @@
 import { mergeGroupKey } from "../lib/bookingMergeKey";
+import { ageCapGroup } from "../lib/childAge";
 import { Router } from "express";
 import { eraseChildLearning } from "../lib/hubPrivacy";
 import { z } from "zod";
@@ -22,6 +23,7 @@ import { cancellationRequestNotice } from "../lib/emailTemplates";
 import { money, paidSoFar as totalPaid, realPhone, refundableSoFar } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
+import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
 import { applyDiscounts, type DiscountRule } from "../../../features/listings/discounts";
 import {
   resolveBundlePricing,
@@ -225,6 +227,14 @@ const cancelSchema = z.object({
 });
 
 const childrenCol = db.collection("children");
+
+// A stored dob ("2018-03-14" or "14 Mar 2018") as a UK ISO day, or undefined.
+function isoDobOf(dob?: string): string | undefined {
+  if (!dob) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) return dob;
+  const d = new Date(dob);
+  return Number.isNaN(d.getTime()) ? undefined : ukToday(d);
+}
 
 // "14 Mar 2018" → age in years (used when the parent gives a DOB but no age).
 function ageFromDob(dob?: string): number | undefined {
@@ -957,10 +967,12 @@ my.post("/bookings", async (req, res) => {
   // status line below). Ids only; a lookup failure must never block a booking.
   let reviewNoQ: string[] = [];
   let everyQ: { id: string; label: string }[] = [];
+  let allChildQ: ChildQ[] = [];
   try {
     const cq = ((await librarySnap(listing.tenantId, (listing as { franchiseId?: string | null }).franchiseId)).data()?.childQuestions ?? []) as { id: string; label?: string; ask?: string; reviewIfNo?: boolean; hidden?: boolean }[];
     reviewNoQ = cq.filter((q) => !q.hidden && q.reviewIfNo).map((q) => q.id);
     everyQ = cq.filter((q) => !q.hidden && q.ask === "every").map((q) => ({ id: q.id, label: q.label ?? q.id }));
+    allChildQ = cq as ChildQ[];
   } catch { /* skip the hold rather than fail the booking */ }
   // Each child's every-booking answers sent with this basket, keyed by name and
   // limited to questions the provider really has set to "every booking".
@@ -997,6 +1009,26 @@ my.post("/bookings", async (req, res) => {
       const { name, age, ageKnown } = resolveChild(it);
       if (outOfRange(ageKnown ? age : undefined)) {
         res.status(400).json({ error: `${name || "A child"} is outside this listing’s age range (${listing.ageFrom ?? ""}–${listing.ageTo ?? ""}).` });
+        return;
+      }
+    }
+  }
+
+  // Required provider questions (CF-005): a child whose REQUIRED questions are
+  // unanswered can't be booked, whatever the browser did. Families only - an
+  // operator keying a booking for a family records what they were told.
+  if (!onBehalf && allChildQ.some((q) => q.required)) {
+    const firstDay = [...sessionDates].sort()[0] ?? ukToday();
+    for (const it of input.items) {
+      const rec = (it.childId && childById.get(it.childId)) || childByName.get(it.child.trim().toLowerCase());
+      const r = resolveChild(it);
+      const day = [...(it.dates ?? [])].sort()[0] ?? firstDay;
+      const missing = missingRequiredQuestions({
+        questions: allChildQ, listingId: input.listingId, dob: isoDobOf(rec?.dob),
+        runFrom: day, answers: r.answers, saved: !!rec,
+      });
+      if (missing.length) {
+        res.status(400).json({ error: `${r.name || "A child"} still needs: ${missing.join(", ")}. Add the required answers to their profile and try again.` });
         return;
       }
     }
@@ -1523,8 +1555,9 @@ my.post("/bookings", async (req, res) => {
           const ageWanted = new Map<string, Record<string, number>>(); // day → groupId → seats
           if (ageCapsActive) {
             for (const i of idxs) {
-              const age = resolveChild(priced[i].item).age;
-              const gid = typeof age === "number" ? groupForAge(age) : undefined;
+              // No date of birth (DOB optional) = no age band: the child is let through and takes no capped age place.
+              const rcAge = resolveChild(priced[i].item);
+              const gid = ageCapGroup(rcAge, ratioGroups);
               if (!gid || ageCaps[gid] === undefined) continue;
               for (const s of priced[i].segments) {
                 if (s.blockId !== blockId) continue;

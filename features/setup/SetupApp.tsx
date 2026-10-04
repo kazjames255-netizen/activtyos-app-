@@ -18,6 +18,7 @@ import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import { useHoScope } from "@/components/franchise/HoScope";
 import { peekMe } from "@/components/auth/PortalGuard";
 import { RolesPermissions } from "./RolesPermissions";
+import { DOB_OPTIONAL_LOSSES } from "@/lib/childDob";
 import {
   useSettings,
   PROVIDER_NOTIFICATIONS,
@@ -2211,6 +2212,15 @@ export function SetupApp() {
                 labels={[t("p8set.credRequired"), t("p8set.optional")]}
               />
             </Row>
+            {!dobLock.required && (
+              <div role="alert" data-testid="dob-optional-warning" className="mx-1 my-2 rounded-xl border px-3.5 py-3 text-[12.5px] leading-[1.5]" style={{ background: "#fffbeb", borderColor: "#f59e0b", color: "#92400e" }}>
+                <div className="font-extrabold">⚠ {t("p8set.dobWarnTitle")}</div>
+                <ul className="m-0 mt-1.5 list-disc ps-5">
+                  {DOB_OPTIONAL_LOSSES.map((k) => <li key={k}>{t(k)}</li>)}
+                </ul>
+                <div className="mt-1.5 font-semibold">{t("p8set.dobWarnFoot")}</div>
+              </div>
+            )}
             <Row label={t("p8set.ppGender")} hint={t("p8set.ppGenderHint")}>
               <Toggle on={settings.collectGender} onChange={(v) => set("collectGender", v)} />
             </Row>

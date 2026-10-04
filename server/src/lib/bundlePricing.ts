@@ -72,15 +72,22 @@ export function resolveBundlePricing(
     .map((id) => periodsById.get(id))
     .filter((p): p is PeriodDoc & { id: string } => !!p);
 
+  // A bundle that never recorded calcOn/passMode (older docs) is "calculated", exactly as the
+  // wizard reads it (calcOn !== false). Treating undefined as OFF made every timing £0 on the
+  // server while the pass itself showed its base price (a £20 day pass at £0.00 at checkout).
+  const calcOn = bundle.calcOn !== false;
+  const passMode = bundle.passMode ?? {};
+  const passFlat = bundle.passFlat ?? {};
+  const periodPrice = bundle.periodPrice ?? {};
   const masterPrice = bundle.masterPrice ?? 0;
   const master = passes[0];
-  const perDay = bundle.calcOn && master ? masterPrice / master.days : 0;
+  const perDay = calcOn && master ? masterPrice / master.days : 0;
   const baseHours = periods.length ? Math.max(...periods.map(periodHours)) : 1;
 
   const priceForPass = (p: PassDoc & { id: string }, idx: number): number => {
     if (idx === 0) return masterPrice; // the master IS the price
-    if (!bundle.calcOn) return bundle.passFlat[p.id] ?? 0;
-    if (bundle.passMode[p.id] === "flat") return bundle.passFlat[p.id] ?? 0;
+    if (!calcOn) return passFlat[p.id] ?? 0;
+    if (passMode[p.id] === "flat") return passFlat[p.id] ?? 0;
     return round2(p.days * perDay);
   };
 
@@ -97,11 +104,11 @@ export function resolveBundlePricing(
     const passPrice = resolvedPasses[idx].price;
     for (const r of periods) {
       const key = `${p.id}_${r.id}`;
-      const override = bundle.periodPrice[key];
+      const override = periodPrice[key];
       timings[key] =
         override !== undefined && override !== null
           ? override
-          : bundle.calcOn
+          : calcOn
             ? round2((passPrice * periodHours(r)) / baseHours)
             : 0;
     }

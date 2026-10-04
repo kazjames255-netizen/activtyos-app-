@@ -425,7 +425,7 @@ export function Sidebar({ portal, drawer }: { portal: PortalKey; drawer?: boolea
 
   return (
     <nav
-      className={`flex h-screen flex-none flex-col overflow-x-hidden overflow-y-auto py-4 text-[13px] transition-[width] duration-200 ${collapsed ? "w-[62px]" : "w-[248px]"}`}
+      className={`flex ${drawer ? "h-[100dvh] max-h-[100dvh] pb-[calc(16px+env(safe-area-inset-bottom))]" : "h-screen"} flex-none flex-col overflow-x-hidden overflow-y-auto py-4 text-[13px] transition-[width] duration-200 ${collapsed ? "w-[62px]" : drawer ? "w-[min(84vw,320px)]" : "w-[248px]"}`}
       style={{
         color: "var(--side-ink)",
         backgroundImage: "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1.6px), var(--side-bg)",

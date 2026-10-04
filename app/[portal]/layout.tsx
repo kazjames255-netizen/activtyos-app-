@@ -86,7 +86,7 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
             {/* Customer-only flashy newsflash for unseen provider posts. print:hidden as above. */}
             {portalKey === "custdash" && <div className="print:hidden"><NewsflashBanner /></div>}
             {/* Customer-only running bar of the family's usable discount codes. print:hidden as above. */}
-            {portalKey === "custdash" && <div className="print:hidden"><CouponTicker /></div>}
+            {portalKey === "custdash" && <div className="print:hidden max-sm:hidden"><CouponTicker /></div>}
             {/* Operator trial / cancellation nudge bar — removed on request 2026-09-02;
                 revisit where/how to reinstate it. Component kept at
                 components/billing/TrialBanner.tsx. */}

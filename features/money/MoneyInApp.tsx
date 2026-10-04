@@ -6,7 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { bookingNetIn } from "@/features/money/bookingIncome";
 import type { Booking as FullBooking } from "@/features/bookings/types";
-import { InvoicesApp } from "@/features/money/InvoicesApp";
+import { InvoicesWithBookings } from "@/features/money/BookingInvoices";
 import { IncomeApp } from "@/features/money/IncomeApp";
 import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
@@ -115,7 +115,7 @@ export function MoneyInApp() {
         </>)}
       </div>
 
-      {tab === "invoices" ? <InvoicesApp embedded /> : <IncomeApp embedded />}
+      {tab === "invoices" ? <InvoicesWithBookings embedded /> : <IncomeApp embedded />}
     </div>
   );
 }

@@ -604,6 +604,8 @@ export interface ServerListing extends Omit<Partial<WizardDraft>, "id"> {
   name: string;
   tenantId?: string;
   tenantName?: string;
+  /** Set by the API for a head office: which franchise owns the listing (null/absent = head office's own). */
+  franchiseId?: string | null;
   /** Optimistic-concurrency stamp (server-set) — send back as `expectedUpdatedAt`
    *  on PUT so a stale tab's autosave is refused instead of silently reverting
    *  someone else's more recent edit. */

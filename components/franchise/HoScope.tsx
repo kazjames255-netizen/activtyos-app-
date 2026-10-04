@@ -110,7 +110,7 @@ function loadFranchises(): Promise<Franchise[]> {
   }
   return frPromise;
 }
-function useFranchises(): Franchise[] | null {
+export function useFranchises(): Franchise[] | null {
   const [list, setList] = useState<Franchise[] | null>(frCache);
   useEffect(() => { loadFranchises().then(setList); }, []);
   return list;

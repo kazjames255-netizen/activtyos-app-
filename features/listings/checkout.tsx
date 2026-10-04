@@ -23,6 +23,7 @@ import { get as apiGet, api } from "@/lib/api";
 import { money, PAY_METHODS } from "@/features/bookings/helpers";
 import { fmtDate, ordinal } from "./format";
 import { uploadPlan, PLAN_MAX_BYTES } from "./planUpload";
+import { dobRequired } from "@/lib/childDob";
 import { useTenantSettings, questionsFor, asksEveryBooking, limitFor, liveVouchers, detailsForListing } from "@/lib/settings";
 import { voucherWindow } from "@/lib/vouchers";
 import { HMRC_CONNECTED, TFC_FAILURE_COPY, balance as tfcBalance, referenceHint, referencePrefix, type TfcBalance, type TfcFailure } from "./tfc";
@@ -238,16 +239,15 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   // age. `d.runFrom` rather than today, matching ageProblem above: the age
   // that matters is the one they'll be on the first day they attend, and two
   // age rules disagreeing on the same screen would be indefensible.
-  const { questions: allQuestions, settings } = useTenantSettings(tenantId, d.id ?? undefined);
+  const { questions: allQuestions, settings, ready: settingsReady } = useTenantSettings(tenantId, d.id ?? undefined);
   // The form asks the "once" questions only. The every-booking ones are
   // rendered per child on the roster above, so listing them here too would
   // ask the same thing twice on the same screen.
   const askQuestions = questionsFor(allQuestions, d.id ?? undefined, ageOn(draft.dob, d.runFrom)).filter(
     (q) => !asksEveryBooking(q),
   );
-  // A child's date of birth is always required: the age check and the register both depend on it, so a provider
-  // setting can no longer waive it (the server cannot judge an age without one).
-  const needDob = true;
+  // The provider's Setup toggle decides (Setup warns what stops working without a date of birth); an age-gated question forces it.
+  const needDob = dobRequired(settings, allQuestions);
   const pinMode = settings.collectionCheck === "pin";
   // Name, date of birth and boy/girl are required: the age gate can't judge a
   // booking without a birthday, and registers are drawn up from both. All of
@@ -274,6 +274,9 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   const flag = (bad: boolean) => (tried && bad ? { borderColor: "#f87171", boxShadow: "0 0 0 1px #f87171" } : null);
 
   const add = () => {
+    // The provider's required questions aren't known until their settings have
+    // loaded; adding before then would skip them (CF-005).
+    if (!settingsReady) return;
     if (missing.length || problem) { setTried(true); return; }
     if (editing !== null) {
       setRoster(roster.map((c, i) => (i === editing ? draft : c)));
@@ -680,9 +683,9 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
             </div>
           )}
           <div className="mt-3 flex gap-2">
-            <button type="button" onClick={add}
-              className={`flex-1 py-2 text-[12.5px] font-extrabold ${tk.round}`}
-              style={{ background: tk.accent, color: tk.accentInk }}>{editing !== null ? tr("p7ck.saveDetails") : tr("p7ck.addChild")}</button>
+            <button type="button" onClick={add} disabled={!settingsReady} aria-busy={!settingsReady}
+              className={`flex-1 py-2 text-[12.5px] font-extrabold disabled:cursor-wait disabled:opacity-60 ${tk.round}`}
+              style={{ background: tk.accent, color: tk.accentInk }}>{!settingsReady ? tr("p7ck.loadingChildQs") : editing !== null ? tr("p7ck.saveDetails") : tr("p7ck.addChild")}</button>
             <button type="button" onClick={() => { setOpen(false); setEditing(null); setTried(false); setDraft({ name: "", photoConsent: false }); }}
               className="text-[12px] font-bold" style={{ color: tk.muted }}>{tr("p8lst.ck8Cancel")}</button>
           </div>
