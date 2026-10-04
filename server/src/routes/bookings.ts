@@ -19,6 +19,10 @@ import { money, realPhone, refundableSoFar, receivedOf } from "../../../features
 import { notify } from "../lib/notify";
 import {
   blockCountDelta,
+  applyPlacesDelta,
+  heldPlaces,
+  placesDelta,
+  placesDeltaIsZero,
   bookingDays,
   countsTowardCapacity,
   countsUpdate,
@@ -523,6 +527,8 @@ bookings.post("/:ref/actions", async (req, res) => {
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
       const oldStatus = b.status;
+      // What the booking held BEFORE this action (per child) — so cancelling ONE child frees ONE place (CN-019).
+      const heldBefore = structuredClone({ status: b.status, seats: b.seats, days: b.days, kids: b.kids });
       receivedBefore = receivedOf(b);
 
       // An offer must be backed by a real free place (§E: "reject if the
@@ -648,19 +654,21 @@ bookings.post("/:ref/actions", async (req, res) => {
       // Keep the block's place counts — total AND per day — in step with
       // the status transition (promote may intentionally exceed capacity —
       // operator's overbook). Firestore requires all reads before writes.
+      const perChild = action.type === "cancel-child" || action.type === "cancel-day";
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;
       let blockUpdate: {
         ref: FirebaseFirestore.DocumentReference;
         counts: ReturnType<typeof countsUpdate>;
       } | null = null;
-      if (delta !== 0) {
-        const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId!));
+      if (b.blockId && (delta !== 0 || perChild) && action.type !== "change-day") {
+        const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId));
         if (blockSnap.exists) {
           const blockData = blockSnap.data() as BlockDoc;
-          blockUpdate = {
-            ref: blockSnap.ref,
-            counts: countsUpdate(blockData, delta, bookingDays(b, blockData)),
-          };
+          const pd = placesDelta(
+            heldPlaces(heldBefore, blockData),
+            heldPlaces(b, blockData),
+          );
+          if (!placesDeltaIsZero(pd)) blockUpdate = { ref: blockSnap.ref, counts: applyPlacesDelta(blockData, pd) };
         }
       }
 
@@ -799,7 +807,7 @@ bookings.post("/:ref/actions", async (req, res) => {
 
     // Freed seats pass to the queue (auto mode); promotes report who's
     // still waiting so the UI can warn about overbooking.
-    if (updated.blockId && (action.type === "decline" || action.type === "cancel"))
+    if (updated.blockId && (action.type === "decline" || action.type === "cancel" || action.type === "cancel-child" || action.type === "cancel-day"))
       void triggerWaitlist(updated.blockId);
     // A cancelled booking gives its discount code back (single-use codes
     // become usable again once nothing in the basket is standing). Safe to

@@ -34,6 +34,10 @@ import {
 } from "../lib/bundlePricing";
 import {
   blockCountDelta,
+  applyPlacesDelta,
+  heldPlaces,
+  placesDelta,
+  placesDeltaIsZero,
   bookingDays,
   bookingSeats,
   countsTowardCapacity,
@@ -1490,7 +1494,7 @@ my.post("/bookings", async (req, res) => {
           const byPass = new Map<string, Record<string, number>>();
           for (const d of liveSnap.docs) {
             const bk = fromDoc(d.data() as BookingDoc);
-            const seats = Math.max(1, (bk as { kids?: unknown[] }).kids?.length ?? 1);
+            const seats = Math.max(1, ((bk as { kids?: { cancelled?: boolean }[] }).kids ?? []).filter((k) => !k.cancelled).length || ((bk as { kids?: unknown[] }).kids?.length ?? 1));
             for (const name of cappedPasses) {
               if (!bookingHasPass(bk.pass, name)) continue;
               const rec = byPass.get(name) ?? {};
@@ -2663,17 +2667,18 @@ async function partialCancel(
     if (b.email !== email) throw new HttpError(403, "Not your booking");
     if (b.status === "Cancelled") throw new HttpError(400, "This booking is already cancelled");
     materialiseKids(b);
-    const before = new Set(b.days ?? []);
+    const heldBefore = structuredClone({ status: b.status, seats: b.seats, days: b.days, kids: b.kids });
     applyPartialCancel(b, wanted);
-    // Only days NO child is left on free a place, and only that day's count —
-    // the seat itself stays until the whole booking goes.
-    const freedDays = [...before].filter((d) => !(b.days ?? []).includes(d));
-    let blockUpdate: { ref: FirebaseFirestore.DocumentReference; dayCounts: Record<string, number> } | null = null;
-    if (b.blockId && freedDays.length && countsTowardCapacity(b.status)) {
+    // One place per child: a cancelled child frees their seat, and each day a
+    // child gives up frees that child's place on that day (CN-019). Derived
+    // from before/after state, so repeating a release can't free twice.
+    let blockUpdate: { ref: FirebaseFirestore.DocumentReference; counts: ReturnType<typeof countsUpdate> } | null = null;
+    if (b.blockId) {
       const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId));
       if (blockSnap.exists) {
         const blk = blockSnap.data() as BlockDoc;
-        blockUpdate = { ref: blockSnap.ref, dayCounts: countsUpdate(blk, -(b.seats ?? 1), freedDays).dayCounts };
+        const pd = placesDelta(heldPlaces(heldBefore, blk), heldPlaces(b, blk));
+        if (!placesDeltaIsZero(pd)) blockUpdate = { ref: blockSnap.ref, counts: applyPlacesDelta(blk, pd) };
       }
     }
 
@@ -2709,7 +2714,7 @@ async function partialCancel(
     }
 
     tx.set(ref, toDoc(b));
-    if (blockUpdate) tx.update(blockUpdate.ref, { dayCounts: blockUpdate.dayCounts });
+    if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
     return b;
   });
 
@@ -2838,6 +2843,7 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       if (b.email !== email) throw new HttpError(403, "Not your booking");
       if (b.status === "Cancelled") throw new HttpError(400, "Already cancelled");
       const oldStatus = b.status;
+      const heldBefore = structuredClone({ status: b.status, seats: b.seats, days: b.days, kids: b.kids });
       applyParentCancel(b, parsed.data.msg, parsed.data.reason);
       // The policy's recommended refund rides on the request (pending the
       // provider's approval; refund-approve refunds this figure via Stripe).
@@ -2866,7 +2872,9 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
         const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId!));
         if (blockSnap.exists) {
           const blockData = blockSnap.data() as BlockDoc;
-          blockUpdate = { ref: blockSnap.ref, counts: countsUpdate(blockData, delta, bookingDays(b, blockData)) };
+          // Only the places still held (a child cancelled earlier already freed theirs).
+          const pd = placesDelta(heldPlaces(heldBefore, blockData), heldPlaces(b, blockData));
+          if (!placesDeltaIsZero(pd)) blockUpdate = { ref: blockSnap.ref, counts: applyPlacesDelta(blockData, pd) };
         }
       }
       tx.set(ref, toDoc(b));

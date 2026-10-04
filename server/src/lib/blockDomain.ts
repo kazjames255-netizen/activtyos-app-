@@ -72,6 +72,65 @@ export function blockCountDelta(
   return after - before;
 }
 
+/** Places a booking holds on a block: total seats and seats per session date.
+ *  Per-CHILD aware — a cancelled child (or a day a child released) no longer
+ *  holds a place, so capacity moves one place per child, not only when the
+ *  whole booking changes status. A booking with no kids[] holds
+ *  bookingSeats × bookingDays, exactly as before. */
+export interface HeldPlaces {
+  seats: number;
+  days: Record<string, number>;
+}
+export function heldPlaces(
+  b: Pick<Booking, "status" | "seats" | "days" | "kids">,
+  block: BlockDoc,
+  status: BookingStatus = b.status,
+): HeldPlaces {
+  const empty: HeldPlaces = { seats: 0, days: {} };
+  if (!countsTowardCapacity(status)) return empty;
+  const all = bookingDays(b, block);
+  const seats = b.seats ?? 1;
+  const kids = b.kids ?? [];
+  const touched = kids.some((k) => k.cancelled || (k.cancelledDays?.length ?? 0) > 0);
+  if (!kids.length || !touched) {
+    return { seats, days: Object.fromEntries(all.map((d) => [d, seats])) };
+  }
+  // Kid dates may be ISO or "Mon 27 Jul 2026" labels — normalise to ISO.
+  const byLabel = new Map(block.sessions.map((s) => [sessionLabel(s).split(" · ")[0], s.date]));
+  const iso = (d: string) => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? d : byLabel.get(d) ?? d);
+  const days: Record<string, number> = {};
+  let cancelledKids = 0;
+  for (const k of kids) {
+    if (k.cancelled) {
+      cancelledKids += 1;
+      continue;
+    }
+    const gone = new Set((k.cancelledDays ?? []).map(iso));
+    const mine = (k.dates?.length ? k.dates.map(iso) : all).filter((d) => !gone.has(d));
+    for (const d of mine) days[d] = (days[d] ?? 0) + 1;
+  }
+  return { seats: Math.max(0, seats - cancelledKids), days };
+}
+
+/** Signed change from `before` to `after` (negative = places freed). */
+export function placesDelta(before: HeldPlaces, after: HeldPlaces): HeldPlaces {
+  const days: Record<string, number> = {};
+  for (const d of new Set([...Object.keys(before.days), ...Object.keys(after.days)])) {
+    const v = (after.days[d] ?? 0) - (before.days[d] ?? 0);
+    if (v !== 0) days[d] = v;
+  }
+  return { seats: after.seats - before.seats, days };
+}
+
+/** Apply a placesDelta to a block's bookedCount + dayCounts. */
+export function applyPlacesDelta(block: BlockDoc, d: HeldPlaces): { bookedCount: number; dayCounts: Record<string, number> } {
+  const dayCounts = { ...(block.dayCounts ?? {}) };
+  for (const [day, v] of Object.entries(d.days)) dayCounts[day] = Math.max(0, (dayCounts[day] ?? 0) + v);
+  return { bookedCount: Math.max(0, block.bookedCount + d.seats), dayCounts };
+}
+
+export const placesDeltaIsZero = (d: HeldPlaces) => d.seats === 0 && Object.keys(d.days).length === 0;
+
 /** Generate one session per matching weekday across the date range. */
 export function generateSessions(
   startDate: string,

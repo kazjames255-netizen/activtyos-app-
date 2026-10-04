@@ -453,7 +453,13 @@ export function bookingKids(b: Booking): Kid[] {
   ];
 }
 
-export const attendeeCount = (b: Booking) => bookingKids(b).length;
+// Children still holding a place: a cancelled child no longer counts (a fully
+// cancelled booking still shows everyone who was on it).
+export const attendeeCount = (b: Booking) => {
+  const kids = bookingKids(b);
+  if (b.status === "Cancelled") return kids.length;
+  return kids.filter((k) => !k.cancelled).length;
+};
 export const sessionCount = (b: Booking) => (b.sessions ? b.sessions.length : 0);
 
 export const kidActiveDays = (k: Kid) => {
