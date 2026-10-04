@@ -5,6 +5,22 @@ import { translateApiMessage } from "./i18n/apiErrors";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
+// Uploads store the absolute URL they were uploaded to. The dev and live apps share one database, so a photo uploaded from a developer's
+// machine is saved as http://localhost:4000/api/images/<id> and shows as a broken image on every other device. Re-point those at the API this
+// app is actually talking to (no-op when the API itself is localhost).
+const LOCAL_IMG = /^https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?(\/api\/images\/)/;
+const BASE_IS_LOCAL = /^https?:\/\/(?:localhost|127\.0\.0\.1)/.test(BASE);
+export function fixLocalImageUrls<T>(v: T): T {
+  if (BASE_IS_LOCAL) return v;
+  const walk = (x: unknown): unknown => {
+    if (typeof x === "string") return LOCAL_IMG.test(x) ? x.replace(LOCAL_IMG, `${BASE}$1`) : x;
+    if (Array.isArray(x)) { for (let i = 0; i < x.length; i++) x[i] = walk(x[i]); return x; }
+    if (x && typeof x === "object") { const o = x as Record<string, unknown>; for (const k of Object.keys(o)) o[k] = walk(o[k]); return o; }
+    return x;
+  };
+  return walk(v) as T;
+}
+
 // ── Platform (HQ) "view as" impersonation ────────────────────────────────────
 // When an HQ owner opens another account, we remember it here and send its uid
 // on every request as `x-act-as`; the backend (platform-only) then serves that
@@ -231,7 +247,7 @@ async function request<T>(path: string, token: string | null, init?: RequestInit
     }
     throw new ApiError(res.status, message, parsed);
   }
-  return res.json() as Promise<T>;
+  return fixLocalImageUrls(await res.json()) as T;
 }
 
 // The API answers a failed validation with the raw zod issue list ([{ message, path: ["date"] }, …]); showing that as JSON to a

@@ -514,7 +514,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {notice && <div className="mb-3 rounded-lg border border-[#cdddf7] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">✓ {notice}</div>}
 
-      <div className="grid gap-3 md:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-[320px_minmax(0,1fr)]">
         <Card className="p-1.5">
           {!threads ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">{tr("comms.loading")}</div>
           : threads.length === 0 ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">{tr("comms.noConversations")}</div>

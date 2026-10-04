@@ -75,7 +75,7 @@ export function NewsflashBanner() {
         const thumb = p.newsletter?.blocks?.find((b) => b.image)?.image || p.photoUrl;
         const headline = p.title || p.body.slice(0, 90);
         return (
-          <div className="nf-bar relative overflow-hidden text-white shadow-md" style={{ background: `linear-gradient(120deg, ${color}, ${color}cc 55%, ${color}88)` }}>
+          <div className="nf-bar relative overflow-hidden text-white shadow-md" style={{ background: color }}>
             <div className="nf-shine pointer-events-none absolute inset-y-0 start-0 w-1/3" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)" }} />
             <button type="button" onClick={openPost} className="relative flex w-full items-center gap-3 px-4 py-2.5 text-start">
               {thumb
