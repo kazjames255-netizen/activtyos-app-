@@ -183,8 +183,9 @@ splitfees.get("/mine", async (req, res) => {
     const mine = raw.franchiseId === auth.franchiseId || (raw.listingId ? myListingIds.has(raw.listingId) : false);
     if (!mine) continue;
     count += 1;
-    revenue = round2(revenue + (b.amount ?? 0));
-    collected = round2(collected + (b.amountPaid ?? (b.pay === "Paid" ? (b.amount ?? 0) : 0)));
+    const refunded = refundedGross(b);
+    revenue = round2(revenue + Math.max(0, round2((b.amount ?? 0) - refunded)));
+    collected = round2(collected + Math.max(0, round2((b.amountPaid ?? (b.pay === "Paid" ? (b.amount ?? 0) : 0)) - refunded)));
   }
   const fee = settings.basis === "perBooking" ? round2(count * (settings.perBookingFee ?? 0)) : round2(revenue * ((settings.rate ?? 0) / 100));
   res.json({ settings, count, revenue, collected, fee, period: range.period, from: range.from, to: range.to });

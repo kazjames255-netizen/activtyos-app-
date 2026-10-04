@@ -303,7 +303,7 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
           </Button>
         </>
       )}
-      <p className="mt-2 text-center text-[11px] text-[var(--ink-3)]">{t("money.subThenPriceAfterTrial", { price: gbp(monthlyPrice(chosen)), plus: chosen.bands ? " +" : "" })}</p>
+      <p className="mt-2 text-center text-[11px] text-[var(--ink-3)]">{t(annual ? "money.subThenPriceAfterTrialYr" : "money.subThenPriceAfterTrial", { price: gbp(annual ? monthlyPrice(chosen) * 10 : monthlyPrice(chosen)), plus: chosen.bands ? " +" : "" })}</p>
     </div>
   );
 

@@ -34,6 +34,7 @@ import type { AddonTemplate, LocalState } from "./FreelancerListingsApp";
 import type { WizardDraft } from "./ListingWizard";
 import { mealDayPlan, dishesForDay } from "@/features/meals/plan";
 import { useT } from "@/lib/i18n/provider";
+import { keepBasketForAuth } from "@/features/listings/booking";
 
 export type ParentRow = { id: string; name: string; email?: string; phone?: string; address?: string; children?: ChildProfile[] };
 
@@ -2603,7 +2604,23 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         </div>
       )}
 
-      {booking?.error && errFresh && !(() => {
+      {booking?.error && errFresh && /^not signed in/i.test(booking.error) && (
+        <div className="mt-2 rounded-lg border px-3 py-2.5 text-[12px] font-semibold" style={{ borderColor: tk.accent, color: tk.ink }}>
+          <div>{tr("p7ck.signInToConfirm")}</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {([["/login", "p7ck.signInBtn"], ["/parent?tab=up&", "p7ck.createAccountBtn"]] as const).map(([base, key]) => (
+              <button key={key} type="button" className="rounded-full border-2 px-4 py-1.5 text-[12px] font-extrabold" style={{ borderColor: tk.accent, color: tk.accent, background: "transparent" }}
+                onClick={() => {
+                  keepBasketForAuth();
+                  const here = encodeURIComponent(window.location.pathname + window.location.search);
+                  window.location.assign(`${base}${base.endsWith("&") ? "" : "?"}next=${here}`);
+                }}>{tr(key)}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {booking?.error && errFresh && !/^not signed in/i.test(booking.error) && !(() => {
         // Once the named child has been taken off, their error is stale.
         const m = /^(.+?) already has a place on/.exec(booking.error);
         return !!m && !b.rosterNames.includes(m[1]);

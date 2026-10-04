@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { db } from "../firebase";
+import { refundedGross } from "../../../features/bookings/helpers";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 
 // Head-office network overview — the franchisor's command centre. Aggregates the
@@ -199,8 +200,9 @@ hoOverview.get("/overview", async (req, res) => {
     const raw = doc.data() as BookingDoc & { franchiseId?: string; listingId?: string; childId?: string; kids?: { name?: string; childId?: string }[] };
     const b = fromDoc(raw);
     if (!COUNTS(b.status)) continue;
-    const amount = b.amount ?? 0;
-    const paid = b.amountPaid ?? (b.pay === "Paid" ? amount : 0);
+    const refunded = refundedGross(b);
+    const amount = Math.max(0, round2((b.amount ?? 0) - refunded));
+    const paid = Math.max(0, round2((b.amountPaid ?? (b.pay === "Paid" ? (b.amount ?? 0) : 0)) - refunded));
     const fid = raw.franchiseId ?? (raw.listingId ? (listingFr.get(raw.listingId) ?? null) : null);
     const bucket = fid && franchises.has(fid) ? franchises.get(fid)! : direct;
     bucket.revenue = round2(bucket.revenue + amount);

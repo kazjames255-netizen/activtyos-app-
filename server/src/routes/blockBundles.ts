@@ -138,6 +138,15 @@ periods.post("/", async (req, res) => {
   res.status(201).json({ id: ref.id, ...doc });
 });
 
+/** Ownership fields an update must never drop (a franchise's rows would otherwise flip to head office). */
+export function ownershipOf(d: unknown): { franchiseId?: string | null; createdBy?: string } {
+  const x = (d ?? {}) as { franchiseId?: string | null; createdBy?: string };
+  const out: { franchiseId?: string | null; createdBy?: string } = {};
+  if (x.franchiseId !== undefined) out.franchiseId = x.franchiseId;
+  if (x.createdBy !== undefined) out.createdBy = x.createdBy;
+  return out;
+}
+
 periods.put("/:id", async (req, res) => {
   const tenantId = requireOperatorWrite(req, res);
   if (!tenantId) return;
@@ -151,8 +160,9 @@ periods.put("/:id", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
-  await snap.ref.set({ ...parsed.data, tenantId });
-  res.json({ id: snap.id, ...parsed.data, tenantId });
+  const own = ownershipOf(snap.data());
+  await snap.ref.set({ ...parsed.data, tenantId, ...own });
+  res.json({ id: snap.id, ...parsed.data, tenantId, ...own });
 });
 
 periods.delete("/:id", async (req, res) => {
@@ -213,8 +223,9 @@ passes.put("/:id", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
-  await snap.ref.set({ ...parsed.data, tenantId });
-  res.json({ id: snap.id, ...parsed.data, tenantId });
+  const own = ownershipOf(snap.data());
+  await snap.ref.set({ ...parsed.data, tenantId, ...own });
+  res.json({ id: snap.id, ...parsed.data, tenantId, ...own });
 });
 
 passes.delete("/:id", async (req, res) => {
@@ -302,6 +313,7 @@ blockBundles.put("/:id", async (req, res) => {
     listingIds: existing.listingIds, // managed via /:id/listings
     order: existing.order, // managed via /reorder
     tenantId,
+    ...ownershipOf(existing), // keep franchise/creator so the block stays with its owner
   };
   await snap.ref.set(doc);
   res.json(bundleOut(snap.id, doc, await pricingContext(tenantId)));
