@@ -549,7 +549,7 @@ export function emailProviderWelcome(p: {
         </p>
         <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin-bottom:6px">
           ${step(1, "Build your first listing", "A camp, class or club families can book: set the dates, the price and how many places you have. Your checklist walks you through it.")}
-          ${step(2, "Choose how parents pay you", `Card payments, bank transfer, vouchers or cash. <a href="${webUrl}/${p.portal}/billing?tab=paid" style="color:#1d3a8f;font-weight:700">Set it up in Billing &amp; payouts</a>. Card payments take about 10 minutes, so have your photo ID and bank details ready.`)}
+          ${step(2, "Add your bank details", `Needed so parents can book and pay you: bank transfers, Tax-Free Childcare and vouchers all pay into this account. <a href="${webUrl}/${p.portal}/billing?tab=paid" style="color:#1d3a8f;font-weight:700">Add them in Billing &amp; payouts</a>. You can also switch on card payments there (optional, recommended). That takes about 10 minutes, so have your photo ID ready.`)}
           ${step(3, "Check where replies go", "When a parent replies to one of your emails, it goes to the contact address on your account. Make sure it is an inbox you read.")}
           ${step(4, "Invite your team", "Bring in your staff so rotas, registers and messages reach the right people.")}
         </table>
@@ -576,7 +576,7 @@ export function emailOnboardingNudge(p: {
   const greet = p.firstName?.trim() || p.providerName || "there";
   const items: { title: string; body: string; href: string; cta: string }[] = [];
   if (p.open.listing) items.push({ title: "Build your first listing", body: "A camp, class or club families can book. It only takes a few minutes, and you can save it as a draft.", href: `${base}/listings`, cta: "Open listings" });
-  if (p.stage !== "d1" && p.open.pay) items.push({ title: "Choose how parents pay you", body: "Card payments, bank transfer, vouchers or cash. Card payments take about 10 minutes, so have your photo ID and bank details ready.", href: `${base}/billing?tab=paid`, cta: "Set up payments" });
+  if (p.stage !== "d1" && p.open.pay) items.push({ title: "Add your bank details", body: "Needed so parents can book and pay you: bank transfers, Tax-Free Childcare and vouchers all pay into this account. You can also switch on card payments (optional, recommended), which takes about 10 minutes with your photo ID.", href: `${base}/billing?tab=paid`, cta: "Add bank details" });
   if (p.stage === "d5" && p.open.plan) items.push({ title: "Start your free trial", body: "Add a card to start your 7-day free trial and go live. You are not charged until the trial ends, and you can cancel any time.", href: `${base}/billing`, cta: "Start my trial" });
   if (!items.length) return;
   const heading = p.stage === "d1" ? "Ready to build your first listing?" : p.stage === "d3" ? "Your set-up checklist" : "You are nearly live";

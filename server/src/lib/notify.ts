@@ -170,7 +170,7 @@ async function tenantLogo(tenantId: string): Promise<MailAttachment | undefined>
  *  drop the ActivityOS chrome to a small "powered by" line — the family's
  *  relationship is with the provider, not us. Operator mail keeps the
  *  "· via ActivityOS" chrome (they ARE the ActivityOS customer). */
-function layout(
+export function layout(
   heading: string,
   body: string,
   href?: string,

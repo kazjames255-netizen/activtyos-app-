@@ -28,6 +28,8 @@ const C = {
 };
 
 const IMG = "/manual/onboarding";
+/** A bare name is an onboarding screenshot; a path starting with / is used as given (for example /manual/emails/01-welcome-desktop). */
+const shotUrl = (src: string) => (src.startsWith("/") ? `${src}.jpg` : `${IMG}/${src}.jpg`);
 
 /* ---------- small building blocks ---------- */
 
@@ -116,7 +118,7 @@ function Lightbox({ shots, index, setIndex, onClose, color }: { shots: ShotDef[]
       {/* On a phone the picture is shown at a readable size and can be dragged sideways; on wider screens it fits the window. */}
       <div className="relative flex min-h-0 flex-1 items-start overflow-auto py-3 sm:items-center sm:justify-center sm:overflow-hidden" onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`${IMG}/${s.src}.jpg`} alt={s.alt} onClick={(e) => e.stopPropagation()} className="h-auto w-[900px] max-w-none flex-none rounded-xl bg-white shadow-2xl sm:max-h-full sm:w-auto sm:max-w-full sm:object-contain" />
+        <img src={shotUrl(s.src)} alt={s.alt} onClick={(e) => e.stopPropagation()} className="h-auto w-[900px] max-w-none flex-none rounded-xl bg-white shadow-2xl sm:max-h-full sm:w-auto sm:max-w-full sm:object-contain" />
       </div>
       {n > 1 && (
         <div className="flex items-center justify-center gap-4 pb-1">
@@ -150,7 +152,7 @@ function Gallery({ shots, color }: { shots: ShotDef[]; color: string }) {
         </div>
         <button type="button" onClick={() => setOpen(true)} aria-label={`Enlarge: ${s.alt}`} className="block w-full cursor-zoom-in border-0 bg-transparent p-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`${IMG}/${s.src}.jpg`} alt={s.alt} className="block h-auto w-full" />
+          <img src={shotUrl(s.src)} alt={s.alt} className="block h-auto w-full" />
         </button>
         {many && (
           <>
@@ -170,7 +172,7 @@ function Gallery({ shots, color }: { shots: ShotDef[]; color: string }) {
               className="relative w-[88px] flex-none overflow-hidden rounded-lg border-2 bg-[var(--surface)] p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
               style={{ borderColor: k === i ? color : "var(--line)", opacity: k === i ? 1 : 0.7 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`${IMG}/${t.src}.jpg`} alt="" loading="lazy" className="block h-auto w-full" />
+              <img src={shotUrl(t.src)} alt="" loading="lazy" className="block h-auto w-full" />
               <span className="absolute bottom-0 left-0 rounded-tr-md px-1.5 text-[11px] font-extrabold text-white" style={{ background: color }}>{k + 1}</span>
             </button>
           ))}
@@ -576,6 +578,17 @@ function Page1() {
         <H2>The emails a new provider gets</H2>
         <Lede>The day 1, 3 and 5 emails go to freelancer and company owners in their first six days. Every one checks at send time and is skipped if the provider has already done the thing, so a reminder never arrives after the action it reminds about, and the series stops once a listing is live. Each has an unsubscribe link; billing emails are always sent.</Lede>
         <Card className="p-4"><EmailTimeline /></Card>
+        <H2>What the emails look like</H2>
+        <Lede>The real templates, filled with example details. Flick through them, or click one to see it full size. The brand name shown inside these emails comes from one setting on the server and will change with the rename.</Lede>
+        <div className="max-w-[760px]"><Gallery color={C.billing} shots={[
+          { src: "/manual/emails/01-welcome-desktop", alt: "Welcome (to the provider)", caption: "Sent once, straight after sign-up. Lists the four first jobs." },
+          { src: "/manual/emails/02-day1-desktop", alt: "Day 1: build your first listing", caption: "Day 1 after sign-up. Skipped if a listing already exists." },
+          { src: "/manual/emails/03-day3-desktop", alt: "Day 3: your set-up checklist", caption: "Day 3. Shows only what is still open. Skipped if a listing exists and bank details are saved." },
+          { src: "/manual/emails/04-day5-desktop", alt: "Day 5: you are nearly live", caption: "Day 5. Only if no listing is live yet, and only the steps that are left." },
+          { src: "/manual/emails/05-trial-ending-desktop", alt: "Trial ending in 3 days", caption: "3 days before the trial ends, only while a trial is running. Also appears in the bell." },
+          { src: "/manual/emails/06-payment-received-desktop", alt: "Payment received (to the parent)", caption: "One email per card payment, in the provider's name. The card processor's own receipt is off." },
+          { src: "/manual/emails/07-booking-confirmed-desktop", alt: "Booking confirmed (to the parent)", caption: "When a booking is confirmed. If it is not yet paid it shows the provider's bank details and the booking reference." },
+        ]} /></div>
         <div className="mt-3 grid grid-cols-1 gap-3 min-[720px]:grid-cols-2">
           <Card className="p-3.5">
             <h3 className="m-0 mb-1 text-[16px] font-extrabold text-[var(--ink)]" style={display}>Where parents&apos; replies go</h3>

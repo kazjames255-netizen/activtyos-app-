@@ -1,11 +1,10 @@
 import { db } from "../firebase";
-import { cardReady } from "./cardReady";
 import { sign } from "./signing";
 import { emailOnboardingNudge } from "./emails";
 import { webUrl } from "./stripe";
 
 // The new-provider email series: day 1, day 3 and day 5 after sign-up. THE RULE: every email is decided at send time from the
-// provider's live facts, and is skipped if the thing it asks for is already done - nobody is reminded about something they have
+// provider's live facts (payChosen = bank details saved, the same rule as go-live), and is skipped if the thing it asks for is already done - nobody is reminded about something they have
 // already finished. The whole series stops the moment a listing is live, a stage that does not apply is recorded as "skipped" so it
 // is never reconsidered, and a provider can opt out for good with the unsubscribe link in every email.
 
@@ -29,16 +28,15 @@ export const unsubPayload = (tenantId: string) => `onbunsub:${tenantId}`;
 export const unsubUrl = (tenantId: string) => `${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "").replace(/\/+$/, "")}/api/public/onboarding-unsub/${encodeURIComponent(tenantId)}?sig=${sign(unsubPayload(tenantId))}`;
 
 async function factsFor(tenantId: string, sub: { status?: string } | undefined): Promise<Facts> {
-  const [any, live, lib, card] = await Promise.all([
+  const [any, live, lib] = await Promise.all([
     db.collection("listings").where("tenantId", "==", tenantId).limit(1).get(),
     db.collection("listings").where("tenantId", "==", tenantId).where("status", "==", "live").limit(1).get(),
     db.collection("libraries").doc(tenantId).get(),
-    cardReady(tenantId),
   ]);
   const billing = ((lib.data()?.settings ?? {}) as { billing?: { sortCode?: string; accountNumber?: string } }).billing;
   const bank = !!(billing?.sortCode?.trim() && billing?.accountNumber?.trim());
   const status = sub?.status ?? "none";
-  return { hasListing: !any.empty, hasLiveListing: !live.empty, planStarted: ["trialing", "active", "past_due", "canceling"].includes(status), payChosen: bank || (card && !!(await db.collection("tenants").doc(tenantId).get()).get("stripeAccountId")) };
+  return { hasListing: !any.empty, hasLiveListing: !live.empty, planStarted: ["trialing", "active", "past_due", "canceling"].includes(status), payChosen: bank };
 }
 
 export async function onboardingNudges(): Promise<void> {
