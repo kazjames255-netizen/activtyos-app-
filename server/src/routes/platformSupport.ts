@@ -11,6 +11,7 @@
 // unit, so a subcollection would only buy extra round-trips.
 
 import { Router } from "express";
+import { cachedCollection } from "../lib/platformReads";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "../firebase";
@@ -343,7 +344,7 @@ platformSupport.post("/:id/note", async (req, res) => {
 });
 
 platformSupport.get("/insights", async (_req, res) => {
-  const snap = await db.collection("supportThreads").get();
+  const snap = await cachedCollection("supportThreads");
   const threads = snap.docs.map((d) => ({ id: d.id, ...(d.data() as ThreadDoc) }));
   // A duplicate rolls up into its canonical thread — count clusters, not rows.
   const primary = threads.filter((t) => !t.duplicateOf);
@@ -410,7 +411,7 @@ async function groqSummarise(payload: string): Promise<{ overview: string; summa
 // the recurring concern so trends are trackable at a glance.
 platformSupport.get("/review", async (_req, res) => {
   const [threadsSnap, cfgSnap] = await Promise.all([
-    db.collection("supportThreads").get(),
+    cachedCollection("supportThreads"),
     CFG_REF().get(),
   ]);
   const threads = threadsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as ThreadDoc) }));

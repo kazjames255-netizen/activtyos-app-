@@ -333,6 +333,9 @@ test.describe("Part 2: the parent checkout screen with the HMRC link switched on
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await page.waitForURL("**/custdash/home", { timeout: 120_000 });
 
+    // Sign-in now lands on the parent Home page; Browse is a hidden nav view, so go to it directly.
+    await page.goto(`${webUrl}/custdash/browse`, { timeout: 120_000 });
+
     // Browse -> this run's listing -> pass, date, basket, add a child (saved on the parent's account).
     await page.getByPlaceholder("Search by name or venue…").fill(title);
     await page.getByRole("button", { name: /^More details/ }).first().click();
@@ -344,7 +347,7 @@ test.describe("Part 2: the parent checkout screen with the HMRC link switched on
     await page.getByRole("button", { name: /Next — add children/ }).click();
     // A child added through the checkout's own form is only saved when the booking is placed, and HMRC linking needs a saved child
     // (link/start 404s otherwise -> "connection failed"). So this run's child already exists on the account (with a DOB) and is picked here.
-    await page.getByRole("button", { name: `+ ${childName}`, exact: true }).click();
+    await page.getByRole("button", { name: `Add ${childName} to this booking` }).click();
     const boy = page.getByRole("button", { name: "Boy", exact: true });
     const nextBtn = page.getByRole("button", { name: "Next", exact: true });
     for (let guard = 0; !(await nextBtn.isVisible().catch(() => false)); guard++) {

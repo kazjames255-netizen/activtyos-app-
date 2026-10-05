@@ -27,7 +27,7 @@ test.describe("email audiences", () => {
     // The merged "everyone" card → open its viewer → find OUR person.
     const card = cardWith(page, "New enquiries — everyone");
     await card.getByRole("button", { name: /View/ }).click();
-    await card.getByPlaceholder(/Search .* recipient/).fill(email);
+    await card.getByPlaceholder(/Search recipients/).fill(email);
     // exact: the "No recipients match “<email>”" empty state echoes the
     // search text, so a substring match can never go hidden.
     await expect(card.getByText(email, { exact: true })).toBeVisible();
@@ -64,7 +64,7 @@ test.describe("email audiences", () => {
 
     const card = cardWith(page, "New this season");
     await card.getByRole("button", { name: /View/ }).click();
-    await card.getByPlaceholder(/Search .* recipient/).fill(email);
+    await card.getByPlaceholder(/Search recipients/).fill(email);
     await expect(card.getByText(email)).toBeVisible();
   });
 
@@ -96,7 +96,7 @@ test.describe("email audiences", () => {
     await page.getByRole("button", { name: /Enquiries/ }).click();
     const card = cardWith(page, "New enquiries — everyone");
     await card.getByRole("button", { name: /View/ }).click();
-    await card.getByPlaceholder(/Search .* recipient/).fill(senderEmail);
+    await card.getByPlaceholder(/Search recipients/).fill(senderEmail);
     await expect(card.getByText(senderEmail)).toBeVisible();
   });
 

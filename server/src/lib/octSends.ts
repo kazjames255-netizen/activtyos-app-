@@ -194,8 +194,10 @@ export async function scheduleReminders(now = ukNow()): Promise<void> {
       const lead = sched.shiftReminder === "24h" ? 24 * 60 : 120;
       const staff = (m.get("staff") as RotaStaff[] | undefined) ?? [];
       const nameOf = new Map(staff.map((s) => [s.id, lc(s.name)]));
-      const emails = await staffEmailByName(tenantId, franchiseId);
-      const shifts = await db.collection("rotaShifts").where("rotaKey", "==", m.id).get();
+      // A reminder lead is at most 24h, so only a shift today or tomorrow can be inside its window (dayDiff <= 1 below).
+      // Equality/`in` only, so no composite index; before, every shift of the whole season was read every 15 minutes per rota.
+      const shifts = await db.collection("rotaShifts").where("rotaKey", "==", m.id).where("date", "in", [now.date, addDays(now.date, 1)]).get();
+      const emails = shifts.empty ? new Map<string, string>() : await staffEmailByName(tenantId, franchiseId);
       for (const sd of shifts.docs) {
         const s = sd.data() as { id: string; staffId?: string | null; date: string; start: string; end: string; locked?: boolean };
         const startMin = toMinutes(s.start);

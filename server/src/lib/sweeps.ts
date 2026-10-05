@@ -491,7 +491,8 @@ async function paymentDueReminders(): Promise<void> {
 // later booking simply moves that day and may earn another ask months on.
 async function reviewRequests(): Promise<void> {
   const { date: today } = ukNow();
-  const snap = await db.collection("bookings").get();
+  // Only Confirmed bookings count below (the loop skips everything else), so don't read the rest of the collection.
+  const snap = await db.collection("bookings").where("status", "==", "Confirmed").get();
   if (snap.empty) return;
   const libFor = libraryLoader();
 
@@ -751,7 +752,9 @@ export async function listingAutoExpire(): Promise<void> {
 // fireOnce keyed by the item id only, same as listing-auto-expire above, so
 // a still-low item isn't re-bothered every sweep interval.
 export async function inventoryLowStock(): Promise<void> {
-  const snap = await db.collection("inventory").get();
+  // Only items with a numeric reorder level can alert (the loop skips minQty == null); a range filter drops null/missing
+  // minQty server-side so those documents are not read (and billed) every hour.
+  const snap = await db.collection("inventory").where("minQty", ">", -1e15).get();
   if (snap.empty) return;
   const settingsFor = settingsLoader();
   for (const d of snap.docs) {
@@ -973,7 +976,7 @@ export function startSweeps(): void {
   sweep("subscription-sync", 6 * 60 * 60_000, subscriptionSync);
   // Counts/exports/HQ analytics accuracy only — Browse already hides a listing
   // with nothing bookable left, so this never affects what a parent can see.
-  sweep("listing-auto-expire", 60 * 60_000, listingAutoExpire);
+  sweep("listing-auto-expire", 6 * 60 * 60_000, listingAutoExpire); // reads ALL blocks + ALL listings: 6-hourly, not hourly (accuracy-only sweep)
   // Setup → Inventory "low stock" — one bell per item, not a re-check every run.
   sweep("inventory-low-stock", 60 * 60_000, inventoryLowStock);
   sweep("trip-consent-chase", 6 * 60 * 60_000, tripConsentChase);

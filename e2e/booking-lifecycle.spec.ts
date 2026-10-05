@@ -157,8 +157,15 @@ test.describe("waitlist loop", () => {
     const opPage = await opCtx.newPage();
     await opPage.goto("/company/bookings");
     await opPage.getByRole("button", { name: /^Waitlisted/ }).click();
-    await opPage.getByText(`E2E Queue Kid ${stamp}`).first().click();
-    await opPage.getByRole("button", { name: "Offer place (2h hold)" }).click();
+    // Let the filter settle into the URL (the page syncs filters <-> URL) before opening a row — a row click
+    // landing in the same tick as the chip click is swallowed by that sync and the detail never opens.
+    await opPage.waitForURL(/filter=waitlisted/);
+    const offerBtn = opPage.getByRole("button", { name: "Offer place (2h hold)" });
+    await expect(async () => {
+      if (!(await offerBtn.isVisible())) await opPage.getByText(`E2E Queue Kid ${stamp}`).first().click();
+      await expect(offerBtn).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
+    await offerBtn.click();
     await expect(opPage.getByText(/Held until \d{2}:\d{2}/)).toBeVisible({ timeout: 20_000 });
     await opCtx.close();
 

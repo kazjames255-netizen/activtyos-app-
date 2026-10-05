@@ -60,7 +60,7 @@ test.describe("bug report → support inbox", () => {
     await opPage.getByRole("button", { name: "Report a bug" }).click();
     await opPage.getByPlaceholder("What were you doing, and what went wrong?").fill(bugSteps);
     await opPage.getByRole("button", { name: "Send report" }).click();
-    await expect(opPage.getByText("Thanks — we're on it.")).toBeVisible({ timeout: 15_000 });
+    await expect(opPage.getByText(/Thanks — we.re on it/)).toBeVisible({ timeout: 15_000 });
     await opCtx.close();
 
     // HQ side: the thread is in the inbox with the reported details.

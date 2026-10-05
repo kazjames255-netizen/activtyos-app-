@@ -1,5 +1,5 @@
 import { test, expect, type Frame, type Locator, type Page } from "@playwright/test";
-import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignIn, fbSignUp } from "./helpers/accounts";
+import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignIn, fbSignUp, stripeConfigured } from "./helpers/accounts";
 
 // Stripe subscription billing, end to end through the REAL gate: a brand-new
 // freelancer signup is walled, captures a genuine test card in the Stripe
@@ -28,6 +28,9 @@ const inAnyFrame = async (page: Page, find: (f: Frame) => Locator, timeoutMs = 3
   }
   return null;
 };
+
+// Needs STRIPE_SECRET_KEY on the local API: without it the gate never renders a card field.
+test.skip(!stripeConfigured(), "no STRIPE_SECRET_KEY on the local API");
 
 test("fresh signup hits the gate, starts a card-backed trial, cancels and reactivates", async ({ page }) => {
   test.setTimeout(240_000);

@@ -1,4 +1,5 @@
 import { db } from "../firebase";
+import { cachedCollection } from "./platformReads";
 
 // ─────────────────────────────────────────────────────────────────────────
 // subscriptionEvents — the provider lifecycle as HISTORY, not as a guess.
@@ -226,7 +227,7 @@ const monthStart = (key: string) => `${key}-01T00:00:00.000Z`;
 export async function churnByMonth(months: number): Promise<{ months: ChurnMonth[] }> {
   const [evSnap, tenantsSnap] = await Promise.all([
     events().get(),
-    db.collection("tenants").get(),
+    cachedCollection("tenants"),
   ]);
 
   // A deleted provider's history is not the network's churn — an e2e

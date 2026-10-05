@@ -3,7 +3,7 @@ import { createHash, createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { API_URL, loadAccounts } from "./helpers/env";
-import { TEST_EMAIL_DOMAIN, apiFetch, apiPost, fbSignIn } from "./helpers/accounts";
+import { TEST_EMAIL_DOMAIN, apiFetch, apiPost, fbSignIn, upsertCustomer } from "./helpers/accounts";
 
 // Mirrors server/src/lib/signing.ts's deriveSecret()+sign() so this test can
 // build a genuinely valid signed unsubscribe token without a server-only
@@ -105,7 +105,7 @@ test.describe("email compliance & send engine (API)", () => {
     expect(r.sample).not.toContain(em("optout", stamp));
 
     // A booked family who explicitly opts OUT is blocked despite the booking.
-    await apiPost("/api/customers", token, { name: `E2E BookedOut ${stamp}`, email: em("booked", stamp), marketingOptIn: false });
+    await upsertCustomer(token, { name: `E2E BookedOut ${stamp}`, email: em("booked", stamp), marketingOptIn: false });
     const afterOptOut = await dryRun(token, [em("booked", stamp), em("optin", stamp)]);
     expect(afterOptOut.recipientCount).toBe(1);
     expect(afterOptOut.sample).toEqual([em("optin", stamp)]);

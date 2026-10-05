@@ -5,6 +5,8 @@ import type { BookingDoc } from "../lib/bookingDoc";
 import { takesStaffSeat } from "../lib/billing";
 import { getPlans, limitsFor } from "./subscription";
 import { churnByMonth } from "../lib/subscriptionEvents";
+import { cachedCollection, invalidateCollection } from "../lib/platformReads";
+import { ttlCache } from "../lib/ttlCache";
 
 export const platform = Router();
 
@@ -16,7 +18,7 @@ type PortalKey = "company" | "freelancer" | "franchise" | "staff" | "custdash" |
 const portalForRole = (role: string): PortalKey => role === "parent" ? "custdash" : role === "company" || role === "franchise" || role === "freelancer" || role === "staff" || role === "platform" ? role : "custdash";
 platform.get("/accounts", async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
-  const [usersSnap, tenantsSnap] = await Promise.all([db.collection("users").get(), db.collection("tenants").get()]);
+  const [usersSnap, tenantsSnap] = await Promise.all([cachedCollection("users"), cachedCollection("tenants")]);
   const tenantName = new Map(tenantsSnap.docs.map((d) => [d.id, (d.data().name as string) ?? d.id]));
   const accounts = usersSnap.docs.map((d) => {
     const u = d.data() as { role?: string; tenantId?: string; franchiseId?: string; email?: string; name?: string; franchiseName?: string; franchiseArea?: string };
@@ -51,10 +53,10 @@ platform.get("/overview", async (req, res) => {
   }
 
   const [tenantsSnap, bookingsSnap, listingsSnap, usersSnap] = await Promise.all([
-    db.collection("tenants").get(),
-    db.collection("bookings").get(),
-    db.collection("listings").get(),
-    db.collection("users").get(),
+    cachedCollection("tenants"),
+    cachedCollection("bookings"),
+    cachedCollection("listings"),
+    cachedCollection("users"),
   ]);
 
   const tenants = tenantsSnap.docs.map((d) => ({
@@ -108,8 +110,8 @@ platform.get("/subscriptions", async (req, res) => {
     return;
   }
   const [tenantsSnap, usersSnap] = await Promise.all([
-    db.collection("tenants").get(),
-    db.collection("users").get(),
+    cachedCollection("tenants"),
+    cachedCollection("users"),
   ]);
   // Same seat count as the tenant's own /api/subscription (lib/billing.ts
   // takesStaffSeat: active staff only — a franchise login is a location, not
@@ -176,9 +178,9 @@ platform.get("/providers", async (req, res) => {
   // time the page is opened or refreshed (Firestore bills per document read).
   if (providersCache && Date.now() - providersCache.at < 60_000) { res.json({ providers: providersCache.providers }); return; }
   const [tenantsSnap, usersSnap, libsSnap] = await Promise.all([
-    db.collection("tenants").get(),
-    db.collection("users").get(),
-    db.collection("libraries").get(),
+    cachedCollection("tenants"),
+    cachedCollection("users"),
+    cachedCollection("libraries"),
   ]);
   // See /subscriptions above — same active-staff-seat count as lib/billing.ts.
   const staffByTenant: Record<string, number> = {};
@@ -240,6 +242,7 @@ platform.get("/providers", async (req, res) => {
 // same store the operator app + Sidebar already read (featureOff = === false).
 platform.patch("/providers/:id/features", async (req, res) => {
   providersCache = null; // an edit must show on the next read
+  invalidateCollection("libraries");
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
   const parsed = z.object({ view: z.string().min(1).max(60), on: z.boolean() }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
@@ -255,6 +258,7 @@ platform.patch("/providers/:id/features", async (req, res) => {
 // GET /api/platform/page-engagement — average time providers spend on each
 // page, last 3 months vs the previous 3, filterable by provider type. Shows
 // which pages/tabs are actually used. `?type=all|freelancer|company`.
+const pageViewsCache = ttlCache<FirebaseFirestore.QuerySnapshot>(120_000);
 platform.get("/page-engagement", async (req, res) => {
   if (req.auth!.role !== "platform") {
     res.status(403).json({ error: "Requires the platform role" });
@@ -264,7 +268,8 @@ platform.get("/page-engagement", async (req, res) => {
   const now = Date.now(), DAY = 86_400_000;
   const curFrom = new Date(now - 90 * DAY).toISOString();
   const prevFrom = new Date(now - 180 * DAY).toISOString();
-  const snap = await db.collection("pageViews").where("createdAt", ">=", prevFrom).get();
+  // Six months of page views is the biggest read on this screen: share one copy for 2 minutes (the window only slides by seconds).
+  const snap = await pageViewsCache.wrap("pv", () => db.collection("pageViews").where("createdAt", ">=", prevFrom).get());
   const cur: Record<string, { sec: number; n: number }> = {};
   const prev: Record<string, { sec: number; n: number }> = {};
   for (const d of snap.docs) {
@@ -297,9 +302,9 @@ const RISK_RANK: Record<string, number> = { payment_failed: 0, cancelling: 1, tr
 async function computeAtRisk() {
   const now = Date.now(), DAY = 86_400_000;
   const [tenantsSnap, bookingsSnap, libsSnap] = await Promise.all([
-    db.collection("tenants").get(),
-    db.collection("bookings").get(),
-    db.collection("libraries").get(),
+    cachedCollection("tenants"),
+    cachedCollection("bookings"),
+    cachedCollection("libraries"),
   ]);
   const settingsById: Record<string, Record<string, unknown>> = {};
   for (const ld of libsSnap.docs) settingsById[ld.id] = (ld.data()?.settings as Record<string, unknown>) ?? {};
@@ -346,6 +351,7 @@ platform.post("/at-risk/:id/contacted", async (req, res) => {
   // Same as the features toggle: merge-set on a missing id would mint a phantom tenant that then shows up in every HQ list.
   if (!(await db.collection("tenants").doc(req.params.id).get()).exists) { res.status(404).json({ error: "No such provider" }); return; }
   await db.collection("tenants").doc(req.params.id).set({ retentionContactedAt: contacted ? new Date().toISOString() : null }, { merge: true });
+  invalidateCollection("tenants"); // the At-risk list must show the new contacted state on its next read
   res.json({ ok: true, contactedAt: contacted ? new Date().toISOString() : null });
 });
 
@@ -359,11 +365,12 @@ platform.post("/at-risk/:id/contacted", async (req, res) => {
 // — backlog 46a / acceptance p2-m35. A cancellation counts in the month NOTICE
 // was given, so `cancel_at_period_end` shows up when the provider decided
 // rather than when their term happened to run out.
+const churnCache = ttlCache<Awaited<ReturnType<typeof churnByMonth>>>(120_000);
 platform.get("/churn", async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
   const asked = Number(req.query.months);
   const months = Math.min(36, Math.max(1, Number.isFinite(asked) ? Math.round(asked) : 6));
-  res.json(await churnByMonth(months));
+  res.json(await churnCache.wrap(String(months), () => churnByMonth(months))); // reads the whole append-only event log: share a copy for 2 minutes
 });
 
 // GET /api/platform/analytics — the money/trends dashboard for HQ: MRR/ARR,
@@ -376,9 +383,9 @@ platform.get("/analytics", async (req, res) => {
     return;
   }
   const [tenantsSnap, bookingsSnap, libsSnap] = await Promise.all([
-    db.collection("tenants").get(),
-    db.collection("bookings").get(),
-    db.collection("libraries").get(),
+    cachedCollection("tenants"),
+    cachedCollection("bookings"),
+    cachedCollection("libraries"),
   ]);
   const settingsById: Record<string, Record<string, unknown>> = {};
   for (const ld of libsSnap.docs) settingsById[ld.id] = (ld.data()?.settings as Record<string, unknown>) ?? {};
@@ -497,7 +504,7 @@ platform.get("/inbox", async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
   const [snap, tenantsSnap] = await Promise.all([
     db.collection("emailMessages").orderBy("at", "desc").limit(INBOX_WINDOW).get(),
-    db.collection("tenants").get(),
+    cachedCollection("tenants"),
   ]);
   const tenantName = new Map(tenantsSnap.docs.map((d) => [d.id, (d.data().name as string) ?? d.id]));
   const items = snap.docs

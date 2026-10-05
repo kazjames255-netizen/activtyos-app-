@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { cachedCollection } from "../lib/platformReads";
 import { z } from "zod";
 import { db } from "../firebase";
 import { operatorScope } from "../middleware/role";
@@ -569,10 +570,10 @@ export async function familySnapshot(email: string, uid: string) {
 // ── Platform snapshot — the HQ overview aggregates. ──
 async function platformSnapshot() {
   const [tenantsSnap, bookingsSnap, listingsSnap, usersSnap] = await Promise.all([
-    db.collection("tenants").get(),
-    db.collection("bookings").get(),
-    db.collection("listings").get(),
-    db.collection("users").get(),
+    cachedCollection("tenants"),
+    cachedCollection("bookings"),
+    cachedCollection("listings"),
+    cachedCollection("users"),
   ]);
   const tenants = tenantsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as { name: string; type: string; createdAt?: string }) }));
   const byType: Record<string, number> = {};

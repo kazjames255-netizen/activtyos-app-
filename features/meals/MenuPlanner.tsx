@@ -59,6 +59,9 @@ export function MenuPlanner() {
   const loadLists = useCallback(() => { apiGet<Listing[]>("/api/listings?mine=1").then(setListings).catch((e) => setError(e instanceof Error ? e.message : t("meals.failedLoadListings"))); }, [t]);
   const loadMenus = useCallback(() => { apiGet<SavedMenu[]>("/api/meal-menus").then(setMenus).catch(() => setMenus([])); }, []);
   useEffect(() => { loadLists(); loadMenus(); }, [loadLists, loadMenus]);
+  // Menus are built on the Saved-menus tab; refetch when leaving it so the planner never works from a list taken before the save
+  // (does not rely on the realtime ping having arrived).
+  useEffect(() => { if (tab !== "saved") loadMenus(); }, [tab, loadMenus]);
   useRealtime(["listings", "mealMenus"], () => { loadLists(); loadMenus(); });
 
   const listing = useMemo(() => (listings ?? []).find((l) => l.id === listingId) ?? null, [listings, listingId]);

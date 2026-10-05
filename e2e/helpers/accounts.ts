@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { API_URL, FIREBASE_API_KEY } from "./env";
 
 // Throwaway-account convention (see AGENTS.md / PROD-READINESS): everything
@@ -67,3 +69,30 @@ export async function apiFetch<T>(path: string, idToken: string | null, init?: R
 
 export const apiPost = <T>(path: string, idToken: string | null, body: unknown) =>
   apiFetch<T>(path, idToken, { method: "POST", body: JSON.stringify(body) });
+
+/** Add a customer, or — when the email is already on the book (the server keeps one family per
+ *  email, and a booking/standing test account may have created it) — update that record instead. */
+export async function upsertCustomer(idToken: string, body: { email: string } & Record<string, unknown>): Promise<void> {
+  try {
+    await apiPost("/api/customers", idToken, body);
+  } catch (e) {
+    if (!/already on your list/.test(String(e))) throw e;
+    const list = await apiFetch<Array<{ id: string; email?: string }>>("/api/customers", idToken);
+    const hit = list.find((c) => (c.email ?? "").toLowerCase() === body.email.toLowerCase());
+    if (!hit) throw e;
+    await apiFetch(`/api/customers/${hit.id}`, idToken, { method: "PUT", body: JSON.stringify(body) });
+  }
+}
+
+/** True when the local API has a Stripe secret key (process env or server/.env). Specs that make a real
+ *  Stripe call (pay-link card payment, Connect payouts, the subscription gate's card field) skip without one:
+ *  every /api/payments/* route answers 503 "Payments aren't configured", so they can only time out. */
+export function stripeConfigured(): boolean {
+  if (process.env.STRIPE_SECRET_KEY) return true;
+  try {
+    const env = readFileSync(join(process.cwd(), "server", ".env"), "utf8") as string;
+    return /^STRIPE_SECRET_KEY=\S+/m.test(env);
+  } catch {
+    return false;
+  }
+}

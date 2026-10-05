@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath } from "./helpers/env";
-import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignIn } from "./helpers/accounts";
+import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignIn, upsertCustomer } from "./helpers/accounts";
 import { cardWith, dismissParentWelcome } from "./helpers/ui";
 
 // Cross-account journeys beyond booking: staff invite → join, operator ↔
@@ -89,7 +89,7 @@ test.describe("messages", () => {
     // The composer only offers existing customers — arrange one whose email
     // is the parent test account's (threads match on email, not uid).
     const op = await fbSignIn(accounts.company.email);
-    await apiPost("/api/customers", op.idToken, {
+    await upsertCustomer(op.idToken, {
       name: familyName,
       email: accounts.parent.email,
       children: [{ name: "E2E Kid", age: 8 }],

@@ -3,6 +3,7 @@ import { Router } from "express";
 import { db } from "../firebase";
 import { requireAuth } from "../middleware/auth";
 import { hubPingRef } from "../lib/hubPing";
+import { createSharedListeners } from "../lib/sharedListeners";
 
 // Realtime invalidation stream (SSE) — the first slice of the product
 // spec's realtime layer. Each connected client gets Firestore listeners
@@ -38,6 +39,11 @@ const HUB_FAMILY_PING = ["hubTopics", "hubNotes"];
 const HUB_CHANNELS = new Set(["hubEnrolments", ...HUB_DIRECT_CHANNELS, ...HUB_PING_CHANNELS]);
 
 export const events = Router();
+
+// Listeners whose query is fully fixed by a key (global / tenant / tenant+franchise) are SHARED across every SSE
+// connection in this process (lib/sharedListeners.ts): one Firestore listener, fanned out in memory, kept ~60s after
+// the last viewer leaves so a reconnect does not re-read the whole result set. Per-user queries are not keyed.
+const shared = createSharedListeners(60_000);
 
 const TICKET_TTL_MS = 20_000;
 type Ticket = { uid: string; email: string | null; expiresAt: number };
@@ -99,8 +105,18 @@ events.get("/", async (req, res) => {
     : null;
 
   const unsubs: (() => void)[] = [];
-  const listen = (q: FirebaseFirestore.Query, name: string) => {
+  const listen = (q: FirebaseFirestore.Query, name: string, shareKey?: string) => {
     if (wanted && !wanted.has(name)) return; // page doesn't watch this — skip its reads
+    if (shareKey) {
+      // onSnapshot fires once immediately with the current state — the shared hub skips it for everyone.
+      unsubs.push(shared.subscribe(
+        `${shareKey}|${name}`,
+        (onChange, onError) => q.onSnapshot(() => onChange(), onError),
+        () => send(name),
+        (err) => console.error(`[events] listener error (${name}):`, err.message),
+      ));
+      return;
+    }
     // onSnapshot fires once immediately with the current state — skip it,
     // clients already loaded their data over REST.
     let first = true;
@@ -157,9 +173,9 @@ events.get("/", async (req, res) => {
       }
     }
     listen(db.collection("hubAttempts").where("parentUid", "==", decoded.uid), "hubAttempts"); // Learning Hub: their own children's results (a tutor's marking arrives live)
-    listen(db.collection("listings"), "listings"); // the browse marketplace
-    listen(db.collection("blocks"), "blocks"); // availability changes
-    listen(db.collection("posts"), "posts"); // providers' newsfeed
+    listen(db.collection("listings"), "listings", "global"); // the browse marketplace
+    listen(db.collection("blocks"), "blocks", "global"); // availability changes
+    listen(db.collection("posts"), "posts", "global"); // providers' newsfeed
     if (decoded.email) {
       const em = decoded.email.toLowerCase();
       listen(db.collection("threads").where("parentEmail", "==", em), "threads");
@@ -174,9 +190,9 @@ events.get("/", async (req, res) => {
         const bk = await db.collection("bookings").where("email", "==", em).get();
         const tids = [...new Set(bk.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean) as string[])].slice(0, 5);
         for (const tid of tids) {
-          listen(db.collection("libraries").where("tenantId", "==", tid), "library");
+          listen(db.collection("libraries").where("tenantId", "==", tid), "library", `t:${tid}`);
           // Published day plans from the family's providers.
-          listen(db.collection("timetables").where("tenantId", "==", tid), "timetables");
+          listen(db.collection("timetables").where("tenantId", "==", tid), "timetables", `t:${tid}`);
         }
       }
     }
@@ -188,9 +204,9 @@ events.get("/", async (req, res) => {
       const enr = await enrolQ.get();
       const tids = [...new Set(enr.docs.filter((d) => d.get("active") !== false).map((d) => d.get("tenantId") as string))].slice(0, 10);
       for (const tid of tids) {
-        listen(db.collection("libraries").where("tenantId", "==", tid), "library"); // the on/off switch
+        listen(db.collection("libraries").where("tenantId", "==", tid), "library", `t:${tid}`); // the on/off switch
         // Shared content only (per-family rows are filtered below); the big collections arrive as pings.
-        for (const c of HUB_FAMILY_DIRECT) listen(db.collection(c).where("tenantId", "==", tid), c);
+        for (const c of HUB_FAMILY_DIRECT) listen(db.collection(c).where("tenantId", "==", tid), c, `t:${tid}`);
         listenPing(tid, HUB_FAMILY_PING);
       }
       // A family's OWN submissions and lessons only — never a whole tenant collection, so
@@ -199,71 +215,71 @@ events.get("/", async (req, res) => {
       const kidIds = [...new Set(enr.docs.filter((d) => d.get("active") !== false).map((d) => d.get("childId") as string))].slice(0, 10);
       if (kidIds.length) listen(db.collection("hubLessons").where("childIds", "array-contains-any", kidIds), "hubLessons");
     }
-    listen(db.collection("mealOptions"), "mealOptions"); // a booked provider's menu
+    listen(db.collection("mealOptions"), "mealOptions", "global"); // a booked provider's menu
   } else if (role === "platform") {
-    listen(db.collection("tenants"), "tenants");
-    listen(db.collection("bookings"), "bookings");
-    listen(db.collection("listings"), "listings");
-    listen(db.collection("blocks"), "blocks");
-    listen(db.collection("leads").where("inPipeline", "==", true), "leads"); // HQ sales pipeline (not the researched prospects)
-    listen(db.collection("supportThreads"), "supportThreads"); // HQ inbox
+    listen(db.collection("tenants"), "tenants", "platform");
+    listen(db.collection("bookings"), "bookings", "platform");
+    listen(db.collection("listings"), "listings", "global");
+    listen(db.collection("blocks"), "blocks", "global");
+    listen(db.collection("leads").where("inPipeline", "==", true), "leads", "platform"); // HQ sales pipeline (not the researched prospects)
+    listen(db.collection("supportThreads"), "supportThreads", "platform"); // HQ inbox
   } else if (tenantId) {
     let bookingsQ: FirebaseFirestore.Query = db
       .collection("bookings")
       .where("tenantId", "==", tenantId);
     if ((role === "franchise" || role === "staff") && franchiseId)
       bookingsQ = bookingsQ.where("franchiseId", "==", franchiseId);
-    listen(bookingsQ, "bookings");
-    listen(db.collection("listings").where("tenantId", "==", tenantId), "listings");
-    listen(db.collection("blocks").where("tenantId", "==", tenantId), "blocks");
-    listen(db.collection("periods").where("tenantId", "==", tenantId), "periods");
-    listen(db.collection("passes").where("tenantId", "==", tenantId), "passes");
-    listen(db.collection("blockBundles").where("tenantId", "==", tenantId), "blockBundles");
-    listen(db.collection("invites").where("tenantId", "==", tenantId), "invites");
-    listen(db.collection("customers").where("tenantId", "==", tenantId), "customers");
-    listen(db.collection("libraries").where("tenantId", "==", tenantId), "library");
-    listen(db.collection("supportThreads").where("providerId", "==", tenantId), "supportThreads"); // Message-ActivityOS replies
-    listen(db.collection("registers").where("tenantId", "==", tenantId), "registers");
-    listen(db.collection("payments").where("tenantId", "==", tenantId), "payments");
-    listen(db.collection("ratioGroups").where("tenantId", "==", tenantId), "ratioGroups");
-    listen(db.collection("ratioBoards").where("tenantId", "==", tenantId), "ratioBoards");
-    listen(db.collection("incidents").where("tenantId", "==", tenantId), "incidents");
-    listen(db.collection("medications").where("tenantId", "==", tenantId), "medications");
-    listen(db.collection("medicationAdmin").where("tenantId", "==", tenantId), "medicationAdmin");
-    listen(db.collection("menus").where("tenantId", "==", tenantId), "menus");
-    listen(db.collection("moments").where("tenantId", "==", tenantId), "moments");
-    listen(db.collection("tasks").where("tenantId", "==", tenantId), "tasks");
-    for (const c of ["hubEnrolments", ...HUB_DIRECT_CHANNELS]) listen(db.collection(c).where("tenantId", "==", tenantId), c);
+    listen(bookingsQ, "bookings", `t:${tenantId}:${(role === "franchise" || role === "staff") && franchiseId ? franchiseId : "*"}`);
+    listen(db.collection("listings").where("tenantId", "==", tenantId), "listings", `t:${tenantId}`);
+    listen(db.collection("blocks").where("tenantId", "==", tenantId), "blocks", `t:${tenantId}`);
+    listen(db.collection("periods").where("tenantId", "==", tenantId), "periods", `t:${tenantId}`);
+    listen(db.collection("passes").where("tenantId", "==", tenantId), "passes", `t:${tenantId}`);
+    listen(db.collection("blockBundles").where("tenantId", "==", tenantId), "blockBundles", `t:${tenantId}`);
+    listen(db.collection("invites").where("tenantId", "==", tenantId), "invites", `t:${tenantId}`);
+    listen(db.collection("customers").where("tenantId", "==", tenantId), "customers", `t:${tenantId}`);
+    listen(db.collection("libraries").where("tenantId", "==", tenantId), "library", `t:${tenantId}`);
+    listen(db.collection("supportThreads").where("providerId", "==", tenantId), "supportThreads", `t:${tenantId}`); // Message-ActivityOS replies
+    listen(db.collection("registers").where("tenantId", "==", tenantId), "registers", `t:${tenantId}`);
+    listen(db.collection("payments").where("tenantId", "==", tenantId), "payments", `t:${tenantId}`);
+    listen(db.collection("ratioGroups").where("tenantId", "==", tenantId), "ratioGroups", `t:${tenantId}`);
+    listen(db.collection("ratioBoards").where("tenantId", "==", tenantId), "ratioBoards", `t:${tenantId}`);
+    listen(db.collection("incidents").where("tenantId", "==", tenantId), "incidents", `t:${tenantId}`);
+    listen(db.collection("medications").where("tenantId", "==", tenantId), "medications", `t:${tenantId}`);
+    listen(db.collection("medicationAdmin").where("tenantId", "==", tenantId), "medicationAdmin", `t:${tenantId}`);
+    listen(db.collection("menus").where("tenantId", "==", tenantId), "menus", `t:${tenantId}`);
+    listen(db.collection("moments").where("tenantId", "==", tenantId), "moments", `t:${tenantId}`);
+    listen(db.collection("tasks").where("tenantId", "==", tenantId), "tasks", `t:${tenantId}`);
+    for (const c of ["hubEnrolments", ...HUB_DIRECT_CHANNELS]) listen(db.collection(c).where("tenantId", "==", tenantId), c, `t:${tenantId}`);
     // Learning Hub big collections: pings, not streams. The marking queue (hubAttempts) is for tenant-level accounts only.
     listenPing(tenantId, franchiseId ? HUB_PING_CHANNELS.filter((c) => c !== "hubAttempts") : HUB_PING_CHANNELS);
-    listen(db.collection("trips").where("tenantId", "==", tenantId), "trips");
-    listen(db.collection("shifts").where("tenantId", "==", tenantId), "shifts");
-    listen(db.collection("timetables").where("tenantId", "==", tenantId), "timetables");
-    listen(db.collection("posts").where("tenantId", "==", tenantId), "posts");
-    listen(db.collection("threads").where("tenantId", "==", tenantId), "threads");
-    listen(db.collection("messages").where("tenantId", "==", tenantId), "messages");
-    listen(db.collection("expenses").where("tenantId", "==", tenantId), "expenses");
-    listen(db.collection("income").where("tenantId", "==", tenantId), "income");
-    listen(db.collection("suppliers").where("tenantId", "==", tenantId), "suppliers");
-    listen(db.collection("purchaseOrders").where("tenantId", "==", tenantId), "purchaseOrders");
-    listen(db.collection("invoices").where("tenantId", "==", tenantId), "invoices");
-    listen(db.collection("documents").where("tenantId", "==", tenantId), "documents");
-    listen(db.collection("certifications").where("tenantId", "==", tenantId), "certifications");
-    listen(db.collection("discountCodes").where("tenantId", "==", tenantId), "discountCodes");
-    listen(db.collection("emails").where("tenantId", "==", tenantId), "emails");
-    listen(db.collection("emailMessages").where("tenantId", "==", tenantId), "emailMessages");
-    listen(db.collection("scheduledEmails").where("tenantId", "==", tenantId), "scheduledEmails");
-    listen(db.collection("wallet").where("tenantId", "==", tenantId), "wallet");
-    listen(db.collection("notifications").where("tenantId", "==", tenantId), "notifications");
-    listen(db.collection("mealOptions").where("tenantId", "==", tenantId), "mealOptions");
-    listen(db.collection("mealOrders").where("tenantId", "==", tenantId), "mealOrders");
-    listen(db.collection("mealMenus").where("tenantId", "==", tenantId), "mealMenus");
+    listen(db.collection("trips").where("tenantId", "==", tenantId), "trips", `t:${tenantId}`);
+    listen(db.collection("shifts").where("tenantId", "==", tenantId), "shifts", `t:${tenantId}`);
+    listen(db.collection("timetables").where("tenantId", "==", tenantId), "timetables", `t:${tenantId}`);
+    listen(db.collection("posts").where("tenantId", "==", tenantId), "posts", `t:${tenantId}`);
+    listen(db.collection("threads").where("tenantId", "==", tenantId), "threads", `t:${tenantId}`);
+    listen(db.collection("messages").where("tenantId", "==", tenantId), "messages", `t:${tenantId}`);
+    listen(db.collection("expenses").where("tenantId", "==", tenantId), "expenses", `t:${tenantId}`);
+    listen(db.collection("income").where("tenantId", "==", tenantId), "income", `t:${tenantId}`);
+    listen(db.collection("suppliers").where("tenantId", "==", tenantId), "suppliers", `t:${tenantId}`);
+    listen(db.collection("purchaseOrders").where("tenantId", "==", tenantId), "purchaseOrders", `t:${tenantId}`);
+    listen(db.collection("invoices").where("tenantId", "==", tenantId), "invoices", `t:${tenantId}`);
+    listen(db.collection("documents").where("tenantId", "==", tenantId), "documents", `t:${tenantId}`);
+    listen(db.collection("certifications").where("tenantId", "==", tenantId), "certifications", `t:${tenantId}`);
+    listen(db.collection("discountCodes").where("tenantId", "==", tenantId), "discountCodes", `t:${tenantId}`);
+    listen(db.collection("emails").where("tenantId", "==", tenantId), "emails", `t:${tenantId}`);
+    listen(db.collection("emailMessages").where("tenantId", "==", tenantId), "emailMessages", `t:${tenantId}`);
+    listen(db.collection("scheduledEmails").where("tenantId", "==", tenantId), "scheduledEmails", `t:${tenantId}`);
+    listen(db.collection("wallet").where("tenantId", "==", tenantId), "wallet", `t:${tenantId}`);
+    listen(db.collection("notifications").where("tenantId", "==", tenantId), "notifications", `t:${tenantId}`);
+    listen(db.collection("mealOptions").where("tenantId", "==", tenantId), "mealOptions", `t:${tenantId}`);
+    listen(db.collection("mealOrders").where("tenantId", "==", tenantId), "mealOrders", `t:${tenantId}`);
+    listen(db.collection("mealMenus").where("tenantId", "==", tenantId), "mealMenus", `t:${tenantId}`);
     // Milestones — the head-office template is one doc per tenant; progress is
     // one doc per franchise (a franchise only ever watches its own).
-    listen(db.collection("milestones").where("tenantId", "==", tenantId), "milestones");
+    listen(db.collection("milestones").where("tenantId", "==", tenantId), "milestones", `t:${tenantId}`);
     let progQ: FirebaseFirestore.Query = db.collection("milestoneProgress").where("tenantId", "==", tenantId);
     if (role === "franchise" && franchiseId) progQ = progQ.where("franchiseId", "==", franchiseId);
-    listen(progQ, "milestoneProgress");
+    listen(progQ, "milestoneProgress", `t:${tenantId}:${role === "franchise" && franchiseId ? franchiseId : "*"}`);
   }
 
   const close = () => {
@@ -278,9 +294,13 @@ events.get("/", async (req, res) => {
   // run ONLY at connect, so switching someone off left their open stream
   // delivering updates indefinitely (every REST refetch 401s, but the stream
   // itself never stopped). One read per account per 25s while connected.
+  // The account re-check is a billed read, so it runs on every 4th beat (~100s) rather than every 25s — still bounded,
+  // and 75% fewer reads per open tab. The ":ping" keep-alive itself still goes out every 25s.
+  let beats = 0;
   const ping = setInterval(() => {
     void (async () => {
       try {
+        if (beats++ % 4 !== 0) { res.write(":ping\n\n"); return; }
         const snap = await db.collection("users").doc(decoded.uid).get();
         const cur = snap.exists ? snap.data()! : {};
         if (!snap.exists || cur.disabled === true || cur.deactivatedAt) {

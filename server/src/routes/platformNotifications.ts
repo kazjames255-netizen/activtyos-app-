@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { cachedCollection } from "../lib/platformReads";
 import { z } from "zod";
 import { db } from "../firebase";
 import { ukToday } from "../lib/ukDate";
@@ -42,7 +43,7 @@ async function buildItems(muted: string[]): Promise<Item[]> {
   const items: Item[] = [];
 
   if (on("signup") || on("cancel")) {
-    const tenants = await db.collection("tenants").get();
+    const tenants = await cachedCollection("tenants");
     for (const d of tenants.docs) {
       const t = d.data() as { name?: string; type?: string; createdAt?: string; subscription?: { status?: string; canceledAt?: string } };
       if (on("signup") && t.createdAt && t.createdAt > cutoff) {
@@ -56,7 +57,7 @@ async function buildItems(muted: string[]): Promise<Item[]> {
   }
 
   if (on("support") || on("bug")) {
-    const threads = await db.collection("supportThreads").get();
+    const threads = await cachedCollection("supportThreads");
     for (const d of threads.docs) {
       const th = d.data() as { kind?: string; providerName?: string; subject?: string; createdAt?: string; messages?: { body?: string; at?: string; from?: string }[] };
       const type: NType = th.kind === "bug" ? "bug" : "support";

@@ -1,6 +1,9 @@
 import { test, expect, type Frame, type Locator } from "@playwright/test";
 import { loadAccounts, statePath } from "./helpers/env";
-import { apiPost, fbSignIn } from "./helpers/accounts";
+import { apiPost, fbSignIn, stripeConfigured } from "./helpers/accounts";
+
+// Needs STRIPE_SECRET_KEY on the local API (/api/payments/* 503s without it).
+test.skip(!stripeConfigured(), "no STRIPE_SECRET_KEY on the local API");
 
 // The platform's one real payment surface: the public invoice pay-link.
 // Stripe test mode with the platform-fallback account (no Connect onboarding
