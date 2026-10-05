@@ -1652,7 +1652,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         )}
         {b.saved <= 0 && (d as { earlyFixedUsed?: boolean }).earlyFixedUsed && (
           <div className="mb-2 rounded-xl border px-3 py-2 text-[12px]" style={{ borderColor: tk.line, color: tk.muted }}>
-            Your early-bird discount is already on an earlier booking this season (one per family), so it isn’t applied here. If that earlier booking is still unpaid and you’d rather rebook, cancel it first.
+            Your early-bird discount is already on an earlier booking this season (one per family), so it isn’t applied here.
+            {(d as { earlyFixedUnpaid?: boolean }).earlyFixedUnpaid && (d as { earlyFixedRef?: string }).earlyFixedRef && (
+              <> That booking is still unpaid. <Link href={`/custdash/bookings?cancel=${encodeURIComponent((d as { earlyFixedRef?: string }).earlyFixedRef!)}`} className="font-bold underline" style={{ color: tk.accent }}>Cancel it ({(d as { earlyFixedRef?: string }).earlyFixedRef})</Link> to use the discount on this one instead.</>
+            )}
           </div>
         )}
         {b.discountLines.map((l, i) => (

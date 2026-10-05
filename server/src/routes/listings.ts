@@ -13,7 +13,7 @@ import { ukToday } from "../lib/ukDate";
 import { passCap, bookingHasPass } from "../lib/passBooking";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { isBrowsable, directLinkVisible } from "../lib/listingVisibility";
-import { earlyBirdScopeOf, earlyFixedUsed } from "../lib/earlyBird";
+import { earlyBirdScopeOf, earlyFixedBooking } from "../lib/earlyBird";
 import { DISCOUNT_KIND_LABEL, ruleDisplayName, type DiscountRule } from "../../../features/listings/discounts";
 import { accessFor, subscriptionState } from "../middleware/subscription";
 
@@ -376,8 +376,8 @@ listings.get("/:id", async (req, res) => {
   const providerName = (libData.settings as { providerName?: string } | undefined)?.providerName?.trim();
   // A signed-in family that already used a fixed-£ early bird this season: the booking page prices without it, as checkout will.
   const hasFixedEarly = ((l.discounts as { kind?: string; enabled?: boolean; method?: string }[] | undefined) ?? []).some((r) => r.kind === "early" && r.enabled !== false && r.method !== "percent");
-  const earlyUsed = hasFixedEarly && req.user?.email ? await earlyFixedUsed(l.tenantId as string, req.user.email.toLowerCase(), earlyBirdScopeOf(snap.id, l.seasonId as string | undefined)) : false;
-  res.json({ ...joined, tenantName: providerName || joined.tenantName, bundle, library, mealMenus, ...(earlyUsed ? { earlyFixedUsed: true } : {}) });
+  const earlyUsed = hasFixedEarly && req.user?.email ? await earlyFixedBooking(l.tenantId as string, req.user.email.toLowerCase(), earlyBirdScopeOf(snap.id, l.seasonId as string | undefined)) : null;
+  res.json({ ...joined, tenantName: providerName || joined.tenantName, bundle, library, mealMenus, ...(earlyUsed ? { earlyFixedUsed: true, earlyFixedRef: earlyUsed.ref, earlyFixedUnpaid: earlyUsed.unpaid } : {}) });
 });
 
 // Operators manage their own tenant's listings. (Bookings keep a denormalised

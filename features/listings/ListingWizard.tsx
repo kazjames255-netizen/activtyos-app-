@@ -382,6 +382,8 @@ export interface WizardDraft {
   discounts?: DiscountRule[];
   /** Server-set on the signed-in family's view: they already used a fixed-£ early bird this season. */
   earlyFixedUsed?: boolean;
+  earlyFixedRef?: string;
+  earlyFixedUnpaid?: boolean;
   status: "draft" | "live";
   archived?: boolean;
   pageStyle?: PageTheme;
