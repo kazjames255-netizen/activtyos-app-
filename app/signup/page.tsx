@@ -151,6 +151,7 @@ function SignupForm() {
   const [heard, setHeard] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Post-signup "Get paid" step. Bank details ride along with register-role;
@@ -428,7 +429,7 @@ function SignupForm() {
           <div className="flex flex-col gap-3.5">
             <div><FieldLabel htmlFor="iv-name">{t("p8pub.suYourName")}</FieldLabel><Input id="iv-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="w-full" /></div>
             <div><FieldLabel htmlFor="iv-email">{t("p7login.email")}</FieldLabel><Input id="iv-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" /></div>
-            <div><FieldLabel htmlFor="iv-pw">{t("p7login.password")}</FieldLabel><Input id="iv-pw" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full" /></div>
+            <div><FieldLabel htmlFor="iv-pw">{t("p7login.password")}</FieldLabel><div className="relative"><Input id="iv-pw" type={showPw ? "text" : "password"} required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pe-14" /><button type="button" onClick={() => setShowPw((v) => !v)} className="absolute end-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[var(--ink-3)] hover:text-[var(--ink-2)]">{showPw ? t("p7login.hide") : t("p7login.show")}</button></div></div>
             {error && <ErrorBox>{error}</ErrorBox>}
             <Button variant="primary" type="submit" disabled={busy || !invite} className="mt-1 h-11 w-full text-[14px]">{busy ? t("p8pub.suIvJoining") : invite ? t("p8pub.suIvJoin", { name: invite.tenantName }) : t("p8pub.suIvJoinBare")}</Button>
             <SignInLink />
@@ -574,7 +575,7 @@ function SignupForm() {
         {current === "login" && (
           <div className="flex flex-col gap-4">
             <div><FieldLabel htmlFor="l-email">{t("p7login.email")}</FieldLabel><Input id="l-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" /></div>
-            <div><FieldLabel htmlFor="l-pw">{t("p7login.password")}</FieldLabel><Input id="l-pw" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("p8pub.suPwPh")} className="w-full" /></div>
+            <div><FieldLabel htmlFor="l-pw">{t("p7login.password")}</FieldLabel><div className="relative"><Input id="l-pw" type={showPw ? "text" : "password"} required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("p8pub.suPwPh")} className="w-full pe-14" /><button type="button" onClick={() => setShowPw((v) => !v)} className="absolute end-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[var(--ink-3)] hover:text-[var(--ink-2)]">{showPw ? t("p7login.hide") : t("p7login.show")}</button></div></div>
             {isOperator && (
               <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[12.5px] leading-snug text-[var(--ink-2)]">
                 <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-[#FF3D7F]" />
