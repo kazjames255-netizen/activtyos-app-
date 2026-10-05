@@ -966,7 +966,7 @@ export function emailVoucherInstructions(
 /** The provider has recorded an off-platform payment (voucher / TFC / cash /
  *  bank transfer) against a booking — tell the family it's landed, with all the
  *  booking context (dates, venue, who's on it, the amount). */
-export function emailPaymentReceived(b: Booking, providerName: string, opts: { label: string; amount: number }): void {
+export function emailPaymentReceived(b: Booking, providerName: string, opts: { label: string; amount: number; refs?: string[] }): void {
   const m = paymentReceivedSpec(b, providerName, opts);
   sendCustomerEmail(b, providerName, "payments", m.subject, m.title, m.body, m.enrich);
 }

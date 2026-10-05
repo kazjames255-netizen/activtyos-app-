@@ -380,6 +380,8 @@ export interface WizardDraft {
   /** Which named policy this listing uses — see lib/cancellation.ts. */
   cancellationPolicyId?: string;
   discounts?: DiscountRule[];
+  /** Server-set on the signed-in family's view: they already used a fixed-£ early bird this season. */
+  earlyFixedUsed?: boolean;
   status: "draft" | "live";
   archived?: boolean;
   pageStyle?: PageTheme;
@@ -2551,6 +2553,9 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
   const openForm = (r: DiscountRule | null, edited = false) => { setForm(r); setNameEdited(edited); };
   const editing = !!form && rules.some((r) => r.id === form.id);
   const set = (p: Partial<DiscountRule>) => setForm((f) => (f ? { ...f, ...p } : f));
+  // Multi-person discounts are percentage-only. A rule saved earlier with another method keeps it until it is edited.
+  const legacyPersonMethod = !!form && form.kind === "person" && editing && rules.find((r) => r.id === form.id)?.method !== "percent";
+  const personPctOnly = !!form && form.kind === "person" && !legacyPersonMethod;
   const save = () => {
     if (!form) return;
     // Persist the shown name — the auto-summary when they didn't type their own.
@@ -2633,8 +2638,8 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
               <div>
                 <FieldLabel>{tr("p8lst.wbDiscMethod")}</FieldLabel>
                 <Select value={form.method} onChange={(e) => set({ method: e.target.value as DiscountRule["method"] })} className="w-full text-[12px]">
-                  {form.kind !== "session" && <option value="price">{tr("p8lst.wbDiscM_price")}</option>}
-                  {form.kind !== "session" && <option value="subtract">{tr("p8lst.wbDiscM_subtract")}</option>}
+                  {form.kind !== "session" && !personPctOnly && <option value="price">{tr("p8lst.wbDiscM_price")}</option>}
+                  {form.kind !== "session" && !personPctOnly && <option value="subtract">{tr("p8lst.wbDiscM_subtract")}</option>}
                   <option value="percent">{tr("p8lst.wbDiscM_percent")}</option>
                 </Select>
               </div>
@@ -2647,6 +2652,16 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
               </div>
             </div>
 
+            {form.kind === "early" && form.method !== "percent" && (
+              <div className="mt-3 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
+                <Rich text={tr("p8lst.wbDiscEarlyOnce")} />
+              </div>
+            )}
+            {form.kind === "person" && (
+              <div className="mt-3 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
+                <Rich text={tr(legacyPersonMethod ? "p8lst.wbDiscPersonLegacy" : "p8lst.wbDiscPersonWhyPct")} />
+              </div>
+            )}
             <div className="mt-3.5 rounded-lg border-s-4 bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]" style={{ borderInlineStartColor: kindOf(form.kind).colour }}>
               <b>{tr("p8lst.wbParentsSee")}</b> {prettyRuleName(form.name.trim()) || ruleSummary(form, tx)}
             </div>

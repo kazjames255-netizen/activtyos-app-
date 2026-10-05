@@ -112,6 +112,7 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
       validKids.length,
       undefined,
       { tr: t, locale },
+      { earlyFixedUsed: (listing as { earlyFixedUsed?: boolean }).earlyFixedUsed },
     );
     return { lines, total: Math.round((total + addonsPerChild * validKids.length) * 100) / 100 };
   })();

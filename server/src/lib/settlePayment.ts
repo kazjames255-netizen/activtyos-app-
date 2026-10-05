@@ -116,9 +116,12 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
   // operator's manual "record payment" sends. Runs after the commit and only on
   // the claiming caller, so a webhook retry or a late browser confirm can't
   // send it twice. Best-effort: a mail failure must never undo settled money.
-  for (const b of settled) {
-    await notifyPaymentReceived(claimed.tenantId, b, "card")
-      .catch((e) => console.error(`[settle] payment-received notice for ${b.ref}:`, (e as Error).message));
+  // One payment, one email: bookings for the same family settled together (a basket spanning weeks) share it.
+  const byFamily = new Map<string, typeof settled>();
+  for (const b of settled) byFamily.set((b.email ?? "").toLowerCase(), [...(byFamily.get((b.email ?? "").toLowerCase()) ?? []), b]);
+  for (const grp of byFamily.values()) {
+    await notifyPaymentReceived(claimed.tenantId, grp[0], "card", grp)
+      .catch((e) => console.error(`[settle] payment-received notice for ${grp[0].ref}:`, (e as Error).message));
   }
   return "settled";
 }

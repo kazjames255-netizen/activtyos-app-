@@ -13,6 +13,7 @@ import { ukToday } from "../lib/ukDate";
 import { passCap, bookingHasPass } from "../lib/passBooking";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { isBrowsable, directLinkVisible } from "../lib/listingVisibility";
+import { earlyBirdScopeOf, earlyFixedUsed } from "../lib/earlyBird";
 import { accessFor, subscriptionState } from "../middleware/subscription";
 
 export const listings = Router();
@@ -370,7 +371,10 @@ listings.get("/:id", async (req, res) => {
   // set at onboarding) rather than the business name denormalised onto the
   // listing at creation. Falls back to that stored name when unset.
   const providerName = (libData.settings as { providerName?: string } | undefined)?.providerName?.trim();
-  res.json({ ...joined, tenantName: providerName || joined.tenantName, bundle, library, mealMenus });
+  // A signed-in family that already used a fixed-£ early bird this season: the booking page prices without it, as checkout will.
+  const hasFixedEarly = ((l.discounts as { kind?: string; enabled?: boolean; method?: string }[] | undefined) ?? []).some((r) => r.kind === "early" && r.enabled !== false && r.method !== "percent");
+  const earlyUsed = hasFixedEarly && req.user?.email ? await earlyFixedUsed(l.tenantId as string, req.user.email.toLowerCase(), earlyBirdScopeOf(snap.id, l.seasonId as string | undefined)) : false;
+  res.json({ ...joined, tenantName: providerName || joined.tenantName, bundle, library, mealMenus, ...(earlyUsed ? { earlyFixedUsed: true } : {}) });
 });
 
 // Operators manage their own tenant's listings. (Bookings keep a denormalised
@@ -425,6 +429,7 @@ listings.post("/", async (req, res) => {
   }
   const tenant = await db.collection("tenants").doc(auth.tenantId).get();
   const data = parsed.data;
+  { const bad = personRuleProblem(data.discounts, undefined); if (bad) { res.status(400).json({ error: bad }); return; } }
   { const bad = await foreignRefProblem(auth, auth.tenantId, data); if (bad) { res.status(400).json({ error: bad }); return; } }
   if (data.status === "live") {
     const problems = publishProblems(data as Record<string, unknown>);
@@ -456,6 +461,20 @@ listings.post("/", async (req, res) => {
   res.status(201).json({ id: ref.id, ...doc });
 });
 
+
+// Multi-person (sibling) discounts are percentage-only: a £ amount is taken per child per line, so a family
+// could split a week into single days and out-discount the weekly pass. Rules already saved with another
+// method keep working (stored id + method unchanged); only NEW or CHANGED ones are refused.
+function personRuleProblem(next: unknown, stored: unknown): string | null {
+  const have = new Map(((stored as { id?: string; method?: string; value?: number }[] | undefined) ?? []).map((r) => [r.id, r]));
+  for (const r of (next as { id: string; kind: string; method: string; value: number }[] | undefined) ?? []) {
+    if (r.kind !== "person" || r.method === "percent") continue;
+    const old = have.get(r.id);
+    if (!old || old.method !== r.method || old.value !== r.value) return "A multi-person discount must be a percentage (a fixed £ amount per child can be beaten by splitting a week into single days).";
+  }
+  return null;
+}
+
 // Load a listing and verify it belongs to the caller's tenant.
 async function ownListing(req: Request, id: string) {
   const auth = req.auth!;
@@ -484,6 +503,7 @@ listings.put("/:id", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
+  { const bad = personRuleProblem(parsed.data.discounts, own.snap.data()!.discounts); if (bad) { res.status(400).json({ error: bad }); return; } }
   // Optimistic concurrency: two tabs autosaving the SAME listing used to be
   // silent last-writer-wins on the WHOLE document — Tab B's stale save could
   // revert Tab A's title change with no warning. The wizard sends back the

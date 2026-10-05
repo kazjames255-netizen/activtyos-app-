@@ -25,6 +25,7 @@ import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
 import { applyDiscounts, type DiscountRule } from "../../../features/listings/discounts";
+import { earlyBirdScopeOf, earlyFixedUsed } from "../lib/earlyBird";
 import {
   resolveBundlePricing,
   type BundleDoc,
@@ -810,6 +811,7 @@ my.post("/bookings", async (req, res) => {
     name: string;
     tenantId: string;
     franchiseId?: string | null;
+    seasonId?: string | null;
     tenantName?: string;
     passes: { name: string; price: number; days?: number }[];
     blockId?: string | null; // block bundle (timings live there)
@@ -1290,6 +1292,8 @@ my.post("/bookings", async (req, res) => {
     if (g) g.heads += 1;
     else grouped.set(key, { pass: p.item.pass, base: p.base, days: p.days.length, heads: 1 });
   }
+  const earlyScope = earlyBirdScopeOf(input.listingId, listing.seasonId);
+  const earlyUsed = (listing.discounts ?? []).some((r) => r.kind === "early" && r.enabled && r.method !== "percent") ? await earlyFixedUsed(listing.tenantId, familyEmail, earlyScope) : false;
   const { total: discounted, lines: discountLines } = applyDiscounts(
     listing.discounts ?? [],
     [...grouped.values()].map((g) => ({ name: g.pass, price: g.base, days: g.days, heads: g.heads })),
@@ -1297,7 +1301,10 @@ my.post("/bookings", async (req, res) => {
     // The UK day, not the default UTC one: an "early bird, before <date>" rule
     // that expired yesterday would otherwise still apply until 1am BST.
     ukToday(),
+    undefined,
+    { earlyFixedUsed: earlyUsed },
   );
+  const earlyScopeStamp = discountLines.some((d) => d.earlyFixed && d.amount > 0) ? earlyScope : null;
   const passGross = round2(priced.reduce((s, p) => s + p.base, 0));
   const discountOff = Math.max(0, round2(passGross - discounted));
   // Spread the discount across items in proportion to their base price.
@@ -1744,6 +1751,7 @@ my.post("/bookings", async (req, res) => {
               discountOff: offThisRow,
               discountNames: [...discountLines.filter((d) => d.amount > 0).map((d) => d.name), ...discountCodes.map((c) => `Code ${c}`)],
             } : {}),
+            ...(earlyScopeStamp ? { earlyBirdScope: earlyScopeStamp } : {}),
             ...(serviceAddress ? { serviceAddress } : {}),
             ...(familyPostcode ? { postcode: familyPostcode } : {}),
             tenantId: listing.tenantId,

@@ -174,6 +174,8 @@ export interface Booking {
   listPrice?: number;
   discountOff?: number;
   discountNames?: string[];
+  /** Server-stamped when a fixed-£ early bird was used: "season:<id>" or "listing:<id>" (once per family per scope). */
+  earlyBirdScope?: string;
   /** Store credit taken off this booking at checkout. `amount` is already net
    *  of it — this is here so the money trail shows where the difference went. */
   walletApplied?: number;

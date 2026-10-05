@@ -62,9 +62,9 @@ export function emptyRule(kind: DiscountKind): DiscountRule {
     enabled: true,
     moreThan: kind === "session" ? 3 : 1,
     appliesTo: "all",
-    method: kind === "session" ? "percent" : "subtract",
+    method: kind === "session" || kind === "person" ? "percent" : "subtract",
     // Presets match their card copy ("10% off", "£10 off").
-    value: kind === "person" ? 0 : 10,
+    value: 10,
     beforeDate: "",
   };
 }
@@ -97,6 +97,8 @@ export interface DiscountLine {
   perItem?: number[];
   /** "10%" / "£5 off" — and who it covers, so £3 on a £60 line makes sense. */
   terms?: string;
+  /** Set on an early-bird line that was a fixed £ amount (limited to once per family per season). */
+  earlyFixed?: boolean;
 }
 /**
  * Work out what comes off a basket. Returns each applied rule's saving.
@@ -106,15 +108,18 @@ export interface DiscountLine {
 export function applyDiscounts(
   rules: DiscountRule[],
   /**
-   * One entry per thing being bought. `heads` is how many children are on it —
-   * a multi-person rule only applies where children are on the SAME line,
-   * because that's what a sibling discount is for. Omit it and every item is
-   * assumed to carry `attendees`, which is the old behaviour.
+   * One entry per thing being bought. `heads` is how many children are on it
+   * (the saving is taken for each of them). Whether a multi-person rule applies
+   * is decided by `attendees` — the children in the WHOLE checkout, whichever
+   * weeks or passes they are on. Omit `heads` and every item is assumed to
+   * carry `attendees`.
    */
   items: { name: string; price: number; days: number; heads?: number }[],
   attendees: number,
   today = new Date().toISOString().slice(0, 10),
   tx?: DiscountTx,
+  /** earlyFixedUsed: this family already used a fixed-£ early bird this season, so those rules are skipped. */
+  opts?: { earlyFixedUsed?: boolean },
 ): { lines: DiscountLine[]; total: number } {
   const headsOf = (i: { heads?: number }) => Math.max(0, i.heads ?? attendees);
   const gross = items.reduce((s, i) => s + i.price * headsOf(i), 0);
@@ -133,14 +138,15 @@ export function applyDiscounts(
   let running = gross;
 
   // 1) Multi-person — priced per discounted attendee, per covered ticket.
-  // Judged line by line: two children on the same week earn it, one child on
-  // each of two weeks doesn't — they're never actually a pair.
+  // Judged across the whole checkout: siblings booked together earn it even on different weeks or passes.
   const discountedHeads = (n: number) => Math.max(0, n);
   const person = live.filter((r) => r.kind === "person");
   let bestPerson: { r: DiscountRule; amount: number; perItem: number[] } | null = null;
   for (const r of person) {
+    // Counted across the whole checkout: child A in week 1 and child B in week 2, booked together, are siblings
+    // for this rule even though they are not on the same line. Every child on a covered line gets the percentage.
     const perItem = items.map((i) =>
-      covers(r, i.name) && headsOf(i) > r.moreThan ? off(r, i.price) * discountedHeads(headsOf(i)) : 0,
+      covers(r, i.name) && attendees > r.moreThan ? off(r, i.price) * discountedHeads(headsOf(i)) : 0,
     );
     const amount = perItem.reduce((s, n) => s + n, 0);
     if (amount > 0 && (!bestPerson || amount > bestPerson.amount)) bestPerson = { r, amount, perItem };
@@ -184,14 +190,14 @@ export function applyDiscounts(
   }
 
   // 3) Early bird.
-  const early = live.filter((r) => r.kind === "early" && r.beforeDate && today <= r.beforeDate);
+  const early = live.filter((r) => r.kind === "early" && r.beforeDate && today <= r.beforeDate && !(opts?.earlyFixedUsed && r.method !== "percent"));
   let bestEarly: { r: DiscountRule; amount: number } | null = null;
   for (const r of early) {
     const amount = off(r, running * shareOf(r));
     if (amount > 0 && (!bestEarly || amount > bestEarly.amount)) bestEarly = { r, amount };
   }
   if (bestEarly) {
-    lines.push({ name: prettyRuleName(bestEarly.r.name, tx?.locale) || ruleSummary(bestEarly.r, tx), amount: bestEarly.amount, scope: scopeOf(bestEarly.r), terms: termsOf(bestEarly.r), perItem: spread(bestEarly.r, bestEarly.amount) });
+    lines.push({ name: prettyRuleName(bestEarly.r.name, tx?.locale) || ruleSummary(bestEarly.r, tx), amount: bestEarly.amount, scope: scopeOf(bestEarly.r), terms: termsOf(bestEarly.r), perItem: spread(bestEarly.r, bestEarly.amount), ...(bestEarly.r.method !== "percent" ? { earlyFixed: true } : {}) });
     running -= bestEarly.amount;
   }
 

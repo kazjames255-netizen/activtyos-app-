@@ -178,20 +178,36 @@ export const bookingDocId = (tenantId: string, ref: string) => `${tenantId}_${re
  *  payment settles in lib/settlePayment.ts (shared with the Stripe webhook),
  *  which sent nothing at all — a family paying by card heard from Stripe, if
  *  anything, but never from ActivityOS. */
-export async function notifyPaymentReceived(tenantId: string, b: Booking, label: string): Promise<void> {
+export async function notifyPaymentReceived(tenantId: string, b: Booking, label: string, group?: Booking[]): Promise<void> {
   if (!b.email?.includes("@")) return;
   const email = b.email;
   const tenantDoc = await db.collection("tenants").doc(tenantId).get();
   const provider = (tenantDoc.get("name") as string) || "your provider";
-  const kidsLabel = b.kids?.length ? b.kids.map((k) => k.name).join(", ") : b.child;
-  const dateLabel = (b.sessions ?? [])[0]?.split(" · ")[0];
-  emailPaymentReceived(b, provider, { label, amount: b.amount ?? 0 });
+  // One payment can settle several bookings (a basket spanning weeks). Send ONE email and ONE bell for the
+  // whole payment: the first booking carries the merged amount, children, dates and the full list of refs.
+  const all = group && group.length > 1 ? group : [b];
+  const uniq = <T,>(xs: T[]) => [...new Set(xs)];
+  const merged: Booking = all.length === 1 ? b : {
+    ...b,
+    amount: Math.round(all.reduce((s, x) => s + (x.amount ?? 0), 0) * 100) / 100,
+    pass: uniq(all.map((x) => x.pass).filter(Boolean)).join(" · "),
+    sessions: uniq(all.flatMap((x) => x.sessions ?? [])),
+    child: uniq(all.map((x) => x.child).filter(Boolean)).join(", "),
+    kids: all.some((x) => x.kids?.length) ? (all.flatMap((x) => x.kids ?? []).filter((k, i, a) => a.findIndex((y) => y.name === k.name) === i)) : b.kids,
+    ...(all.some((x) => x.listPrice != null) ? { listPrice: Math.round(all.reduce((s, x) => s + (x.listPrice ?? x.amount ?? 0), 0) * 100) / 100 } : {}),
+    discountOff: Math.round(all.reduce((s, x) => s + (x.discountOff ?? 0), 0) * 100) / 100,
+    discountNames: uniq(all.flatMap((x) => x.discountNames ?? [])),
+  };
+  const kidsLabel = merged.kids?.length ? merged.kids.map((k) => k.name).join(", ") : merged.child;
+  const dateLabel = (merged.sessions ?? [])[0]?.split(" · ")[0];
+  const refs = all.map((x) => x.ref);
+  emailPaymentReceived(merged, provider, { label, amount: merged.amount ?? 0, refs });
   void notify({
     tenantId,
     to: { kind: "parent", email },
     category: "billing",
-    title: `Payment received · ${b.ref}`,
-    body: `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — £${(b.amount ?? 0).toFixed(2)} received via ${label}${dateLabel ? ` · ${dateLabel}` : ""}. Fully paid — thank you!`,
+    title: `Payment received · ${refs.join(", ")}`,
+    body: `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — £${(merged.amount ?? 0).toFixed(2)} received via ${label}${dateLabel ? ` · ${dateLabel}` : ""}. Fully paid — thank you!`,
     href: `/custdash/bookings?open=${encodeURIComponent(b.ref)}`,
     ref: b.ref,
     bellOnly: true, // the rich email is sent above

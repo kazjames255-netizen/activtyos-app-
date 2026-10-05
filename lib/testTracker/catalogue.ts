@@ -19,7 +19,7 @@ function k(id: string, title: string, accounts: AccountKind[], setup: string, st
 
 // ---- Shared facts, taken from the code (so every check states the same rule) ------------------------------------------
 const STD = "The Standard test camp built in LT-001 (Mon to Fri for 3 weeks, 10 places PER DAY (never more than 10 children on any one day), Automatic approval, Public, Standard cancellation policy, every payment method ticked; passes '1 day' £20, '3 days' £54 any 3 days in one week, '5 days' £90 any 5 days in one week)";
-const AUTO_RULE = "Automatic discount rule (features/listings/discounts.ts, same code prices the server): 1) multi-person rule applies to EVERY child on a line when children on that line is more than the rule's number (price method: child pays the set price; subtract: min(price, amount) off each child; percent: price x % off each child); best single rule wins. 2) multi-session rule on the already-reduced total when sessions (days x children) is more than its number; best single rule wins. 3) early bird on the reduced total if today (UK date) is on or before its date; best single rule wins. Total never below £0.";
+const AUTO_RULE = "Automatic discount rule (features/listings/discounts.ts, same code prices the server): 1) multi-person rule (percentage only for new rules) applies to EVERY child on a covered line when the number of children in the WHOLE checkout is more than the rule's number (price method: child pays the set price; subtract: min(price, amount) off each child; percent: price x % off each child); best single rule wins. 2) multi-session rule on the already-reduced total when sessions (days x children) is more than its number; best single rule wins. 3) early bird on the reduced total if today (UK date) is on or before its date; best single rule wins. Total never below £0.";
 const CODE_RULE = "Discount code rule (server/src/lib/discountCodes.ts): comes off AFTER automatic discounts and BEFORE add-ons. Percent = pass subtotal x %; amount = fixed £ off the whole order; per child = £ x number of booked child lines; never more than the subtotal (or the code's own cap); minimum spend is tested against the pass subtotal after automatic discounts; several codes ADD their amounts (they do not compound) unless one is marked 'Can't be used with any other code'.";
 const WALLET_RULE = "Wallet rule (server/src/routes/my.ts): credit is spent automatically AFTER every discount, up to the balance and up to the slider amount (walletCap); amount due = booking total minus wallet used; if nothing is due the payment shows Funded.";
 const REFUND_RULE = "Refund rule (lib/cancellation.ts + features/bookings/helpers.ts): refund = amount paid so far (card/cash received plus wallet used, minus refunds already given) x the percentage of the first band whose notice is met. Standard policy: 168 hours or more = 100%, 48 hours or more = 50%, less = 0%. Flexible: 24 hours = 100%, else 0%. Strict: 336 hours = 100%, 168 hours = 50%, else 0%. No refunds: always 0%. Notice is counted from midnight at the start of the FIRST session date. If the provider cancels (We cancelled it) the refund is 100% whatever the policy says.";
@@ -251,10 +251,10 @@ k("DI-003", "Sibling discount: a discounted price", OP, STD,
   ["Add a Multi-person rule more than 1, method 'A discounted price' £45. Book two children on '3 days'."],
   ["Each child pays £45."],
   "Each child off = 54 - 45 = £9 so total = 2 x 45 = £90.", "Booking amount 90.", 2),
-k("DI-004", "Sibling discount needs the SAME pass and week", OP, STD,
-  ["With the rule from DI-001 book child A on '3 days' week 1 and child B on '3 days' week 2 (different lines)."],
-  ["No sibling discount: they are not on the same line."],
-  "Total = £54 + £54 = £108 (no discount) because heads on each line = 1.", "discountOff 0.", 2),
+k("DI-004", "Sibling discount counts children across the whole checkout (different weeks)", OP, STD,
+  ["With a multi-person percentage rule (more than 1 child, 10%) book child A on '3 days' week 1 and child B on '3 days' week 2 in the SAME checkout."],
+  ["Both children get the sibling percentage, although they are on different weeks."],
+  "Total = (£54 + £54) less 10% = £97.20.", "discountOff 10.80. (Two separate checkouts, one child each, get no sibling discount.)", 2),
 k("DI-005", "Sibling discount limited to certain tickets", OP, STD,
   ["On the rule choose 'Which tickets does it apply to?' = only '5 days'. Book two children on '3 days'."],
   ["No discount on '3 days'."],
