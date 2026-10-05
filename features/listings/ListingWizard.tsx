@@ -2667,10 +2667,10 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
             </div>
 
             {form.kind === "early" && !form.beforeDate && (
-              <div className="mt-3 text-[11.5px] font-bold text-[var(--red)]">{tr("p8lst.wbDiscNeedDate")}</div>
+              <div className="mt-3 text-[11.5px] font-bold text-[var(--ink-2)]">{tr("p8lst.wbDiscNoDate")}</div>
             )}
             <div className="mt-3 flex gap-2">
-              <Button variant="primary" disabled={form.kind === "early" && !form.beforeDate} onClick={save}>{editing ? tr("p8lst.wbSaveChanges") : tr("p8lst.wbAddDiscount")}</Button>
+              <Button variant="primary" onClick={save}>{editing ? tr("p8lst.wbSaveChanges") : tr("p8lst.wbAddDiscount")}</Button>
               <Button onClick={() => openForm(null)}>{tr("p8lst.wbCancel")}</Button>
             </div>
           </div>

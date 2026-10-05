@@ -75,14 +75,14 @@ export function ruleSummary(r: DiscountRule, tx?: DiscountTx): string {
   if (tx) {
     if (r.kind === "person") return pickPlural(tx.tr, tx.locale, r.method === "price" ? "p8lst.lm8DscPersonPrice" : "p8lst.lm8DscPersonOff", r.moreThan, { amt: amount });
     if (r.kind === "session") return pickPlural(tx.tr, tx.locale, "p8lst.lm8DscSession", r.moreThan, { amt: amount });
-    return tx.tr("p8lst.lm8DscEarly", { date: r.beforeDate ? friendlyIso(r.beforeDate, tx.locale) : tx.tr("p8lst.lm8DscCutoff"), amt: amount });
+    return r.beforeDate ? tx.tr("p8lst.lm8DscEarly", { date: friendlyIso(r.beforeDate, tx.locale), amt: amount }) : tx.tr("p8lst.lm8DscEarlyOpen", { amt: amount });
   }
   if (r.kind === "person")
     return r.method === "price"
       ? `More than ${r.moreThan} child${r.moreThan === 1 ? "" : "ren"} on a pass — every child pays ${amount} per ticket`
       : `More than ${r.moreThan} child${r.moreThan === 1 ? "" : "ren"} on a pass — ${amount} off every child`;
   if (r.kind === "session") return `Book more than ${r.moreThan} sessions — ${amount} off`;
-  return `Book by ${r.beforeDate ? friendlyIso(r.beforeDate) : "the cut-off date"} — ${amount} off`;
+  return r.beforeDate ? `Book by ${friendlyIso(r.beforeDate)} — ${amount} off` : `Early bird — ${amount} off`;
 }
 
 export interface DiscountLine {
@@ -190,7 +190,7 @@ export function applyDiscounts(
   }
 
   // 3) Early bird.
-  const early = live.filter((r) => r.kind === "early" && r.beforeDate && today <= r.beforeDate && !(opts?.earlyFixedUsed && r.method !== "percent"));
+  const early = live.filter((r) => r.kind === "early" && (!r.beforeDate || today <= r.beforeDate) && !(opts?.earlyFixedUsed && r.method !== "percent"));
   let bestEarly: { r: DiscountRule; amount: number } | null = null;
   for (const r of early) {
     const amount = off(r, running * shareOf(r));

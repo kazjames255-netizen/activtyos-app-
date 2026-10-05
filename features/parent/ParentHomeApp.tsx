@@ -215,7 +215,13 @@ export function ParentHomeApp() {
     <section aria-label={h("Attention")}>
       <SectionTitle>{h("Attention")}</SectionTitle>
       <div className="flex flex-col gap-2.5">
-        {toPay.length > 0 && attn(payHref, "var(--brand, #2f6bd8)", "💳", h("ToPay", { n: toPay.length }), h("ToPaySub", { amt: money(owed) }), h("Pay"))}
+        {toPay.length > 0 && (
+          <div key="topay" className="flex flex-col gap-1.5">
+            {attn(payHref, "var(--brand, #2f6bd8)", "💳", h("ToPay", { n: toPay.length }), h("ToPaySub", { amt: money(owed) }), h("Pay"))}
+            {/* Changed your mind? The booking page has "Cancel booking" - one tap away from here. */}
+            <Link href={toPay.length === 1 ? `/custdash/bookings?open=${encodeURIComponent(toPay[0].ref)}` : "/custdash/bookings"} className="self-end px-2 text-[13.5px] font-bold text-[var(--ink-2)] underline">{h("CancelUnpaid", { n: toPay.length })}</Link>
+          </div>
+        )}
         {offers > 0 && attn("/custdash/bookings", "#15b364", "🎟️", h("Offers", { n: offers }), h("OffersSub"))}
         {consentWaiting > 0 && attn("/custdash/trips", "#f59e0b", "🚌", h("Consent", { n: consentWaiting }), h("ConsentSub"))}
         {unread > 0 && attn("/custdash/messages", "#7a5af8", "✉️", h("Unread", { n: unread }), h("UnreadSub"))}
