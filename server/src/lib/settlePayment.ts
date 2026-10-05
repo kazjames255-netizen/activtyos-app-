@@ -118,7 +118,9 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
   // send it twice. Best-effort: a mail failure must never undo settled money.
   // One payment, one email: bookings for the same family settled together (a basket spanning weeks) share it.
   const byFamily = new Map<string, typeof settled>();
-  for (const b of settled) byFamily.set((b.email ?? "").toLowerCase(), [...(byFamily.get((b.email ?? "").toLowerCase()) ?? []), b]);
+  // Same family AND same activity: one payment across two different activities must not describe one with the other's dates.
+  const famKey = (b: (typeof settled)[number]) => `${(b.email ?? "").toLowerCase()}|${b.listingId ?? b.listing ?? ""}`;
+  for (const b of settled) byFamily.set(famKey(b), [...(byFamily.get(famKey(b)) ?? []), b]);
   for (const grp of byFamily.values()) {
     await notifyPaymentReceived(claimed.tenantId, grp[0], "card", grp)
       .catch((e) => console.error(`[settle] payment-received notice for ${grp[0].ref}:`, (e as Error).message));

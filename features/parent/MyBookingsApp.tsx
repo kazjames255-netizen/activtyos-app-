@@ -1315,7 +1315,8 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [mealOrders, setMealOrders] = useState<MealOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<BookingFilter>("all");
+  // The dashboard's "to pay" card links here with ?filter=topay so the family lands on just what is still owing.
+  const [filter, setFilter] = useState<BookingFilter>(() => (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("filter") === "topay" ? "topay" : "all"));
   const [waitOpen, setWaitOpen] = useState(false); // waiting list starts collapsed — tap the header to open
   const [childF, setChildF] = useState("");
   const [listingF, setListingF] = useState("");

@@ -207,14 +207,14 @@ export function placeOfferedSpec(b: Booking, providerName: string, baseUrl: stri
   };
 }
 
-export function paymentReceivedSpec(b: Booking, providerName: string, opts: { label: string; amount: number; refs?: string[] }): CustomerEmailSpec {
+export function paymentReceivedSpec(b: Booking, providerName: string, opts: { label: string; amount: number; refs?: string[]; fullyPaid?: boolean }): CustomerEmailSpec {
   // One payment can settle several bookings (a basket spanning weeks): one email names them all.
   const many = (opts.refs?.length ?? 0) > 1;
   return {
     subject: `Payment received — ${b.listing}`,
     title: "Payment received ✓",
     body: `<p style="font-size:14px">Thanks ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has received your <b>${escapeHtml(opts.label)}</b>
-      payment of <b>${gbp(opts.amount)}</b>. ${many ? "Your bookings are now fully paid" : "Your booking is now fully paid"}. Thank you!</p>${many ? `<p style="font-size:13px;color:#6a6785">Booking references: <b>${opts.refs!.map((r) => escapeHtml(r)).join(", ")}</b></p>` : ""}`,
+      payment of <b>${gbp(opts.amount)}</b>. ${opts.fullyPaid === false ? "Thank you — we have recorded it against your booking" + (many ? "s" : "") : many ? "Your bookings are now fully paid" : "Your booking is now fully paid"}. Thank you!</p>${many ? `<p style="font-size:13px;color:#6a6785">Booking references: <b>${opts.refs!.map((r) => escapeHtml(r)).join(", ")}</b></p>` : ""}`,
     enrich: {}, // hero photo + venue location; the details table shows dates / who / total
   };
 }

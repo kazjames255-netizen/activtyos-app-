@@ -2,6 +2,7 @@ import { refPrefixFor } from "../lib/bookingRef";
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
+import { mergeBookings } from "../lib/mergeBookings";
 import { db } from "../firebase";
 import { ukToday } from "../lib/ukDate";
 import { canWrite, operatorScope, managerScope } from "../middleware/role";
@@ -178,7 +179,6 @@ export const bookingDocId = (tenantId: string, ref: string) => `${tenantId}_${re
  *  payment settles in lib/settlePayment.ts (shared with the Stripe webhook),
  *  which sent nothing at all — a family paying by card heard from Stripe, if
  *  anything, but never from ActivityOS. */
-import { mergeBookings } from "../lib/mergeBookings";
 export async function notifyPaymentReceived(tenantId: string, b: Booking, label: string, group?: Booking[]): Promise<void> {
   if (!b.email?.includes("@")) return;
   const email = b.email;
@@ -190,7 +190,7 @@ export async function notifyPaymentReceived(tenantId: string, b: Booking, label:
   const { merged, refs } = mergeBookings(all);
   const kidsLabel = merged.kids?.length ? merged.kids.map((k) => k.name).join(", ") : merged.child;
   const dateLabel = (merged.sessions ?? [])[0]?.split(" · ")[0];
-  emailPaymentReceived(merged, provider, { label, amount: merged.amount ?? 0, refs });
+  emailPaymentReceived(merged, provider, { label, amount: merged.amount ?? 0, refs, fullyPaid: all.every((x) => x.pay === "Paid") });
   void notify({
     tenantId,
     to: { kind: "parent", email },

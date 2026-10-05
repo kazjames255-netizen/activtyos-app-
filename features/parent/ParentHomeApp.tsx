@@ -195,7 +195,7 @@ export function ParentHomeApp() {
     </Link>
   );
 
-  const payHref = toPay.length === 1 ? `/custdash/bookings?pay=${encodeURIComponent(toPay[0].ref)}` : "/custdash/bookings?tab=payments";
+  const payHref = toPay.length === 1 ? `/custdash/bookings?pay=${encodeURIComponent(toPay[0].ref)}` : "/custdash/bookings?filter=topay";
 
   // ── blocks (rendered in different columns on desktop) ──────────────────
   const greeting = (
@@ -219,7 +219,7 @@ export function ParentHomeApp() {
           <div key="topay" className="flex flex-col gap-1.5">
             {attn(payHref, "var(--brand, #2f6bd8)", "💳", h("ToPay", { n: toPay.length }), h("ToPaySub", { amt: money(owed) }), h("Pay"))}
             {/* One booking: straight into its cancel step. Several: the list, filtered to the ones still to pay. */}
-            <Link href={toPay.length === 1 ? `/custdash/bookings?cancel=${encodeURIComponent(toPay[0].ref)}` : "/custdash/bookings"} className="self-end px-2 text-[13.5px] font-bold text-[var(--ink-2)] underline">{h("CancelUnpaid", { n: toPay.length })}</Link>
+            <Link href={toPay.length === 1 ? `/custdash/bookings?cancel=${encodeURIComponent(toPay[0].ref)}` : "/custdash/bookings?filter=topay"} className="self-end px-2 text-[13.5px] font-bold text-[var(--ink-2)] underline">{h("CancelUnpaid", { n: toPay.length })}</Link>
           </div>
         )}
         {offers > 0 && attn("/custdash/bookings", "#15b364", "🎟️", h("Offers", { n: offers }), h("OffersSub"))}
