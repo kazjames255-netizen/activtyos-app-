@@ -1056,6 +1056,7 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
   const heading =
     a.kind === "Waitlist join" ? "New waitlist join"
     : a.kind === "Booking request" ? "New booking request"
+    : /awaiting card payment/i.test(a.kind) ? "New booking — awaiting card payment"
     : "You have a new booking";
 
   // Every date in a 3-across grid (date over time, small text) so even a long
@@ -1081,7 +1082,7 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
   // Only show a payment line that actually has money against it — a card-only
   // booking shouldn't display "Childcare payment £0", and vice versa.
   const payRows = ([
-    ...(a.cardAmount > 0 ? [["Card payment", money(a.cardAmount)]] : []),
+    ...(a.cardAmount > 0 ? [[/awaiting card payment/i.test(a.kind) ? "Card payment (not paid yet)" : "Card payment", money(a.cardAmount)]] : []),
     ...(a.childcareAmount > 0 ? [[a.childcareLabel || "Childcare payment", money(a.childcareAmount)]] : []),
   ] as [string, string][])
     .map(
@@ -1112,7 +1113,7 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
         <div style="font-size:15px;font-weight:700;color:#4a4763;margin-top:6px">${escapeHtml(a.listingName)}</div>
 
         <p style="font-size:14.5px;line-height:1.6;color:#3b3860;margin:16px 0 4px">
-          Hi ${escapeHtml(a.providerName)}, <b>${escapeHtml(a.bookerName)}</b> has ${a.kind === "Booking request" ? "requested a place on" : a.kind === "Waitlist join" ? "joined the waiting list for" : "booked"} <b>${escapeHtml(a.listingName)}</b>${a.needsApproval ? " — this one needs your approval." : "."}
+          Hi ${escapeHtml(a.providerName)}, <b>${escapeHtml(a.bookerName)}</b> has ${a.kind === "Booking request" ? "requested a place on" : a.kind === "Waitlist join" ? "joined the waiting list for" : "booked"} <b>${escapeHtml(a.listingName)}</b>${a.needsApproval ? " — this one needs your approval." : /awaiting card payment/i.test(a.kind) ? ". The place is held; they have not paid by card yet — you will get a payment-received message when they do." : "."}
         </p>
 
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:14px">

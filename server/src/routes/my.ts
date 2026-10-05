@@ -2025,7 +2025,9 @@ my.post("/bookings", async (req, res) => {
       // A basket books one row per child — the deep-link opens the FIRST ref, so
       // lead the notification with that exact ref (and list the rest) so it's
       // clear which booking it opens.
-      const kind = waitlisted ? "Waitlist join" : needsApproval ? "Booking request" : "New booking";
+      // A card booking is created (place held) BEFORE the family pays: say so, or the provider reads "new booking" as "paid".
+      const awaitingCard = !onBehalf && /^card$/i.test(String(input.method)) && total > 0;
+      const kind = waitlisted ? "Waitlist join" : needsApproval ? "Booking request" : awaitingCard ? "New booking (awaiting card payment)" : "New booking";
       // Rich, beautifully-presented provider email: listing photo, every
       // attendee with their allergies/medical/SEND notes, a payment split, and
       // any EHCP plans as real attachments. Built async (child profiles, venue
