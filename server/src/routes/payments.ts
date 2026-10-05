@@ -76,8 +76,17 @@ payments.post("/connect", async (req, res) => {
   try {
     let accountId: string | undefined = tenant.data()!.stripeAccountId;
     if (!accountId) {
+      // Matches the live Connect platform profile: Stripe carries negative-balance
+      // liability and the provider gets the full Stripe Dashboard. An Express
+      // account (platform-liable) contradicts that profile and Stripe refuses it
+      // in live mode ("review the responsibilities of managing losses").
       const account = await s.accounts.create({
-        type: "express",
+        controller: {
+          losses: { payments: "stripe" },
+          fees: { payer: "account" },
+          requirement_collection: "stripe",
+          stripe_dashboard: { type: "full" },
+        },
         country: "GB",
         email: req.user?.email ?? undefined,
         metadata: { tenantId: auth.tenantId },
@@ -119,7 +128,7 @@ payments.post("/connect", async (req, res) => {
 });
 
 // POST /api/payments/dashboard — a one-time link into the provider's own
-// Stripe Express dashboard, where they change bank details, see payouts and
+// Stripe dashboard, where they change bank details, see payouts and
 // download statements. This is the "Manage" route AFTER onboarding: an
 // account_onboarding link is for finishing setup, not for revisiting it.
 payments.post("/dashboard", async (req, res) => {
@@ -154,8 +163,14 @@ payments.post("/dashboard", async (req, res) => {
       res.json({ url: link.url, onboarding: true });
       return;
     }
-    const login = await s.accounts.createLoginLink(accountId);
-    res.json({ url: login.url, onboarding: false });
+    // Login links exist only for Express-dashboard accounts (the ones made
+    // before the switch); full-dashboard accounts sign in to Stripe directly.
+    if (account.controller?.stripe_dashboard?.type === "express" || account.type === "express") {
+      const login = await s.accounts.createLoginLink(accountId);
+      res.json({ url: login.url, onboarding: false });
+    } else {
+      res.json({ url: "https://dashboard.stripe.com/", onboarding: false });
+    }
   } catch (e) {
     stripeFail(res, e);
   }
