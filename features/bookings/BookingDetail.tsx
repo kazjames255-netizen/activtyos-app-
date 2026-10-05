@@ -30,6 +30,7 @@ import { useTenantSettings, reasonsFor } from "@/lib/settings";
 import { refundFor, policyById, adviceReasonT } from "@/lib/cancellation";
 import { post as apiPost, get as apiGet } from "@/lib/api";
 import { ChildCard, type ChildInfo } from "@/features/registers/ChildCard";
+import { MoneyConfirm } from "./MoneyConfirm";
 
 interface MsgTemplate { id: string; name: string; subject?: string; body: string }
 
@@ -133,8 +134,8 @@ function Tile({ big, small }: { big: string; small: string }) {
 
 function AttendeeCard({ booking, kid, ki, blockAvail }: { booking: Booking; kid: Kid; ki: number; blockAvail: BlockAvail | null }) {
   const t = useT();
-  const cancelChild = useBookingsStore((s) => s.cancelChild);
-  const cancelDay = useBookingsStore((s) => s.cancelDay);
+  // Money actions open an inline confirm panel (MoneyConfirm) — they never fire on one click.
+  const askConfirm = useBookingsStore((s) => s.askConfirm);
   const changeDay = useBookingsStore((s) => s.changeDay);
   const cancelChange = useBookingsStore((s) => s.cancelChange);
   const applyChangeDay = useBookingsStore((s) => s.applyChangeDay);
@@ -181,7 +182,7 @@ function AttendeeCard({ booking, kid, ki, blockAvail }: { booking: Booking; kid:
         </div>
         {active.length > 1 && (
           <button
-            onClick={() => cancelChild(booking.ref, ki)}
+            onClick={() => askConfirm(booking.ref, { kind: "cancel-child", ki })}
             title={t("p7bd.cancelAllTip", { n: active.length, name: kid.name || t("p7bd.thisChild") })}
             className="cursor-pointer whitespace-nowrap text-[11px] font-bold text-[var(--red)]"
           >
@@ -224,7 +225,7 @@ function AttendeeCard({ booking, kid, ki, blockAvail }: { booking: Booking; kid:
                       {t("p7bd.moveWord")}
                     </button>
                     <button
-                      onClick={() => cancelDay(booking.ref, ki, dt)}
+                      onClick={() => askConfirm(booking.ref, { kind: "cancel-day", ki, dt })}
                       title={t("p7bd.cancelDayTip")}
                       className="cursor-pointer text-[11px] font-bold text-[var(--red)]"
                     >
@@ -555,6 +556,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
   const w = useWord();
   const close = useBookingsStore((s) => s.close);
   const act = useBookingsStore((s) => s.act);
+  const askConfirm = useBookingsStore((s) => s.askConfirm);
   const cancelOpen = useBookingsStore((s) => s.cancelOpen);
   const saveNote = useBookingsStore((s) => s.saveNote);
   const [note, setNote] = useState(booking.note || "");
@@ -623,7 +625,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
                 <Rich text={t("p7bd.voucherBox", { scheme: b.voucherScheme ?? t("p7bd.voucherWord"), scheme2: b.voucherScheme ?? t("p7bk.schemeThe") })} />
               </div>
             )}
-            <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>
+            <Button variant="primary" onClick={() => askConfirm(b.ref, { kind: "refund-approve" })}>
               {kind === "wallet"
                 ? t("p7bd.acceptWallet")
                 : kind === "reimbursed" || kind === "cash"
@@ -645,12 +647,12 @@ export function BookingDetail({ booking }: { booking: Booking }) {
       )}
       {(b.pay === "Invoice sent" || b.pay === "Unpaid") && b.status !== "Cancelled" && b.status !== "Declined" && !waitingForPlace(b.status) && (
         <>
-          <Button onClick={() => act(b.ref, "paid")}>{t("p7bd.markPaid")}</Button>
+          <Button onClick={() => askConfirm(b.ref, { kind: "paid" })}>{t("p7bd.markPaid")}</Button>
           <Button onClick={() => act(b.ref, "resend")}>{t("p7bd.resendInvoice")}</Button>
         </>
       )}
       {b.pay === "Awaiting voucher payment" && b.status !== "Cancelled" && b.status !== "Declined" && !waitingForPlace(b.status) && (
-        <Button variant="primary" onClick={() => act(b.ref, "paid")}>{pendingPayActionT(t, w, b)}</Button>
+        <Button variant="primary" onClick={() => askConfirm(b.ref, { kind: "paid" })}>{pendingPayActionT(t, w, b)}</Button>
       )}
       {b.status !== "Cancelled" && b.status !== "Declined" && (
         b.past === true
@@ -783,6 +785,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {ACTION_BUTTONS}
         </div>
         {messaging && <MessageBookingModal booking={b} onClose={() => setMessaging(false)} />}
+        <MoneyConfirm booking={b} />
 
         {/* Tiles */}
         <div className="my-3.5 mb-0.5 flex flex-wrap gap-2">

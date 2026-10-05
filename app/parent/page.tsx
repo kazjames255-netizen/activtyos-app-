@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { safeNext } from "@/lib/safe-next";
 import { post as apiPost } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
@@ -39,6 +39,8 @@ function ParentAuth() {
   // Where to go after sign-up / sign-in (e.g. back to the booking page).
   const next = safeNext(params.get("next"));
   const [tab, setTab] = useState<"in" | "up">(params.get("tab") === "up" ? "up" : "in");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [provider, setProvider] = useState("");
@@ -73,6 +75,18 @@ function ParentAuth() {
     return () => { clearTimeout(timer); ctl.abort(); };
   }, [provider, tab, picked]);
 
+  // Arriving from a provider's booking page (?provider=<id>): the club is already known, so pre-pick it instead of making them search again.
+  const presetId = params.get("provider");
+  useEffect(() => {
+    if (!presetId) return;
+    const ctl = new AbortController();
+    fetch(`${API_BASE}/api/providers?id=${encodeURIComponent(presetId)}`, { signal: ctl.signal })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows: Provider[]) => { if (rows[0]) { setPicked(rows[0]); setProvider(labelFor(rows[0])); } })
+      .catch(() => {});
+    return () => ctl.abort();
+  }, [presetId]);
+
   useEffect(() => {
     function away(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
@@ -95,12 +109,17 @@ function ParentAuth() {
     if (tab === "up") {
       // A parent account only means something next to the club their child attends, so the provider must be picked from the directory first.
       if (!picked) { setError(t("p8par.lgPickProvider")); return; }
+      const fn = firstName.trim(), ln = lastName.trim();
+      if (!fn || !ln) { setError(t("p9jr.parentNameRequired")); return; }
       if (password.length < 6) { setError(t("p8par.lgPwShort")); return; }
       setBusy(true);
       try {
-        await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
+        const cred = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
         try {
-          await apiPost("/api/register-role", { role: "parent", providerId: picked.id });
+          // The name goes on the sign-in profile first, so the token the API sees (and every booking, message and Families row after it) carries "First Last", not an email handle.
+          await updateProfile(cred.user, { displayName: `${fn} ${ln}` });
+          await cred.user.getIdToken(true);
+          await apiPost("/api/register-role", { role: "parent", providerId: picked.id, firstName: fn, lastName: ln });
         } catch {
           setError(t("p8par.lgCreateFailed"));
           setBusy(false);
@@ -239,6 +258,19 @@ function ParentAuth() {
             <p className="mt-1.5 text-[12px] text-[var(--ink-2)]">
               {t("p8par.lgAcctSits")}
             </p>
+          </div>
+        )}
+
+        {tab === "up" && (
+          <div className="grid gap-3.5 sm:grid-cols-2">
+            <div>
+              <FieldLabel htmlFor="parent-first">{t("p9jr.firstName")}</FieldLabel>
+              <Input id="parent-first" required autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full" />
+            </div>
+            <div>
+              <FieldLabel htmlFor="parent-last">{t("p9jr.lastName")}</FieldLabel>
+              <Input id="parent-last" required autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full" />
+            </div>
           </div>
         )}
 

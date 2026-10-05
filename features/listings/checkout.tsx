@@ -2613,7 +2613,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 onClick={() => {
                   keepBasketForAuth();
                   const here = encodeURIComponent(window.location.pathname + window.location.search);
-                  window.location.assign(`${base}${base.endsWith("&") ? "" : "?"}next=${here}`);
+                  window.location.assign(`${base}${base.endsWith("&") ? "" : "?"}next=${here}${base.endsWith("&") && tenantId ? `&provider=${encodeURIComponent(tenantId)}` : ""}`);
                 }}>{tr(key)}</button>
             ))}
           </div>

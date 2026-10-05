@@ -595,8 +595,39 @@ export function paidSoFar(b: Pick<Booking, "pay" | "amount" | "amountPaid" | "wa
  * £200 again — £240 back on a £200 booking.
  */
 export function refundableSoFar(b: Booking): number {
-  const given = refundedTotal(b) + Math.max(0, b.refundedApproved ?? 0);
+  // Approving a refund writes a "Refund approved" log line for money that refundedApproved ALSO totals — count it once.
+  const logged = (b.refundLog || []).reduce((t, x) => t + (/^refund approved/i.test(x.label || "") ? 0 : x.amount || 0), 0);
+  const given = logged + Math.max(0, b.refundedApproved ?? 0);
   return Math.round(Math.max(0, paidSoFar(b) - given) * 100) / 100;
+}
+
+/** A refund the provider has agreed to give but not yet sent: a cancellation
+ *  whose refund is still waiting on "Mark refund sent" (cancel.refund full /
+ *  partial / pending). The money has NOT moved, so it is not in refundedGross —
+ *  Money in shows it as "Refund owed", never as already refunded. */
+export const refundOwedOf = (b: Pick<Booking, "cancel" | "pay" | "amount" | "amountPaid" | "walletApplied" | "refundLog" | "refundedApproved">): number => {
+  const c = b.cancel;
+  if (!c || !(c.refund === "full" || c.refund === "partial" || c.refund === "pending")) return 0;
+  return Math.round(Math.max(0, Math.min(c.amount ?? 0, refundableSoFar(b as Booking))) * 100) / 100;
+};
+
+/** What one child's place (or some of its days) is worth in money actually
+ *  PAID: paid ÷ every booked child-day × the days given up. Paid, not the
+ *  price: an unpaid booking has nothing to give back, and wallet credit spent
+ *  on it counts. `days` omitted = all of that child's days still standing. */
+export function releaseValue(b: Booking, ki: number, days?: string[]): number {
+  const kids = bookingKids(b);
+  const k = kids[ki];
+  if (!k) return 0;
+  const booked = kids.reduce((n, x) => n + Math.max(1, (x.dates || []).length), 0) || 1;
+  const n = days ? days.length : (k.dates || []).length ? kidActiveDays(k).length : 1;
+  return Math.round((paidSoFar(b) / booked) * n * 100) / 100;
+}
+
+/** A kid date (ISO, or the legacy "Mon 12 Oct 2026" label) as ISO, or undefined. */
+export function dayIso(d: string): string | undefined {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  return sessionIsoDates({ sessions: [d] } as Booking)[0];
 }
 
 /** A booking's phone as a real number, or "" — never the "—" placeholder that

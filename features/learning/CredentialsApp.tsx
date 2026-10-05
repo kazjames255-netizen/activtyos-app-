@@ -15,13 +15,18 @@ import { useTeam } from "@/features/team/useTeam";
 import { csvText } from "@/lib/csv";
 import { useLearnRefresh, syncLearning, completionsFor, downloadCourseCertificate, courseCertData, courseCertTemplate, courseInDate, courseExpiry } from "./courseCompletions";
 
-const OPS: [string, string][] = [["all", "All locations"], ["Company-owned", "Company-owned (Head Office)"], ["Milton Keynes", "Milton Keynes"], ["Northampton", "Northampton"], ["Bedford", "Bedford"]];
+// Location filter options come from the team's real locations (never hardcoded demo sites).
+const opsFor = (team: { op?: string }[]): [string, string][] => {
+  const named = Array.from(new Set(team.map((s) => s.op).filter((o): o is string => !!o && o !== "Company-owned")));
+  return [["all", "All locations"], ...(team.some((s) => s.op === "Company-owned") ? [["Company-owned", "Company-owned (Head Office)"] as [string, string]] : []), ...named.map((o) => [o, o] as [string, string])];
+};
 
 export function CredentialsApp() {
   const tr = useT();
   const opLabel = (v: string, l: string) => (v === "all" ? tr("p8lrn.lcAllLocations") : v === "Company-owned" ? tr("p8lrn.lcCompanyOwnedHO") : l);
   const TEAM = useTeam();
   const cred = useCredentials(TEAM);
+  const OPS = opsFor(TEAM);
   const { settings } = useSettings();
   // Completions come from the server (courseCompletions.syncLearning) — re-render when they land.
   useLearnRefresh();

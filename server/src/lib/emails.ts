@@ -761,6 +761,8 @@ export function emailTeamInvite(p: {
   /** Settings → Staff & workforce: a personal welcome line from the provider. */
   message?: string;
   tenantId?: string;
+  /** Franchise invites: who pays what + the royalty rate (lib/franchiseTerms.ts). */
+  costNote?: string;
 }): void {
   const what =
     p.role === "franchise"
@@ -775,8 +777,9 @@ export function emailTeamInvite(p: {
       <h2 style="font-size:19px;margin:0 0 10px">Join ${escapeHtml(p.tenantName)} on ActivityOS</h2>
       <p style="font-size:14px;line-height:1.55;margin:0 0 14px">
         ${p.inviterName ? `${escapeHtml(p.inviterName)} has invited you` : "You've been invited"} to ${what}.
-        The button below creates your account and links it to theirs — nothing to configure.
+        The button below creates your account and links it to theirs. ${p.role === "franchise" ? "After you sign in you add your location, set your block prices and publish your first listing." : "You will be set up in a minute."}
       </p>
+      ${p.costNote ? `<p style="font-size:13.5px;line-height:1.55;margin:0 0 14px;color:#4a4763">${escapeHtml(p.costNote)}</p>` : ""}
       ${p.message ? `<blockquote style="border-left:3px solid #cdddf7;margin:0 0 14px;padding:6px 0 6px 14px;color:#4a4763;font-size:14px;line-height:1.55;white-space:pre-wrap">${escapeHtml(p.message)}</blockquote>` : ""}
       <p style="margin:0 0 16px">
         <a href="${p.link}" style="display:inline-block;background:#2f6bd8;color:#fff;padding:11px 20px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Accept the invite</a>

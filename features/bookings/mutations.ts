@@ -4,7 +4,8 @@
 // drift. No React/zustand/Firebase imports allowed here.
 
 import type { Booking } from "./types";
-import { bookingKids, kidActiveDays, nowStr, refundableSoFar, refundedTotal, sessionDayLabel } from "./helpers";
+import { bookingKids, kidActiveDays, nowStr, refundableSoFar, refundedTotal, releaseValue, sessionDayLabel } from "./helpers";
+import { accumulatePendingRelease } from "../../lib/cancellation";
 
 export type RowAction =
   | "approve"
@@ -124,47 +125,67 @@ export function applyCancel(b: Booking, refund: RefundType, partialAmount?: numb
   b.pay = refund !== "none" && amt > 0 ? "Refund pending" : b.pay;
 }
 
-export function applyCancelChild(b: Booking, ki: number): void {
+export type ReleaseResolution = "refund" | "wallet" | "none";
+export interface ReleaseOpts {
+  /** What happens to the money. Default "refund" = a PENDING refund the provider
+   *  sends themselves and then marks sent (nothing is recorded as refunded yet). */
+  resolution?: ReleaseResolution;
+  /** The provider's figure (defaults to the child's/day's share of what was paid). */
+  amount?: number;
+}
+export interface ReleaseResult { resolution: ReleaseResolution; amount: number }
+
+/** Money for a cancelled child/day. "refund" raises a pending request (cancel.refund
+ *  = "pending"), counted as OWED until refund-approve; "wallet" is credit, instant
+ *  and logged now (the server credits the wallet); "none" moves nothing. */
+function settleRelease(b: Booking, label: string, value: number, opts?: ReleaseOpts): ReleaseResult {
+  const resolution = opts?.resolution ?? "refund";
+  const prior = b.cancel && b.cancel.refundOnly && b.cancel.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
+  const room = Math.max(0, refundableSoFar(b) - prior);
+  const asked = opts?.amount != null && Number.isFinite(opts.amount) ? Math.max(0, opts.amount) : value;
+  const amt = resolution === "none" ? 0 : Math.round(Math.min(asked, room) * 100) / 100;
+  if (amt > 0 && resolution === "wallet") {
+    (b.refundLog = b.refundLog || []).push({ label: `${label} — wallet credit`, amount: amt, on: nowStr(), by: "Provider", source: "Wallet" });
+  } else if (amt > 0) {
+    b.cancel = {
+      on: nowStr(),
+      by: "Provider",
+      refund: "pending",
+      amount: accumulatePendingRelease(b.cancel, amt, refundableSoFar(b)),
+      refundOnly: true, // the booking itself stands (or is already cancelled by its children)
+      msg: `${label} cancelled by the provider.`,
+    };
+  }
+  return { resolution, amount: amt };
+}
+
+export function applyCancelChild(b: Booking, ki: number, opts?: ReleaseOpts): ReleaseResult | null {
   const kids = bookingKids(b);
   const k = kids[ki];
-  if (!k || k.cancelled) return;
-  const share = b.amount / (kids.length || 1);
-  const done = share * ((k.cancelledDays || []).length / ((k.dates || []).length || 1));
-  const refund = Math.max(0, Math.round((share - done) * 100) / 100);
+  if (!k || k.cancelled) return null;
+  const value = releaseValue(b, ki);
   k.cancelled = true;
   k.cancelledDays = (k.dates || []).slice();
-  (b.refundLog = b.refundLog || []).push({
-    label: `${k.name || "Child"} — whole place`,
-    amount: refund,
-    on: nowStr(),
-    by: "Provider",
-    source: "Provider",
-  });
+  const res = settleRelease(b, `${k.name || "Child"} — whole place`, value, opts);
   // kids came from bookingKids which may be a synthesised single-child array;
   // persist it back onto the booking so state survives.
   if (!b.kids) b.kids = kids;
   applyCancelState(b);
+  return res;
 }
 
-export function applyCancelDay(b: Booking, ki: number, dt: string): void {
+export function applyCancelDay(b: Booking, ki: number, dt: string, opts?: ReleaseOpts): ReleaseResult | null {
   const kids = bookingKids(b);
   const k = kids[ki];
-  if (!k || k.cancelled) return;
+  if (!k || k.cancelled) return null;
   k.cancelledDays = k.cancelledDays || [];
-  if (k.cancelledDays.indexOf(dt) > -1) return;
+  if (k.cancelledDays.indexOf(dt) > -1) return null;
   k.cancelledDays.push(dt);
-  const perday =
-    Math.round((b.amount / (kids.length || 1) / ((k.dates || []).length || 1)) * 100) / 100;
-  (b.refundLog = b.refundLog || []).push({
-    label: `${k.name || "Child"} — ${dt}`,
-    amount: perday,
-    on: nowStr(),
-    by: "Provider",
-    source: "Provider",
-  });
+  const res = settleRelease(b, `${k.name || "Child"} — ${dt}`, releaseValue(b, ki, [dt]), opts);
   if (kidActiveDays(k).length === 0) k.cancelled = true;
   if (!b.kids) b.kids = kids;
   applyCancelState(b);
+  return res;
 }
 
 export function applyChangeDayMutation(b: Booking, ki: number, oldDt: string, newDt: string): void {

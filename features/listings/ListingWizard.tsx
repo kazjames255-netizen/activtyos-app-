@@ -1,7 +1,6 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
-import { usePortalHref } from "@/lib/portal-href";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, get as apiGet, post as apiPost, isDemoMode, ApiError } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
@@ -18,6 +17,8 @@ import { LOW_LEFT, blockOn, capacityNote } from "./capacity";
 import { useTenantSettings, useSettings, detailsForListing } from "@/lib/settings";
 import { policyWording, type NamedPolicy } from "@/lib/cancellation";
 import { CheckoutPanel } from "./checkout";
+import { BlocksApp } from "@/features/blocks/BlocksApp";
+import { listingPrereqs, titleMissing, mayCreateOnServer, isAbandonedDraft, newBlockId, bookingLink } from "./prereqs";
 import type { ChildProfile } from "./checkout";
 // Re-exported so existing importers don't have to care that these moved.
 export { ageOn, ageProblem } from "./checkout";
@@ -91,6 +92,8 @@ interface BPeriod { id: string; title: string; start: string; finish: string }
 interface BPass { id: string; name: string; days: number; details?: string }
 interface BBlock {
   id: string; name: string; periodIds: string[]; passIds: string[];
+  /** False until the provider has set prices (Blocks > Set prices). */
+  priced?: boolean;
   masterPrice?: number; calcOn?: boolean; passFlat?: Record<string, number>; passMode?: Record<string, string>;
   periodPrice?: Record<string, number>; // key `${passId}_${periodId}`
 }
@@ -102,6 +105,8 @@ interface BlocksStore {
   resolved: Record<string, ResolvedPricing>;
   loading: boolean;
   error: string | null;
+  /** Re-read the library (after the Blocks builder modal closes); resolves to the fresh store. */
+  reload?: () => Promise<BlocksStore>;
 }
 const EMPTY_BLOCKS: BlocksStore = { periods: [], passes: [], library: [], resolved: {}, loading: true, error: null };
 
@@ -126,6 +131,7 @@ async function fetchBlocks(): Promise<BlocksStore> {
       name: b.name,
       periodIds: b.periodIds,
       passIds: b.passIds,
+      priced: b.priced,
       masterPrice: b.masterPrice ?? undefined,
       calcOn: b.calcOn,
       passFlat: b.passFlat,
@@ -140,24 +146,30 @@ async function fetchBlocks(): Promise<BlocksStore> {
 /** Load the blocks library once per mount. */
 function useBlocks(): BlocksStore {
   const [store, setStore] = useState<BlocksStore>(EMPTY_BLOCKS);
+  const alive = useRef(true);
   useEffect(() => {
-    let alive = true;
+    alive.current = true;
     void (async () => {
       try {
         const s = await fetchBlocks();
-        if (alive) setStore(s);
+        if (alive.current) setStore(s);
       } catch (e) {
         // Surface it — "no blocks" and "couldn't fetch blocks" look identical
         // in the ticket picker otherwise.
-        if (alive)
+        if (alive.current)
           setStore({ ...EMPTY_BLOCKS, loading: false, error: e instanceof Error ? e.message : "Couldn’t load your blocks." });
       }
     })();
     return () => {
-      alive = false;
+      alive.current = false;
     };
   }, []);
-  return store;
+  const reload = async () => {
+    const s = await fetchBlocks();
+    if (alive.current) setStore(s);
+    return s;
+  };
+  return useMemo(() => ({ ...store, reload }), [store]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 function blockTickets(store: BlocksStore, blockId: string | null) {
   const b = store.library.find((x) => x.id === blockId);
@@ -1102,6 +1114,12 @@ export function ListingWizard({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [fullPreview, setFullPreview] = useState(false);
+  // Blocks builder opened over the wizard (so the draft and the step are kept), and the post-publish confirmation.
+  const [blocksOpen, setBlocksOpen] = useState(false);
+  const blockIdsBefore = useRef<string[]>([]);
+  const [publishedId, setPublishedId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const savedIdRef = useRef<string | null>(initial.id ?? null);
   const [saveState, setSaveState] = useState<"idle" | "dirty" | "saving" | "saved" | "error">("idle");
   const blocks = useBlocks();
   const upd = (patch: Partial<WizardDraft>) => setD((p) => ({ ...p, ...patch }));
@@ -1139,6 +1157,8 @@ export function ListingWizard({
   }
   async function syncApiNow(status: "draft" | "live", quiet = false): Promise<boolean> {
     if (conflicted) { setMsg(tr("p8lst.waConflictReload")); return false; }
+    // No draft reaches the server until it has a name: stops empty abandoned "New listing" drafts piling up.
+    if (!mayCreateOnServer(d)) { if (!quiet) setMsg(tr("p9jr.nameFirst")); return false; }
     if (!quiet) setBusy(true);
     setMsg(null);
     try {
@@ -1155,10 +1175,12 @@ export function ListingWizard({
       const { id: draftId, ...draftBody } = { ...d, images, gallery };
       const body = { ...draftBody, status, name: d.title.trim() || "Untitled listing", passes, expectedUpdatedAt: updatedAtRef.current };
       let id = draftId;
+      savedIdRef.current = id ?? null;
       let saved: { updatedAt?: number };
       if (id) saved = await api<{ updatedAt?: number }>(`/api/listings/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) });
       else { const created = await apiPost<{ id: string; updatedAt?: number }>("/api/listings", body); id = created.id; saved = created; }
       if (typeof saved.updatedAt === "number") updatedAtRef.current = saved.updatedAt;
+      savedIdRef.current = id ?? null;
       const next = { ...d, images, gallery, id, status };
       selfUpdate.current = true; // this setD is our own save result — don't let it re-trigger autosave
       setD(next);
@@ -1220,12 +1242,39 @@ export function ListingWizard({
     const h = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (fullPreview) setFullPreview(false);
-      else onClose();
+      else if (blocksOpen) void closeBlocks();
+      else void closeRef.current();
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [fullPreview, onClose]);
+  }, [fullPreview, blocksOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Closing throws away an unpublished draft that never got a name (and its local copy).
+  const closeRef = useRef<() => Promise<void>>(async () => {});
+  closeRef.current = async () => {
+    const id = savedIdRef.current ?? d.id ?? null;
+    if (isAbandonedDraft({ id, title: d.title, status: d.status })) {
+      try { await api(`/api/listings/${encodeURIComponent(id!)}`, { method: "DELETE" }); } catch { /* already gone */ }
+      deleteDraft(id!);
+    }
+    if (!d.title.trim()) deleteDraft(wizardKey);
+    onSaved();
+    onClose();
+  };
+  const openBlocks = () => { blockIdsBefore.current = blocks.library.map((b) => b.id); setBlocksOpen(true); };
+  async function closeBlocks() {
+    setBlocksOpen(false);
+    try {
+      const fresh = await blocks.reload?.();
+      const nid = fresh ? newBlockId(blockIdsBefore.current, fresh.library.map((b) => b.id)) : null;
+      if (nid && !d.blockId) upd({ blockId: nid });
+    } catch { /* the picker keeps showing what it had */ }
+  }
+  // Step 1 needs a name before anything else.
+  const goStep = (i: number) => {
+    if (i > 0 && titleMissing(d.title)) { setStep(0); setMsg(tr("p9jr.nameFirst")); return; }
+    setStep(i);
+  };
   const saveDraftAction = async () => { if (await syncApi("draft")) { setSaveState("saved"); onSaved(); } };
   const blockers = publishBlockers(d, tickets.length, tickets.filter((t) => d.ticketOverrides[t.name]?.hidden !== true).length);
   const publishAction = async () => {
@@ -1235,7 +1284,7 @@ export function ListingWizard({
       setMsg(pickPlural(tr, loc, "p8lst.waThingsToFinish", blockers.length));
       return;
     }
-    if (await syncApi("live")) { onSaved(); onClose(); }
+    if (await syncApi("live")) { onSaved(); setPublishedId(savedIdRef.current ?? d.id ?? null); }
   };
 
   const previewProps = { d, venue, local, booking, addons, theme: resolveTheme(d.pageStyle), onTheme: (t: PageTheme) => upd({ pageStyle: t }) };
@@ -1261,12 +1310,12 @@ export function ListingWizard({
             <button type="button" disabled={busy} onClick={saveDraftAction} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25 disabled:opacity-40">{tr("p8lst.waSaveDraft")}</button>
             <button type="button" onClick={() => setFullPreview(true)} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25">{tr("p8lst.waPreviewBtn")}</button>
             <button type="button" disabled={busy} onClick={publishAction} title={blockers.length ? pickPlural(tr, loc, "p8lst.waThingsLeft", blockers.length) : undefined} className="rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#16306e] shadow-sm hover:bg-white/90 disabled:opacity-60">{tr("p8lst.waPublish")}{blockers.length > 0 && <span className="ms-1 opacity-70">({blockers.length})</span>}</button>
-            <button type="button" onClick={onClose} aria-label={tr("p8lst.waClose")} className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px] font-bold hover:bg-white/30">×</button>
+            <button type="button" onClick={() => void closeRef.current()} aria-label={tr("p8lst.waClose")} className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px] font-bold hover:bg-white/30">×</button>
           </div>
         </div>
         <div className="mx-auto mt-3 flex max-w-[1160px] items-center gap-1">
           {STEPS.map((s, i) => (
-            <button key={s.key} type="button" onClick={() => setStep(i)} title={`${i + 1}. ${tr("p8lst.waStep_" + s.key)}`} className="group flex-1">
+            <button key={s.key} type="button" onClick={() => goStep(i)} title={`${i + 1}. ${tr("p8lst.waStep_" + s.key)}`} className="group flex-1">
               <div className={`h-1.5 rounded-full transition ${i <= step ? "bg-white" : "bg-white/25 group-hover:bg-white/50"}`} />
             </button>
           ))}
@@ -1283,7 +1332,7 @@ export function ListingWizard({
             style={stepKey === "preview" ? undefined : { background: "linear-gradient(180deg,#ffffff 0%,#f1f6ff 100%)" }}>
             {stepKey !== "preview" && <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg,#16306e,#3f78d8,#8fbcff)" }} />}
             <div className={stepKey === "preview" ? "" : "px-4 py-4 sm:px-7 sm:py-5"}>
-            {stepKey === "basics" && <BasicsStep d={d} upd={upd} />}
+            {stepKey === "basics" && <BasicsStep d={d} upd={upd} local={local} patchLocal={patchLocal} blocks={blocks} onCreateBlock={openBlocks} />}
             {stepKey === "details" && <DetailsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "capacity" && <CapacityStep d={d} upd={upd} />}
             {stepKey === "content" && <ContentStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
@@ -1300,7 +1349,7 @@ export function ListingWizard({
               } />}
             {stepKey === "safety" && <SafetyStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "run" && <RunStep d={d} upd={upd} />}
-            {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} />}
+            {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} onCreateBlock={openBlocks} />}
             {stepKey === "discounts" && <DiscountsStep d={d} upd={upd} tickets={tickets} />}
             {stepKey === "preview" && <div><StepHead n={10} kicker={tr("p8lst.waKickPreview")} title={tr("p8lst.waStep_preview")} lede={tr("p8lst.waPreviewLede")} /><HeadingsEditor d={d} upd={upd} /><ParentPreview {...previewProps} full /></div>}
             {stepKey === "addons" && <AddonsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
@@ -1349,7 +1398,7 @@ export function ListingWizard({
                   {blockers.length ? tr("p8lst.waSaveLeft", { n: blockers.length }) : d.status === "live" ? tr("p8lst.waSaveChanges") : tr("p8lst.waSavePublish")}
                 </Button>
               )}
-              <Button variant="primary" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))} className="min-w-[130px]">{tr("p8lst.waNext")}</Button>
+              <Button variant="primary" disabled={step === 0 && titleMissing(d.title)} title={step === 0 && titleMissing(d.title) ? tr("p9jr.nameFirst") : undefined} onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))} className="min-w-[130px]">{tr("p8lst.waNext")}</Button>
             </div>
           ) : (
             <Button variant="primary" disabled={busy || blockers.length > 0} onClick={publishAction} className="min-w-[130px]">
@@ -1358,6 +1407,37 @@ export function ListingWizard({
           )}
         </div>
       </div>
+
+      {blocksOpen && (
+        <div data-ui="blocks-modal" className="fixed inset-0 z-[10000] flex flex-col bg-[#eef2f9]">
+          <div className="flex flex-none items-center justify-between gap-3 px-5 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
+            <div className="min-w-0 text-[13px] font-semibold text-white/90">{tr("p9jr.blocksModalHint")}</div>
+            <button type="button" onClick={() => void closeBlocks()} className="flex-none rounded-full bg-white px-4 py-1.5 text-[12.5px] font-extrabold text-[#16306e]">{tr("p9jr.backToListing")}</button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-4"><BlocksApp embedded /></div>
+        </div>
+      )}
+
+      {publishedId && (() => {
+        const url = bookingLink(typeof window !== "undefined" ? window.location.origin : "", publishedId);
+        const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+        return (
+          <div data-ui="publish-success" className="fixed inset-0 z-[10002] flex items-center justify-center bg-black/55 p-4">
+            <div className="w-full max-w-[520px] rounded-2xl bg-white p-6 text-center shadow-2xl">
+              <div className="text-[34px]">🎉</div>
+              <h2 className="mt-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{tr("p9jr.liveTitle")}</h2>
+              <p className="mt-1 text-[13px] text-[var(--ink-2)]">{tr("p9jr.liveBody")}</p>
+              <input readOnly value={url} aria-label={tr("p9jr.liveLinkLabel")} onFocus={(e) => e.currentTarget.select()} className="mt-3 w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-center text-[13px] font-semibold" />
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                <Button variant="primary" onClick={() => { void navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800); }); }}>{copied ? tr("p9jr.liveCopied") : tr("p9jr.liveCopy")}</Button>
+                {canShare && <Button onClick={() => { void navigator.share({ title: d.title, url }).catch(() => {}); }}>{tr("p9jr.liveShare")}</Button>}
+                <Button onClick={() => window.open(`/book/${publishedId}?preview=1`, "_blank", "noopener")}>{tr("p8lst.flViewAsParent")}</Button>
+              </div>
+              <button type="button" onClick={onClose} className="mt-4 text-[13px] font-bold text-[var(--ink-3)] underline">{tr("p9jr.liveDone")}</button>
+            </div>
+          </div>
+        );
+      })()}
 
       {fullPreview && (
         <div onClick={(e) => e.target === e.currentTarget && setFullPreview(false)}
@@ -1582,13 +1662,73 @@ function genBio(prompt: string, m: StaffMember, variant: number): string {
 }
 
 // ── Step: Basics ───────────────────────────────────────────────────────────
-function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
+/** Add a venue without leaving the wizard: writes to the same library the Locations tab edits and selects it on this listing. */
+function InlineVenueForm({ patchLocal, onAdded, onCancel }: { patchLocal: (fn: (s: LocalState) => LocalState) => void; onAdded: (id: string) => void; onCancel?: () => void }) {
+  const tr = useT();
+  const [nm, setNm] = useState("");
+  const [addr, setAddr] = useState("");
+  const add = () => {
+    if (nm.trim().length < 2) return;
+    const id = uid();
+    patchLocal((s) => ({ ...s, venues: [...s.venues, { id, name: nm.trim(), address: addr.trim() }] }));
+    onAdded(id);
+    setNm(""); setAddr("");
+  };
+  return (
+    <div data-ui="inline-venue" className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+      <div className="mb-2 text-[12px] font-extrabold">{tr("p9jr.addVenueTitle")}</div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div><FieldLabel>{tr("p8lst.flVenueNamePh")}</FieldLabel><Input value={nm} onChange={(e) => setNm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} className="w-full" /></div>
+        <div><FieldLabel>{tr("p8lst.flAddrPh")}</FieldLabel><Input value={addr} onChange={(e) => setAddr(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} className="w-full" /></div>
+      </div>
+      <div className="mt-2 flex gap-2">
+        <Button variant="primary" sm disabled={nm.trim().length < 2} onClick={add}>{tr("p8lst.flAdd")}</Button>
+        {onCancel && <Button sm onClick={onCancel}>{tr("p8lst.blkCancel")}</Button>}
+      </div>
+    </div>
+  );
+}
+
+/** Step 1: what has to exist before this listing can go live, with live ticks and a button to create each missing piece. */
+function PrereqPanel({ d, upd, local, patchLocal, blocks, onCreateBlock }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void; blocks: BlocksStore; onCreateBlock: () => void }) {
+  const tr = useT();
+  const [addingVenue, setAddingVenue] = useState(false);
+  const pre = listingPrereqs({ venueCount: local.venues.length, deliveryMode: d.deliveryMode, blocks: blocks.library.map((b) => ({ passCount: b.passIds.length, priced: b.priced === true })) });
+  const venueOk = pre[0].ok, blockOk = pre[1].ok;
+  const tick = (ok: boolean) => <span aria-hidden className="flex h-5 w-5 flex-none items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: ok ? "#0f9d58" : "#c4c9d6" }}>{ok ? "✓" : ""}</span>;
+  return (
+    <div data-ui="prereq-panel" className="mb-4 rounded-2xl border border-[#cddcf7] bg-white p-4">
+      <div className="text-[14px] font-extrabold">{tr("p9jr.prereqTitle")}</div>
+      <p className="mb-2 text-[12px] text-[var(--ink-3)]">{tr("p9jr.prereqLede")}</p>
+      <div className="flex flex-col gap-2">
+        <div data-ui="prereq-venue" data-ok={venueOk ? "1" : "0"} className="flex flex-wrap items-center gap-2.5 text-[13px]">
+          {tick(venueOk)}
+          <span className="font-bold">{tr("p9jr.prereqVenue")}</span>
+          <span className="text-[var(--ink-3)]">{tr("p9jr.prereqVenueSub")}</span>
+          {!venueOk && !addingVenue && <Button sm className="ms-auto" onClick={() => setAddingVenue(true)}>{tr("p9jr.prereqAddVenue")}</Button>}
+        </div>
+        {addingVenue && !venueOk && <InlineVenueForm patchLocal={patchLocal} onAdded={(id) => { upd({ venueId: id }); setAddingVenue(false); }} onCancel={() => setAddingVenue(false)} />}
+        <div data-ui="prereq-block" data-ok={blockOk ? "1" : "0"} className="flex flex-wrap items-center gap-2.5 text-[13px]">
+          {tick(blockOk)}
+          <span className="font-bold">{tr("p9jr.prereqBlock")}</span>
+          <span className="text-[var(--ink-3)]">{tr("p9jr.prereqBlockSub")}</span>
+          {!blockOk && !blocks.loading && <Button sm className="ms-auto" onClick={onCreateBlock}>{tr("p9jr.prereqCreateBlock")}</Button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BasicsStep({ d, upd, local, patchLocal, blocks, onCreateBlock }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void; blocks: BlocksStore; onCreateBlock: () => void }) {
   const tr = useT();
   return (
     <div className="max-w-[1120px]">
       <StepHead n={1} kicker={tr("p8lst.waKickBasics")} title={tr("p8lst.waBasicsTitle")} lede={tr("p8lst.waBasicsLede")} />
-      <FieldLabel>{tr("p8lst.waTitleLbl")}</FieldLabel>
-      <Input value={d.title} maxLength={70} onChange={(e) => upd({ title: e.target.value })} placeholder={tr("p8lst.waTitlePh")} className="mb-3 w-full" />
+      <PrereqPanel d={d} upd={upd} local={local} patchLocal={patchLocal} blocks={blocks} onCreateBlock={onCreateBlock} />
+      <FieldLabel>{tr("p8lst.waTitleLbl")} <span className="text-[#c0392b]">*</span></FieldLabel>
+      <Input value={d.title} maxLength={70} aria-required onChange={(e) => upd({ title: e.target.value })} placeholder={tr("p8lst.waTitlePh")} className="mb-1 w-full" />
+      {titleMissing(d.title) && <div className="mb-3 text-[11.5px] font-semibold text-[#b45309]">{tr("p9jr.nameFirst")}</div>}
+      {!titleMissing(d.title) && <div className="mb-3" />}
 
       <div className="grid items-start gap-4 md:grid-cols-2">
         <RichCard icon="🖼️" title={tr("p8lst.waMainImage")} subtitle={tr("p8lst.waMainImageSub")}>
@@ -1624,6 +1764,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
   const w = useWord();
   const { locale } = useI18n();
   const [newCat, setNewCat] = useState("");
+  const [addingVenue, setAddingVenue] = useState(false);
   const addCat = () => {
     const name = newCat.trim();
     if (name.length < 2) return;
@@ -1675,6 +1816,11 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
           <option value="">{tr("p8lst.waSelectVenue")}</option>
           {local.venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
         </Select>
+        {(local.venues.length === 0 || addingVenue) ? (
+          <InlineVenueForm patchLocal={patchLocal} onAdded={(id) => { upd({ venueId: id }); setAddingVenue(false); }} onCancel={local.venues.length ? () => setAddingVenue(false) : undefined} />
+        ) : (
+          <button type="button" onClick={() => setAddingVenue(true)} className="mb-2 block text-[12px] font-bold text-[var(--brand-ink)] underline">{tr("p9jr.prereqAddVenue")}</button>
+        )}
         <div className="mb-3 text-[11px] text-[var(--ink-3)]"><Rich text={tr("p8lst.waVenueHint")} /></div>
       </>)}
 
@@ -2152,10 +2298,9 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
 }
 
 // ── Step: Tickets & pricing (pulls from Blocks) ────────────────────────────
-function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; blocks: BlocksStore; tickets: { name: string; days: number; price: number }[] }) {
+function TicketsStep({ d, upd, blocks, tickets, onCreateBlock }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; blocks: BlocksStore; tickets: { name: string; days: number; price: number }[]; onCreateBlock: () => void }) {
   const tr = useT();
   const { locale } = useI18n();
-  const portalHref = usePortalHref();
   const ovUpd = (name: string, field: keyof TicketOverride, value: string) =>
     upd({ ticketOverrides: { ...d.ticketOverrides, [name]: { ...d.ticketOverrides[name], [field]: value } } });
   const toggleHidden = (name: string, hidden: boolean) =>
@@ -2188,14 +2333,14 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
         <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">
           <div className="font-bold text-[var(--ink)]">{tr("p8lst.wbNoBlockTitle")}</div>
           <p className="mt-1">{tr("p8lst.wbNoBlockBody")}</p>
-          <a href={portalHref("/blocks")} target="_blank" rel="noreferrer" className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white hover:bg-[#16306e]">{tr("p8lst.wbBuildBlock")}</a>
+          <button type="button" data-ui="create-block" onClick={onCreateBlock} className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white hover:bg-[#16306e]">{tr("p9jr.prereqCreateBlock")}</button>
           <p className="mt-2.5 text-[11.5px]"><Rich text={tr("p8lst.wbNoBlockNote")} /></p>
         </Card>
       ) : (
         <div className="flex flex-col gap-2">
           {blocks.library.map((b) => {
             const on = b.id === d.blockId;
-            const openBlocks = () => window.open(window.location.pathname.replace(/\/[^/]*$/, "/blocks"), "_blank");
+            const openBlocks = onCreateBlock;
             if (on) return (
               // Selected: a strong, clearly-picked state with its own actions —
               // no longer a toggle, so clicking to explore can't deselect it.
@@ -2224,10 +2369,14 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                   <div className="text-[13.5px] font-extrabold">▥ {b.name}</div>
                   <div className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.wbPeriodsPasses", { p: b.periodIds.length, q: b.passIds.length })}</div>
                 </div>
-                <span className="whitespace-nowrap rounded-full border border-[var(--brand-2)] px-3 py-1 text-[11.5px] font-bold text-[var(--brand-ink)]">{tr("p8lst.wbUseBlock")}</span>
+                <span className="flex items-center gap-2">
+                  {b.priced === false && <span className="whitespace-nowrap rounded-full bg-[#fdf0e3] px-2 py-0.5 text-[10px] font-extrabold text-[#b45309]">{tr("p9jr.needsPrices")}</span>}
+                  <span className="whitespace-nowrap rounded-full border border-[var(--brand-2)] px-3 py-1 text-[11.5px] font-bold text-[var(--brand-ink)]">{tr("p8lst.wbUseBlock")}</span>
+                </span>
               </button>
             );
           })}
+          <button type="button" data-ui="create-block" onClick={onCreateBlock} className="self-start rounded-full border border-dashed border-[var(--brand-2)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--brand-ink)] hover:bg-[var(--brand-soft)]">+ {tr("p9jr.prereqCreateBlock")}</button>
         </div>
       )}
       {tickets.length > 0 && (

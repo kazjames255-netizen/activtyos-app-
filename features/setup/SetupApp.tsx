@@ -1,5 +1,6 @@
 "use client";
 
+import { settingsOwner } from "@/lib/franchiseTerms";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -1538,11 +1539,16 @@ export function SetupApp() {
       )}
 
       <TabStrip tabs={TABS} value={activeTab} onChange={setTab} accent="notifications" />
+      {portal === "franchise" && (
+        <div data-ui="settings-owner" className="mb-2 inline-flex items-center rounded-full px-3 py-1 text-[11.5px] font-extrabold" style={settingsOwner(activeTab) === "headOffice" ? { background: "#fdf0e3", color: "#b45309" } : { background: "#e2f4ea", color: "#0f7a43" }}>
+          {settingsOwner(activeTab) === "headOffice" ? t("p9jr.setByHeadOffice") : t("p9jr.setYours")}
+        </div>
+      )}
 
       {activeTab === "company" && (
         <Section title={t("setup.companySetup")} lede={t("setup.companySetupLede")}>
           <div className="grid gap-2.5 sm:grid-cols-2">
-            <div><FieldLabel>{t("setup.displayName")}</FieldLabel><Input value={settings.providerName ?? ""} placeholder="Amir Coaching" onChange={(e) => set("providerName", e.target.value)} className="w-full" /></div>
+            <div><FieldLabel>{t("setup.displayName")}</FieldLabel><Input value={settings.providerName ?? ""} placeholder="Sunshine Coaching" onChange={(e) => set("providerName", e.target.value)} className="w-full" /></div>
             <div><FieldLabel>{t("setup.showYourNameAs")}</FieldLabel><Select value={settings.providerNameMode ?? "business"} onChange={(e) => {
               // Switching what families see you as fills the display name with
               // that name — the choice used to change only a label (d1s4).

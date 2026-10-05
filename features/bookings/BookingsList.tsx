@@ -107,6 +107,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   const openRef = useBookingsStore((s) => s.openRef);
   const openCreate = useBookingsStore((s) => s.openCreate);
   const act = useBookingsStore((s) => s.act);
+  const askConfirm = useBookingsStore((s) => s.askConfirm);
   const resolveMove = useBookingsStore((s) => s.resolveMove);
   // Which request row has its "reason for declining" box open, and its text.
   const [denyingRef, setDenyingRef] = useState<string | null>(null);
@@ -484,11 +485,11 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   {/* Contextual actions, pushed to the right */}
                   <span className="ms-auto flex flex-wrap items-center justify-end gap-1.5">
                     {b.pay === "Awaiting voucher payment" && !off && !waitingForPlace(b.status) && (
-                      <button onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }} title={t("p7bkl.confirmVoucherTip")}
+                      <button onClick={(e) => { e.stopPropagation(); askConfirm(b.ref, { kind: "paid" }); }} title={t("p7bkl.confirmVoucherTip")}
                         className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{pendingPayActionT(t, w, b)}</button>
                     )}
                     {refundPending && (
-                      <button onClick={(e) => { e.stopPropagation(); act(b.ref, "refund-approve"); }} title={isVoucherBk ? t("p7bkl.refundSchemeTip") : t("p7bkl.approveIssueTip")}
+                      <button onClick={(e) => { e.stopPropagation(); askConfirm(b.ref, { kind: "refund-approve" }); }} title={isVoucherBk ? t("p7bkl.refundSchemeTip") : t("p7bkl.approveIssueTip")}
                         className="flex-none whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_10px_22px_-10px_rgba(194,100,0,.7)] hover:brightness-110" style={{ background: "linear-gradient(120deg,#d97706,#f59e0b)" }}>↩ {isVoucherBk ? t("p7bkl.markSent") : t("p7bkl.approveRefund")}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}</button>
                     )}
                     {!refundPending && b.cancel?.amount != null && b.cancel.amount > 0 && b.cancel.refund !== "none" && (

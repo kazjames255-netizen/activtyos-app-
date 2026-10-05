@@ -39,6 +39,7 @@ export function FranchiseRoyaltiesApp() {
             {t("franchise.royalties")}
           </div>
           <p className="mt-1.5 text-[12.5px] leading-[1.5] text-white/85">{t("franchise.royaltiesLede")} <b>{basisLabel}</b>.</p>
+          <span className="mt-2 inline-block rounded-full bg-white/20 px-2.5 py-0.5 text-[10.5px] font-extrabold">{t("p9jr.setByHeadOffice")}</span>
         </div>
 
         <div className="mb-3 inline-flex gap-1 rounded-xl border border-[var(--line)] bg-white p-1">

@@ -6,6 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useBookingsStore } from "./store";
 import type { BookingFilter } from "./types";
 import { BookingsList } from "./BookingsList";
+import { FirstRunChecklist } from "@/features/dashboard/FirstRunChecklist";
 import { BookingDetail } from "./BookingDetail";
 import { TakeBookingModal } from "./TakeBookingModal";
 import { BulkEmailModal } from "./BulkEmailModal";
@@ -164,6 +165,7 @@ export function BookingsApp() {
           {error}
         </div>
       )}
+      {!booking && <FirstRunChecklist variant="bookings" />}
       {loading ? (
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">
           {t("p8lst.bsLoading")}

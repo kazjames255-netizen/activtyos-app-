@@ -14,8 +14,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { refundFor, DEFAULT_POLICY, DEFAULT_POLICIES, policyById, type CancellationPolicy } from "../lib/cancellation";
-import { receivedOf, refundedGross, collectedNet, owedOf, paidSoFar, refundableSoFar } from "../features/bookings/helpers";
+import { receivedOf, refundedGross, collectedNet, owedOf, paidSoFar, refundableSoFar, refundOwedOf } from "../features/bookings/helpers";
 import { applyCancel, applyRowAction, applyCancelDay, applyCancelChild, applyPartialCancel, applyParentCancel } from "../features/bookings/mutations";
+import { reconcileBooking } from "../server/src/lib/reconcileMath";
+import { bookingNetIn, bookingRefundOwed } from "../features/money/bookingIncome";
 import type { Booking } from "../features/bookings/types";
 
 const bk = (over: Record<string, unknown>) => over as unknown as Booking;
@@ -232,39 +234,85 @@ test("Partial per-day cancellations (CN-019/020/021/022)", async (t) => {
       days: ["2026-10-05", "2026-10-06", "2026-10-07"],
       kids: [{ name: "Ami", dates: ["2026-10-05", "2026-10-06", "2026-10-07"] }] });
 
-  await t.test("CN-020: provider cancels 1 of 3 days on £54 = £18 and booking is Partially refunded", () => {
+  await t.test("CN-020: provider cancels 1 of 3 days on £54 = £18 PENDING (owed, not refunded) until marked sent", () => {
     const b = threeDay(54, 54);
     applyCancelDay(b, 0, "2026-10-05");
+    assert.equal(b.refundLog!.length, 0, "nothing logged as refunded yet");
+    assert.equal(b.cancel!.refund, "pending");
+    assert.equal(b.cancel!.amount, 18);
+    assert.equal(refundOwedOf(b), 18);
+    assert.equal(b.pay, "Paid");
+    assert.equal(collectedNet(b), 54, "the money has not left yet");
+    // "Mark refund sent": the server's refund-approve step logs it and flips the pay state.
+    applyRowAction(b, "refund-approve");
+    b.refundLog!.push({ label: "Refund approved (partial)", amount: 18, on: "x", by: "Provider", source: "Offline" });
+    b.refundedApproved = 18;
+    b.pay = "Partially refunded";
+    assert.equal(collectedNet(b), 36);
+    assert.equal(refundOwedOf(b), 0);
+    assert.equal(refundedGross(b), 18, "counted once, not twice");
+  });
+  await t.test("wallet credit is instant: logged now, not pending", () => {
+    const b = threeDay(54, 54);
+    const r = applyCancelDay(b, 0, "2026-10-05", { resolution: "wallet" });
+    assert.deepEqual(r, { resolution: "wallet", amount: 18 });
     assert.equal(b.refundLog![0].amount, 18);
+    assert.equal(b.refundLog![0].source, "Wallet");
+    assert.equal(b.cancel, undefined);
     assert.equal(b.pay, "Partially refunded");
     assert.equal(collectedNet(b), 36);
+  });
+  await t.test("no refund: nothing recorded at all, the day is still cancelled", () => {
+    const b = threeDay(54, 54);
+    const r = applyCancelDay(b, 0, "2026-10-05", { resolution: "none" });
+    assert.equal(r!.amount, 0);
+    assert.equal(b.refundLog!.length, 0);
+    assert.ok(!b.cancel);
+    assert.deepEqual(b.kids![0].cancelledDays, ["2026-10-05"]);
+    assert.equal(collectedNet(b), 54);
+  });
+  await t.test("the provider's own figure is used, but never more than was paid / still refundable", () => {
+    const b = threeDay(54, 54);
+    assert.equal(applyCancelDay(b, 0, "2026-10-05", { amount: 10 })!.amount, 10);
+    assert.equal(b.cancel!.amount, 10);
+    assert.equal(applyCancelDay(b, 0, "2026-10-06", { amount: 9999 })!.amount, 44, "capped at what is left to give back");
+    assert.equal(b.cancel!.amount, 54, "a second cancel ADDS to the pending request");
+  });
+  await t.test("an unpaid booking has nothing to refund", () => {
+    const b = threeDay(54, 0);
+    b.pay = "Invoice sent";
+    assert.equal(applyCancelDay(b, 0, "2026-10-05")!.amount, 0);
+    assert.ok(!b.cancel);
   });
   await t.test("discounted booking: one day refunds a third of the DISCOUNTED £44, not list £54", () => {
     const b = threeDay(44, 44);
     applyCancelDay(b, 0, "2026-10-05");
-    assert.equal(b.refundLog![0].amount, 14.67);
-    assert.notEqual(b.refundLog![0].amount, 18);
+    assert.equal(b.cancel!.amount, 14.67);
+    assert.notEqual(b.cancel!.amount, 18);
   });
   await t.test("cancelling the same day twice does not refund twice", () => {
     const b = threeDay(54, 54);
     applyCancelDay(b, 0, "2026-10-05");
     applyCancelDay(b, 0, "2026-10-05");
-    assert.equal(b.refundLog!.length, 1);
+    assert.equal(b.cancel!.amount, 18);
   });
-  await t.test("cancelling all three days refunds in full, status Cancelled, nets £0", () => {
+  await t.test("cancelling all three days owes the full £54, status Cancelled, still counted as received until sent", () => {
     const b = threeDay(54, 54);
     for (const d of b.days!) applyCancelDay(b, 0, d);
     assert.equal(b.status, "Cancelled");
-    assert.equal(b.pay, "Refunded");
-    assert.equal(collectedNet(b), 0);
+    assert.equal(refundOwedOf(b), 54);
+    assert.equal(b.pay, "Paid");
+    assert.equal(collectedNet(b), 54);
   });
   await t.test("CN-019: cancelling one of two children refunds half and leaves the other", () => {
     const b = bk({ pay: "Paid", status: "Confirmed", amount: 108, amountPaid: 108, refundLog: [],
       kids: [{ name: "A", dates: ["2026-10-05", "2026-10-06"] }, { name: "B", dates: ["2026-10-05", "2026-10-06"] }] });
     applyCancelChild(b, 0);
-    assert.equal(b.refundLog![0].amount, 54);
+    assert.equal(b.cancel!.amount, 54);
+    assert.equal(b.cancel!.refund, "pending");
+    assert.equal(b.refundLog!.length, 0);
     assert.equal(b.status, "Confirmed");
-    assert.equal(b.pay, "Partially refunded");
+    assert.equal(b.pay, "Paid");
   });
   await t.test("CN-021/022: parent per-day value is paid / booked child-days, each day through the policy on its OWN date", () => {
     const b = bk({ pay: "Paid", amount: 54, amountPaid: 54, walletApplied: 0 });
@@ -291,4 +339,31 @@ test("Partial per-day cancellations (CN-019/020/021/022)", async (t) => {
     const b = bk({ pay: "Paid", amount: 200, amountPaid: 200, refundLog: [{ label: "Released", amount: 40 }] });
     assert.equal(Math.min(refundableSoFar(b), 200), 160);
   });
+});
+
+test("Provider cancel-day refund: pending -> sent, reconciles and is never double counted", () => {
+  const b = bk({ ref: "R-1", pay: "Paid", status: "Confirmed", amount: 54, amountPaid: 54, refundLog: [],
+    days: ["2026-10-05", "2026-10-06", "2026-10-07"], kids: [{ name: "Ami", dates: ["2026-10-05", "2026-10-06", "2026-10-07"] }] });
+  const paidIn = [{ type: "payment", status: "succeeded", amount: 54, refs: ["R-1"] }];
+  applyCancelDay(b, 0, "2026-10-05");
+  // Pending: Money in still has the £54, shows £18 owed, 0 refunded; the ledger agrees (no refund payment yet).
+  assert.deepEqual(bookingNetIn(b), { got: 54, back: 0, net: 54 });
+  assert.equal(bookingRefundOwed(b), 18);
+  assert.equal(reconcileBooking(b as never, paidIn).ok, true);
+  // Mark refund sent (what the server's refund-approve writes): owed -> refunded, once.
+  applyRowAction(b, "refund-approve");
+  b.refundLog!.push({ label: "Refund approved (partial)", amount: 18, on: "x", by: "Provider", source: "Offline" });
+  b.refundedApproved = 18;
+  b.pay = "Partially refunded";
+  assert.deepEqual(bookingNetIn(b), { got: 54, back: 18, net: 36 });
+  assert.equal(bookingRefundOwed(b), 0);
+  const refunded = [...paidIn, { type: "refund", status: "to-reimburse", amount: 18, refs: ["R-1"] }];
+  const r = reconcileBooking(b as never, refunded);
+  assert.equal(r.ok, true);
+  assert.equal(r.net, 36);
+});
+
+test("refundableSoFar counts an approved refund once (log line + refundedApproved are the same money)", () => {
+  const b = bk({ pay: "Partially refunded", amount: 54, amountPaid: 54, refundedApproved: 18, refundLog: [{ label: "Refund approved (partial)", amount: 18 }] });
+  assert.equal(refundableSoFar(b), 36);
 });

@@ -121,11 +121,21 @@ const actionSchema = z.discriminatedUnion("type", [
     amount: z.number().nonnegative().max(1_000_000).optional(),
     reason: z.string().max(120).optional(),
   }),
-  z.object({ type: z.literal("cancel-child"), ki: z.number().int().nonnegative() }),
+  // What happens to the money when ONE child / day is cancelled. Default
+  // "refund" = a PENDING refund (the provider sends it and presses "Mark refund
+  // sent"); "wallet" credits the family at once; "none" moves nothing.
+  z.object({
+    type: z.literal("cancel-child"),
+    ki: z.number().int().nonnegative(),
+    resolution: z.enum(["refund", "wallet", "none"]).optional(),
+    amount: z.number().nonnegative().max(1_000_000).optional(),
+  }),
   z.object({
     type: z.literal("cancel-day"),
     ki: z.number().int().nonnegative(),
     date: z.string().min(1),
+    resolution: z.enum(["refund", "wallet", "none"]).optional(),
+    amount: z.number().nonnegative().max(1_000_000).optional(),
   }),
   z.object({
     type: z.literal("change-day"),
@@ -522,6 +532,9 @@ bookings.post("/:ref/actions", async (req, res) => {
     // What had already come in before "Mark paid" — only the balance is new
     // money. Recording the full price double-counted a part-payment (d19s7).
     let receivedBefore = 0;
+    // Set by cancel-child / cancel-day: wallet credit is the one resolution that
+    // moves money straight away (after the transaction commits).
+    let release: ReturnType<typeof applyCancelDay> = null;
     const updated = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
@@ -618,10 +631,12 @@ bookings.post("/:ref/actions", async (req, res) => {
           applyCancel(b, action.refund, action.amount, action.reason);
           break;
         case "cancel-child":
-          applyCancelChild(b, action.ki);
+          if (b.status === "Cancelled") throw new Conflict("This booking is already cancelled");
+          release = applyCancelChild(b, action.ki, { resolution: action.resolution, amount: action.amount });
           break;
         case "cancel-day":
-          applyCancelDay(b, action.ki, action.date);
+          if (b.status === "Cancelled") throw new Conflict("This booking is already cancelled");
+          release = applyCancelDay(b, action.ki, action.date, { resolution: action.resolution, amount: action.amount });
           break;
         case "change-day":
           break; // fully handled above, block-aware
@@ -722,6 +737,17 @@ bookings.post("/:ref/actions", async (req, res) => {
         source: moved.via === "wallet" ? "Wallet" : moved.via === "offline" ? "Offline" : "Card",
       });
       await ref.set({ cancel: { ...updated.cancel, refundError: FieldValue.delete() }, pay: updated.pay, refundedApproved: updated.refundedApproved, walletRefunded: updated.walletRefunded, refundLog: updated.refundLog }, { merge: true });
+    }
+
+    // A cancelled child/day given back as WALLET CREDIT is instant by design: credit the wallet and put it
+    // on the payments ledger (like a wallet refund-approve) so reconciliation matches the booking.
+    const rel = release as ReturnType<typeof applyCancelDay>; // (assigned inside the transaction callback — TS can't see that)
+    if (rel && rel.resolution === "wallet" && rel.amount > 0 && updated.tenantId) {
+      await creditWallet(updated.tenantId, updated.email, rel.amount, `Credit from ${updated.listing}`, updated.ref);
+      await db.collection("payments").add({
+        tenantId: updated.tenantId, refs: [updated.ref], email: updated.email, type: "refund", amount: rel.amount, currency: "gbp",
+        method: "wallet", via: "wallet", status: "credited", createdAt: new Date().toISOString(),
+      }).catch((e) => console.error(`[refunds] wallet ledger write failed for ${updated.ref}:`, (e as Error).message));
     }
 
     // Status-change emails to the booker (fire-and-forget).

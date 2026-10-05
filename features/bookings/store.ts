@@ -1,7 +1,15 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { Booking, BookingFilter } from "./types";
-import type { BulkAction, CreateBookingInput, RefundType, RowAction } from "./mutations";
+import type { BulkAction, CreateBookingInput, RefundType, ReleaseOpts, RowAction } from "./mutations";
+
+/** A money action waiting for the provider's explicit confirmation (inline panel in the booking detail) —
+ *  none of these ever fires on a single click. */
+export type ConfirmIntent =
+  | { kind: "paid" }
+  | { kind: "refund-approve" }
+  | { kind: "cancel-child"; ki: number }
+  | { kind: "cancel-day"; ki: number; dt: string };
 
 // Take-a-booking payload: a real block (capacity/waitlist apply) or a
 // free-text dates label for unscheduled phone bookings.
@@ -75,8 +83,13 @@ interface BookingsState {
 
   saveNote: (ref: string, text: string) => void;
 
-  cancelChild: (ref: string, ki: number) => void;
-  cancelDay: (ref: string, ki: number, dt: string) => void;
+  /** The money action the provider is being asked to confirm, and on which booking. */
+  confirm: { ref: string; intent: ConfirmIntent } | null;
+  /** Opens the booking and its confirm panel — the action itself runs only from the panel. */
+  askConfirm: (ref: string, intent: ConfirmIntent) => void;
+  clearConfirm: () => void;
+  cancelChild: (ref: string, ki: number, opts?: ReleaseOpts) => void;
+  cancelDay: (ref: string, ki: number, dt: string, opts?: ReleaseOpts) => void;
   changeDay: (ref: string, ki: number, dt: string) => void;
   cancelChange: (ref: string) => void;
   applyChangeDay: (ref: string, ki: number, oldDt: string, newDt: string) => void;
@@ -143,6 +156,7 @@ export const useBookingsStore = create<BookingsState>()(
       seasonFilter: "",
       selected: {},
       openRef: null,
+      confirm: null,
       showCreate: false,
       createListingId: null,
       emailCompose: null,
@@ -254,7 +268,7 @@ export const useBookingsStore = create<BookingsState>()(
         }
       },
       close: () => {
-        set((s) => void (s.openRef = null));
+        set((s) => { s.openRef = null; s.confirm = null; });
         const y = scrollMemory;
         scrollMemory = null;
         if (y === null) return;
@@ -293,6 +307,7 @@ export const useBookingsStore = create<BookingsState>()(
       act: (ref, action, reason) => {
         void run(async () => {
           applyServer(await apiPost<Booking>(actionsUrl(ref), { type: action, ...(reason?.trim() ? { reason: reason.trim() } : {}) }));
+          set((s) => void (s.confirm = null));
           if (action === "resend") {
             const b = get().bookings.find((x) => x.ref === ref);
             if (b) setTimeout(() => alert(tNow("p8lst.bsResent", { email: b.email })), 20);
@@ -340,14 +355,22 @@ export const useBookingsStore = create<BookingsState>()(
           applyServer(await apiPost<Booking>(actionsUrl(ref), { type: "note", text }));
         }),
 
-      cancelChild: (ref, ki) =>
+      askConfirm: (ref, intent) => {
+        get().open(ref);
+        set((s) => void (s.confirm = { ref, intent }));
+      },
+      clearConfirm: () => set((s) => void (s.confirm = null)),
+
+      cancelChild: (ref, ki, opts) =>
         void run(async () => {
-          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: "cancel-child", ki }));
+          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: "cancel-child", ki, ...(opts ?? {}) }));
+          set((s) => void (s.confirm = null));
         }),
 
-      cancelDay: (ref, ki, dt) =>
+      cancelDay: (ref, ki, dt, opts) =>
         void run(async () => {
-          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: "cancel-day", ki, date: dt }));
+          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: "cancel-day", ki, date: dt, ...(opts ?? {}) }));
+          set((s) => void (s.confirm = null));
         }),
 
       changeDay: (ref, ki, dt) =>

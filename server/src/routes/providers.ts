@@ -127,6 +127,14 @@ const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
 
 // GET /api/providers?q=… — type-ahead for the parent sign-up provider picker.
 providersPublic.get("/", async (req, res) => {
+  // ?id=<tenantId> — resolve ONE provider (the booking page links parents here with the provider already known). Same public fields as the search.
+  if (typeof req.query.id === "string" && req.query.id.trim()) {
+    try {
+      const hit = (await directory()).find((r) => r.id === req.query.id);
+      res.json(hit ? [{ id: hit.id, name: hit.name, town: hit.town, postcode: hit.postcode ? outward(hit.postcode) : hit.postcode }] : []);
+    } catch { res.status(503).json({ error: "Provider directory unavailable" }); }
+    return;
+  }
   const q = norm(String(req.query.q ?? ""));
   if (q.length < 2) {
     res.json([]);

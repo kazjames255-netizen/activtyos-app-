@@ -657,9 +657,9 @@ function BuildColumn({
     setDraft((d) => ({ ...d, passIds: d.passIds.filter((x) => x !== id) }));
 
   async function moveToLibrary() {
-    if (empty || busy) return;
+    if (empty || busy || !draft.name.trim()) return;
     const body = {
-      name: draft.name.trim() || "Untitled block",
+      name: draft.name.trim(),
       periodIds: draft.periodIds,
       passIds: draft.passIds,
     };
@@ -726,9 +726,10 @@ function BuildColumn({
         className="mb-2.5 w-full"
       />
 
-      <Button sm variant="primary" disabled={empty || busy} onClick={moveToLibrary}>
+      <Button sm variant="primary" disabled={empty || busy || !draft.name.trim()} onClick={moveToLibrary}>
         {busy ? t("p8lst.blkSaving") : t("p8lst.blkMoveToLib")}
       </Button>
+      {!empty && !draft.name.trim() && <div data-ui="block-name-required" className="mt-1.5 text-[11.5px] font-semibold text-[#b45309]">{t("p9jr.blockNameRequired")}</div>}
     </Card>
   );
 }
@@ -924,7 +925,7 @@ function LibraryCard({
   const t = useT();
   const [renaming, setRenaming] = useState(false);
   const [tempName, setTempName] = useState(block.name);
-  const [showCalc, setShowCalc] = useState(false);
+  const [showCalc, setShowCalc] = useState(!block.priced); // new / unpriced blocks open with their prices showing
   const [dragOver, setDragOver] = useState(false);
   const [editing, setEditing] = useState(false);
 
@@ -1248,7 +1249,9 @@ function PricingCalculator({
 }) {
   const t = useT();
   const { locale } = useI18n();
-  const [openPass, setOpenPass] = useState<string | null>(null);
+  // A block that still needs prices opens with every pass row expanded, so the price field is in plain sight instead of behind a collapsed "£0.00 ▼" row.
+  const [openAll] = useState(!block.priced);
+  const [toggled, setToggled] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState(false);
 
   const [masterPrice, setMasterPrice] = useState(
@@ -1396,12 +1399,12 @@ function PricingCalculator({
             const isM = idx === 0;
             const isFlat = passMode[q.id] === "flat";
             const price = passDisplayPrice(q.id, idx, q.price);
-            const open = openPass === q.id;
+            const open = openAll !== toggled.has(q.id);
             return (
               <div key={q.id} className="overflow-hidden rounded-lg border border-[var(--line)]">
                 <button
                   type="button"
-                  onClick={() => setOpenPass(open ? null : q.id)}
+                  onClick={() => { setToggled((s) => { const n = new Set(s); if (n.has(q.id)) n.delete(q.id); else n.add(q.id); return n; }); }}
                   className="flex w-full items-center gap-2 bg-[var(--panel)] px-2.5 py-1.5 text-start"
                 >
                   <span className="text-[13px] font-extrabold">{q.name}</span>

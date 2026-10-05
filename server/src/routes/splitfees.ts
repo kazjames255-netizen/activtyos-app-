@@ -191,6 +191,14 @@ splitfees.get("/mine", async (req, res) => {
   res.json({ settings, count, revenue, collected, fee, period: range.period, from: range.from, to: range.to });
 });
 
+// GET /api/splitfees/settings — just the royalty basis + rate (the invite form shows and edits it; defaults to 10% of revenue).
+splitfees.get("/settings", async (req, res) => {
+  const auth = req.auth!;
+  if (auth.role !== "company" || !auth.tenantId) { res.status(403).json({ error: "Requires a company (franchisor) account" }); return; }
+  const tenant = await db.collection("tenants").doc(auth.tenantId).get();
+  res.json({ settings: ((tenant.exists && (tenant.data()!.splitFees as z.infer<typeof settingsSchema>)) || null) ?? { basis: "revenue" as const, rate: 10, perBookingFee: 0 } });
+});
+
 // PUT /api/splitfees/settings — the royalty basis + rate (company only).
 splitfees.put("/settings", async (req, res) => {
   const auth = req.auth!;

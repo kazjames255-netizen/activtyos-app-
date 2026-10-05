@@ -37,7 +37,8 @@ const portalOf = (role: Role): string =>
 
 function needStripe(res: Response) {
   if (stripe) return stripe;
-  res.status(503).json({ error: "Payments aren't configured (no STRIPE_SECRET_KEY on the server)" });
+  console.warn("[payments] Stripe is not configured (STRIPE_SECRET_KEY missing) — card payments disabled");
+  res.status(503).json({ error: "Card payments are being set up — you can still take cash and bank-transfer bookings." });
   return null;
 }
 

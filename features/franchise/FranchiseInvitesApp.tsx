@@ -5,11 +5,14 @@
 // join by invite only (never self-signup), so this is the HO's onboarding roster.
 
 import { useCallback, useEffect, useState } from "react";
-import { get as apiGet, post as apiPost } from "@/lib/api";
+import { api, get as apiGet, post as apiPost } from "@/lib/api";
+import { franchiseFeeFor, parseRoyaltyPct, tierParts, type FranchiseTier } from "@/lib/franchiseTerms";
 import { Button, Card, Input } from "@/components/ui";
 import { useT, tNow } from "@/lib/i18n/provider";
 
 interface Invite { token: string; role: string; createdAt: string; usedBy: string | null; sentTo?: string | null; franchiseName?: string | null; franchiseArea?: string | null }
+interface RoyaltySettings { basis: "revenue" | "perBooking"; rate?: number; perBookingFee?: number }
+interface FranchisePlan { id: string; price: number; perFranchise?: number; franchiseTiers?: FranchiseTier[] }
 interface Franchise { franchiseId: string; name: string; area: string | null }
 
 export function FranchiseInvitesApp() {
@@ -19,6 +22,10 @@ export function FranchiseInvitesApp() {
   const [name, setName] = useState("");
   const [area, setArea] = useState("");
   const [email, setEmail] = useState("");
+  // Royalty is one network-wide setting (Split fees). Shown and editable here so head office agrees it BEFORE a franchisee joins.
+  const [royalty, setRoyalty] = useState<RoyaltySettings | null>(null);
+  const [pct, setPct] = useState("10");
+  const [plan, setPlan] = useState<FranchisePlan | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -29,10 +36,23 @@ export function FranchiseInvitesApp() {
     apiGet<Franchise[]>("/api/franchises").then(setFranchises).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    apiGet<{ settings: RoyaltySettings }>("/api/splitfees/settings").then((r) => { setRoyalty(r.settings); if (r.settings.basis === "revenue") setPct(String(r.settings.rate ?? 10)); }).catch(() => {});
+    apiGet<{ plans: FranchisePlan[] }>("/api/subscription").then((r) => setPlan(r.plans.find((p) => p.id === "franchise") ?? null)).catch(() => {});
+  }, []);
 
   async function invite() {
+    const rate = parseRoyaltyPct(pct);
+    const pctMode = (royalty?.basis ?? "revenue") === "revenue";
+    if (pctMode && rate == null) { setErr(t("p9jr.royaltyInvalid")); return; }
     setBusy(true); setErr(null); setMsg(null);
     try {
+      // Save the agreed royalty first so the invite email quotes the same figure.
+      if (pctMode && rate != null && rate !== (royalty?.rate ?? 10)) {
+        const next: RoyaltySettings = { basis: "revenue", rate, perBookingFee: royalty?.perBookingFee ?? 0 };
+        await api("/api/splitfees/settings", { method: "PUT", body: JSON.stringify(next) });
+        setRoyalty(next);
+      }
       const r = await apiPost<{ token: string; sentTo: string | null }>("/api/invites", {
         role: "franchise",
         ...(email.trim() ? { email: email.trim() } : {}),
@@ -72,6 +92,20 @@ export function FranchiseInvitesApp() {
             <div><label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("franchise.franchiseBusinessName")}</label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("franchise.egApfActivityCamps")} className="w-full" /></div>
             <div><label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("franchise.areaTerritory")}</label><Input value={area} onChange={(e) => setArea(e.target.value)} placeholder={t("franchise.egManchester")} className="w-full" /></div>
             <div><label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("franchise.theirEmail")}</label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="them@email.com" className="w-full" /></div>
+          </div>
+          <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
+            {(royalty?.basis ?? "revenue") === "revenue" ? (
+              <div><label htmlFor="inv-royalty" className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("p9jr.royaltyLabel")}</label><Input id="inv-royalty" type="number" min={0} max={100} step="0.5" value={pct} onChange={(e) => setPct(e.target.value)} className="w-full" /></div>
+            ) : (
+              <div className="text-[12px] text-[var(--ink-2)] sm:col-span-1">{t("p9jr.royaltyPerBooking", { fee: `£${(royalty?.perBookingFee ?? 0).toFixed(2)}` })}</div>
+            )}
+            <div className="text-[12px] leading-[1.5] text-[var(--ink-2)] sm:col-span-2">{t("p9jr.royaltyNote")}</div>
+          </div>
+          <div data-ui="franchise-cost" className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-[12px] leading-[1.55] text-[var(--ink-2)]">
+            <div className="font-extrabold text-[var(--ink)]">{t("p9jr.costTitle")}</div>
+            <div>{t("p9jr.costHeadOfficePays", { base: `£${plan?.price ?? 99}`, tiers: tierParts(plan?.franchiseTiers ?? [{ upTo: 5, price: 39 }, { upTo: 15, price: 31 }, { upTo: null, price: 25 }], plan?.perFranchise).map((p) => t(`p9jr.tier_${p.kind}`, { price: `£${p.price}`, n: p.n ?? 0 })).join(", ") })}</div>
+            <div>{t("p9jr.costFranchiseFree")}</div>
+            <div className="text-[var(--ink-3)]">{t("p9jr.costExample", { n: 3, amount: `£${franchiseFeeFor(3, plan?.franchiseTiers ?? [{ upTo: 5, price: 39 }, { upTo: 15, price: 31 }, { upTo: null, price: 25 }], plan?.perFranchise)}` })}</div>
           </div>
           <div className="mt-3"><Button variant="primary" disabled={busy} onClick={invite}>{busy ? t("franchise.creating") : t("franchise.createInvite")}</Button></div>
         </Card>

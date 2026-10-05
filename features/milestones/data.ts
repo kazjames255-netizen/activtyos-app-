@@ -83,10 +83,10 @@ export function seedProgress(phases: MPhase[]): MProgress {
   });
   return { season: "This season", steps };
 }
-export const loadProgress = (phases?: MPhase[]): MProgress => {
+export const loadProgress = (_phases?: MPhase[]): MProgress => {
   const s = read<MProgress>(PK);
   if (s && s.steps && typeof s.steps === "object") return { season: s.season || "This season", steps: s.steps };
-  return phases ? seedProgress(phases) : { season: "This season", steps: {} };
+  return { season: "This season", steps: {} }; // brand-new tenants start at 0% — no invented dates, ticks or names
 };
 export const saveProgress = (p: MProgress) => write(PK, p);
 

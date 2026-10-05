@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
-import { bookingNetIn } from "@/features/money/bookingIncome";
+import { bookingNetIn, bookingRefundOwed } from "@/features/money/bookingIncome";
 import type { Booking as FullBooking } from "@/features/bookings/types";
 import { InvoicesWithBookings } from "@/features/money/BookingInvoices";
 import { IncomeApp } from "@/features/money/IncomeApp";
@@ -55,8 +55,11 @@ export function MoneyInApp() {
   // collected" and the Income tab: NET of refunds (received - refunded); `back` is the refunded part.
   const bookingIn = useMemo(() => bookings.map((b) => {
     const { got, back, net } = bookingNetIn(b as unknown as FullBooking);
-    return { date: (b.createdAt || "").slice(0, 10), amount: net, got, back };
+    return { date: (b.createdAt || "").slice(0, 10), amount: net, got, back, owed: bookingRefundOwed(b as unknown as FullBooking) };
   }).filter((r) => r.got > 0), [bookings]);
+
+  // Refunds agreed with a family but not yet sent — still inside the figures above until "Mark refund sent".
+  const refundsOwed = useMemo(() => bookingIn.reduce((n, r) => n + r.owed, 0), [bookingIn]);
 
   const sumIn = (rows: { date?: string; amount?: number }[], key: string, byYear = false) =>
     rows.filter((r) => (byYear ? (r.date ?? "").slice(0, 4) : (r.date ?? "").slice(0, 7)) === key).reduce((s, r) => s + (r.amount ?? 0), 0);
@@ -112,6 +115,7 @@ export function MoneyInApp() {
         </div>
         <div className="mt-2 text-[11px] text-white/75">{rich(t("p8fin.miReceivedLine", { bk: money(bkMonth), inv: money(invMonth), inc: money(incMonth) }))}</div>
         <div className="mt-0.5 text-[10.5px] text-white/60">{rich(t("p8fin.miAwaitingNote"))}</div>
+        {refundsOwed > 0 && <div data-ui="refunds-owed" className="mt-1 text-[11px] font-semibold text-[#ffe3a3]">{rich(t("p8fin.miRefundsOwed", { amount: money(refundsOwed) }))}</div>}
         </>)}
       </div>
 

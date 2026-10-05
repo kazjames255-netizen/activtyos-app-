@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { db } from "../firebase";
+import { auth as authAdmin, db } from "../firebase";
 import { emailParentWelcome, emailProviderWelcome } from "../lib/emails";
 import { notify } from "../lib/notify";
 
@@ -23,6 +23,9 @@ const schema = z.discriminatedUnion("role", [
     postcode: z.string().trim().max(12).optional(),
     // The provider the parent picked on the sign-up page (a tenant id from /api/providers). Remembered on the account as the parent's home provider.
     providerId: z.string().trim().max(80).optional(),
+    // Parent sign-up asks for a real name so providers see "Jane Smith", not an email handle.
+    firstName: z.string().trim().min(1).max(60).optional(),
+    lastName: z.string().trim().min(1).max(60).optional(),
   }),
   z.object({
     role: z.enum(["company", "freelancer"]),
@@ -85,18 +88,26 @@ registerRole.post("/", async (req, res) => {
       const t = await db.collection("tenants").doc(parsed.data.providerId).get();
       if (t.exists) { homeTenantId = t.id; homeProviderName = (t.data() as { name?: string } | undefined)?.name; }
     }
+    const fullName = [parsed.data.firstName, parsed.data.lastName].filter(Boolean).join(" ") || (user.name ?? "").trim();
+    if (parsed.data.firstName && parsed.data.lastName) {
+      // Put the name on the sign-in profile too, so every later token carries it (bookings, messages and Families read req.user.name).
+      try { await authAdmin.updateUser(user.uid, { displayName: fullName }); } catch { /* the users doc below still holds it */ }
+    }
     await userRef.set({
       email: user.email ?? null,
       role: "parent",
       chosen: true,
+      ...(fullName ? { name: fullName } : {}),
+      ...(parsed.data.firstName ? { firstName: parsed.data.firstName } : {}),
+      ...(parsed.data.lastName ? { lastName: parsed.data.lastName } : {}),
       ...(parsed.data.postcode ? { postcode: parsed.data.postcode } : {}),
       ...(homeTenantId ? { homeTenantId } : {}),
     });
     // Welcome email with a direct sign-in link (still behind the MAIL_LIVE gate; bell/email failures never block sign-up)
-    if (user.email) emailParentWelcome({ to: user.email, firstName: user.name?.split(" ")[0], providerName: homeProviderName });
+    if (user.email) emailParentWelcome({ to: user.email, firstName: parsed.data.firstName ?? user.name?.split(" ")[0], providerName: homeProviderName });
     // Tell the provider a new parent has signed up with them (bell, and email if their notification settings allow). Never blocks sign-up.
     if (homeTenantId) {
-      const who = user.name?.trim() || user.email || "A parent";
+      const who = fullName || user.email || "A parent";
       void notify({
         tenantId: homeTenantId,
         to: { kind: "tenant" },

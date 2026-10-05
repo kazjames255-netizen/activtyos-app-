@@ -7,7 +7,7 @@ import { useHoScope } from "@/components/franchise/HoScope";
 import { withHoNet } from "@/lib/ho-net";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
-import { bookingNetIn } from "@/features/money/bookingIncome";
+import { bookingNetIn, bookingRefundOwed } from "@/features/money/bookingIncome";
 import type { Booking as FullBooking } from "@/features/bookings/types";
 import { Card } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
@@ -169,10 +169,10 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
       // Same rule as the Dashboard's "Income collected" (collectedNet): received
       // minus refunded — a refunded booking isn't money in (acceptance d18s4).
       const { net, back } = bookingNetIn(b as unknown as FullBooking);
-      return { b, paid: net, back };
+      return { b, paid: net, back, owed: bookingRefundOwed(b as unknown as FullBooking) };
     })
     .filter(({ paid }) => paid > 0)
-    .map(({ b, paid, back }) => ({ id: `bk-${b.ref}`, date: (b.createdAt || "").slice(0, 10), category: BOOKINGS_CAT, amount: paid, source: b.booker || b.listing, notes: [b.listing, b.ref, back > 0 ? t("p8fin.inRefunded", { amount: `£${back.toFixed(2)}` }) : ""].filter(Boolean).join(" · "), method: normaliseMethod(b.method), virtual: true, listingId: b.listingId })), [bookings, t]);
+    .map(({ b, paid, back, owed }) => ({ id: `bk-${b.ref}`, date: (b.createdAt || "").slice(0, 10), category: BOOKINGS_CAT, amount: paid, source: b.booker || b.listing, notes: [b.listing, b.ref, back > 0 ? t("p8fin.inRefunded", { amount: `£${back.toFixed(2)}` }) : "", owed > 0 ? t("p8fin.inRefundOwed", { amount: `£${owed.toFixed(2)}` }) : ""].filter(Boolean).join(" · "), method: normaliseMethod(b.method), virtual: true, listingId: b.listingId })), [bookings, t]);
 
   // Paid invoices ARE money in — folded in as read-only rows so Income shows the
   // whole picture without you re-keying them. Dated by when they were paid.

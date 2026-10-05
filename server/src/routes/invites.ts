@@ -8,6 +8,16 @@ import { notifyBilling, staffHeadroom, takesStaffSeat, updateMeteredQuantities, 
 import { forgetRevocation } from "../middleware/auth";
 import { ukToday } from "../lib/ukDate";
 import { loadSettings } from "../lib/tenantLibrary";
+import { franchiseCostParagraph } from "../lib/franchiseTerms";
+import { getPlans } from "./subscription";
+
+// Cost + royalty note for a franchise invite email (live catalogue + the tenant's royalty settings).
+async function franchiseCostNote(tenantId: string): Promise<string> {
+  try {
+    const [plans, t] = await Promise.all([getPlans(), db.collection("tenants").doc(tenantId).get()]);
+    return franchiseCostParagraph(plans.find((p) => p.id === "franchise") as never, (t.data()?.splitFees ?? null) as never);
+  } catch { return franchiseCostParagraph(undefined, null); }
+}
 
 // Invite links — how franchises and staff join a tenant. With an `email`
 // the invite is delivered directly; without one the operator copies the
@@ -135,6 +145,7 @@ invites.post("/", async (req, res) => {
       inviterName: req.user?.name ?? req.user?.email ?? undefined,
       message: inviteMessage,
       tenantId: auth.tenantId,
+      costNote: invitedRole === "franchise" ? await franchiseCostNote(auth.tenantId) : undefined,
     });
     await col.doc(token).set({ lastSentAt: new Date().toISOString() }, { merge: true });
   }
@@ -257,6 +268,7 @@ invites.post("/:token/resend", async (req, res) => {
     link: `${webUrl}/signup?invite=${req.params.token}`,
     inviterName: req.user?.name ?? req.user?.email ?? undefined,
     tenantId: auth.tenantId ?? undefined,
+    costNote: found.d.role === "franchise" ? await franchiseCostNote(auth.tenantId!) : undefined,
   });
   await found.ref.set({ sentTo: to, lastSentAt: new Date().toISOString() }, { merge: true });
   res.json({ sentTo: to });
