@@ -217,7 +217,7 @@ export function Header({ portal }: { portal: PortalKey }) {
             colliding with its neighbours. Contact stays OUTSIDE this scroll
             box (its dropdown panel is absolutely positioned off it — nesting
             it inside an overflow-x-auto ancestor would clip the popover). */}
-        <div className="flex min-w-0 items-center gap-2.5 overflow-x-auto py-1 sm:gap-3">
+        <div className="flex min-w-0 items-center gap-2 overflow-x-auto py-1 pe-3 sm:gap-2.5 xl:gap-3">
           {tabs.map((t) => {
             const active = view === t.view;
             // The Memberships tab stays a solid pill so it draws the eye whether
@@ -242,13 +242,13 @@ export function Header({ portal }: { portal: PortalKey }) {
                 // shrink-0 so a crowded bar never squeezes a tab to an
                 // unreadable icon+sliver — the label always shows from sm up.
                 className={`relative inline-flex shrink-0 items-center gap-1.5 text-[14.5px] no-underline transition-colors duration-150 ${
-                  t.fancy ? "rounded-full px-4 py-1.5 text-[12.5px] font-extrabold" : `rounded-full px-3.5 py-1.5 hover:border-[var(--brand)] hover:text-[var(--brand)] ${active ? "font-extrabold" : "font-bold"}`
+                  t.fancy ? "rounded-full px-4 py-1.5 text-[12.5px] font-extrabold" : `rounded-full px-2.5 py-1.5 text-[13px] hover:border-[var(--brand)] hover:text-[var(--brand)] xl:px-3.5 xl:text-[14.5px] ${active ? "font-extrabold" : "font-bold"}`
                 }`}
                 style={t.fancy ? fancyStyle : colourStyle}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{t.icon}</span>
                 {/* Icon-only on phones; the label returns from sm up. */}
-                <span className={`hidden whitespace-nowrap sm:inline ${t.wide ? "max-w-[180px] truncate" : ""}`}>{t.label}</span>
+                <span className={`hidden whitespace-nowrap sm:inline ${t.wide ? "max-w-[110px] truncate xl:max-w-[180px]" : ""}`}>{t.label}</span>
                 {t.badge > 0 && (
                   <span
                     className="ms-0.5 flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none"
