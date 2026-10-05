@@ -131,7 +131,7 @@ payments.post("/connect", async (req, res) => {
     // /freelancer/finance, which bounced a company or franchise operator into
     // a portal PortalGuard then blocked — they came back from Stripe to an
     // error instead of their payouts.
-    const finance = `${webUrl}/${portalOf(auth.role)}/finance`;
+    const finance = `${webUrl}/${portalOf(auth.role)}/billing?tab=paid`;
     const link = await s.accountLinks.create({
       account: accountId,
       type: "account_onboarding",
@@ -177,7 +177,7 @@ payments.post("/connect/session", async (req, res) => {
       res.json({ clientSecret: session.client_secret, accountId });
     } catch (inner) {
       console.warn("[payments] embedded onboarding session refused, falling back to hosted link:", (inner as Error).message);
-      const finance = `${webUrl}/${portalOf(auth.role)}/finance`;
+      const finance = `${webUrl}/${portalOf(auth.role)}/billing?tab=paid`;
       const link = await s.accountLinks.create({ account: accountId, type: "account_onboarding", refresh_url: finance, return_url: finance });
       res.json({ url: link.url, accountId });
     }
@@ -218,7 +218,7 @@ payments.post("/dashboard", async (req, res) => {
       return;
     }
     if (!account.details_submitted) {
-      const finance = `${webUrl}/${portalOf(auth.role)}/finance`;
+      const finance = `${webUrl}/${portalOf(auth.role)}/billing?tab=paid`;
       const link = await s.accountLinks.create({
         account: accountId, type: "account_onboarding",
         refresh_url: finance, return_url: finance,
