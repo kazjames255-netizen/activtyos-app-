@@ -14,6 +14,7 @@
 
 import { HowItWorks } from "@/components/HowItWorks";
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { DISCOUNT_KIND_LABEL } from "./discounts";
 import { useEffect, useRef, useState } from "react";
 import { tNow, useI18n } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
@@ -1645,7 +1646,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         {/* Big, unmissable: the saving the parent is getting, or why an early bird they expected is not applied. */}
         {b.saved > 0 && (
           <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border-2 px-3 py-2.5" style={{ borderColor: tk.accent, background: `${tk.accent}1f` }}>
-            <span className="text-[14px] font-extrabold" style={{ color: tk.ink }}>🎉 Discount applied</span>
+            <span className="text-[14px] font-extrabold" style={{ color: tk.ink }}>🎉 {b.discountLines.length === 1 && b.discountLines[0].kind ? `${DISCOUNT_KIND_LABEL[b.discountLines[0].kind]} applied` : "Discounts applied"}</span>
             <b className="text-[18px]" style={{ color: tk.accent }}>You save {money(b.saved)}</b>
           </div>
         )}
@@ -1657,7 +1658,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         {b.discountLines.map((l, i) => (
           <div key={i} className="flex items-baseline justify-between gap-3 text-[11.5px]">
             <span className="min-w-0" style={{ color: tk.muted }}>
-              {l.name}{l.terms && <span className="ms-1 opacity-70">({l.terms})</span>}
+              {l.kind && <b className="me-1.5" style={{ color: tk.ink }}>{DISCOUNT_KIND_LABEL[l.kind]}</b>}
+              {l.name}{l.terms && !l.name.includes(l.terms) && <span className="ms-1 opacity-70">({l.terms})</span>}
             </span>
             <b className="flex-none" style={{ color: tk.accent }}>−{money(l.amount)}</b>
           </div>

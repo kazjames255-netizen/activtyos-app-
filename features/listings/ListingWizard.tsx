@@ -393,7 +393,7 @@ export type PageTheme = "playful" | "sport" | "emerald" | "teal" | "royal" | "au
 // prices every parent booking with it. Re-exported so existing imports hold.
 export { applyDiscounts, emptyRule, ruleSummary } from "./discounts";
 export type { DiscountKind, DiscountLine, DiscountRule } from "./discounts";
-import { emptyRule, ruleSummary, prettyRuleName, type DiscountKind, type DiscountRule } from "./discounts";
+import { emptyRule, ruleSummary, prettyRuleName, ruleDisplayName, type DiscountKind, type DiscountRule } from "./discounts";
 import { useT, useI18n, useWord, tNow } from "@/lib/i18n/provider";
 import { Rich } from "@/components/i18n/Rich";
 import { PayModal } from "@/features/payments/PayModal";
@@ -2579,7 +2579,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
   const save = () => {
     if (!form) return;
     // Persist the shown name — the auto-summary when they didn't type their own.
-    const finalRule = nameEdited && form.name.trim() ? form : { ...form, name: ruleSummary(form) };
+    const finalRule = nameEdited && form.name.trim() ? form : { ...form, name: "" };
     setRules(editing ? rules.map((r) => (r.id === form.id ? finalRule : r)) : [...rules, finalRule]);
     openForm(null);
   };
@@ -2683,7 +2683,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
               </div>
             )}
             <div className="mt-3.5 rounded-lg border-s-4 bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]" style={{ borderInlineStartColor: kindOf(form.kind).colour }}>
-              <b>{tr("p8lst.wbParentsSee")}</b> {prettyRuleName(form.name.trim()) || ruleSummary(form, tx)}
+              <b>{tr("p8lst.wbParentsSee")}</b> {nameEdited && form.name.trim() ? prettyRuleName(form.name.trim()) : ruleSummary(form, tx)}
             </div>
 
             {form.kind === "early" && !form.beforeDate && (
@@ -2708,7 +2708,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
                 <div key={r.id} className="flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3" style={{ borderInlineStart: `4px solid ${k.colour}`, opacity: r.enabled ? 1 : 0.55 }}>
                   <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-[15px]" style={{ background: `${k.colour}1a` }}>{k.icon}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] font-bold">{prettyRuleName(r.name.trim()) || ruleSummary(r, tx)}</span>
+                    <span className="block truncate text-[12.5px] font-bold">{ruleDisplayName(r, tx)}</span>
                     <span className="block truncate text-[11px] text-[var(--ink-3)]">{tr("p8lst.wbDk_" + k.kind + "_title")} · {r.passNames.length ? r.passNames.join(", ") : tr("p8lst.wbAllTicketsLc")}</span>
                   </span>
                   <span className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold" style={{ background: `${k.colour}1a`, color: k.colour }}>
@@ -2717,7 +2717,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
                   <button type="button" onClick={() => setRules(rules.map((x) => (x.id === r.id ? { ...x, enabled: !x.enabled } : x)))}
                     className="rounded-full border px-2.5 py-1 text-[11px] font-bold"
                     style={r.enabled ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{r.enabled ? tr("p8lst.wbOn") : tr("p8lst.wbOff")}</button>
-                  <Button sm onClick={() => openForm(r, !!r.name?.trim())}>{tr("p8lst.wbEdit")}</Button>
+                  <Button sm onClick={() => openForm(r, !!r.name?.trim() && ruleDisplayName(r) === prettyRuleName(r.name.trim()))}>{tr("p8lst.wbEdit")}</Button>
                   <button type="button" onClick={() => { setRules(rules.filter((x) => x.id !== r.id)); if (form?.id === r.id) openForm(null); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
                 </div>
               );
@@ -4439,7 +4439,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                     {live.slice(0, 3).map((r) => (
                       <div key={r.id} className="flex items-start justify-between gap-2">
                         <span className="min-w-0">
-                          <span className="block text-[11px] leading-snug" style={{ color: "#c3ccdb" }}>{prettyRuleName(r.name.trim()) || ruleSummary(r, { tr, locale })}</span>
+                          <span className="block text-[11px] leading-snug" style={{ color: "#c3ccdb" }}>{ruleDisplayName(r, { tr, locale })}</span>
                           {/* Which tickets it covers — a rule on one pass shouldn't look universal. */}
                           <span className="block text-[9.5px]" style={{ color: MUTs }}>
                             {r.passNames.length === 0 ? tr("p7pg.allPasses") : r.passNames.join(", ")}
