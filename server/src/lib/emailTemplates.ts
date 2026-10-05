@@ -15,20 +15,11 @@ export function escapeHtml(s: string) {
  *  look like "Mon 20 Jul 2026 · 08:00 – 17:30". */
 export function datesGridHtml(sessions: string[]): string {
   if (!sessions.length) return "<span style='color:#a7a3bd'>Dates to be confirmed</span>";
-  const cell = (s: string) => {
-    const [day, time] = s.split(" · ");
-    return `<td width="33%" style="padding:3px 10px 6px 0;vertical-align:top">
-      <div style="font-size:12px;font-weight:700;color:#171534;white-space:nowrap">${escapeHtml(day ?? s)}</div>
-      ${time ? `<div style="font-size:11px;color:#8a86a3;white-space:nowrap">${escapeHtml(time)}</div>` : ""}
-    </td>`;
-  };
-  const rows: string[] = [];
-  for (let i = 0; i < sessions.length; i += 3) {
-    const cells = sessions.slice(i, i + 3).map(cell);
-    while (cells.length < 3) cells.push(`<td width="33%"></td>`);
-    rows.push(`<tr>${cells.join("")}</tr>`);
-  }
-  return `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">${rows.join("")}</table>`;
+  // One line per day, stacked: side-by-side columns get squeezed or clipped on phones and in forwarded mail.
+  return sessions.map((x) => {
+    const [day, time] = x.split(" · ");
+    return `<div style="padding:5px 0;border-bottom:1px solid #eef0f5;font-size:14px;line-height:1.35;color:#171534"><b>${escapeHtml(day ?? x)}</b>${time ? ` <span style="color:#6a6785">· ${escapeHtml(time)}</span>` : ""}</div>`;
+  }).join("");
 }
 
 /** The customer booking-email shell: the PROVIDER's logo/name up top, all the
@@ -46,11 +37,10 @@ export function layout(
 ): string {
   const kids = b.kids?.length ? b.kids.map((k) => k.name).join(", ") : b.child;
   const bookingUrl = `${baseUrl}/custdash/bookings?open=${encodeURIComponent(b.ref)}`;
+  // Label above value, one block per row: a two-column table squeezed the values to the right on phones and dropped them entirely in
+  // some clients when the mail was forwarded. Stacked blocks read the same everywhere.
   const row = (label: string, value: string) =>
-    `<tr>
-      <td style="padding:7px 16px 7px 0;font-size:12.5px;color:#8a86a3;white-space:nowrap;vertical-align:top">${escapeHtml(label)}</td>
-      <td style="padding:7px 0;font-size:13.5px;color:#171534;border-bottom:1px solid #eef0f5">${value}</td>
-    </tr>`;
+    `<div style="padding:9px 0;border-bottom:1px solid #eef0f5"><div style="font-size:12px;line-height:1.3;color:#8a86a3;margin-bottom:2px">${escapeHtml(label)}</div><div style="font-size:15px;line-height:1.4;color:#171534">${value}</div></div>`;
   const header = brand.hasLogo
     ? `<img src="cid:provider-logo" alt="${escapeHtml(brand.name)}" style="max-height:48px;max-width:220px;display:inline-block" />`
     : `<span style="font-size:22px;font-weight:800;color:#1d3a8f">${escapeHtml(brand.name)}</span>`;
@@ -66,14 +56,14 @@ export function layout(
       <div style="padding:24px 28px 28px">
         <h1 style="font-size:22px;line-height:1.25;margin:0 0 14px;color:#171534">${title}</h1>
         ${bodyHtml}
-        <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin-top:16px">
+        <div style="margin-top:16px">
           ${row("Activity", escapeHtml(b.listing))}
           ${row("Pass", escapeHtml(b.pass))}
           ${ctx.location ? row(ctx.homeVisit ? "We'll come to you at" : "Location", escapeHtml(ctx.location)) : ""}
           ${row("Child", escapeHtml(kids || "—"))}
           ${b.listPrice != null && (b.discountOff ?? 0) > 0 ? `${row("Price before discount", gbp(b.listPrice))}${row(`Discount${b.discountNames?.length ? ` (${b.discountNames.join(", ")})` : ""}`, `− ${gbp(b.discountOff ?? 0)}`)}` : ""}
           ${row("Total", `<b>${gbp(b.amount)}</b>`)}
-        </table>
+        </div>
         ${label("Dates &amp; times")}
         ${datesGridHtml(b.sessions ?? [])}
         ${ctx.mapCid ? `${label("Where")}<img src="${ctx.mapCid}" alt="Map of ${escapeHtml(ctx.location ?? b.listing)}" width="544" style="display:block;width:100%;max-width:544px;height:auto;border-radius:12px;border:1px solid #eef0f5" />${ctx.location ? `<div style="font-size:12px;color:#8a86a3;margin-top:6px">📍 ${escapeHtml(ctx.location)}</div>` : ""}` : ""}
