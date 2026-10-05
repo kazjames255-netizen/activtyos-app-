@@ -248,7 +248,7 @@ function ListingPicker({ listings, venues, active, activeName, onPick }: { listi
   const shown = listings.filter(([id, n]) => `${n} ${venues[id] ?? ""}`.toLowerCase().includes(needle));
   return (
     <div className="relative">
-      <button type="button" aria-label={t("registers.chooseListing")} onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-[var(--raised)] px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#2f5fd0]">{activeName || t("registers.chooseListing")} <span className="text-[9px]">▾</span></button>
+      <button type="button" aria-label={t("registers.chooseListing")} onClick={() => setOpen((v) => !v)} className="flex min-h-[40px] items-center gap-2 rounded-xl border border-white/35 bg-white/15 px-3.5 py-2 text-[14px] font-extrabold text-white hover:bg-white/25">{activeName || t("registers.chooseListing")} <span className="text-[11px] opacity-90">▾</span></button>
       {open && (<>
         <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
         <div className="absolute start-0 z-20 mt-1 w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
