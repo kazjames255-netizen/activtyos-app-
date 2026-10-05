@@ -85,7 +85,7 @@ export function StorePage({ tenantId }: { tenantId: string }) {
             <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#2f6bd8]" style={accent ? { color: accent.text } : undefined}>
               {t("p8lst.spBookWith", { provider })}
             </div>
-            <h1 className="text-[26px] font-extrabold tracking-[-0.02em] text-[#171534]">
+            <h1 className="text-[26px] font-extrabold tracking-[-0.02em] text-[#171534]" style={{ color: "#171534" }}>
               {t("p8lst.spHeading")}
             </h1>
           </div>
@@ -100,8 +100,13 @@ export function StorePage({ tenantId }: { tenantId: string }) {
               const hero = l.images?.[0];
               const passes = l.passes ?? [];
               const from = passes.length ? Math.min(...passes.map((p) => p.price)) : null;
-              const runFrom = fmtDate(l.runFrom);
-              const runTo = fmtDate(l.runTo);
+              // The real first and last session dates (same as Browse), not the listing's recipe dates.
+              const blockDates = (l.blocks ?? []) as { startDate?: string; endDate?: string }[];
+              const first = blockDates.map((b) => b.startDate).filter(Boolean).sort()[0];
+              const last = blockDates.map((b) => b.endDate).filter(Boolean).sort().at(-1);
+              const runFrom = fmtDate(first ?? l.runFrom);
+              const runTo = fmtDate(last ?? l.runTo);
+              const offers = ((l as { offers?: { label: string }[] }).offers ?? []).slice(0, 2);
               const spotsLeft = (l.blocks ?? []).filter((b) => b.open).reduce((s, b) => s + b.spotsLeft, 0);
               return (
                 <Link
@@ -118,6 +123,11 @@ export function StorePage({ tenantId }: { tenantId: string }) {
                       {runFrom && runTo ? `${runFrom} – ${runTo}` : t("p7pub.datesTbc")}
                       {spotsLeft > 0 && <span className="text-[#1d3a8f]" style={accent ? { color: accent.text } : undefined}>{" · "}{t("p7pub.placesAvailable")}</span>}
                     </div>
+                    {offers.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {offers.map((o) => <span key={o.label} className="rounded-full bg-[#fdecea] px-2 py-0.5 text-[10.5px] font-bold text-[#b3261e]">🏷️ {o.label}</span>)}
+                      </div>
+                    )}
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-[13px] font-extrabold text-[#171534]">
                         {from !== null ? t("p7pub.fromPrice", { amt: money(from) }) : ""}
