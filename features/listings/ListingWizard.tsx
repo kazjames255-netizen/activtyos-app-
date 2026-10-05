@@ -206,6 +206,18 @@ export type RunBlock = { id: string; name: string; startDate: string; endDate: s
  */
 
 /** Online venues have no address, map or travel — just joining details. */
+/** One entry per pass + time slot actually booked (a basket can mix passes with different timings), with the days it covers. */
+function slotsOf(lines: { pass: string; dates: string[]; timing?: string }[]): { pass: string; timing: string; dates: string[] }[] {
+  const m = new Map<string, { pass: string; timing: string; dates: Set<string> }>();
+  for (const l of lines) {
+    const k = `${l.pass}|${l.timing ?? ""}`;
+    const cur = m.get(k) ?? { pass: l.pass, timing: l.timing ?? "", dates: new Set<string>() };
+    l.dates.forEach((d) => cur.dates.add(d));
+    m.set(k, cur);
+  }
+  return [...m.values()].map((x) => ({ pass: x.pass, timing: x.timing, dates: [...x.dates].sort() }));
+}
+
 export function isOnlineVenue(v: { kind?: string } | null | undefined): boolean {
   return v?.kind === "online";
 }
@@ -693,7 +705,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean } | null>(null);
+  const [done, setDone] = useState<{ cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; slots?: { pass: string; timing: string; dates: string[] }[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean } | null>(null);
   const [payClosed, setPayClosed] = useState(false);
   const [paidNow, setPaidNow] = useState(false);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
@@ -733,7 +745,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       );
       // One line per child per pass, holding only the days that child is on —
       // a family where one sibling skips Wednesday is two different bookings.
-      type Line = { blockId: string; pass: string; dates: string[]; child: string; itemId: string; periodId?: string };
+      type Line = { blockId: string; pass: string; dates: string[]; child: string; itemId: string; periodId?: string; timing?: string };
       const lines: Line[] = [];
       for (const item of basket) {
         const perChild = new Map<string, string[]>();
@@ -745,7 +757,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         for (const [child, dates] of perChild) {
           const blk = blockOn(listing.blocks, dates[0]);
           if (!blk) throw new Error(t("p7cl.errClosed"));
-          lines.push({ blockId: blk.id, pass: item.name, dates, child, itemId: item.id, periodId: item.periodId });
+          lines.push({ blockId: blk.id, pass: item.name, dates, child, itemId: item.id, periodId: item.periodId, timing: item.timing });
         }
       }
       if (!lines.length) throw new Error(t("p7cl.errNobody"));
@@ -825,6 +837,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         firstDate: allDates[0],
         lastDate: allDates[allDates.length - 1],
         dates: [...new Set(allDates)],
+        slots: slotsOf(lines),
         voucherScheme,
         voucherDetails,
         bank: bankPay,
@@ -906,6 +919,22 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
           <div className="p-4">
             {kids && <div className={rowCls}><span className={labCls}>{t("p7cl.lblWho")}</span><span className={valCls}>{kids}</span></div>}
             {done.passes.length > 0 && <div className={rowCls}><span className={labCls}>{t("p7cl.lblPass")}</span><span className={valCls}>{done.passes.join(", ")}</span></div>}
+            {(() => {
+              // The time(s) of what was booked. One shared time reads as a single "Time" row; different passes with different times are listed
+              // one per pass with their own days, so a family never has to guess which day starts when.
+              const sl = (done.slots ?? []).filter((x) => x.timing);
+              if (!sl.length) return null;
+              const same = sl.every((x) => x.timing === sl[0].timing);
+              if (same) return <div className={rowCls}><span className={labCls}>{t("p7cl.lblTime")}</span><span className={valCls}>{sl[0].timing}</span></div>;
+              return (
+                <div className={rowCls}>
+                  <span className={labCls}>{t("p7cl.lblTime")}</span>
+                  <span className={`${valCls} flex flex-col gap-1`}>
+                    {sl.map((x) => <span key={`${x.pass}|${x.timing}`}>{x.timing} <span className="font-normal text-[#6a6785]">· {x.pass}{x.dates.length ? ` · ${new Intl.ListFormat(dl(), { style: "short", type: "conjunction" }).format(x.dates.map((d) => fmtDay(d) ?? d))}` : ""}</span></span>)}
+                  </span>
+                </div>
+              );
+            })()}
             {when && <div className={rowCls}><span className={labCls}>{t("p7cl.lblStarts")}</span><span className={valCls}>{when}</span></div>}
             {where && <div className={rowCls}><span className={labCls}>{t("p7cl.lblWhere")}</span><span className={valCls}>{where}</span></div>}
             {done.refs.length > 1 && <div className="mt-2 rounded-lg bg-[#eef3ff] px-3 py-2 text-[12px] text-[#1d3a8f]">{t("p7cl.multiBookings", { n: String(done.refs.length) })}</div>}
@@ -986,6 +1015,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
 
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           <a href="/custdash/bookings" className="rounded-lg px-5 py-2.5 text-[13px] font-bold text-white" style={{ background: "var(--brand-2,#2f6bd8)" }}>{t("p7cl.seeMyBookings")}</a>
+          {listing.tenantId && <a href={`/custdash/messages?compose=1&tenant=${encodeURIComponent(listing.tenantId)}`} className="rounded-lg border border-[#dbe0ec] bg-white px-5 py-2.5 text-[13px] font-bold text-[#4a4763]">{t("p7cl.messageProvider", { provider: listing.tenantName || t("p7cl.theProvider") })}</a>}
           <a href="/custdash/browse" className="rounded-lg border border-[#dbe0ec] bg-white px-5 py-2.5 text-[13px] font-bold text-[#4a4763]">{t("p7cl.browseMore")}</a>
         </div>
       </div>
