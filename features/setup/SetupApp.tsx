@@ -2091,6 +2091,9 @@ export function SetupApp() {
           <Row label={t("p8set.regTimes")} hint={t("p8set.regTimesHint")}>
             <Toggle on={settings.registers?.timestamps ?? true} onChange={(v) => set("registers", { ...settings.registers, timestamps: v })} labels={[t("p8set.on"), t("p8set.off")]} />
           </Row>
+          <Row label={t("p8set.regAskWho")} hint={t("p8set.regAskWhoHint")}>
+            <Toggle on={settings.registers?.askCollectedBy ?? false} onChange={(v) => set("registers", { ...settings.registers, askCollectedBy: v })} labels={[t("p8set.on"), t("p8set.off")]} />
+          </Row>
           <Row label={t("p8set.regPin")} hint={t("p8set.regPinHint")}>
             <Toggle on={settings.registers?.requireCollectionPin ?? false} onChange={(v) => set("registers", { ...settings.registers, requireCollectionPin: v })} labels={[t("p8set.on"), t("p8set.off")]} />
           </Row>

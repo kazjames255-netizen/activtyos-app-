@@ -919,6 +919,7 @@ export interface TenantSettings {
   registers?: {
     timestamps?: boolean;   // show the time next to In / Collected
     requireCollectionPin?: boolean; // show the "collection PIN required" banner
+    askCollectedBy?: boolean; // when staff tap Collect, pop up "who collected <child>?" and record the name (off by default)
     fields?: { contact?: boolean; emergency?: boolean; password?: boolean; school?: boolean };
     /** Which facts appear on a child's register card. Each defaults to on. */
     card?: {
@@ -1442,6 +1443,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     registers: {
       timestamps: s.registers?.timestamps ?? true,
       requireCollectionPin: s.registers?.requireCollectionPin ?? false,
+      askCollectedBy: s.registers?.askCollectedBy ?? false,
       fields: { ...DEFAULT_SETTINGS.registers!.fields, ...(s.registers?.fields ?? {}) },
       card: { ...DEFAULT_SETTINGS.registers!.card, ...(s.registers?.card ?? {}) },
       actions: { ...DEFAULT_SETTINGS.registers!.actions, ...(s.registers?.actions ?? {}) },

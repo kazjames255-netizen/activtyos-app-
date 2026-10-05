@@ -1017,7 +1017,7 @@ export function RegistersApp() {
     // recorded the time but never the person (acceptance test d10s1).
     let collectedBy: string | undefined;
     const row = (days[date] ?? []).find((s) => s.blockId === blockId)?.attendees.find((a) => a.ref === ref);
-    if (action === "collect" && !row?.attendance?.collectedAt && typeof window !== "undefined") {
+    if (action === "collect" && !row?.attendance?.collectedAt && settings.registers?.askCollectedBy === true && typeof window !== "undefined") {
       const who = window.prompt(t("registers.collectedByPrompt", { name: row?.children?.[0]?.name ?? "" }), row?.booker ?? "");
       if (who === null) return; // cancelled — don't sign them out
       collectedBy = who.trim() || undefined;
