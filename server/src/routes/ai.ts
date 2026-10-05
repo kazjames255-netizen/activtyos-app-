@@ -13,6 +13,7 @@ import { ukMonth, ukToday } from "../lib/ukDate";
 import { isFranchise, franchiseChildIds, franchiseFamilyEmails } from "../lib/franchiseScope";
 import { capsFor } from "../middleware/access";
 import { capLevel } from "../../../lib/accessMap";
+import { buildSetupSystem, SETUP_TOPIC, DATA_TOPIC } from "../lib/setupKnowledge";
 import { bookingInSite, recordInSite, staffSiteScope, type SiteScope } from "../lib/siteScope";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -61,7 +62,7 @@ const HOWTO: Record<"operator" | "staff" | "parent" | "platform" | "headoffice",
     "Memberships: Setup → Memberships — turn it on and define up to 3 tiers (a % discount or £ wallet credit per month).",
     "Run payroll / see timesheets: Payroll for pay runs (it uses clocked hours); Clock in/out & timesheets for the hours themselves.",
     "Split fees with a partner or coach: the Split fees page (company/owner only). Franchises see royalties owed to head office instead, on the Royalties page; freelancers don't have a split-fees page.",
-    "Change your ActivityOS plan: Subscription.",
+    "Plan, trial, cancel, and getting paid by parents (Stripe, bank details): Billing & payouts.",
     "Set up the business: Setup & features (seasons, child questions, consents, safeguarding options, roles & permissions, and which modules families see).",
   ].join("\n• "),
   staff: [
@@ -96,8 +97,8 @@ const HOWTO: Record<"operator" | "staff" | "parent" | "platform" | "headoffice",
 // Deep-link map — page label → view slug, per portal. URL = /${portal}/${slug}.
 // So the assistant can link users straight to the exact screen.
 const NAV: Record<string, [string, string][]> = {
-  company: [["Dashboard", "dashboard"], ["Bookings", "bookings"], ["Blocks & listings", "listings"], ["Registers", "admin-registers"], ["Families", "customers"], ["Ratios & groups", "ratios"], ["Activity timetable", "timetable"], ["Events calendar", "calendar"], ["Meals", "meals"], ["Trips & visits", "trips"], ["Task manager", "tasks"], ["Discount codes", "marketing"], ["Referrals", "referrals"], ["Finance & analytics", "finance"], ["Money in", "purchasing"], ["Money out", "expenses"], ["Invoices", "invoices"], ["Reconciliation", "reconciliation"], ["Inventory", "inventory"], ["Staff", "staff"], ["Staff schedule", "schedule"], ["Leave & absence", "holiday"], ["Clock in/out & timesheets", "timesheets"], ["Payroll", "payroll"], ["Learning Centre", "learning"], ["Compliance & certificates", "credentials"], ["Documents", "documents"], ["Milestones", "ho-framework"], ["Messages", "messages"], ["Newsfeed", "newsfeed"], ["Moments", "moments"], ["Email", "email"], ["Subscription", "subscription"], ["Setup & features", "setup"], ["AI assistant", "ai"], ["Split fees", "splitfees"], ["Franchises", "franchise-overview"], ["Feature control", "franchise-features"], ["Invite franchises", "franchise-invites"], ["Territories map", "territories"], ["Support", "support"], ["Get paid", "getpaid"]],
-  freelancer: [["Dashboard", "dash"], ["Bookings", "bookings"], ["Blocks & listings", "listings"], ["Registers", "registers"], ["Families", "customers"], ["Ratios & groups", "ratios"], ["Activity timetable", "timetable"], ["Events calendar", "calendar"], ["Meals", "meals"], ["Trips & visits", "trips"], ["Task manager", "tasks"], ["Discount codes", "marketing"], ["Referrals", "referrals"], ["Finance & analytics", "finance"], ["Money in", "purchasing"], ["Money out", "expenses"], ["Invoices", "invoices"], ["Reconciliation", "reconciliation"], ["Inventory", "inventory"], ["Leave & absence", "holiday"], ["Clock in/out & timesheets", "timesheets"], ["Messages", "messages"], ["Newsfeed", "newsfeed"], ["Moments", "moments"], ["Email", "email"], ["Subscription", "subscription"], ["Setup & features", "setup"], ["AI assistant", "ai"]],
+  company: [["Dashboard", "dashboard"], ["Bookings", "bookings"], ["Blocks & listings", "listings"], ["Registers", "admin-registers"], ["Families", "customers"], ["Ratios & groups", "ratios"], ["Activity timetable", "timetable"], ["Events calendar", "calendar"], ["Meals", "meals"], ["Trips & visits", "trips"], ["Task manager", "tasks"], ["Discount codes", "marketing"], ["Referrals", "referrals"], ["Finance & analytics", "finance"], ["Money in", "purchasing"], ["Money out", "expenses"], ["Invoices", "invoices"], ["Reconciliation", "reconciliation"], ["Inventory", "inventory"], ["Staff", "staff"], ["Staff schedule", "schedule"], ["Leave & absence", "holiday"], ["Clock in/out & timesheets", "timesheets"], ["Payroll", "payroll"], ["Learning Centre", "learning"], ["Compliance & certificates", "credentials"], ["Documents", "documents"], ["Milestones", "ho-framework"], ["Messages", "messages"], ["Newsfeed", "newsfeed"], ["Moments", "moments"], ["Email", "email"], ["Billing & payouts (plan tab)", "billing"], ["Billing & payouts — Get paid by parents tab", "billing?tab=paid"], ["Setup & features", "setup"], ["AI assistant", "ai"], ["Split fees", "splitfees"], ["Franchises", "franchise-overview"], ["Feature control", "franchise-features"], ["Invite franchises", "franchise-invites"], ["Territories map", "territories"], ["Support", "support"]],
+  freelancer: [["Dashboard", "dash"], ["Bookings", "bookings"], ["Blocks & listings", "listings"], ["Registers", "registers"], ["Families", "customers"], ["Ratios & groups", "ratios"], ["Activity timetable", "timetable"], ["Events calendar", "calendar"], ["Meals", "meals"], ["Trips & visits", "trips"], ["Task manager", "tasks"], ["Discount codes", "marketing"], ["Referrals", "referrals"], ["Finance & analytics", "finance"], ["Money in", "purchasing"], ["Money out", "expenses"], ["Invoices", "invoices"], ["Reconciliation", "reconciliation"], ["Inventory", "inventory"], ["Leave & absence", "holiday"], ["Clock in/out & timesheets", "timesheets"], ["Messages", "messages"], ["Newsfeed", "newsfeed"], ["Moments", "moments"], ["Email", "email"], ["Billing & payouts (plan tab)", "billing"], ["Billing & payouts — Get paid by parents tab", "billing?tab=paid"], ["Setup & features", "setup"], ["AI assistant", "ai"]],
   staff: [["Dashboard", "dash"], ["My shifts & clock in/out", "schedule"], ["My availability", "availability"], ["Time off", "holiday"], ["My tasks", "tasks"], ["Register", "registers"], ["Ratios & groups", "ratios"], ["Activity timetable", "timetable"], ["Meals", "meals"], ["Trips", "trips"], ["Moments", "moments"], ["Report a concern", "incident"], ["Accidents & first aid", "accidents"], ["Medication", "medication"], ["Certificates & courses", "certificates"], ["Documents", "documents"], ["Payslips", "payslips"], ["My expenses", "expenses"], ["Appraisals", "appraisals"], ["Onboarding", "onboarding"], ["Announcements", "announcements"], ["Messages", "messages"], ["Families", "customers"], ["Account settings", "account"], ["Ask AI", "ai"]],
   custdash: [["Browse activities", "browse"], ["My bookings", "bookings"], ["Payments", "payments"], ["Wallet", "wallet"], ["Coupons & discount codes", "coupons"], ["Memberships", "memberships"], ["Refer a friend", "refer"], ["Child & details", "children"], ["Moments", "moments"], ["Newsfeed", "newsfeed"], ["Meals", "meals"], ["Trips & consent", "trips"], ["Activity timetable", "timetable"], ["Medication", "medication"], ["First aid & incidents", "accidents"], ["Messages", "messages"], ["My account", "account"], ["Data & privacy", "privacy"], ["Help & support", "activityos"], ["AI assistant", "ai"]],
   platform: [["Analytics", "analytics"], ["Providers & billing", "providers"], ["Page engagement", "engagement"], ["At risk", "at-risk"], ["Sales pipeline", "sales"], ["Provider features", "features"], ["Messages & support", "messages"], ["AI assistant", "ai"]],
@@ -785,8 +786,17 @@ ai.post("/chat", async (req, res) => {
   };
   const portal = roleToPortal[auth.role];
 
+  // Set-up / plan / billing / getting-paid questions from owners get the extra knowledge section (lib/setupKnowledge.ts).
+  const recentUser = parsed.data.messages.filter((m) => m.role === "user").slice(-2).map((m) => m.content).join(" \n ");
+  const setupMode = (howtoKey === "operator" || howtoKey === "headoffice") && SETUP_TOPIC.test(recentUser);
+  const wantsData = DATA_TOPIC.test(parsed.data.messages[parsed.data.messages.length - 1].content);
+
   const today = new Date();
-  const system = [
+  // Lean prompt for set-up / billing questions (lib/setupKnowledge.ts): the full prompt (nav of every page, how-to guide, live
+  // snapshot) would push the request past the model's token budget.
+  const setupSystem = buildSetupSystem(portal, who, wantsData ? JSON.stringify(snapshot).slice(0, 6000) : undefined);
+
+  const fullSystem = [
     "You are the ActivityOS assistant, embedded in a platform for children's activity providers (camps, clubs, classes).",
     `You are talking to ${who}`,
     `Today is ${today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/London" })}, and the current UK time is ${today.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" })}. Use this time to judge which of today's sessions are running now, still to come, or already finished.`,
@@ -810,6 +820,7 @@ ai.post("/chat", async (req, res) => {
     "",
     `LIVE DATA (everything you can see — read it all before answering):\n${JSON.stringify(snapshot)}`,
   ].join("\n");
+  const system = setupMode ? setupSystem : fullSystem;
 
   const groqRes = await fetch(GROQ_URL, {
     method: "POST",
@@ -820,7 +831,7 @@ ai.post("/chat", async (req, res) => {
       temperature: 0.3,
       // gpt-oss are reasoning models: give headroom so the answer survives the
       // reasoning budget, and keep that reasoning light so replies stay snappy.
-      max_tokens: MODEL.includes("gpt-oss") ? 1600 : 700,
+      max_tokens: MODEL.includes("gpt-oss") ? (setupMode ? 1000 : 1600) : 700,
       ...(MODEL.includes("gpt-oss") ? { reasoning_effort: "low" as const } : {}),
     }),
   });
