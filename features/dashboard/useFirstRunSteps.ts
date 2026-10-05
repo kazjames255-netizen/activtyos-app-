@@ -95,7 +95,7 @@ export function useFirstRunSteps() {
   if (facts) {
     hasBooking = facts.bookings > 0;
     steps = [
-      { id: "venue", done: facts.venues > 0, href: `${base}/listings?tab=locations` },
+      { id: "venue", done: facts.venues > 0, href: `${base}/listings?tab=locations&add=1` },
       { id: "block", done: facts.blocks > 0, href: `${base}/blocks` },
       { id: "listing", done: facts.listings > 0, href: `${base}/listings` },
       { id: "pay", done: facts.payChosen || visited.has("pay"), href: `${base}/billing?tab=paid` },

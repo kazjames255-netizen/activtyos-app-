@@ -1135,7 +1135,8 @@ function LocationsTab({
   const t = useT();
   const facLabel = (f: string) => (FAC_KEYS[f] ? t("p8lst." + FAC_KEYS[f]) : f);
   const [selId, setSelId] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  // The set-up checklist links here with ?add=1 so the add-a-venue form is already open.
+  const [adding, setAdding] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("add") === "1");
   const [nm, setNm] = useState("");
   const [addr, setAddr] = useState("");
   const [pin, setPin2] = useState<{ lat: number; lng: number } | null>(null); // pending map pin from the finder
@@ -1236,7 +1237,7 @@ function LocationsTab({
 
           {adding ? (
             <div className="mt-1 flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
-              <AddressFinder onPick={(h) => { setAddr(tidyAddress(h.label)); setPin2({ lat: h.lat, lng: h.lng }); }} />
+              <AddressFinder onPick={(h) => { const a = tidyAddress(h.label); setAddr(a); setPin2({ lat: h.lat, lng: h.lng }); /* name pre-fills from the found place (first part of the address) and stays editable; never overwrites what they typed */ setNm((cur) => (cur.trim() ? cur : a.split(",")[0].trim())); }} />
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="flex-1">
                   <FieldLabel>{t("p8lst.flVenueName")}</FieldLabel>
