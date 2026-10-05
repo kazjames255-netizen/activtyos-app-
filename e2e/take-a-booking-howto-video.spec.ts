@@ -151,7 +151,7 @@ test("record the Take a booking how-to video", async ({ browser }) => {
 
     // children
     await rec.cap("Add the child: name and date of birth are required.", "Now add the child. Their name and date of birth are required. Everything else, like allergies and emergency contact, the parent can add later.", { step: "4", min: 3500 });
-    await page.getByRole("button", { name: /Add a new child/ }).click({ timeout: 10_000 }).catch(() => {});
+    await page.getByRole("button", { name: /^(＋ )?Add a (new )?child$/ }).click({ timeout: 10_000 }).catch(() => {});
     await page.waitForTimeout(800);
     await page.getByPlaceholder(/first and last name/i).first().fill("Alex Parent").catch(() => {});
     await page.locator('input[type="date"]').first().fill("2018-03-14").catch(() => {});

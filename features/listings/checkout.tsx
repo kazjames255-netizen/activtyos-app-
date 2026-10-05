@@ -229,6 +229,9 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
   const [draft, setDraft] = useState<ChildProfile>({ name: "", photoConsent: false });
+  // Children added on this screen, kept so their card stays on the list (and can be tapped back on) after being switched off.
+  const [created, setCreated] = useState<ChildProfile[]>([]);
+  const [more, setMore] = useState(false);
   const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
   const inp = `aos-in w-full border px-2.5 py-2 text-[12.5px] outline-none ${tk.round}`;
   // tk.line is a hairline meant for dividers; on the dark themes it left the
@@ -286,119 +289,79 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
     } else {
       onAdded(draft.name.trim());
       setRoster([...roster, draft]);
+      setCreated((cs) => [...cs, draft]);
     }
     setDraft({ name: "", photoConsent: false });
     setEditing(null);
     setTried(false);
     setOpen(false);
+    setMore(false);
   };
+  // One list, one card style: saved profiles first, then anyone just added here.
+  const nkey = (c: ChildProfile) => c.name.trim().toLowerCase();
+  const cards = [...new Map(saved.map((sv) => [nkey(sv), sv])).values()];
+  for (const c of [...roster, ...created]) if (!cards.some((x) => nkey(x) === nkey(c))) cards.push(c);
 
 
   return (
     <>
-      <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{tr("p7ck.yourChildren")}</div>
+      <div className="mt-4 text-[17px] font-extrabold" style={{ color: tk.ink }}>{tr("p7ck.whosComingQ")}</div>
+      {(() => {
+        const from = parseInt(d.ageFrom, 10), to = parseInt(d.ageTo, 10);
+        if (!Number.isFinite(from) && !Number.isFinite(to)) return null;
+        const range = Number.isFinite(from) && Number.isFinite(to)
+          ? (from === to ? tr("p7ck.rangeAge", { from }) : tr("p7ck.rangeAges", { from, to }))
+          : Number.isFinite(from) ? tr("p7ck.rangeOver", { from }) : tr("p7ck.rangeUpTo", { to });
+        return <div className="mt-0.5 text-[14px]" style={{ color: tk.muted }}><Rich text={tr("p7ck.listingFor", { range, tail: d.allowOutOfRange ? tr("p7ck.tailOthers") : "." })} /></div>;
+      })()}
 
-      {saved.length > 0 && (
-        <div className="mt-1.5">
-          <div className="text-[13px] font-semibold" style={{ color: tk.muted }}>
-            {tr("p7ck.clickToAdd")}{" "}
-            {/* State the range. Chips only said "out of age range", so a listing
-                whose ages were set wrong (4–4 rather than 4–11) looked like the
-                children were at fault, with no way to see why from this screen. */}
-            {(() => {
-              const from = parseInt(d.ageFrom, 10), to = parseInt(d.ageTo, 10);
-              if (!Number.isFinite(from) && !Number.isFinite(to)) return null;
-              const range = Number.isFinite(from) && Number.isFinite(to)
-                ? (from === to ? tr("p7ck.rangeAge", { from }) : tr("p7ck.rangeAges", { from, to }))
-                : Number.isFinite(from) ? tr("p7ck.rangeOver", { from }) : tr("p7ck.rangeUpTo", { to });
-              return <Rich text={tr("p7ck.listingFor", { range, tail: d.allowOutOfRange ? tr("p7ck.tailOthers") : "." })} />;
-            })()}
-          </div>
-          <div className="mt-2 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Every saved child stays on the grid whether they're coming or not — one dropping out of sight because it hasn't been added
-                yet looks like it's been lost. Each is a big card: tap to put them on this booking, tap again to take them off. */}
-            {[...new Map(saved.map((sv) => [sv.name.trim().toLowerCase(), sv])).values()].map((sv) => {
-              const bad = ageProblem(d, sv, tr);
-              const added = roster.some((r) => (r.id && r.id === sv.id) || r.name === sv.name);
-              const initial = (sv.name.trim()[0] ?? "?").toUpperCase();
-              return (
-                <button key={sv.id ?? sv.name} type="button" disabled={!!bad}
-                  aria-pressed={added}
-                  title={bad ?? (added ? tr("p7ck.takeOffBooking", { name: sv.name }) : tr("p7ck.addToBooking", { name: sv.name }))}
-                  onClick={() => {
-                    if (added) { setRoster(roster.filter((r) => !((r.id && r.id === sv.id) || r.name === sv.name))); return; }
-                    onAdded(sv.name.trim());
-                    setRoster([...roster, sv]);
-                  }}
-                  className="flex items-center gap-3 rounded-2xl border-2 p-3 text-start transition active:scale-[0.99] disabled:opacity-45"
-                  style={{ borderColor: added ? "#16a34a" : "#c7d2f0", background: added ? "#ecfdf3" : "#fff", boxShadow: added ? "0 8px 22px -12px rgba(22,163,74,.55)" : "0 6px 16px -12px rgba(20,30,90,.35)" }}>
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[19px] font-extrabold text-white" style={{ background: added ? "#16a34a" : "#1d3a8f" }} aria-hidden>{initial}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15.5px] font-extrabold" style={{ color: "#171534" }}>
-                      {sv.name}
-                      {sv.dob && <span className="ms-1.5 text-[12px] font-semibold" style={{ color: tk.muted }}>age {ageOn(sv.dob, d.runFrom) ?? "—"}</span>}
-                    </span>
-                    <span className="mt-0.5 block text-[12px] leading-snug" style={{ color: bad ? "#b91c1c" : tk.muted }}>
-                      {bad ?? (added ? (comingCount(sv.name.trim()) > 0 ? tr("p7ck.addedAllDates") : tr("p7ck.notOnAnyDates")) : tr("p7ck.addToBooking", { name: sv.name }))}
-                    </span>
-                    {added && (
-                      <span role="button" tabIndex={0} className="mt-1 inline-block text-[12px] font-bold underline" style={{ color: "#1d3a8f" }}
-                        onClick={(e) => { e.stopPropagation(); const ri = roster.findIndex((r) => (r.id && r.id === sv.id) || r.name === sv.name); if (ri >= 0) { setDraft(roster[ri]); setEditing(ri); setOpen(true); } }}
-                        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.click(); }}>{tr("p7ck.editDetails")}</span>
-                    )}
-                  </span>
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-[17px] font-black"
-                    style={added ? { background: "#16a34a", borderColor: "#16a34a", color: "#fff" } : { borderColor: "#1d3a8f", color: "#1d3a8f" }} aria-hidden>
-                    {added ? "✓" : "+"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {roster.some((c) => !saved.some((sv) => sv.name.trim().toLowerCase() === c.name.trim().toLowerCase())) && (
-        <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-          {roster.map((c, i) => {
-            // children already shown as a card above are not repeated here
-            if (saved.some((sv) => sv.name.trim().toLowerCase() === c.name.trim().toLowerCase())) return null;
-            const on = comingCount(c.name.trim());
-            // Same two strengths as the chips below: soft while a child is only
-            // listed, solid once they're on something.
-            return (
-              <div key={`${c.name}-${i}`} className={`border-2 px-3 py-2 ${tk.round}`}
-                style={{ borderColor: sexTint(c.sex, true).border, background: sexTint(c.sex, true).bg }}>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="flex-1 text-[12.5px] font-bold" style={{ color: sexTint(c.sex, true).ink }}>
-                    {c.name}
-                    {c.dob && <span className="ms-1.5 text-[11px] font-semibold" style={{ color: "rgba(255,255,255,.8)" }}>age {ageOn(c.dob, d.runFrom) ?? "—"}</span>}
-                  </span>
-                  {/* On the solid fill the muted greys vanish, so the actions
-                      follow the row's state too. */}
-                  <button type="button" onClick={() => { setDraft(c); setEditing(i); setOpen(true); }}
-                    className="text-[11.5px] font-bold" style={{ color: "rgba(255,255,255,.9)" }}>{tr("p7ck.editDetails")}</button>
-                  {/* Off the booking entirely — their dates go and they drop
-                      back to a pale chip above, ready to add again. Deleting
-                      the profile belongs in the profile area, not mid-booking. */}
-                  <button type="button"
-                    onClick={() => { onUnassignAll(c.name.trim()); setRoster(roster.filter((_, n) => n !== i)); }}
-                    className="text-[11.5px] font-bold" style={{ color: "rgba(255,255,255,.9)" }}>{tr("p7ck.notComing")}</button>
-                </div>
-                {/* Says what just happened and where to change it — a child
-                    silently landing on every date is the surprise worth
-                    heading off. */}
-                <div className="mt-1 text-[11px] leading-[1.45]" style={{ color: "rgba(255,255,255,.85)" }}>
-                  {on > 0
-                    ? tr("p7ck.addedAllDates")
-                    : tr("p7ck.notOnAnyDates")}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
+      <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        {/* One card style for everyone: saved children and ones just added here. Tap = on every chosen date, tap again = off. */}
+        {cards.map((sv) => {
+          const bad = ageProblem(d, sv, tr);
+          const same = (r: ChildProfile) => (r.id && r.id === sv.id) || r.name.trim().toLowerCase() === sv.name.trim().toLowerCase();
+          const added = roster.some(same);
+          const initial = (sv.name.trim()[0] ?? "?").toUpperCase();
+          return (
+            <button key={sv.id ?? sv.name} type="button" disabled={!!bad}
+              aria-pressed={added} data-ui="child-card"
+              title={bad ?? (added ? tr("p7ck.takeOffBooking", { name: sv.name }) : tr("p7ck.addToBooking", { name: sv.name }))}
+              onClick={() => {
+                if (added) { setRoster(roster.filter((r) => !same(r))); return; }
+                onAdded(sv.name.trim());
+                setRoster([...roster, sv]);
+              }}
+              className="flex min-h-[72px] items-center gap-3 rounded-2xl border-2 p-3 text-start transition active:scale-[0.99] disabled:opacity-45"
+              style={{ borderColor: added ? "#16a34a" : "#c7d2f0", background: added ? "#ecfdf3" : "#fff", boxShadow: added ? "0 8px 22px -12px rgba(22,163,74,.55)" : "0 6px 16px -12px rgba(20,30,90,.35)" }}>
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[19px] font-extrabold text-white" style={{ background: added ? "#16a34a" : "#1d3a8f" }} aria-hidden>{initial}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[16px] font-extrabold" style={{ color: "#171534" }}>
+                  {sv.name}
+                  {sv.dob && <span className="ms-1.5 text-[14px] font-semibold" style={{ color: "#5b6074" }}>age {ageOn(sv.dob, d.runFrom) ?? "—"}</span>}
+                </span>
+                {bad && <span className="mt-0.5 block text-[14px] leading-snug" style={{ color: "#b91c1c" }}>{bad}</span>}
+                {added && !bad && (
+                  <span role="button" tabIndex={0} className="mt-0.5 inline-block text-[14px] font-bold underline" style={{ color: "#1d3a8f" }}
+                    onClick={(e) => { e.stopPropagation(); const ri = roster.findIndex(same); if (ri >= 0) { setDraft(roster[ri]); setEditing(ri); setMore(true); setOpen(true); } }}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.click(); }}>{tr("p7ck.editDetails")}</span>
+                )}
+              </span>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-[17px] font-black"
+                style={added ? { background: "#16a34a", borderColor: "#16a34a", color: "#fff" } : { borderColor: "#1d3a8f", color: "#1d3a8f" }} aria-hidden>
+                {added ? "✓" : "+"}
+              </span>
+            </button>
+          );
+        })}
+        {!open && (
+          <button type="button" onClick={() => { setMore(false); setOpen(true); }} data-ui="add-child"
+            className="flex min-h-[72px] items-center gap-3 rounded-2xl border-2 border-dashed p-3 text-start"
+            style={{ borderColor: "#9aa7d6", background: "transparent", color: tk.ink }}>
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-dashed text-[22px] font-black" style={{ borderColor: "#9aa7d6" }} aria-hidden>+</span>
+            <span className="text-[16px] font-extrabold">{tr("p7ck.addAChild")}</span>
+          </button>
+        )}
+      </div>
       {/* Questions the provider re-asks every booking.
           These sit out here rather than inside "Edit details" on purpose: a
           returning family never opens that form, so a question buried in it
@@ -430,28 +393,22 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           </div>
         );
       })}
-
-      {!open ? (
-        <button type="button" onClick={() => setOpen(true)}
-          className={`mt-2 w-full border border-dashed px-3 py-2 text-[12.5px] font-bold ${tk.round}`}
-          style={{ borderColor: tk.line, color: tk.ink }}>
-          ＋ Add a new child
-        </button>
-      ) : (
-        <div className={`mt-2 border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
+      {open && (
+        <div className={`mt-2.5 border-2 p-3.5 ${tk.round}`} style={{ borderColor: "#c7d2f0" }}>
           <div className="flex flex-wrap gap-2">
             <div className="min-w-[150px] flex-1">
               <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>{tr("p7ck.lblChildName")} <span style={{ color: "#f87171" }}>*</span></div>
               <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                 placeholder={tr("p7ck.phFullName")} className={inp} style={{ ...inpStyle, ...flag(!draft.name.trim()) }} />
             </div>
+            {needDob && (
             <div className="w-[150px]">
               <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>{tr("p7ck.lblDob")} {needDob ? <span style={{ color: "#f87171" }}>*</span> : <span className="font-normal">{tr("p7ck.optionalDash")}</span>}</div>
               <input type="date" value={draft.dob ?? ""} onChange={(e) => setDraft({ ...draft, dob: e.target.value })}
                 className={inp} style={{ ...inpStyle, ...flag(!draft.dob) }} />
             </div>
+            )}
           </div>
-
           {problem && (
             <div className={`mt-2 border px-3 py-2 text-[12px] font-bold ${tk.round}`}
               style={{ borderColor: "#f87171", background: "rgba(248,113,113,.12)", color: "#fca5a5" }}>{problem}</div>
@@ -460,7 +417,52 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
             <div className={`mt-2 border px-3 py-2 text-[12px] font-semibold leading-[1.5] ${tk.round}`}
               style={{ borderColor: "#f59e0b", background: "rgba(245,158,11,.12)", color: "#e0a020" }}>{approvalNote}</div>
           )}
+          {/* A provider with no reason to ask can switch this off entirely in
+              Setup — asking a parent to sex their child for no purpose isn't
+              a neutral default. */}
+          {settings.collectGender && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>{tr("p7ck.lblBoyGirl")} <span style={{ color: "#f87171" }}>*</span></span>
+            {([["boy", tr("p7ck.boy")], ["girl", tr("p7ck.girl")]] as const).map(([v, l]) => {
+              const on = draft.sex === v;
+              const c = sexTint(v);
+              return (
+                <button key={v} type="button" onClick={() => setDraft({ ...draft, sex: on ? undefined : v })}
+                  className={`border-2 px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
+                  style={on
+                    ? { borderColor: c.border, background: c.bg, color: c.ink }
+                    : { borderColor: `${tk.ink}59`, color: tk.ink, ...flag(!draft.sex) }}>
+                  {l}
+                </button>
+              );
+            })}
+            <span className="w-full text-[10.5px]" style={{ color: tk.muted }}>{tr("p7ck.boyGirlNote")}</span>
+          </div>
+          )}
+          <QuestionFields
+            questions={askQuestions.filter((q) => q.required)}
+            answers={draft.answers ?? {}}
+            onChange={(answers) => setDraft({ ...draft, answers })}
+            tone={{
+              ink: tk.ink,
+              muted: tk.muted,
+              inputClass: inp,
+              inputStyle: inpStyle,
+              accent: tk.accent,
+              accentSoft: `${tk.accent}26`,
+              line: `${tk.ink}26`,
+            }}
+          />
 
+          <button type="button" onClick={() => setMore(!more)} className="mt-3 text-[14px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>{more ? tr("p7ck.fewerDetails") : tr("p7ck.moreDetailsOpt")}</button>
+          {more && (<>
+            {!needDob && (
+              <div className="mt-2 w-[170px]">
+              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>{tr("p7ck.lblDob")} {needDob ? <span style={{ color: "#f87171" }}>*</span> : <span className="font-normal">{tr("p7ck.optionalDash")}</span>}</div>
+              <input type="date" value={draft.dob ?? ""} onChange={(e) => setDraft({ ...draft, dob: e.target.value })}
+                className={inp} style={{ ...inpStyle, ...flag(!draft.dob) }} />
+            </div>
+            )}
           {/* After the name, so it can be asked for by name, and so the two
               required fields lead the form. Asked with a reason attached —
               "add a photo" on its own is just another empty box. */}
@@ -621,10 +623,8 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
             </div>
           </div>
 
-          {/* The provider's own questions. Same list the operator sees on the
-              Families screen, so an answer given here is the answer there. */}
           <QuestionFields
-            questions={askQuestions}
+            questions={askQuestions.filter((q) => !q.required)}
             answers={draft.answers ?? {}}
             onChange={(answers) => setDraft({ ...draft, answers })}
             tone={{
@@ -637,30 +637,6 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               line: `${tk.ink}26`,
             }}
           />
-
-          {/* A provider with no reason to ask can switch this off entirely in
-              Setup — asking a parent to sex their child for no purpose isn't
-              a neutral default. */}
-          {settings.collectGender && (
-          <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>{tr("p7ck.lblBoyGirl")} <span style={{ color: "#f87171" }}>*</span></span>
-            {([["boy", tr("p7ck.boy")], ["girl", tr("p7ck.girl")]] as const).map(([v, l]) => {
-              const on = draft.sex === v;
-              const c = sexTint(v);
-              return (
-                <button key={v} type="button" onClick={() => setDraft({ ...draft, sex: on ? undefined : v })}
-                  className={`border-2 px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
-                  style={on
-                    ? { borderColor: c.border, background: c.bg, color: c.ink }
-                    : { borderColor: `${tk.ink}59`, color: tk.ink, ...flag(!draft.sex) }}>
-                  {l}
-                </button>
-              );
-            })}
-            <span className="w-full text-[10.5px]" style={{ color: tk.muted }}>{tr("p7ck.boyGirlNote")}</span>
-          </div>
-          )}
-
           {/* Permission to USE photos of them — not the photo above, which is
               for staff to recognise them. A provider who never publishes
               photos shouldn't be asking families to rule on it. */}
@@ -676,7 +652,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               ))}
             </div>
           )}
-
+          </>)}
           {tried && missing.length > 0 && !problem && (
             <div className={`mt-2.5 border px-3 py-2 text-[12px] font-bold ${tk.round}`}
               style={{ borderColor: "#f87171", background: "rgba(248,113,113,.12)", color: "#fca5a5" }}>
@@ -687,7 +663,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
             <button type="button" onClick={add} disabled={!settingsReady} aria-busy={!settingsReady}
               className={`flex-1 py-2 text-[12.5px] font-extrabold disabled:cursor-wait disabled:opacity-60 ${tk.round}`}
               style={{ background: tk.accent, color: tk.accentInk }}>{!settingsReady ? tr("p7ck.loadingChildQs") : editing !== null ? tr("p7ck.saveDetails") : tr("p7ck.addChild")}</button>
-            <button type="button" onClick={() => { setOpen(false); setEditing(null); setTried(false); setDraft({ name: "", photoConsent: false }); }}
+            <button type="button" onClick={() => { setOpen(false); setMore(false); setEditing(null); setTried(false); setDraft({ name: "", photoConsent: false }); }}
               className="text-[12px] font-bold" style={{ color: tk.muted }}>{tr("p8lst.ck8Cancel")}</button>
           </div>
         </div>
@@ -844,6 +820,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // ref mutated inside a setState updater, which React re-runs, so a newly
   // added child could be filtered straight back out.
   const [q, setQ] = useState("");
+  const [showPasses, setShowPasses] = useState(false);
   // A family being created on the call. Held here until there's a server route
   // that can make the account — see §H of the backend handoff.
   const [np, setNp] = useState({ name: "", email: "", phone: "", address: "" });
@@ -1188,6 +1165,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   })();
   const existingOn = (id: string) => existingClashes.filter((c) => c.itemIds.includes(id));
   const unassigned = shortPasses.length;
+  // Per-pass fine control stays tucked away unless something on a pass needs fixing.
+  const passesForced = roster.length > 0 && (unassigned > 0 || clashes.length > 0 || existingClashes.length > 0);
+  const passesOpen = showPasses || passesForced;
   // A server error describes the basket as it was when Pay was pressed. The moment
   // the basket, the dates or the children change it is out of date, so hide it
   // (it comes back if Pay is pressed again and is still true).
@@ -1441,20 +1421,26 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               onAdded={(name) => b.clearRemovalsFor(name)}
  />
           )}
-          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{tr("p7ck.whosOnEachPass")}</div>
-          {(
-            <div className="mt-1.5 text-[12px] leading-[1.45]" style={{ color: tk.muted }}>
-              {roster.length === 0
-                ? tr("p7ck.addChildAbove")
-                : tr("p7ck.tapNameOff")}
-              {roster.length > 0 && b.basket.length > 1 && (
-                <div className="mt-1.5 rounded-lg px-3 py-2 text-[12.5px] font-semibold" style={{ background: "rgba(200,255,0,.12)", color: tk.ink, border: `1px solid ${tk.line}` }}>
-                  Different children on different dates? Every child starts on every pass below. Tap a child's name on a pass to take them off it, and tap again to put them back.
-                </div>
-              )}
-            </div>
+          {roster.length > 0 && (() => {
+            const days = new Set(b.basket.flatMap((x) => x.dates)).size;
+            return (
+              <div className="mt-3 text-[15px] font-bold" style={{ color: tk.ink }} data-ui="who-status">
+                {tr("p7ck.whoStatus", { kids: pickPlural(tr, locale, "p7ck.kidsN", roster.length), days: pickPlural(tr, locale, "p7ck.daysN", days), amt: money(b.total) })}
+              </div>
+            );
+          })()}
+          {roster.length > 0 && !passesOpen && (
+            <button type="button" onClick={() => setShowPasses(true)} className="mt-1.5 py-2 text-[14px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
+              {tr("p7ck.chooseDaysEach")}
+            </button>
+          )}
+          {roster.length > 0 && passesOpen && !passesForced && (
+            <button type="button" onClick={() => setShowPasses(false)} className="mt-1.5 py-2 text-[14px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
+              {tr("p7ck.hideDaysEach")}
+            </button>
           )}
 
+          {passesOpen && (
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {b.basket.map((x) => {
               return (
@@ -1576,6 +1562,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               );
             })}
           </div>
+          )}
         </>
       )}
 

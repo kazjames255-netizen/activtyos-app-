@@ -50,7 +50,7 @@ test.describe("discount codes", () => {
     await page.getByRole("button", { name: /Add .* to basket/ }).click();
     await page.getByRole("button", { name: /Next — add children/ }).click();
 
-    await page.getByRole("button", { name: /Add a new child/ }).click();
+    await page.getByRole("button", { name: /^(＋ )?Add a (new )?child$/ }).click();
     await page.getByPlaceholder("First and last name").fill(`E2E Coupon Kid ${stamp}`);
     const dob = page.locator('input[type="date"]').first();
     if (await dob.isVisible().catch(() => false)) await dob.fill("2018-05-14");

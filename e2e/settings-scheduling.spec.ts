@@ -55,7 +55,7 @@ test.describe("setup reaches the parent checkout", () => {
       await pp.getByRole("button", { name: /^(Mon|Tue|Wed|Thu|Fri) \d+$/ }).first().click();
       await pp.getByRole("button", { name: /Add .* to basket/ }).click();
       await pp.getByRole("button", { name: /Next — add children/ }).click();
-      await pp.getByRole("button", { name: /Add a new child/ }).click();
+      await pp.getByRole("button", { name: /^(＋ )?Add a (new )?child$/ }).click();
 
       await expect(pp.getByText(question).first()).toBeVisible({ timeout: 15_000 });
       await expect(pp.getByText("Boy or girl?")).toBeHidden();

@@ -402,7 +402,7 @@ test("S12 parent books (cash on the day)", async () => {
   await p.getByRole("button", { name: /Add .* to basket/ }).click(); await p.waitForTimeout(1200);
   await shot(p, "pa-basket");
   await p.getByRole("button", { name: /Next — add children/ }).click(); await p.waitForTimeout(2000);
-  await p.getByRole("button", { name: /Add a new child/ }).click();
+  await p.getByRole("button", { name: /^(＋ )?Add a (new )?child$/ }).click();
   await p.getByPlaceholder("First and last name").fill(`Kid ${stamp}`);
   const dob = p.locator('input[type="date"]').first(); if (await dob.isVisible().catch(() => false)) await dob.fill("2018-05-14");
   const boyBtn = p.getByRole("button", { name: "Boy", exact: true }); await boyBtn.waitFor({ state: "visible", timeout: 6000 }).then(() => boyBtn.click()).catch(() => {});
@@ -437,8 +437,8 @@ async function parentBook(p: Page, dayIdx: number | number[], method: string, ta
   for (const i of ([] as number[]).concat(dayIdx)) await days.nth(i).click();
   await p.getByRole("button", { name: /Add .* to basket/ }).click(); await p.waitForTimeout(1000);
   await p.getByRole("button", { name: /Next — add children/ }).click(); await p.waitForTimeout(2500);
-  if (await p.getByRole("button", { name: /Add a new child/ }).isVisible().catch(() => false) && !(await p.getByText(`Kid ${stamp}`).first().isVisible().catch(() => false))) {
-    await p.getByRole("button", { name: /Add a new child/ }).click();
+  if (await p.getByRole("button", { name: /^(＋ )?Add a (new )?child$/ }).isVisible().catch(() => false) && !(await p.getByText(`Kid ${stamp}`).first().isVisible().catch(() => false))) {
+    await p.getByRole("button", { name: /^(＋ )?Add a (new )?child$/ }).click();
     await p.getByPlaceholder("First and last name").fill(`Kid ${stamp}`);
     const dob = p.locator('input[type="date"]').first(); if (await dob.isVisible().catch(() => false)) await dob.fill("2018-05-14");
     const boy = p.getByRole("button", { name: "Boy", exact: true }); await boy.waitFor({ state: "visible", timeout: 5000 }).then(() => boy.click()).catch(() => {});

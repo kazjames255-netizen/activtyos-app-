@@ -157,7 +157,7 @@ test.describe("parent books; operator sees it live", () => {
     await page.getByRole("button", { name: /Next — add children/ }).click();
 
     // New child with the minimum the provider requires.
-    await page.getByRole("button", { name: /Add a new child/ }).click();
+    await page.getByRole("button", { name: /^(＋ )?Add a (new )?child$/ }).click();
     await page.getByPlaceholder("First and last name").fill(childName);
     const dob = page.locator('input[type="date"]').first();
     if (await dob.isVisible().catch(() => false)) await dob.fill("2018-05-14");
