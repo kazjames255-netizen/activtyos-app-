@@ -10,7 +10,7 @@ import { post as apiPost } from "@/lib/api";
 const PK = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
 const CONNECT_JS = "https://connect-js.stripe.com/v1.0/connect.js";
 
-interface ConnectInstance { create(name: string): HTMLElement & { setOnExit?: (cb: () => void) => void } }
+interface ConnectInstance { create(name: string): HTMLElement & { setOnExit?: (cb: () => void) => void; setOnLoadError?: (cb: (e: { error?: { message?: string } }) => void) => void } }
 interface StripeConnectGlobal { init(o: { publishableKey: string; fetchClientSecret: () => Promise<string>; appearance?: unknown }): ConnectInstance }
 declare global { interface Window { StripeConnect?: StripeConnectGlobal } }
 
@@ -57,6 +57,8 @@ export function EmbeddedOnboarding({ onClose, onExit }: { onClose: () => void; o
         });
         const el = inst.create("account-onboarding");
         el.setOnExit?.(() => onExit());
+        // Stripe could not load the form (for example it refused to authenticate this account): show the way out.
+        el.setOnLoadError?.((e) => { if (!dead) { setMsg(e?.error?.message || "Stripe could not open the form here."); setState("error"); } });
         if (dead || !host.current) return;
         host.current.innerHTML = "";
         host.current.appendChild(el);
@@ -94,6 +96,7 @@ export function EmbeddedOnboarding({ onClose, onExit }: { onClose: () => void; o
           </div>
         )}
         <div ref={host} />
+        {state !== "error" && <div className="mt-3 border-t border-[var(--line)] pt-3 text-center text-[12.5px] text-[var(--ink-3)]">Form not working? <button type="button" onClick={useHosted} className="font-bold text-[var(--brand,#2f4fa8)] underline">Continue on Stripe’s own page</button></div>}
       </div>
     </div>
   );
