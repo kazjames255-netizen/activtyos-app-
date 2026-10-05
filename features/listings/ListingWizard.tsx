@@ -693,7 +693,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean } | null>(null);
+  const [done, setDone] = useState<{ cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean } | null>(null);
   const [payClosed, setPayClosed] = useState(false);
   const [paidNow, setPaidNow] = useState(false);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
@@ -824,6 +824,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         passes: [...new Set(lines.map((l) => l.pass))],
         firstDate: allDates[0],
         lastDate: allDates[allDates.length - 1],
+        dates: [...new Set(allDates)],
         voucherScheme,
         voucherDetails,
         bank: bankPay,
@@ -845,10 +846,17 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
     const venue = lib?.venue;
     const fmtDay = (iso?: string) =>
       iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" }) : null;
+    // Say exactly which days were booked: a run of consecutive days (weekends skipped) reads "Mon 19 Oct – Fri 23 Oct", but two or three
+    // separate days read "Mon 19 Oct and Fri 23 Oct" (not a range that implies every day in between).
+    const ds = done.dates ?? [];
+    const dayNo = (iso: string) => Math.round(new Date(`${iso}T00:00:00Z`).getTime() / 86_400_000);
+    const runsOn = ds.length > 1 && ds.every((iso, i) => i === 0 || dayNo(iso) - dayNo(ds[i - 1]) === 1 || (new Date(`${ds[i - 1]}T00:00:00Z`).getUTCDay() === 5 && dayNo(iso) - dayNo(ds[i - 1]) === 3));
     const when =
-      done.firstDate && done.lastDate && done.lastDate !== done.firstDate
-        ? `${fmtDay(done.firstDate)} – ${fmtDay(done.lastDate)}`
-        : fmtDay(done.firstDate);
+      ds.length > 1 && !runsOn
+        ? (ds.length <= 6 ? new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(ds.map((d) => fmtDay(d) ?? d)) : `${ds.length} days, ${fmtDay(ds[0])} – ${fmtDay(ds[ds.length - 1])}`)
+        : done.firstDate && done.lastDate && done.lastDate !== done.firstDate
+          ? `${fmtDay(done.firstDate)} – ${fmtDay(done.lastDate)}`
+          : fmtDay(done.firstDate);
     const kids = done.children.length > 1 ? new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(done.children) : done.children.join(", ");
     const where = venue?.name ? [venue.name, venue.address].filter(Boolean).join(", ") : null;
     // Voucher bookings are NOT paid yet — the family pays through their scheme's
