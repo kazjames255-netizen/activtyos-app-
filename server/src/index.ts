@@ -440,7 +440,7 @@ app.use(
 
 const port = Number(process.env.PORT || 4000);
 app.listen(port, () => {
-  console.log(`ActivityOS API listening on http://localhost:${port}`);
+  console.log(`API listening on http://localhost:${port}`);
   warmLeads();
   // Load the hub's on-disk index snapshots into memory in the background (no Firestore reads), one file at a time, so the first
   // page after a restart is instant and a snapshot still inside its TTL never triggers a rebuild. See lib/hubCache.ts.

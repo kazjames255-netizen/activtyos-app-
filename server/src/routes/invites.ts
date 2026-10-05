@@ -10,6 +10,7 @@ import { ukToday } from "../lib/ukDate";
 import { loadSettings } from "../lib/tenantLibrary";
 import { franchiseCostParagraph } from "../lib/franchiseTerms";
 import { getPlans } from "./subscription";
+import { BRAND } from "../lib/brand";
 
 // Cost + royalty note for a franchise invite email (live catalogue + the tenant's royalty settings).
 async function franchiseCostNote(tenantId: string): Promise<string> {
@@ -611,7 +612,7 @@ async function planFull(tenantId: string): Promise<{ limit: number } | null> {
 }
 
 const planFullMessage = (tenantName: string) =>
-  `${tenantName}'s ActivityOS plan is full right now, so you can't join just yet. We've let them know — once they free up a place or upgrade, this same invite link will work.`;
+  `${tenantName}'s ${BRAND} plan is full right now, so you can't join just yet. We've let them know — once they free up a place or upgrade, this same invite link will work.`;
 
 /** Tell the owner someone couldn't join. At most once a day per invite — the
  *  preview is public and runs on every page load. Never throws. */

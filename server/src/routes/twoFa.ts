@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto
 import { z } from "zod";
 import { db } from "../firebase";
 import { sendMail } from "../lib/mailer";
+import { BRAND } from "../lib/brand";
 
 // Mandatory email 2FA for the platform (super-admin/HQ) portal — a small,
 // manually-provisioned set of accounts. Mounted with `requireAuth` ONLY (no
@@ -73,11 +74,11 @@ twoFa.post("/send", async (req, res) => {
   }
 
   const html = `
-    <p>Your ActivityOS platform sign-in code is:</p>
+    <p>Your ${BRAND} platform sign-in code is:</p>
     <p style="font-size:28px;font-weight:800;letter-spacing:4px;">${code}</p>
     <p>This code expires in ${Math.round(CODE_TTL_MS / 60_000)} minutes. If you didn't request this, you can ignore this email.</p>
   `;
-  const delivered = await sendMail(TWO_FA_RECIPIENT, "Your ActivityOS platform sign-in code", html);
+  const delivered = await sendMail(TWO_FA_RECIPIENT, `Your ${BRAND} platform sign-in code`, html);
   res.json({ sent: true, delivered, expiresInMs: CODE_TTL_MS });
 });
 

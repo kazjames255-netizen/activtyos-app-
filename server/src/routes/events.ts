@@ -238,7 +238,7 @@ events.get("/", async (req, res) => {
     listen(db.collection("invites").where("tenantId", "==", tenantId), "invites", `t:${tenantId}`);
     listen(db.collection("customers").where("tenantId", "==", tenantId), "customers", `t:${tenantId}`);
     listen(db.collection("libraries").where("tenantId", "==", tenantId), "library", `t:${tenantId}`);
-    listen(db.collection("supportThreads").where("providerId", "==", tenantId), "supportThreads", `t:${tenantId}`); // Message-ActivityOS replies
+    listen(db.collection("supportThreads").where("providerId", "==", tenantId), "supportThreads", `t:${tenantId}`); // support message replies
     listen(db.collection("registers").where("tenantId", "==", tenantId), "registers", `t:${tenantId}`);
     listen(db.collection("payments").where("tenantId", "==", tenantId), "payments", `t:${tenantId}`);
     listen(db.collection("ratioGroups").where("tenantId", "==", tenantId), "ratioGroups", `t:${tenantId}`);

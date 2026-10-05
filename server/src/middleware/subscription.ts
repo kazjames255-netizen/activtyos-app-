@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { db } from "../firebase";
+import { BRAND } from "../lib/brand";
 
 // ─────────────────────────────────────────────────────────────────────────
 // The real subscription wall. The client's SubscriptionGate is UX; this is
@@ -32,7 +33,7 @@ import { db } from "../firebase";
 //               head-office franchise filter (franchises). GET only.
 //   OPEN        seeing/fixing the bill and the shell around it: subscription,
 //               me, account, notifications, tenants, register-role, privacy
-//               (GDPR export/erasure), support (Message ActivityOS / bug
+//               (GDPR export/erasure), support (Message ${BRAND} / bug
 //               reports), invites — except CREATING a new invite, which is
 //               normal business and follows the mode. Deactivating a leaver
 //               stays open: taking access away is a safeguarding action.
@@ -126,20 +127,20 @@ function refusal(mode: "readonly" | "locked", owner: boolean, status: string): s
   const still = "Registers, children's details, incidents, first aid and medication still work.";
   if (mode === "readonly") {
     return owner
-      ? `Your last ActivityOS payment failed over ${GRACE_DAYS} days ago, so your account is read-only until you update your card in Billing & payouts. ${still}`
-      : `Your provider's ActivityOS payment is overdue, so this is read-only for now. ${still}`;
+      ? `Your last ${BRAND} payment failed over ${GRACE_DAYS} days ago, so your account is read-only until you update your card in Billing & payouts. ${still}`
+      : `Your provider's ${BRAND} payment is overdue, so this is read-only for now. ${still}`;
   }
   // "unpaid" locks like a cancellation but ISN'T one — the subscription is
   // still there and a working card settles it immediately, so don't tell the
   // operator it has ended.
   if (status === "unpaid") {
     return owner
-      ? `Your ActivityOS payment has failed every retry, so the account is paused. Update your card in Billing & payouts and we'll settle the outstanding invoice straight away. ${still}`
-      : `Your provider's ActivityOS payment hasn't gone through, so this is paused for now. ${still}`;
+      ? `Your ${BRAND} payment has failed every retry, so the account is paused. Update your card in Billing & payouts and we'll settle the outstanding invoice straight away. ${still}`
+      : `Your provider's ${BRAND} payment hasn't gone through, so this is paused for now. ${still}`;
   }
   return owner
-    ? `Your ActivityOS subscription has ended — reactivate it in Billing & payouts to continue. ${still}`
-    : `Your provider's ActivityOS subscription has ended. ${still}`;
+    ? `Your ${BRAND} subscription has ended — reactivate it in Billing & payouts to continue. ${still}`
+    : `Your provider's ${BRAND} subscription has ended. ${still}`;
 }
 
 export async function enforceSubscription(req: Request, res: Response, next: NextFunction): Promise<void> {

@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { BRAND } from "./brand";
 
 // P60 (end-of-year certificate) and P45 (leaver) as PDFs, built from the YTD
 // store. Same library/house style as payslipPdf.ts. These are ESTIMATE-framed
@@ -58,6 +59,6 @@ export function buildPayrollDocPdf(i: PayrollDocInput): Buffer {
   row("Net pay", gbp(i.totals.net));
   y += 10;
   doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(138, 146, 168);
-  doc.text(doc.splitTextToSize(`Issued ${i.issuedOn}. This is generated from the figures held in ActivityOS for this employment only (taxable pay is approximated as gross pay; pay and tax from previous employments are not included). Keep it safe — you may need it for tax credits, loans or a tax refund. The statutory ${i.kind} comes from your payroll provider's HMRC (RTI) data.`, W - M * 2), M, y);
+  doc.text(doc.splitTextToSize(`Issued ${i.issuedOn}. This is generated from the figures held in ${BRAND} for this employment only (taxable pay is approximated as gross pay; pay and tax from previous employments are not included). Keep it safe — you may need it for tax credits, loans or a tax refund. The statutory ${i.kind} comes from your payroll provider's HMRC (RTI) data.`, W - M * 2), M, y);
   return Buffer.from(doc.output("arraybuffer"));
 }

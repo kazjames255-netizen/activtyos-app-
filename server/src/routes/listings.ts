@@ -32,8 +32,8 @@ async function subscriptionRefusal(req: Request): Promise<string | null> {
   const auth = req.auth;
   if (!auth || !TEAM_ROLES.has(auth.role) || !auth.tenantId) return null;
   const { mode } = accessFor(await subscriptionState(auth.tenantId));
-  if (mode === "readonly") return "Your provider's ActivityOS payment is overdue, so listings are read-only for now.";
-  if (mode === "locked") return "Your provider's ActivityOS subscription has ended, so listings can't be changed right now.";
+  if (mode === "readonly") return `Your provider's ${BRAND} payment is overdue, so listings are read-only for now.`;
+  if (mode === "locked") return `Your provider's ${BRAND} subscription has ended, so listings can't be changed right now.`;
   return null;
 }
 
@@ -48,6 +48,7 @@ async function subscriptionRefusal(req: Request): Promise<string | null> {
 // here so a listing document can never blow Firestore's 1MB limit.
 
 import { baseListingSchema, createSchema, publishProblems, RUN_FIELDS, runRecipeOf, type ListingInput } from "../lib/listingRules";
+import { BRAND } from "../lib/brand";
 
 // Join each listing's real blocks (availability included) onto the response.
 // Only the blocks for the listings being returned are read — this used to scan

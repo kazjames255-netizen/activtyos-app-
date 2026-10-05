@@ -751,7 +751,7 @@ ai.post("/chat", async (req, res) => {
   } else if (auth.role === "platform") {
     snapshot = await platformSnapshot();
     howtoKey = "platform";
-    who = "the ActivityOS platform super-admin. The data is platform-wide aggregates across every provider.";
+    who = "the platform super-admin. The data is platform-wide aggregates across every provider.";
   } else if (auth.role === "company" && !parsed.data.franchiseId && auth.tenantId && await hasFranchises(auth.tenantId)) {
     // A head office viewing the whole network (no single-franchise scope) gets the
     // franchisor snapshot: per-franchise performance, royalties, its own money.
@@ -797,7 +797,7 @@ ai.post("/chat", async (req, res) => {
   const setupSystem = buildSetupSystem(portal, who, wantsData ? JSON.stringify(snapshot).slice(0, 6000) : undefined);
 
   const fullSystem = [
-    "You are the ActivityOS assistant, embedded in a platform for children's activity providers (camps, clubs, classes).",
+    "You are the assistant, embedded in a platform for children's activity providers (camps, clubs, classes).",
     `You are talking to ${who}`,
     `Today is ${today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/London" })}, and the current UK time is ${today.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" })}. Use this time to judge which of today's sessions are running now, still to come, or already finished.`,
     "You are an expert on this platform and genuinely helpful. There are two kinds of question and you handle BOTH well:",

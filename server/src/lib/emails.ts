@@ -680,13 +680,13 @@ export function emailWebsiteAddonAck(p: {
          <div style="background:#f5f6fb;border-left:3px solid #1d3a8f;border-radius:6px;padding:12px 14px;margin:0 0 16px;font-size:13.5px;line-height:1.55;color:#171534">${escapeHtml(p.message?.trim() || "(no message included)")}</div>
          <p style="font-size:14px;line-height:1.6;margin:0 0 16px">Someone from the team will get back to you shortly with an answer.</p>`
       : p.slotAt && videoUrl
-      ? `<p style="font-size:14px;line-height:1.6;margin:0 0 16px">Thanks, ${escapeHtml(firstName)} — we've got your request for a branded website to match your Activly storefront, and booked you in for a quick call to talk it through:</p>
+      ? `<p style="font-size:14px;line-height:1.6;margin:0 0 16px">Thanks, ${escapeHtml(firstName)} — we've got your request for a branded website to match your ${BRAND} storefront, and booked you in for a quick call to talk it through:</p>
          <div style="background:#eef4ff;border-radius:10px;padding:14px 16px;margin:0 0 16px;text-align:center;font-size:15px;font-weight:800;color:#1d3a8f">${escapeHtml(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(p.slotAt)))} (UK time)</div>
          <div style="text-align:center;margin:0 0 16px">
            <a href="${videoUrl}" style="display:inline-block;background:#1d3a8f;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(29,58,143,.55)">🎥 Join your call</a>
          </div>
          <p style="font-size:13.5px;line-height:1.6;margin:0 0 16px;color:#4a4763">Same link works whenever you're ready to join, no account or download needed. Need to move it? Just reply to this email.</p>`
-      : `<p style="font-size:14px;line-height:1.6;margin:0 0 16px">Thanks, ${escapeHtml(firstName)} — we've got your request for a branded website to match your Activly storefront. Someone from the team will be in touch shortly to confirm the details and get started.</p>`;
+      : `<p style="font-size:14px;line-height:1.6;margin:0 0 16px">Thanks, ${escapeHtml(firstName)} — we've got your request for a branded website to match your ${BRAND} storefront. Someone from the team will be in touch shortly to confirm the details and get started.</p>`;
     const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
       <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
@@ -735,7 +735,7 @@ export function emailDemoBooked(p: { to: string; name: string; slotAt: string; l
       </div>
       <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">${BRAND}</b></div>
     </div>`;
-    await sendMail(p.to, "You're booked in for your Activly demo", html, await leadReplySender(p.leadId));
+    await sendMail(p.to, `You're booked in for your ${BRAND} demo`, html, await leadReplySender(p.leadId));
   })().catch((e) => console.error("[mail] demo-booked ack build failed:", (e as Error).message));
 }
 
@@ -790,7 +790,7 @@ export function emailCallNote(p: { to: string; name: string; note: string; leadI
       </div>
       <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">${BRAND}</b></div>
     </div>`;
-    await sendMail(p.to, "A note from the Activly team", html, await leadReplySender(p.leadId));
+    await sendMail(p.to, `A note from the ${BRAND} team`, html, await leadReplySender(p.leadId));
   })().catch((e) => console.error("[mail] call-note build failed:", (e as Error).message));
 }
 
