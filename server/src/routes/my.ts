@@ -25,7 +25,7 @@ import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
 import { applyDiscounts, DISCOUNT_KIND_LABEL, type DiscountRule } from "../../../features/listings/discounts";
-import { earlyBirdScopeOf, earlyFixedUsed } from "../lib/earlyBird";
+import { earlyBirdScopeOf, earlyFixedUsed, claimEarlyBird } from "../lib/earlyBird";
 import { mergeBookings } from "../lib/mergeBookings";
 import {
   resolveBundlePricing,
@@ -1306,6 +1306,10 @@ my.post("/bookings", async (req, res) => {
     { earlyFixedUsed: earlyUsed },
   );
   const earlyScopeStamp = discountLines.some((d) => d.earlyFixed && d.amount > 0) ? earlyScope : null;
+  if (earlyScopeStamp && familyEmail && !(await claimEarlyBird(listing.tenantId, familyEmail, earlyScopeStamp))) {
+    res.status(409).json({ error: "Your early-bird discount is being used on another booking right now. Please try again in a moment." });
+    return;
+  }
   const passGross = round2(priced.reduce((s, p) => s + p.base, 0));
   const discountOff = Math.max(0, round2(passGross - discounted));
   // Spread the discount across items in proportion to their base price.
