@@ -24,7 +24,7 @@ import { money, paidSoFar as totalPaid, realPhone, refundableSoFar } from "../..
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
-import { applyDiscounts, type DiscountRule } from "../../../features/listings/discounts";
+import { applyDiscounts, DISCOUNT_KIND_LABEL, type DiscountRule } from "../../../features/listings/discounts";
 import { earlyBirdScopeOf, earlyFixedUsed } from "../lib/earlyBird";
 import { mergeBookings } from "../lib/mergeBookings";
 import {
@@ -1750,7 +1750,7 @@ my.post("/bookings", async (req, res) => {
             ...(offThisRow > 0.004 ? {
               listPrice,
               discountOff: offThisRow,
-              discountNames: [...discountLines.filter((d) => d.amount > 0).map((d) => d.name), ...discountCodes.map((c) => `Code ${c}`)],
+              discountNames: [...discountLines.filter((d) => d.amount > 0).map((d) => (d.kind ? (d.custom ? `${DISCOUNT_KIND_LABEL[d.kind]}: ${d.name}` : `${DISCOUNT_KIND_LABEL[d.kind]} (${d.terms ?? d.name})`) : d.name)), ...discountCodes.map((c) => `Discount code ${c}`)],
             } : {}),
             ...(earlyScopeStamp ? { earlyBirdScope: earlyScopeStamp } : {}),
             ...(serviceAddress ? { serviceAddress } : {}),

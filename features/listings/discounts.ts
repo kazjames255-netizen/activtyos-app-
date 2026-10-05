@@ -74,10 +74,13 @@ export function emptyRule(kind: DiscountKind): DiscountRule {
  *  auto-generated from the rule when it was saved (and has since gone stale after the amount or date was edited) is
  *  rebuilt from the rule, so "Book by the cut-off date - GBP10.00 off" can never sit on a GBP12 rule. */
 const AUTO_NAME = /^(More than \d+ child(ren)? on a pass|Book more than \d+ sessions|Book by .+ — .+ off|Early bird — .+ off)/i;
+export function isAutoRuleName(r: DiscountRule): boolean {
+  const n = (r.name ?? "").trim();
+  return !n || AUTO_NAME.test(n);
+}
 export function ruleDisplayName(r: DiscountRule, tx?: DiscountTx): string {
-  const n = prettyRuleName((r.name ?? "").trim(), tx?.locale);
-  if (!n || AUTO_NAME.test(n)) return ruleSummary(r, tx);
-  return n;
+  if (isAutoRuleName(r)) return ruleSummary(r, tx);
+  return prettyRuleName((r.name ?? "").trim(), tx?.locale);
 }
 
 /** Plain-English summary shown to the operator and the booker. */
@@ -110,6 +113,8 @@ export interface DiscountLine {
   terms?: string;
   /** Which kind of discount this is, so screens can label it ("Early bird discount"). */
   kind?: DiscountKind;
+  /** True when the operator typed their own name for the rule (otherwise the name is auto-generated from it). */
+  custom?: boolean;
   /** Set on an early-bird line that was a fixed £ amount (limited to once per family per season). */
   earlyFixed?: boolean;
 }
@@ -165,7 +170,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestPerson || amount > bestPerson.amount)) bestPerson = { r, amount, perItem };
   }
   if (bestPerson) {
-    lines.push({ name: ruleDisplayName(bestPerson.r, tx), kind: "person", amount: bestPerson.amount, scope: scopeOf(bestPerson.r), terms: termsOf(bestPerson.r), perItem: bestPerson.perItem });
+    lines.push({ name: ruleDisplayName(bestPerson.r, tx), kind: "person", custom: !isAutoRuleName(bestPerson.r), amount: bestPerson.amount, scope: scopeOf(bestPerson.r), terms: termsOf(bestPerson.r), perItem: bestPerson.perItem });
     running -= bestPerson.amount;
   }
 
@@ -198,7 +203,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestSession || amount > bestSession.amount)) bestSession = { r, amount };
   }
   if (bestSession) {
-    lines.push({ name: ruleDisplayName(bestSession.r, tx), kind: "session", amount: bestSession.amount, scope: scopeOf(bestSession.r), terms: termsOf(bestSession.r), perItem: spread(bestSession.r, bestSession.amount) });
+    lines.push({ name: ruleDisplayName(bestSession.r, tx), kind: "session", custom: !isAutoRuleName(bestSession.r), amount: bestSession.amount, scope: scopeOf(bestSession.r), terms: termsOf(bestSession.r), perItem: spread(bestSession.r, bestSession.amount) });
     running -= bestSession.amount;
   }
 
@@ -210,7 +215,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestEarly || amount > bestEarly.amount)) bestEarly = { r, amount };
   }
   if (bestEarly) {
-    lines.push({ name: ruleDisplayName(bestEarly.r, tx), kind: "early", amount: bestEarly.amount, scope: scopeOf(bestEarly.r), terms: termsOf(bestEarly.r), perItem: spread(bestEarly.r, bestEarly.amount), ...(bestEarly.r.method !== "percent" ? { earlyFixed: true } : {}) });
+    lines.push({ name: ruleDisplayName(bestEarly.r, tx), kind: "early", custom: !isAutoRuleName(bestEarly.r), amount: bestEarly.amount, scope: scopeOf(bestEarly.r), terms: termsOf(bestEarly.r), perItem: spread(bestEarly.r, bestEarly.amount), ...(bestEarly.r.method !== "percent" ? { earlyFixed: true } : {}) });
     running -= bestEarly.amount;
   }
 
