@@ -2552,7 +2552,12 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
   const [nameEdited, setNameEdited] = useState(false);
   const openForm = (r: DiscountRule | null, edited = false) => { setForm(r); setNameEdited(edited); };
   const editing = !!form && rules.some((r) => r.id === form.id);
-  const set = (p: Partial<DiscountRule>) => setForm((f) => (f ? { ...f, ...p } : f));
+  // Editing an existing rule applies straight to the listing (as well as to the open form): the form has its own
+  // "Save changes" button right above the wizard's, and pressing only the wizard's used to drop the edit silently.
+  const set = (p: Partial<DiscountRule>) => {
+    setForm((f) => (f ? { ...f, ...p } : f));
+    if (editing && form) setRules(rules.map((r) => (r.id === form.id ? { ...r, ...p } : r)));
+  };
   // Multi-person discounts are percentage-only. A rule saved earlier with another method keeps it until it is edited.
   const legacyPersonMethod = !!form && form.kind === "person" && editing && rules.find((r) => r.id === form.id)?.method !== "percent";
   const personPctOnly = !!form && form.kind === "person" && !legacyPersonMethod;
