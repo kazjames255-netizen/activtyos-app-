@@ -707,7 +707,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; slots?: { pass: string; timing: string; dates: string[] }[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean } | null>(null);
+  const [done, setDone] = useState<{ cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; slots?: { pass: string; timing: string; dates: string[] }[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean; listPrice?: number; discountOff?: number; discountNames?: string[] } | null>(null);
   const [payClosed, setPayClosed] = useState(false);
   const [paidNow, setPaidNow] = useState(false);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
@@ -767,6 +767,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       for (const l of lines) byBlock.set(l.blockId, [...(byBlock.get(l.blockId) ?? []), l]);
       const refs: string[] = [];
       let total = 0;
+      let listSum = 0, offSum = 0; const offNames = new Set<string>();
       let voucherDetails: { label: string; value: string }[] | undefined;
       let bankPay: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number } | undefined;
       let heldForApproval = false;
@@ -827,6 +828,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         if (res.bookings.some((x) => x.status === "Approval needed")) heldForApproval = true;
         if (res.bookings.some((x) => x.status !== "Waitlisted")) seated = true;
         total += res.total;
+        for (const x of res.bookings as { amount?: number; listPrice?: number; discountOff?: number; discountNames?: string[] }[]) { listSum += x.listPrice ?? x.amount ?? 0; offSum += x.discountOff ?? 0; (x.discountNames ?? []).forEach((n) => offNames.add(n)); }
         if (res.voucher?.details?.length) voucherDetails = res.voucher.details;
         if (res.bank) bankPay = res.bank;
       }
@@ -834,6 +836,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       setDone({
         refs,
         total,
+        ...(offSum > 0.004 ? { listPrice: Math.round(listSum * 100) / 100, discountOff: Math.round(offSum * 100) / 100, discountNames: [...offNames] } : {}),
         children: [...new Set(lines.map((l) => l.child))],
         passes: [...new Set(lines.map((l) => l.pass))],
         firstDate: allDates[0],
@@ -892,17 +895,21 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
     const websiteD = vDetails.find((d) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value));
     const website = websiteD ? (/^https?:\/\//i.test(websiteD.value) ? websiteD.value : `https://${websiteD.value}`) : null;
     const isUrlD = (d: { label: string; value: string }) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value);
+    // The same test as the "Pay now" button below: a card booking with money still to pay is held, not yet complete.
+    const awaitingCard = !!done.payByCard && !needsApproval && !done.waitlisted && (!scheme || !!done.cardDue) && (done.cardDue ?? done.total) > 0;
     const rowCls = "flex items-start gap-3 py-1.5 text-[13px]";
     const labCls = "w-[92px] flex-none text-[#8a86a3]";
     const valCls = "font-semibold text-[#171534]";
     return (
       <div className="mx-auto max-w-[540px] p-6 text-center">
-        <div className="text-[44px]">{done.waitlisted ? "⏳" : needsApproval ? "📩" : "🎉"}</div>
+        <div className="text-[44px]">{done.waitlisted ? "⏳" : needsApproval ? "📩" : awaitingCard ? "💳" : "🎉"}</div>
         <h2 className="mt-2 text-[24px] font-extrabold tracking-[-0.01em] text-[#171534]" style={{ color: "#171534" }}>
           {done.waitlisted
             ? `You're on the waiting list${kids ? ` for ${kids}` : ""}`
             : needsApproval
             ? (kids ? t("p7cl.reqReceivedFor", { kids }) : t("p7cl.reqReceived"))
+            : awaitingCard
+            ? `Nearly there${kids ? `, ${kids}` : ""} — pay to finish booking`
             : (kids ? t(done.children.length > 1 ? "p7cl.bookedKidsMany" : "p7cl.bookedKids", { kids }) : t("p7cl.bookedYou"))}
         </h2>
         <p className="mt-1.5 text-[13px] text-[#6a6785]">
@@ -910,6 +917,8 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
             ? "Nothing to pay now. We'll email you the moment a place comes up, and you'll only be charged if you take it."
             : needsApproval
             ? t(scheme ? "p7cl.approvalBodyScheme" : "p7cl.approvalBody", { provider: listing.tenantName || t("p7cl.theProvider") })
+            : awaitingCard
+            ? "Your place is held. Press Pay now to pay by card and complete the booking. The details are on their way by email."
             : t("p7cl.confirmEmail")}
         </p>
 
@@ -940,6 +949,12 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
             {when && <div className={rowCls}><span className={labCls}>{t("p7cl.lblStarts")}</span><span className={valCls}>{when}</span></div>}
             {where && <div className={rowCls}><span className={labCls}>{t("p7cl.lblWhere")}</span><span className={valCls}>{where}</span></div>}
             {done.refs.length > 1 && <div className="mt-2 rounded-lg bg-[#eef3ff] px-3 py-2 text-[12px] text-[#1d3a8f]">{t("p7cl.multiBookings", { n: String(done.refs.length) })}</div>}
+            {(done.discountOff ?? 0) > 0 && (
+              <div className="mt-2 rounded-lg bg-[#e8f8ee] px-3 py-2 text-[13px] text-[#0f6b34]">
+                <div className="flex items-center justify-between"><span>Price before discount</span><b>{money(done.listPrice ?? done.total)}</b></div>
+                <div className="flex items-start justify-between gap-3"><span className="min-w-0">Discount{done.discountNames?.length ? ` (${done.discountNames.join(", ")})` : ""}</span><b className="flex-none">− {money(done.discountOff ?? 0)}</b></div>
+              </div>
+            )}
             <div className="mt-2 flex items-center justify-between border-t border-[#eef0f5] pt-2.5 text-[13px]">
               <span className="text-[#8a86a3]">{done.refs.length === 1 ? t("p7cl.refOne") : t("p7cl.refMany")} {done.refs.join(", ")}</span>
               {scheme

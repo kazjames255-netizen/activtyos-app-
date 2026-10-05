@@ -1642,6 +1642,18 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           someone is choosing lunches was two conversations at once. */}
       {ckStage === "pay" && (
       <div className="mt-4 border-t pt-3" style={{ borderColor: tk.line }}>
+        {/* Big, unmissable: the saving the parent is getting, or why an early bird they expected is not applied. */}
+        {b.saved > 0 && (
+          <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border-2 px-3 py-2.5" style={{ borderColor: tk.accent, background: `${tk.accent}1f` }}>
+            <span className="text-[14px] font-extrabold" style={{ color: tk.ink }}>🎉 Discount applied</span>
+            <b className="text-[18px]" style={{ color: tk.accent }}>You save {money(b.saved)}</b>
+          </div>
+        )}
+        {b.saved <= 0 && (d as { earlyFixedUsed?: boolean }).earlyFixedUsed && (
+          <div className="mb-2 rounded-xl border px-3 py-2 text-[12px]" style={{ borderColor: tk.line, color: tk.muted }}>
+            Your early-bird discount is already on an earlier booking this season (one per family), so it isn’t applied here. If that earlier booking is still unpaid and you’d rather rebook, cancel it first.
+          </div>
+        )}
         {b.discountLines.map((l, i) => (
           <div key={i} className="flex items-baseline justify-between gap-3 text-[11.5px]">
             <span className="min-w-0" style={{ color: tk.muted }}>
