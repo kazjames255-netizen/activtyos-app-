@@ -1,4 +1,4 @@
-/* ActivityOS marketing site: language switching (static hosting, no framework).
+/* Name TBC marketing site: language switching (static hosting, no framework).
  * English stays literal in the HTML. For other languages the dictionary /v2/i18n/<lang>.json maps key -> string and this
  * script rewrites every [data-i18n] element and every [data-i18n-attr] attribute in place. Markup inside a string uses
  * indexed tags: <1>..</1> = the 1st element of the original (attributes/classes/links kept), <2/> = an element kept as-is
@@ -7,8 +7,8 @@
  * Docs: docs/i18n-website.md */
 (function () {
   'use strict';
-  var BRAND = 'Activly';          // <- the product name shown on every page in every language (rename here)
-  var HTML_BRAND = 'Activly';     // the brand word literally present in the static HTML (English text, SEO); see scripts/i18n-v2/rebrand.mjs
+  var BRAND = 'Name TBC';          // <- the product name shown on every page in every language (rename here)
+  var HTML_BRAND = 'Name TBC';     // the brand word literally present in the static HTML (English text, SEO); see scripts/i18n-v2/rebrand.mjs
   var LANGS = ['en', 'ar', 'ur', 'pl', 'ro', 'cy', 'bn', 'pa', 'pt', 'es', 'fr'];
   var RTL = { ar: 1, ur: 1 };
   var V = window.__aosV || '1';

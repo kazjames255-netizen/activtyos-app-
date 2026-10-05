@@ -1,4 +1,4 @@
-/* Activly v2 responsive shim: burger drawer + tap-to-toggle dropdowns. No deps. */
+/* Name TBC v2 responsive shim: burger drawer + tap-to-toggle dropdowns. No deps. */
 (function(){
   var hdr=document.querySelector('header.nav'); if(!hdr) return;
   var inner=hdr.querySelector('.nav-in'); if(!inner) return;
