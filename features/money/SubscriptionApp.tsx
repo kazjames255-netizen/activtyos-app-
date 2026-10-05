@@ -12,6 +12,7 @@ import { Button } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useT } from "@/lib/i18n/provider";
 import { BRAND } from "@/lib/i18n/config";
+import { gateMode } from "@/lib/billingGate";
 
 // The platform's own Stripe account (plan fees) — NOT a provider's connected
 // account (those live in PayPage/PayModal for parents paying providers).
@@ -150,7 +151,9 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
+  const [billingDown, setBillingDown] = useState(false);
   const [acting, setActing] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [annual, setAnnual] = useState(false);
   const [band, setBand] = useState<Record<string, string>>({});
   const [card, setCard] = useState({ name: "", number: "", exp: "", cvc: "" });
@@ -177,6 +180,8 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
       setPayFor(p);
       return;
     }
+    // Fail closed: no card billing in production means no trial start (the server refuses too).
+    if (gateMode(data?.billingConfigured, process.env.NODE_ENV) === "closed") { setBillingDown(true); return; }
     setSaving(p.id);
     try {
       await api("/api/subscription", { method: "PUT", body: JSON.stringify({ plan: p.id, cadence: annual ? "year" : "month", ...(p.bands ? { band: bandFor(p) } : {}) }) });
@@ -287,6 +292,8 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
             onError={setError}
           />
         </div>
+      ) : gateMode(data.billingConfigured, process.env.NODE_ENV) === "closed" ? (
+        <div role="alert" className="mt-3 rounded-lg border border-[#f4c7c7] bg-[#fdf2f2] px-3 py-3 text-[12.5px] font-bold text-[#b91c1c]">{t("p9jr.billingDown")}</div>
       ) : (
         <>
           <div className="mt-3 flex flex-col gap-2.5">
@@ -348,6 +355,7 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
   const onFranchise = c.plan === "franchise";
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+      {billingDown && <div role="alert" className="mb-3 rounded-lg border border-[#f4c7c7] bg-[#fdf2f2] px-3 py-2.5 text-[12.5px] font-bold text-[#b91c1c]">{t("p9jr.billingDown")}</div>}
       {/* Hero — matches the other Money pages (Expenses / Purchasing). */}
       <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), var(--hero-grad)`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
@@ -414,8 +422,24 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
             </div>
           )}
 
+          {c.status === "canceling" && (
+            <div className="mt-3 rounded-xl border border-[#f0d9b0] bg-[#fdf6e7] px-3.5 py-3 text-[13.5px] leading-snug text-[#7a4f06]">
+              <b>{t("money.subCancelBannerTitle", { date: fmtDay(c.cancelAt ?? c.currentPeriodEnd ?? c.trialEndsAt) })}</b>
+              <div className="mt-1">{t("money.subCancelBannerBody")}</div>
+            </div>
+          )}
+          {confirmCancel && (c.status === "active" || c.status === "trialing") && (
+            <div className="mt-3 rounded-xl border border-[#f3c4c9] bg-[#fdebec] px-3.5 py-3 text-[13.5px] leading-snug text-[#8a1f2c]">
+              <b>{t("money.subCancelConfirmTitle")}</b>
+              <div className="mt-1">{t("money.subCancelConfirmBody", { date: fmtDay(c.status === "trialing" ? c.trialEndsAt : c.currentPeriodEnd) })}</div>
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                <Button variant="danger" sm onClick={() => { setConfirmCancel(false); void act("cancel", "cancel"); }}>{t("money.subCancelConfirmYes")}</Button>
+                <Button variant="ghost" sm onClick={() => setConfirmCancel(false)}>{t("money.subCancelConfirmKeep")}</Button>
+              </div>
+            </div>
+          )}
           <div className="mt-3.5 flex flex-wrap gap-2">
-            {(c.status === "active" || c.status === "trialing") && <Button variant="danger" sm onClick={() => act("cancel", "cancel")} disabled={acting === "cancel"}>{acting === "cancel" ? t("money.subCancelling") : t("money.subCancelSubscription")}</Button>}
+            {(c.status === "active" || c.status === "trialing") && <Button variant="danger" sm onClick={() => setConfirmCancel(true)} disabled={acting === "cancel"}>{acting === "cancel" ? t("money.subCancelling") : t("money.subCancelSubscription")}</Button>}
             {(c.status === "canceling" || c.status === "canceled" || c.status === "unpaid") && <Button variant="primary" sm onClick={() => act("reactivate", "react")} disabled={acting === "react"}>{acting === "react" ? t("money.subReactivating") : t("money.subReactivate")}</Button>}
           </div>
         </div>
