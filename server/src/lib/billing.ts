@@ -24,7 +24,7 @@ export interface SubRecord {
   price?: number; staffLimit?: number | null; locationLimit?: number | null;
   staffUsed?: number; locationsUsed?: number;
   trialEndsAt?: string | null; currentPeriodEnd?: string | null; cancelAt?: string | null;
-  since?: string | null; canceledAt?: string | null;
+  since?: string | null; canceledAt?: string | null; cancelRequestedAt?: string | null;
   /** When the tenant first went past_due (null otherwise) — starts the grace period. */
   pastDueSince?: string | null;
   stripeCustomerId?: string; stripeSubscriptionId?: string; stripePriceId?: string;

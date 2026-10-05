@@ -435,6 +435,8 @@ subscription.put("/", async (req, res) => {
   if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const parsed = putSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  // Fail closed: with no card billing configured, production must not hand out free trials (dev without keys keeps the record-only trial).
+  if (!stripe && process.env.NODE_ENV === "production") { res.status(503).json({ error: "Card billing is temporarily unavailable. Please try again shortly." }); return; }
   const plans = await getPlans();
   const lim = limitsFor(plans, parsed.data.plan, parsed.data.band);
   const prior = await subOf(auth.tenantId);
@@ -505,7 +507,7 @@ subscription.post("/cancel", async (req, res) => {
   }
 
   const cancelAt = sub.currentPeriodEnd ?? sub.trialEndsAt ?? new Date().toISOString();
-  await saveSub(auth.tenantId, { status: "canceling", cancelAt });
+  await saveSub(auth.tenantId, { status: "canceling", cancelAt, cancelRequestedAt: new Date().toISOString() });
   // Notice given NOW, even though the term runs to cancelAt — the month the
   // provider decided is the month HQ's churn must count (backlog 46a).
   await recordSubscriptionEvent({ tenantId: auth.tenantId, status: "canceling", source: "route" });

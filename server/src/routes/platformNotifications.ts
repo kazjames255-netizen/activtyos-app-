@@ -50,6 +50,12 @@ async function buildItems(muted: string[]): Promise<Item[]> {
         items.push({ id: `signup_${d.id}`, type: "signup", title: `New ${t.type === "company" ? "company" : "freelancer"} signed up`, body: t.name ?? d.id, href: `/platform/providers`, at: t.createdAt });
       }
       const sub = t.subscription;
+      // A provider who has PRESSED cancel but is still on their paid/trial period: HQ should hear about it now (the plan is saved with
+      // cancelRequestedAt), not only weeks later when it actually ends. Reactivating flips the status back, so the item disappears.
+      const subX = sub as { status?: string; cancelAt?: string; cancelRequestedAt?: string } | undefined;
+      if (on("cancel") && subX?.status === "canceling" && subX.cancelRequestedAt && subX.cancelRequestedAt > cutoff) {
+        items.push({ id: `cancelling_${d.id}`, type: "cancel", title: `${t.name ?? d.id} is cancelling their plan`, body: subX.cancelAt ? `Ends ${new Date(subX.cancelAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} — reach out while they can still reactivate` : "Cancel requested", href: `/platform/providers`, at: subX.cancelRequestedAt });
+      }
       if (on("cancel") && sub?.status === "canceled" && sub.canceledAt && sub.canceledAt > cutoff) {
         items.push({ id: `cancel_${d.id}`, type: "cancel", title: `${t.name ?? d.id} cancelled their plan`, body: "Subscription cancelled", href: `/platform/providers`, at: sub.canceledAt });
       }
