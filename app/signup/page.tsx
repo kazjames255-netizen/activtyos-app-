@@ -591,7 +591,7 @@ function SignupForm() {
 
         {current === "payments" && (
           <div className="flex flex-col gap-5">
-            <div className="rounded-xl bg-[var(--brand-soft,#eef3ff)] px-4 py-3 text-[12.5px] font-semibold text-[var(--brand-ink,#16306e)]">
+            <div className="rounded-xl bg-[#eef3ff] px-4 py-3 text-[12.5px] font-semibold text-[#16306e]">
               🎉 {t("p8pub.suPayReady")}
             </div>
 
