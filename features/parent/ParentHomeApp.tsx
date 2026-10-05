@@ -218,8 +218,8 @@ export function ParentHomeApp() {
         {toPay.length > 0 && (
           <div key="topay" className="flex flex-col gap-1.5">
             {attn(payHref, "var(--brand, #2f6bd8)", "💳", h("ToPay", { n: toPay.length }), h("ToPaySub", { amt: money(owed) }), h("Pay"))}
-            {/* Changed your mind? The booking page has "Cancel booking" - one tap away from here. */}
-            <Link href={toPay.length === 1 ? `/custdash/bookings?open=${encodeURIComponent(toPay[0].ref)}` : "/custdash/bookings"} className="self-end px-2 text-[13.5px] font-bold text-[var(--ink-2)] underline">{h("CancelUnpaid", { n: toPay.length })}</Link>
+            {/* One booking: straight into its cancel step. Several: the list, filtered to the ones still to pay. */}
+            <Link href={toPay.length === 1 ? `/custdash/bookings?cancel=${encodeURIComponent(toPay[0].ref)}` : "/custdash/bookings"} className="self-end px-2 text-[13.5px] font-bold text-[var(--ink-2)] underline">{h("CancelUnpaid", { n: toPay.length })}</Link>
           </div>
         )}
         {offers > 0 && attn("/custdash/bookings", "#15b364", "🎟️", h("Offers", { n: offers }), h("OffersSub"))}
