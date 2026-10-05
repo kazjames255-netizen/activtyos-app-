@@ -26,6 +26,7 @@ import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../fe
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
 import { applyDiscounts, type DiscountRule } from "../../../features/listings/discounts";
 import { earlyBirdScopeOf, earlyFixedUsed } from "../lib/earlyBird";
+import { mergeBookings } from "../lib/mergeBookings";
 import {
   resolveBundlePricing,
   type BundleDoc,
@@ -1995,10 +1996,16 @@ my.post("/bookings", async (req, res) => {
       // sent below via emailVoucherInstructions — so don't ALSO send the generic
       // confirmed/request email, or the family gets two.
       if (voucher) { /* handled by the voucher email below */ }
-      else if (b0.status === "Confirmed") emailBookingConfirmed(b0, provider, isBankMethod(input.method) ? await bankPayDetails(listing.tenantId, b0.ref, b0.amount) : null);
-      // A waiting-list place is NOT "a request pending approval" - it gets its own message.
-      else if (b0.status === "Waitlisted") emailWaitlistJoined(b0, provider);
-      else emailBookingRequestReceived(b0, provider);
+      else {
+        // A checkout spanning weeks made one booking per week: ONE email describes the whole thing (total, every date,
+        // every ref). Bank transfer keeps the first booking's own figures - its payment reference is per booking.
+        const sameState = bookings.length > 1 && bookings.every((x) => x.status === b0.status) && !isBankMethod(input.method);
+        const { merged, refs } = sameState ? mergeBookings(bookings) : { merged: b0, refs: [b0.ref] };
+        if (b0.status === "Confirmed") emailBookingConfirmed(merged, provider, isBankMethod(input.method) ? await bankPayDetails(listing.tenantId, b0.ref, b0.amount) : null, refs);
+        // A waiting-list place is NOT "a request pending approval" - it gets its own message.
+        else if (b0.status === "Waitlisted") emailWaitlistJoined(merged, provider, refs);
+        else emailBookingRequestReceived(merged, provider, refs);
+      }
     }
     // Tell the PROVIDER a booking just came in — bell + email. This was never
     // wired: the create path only ever emailed the parent, so operators got no

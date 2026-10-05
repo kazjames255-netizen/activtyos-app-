@@ -338,14 +338,14 @@ function sendCustomerEmail(
   })().catch((e) => console.error(`[mail] "${subject}" build failed:`, (e as Error).message));
 }
 
-export function emailBookingRequestReceived(b: Booking, providerName: string): void {
+export function emailBookingRequestReceived(b: Booking, providerName: string, refs?: string[]): void {
   const m = requestReceivedSpec(b, providerName);
-  sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body, m.enrich);
+  sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body + refsNote(refs), m.enrich);
 }
 
-export function emailWaitlistJoined(b: Booking, providerName: string): void {
+export function emailWaitlistJoined(b: Booking, providerName: string, refs?: string[]): void {
   const m = waitlistJoinedSpec(b, providerName);
-  sendCustomerEmail(b, providerName, "waitlist", m.subject, m.title, m.body, m.enrich);
+  sendCustomerEmail(b, providerName, "waitlist", m.subject, m.title, m.body + refsNote(refs), m.enrich);
 }
 
 export function emailPaymentLink(b: Booking, providerName: string): void {
@@ -360,9 +360,12 @@ export function emailPaymentLink(b: Booking, providerName: string): void {
 export { bankPayHtml };
 export type { BankPayDetails };
 
-export function emailBookingConfirmed(b: Booking, providerName: string, bank?: BankPayDetails | null): void {
+const refsNote = (refs?: string[]) =>
+  refs && refs.length > 1 ? `<p style="font-size:13px;color:#6a6785">This covers ${refs.length} weekly bookings. References: <b>${refs.map((r) => escapeHtml(r)).join(", ")}</b></p>` : "";
+
+export function emailBookingConfirmed(b: Booking, providerName: string, bank?: BankPayDetails | null, refs?: string[]): void {
   const m = bookingConfirmedSpec(b, providerName, bank);
-  sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body, m.enrich);
+  sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body + refsNote(refs), m.enrich);
 }
 
 export function emailBookingDeclined(b: Booking, providerName: string, reason?: string): void {
