@@ -11,6 +11,7 @@ import { SubscriptionGate, SubscriptionLock } from "@/components/auth/Subscripti
 import { PageTracker } from "@/components/analytics/PageTracker";
 import { CouponTicker } from "@/features/parent/CouponTicker";
 import { NewsflashBanner } from "@/features/parent/NewsflashBanner";
+import { SetupBanner } from "@/features/dashboard/SetupBanner";
 import { ParentWelcome } from "@/features/parent/ParentWelcome";
 import { StaffWelcome } from "@/features/staff/StaffWelcome";
 import { StaffReminderBanner } from "@/features/staff/StaffReminderBanner";
@@ -87,6 +88,8 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
             {portalKey === "custdash" && <div className="print:hidden"><NewsflashBanner /></div>}
             {/* Customer-only running bar of the family's usable discount codes. print:hidden as above. */}
             {portalKey === "custdash" && <div className="print:hidden max-sm:hidden"><CouponTicker /></div>}
+            {/* Persistent "finish setting up" bar for providers until first-run steps are done. */}
+            {(portalKey === "company" || portalKey === "franchise" || portalKey === "freelancer") && <div className="print:hidden" style={LIGHT_PALETTE}><SetupBanner /></div>}
             {/* Operator trial / cancellation nudge bar — removed on request 2026-09-02;
                 revisit where/how to reinstate it. Component kept at
                 components/billing/TrialBanner.tsx. */}

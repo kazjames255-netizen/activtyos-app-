@@ -6,94 +6,29 @@
 // Dashboard and as the empty state of Bookings; hidden for good once the
 // provider has a published listing AND a booking, or taps Hide (remembered per
 // tenant in localStorage).
-import { useCallback, useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { get as apiGet } from "@/lib/api";
-import { useRealtime } from "@/lib/realtime";
-import { peekMe, getMe } from "@/components/auth/PortalGuard";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 import { useT } from "@/lib/i18n/provider";
-
-type StepId = "venue" | "block" | "listing" | "pay" | "cancel" | "team";
-interface Facts { venues: number; blocks: number; listings: number; bookings: number; payChosen: boolean; cancelChosen: boolean; team: number }
-interface Stored { hidden?: boolean; visited?: StepId[] }
-
-const OPERATOR_PORTALS = ["company", "franchise", "freelancer"];
-const storeKey = (tenant: string) => `aos.firstrun.v1.${tenant}`;
-function readStore(tenant: string): Stored {
-  try { return JSON.parse(window.localStorage.getItem(storeKey(tenant)) || "{}") as Stored; } catch { return {}; }
-}
-function writeStore(tenant: string, s: Stored) {
-  try { window.localStorage.setItem(storeKey(tenant), JSON.stringify(s)); } catch { /* storage blocked — checklist just reappears next visit */ }
-}
+import { useFirstRunSteps, type StepId } from "@/features/dashboard/useFirstRunSteps";
 
 export function FirstRunChecklist({ variant = "dashboard" }: { variant?: "dashboard" | "bookings" }) {
   const t = useT();
   const router = useRouter();
-  const portal = (usePathname() ?? "/").split("/")[1] || "";
-  const [me, setMe] = useState(() => peekMe());
-  useEffect(() => { getMe().then(setMe).catch(() => {}); }, []);
-  // A franchisee shares the head office's tenant id, so its franchise id is part of the key.
-  const tenant = me?.tenantId ? `${me.tenantId}${me.franchiseId ? `.${me.franchiseId}` : ""}` : "";
-  const [facts, setFacts] = useState<Facts | null>(null);
-  const [store, setStore] = useState<Stored>({});
-  const enabled = OPERATOR_PORTALS.includes(portal) && !!tenant;
+  const fr = useFirstRunSteps();
+  const { steps, doneCount, allDone, store } = fr;
 
-  useEffect(() => { if (enabled) setStore(readStore(tenant)); }, [enabled, tenant]);
-
-  const load = useCallback(() => {
-    if (!enabled) return;
-    const safe = <T,>(p: Promise<T>, d: T) => p.catch(() => d);
-    Promise.all([
-      safe(apiGet<{ venues?: unknown[]; settings?: { payMethods?: unknown[]; cancellationPolicies?: unknown[]; billing?: { bankAccount?: string; sortCode?: string; iban?: string } } } | null>("/api/library"), null),
-      safe(apiGet<unknown[]>("/api/block-bundles"), []),
-      safe(apiGet<unknown[]>("/api/listings?mine=1"), []),
-      safe(apiGet<unknown[]>("/api/bookings"), []),
-      safe(apiGet<{ connected?: boolean; chargesEnabled?: boolean }>("/api/payments/status"), {}),
-      portal === "freelancer" ? Promise.resolve([] as { role: string }[]) : safe(apiGet<{ role: string }[]>("/api/invites"), []),
-    ]).then(([lib, blocks, listings, bookings, stripe, invites]) => {
-      setFacts({
-        venues: lib?.venues?.length ?? 0,
-        blocks: blocks?.length ?? 0,
-        listings: listings?.length ?? 0,
-        bookings: bookings?.length ?? 0,
-        // "Chosen" = saved something of their own, or Stripe is live.
-        payChosen: !!stripe?.chargesEnabled || !!lib?.settings?.payMethods?.length || !!lib?.settings?.billing?.bankAccount || !!lib?.settings?.billing?.iban,
-        cancelChosen: !!lib?.settings?.cancellationPolicies?.length,
-        team: (invites ?? []).filter((i) => i.role === "staff").length,
-      });
-    });
-  }, [enabled, portal]);
-  useEffect(load, [load]);
-  useRealtime(["bookings", "blocks", "listings"], load);
-
-  if (!enabled || !facts || store.hidden) return null;
+  if (!fr.enabled || !fr.ready || store.hidden) return null;
   // Established providers never see it.
-  if (facts.listings > 0 && facts.bookings > 0) return null;
+  if (fr.established) return null;
   // On Bookings it's the empty state — only when there's nothing to list.
-  if (variant === "bookings" && facts.bookings > 0) return null;
+  if (variant === "bookings" && fr.hasBooking) return null;
 
-  const visited = new Set(store.visited ?? []);
-  const base = `/${portal}`;
-  const steps: { id: StepId; done: boolean; href: string }[] = [
-    { id: "venue", done: facts.venues > 0, href: `${base}/listings?tab=locations` },
-    { id: "block", done: facts.blocks > 0, href: `${base}/blocks` },
-    { id: "listing", done: facts.listings > 0, href: `${base}/listings` },
-    { id: "pay", done: facts.payChosen || visited.has("pay"), href: `${base}/getpaid` },
-    { id: "cancel", done: facts.cancelChosen || visited.has("cancel"), href: `${base}/setup?tab=cancel` },
-    ...(portal === "freelancer" ? [] : [{ id: "team" as StepId, done: facts.team > 0, href: `${base}/staff` }]),
-  ];
-  const doneCount = steps.filter((s) => s.done).length;
-  const allDone = doneCount === steps.length;
-  const nextId = steps.find((s) => !s.done)?.id;
+  const nextId = fr.next?.id;
   const pct = Math.round((doneCount / steps.length) * 100);
 
-  const hide = () => { const n = { ...store, hidden: true }; setStore(n); writeStore(tenant, n); };
+  const hide = fr.hideCard;
   const go = (s: { id: StepId; href: string }) => {
-    if (s.id === "pay" || s.id === "cancel") {
-      const n = { ...store, visited: Array.from(new Set([...(store.visited ?? []), s.id])) };
-      setStore(n); writeStore(tenant, n);
-    }
+    fr.markVisited(s.id);
     router.push(s.href);
   };
 
