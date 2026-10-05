@@ -22,8 +22,11 @@ export async function cardReady(tenantId: string): Promise<boolean> {
       // Ready to take cards: make sure Apple Pay / Google Pay work on this provider's checkout (fire and forget, idempotent).
       if (ok) void ensurePayDomains(tenantId, accountId);
     }
-  } catch {
-    ok = true; // Stripe unreachable: do not hide Card on a guess
+  } catch (e) {
+    // The saved account does not exist for the keys in use (a test-mode account after going live): it cannot take cards.
+    // Anything else (Stripe unreachable): do not hide Card on a guess.
+    const err = e as { code?: string; statusCode?: number };
+    ok = !(err?.code === "resource_missing" || err?.code === "account_invalid" || err?.statusCode === 404 || err?.statusCode === 403);
   }
   cache.set(tenantId, { at: Date.now(), ok });
   return ok;
