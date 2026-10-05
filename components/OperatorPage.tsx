@@ -146,7 +146,7 @@ export function PageHero({
             </h2>
             {lede && <p className="mt-1.5 max-w-[640px] text-[14px] leading-[1.45] text-white/85 max-sm:line-clamp-2 sm:text-[12.5px] sm:leading-[1.5]">{lede}</p>}
           </div>
-          <div className="flex flex-none flex-wrap items-center gap-2">
+          <div className="flex flex-none flex-wrap items-center gap-2 max-sm:w-full max-sm:flex-auto">
             <SettingsLink />
             {showTour && <TourLauncher view={heroView} compact />}
             {actions}

@@ -417,7 +417,7 @@ export function payMethodLabel(b: { voucherScheme?: string; method?: string }): 
   if (/cash/i.test(m)) return "Cash";
   if (/bank|transfer/i.test(m)) return "Bank transfer";
   if (/tax.?free|tfc/i.test(m)) return "Tax-Free Childcare";
-  if (/haf|funded/i.test(m)) return "HAF / funded";
+  if (/haf|funded/i.test(m)) return "Free / funded";
   if (/card/i.test(m)) return "Card";
   return m;
 }
