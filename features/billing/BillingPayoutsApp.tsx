@@ -18,7 +18,7 @@ import { PaymentsApp } from "@/features/payments/PaymentsApp";
 
 type Tab = "plan" | "paid";
 
-function BankDetailsCard() {
+export function BankDetailsCard({ onSaved }: { onSaved?: () => void } = {}) {
   const [bankName, setBankName] = useState("");
   const [sortCode, setSortCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -45,6 +45,7 @@ function BankDetailsCard() {
       settings.billing = billing;
       await apiPut("/api/library", { settings });
       setState("saved");
+      onSaved?.();
     } catch { setState("error"); }
   }
 

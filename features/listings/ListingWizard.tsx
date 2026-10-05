@@ -2,6 +2,7 @@
 
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { GoLiveModal, fetchGoLive, goLiveReady } from "@/features/billing/GoLiveModal";
 import { api, get as apiGet, post as apiPost, isDemoMode, ApiError } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
@@ -1334,6 +1335,7 @@ export function ListingWizard({
   };
   const saveDraftAction = async () => { if (await syncApi("draft")) { setSaveState("saved"); onSaved(); } };
   const blockers = publishBlockers(d, tickets.length, tickets.filter((t) => d.ticketOverrides[t.name]?.hidden !== true).length);
+  const [goLiveOpen, setGoLiveOpen] = useState(false);
   const publishAction = async () => {
     if (blockers.length) {
       // Send them to the first thing that's missing rather than making them hunt.
@@ -1341,7 +1343,12 @@ export function ListingWizard({
       setMsg(pickPlural(tr, loc, "p8lst.waThingsToFinish", blockers.length));
       return;
     }
-    if (await syncApi("live")) { onSaved(); setPublishedId(savedIdRef.current ?? d.id ?? null); }
+    // A new provider must have started their plan and chosen how parents pay before the first listing goes live.
+    if (!goLiveOpen) {
+      const gl = await fetchGoLive();
+      if (!goLiveReady(gl)) { setGoLiveOpen(true); return; }
+    }
+    if (await syncApi("live")) { setGoLiveOpen(false); onSaved(); setPublishedId(savedIdRef.current ?? d.id ?? null); }
   };
 
   const previewProps = { d, venue, local, booking, addons, theme: resolveTheme(d.pageStyle), onTheme: (t: PageTheme) => upd({ pageStyle: t }) };
@@ -1351,6 +1358,7 @@ export function ListingWizard({
     <div className="fixed inset-0 z-[9999] flex flex-col bg-[#eef2f9] text-[var(--ink)]"
       style={{ ["--bg" as string]: "#f5f8fd", ["--surface" as string]: "#fff", ["--panel" as string]: "#fbf8fc", ["--ink" as string]: "#171534", ["--ink-2" as string]: "#4a4763", ["--ink-3" as string]: "#8a86a3", ["--line" as string]: "#ece6f1" } as React.CSSProperties}>
 
+      {goLiveOpen && <GoLiveModal onClose={() => setGoLiveOpen(false)} onGoLive={() => void publishAction()} busy={busy} />}
       {/* Fancy blue header + segmented progress — the campaign-wizard slideshow look. */}
       <div className="flex-none px-5 py-4 text-white sm:px-6" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
         <div className="mx-auto flex max-w-[1160px] flex-wrap items-center justify-between gap-2">

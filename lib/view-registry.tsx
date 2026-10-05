@@ -92,6 +92,7 @@ const PlatformAnalyticsApp = dynamic(() => import("@/features/platform/PlatformA
 const PlatformEngagementApp = dynamic(() => import("@/features/platform/PlatformEngagementApp").then((m) => m.PlatformEngagementApp));
 const PlatformFeaturesApp = dynamic(() => import("@/features/platform/PlatformFeaturesApp").then((m) => m.PlatformFeaturesApp));
 const PlatformAtRiskApp = dynamic(() => import("@/features/platform/PlatformAtRiskApp").then((m) => m.PlatformAtRiskApp));
+const ManualApp = dynamic(() => import("@/features/platform/ManualApp").then((m) => m.ManualApp));
 const SalesApp = dynamic(() => import("@/features/platform/SalesApp").then((m) => m.SalesApp));
 const TestTrackerApp = dynamic(() => import("@/features/testTracker/TestTrackerApp").then((m) => m.TestTrackerApp));
 const LeadsApp = dynamic(() => import("@/features/platform/LeadsApp").then((m) => m.LeadsApp));
@@ -356,6 +357,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     testing: TestTrackerApp,
     tasks: TasksApp,
     dash: PlatformAnalyticsApp, // Overview retired — /platform/dash lands on Analytics
+    manual: ManualApp,
     providers: ProvidersApp,
     analytics: PlatformAnalyticsApp,
     engagement: PlatformEngagementApp,

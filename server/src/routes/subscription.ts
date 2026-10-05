@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { goLiveStatus } from "../lib/goLive";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
@@ -228,6 +229,13 @@ subscription.get("/", async (req, res) => {
 // EVERY member of the team (the plan page above is owner-only). The portal
 // shell uses it for the payment-failed banner and the read-only / locked
 // screens, so staff and franchises see why a save was refused.
+// GET /go-live — what a new provider still has to do before a listing can go live (drives the Go live pop-up).
+subscription.get("/go-live", async (req, res) => {
+  const auth = req.auth!;
+  if (!auth.tenantId || !canManage(auth.role)) { res.json({ planStarted: true, payChosen: true, pay: { stripe: true, bank: false, cashOnly: false }, replyTo: "" }); return; }
+  res.json(await goLiveStatus(auth.tenantId));
+});
+
 subscription.get("/access", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !["company", "freelancer", "franchise", "staff"].includes(auth.role)) {

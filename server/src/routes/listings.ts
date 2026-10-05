@@ -14,6 +14,7 @@ import { passCap, bookingHasPass } from "../lib/passBooking";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { isBrowsable, directLinkVisible } from "../lib/listingVisibility";
 import { earlyBirdScopeOf, earlyFixedBooking } from "../lib/earlyBird";
+import { goLiveRefusal } from "../lib/goLive";
 import { DISCOUNT_KIND_LABEL, ruleDisplayName, type DiscountRule } from "../../../features/listings/discounts";
 import { accessFor, subscriptionState } from "../middleware/subscription";
 
@@ -440,6 +441,7 @@ listings.post("/", async (req, res) => {
       res.status(400).json({ error: `Can't publish yet — this listing needs ${problems.join(", ")}.` });
       return;
     }
+    { const why = await goLiveRefusal(auth.tenantId); if (why) { res.status(402).json({ error: why, code: "go_live_requirements" }); return; } }
   }
   const name = (data.title ?? data.name)!;
   const doc = {
@@ -537,6 +539,7 @@ listings.put("/:id", async (req, res) => {
       res.status(400).json({ error: `Can't publish yet — this listing needs ${problems.join(", ")}.` });
       return;
     }
+    { const why = await goLiveRefusal(req.auth!.tenantId!); if (why) { res.status(402).json({ error: why, code: "go_live_requirements" }); return; } }
   }
   const patch: Record<string, unknown> = { ...data, updatedAt: Date.now() };
   // Head office (company) / platform can ASSIGN or reassign a listing to a

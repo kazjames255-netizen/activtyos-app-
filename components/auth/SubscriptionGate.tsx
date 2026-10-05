@@ -72,7 +72,8 @@ export function SubscriptionGate({ portal, children }: { portal: string; childre
       .then((a) => {
         if (cancelled) return;
         setAccess(a);
-        setState(OWNER_PORTALS.has(portal) && (!a.status || a.status === "none") ? "gated" : "ok");
+        // No wall any more: a new provider reaches the dashboard first and starts their plan at Go live (see features/billing/GoLiveModal).
+        setState("ok");
       })
       .catch(() => { if (!cancelled) setState("ok"); }); // API unreachable — don't lock the shell
     return () => { cancelled = true; };

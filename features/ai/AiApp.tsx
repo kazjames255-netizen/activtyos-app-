@@ -9,6 +9,7 @@ import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import { RobotAvatar, type RobotState } from "./RobotAvatar";
 import { useMic, useTts } from "./voice";
 import { useT } from "@/lib/i18n/provider";
+import { AnswerVisual, splitVisuals } from "./AnswerVisuals";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AI co-pilot — a conversational assistant with the ActivityOS robot as its
@@ -232,10 +233,11 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
     try {
       const res = await post<{ reply?: string; action?: ProposedAction }>("/api/ai/chat", { messages: history, portal, ...(hoScope ? { franchiseId: hoScope } : {}) });
       const reply = res.reply ?? res.action?.summary ?? "";
+      const spoken = splitVisuals(reply).text;
       const full = [...history, { role: "assistant" as const, content: reply }];
       setMsgs(full); persist(full);
       if (res.action) setProposed(res.action);   // backend tool-use → confirm card
-      if (reply) speakReply(reply);
+      if (spoken) speakReply(spoken);
     } catch (e) {
       setError((e as Error).message); setDraft(q);
     } finally { setBusy(false); }
@@ -243,7 +245,7 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
 
   const appendAssistant = useCallback((content: string) => {
     setMsgs((m) => { const next = [...m, { role: "assistant" as const, content }]; persist(next); return next; });
-    if (speakOn || handsFreeRef.current) tts.speak(content);
+    if (speakOn || handsFreeRef.current) tts.speak(splitVisuals(content).text);
   }, [persist, speakOn, tts]);
 
   // Run a confirmed action against the real (authed) endpoint.
@@ -375,12 +377,14 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
                   if (m.role === "user") return (
                     <div key={i} className="flex justify-end"><div className="max-w-[85%] rounded-2xl rounded-ee-md bg-[#eaf0fc] px-3.5 py-2 text-[13px] font-medium text-[#1d3a8f]">{m.content}</div></div>
                   );
-                  const acts = actionsFor(m.content, kind, portal);
+                  const { text: shown, visuals } = splitVisuals(m.content);
+                  const acts = actionsFor(shown, kind, portal);
                   return (
                     <div key={i} className="flex items-start gap-2.5">
                       <RobotAvatar state={busy && i === msgs.length - 1 ? "thinking" : tts.speaking && i === msgs.length - 1 ? "talking" : "idle"} size={34} className="mt-0.5 flex-none" />
                       <div className="max-w-[85%]">
-                        <div className="rounded-2xl rounded-es-md border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[var(--ink)]"><RichText text={m.content} /></div>
+                        <div className="rounded-2xl rounded-es-md border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[var(--ink)]"><RichText text={shown} /></div>
+                        {visuals.map((v) => <AnswerVisual key={v} id={v} />)}
                         {acts.length > 0 && (
                           <div className="mt-1.5 flex flex-wrap gap-1.5">
                             {acts.map((a) => (
@@ -450,7 +454,7 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
           {/* Follow-up chips */}
           {showFollowups && (
             <div className="flex flex-wrap gap-1.5 border-t border-[var(--line)] px-3 pt-2">
-              {followupsFor(last.content, t).map((f) => (
+              {followupsFor(splitVisuals(last.content).text, t).map((f) => (
                 <button key={f} type="button" onClick={() => void send(f)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[11.5px] font-semibold text-[var(--ink-2)] transition hover:border-[#2f6bd8] hover:text-[var(--ink)]">{f}</button>
               ))}
             </div>
