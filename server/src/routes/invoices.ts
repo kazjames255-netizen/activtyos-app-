@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
+import { retrieveConnected } from "../lib/connectedAccount";
 import { paidSoFar } from "../../../features/bookings/helpers";
 import { settleInvoiceBooking, settleInvoicePayment } from "../lib/settlePayment";
 import type { Booking } from "../../../features/bookings/types";
@@ -241,8 +242,8 @@ invoicePublic.post("/:token/checkout", async (req, res) => {
   const accountId = tenant.data()?.stripeAccountId as string | undefined;
   let stripeAccount: string | null = null;
   if (accountId) {
-    const account = await stripe.accounts.retrieve(accountId);
-    if (account.charges_enabled && account.capabilities?.card_payments === "active") stripeAccount = accountId;
+    const account = await retrieveConnected(stripe, inv.tenantId as string, accountId);
+    if (account?.charges_enabled && account.capabilities?.card_payments === "active") stripeAccount = accountId;
   }
   if (!stripeAccount && !platformFallback) {
     res.status(409).json({ error: "This provider can't take card payments yet — pay by one of the listed methods instead" });

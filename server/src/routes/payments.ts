@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite, operatorScope, type Role, managerScope } from "../middleware/role";
 import { platformFallback, stripe, toPence, webUrl } from "../lib/stripe";
+import { retrieveConnected } from "../lib/connectedAccount";
 import { autoEmailOn } from "../lib/autoEmails";
 import { ensurePayDomains } from "../lib/payDomains";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
@@ -77,6 +78,18 @@ payments.post("/connect", async (req, res) => {
   }
   try {
     let accountId: string | undefined = tenant.data()!.stripeAccountId;
+    if (accountId) {
+      // Gone (deleted / revoked / a test id under live keys) → cleared; make a new one below.
+      const account = await retrieveConnected(s, auth.tenantId, accountId);
+      if (!account) accountId = undefined;
+      // Repair accounts created before capabilities were requested — the
+      // onboarding link below then collects anything newly required.
+      else if (!account.capabilities?.card_payments) {
+        await s.accounts.update(accountId, {
+          capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
+        });
+      }
+    }
     if (!accountId) {
       // Matches the live Connect platform profile: Stripe carries negative-balance
       // liability and the provider gets the full Stripe Dashboard. An Express
@@ -101,15 +114,6 @@ payments.post("/connect", async (req, res) => {
       });
       accountId = account.id;
       await tenantRef.update({ stripeAccountId: accountId });
-    } else {
-      // Repair accounts created before capabilities were requested — the
-      // onboarding link below then collects anything newly required.
-      const account = await s.accounts.retrieve(accountId);
-      if (!account.capabilities?.card_payments) {
-        await s.accounts.update(accountId, {
-          capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
-        });
-      }
     }
     // Return to the CALLER's own Finance page. These used to be hardcoded to
     // /freelancer/finance, which bounced a company or franchise operator into
@@ -155,7 +159,11 @@ payments.post("/dashboard", async (req, res) => {
   try {
     // Stripe only issues a login link once onboarding has been submitted;
     // before that the right destination is still the onboarding form.
-    const account = await s.accounts.retrieve(accountId);
+    const account = await retrieveConnected(s, auth.tenantId, accountId);
+    if (!account) {
+      res.status(409).json({ error: "Connect your payout account first" });
+      return;
+    }
     if (!account.details_submitted) {
       const finance = `${webUrl}/${portalOf(auth.role)}/finance`;
       const link = await s.accountLinks.create({
@@ -194,7 +202,11 @@ payments.get("/status", async (req, res) => {
     return;
   }
   try {
-    const account = await s.accounts.retrieve(accountId);
+    const account = await retrieveConnected(s, scope.tenantId, accountId);
+    if (!account) {
+      res.json({ connected: false, platformFallback });
+      return;
+    }
     if (account.charges_enabled && account.capabilities?.card_payments === "active") void ensurePayDomains(scope.tenantId, accountId);
     res.json({
       connected: true,
@@ -267,7 +279,7 @@ payments.post("/checkout", async (req, res) => {
     const tenant = await tenantsCol.doc(tenantId).get();
     const accountId: string | undefined = tenant.data()?.stripeAccountId;
     let stripeAccount: string | null = null;
-    if (accountId) { const account = await s.accounts.retrieve(accountId); if (account.charges_enabled && account.capabilities?.card_payments === "active") stripeAccount = accountId; }
+    if (accountId) { const account = await retrieveConnected(s, tenantId, accountId); if (account?.charges_enabled && account.capabilities?.card_payments === "active") stripeAccount = accountId; }
     if (!stripeAccount && !platformFallback) { res.status(409).json({ error: "This provider can't take card payments yet — they haven't finished Stripe onboarding" }); return; }
     let intent;
     try {
@@ -338,10 +350,10 @@ payments.post("/checkout", async (req, res) => {
   const accountId: string | undefined = tenant.data()?.stripeAccountId;
   let stripeAccount: string | null = null;
   if (accountId) {
-    const account = await s.accounts.retrieve(accountId);
+    const account = await retrieveConnected(s, tenantId, accountId);
     // Both must hold: the account processes charges AND the card_payments
     // capability is active (charges_enabled alone isn't enough).
-    if (account.charges_enabled && account.capabilities?.card_payments === "active")
+    if (account?.charges_enabled && account.capabilities?.card_payments === "active")
       stripeAccount = accountId;
   }
   if (!stripeAccount && !platformFallback) {
@@ -481,8 +493,8 @@ bookingPayPublic.post("/:token/checkout", async (req, res) => {
   const accountId: string | undefined = tenant.data()?.stripeAccountId;
   let stripeAccount: string | null = null;
   if (accountId) {
-    const account = await s.accounts.retrieve(accountId);
-    if (account.charges_enabled && account.capabilities?.card_payments === "active") stripeAccount = accountId;
+    const account = await retrieveConnected(s, tenantId, accountId);
+    if (account?.charges_enabled && account.capabilities?.card_payments === "active") stripeAccount = accountId;
   }
   if (!stripeAccount && !platformFallback) {
     res.status(409).json({ error: "This provider can't take card payments yet — pay by one of the listed methods instead" });
