@@ -613,6 +613,25 @@ bookings.post("/:ref/actions", async (req, res) => {
         }
       }
 
+      // Approving a date change moves seats between days: keep the block's per-day counts in step (the old day frees a
+      // place, the new one takes it) and refuse a move into a day that has filled up since the request was made.
+      if (action.type === "move-approve" && b.dateChangeRequest && b.dateChangeRequest.status === "pending" && b.blockId && countsTowardCapacity(b.status)) {
+        const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId));
+        if (blockSnap.exists) {
+          const block = blockSnap.data() as BlockDoc;
+          const idxs = action.approveIndexes ?? b.dateChangeRequest.moves.map((_, i) => i);
+          let cur: BlockDoc = block;
+          for (const [i, m] of b.dateChangeRequest.moves.entries()) {
+            if (!idxs.includes(i) || !m.from || !m.to || m.from === m.to) continue;
+            if ((cur.capacityScope ?? "listing") === "day" && !daysHaveSpace(cur, { [m.to]: 1 }).fits)
+              throw new Conflict(`${m.to} is full now — it can't be approved`);
+            const dec = countsUpdate(cur, -1, [m.from]);
+            cur = { ...cur, ...countsUpdate({ ...cur, ...dec }, 1, [m.to]) };
+          }
+          moveUpdate = { ref: blockSnap.ref, counts: { bookedCount: cur.bookedCount, dayCounts: cur.dayCounts ?? {} } };
+        }
+      }
+
       // A refund is approved ONCE. Replaying the action used to credit the
       // wallet again, or fire a second Stripe refund.
       if (action.type === "refund-approve") {

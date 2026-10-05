@@ -75,7 +75,13 @@ export function priceData(monthly: number, cadence: string): Stripe.Subscription
  *  is deleted rather than left to split the tenant's billing history. */
 export async function ensureCustomer(tenantId: string, email?: string | null): Promise<string> {
   const sub = await subOf(tenantId);
-  if (sub?.stripeCustomerId) return sub.stripeCustomerId;
+  if (sub?.stripeCustomerId) {
+    // A customer id saved while Stripe was in TEST mode does not exist once the live keys are in ("No such customer"):
+    // check it, and start afresh (dropping the dead subscription/price ids that hung off it) when it is gone.
+    const alive = await stripe!.customers.retrieve(sub.stripeCustomerId).then((c) => !(c as { deleted?: boolean }).deleted).catch((e: { code?: string; statusCode?: number }) => (e?.code === "resource_missing" || e?.statusCode === 404 ? false : true));
+    if (alive) return sub.stripeCustomerId;
+    await tenants().doc(tenantId).set({ subscription: { stripeCustomerId: null, stripeSubscriptionId: null, stripePriceId: null } }, { merge: true });
+  }
   const t = await tenants().doc(tenantId).get();
   const created = await stripe!.customers.create({
     name: (t.get("name") as string) || tenantId,

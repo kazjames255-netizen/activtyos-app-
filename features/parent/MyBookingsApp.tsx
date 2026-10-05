@@ -142,7 +142,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
 
   useEffect(() => {
     if (!booking.tenantId) return;
-    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean; allowPartialCancel?: boolean; partialAllowRefund?: boolean; partialAllowWallet?: boolean; partialAllowChangeDate?: boolean; customerArea?: { wallet?: boolean } } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
+    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean; allowPartialCancel?: boolean; partialAllowRefund?: boolean; partialAllowWallet?: boolean; partialAllowChangeDate?: boolean; customerArea?: { wallet?: boolean } } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}${booking.listingId ? `?listingId=${encodeURIComponent(booking.listingId)}` : ""}`)
       .then((r) => {
         const s = r.settings ?? {};
         const allowCard = s.allowCardRefund ?? true;
@@ -633,7 +633,9 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   const todayIso = new Date().toISOString().slice(0, 10);
   const available = (() => {
     const set = new Set<string>();
-    for (const bk of listing?.blocks ?? [])
+    // The server only moves a booking within its OWN block (a weekly listing has one block per week), so only offer those.
+    const own = (listing?.blocks ?? []).filter((bk) => !booking.blockId || bk.id === booking.blockId);
+    for (const bk of own.length ? own : listing?.blocks ?? [])
       for (const s of bk.sessions ?? []) if (s.spotsLeft > 0 && s.date > todayIso) set.add(s.date);
     return [...set].sort();
   })();

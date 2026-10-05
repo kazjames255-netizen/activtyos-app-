@@ -483,10 +483,13 @@ export const refundedTotal = (b: Booking) =>
  *  state, else 0 (genuinely unpaid). */
 export const receivedOf = (b: Booking) => {
   const paid = Number(b.amountPaid);
-  if (Number.isFinite(paid) && paid > 0) return paid;
+  // Store credit spent on a booking is money that came in too: `amount` is already net of it, and the wallet was
+  // topped up earlier by a refund that Money in deducted — without this it is deducted once and never added back.
+  const wallet = Math.max(0, Number(b.walletApplied) || 0);
+  if (Number.isFinite(paid) && paid > 0) return paid + wallet;
   return b.pay === "Paid" || b.pay === "Funded" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded"
-    ? (b.amount || 0)
-    : 0;
+    ? (b.amount || 0) + wallet
+    : wallet;
 };
 
 /** Everything actually refunded on this booking: per-day/child refunds

@@ -1363,7 +1363,7 @@ my.post("/bookings", async (req, res) => {
         const prior = await bookingsCol.where("email", "==", familyEmail).where("tenantId", "==", listing.tenantId).limit(1).get();
         if (!prior.empty) { res.status(400).json({ error: `Code ${l.code} is for new customers only` }); return; }
       }
-      const check = checkCode(l.data, discounted, today, { email: familyEmail, listingId: input.listingId, attendees: amounts.length, listingFranchiseId: (listing as { franchiseId?: string | null }).franchiseId ?? null });
+      const check = checkCode(l.data, discounted, today, { email: familyEmail, listingId: input.listingId, attendees: attendees, listingFranchiseId: (listing as { franchiseId?: string | null }).franchiseId ?? null });
       if (!check.ok) { res.status(400).json({ error: check.reason }); return; }
       totalOff = round2(totalOff + check.off);
       if (l.data.referral && l.data.referrerEmail && familyEmail) referralHit = { referrerEmail: l.data.referrerEmail, code: l.code, friendDiscount: check.off };
@@ -1792,7 +1792,7 @@ my.post("/bookings", async (req, res) => {
             // A voucher booking waits on the scheme's money, not the parent — a
             // distinct state so the two chase lists don't mix.
             pay:
-              due <= 0
+              due <= 0 || (onBehalf && /haf/i.test(String(input.method ?? "")))
                 ? "Funded"
                 : placed && voucher
                   ? "Awaiting voucher payment"
@@ -2865,18 +2865,23 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       if (b.status === "Cancelled") throw new HttpError(400, "Already cancelled");
       const oldStatus = b.status;
       const heldBefore = structuredClone({ status: b.status, seats: b.seats, days: b.days, kids: b.kids });
+      // Days already released and awaiting approval: that refund is owed whatever the policy says about the rest, so
+      // cancelling the remainder must ADD to it, never replace it.
+      const pendingBefore = b.cancel?.refundOnly && b.cancel.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
       applyParentCancel(b, parsed.data.msg, parsed.data.reason);
       // The policy's recommended refund rides on the request (pending the
       // provider's approval; refund-approve refunds this figure via Stripe).
       if (policyAmount !== null && b.cancel) {
-        b.cancel.amount = policyAmount;
-        b.cancel.refund = policyAmount >= (paid || 0) && paid > 0 ? "full" : policyAmount > 0 ? "partial" : "none";
+        const frac = paid > 0 ? policyAmount / paid : 0;
+        const total = pendingBefore > 0 ? Math.min(paid, Math.round((pendingBefore + Math.max(0, paid - pendingBefore) * frac) * 100) / 100) : policyAmount;
+        b.cancel.amount = total;
+        b.cancel.refund = total >= (paid || 0) && paid > 0 ? "full" : total > 0 ? "partial" : "none";
         if (policyReason) b.cancel.msg = `${b.cancel.msg} (${policyReason})`;
       }
       if (parsed.data.refundPref && b.cancel) b.cancel.refundTo = parsed.data.refundPref;
       // Credit note instead of a nil refund: the provider approves it like any
       // refund, and approval pays it into the wallet (never to card).
-      if (creditNote > 0 && b.cancel) {
+      if (creditNote > 0 && b.cancel && pendingBefore === 0) {
         b.cancel.amount = creditNote;
         b.cancel.refund = "full";
         b.cancel.refundTo = "wallet";

@@ -45,6 +45,8 @@ export const isoOfLabel = (s: string): string | null => {
 export function applyMoveApprove(b: Booking, approveIndexes?: number[], reason?: string, opts: { fee?: number; selfService?: boolean } = {}): void {
   const req = b.dateChangeRequest;
   if (!req) return;
+  // Approving twice (double click, stale tab) must not move anything again or burn the parent's amend limit.
+  if (req.status !== "pending") return;
   const idxs = approveIndexes ?? req.moves.map((_, i) => i);
   const labelOfIso = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
   req.moves.forEach((m, i) => {

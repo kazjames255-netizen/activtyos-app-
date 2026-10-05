@@ -331,7 +331,7 @@ subscription.delete("/card", async (req, res) => {
     res.status(400).json({ error: "Cancel your subscription first — a live plan can't bill without a card." });
     return;
   }
-  const pms = await stripe.customers.listPaymentMethods(sub.stripeCustomerId, { type: "card" });
+  const pms = await stripe.customers.listPaymentMethods(sub.stripeCustomerId, { type: "card" }).catch(() => ({ data: [] as { id: string }[] }));
   for (const p of pms.data) await stripe.paymentMethods.detach(p.id).catch(() => {});
   await db.collection("tenants").doc(auth.tenantId).set(
     { subscription: { cardLast4: null, cardBrand: null } },
@@ -568,7 +568,7 @@ subscription.post("/reactivate", async (req, res) => {
     }
 
     const customer = sub.stripeCustomerId;
-    const cust = customer ? await stripe.customers.retrieve(customer) : null;
+    const cust = customer ? await stripe.customers.retrieve(customer).catch(() => null) : null; // a test-mode id is gone in live mode
     const pm = cust && !cust.deleted ? cust.invoice_settings?.default_payment_method : null;
     if (!customer || !pm) {
       res.status(402).json({ error: "Add a card to reactivate — your saved card is no longer available." });
