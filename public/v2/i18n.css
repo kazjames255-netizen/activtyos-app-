@@ -35,3 +35,6 @@ html.i18n-wait body{visibility:hidden}
   header.nav{position:sticky}
   header.nav .lang-sw{position:absolute;inset-inline-end:20px;top:50%;transform:translateY(-50%);order:0;margin:0;padding:0;border:0}
 }
+
+/* the wordmark must never wrap onto two lines when the nav is crowded (long translated menu labels) */
+header.nav .brand{white-space:nowrap;flex-shrink:0}

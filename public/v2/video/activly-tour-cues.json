@@ -1,1 +1,170 @@
-[{"start":0,"end":3.91,"step":"PRODUCT TOUR","text":"A three-minute tour of Activly Bookings, staff, money and safeguarding in one login."},{"start":3.91,"end":11.12,"step":"Dashboard","text":"Your dashboard: income, bookings and spaces left at a glance, updating live as parents book."},{"start":11.12,"end":18.43,"step":"Listings","text":"Listings: every camp and club with its own cover photo, price, dates and places left."},{"start":18.43,"end":26.54,"step":"Listings","text":"Share a booking link or QR code for any listing, so parents can book and pay online."},{"start":26.54,"end":33.95,"step":"Listings","text":"Embed puts a Book now button on your own website with one line of code."},{"start":33.95,"end":41.18,"step":"Cancellations","text":"Cancellations: pick a policy per listing, with refunds back to the parent's card or wallet."},{"start":41.18,"end":47.79,"step":"Discount codes","text":"Discount codes and vouchers: percentage or fixed-amount codes with limits and expiry dates."},{"start":47.79,"end":54.7,"step":"Memberships","text":"Memberships for parents: tiers that give wallet credit or a standing discount at checkout."},{"start":54.7,"end":62.21,"step":"Bookings","text":"Bookings: who, what, when and whether it is paid, with waitlists and capacity handled for you."},{"start":62.21,"end":69.12,"step":"Registers","text":"Registers: on the day, sign children in and see medical notes and collection details."},{"start":69.12,"end":77.33,"step":"Email campaigns","text":"Email campaigns: send to the right families, with every sent campaign and its open rate kept on file."},{"start":77.33,"end":84.43,"step":"Email campaigns","text":"Compose from a template, choose an audience, then send now or schedule for later."},{"start":84.43,"end":90.15,"step":"Newsfeed","text":"Newsfeed: post news and event updates for all your families."},{"start":90.15,"end":95.85,"step":"Moments","text":"Moments: share photos and highlights from the day with parents."},{"start":95.85,"end":103.06,"step":"Log concern","text":"Log a concern or incident, with who was involved, what happened and what was done."},{"start":103.06,"end":109.67,"step":"First aid","text":"First aid: accident records with treatment given and who the first aider was."},{"start":109.67,"end":116.88,"step":"Medication","text":"Medication: parental consent, dose and storage on record, and a log of every dose given."},{"start":116.88,"end":124.39,"step":"Task manager","text":"Task manager: hand jobs to your team with due dates and priorities, and tick them off."},{"start":124.39,"end":133.69,"step":"Money in","text":"Money in: parents pay into your own Stripe account, and Tax-Free Childcare and childcare vouchers are recorded against the booking by reference."},{"start":133.69,"end":143.11,"step":"Rota","text":"Staff schedule: build the rota by week, by area or by team member, with the wage cost worked out as you roster."},{"start":143.11,"end":152.12,"step":"Rota","text":"Availability: ask your team when they can work. They answer from their own portal and you roster from their replies."},{"start":152.12,"end":162.03,"step":"Rota","text":"Staff checks as you roster: lapsed DBS, first aid and training are flagged on the rota before anyone is put on a session."},{"start":162.03,"end":168.84,"step":"Rota","text":"Happy with the week? Publish the rota to your team in one click."},{"start":168.84,"end":176.35,"step":"Payroll","text":"Payroll: tax, National Insurance and pension, payslips, and journals you can post to Xero or QuickBooks."},{"start":176.35,"end":183.87,"step":"Learning","text":"The Learning Centre: assign courses to roles, and every completion is filed against the staff record."},{"start":183.87,"end":190.48,"step":"Compliance","text":"Compliance: DBS checks and certificates in one place, with reminders before anything lapses."},{"start":190.48,"end":197.09,"step":"Messages","text":"Messages: talk to families in one place, one to one or in groups."},{"start":197.09,"end":202.3,"step":"NEXT STEP","text":"Ready when you are Book a demo, or start free for 7 days. A flat monthly fee. Never a cut of your bookings. Also built in: meals, trips and consent, ratios, calendar, timetable, referrals and reviews."}]
+[
+ {
+  "start": 0,
+  "end": 3.91,
+  "step": "PRODUCT TOUR",
+  "text": "A three-minute tour of Name TBC. Bookings, staff, money and safeguarding in one login."
+ },
+ {
+  "start": 3.91,
+  "end": 11.12,
+  "step": "Dashboard",
+  "text": "Your dashboard: income, bookings and spaces left at a glance, updating live as parents book."
+ },
+ {
+  "start": 11.12,
+  "end": 18.43,
+  "step": "Listings",
+  "text": "Listings: every camp and club with its own cover photo, price, dates and places left."
+ },
+ {
+  "start": 18.43,
+  "end": 26.54,
+  "step": "Listings",
+  "text": "Share a booking link or QR code for any listing, so parents can book and pay online."
+ },
+ {
+  "start": 26.54,
+  "end": 33.95,
+  "step": "Listings",
+  "text": "Embed puts a Book now button on your own website with one line of code."
+ },
+ {
+  "start": 33.95,
+  "end": 41.18,
+  "step": "Cancellations",
+  "text": "Cancellations: pick a policy per listing, with refunds back to the parent's card or wallet."
+ },
+ {
+  "start": 41.18,
+  "end": 47.79,
+  "step": "Discount codes",
+  "text": "Discount codes and vouchers: percentage or fixed-amount codes with limits and expiry dates."
+ },
+ {
+  "start": 47.79,
+  "end": 54.7,
+  "step": "Memberships",
+  "text": "Memberships for parents: tiers that give wallet credit or a standing discount at checkout."
+ },
+ {
+  "start": 54.7,
+  "end": 62.21,
+  "step": "Bookings",
+  "text": "Bookings: who, what, when and whether it is paid, with waitlists and capacity handled for you."
+ },
+ {
+  "start": 62.21,
+  "end": 69.12,
+  "step": "Registers",
+  "text": "Registers: on the day, sign children in and see medical notes and collection details."
+ },
+ {
+  "start": 69.12,
+  "end": 77.33,
+  "step": "Email campaigns",
+  "text": "Email campaigns: send to the right families, with every sent campaign and its open rate kept on file."
+ },
+ {
+  "start": 77.33,
+  "end": 84.43,
+  "step": "Email campaigns",
+  "text": "Compose from a template, choose an audience, then send now or schedule for later."
+ },
+ {
+  "start": 84.43,
+  "end": 90.15,
+  "step": "Newsfeed",
+  "text": "Newsfeed: post news and event updates for all your families."
+ },
+ {
+  "start": 90.15,
+  "end": 95.85,
+  "step": "Moments",
+  "text": "Moments: share photos and highlights from the day with parents."
+ },
+ {
+  "start": 95.85,
+  "end": 103.06,
+  "step": "Log concern",
+  "text": "Log a concern or incident, with who was involved, what happened and what was done."
+ },
+ {
+  "start": 103.06,
+  "end": 109.67,
+  "step": "First aid",
+  "text": "First aid: accident records with treatment given and who the first aider was."
+ },
+ {
+  "start": 109.67,
+  "end": 116.88,
+  "step": "Medication",
+  "text": "Medication: parental consent, dose and storage on record, and a log of every dose given."
+ },
+ {
+  "start": 116.88,
+  "end": 124.39,
+  "step": "Task manager",
+  "text": "Task manager: hand jobs to your team with due dates and priorities, and tick them off."
+ },
+ {
+  "start": 124.39,
+  "end": 133.69,
+  "step": "Money in",
+  "text": "Money in: parents pay into your own Stripe account, and Tax-Free Childcare and childcare vouchers are recorded against the booking by reference."
+ },
+ {
+  "start": 133.69,
+  "end": 143.11,
+  "step": "Rota",
+  "text": "Staff schedule: build the rota by week, by area or by team member, with the wage cost worked out as you roster."
+ },
+ {
+  "start": 143.11,
+  "end": 152.12,
+  "step": "Rota",
+  "text": "Availability: ask your team when they can work. They answer from their own portal and you roster from their replies."
+ },
+ {
+  "start": 152.12,
+  "end": 162.03,
+  "step": "Rota",
+  "text": "Staff checks as you roster: lapsed DBS, first aid and training are flagged on the rota before anyone is put on a session."
+ },
+ {
+  "start": 162.03,
+  "end": 168.84,
+  "step": "Rota",
+  "text": "Happy with the week? Publish the rota to your team in one click."
+ },
+ {
+  "start": 168.84,
+  "end": 176.35,
+  "step": "Payroll",
+  "text": "Payroll: tax, National Insurance and pension, payslips, and journals you can post to Xero or QuickBooks."
+ },
+ {
+  "start": 176.35,
+  "end": 183.87,
+  "step": "Learning",
+  "text": "The Learning Centre: assign courses to roles, and every completion is filed against the staff record."
+ },
+ {
+  "start": 183.87,
+  "end": 190.48,
+  "step": "Compliance",
+  "text": "Compliance: DBS checks and certificates in one place, with reminders before anything lapses."
+ },
+ {
+  "start": 190.48,
+  "end": 197.09,
+  "step": "Messages",
+  "text": "Messages: talk to families in one place, one to one or in groups."
+ },
+ {
+  "start": 197.09,
+  "end": 202.3,
+  "step": "NEXT STEP",
+  "text": "Ready when you are Book a demo, or start free for 7 days. A flat monthly fee. Never a cut of your bookings. Also built in: meals, trips and consent, ratios, calendar, timetable, referrals and reviews."
+ }
+]

@@ -13,5 +13,6 @@
  "js.send-failed": "Couldn't send that — please try again in a moment.",
  "js.legal-notice": "Translation notice: this page has been translated for your convenience only. The English version is the legally binding version and prevails if there is any difference between the two.",
  "js.pricing-notice": "Translation notice: this page has been translated for your convenience. The English version is the authoritative version of our prices and plan terms and prevails if there is any difference.",
- "js.legal-notice-link": "Read the English version"
+ "js.legal-notice-link": "Read the English version",
+ "js.menu-aria": "Menu"
 }

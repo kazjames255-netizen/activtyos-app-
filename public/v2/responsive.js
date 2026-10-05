@@ -14,6 +14,8 @@
     demo.className='rsp-demo'; demo.href='/demo';
     demo.setAttribute('data-i18n','g.book-a-demo-1lqj'); demo.textContent='Book a demo';
     inner.appendChild(demo);
+    var relabel=function(){ if(window.aosT){ demo.textContent=window.aosT('g.book-a-demo-1lqj','Book a demo'); btn.setAttribute('aria-label',window.aosT('js.menu-aria','Menu')); } };
+    window.addEventListener('aos:lang',relabel); relabel();
   }
   var links=hdr.querySelector('.nav-links');
   if(links){ if(!links.id) links.id='rsp-nav'; btn.setAttribute('aria-controls',links.id); }
