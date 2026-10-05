@@ -36,6 +36,7 @@ export function BankDetailsCard({ onSaved }: { onSaved?: () => void } = {}) {
   }, []);
 
   async function save() {
+    if (sortCode.replace(/\D/g, "").length < 6 || accountNumber.replace(/\D/g, "").length < 6) { setState("error"); return; }
     setState("saving");
     try {
       // Read-modify-write: the library PUT replaces `settings` wholesale.
@@ -52,10 +53,10 @@ export function BankDetailsCard({ onSaved }: { onSaved?: () => void } = {}) {
 
   return (
     <Card className="mb-4 p-4">
-      <div className="text-[14px] font-extrabold">Bank details for invoices</div>
+      <div className="text-[14px] font-extrabold">Your bank details <span className="ms-1 rounded-full bg-[var(--brand-soft,#e6ecff)] px-2 py-0.5 text-[11px] text-[var(--brand-ink,#1d3a8f)]">Required</span></div>
       <p className="mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-        Shown on your invoices and to parents who pay by bank transfer, Tax-Free Childcare or vouchers, so they know where to send money.
-        Card payments go to the account you give Stripe, below.
+        So parents can book and pay you. Bank transfers, Tax-Free Childcare and vouchers all pay into this account, and it is shown on your invoices.
+        Card payments are separate and go to the account you give Stripe, below.
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <div><FieldLabel htmlFor="bp-bank">Bank name</FieldLabel><Input id="bp-bank" value={bankName} onChange={(e) => { setBankName(e.target.value); setState("idle"); }} placeholder="e.g. Barclays" className="w-full" /></div>
@@ -65,7 +66,7 @@ export function BankDetailsCard({ onSaved }: { onSaved?: () => void } = {}) {
       <div className="mt-3 flex items-center gap-3">
         <Button variant="primary" onClick={() => void save()} disabled={state === "saving"}>{state === "saving" ? "Saving…" : "Save bank details"}</Button>
         {state === "saved" && <span className="text-[12.5px] font-bold text-[var(--green,#0f7a43)]">Saved</span>}
-        {state === "error" && <span className="text-[12.5px] font-bold text-[var(--red,#e21d27)]">Couldn't save. Try again.</span>}
+        {state === "error" && <span className="text-[12.5px] font-bold text-[var(--red,#e21d27)]">Enter a full sort code (6 digits) and account number, then try again.</span>}
       </div>
     </Card>
   );

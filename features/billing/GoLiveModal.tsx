@@ -22,7 +22,6 @@ export const goLiveReady = (s: Status | null) => !s || (s.planStarted && s.payCh
 export function GoLiveModal({ onClose, onGoLive, busy }: { onClose: () => void; onGoLive: () => void; busy?: boolean }) {
   const portal = portalOf(usePathname());
   const [s, setS] = useState<Status | null>(null);
-  const [showBank, setShowBank] = useState(false);
   const [reply, setReply] = useState("");
   const [replySaved, setReplySaved] = useState(false);
   const [replyConfirmed, setReplyConfirmed] = useState(false);
@@ -44,7 +43,6 @@ export function GoLiveModal({ onClose, onGoLive, busy }: { onClose: () => void; 
     fn(settings);
     await apiPut("/api/library", { settings });
   }
-  async function setCashOnly(v: boolean) { await patchSettings((st) => { st.cashOnly = v; }); refresh(); }
   async function saveReply() {
     await patchSettings((st) => { st.billing = { ...((st.billing as Record<string, unknown>) ?? {}), email: reply.trim() }; });
     setReplySaved(true);
@@ -94,16 +92,17 @@ export function GoLiveModal({ onClose, onGoLive, busy }: { onClose: () => void; 
             )}
             {cur === 1 && (
               <>
-                <div className="text-[16px] font-extrabold">How will parents pay you?</div>
-                <p className="mb-3 mt-1 text-[13px] text-[var(--ink-2)]">Pick one to start. You can add the others later.</p>
-                <div className="flex flex-col gap-2">
-                  {choice("Take card payments", "Cards, Apple Pay and Google Pay, paid straight to you.", s.pay.stripe,
-                    s.pay.stripe ? <span className="text-[12px] font-bold text-[#12805a]">Ready</span> : <a href={`${base}/billing?tab=paid`} target="_blank" rel="noreferrer"><Button sm variant="primary">Connect Stripe</Button></a>)}
-                  {choice("Bank transfer", "Parents pay into your bank account.", s.pay.bank,
-                    s.pay.bank ? <span className="text-[12px] font-bold text-[#12805a]">Added</span> : <Button sm onClick={() => setShowBank((v) => !v)}>{showBank ? "Hide" : "Add bank details"}</Button>)}
-                  {showBank && !s.pay.bank && <BankDetailsCard onSaved={() => { setShowBank(false); refresh(); }} />}
-                  {choice("Cash only", "You take cash and tick off payments yourself.", s.pay.cashOnly,
-                    <Button sm onClick={() => void setCashOnly(!s.pay.cashOnly)}>{s.pay.cashOnly ? "Undo" : "I only take cash"}</Button>)}
+                <div className="text-[16px] font-extrabold">Your bank details <span className="ms-1 rounded-full bg-[var(--brand-soft,#e6ecff)] px-2 py-0.5 text-[11px] text-[var(--brand-ink,#1d3a8f)]">Required</span></div>
+                <p className="mb-3 mt-1 text-[13px] text-[var(--ink-2)]">So parents can book and pay you. Bank transfers, Tax-Free Childcare and vouchers all pay into this account, and it is shown on your invoices.</p>
+                {s.pay.bank ? (
+                  <div className="rounded-xl border border-[#12805a] bg-[#eefaf2] p-3 text-[14px] font-extrabold">✓ Bank details saved</div>
+                ) : (
+                  <BankDetailsCard onSaved={refresh} />
+                )}
+                <div className="mt-3 flex items-center gap-3 rounded-xl border border-[var(--line)] p-3">
+                  <div className="min-w-0 flex-1"><div className="text-[13.5px] font-extrabold">{s.pay.stripe ? "✓ " : ""}Also take card payments <span className="font-semibold text-[var(--ink-3)]">(optional, recommended)</span></div>
+                    <div className="text-[12px] text-[var(--ink-3)]">Cards, Apple Pay and Google Pay, paid straight to you. You can do this later.</div></div>
+                  {s.pay.stripe ? <span className="text-[12px] font-bold text-[#12805a]">Ready</span> : <a href={`${base}/billing?tab=paid`} target="_blank" rel="noreferrer"><Button sm>Connect Stripe</Button></a>}
                 </div>
               </>
             )}

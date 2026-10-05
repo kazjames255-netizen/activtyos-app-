@@ -54,7 +54,7 @@ function fetchFacts(tenant: string, portal: string, force: boolean) {
       listings: listings?.length ?? 0,
       bookings: bookings?.length ?? 0,
       // "Chosen" = saved something of their own, or Stripe is live.
-      payChosen: !!stripe?.chargesEnabled || !!lib?.settings?.payMethods?.length || !!lib?.settings?.billing?.bankAccount || !!lib?.settings?.billing?.iban,
+      payChosen: !!lib?.settings?.billing?.bankAccount || !!lib?.settings?.billing?.iban || !!(lib?.settings?.billing as { sortCode?: string; accountNumber?: string } | undefined)?.accountNumber,
       cancelChosen: !!lib?.settings?.cancellationPolicies?.length,
       team: (invites ?? []).filter((i) => i.role === "staff").length,
     };
@@ -98,7 +98,7 @@ export function useFirstRunSteps() {
       { id: "venue", done: facts.venues > 0, href: `${base}/listings?tab=locations&add=1` },
       { id: "block", done: facts.blocks > 0, href: `${base}/blocks` },
       { id: "listing", done: facts.listings > 0, href: `${base}/listings` },
-      { id: "pay", done: facts.payChosen || visited.has("pay"), href: `${base}/billing?tab=paid` },
+      { id: "pay", done: facts.payChosen, href: `${base}/billing?tab=paid` },
       { id: "cancel", done: facts.cancelChosen || visited.has("cancel"), href: `${base}/setup?tab=cancel` },
       ...(portal === "freelancer" ? [] : [{ id: "team" as StepId, done: facts.team > 0, href: `${base}/staff` }]),
     ];
