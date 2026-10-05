@@ -7,7 +7,7 @@ import { Rich } from "@/components/i18n/Rich";
 import { pickPlural } from "@/lib/i18n/plural";
 import { isRTL } from "@/lib/i18n/config";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { firebaseAuth } from "@/lib/firebase/client";
@@ -248,6 +248,13 @@ export function FreelancerListingsApp() {
     return t === "blocks" || t === "locations" ? t : "listings";
   };
   const [tab, setTab] = useState<Tab>(initialTab);
+  // A client-side link (the set-up checklist's "Add a venue") renders this page BEFORE the address bar has changed, so the
+  // initial read above can still see the old URL. Follow the router's own search params as well.
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const q = searchParams?.get("tab");
+    if (q === "blocks" || q === "locations" || q === "listings") setTab(q);
+  }, [searchParams]);
   const [listings, setListings] = useState<Listing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [local, setLocal] = useState<LocalState | null>(null);
@@ -1140,6 +1147,8 @@ function LocationsTab({
   const [selId, setSelId] = useState<string | null>(null);
   // The set-up checklist links here with ?add=1 so the add-a-venue form is already open.
   const [adding, setAdding] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("add") === "1");
+  const addParam = useSearchParams()?.get("add");
+  useEffect(() => { if (addParam === "1") setAdding(true); }, [addParam]);
   const [nm, setNm] = useState("");
   const [addr, setAddr] = useState("");
   const [pin, setPin2] = useState<{ lat: number; lng: number } | null>(null); // pending map pin from the finder
@@ -1240,7 +1249,7 @@ function LocationsTab({
 
           {adding ? (
             <div className="mt-1 flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
-              <AddressFinder onPick={(h) => { const a = tidyAddress(h.label); setAddr(a); setPin2({ lat: h.lat, lng: h.lng }); /* name pre-fills from the found place (first part of the address) and stays editable; never overwrites what they typed */ setNm((cur) => (cur.trim() ? cur : a.split(",")[0].trim())); }} />
+              <AddressFinder onPick={(h) => { const a = tidyAddress(h.label); setAddr(a); setPin2({ lat: h.lat, lng: h.lng }); /* name pre-fills from the found place (first part of the address, unless that is just a postcode) and stays editable; never overwrites what they typed */ const first = h.label.split(",")[0].trim(); const isPostcode = /^[A-Za-z]{1,2}\d[A-Za-z\d]?\s*\d[A-Za-z]{2}$/.test(first); setNm((cur) => (cur.trim() || isPostcode ? cur : first)); }} />
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="flex-1">
                   <FieldLabel>{t("p8lst.flVenueName")}</FieldLabel>

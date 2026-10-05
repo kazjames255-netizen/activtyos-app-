@@ -18,6 +18,15 @@ const shot = async (page: Page, name: string, full = false) => {
 
 test.describe.configure({ mode: "serial" });
 test.beforeAll(() => fs.mkdirSync(SHOTS, { recursive: true }));
+// Each test gets a fresh browser context, so every test after the sign-up signs in again with the account test 1 created.
+test.beforeEach(async ({ page }, info) => {
+  if (info.title.startsWith("1 ")) return;
+  await page.goto("/login");
+  await page.getByPlaceholder("you@example.com").fill(email);
+  await page.locator('input[type="password"]').fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 60_000 });
+});
 
 test("1 public site -> company signup wizard (+ error states)", async ({ page }) => {
   test.setTimeout(120_000);
@@ -44,20 +53,20 @@ test("1 public site -> company signup wizard (+ error states)", async ({ page })
   await page.fill("#l-email", email);
   await page.fill("#l-pw", TEST_PASSWORD);
   await page.getByRole("button", { name: /Create/ }).click();
-  await expect(page.getByText("Get paid").first()).toBeVisible({ timeout: 30_000 });
-  await shot(page, "signup-get-paid");
-  await page.getByText(/Skip for now/).click();
+  // No money questions at sign-up and no plan wall: straight into the portal with the checklist.
+  await expect(page.getByText("Get set up to take bookings").first()).toBeVisible({ timeout: 40_000 });
+  await shot(page, "signup-checklist");
 });
 
-test("2 billing gate -> start trial (local dev has no Stripe keys: empty card form passes)", async ({ page }) => {
+test("2 Billing & payouts: plan picker is on the Your plan tab (no wall)", async ({ page }) => {
   await page.goto("/company/bookings");
-  await expect(page.getByText("Pick your plan")).toBeVisible({ timeout: 30_000 });
-  await shot(page, "gate");
+  await expect(page.getByText("Pick your plan")).toHaveCount(0);
+  await page.goto("/company/billing?tab=plan");
+  await expect(page.getByText("Choose your plan")).toBeVisible({ timeout: 30_000 });
+  await shot(page, "billing-plan");
   await page.getByText("Growth · 11–30 staff").click();
   await page.getByText(/Annual/).click();
-  await shot(page, "gate-annual");
-  await page.getByRole("button", { name: /Start 7-day/ }).click();
-  await expect(page.getByText("Pick your plan")).toBeHidden({ timeout: 30_000 });
+  await shot(page, "billing-plan-annual");
 });
 
 test("3 onboarding surfaces + staff invite", async ({ page }) => {

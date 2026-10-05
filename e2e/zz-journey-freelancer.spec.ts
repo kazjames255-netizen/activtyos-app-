@@ -9,7 +9,7 @@ const stamp = Date.now().toString(36);
 const email = `e2e-journey-fl-${stamp}@${TEST_EMAIL_DOMAIN}`;
 const SHOTS = "e2e/review/shots/journey-freelancer";
 
-test("new freelancer: sign-up wizard -> plan gate -> first login", async ({ page }) => {
+test("new freelancer: sign-up wizard -> checklist (no plan wall) -> first login", async ({ page }) => {
   test.setTimeout(180_000);
   const cont = () => page.getByRole("button", { name: /^Continue/ }).click();
   await page.goto("/signup");
@@ -39,19 +39,14 @@ test("new freelancer: sign-up wizard -> plan gate -> first login", async ({ page
   await expect(page.getByText("Password must be at least 6 characters.")).toBeVisible();
   await page.locator("#l-pw").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: /Create account/ }).click();
-  await expect(page.getByText("Get paid", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
-  await page.screenshot({ path: `${SHOTS}/spec-getpaid.png` });
-  await page.getByRole("button", { name: /Go to dashboard/ }).click();
+  // Sign-up no longer asks money questions and there is no plan wall: the new provider lands straight in the portal with the
+  // "Get set up" checklist. The plan (free trial) and bank details are asked for at Go live.
+  await expect(page.getByText("Get set up to take bookings").first()).toBeVisible({ timeout: 40_000 });
+  await expect(page.getByText("Pick your plan")).toHaveCount(0);
+  await expect(page.getByText("0 of 5 done").first()).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/spec-checklist.png`, fullPage: true });
 
-  // Plan gate. Locally (no Stripe keys) it is the dummy card form; known copy issue: the footer line says
-  // "£29/mo" even when Annual is selected.
-  await expect(page.getByText("Pick your plan")).toBeVisible({ timeout: 40_000 });
-  await expect(page.getByText(/Free for 7 days/)).toBeVisible();
-  await page.screenshot({ path: `${SHOTS}/spec-gate.png`, fullPage: true });
-  await page.getByRole("button", { name: /Start 7-day free trial/ }).click();
-  await expect(page.getByText("Pick your plan")).toBeHidden({ timeout: 40_000 });
-
-  // First landing is an empty Bookings list with no onboarding checklist.
+  // First landing is an empty Bookings list under the checklist.
   await expect(page.getByText("No bookings match this view.")).toBeVisible({ timeout: 30_000 });
   await page.goto("/freelancer/listings");
   await expect(page.getByText(/No listings yet/)).toBeVisible({ timeout: 30_000 });

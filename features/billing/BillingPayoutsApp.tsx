@@ -19,7 +19,8 @@ import { PaymentsApp } from "@/features/payments/PaymentsApp";
 
 type Tab = "plan" | "paid";
 
-export function BankDetailsCard({ onSaved }: { onSaved?: () => void } = {}) {
+/** `bare` = no card chrome / heading / intro, for use inside a pop-up that already explains it. */
+export function BankDetailsCard({ onSaved, bare }: { onSaved?: () => void; bare?: boolean } = {}) {
   const [bankName, setBankName] = useState("");
   const [sortCode, setSortCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -51,13 +52,15 @@ export function BankDetailsCard({ onSaved }: { onSaved?: () => void } = {}) {
     } catch { setState("error"); }
   }
 
-  return (
-    <Card className="mb-4 p-4">
+  const inner = (
+    <>
+      {!bare && (<>
       <div className="text-[14px] font-extrabold">Your bank details <span className="ms-1 rounded-full bg-[var(--brand-soft,#e6ecff)] px-2 py-0.5 text-[11px] text-[var(--brand-ink,#1d3a8f)]">Required</span></div>
       <p className="mt-0.5 text-[12.5px] text-[var(--ink-3)]">
         So parents can book and pay you. Bank transfers, Tax-Free Childcare and vouchers all pay into this account, and it is shown on your invoices.
         Card payments are separate and go to the account you give Stripe, below.
       </p>
+      </>)}
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <div><FieldLabel htmlFor="bp-bank">Bank name</FieldLabel><Input id="bp-bank" value={bankName} onChange={(e) => { setBankName(e.target.value); setState("idle"); }} placeholder="e.g. Barclays" className="w-full" /></div>
         <div><FieldLabel htmlFor="bp-sort">Sort code</FieldLabel><Input id="bp-sort" inputMode="numeric" value={sortCode} onChange={(e) => { setSortCode(e.target.value); setState("idle"); }} placeholder="00-00-00" className="w-full" /></div>
@@ -68,8 +71,9 @@ export function BankDetailsCard({ onSaved }: { onSaved?: () => void } = {}) {
         {state === "saved" && <span className="text-[12.5px] font-bold text-[var(--green,#0f7a43)]">Saved</span>}
         {state === "error" && <span className="text-[12.5px] font-bold text-[var(--red,#e21d27)]">Enter a full sort code (6 digits) and account number, then try again.</span>}
       </div>
-    </Card>
+    </>
   );
+  return bare ? <div>{inner}</div> : <Card className="mb-4 p-4">{inner}</Card>;
 }
 
 export function BillingPayoutsApp() {

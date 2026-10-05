@@ -97,7 +97,7 @@ export function GoLiveModal({ onClose, onGoLive, busy }: { onClose: () => void; 
                 {s.pay.bank ? (
                   <div className="rounded-xl border border-[#12805a] bg-[#eefaf2] p-3 text-[14px] font-extrabold">✓ Bank details saved</div>
                 ) : (
-                  <BankDetailsCard onSaved={refresh} />
+                  <BankDetailsCard bare onSaved={refresh} />
                 )}
                 <div className="mt-3 flex items-center gap-3 rounded-xl border border-[var(--line)] p-3">
                   <div className="min-w-0 flex-1"><div className="text-[13.5px] font-extrabold">{s.pay.stripe ? "✓ " : ""}Also take card payments <span className="font-semibold text-[var(--ink-3)]">(optional, recommended)</span></div>

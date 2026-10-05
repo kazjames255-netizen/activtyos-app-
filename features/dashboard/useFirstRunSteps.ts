@@ -83,7 +83,7 @@ export function useFirstRunSteps() {
   useEffect(() => { if (enabled) fetchFacts(tenant, portal, false); }, [enabled, tenant, portal, pathname]);
   // Server-side changes refetch (shared listener), but only for a tenant still being set up.
   const onRt = useCallback(() => { if (enabled) fetchFacts(tenant, portal, true); }, [enabled, tenant, portal]);
-  useRealtime(["bookings", "blocks", "listings"], onRt);
+  useRealtime(["bookings", "blocks", "listings", "library", "tenants"], onRt); // library = venues, bank details, policies
 
   const store = tenant && typeof window !== "undefined" ? readStore(tenant) : {};
   const facts = tenant ? cache.get(tenant)?.facts ?? null : null;

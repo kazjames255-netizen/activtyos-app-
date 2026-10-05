@@ -2,7 +2,7 @@ import { test, expect, type Frame, type Locator, type Page } from "@playwright/t
 import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignIn, fbSignUp, stripeConfigured } from "./helpers/accounts";
 
 // Stripe subscription billing, end to end through the REAL gate: a brand-new
-// freelancer signup is walled, captures a genuine test card in the Stripe
+// freelancer signup (no wall) starts the trial from Billing & payouts, captures a genuine test card in the Stripe
 // PaymentElement, starts the 7-day trial, then cancels and reactivates from
 // Money → Subscription. A fresh account is essential — the suite's standing
 // operator accounts predate the gate and are deliberately never walled.
@@ -43,12 +43,16 @@ test("fresh signup hits the gate, starts a card-backed trial, cancels and reacti
     providerNameMode: "business",
   });
 
-  // Sign in through the real login page — the gate must wall the portal.
+  // Sign in through the real login page. There is no plan wall any more: a new provider lands in the portal and starts the
+  // trial from Billing & payouts (or from the Go live pop-up when publishing the first listing).
   await page.goto("/login");
   await page.getByPlaceholder("you@example.com").fill(email);
   await page.locator('input[type="password"]').fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.getByText("Pick your plan")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Get set up to take bookings").first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Pick your plan")).toHaveCount(0);
+  await page.goto("/freelancer/billing?tab=plan");
+  await page.getByRole("button", { name: "Start free trial" }).first().click(); // the Freelancer card -> "Add your card" box
 
   // The PaymentElement replaces the old dummy card form — fill the Stripe
   // test card inside its iframes.
@@ -65,10 +69,10 @@ test("fresh signup hits the gate, starts a card-backed trial, cancels and reacti
   await page.getByRole("button", { name: /Start 7-day free trial/ }).click();
 
   // confirmSetup + POST /start + the gate's re-check — give Stripe room.
-  await expect(page.getByText("Pick your plan")).toBeHidden({ timeout: 60_000 });
+  await expect(page.getByText("Add your card")).toBeHidden({ timeout: 60_000 });
 
-  // Money → Subscription shows the live trial and the card on file.
-  await page.goto("/freelancer/subscription");
+  // Billing & payouts → Your plan shows the live trial and the card on file.
+  await page.goto("/freelancer/billing?tab=plan");
   await expect(page.getByText("Free trial", { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("···· 4242")).toBeVisible();
 

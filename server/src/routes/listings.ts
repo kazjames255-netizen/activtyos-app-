@@ -539,7 +539,8 @@ listings.put("/:id", async (req, res) => {
       res.status(400).json({ error: `Can't publish yet — this listing needs ${problems.join(", ")}.` });
       return;
     }
-    { const why = await goLiveRefusal(req.auth!.tenantId!); if (why) { res.status(402).json({ error: why, code: "go_live_requirements" }); return; } }
+    // Only the moment a listing GOES live is gated — editing one that is already live must never be refused.
+    if (own.snap.data()!.status !== "live") { const why = await goLiveRefusal(req.auth!.tenantId!); if (why) { res.status(402).json({ error: why, code: "go_live_requirements" }); return; } }
   }
   const patch: Record<string, unknown> = { ...data, updatedAt: Date.now() };
   // Head office (company) / platform can ASSIGN or reassign a listing to a
