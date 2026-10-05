@@ -75,7 +75,15 @@ function SetupForm({ plan, band, cadence, cta, cardOnly, onDone, onError }: {
         e.preventDefault();
         if (!stripeJs || !elements || busy) return;
         setBusy(true);
-        const { error, setupIntent } = await stripeJs.confirmSetup({ elements, redirect: "if_required" });
+        // Never hang silently: a bank check that never appears (pop-up blocked, VPN) ends with a clear message after 75s.
+        const slow = new Promise<"slow">((r) => setTimeout(() => r("slow"), 75_000));
+        const res = await Promise.race([stripeJs.confirmSetup({ elements, redirect: "if_required" }), slow]);
+        if (res === "slow") {
+          onError("Your bank or Stripe did not respond. You have not been charged. Allow pop-ups for this site, turn off any VPN, then reload the page and try again.");
+          setBusy(false);
+          return;
+        }
+        const { error, setupIntent } = res;
         if (error || !setupIntent) {
           onError(error?.message ?? t("money.subCardNotConfirmed"));
           setBusy(false);
