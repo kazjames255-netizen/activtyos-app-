@@ -14,6 +14,7 @@ import { passCap, bookingHasPass } from "../lib/passBooking";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { isBrowsable, directLinkVisible } from "../lib/listingVisibility";
 import { earlyBirdScopeOf, earlyFixedUsed } from "../lib/earlyBird";
+import { DISCOUNT_KIND_LABEL, ruleDisplayName, type DiscountRule } from "../../../features/listings/discounts";
 import { accessFor, subscriptionState } from "../middleware/subscription";
 
 export const listings = Router();
@@ -209,8 +210,10 @@ listings.get("/", async (req, res) => {
   type Rule = { name?: string; method?: string; value?: number; moreThan?: number; kind?: string; enabled?: boolean; beforeDate?: string };
   const ruleOffer = (r: Rule): { label: string; percent?: number } => {
     const pct = r.method === "percent";
-    const amt = r.method === "subtract" ? `£${r.value} off` : pct ? `${r.value}% off` : `£${r.value} each`;
-    const label = r.name && r.name.trim() ? r.name.trim() : amt;
+    // Same label the checkout shows: the kind of discount first ("Early bird discount: ..."), and a stale auto-generated
+    // name (saved before the amount or date was edited) is rebuilt from the rule.
+    const rule = r as unknown as DiscountRule;
+    const label = `${DISCOUNT_KIND_LABEL[rule.kind] ?? "Discount"}: ${ruleDisplayName({ ...rule, name: rule.name ?? "", passNames: rule.passNames ?? [], beforeDate: rule.beforeDate ?? "" })}`;
     return { label, percent: pct ? r.value : undefined };
   };
 

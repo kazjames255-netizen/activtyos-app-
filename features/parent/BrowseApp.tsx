@@ -638,7 +638,7 @@ export function BrowseApp() {
                   if (!offers.length && !slots.length && !pays.length) return null;
                   return (
                     <div className="mt-2.5 flex flex-col gap-1.5">
-                      {chipGroup(l.id, "offers", offers, 1, "bg-[#fdecea] text-[#b3261e]")}
+                      {chipGroup(l.id, "offers", offers, 2, "bg-[#fdecea] text-[#b3261e]")}
                       {chipGroup(l.id, "slots", slots, 3, "bg-[#eef4ff] text-[var(--brand)]")}
                       {chipGroup(l.id, "pays", pays, 1, "bg-[#e9f9f2] text-[#0b5a3f]")}
                     </div>

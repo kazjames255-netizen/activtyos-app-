@@ -1809,6 +1809,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   <span className="ms-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>
                     {pickPlural(tr, locale, "p8lst.ck8PassCount", b.basket.length)}
                     {b.saved > 0 ? tr("p7ck.savedAmt", { amt: money(b.saved) }) : ""}
+                    {b.saved > 0 && b.discountLines.length > 0 ? ` (${[...new Set(b.discountLines.map((l) => (l.kind ? DISCOUNT_KIND_LABEL[l.kind] : l.name)))].join(", ")})` : ""}
                   </span>
                 </span>
                 <span className="flex items-baseline gap-2">
