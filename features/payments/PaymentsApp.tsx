@@ -59,10 +59,20 @@ export function PaymentsApp() {
   useEffect(() => refresh(), [refresh]);
   useRealtime(["payments", "tenants"], refresh);
 
-  // Set-up opens inside the app (Stripe's embedded form); the hosted-page redirect is the built-in fallback.
-  function connect() {
+  // Stripe's hosted onboarding page is the default. The embedded form (EmbeddedOnboarding) is built but off:
+  // Stripe refused to authenticate full-dashboard accounts inside it. Flip USE_EMBEDDED to try it again.
+  const USE_EMBEDDED = false;
+  async function connect() {
     setError(null);
-    setEmbedded(true);
+    if (USE_EMBEDDED) { setEmbedded(true); return; }
+    setBusy(true);
+    try {
+      const { url } = await apiPost<{ url: string }>("/api/payments/connect", {});
+      window.location.href = url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("p8lst.payStartFail"));
+      setBusy(false);
+    }
   }
 
   const ready = status?.connected && status.chargesEnabled;
