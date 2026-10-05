@@ -172,7 +172,7 @@ payments.post("/connect/session", async (req, res) => {
     try {
       const session = await s.accountSessions.create({
         account: accountId,
-        components: { account_onboarding: { enabled: true, features: { external_account_collection: true } } },
+        components: { account_onboarding: { enabled: true } },
       });
       res.json({ clientSecret: session.client_secret, accountId });
     } catch (inner) {
