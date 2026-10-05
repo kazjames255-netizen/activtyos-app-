@@ -3,6 +3,7 @@
 // listing's venue and the pay URL, then hands the results to these functions
 // (which is also what lets tests/emails.test.mts check the content).
 import type { Booking } from "../../../features/bookings/types";
+import { BRAND } from "./brand";
 
 export const gbp = (n: number) => `£${(Math.round(n * 100) / 100).toFixed(2)}`;
 
@@ -75,7 +76,7 @@ export function layout(
       </div>
       <div style="background:#f7f9fd;padding:16px 24px;text-align:center;border-top:1px solid #eef0f5">
         <img src="cid:aos-mark" width="15" height="15" alt="" style="vertical-align:middle;margin-right:6px;border-radius:4px;opacity:.9" />
-        <span style="font-size:11.5px;color:#8a86a3;vertical-align:middle">Powered by <b style="color:#4a4763">ActivityOS</b></span>
+        <span style="font-size:11.5px;color:#8a86a3;vertical-align:middle">Powered by <b style="color:#4a4763">${BRAND}</b></span>
         <div style="font-size:11px;color:#a7a3bd;margin-top:5px">You're receiving this because a booking was made with ${escapeHtml(brand.name)}.</div>
       </div>
     </div>
@@ -239,12 +240,12 @@ export function familyBookingCreatedEmail(
   <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#171534">
     <div style="padding:18px 0 10px;border-bottom:2px solid #1d3a8f">
       <strong style="font-size:18px">${escapeHtml(providerName)}</strong>
-      <span style="color:#8a86a3;font-size:12px"> · via ActivityOS</span>
+      <span style="color:#8a86a3;font-size:12px"> · via ${BRAND}</span>
     </div>
     <h2 style="font-size:19px;margin:18px 0 6px">Your booking is confirmed</h2>
     <p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has made this booking for you
       (you spoke to them, or they took it over the phone), and it now lives in your own
-      ActivityOS account so you can see it, pay it, and manage it any time.</p>
+      ${BRAND} account so you can see it, pay it, and manage it any time.</p>
     <table style="margin:14px 0;border-collapse:collapse;font-size:13.5px" cellpadding="0">
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref${bookings.length > 1 ? "s" : ""}</td><td><b>${refs}</b></td></tr>
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Activity</td><td>${escapeHtml(b.listing)}</td></tr>

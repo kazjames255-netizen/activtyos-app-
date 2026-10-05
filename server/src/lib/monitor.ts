@@ -1,6 +1,7 @@
 import { db } from "../firebase";
 import { sendMailDetailed } from "./mailer";
 import { ukToday } from "./ukDate";
+import { BRAND } from "./brand";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Knowing something broke, without waiting for a customer to ring.
@@ -69,7 +70,7 @@ export async function record(f: Fault): Promise<void> {
   const ctx = Object.entries(f.context ?? {}).map(([k, v]) => `${k}: ${String(v)}`).join("<br>");
   await sendMailDetailed(
     TO,
-    `ActivityOS ${f.kind} fault — ${f.signature}`,
+    `${BRAND} ${f.kind} fault — ${f.signature}`,
     `<p><b>${escapeHtml(f.message)}</b></p>${ctx ? `<p>${ctx}</p>` : ""}`
       + `<p style="color:#666">${at} — UK day ${ukToday()}</p>`
       + (f.stack ? `<pre style="font:12px/1.4 monospace;white-space:pre-wrap">${escapeHtml(f.stack.slice(0, 3000))}</pre>` : "")

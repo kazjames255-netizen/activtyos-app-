@@ -18,6 +18,7 @@ import { db } from "../firebase";
 import { notify, isMuted } from "../lib/notify";
 import { sendMailDetailed } from "../lib/mailer";
 import { webUrl } from "../lib/stripe";
+import { BRAND } from "../lib/brand";
 
 type Tier = "freelancer" | "company" | "franchise";
 
@@ -123,8 +124,8 @@ export async function franchiseLabel(tenantId: string, franchiseId: string): Pro
 /** Nudge the recipient of an HQ message: ring their in-app bell (and email) so they actually know HQ has
  *  written / replied / updated their bug — otherwise it sits unseen. Used for a reply AND for a conversation HQ starts. */
 async function notifyRecipient(t: ThreadDoc, text: string, fresh = false): Promise<void> {
-  const headline = fresh ? "Message from ActivityOS support" : "Reply from ActivityOS support";
-  const subj = fresh ? "ActivityOS support sent you a message" : "ActivityOS support replied";
+  const headline = fresh ? `Message from ${BRAND} support` : `Reply from ${BRAND} support`;
+  const subj = fresh ? `${BRAND} support sent you a message` : `${BRAND} support replied`;
   const preview = text.length > 140 ? text.slice(0, 137) + "…" : text;
   try {
     if (t.party === "provider" && t.providerId) {
@@ -147,7 +148,7 @@ async function notifyRecipient(t: ThreadDoc, text: string, fresh = false): Promi
         else {
           const link = `${webUrl}/custdash/activityos`;
           const out = await sendMailDetailed(to, subj,
-            `<div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#171534"><p><strong>ActivityOS support</strong> ${fresh ? "sent you a message" : "replied to your message"}:</p><blockquote style="border-left:3px solid #cdddf7;margin:12px 0;padding:6px 0 6px 14px;color:#4a4763;white-space:pre-wrap">${preview.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</blockquote><p><a href="${link}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Open the conversation</a></p></div>`);
+            `<div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#171534"><p><strong>${BRAND} support</strong> ${fresh ? "sent you a message" : "replied to your message"}:</p><blockquote style="border-left:3px solid #cdddf7;margin:12px 0;padding:6px 0 6px 14px;color:#4a4763;white-space:pre-wrap">${preview.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</blockquote><p><a href="${link}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Open the conversation</a></p></div>`);
           await bell.set({ emailStatus: out.status }, { merge: true });
         }
       }

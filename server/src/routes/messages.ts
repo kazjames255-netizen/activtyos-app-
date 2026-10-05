@@ -13,6 +13,7 @@ import { franchiseFamilyEmails, familyFranchiseMap } from "../lib/franchiseScope
 import { customerAreaOn } from "../lib/customerArea";
 import { webUrl } from "../lib/stripe";
 import { applyTokens, bookingCtx, hasMergeTokens, mergeContextForEmail, mergeContexts, pickBest, tenantMergeBase, venueResolver, type BookingLike, type MergeCtx } from "../lib/mergeFields";
+import { BRAND } from "../lib/brand";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Messages (Communication) — 1:1 threads between a provider (tenant) and a
@@ -908,7 +909,7 @@ async function accountSupportThread(req: import("express").Request, create: bool
     const tt = await tenantTier(providerId);
     // Franchisees share the head office's tenant — label the thread as the franchise.
     const label = (fr ? await franchiseLabel(providerId, fr) : null) ?? tt?.providerName ?? "Provider";
-    const doc: ThreadDoc = { party: "provider", name: label, email: req.user?.email ?? "", tier: tt?.tier ?? "company", providerId, franchiseId: fr, providerName: label, subject: "Message ActivityOS", ticket: await nextTicket("message"), kind: "message", status: "open", unreadByHq: false, messages: [], createdAt: at, updatedAt: at };
+    const doc: ThreadDoc = { party: "provider", name: label, email: req.user?.email ?? "", tier: tt?.tier ?? "company", providerId, franchiseId: fr, providerName: label, subject: `Message ${BRAND}`, ticket: await nextTicket("message"), kind: "message", status: "open", unreadByHq: false, messages: [], createdAt: at, updatedAt: at };
     const ref = await supportThreadsCol.add(doc);
     return { ref, data: doc };
   }
@@ -925,7 +926,7 @@ async function accountSupportThread(req: import("express").Request, create: bool
   return null;
 }
 // Map an embedded thread message to the shape the SupportApp chat expects.
-const toChatMsg = (m: Msg, senderName: string) => ({ id: m.id, from: m.from === "hq" ? "activityos" : "user", senderName: m.from === "hq" ? "ActivityOS" : senderName, topic: m.topic, subject: m.subject, body: m.body, createdAt: m.at });
+const toChatMsg = (m: Msg, senderName: string) => ({ id: m.id, from: m.from === "hq" ? "activityos" : "user", senderName: m.from === "hq" ? `${BRAND}` : senderName, topic: m.topic, subject: m.subject, body: m.body, createdAt: m.at });
 
 messages.get("/support", async (req, res) => {
   if (!req.auth) { res.status(403).json({ error: "Requires an account" }); return; }

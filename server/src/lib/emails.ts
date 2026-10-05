@@ -15,6 +15,7 @@ import {
   refundApprovedSpec,
   refundDeclinedSpec, placeOfferedSpec, paymentReceivedSpec, familyBookingCreatedEmail,
 } from "./emailTemplates";
+import { BRAND } from "./brand";
 
 /** A random, always-lowercase local part for a lead's reply address —
  * deliberately NOT the Firestore doc id: that's mixed-case, and real mail
@@ -193,7 +194,7 @@ async function venueMapPng(lat: number, lng: number): Promise<Buffer | null> {
     for (let dx = 0; dx < COLS; dx++)
       for (let dy = 0; dy < ROWS; dy++) {
         const r = await fetch(`https://tile.openstreetmap.org/${z}/${originX + dx}/${originY + dy}.png`, {
-          headers: { "User-Agent": "ActivityOS/1.0 (booking confirmation maps)" },
+          headers: { "User-Agent": `${BRAND}/1.0 (booking confirmation maps)` },
           signal: AbortSignal.timeout(5000),
         });
         if (!r.ok) return null;
@@ -476,14 +477,14 @@ export function emailSignUpInvite(p: {
       <div style="padding:26px 22px">
         <h2 style="font-size:21px;margin:0 0 12px;color:#171534">Hi ${escapeHtml(p.firstName)} 👋</h2>
         <p style="font-size:14px;line-height:1.6;margin:0 0 4px">
-          <b>${escapeHtml(brand.name)}</b> takes bookings on <b>ActivityOS</b> and has set up an account for you — so you can
+          <b>${escapeHtml(brand.name)}</b> takes bookings on <b>${BRAND}</b> and has set up an account for you — so you can
           see every session they run, with dates and places left, and book in a couple of taps.
         </p>
         <div style="background:#eef4ff;border-radius:14px;padding:22px;text-align:center;margin:18px 0">
           <a href="${p.link}" style="display:inline-block;background:#1d3a8f;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(29,58,143,.55)">${cta} →</a>
           <div style="font-size:12px;line-height:1.5;color:#4a5a94;margin-top:12px">
             ${p.existed
-              ? "You already have an ActivityOS account — that link signs you in."
+              ? `You already have an ${BRAND} account — that link signs you in.`
               : "No password is set yet — that link lets you choose your own. Your name and email are already filled in."}
           </div>
         </div>
@@ -491,7 +492,7 @@ export function emailSignUpInvite(p: {
           Didn't expect this? Just ignore it — nothing happens.
         </p>
       </div>
-      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">${BRAND}</b></div>
     </div>`;
     sendAs(
       p.tenantId,
@@ -538,30 +539,70 @@ export function emailProviderWelcome(p: {
     const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
       <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
-        <span style="font-size:22px;font-weight:800;color:#1d3a8f">ActivityOS</span>
+        <span style="font-size:22px;font-weight:800;color:#1d3a8f">${BRAND}</span>
       </div>
       <div style="padding:26px 22px">
-        <h2 style="font-size:21px;margin:0 0 12px;color:#171534">Welcome to ActivityOS, ${escapeHtml(greetingName)} 🎉</h2>
+        <h2 style="font-size:21px;margin:0 0 12px;color:#171534">Welcome to ${BRAND}, ${escapeHtml(greetingName)} 🎉</h2>
         <p style="font-size:14px;line-height:1.6;margin:0 0 16px">
-          <b>${escapeHtml(p.providerName)}</b> is now set up. ActivityOS is where you'll run bookings, take payments,
+          <b>${escapeHtml(p.providerName)}</b> is now set up. ${BRAND} is where you'll run bookings, take payments,
           roster your team and keep families in the loop — all from one place.
         </p>
         <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin-bottom:6px">
-          ${step(1, "Add your first listing", "A camp, class or club families can book — set the dates, price and how many places you've got.")}
-          ${step(2, "Invite your team", "Bring in your staff or franchisees so rotas, registers and messages reach the right people.")}
-          ${step(3, "Finish Setup &amp; features", "Your logo, safeguarding contacts, cancellation policy and the rest — a few minutes now saves a chase later.")}
+          ${step(1, "Build your first listing", "A camp, class or club families can book: set the dates, the price and how many places you have. Your checklist walks you through it.")}
+          ${step(2, "Choose how parents pay you", `Card payments, bank transfer, vouchers or cash. <a href="${webUrl}/${p.portal}/billing?tab=paid" style="color:#1d3a8f;font-weight:700">Set it up in Billing &amp; payouts</a>. Card payments take about 10 minutes, so have your photo ID and bank details ready.`)}
+          ${step(3, "Check where replies go", "When a parent replies to one of your emails, it goes to the contact address on your account. Make sure it is an inbox you read.")}
+          ${step(4, "Invite your team", "Bring in your staff so rotas, registers and messages reach the right people.")}
         </table>
         <div style="text-align:center;margin:22px 0 6px">
           <a href="${dashUrl}" style="display:inline-block;background:#1d3a8f;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(29,58,143,.55)">Open your dashboard →</a>
         </div>
         <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:18px 0 0;text-align:center">
-          Questions any time? Reply to this email, or use Message ActivityOS from inside the app.
+          Questions any time? Reply to this email, or use Message ${BRAND} from inside the app.
         </p>
       </div>
-      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">${BRAND}</b></div>
     </div>`;
-    sendAs(p.tenantId, "ActivityOS", p.to, "Welcome to ActivityOS — let's get you set up", html);
+    sendAs(p.tenantId, `${BRAND}`, p.to, `Welcome to ${BRAND} — let's get you set up`, html);
   })().catch((e) => console.error("[mail] provider welcome build failed:", (e as Error).message));
+}
+
+/** The day 1 / 3 / 5 new-provider email (lib/onboardingNudges.ts decides WHETHER to send; this only words it). Lists only the steps
+ *  that are still open, each with a straight link. */
+export function emailOnboardingNudge(p: {
+  to: string; tenantId: string; providerName: string; firstName?: string; portal: "company" | "freelancer";
+  stage: "d1" | "d3" | "d5"; open: { listing: boolean; plan: boolean; pay: boolean }; unsubUrl: string;
+}): void {
+  const base = `${webUrl}/${p.portal}`;
+  const greet = p.firstName?.trim() || p.providerName || "there";
+  const items: { title: string; body: string; href: string; cta: string }[] = [];
+  if (p.open.listing) items.push({ title: "Build your first listing", body: "A camp, class or club families can book. It only takes a few minutes, and you can save it as a draft.", href: `${base}/listings`, cta: "Open listings" });
+  if (p.stage !== "d1" && p.open.pay) items.push({ title: "Choose how parents pay you", body: "Card payments, bank transfer, vouchers or cash. Card payments take about 10 minutes, so have your photo ID and bank details ready.", href: `${base}/billing?tab=paid`, cta: "Set up payments" });
+  if (p.stage === "d5" && p.open.plan) items.push({ title: "Start your free trial", body: "Add a card to start your 7-day free trial and go live. You are not charged until the trial ends, and you can cancel any time.", href: `${base}/billing`, cta: "Start my trial" });
+  if (!items.length) return;
+  const heading = p.stage === "d1" ? "Ready to build your first listing?" : p.stage === "d3" ? "Your set-up checklist" : "You are nearly live";
+  const intro = p.stage === "d1" ? "You have set up your account. The quickest way to see it working is to build a listing."
+    : p.stage === "d3" ? "Here is what is still to do. Everything you have already done is left off."
+    : "You have not gone live yet. Here is what is left, and nothing else.";
+  const subject = p.stage === "d1" ? "Build your first listing" : p.stage === "d3" ? "Your set-up checklist" : "You are nearly live";
+  void (async () => {
+    const rows = items.map((i) => `
+      <tr><td style="padding:12px 0;border-bottom:1px solid #eef0f5">
+        <div style="font-size:15px;font-weight:800;color:#171534">${escapeHtml(i.title)}</div>
+        <div style="font-size:13.5px;color:#4a4763;line-height:1.5;margin:3px 0 8px">${escapeHtml(i.body)}</div>
+        <a href="${i.href}" style="display:inline-block;background:#1d3a8f;color:#ffffff;padding:9px 20px;border-radius:999px;text-decoration:none;font-weight:700;font-size:13.5px">${escapeHtml(i.cta)}</a>
+      </td></tr>`).join("");
+    const html = `
+    <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
+      <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f"><span style="font-size:22px;font-weight:800;color:#1d3a8f">${BRAND}</span></div>
+      <div style="padding:26px 22px">
+        <h2 style="font-size:21px;margin:0 0 8px;color:#171534">${heading}</h2>
+        <p style="font-size:14px;line-height:1.6;margin:0 0 10px">Hi ${escapeHtml(greet)}. ${intro}</p>
+        <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">${rows}</table>
+        <p style="font-size:12px;line-height:1.5;color:#8a8fa3;margin:22px 0 0">Questions? Just reply to this email. You are getting this because you recently set up ${escapeHtml(p.providerName || "an account")} on ${BRAND}. <a href="${p.unsubUrl}" style="color:#8a8fa3">Stop these set-up emails</a>.</p>
+      </div>
+    </div>`;
+    sendAs(p.tenantId, BRAND, p.to, `${subject} · ${BRAND}`, html);
+  })().catch((e) => console.error("[mail] onboarding nudge build failed:", (e as Error).message));
 }
 
 /** Welcome for a parent who has just created an account (POST /api/register-role, role "parent"): confirms the account, names the provider they
@@ -587,7 +628,7 @@ export function emailParentWelcome(p: { to: string; firstName?: string; provider
     const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
       <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
-        <span style="font-size:22px;font-weight:800;color:#1d3a8f">ActivityOS</span>
+        <span style="font-size:22px;font-weight:800;color:#1d3a8f">${BRAND}</span>
       </div>
       <div style="padding:26px 22px">
         <h2 style="font-size:21px;margin:0 0 12px;color:#171534">Welcome 🎉 you&rsquo;re all set</h2>
@@ -605,9 +646,9 @@ export function emailParentWelcome(p: { to: string; firstName?: string; provider
           If you didn&rsquo;t create this account, you can ignore this email.
         </p>
       </div>
-      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">${BRAND}</b></div>
     </div>`;
-    sendAs(undefined, "ActivityOS", p.to, "Welcome to ActivityOS — your account is ready", html);
+    sendAs(undefined, `${BRAND}`, p.to, `Welcome to ${BRAND} — your account is ready`, html);
   })().catch((e) => console.error("[mail] parent welcome build failed:", (e as Error).message));
 }
 
@@ -649,7 +690,7 @@ export function emailWebsiteAddonAck(p: {
     const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
       <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
-        <span style="font-size:22px;font-weight:800;color:#1d3a8f">ActivityOS</span>
+        <span style="font-size:22px;font-weight:800;color:#1d3a8f">${BRAND}</span>
       </div>
       <div style="padding:26px 22px">
         <h2 style="font-size:21px;margin:0 0 12px;color:#171534">${escapeHtml(heading)}</h2>
@@ -661,7 +702,7 @@ export function emailWebsiteAddonAck(p: {
         </div>` : ""}
         <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:18px 0 0;text-align:center">Questions any time? Just reply to this email.</p>
       </div>
-      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">${BRAND}</b></div>
     </div>`;
     // No tenantId — this is platform mail, before anyone has an account.
     // Reply-To routes a reply back onto this lead (see leadReplySender).
@@ -681,7 +722,7 @@ export function emailDemoBooked(p: { to: string; name: string; slotAt: string; l
     const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
       <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
-        <span style="font-size:22px;font-weight:800;color:#1d3a8f">ActivityOS</span>
+        <span style="font-size:22px;font-weight:800;color:#1d3a8f">${BRAND}</span>
       </div>
       <div style="padding:26px 22px">
         <h2 style="font-size:21px;margin:0 0 12px;color:#171534">You're booked in, ${escapeHtml(firstName)} 🎉</h2>
@@ -692,7 +733,7 @@ export function emailDemoBooked(p: { to: string; name: string; slotAt: string; l
         </div>` : ""}
         <p style="font-size:13.5px;line-height:1.6;margin:0;color:#4a4763">${videoUrl ? "Same link works whenever you're ready to join, no account or download needed. " : "We'll send you the link to join before the call. "}Need to move it? Just reply to this email.</p>
       </div>
-      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">${BRAND}</b></div>
     </div>`;
     await sendMail(p.to, "You're booked in for your Activly demo", html, await leadReplySender(p.leadId));
   })().catch((e) => console.error("[mail] demo-booked ack build failed:", (e as Error).message));
@@ -710,7 +751,7 @@ export function emailQuestionAnswered(p: { to: string; name: string; question: s
     const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
       <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
-        <span style="font-size:22px;font-weight:800;color:#1d3a8f">ActivityOS</span>
+        <span style="font-size:22px;font-weight:800;color:#1d3a8f">${BRAND}</span>
       </div>
       <div style="padding:26px 22px">
         <h2 style="font-size:21px;margin:0 0 12px;color:#171534">Here's your answer, ${escapeHtml(firstName)}</h2>
@@ -724,7 +765,7 @@ export function emailQuestionAnswered(p: { to: string; name: string; question: s
         </div>
         <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:18px 0 0;text-align:center">Anything else? Just reply to this email.</p>
       </div>
-      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">${BRAND}</b></div>
     </div>`;
     await sendMail(p.to, "Your question, answered", html, await leadReplySender(p.leadId));
   })().catch((e) => console.error("[mail] question-answered build failed:", (e as Error).message));
@@ -740,14 +781,14 @@ export function emailCallNote(p: { to: string; name: string; note: string; leadI
     const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
       <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
-        <span style="font-size:22px;font-weight:800;color:#1d3a8f">ActivityOS</span>
+        <span style="font-size:22px;font-weight:800;color:#1d3a8f">${BRAND}</span>
       </div>
       <div style="padding:26px 22px">
         <h2 style="font-size:21px;margin:0 0 12px;color:#171534">A quick note for you, ${escapeHtml(firstName)}</h2>
         <div style="background:#eef4ff;border-left:3px solid #1d3a8f;border-radius:6px;padding:12px 14px;margin:0 0 16px;font-size:14px;line-height:1.6;color:#171534">${escapeHtml(p.note)}</div>
         <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:18px 0 0;text-align:center">Questions any time? Just reply to this email.</p>
       </div>
-      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">${BRAND}</b></div>
     </div>`;
     await sendMail(p.to, "A note from the Activly team", html, await leadReplySender(p.leadId));
   })().catch((e) => console.error("[mail] call-note build failed:", (e as Error).message));
@@ -777,7 +818,7 @@ export function emailTeamInvite(p: {
     p.to,
     `${p.tenantName} — you're invited`,
     `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#171534">
-      <h2 style="font-size:19px;margin:0 0 10px">Join ${escapeHtml(p.tenantName)} on ActivityOS</h2>
+      <h2 style="font-size:19px;margin:0 0 10px">Join ${escapeHtml(p.tenantName)} on ${BRAND}</h2>
       <p style="font-size:14px;line-height:1.55;margin:0 0 14px">
         ${p.inviterName ? `${escapeHtml(p.inviterName)} has invited you` : "You've been invited"} to ${what}.
         The button below creates your account and links it to theirs. ${p.role === "franchise" ? "After you sign in you add your location, set your block prices and publish your first listing." : "You will be set up in a minute."}
@@ -1096,7 +1137,7 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
   <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#eef1f7;padding:24px 12px">
     <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 34px -18px rgba(20,30,70,.4)">
 
-      <!-- ActivityOS brand header — the real mark, embedded inline (cid) so it
+      <!-- ${BRAND} brand header — the real mark, embedded inline (cid) so it
            renders in every client (see aosLogoAttachment). -->
       <div style="background:linear-gradient(120deg,#16306e 0%,#274ba3 55%,#3f78d8 100%);padding:18px 24px;text-align:center">
         <img src="cid:aos-mark" width="26" height="26" alt="" style="vertical-align:middle;margin-right:9px;border-radius:7px" />
@@ -1139,11 +1180,11 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
         <div style="text-align:center;margin:24px 0 6px">
           <a href="{{VIEW_URL}}" style="display:inline-block;background:#15b364;color:#ffffff;padding:14px 34px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(21,179,100,.6)">View booking →</a>
         </div>
-        <p style="text-align:center;font-size:12px;color:#a7a3bd;margin:6px 0 0">Opens this exact booking in ActivityOS.</p>
+        <p style="text-align:center;font-size:12px;color:#a7a3bd;margin:6px 0 0">Opens this exact booking in ${BRAND}.</p>
       </div>
 
       <div style="background:#f7f9fd;padding:16px 24px;text-align:center;border-top:1px solid #eef0f5">
-        <span style="font-size:11.5px;color:#8a86a3">You're receiving this because you're on ${escapeHtml(a.providerName)}'s team on ActivityOS.</span>
+        <span style="font-size:11.5px;color:#8a86a3">You're receiving this because you're on ${escapeHtml(a.providerName)}'s team on ${BRAND}.</span>
       </div>
     </div>
   </div>
@@ -1169,14 +1210,14 @@ export function emailNewMessage(
   <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#171534">
     <div style="padding:18px 0 10px;border-bottom:2px solid #1d3a8f">
       <strong style="font-size:18px">${escapeHtml(opts.providerName)}</strong>
-      <span style="color:#8a86a3;font-size:12px"> · via ActivityOS</span>
+      <span style="color:#8a86a3;font-size:12px"> · via ${BRAND}</span>
     </div>
     <h2 style="font-size:19px;margin:18px 0 6px">New message from ${escapeHtml(opts.senderName)}</h2>
     <blockquote style="border-left:3px solid #cdddf7;margin:12px 0;padding:6px 0 6px 14px;color:#4a4763;white-space:pre-wrap;font-size:14px">${escapeHtml(opts.body)}</blockquote>
     ${opts.emailOnly
       ? `<p style="font-size:13.5px;color:#4a4763">To answer, just reply to this email — it goes to ${escapeHtml(opts.providerName)}.</p>`
       : `<p><a href="${opts.deepLink}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Take me to the message</a></p>`}
-    <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">${opts.emailOnly ? `You're receiving this because you've booked with ${escapeHtml(opts.providerName)}.` : "You're receiving this because you have a conversation on ActivityOS."}</p>
+    <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">${opts.emailOnly ? `You're receiving this because you've booked with ${escapeHtml(opts.providerName)}.` : `You're receiving this because you have a conversation on ${BRAND}.`}</p>
   </div>`,
     // Reply-To stays free for §JJ's per-thread reply address — except when
     // this email is the only channel: then a reply reaches the provider.

@@ -12,6 +12,7 @@ import {
   sageConfig, sageConfigured, sageAuthorizeUrl, sageExchangeCode, sageRefresh, sageBusinesses, sageJournalBody, sagePostJournal, sageAccounts, type SageTokens,
   pfetch, ProviderError, type ProviderErrorKind, bodyFingerprint, EXTRA_BUCKETS, validatePayLines, requiredBuckets, journalRefs,
 } from "../lib/accounting";
+import { BRAND } from "../lib/brand";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Accounting integrations — QuickBooks Online / Xero / Sage Business Cloud
@@ -423,7 +424,7 @@ accounting.post("/post/:runId", async (req, res) => {
   if (missing.length) { res.status(400).json({ error: `Map all the accounts before posting (missing: ${missing.map((b) => BUCKET_LABEL[b]).join(", ")})` }); return; }
 
   // The exact request body, built once: its fingerprint is part of the provider idempotency key (see bodyFingerprint).
-  const narration = `ActivityOS payroll \u2014 ${period}`.slice(0, 250);
+  const narration = `${BRAND} payroll \u2014 ${period}`.slice(0, 250);
   const body = provider === "quickbooks" ? qboJournalBody(mapping, totals, { paidOn, docNumber: refs.qboDocNumber })
     : provider === "xero" ? xeroJournalBody(mapping, totals, { paidOn, narration })
     : sageJournalBody(mapping, totals, { paidOn, reference: refs.sageReference, details: narration });

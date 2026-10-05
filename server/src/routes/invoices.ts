@@ -19,6 +19,7 @@ import { addDays, ukToday, isRealDay } from "../lib/ukDate";
 import { linkExpiresOn, linkExpired } from "../lib/linkExpiry";
 import { round2, grandTotal, isOverdue, statusAfterEmail, invoiceSummary, type LineItem } from "../lib/invoiceMath";
 import { splitClears, applyClears } from "../lib/patchClear";
+import { BRAND } from "../lib/brand";
 
 // PUBLIC_WEB_URL/APP_URL are this file's historic names; WEB_URL is what the
 // rest of the server (lib/stripe.ts) and DEPLOY.md use. Accept all three or a
@@ -253,7 +254,7 @@ invoicePublic.post("/:token/checkout", async (req, res) => {
         amount: toPence(amount),
         currency: "gbp",
         automatic_payment_methods: { enabled: true },
-        description: `${(tenant.data()?.name as string) ?? "ActivityOS"} — invoice ${(inv.reference as string) || doc.id}`,
+        description: `${(tenant.data()?.name as string) ?? `${BRAND}`} — invoice ${(inv.reference as string) || doc.id}`,
         metadata: { tenantId: inv.tenantId as string, invoiceId: doc.id, kind: "invoice" },
         ...(typeof inv.customerEmail === "string" && inv.customerEmail.includes("@") ? { receipt_email: inv.customerEmail } : {}),
       },

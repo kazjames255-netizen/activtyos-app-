@@ -65,6 +65,7 @@ import { account } from "./routes/account";
 import { privacy } from "./routes/privacy";
 import { emails, emailsInbound, emailsOpen, emailsResendInbound, emailsUnsub } from "./routes/emails";
 import { hubDigestPublic } from "./routes/hub/digestApi";
+import { onboardingUnsub } from "./routes/onboardingUnsub";
 import { mealOptions, mealOrders } from "./routes/mealsShop";
 import { mealMenus } from "./routes/mealMenus";
 import { documents } from "./routes/documents";
@@ -215,6 +216,7 @@ app.use("/api/images", rateLimit("images", 600), images);
 // Very generous: Gmail/Apple proxies fetch for many recipients from few IPs.
 app.use("/api/emails/open", rateLimit("email-open", 1000), emailsOpen);
 app.use("/api/emails/unsubscribe", rateLimit("unsubscribe", 30), emailsUnsub);
+app.use("/api/public/onboarding-unsub", rateLimit("onboarding-unsub", 30), onboardingUnsub);
 // Learning Hub parent digest / homework-reminder opt-out (public: signed link in the email).
 app.use("/api/hub-digest", rateLimit("hub-digest-optout", 30), hubDigestPublic);
 // Inbound email webhook — called by a mail platform with a shared secret.

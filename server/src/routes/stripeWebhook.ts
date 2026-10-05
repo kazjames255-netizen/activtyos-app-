@@ -5,6 +5,7 @@ import { db } from "../firebase";
 import { markPastDue, notifyBilling, syncFromStripe, tenantForCustomer } from "../lib/billing";
 import { markCardFailed, paymentForIntent, settleInvoicePayment, settlePaymentRecord } from "../lib/settlePayment";
 import { clearSubscriptionCache } from "../middleware/subscription";
+import { BRAND } from "../lib/brand";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Stripe webhook — two jobs.
@@ -95,12 +96,12 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
           if (status === "unpaid" && before?.status !== "unpaid") {
             await notifyBilling(
               tenantId,
-              "Your ActivityOS account is paused",
+              `Your ${BRAND} account is paused`,
               "Every retry on your card has failed, so saving is paused — registers, incidents, first aid and medication still work. Update your card in Money → Subscription and we'll settle the outstanding invoice straight away.",
             );
           }
           if (status === "canceled" && before?.status !== "canceled") {
-            await notifyBilling(tenantId, "Your ActivityOS subscription has ended", "Reactivate any time from Money → Subscription — your data is all still here.");
+            await notifyBilling(tenantId, `Your ${BRAND} subscription has ended`, "Reactivate any time from Money → Subscription — your data is all still here.");
           }
         }
         break;
@@ -140,8 +141,8 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
           clearSubscriptionCache(tenantId);
           await notifyBilling(
             tenantId,
-            "Your ActivityOS payment failed",
-            "We couldn't charge your card. Update it in Money → Subscription within 14 days to keep full access — after that ActivityOS goes read-only (registers, incidents, first aid and medication keep working).",
+            `Your ${BRAND} payment failed`,
+            `We couldn't charge your card. Update it in Money → Subscription within 14 days to keep full access — after that ${BRAND} goes read-only (registers, incidents, first aid and medication keep working).`,
           );
         }
         break;

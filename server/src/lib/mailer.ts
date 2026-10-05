@@ -1,6 +1,7 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import type { Sender } from "./sender";
 import { db } from "../firebase";
+import { BRAND } from "./brand";
 
 // Transactional email engine (product spec build item 9, minus per-provider
 // sending domains for now).
@@ -61,7 +62,7 @@ function getTransport() {
 // MAIL_FROM is the one authenticated identity ("ActivityOS <no-reply@…>" or a
 // bare address). Its ADDRESS is fixed — providers only ever vary the display
 // name in front of it (see lib/sender.ts).
-const MAIL_FROM = process.env.MAIL_FROM || "ActivityOS <no-reply@activityos.local>";
+const MAIL_FROM = process.env.MAIL_FROM || `${BRAND} <no-reply@activityos.local>`;
 const angled = MAIL_FROM.match(/<([^>]+)>/);
 /** The platform's default From address. A tenant may override the LOCAL PART
  *  (see lib/sender.ts) — never the domain, which is the one we authenticate. */

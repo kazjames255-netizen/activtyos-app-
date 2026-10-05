@@ -992,4 +992,6 @@ export function startSweeps(): void {
   void import("./octSends").then((m) => m.startOctSweeps());
   // Once a day is plenty for a retention purge — see the policy comment above.
   sweep("onboarding-retention", 24 * 60 * 60_000, onboardingRetentionPurge);
+  // New-provider emails (day 1 / 3 / 5): decided from live facts at send time, so nobody is reminded of something already done.
+  sweep("onboarding-nudges", 60 * 60_000, async () => { const m = await import("./onboardingNudges"); await m.onboardingNudges(); });
 }

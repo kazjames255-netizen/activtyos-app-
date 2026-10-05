@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { stripe, toPence } from "./stripe";
 import { notify } from "./notify";
 import { recordSubscriptionEvent, type SubEventSource } from "./subscriptionEvents";
+import { BRAND } from "./brand";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Stripe Billing helpers — the platform's OWN revenue (the plan fee a
@@ -51,7 +52,7 @@ export async function ensureProduct(): Promise<string> {
   const existing = snap.exists ? (snap.get("productId") as string | undefined) : undefined;
   if (existing) return existing;
   const product = await stripe!.products.create({
-    name: "ActivityOS subscription",
+    name: `${BRAND} subscription`,
     metadata: { aos: "subscription" },
   });
   await ref.set({ productId: product.id }, { merge: true });

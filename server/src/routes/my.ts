@@ -82,6 +82,7 @@ import { checkCoverage, type CoverageArea } from "../lib/coverageArea";
 import { TFC_SCHEME, canonicalMethod, isTfcMethod, methodAllowed, methodKey, splitTfc } from "../lib/payMethods";
 import { attachChildcareRefs, childcareOf, childcareRoute, type ChildcareBooking } from "../lib/childcare";
 import { autoEnrolFromBooking } from "../lib/hubAutoEnrol";
+import { BRAND } from "../lib/brand";
 
 // Parent ("my") endpoints. Identity comes exclusively from the verified
 // Firebase token — the booker email is stamped server-side and every read
@@ -2131,7 +2132,7 @@ my.post("/bookings", async (req, res) => {
           key: "booking-new",
           title: `${kind} · ${primary.ref} · ${bookerName}`,
           body: `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(input.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
-          subject: `ActivityOS: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
+          subject: `${BRAND}: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
           href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
           ref: primary.ref,
           emailFullHtml,

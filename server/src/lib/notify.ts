@@ -18,6 +18,7 @@ import { db } from "../firebase";
 import { loadSettings } from "./tenantLibrary";
 import { sendMail, sendMailDetailed, type MailAttachment } from "./mailer";
 import { webUrl } from "./stripe";
+import { BRAND } from "./brand";
 
 const col = () => db.collection("notifications");
 const prefsCol = () => db.collection("notificationPrefs");
@@ -180,9 +181,9 @@ function layout(
   const brandColor = "#1d3a8f";
   const header = opts?.logoCid
     ? `<img src="cid:${opts.logoCid}" alt="${escapeHtml(heading)}" style="max-height:44px;max-width:220px;display:inline-block" />`
-    : `<strong style="font-size:18px">${escapeHtml(heading)}</strong>${opts?.branded ? "" : `<span style="color:#8a86a3;font-size:12px"> · via ActivityOS</span>`}`;
-  const cta = opts?.branded ? "Open" : "Open in ActivityOS";
-  const poweredBy = opts?.branded ? `<span style="color:#b7b3c9;font-size:11px;display:block;margin-top:6px">Powered by ActivityOS</span>` : "";
+    : `<strong style="font-size:18px">${escapeHtml(heading)}</strong>${opts?.branded ? "" : `<span style="color:#8a86a3;font-size:12px"> · via ${BRAND}</span>`}`;
+  const cta = opts?.branded ? "Open" : `Open in ${BRAND}`;
+  const poweredBy = opts?.branded ? `<span style="color:#b7b3c9;font-size:11px;display:block;margin-top:6px">Powered by ${BRAND}</span>` : "";
   return `
   <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#171534">
     <div style="padding:18px 0 10px;border-bottom:2px solid ${brandColor}">
@@ -190,7 +191,7 @@ function layout(
     </div>
     <div style="font-size:14px;line-height:1.6;margin:18px 0">${body}</div>
     ${link ? `<p><a href="${link}" style="display:inline-block;background:${brandColor};color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">${cta}</a></p>` : ""}
-    <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">${escapeHtml(footer ?? "You're receiving this because of your account on ActivityOS.")}${poweredBy}</p>
+    <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">${escapeHtml(footer ?? `You're receiving this because of your account on ${BRAND}.`)}${poweredBy}</p>
   </div>`;
 }
 
@@ -365,7 +366,7 @@ export async function notify(input: NotifyInput): Promise<void> {
       // That inbox belongs to the FRANCHISE account, whose portal is /franchise — the tenant's
       // (company) link would be refused for it (one account = one portal).
       if (frInbox && href) emailHref = href.replace(/^\/(company|freelancer|staff)\//, "/franchise/");
-      footer = "You're receiving this because you're on this provider's team on ActivityOS.";
+      footer = `You're receiving this because you're on this provider's team on ${BRAND}.`;
     }
     if (!to?.includes("@")) return;
 

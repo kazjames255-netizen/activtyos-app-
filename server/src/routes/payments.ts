@@ -11,6 +11,7 @@ import { settlePaymentRecord } from "../lib/settlePayment";
 import { bookingForToken } from "../lib/bookingPayToken";
 import { payable, balanceOf } from "../lib/payGate";
 import { buildPayOptions } from "../lib/publicPayOptions";
+import { BRAND } from "../lib/brand";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Payments — Stripe Connect (build item 7).
@@ -272,7 +273,7 @@ payments.post("/checkout", async (req, res) => {
     try {
       intent = await s.paymentIntents.create({
         amount: toPence(amount), currency: "gbp", automatic_payment_methods: { enabled: true },
-        description: `${tenant.data()?.name ?? "ActivityOS"} — meal${orders.length > 1 ? "s" : ""}`,
+        description: `${tenant.data()?.name ?? `${BRAND}`} — meal${orders.length > 1 ? "s" : ""}`,
         metadata: { tenantId, mealOrders: orders.map((o) => o.id).join(","), email },
         ...((await autoEmailOn(tenantId, "payments")) ? { receipt_email: email } : {}), // meal orders have no email of our own, so Stripe's receipt stays
       }, stripeAccount ? { stripeAccount } : undefined);
@@ -355,7 +356,7 @@ payments.post("/checkout", async (req, res) => {
         amount: toPence(amount),
         currency: "gbp",
         automatic_payment_methods: { enabled: true },
-        description: `${tenant.data()?.name ?? "ActivityOS"} — booking${bookings.length > 1 ? "s" : ""} ${bookings.map((b) => b.ref).join(", ")}`,
+        description: `${tenant.data()?.name ?? `${BRAND}`} — booking${bookings.length > 1 ? "s" : ""} ${bookings.map((b) => b.ref).join(", ")}`,
         metadata: { tenantId, refs: bookings.map((b) => b.ref).join(","), email },
         // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).
       },
@@ -494,7 +495,7 @@ bookingPayPublic.post("/:token/checkout", async (req, res) => {
         amount: toPence(amount),
         currency: "gbp",
         automatic_payment_methods: { enabled: true },
-        description: `${tenant.data()?.name ?? "ActivityOS"} — booking ${b.ref}`,
+        description: `${tenant.data()?.name ?? `${BRAND}`} — booking ${b.ref}`,
         metadata: { tenantId, refs: b.ref, email: b.email, via: "pay-link" },
         // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).
       },
