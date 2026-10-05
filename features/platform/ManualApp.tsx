@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { Card } from "@/components/ui";
 
 /**
@@ -48,18 +49,134 @@ function Section({ children }: { children: ReactNode }) {
   return <section className="mt-12">{children}</section>;
 }
 
-/** A real screenshot in a browser-style frame. Tap to open full size. */
-function Shot({ src, alt, caption, color }: { src: string; alt: string; caption?: string; color: string }) {
+type ShotDef = { src: string; alt: string; caption?: string };
+
+/** Swipe left/right on touch screens. */
+function useSwipe(go: (d: number) => void) {
+  const x0 = useRef<number | null>(null);
+  return {
+    onTouchStart: (e: React.TouchEvent) => { x0.current = e.touches[0].clientX; },
+    onTouchEnd: (e: React.TouchEvent) => {
+      if (x0.current == null) return;
+      const dx = e.changedTouches[0].clientX - x0.current;
+      x0.current = null;
+      if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+    },
+  };
+}
+
+function RoundBtn({ label, onClick, children, className = "", style }: { label: string; onClick: () => void; children: ReactNode; className?: string; style?: CSSProperties }) {
   return (
-    <figure className="m-0 min-w-0">
-      <a href={`${IMG}/${src}.jpg`} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-[14px] border-2 bg-[var(--surface)] shadow-[var(--shadow-sm)]" style={{ borderColor: tint(color, 45) }}>
-        <div className="flex items-center gap-[5px] px-2.5 py-2" style={{ background: tint(color, 18) }} aria-hidden="true">
-          {[0, 1, 2].map((i) => <i key={i} className="block h-[9px] w-[9px] rounded-full" style={{ background: color, opacity: 0.55 }} />)}
-        </div>
+    <button type="button" aria-label={label} onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className={`grid h-11 w-11 place-items-center rounded-full border-0 text-[22px] font-bold leading-none shadow-md transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${className}`}
+      style={style}>
+      {children}
+    </button>
+  );
+}
+
+/** Full-size viewer: Esc closes, arrow keys and swipe move, Tab stays inside, focus returns to the thumbnail it came from. */
+function Lightbox({ shots, index, setIndex, onClose, color }: { shots: ShotDef[]; index: number; setIndex: (i: number) => void; onClose: () => void; color: string }) {
+  const box = useRef<HTMLDivElement>(null);
+  const closeBtn = useRef<HTMLButtonElement>(null);
+  const n = shots.length;
+  const go = useCallback((d: number) => setIndex((index + d + n) % n), [index, n, setIndex]);
+  const swipe = useSwipe(go);
+
+  useEffect(() => {
+    const back = document.activeElement as HTMLElement | null;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeBtn.current?.focus();
+    return () => { document.body.style.overflow = prevOverflow; back?.focus?.(); };
+  }, []);
+
+  function onKey(e: React.KeyboardEvent) {
+    if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
+    if (e.key === "ArrowLeft" && n > 1) { e.preventDefault(); go(-1); return; }
+    if (e.key === "ArrowRight" && n > 1) { e.preventDefault(); go(1); return; }
+    if (e.key === "Tab") {
+      const f = Array.from(box.current?.querySelectorAll<HTMLElement>("button:not([disabled])") ?? []);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+
+  const s = shots[index];
+  return createPortal(
+    <div ref={box} role="dialog" aria-modal="true" aria-label={`Screenshot viewer: ${s.alt}`} onKeyDown={onKey} onClick={onClose}
+      className="fixed inset-0 z-[10000] flex flex-col bg-black/95 p-3 sm:p-6" {...swipe}>
+      <div className="flex items-center justify-between gap-3 text-white">
+        <span className="min-w-0 text-[14px] font-bold" aria-live="polite">{index + 1} / {n}{s.caption ? ` · ${s.caption}` : ""}<span className="block text-[11.5px] font-semibold text-white/70 sm:hidden">Drag the picture to see all of it</span></span>
+        <button ref={closeBtn} type="button" onClick={(e) => { e.stopPropagation(); onClose(); }} aria-label="Close viewer"
+          className="rounded-full bg-white px-4 py-2 text-[14px] font-extrabold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" style={{ color }}>Close (Esc)</button>
+      </div>
+      {/* On a phone the picture is shown at a readable size and can be dragged sideways; on wider screens it fits the window. */}
+      <div className="relative flex min-h-0 flex-1 items-start overflow-auto py-3 sm:items-center sm:justify-center sm:overflow-hidden" onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`${IMG}/${src}.jpg`} alt={alt} loading="lazy" className="block h-auto w-full" />
-      </a>
-      {caption && <figcaption className="mt-1.5 text-[12.5px] leading-snug text-[var(--ink-3)]">{caption}</figcaption>}
+        <img src={`${IMG}/${s.src}.jpg`} alt={s.alt} onClick={(e) => e.stopPropagation()} className="h-auto w-[900px] max-w-none flex-none rounded-xl bg-white shadow-2xl sm:max-h-full sm:w-auto sm:max-w-full sm:object-contain" />
+      </div>
+      {n > 1 && (
+        <div className="flex items-center justify-center gap-4 pb-1">
+          <RoundBtn label="Previous screenshot" onClick={() => go(-1)} className="bg-white" style={{ color }}>&#8249;</RoundBtn>
+          <div className="flex gap-1.5" aria-hidden="true">{shots.map((_, i) => <i key={i} className="block h-2 w-2 rounded-full" style={{ background: i === index ? "#fff" : "rgba(255,255,255,.4)" }} />)}</div>
+          <RoundBtn label="Next screenshot" onClick={() => go(1)} className="bg-white" style={{ color }}>&#8250;</RoundBtn>
+        </div>
+      )}
+    </div>,
+    document.body,
+  );
+}
+
+/** A real screenshot in a browser-style frame, with prev/next, thumbnails, arrow keys and swipe. Click the picture for full size. */
+function Gallery({ shots, color }: { shots: ShotDef[]; color: string }) {
+  const [i, setI] = useState(0);
+  const [open, setOpen] = useState(false);
+  const n = shots.length;
+  const go = useCallback((d: number) => setI((x) => (x + d + n) % n), [n]);
+  const swipe = useSwipe(go);
+  const s = shots[i];
+  const many = n > 1;
+  return (
+    <figure className="m-0 min-w-0" role="group" aria-roledescription="carousel" aria-label={s.alt}
+      tabIndex={many ? 0 : undefined}
+      onKeyDown={(e) => { if (!many) return; if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); } else if (e.key === "ArrowRight") { e.preventDefault(); go(1); } }}>
+      <div className="relative overflow-hidden rounded-[14px] border-2 bg-[var(--surface)] shadow-[var(--shadow-sm)]" style={{ borderColor: tint(color, 45) }} {...swipe}>
+        <div className="flex items-center gap-[5px] px-2.5 py-2" style={{ background: tint(color, 18) }} aria-hidden="true">
+          {[0, 1, 2].map((k) => <i key={k} className="block h-[9px] w-[9px] rounded-full" style={{ background: color, opacity: 0.55 }} />)}
+          {many && <span className="ml-auto text-[11.5px] font-bold" style={{ color }}>{i + 1} / {n}</span>}
+        </div>
+        <button type="button" onClick={() => setOpen(true)} aria-label={`Enlarge: ${s.alt}`} className="block w-full cursor-zoom-in border-0 bg-transparent p-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`${IMG}/${s.src}.jpg`} alt={s.alt} className="block h-auto w-full" />
+        </button>
+        {many && (
+          <>
+            <RoundBtn label="Previous screenshot" onClick={() => go(-1)} className="absolute left-2 top-1/2 -translate-y-1/2 bg-[var(--surface)]" style={{ color, border: `2px solid ${tint(color, 45)}` }}>&#8249;</RoundBtn>
+            <RoundBtn label="Next screenshot" onClick={() => go(1)} className="absolute right-2 top-1/2 -translate-y-1/2 bg-[var(--surface)]" style={{ color, border: `2px solid ${tint(color, 45)}` }}>&#8250;</RoundBtn>
+          </>
+        )}
+      </div>
+      <figcaption className="mt-2 flex items-start justify-between gap-3 text-[13px] leading-snug text-[var(--ink-2)]" aria-live="polite">
+        <span className="min-w-0 font-bold">{s.caption ?? s.alt}</span>
+        <span className="flex-none text-[12px] text-[var(--ink-3)]">Click to enlarge</span>
+      </figcaption>
+      {many && (
+        <div className="mt-2 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Choose a screenshot">
+          {shots.map((t, k) => (
+            <button key={t.src} type="button" role="tab" aria-selected={k === i} aria-label={`Show screenshot ${k + 1}: ${t.caption ?? t.alt}`} onClick={() => setI(k)}
+              className="relative w-[88px] flex-none overflow-hidden rounded-lg border-2 bg-[var(--surface)] p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              style={{ borderColor: k === i ? color : "var(--line)", opacity: k === i ? 1 : 0.7 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`${IMG}/${t.src}.jpg`} alt="" loading="lazy" className="block h-auto w-full" />
+              <span className="absolute bottom-0 left-0 rounded-tr-md px-1.5 text-[11px] font-extrabold text-white" style={{ background: color }}>{k + 1}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {open && <Lightbox shots={shots} index={i} setIndex={setI} onClose={() => setOpen(false)} color={color} />}
     </figure>
   );
 }
@@ -82,7 +199,7 @@ function Facts({ color, rows }: { color: string; rows: { k: string; v: ReactNode
 function Stage({ n, color, title, tag, facts, shots }: {
   n: string; color: string; title: string; tag: string;
   facts: { k: string; v: ReactNode }[];
-  shots: { src: string; alt: string; caption?: string }[];
+  shots: ShotDef[];
 }) {
   return (
     <Section>
@@ -95,9 +212,7 @@ function Stage({ n, color, title, tag, facts, shots }: {
       </div>
       <div className="mt-4 grid grid-cols-1 gap-5 min-[900px]:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
         <Facts color={color} rows={facts} />
-        <div className={`grid min-w-0 content-start gap-3 ${shots.length >= 3 ? "min-[560px]:grid-cols-2" : shots.length === 2 ? "min-[560px]:grid-cols-2 min-[900px]:grid-cols-1" : ""}`}>
-          {shots.map((s) => <Shot key={s.src} src={s.src} alt={s.alt} caption={s.caption} color={color} />)}
-        </div>
+        <div className="min-w-0 min-[900px]:sticky min-[900px]:top-4 min-[900px]:self-start"><Gallery shots={shots} color={color} /></div>
       </div>
     </Section>
   );
@@ -162,7 +277,7 @@ const CHECKS = [
   { label: "Create block", color: C.block, ticks: "a block is saved" },
   { label: "Create listing", color: C.listing, ticks: "a listing exists" },
   { label: "Get paid", color: C.billing, ticks: "bank details are saved" },
-  { label: "Cancellations", color: C.cancel, ticks: "a cancellation policy is saved" },
+  { label: "Cancellations", color: C.cancel, ticks: "the policy is saved or reviewed" },
 ];
 
 function ProgressGraph() {
@@ -182,7 +297,7 @@ function ProgressGraph() {
         ))}
       </div>
       <p className="m-0 mt-3 text-[13px] leading-relaxed text-[var(--ink-2)]">
-        The checklist hides for good once a listing is published <b>and</b> a booking exists, or when the provider presses Hide. The top banner on every page shows the same count and the next job.
+        The checklist hides for good once a listing exists <b>and</b> a booking has come in, or when the provider presses Hide. The top banner on every page shows the same count and the next job. Company and franchise accounts get a sixth job, Invite your team.
       </p>
     </Card>
   );
@@ -210,7 +325,7 @@ function MoneyFlow() {
       <svg viewBox="0 0 900 336" className="w-full min-w-[640px]" role="img" aria-label="Who pays whom: the provider pays the platform a monthly plan after a seven day free trial; parents pay the provider directly by card to the provider's Stripe account, or by bank transfer, Tax-Free Childcare or vouchers into the provider's bank account">
         {box(30, 30, 190, C.billing, "Provider", "pays for the plan")}
         {box(680, 30, 190, C.checklist, "The platform", "never holds booking money")}
-        {arrow(228, 62, 672, 62, C.billing, "£29 a month + VAT, after a 7-day free trial", 48)}
+        {arrow(228, 62, 672, 62, C.billing, "from £29 a month + VAT, after a 7-day free trial", 48)}
 
         {box(30, 230, 190, C.venue, "Parents", "book and pay")}
         {box(340, 160, 230, C.golive, "Provider's own Stripe", "cards, Apple Pay, Google Pay")}
@@ -237,7 +352,7 @@ function PayMethods() {
   return (
     <div className="grid grid-cols-1 gap-3 min-[720px]:grid-cols-2">
       {col(C.golive, "Card payments", "Parents see the card form once the provider has finished card set-up. Apple Pay and Google Pay appear automatically on phones and browsers that support them.", ["Cards", "Apple Pay", "Google Pay"], "the provider's own Stripe account, then their bank")}
-      {col(C.block, "Bank and benefits", "Parents are shown the provider's bank details, and the provider marks the payment received. This is why bank details are compulsory.", ["Bank transfer", "Tax-Free Childcare", "Vouchers"], "the provider's bank account")}
+      {col(C.block, "Bank and benefits", "Parents are told how to pay in their booking email and in My bookings, quoting their booking reference. The bank details are never shown on a public pay link, and the provider marks the payment received. This is why bank details are compulsory. These options show when the provider has switched them on, per listing in the editor or by default under Setup, Payments.", ["Bank transfer", "Tax-Free Childcare", "Vouchers"], "the provider's bank account")}
     </div>
   );
 }
@@ -252,7 +367,7 @@ function PlanTimeline() {
         <rect x={x(0)} y="34" width={x(7) - x(0)} height="34" rx="8" fill={C.open} />
         <text x={(x(0) + x(7)) / 2} y="56" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">7-day free trial · no charge</text>
         <rect x={x(7) + 3} y="34" width={x(21) - x(7) - 3} height="34" rx="8" fill={C.billing} />
-        <text x={(x(7) + x(21)) / 2} y="56" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">Paid plan · £29 + VAT a month</text>
+        <text x={(x(7) + x(21)) / 2} y="56" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">Paid plan · from £29 + VAT a month</text>
         {[0, 7, 14, 21].map((d) => (
           <g key={d}>
             <line x1={x(d)} y1="72" x2={x(d)} y2="82" stroke="var(--ink-3)" />
@@ -277,11 +392,11 @@ function PlanTimeline() {
 /* ---------- 4. emails ---------- */
 
 const EMAILS: { when: string; what: string; skip: string; color: string }[] = [
-  { when: "Straight after sign-up", what: "Welcome and the first three jobs", skip: "Sent once", color: C.signup },
+  { when: "Straight after sign-up", what: "Welcome and the four first jobs", skip: "Sent once", color: C.signup },
   { when: "Day 1", what: "Build your first listing", skip: "Skipped if a listing exists", color: C.venue },
-  { when: "Day 3", what: "Your checklist, open steps only", skip: "Skipped if every step is done", color: C.listing },
-  { when: "Day 5", what: "You have not gone live yet", skip: "Skipped if live or trial started", color: C.golive },
-  { when: "3 days before the trial ends", what: "Trial ending, card will be charged", skip: "Skipped if cancelled", color: C.billing },
+  { when: "Day 3", what: "Your checklist, open steps only", skip: "Skipped if a listing exists and payment is set up", color: C.listing },
+  { when: "Day 5", what: "You are nearly live: only what is left", skip: "Skipped if a listing is live", color: C.golive },
+  { when: "3 days before the trial ends", what: "Trial ending, card will be charged", skip: "Only while a trial is running", color: C.billing },
   { when: "Each payment", what: "One receipt, in the provider's name", skip: "The card processor's own receipt is off", color: C.open },
 ];
 
@@ -345,7 +460,8 @@ function Page1() {
           { k: "What they see", v: "\"Get set up to take bookings\" with a progress bar and five numbered jobs. The next job has a blue outline and a button." },
           { k: "What to do", v: "Press the button on the highlighted job. Every job ticks itself when the real thing is saved, so there is nothing to tick by hand." },
           { k: "Stays with them", v: "A slim banner on every page shows the count and the next job, with a Continue button. It can be hidden for the day." },
-          { k: "Hides when", v: "A listing is published and a booking exists, or the provider presses Hide." },
+          { k: "Hides when", v: "A listing exists and a booking has come in, or the provider presses Hide." },
+          { k: "Companies and franchises", v: "They see a sixth job, Invite your team. Freelancers do not." },
         ]}
         shots={[{ src: "dashboard-0-of-5", alt: "Dashboard checklist showing 0 of 5 done", caption: "A brand-new provider: 0 of 5" }]} />
 
@@ -368,7 +484,7 @@ function Page1() {
           { k: "What to do", v: "Add a period (for example Full day, 9:00 to 15:30), add a pass (for example Day pass, 1 day), press Add to block on each, name the block and Move to Block Library. Set the prices with the pricing calculator." },
           { k: "What ticks it", v: "One block in the Block Library." },
           { k: "The green prompt", v: "\"Block created. Ready for the next step: Create and publish your first listing?\" or \"Not yet, I want to add more blocks\"." },
-          { k: "Common mistakes", v: "Leaving a block without prices: the listing then cannot be published." },
+          { k: "Common mistakes", v: "A block with no priced passes: the listing then cannot be published." },
         ]}
         shots={[
           { src: "blocks-empty", alt: "Blocks tab with periods, passes and blocks", caption: "Periods, then passes, then blocks" },
@@ -377,20 +493,25 @@ function Page1() {
 
       <Stage n="5" color={C.listing} title="Create and publish a listing" tag="Checklist job 3 · 13 steps"
         facts={[
-          { k: "What they see", v: "An empty Listings tab, then a 13-step guided editor with a progress bar. A box at the start lists what is needed before publishing." },
-          { k: "What to do", v: "Give the listing a title and photo, pick the venue and the block (step 8 attaches the block, which brings the passes and prices), set age range, capacity and policy. Publish is at step 13." },
+          { k: "What they see", v: "An empty Listings tab, then a 13-step guided editor with a progress bar. Step 1 opens with a box, \"What you need before you publish\", listing the venue and a block with priced passes." },
+          { k: "What to do", v: "Step 1 Basics: title and photo. Step 2 Details: the venue (and which payment methods this listing accepts). Step 7 When it runs: the dates. Step 8 Tickets & pricing: press Use this block, which brings its passes and prices. Everything else (capacity, content, safety, discounts, add-ons, staff) can be filled in now or later. Step 13 Policy & publish has the Publish button." },
+          { k: "What stops Publish", v: "The Publish button shows how many things are left, for example Publish (4). Step 13 opens with a box, \"Before this can be published\", listing each missing item with a link to its step. A title, a venue, the dates and a block with passes are required. Capacity is optional." },
           { k: "What ticks it", v: "A listing exists. It counts once saved, even as a draft, but parents only see it after Publish." },
           { k: "The green prompt", v: "Appears on the Listings tab when the listing job is done and shows the next job." },
-          { k: "Common mistakes", v: "Publishing with no block: the editor shows \"Pick a block so the listing has passes and prices\" and Publish stays disabled until it is fixed." },
+          { k: "Common mistakes", v: "Choosing no block: the editor says \"Pick a block so the listing has passes and prices\" and the link in that box jumps to step 8." },
         ]}
         shots={[
           { src: "listings-empty", alt: "Empty listings tab", caption: "New listing starts here" },
-          { src: "listing-wizard-step-1", alt: "Listing editor, step 1 of 13", caption: "Step 1 of 13 · basics" },
+          { src: "listing-wizard-step-1", alt: "Listing editor, step 1 of 13", caption: "Step 1 of 13 · basics and what is needed" },
+          { src: "listing-step-2-details", alt: "Listing editor, step 2: details and venue", caption: "Step 2 · pick the venue" },
+          { src: "listing-step-7-when-it-runs", alt: "Listing editor, step 7: when it runs", caption: "Step 7 · dates and days" },
+          { src: "listing-step-8-tickets-and-block", alt: "Listing editor, step 8: tickets and pricing with the block chosen", caption: "Step 8 · choose the block" },
+          { src: "listing-step-13-policy-and-publish", alt: "Listing editor, step 13: policy and publish", caption: "Step 13 · policy and Publish" },
         ]} />
 
       <Stage n="6" color={C.golive} title="Go live: three single steps" tag="New providers only"
         facts={[
-          { k: "When it appears", v: "When a new provider presses Publish on a listing for the first time. Providers who already have a plan and bank details go straight through." },
+          { k: "When it appears", v: "When a new provider presses Publish and the plan or bank details are not done yet. Once both are done, Publish goes straight through. Accounts that predate this flow, and franchise branches (which ride on head office's plan), are never held up." },
           { k: "Step 1 · free trial", v: "Add a card to start the 7-day free trial. It opens in a new tab and ticks itself when they return. Nothing is charged until the trial ends." },
           { k: "Step 2 · bank details (required)", v: "Bank name, sort code and account number. Bank transfers, Tax-Free Childcare and vouchers pay into this account and it is shown on invoices. Below it, card payments through Stripe are optional and recommended, and can be done later." },
           { k: "Step 3 · reply-to", v: "Where parents' replies go. It is filled in from their login email. They press Save, then Go live." },
@@ -419,17 +540,17 @@ function Page1() {
 
       <Stage n="8" color={C.cancel} title="Set your cancellation policy" tag="Checklist job 5"
         facts={[
-          { k: "What they see", v: "Setup, Cancellations & refunds, with a ready-made Standard policy: full refund a week ahead, half back at 48 hours, nothing after." },
+          { k: "What they see", v: "Setup, Cancellations & refunds, with four ready-made policies: Standard, Flexible, Strict and No refunds. Standard is the default and what a new listing starts on: full refund a week ahead, half back at 48 hours, nothing after." },
           { k: "What to do", v: "Edit the notice periods and percentages, rename it if they like, and press Done. The wording parents read writes itself from the rows." },
           { k: "What ticks it", v: "Pressing Set my policy marks it as reviewed, and saving a policy ticks it too. Keeping the standard policy is fine." },
-          { k: "Good to know", v: "The platform works out what is owed when someone cancels and shows it. The provider decides whether to send the refund." },
+          { k: "Good to know", v: "When a family cancels, the platform works out what they are owed from this policy and shows it. The provider always decides whether to send the refund, and the platform never moves the money." },
         ]}
         shots={[{ src: "cancellation-policy", alt: "Cancellations and refunds setup", caption: "The standard policy, ready to edit" }]} />
 
       <Stage n="9" color={C.open} title="Set up done: parents can book" tag="Checklist 5 of 5"
         facts={[
           { k: "What they see", v: "All five jobs ticked. The checklist and the top banner disappear after the first booking." },
-          { k: "What parents see", v: "The published listing on Browse and on the provider's own link. Cards show once Stripe is ready. Bank transfer, Tax-Free Childcare and vouchers show from day one." },
+          { k: "What parents see", v: "The published listing on Browse and on the provider's own link. The card option shows once Stripe is ready. Bank transfer, Tax-Free Childcare and vouchers show when the provider has switched them on, per listing in the editor or by default under Setup, Payments." },
           { k: "If something is open", v: "The checklist stays and the top banner keeps naming the next job." },
         ]}
         shots={[{ src: "dashboard-4-of-5", alt: "Dashboard checklist with four jobs done", caption: "Four of five done, one to go" }]} />
@@ -447,13 +568,13 @@ function Page1() {
 
       <Section>
         <H2>The plan: trial, charge and grace</H2>
-        <Lede>Nothing is charged for the first 7 days. After that the plan is charged monthly. A failed payment starts a 14-day grace period; after that the account becomes read-only, never deleted.</Lede>
+        <Lede>Nothing is charged for the first 7 days. After that the plan is charged monthly. A failed payment starts a 14-day grace period; after that the account becomes read-only, never deleted. If the plan is cancelled, or Stripe gives up collecting, the account locks and only the safety records stay open: registers, incidents, medication and child files.</Lede>
         <PlanTimeline />
       </Section>
 
       <Section>
         <H2>The emails a new provider gets</H2>
-        <Lede>Every nudge checks at send time and is skipped if the provider has already done the thing, so a reminder never arrives after the action it reminds about. Each has an unsubscribe link; billing and security emails are always sent.</Lede>
+        <Lede>The day 1, 3 and 5 emails go to freelancer and company owners in their first six days. Every one checks at send time and is skipped if the provider has already done the thing, so a reminder never arrives after the action it reminds about, and the series stops once a listing is live. Each has an unsubscribe link; billing emails are always sent.</Lede>
         <Card className="p-4"><EmailTimeline /></Card>
         <div className="mt-3 grid grid-cols-1 gap-3 min-[720px]:grid-cols-2">
           <Card className="p-3.5">
