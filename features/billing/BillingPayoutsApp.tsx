@@ -1,5 +1,6 @@
 "use client";
 
+import { StepDonePrompt } from "@/features/dashboard/StepDonePrompt";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { portalOf } from "@/lib/portal-href";
@@ -106,6 +107,7 @@ export function BillingPayoutsApp() {
       )}
       {tab === "plan" && !isFranchise ? <SubscriptionApp /> : (
         <>
+          <StepDonePrompt step="pay" />
           <BankDetailsCard />
           <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">
             Taking card payments takes about 10 minutes, so have your photo ID and bank details ready.{" "}

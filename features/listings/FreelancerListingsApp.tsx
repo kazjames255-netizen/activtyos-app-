@@ -1,5 +1,6 @@
 "use client";
 
+import { StepDonePrompt } from "@/features/dashboard/StepDonePrompt";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useT, useI18n, tNow } from "@/lib/i18n/provider";
 import { Rich } from "@/components/i18n/Rich";
@@ -490,6 +491,7 @@ export function FreelancerListingsApp() {
         </div>
       )}
 
+      {tab === "listings" && <StepDonePrompt step="listing" />}
       {tab === "listings" && (
         <ListingsTab
           listings={listings}
@@ -512,7 +514,8 @@ export function FreelancerListingsApp() {
           refresh={refresh}
         />
       )}
-      {tab === "blocks" && <BlocksApp embedded />}
+      {tab === "blocks" && <><StepDonePrompt step="block" /><BlocksApp embedded /></>}
+      {tab === "locations" && <StepDonePrompt step="venue" />}
       {tab === "locations" && <LocationsTab local={local} patch={patchLocal} usage={usage} onNewListing={startNew} />}
 
       {wizard && (

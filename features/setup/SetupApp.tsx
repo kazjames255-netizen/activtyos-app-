@@ -1,5 +1,6 @@
 "use client";
 
+import { StepDonePrompt } from "@/features/dashboard/StepDonePrompt";
 import { settingsOwner } from "@/lib/franchiseTerms";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
@@ -2299,6 +2300,7 @@ export function SetupApp() {
 
       {activeTab === "cancel" && (
         <>
+          <StepDonePrompt step="cancel" />
           <Section
             title={t("p8set.cnTitle")}
             lede={t("p8set.cnLede")}
