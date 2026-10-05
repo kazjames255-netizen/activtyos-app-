@@ -141,8 +141,8 @@ export async function staffHeadroom(tenantId: string): Promise<{ ok: boolean; re
   return {
     ok: false,
     reason: pending
-      ? `${cap} — you have ${used} and ${pending} invite${pending === 1 ? "" : "s"} still waiting to be accepted. Withdraw an unused invite in Team & invites, or upgrade your band in Money → Subscription.`
-      : `${cap} and you already have ${used} — upgrade your band in Money → Subscription to invite more.`,
+      ? `${cap} — you have ${used} and ${pending} invite${pending === 1 ? "" : "s"} still waiting to be accepted. Withdraw an unused invite in Team & invites, or upgrade your band in Billing & payouts.`
+      : `${cap} and you already have ${used} — upgrade your band in Billing & payouts to invite more.`,
   };
 }
 
@@ -299,7 +299,7 @@ function declineMessage(e: unknown): string {
     return `${base} Your bank wants to confirm it — try paying the invoice from the emailed link.`;
   }
   if (err?.type === "StripeInvalidRequestError" && /payment method|source/i.test(err.message ?? "")) {
-    return "There's no usable card on file — add one in Money → Subscription.";
+    return "There's no usable card on file — add one in Billing & payouts.";
   }
   return base;
 }

@@ -62,14 +62,14 @@ function Arrow({ down = true, label }: { down?: boolean; label?: string }) {
 
 // ── 1. journey ──────────────────────────────────────────────────────────────
 function Journey() {
-  const steps = ["Sign up", "Dashboard + checklist", "Build your first listing", "Go live pop-up: plan, how parents pay, reply address", "Parents book", "Connect Stripe to take cards"];
+  const steps = ["Sign up (no money questions)", "Add your venue", "Create a block", "Create and publish your first listing", "Go live pop-up: free trial card, bank details, reply-to email", "Optional: connect Stripe for cards", "Set your cancellation policy", "Parents book and pay"];
   return (
     <Frame title="Your journey" label={`Your journey in order: ${steps.join(", then ")}.`}>
       <ol className="m-0 list-none p-0">
         {steps.map((s, i) => (
           <li key={s} className="relative flex items-center gap-2 py-[3px]">
             {i < steps.length - 1 && <span aria-hidden className="absolute start-[9.5px] top-[23px] h-[calc(100%-14px)] w-[1.5px]" style={{ background: "var(--brand-line, var(--line))" }} />}
-            <Num n={i + 1} done={i === 3} />
+            <Num n={i + 1} done={i === 4} />
             <span className="min-w-0 text-[12px] font-semibold leading-tight" style={{ color: "var(--ink)" }}>{s}</span>
           </li>
         ))}
@@ -122,13 +122,13 @@ function MoneyFlows() {
 // ── 3. go-live ──────────────────────────────────────────────────────────────
 function GoLive() {
   const rows: { t: string; tag: string; sub: string }[] = [
-    { t: "Your plan", tag: "Required", sub: "Start the 7-day free trial." },
-    { t: "How parents pay", tag: "Choose at least one", sub: "Stripe cards, bank transfer, or I only take cash." },
+    { t: "Start your free trial", tag: "Required", sub: "Add a card. Nothing is charged for 7 days." },
+    { t: "Your bank details", tag: "Required", sub: "Bank transfer, Tax-Free Childcare and vouchers pay into it. Cards via Stripe are an optional extra." },
     { t: "Where replies go", tag: "Your contact address", sub: "Parent replies to your emails land here." },
   ];
   return (
     <Frame title="Before you go live"
-      label="Three things before you go live. One, your plan, required. Two, how parents pay: choose at least one of Stripe cards, bank transfer, or I only take cash. Three, where replies go.">
+      label="Three single steps before you go live. One, start your free trial, required. Two, your bank details, required; card payments via Stripe are optional. Three, where replies go.">
       <div className="flex flex-col gap-1.5">
         {rows.map((r, i) => (
           <div key={r.t} className="flex items-start gap-2 px-2 py-1.5" style={box}>

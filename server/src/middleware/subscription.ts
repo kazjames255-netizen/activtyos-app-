@@ -126,7 +126,7 @@ function refusal(mode: "readonly" | "locked", owner: boolean, status: string): s
   const still = "Registers, children's details, incidents, first aid and medication still work.";
   if (mode === "readonly") {
     return owner
-      ? `Your last ActivityOS payment failed over ${GRACE_DAYS} days ago, so your account is read-only until you update your card in Money → Subscription. ${still}`
+      ? `Your last ActivityOS payment failed over ${GRACE_DAYS} days ago, so your account is read-only until you update your card in Billing & payouts. ${still}`
       : `Your provider's ActivityOS payment is overdue, so this is read-only for now. ${still}`;
   }
   // "unpaid" locks like a cancellation but ISN'T one — the subscription is
@@ -134,11 +134,11 @@ function refusal(mode: "readonly" | "locked", owner: boolean, status: string): s
   // operator it has ended.
   if (status === "unpaid") {
     return owner
-      ? `Your ActivityOS payment has failed every retry, so the account is paused. Update your card in Money → Subscription and we'll settle the outstanding invoice straight away. ${still}`
+      ? `Your ActivityOS payment has failed every retry, so the account is paused. Update your card in Billing & payouts and we'll settle the outstanding invoice straight away. ${still}`
       : `Your provider's ActivityOS payment hasn't gone through, so this is paused for now. ${still}`;
   }
   return owner
-    ? `Your ActivityOS subscription has ended — reactivate it in Money → Subscription to continue. ${still}`
+    ? `Your ActivityOS subscription has ended — reactivate it in Billing & payouts to continue. ${still}`
     : `Your provider's ActivityOS subscription has ended. ${still}`;
 }
 

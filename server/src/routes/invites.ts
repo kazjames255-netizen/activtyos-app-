@@ -624,7 +624,7 @@ async function tellOwnerPlanFull(ref: FirebaseFirestore.DocumentReference, invit
     await notifyBilling(
       String(invite.tenantId),
       "Someone couldn't join — your plan is full",
-      `${who} tried to accept their staff invite, but all ${limit} staff place${limit === 1 ? "" : "s"} on your plan are taken. Upgrade your band in Money → Subscription, or switch off someone who has left in Team & invites — their invite link will then work.`,
+      `${who} tried to accept their staff invite, but all ${limit} staff place${limit === 1 ? "" : "s"} on your plan are taken. Upgrade your band in Billing & payouts, or switch off someone who has left in Team & invites — their invite link will then work.`,
     );
   } catch (e) {
     console.error("[invites] plan-full notice failed:", (e as Error).message);

@@ -97,11 +97,11 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
             await notifyBilling(
               tenantId,
               `Your ${BRAND} account is paused`,
-              "Every retry on your card has failed, so saving is paused — registers, incidents, first aid and medication still work. Update your card in Money → Subscription and we'll settle the outstanding invoice straight away.",
+              "Every retry on your card has failed, so saving is paused — registers, incidents, first aid and medication still work. Update your card in Billing & payouts and we'll settle the outstanding invoice straight away.",
             );
           }
           if (status === "canceled" && before?.status !== "canceled") {
-            await notifyBilling(tenantId, `Your ${BRAND} subscription has ended`, "Reactivate any time from Money → Subscription — your data is all still here.");
+            await notifyBilling(tenantId, `Your ${BRAND} subscription has ended`, "Reactivate any time from Billing & payouts — your data is all still here.");
           }
         }
         break;
@@ -113,7 +113,7 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
           await notifyBilling(
             tenantId,
             "Your free trial ends in 3 days",
-            "Your card will be charged when the trial ends. Cancel before then in Money → Subscription if it's not for you.",
+            "Your card will be charged when the trial ends. Cancel before then in Billing & payouts if it's not for you.",
           );
         }
         break;
@@ -142,7 +142,7 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
           await notifyBilling(
             tenantId,
             `Your ${BRAND} payment failed`,
-            `We couldn't charge your card. Update it in Money → Subscription within 14 days to keep full access — after that ${BRAND} goes read-only (registers, incidents, first aid and medication keep working).`,
+            `We couldn't charge your card. Update it in Billing & payouts within 14 days to keep full access — after that ${BRAND} goes read-only (registers, incidents, first aid and medication keep working).`,
           );
         }
         break;

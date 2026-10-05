@@ -565,7 +565,7 @@ subscription.post("/reactivate", async (req, res) => {
       clearSubscriptionCache(auth.tenantId);
       if (settled.attempted && !settled.paid) {
         res.status(402).json({
-          error: `${settled.error ?? "We couldn't take the outstanding payment."} Update your card in Money → Subscription and we'll try again straight away.`,
+          error: `${settled.error ?? "We couldn't take the outstanding payment."} Update your card in Billing & payouts and we'll try again straight away.`,
           code: "reactivate_payment_failed",
           status: settled.status,
         });
