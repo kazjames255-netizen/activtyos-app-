@@ -473,7 +473,7 @@ function personRuleProblem(next: unknown, stored: unknown): string | null {
   for (const r of (next as { id: string; kind: string; method: string; value: number }[] | undefined) ?? []) {
     if (r.kind !== "person" || r.method === "percent") continue;
     const old = have.get(r.id);
-    if (!old || old.method !== r.method || old.value !== r.value) return "A multi-person discount must be a percentage (a fixed £ amount per child can be beaten by splitting a week into single days).";
+    if (!old || old.method !== r.method || old.value !== r.value || (old as { kind?: string }).kind !== r.kind) return "A multi-person discount must be a percentage (a fixed £ amount per child can be beaten by splitting a week into single days).";
   }
   return null;
 }

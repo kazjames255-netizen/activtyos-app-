@@ -1662,7 +1662,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           <div key={i} className="flex items-baseline justify-between gap-3 text-[11.5px]">
             <span className="min-w-0" style={{ color: tk.muted }}>
               {l.kind && <b className="me-1.5" style={{ color: tk.ink }}>{DISCOUNT_KIND_LABEL[l.kind]}</b>}
-              {l.name}{l.terms && !l.name.includes(l.terms) && <span className="ms-1 opacity-70">({l.terms})</span>}
+              {l.kind && !l.custom ? (l.terms ? <span>({l.terms})</span> : null) : <>{l.name}{l.terms && !l.name.includes(l.terms) && <span className="ms-1 opacity-70">({l.terms})</span>}</>}
             </span>
             <b className="flex-none" style={{ color: tk.accent }}>−{money(l.amount)}</b>
           </div>
