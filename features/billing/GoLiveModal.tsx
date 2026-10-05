@@ -25,6 +25,8 @@ export function GoLiveModal({ onClose, onGoLive, busy }: { onClose: () => void; 
   const [showBank, setShowBank] = useState(false);
   const [reply, setReply] = useState("");
   const [replySaved, setReplySaved] = useState(false);
+  const [replyConfirmed, setReplyConfirmed] = useState(false);
+  const [step, setStep] = useState<number | null>(null);
   const base = `/${portal === "franchise" ? "company" : portal}`;
 
   const refresh = useCallback(() => { void fetchGoLive().then((x) => { if (x) { setS(x); setReply((r) => r || x.replyTo); } }); }, []);
@@ -46,12 +48,27 @@ export function GoLiveModal({ onClose, onGoLive, busy }: { onClose: () => void; 
   async function saveReply() {
     await patchSettings((st) => { st.billing = { ...((st.billing as Record<string, unknown>) ?? {}), email: reply.trim() }; });
     setReplySaved(true);
+    setReplyConfirmed(true);
   }
 
-  const tick = (ok: boolean) => (
-    <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full text-[12px] font-bold" style={ok ? { background: "#12805a", color: "#fff" } : { border: "2px solid var(--line)", color: "transparent" }}>✓</span>
-  );
+  const planDone = !!s?.planStarted;
+  const payDone = !!s?.payChosen;
+  const stepDone = [planDone, payDone, replyConfirmed];
+  // One step at a time: start on the first one not done yet; Back / Next move between them.
+  const firstOpen = stepDone.findIndex((d) => !d);
+  const cur = step ?? (firstOpen === -1 ? 2 : firstOpen);
   const ready = goLiveReady(s);
+  const dots = (
+    <div className="mt-2 flex items-center gap-1.5" aria-label={`Step ${cur + 1} of 3`}>
+      {[0, 1, 2].map((i) => <span key={i} className="h-1.5 flex-1 rounded-full" style={{ background: i <= cur ? "var(--brand,#2f4fa8)" : "var(--line)" }} />)}
+    </div>
+  );
+  const choice = (title: string, note: string, done: boolean, action: React.ReactNode) => (
+    <div className="flex items-center gap-3 rounded-xl border p-3" style={{ borderColor: done ? "#12805a" : "var(--line)", background: done ? "#eefaf2" : "transparent" }}>
+      <div className="min-w-0 flex-1"><div className="text-[14px] font-extrabold">{done ? "✓ " : ""}{title}</div><div className="text-[12.5px] text-[var(--ink-3)]">{note}</div></div>
+      <div className="flex-none">{action}</div>
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/55 p-3" role="dialog" aria-modal="true" aria-label="Before you go live">
@@ -59,52 +76,58 @@ export function GoLiveModal({ onClose, onGoLive, busy }: { onClose: () => void; 
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Before you go live</div>
-            <p className="mt-0.5 text-[12.5px] text-[var(--ink-3)]">Two quick things, so parents can book and pay you. Your listing stays saved while you do them.</p>
+            <p className="mt-0.5 text-[12.5px] text-[var(--ink-3)]">Step {cur + 1} of 3. Your listing stays saved while you do these.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="text-[20px] leading-none text-[var(--ink-3)]">×</button>
         </div>
+        {dots}
 
         {!s ? <p className="py-6 text-center text-[13px] text-[var(--ink-3)]">Checking…</p> : (
-          <>
-            <div className="mt-4 flex gap-3 rounded-xl border border-[var(--line)] p-3">
-              {tick(s.planStarted)}
-              <div className="min-w-0 flex-1">
-                <div className="text-[14px] font-extrabold">1 · Your plan <span className="ms-1 rounded-full bg-[var(--brand-soft,#e6ecff)] px-2 py-0.5 text-[11px] text-[var(--brand-ink,#1d3a8f)]">Required</span></div>
-                <p className="text-[12.5px] text-[var(--ink-3)]">{s.planStarted ? "Your free trial is running." : "Add a card to start your 7-day free trial. You are not charged until it ends, and you can cancel any time."}</p>
-                {!s.planStarted && <a href={`${base}/billing`} target="_blank" rel="noreferrer"><Button variant="primary" className="mt-2">Start my free trial</Button></a>}
-              </div>
-            </div>
-
-            <div className="mt-3 flex gap-3 rounded-xl border border-[var(--line)] p-3">
-              {tick(s.payChosen)}
-              <div className="min-w-0 flex-1">
-                <div className="text-[14px] font-extrabold">2 · How will parents pay you? <span className="ms-1 rounded-full bg-[var(--brand-soft,#e6ecff)] px-2 py-0.5 text-[11px] text-[var(--brand-ink,#1d3a8f)]">Choose at least one</span></div>
-                <div className="mt-2 flex flex-col gap-2 text-[13px]">
-                  <div className="flex items-center justify-between gap-2"><span>{s.pay.stripe ? "✓ " : ""}Cards, Apple Pay and Google Pay</span>
-                    {s.pay.stripe ? <span className="text-[12px] font-bold text-[#12805a]">Ready</span> : <a href={`${base}/billing?tab=paid`} target="_blank" rel="noreferrer"><Button sm>Connect Stripe</Button></a>}</div>
-                  <div className="flex items-center justify-between gap-2"><span>{s.pay.bank ? "✓ " : ""}Bank transfer</span>
-                    {s.pay.bank ? <span className="text-[12px] font-bold text-[#12805a]">Bank details added</span> : <Button sm onClick={() => setShowBank((v) => !v)}>{showBank ? "Hide" : "Add bank details"}</Button>}</div>
+          <div className="mt-4">
+            {cur === 0 && (
+              <>
+                <div className="text-[16px] font-extrabold">Start your free trial</div>
+                <p className="mt-1 text-[13px] text-[var(--ink-2)]">{planDone ? "Your free trial is running." : "Add a card to start your 7-day free trial. You are not charged until it ends, and you can cancel any time."}</p>
+                {!planDone && <a href={`${base}/billing`} target="_blank" rel="noreferrer"><Button variant="primary" className="mt-3">Start my free trial</Button></a>}
+                {!planDone && <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">It opens in a new tab. Come back here when you are done and this ticks itself.</p>}
+              </>
+            )}
+            {cur === 1 && (
+              <>
+                <div className="text-[16px] font-extrabold">How will parents pay you?</div>
+                <p className="mb-3 mt-1 text-[13px] text-[var(--ink-2)]">Pick one to start. You can add the others later.</p>
+                <div className="flex flex-col gap-2">
+                  {choice("Take card payments", "Cards, Apple Pay and Google Pay, paid straight to you.", s.pay.stripe,
+                    s.pay.stripe ? <span className="text-[12px] font-bold text-[#12805a]">Ready</span> : <a href={`${base}/billing?tab=paid`} target="_blank" rel="noreferrer"><Button sm variant="primary">Connect Stripe</Button></a>)}
+                  {choice("Bank transfer", "Parents pay into your bank account.", s.pay.bank,
+                    s.pay.bank ? <span className="text-[12px] font-bold text-[#12805a]">Added</span> : <Button sm onClick={() => setShowBank((v) => !v)}>{showBank ? "Hide" : "Add bank details"}</Button>)}
                   {showBank && !s.pay.bank && <BankDetailsCard onSaved={() => { setShowBank(false); refresh(); }} />}
-                  <label className="flex cursor-pointer items-center gap-2"><input type="checkbox" checked={s.pay.cashOnly} onChange={(e) => void setCashOnly(e.target.checked)} className="h-4 w-4" /> I only take cash</label>
+                  {choice("Cash only", "You take cash and tick off payments yourself.", s.pay.cashOnly,
+                    <Button sm onClick={() => void setCashOnly(!s.pay.cashOnly)}>{s.pay.cashOnly ? "Undo" : "I only take cash"}</Button>)}
                 </div>
-              </div>
-            </div>
-
-            <div className="mt-3 flex gap-3 rounded-xl border border-[var(--line)] p-3">
-              {tick(replySaved || !!s.replyTo)}
-              <div className="min-w-0 flex-1">
-                <div className="text-[14px] font-extrabold">3 · Where should parents' replies go?</div>
-                <p className="text-[12.5px] text-[var(--ink-3)]">When a parent replies to one of your emails, it goes here. Make sure it is an inbox you read.</p>
-                <div className="mt-1.5 flex gap-2"><Input type="email" value={reply} onChange={(e) => { setReply(e.target.value); setReplySaved(false); }} placeholder="you@example.com" className="min-w-0 flex-1" aria-label="Reply-to email" />
+              </>
+            )}
+            {cur === 2 && (
+              <>
+                <div className="text-[16px] font-extrabold">Where should parents' replies go?</div>
+                <p className="mt-1 text-[13px] text-[var(--ink-2)]">When a parent replies to one of your emails, it goes here. Make sure it is an inbox you read.</p>
+                <div className="mt-2 flex gap-2"><Input type="email" value={reply} onChange={(e) => { setReply(e.target.value); setReplySaved(false); setReplyConfirmed(false); }} placeholder="you@example.com" className="min-w-0 flex-1" aria-label="Reply-to email" />
                   <Button sm onClick={() => void saveReply()} disabled={!reply.includes("@")}>{replySaved ? "Saved" : "Save"}</Button></div>
-              </div>
-            </div>
-          </>
+              </>
+            )}
+          </div>
         )}
 
-        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-          <Button onClick={onClose}>Not yet</Button>
-          <Button variant="primary" disabled={!ready || !!busy} onClick={onGoLive} className="!bg-[#e9a915] !border-[#e9a915] !text-[#2a1d00]">{busy ? "Going live…" : "Go live"}</Button>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+          <div>{cur > 0 ? <Button onClick={() => setStep(cur - 1)}>Back</Button> : <Button onClick={onClose}>Not yet</Button>}</div>
+          <div className="flex gap-2">
+            {cur > 0 && <Button onClick={onClose}>Not yet</Button>}
+            {cur < 2 ? (
+              <Button variant="primary" disabled={!stepDone[cur]} onClick={() => setStep(cur + 1)}>Next</Button>
+            ) : (
+              <Button variant="primary" disabled={!ready || !reply.includes("@") || !!busy} onClick={() => { void saveReply().then(onGoLive); }} className="!bg-[#e9a915] !border-[#e9a915] !text-[#2a1d00]">{busy ? "Going live…" : "Go live"}</Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
