@@ -4,442 +4,468 @@ import { useState, type ReactNode, type CSSProperties } from "react";
 import { Card } from "@/components/ui";
 
 /**
- * platform/manual — the HQ manual. Content-array driven: add a page by
- * pushing another entry onto MANUAL_PAGES. English only (internal team doc).
- * Colours come from the app's CSS variables; "soft" tints are mixed from the
- * surface so they read in light and dark.
+ * platform/manual — the HQ manual. Content-array driven: add a page by pushing another entry onto MANUAL_PAGES.
+ * English only (internal team doc). Colours come from the app's CSS variables; tints are mixed from the surface so
+ * they read in light and dark. Screenshots live in /public/manual/onboarding (taken from the real app, brand-neutral).
+ * The page never names the product: it says "the platform".
  */
 
-const ACC = "var(--brand-2)";
-const soft = (c: string) => `color-mix(in srgb, ${c} 15%, var(--surface))`;
-const GOOD = "var(--green)";
-const WARN = "#c47a00";
-
 const display: CSSProperties = { fontFamily: "var(--ff-display)" };
+const tint = (c: string, pct = 14) => `color-mix(in srgb, ${c} ${pct}%, var(--surface))`;
 
-type PillKind = "req" | "opt" | "new";
-const PILL: Record<PillKind, { bg: string; fg: string }> = {
-  req: { bg: soft(ACC), fg: ACC },
-  opt: { bg: soft(GOOD), fg: GOOD },
-  new: { bg: soft(WARN), fg: WARN },
+// One colour per stage, used everywhere that stage appears (diagram, section band, number badge).
+const C = {
+  signup: "#2f6bd8",
+  checklist: "#1d3a8f",
+  venue: "#0e9f8e",
+  block: "#12805a",
+  listing: "#c47a00",
+  golive: "#e0357a",
+  billing: "#6d4bd8",
+  cancel: "#e0702a",
+  open: "#0f7a43",
 };
-function Pill({ kind, children }: { kind: PillKind; children: ReactNode }) {
-  return (
-    <span className="mr-1.5 inline-block rounded-full px-2.5 py-0.5 text-[12px] font-bold" style={{ background: PILL[kind].bg, color: PILL[kind].fg }}>
-      {children}
-    </span>
-  );
-}
 
-function Tag({ children }: { children: ReactNode }) {
+const IMG = "/manual/onboarding";
+
+/* ---------- small building blocks ---------- */
+
+function Pill({ color, children }: { color: string; children: ReactNode }) {
   return (
-    <span className="inline-block rounded-full px-2.5 py-[3px] text-[11.5px] font-bold uppercase tracking-wider" style={{ background: soft(WARN), color: WARN }}>
+    <span className="inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-bold" style={{ background: tint(color, 16), color }}>
       {children}
     </span>
   );
 }
 
 function H2({ children }: { children: ReactNode }) {
-  return <h2 className="mb-1 mt-2 text-[22px] font-extrabold text-[var(--ink)] sm:text-[26px]" style={display}>{children}</h2>;
+  return <h2 className="mb-1 mt-0 text-[24px] font-extrabold leading-tight text-[var(--ink)] sm:text-[28px]" style={display}>{children}</h2>;
 }
 function Lede({ children }: { children: ReactNode }) {
-  return <p className="mb-1.5 mt-0 max-w-[68ch] text-[14.5px] leading-relaxed text-[var(--ink-2)]">{children}</p>;
+  return <p className="mb-3 mt-1 max-w-[70ch] text-[14.5px] leading-relaxed text-[var(--ink-2)]">{children}</p>;
 }
-function Rule() {
-  return <hr className="my-9 border-0 border-t border-[var(--line)]" />;
-}
-function Muted({ children }: { children: ReactNode }) {
-  return <p className="mb-0 mt-2 text-[13px] leading-relaxed text-[var(--ink-2)]">{children}</p>;
+function Section({ children }: { children: ReactNode }) {
+  return <section className="mt-12">{children}</section>;
 }
 
-function Branch({ title, children }: { title: string; children: ReactNode }) {
+/** A real screenshot in a browser-style frame. Tap to open full size. */
+function Shot({ src, alt, caption, color }: { src: string; alt: string; caption?: string; color: string }) {
   return (
-    <Card className="p-3.5">
-      <h3 className="mb-1.5 mt-0 text-[16.5px] font-extrabold text-[var(--ink)]" style={display}>{title}</h3>
-      <div className="text-[14px] leading-relaxed text-[var(--ink-2)]">{children}</div>
+    <figure className="m-0 min-w-0">
+      <a href={`${IMG}/${src}.jpg`} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-[14px] border-2 bg-[var(--surface)] shadow-[var(--shadow-sm)]" style={{ borderColor: tint(color, 45) }}>
+        <div className="flex items-center gap-[5px] px-2.5 py-2" style={{ background: tint(color, 18) }} aria-hidden="true">
+          {[0, 1, 2].map((i) => <i key={i} className="block h-[9px] w-[9px] rounded-full" style={{ background: color, opacity: 0.55 }} />)}
+        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`${IMG}/${src}.jpg`} alt={alt} loading="lazy" className="block h-auto w-full" />
+      </a>
+      {caption && <figcaption className="mt-1.5 text-[12.5px] leading-snug text-[var(--ink-3)]">{caption}</figcaption>}
+    </figure>
+  );
+}
+
+/** What the provider sees / does / what ticks it / the green prompt / mistakes — the same shape for every stage. */
+function Facts({ color, rows }: { color: string; rows: { k: string; v: ReactNode }[] }) {
+  return (
+    <dl className="m-0 grid content-start gap-2">
+      {rows.map((r) => (
+        <div key={r.k} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5" style={{ borderLeft: `4px solid ${color}` }}>
+          <dt className="text-[11.5px] font-extrabold uppercase tracking-wider" style={{ color }}>{r.k}</dt>
+          <dd className="m-0 mt-0.5 text-[14px] leading-relaxed text-[var(--ink-2)]">{r.v}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** One stage of onboarding: coloured band with number + title, facts on the left, screenshots on the right. */
+function Stage({ n, color, title, tag, facts, shots }: {
+  n: string; color: string; title: string; tag: string;
+  facts: { k: string; v: ReactNode }[];
+  shots: { src: string; alt: string; caption?: string }[];
+}) {
+  return (
+    <Section>
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl px-4 py-3.5 text-white" style={{ background: `linear-gradient(120deg, ${color}, color-mix(in srgb, ${color} 62%, #0b1f5c))` }}>
+        <span className="grid h-10 w-10 flex-none place-items-center rounded-full bg-white text-[18px] font-extrabold" style={{ color }}>{n}</span>
+        <div className="min-w-0 flex-1">
+          <h2 className="m-0 text-[22px] font-extrabold leading-tight sm:text-[25px]" style={display}>{title}</h2>
+        </div>
+        <span className="rounded-full bg-white/20 px-3 py-1 text-[12px] font-bold">{tag}</span>
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-5 min-[900px]:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+        <Facts color={color} rows={facts} />
+        <div className={`grid min-w-0 content-start gap-3 ${shots.length >= 3 ? "min-[560px]:grid-cols-2" : shots.length === 2 ? "min-[560px]:grid-cols-2 min-[900px]:grid-cols-1" : ""}`}>
+          {shots.map((s) => <Shot key={s.src} src={s.src} alt={s.alt} caption={s.caption} color={color} />)}
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+/* ---------- 1. the journey diagram ---------- */
+
+const JOURNEY: { n: string; label: string; sub: string; color: string }[] = [
+  { n: "1", label: "Sign up", sub: "5 short steps", color: C.signup },
+  { n: "2", label: "Checklist", sub: "5 jobs, in order", color: C.checklist },
+  { n: "3", label: "Add venue", sub: "checklist 1", color: C.venue },
+  { n: "4", label: "Create block", sub: "checklist 2", color: C.block },
+  { n: "5", label: "Create listing", sub: "checklist 3", color: C.listing },
+  { n: "6", label: "Go live", sub: "3-step pop-up", color: C.golive },
+  { n: "7", label: "Billing", sub: "checklist 4", color: C.billing },
+  { n: "8", label: "Cancellations", sub: "checklist 5", color: C.cancel },
+  { n: "9", label: "Parents book", sub: "set up done", color: C.open },
+];
+
+function Journey() {
+  const w = 940, step = w / JOURNEY.length;
+  return (
+    <>
+      {/* wide screens: one road with nine stops */}
+      <svg viewBox={`0 0 ${w} 150`} className="hidden w-full min-[760px]:block" role="img" aria-label="Journey from sign-up to parents booking: sign up, dashboard checklist, add venue, create block, create listing, go live pop-up, billing, cancellation policy, parents book">
+        <defs>
+          <linearGradient id="road" x1="0" x2="1">
+            {JOURNEY.map((j, i) => <stop key={j.n} offset={`${(i / (JOURNEY.length - 1)) * 100}%`} stopColor={j.color} />)}
+          </linearGradient>
+        </defs>
+        <rect x={step / 2} y="44" width={w - step} height="10" rx="5" fill="url(#road)" />
+        {JOURNEY.map((j, i) => {
+          const cx = step / 2 + i * step;
+          return (
+            <g key={j.n}>
+              <circle cx={cx} cy="49" r="24" fill={j.color} stroke="var(--surface)" strokeWidth="4" />
+              <text x={cx} y="56" textAnchor="middle" fontSize="20" fontWeight="800" fill="#fff">{j.n}</text>
+              <text x={cx} y="98" textAnchor="middle" fontSize="13.5" fontWeight="800" fill="var(--ink)">{j.label}</text>
+              <text x={cx} y="116" textAnchor="middle" fontSize="11.5" fill="var(--ink-3)">{j.sub}</text>
+            </g>
+          );
+        })}
+      </svg>
+      {/* phones: the same road, standing up */}
+      <ol className="m-0 list-none p-0 min-[760px]:hidden">
+        {JOURNEY.map((j, i) => (
+          <li key={j.n} className="relative flex items-center gap-3 pb-4 last:pb-0">
+            {i < JOURNEY.length - 1 && <span className="absolute left-[19px] top-10 h-[calc(100%-26px)] w-[3px] rounded" style={{ background: `linear-gradient(${j.color}, ${JOURNEY[i + 1].color})` }} />}
+            <span className="relative grid h-10 w-10 flex-none place-items-center rounded-full text-[17px] font-extrabold text-white" style={{ background: j.color }}>{j.n}</span>
+            <span><b className="block text-[14.5px] text-[var(--ink)]">{j.label}</b><span className="text-[12.5px] text-[var(--ink-3)]">{j.sub}</span></span>
+          </li>
+        ))}
+      </ol>
+    </>
+  );
+}
+
+/* ---------- 2. set-up progress graph ---------- */
+
+const CHECKS = [
+  { label: "Add venue", color: C.venue, ticks: "a venue is saved" },
+  { label: "Create block", color: C.block, ticks: "a block is saved" },
+  { label: "Create listing", color: C.listing, ticks: "a listing exists" },
+  { label: "Get paid", color: C.billing, ticks: "bank details are saved" },
+  { label: "Cancellations", color: C.cancel, ticks: "a cancellation policy is saved" },
+];
+
+function ProgressGraph() {
+  return (
+    <Card className="p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <b className="text-[15px] text-[var(--ink)]">The checklist bar fills one fifth at a time</b>
+        <span className="text-[12.5px] text-[var(--ink-3)]">0 of 5 &rarr; 5 of 5</span>
+      </div>
+      <div className="mt-3 grid grid-cols-5 gap-1.5" role="img" aria-label="Progress bar split into five coloured segments: venue, block, listing, get paid, cancellations">
+        {CHECKS.map((c, i) => (
+          <div key={c.label} className="min-w-0">
+            <div className="h-5 rounded-md" style={{ background: c.color, opacity: 0.35 + i * 0.13 }} />
+            <div className="mt-1 text-[11.5px] font-extrabold leading-tight" style={{ color: c.color }}>{i + 1}. {c.label}</div>
+            <div className="hidden text-[11.5px] leading-snug text-[var(--ink-3)] min-[560px]:block">ticks when {c.ticks}</div>
+          </div>
+        ))}
+      </div>
+      <p className="m-0 mt-3 text-[13px] leading-relaxed text-[var(--ink-2)]">
+        The checklist hides for good once a listing is published <b>and</b> a booking exists, or when the provider presses Hide. The top banner on every page shows the same count and the next job.
+      </p>
     </Card>
   );
 }
-function Bullets({ items }: { items: string[] }) {
-  return <ul className="m-0 list-disc space-y-1 pl-[18px]">{items.map((t) => <li key={t}>{t}</li>)}</ul>;
-}
-function Two({ children }: { children: ReactNode }) {
-  return <div className="mt-2 grid grid-cols-1 gap-4 min-[720px]:grid-cols-2">{children}</div>;
-}
 
-function Table({ head, rows }: { head: string[]; rows: string[][] }) {
-  return (
-    <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)]" tabIndex={0}>
-      <table className="w-full min-w-[560px] border-collapse text-[13.5px]">
-        <thead>
-          <tr>
-            {head.map((h) => (
-              <th key={h} className="border-b border-[var(--line)] px-3 py-2.5 text-left align-top text-[11.5px] font-bold uppercase tracking-wider text-[var(--ink-3)]">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i}>
-              {r.map((c, j) => (
-                <td key={j} className={`px-3 py-2.5 align-top ${i < rows.length - 1 ? "border-b border-[var(--line)]" : ""} ${j === 0 ? "font-semibold text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>{c}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+/* ---------- 3. money pictures ---------- */
 
-/* ---------- screen sketches ---------- */
+function MoneyFlow() {
+  const box = (x: number, y: number, w: number, color: string, t1: string, t2: string) => (
+    <g>
+      <rect x={x} y={y} width={w} height="64" rx="14" fill={tint(color, 18)} stroke={color} strokeWidth="2" />
+      <text x={x + w / 2} y={y + 28} textAnchor="middle" fontSize="15" fontWeight="800" fill="var(--ink)">{t1}</text>
+      <text x={x + w / 2} y={y + 48} textAnchor="middle" fontSize="11.5" fill="var(--ink-3)">{t2}</text>
+    </g>
+  );
+  const arrow = (x1: number, y1: number, x2: number, y2: number, color: string, label: string, ly: number) => (
+    <g>
+      <defs><marker id={`ah-${color.slice(1)}`} markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9z" fill={color} /></marker></defs>
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="3.5" strokeLinecap="round" markerEnd={`url(#ah-${color.slice(1)})`} />
+      <text x={(x1 + x2) / 2} y={ly} textAnchor="middle" fontSize="12" fontWeight="700" fill={color}>{label}</text>
+    </g>
+  );
+  return (
+    <Card className="overflow-x-auto p-3 sm:p-4">
+      <svg viewBox="0 0 900 336" className="w-full min-w-[640px]" role="img" aria-label="Who pays whom: the provider pays the platform a monthly plan after a seven day free trial; parents pay the provider directly by card to the provider's Stripe account, or by bank transfer, Tax-Free Childcare or vouchers into the provider's bank account">
+        {box(30, 30, 190, C.billing, "Provider", "pays for the plan")}
+        {box(680, 30, 190, C.checklist, "The platform", "never holds booking money")}
+        {arrow(228, 62, 672, 62, C.billing, "£29 a month + VAT, after a 7-day free trial", 48)}
 
-function Screen({ children, side }: { children: ReactNode; side?: ReactNode }) {
-  return (
-    <div className="overflow-hidden rounded-[14px] border-[1.5px] border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)]" aria-hidden="true">
-      <div className="flex gap-[5px] border-b border-[var(--line)] bg-[var(--panel)] px-2.5 py-2">
-        {[0, 1, 2].map((i) => <i key={i} className="block h-[9px] w-[9px] rounded-full bg-[var(--line)]" />)}
-      </div>
-      {side ? (
-        <div className="grid min-h-[200px] grid-cols-[96px_1fr]">
-          {side}
-          <div className="p-3.5 text-[13px] text-[var(--ink)]">{children}</div>
-        </div>
-      ) : (
-        <div className="p-3.5 text-[13px] text-[var(--ink)]">{children}</div>
-      )}
-    </div>
-  );
-}
-function SH({ children, mt }: { children: ReactNode; mt?: boolean }) {
-  return <h3 className={`mb-2 text-[16px] font-extrabold text-[var(--ink)] ${mt ? "mt-3" : "mt-0"}`} style={display}>{children}</h3>;
-}
-function Field({ children, right, mt }: { children: ReactNode; right?: ReactNode; mt?: boolean }) {
-  return (
-    <div className={`my-1.5 flex min-h-[28px] items-center justify-between rounded-[7px] border border-[var(--line)] px-[9px] py-1 text-[12.5px] text-[var(--ink-3)] ${mt ? "mt-2" : ""}`}>
-      <span>{children}</span>{right}
-    </div>
-  );
-}
-function Btn({ kind = "solid", children, style }: { kind?: "solid" | "ghost" | "big"; children: ReactNode; style?: CSSProperties }) {
-  const base = "inline-block whitespace-nowrap rounded-full font-bold";
-  if (kind === "ghost") return <span className={`${base} border-[1.5px] px-4 py-1.5 text-[12.5px]`} style={{ borderColor: ACC, color: ACC, ...style }}>{children}</span>;
-  if (kind === "big") return <span className={`${base} px-6 py-[11px] text-[15px]`} style={{ background: "var(--gold)", color: "#2a1d00", boxShadow: "0 8px 20px -10px rgba(233,169,21,.9)", ...style }}>{children}</span>;
-  return <span className={`${base} px-4 py-1.5 text-[12.5px]`} style={{ background: ACC, color: "#fff", ...style }}>{children}</span>;
-}
-function Check({ done, children, last }: { done?: boolean; children: ReactNode; last?: boolean }) {
-  return (
-    <div className={`flex items-center gap-2 py-1.5 text-[12.5px] ${last ? "" : "border-b border-[var(--line)]"}`}>
-      <span className="h-[15px] w-[15px] flex-none rounded-[4px] border-[1.5px]" style={done ? { background: GOOD, borderColor: GOOD } : { borderColor: "var(--ink-3)" }} />
-      {children}
-    </div>
-  );
-}
-function Panel2({ children }: { children: ReactNode }) {
-  return <div className="mt-2 rounded-[10px] border-[1.5px] border-dashed border-[var(--line)] px-[11px] py-[9px]">{children}</div>;
-}
-function Chip({ on, children }: { on?: boolean; children: ReactNode }) {
-  return (
-    <div className="min-w-[88px] flex-1 rounded-[10px] border-[1.5px] px-2.5 py-2 text-[12.5px] font-bold" style={on ? { borderColor: ACC, background: soft(ACC) } : { borderColor: "var(--line)" }}>{children}</div>
+        {box(30, 230, 190, C.venue, "Parents", "book and pay")}
+        {box(340, 160, 230, C.golive, "Provider's own Stripe", "cards, Apple Pay, Google Pay")}
+        {box(340, 262, 230, C.block, "Provider's bank account", "bank transfer, Tax-Free Childcare, vouchers")}
+        {arrow(228, 250, 332, 200, C.golive, "card", 212)}
+        {arrow(228, 270, 332, 292, C.block, "bank / benefits", 322)}
+        <text x="745" y="205" textAnchor="middle" fontSize="12.5" fontWeight="800" fill="var(--ink)">No cut of bookings</text>
+        <text x="745" y="224" textAnchor="middle" fontSize="12" fill="var(--ink-3)">The provider pays only</text>
+        <text x="745" y="241" textAnchor="middle" fontSize="12" fill="var(--ink-3)">Stripe&apos;s own card fees</text>
+      </svg>
+    </Card>
   );
 }
 
-function Step({ n, title, flip, pill, children, screen }: { n: number; title: string; flip?: boolean; pill?: ReactNode; children: ReactNode; screen: ReactNode }) {
-  const note = (
-    <div className={flip ? "min-[720px]:order-2" : ""}>
-      <div className="mb-1.5 grid h-[30px] w-[30px] place-items-center rounded-full text-[14px] font-extrabold" style={{ background: ACC, color: "#fff" }}>{n}</div>
-      <h2 className="mb-1 mt-0 text-[21px] font-extrabold text-[var(--ink)]" style={display}>{title}</h2>
-      <div className="flex flex-col gap-[.6em] text-[14.5px] leading-relaxed text-[var(--ink-2)]">{children}</div>
-      {pill && <div className="mt-2">{pill}</div>}
+function PayMethods() {
+  const col = (color: string, title: string, pay: string, items: string[], dest: string) => (
+    <div className="rounded-2xl border-2 p-4" style={{ borderColor: tint(color, 50), background: tint(color, 7) }}>
+      <div className="text-[17px] font-extrabold text-[var(--ink)]" style={display}>{title}</div>
+      <div className="mt-2 flex flex-wrap gap-1.5">{items.map((i) => <Pill key={i} color={color}>{i}</Pill>)}</div>
+      <p className="m-0 mt-3 text-[14px] leading-relaxed text-[var(--ink-2)]">{pay}</p>
+      <p className="m-0 mt-2 text-[12.5px] font-bold" style={{ color }}>Lands in: {dest}</p>
     </div>
   );
   return (
-    <div className="mt-2 grid grid-cols-1 items-center gap-[22px] min-[720px]:grid-cols-2">
-      {note}
-      <div className={flip ? "min-[720px]:order-1" : ""}>{screen}</div>
-    </div>
-  );
-}
-function Arrow() {
-  return (
-    <div className="my-3.5 flex justify-center" style={{ color: ACC }} aria-hidden="true">
-      <svg viewBox="0 0 26 34" width="26" height="34" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2v26M5 21l8 9 8-9" /></svg>
+    <div className="grid grid-cols-1 gap-3 min-[720px]:grid-cols-2">
+      {col(C.golive, "Card payments", "Parents see the card form once the provider has finished card set-up. Apple Pay and Google Pay appear automatically on phones and browsers that support them.", ["Cards", "Apple Pay", "Google Pay"], "the provider's own Stripe account, then their bank")}
+      {col(C.block, "Bank and benefits", "Parents are shown the provider's bank details, and the provider marks the payment received. This is why bank details are compulsory.", ["Bank transfer", "Tax-Free Childcare", "Vouchers"], "the provider's bank account")}
     </div>
   );
 }
 
-function Phone({ children }: { children: ReactNode }) {
+/** Trial and billing timeline: days 0 to 21, then the failed-payment path underneath. */
+function PlanTimeline() {
+  const x = (d: number) => 50 + d * 30; // day -> px
   return (
-    <div className="mx-auto w-[min(210px,100%)] overflow-hidden rounded-[26px] border-[5px] border-[var(--ink)] bg-[var(--surface)]" aria-hidden="true">
-      <div className="flex gap-[5px] border-b border-[var(--line)] bg-[var(--panel)] px-2.5 py-2">
-        {[0, 1, 2].map((i) => <i key={i} className="block h-[9px] w-[9px] rounded-full bg-[var(--line)]" />)}
-      </div>
-      <div className="p-3 text-[13px] text-[var(--ink)]">{children}</div>
-    </div>
-  );
-}
-function Pay({ off, a, b }: { off?: boolean; a: string; b: string }) {
-  return (
-    <div className={`my-[5px] flex justify-between rounded-lg border border-[var(--line)] px-[9px] py-[7px] text-[12px] font-bold ${off ? "line-through opacity-45" : ""}`}>
-      <span>{a}</span><span>{b}</span>
-    </div>
-  );
-}
+    <Card className="overflow-x-auto p-3 sm:p-4">
+      <svg viewBox="0 0 880 250" className="w-full min-w-[640px]" role="img" aria-label="Plan timeline. Days 0 to 7 are the free trial, with no charge. On day 7 the first monthly charge is taken. If a payment fails there is a 14 day grace period, then the account becomes read-only while data and safety records are kept">
+        <text x="50" y="22" fontSize="13" fontWeight="800" fill="var(--ink)">A normal month</text>
+        <rect x={x(0)} y="34" width={x(7) - x(0)} height="34" rx="8" fill={C.open} />
+        <text x={(x(0) + x(7)) / 2} y="56" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">7-day free trial · no charge</text>
+        <rect x={x(7) + 3} y="34" width={x(21) - x(7) - 3} height="34" rx="8" fill={C.billing} />
+        <text x={(x(7) + x(21)) / 2} y="56" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">Paid plan · £29 + VAT a month</text>
+        {[0, 7, 14, 21].map((d) => (
+          <g key={d}>
+            <line x1={x(d)} y1="72" x2={x(d)} y2="82" stroke="var(--ink-3)" />
+            <text x={x(d)} y="97" textAnchor="middle" fontSize="12" fill="var(--ink-3)">{d === 0 ? "Go live" : `Day ${d}`}</text>
+          </g>
+        ))}
+        <text x={x(7)} y="115" textAnchor="middle" fontSize="12" fontWeight="800" fill={C.billing}>first charge</text>
 
-/* ---------- money timeline (inline SVG-free CSS flow) ---------- */
-
-function Timeline({ items }: { items: { t: string; d: string; alt?: boolean }[] }) {
-  return (
-    <div className="mt-4 flex overflow-x-auto pb-1.5" tabIndex={0}>
-      {items.map((it) => {
-        const c = it.alt ? "var(--gold)" : ACC;
-        return (
-          <div key={it.t} className="relative flex-[1_0_150px] border-t-[3px] pr-2.5 pt-2.5" style={{ borderTopColor: c }}>
-            <span className="absolute -top-2 left-0 h-[13px] w-[13px] rounded-full" style={{ background: c }} />
-            <b className="block text-[13px] text-[var(--ink)]">{it.t}</b>
-            <span className="text-[12.5px] text-[var(--ink-2)]">{it.d}</span>
-          </div>
-        );
-      })}
-    </div>
+        <text x="50" y="150" fontSize="13" fontWeight="800" fill="var(--ink)">If a payment fails</text>
+        <rect x={x(7)} y="162" width={x(21) - x(7)} height="34" rx="8" fill={C.cancel} />
+        <text x={(x(7) + x(21)) / 2} y="184" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">14-day grace · everything still works</text>
+        <rect x={x(21) + 3} y="162" width={830 - x(21) - 3} height="34" rx="8" fill="#b3261e" />
+        <text x={(x(21) + 3 + 830) / 2} y="184" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">Read-only · data kept</text>
+        <text x={x(7)} y="218" textAnchor="middle" fontSize="12" fill="var(--ink-3)">payment fails</text>
+        <text x="830" y="218" textAnchor="end" fontSize="12" fill="var(--ink-3)">paying again unlocks it</text>
+        <text x="830" y="236" textAnchor="end" fontSize="12" fill="var(--ink-3)">safety records stay open throughout</text>
+      </svg>
+    </Card>
   );
 }
 
-/* ---------- page 1 ---------- */
+/* ---------- 4. emails ---------- */
+
+const EMAILS: { when: string; what: string; skip: string; color: string }[] = [
+  { when: "Straight after sign-up", what: "Welcome and the first three jobs", skip: "Sent once", color: C.signup },
+  { when: "Day 1", what: "Build your first listing", skip: "Skipped if a listing exists", color: C.venue },
+  { when: "Day 3", what: "Your checklist, open steps only", skip: "Skipped if every step is done", color: C.listing },
+  { when: "Day 5", what: "You have not gone live yet", skip: "Skipped if live or trial started", color: C.golive },
+  { when: "3 days before the trial ends", what: "Trial ending, card will be charged", skip: "Skipped if cancelled", color: C.billing },
+  { when: "Each payment", what: "One receipt, in the provider's name", skip: "The card processor's own receipt is off", color: C.open },
+];
+
+function EmailTimeline() {
+  return (
+    <ol className="m-0 grid list-none gap-0 p-0 min-[820px]:grid-cols-6">
+      {EMAILS.map((e) => (
+        <li key={e.when} className="relative min-w-0 border-t-[4px] pb-2 pr-3 pt-3 min-[820px]:pr-2" style={{ borderTopColor: e.color }}>
+          <span className="absolute -top-[9px] left-0 h-[14px] w-[14px] rounded-full border-2 border-[var(--surface)]" style={{ background: e.color }} />
+          <b className="block text-[13.5px] leading-tight text-[var(--ink)]">{e.when}</b>
+          <span className="mt-0.5 block text-[13px] leading-snug text-[var(--ink-2)]">{e.what}</span>
+          <span className="mt-1.5 inline-block rounded-md px-1.5 py-0.5 text-[11.5px] font-bold leading-tight" style={{ background: tint(e.color, 14), color: e.color }}>{e.skip}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/* ---------- the page ---------- */
 
 function Page1() {
   return (
     <>
-      <Tag>HQ manual · page 1</Tag>
-      <h1 className="mb-1.5 mt-2 text-[clamp(28px,5vw,40px)] font-extrabold leading-[1.1] text-[var(--ink)]" style={{ ...display, textWrap: "balance" }}>Provider onboarding</h1>
-      <Lede>The journey from sign-up to the first card payment, the emails that go with it, and how email and payments are set up. The name is a placeholder because the brand is changing. Screens are sketches.</Lede>
-      <div className="mb-1 mt-3 flex flex-wrap gap-3.5 text-[13px] text-[var(--ink-2)]">
-        <Pill kind="req">Required</Pill><Pill kind="opt">Optional</Pill><Pill kind="new">New</Pill>
+      <div className="overflow-hidden rounded-3xl px-5 py-7 text-white sm:px-8 sm:py-9" style={{ background: "linear-gradient(120deg, #1d3a8f, #2f6bd8 55%, #6d4bd8)" }}>
+        <div className="text-[12px] font-extrabold uppercase tracking-[.14em] text-white/70">HQ manual · page 1</div>
+        <h1 className="m-0 mt-1 text-[30px] font-extrabold leading-tight sm:text-[40px]" style={display}>How a new provider gets set up</h1>
+        <p className="m-0 mt-2 max-w-[62ch] text-[15.5px] leading-relaxed text-white/85">
+          From the first sign-up screen to parents booking: every screen a provider sees, in the real order, with what to do, what ticks the step off and the mistakes to watch for.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {["5 sign-up steps", "5 checklist jobs", "3-step Go live pop-up", "7-day free trial"].map((t) => (
+            <span key={t} className="rounded-full bg-white/18 px-3 py-1 text-[13px] font-bold">{t}</span>
+          ))}
+        </div>
       </div>
 
-      <Rule />
-      <Step n={1} title="Sign up"
-        screen={
-          <Screen>
-            <SH>What are you?</SH>
-            <div className="flex flex-wrap gap-2"><Chip on>Freelancer</Chip><Chip>Company</Chip><Chip>Franchise</Chip></div>
-            <SH mt>Your login</SH>
-            <Field>you@example.com</Field>
-            <Field right={<b style={{ color: ACC }}>Show</b>}>Password</Field>
-            <Btn>Create account</Btn>
-          </Screen>
-        }>
-        <p className="m-0">Three short steps: who you are, your business and branding, then a login.</p>
-        <p className="m-0">No money questions at all. The login step has a Show/Hide password button and the terms tick.</p>
-      </Step>
+      <Section>
+        <H2>The whole journey on one line</H2>
+        <Lede>Each colour is one stage, and the same colour is used for its section below.</Lede>
+        <Card className="p-3 sm:p-5"><Journey /></Card>
+        <div className="mt-4"><ProgressGraph /></div>
+      </Section>
 
-      <Arrow />
-      <Step n={2} title="Straight into the dashboard" flip pill={<Pill kind="new">New: no card at this point</Pill>}
-        screen={
-          <Screen side={
-            <div className="flex flex-col gap-[7px] p-2.5 text-[11.5px]" style={{ background: "var(--brand)", color: "#fff" }}>
-              <b>Brand</b><span className="opacity-80">Dashboard</span><span className="opacity-80">Blocks &amp; listings</span><span className="opacity-80">Settings</span>
-            </div>
-          }>
-            <SH>Welcome. Let&apos;s get you set up</SH>
-            <Check>Add a venue</Check><Check>Build a block</Check><Check>Create your first listing</Check><Check last>Choose a cancellation policy</Check>
-          </Screen>
-        }>
-        <p className="m-0">No payment wall. The checklist walks them through a venue, a block and a first listing, so they see the product working before anything is asked of them.</p>
-      </Step>
+      <Stage n="1" color={C.signup} title="Sign up" tag="5 short steps · no money questions"
+        facts={[
+          { k: "What they see", v: "A card with a progress bar: choose Freelancer, Company or Franchise Head Office; business details; how parents see them; how they heard about us; then email and password." },
+          { k: "What to do", v: "Fill each step and press Continue. The how-did-you-hear step needs one pick. Tick the terms box on the last step and press Create account." },
+          { k: "What happens next", v: "They land on the dashboard with the set-up checklist. No card, no bank details and no Stripe at sign-up." },
+          { k: "Common mistakes", v: "Franchise branches do not sign up here: the head office sends them an invite link. A parent picks the small \"I'm a parent\" link instead." },
+        ]}
+        shots={[
+          { src: "signup-1-type", alt: "Sign-up step 1: choose how you will use the platform", caption: "Step 1 · who you are" },
+          { src: "signup-2-business", alt: "Sign-up step 2: about your business", caption: "Step 2 · business details" },
+          { src: "signup-3-how-parents-see-you", alt: "Sign-up step 3: how parents see you", caption: "Step 3 · name and logo" },
+          { src: "signup-4-how-did-you-hear", alt: "Sign-up step 4: how did you hear about us", caption: "Step 4 · how they heard" },
+          { src: "signup-5-your-login", alt: "Sign-up step 5: your login", caption: "Step 5 · email and password" },
+        ]} />
 
-      <Arrow />
-      <Step n={3} title="Build the first listing"
-        screen={
-          <Screen>
-            <SH>Summer camp</SH>
-            <Check done>Details</Check><Check done>Tickets and prices</Check><Check done last>Dates</Check>
-            <div className="mt-3.5 text-center"><Btn kind="big">Go live</Btn></div>
-          </Screen>
-        }>
-        <p className="m-0">They can save drafts, preview the booking page and edit freely, with no card.</p>
-        <p className="m-0">When it&apos;s ready, the last step shows one big button.</p>
-      </Step>
+      <Stage n="2" color={C.checklist} title="The dashboard checklist" tag="Five jobs, in order"
+        facts={[
+          { k: "What they see", v: "\"Get set up to take bookings\" with a progress bar and five numbered jobs. The next job has a blue outline and a button." },
+          { k: "What to do", v: "Press the button on the highlighted job. Every job ticks itself when the real thing is saved, so there is nothing to tick by hand." },
+          { k: "Stays with them", v: "A slim banner on every page shows the count and the next job, with a Continue button. It can be hidden for the day." },
+          { k: "Hides when", v: "A listing is published and a booking exists, or the provider presses Hide." },
+        ]}
+        shots={[{ src: "dashboard-0-of-5", alt: "Dashboard checklist showing 0 of 5 done", caption: "A brand-new provider: 0 of 5" }]} />
 
-      <Arrow />
-      <Step n={4} title="One pop-up before Go live" flip pill={<Pill kind="new">New</Pill>}
-        screen={
-          <Screen>
-            <SH>Before you go live</SH>
-            <Panel2>
-              <b className="block text-[13px]">Part 1 · Your plan <Pill kind="req">Required</Pill></b>
-              <span className="text-[var(--ink-2)]">7-day free trial, then monthly. Cancel any time.</span>
-              <Field>Card number</Field>
-            </Panel2>
-            <Panel2>
-              <b className="block text-[13px]">Part 2 · How will parents pay you? <Pill kind="req">Choose at least one</Pill></b>
-              <Check><span className="flex-1">Cards, Apple Pay, Google Pay</span><Btn>Connect Stripe</Btn></Check>
-              <Check><span className="flex-1">Bank transfer</span><span className="text-[var(--ink-3)]">add bank details</span></Check>
-              <Check last>I only take cash</Check>
-            </Panel2>
-            <Panel2>
-              <b className="block text-[13px]">Part 3 · Where should parents&apos; replies go?</b>
-              <Field>name@example.com</Field>
-            </Panel2>
-            <div className="mt-2.5 flex flex-wrap items-center gap-2"><Btn kind="big" style={{ fontSize: 13, padding: "8px 18px" }}>Start free trial and go live</Btn><Btn kind="ghost">Not yet</Btn></div>
-          </Screen>
-        }>
-        <p className="m-0">The plan card starts the trial. At least one way to get paid must be chosen, so a listing can never go live with no way for parents to pay. Cash only is allowed, but only as a deliberate tick.</p>
-        <p className="m-0">Part 3 shows the address that replies to emails will go to, already filled in from the login email, so they confirm it is an inbox they read.</p>
-      </Step>
+      <Stage n="3" color={C.venue} title="Add your venue" tag="Checklist job 1"
+        facts={[
+          { k: "What they see", v: "Blocks & listings opens on the Locations tab with the add-a-venue form already open." },
+          { k: "What to do", v: "Type a postcode or address and press Find. The venue name fills in from the address and can be edited. Press Add." },
+          { k: "What ticks it", v: "One venue saved. Online-only providers can use Add online instead." },
+          { k: "The green prompt", v: "\"Venue added. Ready for the next step: Create a block?\" Press the gold button to move on, or \"Not yet, I want to add more venues\" to stay and add another. Not yet hides the box for that visit only." },
+          { k: "Common mistakes", v: "Skipping the address search, so the map pin is missing. Typing the venue name before searching is fine: it is never overwritten." },
+        ]}
+        shots={[
+          { src: "venue-add-form", alt: "Add a venue form", caption: "The form opens ready to use" },
+          { src: "venue-added-prompt", alt: "Venue added, with the next-step prompt", caption: "After saving: next step, or add more" },
+        ]} />
 
-      <Rule />
-      <Two>
-        <Branch title="If they chose bank transfer and cash">
-          <p className="m-0 mb-2">Parents see only the methods that work. Card is hidden until Stripe is ready.</p>
-          <Phone><b>How will you pay?</b><Pay a="Bank transfer" b="✓" /><Pay a="Cash" b="✓" /><Pay off a="Card" b="hidden" /></Phone>
-        </Branch>
-        <Branch title="Once Stripe is ready">
-          <p className="m-0 mb-2">Card appears by itself, with Apple Pay and Google Pay on supported phones.</p>
-          <Phone>
-            <b>How will you pay?</b><Pay a="Card" b="✓" />
-            <div className="mt-1.5 rounded-lg bg-black p-[7px] text-center text-[12.5px] font-bold text-white">Pay</div>
-            <Pay a="Bank transfer" b="✓" />
-          </Phone>
-        </Branch>
-      </Two>
+      <Stage n="4" color={C.block} title="Create a block" tag="Checklist job 2"
+        facts={[
+          { k: "What they see", v: "Three columns: make your periods, make your passes, build your blocks. A block is the dates, passes and prices built once and reused." },
+          { k: "What to do", v: "Add a period (for example Full day, 9:00 to 15:30), add a pass (for example Day pass, 1 day), press Add to block on each, name the block and Move to Block Library. Set the prices with the pricing calculator." },
+          { k: "What ticks it", v: "One block in the Block Library." },
+          { k: "The green prompt", v: "\"Block created. Ready for the next step: Create and publish your first listing?\" or \"Not yet, I want to add more blocks\"." },
+          { k: "Common mistakes", v: "Leaving a block without prices: the listing then cannot be published." },
+        ]}
+        shots={[
+          { src: "blocks-empty", alt: "Blocks tab with periods, passes and blocks", caption: "Periods, then passes, then blocks" },
+          { src: "block-created-prompt", alt: "Block created, with the next-step prompt", caption: "After the first block" },
+        ]} />
 
-      <Arrow />
-      <Step n={5} title="Connect Stripe inside the portal" pill={<Pill kind="new">New: embedded form, with a redirect as the fallback</Pill>}
-        screen={
-          <Screen>
-            <SH>Get paid by parents</SH>
-            <Check done>Business type: sole trader</Check><Check done>Photo ID</Check><Check>Bank account</Check><Check last>Phone code</Check>
-            <Field mt>Sort code</Field>
-            <Btn>Continue</Btn>
-          </Screen>
-        }>
-        <p className="m-0">When they choose card payments, Stripe&apos;s form appears on our own page, so they never feel they&apos;ve left. Stripe still checks identity, which can include a photo ID.</p>
-        <p className="m-0">A step-by-step guide sits next to it, listing what to have ready.</p>
-      </Step>
+      <Stage n="5" color={C.listing} title="Create and publish a listing" tag="Checklist job 3 · 13 steps"
+        facts={[
+          { k: "What they see", v: "An empty Listings tab, then a 13-step guided editor with a progress bar. A box at the start lists what is needed before publishing." },
+          { k: "What to do", v: "Give the listing a title and photo, pick the venue and the block (step 8 attaches the block, which brings the passes and prices), set age range, capacity and policy. Publish is at step 13." },
+          { k: "What ticks it", v: "A listing exists. It counts once saved, even as a draft, but parents only see it after Publish." },
+          { k: "The green prompt", v: "Appears on the Listings tab when the listing job is done and shows the next job." },
+          { k: "Common mistakes", v: "Publishing with no block: the editor shows \"Pick a block so the listing has passes and prices\" and Publish stays disabled until it is fixed." },
+        ]}
+        shots={[
+          { src: "listings-empty", alt: "Empty listings tab", caption: "New listing starts here" },
+          { src: "listing-wizard-step-1", alt: "Listing editor, step 1 of 13", caption: "Step 1 of 13 · basics" },
+        ]} />
 
-      <Rule />
-      <h2 className="m-0 text-[24px] font-extrabold text-[var(--ink)]" style={display}>The money timeline</h2>
-      <Lede>Nothing is charged before the trial ends. If they never press Go live, a gentle reminder asks for the plan card by day 5, so no one uses it free for ever.</Lede>
-      <Timeline items={[
-        { t: "Day 0", d: "Account created. No card." },
-        { t: "First listing", d: "Go live. Card entered. Trial starts." },
-        { t: "Day 5 after sign-up", d: "Reminder if they haven't gone live.", alt: true },
-        { t: "7 days after Go live", d: "Trial ends. Plan charged monthly." },
-        { t: "Any time", d: "Connect Stripe. Card appears for parents." },
-      ]} />
+      <Stage n="6" color={C.golive} title="Go live: three single steps" tag="New providers only"
+        facts={[
+          { k: "When it appears", v: "When a new provider presses Publish on a listing for the first time. Providers who already have a plan and bank details go straight through." },
+          { k: "Step 1 · free trial", v: "Add a card to start the 7-day free trial. It opens in a new tab and ticks itself when they return. Nothing is charged until the trial ends." },
+          { k: "Step 2 · bank details (required)", v: "Bank name, sort code and account number. Bank transfers, Tax-Free Childcare and vouchers pay into this account and it is shown on invoices. Below it, card payments through Stripe are optional and recommended, and can be done later." },
+          { k: "Step 3 · reply-to", v: "Where parents' replies go. It is filled in from their login email. They press Save, then Go live." },
+          { k: "Enforced by the server", v: "Publishing without a started plan or saved bank details is refused, so no other screen can skip this." },
+          { k: "Common mistakes", v: "Closing the pop-up with Not yet: the listing stays saved as a draft and the pop-up returns at the next Publish." },
+        ]}
+        shots={[
+          { src: "golive-1-free-trial", alt: "Go live pop-up, step 1: start your free trial", caption: "Step 1 · free trial card" },
+          { src: "golive-2-bank-details", alt: "Go live pop-up, step 2: bank details", caption: "Step 2 · bank details, with optional card payments" },
+          { src: "golive-3-reply-to", alt: "Go live pop-up, step 3: where replies go", caption: "Step 3 · reply-to, then Go live" },
+        ]} />
 
-      <Rule />
-      <Tag>Emails</Tag>
-      <H2>The emails a new provider receives</H2>
-      <Lede>Rule for every email in this table: <b className="text-[var(--ink)]">check at send time, and skip it if the provider has already done the thing.</b> A reminder never arrives after the action it reminds about.</Lede>
-      <Table head={["When", "Who sends it", "What it says", "Skipped if"]} rows={[
-        ["Straight after sign-up", "Platform", "Welcome. First three jobs: add a listing, choose how you get paid, set where replies go.", "Never skipped, sent once"],
-        ["Day 1", "Platform", "Build your first listing, with a link straight to it.", "A listing already exists"],
-        ["Day 3", "Platform", "Your checklist, showing only the steps still open.", "Every checklist step is done"],
-        ["Day 5", "Platform", "You have not gone live yet. What is left: plan card and a way to get paid.", "The listing is live, or the trial has started"],
-        ["3 days before the trial ends", "Payment provider, via our app", "Your trial ends soon and your card will be charged. Cancel before then if it is not for you.", "No trial running, or already cancelled"],
-        ["Each monthly charge", "Payment provider", "Receipt or failed-payment notice. A failed payment starts a 14-day grace period.", "Not applicable"],
-        ["Stripe account needs attention", "Payment provider, direct to the provider", "Stripe asks for a document, or says a check failed.", "Not applicable. We do not control these"],
-      ]} />
-      <div className="mt-3.5 grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3">
-        <Branch title={'How "skipped if" works'}>Each nudge reads the live facts when it is due, never a stored guess. A sent-flag stops a repeat, and the whole series stops the moment the provider goes live.</Branch>
-        <Branch title="Stop and pause">Every nudge has an unsubscribe link and a &quot;pause onboarding emails&quot; switch in Setup. Security and billing emails are always sent.</Branch>
-        <Branch title="One receipt">A parent gets one receipt for a booking payment: the platform&apos;s own &quot;Payment received&quot; email, in the provider&apos;s name. The payment provider&apos;s receipt is switched off for booking payments.</Branch>
-      </div>
+      <Stage n="7" color={C.billing} title="Billing & payouts" tag="Checklist job 4"
+        facts={[
+          { k: "What they see", v: "One page, two tabs. \"Your plan\" is what they pay the platform. \"Get paid by parents\" is how parents pay them." },
+          { k: "Get paid by parents", v: "Bank details at the top (required). Then Connect Stripe for cards, Apple Pay and Google Pay. Stripe's own page opens, they enter identity, business and bank details, and they come back here." },
+          { k: "What ticks it", v: "Bank details saved. Connecting Stripe is optional for the tick but is what makes the card option appear for parents." },
+          { k: "The green prompt", v: "\"Payments set up. Ready for the next step: Set your cancellation policy?\" or \"Not yet, I want to change something here\"." },
+          { k: "Your plan tab", v: "Shows the free trial, the current plan and price, change plan and cancel. A plan can be started here any time before Go live." },
+          { k: "Have ready for Stripe", v: "Photo ID, business details and a bank account in the owner's own name. It takes about ten minutes." },
+        ]}
+        shots={[
+          { src: "billing-get-paid", alt: "Billing and payouts, get paid by parents tab", caption: "Get paid by parents" },
+          { src: "billing-your-plan", alt: "Billing and payouts, your plan tab", caption: "Your plan" },
+        ]} />
 
-      <Rule />
-      <Tag>Email set-up</Tag>
-      <H2>How a provider&apos;s emails reach parents</H2>
-      <Lede>A provider needs no email or domain set-up to start. Everything below works from day one.</Lede>
-      <Two>
-        <Branch title="What works with no set-up">
-          <Bullets items={[
-            "Booking confirmations, payment receipts, waiting-list and reminder emails",
-            "Messages to families, and campaigns from the Email area",
-            "All sent from the platform's own verified address, so they reach inboxes reliably",
-            "The sender name parents see is the provider's business name",
-          ]} />
-        </Branch>
-        <Branch title="Where replies go">
-          <p className="m-0 mb-1.5">Replies go to the provider&apos;s own contact address, which is filled in from their login email when they sign up, so it is never blank. In practice it is the inbox they signed up with.</p>
-          <p className="m-0">The risk is a provider who signed up with an address they rarely read. So the Go live pop-up asks them to confirm it.</p>
-        </Branch>
-      </Two>
-      <Two>
-        <Branch title="What they cannot do yet">
-          <Bullets items={[
-            "Send from their own address, for example info@theirclub.co.uk. That needs their own domain verified, and is a later milestone",
-            'Show their own domain in the "From" line',
-          ]} />
-        </Branch>
-        <Branch title="Optional: replies into the in-app inbox">
-          <p className="m-0">Providers can forward their email to a platform address so parents&apos; replies appear in the in-app Inbox. It needs the server&apos;s inbound mail setting to be switched on.</p>
-        </Branch>
-      </Two>
-      <Muted>Set-up notes: the sending domain is the platform&apos;s own until a provider-owned domain is added later, and the reply-to address is confirmed in the Go live pop-up.</Muted>
+      <Stage n="8" color={C.cancel} title="Set your cancellation policy" tag="Checklist job 5"
+        facts={[
+          { k: "What they see", v: "Setup, Cancellations & refunds, with a ready-made Standard policy: full refund a week ahead, half back at 48 hours, nothing after." },
+          { k: "What to do", v: "Edit the notice periods and percentages, rename it if they like, and press Done. The wording parents read writes itself from the rows." },
+          { k: "What ticks it", v: "Pressing Set my policy marks it as reviewed, and saving a policy ticks it too. Keeping the standard policy is fine." },
+          { k: "Good to know", v: "The platform works out what is owed when someone cancels and shows it. The provider decides whether to send the refund." },
+        ]}
+        shots={[{ src: "cancellation-policy", alt: "Cancellations and refunds setup", caption: "The standard policy, ready to edit" }]} />
 
-      <Rule />
-      <Tag>Payments set-up</Tag>
-      <H2>Cards, Apple Pay and Google Pay</H2>
-      <Lede>Two separate payment relationships exist, and each has its own set-up. The provider pays the platform for their plan. Parents pay the provider for bookings.</Lede>
-      <Two>
-        <Branch title="Plan payments (provider to platform)">
-          <Bullets items={[
-            "Card entered in the Go live pop-up, which starts the 7-day trial",
-            "Charged monthly after the trial. A failed payment gives a 14-day grace period, then read-only. Safety records stay open",
-            "Prices: freelancer 29 pounds a month, company from 49, franchise from 99",
-          ]} />
-        </Branch>
-        <Branch title="Booking payments (parent to provider)">
-          <Bullets items={[
-            "Money goes straight to the provider's own account, never held by the platform",
-            "The platform takes no cut of bookings. The provider pays the card processor's fees",
-            "Card only shows to parents once the provider's account can take charges",
-            "Parents get one receipt: the platform's own \"Payment received\" email. The processor's receipt is switched off for bookings",
-          ]} />
-        </Branch>
-      </Two>
-      <Table head={["Step", "Who", "When"]} rows={[
-        ["Switch Apple Pay on in the payment settings", "Platform owner", "Once"],
-        ["Register the web address the app is served from, and later the new domain", "Platform owner", "Once per domain"],
-        ["Set the list of pay domains on the server", "Developer", "Once per domain"],
-        ["Register those domains on the provider's own account", "Automatic", "When the provider can first take cards, and again when a new domain is added"],
-        ["Test on a real iPhone, in Safari, with a card in Wallet", "Platform owner", "After the live keys are in"],
-      ]} />
-      <Muted>Parents see an Apple Pay button above the card form on supported phones and Macs. Google Pay does the same in Chrome. There is nothing for the provider to switch on.</Muted>
+      <Stage n="9" color={C.open} title="Set up done: parents can book" tag="Checklist 5 of 5"
+        facts={[
+          { k: "What they see", v: "All five jobs ticked. The checklist and the top banner disappear after the first booking." },
+          { k: "What parents see", v: "The published listing on Browse and on the provider's own link. Cards show once Stripe is ready. Bank transfer, Tax-Free Childcare and vouchers show from day one." },
+          { k: "If something is open", v: "The checklist stays and the top banner keeps naming the next job." },
+        ]}
+        shots={[{ src: "dashboard-4-of-5", alt: "Dashboard checklist with four jobs done", caption: "Four of five done, one to go" }]} />
 
-      <Rule />
-      <Tag>Payment methods</Tag>
-      <H2>What parents can pay with</H2>
-      <Lede>Set once in the payment provider&apos;s Connect settings, under Payment methods, &quot;For your connected accounts&quot;. It applies to every provider. Providers on the full dashboard can turn a method on or off only if it is not blocked.</Lede>
-      <Table head={["Method", "Setting", "Why"]} rows={[
-        ["Cards", "On by default", "Covers almost every parent"],
-        ["Apple Pay", "On by default", "One tap on iPhone and Mac. Needs the domain registered, which is automatic per provider"],
-        ["Google Pay", "On by default", "Same on Android and Chrome"],
-        ["Buy now pay later (Klarna, Afterpay, Clearpay, Zip, Affirm)", "Off", "Unusual for a 20 pound booking, adds fees and money-owed complaints"],
-        ["PayPal, Amazon Pay, Revolut Pay", "Off", "Extra fees and harder refunds. Can be added later if providers ask"],
-        ["Pay by Bank, Stripe bank transfers", "Off", "Unfamiliar to parents and harder to reconcile. Revisit later"],
-        ["Crypto and regional methods", "Off or blocked", "Not relevant to UK providers"],
-      ]} />
-      <Muted>Cards, bank transfer, vouchers, Tax-Free Childcare and cash are what a provider offers inside the platform. The list above is only what the card form shows.</Muted>
+      <Section>
+        <H2>Who pays whom</H2>
+        <Lede>Two separate money flows that never mix. The provider pays the platform for the plan. Parents pay the provider directly, and the platform never holds booking money or takes a cut.</Lede>
+        <MoneyFlow />
+      </Section>
 
-      <Rule />
-      <Tag>Going live with real payments</Tag>
-      <H2>Switching from test to live</H2>
-      <Table head={["Item", "Where", "Note"]} rows={[
-        ["Business type and identity", "Payment provider account", "Sole trader or company. Identity check with photo ID. A non-director may act as representative but the real directors must be listed"],
-        ["Phone verification and payout bank account", "Payment provider account", "Phone code by text. Bank in the owner's own name"],
-        ["Two webhooks", "Payment provider account", "One for the platform's account, one for connected accounts. Both point at the API, with seven events each"],
-        ["Four values: secret key, publishable key, two signing secrets", "API host and web host", "Entered by the developer. Never pasted into chat or documents. Rotate any key that has been exposed"],
-        ["Test accounts", "Provider records", "An account created in test mode does not exist in live mode. Providers reconnect through Get paid. Saved customer ids are recreated automatically"],
-        ["First real payment", "Everyone", "A 30p booking with a real card, then refund it"],
-      ]} />
+      <Section>
+        <H2>What parents can pay with</H2>
+        <PayMethods />
+      </Section>
 
-      <Rule />
-      <Tag>Brand name</Tag>
-      <H2>The name is going to change</H2>
-      <Lede>The product name appears in about 98 files and in many emails. A checklist is kept so the rename is done in one pass: one name setting for the web and one for the server, then the domain items (sender address, payment provider account name and statement descriptor, Apple Pay domain, public pages, webhook and login settings).</Lede>
+      <Section>
+        <H2>The plan: trial, charge and grace</H2>
+        <Lede>Nothing is charged for the first 7 days. After that the plan is charged monthly. A failed payment starts a 14-day grace period; after that the account becomes read-only, never deleted.</Lede>
+        <PlanTimeline />
+      </Section>
+
+      <Section>
+        <H2>The emails a new provider gets</H2>
+        <Lede>Every nudge checks at send time and is skipped if the provider has already done the thing, so a reminder never arrives after the action it reminds about. Each has an unsubscribe link; billing and security emails are always sent.</Lede>
+        <Card className="p-4"><EmailTimeline /></Card>
+        <div className="mt-3 grid grid-cols-1 gap-3 min-[720px]:grid-cols-2">
+          <Card className="p-3.5">
+            <h3 className="m-0 mb-1 text-[16px] font-extrabold text-[var(--ink)]" style={display}>Where parents&apos; replies go</h3>
+            <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">To the reply-to address confirmed in Go live step 3, filled in from the provider&apos;s login email. Emails are sent from the platform&apos;s own verified address under the provider&apos;s business name, so there is nothing to set up.</p>
+          </Card>
+          <Card className="p-3.5">
+            <h3 className="m-0 mb-1 text-[16px] font-extrabold text-[var(--ink)]" style={display}>One receipt per payment</h3>
+            <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">A parent gets one &quot;Payment received&quot; email per card payment, from the platform in the provider&apos;s name. The card processor&apos;s own receipt is switched off for bookings.</p>
+          </Card>
+        </div>
+      </Section>
     </>
   );
 }
@@ -453,8 +479,8 @@ export function ManualApp() {
   const [id, setId] = useState(MANUAL_PAGES[0].id);
   const page = MANUAL_PAGES.find((p) => p.id === id) ?? MANUAL_PAGES[0];
   return (
-    <div className="min-w-0 text-[var(--ink)]">
-      <nav aria-label="Manual pages" className="mx-auto mb-5 flex max-w-[940px] gap-2 overflow-x-auto pb-1">
+    <div className="min-w-0 pb-10 text-[var(--ink)]">
+      <nav aria-label="Manual pages" className="mx-auto mb-5 flex max-w-[1040px] gap-2 overflow-x-auto pb-1">
         {MANUAL_PAGES.map((p) => {
           const on = p.id === page.id;
           return (
@@ -464,14 +490,14 @@ export function ManualApp() {
               onClick={() => setId(p.id)}
               aria-current={on ? "page" : undefined}
               className="whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[13px] font-bold transition-colors"
-              style={on ? { background: ACC, borderColor: ACC, color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)", background: "var(--surface)" }}
+              style={on ? { background: C.checklist, borderColor: C.checklist, color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)", background: "var(--surface)" }}
             >
               {p.label}
             </button>
           );
         })}
       </nav>
-      <article className="mx-auto max-w-[940px]">{page.render()}</article>
+      <article className="mx-auto max-w-[1040px]">{page.render()}</article>
     </div>
   );
 }
