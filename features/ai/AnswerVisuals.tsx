@@ -161,15 +161,14 @@ function Chip({ children, on }: { children: ReactNode; on: boolean }) {
 function PaymentMethods() {
   return (
     <Frame title="What parents can pay with"
-      label="At checkout parents see Cards, Apple Pay and Google Pay. Klarna, PayPal and Amazon Pay are switched off. You can also accept bank transfer, vouchers, Tax-Free Childcare and cash yourself.">
+      label="Parents can pay by card, Apple Pay and Google Pay once your card set-up is done. Bank transfer, vouchers and Tax-Free Childcare pay into your bank details.">
       <div className="text-[10.5px] font-bold" style={{ color: "var(--ink-2)" }}>At checkout</div>
       <div className="mt-1 flex flex-wrap gap-1">
         <Chip on>Cards</Chip><Chip on>Apple Pay</Chip><Chip on>Google Pay</Chip>
-        <Chip on={false}>Klarna</Chip><Chip on={false}>PayPal</Chip><Chip on={false}>Amazon Pay</Chip>
       </div>
-      <div className="mt-2 text-[10.5px] font-bold" style={{ color: "var(--ink-2)" }}>You record these yourself</div>
+      <div className="mt-2 text-[10.5px] font-bold" style={{ color: "var(--ink-2)" }}>Into your bank account</div>
       <div className="mt-1 flex flex-wrap gap-1">
-        <Chip on>Bank transfer</Chip><Chip on>Vouchers</Chip><Chip on>Tax-Free Childcare</Chip><Chip on>Cash</Chip>
+        <Chip on>Bank transfer</Chip><Chip on>Vouchers</Chip><Chip on>Tax-Free Childcare</Chip>
       </div>
     </Frame>
   );
