@@ -2623,7 +2623,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       {booking?.error && errFresh && !/^not signed in/i.test(booking.error) && !(() => {
         // Once the named child has been taken off, their error is stale.
         const m = /^(.+?) already has a place on/.exec(booking.error);
-        return !!m && !b.rosterNames.includes(m[1]);
+        if (!m) return false;
+        if (!b.rosterNames.includes(m[1])) return true;
+        // Also stale once that child has been taken off the clashing day(s) (the "Take X off <day> only" button leaves them in the roster).
+        const md = /^(.+?) already has a place on (.+?) \(booking/.exec(booking.error);
+        if (!md) return false;
+        const pretty = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+        return !b.basket.some((x) => x.dates.some((iso) => pretty(iso) === md[2]) && b.childrenOn(x.id).includes(md[1]));
       })() && (
         <div className="mt-2 text-[11.5px] font-semibold" style={{ color: "#dc2626" }}>
           {booking.error}
