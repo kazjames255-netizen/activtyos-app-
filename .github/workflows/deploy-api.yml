@@ -39,6 +39,8 @@ jobs:
         if: steps.secrets.outputs.ok == 'true'
         with:
           node-version: 24
+      # --detach: return once the upload is accepted. Streaming the build (--ci) kept the job
+      # open long after Railway had finished deploying.
       - name: Deploy (builds on Railway)
         if: steps.secrets.outputs.ok == 'true'
-        run: npx --yes @railway/cli@latest up --ci --service c23fdee0-383e-457a-841a-236655b1474e --environment production
+        run: npx --yes @railway/cli@latest up --detach --service c23fdee0-383e-457a-841a-236655b1474e --environment production
