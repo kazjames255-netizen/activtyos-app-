@@ -24,7 +24,7 @@ const infoKey = (view: string) => `p8fr.featInfo_${view.replace(/-/g, "_")}`;
 
 // The togglable "main pages" a franchise has — the franchise nav minus the
 // always-on essentials and non-feature views (mirrors Setup → Features).
-const SKIP = new Set(["dash", "dashboard", "auth", "setup", "account", "subscription", "getpaid", "privacy"]);
+const SKIP = new Set(["dash", "dashboard", "auth", "setup", "account", "subscription", "getpaid", "billing", "privacy"]);
 function featureList(): { view: string; label: string }[] {
   const seen = new Set<string>();
   return (NAV_GROUPS.franchise ?? [])

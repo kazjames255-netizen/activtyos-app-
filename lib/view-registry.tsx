@@ -56,6 +56,7 @@ const CompanyIncidents = dynamic(() => import("@/features/franchise/OversightSwi
 const CompanyAccidents = dynamic(() => import("@/features/franchise/OversightSwitch").then((m) => m.CompanyAccidents));
 const CompanyMedication = dynamic(() => import("@/features/franchise/OversightSwitch").then((m) => m.CompanyMedication));
 const FranchiseRoyaltiesApp = dynamic(() => import("@/features/franchise/FranchiseRoyaltiesApp").then((m) => m.FranchiseRoyaltiesApp));
+const BillingPayoutsApp = dynamic(() => import("@/features/billing/BillingPayoutsApp").then((m) => m.BillingPayoutsApp));
 const PaymentsApp = dynamic(() => import("@/features/payments/PaymentsApp").then((m) => m.PaymentsApp));
 const NewsfeedApp = dynamic(() => import("@/features/newsfeed/NewsfeedApp").then((m) => m.NewsfeedApp));
 const ParentNewsfeedApp = dynamic(() => import("@/features/newsfeed/ParentNewsfeedApp").then((m) => m.ParentNewsfeedApp));
@@ -161,6 +162,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     invoices: MoneyInApp,
     subscription: SubscriptionApp,
     getpaid: PaymentsApp,
+    billing: BillingPayoutsApp,
     documents: DocumentsApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
@@ -227,6 +229,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     invoices: MoneyInApp,
     subscription: SubscriptionApp,
     getpaid: PaymentsApp,
+    billing: BillingPayoutsApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
     "marketing-strategies": MarketingStrategiesApp,
@@ -275,6 +278,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     invoices: MoneyInApp,
     subscription: SubscriptionApp,
     getpaid: PaymentsApp,
+    billing: BillingPayoutsApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
     "marketing-strategies": MarketingStrategiesApp,

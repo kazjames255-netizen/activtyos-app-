@@ -21,7 +21,7 @@ import { useHoScope } from "@/components/franchise/HoScope";
 export const HO_COMBINED_KEEP = new Set<string>([
   "dashboard", "dash", "splitfees", "territories", "ho-framework",
   "tasks", "email", "messages", "activityos", "newsfeed",
-  "reviews", "ai", "subscription", "getpaid",
+  "reviews", "ai", "subscription", "getpaid", "billing",
   // Head office's money is ONE simplified Finance page (P&L + royalty income +
   // breakdown by franchise) — see HoFinanceApp. The per-site ledgers stay
   // reachable by direct link from it, not as separate sidebar items.
@@ -497,7 +497,7 @@ export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?:
     { label: null, views: ["dashboard"] },
     { label: "Overview", views: ["tasks", "ai"] },
     { label: "Franchises", views: ["franchise-overview", "franchise-features", "franchise-invites", "territories"] },
-    { label: "Money", views: ["finance", "splitfees", "subscription", "getpaid"] },
+    { label: "Money", views: ["finance", "splitfees", "billing"] },
     { label: "Communication", views: ["newsfeed", "messages", "email", "activityos"] },
     { label: "People & reviews", views: ["staff", "reviews"] },
     { label: "Safeguarding oversight", views: ["incidents", "accidents", "medication", "registers"] },

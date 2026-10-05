@@ -738,9 +738,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const allMethods: readonly string[] = ckSettings.payMethods.length ? ckSettings.payMethods : PAY_METHODS;
   // A parent can only pay by bank transfer if the provider has given somewhere to send it (the public settings carry just a yes/no).
   const bankReady = !!(ckSettings as unknown as { bankReady?: boolean }).bankReady;
+  const cardReadyFlag = (ckSettings as unknown as { cardReady?: boolean }).cardReady;
   const payList: readonly string[] = allMethods
     .filter((m) => /card/i.test(m) || !d.payMethods || d.payMethods.includes(m))
     .filter((m) => !(parentMode && /bank|transfer/i.test(m) && !bankReady))
+    // A provider who has not finished Stripe cannot take a card payment: do not offer Card to a parent (it would fail at Pay now).
+    .filter((m) => !(parentMode && /^card$/i.test(m) && cardReadyFlag === false))
     // HAF (funded) places are arranged by the provider, never self-selected by a parent: a funded place is £0 only once the provider confirms it.
     .filter((m) => !(parentMode && /haf|funded/i.test(m)));
   // Voucher schemes with a reference filled in — the only ones a parent can
@@ -790,7 +793,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // quote. If it's too close for the money to clear, the deadline note below
   // still cautions the family — but the option no longer silently vanishes.
   if (payList.some((m) => /voucher/i.test(m)) && vouchers.length) parentOpts.push(["voucher", tr("p7ck.methodVouchers")]);
-  const method = parentMode || payList.includes(rawMethod) ? rawMethod : payList[0];
+  // A parent whose chosen method has been taken off the list (Card, when the provider has not finished Stripe) moves to the first one left.
+  const method = parentMode
+    ? (parentOpts.length === 0 || parentOpts.some(([k]) => k === rawMethod) ? rawMethod : parentOpts[0][0])
+    : payList.includes(rawMethod) ? rawMethod : payList[0];
   // The full-page checkout scrolls itself, so the page underneath must stop —
   // otherwise there are two scrollbars and the outer one moves nothing you can
   // see. Restored on the way out, including if the tab closes mid-booking.
@@ -2142,6 +2148,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             {(parentMode ? parentOpts : payList.map((m) => [m, m] as [string, string]))
               .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
+          {parentMode && parentOpts.length === 0 && (
+            <p className="mt-2 text-[12px]" style={{ color: tk.muted }}>This provider has not set up online payment yet. You can still book; they will contact you to arrange payment.</p>
+          )}
 
           {/* Paying by voucher happens on the scheme's own website, so this
               has to hand over everything needed to do it: which scheme, the

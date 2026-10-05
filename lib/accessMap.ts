@@ -88,7 +88,7 @@ export const FEATURE_WRITE_API: { prefix: string; keys: string[]; label: string;
  *  safeguarding pages (see FEATURE_API). */
 const NEVER_OFF = new Set([
   "dash", "dashboard", "bookings", "listings", "blocks", "locations",
-  "customers", "finance", "setup", "account", "privacy", "auth", "support", "subscription",
+  "customers", "finance", "setup", "account", "privacy", "auth", "support", "subscription", "billing", "getpaid",
   "incidents", "incident", "accidents", "medication",
 ]);
 

@@ -6,6 +6,7 @@ import { forgetSettings } from "../middleware/access";
 import { geocodeAddress } from "./geo";
 import { normaliseChildcareSettings } from "../lib/childcare";
 import { publicLibrarySettings } from "../lib/publicLibrary";
+import { cardReady } from "../lib/cardReady";
 import { librarySnap } from "../lib/tenantLibrary";
 
 type Venue = { id: string; name?: string; address?: string; city?: string; kind?: string; lat?: number; lng?: number };
@@ -241,6 +242,7 @@ libraryPublic.get("/:tenantId", async (req, res) => {
   const src = (data.settings ?? {}) as Record<string, unknown>;
 
   const settings = publicLibrarySettings(src);
+  settings.cardReady = await cardReady(tenantId);
 
   res.json({ settings, childQuestions: data.childQuestions ?? null });
 });

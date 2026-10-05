@@ -272,7 +272,7 @@ payments.post("/checkout", async (req, res) => {
         amount: toPence(amount), currency: "gbp", automatic_payment_methods: { enabled: true },
         description: `${tenant.data()?.name ?? "ActivityOS"} — meal${orders.length > 1 ? "s" : ""}`,
         metadata: { tenantId, mealOrders: orders.map((o) => o.id).join(","), email },
-        ...((await autoEmailOn(tenantId, "payments")) ? { receipt_email: email } : {}),
+        ...((await autoEmailOn(tenantId, "payments")) ? { receipt_email: email } : {}), // meal orders have no email of our own, so Stripe's receipt stays
       }, stripeAccount ? { stripeAccount } : undefined);
     } catch (e) { stripeFail(res, e); return; }
     const rref = await paymentsCol.add({ tenantId, mealOrderIds: orders.map((o) => o.id), email, amount, currency: "gbp", paymentIntentId: intent.id, stripeAccount, platformFallback: !stripeAccount, status: "created", createdAt: new Date().toISOString() });
@@ -355,8 +355,7 @@ payments.post("/checkout", async (req, res) => {
         automatic_payment_methods: { enabled: true },
         description: `${tenant.data()?.name ?? "ActivityOS"} — booking${bookings.length > 1 ? "s" : ""} ${bookings.map((b) => b.ref).join(", ")}`,
         metadata: { tenantId, refs: bookings.map((b) => b.ref).join(","), email },
-        // Stripe's card receipt is the "payments" automatic email.
-        ...((await autoEmailOn(tenantId, "payments")) ? { receipt_email: email } : {}),
+        // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).
       },
       stripeAccount ? { stripeAccount } : undefined,
     );
@@ -495,7 +494,7 @@ bookingPayPublic.post("/:token/checkout", async (req, res) => {
         automatic_payment_methods: { enabled: true },
         description: `${tenant.data()?.name ?? "ActivityOS"} — booking ${b.ref}`,
         metadata: { tenantId, refs: b.ref, email: b.email, via: "pay-link" },
-        ...((await autoEmailOn(tenantId, "payments")) && b.email.includes("@") ? { receipt_email: b.email } : {}),
+        // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).
       },
       stripeAccount ? { stripeAccount } : undefined,
     );

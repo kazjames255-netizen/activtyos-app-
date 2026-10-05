@@ -98,7 +98,7 @@ export function useFirstRunSteps() {
       { id: "venue", done: facts.venues > 0, href: `${base}/listings?tab=locations` },
       { id: "block", done: facts.blocks > 0, href: `${base}/blocks` },
       { id: "listing", done: facts.listings > 0, href: `${base}/listings` },
-      { id: "pay", done: facts.payChosen || visited.has("pay"), href: `${base}/getpaid` },
+      { id: "pay", done: facts.payChosen || visited.has("pay"), href: `${base}/billing?tab=paid` },
       { id: "cancel", done: facts.cancelChosen || visited.has("cancel"), href: `${base}/setup?tab=cancel` },
       ...(portal === "freelancer" ? [] : [{ id: "team" as StepId, done: facts.team > 0, href: `${base}/staff` }]),
     ];

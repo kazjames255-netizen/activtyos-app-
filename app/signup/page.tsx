@@ -179,7 +179,7 @@ function SignupForm() {
   const frFromHo = Boolean(invite?.role === "franchise" && (invite?.franchiseName || invite?.franchiseArea));
   const isOperator = accountType !== "parent";
   const steps: StepId[] = useMemo(
-    () => (isOperator ? ["type", "business", "identity", "hear", "login", "payments"] : ["type", "you", "login"]),
+    () => (isOperator ? ["type", "business", "identity", "hear", "login"] : ["type", "you", "login"]),
     [isOperator],
   );
   const current = steps[step];
@@ -331,11 +331,7 @@ function SignupForm() {
       });
       // Operators get an optional "Get paid" step (Stripe needs the tenant to
       // exist first); parents go straight home.
-      if (isOperator) {
-        setBusy(false);
-        setStep(steps.indexOf("payments"));
-        return;
-      }
+      // Getting paid now lives on Billing & payouts (and the first-run checklist), not in sign-up.
       router.replace(homeUrl);
     } catch (err) {
       const code = (err as { code?: string }).code || "";
@@ -609,6 +605,7 @@ function SignupForm() {
                     {stripeBusy ? t("p8pub.suStripeBusy") : `${t("p8pub.suStripeBtn")} ${arrow}`}
                   </button>
                   {stripeMsg && <p className="mt-2 text-[11.5px] font-semibold text-[var(--red)]">{stripeMsg}</p>}
+                  <a href="/help/get-paid" target="_blank" rel="noreferrer" className="mt-2 block text-[12px] font-bold text-[#635bff] underline">{t("p8pub.suGuide")}</a>
                 </div>
               </div>
             </div>
@@ -641,7 +638,7 @@ function SignupForm() {
       <div className="mt-2 flex items-center justify-between gap-3 border-t border-[var(--line)] bg-[var(--panel)] px-7 py-4">
         {current === "payments"
           // Account already exists — no going back, just skip the optional setup.
-          ? <button type="button" onClick={() => router.replace(homeUrl)} disabled={busy} className="text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)] disabled:opacity-50">{t("p8pub.suSkip")} {arrow}</button>
+          ? <button type="button" onClick={() => router.replace(homeUrl)} disabled={busy} className="h-11 rounded-full border-2 border-[var(--line)] px-5 text-[13px] font-bold text-[var(--ink-2)] hover:text-[var(--ink)] disabled:opacity-50">{t("p8pub.suSkip")} {arrow}</button>
           : step > 0
           ? <button type="button" onClick={back} disabled={busy} className="text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)] disabled:opacity-50">{backArrow} {t("p8pub.suBack")}</button>
           : <SignInLink inline />}
