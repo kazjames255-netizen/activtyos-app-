@@ -1,4 +1,4 @@
-import { Router, type Response } from "express";
+import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite, operatorScope, type Role, managerScope } from "../middleware/role";
@@ -54,6 +54,55 @@ function stripeFail(res: Response, e: unknown) {
 }
 
 
+/** The tenant's connected account — reused when it still exists, otherwise a new one is created and saved. */
+async function ensureConnectedAccount(
+  s: NonNullable<ReturnType<typeof needStripe>>,
+  auth: NonNullable<Request["auth"]>,
+  email: string | undefined,
+  tenantRef: FirebaseFirestore.DocumentReference,
+  tenant: FirebaseFirestore.DocumentSnapshot,
+): Promise<string> {
+  let accountId: string | undefined = tenant.data()!.stripeAccountId;
+    if (accountId) {
+      // Gone (deleted / revoked / a test id under live keys) → cleared; make a new one below.
+      const account = await retrieveConnected(s, auth.tenantId!, accountId);
+      if (!account) accountId = undefined;
+      // Repair accounts created before capabilities were requested — the
+      // onboarding link below then collects anything newly required.
+      else if (!account.capabilities?.card_payments) {
+        await s.accounts.update(accountId, {
+          capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
+        });
+      }
+    }
+    if (!accountId) {
+      // Matches the live Connect platform profile: Stripe carries negative-balance
+      // liability and the provider gets the full Stripe Dashboard. An Express
+      // account (platform-liable) contradicts that profile and Stripe refuses it
+      // in live mode ("review the responsibilities of managing losses").
+      const account = await s.accounts.create({
+        controller: {
+          losses: { payments: "stripe" },
+          fees: { payer: "account" },
+          requirement_collection: "stripe",
+          stripe_dashboard: { type: "full" },
+        },
+        country: "GB",
+        email: email,
+        metadata: { tenantId: auth.tenantId! },
+        business_profile: { name: tenant.data()!.name },
+        // Capabilities must be REQUESTED explicitly — an Express account
+        // without card_payments completes onboarding but then rejects every
+        // charge ("cannot create a charge … without the card_payments
+        // capability").
+        capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
+      });
+      accountId = account.id;
+      await tenantRef.update({ stripeAccountId: accountId });
+    }
+  return accountId!;
+}
+
 // POST /api/payments/connect — create (or resume onboarding for) the
 // tenant's Express account; returns the hosted onboarding URL.
 payments.post("/connect", async (req, res) => {
@@ -77,44 +126,7 @@ payments.post("/connect", async (req, res) => {
     return;
   }
   try {
-    let accountId: string | undefined = tenant.data()!.stripeAccountId;
-    if (accountId) {
-      // Gone (deleted / revoked / a test id under live keys) → cleared; make a new one below.
-      const account = await retrieveConnected(s, auth.tenantId, accountId);
-      if (!account) accountId = undefined;
-      // Repair accounts created before capabilities were requested — the
-      // onboarding link below then collects anything newly required.
-      else if (!account.capabilities?.card_payments) {
-        await s.accounts.update(accountId, {
-          capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
-        });
-      }
-    }
-    if (!accountId) {
-      // Matches the live Connect platform profile: Stripe carries negative-balance
-      // liability and the provider gets the full Stripe Dashboard. An Express
-      // account (platform-liable) contradicts that profile and Stripe refuses it
-      // in live mode ("review the responsibilities of managing losses").
-      const account = await s.accounts.create({
-        controller: {
-          losses: { payments: "stripe" },
-          fees: { payer: "account" },
-          requirement_collection: "stripe",
-          stripe_dashboard: { type: "full" },
-        },
-        country: "GB",
-        email: req.user?.email ?? undefined,
-        metadata: { tenantId: auth.tenantId },
-        business_profile: { name: tenant.data()!.name },
-        // Capabilities must be REQUESTED explicitly — an Express account
-        // without card_payments completes onboarding but then rejects every
-        // charge ("cannot create a charge … without the card_payments
-        // capability").
-        capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
-      });
-      accountId = account.id;
-      await tenantRef.update({ stripeAccountId: accountId });
-    }
+    const accountId = await ensureConnectedAccount(s, auth, req.user?.email ?? undefined, tenantRef, tenant);
     // Return to the CALLER's own Finance page. These used to be hardcoded to
     // /freelancer/finance, which bounced a company or franchise operator into
     // a portal PortalGuard then blocked — they came back from Stripe to an
@@ -128,6 +140,47 @@ payments.post("/connect", async (req, res) => {
       return_url: finance,
     });
     res.json({ url: link.url, accountId });
+  } catch (e) {
+    stripeFail(res, e);
+  }
+});
+
+// POST /api/payments/connect/session — the same account as /connect, but returns an Account Session
+// client secret so the set-up form can be shown INSIDE the app (Stripe's embedded onboarding). If Stripe
+// will not issue a session for this account, the hosted onboarding link comes back instead and the UI
+// redirects as before — the provider is never stuck.
+payments.post("/connect/session", async (req, res) => {
+  const s = needStripe(res);
+  if (!s) return;
+  const auth = req.auth!;
+  if (!canWrite(auth.role) || !auth.tenantId) {
+    res.status(403).json({ error: "Requires an operator account with a tenant" });
+    return;
+  }
+  if (auth.role === "franchise") {
+    res.status(403).json({ error: "Your head office manages the payout (Stripe) account." });
+    return;
+  }
+  const tenantRef = tenantsCol.doc(auth.tenantId);
+  const tenant = await tenantRef.get();
+  if (!tenant.exists) {
+    res.status(400).json({ error: "Your tenant no longer exists" });
+    return;
+  }
+  try {
+    const accountId = await ensureConnectedAccount(s, auth, req.user?.email ?? undefined, tenantRef, tenant);
+    try {
+      const session = await s.accountSessions.create({
+        account: accountId,
+        components: { account_onboarding: { enabled: true, features: { external_account_collection: true } } },
+      });
+      res.json({ clientSecret: session.client_secret, accountId });
+    } catch (inner) {
+      console.warn("[payments] embedded onboarding session refused, falling back to hosted link:", (inner as Error).message);
+      const finance = `${webUrl}/${portalOf(auth.role)}/finance`;
+      const link = await s.accountLinks.create({ account: accountId, type: "account_onboarding", refresh_url: finance, return_url: finance });
+      res.json({ url: link.url, accountId });
+    }
   } catch (e) {
     stripeFail(res, e);
   }

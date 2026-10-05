@@ -9,6 +9,7 @@ import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Badge, Button, Card } from "@/components/ui";
 import { useT, useWord } from "@/lib/i18n/provider";
+import { EmbeddedOnboarding } from "./EmbeddedOnboarding";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Finance — v1 is the payments slice: connect the tenant's own Stripe
@@ -49,6 +50,7 @@ export function PaymentsApp() {
   const [payments, setPayments] = useState<PaymentRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [embedded, setEmbedded] = useState(false);
 
   const refresh = useCallback(() => {
     apiGet<Status>("/api/payments/status").then(setStatus).catch((e) => setError(e.message));
@@ -57,16 +59,10 @@ export function PaymentsApp() {
   useEffect(() => refresh(), [refresh]);
   useRealtime(["payments", "tenants"], refresh);
 
-  async function connect() {
-    setBusy(true);
+  // Set-up opens inside the app (Stripe's embedded form); the hosted-page redirect is the built-in fallback.
+  function connect() {
     setError(null);
-    try {
-      const { url } = await apiPost<{ url: string }>("/api/payments/connect", {});
-      window.location.href = url; // Stripe-hosted Express onboarding
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("p8lst.payStartFail"));
-      setBusy(false);
-    }
+    setEmbedded(true);
   }
 
   const ready = status?.connected && status.chargesEnabled;
@@ -76,6 +72,7 @@ export function PaymentsApp() {
 
   return (
     <div className="text-[var(--ink)]">
+      {embedded && <EmbeddedOnboarding onClose={() => setEmbedded(false)} onExit={() => { setEmbedded(false); refresh(); }} />}
       <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
         {t("p8lst.payTitle")}
       </h2>
