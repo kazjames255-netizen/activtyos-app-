@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import { canWrite, operatorScope, type Role, managerScope } from "../middleware/role";
 import { platformFallback, stripe, toPence, webUrl } from "../lib/stripe";
 import { autoEmailOn } from "../lib/autoEmails";
+import { ensurePayDomains } from "../lib/payDomains";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { bookingDocId } from "./bookings";
 import { settlePaymentRecord } from "../lib/settlePayment";
@@ -193,6 +194,7 @@ payments.get("/status", async (req, res) => {
   }
   try {
     const account = await s.accounts.retrieve(accountId);
+    if (account.charges_enabled && account.capabilities?.card_payments === "active") void ensurePayDomains(scope.tenantId, accountId);
     res.json({
       connected: true,
       accountId,

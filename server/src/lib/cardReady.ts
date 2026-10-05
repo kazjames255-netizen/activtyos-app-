@@ -1,5 +1,6 @@
 import { db } from "../firebase";
 import { platformFallback, stripe } from "./stripe";
+import { ensurePayDomains } from "./payDomains";
 
 // Can THIS provider take a card payment right now? The booking page used to offer "Card" to every parent, so a provider who had
 // not finished Stripe got bookings that then failed at "Pay now". Cached for a minute per tenant: the public library is read on
@@ -18,6 +19,8 @@ export async function cardReady(tenantId: string): Promise<boolean> {
     if (accountId) {
       const a = await stripe.accounts.retrieve(accountId);
       ok = !!a.charges_enabled && a.capabilities?.card_payments === "active";
+      // Ready to take cards: make sure Apple Pay / Google Pay work on this provider's checkout (fire and forget, idempotent).
+      if (ok) void ensurePayDomains(tenantId, accountId);
     }
   } catch {
     ok = true; // Stripe unreachable: do not hide Card on a guess
