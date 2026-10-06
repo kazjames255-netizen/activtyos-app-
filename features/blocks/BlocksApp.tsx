@@ -328,6 +328,7 @@ export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
         } as React.CSSProperties
       }
     >
+      <style>{`@keyframes aosChipPop{0%{transform:scale(.2) translateY(-30px);opacity:0}60%{transform:scale(1.18) translateY(0);opacity:1}100%{transform:scale(1);opacity:1}}.aos-chip-pop{animation:aosChipPop 520ms cubic-bezier(.2,.9,.3,1.2) both}@media (prefers-reduced-motion: reduce){.aos-chip-pop{animation:none}}`}</style>
       {!embedded && <PageHero title={t("p8lst.blkHeroTitle")} lede={t("p8lst.blkHeroLede")} icon="🗓️" actions={<TourLauncher view="blocks" compact />} />}
 
       {error && (
@@ -782,7 +783,7 @@ function BuildColumn({
   }
 
   return (
-    <Card className="p-3.5" style={{ borderInlineStartWidth: "4px", borderInlineStartColor: "var(--brand)" }}>
+    <Card className="p-3.5" style={{ borderInlineStartWidth: "6px", borderInlineStartColor: "#e9a915", background: "linear-gradient(180deg, #fffaf0, var(--surface) 140px)", boxShadow: "0 14px 34px -18px rgba(233,169,21,.65)" }}>
       <StepHead n={3} title={t("p8lst.blkStep3")} />
       <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">
         {t("p8lst.blkBuildHelp")}
@@ -798,8 +799,8 @@ function BuildColumn({
         onDrop={onDrop}
         className="mb-2.5 rounded-xl border-2 border-dashed p-3 transition-colors"
         style={{
-          borderColor: over ? "var(--brand-2, #1d3a8f)" : "var(--line)",
-          background: over ? "var(--brand-soft)" : "transparent",
+          borderColor: over ? "var(--brand-2, #1d3a8f)" : "#e9a915",
+          background: over ? "var(--brand-soft)" : "#fffdf6",
         }}
       >
         {empty ? (
@@ -812,7 +813,7 @@ function BuildColumn({
             {draftPeriods.length > 0 && (
               <ChipRow label={t("p8lst.blkPeriods")}>
                 {draftPeriods.map((p) => (
-                  <Chip key={p.id} onRemove={() => dropPeriod(p.id)}>
+                  <Chip key={p.id} accent="#e9a915" onRemove={() => dropPeriod(p.id)}>
                     {p.title} <span className="text-[var(--ink-3)]">{periodRange(p)}</span>
                   </Chip>
                 ))}
@@ -821,7 +822,7 @@ function BuildColumn({
             {draftPasses.length > 0 && (
               <ChipRow label={t("p8lst.blkPasses")}>
                 {draftPasses.map((p) => (
-                  <Chip key={p.id} onRemove={() => dropPass(p.id)}>
+                  <Chip key={p.id} accent="#2f6bd8" onRemove={() => dropPass(p.id)}>
                     {p.name}
                   </Chip>
                 ))}
@@ -1659,10 +1660,13 @@ function ChipRow({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function Chip({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
+function Chip({ children, onRemove, accent }: { children: React.ReactNode; onRemove: () => void; accent?: string }) {
   const t = useT();
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[3px] text-[11.5px] font-semibold text-[var(--ink-2)]">
+    <span
+      className={accent ? "aos-chip-pop inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-extrabold" : "inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[3px] text-[11.5px] font-semibold text-[var(--ink-2)]"}
+      style={accent ? { background: `color-mix(in srgb, ${accent} 16%, #fff)`, border: `2px solid ${accent}`, color: "#171534" } : undefined}
+    >
       {children}
       <button
         type="button"
