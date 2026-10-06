@@ -4135,7 +4135,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
           )}
         </div>
         {/* hero image (no text on it) */}
-        <div className="relative overflow-hidden rounded-[28px]" style={{ aspectRatio: heroAspect }}>
+        <div className="relative overflow-hidden rounded-[28px]" style={{ aspectRatio: imgs.length ? heroAspect : "6 / 1", minHeight: imgs.length ? undefined : 72 }}>
           <HeroImages imgs={imgs} fallback={HERO_FALLBACK} />
           {heroCat && <span className="absolute start-4 top-4 z-[2] rounded-full bg-white px-3.5 py-2 text-[12px] font-extrabold" style={{ color: BLUE, transform: "rotate(-3deg)" }}>🎉 {optionLabel(heroCat.name)}</span>}
         </div>
@@ -4353,7 +4353,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
         )}
       </div>
       {/* hero image (no text on it) */}
-      <div className="relative overflow-hidden" style={{ aspectRatio: heroAspect }}>
+      <div className="relative overflow-hidden" style={{ aspectRatio: imgs.length ? heroAspect : "6 / 1", minHeight: imgs.length ? undefined : 72 }}>
         <HeroImages imgs={imgs} fallback={`linear-gradient(120deg,${EL},#00a3ff 70%,#003)`} />
         <div className="pointer-events-none absolute inset-0 z-[1]" style={{ backgroundImage: "repeating-linear-gradient(115deg,transparent 0 46px,rgba(255,255,255,.05) 46px 48px)" }} />
         {heroCat && <span className="absolute start-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em]" style={{ background: LIME, color: INK, transform: "skewX(-8deg)" }}>{optionLabel(heroCat.name)}</span>}
