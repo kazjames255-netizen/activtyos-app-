@@ -40,3 +40,10 @@ export function isQueuedOn(status: string | undefined, days: string[] | undefine
 export function cardUnpaid(method: unknown, amount: number | undefined, onBehalf: unknown): boolean {
   return /^card$/i.test(String(method)) && (amount ?? 0) > 0 && !onBehalf;
 }
+
+/** A booking for several days gets ONE session reminder, before its first booked day (a 30-day camp must not send 30 emails).
+ *  `days` is the booking's own day list (undefined = every session of the block); `blockDates` are all the block's session dates. */
+export function isFirstBookedSession(days: string[] | undefined, blockDates: string[], date: string): boolean {
+  const mine = (days && days.length ? days : blockDates).filter(Boolean).slice().sort();
+  return mine.length === 0 ? true : mine[0] === date;
+}

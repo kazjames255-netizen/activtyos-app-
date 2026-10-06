@@ -9,6 +9,7 @@ import { syncFromStripe, updateMeteredQuantities } from "./billing";
 import { clearSubscriptionCache } from "../middleware/subscription";
 import { AUTO_EMAIL_DEFAULTS, type AutoEmailPrefs } from "./autoEmails";
 import { performEmailSend } from "./emailSend";
+import { isFirstBookedSession } from "./bookingRules";
 import { bookingRefOfKey, entryFor, registerRows } from "./registerRows";
 import type { Booking } from "../../../features/bookings/types";
 
@@ -390,6 +391,8 @@ async function sessionReminders(): Promise<void> {
 
       for (const b of await bookingsFor(block.id)) {
         if (b.status !== "Confirmed" || !b.email?.includes("@") || !bookedOn(b, s.date)) continue;
+        // One reminder per booking, before its first booked day: a multi-day booking must not send a reminder every day.
+        if (!isFirstBookedSession(b.days, (block.sessions ?? []).map((x) => x.date), s.date)) continue;
         const owes = b.pay !== "Paid" && (b.amount ?? 0) > 0;
         // The booking snapshots the listing name — the best fallback when the
         // block doesn't link to a live listing doc.
