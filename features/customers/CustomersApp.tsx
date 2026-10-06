@@ -264,6 +264,7 @@ const splitName = (name: string) => {
 };
 
 export function CustomersApp() {
+  const portalHref = usePortalHref();
   const t = useT();
   const { locale } = useI18n();
   const fa = (s: string) => (isRTL(locale) ? s.replace(/[←→]/g, (c) => (c === "←" ? "→" : "←")) : s);
@@ -1355,6 +1356,30 @@ export function CustomersApp() {
 
                 {key === openKid && (
                   <div className="border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3 ps-5">
+                    {/* Quick links for this child, the same records as "Find a child": log it straight from here. */}
+                    {(() => {
+                      const n = encodeURIComponent(k.name);
+                      const em = encodeURIComponent((k.family.email ?? "").trim().toLowerCase());
+                      const incSeg = portalHref("/incidents");
+                      const chip = (icon: string, label: string, tint: string, href: string, disabled = false) => (
+                        <a key={label} href={disabled ? undefined : href} aria-disabled={disabled}
+                          className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-extrabold no-underline transition hover:-translate-y-0.5"
+                          style={{ borderColor: tint + "55", background: tint + "12", color: tint, opacity: disabled ? 0.4 : 1, pointerEvents: disabled ? "none" : "auto" }}>
+                          <span aria-hidden>{icon}</span>{label}
+                        </a>
+                      );
+                      return (
+                        <div className="mb-3 flex flex-wrap gap-2">
+                          {chip("\u26D1\uFE0F", t("registers.firstAid"), "#be123c", portalHref(`/accidents?child=${n}`))}
+                          {chip("\u26A0\uFE0F", t("registers.logConcern"), "#b45309", `${incSeg}?child=${n}`)}
+                          {chip("\uD83D\uDC8A", t("registers.medication"), "#15803d", portalHref(`/medication?child=${n}`))}
+                          {chip("\uD83C\uDF7D\uFE0F", t("registers.meals"), "#0f766e", portalHref(`/meals?child=${n}`))}
+                          {chip("\uD83D\uDCF8", t("registers.moment"), "#7c3aed", portalHref(`/moments?child=${n}`))}
+                          {chip("\uD83D\uDCAC", t("registers.messageParent"), "#1d3a8f", portalHref(`/messages?compose=1&emails=${em}`), !k.family.email)}
+                          {chip("\u2709\uFE0F", t("registers.emailParent"), "#0e7490", portalHref(`/email?to=${em}`), !k.family.email)}
+                        </div>
+                      );
+                    })()}
                     <div className="grid gap-x-4 gap-y-2.5 sm:grid-cols-4">
                       <Row label={t("customers.dateOfBirth")} value={k.dob} />
                       <Row label={t("customers.age")} value={ageOf(k) !== null ? String(ageOf(k)) : ""} />
