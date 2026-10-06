@@ -32,7 +32,7 @@ export function layout(
   title: string,
   bodyHtml: string,
   b: Booking,
-  ctx: { heroCid?: string; location?: string; homeVisit?: boolean; provided?: string[]; toBring?: string[]; mapCid?: string } = {},
+  ctx: { heroCid?: string; location?: string; homeVisit?: boolean; online?: boolean; joinInfo?: string; provided?: string[]; toBring?: string[]; mapCid?: string } = {},
   /** The web origin links are built on (emails.ts passes the live webUrl). */
   baseUrl = "",
 ): string {
@@ -63,11 +63,13 @@ export function layout(
           ${ctx.location ? row(ctx.homeVisit ? "We'll come to you at" : "Location", escapeHtml(ctx.location)) : ""}
           ${row("Child", escapeHtml(kids || "—"))}
           ${b.listPrice != null && (b.discountOff ?? 0) > 0 ? `${row("Price before discount", gbp(b.listPrice))}${row(`Discount${b.discountNames?.length ? ` (${b.discountNames.join(", ")})` : ""}`, `− ${gbp(b.discountOff ?? 0)}`)}` : ""}
+          ${(b.addons ?? []).length ? row("Extras", (b.addonLines?.length && new Set(b.addonLines.map((l) => l.child)).size > 1 ? b.addonLines.map((l) => `${escapeHtml(l.label)} — ${gbp(l.price)} <span style="color:#8a86a3">(${escapeHtml(l.child)})</span>`) : (b.addons ?? []).map((a) => escapeHtml(a))).join("<br>")) : ""}
           ${row("Total", `<b>${gbp(b.amount)}</b>`)}
         </div>
         ${label("Dates &amp; times")}
         ${datesGridHtml(b.sessions ?? [])}
         ${ctx.mapCid ? `${label("Where")}<img src="${ctx.mapCid}" alt="Map of ${escapeHtml(ctx.location ?? b.listing)}" width="544" style="display:block;width:100%;max-width:544px;height:auto;border-radius:12px;border:1px solid #eef0f5" />${ctx.location ? `<div style="font-size:12px;color:#8a86a3;margin-top:6px">📍 ${escapeHtml(ctx.location)}</div>` : ""}` : ""}
+        ${ctx.online && ctx.joinInfo ? `${label("How to join")}<div style="font-size:14px;line-height:1.6;color:#3d4763;white-space:pre-line">${escapeHtml(ctx.joinInfo)}</div>` : ""}
         ${ctx.provided && ctx.provided.length ? `${label("What's included")}<div>${chips(ctx.provided)}</div>` : ""}
         ${ctx.toBring && ctx.toBring.length ? `${label("What to bring")}<div>${chips(ctx.toBring)}</div>` : ""}
         <div style="text-align:center;margin:26px 0 4px">
@@ -195,7 +197,7 @@ export function refundDeclinedSpec(b: Booking, providerName: string): CustomerEm
 
 export function placeOfferedSpec(b: Booking, providerName: string, baseUrl: string): CustomerEmailSpec {
   const until = b.offerExpiresAt
-    ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+    ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) // UK time, whatever the server's clock zone is
     : "";
   return {
     subject: `A place has opened up — ${b.listing}`,

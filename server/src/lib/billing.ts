@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { stripeMode } from "./directoryRules";
 import { db } from "../firebase";
 import { stripe, toPence } from "./stripe";
 import { notify } from "./notify";
@@ -48,7 +49,7 @@ export async function saveSub(tenantId: string, patch: Partial<SubRecord>): Prom
  *  The database is shared by the live site and local test runs, so an id is kept PER MODE (live / test) and checked to still exist:
  *  a product made under the test keys does not exist under the live keys ("No such product"), which used to stop every trial start. */
 export async function ensureProduct(): Promise<string> {
-  const mode = (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_live") ? "live" : "test";
+  const mode = stripeMode(process.env.STRIPE_SECRET_KEY);
   const ref = db.collection("platform").doc("billing");
   const snap = await ref.get();
   const existing = snap.exists ? (snap.get(`productIds.${mode}`) as string | undefined) : undefined;

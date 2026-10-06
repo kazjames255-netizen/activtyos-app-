@@ -1,0 +1,23 @@
+import { chromium, login, shot, go, rec, results, load } from "./hv-ui-lib";
+import { call, db, tokFor } from "./hv-lib";
+import fs from "node:fs";
+(async () => {
+  const S = load(); const L = S.listings;
+  const b = await chromium.launch();
+  const { page: pf } = await login(b, S.accts.fa.email);
+  const fa = await tokFor(S.accts.fa.email);
+  const bk = (await call(fa, "GET", "/api/bookings")).json as any[];
+  const hv = bk.find((x) => x.serviceAddress?.postcode && x.listing === "HV Postcode Visits");
+  rec("API provider /api/bookings carries the visit address", !!hv, hv ? JSON.stringify(hv.serviceAddress) : "no booking with serviceAddress returned to the provider");
+  await go(pf, "/freelancer/bookings");
+  const search = pf.getByPlaceholder(/search/i).first();
+  if (hv && await search.isVisible().catch(() => false)) await search.fill(hv.ref);
+  await pf.waitForTimeout(2000);
+  const card = pf.locator('[data-ui="card"]').filter({ hasText: hv?.ref ?? "zzz" }).first();
+  await card.click().catch(() => {});
+  await pf.waitForTimeout(1500);
+  const body = await pf.locator("body").innerText();
+  rec("UI provider booking view shows WHERE to go (visit address)", /5 Home Road|NN5 7EA/.test(body), "address text present on provider bookings screen: " + /NN5 7EA/.test(body), await shot(pf, "hv-provider-booking", true));
+  fs.writeFileSync("/private/tmp/claude-501/-Users-kazjames-Downloads-activtyos-app-/d6be64b6-4124-4419-9525-b7eb6fbb7058/scratchpad/hv-ui-b.json", JSON.stringify(results, null, 1));
+  await b.close(); process.exit(0);
+})().catch((e) => { console.error(e); process.exit(1); });

@@ -54,6 +54,13 @@ export const baseListingSchema = z
     // Where sessions happen: a fixed venue (default), a home-visit provider who
     // travels to the family, or both. Absent = "venue" (unchanged behaviour).
     deliveryMode: z.enum(["venue", "home-visit", "both"]).optional(),
+    // Online listings (the venue is the account's "Online" place): how families get into the session.
+    // "platform" (default) = our own video room; "own" = the provider's own link (Zoom etc.), shown from 10 minutes before the start
+    // (or straight away when showLinkNow). maxJoiners: optional cap on children in the room. No recording exists or is planned.
+    videoMode: z.enum(["platform", "own"]).optional(),
+    ownLink: z.string().trim().max(500).optional(),
+    showLinkNow: z.boolean().optional(),
+    maxJoiners: z.string().max(6).optional(),
     // Coverage area for a home-visit ("home-visit" or "both") listing — either a
     // flat list of postcode prefixes, or a radius in miles from a base postcode.
     // Checkout validates the family's service address against this.

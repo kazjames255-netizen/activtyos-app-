@@ -1,6 +1,7 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { addonLinesFor } from "@/features/bookings/helpers";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GoLiveModal, fetchGoLive, goLiveReady } from "@/features/billing/GoLiveModal";
 import { api, get as apiGet, post as apiPost, isDemoMode, ApiError } from "@/lib/api";
@@ -224,9 +225,8 @@ function slotsOf(lines: { pass: string; dates: string[]; timing?: string }[]): {
   return [...m.values()].map((x) => ({ pass: x.pass, timing: x.timing, dates: [...x.dates].sort() }));
 }
 
-export function isOnlineVenue(v: { kind?: string } | null | undefined): boolean {
-  return v?.kind === "online";
-}
+export { isOnlineVenue } from "./wizardRules";
+import { isOnlineVenue, fixYear, runLooksWrong, saveStatusFor, onlineVenueChoice, deliveryPatch } from "./wizardRules";
 
 /** The dated run covering a date, when the server has told us about them. */
 
@@ -296,6 +296,11 @@ export interface WizardDraft {
    *  provider who travels to the family, or "both" — a venue plus a coverage
    *  area for visits. Absent on older listings = "venue" (unchanged behaviour). */
   deliveryMode?: "venue" | "home-visit" | "both";
+  /** Online listings: "platform" (our video room, default) or "own" (the provider's own link). */
+  videoMode?: "platform" | "own";
+  ownLink?: string;
+  showLinkNow?: boolean;
+  maxJoiners?: string;
   /** Where a home-visit ("home-visit" or "both") listing will travel to — either
    *  a flat list of postcode prefixes ("SW1", "SW2 1") or a radius in miles
    *  from the provider's base postcode. Checkout validates the family's service
@@ -465,6 +470,7 @@ export function publishBlockers(d: WizardDraft, ticketCount: number, visibleTick
   if (!d.title.trim()) out.push({ step: at("basics"), what: tNow("p8lst.waBlkName") });
   const homeVisit = d.deliveryMode === "home-visit" || d.deliveryMode === "both";
   if (d.deliveryMode !== "home-visit" && !d.venueId) out.push({ step: at("details"), what: tNow("p8lst.waBlkVenue") });
+  if (d.videoMode === "own" && !(d.ownLink ?? "").trim()) out.push({ step: at("details"), what: tNow("p9tx.vmNeedLink") });
   if (homeVisit && !d.coverageArea) out.push({ step: at("details"), what: tNow("p8lst.waBlkArea") });
   else if (homeVisit && d.coverageArea?.mode === "postcodePrefixes" && !(d.coverageArea.postcodePrefixes ?? []).length)
     out.push({ step: at("details"), what: tNow("p8lst.waBlkPrefix") });
@@ -715,7 +721,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; slots?: { pass: string; timing: string; dates: string[] }[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean; listPrice?: number; discountOff?: number; discountNames?: string[] } | null>(null);
+  const [done, setDone] = useState<{ cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; slots?: { pass: string; timing: string; dates: string[] }[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean; listPrice?: number; discountOff?: number; discountNames?: string[]; visitAt?: string; extras?: string[] } | null>(null);
   const [payClosed, setPayClosed] = useState(false);
   const [paidNow, setPaidNow] = useState(false);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
@@ -775,7 +781,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       for (const l of lines) byBlock.set(l.blockId, [...(byBlock.get(l.blockId) ?? []), l]);
       const refs: string[] = [];
       let total = 0;
-      let listSum = 0, offSum = 0; const offNames = new Set<string>();
+      let listSum = 0, offSum = 0; const offNames = new Set<string>(); const extraLines: string[] = [];
       let voucherDetails: { label: string; value: string }[] | undefined;
       let bankPay: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number } | undefined;
       let heldForApproval = false;
@@ -836,7 +842,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         if (res.bookings.some((x) => x.status === "Approval needed")) heldForApproval = true;
         if (res.bookings.some((x) => x.status !== "Waitlisted")) seated = true;
         total += res.total;
-        for (const x of res.bookings as { amount?: number; listPrice?: number; discountOff?: number; discountNames?: string[] }[]) { listSum += x.listPrice ?? x.amount ?? 0; offSum += x.discountOff ?? 0; (x.discountNames ?? []).forEach((n) => offNames.add(n)); }
+        for (const x of res.bookings as { amount?: number; listPrice?: number; discountOff?: number; discountNames?: string[]; addons?: string[]; addonLines?: { child: string; label: string; price: number }[]; kids?: unknown[] }[]) { addonLinesFor(x).forEach((l) => extraLines.push(l)); listSum += x.listPrice ?? x.amount ?? 0; offSum += x.discountOff ?? 0; (x.discountNames ?? []).forEach((n) => offNames.add(n)); }
         if (res.voucher?.details?.length) voucherDetails = res.voucher.details;
         if (res.bank) bankPay = res.bank;
       }
@@ -844,6 +850,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       setDone({
         refs,
         total,
+        ...(extraLines.length ? { extras: extraLines } : {}),
         ...(offSum > 0.004 ? { listPrice: Math.round(listSum * 100) / 100, discountOff: Math.round(offSum * 100) / 100, discountNames: [...offNames] } : {}),
         children: [...new Set(lines.map((l) => l.child))],
         passes: [...new Set(lines.map((l) => l.pass))],
@@ -854,6 +861,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         voucherScheme,
         voucherDetails,
         bank: bankPay,
+        ...(serviceAddress?.postcode?.trim() ? { visitAt: [serviceAddress.address, serviceAddress.postcode].map((x) => (x ?? "").trim()).filter(Boolean).join(", ") } : {}),
         needsApproval: heldForApproval,
         waitlisted: !seated,
         payByCard: (/^card$/i.test(String(method)) || (/^tfc$/i.test(String(method)) && /^card$/i.test(tfc?.remainderVia ?? "") && (tfc?.amount ?? 0) < total)) && seated,
@@ -937,6 +945,10 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
           </div>
           <div className="p-4">
             {kids && <div className={rowCls}><span className={labCls}>{t("p7cl.lblWho")}</span><span className={valCls}>{kids}</span></div>}
+            {(() => { const ov = listing.library?.venue as unknown as { kind?: string; directions?: string } | null | undefined; return ov?.kind === "online" ? (
+              <div className="mb-1 rounded-xl border-2 border-[#2f6bd8] bg-[#eef4ff] p-3 text-[13px]"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">💻 {t("p7pg.howToJoin")}</div><div className="mt-1 whitespace-pre-line font-semibold text-[#171534]">{(ov.directions ?? "").trim() || t("p9tx.joinLater")}</div></div>
+            ) : null; })()}
+            {done.visitAt && <div className={rowCls}><span className={labCls}>🚗 {t("p9tx.hvWeCome")}</span><span className={valCls}>{done.visitAt}</span></div>}
             {done.passes.length > 0 && <div className={rowCls}><span className={labCls}>{t("p7cl.lblPass")}</span><span className={valCls}>{done.passes.join(", ")}</span></div>}
             {(() => {
               // The time(s) of what was booked. One shared time reads as a single "Time" row; different passes with different times are listed
@@ -954,6 +966,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
                 </div>
               );
             })()}
+            {(done.extras?.length ?? 0) > 0 && <div className={rowCls}><span className={labCls}>{t("p8lst.ck8Addons")}</span><span className={`${valCls} flex flex-col gap-0.5`}>{done.extras!.map((x, i) => <span key={i}>{x}</span>)}</span></div>}
             {when && <div className={rowCls}><span className={labCls}>{t("p7cl.lblStarts")}</span><span className={valCls}>{when}</span></div>}
             {where && <div className={rowCls}><span className={labCls}>{t("p7cl.lblWhere")}</span><span className={valCls}>{where}</span></div>}
             {done.refs.length > 1 && <div className="mt-2 rounded-lg bg-[#eef3ff] px-3 py-2 text-[12px] text-[#1d3a8f]">{t("p7cl.multiBookings", { n: String(done.refs.length) })}</div>}
@@ -1338,7 +1351,8 @@ export function ListingWizard({
     if (i > 0 && titleMissing(d.title)) { setStep(0); setMsg(tr("p9jr.nameFirst")); return; }
     setStep(i);
   };
-  const saveDraftAction = async () => { if (await syncApi("draft")) { setSaveState("saved"); onSaved(); } };
+  // On a LIVE listing this button must keep it live: it used to send status "draft", silently taking the listing off sale (parents then see "This booking isn't open right now").
+  const saveDraftAction = async () => { if (await syncApi(saveStatusFor(d.status))) { setSaveState("saved"); onSaved(); } };
   const blockers = publishBlockers(d, tickets.length, tickets.filter((t) => d.ticketOverrides[t.name]?.hidden !== true).length);
   const [goLiveOpen, setGoLiveOpen] = useState(false);
   const publishAction = async () => {
@@ -1377,7 +1391,7 @@ export function ListingWizard({
               const label = { idle: "", dirty: "", saving: tr("p8lst.waSaving"), saved: tr("p8lst.waSaved"), error: "" }[saveState];
               return label ? <span className="me-0.5 text-[11.5px] font-semibold text-white/85">{saveState === "saved" ? "✓ " : ""}{label}</span> : null;
             })()}
-            <button type="button" disabled={busy} onClick={saveDraftAction} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25 disabled:opacity-40">{tr("p8lst.waSaveDraft")}</button>
+            <button type="button" disabled={busy} onClick={saveDraftAction} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25 disabled:opacity-40">{d.status === "live" ? tr("p8lst.waSaveChanges") : tr("p8lst.waSaveDraft")}</button>
             <button type="button" onClick={() => setFullPreview(true)} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25">{tr("p8lst.waPreviewBtn")}</button>
             <button type="button" disabled={busy} onClick={publishAction} title={blockers.length ? pickPlural(tr, loc, "p8lst.waThingsLeft", blockers.length) : undefined} className="rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#16306e] shadow-sm hover:bg-white/90 disabled:opacity-60">{tr("p8lst.waPublish")}{blockers.length > 0 && <span className="ms-1 opacity-70">({blockers.length})</span>}</button>
             <button type="button" onClick={() => void closeRef.current()} aria-label={tr("p8lst.waClose")} className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px] font-bold hover:bg-white/30">×</button>
@@ -1870,12 +1884,12 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
             <button key={mode} type="button" onClick={() => {
               if (mode === "online") {
                 // Online sessions have no address: use (or create) the account's "Online" place, so every page already knows how to show it.
-                const existing = local.venues.find((v) => isOnlineVenue(v));
-                const id = existing?.id ?? uid();
-                if (!existing) patchLocal((st) => ({ ...st, venues: [...st.venues, { id, name: "Online", address: "", kind: "online" }] }));
+                const pick = onlineVenueChoice(local.venues, uid());
+                const id = pick.id;
+                if (pick.create) patchLocal((st) => ({ ...st, venues: [...st.venues, { id, name: "Online", address: "", kind: "online" }] }));
                 upd({ deliveryMode: "venue", venueId: id, coverageArea: null });
               } else {
-                upd({ deliveryMode: mode, ...(mode === "venue" && isOnl ? { venueId: null } : {}), ...(mode === "home-visit" && !d.coverageArea ? { coverageArea: { mode: "postcodePrefixes", postcodePrefixes: [] } } : {}) });
+                upd(deliveryPatch(mode, local.venues, d.venueId, !!d.coverageArea));
               }
             }}
               className="rounded-full border px-3 py-1.5 text-[12px] font-bold"
@@ -1899,9 +1913,30 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
             <div className="text-[13px] font-extrabold text-[#1d3a8f]">💻 {tr("p9tx.onlineTitle")}</div>
             <div className="mt-0.5 text-[12px] font-semibold text-[#3d4763]">{tr("p9tx.onlineNote")}</div>
             <div className="mt-2.5 opacity-60"><FieldLabel>{tr("p8lst.waVenue")}</FieldLabel><Select value={ov.id} disabled className="w-full max-w-[360px]"><option value={ov.id}>{ov.name}: {tr("p9tx.noAddressNeeded")}</option></Select></div>
-            <div className="mt-2.5"><FieldLabel>{tr("p9tx.howJoin")}</FieldLabel>
-              <textarea rows={3} value={ov.directions ?? ""} onChange={(e) => patchLocal((st) => ({ ...st, venues: st.venues.map((v) => (v.id === ov.id ? { ...v, directions: e.target.value } : v)) }))}
-                placeholder={tr("p9tx.howJoinPh")} className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[var(--brand-2)]" /></div>
+            <div className="mt-3 rounded-xl border border-[var(--line)] bg-white p-3">
+              <div className="text-[12.5px] font-extrabold text-[#16306e]">{tr("p9tx.vmTitle")}</div>
+              {([["platform", tr("p9tx.vmPlatform"), tr("p9tx.vmPlatformSub")], ["own", tr("p9tx.vmOwn"), tr("p9tx.vmOwnSub")]] as const).map(([k, label, sub]) => {
+                const on = (d.videoMode ?? "platform") === k;
+                return (
+                  <label key={k} className="mt-2 flex cursor-pointer items-start gap-2.5 rounded-lg border-2 p-2.5" style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)" }}>
+                    <input type="radio" name="wiz-video-mode" checked={on} onChange={() => upd({ videoMode: k })} className="mt-1" />
+                    <span><span className="block text-[13px] font-extrabold">{label}</span><span className="block text-[11.5px] leading-snug text-[var(--ink-3)]">{sub}</span></span>
+                  </label>
+                );
+              })}
+              {(d.videoMode ?? "platform") === "own" ? (
+                <div className="mt-2.5">
+                  <FieldLabel htmlFor="wiz-own-link">{tr("p9tx.ownLinkLbl")}</FieldLabel>
+                  <Input id="wiz-own-link" type="url" value={d.ownLink ?? ""} onChange={(e) => upd({ ownLink: e.target.value })} placeholder="https://" className="w-full" />
+                  <label className="mt-2 flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold"><input type="checkbox" checked={d.showLinkNow === true} onChange={(e) => upd({ showLinkNow: e.target.checked })} />{tr("p9tx.showNow")}</label>
+                </div>
+              ) : (
+                <div className="mt-2.5 w-[170px]"><FieldLabel htmlFor="wiz-max-joiners">{tr("p9tx.maxJoinLbl")}</FieldLabel><Input id="wiz-max-joiners" type="number" min={1} value={d.maxJoiners ?? ""} onChange={(e) => upd({ maxJoiners: e.target.value })} className="w-full" /></div>
+              )}
+            </div>
+            <div className="mt-2.5"><FieldLabel>{tr("p9tx.howJoinNotes")}</FieldLabel>
+              <textarea rows={2} value={ov.directions ?? ""} onChange={(e) => patchLocal((st) => ({ ...st, venues: st.venues.map((v) => (v.id === ov.id ? { ...v, directions: e.target.value } : v)) }))}
+                placeholder={tr("p9tx.howJoinNotesPh")} className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[var(--brand-2)]" /></div>
           </div>
         );
       })()}
@@ -2318,17 +2353,6 @@ function SafetyStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
 }
 
 // ── Step: When it runs ─────────────────────────────────────────────────────
-/** A date box typed as "26/10/20" yields the year 0020 (and 20 weeks becomes 58 weeks of nothing). Two-digit and three-digit years mean 20xx. */
-function fixYear(v: string): string {
-  const m = /^(\d{1,6})-(\d{2})-(\d{2})$/.exec(v);
-  if (!m) return v;
-  const y = Number(m[1]);
-  if (y >= 1000 && y <= 9999) return v;
-  if (y < 100) return `${2000 + y}-${m[2]}-${m[3]}`;
-  if (y < 1000) return v; // still being typed: keep waiting for four digits
-  return v;
-}
-
 function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
   const tr = useT();
   const { locale } = useI18n();
@@ -2370,7 +2394,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
           </div>
         </RichCard>
 
-        {(weeks.length > 40 || (d.runFrom && Number(d.runFrom.slice(0, 4)) < 2000)) && (
+        {runLooksWrong(weeks.length, d.runFrom) && (
           <div className="md:col-span-2 -mb-1 flex items-start gap-2 rounded-xl border-2 border-[#e9a915] bg-[#fff6dc] px-3 py-2 text-[12.5px] font-bold text-[#7a4b00]"><span aria-hidden>⚠️</span><span>{tr("p9tx.runTooLong", { n: weeks.length })}</span></div>
         )}
         <RichCard icon="📆" title={pickPlural(tr, locale, "p8lst.wbCalTitle", weeks.length)} subtitle={tr("p8lst.wbCalSub", { n: live })} tint="teal">
@@ -2807,6 +2831,11 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
                     style={r.enabled ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{r.enabled ? tr("p8lst.wbOn") : tr("p8lst.wbOff")}</button>
                   <Button sm onClick={() => openForm(r, !!r.name?.trim() && ruleDisplayName(r) === prettyRuleName(r.name.trim()))}>{tr("p8lst.wbEdit")}</Button>
                   <button type="button" onClick={() => { setRules(rules.filter((x) => x.id !== r.id)); if (form?.id === r.id) openForm(null); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
+                  {r.kind === "person" && r.method !== "percent" && (
+                    <div className="basis-full rounded-lg border-2 border-[#e9a915] bg-[#fff3cf] px-3 py-2 text-[12px] font-bold leading-snug text-[#5a3500]" role="note">
+                      ⚠️ {tr("p9tx.oldPersonWarn")}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -2941,7 +2970,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
       options: q.type === "choice" ? (q.options ?? []).map((o) => o.trim()).filter(Boolean) : undefined,
     }));
     const fields = {
-      name: name.trim(), type, price: parseFloat(price) || 0,
+      name: name.trim(), type, price: Math.max(0, parseFloat(price) || 0),
       description: desc.trim() || undefined,
       questions: keep.length ? keep : undefined,
     };
@@ -2983,7 +3012,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
                 <AddonIcon addon={a} patchLocal={patchLocal} />
                 <button type="button" onClick={() => startEdit(a)} title={tr("p8lst.wbEditItem", { name: a.name })}
                   className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:border-[var(--brand)]">{tr("p8lst.wbEdit")}</button>
-                <button type="button" onClick={() => { if (editing === a.id) clear(); patchLocal((s) => ({ ...s, addons: s.addons.filter((x) => x.id !== a.id) })); upd({ addonIds: d.addonIds.filter((x) => x !== a.id) }); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
+                <button type="button" onClick={() => { if (!confirm(tr("p9tx.adDelConfirm", { name: a.name }))) return; if (editing === a.id) clear(); patchLocal((s) => ({ ...s, addons: s.addons.filter((x) => x.id !== a.id) })); upd({ addonIds: d.addonIds.filter((x) => x !== a.id) }); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
               </div>
             );
           })}
@@ -3056,7 +3085,10 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
   // A team member joins the library list (what customer pages read) the moment they're ticked or given a bio.
   const adopt = (m: StaffMember, patch: Partial<StaffMember> = {}) => patchLocal((s) => (s.staff.some((x) => x.id === m.id) ? { ...s, staff: s.staff.map((x) => (x.id === m.id ? { ...x, ...patch } : x)) } : { ...s, staff: [...s.staff, { ...m, ...patch }] }));
   const updMember = (m: StaffMember, patch: Partial<StaffMember>) => adopt(m, patch);
-  const writeBio = (m: StaffMember) => { updMember(m, { bio: genBio(m.bio, m, bioN[m.id] || 0) }); setBioN((s) => ({ ...s, [m.id]: (s[m.id] || 0) + 1 })); };
+  // "Write with AI" works from the few words the person typed. Pressing it again must reuse THOSE words, not read back the bio it just wrote
+  // (that produced gibberish like "a gift for tom, lead, friendly"). Typing in the box starts a fresh set of words.
+  const [seed, setSeed] = useState<Record<string, string>>({});
+  const writeBio = (m: StaffMember) => { const base = seed[m.id] ?? m.bio; if (seed[m.id] === undefined) setSeed((x) => ({ ...x, [m.id]: m.bio })); updMember(m, { bio: genBio(base, m, bioN[m.id] || 0) }); setBioN((x) => ({ ...x, [m.id]: (x[m.id] || 0) + 1 })); };
   const query = q.trim().toLowerCase();
   const list = query ? all.filter((m) => `${m.first} ${m.last}`.toLowerCase().includes(query)) : all;
   const assignedCount = all.filter((m) => d.staffIds.includes(m.id)).length;
@@ -3091,7 +3123,7 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
                   <FieldLabel>{tr("p8lst.wbBio")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.wbParentsSeeThis")}</span></FieldLabel>
                   <Button sm onClick={() => writeBio(m)}>{tr("p8lst.wbWriteAI")}</Button>
                 </div>
-                <textarea value={m.bio} maxLength={300} onChange={(e) => updMember(m, { bio: e.target.value })} placeholder={tr("p8lst.wbBioPh")}
+                <textarea value={m.bio} maxLength={300} onChange={(e) => { setSeed((x) => { const { [m.id]: _drop, ...rest } = x; return rest; }); updMember(m, { bio: e.target.value }); }} placeholder={tr("p8lst.wbBioPh")}
                   className="h-[58px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 text-[12.5px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
               </div>
             );
@@ -4168,7 +4200,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 
         {/* fancy fact strip (under the image) */}
         <div className="relative z-10 mx-2 -mt-6 flex flex-col overflow-hidden rounded-2xl bg-white sm:flex-row" style={{ boxShadow: "0 18px 34px -18px rgba(30,50,90,.35)" }}>
-          {([["📍", tr("p7pg.whereLbl"), venue?.name || town || tr("p7pg.venueTbc"), "#eef4ff", venue?.address || null], ["📆", tr("p7pg.whenLbl"), runLabel, "#e4f8ee", null], ["👧👦", tr("p7pg.agesLbl"), d.ageFrom && d.ageTo ? tr("p7pg.agesYears", { from: d.ageFrom, to: d.ageTo }) : tr("p7pg.allAges"), "#fff0f5", null]] as [string, string, string, string, string | null][]).map(([e, k, v, tint, sub], i) => (
+          {([["📍", tr("p7pg.whereLbl"), (d.deliveryMode === "home-visit" ? tr("p9tx.hvWeCome") : venue?.name || town || tr("p7pg.venueTbc")), "#eef4ff", venue?.address || null], ["📆", tr("p7pg.whenLbl"), runLabel, "#e4f8ee", null], ["👧👦", tr("p7pg.agesLbl"), d.ageFrom && d.ageTo ? tr("p7pg.agesYears", { from: d.ageFrom, to: d.ageTo }) : tr("p7pg.allAges"), "#fff0f5", null]] as [string, string, string, string, string | null][]).map(([e, k, v, tint, sub], i) => (
             <div key={k} className={`flex flex-1 items-center gap-3 px-4 py-3.5 ${i ? "border-t border-[#eef2fb] sm:border-s sm:border-t-0" : ""}`}>
               <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[16px]" style={{ background: tint }}>{e}</span>
               <div className="min-w-0"><div className="text-[9.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">{k}</div><div className="truncate text-[13px] font-extrabold" style={{ color: DEEP }}>{v}</div>{sub && <div className="truncate text-[11px] font-medium text-[#7a8194]">{sub}</div>}</div>
@@ -4241,7 +4273,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
               <img src={a.image} alt="" className="h-8 w-8 flex-none rounded-lg object-cover" />
             ) : (
               <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-[15px]" style={{ background: a.emoji ? "#e4f8ee" : "#06d6a0", color: a.emoji ? undefined : "#fff" }}>{a.emoji || "＋"}</span>
-            )}{a.name}</span><b style={{ color: DEEP }}>{money(a.price)}</b></div>)}</div></PlayCard>}
+            )}{a.name}</span><b style={{ color: DEEP }}>{money(a.price)}<span className="ms-1 text-[10.5px] font-semibold opacity-70">{a.type === "perday" ? tr("p8lst.ck8PerDay") : tr("p8lst.ck8OneOff")}</span></b></div>)}</div></PlayCard>}
             {d.gallery.length > 0 && <PlayCard e="📸" tint="#fff6e0" title={headingOf(d, "gallery", "title")}><div className={`grid gap-2.5 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} className="rounded-2xl" style={{ aspectRatio: "1 / 1" }} />)}</div></PlayCard>}
           </div>
           {full && <div id="aos-book" className="self-start lg:sticky lg:top-4">{widget}</div>}
@@ -4328,7 +4360,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
       </div>
       {/* fancy info strip (under the image) */}
       <div className="flex flex-col border-y sm:flex-row" style={{ borderColor: LINEs, background: PANEL }}>
-        {([["📍", venue?.name || town || tr("p7pg.venueTbc"), venue?.address || null], ["📆", runLabel, null], ["👧👦", d.ageFrom && d.ageTo ? tr("p7pg.agesRange", { from: d.ageFrom, to: d.ageTo }) : tr("p7pg.allAges"), null]] as [string, string, string | null][]).map(([e, v, sub], i) => (
+        {([["📍", (d.deliveryMode === "home-visit" ? tr("p9tx.hvWeCome") : venue?.name || town || tr("p7pg.venueTbc")), venue?.address || null], ["📆", runLabel, null], ["👧👦", d.ageFrom && d.ageTo ? tr("p7pg.agesRange", { from: d.ageFrom, to: d.ageTo }) : tr("p7pg.allAges"), null]] as [string, string, string | null][]).map(([e, v, sub], i) => (
           <div key={i} className={`flex flex-1 items-center gap-2.5 px-5 py-3 ${i ? "border-t sm:border-s sm:border-t-0" : ""}`} style={i ? { borderColor: LINEs } : undefined}>
             <span className="text-[15px]">{e}</span>
             <span className="min-w-0 flex-1">
@@ -4616,7 +4648,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
             {addons.length > 0 && <SportSec eye={headingOf(d, "addons", "eyebrow")} title={headingOf(d, "addons", "title")}>{addons.map((a, i) => <div key={i} className="mt-2 flex items-center justify-between border px-4 py-3 first:mt-0" style={{ borderColor: LINEs, background: PANEL }}><span className="flex items-center gap-2.5 text-[13.5px] font-bold">{a.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={a.image} alt="" className="h-8 w-8 flex-none object-cover" />
-            ) : a.emoji ? <span className="text-[16px]">{a.emoji}</span> : null}{a.name}</span><span className={`font-black ${cond}`} style={{ color: LIME }}>{money(a.price)}</span></div>)}</SportSec>}
+            ) : a.emoji ? <span className="text-[16px]">{a.emoji}</span> : null}{a.name}</span><span className={`font-black ${cond}`} style={{ color: LIME }}>{money(a.price)}<span className="ms-1 text-[10.5px] font-semibold normal-case not-italic opacity-70">{a.type === "perday" ? tr("p8lst.ck8PerDay") : tr("p8lst.ck8OneOff")}</span></span></div>)}</SportSec>}
             {d.gallery.length > 0 && <SportSec eye={headingOf(d, "gallery", "eyebrow")} title={headingOf(d, "gallery", "title")}><div className={`grid gap-2 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} style={{ aspectRatio: "1 / 1" }} />)}</div></SportSec>}
           </div>
           {full && <div id="aos-book" className="self-start lg:sticky lg:top-4">{widget}</div>}

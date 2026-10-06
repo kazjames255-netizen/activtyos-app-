@@ -1,0 +1,20 @@
+import { fbSignIn, apiFetch } from "../helpers/accounts";
+import { check, loadState, db } from "./st4-lib";
+(async () => {
+  const st = loadState(); const tok = (await fbSignIn(st.emails.co)).idToken; const H = { "Content-Type": "application/json", Authorization: `Bearer ${tok}` };
+  const day = (await apiFetch<any>(`/api/listings/${st.listings.L2}`, tok)).runFrom;
+  const get = async () => ((await apiFetch<any>(`/api/ratios?date=${day}`, tok)).sessions as any[]).find((x) => x.listingId === st.listings.L2);
+  const s0 = await get();
+  const refs = s0.children.map((c: any) => c.ref);
+  const put = async (staffIds: string[]) => (await fetch(`http://localhost:4000/api/ratios/${s0.blockId}/${day}`, { method: "PUT", headers: H, body: JSON.stringify({ groups: [{ id: "g1", name: "All children", childIds: refs, staffIds }] }) })).status;
+  const priya = `u_${st.staff.s2.uid}`; const nina = `u_${st.staff.s4.uid}`;
+  let code = await put([priya]); let s1 = await get();
+  check("RAT-04 one assigned staff (Priya) against 2 needed -> ratio NOT met (warning)", code === 200 && s1.staffAssigned === 1 && s1.requiredStaff === 2 && s1.met === false, JSON.stringify({ code, assigned: s1.staffAssigned, required: s1.requiredStaff, met: s1.met }));
+  code = await put([priya, nina]); s1 = await get();
+  check("RAT-05 two assigned staff (Priya + Nina) -> ratio met", code === 200 && s1.staffAssigned === 2 && s1.met === true, JSON.stringify({ code, assigned: s1.staffAssigned, met: s1.met }));
+  const sam = `u_${st.staff.s1.uid}`;
+  code = await put([priya, sam]); s1 = await get();
+  console.log("assign switched-off Sam to a ratio group ->", code, "assigned", s1.staffAssigned, "met", s1.met);
+  check("RAT-06 a switched-off person never counts as ratio cover (saved on a group, ignored)", s1.staffAssigned === 1 && s1.met === false, `status=${code} assigned=${s1.staffAssigned} met=${s1.met}`);
+  process.exit(0);
+})().catch((e) => { console.error(e); process.exit(1); });

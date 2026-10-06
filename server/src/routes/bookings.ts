@@ -9,7 +9,8 @@ import { canWrite, operatorScope, managerScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
 import { stripe, toPence } from "../lib/stripe";
-import { queuePositions, triggerWaitlist, waitingCount } from "../lib/waitlist";
+import { capsProblem, queuePositions, triggerWaitlist, waitingCount } from "../lib/waitlist";
+import { positionsFrom, sortQueue } from "../lib/waitlistQueue";
 import { releaseDiscountCodes } from "../lib/discountRedemptions";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { creditWallet } from "../lib/wallet";
@@ -256,6 +257,17 @@ bookings.get("/", async (req, res) => {
   // matters, because "what came in yesterday" is answered from this.
   const list = applyHoNetFilter(snap.docs.filter((d) => !site || bookingInSite(d.data(), site)).map((d) => withCreated(d)), scope.role, req.query.franchiseId);
   list.sort((a, b) => (a.ref < b.ref ? 1 : -1));
+  // Queue positions for the families waiting, worked out from the bookings already loaded (no extra reads): the provider chooses
+  // whom to offer a place to, so they need to see who is first in line for each date. Only when this view holds the whole queue.
+  const wholeQueue = !site && !((scope.role === "franchise" || scope.role === "staff") && scope.franchiseId);
+  if (wholeQueue) {
+    const byBlock = new Map<string, typeof list>();
+    for (const b of list) if (b.status === "Waitlisted" && b.blockId) byBlock.set(b.blockId, [...(byBlock.get(b.blockId) ?? []), b]);
+    for (const [, queued] of byBlock) {
+      const pos = positionsFrom(sortQueue(queued), queued.map((b) => b.ref), (x) => (queued.find((q) => q.ref === x.ref)?.days ?? []));
+      for (const b of queued) { const mine = pos.filter((p) => p.ref === b.ref).map(({ date, position }) => ({ date, position })); if (mine.length) (b as { waitlist?: unknown }).waitlist = mine; }
+    }
+  }
   res.json(scope.role === "staff" ? list.map((b) => staffView(b as unknown as Record<string, unknown>)) : list.map((b) => withChildcare(b as ChildcareBooking)));
 });
 
@@ -318,6 +330,10 @@ bookings.get("/:ref", async (req, res) => {
   // …plus, on a childcare booking, the derived block and the per-child payment
   // records (OUR minted reference to quote, and the booker's own alongside it).
   const one = withChildcare(withCreated(doc) as ChildcareBooking);
+  if (one.status === "Waitlisted" && one.blockId) {
+    const wl = await queuePositions(one.blockId, [one.ref]).catch(() => []);
+    if (wl.length) (one as { waitlist?: unknown }).waitlist = wl.map(({ date, position }) => ({ date, position }));
+  }
   const full = isChildcare(one) ? { ...one, childcarePayments: paymentRecordsOf(one) } : one;
   res.json(scope.role === "staff" ? staffView(full as unknown as Record<string, unknown>) : full);
 });
@@ -564,6 +580,8 @@ bookings.post("/:ref/actions", async (req, res) => {
                 ? daysHaveSpace(block, Object.fromEntries(days.map((d) => [d, seats]))).fits
                 : block.bookedCount + seats <= block.capacity;
             if (!block.open || !fits) throw new Conflict("That date is still full — free a place first (or promote to overbook)");
+            const capWhy = await capsProblem(tx, b, block, days);
+            if (capWhy) throw new Conflict(`${capWhy} — free a place on it first (or promote to overbook)`);
           }
         }
       }
@@ -638,6 +656,10 @@ bookings.post("/:ref/actions", async (req, res) => {
         if (!b.cancel) throw new Conflict("There's no cancellation on this booking to refund");
         if (b.cancel.refund === "approved") throw new Conflict("This refund has already been approved");
         if (b.cancel.refund === "declined") throw new Conflict("This refund was declined");
+        // A cancellation whose policy gives nothing back ("none", or an amount of 0) has nothing to approve. Approving it used to flip the booking
+        // to "Refunded" with GBP0 refunded and email the family "refund approved". (To give money back anyway, cancel again with a full/partial amount.)
+        if (b.cancel.refund === "none" || (typeof b.cancel.amount === "number" && b.cancel.amount <= 0.004))
+          throw new Conflict("No refund is due on this cancellation, so there is nothing to approve. To give money back, issue a refund with an amount.");
         // Snapshot BEFORE the action flips pay to "Refunded" — what's still
         // refundable is worked out from this, not from the flipped booking.
         refundBefore = { refund: b.cancel.refund, pay: b.pay, refundable: refundableSoFar(b), attempts: (b.cancel as { refundAttempts?: number }).refundAttempts ?? 0 };

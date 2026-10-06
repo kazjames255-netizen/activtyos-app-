@@ -187,6 +187,8 @@ export interface Booking {
   /** Marketing discount code redeemed on this booking, if any. */
   discountCode?: string;
   addons: string[];
+  /** The same extras, structured: who each is for and on which days. Older bookings only have `addons` strings. */
+  addonLines?: { child: string; label: string; price: number; days: string[]; perDay: boolean; meal?: boolean }[];
   /** ISO dates a meal was bought for at checkout (meals ride the add-on lines;
    *  this is the clean structured signal the meals area reads). */
   mealDates?: string[];
@@ -211,6 +213,10 @@ export interface Booking {
    *  operator to approve/deny from the row. On approve the swaps are applied. */
   /** How many date moves the provider has approved on this booking (for Setup > Amending dates "most moves per booking"). */
   amendMovesApproved?: number;
+  /** The earliest session date this booking ever had, kept when a date is moved: refund notice is judged on the EARLIER of this and the current first date. */
+  origFirstDate?: string;
+  /** current date -> the original date it came from (set only for moved days); each released day is judged on the earlier of the two. */
+  dayOrigin?: Record<string, string>;
   dateChangeRequest?: {
     moves: { childName?: string; childId?: string; from: string; to: string; approved?: boolean }[];
     /** A requested new time slot ("09:00 – 15:30"), separate from date moves. */

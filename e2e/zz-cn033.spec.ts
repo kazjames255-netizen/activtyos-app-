@@ -1,0 +1,30 @@
+import { test, expect } from "@playwright/test";
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+import { ROOT, WEB_URL } from "./helpers/env";
+import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignUp } from "./helpers/accounts";
+
+test("CN-033 no developer text on Setup > Cancellations & refunds / Reconciliation", async ({ page }) => {
+  const stamp = Date.now().toString(36);
+  const email = `e2e-cn033-${stamp}@${TEST_EMAIL_DOMAIN}`;
+  const s = await fbSignUp(email);
+  const r = await apiPost<{ tenantId: string }>("/api/register-role", s.idToken, { role: "company", businessName: `CN033 ${stamp}`, providerName: `CN033 ${stamp}`, providerNameMode: "business" });
+  execFileSync("npm", ["--prefix", path.join(ROOT, "server"), "run", "e2e-unwall", "--", r.tenantId], { stdio: "pipe" });
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(`${WEB_URL}/login`);
+  await page.getByPlaceholder("you@example.com").fill(email);
+  await page.locator('input[type="password"]').fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL(/company/, { timeout: 90_000 });
+  await page.goto("/company/setup?tab=cancel");
+  const lbl = page.getByText(/When a refund is due/i).first();
+  await expect(lbl).toBeVisible({ timeout: 60_000 });
+  const sel = page.locator("select").filter({ has: page.locator("option", { hasText: /Flag it for me/ }) }).first();
+  await sel.selectOption("auto");
+  await page.waitForTimeout(1000);
+  await lbl.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(ROOT, "e2e/review/shots/redo/CN-033-recheck.png") });
+  const txt = await page.locator("body").innerText();
+  expect(txt).not.toMatch(/\(Amir\)|needs building/i);
+  console.log("NOTE:", (txt.match(/[^\n]*Not available yet[^\n]*/i) ?? [""])[0]);
+});

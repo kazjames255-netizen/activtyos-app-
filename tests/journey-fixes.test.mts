@@ -1,6 +1,7 @@
 /** Provider-journey fixes: wizard prerequisites + draft hygiene, billing gate, franchise terms. Pure, no network. */
 import test from "node:test";
 import assert from "node:assert/strict";
+import { BRAND } from "../server/src/lib/brand";
 import { listingPrereqs, allPrereqsMet, titleMissing, mayCreateOnServer, isAbandonedDraft, newBlockId, bookingLink } from "../features/listings/prereqs";
 import { gateMode } from "../lib/billingGate";
 import { tierParts, franchiseFeeFor, parseRoyaltyPct, settingsOwner } from "../lib/franchiseTerms";
@@ -58,6 +59,6 @@ test("invite email text states base, tiers, royalty and that the franchisee pays
   const t = franchiseCostParagraph({ price: 99, franchiseTiers: tiers }, { basis: "revenue", rate: 12 });
   assert.match(t, /£99\/month/);
   assert.match(t, /£39 each for the first 5/);
-  assert.match(t, /pay nothing to ActivityOS/);
+  assert.match(t, new RegExp(`pay nothing to ${BRAND}`));
   assert.match(t, /12% of revenue/);
 });

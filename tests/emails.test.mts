@@ -18,6 +18,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
+import { BRAND } from "../server/src/lib/brand";
 import {
   bankPayHtml,
   bookingConfirmedSpec,
@@ -170,9 +171,9 @@ test("ME-001 confirmed: 'View my booking' links to the booking in the parent das
   assert.ok(html.includes(`href="${WEB}/custdash/bookings?open=SSC-1042"`));
 });
 
-test("ME-001 confirmed: powered-by footer and provider name are present (no ActivityOS branding up top)", () => {
+test("ME-001 confirmed: powered-by footer and provider name are present (brand is only in the footer)", () => {
   const html = render(bookingConfirmedSpec(booking(), PROVIDER), booking());
-  assert.match(html, /Powered by <b[^>]*>ActivityOS/);
+  assert.match(html, new RegExp(`Powered by <b[^>]*>${BRAND}`));
   assert.match(html, /a booking was made with Sunny Sports Club/);
 });
 

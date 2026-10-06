@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { openOccupancy } from "../lib/rosterRules";
 import { db } from "../firebase";
 import { managerScope } from "../middleware/role";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
@@ -242,7 +243,8 @@ async function buildDashboard(tenantId: string, venueId: string | null, franchis
     const future = sum.sessions.filter((s) => s.date >= today);
     // Occupancy counts only runs still selling with sessions yet to happen.
     if (sum.open && future.length) {
-      openCapacity += sum.capacity; openBooked += sum.bookedCount;
+      const occ = openOccupancy((doc as { capacityScope?: string }).capacityScope, sum, future);
+      openCapacity += occ.capacity; openBooked += occ.booked;
       const cur = perListing.get(doc.listingId) ?? { listing, capacity: 0, booked: 0, spotsLeft: 0, nextDate: "9999-99-99" };
       addRunToListing(cur, doc, sum);
       const nd = future.map((s) => s.date).sort()[0];

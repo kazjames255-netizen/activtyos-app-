@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type CSSPrope
 import { createPortal } from "react-dom";
 import { Card } from "@/components/ui";
 import { ManualLegal } from "./ManualLegal";
+import { ManualPilot } from "./ManualPilot";
 
 /**
  * platform/manual — the HQ manual. Content-array driven: add a page by pushing another entry onto MANUAL_PAGES.
@@ -663,6 +664,7 @@ function Page1() {
 const MANUAL_PAGES: { id: string; label: string; render: () => ReactNode }[] = [
   { id: "provider-onboarding", label: "Page 1 · Provider onboarding", render: () => <Page1 /> },
   { id: "legal", label: "Page 2 · Legal documents", render: () => <ManualLegal /> },
+  { id: "pilot", label: "Page 3 · Pilot: first real bookings", render: () => <ManualPilot /> },
 ];
 
 export function ManualApp() {

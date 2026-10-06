@@ -1,8 +1,12 @@
 import { Router, type Request } from "express";
+import { personRuleProblem } from "../lib/discountRules";
+import { gateAppliesOnPublish } from "../../../lib/billingRules";
+import { withoutBaseAddress, touchesCapacity, withHomeTenant } from "../lib/publicListing";
 import { z } from "zod";
 import { db } from "../firebase";
 import { FieldValue } from "firebase-admin/firestore";
-import { librarySnap, libraryDocId } from "../lib/tenantLibrary";
+import { librarySnap, libraryDocId, loadSettings } from "../lib/tenantLibrary";
+import { DEFAULT_POLICY, policyById, policyWording, type NamedPolicy } from "../../../lib/cancellation";
 import { canWrite } from "../middleware/role";
 import { isFranchise, visibleToFranchise } from "../lib/franchiseScope";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
@@ -15,6 +19,7 @@ import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { isBrowsable, directLinkVisible } from "../lib/listingVisibility";
 import { earlyBirdScopeOf, earlyFixedBooking } from "../lib/earlyBird";
 import { goLiveRefusal } from "../lib/goLive";
+import { triggerWaitlist } from "../lib/waitlist";
 import { DISCOUNT_KIND_LABEL, ruleDisplayName, type DiscountRule } from "../../../features/listings/discounts";
 import { accessFor, subscriptionState } from "../middleware/subscription";
 
@@ -120,15 +125,6 @@ async function withBlocks(
 // private — those listings only come back from GET /api/listings/:id (the
 // direct link). With ?mine=1, ALL of the caller's own tenant's listings
 // (drafts and hidden included — the operator management view).
-/** A home-visit provider's base postcode is usually their own home. Parents never need it (the server checks the distance), so it never leaves the server
- *  in a response to anyone but the owning provider. The postcode areas they cover and the radius are kept: those are the service area, not an address. */
-function withoutBaseAddress<T extends { coverageArea?: unknown }>(l: T): T {
-  const c = l.coverageArea as { basePostcode?: string } | null | undefined;
-  if (!c || typeof c !== "object" || !("basePostcode" in c)) return l;
-  const { basePostcode: _hidden, ...rest } = c;
-  return { ...l, coverageArea: rest };
-}
-
 listings.get("/", async (req, res) => {
   if (req.query.mine === "1") {
     const auth = req.auth!;
@@ -187,6 +183,13 @@ listings.get("/", async (req, res) => {
       const me = await db.collection("users").doc(req.user.uid).get();
       const home = me.get("homeTenantId") as string | undefined;
       if (home) allowed.add(home);
+    }
+    // The provider a parent picked when they signed up is THEIR provider from day one: their listings show in Browse even before a first booking
+    // and even if that provider has not joined the wider marketplace.
+    if (req.user?.uid) {
+      const me = await db.collection("users").doc(req.user.uid).get();
+      const home = me.get("homeTenantId") as string | undefined;
+      withHomeTenant(allowed, home);
     }
     visible = visible.filter((d) => allowed.has(d.data().tenantId as string));
   }
@@ -394,7 +397,14 @@ listings.get("/:id", async (req, res) => {
   // A signed-in family that already used a fixed-£ early bird this season: the booking page prices without it, as checkout will.
   const hasFixedEarly = ((l.discounts as { kind?: string; enabled?: boolean; method?: string }[] | undefined) ?? []).some((r) => r.kind === "early" && r.enabled !== false && r.method !== "percent");
   const earlyUsed = hasFixedEarly && req.user?.email ? await earlyFixedBooking(l.tenantId as string, req.user.email.toLowerCase(), earlyBirdScopeOf(snap.id, l.seasonId as string | undefined)) : null;
-  res.json({ ...(own ? joined : withoutBaseAddress(joined)), tenantName: providerName || joined.tenantName, bundle, library, mealMenus, ...(earlyUsed ? { earlyFixedUsed: true, earlyFixedRef: earlyUsed.ref, earlyFixedUnpaid: earlyUsed.unpaid } : {}) });
+  // The cancellation sentence a parent reads before paying is built from the policy the server will actually apply at cancel time (the listing's
+  // stored text is a snapshot taken when the provider picked the policy: it goes stale when Setup is edited, and older/imported listings never had one).
+  let cancellation: string | undefined;
+  try {
+    const pols = ((await loadSettings(l.tenantId as string, (l.franchiseId as string | null | undefined) ?? null)).cancellationPolicies ?? []) as NamedPolicy[];
+    cancellation = policyWording(policyById(pols, l.cancellationPolicyId as string | undefined) ?? DEFAULT_POLICY);
+  } catch { /* keep whatever the listing stored */ }
+  res.json({ ...(own ? joined : withoutBaseAddress(joined)), tenantName: providerName || joined.tenantName, ...(cancellation ? { cancellation } : {}), bundle, library, mealMenus, ...(earlyUsed ? { earlyFixedUsed: true, earlyFixedRef: earlyUsed.ref, earlyFixedUnpaid: earlyUsed.unpaid } : {}) });
 });
 
 // Operators manage their own tenant's listings. (Bookings keep a denormalised
@@ -486,15 +496,6 @@ listings.post("/", async (req, res) => {
 // Multi-person (sibling) discounts are percentage-only: a £ amount is taken per child per line, so a family
 // could split a week into single days and out-discount the weekly pass. Rules already saved with another
 // method keep working (stored id + method unchanged); only NEW or CHANGED ones are refused.
-function personRuleProblem(next: unknown, stored: unknown): string | null {
-  const have = new Map(((stored as { id?: string; method?: string; value?: number }[] | undefined) ?? []).map((r) => [r.id, r]));
-  for (const r of (next as { id: string; kind: string; method: string; value: number }[] | undefined) ?? []) {
-    if (r.kind !== "person" || r.method === "percent") continue;
-    const old = have.get(r.id);
-    if (!old || old.method !== r.method || old.value !== r.value || (old as { kind?: string }).kind !== r.kind) return "A multi-person discount must be a percentage (a fixed £ amount per child can be beaten by splitting a week into single days).";
-  }
-  return null;
-}
 
 // Load a listing and verify it belongs to the caller's tenant.
 async function ownListing(req: Request, id: string) {
@@ -556,7 +557,7 @@ listings.put("/:id", async (req, res) => {
       return;
     }
     // Only the moment a listing GOES live is gated — editing one that is already live must never be refused.
-    if (own.snap.data()!.status !== "live") { const why = await goLiveRefusal(req.auth!.tenantId!); if (why) { res.status(402).json({ error: why, code: "go_live_requirements" }); return; } }
+    if (gateAppliesOnPublish(own.snap.data()!.status as string | undefined, true)) { const why = await goLiveRefusal(req.auth!.tenantId!); if (why) { res.status(402).json({ error: why, code: "go_live_requirements" }); return; } }
   }
   const patch: Record<string, unknown> = { ...data, updatedAt: Date.now() };
   // Head office (company) / platform can ASSIGN or reassign a listing to a
@@ -610,6 +611,12 @@ listings.put("/:id", async (req, res) => {
   }
   if (RUN_FIELDS.some((f) => f in data)) {
     await syncListingBlocks(own.snap.id, req.auth!.tenantId!, runRecipeOf(merged));
+  }
+  // More room (capacity raised, a closed ticket reopened, an age cap lifted): in automatic mode the families waiting are offered
+  // the places that just appeared, same as after a cancellation. A no-op in manual mode (the provider chooses).
+  if (touchesCapacity(data)) {
+    const bl = await db.collection("blocks").where("listingId", "==", own.snap.id).get();
+    for (const d of bl.docs) void triggerWaitlist(d.id);
   }
   res.json({ id: own.snap.id, ...merged });
 });

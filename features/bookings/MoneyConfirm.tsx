@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useT, useI18n } from "@/lib/i18n/provider";
 import { Button } from "@/components/ui";
 import { useTenantSettings } from "@/lib/settings";
-import { refundFor, policyById, adviceReasonT } from "@/lib/cancellation";
+import { refundFor, effectiveRefundDate, policyById, adviceReasonT } from "@/lib/cancellation";
 import { useBookingsStore } from "./store";
 import type { Booking } from "./types";
 import {
@@ -109,7 +109,7 @@ function ReleaseConfirm({ booking: b, ki, dt }: { booking: Booking; ki: number; 
   const policy = policyById(settings.cancellationPolicies, undefined);
   const now = new Date().toISOString();
   const slot = days.length ? share / days.length : 0;
-  const advices = policy ? days.map((d) => refundFor(policy, dayIso(d), slot, now, initiator)) : [];
+  const advices = policy ? days.map((d) => refundFor(policy, effectiveRefundDate(b.dayOrigin?.[dayIso(d) ?? ""], dayIso(d)), slot, now, initiator)) : [];
   const usable = advices.length > 0 && advices.every((a) => a != null);
   const suggested = usable ? round2(Math.min(worth, advices.reduce((n, a) => n + (a?.amount ?? 0), 0))) : worth;
   const advice = dt && usable ? advices[0] : null;

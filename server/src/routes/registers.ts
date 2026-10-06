@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { childExtrasForDay } from "../lib/rosterRules";
 import { z } from "zod";
 import { db } from "../firebase";
 import { isPlainStaff, type Role } from "../middleware/role";
@@ -237,8 +238,11 @@ registers.get("/", async (req, res) => {
         booker: b.booker,
         email: b.email ?? "",
         phone: realPhone(b.phone) || phoneByEmail.get(b.email ?? "") || "",
+        // A home-visit booking: where the staff member has to go (the family's own address for that session).
+        ...(b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) ? { serviceAddress: [b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ") } : {}),
         note: b.note ?? "",
-        addons: b.addons ?? [],
+        // This child's extras for THIS day only: a sibling's T-shirt, or a lunch bought for other days, must not show here.
+        addons: childExtrasForDay(b.addonLines, b.addons, r.name, date),
         bookingStatus: b.status,
         seats: 1,
         children: [{ name: r.name, age: r.age }],

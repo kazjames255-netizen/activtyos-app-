@@ -156,7 +156,7 @@ export function FinanceAnalyticsApp() {
     const inWindow = new Set<string>();
     for (let i = months - 1; i >= 0; i--) inWindow.add(mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))));
 
-    const addonCount = new Map<string, number>();
+    const addonAgg = new Map<string, { count: number; rev: number }>();
     const byPass = new Map<string, { count: number; revenue: number }>();
     const gender = { boy: 0, girl: 0, unknown: 0 };
     const dow = [0, 0, 0, 0, 0, 0, 0];
@@ -172,13 +172,21 @@ export function FinanceAnalyticsApp() {
       if (b.pass) { const p = byPass.get(b.pass) ?? { count: 0, revenue: 0 }; p.count++; p.revenue += collectedNet(b); byPass.set(b.pass, p); }
       const ad = b.addons ?? [];
       if (ad.length) bookingsWithAddon++;
-      for (const id of ad) { addonCount.set(id, (addonCount.get(id) ?? 0) + 1); addonUnits++; addonRevenue += addonMeta[id]?.price ?? 0; }
+      // Each booking carries its extras as text ("Hot lunch × 5 — £25.00"): read the name and the amount actually charged from it.
+      for (const line of ad) {
+        const m = /^(.*?)\s+—\s+£([\d,]+(?:\.\d+)?)$/.exec(line.trim());
+        const nm = (m ? m[1] : line).replace(/\s+×\s+\d+.*$/, "").replace(/\s+\(.*\)$/, "").replace(/^🍽\s*/, "").trim() || line;
+        const amt = m ? parseFloat(m[2].replace(/,/g, "")) : 0;
+        const cur = addonAgg.get(nm) ?? { count: 0, rev: 0 };
+        cur.count++; cur.rev += amt; addonAgg.set(nm, cur);
+        addonUnits++; addonRevenue += amt;
+      }
       for (const d of b.days ?? []) { const wd = new Date(`${d}T00:00:00Z`).getUTCDay(); if (wd >= 0 && wd <= 6) dow[wd]++; }
       for (const ln of learnerNames(b)) { const k = ln.toLowerCase(); if (seenLearner.has(k)) continue; seenLearner.add(k); const s = childSex[k]; if (s === "boy") gender.boy++; else if (s === "girl") gender.girl++; else gender.unknown++; }
     }
 
     const valueBands = VALUE_BANDS.map(([label, lo, hi], i) => { const n = amounts.filter((v) => v >= lo && v < hi).length; return { label, value: n, sub: String(n), color: ACT_C[i % ACT_C.length] }; });
-    const topAddons = [...addonCount.entries()].map(([id, count]) => ({ label: addonMeta[id]?.name ?? t("p8fin.faAddonFallback"), count, rev: (addonMeta[id]?.price ?? 0) * count })).sort((x, y) => y.rev - x.rev || y.count - x.count).slice(0, 8)
+    const topAddons = [...addonAgg.entries()].map(([label, v]) => ({ label, count: v.count, rev: Math.round(v.rev * 100) / 100 })).sort((x, y) => y.rev - x.rev || y.count - x.count).slice(0, 8)
       .map((r, i) => ({ label: r.label, value: r.rev, sub: t("p8fin.faAddonSold", { amount: money(r.rev), n: r.count }), color: ACT_C[i % ACT_C.length] }));
     const passRows = [...byPass.entries()].sort((x, y) => y[1].revenue - x[1].revenue).slice(0, 8).map(([label, v], i) => ({ label, value: v.revenue, sub: `${money(v.revenue)} · ${v.count}`, color: ACT_C[i % ACT_C.length] }));
     const dowRows = DOW.map((i) => ({ label: dowShort(i), value: dow[i], sub: String(dow[i]), color: LIGHTB }));

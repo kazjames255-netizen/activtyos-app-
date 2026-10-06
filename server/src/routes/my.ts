@@ -20,13 +20,14 @@ import { refPrefixFor } from "../lib/bookingRef";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/mealCutoff";
 import { cancellationRequestNotice } from "../lib/emailTemplates";
-import { money, paidSoFar as totalPaid, realPhone, refundableSoFar } from "../../../features/bookings/helpers";
+import { money, paidSoFar as totalPaid, realPhone, refundableSoFar, sessionIsoDates } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
 import { applyDiscounts, DISCOUNT_KIND_LABEL, type DiscountRule } from "../../../features/listings/discounts";
 import { earlyBirdScopeOf, earlyFixedUsed, claimEarlyBird } from "../lib/earlyBird";
 import { mergeBookings } from "../lib/mergeBookings";
+import { ageRangeFor, isOutOfRange, passHidden, addonRefusal, isQueuedOn, cardUnpaid } from "../lib/bookingRules";
 import {
   resolveBundlePricing,
   type BundleDoc,
@@ -67,7 +68,7 @@ import { canWrite } from "../middleware/role";
 import { queuePositions, triggerWaitlist } from "../lib/waitlist";
 import { upsertFamilyFromBasket } from "../lib/customerUpsert";
 import { voucherWindow } from "../../../lib/vouchers";
-import { DEFAULT_POLICY, accumulatePendingRelease, noRefundCreditAmount, policyById, refundFor, type NamedPolicy } from "../../../lib/cancellation";
+import { DEFAULT_POLICY, accumulatePendingRelease, effectiveRefundDate, noRefundCreditAmount, policyById, refundFor, type NamedPolicy } from "../../../lib/cancellation";
 import { bookingDocId } from "./bookings";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { grantPlanAccess } from "./childFiles";
@@ -835,7 +836,7 @@ my.post("/bookings", async (req, res) => {
     deliveryMode?: "venue" | "home-visit" | "both";
     coverageArea?: CoverageArea | null;
     minGapMinutes?: number;
-    ticketOverrides?: Record<string, { capacity?: string }>;
+    ticketOverrides?: Record<string, { capacity?: string; hidden?: boolean; ageFrom?: string; ageTo?: string }>;
     bookRules?: Record<string, string>;
   };
   // An out-of-range child on a listing that ALLOWS them still can't be seated
@@ -845,9 +846,9 @@ my.post("/bookings", async (req, res) => {
   const ageFrom = parseInt(listing.ageFrom ?? "", 10);
   const ageTo = parseInt(listing.ageTo ?? "", 10);
   // Age 0 is a real age (an infant) — only an UNKNOWN age (undefined) is exempt from the gate.
-  const outOfRange = (age?: number) =>
-    typeof age === "number" && Number.isFinite(age) && age >= 0 &&
-    ((Number.isFinite(ageFrom) && age < ageFrom) || (Number.isFinite(ageTo) && age > ageTo));
+  // A ticket (pass) can carry its own age range (wizard > Tickets & pricing > Age from / Age to); a blank box falls back to the listing's range.
+  const rangeFor = (pass?: string) => ageRangeFor(listing, pass);
+  const outOfRange = (age?: number, pass?: string) => isOutOfRange(listing, age, pass);
   // Lifecycle gates — the client-side lock is a courtesy, this is the control.
   if ((listing.status ?? "live") !== "live" || listing.archived) {
     res.status(409).json({ error: "This listing isn't open for booking" });
@@ -1015,11 +1016,12 @@ my.post("/bookings", async (req, res) => {
   // control that also stops a direct API call. When the listing doesn't accept
   // out-of-range children, reject any that are (the "Yes" case is allowed
   // through and later flipped to Approval needed).
-  if (!listing.allowOutOfRange && (Number.isFinite(ageFrom) || Number.isFinite(ageTo))) {
+  if (!listing.allowOutOfRange) {
     for (const it of input.items) {
       const { name, age, ageKnown } = resolveChild(it);
-      if (outOfRange(ageKnown ? age : undefined)) {
-        res.status(400).json({ error: `${name || "A child"} is outside this listing’s age range (${listing.ageFrom ?? ""}–${listing.ageTo ?? ""}).` });
+      if (outOfRange(ageKnown ? age : undefined, it.pass)) {
+        const rg = rangeFor(it.pass);
+        res.status(400).json({ error: `${name || "A child"} is outside this ${listing.ticketOverrides?.[it.pass]?.ageFrom || listing.ticketOverrides?.[it.pass]?.ageTo ? "ticket’s" : "listing’s"} age range (${Number.isFinite(rg.from) ? rg.from : ""}–${Number.isFinite(rg.to) ? rg.to : ""}).` });
         return;
       }
     }
@@ -1175,6 +1177,8 @@ my.post("/bookings", async (req, res) => {
       }
       const passDays = resolvedPass?.days ?? listedPass?.days;
       // A pass the provider has shut (per-listing capacity "0") takes no family booking (LT-014).
+      // A pass the provider has HIDDEN on this listing is removed from it entirely: the booking page already drops it, and a direct call must not get around that.
+      if (passHidden(listing, item.pass)) throw new HttpError(400, "That pass isn't available on this listing");
       if (!onBehalf && passClosedBy(listing.ticketOverrides?.[item.pass]?.capacity)) throw new HttpError(400, "That pass is closed");
       let days = item.dates ?? (passDays && passDays < sessionDates.length ? sessionDates.slice(0, passDays) : sessionDates);
       days = [...new Set(days)].sort();
@@ -1198,9 +1202,14 @@ my.post("/bookings", async (req, res) => {
         const problem = passDaysProblem({ need: passDays, picked: days, runDates: [...blockOfDate.keys()].sort(), rule: listing.bookRules?.[item.pass], today: todayIso });
         if (problem) throw new HttpError(400, problem);
       }
+      const seenExtras = new Set<string>();
       const addons = (item.addons ?? []).map((a) => {
         const def = libAddons.get(a.id);
         if (!def) throw new HttpError(400, "Unknown add-on");
+        // Only extras this listing actually offers can be bought on it (the provider may have un-ticked one while it sat in a basket),
+        // and each extra once per child line — a repeated id would just charge twice.
+        const addonProblem = addonRefusal((listing as { addonIds?: string[] }).addonIds, a.id, seenExtras, def.name, item.child);
+        if (addonProblem) throw new HttpError(400, addonProblem);
         return priceAddon(def, a, days, item.child, (m) => { throw new HttpError(400, m); });
       });
       // Meals chosen for this child's days become per-day add-on lines priced
@@ -1267,8 +1276,11 @@ my.post("/bookings", async (req, res) => {
           const bt = String((d.get("timing") as string | undefined) ?? "").trim().toLowerCase();
           if (bt && w.timing && bt !== w.timing) continue; // another session that day
           // By child id when both sides have one; by name only within the same family.
-          const hit = registerRows(b, w.day).some((r) => r.expected && (w.childId && r.childId ? r.childId === w.childId : sameFamily && r.name.trim().toLowerCase() === w.name.trim().toLowerCase()));
-          if (hit) { res.status(409).json({ error: `${w.name || "This child"} already has a place on ${prettyDay(w.day)} (booking ${b.ref}).` }); return; }
+          // A child already QUEUED for that day (Waitlisted) can't join the queue a second time either: two entries could both be offered a
+          // place and double-book them. (Queued bookings aren't "expected" on the register, so they are matched here by their days.)
+          const queuedOn = isQueuedOn(b.status, b.days, w.day);
+          const hit = registerRows(b, w.day).some((r) => (r.expected || queuedOn) && (w.childId && r.childId ? r.childId === w.childId : sameFamily && r.name.trim().toLowerCase() === w.name.trim().toLowerCase()));
+          if (hit) { res.status(409).json({ error: queuedOn ? `${w.name || "This child"} is already on the waiting list for ${prettyDay(w.day)} (booking ${b.ref}).` : `${w.name || "This child"} already has a place on ${prettyDay(w.day)} (booking ${b.ref}).` }); return; }
         }
       }
   }
@@ -1779,6 +1791,9 @@ my.post("/bookings", async (req, res) => {
             days: seg.days,
             ...(p.timing ? { timing: p.timing } : {}),
             addons: segAddons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
+            // Who each extra is for, and on which days (the strings above say neither). Registers, kitchen and booking views read this so
+            // one child's T-shirt size or lunch never shows against a sibling.
+            addonLines: segAddons.map((a) => ({ child: rc.name, label: a.label, price: a.price, days: a.onDays, perDay: a.perDay, ...(a.meal ? { meal: true } : {}) })),
             // The ISO dates a meal was bought for on this segment — a clean
             // signal for the customer "what's being served" gate + read-out,
             // separate from the human-readable add-on strings.
@@ -1790,7 +1805,7 @@ my.post("/bookings", async (req, res) => {
             // Out-of-range child on an allow-out-of-range listing → request a
             // place (Approval needed), overriding an otherwise auto-confirm. An
             // operator booking on-behalf is itself the approval, so it stands.
-            status: placed ? (!onBehalf && ((listing.allowOutOfRange && outOfRange(rc.ageKnown ? rc.age : undefined)) || heldByNoAnswer(reviewNoQ, rc.answers)) ? "Approval needed" : placedStatus) : "Waitlisted",
+            status: placed ? (!onBehalf && ((listing.allowOutOfRange && outOfRange(rc.ageKnown ? rc.age : undefined, p.item.pass)) || heldByNoAnswer(reviewNoQ, rc.answers)) ? "Approval needed" : placedStatus) : "Waitlisted",
             // Judged on what's left to pay, not the method: a HAF/free £0 place
             // — or one fully covered by store credit — is Funded, never Unpaid.
             // A voucher booking waits on the scheme's money, not the parent — a
@@ -1887,6 +1902,7 @@ my.post("/bookings", async (req, res) => {
             discountNames: [...new Set(grp.flatMap((g) => g.discountNames ?? []))],
           } : {}),
           addons: grp.flatMap((g) => g.addons ?? []),
+          addonLines: grp.flatMap((g) => g.addonLines ?? []),
           ...(payRefs.length ? { payRefs } : {}),
           ...(grp.some((g) => g.walletApplied) ? { walletApplied: sum((g) => g.walletApplied ?? 0) } : {}),
         });
@@ -2012,8 +2028,8 @@ my.post("/bookings", async (req, res) => {
         // A card booking holds the place BEFORE the family pays. "You're booked in" must not go out until the card has actually gone through
         // (a declined or abandoned payment would leave a confirmation for a booking that isn't paid): the "Payment received" email that follows
         // a successful payment is the single confirmation. Cash, funded (GBP 0), bank transfer and voucher bookings confirm straight away.
-        const cardUnpaid = /^card$/i.test(String(input.method)) && (merged.amount ?? 0) > 0 && !onBehalf;
-        if (b0.status === "Confirmed" && cardUnpaid) { /* confirmed by the payment-received email once the card succeeds */ }
+        const cardIsUnpaid = cardUnpaid(input.method, merged.amount, onBehalf);
+        if (b0.status === "Confirmed" && cardIsUnpaid) { /* confirmed by the payment-received email once the card succeeds */ }
         else if (b0.status === "Confirmed") emailBookingConfirmed(merged, provider, isBankMethod(input.method) ? await bankPayDetails(listing.tenantId, b0.ref, b0.amount) : null, refs);
         // A waiting-list place is NOT "a request pending approval" - it gets its own message.
         else if (b0.status === "Waitlisted") emailWaitlistJoined(merged, provider, refs);
@@ -2093,10 +2109,14 @@ my.post("/bookings", async (req, res) => {
         const venueId = (listing as { venueId?: string | null }).venueId;
         if (venueId) {
           const lib = (await librarySnap(listing.tenantId, (listing as { franchiseId?: string | null }).franchiseId)).data() ?? {};
-          const venues = (lib.venues ?? []) as { id: string; name?: string; address?: string }[];
+          const venues = (lib.venues ?? []) as { id: string; name?: string; address?: string; kind?: string }[];
           const v = venues.find((x) => x.id === venueId);
-          if (v) location = [v.name, v.address].filter(Boolean).join(", ") || undefined;
+          if (v && (v as { kind?: string }).kind === "online") location = "Online (the family is sent the joining details)";
+          else if (v) location = [v.name, v.address].filter(Boolean).join(", ") || undefined;
         }
+        // A home visit: the provider needs to know WHERE to go, which is the address the family gave at checkout (never a venue).
+        const visit = bookings.find((b) => b.serviceAddress?.postcode || b.serviceAddress?.address)?.serviceAddress;
+        if (visit) location = `Home visit at ${[visit.address, visit.postcode].filter(Boolean).join(", ")}`;
         // Hero image — embed inline (cid) so it renders even from a localhost/
         // dev URL a mail client's image proxy can't reach (same as the logo).
         // The bytes live in the `images` collection (see routes/uploads.ts).
@@ -2376,7 +2396,8 @@ my.post("/bookings/:ref/amend", async (req, res) => {
           const blk = blkSnap?.exists ? (blkSnap.data() as BlockDoc) : null;
           if (blk && (blk.capacityScope ?? "listing") === "day") {
             const want: Record<string, number> = {};
-            for (const mv of moves) want[mv.to] = (want[mv.to] ?? 0) + 1;
+            const liveKids = (booking.kids ?? []).filter((k) => !k.cancelled).length || 1;
+            for (const mv of moves) want[mv.to] = (want[mv.to] ?? 0) + (mv.childName || mv.childId ? 1 : liveKids);
             const space = daysHaveSpace(blk, want);
             if (!space.fits) throw new HttpError(409, `${prettyDay(space.fullDay!)} is full`);
           }
@@ -2387,15 +2408,13 @@ my.post("/bookings/:ref/amend", async (req, res) => {
             requestedAt: new Date().toISOString(),
             ...(parsed.data.message || parsed.data.msg ? { note: (parsed.data.message || parsed.data.msg)!.trim() } : {}),
           } as NonNullable<Booking["dateChangeRequest"]>;
+          const heldBefore = structuredClone({ status: cur.status, seats: cur.seats, days: cur.days, kids: cur.kids });
           applyMoveApprove(cur, undefined, undefined, { fee: adminFee, selfService: true });
-          // Keep the block's per-day places in step: each move frees its old day and takes the new one.
+          // Keep the block's per-day places in step: what the booking holds after the move minus what it held before (a booking of
+          // several children frees and takes one place per child, not one place in total).
           if (blk && blkSnap && countsTowardCapacity(cur.status)) {
-            let working = blk;
-            for (const mv of moves) {
-              working = { ...working, ...countsUpdate(working, -1, [mv.from]) };
-              working = { ...working, ...countsUpdate(working, 1, [mv.to]) };
-            }
-            tx.update(blkSnap.ref, { dayCounts: working.dayCounts ?? {} });
+            const pd = placesDelta(heldPlaces(heldBefore, blk), heldPlaces(cur, blk));
+            if (!placesDeltaIsZero(pd)) tx.update(blkSnap.ref, applyPlacesDelta(blk, pd));
           }
           tx.set(snap.ref, toDoc(cur));
           return cur;
@@ -2550,6 +2569,8 @@ my.post("/bookings/:ref/decline-offer", async (req, res) => {
       }
       b.status = "Cancelled";
       b.note = "Offer declined.";
+      // A cancelled booking always says when and by whom (reports, the Cancelled tab and the invariants rely on it); nothing was paid, so nothing to refund.
+      b.cancel = { on: ukToday(), by: "Booker", refund: "none", msg: "The family gave up the offered place." };
       tx.set(ref, toDoc(b));
       if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
       return b;
@@ -2688,7 +2709,7 @@ async function partialCancel(
   const value = Math.min(refundableSoFar(existing),
     resolution === "wallet"
       ? round2(releasedCount * perSlotPaid)
-      : round2(releasedDays.reduce((sum, d) => sum + (refundFor(policy, d, perSlotPaid, now, "parent")?.amount ?? 0), 0)));
+      : round2(releasedDays.reduce((sum, d) => sum + (refundFor(policy, effectiveRefundDate(existing.dayOrigin?.[d], d), perSlotPaid, now, "parent")?.amount ?? 0), 0)));
 
   const updated = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
@@ -2828,7 +2849,10 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
   // anything already refunded (features/bookings/helpers refundableSoFar).
   // Was: `amount` only when "Paid", with earlier refunds never taken off.
   const paid = refundableSoFar(existing);
-  const firstSession = (existing.days ?? []).slice().sort()[0];
+  // A booking the provider made by phone has no `days`/`kids` dates, only its session labels: use those, or the policy is never worked out
+  // and approving the pending request refunds EVERYTHING whatever the notice (found testing cancellation policies).
+  const dayList = existing.days?.length ? existing.days : (existing.kids ?? []).flatMap((k) => k.dates ?? []);
+  const firstSession = (dayList.length ? dayList : sessionIsoDates(existing)).slice().sort()[0];
   let policyAmount: number | null = null;
   let policyReason: string | undefined;
   let creditNote = 0; // CN-004: noRefundCredit → wallet credit in lieu of a £0 refund
@@ -2850,7 +2874,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     const settings = tenantId ? await loadSettings(tenantId, franchiseId) : undefined;
     const policies = (settings?.cancellationPolicies ?? []) as NamedPolicy[];
     const policy = policyById(policies, policyId) ?? DEFAULT_POLICY;
-    const advice = refundFor(policy, firstSession, paid, new Date().toISOString(), "parent");
+    // Notice runs from the EARLIER of the original first date and today's first date (moving a date later can't improve the refund).
+    const advice = refundFor(policy, effectiveRefundDate(existing.origFirstDate, firstSession), paid, new Date().toISOString(), "parent");
     if (advice) {
       policyAmount = advice.amount;
       policyReason = advice.reason;

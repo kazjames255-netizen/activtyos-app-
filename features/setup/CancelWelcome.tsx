@@ -23,7 +23,8 @@ export function CancelWelcome({ policy, onEdit }: { policy: NamedPolicy; onEdit:
   };
   const tone = (pct: number) => (pct >= 100 ? { bg: "#e7f6ee", fg: "#0f7a43" } : pct > 0 ? { bg: "#fdf3d8", fg: "#9a5a00" } : { bg: "#fdebec", fg: "#bb1620" });
   return (
-    <Card className="p-5 sm:p-6" data-testid="cancel-welcome">
+    <Card className="p-5 sm:p-6">
+      <div data-testid="cancel-welcome">
       <div className="text-[22px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t("p9fr.cwTitle")}</div>
       <p className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-[var(--ink-2)]">{t("p9fr.cwIntro")}</p>
       <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
@@ -39,12 +40,13 @@ export function CancelWelcome({ policy, onEdit }: { policy: NamedPolicy; onEdit:
             );
           })}
         </div>
-        <p className="mt-3 mb-0 text-[14px] leading-relaxed text-[var(--ink-2)]">{policyWordingT(t, locale, { ...policy, wording: undefined })}</p>
+        <p className="mt-3 mb-0 text-[14px] leading-relaxed text-[var(--ink-2)]">{(w => w.charAt(0).toLocaleUpperCase(locale) + w.slice(1))(policyWordingT(t, locale, { ...policy, wording: undefined }))}</p>
       </div>
       <p className="mt-3 text-[14px] text-[var(--ink-2)]">{t("p9fr.cwChange")}</p>
       <div className="mt-4 flex flex-wrap gap-2.5">
         <Button variant="primary" onClick={keep} className="!min-h-[46px] !px-6 !text-[15px]">{t("p9fr.cwKeep")}</Button>
         <Button onClick={onEdit} className="!min-h-[46px] !px-5 !text-[15px]">{t("p9fr.cwEdit")}</Button>
+      </div>
       </div>
     </Card>
   );

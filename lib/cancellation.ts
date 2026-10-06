@@ -15,6 +15,9 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import { pickPlural } from "./i18n/plural";
+/** "an 80%" / "an 18%" / "a 50%": the English article for a percentage as it is read aloud. Other languages ignore it. */
+export const aPct = (n: number): string => (/^(8|11|18|8\d)$/.test(String(n)) ? `an ${n}` : `a ${n}`);
+
 export interface RefundBand {
   /** Cancel at least this many hours before the first session starts. */
   hoursBefore: number;
@@ -127,11 +130,11 @@ export function policyWording(policy: CancellationPolicy): string {
       ? "Cancel at any time for a full refund."
       : pct <= 0
         ? "Refunds are not given once a place is booked."
-        : `Cancel at any time for a ${pct}% refund.`;
+        : `Cancel at any time for ${aPct(pct)}% refund.`;
   }
 
   const parts = bands.map((b) => {
-    const amount = b.refundPercent >= 100 ? "a full refund" : b.refundPercent <= 0 ? "no refund" : `a ${b.refundPercent}% refund`;
+    const amount = b.refundPercent >= 100 ? "a full refund" : b.refundPercent <= 0 ? "no refund" : `${aPct(b.refundPercent)}% refund`;
     return `cancel at least ${noticeLabel(b.hoursBefore)} before it starts for ${amount}`;
   });
   const tail = floor && floor.refundPercent > 0 ? `After that, ${floor.refundPercent}% is refunded.` : "After that, no refund is given.";
@@ -151,6 +154,19 @@ export interface RefundAdvice {
   reason: string;
   /** True when the provider cancelled (full refund, notice bands ignored) — lets the UI re-word `reason` in the active language. */
   byProvider?: boolean;
+}
+
+/**
+ * The date a refund's notice is judged on: the EARLIER of a session's original date and the date it sits on now. Moving a session
+ * LATER must not buy a bigger refund (book 3 days out, move it to 14 days out, cancel for 100%), and moving it earlier counts from the
+ * earlier date. A missing / malformed original (a booking never moved, or an old one) means "judge on the current date".
+ */
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+export function effectiveRefundDate(original: string | undefined | null, current: string | undefined | null): string | undefined {
+  const o = original && ISO_DAY.test(original) ? original : undefined;
+  const c = current && ISO_DAY.test(current) ? current : undefined;
+  if (o && c) return o < c ? o : c;
+  return o ?? c;
 }
 
 /**
@@ -257,11 +273,11 @@ export function policyWordingT(t: TFn, locale: string, policy: CancellationPolic
   const floor = sortBands(policy.bands).find((b) => b.hoursBefore <= 0);
   if (bands.length === 0) {
     const pct = floor?.refundPercent ?? 0;
-    return pct >= 100 ? t("p7pol.allFull") : pct <= 0 ? t("p7pol.allNone") : t("p7pol.allPct", { pct });
+    return pct >= 100 ? t("p7pol.allFull") : pct <= 0 ? t("p7pol.allNone") : t("p7pol.allPct", { pct, aPct: aPct(pct) });
   }
   const parts = bands.map((b) => {
     const notice = noticeLabelT(t, locale, b.hoursBefore);
-    return b.refundPercent >= 100 ? t("p7pol.bandFull", { notice }) : b.refundPercent <= 0 ? t("p7pol.bandNone", { notice }) : t("p7pol.bandPct", { notice, pct: b.refundPercent });
+    return b.refundPercent >= 100 ? t("p7pol.bandFull", { notice }) : b.refundPercent <= 0 ? t("p7pol.bandNone", { notice }) : t("p7pol.bandPct", { notice, pct: b.refundPercent, aPct: aPct(b.refundPercent) });
   });
   const tail = floor && floor.refundPercent > 0 ? t("p7pol.tailPct", { pct: floor.refundPercent }) : t("p7pol.tailNone");
   return `${parts.join("; ")}. ${tail}`;

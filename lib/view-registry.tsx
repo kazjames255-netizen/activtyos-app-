@@ -78,6 +78,7 @@ const SetupApp = dynamic(() => import("@/features/setup/SetupApp").then((m) => m
 const SupportApp = dynamic(() => import("@/features/support/SupportApp").then((m) => m.SupportApp));
 const TemplatesApp = dynamic(() => import("@/features/templates/TemplatesApp").then((m) => m.TemplatesApp));
 const FreelancerListingsApp = dynamic(() => import("@/features/listings/FreelancerListingsApp").then((m) => m.FreelancerListingsApp));
+const SessionRoom = dynamic(() => import("@/features/onlinesessions/SessionRoom").then((m) => m.SessionRoom));
 const BrowseApp = dynamic(() => import("@/features/parent/BrowseApp").then((m) => m.BrowseApp));
 const WalletApp = dynamic(() => import("@/features/parent/WalletApp").then((m) => m.WalletApp));
 const CouponsApp = dynamic(() => import("@/features/parent/CouponsApp").then((m) => m.CouponsApp));
@@ -128,6 +129,7 @@ const AiAssistant = dynamic(() => import("@/features/ai/AiApp").then((m) => m.Ai
  */
 export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentType<any>>>> = {
   company: {
+    session: SessionRoom,
     learninghub: TutorLearningHubApp,
     dashboard: CompanyDashboardSwitch,
     setup: SetupApp,
@@ -194,6 +196,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     moments2: MomentsApp,
   },
   franchise: {
+    session: SessionRoom,
     learninghub: TutorLearningHubApp,
     dash: DashboardApp,
     royalties: FranchiseRoyaltiesApp,
@@ -246,6 +249,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     moments2: MomentsApp,
   },
   freelancer: {
+    session: SessionRoom,
     learninghub: TutorLearningHubApp,
     dash: DashboardApp,
     setup: SetupApp,
@@ -327,6 +331,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     moments2: MomentsApp, // routable alias of Moments
   },
   custdash: {
+    session: SessionRoom,
     home: ParentHomeApp,
     learninghub: StudentLearningHubApp,
     browse: BrowseApp,

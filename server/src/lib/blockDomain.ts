@@ -92,12 +92,17 @@ export function heldPlaces(
   const seats = b.seats ?? 1;
   const kids = b.kids ?? [];
   const touched = kids.some((k) => k.cancelled || (k.cancelledDays?.length ?? 0) > 0);
-  if (!kids.length || !touched) {
-    return { seats, days: Object.fromEntries(all.map((d) => [d, seats])) };
-  }
   // Kid dates may be ISO or "Mon 27 Jul 2026" labels — normalise to ISO.
   const byLabel = new Map(block.sessions.map((s) => [sessionLabel(s).split(" · ")[0], s.date]));
   const iso = (d: string) => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? d : byLabel.get(d) ?? d);
+  // Two children on one booking can attend DIFFERENT days (one all week, one Mon-Wed). Creation counts each child on its own days, so every later
+  // read (cancel, date move, approve) must too, even when nobody has cancelled anything yet. Otherwise cancelling that booking frees seats on days a
+  // child never held, and a place still held by someone else is released. Per-child days only count where they fall inside the booking's own days.
+  const allSet = new Set(all);
+  const perKid = kids.length > 0 && kids.some((k) => (k.dates?.length ?? 0) > 0 && k.dates!.map(iso).some((d) => allSet.has(d)) && k.dates!.map(iso).filter((d) => allSet.has(d)).length !== all.length);
+  if (!kids.length || (!touched && !perKid)) {
+    return { seats, days: Object.fromEntries(all.map((d) => [d, seats])) };
+  }
   const days: Record<string, number> = {};
   let cancelledKids = 0;
   for (const k of kids) {
@@ -106,7 +111,8 @@ export function heldPlaces(
       continue;
     }
     const gone = new Set((k.cancelledDays ?? []).map(iso));
-    const mine = (k.dates?.length ? k.dates.map(iso) : all).filter((d) => !gone.has(d));
+    const kd = k.dates?.length ? k.dates.map(iso).filter((d) => allSet.has(d)) : all;
+    const mine = (kd.length ? kd : all).filter((d) => !gone.has(d));
     for (const d of mine) days[d] = (days[d] ?? 0) + 1;
   }
   return { seats: Math.max(0, seats - cancelledKids), days };

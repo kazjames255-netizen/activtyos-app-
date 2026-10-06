@@ -1,5 +1,6 @@
 "use client";
 
+import { bankDetailsValid } from "@/lib/billingRules";
 import { StepDonePrompt } from "@/features/dashboard/StepDonePrompt";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -39,7 +40,7 @@ export function BankDetailsCard({ onSaved, bare }: { onSaved?: () => void; bare?
   }, []);
 
   async function save() {
-    if (sortCode.replace(/\D/g, "").length < 6 || accountNumber.replace(/\D/g, "").length < 6) { setState("error"); return; }
+    if (!bankDetailsValid(sortCode, accountNumber)) { setState("error"); return; }
     setState("saving");
     try {
       // Read-modify-write: the library PUT replaces `settings` wholesale.

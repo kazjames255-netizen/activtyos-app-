@@ -18,7 +18,9 @@ export function priceAddon(
   const onDays = sel.days ? [...new Set(sel.days)] : days;
   if (onDays.some((d) => !days.includes(d)))
     fail(`Add-on "${def.name}" is on a day the pass isn't`);
-  const price = def.type === "perday" ? round2(def.price * onDays.length) : def.price;
+  // A price that isn't a sane non-negative number (typed as -5, or left blank) is treated as free rather than taking money OFF the booking.
+  const unitPrice = Number.isFinite(def.price) && def.price > 0 ? def.price : 0;
+  const price = def.type === "perday" ? round2(unitPrice * onDays.length) : round2(unitPrice);
   // Judge the answers against the library, not the client: a required
   // question left blank, or a size that isn't one of the offered ones,
   // is an order the provider can't fill.
@@ -41,7 +43,7 @@ export function priceAddon(
     // Kept for the per-block split — a line spanning blocks
     // becomes one booking per block, and its add-ons ride along.
     perDay: def.type === "perday",
-    unit: def.price,
+    unit: unitPrice,
     onDays,
     suffix,
     meal: false,

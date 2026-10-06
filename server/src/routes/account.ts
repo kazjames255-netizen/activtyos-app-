@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { displayNameFallback } from "../lib/directoryRules";
 import { z } from "zod";
 import { auth as authAdmin, db } from "../firebase";
 import { forgetRevocation } from "../middleware/auth";
@@ -52,7 +53,7 @@ async function providerNameFallback(tenantId?: string | null): Promise<string> {
   try {
     const [t, lib] = await Promise.all([db.collection("tenants").doc(tenantId).get(), db.collection("libraries").doc(tenantId).get()]);
     const settings = (lib.data()?.settings ?? {}) as { providerName?: string; billing?: { businessName?: string } };
-    return (settings.providerName || settings.billing?.businessName || (t.get("name") as string | undefined) || "").trim();
+    return displayNameFallback(settings, t.get("name") as string | undefined);
   } catch { return ""; }
 }
 

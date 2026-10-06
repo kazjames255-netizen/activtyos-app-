@@ -16,6 +16,7 @@ import { OnSiteNowCard } from "@/features/timeclock/OnSiteNowCard";
 import { InboxCard, MessagesCard, NewsfeedCard, NotificationsCard } from "@/features/dashboard/CommsCards";
 import { Badge } from "@/components/ui";
 import { FirstRunChecklist } from "@/features/dashboard/FirstRunChecklist";
+import { HostSessionsCard } from "@/features/onlinesessions/HostSessionsCard";
 import { greeting } from "@/lib/greeting";
 import { useI18n, useT, useWord } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
@@ -500,6 +501,7 @@ export function DashboardApp() {
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       <FirstRunChecklist />
+      <HostSessionsCard />
       {freshAccount && bookings && <EnableHubCard first portal={portal} settings={settings} loading={settingsLoading} save={saveSettings} />}
       {/* Hero */}
       <div className="overflow-hidden rounded-2xl text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>

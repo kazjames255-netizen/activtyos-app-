@@ -72,8 +72,8 @@ export function applyRowAction(b: Booking, action: RowAction): void {
     b.offerExpiresAt = expires.toISOString();
     b.note = "Place offered — held for 2 hours.";
   } else if (action === "refund-approve") {
-    if (b.cancel) b.cancel.refund = "approved";
-    b.pay = "Refunded";
+    // Only a refund that actually returns money makes the booking "Refunded" (a no-refund cancellation approved by mistake must not).
+    if (b.cancel && b.cancel.refund !== "none" && (b.cancel.amount ?? 1) > 0.004) { b.cancel.refund = "approved"; b.pay = "Refunded"; }
   } else if (action === "refund-decline") {
     if (b.cancel) b.cancel.refund = "declined";
     if (b.pay === "Refund pending") b.pay = "Paid";

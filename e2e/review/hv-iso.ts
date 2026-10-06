@@ -1,0 +1,10 @@
+import { call, load, tokFor, db } from "./hv-lib";
+(async () => { const S = load(); const p1 = await tokFor(S.accts.p1.email), p2 = await tokFor(S.accts.p2.email), cb = await tokFor(S.accts.cb.email);
+  const mine1 = (await call(p1, "GET", "/api/my/bookings")).json as any[]; const ref = mine1.find((b) => b.serviceAddress)?.ref;
+  const p2list = JSON.stringify((await call(p2, "GET", "/api/my/bookings")).json);
+  const r = (ok_: boolean, id: string, note: string) => console.log(`${ok_ ? "PASS" : "FAIL"} ISO ${id} ${note}`);
+  r(!p2list.includes("NN5 7EA") && !p2list.includes(ref), "p2 /api/my/bookings has none of p1's bookings or address", "");
+  const cx = await call(p2, "POST", `/api/my/bookings/${ref}/cancel`, {}); r(cx.status === 404 || cx.status === 403, "p2 cannot cancel p1's booking", `HTTP ${cx.status}`);
+  const pb = await call(p2, "GET", "/api/bookings"); r(pb.status === 403 || (Array.isArray(pb.json) && pb.json.length === 0), "parent cannot list provider bookings", `HTTP ${pb.status}`);
+  const other = await call(cb, "GET", "/api/bookings"); const oj = JSON.stringify(other.json); r(!oj.includes("NN5 7EA") && !oj.includes(ref), "another provider (company cb) sees none of fa's booking addresses", `HTTP ${other.status}`);
+  process.exit(0); })();

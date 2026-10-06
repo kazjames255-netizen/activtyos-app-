@@ -1,0 +1,26 @@
+import { fbSignIn } from "../helpers/accounts";
+import { chromium, newCtx, login, go, shot, body, check, loadState, db, openWizard } from "./st4-lib";
+const API = "http://localhost:4000";
+(async () => {
+  const st = loadState(); const tok = (await fbSignIn(st.emails.co)).idToken;
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${tok}` };
+  const inv = await db.collection("invites").where("usedBy", "==", st.staff.s1.uid).get(); const token = inv.docs[0].id;
+  const on = await fetch(`${API}/api/invites/${token}/status`, { method: "PATCH", headers: H, body: JSON.stringify({ status: "active" }) });
+  console.log("re-enable", on.status);
+  const before = (await db.collection("listings").doc(st.listings.L2).get()).get("staffIds");
+  const off = await fetch(`${API}/api/invites/${token}/status`, { method: "PATCH", headers: H, body: JSON.stringify({ status: "deactivated" }) });
+  const after = (await db.collection("listings").doc(st.listings.L2).get()).get("staffIds");
+  const lib = (await db.collection("libraries").doc(st.tenantId).get()).get("staff");
+  console.log("deactivate", off.status, "staffIds before", before, "after", after, "lib has Sam:", JSON.stringify(lib).includes("Sam"));
+  const b = await chromium.launch();
+  const c2 = await newCtx(b); const pp = await c2.newPage();
+  await go(pp, `/book/${st.listings.L2}`, 6000);
+  const pt = await body(pp); let s = await shot(pp, "14b-parent-page-after-sam-deactivated-FIXED");
+  check("DEACT-01 parent page stops showing a staff member whose account was switched off (after fix)", off.status === 200 && !pt.includes("Sam Helper") && pt.includes("Priya Coach"), `Sam shown=${pt.includes("Sam Helper")} Priya shown=${pt.includes("Priya Coach")}`, s);
+  await c2.close();
+  const c3 = await newCtx(b); const wp = await c3.newPage(); await login(wp, st.emails.co);
+  await openWizard(wp, "/company", "St4 One Staff Camp", 11);
+  const wt = await body(wp); s = await shot(wp, "15b-step11-after-sam-deactivated-FIXED");
+  check("DEACT-02 step 11 no longer offers the switched-off person; the other assignment is kept", !wt.includes("Sam Helper") && wt.includes("Priya Coach") && (wt.match(/Onsite/g) ?? []).length === 1, "", s);
+  await c3.close(); await b.close(); process.exit(0);
+})().catch((e) => { console.error(e); process.exit(1); });

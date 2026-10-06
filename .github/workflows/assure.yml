@@ -1,0 +1,23 @@
+# Bookings assurance: the pure regression suites + type check. Runs on every push to main and every pull request.
+# Separate from deploy.yml / deploy-api.yml on purpose: a failure here is a red cross to look at, it never blocks or gates a deploy.
+name: assure
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  assure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix server ci
+      - name: Pure test suites (existing + regression)
+        run: server/node_modules/.bin/tsx --test --test-reporter=spec tests/*.test.mts tests/regression/*.test.mts
+      - name: Type check
+        run: npx tsc --noEmit -p tsconfig.build.json && npm --prefix server run typecheck

@@ -663,3 +663,12 @@ export function refundButtonKind(b: { voucherScheme?: string; method?: string; p
   if (b.paymentIntentId) return "stripe";
   return dest === "card" ? "bank" : "plain";
 }
+
+/** A booking's extras as readable lines. With several children on one booking each line says whose it is ("Camp T-shirt (T-shirt size: M) — £12.00 · for Ava"),
+ *  because the plain `addons` strings carry no name. Older bookings (no structured lines) fall back to the strings. */
+export function addonLinesFor(b: { addons?: string[]; addonLines?: { child: string; label: string; price: number }[]; kids?: unknown[] }): string[] {
+  const lines = b.addonLines ?? [];
+  const many = new Set(lines.map((l) => l.child.trim())).size > 1 || (b.kids?.length ?? 0) > 1;
+  if (!lines.length || !many) return b.addons ?? [];
+  return lines.map((l) => `${l.label} — £${l.price.toFixed(2)} · for ${l.child}`);
+}

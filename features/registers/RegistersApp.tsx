@@ -60,7 +60,7 @@ interface SGRec { photo?: string; dob?: string; school?: string; allergies?: str
 // ref#child); `bookingRef` is the booking they belong to. `cancelledOnSite`:
 // the booking was cancelled while they were signed in, so they stay listed
 // until someone signs them out.
-interface Attendee { ref: string; bookingRef?: string; cancelledOnSite?: boolean; childId?: string | null; booker: string; email: string; phone?: string; note?: string; addons?: string[]; bookingStatus: string; seats: number; children: { name: string; age?: number }[]; child: SGRec | null; attendance: Attendance | null; groupId?: string | null; groupName?: string | null }
+interface Attendee { ref: string; bookingRef?: string; cancelledOnSite?: boolean; childId?: string | null; booker: string; email: string; phone?: string; serviceAddress?: string; note?: string; addons?: string[]; bookingStatus: string; seats: number; children: { name: string; age?: number }[]; child: SGRec | null; attendance: Attendance | null; groupId?: string | null; groupName?: string | null }
 interface Head { n: number; by: string; at: string }
 interface RatioGroup { id: string; name: string }
 interface Session { blockId: string; date: string; start: string; end: string; blockName: string; listingId: string; listingName: string; attendees: Attendee[]; groups?: RatioGroup[]; counts: { expected: number; present: number; notArrived: number; absent: number; collected: number }; heads: Head[]; takenBy: { name: string; at: string } | null;
@@ -281,7 +281,7 @@ function ChildModal({ a, showTimes, fields, card, questions, ctx, edit, canEdit,
     careNotes: c?.careNotes, likes: c?.likes, dislikes: c?.dislikes, answers: c?.answers,
     photoConsent: c?.photoConsent, suncreamConsent: c?.suncreamConsent, firstAidConsent: c?.firstAidConsent, walkHomeConsent: c?.walkHomeConsent,
     collectionPassword: c?.collectionPassword, emergencyName: c?.emergencyName, emergencyPhone: c?.emergencyPhone, school: c?.school,
-    contactName: a.booker, contactPhone: a.phone, contactEmail: a.email,
+    contactName: a.booker, contactPhone: a.phone, contactEmail: a.email, contactAddress: a.serviceAddress,
     bookingRef: a.bookingRef ?? a.ref, bookingNotes: a.note,
     collected: a.attendance?.collectedAt ? `${showTimes ? timeOf(a.attendance.collectedAt) : t("p8ops.qfYes").toLowerCase()}${a.attendance.collectedBy ? ` \u00b7 ${t("p8ops.rgByName", { name: a.attendance.collectedBy })}` : ""}` : undefined,
     siblings: ctx.siblings,

@@ -5,6 +5,7 @@ import { cert, getApps, initializeApp, type AppOptions } from "firebase-admin/ap
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import "./lib/readMeter"; // counts every Firestore document read, attributed (see lib/readMeter.ts)
+import { withBusyRetry } from "./lib/busyRetry";
 
 // Credential resolution order:
 //   1. Emulator mode (FIRESTORE_EMULATOR_HOST set) — no real credentials are
@@ -57,5 +58,12 @@ const app = getApps()[0] ?? initializeApp(options);
 export const db = getFirestore(app);
 // Booking objects contain optional fields; don't reject docs over `undefined`.
 db.settings({ ignoreUndefinedProperties: true });
+
+// Every transaction in the app gets a short jittered retry when Firestore is busy ("Too much contention", ABORTED, DEADLINE_EXCEEDED), on top of
+// the SDK's own quiet retries. If it still fails, the route error handler answers 503 "we're busy" rather than a raw 500 (lib/busyRetry.ts).
+{
+  const original = db.runTransaction.bind(db) as (fn: unknown, opts?: unknown) => Promise<unknown>;
+  (db as unknown as { runTransaction: unknown }).runTransaction = (fn: unknown, opts?: unknown) => withBusyRetry(() => original(fn, opts));
+}
 
 export const auth = getAuth(app);

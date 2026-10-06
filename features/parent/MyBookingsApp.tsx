@@ -1,5 +1,7 @@
 "use client";
 
+import { kidInitials } from "@/lib/uiRules";
+import { OnlineSessionsPanel } from "@/features/onlinesessions/OnlineSessionsPanel";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -9,11 +11,11 @@ import { useRealtime } from "@/lib/realtime";
 import { useI18n, useT, useWord, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
-import { bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, refundableSoFar } from "@/features/bookings/helpers";
+import { addonLinesFor, bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, refundableSoFar } from "@/features/bookings/helpers";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
-import { refundFor, policyById, policyWordingT, adviceReasonT, type NamedPolicy } from "@/lib/cancellation";
+import { refundFor, effectiveRefundDate, policyById, policyWordingT, adviceReasonT, aPct, type NamedPolicy } from "@/lib/cancellation";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 
 // Boy → blue, Girl → pink, unknown → house grey. Same convention as the
@@ -166,12 +168,12 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   // notice to the first session — so the parent sees their entitlement, not a
   // vague "if a refund is due".
   const policy = cfg ? policyById(cfg.policies, listing?.cancellationPolicyId) ?? cfg.policies[0] ?? null : null;
-  const allDays = [...(booking.days ?? [])].sort();
+  const allDays = [...bookingDays(booking)].sort(); // phone-made bookings carry only session labels, not days
   const firstDay = allDays[0];
   // What could actually come back: the money RECEIVED (less anything already refunded) — the server values a refund the same way,
   // never against the price. An unpaid booking used to be told "You're entitled to a full refund of £20.00".
   const paidNow = refundableSoFar(booking);
-  const advice = policy ? refundFor(policy, firstDay, paidNow, new Date().toISOString(), "parent") : null;
+  const advice = policy ? refundFor(policy, effectiveRefundDate(booking.origFirstDate, firstDay), paidNow, new Date().toISOString(), "parent") : null;
 
   // Per-day (partial) cancellation. We work in SLOTS = one (child, day) pair, so
   // a booking with several children (each on their own dates) can be cancelled
@@ -198,7 +200,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
     cfg?.partRefund ? "refund" : null,
   ].filter(Boolean)) as ("refund" | "wallet" | "changedate")[];
   const canPartial = !!cfg?.allowPartial && totalPaidSlots > 1 && slots.length > 0 && resOptions.length > 0;
-  const slotRefund = (d: string) => (policy ? refundFor(policy, d, perSlotPaid, new Date().toISOString(), "parent")?.amount ?? 0 : 0);
+  const slotRefund = (d: string) => (policy ? refundFor(policy, effectiveRefundDate(booking.dayOrigin?.[d], d), perSlotPaid, new Date().toISOString(), "parent")?.amount ?? 0 : 0);
   const togglePick = (key: string) => setPickedDays((p) => (p.includes(key) ? p.filter((x) => x !== key) : [...p, key]));
   const pickedSlots = slots.filter((s) => pickedDays.includes(s.key));
   // Refund = pro-rata, per policy, per day. Wallet = full pro-rata value (stays
@@ -397,7 +399,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
           ) : advice.percent >= 100 ? (
             <div className="font-extrabold text-[var(--brand)]">{t("p7bk.entitledFull", { amt: money(advice.amount) })}</div>
           ) : advice.amount > 0 ? (
-            <div className="font-extrabold text-[var(--brand)]">{t("p7bk.entitledPct", { pct: advice.percent, amt: money(advice.amount) })}</div>
+            <div className="font-extrabold text-[var(--brand)]">{t("p7bk.entitledPct", { pct: advice.percent, aPct: aPct(advice.percent), amt: money(advice.amount) })}</div>
           ) : (
             <div className="font-extrabold text-[#c0392b]">{t("p7bk.noRefundDue")}</div>
           )}
@@ -849,7 +851,7 @@ function BankTransferBox({ b }: { b: Booking }) {
   );
 }
 
-function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, clash, listingInfo, venue, mealOrders = [] }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; autoOpen?: boolean; clash?: boolean; listingInfo?: AmendListing | null; venue?: { location?: string | null; address?: string | null; city?: string | null }; mealOrders?: MealOrder[] }) {
+function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, clash, listingInfo, venue, mealOrders = [] }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; autoOpen?: boolean; clash?: boolean; listingInfo?: AmendListing | null; venue?: { location?: string | null; address?: string | null; city?: string | null; online?: boolean; joinInfo?: string | null }; mealOrders?: MealOrder[] }) {
   const t = useT();
   const w = useWord();
   const { locale } = useI18n();
@@ -868,7 +870,8 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
   const [amending, setAmending] = useState(!!autoAmend);
   useEffect(() => { if (autoAmend || autoCancel || autoOpen) document.getElementById(`booking-${b.ref}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }, [autoAmend, autoCancel, autoOpen, b.ref]);
   // The payment-link email lands on ?pay=REF — open that card's payment.
-  const [paying, setPaying] = useState(!!autoPay);
+  // An offer link (?pay=REF) lands on a booking that is only OFFERED, not payable yet: open the card so Accept is visible, not a "not ready to pay" error.
+  const [paying, setPaying] = useState(!!autoPay && b.status !== "Offered" && b.status !== "Waitlisted");
   const [offerBusy, setOfferBusy] = useState(false);
   // The listing this booking is on (venue/address for the row + the live
   // schedule + pass rules the amend modal needs) — fetched once at list level.
@@ -929,6 +932,8 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
     try {
       await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/${action}${b.tenantId ? `?tenantId=${encodeURIComponent(b.tenantId)}` : ""}`, {});
       refresh();
+      // The email and bell say "accept and pay": once accepted, go straight to paying.
+      if (action === "accept-offer" && (b.amount ?? 0) > 0) setPaying(true);
     } catch (e) {
       alert(e instanceof Error ? e.message : t("parent.errSomethingWrong"));
     }
@@ -971,7 +976,8 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
     (b.status === "Confirmed" || b.pay === "Invoice sent") && owedOf(b) > 0.005;
 
   const kidNames = (b.kids && b.kids.length ? b.kids.map((k) => k.name) : [b.child]).filter(Boolean);
-  const initials = kidNames.length ? kidNames.map((n) => (n || "?").charAt(0).toUpperCase()).join(" & ") : "?";
+  // A basket of many children used to build "T & T & T & T …": a wide badge that squeezed the names column to one letter per line. Show two initials and "+N".
+  const initials = kidInitials(kidNames);
   const loc = { location: venue?.location ?? info?.location ?? null, address: venue?.address ?? info?.address ?? null, city: venue?.city ?? info?.city ?? null };
   const sessCount = b.sessions?.length || b.days?.length || 0;
   const childCount = b.kids?.length || 1;
@@ -1001,7 +1007,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           </PCol>
           <PCol label={t("parent.datesCol")} w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{pickPlural(t, locale, "p7bk.sessN", sessCount)} · {pickPlural(t, locale, "p7bk.kidN", childCount)}{sessCount > 1 ? " · " + t("p7bk.tapViewAll") : ""}</span></PCol>
           <PCol label={t("parent.statusCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? t("parent.dateChangeStatus") : w(b.status)}</span></PCol>
-          {!cancelled && <PCol label={t("parent.paymentCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{w(payLabelFor(b))}</span></PCol>}
+          {!cancelled && <PCol label={t("parent.paymentCol")} w="w-[104px]"><span className="inline-flex max-w-full whitespace-normal rounded-xl px-2.5 py-[3px] text-[11px] font-extrabold leading-tight" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{w(payLabelFor(b))}</span></PCol>}
           {attendLabel && <PCol label={t("p7bk.todayCol")} w="w-[130px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={attend?.status === "in" ? { background: "#dcfce7", color: "#166534" } : attend?.status === "absent" ? { background: "#fee2e2", color: "#991b1b" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{attendLabel}</span></PCol>}
           <div className="ms-auto flex-none text-end">
             <div className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)] sm:text-[8.5px]">{t("parent.amountCol")}</div>
@@ -1147,8 +1153,14 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
               {b.serviceAddress?.address || b.serviceAddress?.postcode ? (
                 <div className="py-[4px] text-[12.5px] font-semibold">{t("p8par.mbComeToYou", { addr: [b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ") })}</div>
               ) : (<>
-                {loc.location && <div className="py-[4px] text-[12.5px] font-semibold">📍 {loc.location}</div>}
-                {(loc.address || loc.city) && (
+                {loc.location && <div className="py-[4px] text-[12.5px] font-semibold">{venue?.online ? "💻" : "📍"} {loc.location}</div>}
+                {venue?.online && (
+                  <div className="my-1 rounded-xl border-2 border-[#2f6bd8] bg-[#eef4ff] p-3 text-[12.5px]">
+                    <div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">{t("p7pg.howToJoin")}</div>
+                    <div className="mt-1 whitespace-pre-line font-semibold text-[var(--ink)]">{venue.joinInfo || t("p9tx.joinLater")}</div>
+                  </div>
+                )}
+                {!venue?.online && (loc.address || loc.city) && (
                   <div className="pb-[4px] text-[12px] text-[var(--ink-3)]">{[loc.address, loc.city].filter(Boolean).join(" · ")}</div>
                 )}
               </>)}
@@ -1169,7 +1181,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           ))}
           {/* Extras — the true add-ons (meal lines are pulled out into their
               own section below so they don't double up). */}
-          {(() => { const extras = (b.addons ?? []).filter((a) => !a.startsWith("🍽")); return extras.length > 0 && (
+          {(() => { const extras = addonLinesFor(b).filter((a) => !a.startsWith("🍽")); return extras.length > 0 && (
             <>
               <SectionHead>{t("parent.addOns")}</SectionHead>
               {extras.map((a, i) => <div key={i} className="border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">{a}</div>)}
@@ -1320,7 +1332,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
   const [error, setError] = useState<string | null>(null);
   // The dashboard's "to pay" card links here with ?filter=topay so the family lands on just what is still owing.
   const [filter, setFilter] = useState<BookingFilter>(() => (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("filter") === "topay" ? "topay" : "all"));
-  const [waitOpen, setWaitOpen] = useState(false); // waiting list starts collapsed — tap the header to open
+  const [waitOpen, setWaitOpen] = useState<boolean | null>(null); // null = automatic: collapsed above other bookings, open when the waiting list is all the family has
   const [childF, setChildF] = useState("");
   const [listingF, setListingF] = useState("");
   const [fromF, setFromF] = useState("");
@@ -1384,7 +1396,8 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
   const listingOf = (b: Booking): AmendListing | null => (b.listingId ? detailById[b.listingId] ?? null : null);
   const venueOf = (b: Booking) => {
     const v = b.listingId ? detailById[b.listingId]?.library?.venue : null;
-    return v ? { location: v.name ?? null, address: v.address ?? null, city: v.city ?? null } : undefined;
+    const ex = v as unknown as { kind?: string; directions?: string } | null;
+    return v ? { location: v.name ?? null, address: v.address ?? null, city: v.city ?? null, ...(ex?.kind === "online" ? { online: true, joinInfo: (ex.directions ?? "").trim() || null } : {}) } : undefined;
   };
   // The payment-link email deep-links here as ?pay=REF; the schedule's
   // "Edit booking" deep-links as ?amend=REF (auto-opens the Change-dates flow).
@@ -1400,6 +1413,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
 
   return (
     <div className="text-[var(--ink)]">
+      <OnlineSessionsPanel />
       {!hideHeader && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -1488,13 +1502,14 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
           { key: "cancelled", label: tr("parent.tabCancelledRefunded") },
         ];
 
+        const waitShown = waitOpen ?? rest.length === 0;
         return (
           <>
             {waiting.length > 0 && (
               <div className="mb-5 overflow-hidden rounded-2xl border border-[var(--brand-line,#cdddf7)] shadow-[0_1px_3px_rgba(20,30,60,.06)]">
                 <button
                   type="button"
-                  onClick={() => setWaitOpen((v) => !v)}
+                  onClick={() => setWaitOpen(!waitShown)}
                   className="flex w-full items-center justify-between gap-3 px-4 py-3 text-start text-white"
                   style={{ background: "radial-gradient(120% 140% at 12% -20%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,var(--brand-strong) 0%,var(--brand-2) 100%)" }}
                 >
@@ -1507,10 +1522,10 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                   </span>
                   <span className="flex items-center gap-2 text-[12px] font-bold">
                     <span className="rounded-full bg-white/20 px-2 py-0.5">{waiting.length}</span>
-                    <span className={`transition-transform ${waitOpen ? "rotate-180" : ""}`}>▾</span>
+                    <span className={`transition-transform ${waitShown ? "rotate-180" : ""}`}>▾</span>
                   </span>
                 </button>
-                {waitOpen && (
+                {waitShown && (
                   <div className="flex flex-col gap-2.5 bg-[var(--surface)] p-3">
                     {waiting.map((b) => <WaitlistCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} />)}
                   </div>

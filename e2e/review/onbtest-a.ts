@@ -1,0 +1,82 @@
+import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, fbSignIn, apiFetch } from "../helpers/accounts";
+import { WEB_URL } from "../helpers/env";
+import { chromium, check, shot, go, body, newCtx, saveAcc, db } from "./onbtest-lib";
+
+const stamp = Date.now().toString(36);
+(async () => {
+  const b = await chromium.launch();
+  const ctx = await newCtx(b);
+  const page = await ctx.newPage();
+  const email = `e2e-ob-fl-${stamp}@${TEST_EMAIL_DOMAIN}`;
+  await go(page, "/signup");
+  await shot(page, "A1-signup-type");
+  let txt = await body(page);
+  check("A1 signup step 1 shows 3 account types", /Freelancer/.test(txt) && /Company/.test(txt) && /Franchise/.test(txt));
+  const moneyRe = /sort code|account number|stripe|bank details|card payments/i;
+  check("A1b no money questions on step 1", !moneyRe.test(txt));
+  await page.getByRole("button", { name: /Continue/ }).last().click(); await page.waitForTimeout(1200);
+  await shot(page, "A2-business-empty");
+  // empty business -> validation
+  await page.getByRole("button", { name: /Continue/ }).last().click(); await page.waitForTimeout(800);
+  txt = await body(page);
+  check("A2 business step blocks empty name", /business name|name/i.test(txt) && (await page.locator("#b-name").count()) > 0, "still on business step");
+  check("A2b no money questions on business step", !moneyRe.test(txt));
+  await page.locator("#b-name").fill("Onboard Test Camps");
+  await page.locator("#b-addr").fill("1 High Street, Northampton");
+  await page.locator("#b-pc").fill("NN1 1AA");
+  await page.locator("#b-email").fill(email);
+  await page.locator("#b-phone").fill("07700 900123");
+  await shot(page, "A3-business-filled");
+  await page.getByRole("button", { name: /Continue/ }).last().click(); await page.waitForTimeout(1200);
+  await shot(page, "A4-identity");
+  txt = await body(page);
+  check("A4 identity step reached, no money", /see you as|logo/i.test(txt) && !moneyRe.test(txt));
+  await page.getByRole("button", { name: /Continue/ }).last().click(); await page.waitForTimeout(1200);
+  // hear: must pick
+  await page.getByRole("button", { name: /Continue/ }).last().click(); await page.waitForTimeout(800);
+  const stillHear = (await page.locator("#l-email").count()) === 0;
+  check("A5 'how did you hear' blocks until one is chosen", stillHear);
+  await shot(page, "A5-hear");
+  txt = await body(page);
+  check("A5b no money on hear step", !moneyRe.test(txt));
+  // choose first option (a button in the grid)
+  await page.locator("button:has(span.text-\\[22px\\])").first().click();
+  await page.getByRole("button", { name: /Continue/ }).last().click(); await page.waitForTimeout(1200);
+  check("A6 login step reached", (await page.locator("#l-email").count()) > 0);
+  const pre = await page.locator("#l-email").inputValue();
+  check("A6b login email prefilled from contact email", pre === email, pre);
+  // terms agreement: Create account is disabled until ticked
+  const btn = page.getByRole("button", { name: /Create account/ });
+  check("A9 Create account disabled until terms ticked", await btn.isDisabled());
+  await page.locator('input[type="checkbox"]').check();
+  check("A9b Create account enabled after ticking", await btn.isEnabled());
+  // weak password
+  await page.locator("#l-pw").fill("123");
+  await btn.click(); await page.waitForTimeout(900);
+  check("A7 weak password blocked", (await page.locator("#l-pw").count()) > 0 && /6|password/i.test(await body(page)));
+  await page.locator("#l-pw").fill(TEST_PASSWORD);
+  check("A8 password hidden by default", (await page.locator("#l-pw").getAttribute("type")) === "password");
+  await page.getByRole("button", { name: /^Show$/ }).click();
+  check("A8b Show reveals password", (await page.locator("#l-pw").getAttribute("type")) === "text");
+  await shot(page, "A8-login-show");
+  await page.getByRole("button", { name: /^Hide$/ }).click();
+  check("A8c Hide masks again", (await page.locator("#l-pw").getAttribute("type")) === "password");
+  await shot(page, "A9-login-ready");
+  await btn.click();
+  await page.waitForURL((u: URL) => /\/freelancer/.test(u.pathname), { timeout: 60_000 }).catch(() => {});
+  await page.waitForTimeout(5000);
+  check("A10 sign-up lands on /freelancer", /\/freelancer/.test(page.url()), page.url());
+  await shot(page, "B1-dashboard-after-signup");
+  const tok = (await fbSignIn(email)).idToken;
+  const me = await apiFetch<any>("/api/me", tok);
+  saveAcc({ email, tenantId: me.tenantId, kind: "freelancer-ui" });
+  console.log("tenant", me.tenantId);
+  check("A11 tenant created", !!me.tenantId, me.tenantId);
+  const sub = (await db.collection("tenants").doc(me.tenantId).get()).get("subscription");
+  console.log("subscription", JSON.stringify(sub));
+  check("A12 new tenant starts with subscription status 'none'", sub?.status === "none", JSON.stringify(sub));
+  txt = await body(page);
+  check("B1 checklist shows 'Get set up' 0 of 5", /Get set up/i.test(txt) && /0 of 5/.test(txt));
+  require("node:fs").writeFileSync("/tmp/onb-fl.json", JSON.stringify({ email, tenantId: me.tenantId }));
+  await b.close(); process.exit(0);
+})().catch((e) => { console.error(e); process.exit(1); });

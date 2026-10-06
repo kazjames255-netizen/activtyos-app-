@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { isBusyError, BUSY_MESSAGE } from "./lib/busyRetry";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +20,7 @@ import { referencePublic, references } from "./routes/references";
 import { library, libraryPublic } from "./routes/library";
 import { listings } from "./routes/listings";
 import { my } from "./routes/my";
+import { onlineSessions } from "./routes/onlineSessions";
 import { rateLimit } from "./lib/rateLimit";
 import { gzipResponses } from "./lib/gzip";
 import { staffAnnouncements } from "./routes/staffAnnouncements";
@@ -378,6 +380,7 @@ app.use("/api/my/files", childFiles);
 app.use("/api/my/referral", referral);
 app.use("/api/my/memberships", memberships);
 app.use("/api/my", my);
+app.use("/api/online-sessions", onlineSessions);
 app.use("/api/referrals", referralsAdmin);
 app.use("/api/memberships", membershipsAdmin);
 app.use("/api/register-role", registerRole);
@@ -422,6 +425,11 @@ app.use(
     const fsMsg = String((err as Error)?.message ?? "");
     if (/must point to a document|not a valid resource path|longer than 1500 bytes|Resource id .* is invalid|contains a resource id/.test(fsMsg)) {
       res.status(404).json({ error: "Not found" });
+      return;
+    }
+    // The database was busy and the retries ran out: say so plainly (503) rather than "Internal server error". Not a fault worth an alarm.
+    if (isBusyError(err)) {
+      res.status(503).json({ error: BUSY_MESSAGE });
       return;
     }
     // A 500 is a fault: record it and (first occurrence) raise the alarm, so

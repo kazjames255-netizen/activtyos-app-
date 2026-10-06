@@ -52,7 +52,13 @@ export async function checkCoverage(
     if (!prefixes.length) return { ok: true };
     const pcCompact = pc.replace(/\s/g, "");
     const pcOutward = outward(pc);
-    const hit = prefixes.some((p) => pcCompact.startsWith(p) || pcOutward.startsWith(p));
+    // A prefix ending in a digit must end a district: "NN5" covers NN5 and NN5 7EA but not the different district NN50 ("SW1" covers SW1A, not SW10).
+    const matches = (p: string) => {
+      if (!(pcCompact.startsWith(p) || pcOutward.startsWith(p))) return false;
+      if (/\d$/.test(p) && p.length < pcOutward.length && pcOutward.startsWith(p) && /\d/.test(pcOutward[p.length])) return false;
+      return true;
+    };
+    const hit = prefixes.some(matches);
     return hit ? { ok: true } : { ok: false, reason: `Sorry, ${pc} is outside this provider's home-visit coverage area` };
   }
 

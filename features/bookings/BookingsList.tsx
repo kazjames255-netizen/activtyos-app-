@@ -391,7 +391,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 >
                   <div className="flex items-baseline gap-2">
                     <b className="min-w-0 flex-1 truncate text-[12.5px]">{b.booker}</b>
-                    <b className="flex-none text-[12px] tabular-nums">{money(b.amount)}</b>
+                    <b className="flex-none text-[12px] tabular-nums" style={waitingForPlace(b.status) ? { opacity: 0.5 } : undefined}>{money(b.amount)}</b>
                   </div>
                   <div
                     className={
@@ -464,8 +464,8 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   </div>
                   <span className="flex-none whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11.5px] font-extrabold" style={{ background: heroTone(b.status).bg, color: heroTone(b.status).fg }}>{w(b.status)}</span>
                   <div className="flex-none ps-1 text-end">
-                    <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("p7bkl.amountLbl")}</div>
-                    <b className="text-[18px] tabular-nums text-[var(--ink)]">{money(b.amount)}</b>
+                    <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{waitingForPlace(b.status) ? t("p9tx.ifOffered") : t("p7bkl.amountLbl")}</div>
+                    <b className="text-[18px] tabular-nums text-[var(--ink)]" style={waitingForPlace(b.status) ? { opacity: 0.5 } : undefined}>{money(b.amount)}</b>
                   </div>
                 </div>
 
@@ -481,7 +481,13 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay, b.status).bg, color: payTone(b.pay, b.status).fg }}>{w(payLabelFor(b))}</span>
                     <span className="text-[11px] font-semibold text-[var(--ink-3)]">{w(payMethodLabel(b))}</span>
                   </span>
+                  {b.status === "Waitlisted" && b.waitlist && b.waitlist.length > 0 && (
+                    <span className="rounded-full bg-[#fff1d6] px-2.5 py-[3px] text-[11px] font-extrabold text-[#9a5a00]">{b.waitlist.map((x) => `${t("p9tx.wlPlace", { n: x.position })} · ${x.date.slice(8)}/${x.date.slice(5, 7)}`).join("  ")}</span>
+                  )}
 
+                  {b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) && (
+                    <span className="basis-full text-[12.5px] font-bold text-[#0b5a3f]">🚗 {t("p9tx.hvVisitAt")} {[b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ")}</span>
+                  )}
                   {/* Contextual actions, pushed to the right */}
                   <span className="ms-auto flex flex-wrap items-center justify-end gap-1.5">
                     {b.pay === "Awaiting voucher payment" && !off && !waitingForPlace(b.status) && (

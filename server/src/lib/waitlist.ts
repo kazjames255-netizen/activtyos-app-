@@ -1,9 +1,13 @@
 import { db } from "../firebase";
+import { capsViolation } from "./capRules";
 import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
 import { applyRowAction } from "../../../features/bookings/mutations";
 import { bookingDays, countsUpdate, daysHaveSpace, type BlockDoc } from "./blockDomain";
 import { emailPlaceOffered } from "./emails";
+import { notify } from "./notify";
+import { passCap, bookingHasPass } from "./passBooking";
+import { loadSettings } from "./tenantLibrary";
 
 // ─────────────────────────────────────────────────────────────────────────
 // The waiting list (handoff §E). A waitlisted BOOKING is the queue entry —
@@ -46,6 +50,29 @@ export async function waitingCount(blockId: string, dates: string[]): Promise<nu
   return queued.filter((b) => (block ? bookingDays(b, block) : (b.days ?? [])).some((d) => set.has(d))).length;
 }
 
+
+/** The per-ticket and per-age-group daily caps a place must ALSO respect (the block's own room is checked by the caller). A seat freed
+ *  elsewhere on the block does not make room on a capped ticket, so an offer for a pass or age group that is still at its cap would
+ *  overbook it. Returns a plain-words reason, or null when the place fits. Reads only — call it before any write in the transaction. */
+export async function capsProblem(tx: FirebaseFirestore.Transaction, b: Booking, block: BlockDoc, days: string[]): Promise<string | null> {
+  if (!b.blockId || !block.listingId) return null;
+  const listingSnap = await tx.get(db.collection("listings").doc(block.listingId));
+  if (!listingSnap.exists) return null;
+  const listing = listingSnap.data() as { ticketOverrides?: Record<string, { capacity?: string }>; ageCapsOn?: boolean; ageCaps?: Record<string, number>; franchiseId?: string | null };
+  const ageCaps = listing.ageCaps ?? {};
+  const ageOn = !!listing.ageCapsOn && Object.keys(ageCaps).length > 0;
+  const capped = Object.entries(listing.ticketOverrides ?? {}).some(([n, o]) => passCap(o?.capacity) !== null && bookingHasPass(b.pass, n));
+  if (!capped && !ageOn) return null;
+  const live = await tx.get(db.collection("bookings").where("blockId", "==", b.blockId).where("status", "in", ["Confirmed", "Approval needed", "Offered"]));
+  const seatsOf = (x: Booking) => {
+    const kids = ((x as { kids?: { cancelled?: boolean }[] }).kids ?? []);
+    return Math.max(1, kids.filter((k) => !k.cancelled).length || kids.length || 1);
+  };
+  const groups = ageOn ? ((((await loadSettings(block.tenantId, listing.franchiseId)).ratioGroups) ?? []) as { id: string; ageFrom: number; ageTo: number; name?: string }[]) : [];
+  const lite = (x: Booking) => ({ ref: x.ref, pass: x.pass, age: x.age, days: x.days, seats: seatsOf(x) });
+  return capsViolation(listing, lite(b), days, live.docs.map((d) => lite(fromDoc(d.data() as BookingDoc))), block.sessions.map((x) => x.date), groups);
+}
+
 /** Offer one waitlisted booking its place (2h hold). Transactional: checks
  * the seat is really free and the booking still queued. Returns the updated
  * booking, or null when it no longer fits/exists. */
@@ -68,6 +95,7 @@ export async function makeOffer(tenantId: string, ref: string): Promise<Booking 
           ? daysHaveSpace(block, Object.fromEntries(days.map((d) => [d, seats]))).fits
           : block.bookedCount + seats <= block.capacity;
       if (!fits) return null;
+      if (await capsProblem(tx, b, block, days)) return null; // a capped ticket / age group is still full: a seat freed elsewhere doesn't help
       applyRowAction(b, "offer"); // Offered + offeredAt + 2h expiry
       tx.set(bookingRef, toDoc(b));
       tx.update(blockSnap.ref, { ...countsUpdate(block, seats, days) }); // hold the seat
@@ -78,6 +106,22 @@ export async function makeOffer(tenantId: string, ref: string): Promise<Booking 
     console.error("[waitlist] offer failed:", (e as Error).message);
     return null;
   }
+}
+
+/** The family's bell for an offered place (the email alone is easy to miss, and is held back while mail isn't live). Used by the
+ *  automatic offers; the provider's manual "Offer" raises the same bell in routes/bookings.ts. */
+function bellPlaceOffered(b: Booking): void {
+  const until = b.offerExpiresAt ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) : "";
+  void notify({
+    tenantId: b.tenantId!,
+    to: { kind: "parent", email: b.email },
+    category: "booking",
+    bellOnly: true,
+    title: `A place is available · ${b.ref}`,
+    body: `${b.listing}${b.child ? ` · ${b.child}` : ""} — a place has come up and is being held for you${until ? ` until ${until}` : ""}. Accept and pay to take it.`,
+    href: `/custdash/bookings?pay=${encodeURIComponent(b.ref)}`,
+    ref: b.ref,
+  });
 }
 
 /** AUTO mode: offer freed places to the front of the queue. Fire-and-forget
@@ -99,8 +143,10 @@ export async function triggerWaitlist(blockId: string): Promise<void> {
     // we just stop once nothing more fits.
     for (const b of await queuedBookings(blockId)) {
       const offered = await makeOffer(block.tenantId, b.ref);
-      if (offered && offered.email.includes("@"))
+      if (offered && offered.email.includes("@")) {
         emailPlaceOffered(offered, listing.tenantName ?? listing.name ?? "Your activity provider");
+        bellPlaceOffered(offered);
+      }
       if (!offered) {
         // Someone deeper in the queue may still fit (day scope: different
         // dates) — keep walking; capacity checks are cheap.

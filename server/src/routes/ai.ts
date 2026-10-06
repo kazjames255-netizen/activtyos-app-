@@ -190,7 +190,13 @@ export async function tenantSnapshot(tenantId: string, forStaff = false, franchi
     const doc = d.data() as BlockDoc;
     const sum = blockSummary(d.id, doc);
     const listing = title.get(doc.listingId) ?? "Untitled";
-    if (sum.open && sum.sessions.some((s) => s.date >= today)) { openCapacity += sum.capacity; openBooked += sum.bookedCount; }
+    if (sum.open && sum.sessions.some((s) => s.date >= today)) {
+      if ((doc as { capacityScope?: string }).capacityScope === "day") {
+        // A per-day limit applies to EACH day: count it per remaining day against the children booked on that day. Summing the daily limit once
+        // per run against all child-days booked made a busy per-day listing read as over-full ("0 spaces left") on the dashboard KPI.
+        for (const s of sum.sessions) if (s.date >= today) { openCapacity += s.capacity; openBooked += s.bookedCount; }
+      } else { openCapacity += sum.capacity; openBooked += sum.bookedCount; }
+    }
     for (const s of sum.sessions) sessions.push({ date: s.date, start: s.start, end: s.end, capacity: s.capacity, booked: s.bookedCount, spotsLeft: s.spotsLeft, listing, open: sum.open });
   }
   sessions.sort((a, b) => (`${a.date} ${a.start}` < `${b.date} ${b.start}` ? -1 : 1));

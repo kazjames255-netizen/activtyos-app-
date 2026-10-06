@@ -12,6 +12,7 @@ import {
   bookingKids,
   kidActiveDays,
   money,
+  addonLinesFor,
   payLabelFor,
   pendingPayActionT,
   payTone,
@@ -27,7 +28,7 @@ import {
 } from "./helpers";
 import { Badge, Button, Card, DefRow, Input, SectionHead, Select } from "@/components/ui";
 import { useTenantSettings, reasonsFor } from "@/lib/settings";
-import { refundFor, policyById, adviceReasonT } from "@/lib/cancellation";
+import { refundFor, effectiveRefundDate, policyById, adviceReasonT } from "@/lib/cancellation";
 import { post as apiPost, get as apiGet } from "@/lib/api";
 import { ChildCard, type ChildInfo } from "@/features/registers/ChildCard";
 import { MoneyConfirm } from "./MoneyConfirm";
@@ -314,7 +315,7 @@ function CancelPanel({ booking }: { booking: Booking }) {
     // from when the child was next due in, and sessions aren't guaranteed to
     // be in order. Free-text sessions ("Week 1") parse to nothing and
     // correctly leave us with no advice to give.
-    sessionIsoDates(booking).sort()[0],
+    effectiveRefundDate(booking.origFirstDate, sessionIsoDates(booking).sort()[0]),
     booking.amount,
     new Date().toISOString(),
     initiator,
@@ -758,6 +759,9 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {b.status !== "Cancelled" && b.status !== "Declined" && (
             <Badge tone={payTone(b.pay, b.status)}>{w(payLabelFor(b))}</Badge>
           )}
+          {b.status === "Waitlisted" && b.waitlist && b.waitlist.length > 0 && (
+            <Badge tone={{ bg: "#fff1d6", fg: "#9a5a00" }}>{b.waitlist.map((x) => `${t("p9tx.wlPlace", { n: x.position })} · ${new Date(`${x.date}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" })}`).join("  ")}</Badge>
+          )}
           {b.cardFailed && b.status !== "Cancelled" && b.status !== "Declined" && (
             <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>{t("p7bd.cardFailedBadge")}</Badge>
           )}
@@ -794,7 +798,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             small={attendeeCount(b) === 1 ? t("p7bd.attendee_one") : t("p7bd.attendee_other")}
           />
           <Tile big={String(sessionCount(b))} small={t("p7bd.sessionsTile")} />
-          <Tile big={money(b.amount)} small={t("p7bd.totalLbl")} />
+          <Tile big={money(b.amount)} small={waitingForPlace(b.status) ? t("p9tx.ifOffered") : t("p7bd.totalLbl")} />
         </div>
 
         {/* Tabs — the booking, or the same child card as the register */}
@@ -824,8 +828,9 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         <SectionHead>{t("p7bd.secActivity")}</SectionHead>
         <DefRow label={t("p7bd.lblListing")} value={b.listing} />
         <DefRow label={t("p7bd.lblPass")} value={b.pass} />
+        {b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) && <DefRow label={"🚗 " + t("p9tx.hvVisitAt")} value={[b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ")} />}
         <DefRow label={t("p7bd.lblTicket")} value={b.ticket} />
-        {b.addons && b.addons.length > 0 && <DefRow label={t("p7bd.lblAddons")} value={b.addons.join(", ")} />}
+        {b.addons && b.addons.length > 0 && <DefRow label={t("p7bd.lblAddons")} value={addonLinesFor(b).join(", ")} />}
 
         {/* Contact */}
         <SectionHead>{t("p7bd.secContact")}</SectionHead>
@@ -879,7 +884,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         {b.priceOverride && (
           <DefRow label={t("p9tx.bdPriceSet")} value={`${money(b.priceOverride.originalAmount)} → ${money(b.priceOverride.amount)} · ${b.priceOverride.by}${b.priceOverride.reason ? ` · ${b.priceOverride.reason}` : ""}`} />
         )}
-        <DefRow label={t("p7bd.totalLbl")} value={money(b.amount)} />
+        <DefRow label={waitingForPlace(b.status) ? t("p9tx.ifOffered") : t("p7bd.totalLbl")} value={money(b.amount)} />
         {(/tax.?free|\btfc\b/i.test(b.method ?? "") || /tax.?free|\btfc\b/i.test(b.voucherScheme ?? "")) && (
           <DefRow
             label={t("p7bd.lblTfcRecon")}

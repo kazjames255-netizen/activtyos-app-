@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { withoutLeavers } from "../lib/rosterRules";
 import { z } from "zod";
 import { db } from "../firebase";
 import { isPlainStaff, type Role } from "../middleware/role";
@@ -169,7 +170,7 @@ ratios.get("/", async (req, res) => {
       .sort((a, b) => (a.name < b.name ? -1 : 1));
 
     const doc = groupSnaps[i].exists ? (groupSnaps[i].data() as RatioDoc) : null;
-    const groups: Group[] = (doc?.groups ?? []).map((g) => ({ ...g, staffIds: g.staffIds.filter((x) => !leavers.has(x)) }));
+    const groups: Group[] = (doc?.groups ?? []).map((g) => ({ ...g, staffIds: withoutLeavers(g.staffIds, leavers) }));
     const assignedStaff = new Set(groups.flatMap((g) => g.staffIds));
     const assignedChildIds = new Set(groups.flatMap((g) => g.childIds));
 
@@ -403,7 +404,7 @@ ratios.put("/:blockId/:date", async (req, res) => {
     return;
   }
   const leavers = await leaverStaffIds(auth.tenantId);
-  const doc: RatioDoc = { tenantId: auth.tenantId, blockId, date, groups: parsed.data.groups.map((g) => ({ ...g, staffIds: g.staffIds.filter((x) => !leavers.has(x)) })) };
+  const doc: RatioDoc = { tenantId: auth.tenantId, blockId, date, groups: parsed.data.groups.map((g) => ({ ...g, staffIds: withoutLeavers(g.staffIds, leavers) })) };
   await db.collection("ratioGroups").doc(groupId(blockId, date)).set(doc);
   res.json({ ok: true });
 });

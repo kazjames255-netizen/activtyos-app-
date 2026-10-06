@@ -313,7 +313,7 @@ test("discount schema: negative values, bad kind/method and non-integer threshol
   assert.equal(d({ moreThan: -1 }), false);
 });
 test("emptyRule presets match their card copy", () => {
-  assert.deepEqual([emptyRule("person").method, emptyRule("person").value, emptyRule("person").moreThan], ["subtract", 0, 1]);
+  assert.deepEqual([emptyRule("person").method, emptyRule("person").value, emptyRule("person").moreThan], ["percent", 10, 1]);
   assert.deepEqual([emptyRule("session").method, emptyRule("session").value, emptyRule("session").moreThan], ["percent", 10, 3]);
   assert.equal(emptyRule("early").value, 10);
   assert.equal(emptyRule("early").enabled, true);

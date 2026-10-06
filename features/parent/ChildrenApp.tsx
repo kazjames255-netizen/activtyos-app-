@@ -1,5 +1,6 @@
 "use client";
 
+import { collectionOk as collectionOkRule } from "@/lib/uiRules";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
@@ -469,7 +470,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
           emoji: "🔒",
           title: t("parent.safeguarding"),
           sub: t("parent.safeguardingSub"),
-          ok: settings.collectionCheck === "off" || collectionPassword.trim().length > 0,
+          ok: collectionOkRule(settings.collectionCheck, collectionPassword),
           body: (
             <>
               {settings.collectionCheck !== "off" && (
@@ -521,7 +522,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
   const safeStep = Math.min(step, last);
   const canNext = slides[safeStep].ok;
   // The collection password is required whenever the provider has the collection check switched on (a child can never be handed over without one).
-  const collectionOk = settings.collectionCheck === "off" || collectionPassword.trim().length > 0;
+  const collectionOk = collectionOkRule(settings.collectionCheck, collectionPassword);
   const canSave = canLeaveAbout && emergencyOk && questionsOk && collectionOk;
   const next = () => canNext && setStep((s) => Math.min(last, s + 1));
   const back = () => setStep((s) => Math.max(0, s - 1));

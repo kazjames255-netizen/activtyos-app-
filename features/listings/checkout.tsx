@@ -194,6 +194,32 @@ export function ageApprovalNote(d: WizardDraft, c: ChildProfile, tr?: (k: string
   if (!outside) return null;
   return tr ? tr("p7ck.ageOutsideNote", { name: c.name || tr("p7ck.thisChild"), from: d.ageFrom, to: d.ageTo }) : `${c.name || "This child"} is outside the ${d.ageFrom}–${d.ageTo} age range, so this place has to be approved by the provider — you'll book now and they'll confirm.`;
 }
+/** A child's age TODAY (UK calendar date), worked out exactly as the server does when it checks a booking (server/src/routes/my.ts ageFromDob). */
+export function ageToday(dob: string | undefined): number | null {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (Number.isNaN(d.getTime())) return null;
+  const uk = (x: Date) => x.toLocaleDateString("en-CA", { timeZone: "Europe/London" }).split("-").map(Number);
+  const [by, bm, bd] = uk(d), [ny, nm, nd] = uk(new Date());
+  let a = ny - by;
+  if (nm < bm || (nm === bm && nd < bd)) a--;
+  return a >= 0 && a <= 25 ? a : null;
+}
+/** The ticket's own Age from / Age to (wizard > Tickets & pricing), falling back to the listing's range for a blank box: the same range the server applies. */
+export function ticketAgeRange(d: WizardDraft, passName: string): { from: number; to: number; own: boolean } {
+  const ov = d.ticketOverrides?.[passName];
+  const f = parseInt(ov?.ageFrom ?? "", 10), t = parseInt(ov?.ageTo ?? "", 10);
+  const lf = parseInt(d.ageFrom, 10), lt = parseInt(d.ageTo, 10);
+  return { from: Number.isFinite(f) ? f : lf, to: Number.isFinite(t) ? t : lt, own: Number.isFinite(f) || Number.isFinite(t) };
+}
+/** True when this child's age sits outside the ticket's range (an unknown age is never judged, as on the server). */
+export function outsideTicketRange(d: WizardDraft, c: ChildProfile, passName: string): { from: number; to: number } | null {
+  const age = ageToday(c.dob);
+  if (age === null) return null;
+  const r = ticketAgeRange(d, passName);
+  const out = (Number.isFinite(r.from) && age < r.from) || (Number.isFinite(r.to) && age > r.to);
+  return out ? { from: r.from, to: r.to } : null;
+}
 /** Going back was a faint line of underlined text; at every stage it is now a
  *  button that looks like one, so the way out is as findable as the way on. */
 function BackBtn({ tk, onClick, children, className = "" }: {
@@ -1078,7 +1104,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const afterCode = Math.max(0, grandTotal - codeOff);
   // Most that could come off this booking from the wallet (can't exceed what's
   // owed after codes). Auto-apply spends all of it; the family can dial it back.
-  const walletAvail = Math.min(walletBalance, afterCode);
+  // Joining a waiting list spends nothing (the server leaves the wallet alone for a queued place), so don't show credit as used.
+  const walletAvail = b.waitlistOnly ? 0 : Math.min(walletBalance, afterCode);
   const walletApplied = walletUse === null ? walletAvail : Math.max(0, Math.min(walletUse, walletAvail));
   const amountDue = Math.max(0, afterCode - walletApplied);
   // What makes a pass valid depends on how it was sold.
@@ -1172,6 +1199,19 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   })();
   const existingOn = (id: string) => existingClashes.filter((c) => c.itemIds.includes(id));
   const unassigned = shortPasses.length;
+  // A ticket with its own age range: any child put on it who is outside the range. Blocks Confirm (or, when the listing takes out-of-range children,
+  // just warns that the place becomes a request). Only tickets that set their own range are checked here: the listing-wide range is on the child cards.
+  const ticketAgeIssues = b.basket.flatMap((x) =>
+    b.childrenOn(x.id).flatMap((name) => {
+      const c = roster.find((r) => r.name.trim() === name);
+      if (!c || !ticketAgeRange(d, x.name).own) return [];
+      const out = outsideTicketRange(d, c, x.name);
+      return out ? [{ itemId: x.id, name, ticket: x.name, from: out.from, to: out.to }] : [];
+    }),
+  );
+  const ticketAgeBlocks = !d.allowOutOfRange && ticketAgeIssues.length > 0;
+  const ticketAgeText = (i: { name: string; ticket: string; from: number; to: number }) =>
+    tr("p9tx.ckTicketAge", { name: i.name, ticket: i.ticket, from: Number.isFinite(i.from) ? i.from : "", to: Number.isFinite(i.to) ? i.to : "" });
   // Per-pass fine control stays tucked away unless something on a pass needs fixing.
   const passesForced = roster.length > 0 && (unassigned > 0 || clashes.length > 0 || existingClashes.length > 0);
   const passesOpen = showPasses || passesForced;
@@ -1488,8 +1528,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                         {roster.map((c) => {
                           const name = c.name.trim();
                           const going = b.childrenOn(x.id).includes(name);
+                          const outT = ticketAgeRange(d, x.name).own ? outsideTicketRange(d, c, x.name) : null;
                           return (
-                            <button key={name} type="button" onClick={() => b.toggleChild(x.id, name)}
+                            <button key={name} type="button" disabled={!!outT && !going && !d.allowOutOfRange} onClick={() => b.toggleChild(x.id, name)}
                               title={x.dates.length === 1
                                 ? (going ? tr("p7ck.takeOffDay", { name }) : tr("p7ck.putOnDay", { name }))
                                 : (going ? tr("p7ck.takeOffPassN", { name, n: x.dates.length }) : tr("p7ck.putOnPassN", { name, n: x.dates.length }))}
@@ -1497,11 +1538,16 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                               style={going
                                 ? { borderColor: sexTint(c.sex, true).border, background: sexTint(c.sex, true).bg, color: sexTint(c.sex, true).ink }
                                 : { borderColor: "#c3c9d6", background: "#eceff5", color: "#5a6478" }}>
-                              {going ? "✓ " : "+ "}{name}
+                              {going ? "✓ " : "+ "}{name}{outT && !going ? ` · ${tr("p9tx.ckTicketAgeShort", { from: Number.isFinite(outT.from) ? outT.from : "", to: Number.isFinite(outT.to) ? outT.to : "" })}` : ""}
                             </button>
                           );
                         })}
                       </div>
+                      {ticketAgeIssues.filter((i) => i.itemId === x.id).map((i) => (
+                        <div key={i.name} role="alert" className="mt-1.5 text-[11.5px] font-bold" style={{ color: d.allowOutOfRange ? "#9a5a00" : "#c0392b" }}>
+                          {d.allowOutOfRange ? "ℹ️ " : "⚠️ "}{d.allowOutOfRange ? tr("p9tx.ckTicketAgeReq", { name: i.name, ticket: i.ticket, from: Number.isFinite(i.from) ? i.from : "", to: Number.isFinite(i.to) ? i.to : "" }) : ticketAgeText(i)}
+                        </div>
+                      ))}
                       {clashesOn(x.id).length > 0 && (
                         <div className="mt-1.5 border px-2.5 py-1.5 text-[11px] leading-[1.45]"
                           style={{ borderColor: "#fed7aa", background: "#fff7ed", color: "#9a3412" }}>
@@ -1805,7 +1851,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           ).map((q) => ({ who: c.name.trim() || tr("p7ck.thisChildLower"), label: q.label })),
         );
         const ready =
-          roster.length > 0 && unassigned === 0 && shortPasses.length === 0 && clashes.length === 0 && existingClashes.length === 0 && outstanding.length === 0;
+          roster.length > 0 && unassigned === 0 && shortPasses.length === 0 && clashes.length === 0 && existingClashes.length === 0 && outstanding.length === 0 && !ticketAgeBlocks;
         const next = tr("p7ck.ctaNext");
         return (
           <>
@@ -1835,6 +1881,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 : clashes.length > 0 ? tr("p7ck.ctaClash", { name: clashes[0].name, date: fmtDate(clashes[0].iso) })
                 : existingClashes.length > 0 ? tr("p9tx.ckAlreadyBooked", { name: existingClashes[0].name, date: String(fmtDate(existingClashes[0].iso)) })
                 : unassigned > 0 || shortPasses.length > 0 ? tr("p7ck.ctaPutChild")
+                : ticketAgeBlocks ? ticketAgeText(ticketAgeIssues[0])
                 : outstanding.length > 0 ? tr("p7ck.ctaAnswer", { label: outstanding[0].label, who: outstanding[0].who })
                 : next}
             </button>
@@ -2714,7 +2761,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       )}
 
       {ckStage === "pay" && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || (parentMode && !phoneOk) || (homeVisit && !serviceAddress.postcode.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || existingClashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && refKids.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
+        disabled={(!parentMode && !b.parent) || (parentMode && !phoneOk) || (homeVisit && !serviceAddress.postcode.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || existingClashes.length > 0 || ticketAgeBlocks || !!booking?.busy || (method === "voucher" && !!chosenVoucher && refKids.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // With an onBook handler the confirm actually books — the parent
@@ -2771,6 +2818,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           : parentMode && !phoneOk ? tr("p7ck.ctaAddPhone")
           : homeVisit && !serviceAddress.postcode.trim() ? tr("p7ck.ctaVisitAddr")
           : roster.length === 0 ? tr("p7ck.ctaAddChildFirst")
+          : ticketAgeBlocks ? ticketAgeText(ticketAgeIssues[0])
           : unassigned > 0 ? pickPlural(tr, locale, "p7ck.ctaNobody", unassigned)
           : clashes.length > 0 ? tr("p7ck.ctaClash", { name: clashes[0].name, date: fmtDate(clashes[0].iso) })
           : existingClashes.length > 0 ? tr("p9tx.ckAlreadyBooked", { name: existingClashes[0].name, date: String(fmtDate(existingClashes[0].iso)) })
@@ -2791,7 +2839,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           : tr("p7ck.ctaSendLink", { amt: money(amountDue) })}
       </button>}
 
-      <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>{d.cancellation}</div>
+      <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>{d.cancellation ? d.cancellation.charAt(0).toLocaleUpperCase() + d.cancellation.slice(1) : d.cancellation}</div>
       </div>
     </div>
     </>

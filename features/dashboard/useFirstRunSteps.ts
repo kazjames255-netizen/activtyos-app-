@@ -6,6 +6,7 @@
 // 60s TTL per tenant (one set of reads per minute per tab, not per navigation),
 // and an established provider (published listing + a booking) is remembered in
 // localStorage so those reads stop altogether.
+import { payStepDone } from "@/lib/billingRules";
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
@@ -54,7 +55,7 @@ function fetchFacts(tenant: string, portal: string, force: boolean) {
       listings: listings?.length ?? 0,
       bookings: bookings?.length ?? 0,
       // "Chosen" = saved something of their own, or Stripe is live.
-      payChosen: !!lib?.settings?.billing?.bankAccount || !!lib?.settings?.billing?.iban || !!(lib?.settings?.billing as { sortCode?: string; accountNumber?: string } | undefined)?.accountNumber,
+      payChosen: payStepDone(lib?.settings?.billing as Parameters<typeof payStepDone>[0]),
       cancelChosen: !!lib?.settings?.cancellationPolicies?.length,
       team: (invites ?? []).filter((i) => i.role === "staff").length,
     };

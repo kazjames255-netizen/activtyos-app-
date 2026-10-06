@@ -242,7 +242,7 @@ async function venueMapPng(lat: number, lng: number): Promise<Buffer | null> {
 async function listingContext(
   b: Booking,
   want: { whatIncluded?: boolean; map?: boolean },
-): Promise<{ heroCid?: string; location?: string; homeVisit?: boolean; provided?: string[]; toBring?: string[]; mapCid?: string; attachments: MailAttachment[] }> {
+): Promise<{ heroCid?: string; location?: string; homeVisit?: boolean; online?: boolean; joinInfo?: string; provided?: string[]; toBring?: string[]; mapCid?: string; attachments: MailAttachment[] }> {
   const attachments: MailAttachment[] = [];
   // Home-visit booking: "location" is the family's own service address, not a
   // venue — no venue lookup, no map of their own house.
@@ -272,12 +272,21 @@ async function listingContext(
     }
 
     let location: string | undefined; let lat: number | undefined; let lng: number | undefined;
-    let venueAddress: string | undefined;
+    let venueAddress: string | undefined; let online = false; let joinInfo: string | undefined;
     const venueId = listing.venueId as string | undefined;
     if (venueId && b.tenantId) {
       const lib = (await db.collection("libraries").doc(b.tenantId).get()).data() ?? {};
-      const v = ((lib.venues ?? []) as { id: string; name?: string; address?: string; lat?: number; lng?: number }[]).find((x) => x.id === venueId);
-      if (v) { location = [v.name, v.address].filter(Boolean).join(", ") || undefined; lat = v.lat; lng = v.lng; venueAddress = v.address; }
+      const v = ((lib.venues ?? []) as { id: string; name?: string; address?: string; lat?: number; lng?: number; kind?: string; directions?: string }[]).find((x) => x.id === venueId);
+      if (v && v.kind === "online") {
+        online = true; location = "Online"; joinInfo = (v.directions ?? "").trim() || undefined;
+        // The platform's own video room (or an own link) replaces free-text instructions: say when and where to join, never an address.
+        try {
+          const { onlineJoinText } = await import("./onlineSessions");
+          const next = (b.days ?? []).filter((d) => d >= new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date())).sort()[0] ?? b.days?.[0];
+          joinInfo = await onlineJoinText({ id: (b.listingId as string) || "", tenantId: b.tenantId, name: String(listing.name ?? ""), blockId: listing.blockId as string | undefined, videoMode: listing.videoMode as "platform" | "own" | undefined, ownLink: listing.ownLink as string | undefined, showLinkNow: listing.showLinkNow === true }, next, b.timing, (listing.videoMode === "own" ? undefined : joinInfo));
+        } catch { /* keep the venue's own text */ }
+      }
+      else if (v) { location = [v.name, v.address].filter(Boolean).join(", ") || undefined; lat = v.lat; lng = v.lng; venueAddress = v.address; }
     }
 
     let mapCid: string | undefined;
@@ -298,7 +307,7 @@ async function listingContext(
 
     const provided = want.whatIncluded ? ((listing.provided as string[] | undefined) ?? []).filter(Boolean) : undefined;
     const toBring = want.whatIncluded ? ((listing.toBring as string[] | undefined) ?? []).filter(Boolean) : undefined;
-    return { heroCid, location, provided, toBring, mapCid, attachments };
+    return { heroCid, location, online, joinInfo, provided, toBring, mapCid, attachments };
   } catch {
     return { attachments };
   }
@@ -329,6 +338,8 @@ function sendCustomerEmail(
         heroCid: ctx.heroCid,
         location: ctx.location,
         homeVisit: ctx.homeVisit,
+        online: ctx.online,
+        joinInfo: ctx.joinInfo,
         provided: ctx.provided,
         toBring: ctx.toBring,
         mapCid: ctx.mapCid,

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { maskEmail, publicFullAddress } from "../lib/directoryRules";
 import { db } from "../firebase";
 
 /**
@@ -19,14 +20,6 @@ import { db } from "../firebase";
 const outward = (pc: string) => { const c = pc.replace(/\s+/g, "").toUpperCase(); return c.length > 3 ? c.slice(0, -3) : c; };
 
 export const providersPublic = Router();
-
-/** "sam.taylor@riverside.co.uk" -> "sa***@riverside.co.uk": enough to tell two similarly named providers apart, never the usable address. */
-function maskEmail(e?: string): string | undefined {
-  const m = /^([^@\s]+)@([^@\s]+\.[^@\s]+)$/.exec((e ?? "").trim());
-  if (!m) return undefined;
-  const local = m[1];
-  return `${local.slice(0, Math.min(2, Math.max(1, local.length - 1)))}***@${m[2].toLowerCase()}`;
-}
 
 type Provider = { id: string; name: string; town?: string; postcode?: string; emailHint?: string; fullAddress?: string };
 /** What a row can be matched on: the trading name AND the registered one. */
@@ -117,7 +110,7 @@ async function directory(): Promise<Row[]> {
       seen.add(key);
 
       // The full address is shown ONLY when the provider ticked 'show my address when parents search' in Setup. Default: never.
-      const fullAddress = settings.billing?.showAddressPublicly === true ? (settings.billing?.address ?? "").replace(/\s+/g, " ").trim() || undefined : undefined;
+      const fullAddress = publicFullAddress(settings.billing);
       rows.push({ id: doc.id, name, town: townFrom(settings.billing?.address), postcode, terms, emailHint: maskEmail(settings.billing?.email), fullAddress });
     });
 
