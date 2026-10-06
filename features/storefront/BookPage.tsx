@@ -66,6 +66,7 @@ export function BookPage({ id }: { id: string }) {
       .then((l) => { setListing(l); if (embedded) window.parent?.postMessage({ type: "activityos:debug", kind: "listing", msg: "listing loaded" }, "*"); })
       .catch((e) => { setNotFound((e as { status?: number })?.status === 404); setError(e instanceof Error ? e.message : t("p7pub.errLoadListing")); if (embedded) window.parent?.postMessage({ type: "activityos:debug", kind: "listing-error", msg: String(e?.message ?? e) }, "*"); });
   }, [id]);
+  const [gateDismissed, setGateDismissed] = useState(false);
   useEffect(() => firebaseAuth.onAuthStateChanged((u) => setSignedIn(!!u)), []);
   useEffect(() => {
     if (!embedded) return;
@@ -145,6 +146,26 @@ export function BookPage({ id }: { id: string }) {
       {embedded && fromStore && (
         <div className="px-4 pt-3 text-[12.5px]">
           <button type="button" onClick={() => { if (confirmLeavingBasket()) window.history.back(); }} className="font-bold text-[#2f6bd8] underline" style={accent ? { color: accent.text } : undefined}>{t("p7pub.allActivities")}</button>
+        </div>
+      )}
+      {signedIn === false && !embedded && !preview && !gateDismissed && (
+        // Opened from a shared link (e.g. WhatsApp) while signed out: say so up front, or the family list looks empty and confusing.
+        <div className="fixed inset-0 z-[500] flex items-end justify-center bg-black/50 p-3 sm:items-center" role="dialog" aria-modal="true">
+          <div className="w-full max-w-[420px] rounded-2xl bg-white p-5 text-[#171534] shadow-2xl">
+            <div className="text-[18px] font-extrabold">{t("p7pub.signInFirstTitle")}</div>
+            <p className="mt-2 text-[14px] leading-snug text-[#4a4668]">{t("p7pub.signInFirstBody")}</p>
+            <div className="mt-4 flex flex-col gap-2">
+              {([["/login", "p7ck.signInBtn", true], ["/parent?tab=up&", "p7ck.createAccountBtn", false]] as const).map(([base, key, primary]) => (
+                <button key={key} type="button" className="rounded-full border-2 border-[#2f6bd8] px-4 py-3 text-[14px] font-extrabold" style={primary ? { background: "#2f6bd8", color: "#fff" } : { color: "#2f6bd8" }}
+                  onClick={() => {
+                    keepBasketForAuth();
+                    const here = encodeURIComponent(`/book/${id}`);
+                    window.location.assign(`${base}${base.endsWith("&") ? "" : "?"}next=${here}${base.endsWith("&") && listing.tenantId ? `&provider=${encodeURIComponent(listing.tenantId)}` : ""}`);
+                  }}>{t(key)}</button>
+              ))}
+              <button type="button" onClick={() => setGateDismissed(true)} className="py-1 text-[13px] font-bold text-[#8a86a3] underline">{t("p7pub.signInFirstLater")}</button>
+            </div>
+          </div>
         </div>
       )}
       <CustomerPage listing={listing} topRight={topRight} logo={brandLogo(settings)} />
