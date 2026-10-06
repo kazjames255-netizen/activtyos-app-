@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api as apiCall, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
@@ -120,6 +120,38 @@ const num = (v: string): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
+
+/** When someone presses "+ Add to block", the card visibly flies across the page into the block column (and the page scrolls there on narrow
+ *  screens), then the block box flashes. Respects "reduce motion". Purely visual: the real add happens in the caller. */
+function flyToBlock(from: HTMLElement | null) {
+  if (typeof window === "undefined" || !from) return;
+  const target = document.querySelector<HTMLElement>("[data-block-drop]");
+  if (!target) return;
+  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const narrow = window.matchMedia?.("(max-width: 1023px)").matches;
+  if (narrow) target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+  if (reduce) return;
+  const a = from.getBoundingClientRect();
+  const clone = from.cloneNode(true) as HTMLElement;
+  Object.assign(clone.style, { position: "fixed", left: `${a.left}px`, top: `${a.top}px`, width: `${a.width}px`, height: `${a.height}px`, margin: "0", zIndex: "2147483000", pointerEvents: "none", boxShadow: "0 18px 40px -10px rgba(0,0,0,.35)", transformOrigin: "center" });
+  document.body.appendChild(clone);
+  const go = () => {
+    const b = target.getBoundingClientRect();
+    const dx = b.left + Math.min(b.width, 260) / 2 - (a.left + a.width / 2);
+    const dy = b.top + Math.min(b.height, 120) / 2 - (a.top + a.height / 2);
+    const anim = clone.animate(
+      [{ transform: "translate(0,0) scale(1)", opacity: 1 }, { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 40}px) scale(0.9)`, opacity: 1, offset: 0.5 }, { transform: `translate(${dx}px, ${dy}px) scale(0.35)`, opacity: 0.15 }],
+      { duration: 650, easing: "cubic-bezier(.2,.8,.2,1)" },
+    );
+    anim.onfinish = () => {
+      clone.remove();
+      target.animate([{ boxShadow: "0 0 0 0 rgba(233,169,21,.0)" }, { boxShadow: "0 0 0 6px rgba(233,169,21,.55)" }, { boxShadow: "0 0 0 0 rgba(233,169,21,0)" }], { duration: 700 });
+    };
+  };
+  // On a narrow screen wait for the scroll to settle before measuring the target.
+  if (narrow) window.setTimeout(go, 350); else go();
+}
+
 // ── Manual chrome ──────────────────────────────────────────────────────────
 function PaletteCard({
   title,
@@ -130,7 +162,9 @@ function PaletteCard({
   onDragStart,
   added = false,
   onUndo,
+  accent,
 }: {
+  accent?: string; // a standout colour for the most important kind of card (the time periods)
   title: string;
   meta: string;
   onAdd: () => void;
@@ -141,11 +175,14 @@ function PaletteCard({
   onUndo?: () => void;
 }) {
   const t = useT();
+  const cardRef = useRef<HTMLDivElement>(null);
   return (
     <div
+      ref={cardRef}
       draggable
       onDragStart={onDragStart}
-      className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 transition-colors ${added ? "border-[#bfe6cd] bg-[#eefaf1]" : "border-[var(--line)] bg-[var(--panel)]"}`}
+      className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 transition-colors ${added ? "border-[#bfe6cd] bg-[#eefaf1]" : accent ? "" : "border-[var(--line)] bg-[var(--panel)]"}`}
+      style={!added && accent ? { borderColor: `color-mix(in srgb, ${accent} 55%, var(--line))`, borderInlineStartWidth: 5, borderInlineStartColor: accent, background: `color-mix(in srgb, ${accent} 12%, var(--surface))` } : undefined}
     >
       <div className="min-w-0">
         <div className="truncate text-[12.5px] font-bold text-[var(--ink)]">{title}</div>
@@ -154,7 +191,7 @@ function PaletteCard({
       <div className="flex flex-none items-center gap-1">
         {added ? (
           <>
-            <span className="rounded-full bg-[#d8f3e1] px-2 py-[2px] text-[10.5px] font-extrabold text-[#127a3e]">{t("p8lst.blkInBlock")}</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#127a3e] px-2.5 py-[3px] text-[11px] font-extrabold text-white">{t("p8lst.blkInBlock")}</span>
             <button
               type="button"
               onClick={onUndo}
@@ -166,8 +203,9 @@ function PaletteCard({
         ) : (
           <button
             type="button"
-            onClick={onAdd}
-            className="rounded-full border border-[var(--line)] px-2 py-[2px] text-[10.5px] font-bold text-[var(--brand-ink,#1d3a8f)] hover:border-[var(--brand)]"
+            onClick={() => { flyToBlock(cardRef.current); onAdd(); }}
+            className={accent ? "rounded-full border-0 px-2.5 py-[3px] text-[11px] font-extrabold hover:brightness-105" : "rounded-full border border-[var(--line)] px-2 py-[2px] text-[10.5px] font-bold text-[var(--brand-ink,#1d3a8f)] hover:border-[var(--brand)]"}
+            style={accent ? { background: accent, color: accent === "#e9a915" ? "#2a1d00" : "#fff" } : undefined}
           >
             {t("p8lst.blkAddToBlock")}
           </button>
@@ -452,6 +490,7 @@ function PeriodsColumn({
       <div className="flex flex-col gap-1.5">
         {periods.map((p) => (
           <PaletteCard
+            accent="#e9a915"
             key={p.id}
             title={p.title}
             meta={periodRange(p)}
@@ -596,6 +635,7 @@ function PassesColumn({
       <div className="flex flex-col gap-1.5">
         {passes.map((p) => (
           <PaletteCard
+            accent="#2f6bd8"
             key={p.id}
             title={p.name}
             meta={`${pickPlural(t, locale, "p8lst.blkDays", p.days)}${p.details ? ` · ${t("p8lst.blkHasDetails")}` : ""}`}
@@ -677,6 +717,7 @@ function BuildColumn({
       </p>
 
       <div
+        data-block-drop
         onDragOver={(e) => {
           e.preventDefault();
           setOver(true);
