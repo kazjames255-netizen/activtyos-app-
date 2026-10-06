@@ -5,7 +5,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { AUTO_EMAIL_DEFAULTS } from "../../server/src/lib/autoEmails";
 import { offerExpiredSpec, placeOfferedSpec } from "../../server/src/lib/emailTemplates";
 import type { Booking } from "../../features/bookings/types";
 
@@ -26,9 +25,12 @@ test("the offer email gives a UK-time deadline and one Accept and pay button", (
 });
 
 test("provider waiting-list alert defaults: free-place alert ON, every-join email OFF, one first-join email ON", () => {
-  assert.equal(AUTO_EMAIL_DEFAULTS.waitlistFreeAlert, true);
-  assert.equal(AUTO_EMAIL_DEFAULTS.waitlistJoinAlert, false);
-  assert.equal(AUTO_EMAIL_DEFAULTS.waitlistStartAlert, true);
+  // Read from the source text: importing autoEmails.ts would pull in the database client, which regression tests must not.
+  const src = readFileSync(new URL("../../server/src/lib/autoEmails.ts", import.meta.url), "utf8");
+  const defaults = src.slice(src.indexOf("AUTO_EMAIL_DEFAULTS"));
+  assert.match(defaults, /waitlistFreeAlert: true/);
+  assert.match(defaults, /waitlistJoinAlert: false/);
+  assert.match(defaults, /waitlistStartAlert: true/);
 });
 
 test("new listings start with the waiting list on automatic offers", () => {
