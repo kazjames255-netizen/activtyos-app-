@@ -648,7 +648,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
       )}
       {(b.pay === "Invoice sent" || b.pay === "Unpaid") && b.status !== "Cancelled" && b.status !== "Declined" && !waitingForPlace(b.status) && (
         <>
-          <Button onClick={() => askConfirm(b.ref, { kind: "paid" })}>{t("p7bd.markPaid")}</Button>
+          <Button variant="primary" className="!bg-[#15b364] !text-white !border-[#15b364] shadow-[0_6px_16px_-6px_rgba(21,179,100,.7)] ring-2 ring-[#15b364]/30" onClick={() => askConfirm(b.ref, { kind: "paid" })}>{"\u2713 "}{t("p7bd.markPaid")}</Button>
           <Button onClick={() => act(b.ref, "resend")}>{t("p7bd.resendInvoice")}</Button>
         </>
       )}
