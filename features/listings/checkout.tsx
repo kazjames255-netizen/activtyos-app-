@@ -14,7 +14,7 @@
 
 import { HowItWorks } from "@/components/HowItWorks";
 import { dateLocale as dl } from "@/lib/i18n/format";
-import { DISCOUNT_KIND_LABEL } from "./discounts";
+import type { DiscountKind } from "./discounts";
 import { useEffect, useRef, useState } from "react";
 import { tNow, useI18n } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
@@ -486,8 +486,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                 {tr("p7ck.photoOf", { name: draft.name.trim() || tr("p7ck.yourChildWord") })} <span className="font-normal">{tr("p7ck.optionalDash")}</span>
               </div>
               <div className="mt-0.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
-                It goes on the register so staff who haven&rsquo;t met them know who they&rsquo;re
-                greeting, and who they&rsquo;re handing over to at the end of the day.
+                {tr("p9tx.ckPhotoNote")}
               </div>
               {draft.photo ? (
                 <button type="button" onClick={() => setDraft({ ...draft, photo: undefined })}
@@ -554,7 +553,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                   {tr("p7ck.lblEhcp")} <span className="font-normal">{tr("p7ck.optionalDash")}</span>
                 </div>
                 <div className="mt-0.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
-                  If you have one, upload it so staff can read it before day one. PDF or image, up to {PLAN_MAX_BYTES / 1_000_000}MB.
+                  {tr("p9tx.ckPlanNote", { mb: String(PLAN_MAX_BYTES / 1_000_000) })}
                 </div>
                 {draft.sendPlanId ? (
                   <div className="mt-1.5 flex items-center gap-2">
@@ -566,7 +565,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                   </div>
                 ) : planPct !== null ? (
                   <div className="mt-2">
-                    <div className="text-[11.5px] font-bold" style={{ color: tk.ink }}>Uploading… {Math.round(planPct * 100)}%</div>
+                    <div className="text-[11.5px] font-bold" style={{ color: tk.ink }}>{tr("p9tx.ckUploading", { pct: String(Math.round(planPct * 100)) })}</div>
                     <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full" style={{ background: `${tk.ink}26` }}>
                       <div className="h-full rounded-full" style={{ width: `${planPct * 100}%`, background: tk.accent }} />
                     </div>
@@ -614,7 +613,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           <div className="mt-2">
             <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>{tr("p7ck.lblLikes")} <span className="font-normal">{tr("p7ck.optionalDash")}</span></div>
             <div className="mb-1 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
-              What settles them and what doesn&rsquo;t — football and drawing, or loud rooms and being rushed. It helps staff on day one.
+              {tr("p9tx.ckLikesNote")}
             </div>
             <div className="flex flex-wrap gap-2">
               <input value={draft.likes ?? ""} onChange={(e) => setDraft({ ...draft, likes: e.target.value })} maxLength={limitFor(settings, "likes", CHILD_LIMITS)}
@@ -710,6 +709,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   tenantId?: string;
 }) {
   const tr = useT();
+  const dkLabel = (k: DiscountKind) => tr(k === "person" ? "p9tx.dkPerson" : k === "session" ? "p9tx.dkSession" : "p9tx.dkEarly");
   const { locale } = useI18n();
   const parentMode = mode === "parent";
   const { list: parents, state: parentsState, error: parentsError } = useParents(parentMode);
@@ -1330,7 +1330,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           <div className={`mt-1.5 border p-2.5 ${tk.round}`} style={{ borderColor: tk.line }}>
             <div className="text-[12px] font-extrabold" style={{ color: tk.ink }}>{tr("p7ck.optAlready")}</div>
             <div className="mb-1.5 mt-0.5 text-[11px] leading-[1.4]" style={{ color: tk.muted }}>{tr("p7ck.optAlreadyBody")} <span title={tr("p7ck.regOnlyTip")}>{tr("p7ck.regOnlyUse2")}</span></div>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by parent, child, email, phone or address"
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("p9tx.ckSearchPh")}
               className={`w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
             <div className="mt-1 text-[11px]" style={{ color: parentsState === "error" ? "#fca5a5" : tk.ink }}>
               {parentsState === "loading"
@@ -1368,10 +1368,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             tour={
               <div className="grid gap-4 md:grid-cols-[1fr_340px]">
                 <div className="max-w-[560px] text-[12.5px] leading-[1.6]">
-                  <p><b>This is for bookings you take for a family</b> (phone, walk-in). It is not the same as sending a parent a sign-up link.</p>
-                  <p className="mt-1.5">You enter only the parent&rsquo;s <b>name, email and phone</b>, then each child&rsquo;s <b>name and date of birth</b>. We create the parent&rsquo;s account for them and email the booking with a <b>Pay</b> button that needs no login, plus a link to set a password and fill in the rest (allergies, emergency contact, address). Want the parent to do all of it themselves? Send them the listing&rsquo;s <b>Link</b> from Blocks &amp; listings instead.</p>
+                  <p><Rich text={tr("p9tx.ckTakeFor1")} /></p>
+                  <p className="mt-1.5"><Rich text={tr("p9tx.ckTakeFor2")} /></p>
                 </div>
-                <video src="/v2/video/take-a-booking.mp4" controls preload="metadata" className="w-full self-start rounded-lg border border-[var(--line)] bg-black" aria-label="How to take a booking for a family (about 1 minute 45)" />
+                <video src="/v2/video/take-a-booking.mp4" controls preload="metadata" className="w-full self-start rounded-lg border border-[var(--line)] bg-black" aria-label={tr("p9tx.ckTakeForVideo")} />
               </div>
             }
           />
@@ -1404,7 +1404,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               onClick={() => b.setParent({ id: "new", name: np.name.trim(), email: np.email.trim(), phone: np.phone.trim() })}
               className={`w-full py-2 text-[12.5px] font-extrabold disabled:opacity-40 ${tk.round}`}
               style={{ background: tk.accent, color: tk.accentInk }}>
-              {npReady ? tr("p7ck.setUpName", { name: np.name.trim() }) : "Fill in name, email and phone to carry on"}
+              {npReady ? tr("p7ck.setUpName", { name: np.name.trim() }) : tr("p9tx.ckFillNp")}
             </button>
           </div>
         </>
@@ -1514,8 +1514,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       {existingOn(x.id).length > 0 && (
                         <div className="mt-1.5 border px-2.5 py-1.5 text-[11px] leading-[1.45]"
                           style={{ borderColor: "#fcd34d", background: "#fffbeb", color: "#92400e" }}>
-                          {existingOn(x.id).map((c) => `${c.name} already has a place on ${fmtDate(c.iso)} (booking ${c.ref}).`).join(" ")}{" "}
-                          Take them off this pass to continue.
+                          {existingOn(x.id).map((c) => tr("p9tx.ckAlreadyPlace", { name: c.name, date: String(fmtDate(c.iso)), ref: c.ref })).join(" ")}{" "}
+                          {tr("p9tx.ckTakeOffPass")}
                         </div>
                       )}
                       {b.childrenOn(x.id).length === 0 && roster.length > 0 && (
@@ -1595,7 +1595,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   </button>
                   {open && (
                     <div className="px-3 pb-3 pt-2.5">
-                      {!single && chosen > 0 && <button type="button" onClick={() => copyMealsToAll(kid)} className="mb-2.5 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold" style={{ border: `1px solid ${tk.accent}`, color: tk.accent }}>⧉ Copy {kid}’s meals to all children</button>}
+                      {!single && chosen > 0 && <button type="button" onClick={() => copyMealsToAll(kid)} className="mb-2.5 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold" style={{ border: `1px solid ${tk.accent}`, color: tk.accent }}>{tr("p9tx.ckCopyMeals", { kid })}</button>}
                       <div className="grid gap-1.5 sm:grid-cols-2">
                         {slots.map(({ date }) => {
                           const menu = menuForDate(date);
@@ -1622,8 +1622,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                               </div>
                               {sel && slots.length > 1 && (
                                 <div className="mt-1.5 flex flex-wrap gap-2">
-                                  {sameWdCount > 1 && <button type="button" onClick={() => applyEveryWeekday(kid, date, sel)} className="text-[10.5px] font-extrabold underline" style={{ color: tk.accent }}>↻ Same every {wdLabel}</button>}
-                                  <button type="button" onClick={() => applyAllDays(kid, date, sel)} className="text-[10.5px] font-extrabold underline" style={{ color: tk.accent }}>↻ Same all {kid.split(" ")[0]}’s days</button>
+                                  {sameWdCount > 1 && <button type="button" onClick={() => applyEveryWeekday(kid, date, sel)} className="text-[10.5px] font-extrabold underline" style={{ color: tk.accent }}>{tr("p9tx.ckSameEvery", { wd: String(wdLabel) })}</button>}
+                                  <button type="button" onClick={() => applyAllDays(kid, date, sel)} className="text-[10.5px] font-extrabold underline" style={{ color: tk.accent }}>{tr("p9tx.ckSameAll", { kid: kid.split(" ")[0] })}</button>
                                 </div>
                               )}
                             </div>
@@ -1652,22 +1652,22 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         {/* Big, unmissable: the saving the parent is getting, or why an early bird they expected is not applied. */}
         {b.saved > 0 && (
           <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border-2 px-3 py-2.5" style={{ borderColor: tk.accent, background: `${tk.accent}1f` }}>
-            <span className="text-[14px] font-extrabold" style={{ color: tk.ink }}>🎉 {b.discountLines.length === 1 && b.discountLines[0].kind ? `${DISCOUNT_KIND_LABEL[b.discountLines[0].kind]} applied` : "Discounts applied"}</span>
-            <b className="text-[18px]" style={{ color: tk.accent }}>You save {money(b.saved)}</b>
+            <span className="text-[14px] font-extrabold" style={{ color: tk.ink }}>🎉 {b.discountLines.length === 1 && b.discountLines[0].kind ? tr("p9tx.ckKindApplied", { kind: dkLabel(b.discountLines[0].kind) }) : tr("p9tx.ckDiscountsApplied")}</span>
+            <b className="text-[18px]" style={{ color: tk.accent }}>{tr("p9tx.ckYouSave", { amt: money(b.saved) })}</b>
           </div>
         )}
         {b.saved <= 0 && (d as { earlyFixedUsed?: boolean }).earlyFixedUsed && (
           <div className="mb-2 rounded-xl border px-3 py-2 text-[12px]" style={{ borderColor: tk.line, color: tk.muted }}>
-            Your early-bird discount is already on an earlier booking this season (one per family), so it isn’t applied here.
+            {tr("p9tx.ckEarlyUsed")}
             {(d as { earlyFixedUnpaid?: boolean }).earlyFixedUnpaid && (d as { earlyFixedRef?: string }).earlyFixedRef && (
-              <> That booking is still unpaid. <Link href={`/custdash/bookings?cancel=${encodeURIComponent((d as { earlyFixedRef?: string }).earlyFixedRef!)}`} className="font-bold underline" style={{ color: tk.accent }}>Cancel it ({(d as { earlyFixedRef?: string }).earlyFixedRef})</Link> to use the discount on this one instead.</>
+              <> {tr("p9tx.ckEarlyUnpaid")} <Link href={`/custdash/bookings?cancel=${encodeURIComponent((d as { earlyFixedRef?: string }).earlyFixedRef!)}`} className="font-bold underline" style={{ color: tk.accent }}>{tr("p9tx.ckEarlyCancel", { ref: String((d as { earlyFixedRef?: string }).earlyFixedRef) })}</Link> {tr("p9tx.ckEarlyInstead")}</>
             )}
           </div>
         )}
         {b.discountLines.map((l, i) => (
           <div key={i} className="flex items-baseline justify-between gap-3 text-[11.5px]">
             <span className="min-w-0" style={{ color: tk.muted }}>
-              {l.kind && <b className="me-1.5" style={{ color: tk.ink }}>{DISCOUNT_KIND_LABEL[l.kind]}</b>}
+              {l.kind && <b className="me-1.5" style={{ color: tk.ink }}>{dkLabel(l.kind)}</b>}
               {l.kind && !l.custom ? (l.terms ? <span>({l.terms})</span> : null) : <>{l.name}{l.terms && !l.name.includes(l.terms) && <span className="ms-1 opacity-70">({l.terms})</span>}</>}
             </span>
             <b className="flex-none" style={{ color: tk.accent }}>−{money(l.amount)}</b>
@@ -1787,7 +1787,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           </span>
         </div>}
         {!parentMode && b.totalOverride !== null && (
-          <input type="text" maxLength={200} value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} placeholder="Reason (kept on the booking)"
+          <input type="text" maxLength={200} value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} placeholder={tr("p9tx.ckReason")}
             className={`mt-1.5 w-full border px-2 py-1 text-[12px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
         )}
       </div>
@@ -1818,7 +1818,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   <span className="ms-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>
                     {pickPlural(tr, locale, "p8lst.ck8PassCount", b.basket.length)}
                     {b.saved > 0 ? tr("p7ck.savedAmt", { amt: money(b.saved) }) : ""}
-                    {b.saved > 0 && b.discountLines.length > 0 ? ` (${[...new Set(b.discountLines.map((l) => (l.kind ? DISCOUNT_KIND_LABEL[l.kind] : l.name)))].join(", ")})` : ""}
+                    {b.saved > 0 && b.discountLines.length > 0 ? ` (${[...new Set(b.discountLines.map((l) => (l.kind ? dkLabel(l.kind) : l.name)))].join(", ")})` : ""}
                   </span>
                 </span>
                 <span className="flex items-baseline gap-2">
@@ -1833,7 +1833,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               style={{ background: tk.accent, color: tk.accentInk }}>
               {roster.length === 0 ? tr("p7ck.ctaAddChildFirst")
                 : clashes.length > 0 ? tr("p7ck.ctaClash", { name: clashes[0].name, date: fmtDate(clashes[0].iso) })
-                : existingClashes.length > 0 ? `${existingClashes[0].name} is already booked on ${fmtDate(existingClashes[0].iso)}`
+                : existingClashes.length > 0 ? tr("p9tx.ckAlreadyBooked", { name: existingClashes[0].name, date: String(fmtDate(existingClashes[0].iso)) })
                 : unassigned > 0 || shortPasses.length > 0 ? tr("p7ck.ctaPutChild")
                 : outstanding.length > 0 ? tr("p7ck.ctaAnswer", { label: outstanding[0].label, who: outstanding[0].who })
                 : next}
@@ -2120,11 +2120,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           to the one they want, by name. */}
       {ckStage === "pay" && (
         <BackBtn tk={tk} onClick={() => { if (hasMeals) setCkStage("meals"); else if (addons.length) { setExtraIdx(ordered.length - 1); setCkStage("extras"); } else setCkStage("who"); }} className="mt-3">
-          {hasMeals ? tr("p8lst.ck8BackToMeals") : ordered.length ? tr("p7ck.backTo", { step: ordered[ordered.length - 1].name }) : "Change children or who is on which day"}
+          {hasMeals ? tr("p8lst.ck8BackToMeals") : ordered.length ? tr("p7ck.backTo", { step: ordered[ordered.length - 1].name }) : tr("p9tx.ckChangeKids")}
         </BackBtn>
       )}
       {ckStage === "pay" && (
-        <BackBtn tk={tk} onClick={() => b.setStage("pick")} className="mt-2 w-full justify-center">Change dates (clear or edit the basket)</BackBtn>
+        <BackBtn tk={tk} onClick={() => b.setStage("pick")} className="mt-2 w-full justify-center">{tr("p9tx.ckChangeDates")}</BackBtn>
       )}
       {/* Nothing to pay: a parent isn't asked how they'd like to settle £0.
           The operator still picks one, because "HAF" and "Free place" are how
@@ -2149,7 +2149,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
           {parentMode && parentOpts.length === 0 && (
-            <p className="mt-2 text-[12px]" style={{ color: tk.muted }}>This provider has not set up online payment yet. You can still book; they will contact you to arrange payment.</p>
+            <p className="mt-2 text-[12px]" style={{ color: tk.muted }}>{tr("p9tx.ckNoOnlinePay")}</p>
           )}
 
           {/* Paying by voucher happens on the scheme's own website, so this
@@ -2664,9 +2664,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 {hits.length
                   ? (hits.some((x) => x.dates.length > 1)
                       // A 3 or 5 day pass is one pass: you cannot drop one day of it, so say so.
-                      ? `Take ${kid} off the ${hits.find((x) => x.dates.length > 1)!.name} (clashes on ${m[2]})`
-                      : `Take ${kid} off ${m[2]} only`)
-                  : `Remove ${kid} from this booking`}
+                      ? tr("p9tx.ckTakeOffClash", { kid, pass: hits.find((x) => x.dates.length > 1)!.name, date: String(m[2]) })
+                      : tr("p9tx.ckTakeOffOnly", { kid, date: String(m[2]) }))
+                  : tr("p9tx.ckRemoveKid", { kid })}
               </button>
             );
           })()}
@@ -2677,7 +2677,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         <div className="mt-3">
           {phoneOk && !editPhone ? (
             <div className="flex items-center justify-between gap-2 text-[12.5px]" style={{ color: tk.muted }}>
-              <span>📞 We&apos;ll use <b style={{ color: tk.ink }}>{phone.trim()}</b> to reach you about this booking.</span>
+              <span>{tr("p9tx.ckPhoneUse1")} <b style={{ color: tk.ink }}>{phone.trim()}</b> {tr("p9tx.ckPhoneUse2")}</span>
               <button type="button" onClick={() => setEditPhone(true)} className="font-bold underline">Change</button>
             </div>
           ) : (<>
@@ -2689,7 +2689,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             {phone.trim()
               ? (phonePrefilled ? tr("p7ck.phoneFromProvider") : tr("p7ck.phoneReach"))
               : tr("p7ck.phoneNeed")}
-            {phone.trim() && !phoneOk && <b style={{ color: "#dc2626" }}> Please enter the full number, with at least 10 digits.</b>}
+            {phone.trim() && !phoneOk && <b style={{ color: "#dc2626" }}> {tr("p9tx.ckPhoneBad")}</b>}
           </div>
           </>)}
         </div>
@@ -2772,11 +2772,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           : roster.length === 0 ? tr("p7ck.ctaAddChildFirst")
           : unassigned > 0 ? pickPlural(tr, locale, "p7ck.ctaNobody", unassigned)
           : clashes.length > 0 ? tr("p7ck.ctaClash", { name: clashes[0].name, date: fmtDate(clashes[0].iso) })
-          : existingClashes.length > 0 ? `${existingClashes[0].name} is already booked on ${fmtDate(existingClashes[0].iso)}`
+          : existingClashes.length > 0 ? tr("p9tx.ckAlreadyBooked", { name: existingClashes[0].name, date: String(fmtDate(existingClashes[0].iso)) })
           : shortPasses.length > 0 ? tr("p7ck.ctaShort", { n: shortPasses[0].dates.length, pass: shortPasses[0].name })
           // "Confirm & pay £0.00" and "Send payment link · £0.00" both promise
           // something that isn't going to happen.
-          : parentMode && b.waitlistOnly ? "Join the waiting list (nothing to pay)"
+          : parentMode && b.waitlistOnly ? tr("p9tx.ckJoinWait")
           : grandTotal <= 0 ? (parentMode ? tr("p7ck.ctaConfirm") : tr("p7ck.ctaCreateFree"))
           // Paying by voucher happens on the scheme's website, not here — so
           // the button confirms the booking, it doesn't take a payment.

@@ -985,7 +985,7 @@ function TaskGroup({ title, list, empty, color, today, noAssignee, hideDone, onO
         <span className="rounded-full px-1.5 text-[10.5px] font-extrabold" style={{ background: `${color}14`, color }}>{list.length}</span>
         {/* The count is still every date — say so, or a folded repeat looks like
             rows that went missing. */}
-        {repeats > 0 && <span className="text-[10.5px] font-semibold text-[var(--ink-3)]">across {folded.length} task{folded.length === 1 ? "" : "s"} · repeats folded</span>}
+        {repeats > 0 && <span className="text-[10.5px] font-semibold text-[var(--ink-3)]">{tr("p9tx.tkRepeatsFolded", { n: String(folded.length) })}</span>}
       </div>
       {list.length === 0 ? <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[12px] text-[var(--ink-3)]">{empty}</div>
         : <>
@@ -1565,7 +1565,7 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
                 <DSection icon="📅" tint="#be185d" title={tr("p7tk.secEvents")}>
                   <label className={`flex items-start gap-2.5 ${due ? "cursor-pointer" : "opacity-60"}`}>
                     <input type="checkbox" checked={toCal} disabled={!due} onChange={(e) => setToCal(e.target.checked)} className="mt-0.5 h-[18px] w-[18px] flex-none accent-[#be185d]" />
-                    <span className="text-[12.5px] text-[var(--ink-2)]"><b className="text-[var(--ink)]">{tr("p7tk.alsoShowEvents")}</b><br />{due ? "Adds it to your sidebar calendar too." : "Set a due date first."}</span>
+                    <span className="text-[12.5px] text-[var(--ink-2)]"><b className="text-[var(--ink)]">{tr("p7tk.alsoShowEvents")}</b><br />{due ? tr("p9tx.tkAddsCal") : tr("p9tx.tkSetDue")}</span>
                   </label>
                 </DSection>
               )}
@@ -1975,7 +1975,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                 </div>
               )}
               <div className="grid grid-cols-2 gap-2.5">
-                <label className="block">{lbl("Due date")}<input type="date" value={task.due ?? ""} onChange={(e) => save({ due: e.target.value || null })} className={inputCls} /></label>
+                <label className="block">{lbl(tr("p9tx.tkDue"))}<input type="date" value={task.due ?? ""} onChange={(e) => save({ due: e.target.value || null })} className={inputCls} /></label>
                 <label className="block">{lbl("Time")}<input type="time" value={task.time ?? ""} onChange={(e) => {
                   const v = e.target.value || null;
                   // Same rule as the create form: a time implies a date, or nothing
@@ -2100,7 +2100,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
 
         {/* ── Footer ───────────────────────────────────────────────────────── */}
         <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] bg-white px-4 py-3">
-          <button type="button" onClick={onDelete} className="rounded-xl px-2.5 py-2 text-[12px] font-bold text-[#c02636] hover:bg-[#fdebec]">🗑 Delete{task.seriesId ? " this date" : ""}</button>
+          <button type="button" onClick={onDelete} className="rounded-xl px-2.5 py-2 text-[12px] font-bold text-[#c02636] hover:bg-[#fdebec]">{task.seriesId ? tr("p9tx.tkDeleteThis") : tr("p9tx.tkDelete")}</button>
           {/* Deleting one date out of a 200-day repeat is rarely what you meant. */}
           {task.seriesId && (
             <button type="button" onClick={onDeleteSeries} className="rounded-xl px-2.5 py-2 text-[12px] font-bold text-[#c02636] hover:bg-[#fdebec]">{tr("p7tk.deleteWholeRepeat")}</button>

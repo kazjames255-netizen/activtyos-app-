@@ -4,6 +4,7 @@ import { StepDonePrompt } from "@/features/dashboard/StepDonePrompt";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { portalOf } from "@/lib/portal-href";
+import { useT } from "@/lib/i18n/provider";
 import { get as apiGet, put as apiPut } from "@/lib/api";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { SubscriptionApp } from "@/features/money/SubscriptionApp";
@@ -21,6 +22,7 @@ type Tab = "plan" | "paid";
 
 /** `bare` = no card chrome / heading / intro, for use inside a pop-up that already explains it. */
 export function BankDetailsCard({ onSaved, bare }: { onSaved?: () => void; bare?: boolean } = {}) {
+  const t = useT();
   const [bankName, setBankName] = useState("");
   const [sortCode, setSortCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -55,21 +57,20 @@ export function BankDetailsCard({ onSaved, bare }: { onSaved?: () => void; bare?
   const inner = (
     <>
       {!bare && (<>
-      <div className="text-[14px] font-extrabold">Your bank details <span className="ms-1 rounded-full bg-[var(--brand-soft,#e6ecff)] px-2 py-0.5 text-[11px] text-[var(--brand-ink,#1d3a8f)]">Required</span></div>
+      <div className="text-[14px] font-extrabold">{t("p9tx.glBank")} <span className="ms-1 rounded-full bg-[var(--brand-soft,#e6ecff)] px-2 py-0.5 text-[11px] text-[var(--brand-ink,#1d3a8f)]">{t("p9tx.glRequired")}</span></div>
       <p className="mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-        So parents can book and pay you. Bank transfers, Tax-Free Childcare and vouchers all pay into this account, and it is shown on your invoices.
-        Card payments are separate and go to the account you give Stripe, below.
+        {t("p9tx.glBankWhy")} {t("p9tx.bpCardSep")}
       </p>
       </>)}
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <div><FieldLabel htmlFor="bp-bank">Bank name</FieldLabel><Input id="bp-bank" value={bankName} onChange={(e) => { setBankName(e.target.value); setState("idle"); }} placeholder="e.g. Barclays" className="w-full" /></div>
-        <div><FieldLabel htmlFor="bp-sort">Sort code</FieldLabel><Input id="bp-sort" inputMode="numeric" value={sortCode} onChange={(e) => { setSortCode(e.target.value); setState("idle"); }} placeholder="00-00-00" className="w-full" /></div>
-        <div><FieldLabel htmlFor="bp-acc">Account number</FieldLabel><Input id="bp-acc" inputMode="numeric" value={accountNumber} onChange={(e) => { setAccountNumber(e.target.value); setState("idle"); }} placeholder="12345678" className="w-full" /></div>
+        <div><FieldLabel htmlFor="bp-bank">{t("p9tx.bpBankName")}</FieldLabel><Input id="bp-bank" value={bankName} onChange={(e) => { setBankName(e.target.value); setState("idle"); }} placeholder={t("p9tx.bpBankNamePh")} className="w-full" /></div>
+        <div><FieldLabel htmlFor="bp-sort">{t("p9tx.bpSortCode")}</FieldLabel><Input id="bp-sort" inputMode="numeric" value={sortCode} onChange={(e) => { setSortCode(e.target.value); setState("idle"); }} placeholder="00-00-00" className="w-full" /></div>
+        <div><FieldLabel htmlFor="bp-acc">{t("p9tx.bpAccNo")}</FieldLabel><Input id="bp-acc" inputMode="numeric" value={accountNumber} onChange={(e) => { setAccountNumber(e.target.value); setState("idle"); }} placeholder="12345678" className="w-full" /></div>
       </div>
       <div className="mt-3 flex items-center gap-3">
-        <Button variant="primary" onClick={() => void save()} disabled={state === "saving"}>{state === "saving" ? "Saving…" : "Save bank details"}</Button>
-        {state === "saved" && <span className="text-[12.5px] font-bold text-[var(--green,#0f7a43)]">Saved</span>}
-        {state === "error" && <span className="text-[12.5px] font-bold text-[var(--red,#e21d27)]">Enter a full sort code (6 digits) and account number, then try again.</span>}
+        <Button variant="primary" onClick={() => void save()} disabled={state === "saving"}>{state === "saving" ? t("p9tx.bpSaving") : t("p9tx.bpSaveBank")}</Button>
+        {state === "saved" && <span className="text-[12.5px] font-bold text-[var(--green,#0f7a43)]">{t("p9tx.glSaved")}</span>}
+        {state === "error" && <span className="text-[12.5px] font-bold text-[var(--red,#e21d27)]">{t("p9tx.bpBankBad")}</span>}
       </div>
     </>
   );
@@ -77,6 +78,7 @@ export function BankDetailsCard({ onSaved, bare }: { onSaved?: () => void; bare?
 }
 
 export function BillingPayoutsApp() {
+  const t = useT();
   const portal = portalOf(usePathname());
   const isFranchise = portal === "franchise";
   const [tab, setTab] = useState<Tab>(() => {
@@ -99,15 +101,14 @@ export function BillingPayoutsApp() {
 
   return (
     <div className="text-[var(--ink)]">
-      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Billing and payouts</h2>
+      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p9tx.bpTitle")}</h2>
       <p className="mb-3 max-w-[70ch] text-[12.5px] text-[var(--ink-3)]">
-        Two separate things live here. You pay Activly for your plan, and parents pay you for their bookings. They use different
-        accounts on purpose, so you can pay for your plan with one card and get paid into a different bank if you like.
+        {t("p9tx.bpIntro")}
       </p>
       {!isFranchise && (
         <div className="mb-4 flex flex-col gap-2.5 sm:flex-row">
-          {tabBtn("plan", "Your Activly plan", "What you pay us: 7-day free trial, then monthly")}
-          {tabBtn("paid", "Get paid by parents", "Card payments and bank details for invoices")}
+          {tabBtn("plan", t("p9tx.bpTabPlan"), t("p9tx.bpTabPlanSub"))}
+          {tabBtn("paid", t("p9tx.bpTabPaid"), t("p9tx.bpTabPaidSub"))}
         </div>
       )}
       {tab === "plan" && !isFranchise ? <SubscriptionApp /> : (
@@ -115,8 +116,8 @@ export function BillingPayoutsApp() {
           <StepDonePrompt step="pay" />
           <BankDetailsCard />
           <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">
-            Taking card payments takes about 10 minutes, so have your photo ID and bank details ready.{" "}
-            <a href="/help/get-paid" target="_blank" rel="noreferrer" className="font-bold text-[var(--brand-2,#2f6bd8)] underline">Read the step-by-step Get paid guide</a>.
+            {t("p9tx.bpTenMin")}{" "}
+            <a href="/help/get-paid" target="_blank" rel="noreferrer" className="font-bold text-[var(--brand-2,#2f6bd8)] underline">{t("p9tx.bpGuide")}</a>.
           </p>
           <PaymentsApp />
         </>

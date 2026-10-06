@@ -908,20 +908,20 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         <div className="text-[44px]">{done.waitlisted ? "⏳" : needsApproval ? "📩" : awaitingCard ? "💳" : "🎉"}</div>
         <h2 className="mt-2 text-[24px] font-extrabold tracking-[-0.01em] text-[#171534]" style={{ color: "#171534" }}>
           {done.waitlisted
-            ? `You're on the waiting list${kids ? ` for ${kids}` : ""}`
+            ? (kids ? t("p9tx.ckWaitFor", { kids }) : t("p9tx.ckWait"))
             : needsApproval
             ? (kids ? t("p7cl.reqReceivedFor", { kids }) : t("p7cl.reqReceived"))
             : awaitingCard
-            ? `Nearly there${kids ? `, ${kids}` : ""} — pay to finish booking`
+            ? (kids ? t("p9tx.ckNearlyFor", { kids }) : t("p9tx.ckNearly"))
             : (kids ? t(done.children.length > 1 ? "p7cl.bookedKidsMany" : "p7cl.bookedKids", { kids }) : t("p7cl.bookedYou"))}
         </h2>
         <p className="mt-1.5 text-[13px] text-[#6a6785]">
           {done.waitlisted
-            ? "Nothing to pay now. We'll email you the moment a place comes up, and you'll only be charged if you take it."
+            ? t("p9tx.ckWaitBody")
             : needsApproval
             ? t(scheme ? "p7cl.approvalBodyScheme" : "p7cl.approvalBody", { provider: listing.tenantName || t("p7cl.theProvider") })
             : awaitingCard
-            ? "Your place is held. Press Pay now to pay by card and complete the booking. The details are on their way by email."
+            ? t("p9tx.ckHeldBody")
             : t("p7cl.confirmEmail")}
         </p>
 
@@ -954,8 +954,8 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
             {done.refs.length > 1 && <div className="mt-2 rounded-lg bg-[#eef3ff] px-3 py-2 text-[12px] text-[#1d3a8f]">{t("p7cl.multiBookings", { n: String(done.refs.length) })}</div>}
             {(done.discountOff ?? 0) > 0 && (
               <div className="mt-2 rounded-lg bg-[#e8f8ee] px-3 py-2 text-[13px] text-[#0f6b34]">
-                <div className="flex items-center justify-between"><span>Price before discount</span><b>{money(done.listPrice ?? done.total)}</b></div>
-                <div className="flex items-start justify-between gap-3"><span className="min-w-0">Discount{done.discountNames?.length ? ` (${done.discountNames.join(", ")})` : ""}</span><b className="flex-none">− {money(done.discountOff ?? 0)}</b></div>
+                <div className="flex items-center justify-between"><span>{t("p9tx.ckPriceBefore")}</span><b>{money(done.listPrice ?? done.total)}</b></div>
+                <div className="flex items-start justify-between gap-3"><span className="min-w-0">{done.discountNames?.length ? t("p9tx.ckDiscountWith", { names: done.discountNames.join(", ") }) : t("p9tx.ckDiscount")}</span><b className="flex-none">− {money(done.discountOff ?? 0)}</b></div>
               </div>
             )}
             <div className="mt-2 flex items-center justify-between border-t border-[#eef0f5] pt-2.5 text-[13px]">
@@ -972,23 +972,23 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         {/* Bank transfer: the family is told exactly where to send the money and what to quote. */}
         {done.bank && !needsApproval && !done.waitlisted && (
           <div className="mt-3 rounded-2xl border-2 border-[#1d3a8f] bg-[#eef3ff] p-4 text-start">
-            <div className="text-[13px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">Pay by bank transfer · {money(done.bank.amount ?? done.total)}</div>
+            <div className="text-[13px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">{t("p7pub.bankTitle")} · {money(done.bank.amount ?? done.total)}</div>
             <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[14px]">
-              {done.bank.bankName && (<><span className="text-[#6a6785]">Bank</span><b className="text-[#171534]">{done.bank.bankName}</b></>)}
-              {done.bank.accountName && (<><span className="text-[#6a6785]">Account name</span><b className="text-[#171534]">{done.bank.accountName}</b></>)}
-              {done.bank.sortCode && (<><span className="text-[#6a6785]">Sort code</span><b className="text-[#171534]">{done.bank.sortCode}</b></>)}
-              {done.bank.accountNumber && (<><span className="text-[#6a6785]">Account number</span><b className="text-[#171534]">{done.bank.accountNumber}</b></>)}
-              <span className="text-[#6a6785]">Reference</span><b className="text-[#171534]">{done.bank.reference}</b>
+              {done.bank.bankName && (<><span className="text-[#6a6785]">{t("p7pub.bankName")}</span><b className="text-[#171534]">{done.bank.bankName}</b></>)}
+              {done.bank.accountName && (<><span className="text-[#6a6785]">{t("p7pub.accountName")}</span><b className="text-[#171534]">{done.bank.accountName}</b></>)}
+              {done.bank.sortCode && (<><span className="text-[#6a6785]">{t("p7pub.sortCode")}</span><b className="text-[#171534]">{done.bank.sortCode}</b></>)}
+              {done.bank.accountNumber && (<><span className="text-[#6a6785]">{t("p7pub.accountNumber")}</span><b className="text-[#171534]">{done.bank.accountNumber}</b></>)}
+              <span className="text-[#6a6785]">{t("p9tx.ckBankRefLbl")}</span><b className="text-[#171534]">{done.bank.reference}</b>
             </div>
-            <div className="mt-2 text-[12px] text-[#6a6785]">Please quote the reference exactly. Your booking is held; {listing.tenantName || "your provider"} marks it paid when the money arrives. These details are also in your confirmation email.</div>
+            <div className="mt-2 text-[12px] text-[#6a6785]">{t("p9tx.ckBankNote", { provider: listing.tenantName || t("p9tx.ckYourProvider") })}</div>
           </div>
         )}
 
         {/* Cash on the day: nothing is taken now, so say what to bring. */}
         {done.payCash && !needsApproval && !done.waitlisted && done.total > 0 && (
           <div className="mt-3 rounded-2xl border-2 border-[#0f6b34] bg-[#e8f8ee] p-4 text-start">
-            <div className="text-[13px] font-extrabold uppercase tracking-wide text-[#0f6b34]">Pay in cash on the day · {money(done.total)}</div>
-            <div className="mt-1 text-[14px] text-[#171534]">Pay {money(done.total)} in cash on the day. Bring it with you.</div>
+            <div className="text-[13px] font-extrabold uppercase tracking-wide text-[#0f6b34]">{t("p9tx.ckCashTitle", { amt: money(done.total) })}</div>
+            <div className="mt-1 text-[14px] text-[#171534]">{t("p9tx.ckCashBody", { amt: money(done.total) })}</div>
           </div>
         )}
 
@@ -3241,7 +3241,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
       </div>
       {b.waitSel.length > 0 && !b.isSingle && (
         <div className="mt-2 text-[11.5px] font-bold leading-[1.45]">
-          Waiting lists work one day at a time. Choose the 1 day pass, pick this day, and join from there.
+          {tr("p9tx.wzWaitOneDay")}
         </div>
       )}
       {b.waitSel.length > 0 && b.isSingle && (
@@ -3486,7 +3486,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
                 const queueable = full && b.waitlistOn && !dOff;
                 return <button key={iso} type="button" disabled={dPast || dOff || (full && !queueable)}
                   onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
-                  title={dClosed ? "Bookings closed" : dPast ? tr("p7bw.dayPassed") : full ? (queueable ? (waiting ? tr("p7bw.onWaitTap") : tr("p7bw.fullTapJoin")) : tr("p7bw.fullWord")) : left === null ? undefined : d.showSpaces ? (low ? tr("p7bw.onlyLeft", { n: left }) : tr("p7bw.placesLeftN", { n: left })) : (low ? tr("p7bw.almostFull") : tr("p7bw.spaceAvail"))}
+                  title={dClosed ? tr("p9tx.wzClosed") : dPast ? tr("p7bw.dayPassed") : full ? (queueable ? (waiting ? tr("p7bw.onWaitTap") : tr("p7bw.fullTapJoin")) : tr("p7bw.fullWord")) : left === null ? undefined : d.showSpaces ? (low ? tr("p7bw.onlyLeft", { n: left }) : tr("p7bw.placesLeftN", { n: left })) : (low ? tr("p7bw.almostFull") : tr("p7bw.spaceAvail"))}
                   className="relative flex w-[44px] flex-col items-center rounded-xl border-2 py-1.5 disabled:cursor-not-allowed"
                   style={waiting ? { borderColor: "#c2410c", color: "#c2410c", background: "#fff7ed" }
                     : dPast ? { borderColor: LINEp, color: "#cdd2db", background: "#f3f4f7", opacity: 0.6 }
@@ -3573,7 +3573,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
         </>
       )}
       <div className="mt-5 border-t-2 border-dashed pt-4" style={{ borderColor: LINEp }}>
-        <div className="mb-2 flex items-center justify-between"><span className="text-[13.5px] font-extrabold" style={{ color: INKp }}>{tr("p7bw.yourBasket")}</span>{b.basket.length > 1 && (<button type="button" onClick={() => { if (window.confirm("Empty your basket?")) b.clearBasket(); }} className="ms-2 text-[11.5px] font-bold underline opacity-80">Clear basket</button>)}<span className="rounded-full px-2 py-[2px] text-[10px] font-extrabold" style={{ background: SOFTb, color: BLUE }}>{b.basket.length}</span></div>
+        <div className="mb-2 flex items-center justify-between"><span className="text-[13.5px] font-extrabold" style={{ color: INKp }}>{tr("p7bw.yourBasket")}</span>{b.basket.length > 1 && (<button type="button" onClick={() => { if (window.confirm(tr("p9tx.wzEmptyConfirm"))) b.clearBasket(); }} className="ms-2 text-[11.5px] font-bold underline opacity-80">{tr("p9tx.wzClearBasket")}</button>)}<span className="rounded-full px-2 py-[2px] text-[10px] font-extrabold" style={{ background: SOFTb, color: BLUE }}>{b.basket.length}</span></div>
         {b.basket.length === 0 ? <div className="text-[12.5px] text-[#a6adba]">{tr("p7bw.nothingAdded")}</div> :
           <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-start justify-between gap-2 rounded-xl px-2.5 py-2 text-[12px]" style={{ background: "#f4f7ff" }}><span className="min-w-0"><b className="block" style={{ color: INKp }}>{x.name}</b><span className="block text-[11px] leading-snug" style={{ color: "#5b6478" }}>{b.datesPretty(x.dates)}</span>{x.timing ? <span className="block text-[11px] font-bold" style={{ color: BLUE }}>🕘 {x.timing}</span> : null}</span><span className="flex items-baseline gap-2"><b style={{ color: INKp }}>{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#c8ccd4] hover:text-[#e21d27]">✕</button></span></div>)}</div>}
         {b.basket.length > 0 && b.discountLines.length > 0 && (
@@ -3671,7 +3671,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? tr("p7bw.stepAnyDates") : tr("p7bw.stepDates"))}
             {b.pass && cutoffNote(d, "#8f9bb0", tr, locale)}
             {weeks.length ? <div className="flex flex-col gap-3">{weeks.slice(0, 8).map((w) => <div key={w.mon}>
-              <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">Week {w.n} · from {fmtDate(w.mon)}</div>
+              <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">{tr("p9tx.wzWeekFrom", { n: String(w.n), date: String(fmtDate(w.mon)) })}</div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
                 const dOff = b.off(iso); const dClosed = !b.past(iso) && b.closed(iso); const dPast = b.past(iso) || dClosed; const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
                 const left = b.leftOn(iso); const held = b.heldByBasket(iso); const full = !dOff && !dPast && left !== null && left < 1 && !held; const low = !full && left !== null && (held || b.isLow(iso, left));
@@ -3680,7 +3680,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                 const queueable = full && b.waitlistOn && !dOff;
                 return <button key={iso} type="button" disabled={dPast || dOff || (full && !queueable)}
                   onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
-                  title={dClosed ? "Bookings closed" : dPast ? tr("p7bw.dayPassed") : full ? (queueable ? (waiting ? tr("p7bw.onWaitTap") : tr("p7bw.fullTapJoin")) : tr("p7bw.fullWord")) : left === null ? undefined : d.showSpaces ? (low ? tr("p7bw.onlyLeft", { n: left }) : tr("p7bw.placesLeftN", { n: left })) : (low ? tr("p7bw.almostFull") : tr("p7bw.spaceAvail"))}
+                  title={dClosed ? tr("p9tx.wzClosed") : dPast ? tr("p7bw.dayPassed") : full ? (queueable ? (waiting ? tr("p7bw.onWaitTap") : tr("p7bw.fullTapJoin")) : tr("p7bw.fullWord")) : left === null ? undefined : d.showSpaces ? (low ? tr("p7bw.onlyLeft", { n: left }) : tr("p7bw.placesLeftN", { n: left })) : (low ? tr("p7bw.almostFull") : tr("p7bw.spaceAvail"))}
                   className="relative flex w-[40px] flex-col items-center border py-1 disabled:cursor-not-allowed"
                   style={waiting ? { borderColor: "#ffb020", color: "#ffb020", background: "#2a2110" }
                     : dPast ? { borderColor: LINEs, color: "#454d5e", background: CELLOFF, opacity: 0.5 }
@@ -3763,7 +3763,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
         )}
         </div>
         <div className="mt-1 border-t pt-4" style={{ borderColor: LINEs }}>
-          <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-black italic uppercase text-white">{tr("p7bw.yourBasket")}</span>{b.basket.length > 1 && (<button type="button" onClick={() => { if (window.confirm("Empty your basket?")) b.clearBasket(); }} className="ms-2 text-[11.5px] font-bold underline opacity-80">Clear basket</button>)}<span className="px-2 py-[2px] text-[10px] font-black" style={{ background: CELL, color: LIME }}>{b.basket.length}</span></div>
+          <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-black italic uppercase text-white">{tr("p7bw.yourBasket")}</span>{b.basket.length > 1 && (<button type="button" onClick={() => { if (window.confirm(tr("p9tx.wzEmptyConfirm"))) b.clearBasket(); }} className="ms-2 text-[11.5px] font-bold underline opacity-80">{tr("p9tx.wzClearBasket")}</button>)}<span className="px-2 py-[2px] text-[10px] font-black" style={{ background: CELL, color: LIME }}>{b.basket.length}</span></div>
           {b.basket.length === 0 ? <div className="text-[12.5px] text-[#6a7488]">{tr("p7bw.nothingAdded")}</div> :
             <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-start justify-between gap-2 text-[12px] text-[#c3ccdb]"><span className="min-w-0"><b className="block text-white">{x.name}</b><span className="block text-[11px] leading-snug" style={{ color: MUTs }}>{b.datesPretty(x.dates)}</span>{x.timing ? <span className="block text-[11px] font-bold" style={{ color: LIME }}>🕘 {x.timing}</span> : null}</span><span className="flex items-baseline gap-2"><b className="text-white">{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#5c6678] hover:text-[#ff5d5d]">✕</button></span></div>)}</div>}
           {b.basket.length > 0 && b.discountLines.length > 0 && (
@@ -4334,12 +4334,12 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                     <>
                       <div className={`mt-1 truncate text-[18px] font-black ${cond}`}
                         style={{ fontVariantNumeric: "tabular-nums", color: left <= 0 ? "#ff5470" : "#fff" }}>
-                        {left <= 0 ? tr("p7pg.soldOut") : perDay ? `${total} places a day` : tr("p7pg.leftOfTotal", { left, total })}
+                        {left <= 0 ? tr("p7pg.soldOut") : perDay ? tr("p9tx.wzPlacesADay", { total: String(total) }) : tr("p7pg.leftOfTotal", { left, total })}
                       </div>
                       <div className="mt-1.5 h-1 w-full" style={{ background: "#26304a" }}>
                         <div className="h-full" style={{ width: `${pct}%`, background: left <= 0 ? "#ff5470" : LIME }} />
                       </div>
-                      <div className="mt-1 text-[10.5px]" style={{ color: MUTs }}>{perDay ? `Busiest day: ${used} of ${total} booked` : `${used} booked · ${pct}% full`}</div>
+                      <div className="mt-1 text-[10.5px]" style={{ color: MUTs }}>{perDay ? tr("p9tx.wzBusiest", { used: String(used), total: String(total) }) : tr("p9tx.wzBookedPct", { used: String(used), pct: String(pct) })}</div>
                     </>
                   );
                 })()}
@@ -4373,7 +4373,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                       {/* Only worth saying once some dates have actually gone. */}
                       {open.length < dates.length && (
                         <div className="mt-1.5 text-[10.5px]" style={{ color: MUTs }}>
-                          <b className="text-white">{open.length}</b> of {dates.length} dates still have space
+                          {(() => { const parts = tr("p9tx.wzDatesSpace", { open: "\u0000", total: String(dates.length) }).split("\u0000"); return <>{parts[0]}<b className="text-white">{open.length}</b>{parts[1]}</>; })()}
                         </div>
                       )}
                       {spans.length > 0 && (

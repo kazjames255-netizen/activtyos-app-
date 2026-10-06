@@ -2,7 +2,7 @@
 import { fromRows } from "./_rows";
 
 export default fromRows({
-  home: ["Home", "Home", "Home", "Home", "Home", "Home", "Home", "Home", "Home", "Home", "Home"],
+  home: ["Home", "Start", "Acasă", "ہوم", "ਹੋਮ", "হোম", "الرئيسية", "Início", "Inicio", "Accueil", "Hafan"],
   dashboard: ["Dashboard", "Pulpit", "Panou de control", "ڈیش بورڈ", "ਡੈਸ਼ਬੋਰਡ", "ড্যাশবোর্ড", "لوحة التحكم", "Painel", "Panel", "Tableau de bord", "Dangosfwrdd"],
   newsfeed: ["Newsfeed", "Aktualności", "Noutăți", "نیوز فیڈ", "ਨਿਊਜ਼ਫੀਡ", "নিউজফিড", "آخر الأخبار", "Novidades", "Novedades", "Fil d’actualité", "Ffrwd newyddion"],
   messages: ["Messages", "Wiadomości", "Mesaje", "پیغامات", "ਸੁਨੇਹੇ", "বার্তা", "الرسائل", "Mensagens", "Mensajes", "Messages", "Negeseuon"],
@@ -103,4 +103,5 @@ export default fromRows({
   provider_features: ["Provider features", "Funkcje dostawców", "Funcțiile furnizorilor", "فراہم کنندگان کی خصوصیات", "ਪ੍ਰਦਾਤਾ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ", "প্রদানকারীর ফিচার", "ميزات المزوّدين", "Funcionalidades dos prestadores", "Funciones de los proveedores", "Fonctionnalités des prestataires", "Nodweddion darparwyr"],
   messages_support: ["Messages & support", "Wiadomości i wsparcie", "Mesaje și asistență", "پیغامات اور سپورٹ", "ਸੁਨੇਹੇ ਅਤੇ ਸਹਾਇਤਾ", "বার্তা ও সহায়তা", "الرسائل والدعم", "Mensagens e suporte", "Mensajes y soporte", "Messages et assistance", "Negeseuon a chymorth"],
   support_review: ["Support review", "Przegląd wsparcia", "Revizuirea asistenței", "سپورٹ کا جائزہ", "ਸਹਾਇਤਾ ਸਮੀਖਿਆ", "সহায়তা পর্যালোচনা", "مراجعة الدعم", "Revisão do suporte", "Revisión de soporte", "Revue du support", "Adolygu cymorth"],
+  billing_payouts: ["Billing & payouts", "Rozliczenia i wypłaty", "Facturare și plăți", "بلنگ اور ادائیگیاں", "ਬਿਲਿੰਗ ਅਤੇ ਭੁਗਤਾਨ", "বিলিং ও পেআউট", "الفوترة والمدفوعات", "Faturação e pagamentos", "Facturación y cobros", "Facturation et paiements", "Bilio a thaliadau"],
 });

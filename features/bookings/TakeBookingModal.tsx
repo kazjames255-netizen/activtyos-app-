@@ -270,7 +270,7 @@ export function TakeBookingModal() {
         )}
 
         <div className="mt-2 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">
-          Choose a live listing ({shown.length})
+          {t("p9tx.tbChooseListing", { n: String(shown.length) })}
         </div>
         <select
           value={activeId}

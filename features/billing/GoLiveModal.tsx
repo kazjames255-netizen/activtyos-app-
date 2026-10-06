@@ -6,6 +6,7 @@ import { portalOf } from "@/lib/portal-href";
 import { get as apiGet, put as apiPut } from "@/lib/api";
 import { Button, Input } from "@/components/ui";
 import { BankDetailsCard } from "@/features/billing/BillingPayoutsApp";
+import { useT } from "@/lib/i18n/provider";
 
 // The "Before you go live" pop-up shown when a NEW provider presses Go live on their first listing. Three things, each ticked off as
 // it is done: (1) the plan (starts the 7-day trial), (2) at least one way for parents to pay (Stripe cards, bank details, or an
@@ -20,6 +21,7 @@ export async function fetchGoLive(): Promise<Status | null> {
 export const goLiveReady = (s: Status | null) => !s || (s.planStarted && s.payChosen);
 
 export function GoLiveModal({ onClose, onGoLive, busy }: { onClose: () => void; onGoLive: () => void; busy?: boolean }) {
+  const t = useT();
   const portal = portalOf(usePathname());
   const [s, setS] = useState<Status | null>(null);
   const [reply, setReply] = useState("");
@@ -57,7 +59,7 @@ export function GoLiveModal({ onClose, onGoLive, busy }: { onClose: () => void; 
   const cur = step ?? (firstOpen === -1 ? 2 : firstOpen);
   const ready = goLiveReady(s);
   const dots = (
-    <div className="mt-2 flex items-center gap-1.5" aria-label={`Step ${cur + 1} of 3`}>
+    <div className="mt-2 flex items-center gap-1.5" aria-label={t("p9tx.glStepAria", { n: String(cur + 1) })}>
       {[0, 1, 2].map((i) => <span key={i} className="h-1.5 flex-1 rounded-full" style={{ background: i <= cur ? "var(--brand,#2f4fa8)" : "var(--line)" }} />)}
     </div>
   );
@@ -69,62 +71,62 @@ export function GoLiveModal({ onClose, onGoLive, busy }: { onClose: () => void; 
   );
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/55 p-3" role="dialog" aria-modal="true" aria-label="Before you go live">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/55 p-3" role="dialog" aria-modal="true" aria-label={t("p9tx.glTitle")}>
       <div className="max-h-[92vh] w-full max-w-[560px] overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 text-[var(--ink)] shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Before you go live</div>
-            <p className="mt-0.5 text-[12.5px] text-[var(--ink-3)]">Step {cur + 1} of 3. Your listing stays saved while you do these.</p>
+            <div className="text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p9tx.glTitle")}</div>
+            <p className="mt-0.5 text-[12.5px] text-[var(--ink-3)]">{t("p9tx.glStepSub", { n: String(cur + 1) })}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-[20px] leading-none text-[var(--ink-3)]">×</button>
+          <button type="button" onClick={onClose} aria-label={t("p9tx.glClose")} className="text-[20px] leading-none text-[var(--ink-3)]">×</button>
         </div>
         {dots}
 
-        {!s ? <p className="py-6 text-center text-[13px] text-[var(--ink-3)]">Checking…</p> : (
+        {!s ? <p className="py-6 text-center text-[13px] text-[var(--ink-3)]">{t("p9tx.glChecking")}</p> : (
           <div className="mt-4">
             {cur === 0 && (
               <>
-                <div className="text-[16px] font-extrabold">Start your free trial</div>
-                <p className="mt-1 text-[13px] text-[var(--ink-2)]">{planDone ? "Your free trial is running." : "Add a card to start your 7-day free trial. You are not charged until it ends, and you can cancel any time."}</p>
-                {!planDone && <a href={`${base}/billing`} target="_blank" rel="noreferrer"><Button variant="primary" className="mt-3">Start my free trial</Button></a>}
-                {!planDone && <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">It opens in a new tab. Come back here when you are done and this ticks itself.</p>}
+                <div className="text-[16px] font-extrabold">{t("p9tx.glStep1")}</div>
+                <p className="mt-1 text-[13px] text-[var(--ink-2)]">{planDone ? t("p9tx.glTrialRunning") : t("p9tx.glTrialAdd")}</p>
+                {!planDone && <a href={`${base}/billing`} target="_blank" rel="noreferrer"><Button variant="primary" className="mt-3">{t("p9tx.glTrialBtn")}</Button></a>}
+                {!planDone && <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">{t("p9tx.glNewTab")}</p>}
               </>
             )}
             {cur === 1 && (
               <>
-                <div className="text-[16px] font-extrabold">Your bank details <span className="ms-1 rounded-full bg-[var(--brand-soft,#e6ecff)] px-2 py-0.5 text-[11px] text-[var(--brand-ink,#1d3a8f)]">Required</span></div>
-                <p className="mb-3 mt-1 text-[13px] text-[var(--ink-2)]">So parents can book and pay you. Bank transfers, Tax-Free Childcare and vouchers all pay into this account, and it is shown on your invoices.</p>
+                <div className="text-[16px] font-extrabold">{t("p9tx.glBank")} <span className="ms-1 rounded-full bg-[var(--brand-soft,#e6ecff)] px-2 py-0.5 text-[11px] text-[var(--brand-ink,#1d3a8f)]">{t("p9tx.glRequired")}</span></div>
+                <p className="mb-3 mt-1 text-[13px] text-[var(--ink-2)]">{t("p9tx.glBankWhy")}</p>
                 {s.pay.bank ? (
-                  <div className="rounded-xl border border-[#12805a] bg-[#eefaf2] p-3 text-[14px] font-extrabold">✓ Bank details saved</div>
+                  <div className="rounded-xl border border-[#12805a] bg-[#eefaf2] p-3 text-[14px] font-extrabold">✓ {t("p9tx.glBankSaved")}</div>
                 ) : (
                   <BankDetailsCard bare onSaved={refresh} />
                 )}
                 <div className="mt-3 flex items-center gap-3 rounded-xl border border-[var(--line)] p-3">
-                  <div className="min-w-0 flex-1"><div className="text-[13.5px] font-extrabold">{s.pay.stripe ? "✓ " : ""}Also take card payments <span className="font-semibold text-[var(--ink-3)]">(optional, recommended)</span></div>
-                    <div className="text-[12px] text-[var(--ink-3)]">Cards, Apple Pay and Google Pay, paid straight to you. You can do this later.</div></div>
-                  {s.pay.stripe ? <span className="text-[12px] font-bold text-[#12805a]">Ready</span> : <a href={`${base}/billing?tab=paid`} target="_blank" rel="noreferrer"><Button sm>Connect Stripe</Button></a>}
+                  <div className="min-w-0 flex-1"><div className="text-[13.5px] font-extrabold">{s.pay.stripe ? "✓ " : ""}{t("p9tx.glCardTitle")} <span className="font-semibold text-[var(--ink-3)]">{t("p9tx.glCardOpt")}</span></div>
+                    <div className="text-[12px] text-[var(--ink-3)]">{t("p9tx.glCardNote")}</div></div>
+                  {s.pay.stripe ? <span className="text-[12px] font-bold text-[#12805a]">{t("p9tx.glReady")}</span> : <a href={`${base}/billing?tab=paid`} target="_blank" rel="noreferrer"><Button sm>{t("p9tx.glConnect")}</Button></a>}
                 </div>
               </>
             )}
             {cur === 2 && (
               <>
-                <div className="text-[16px] font-extrabold">Where should parents' replies go?</div>
-                <p className="mt-1 text-[13px] text-[var(--ink-2)]">When a parent replies to one of your emails, it goes here. Make sure it is an inbox you read.</p>
-                <div className="mt-2 flex gap-2"><Input type="email" value={reply} onChange={(e) => { setReply(e.target.value); setReplySaved(false); setReplyConfirmed(false); }} placeholder="you@example.com" className="min-w-0 flex-1" aria-label="Reply-to email" />
-                  <Button sm onClick={() => void saveReply()} disabled={!reply.includes("@")}>{replySaved ? "Saved" : "Save"}</Button></div>
+                <div className="text-[16px] font-extrabold">{t("p9tx.glReplyQ")}</div>
+                <p className="mt-1 text-[13px] text-[var(--ink-2)]">{t("p9tx.glReplyWhy")}</p>
+                <div className="mt-2 flex gap-2"><Input type="email" value={reply} onChange={(e) => { setReply(e.target.value); setReplySaved(false); setReplyConfirmed(false); }} placeholder="you@example.com" className="min-w-0 flex-1" aria-label={t("p9tx.glReplyAria")} />
+                  <Button sm onClick={() => void saveReply()} disabled={!reply.includes("@")}>{replySaved ? t("p9tx.glSaved") : t("p9tx.glSave")}</Button></div>
               </>
             )}
           </div>
         )}
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
-          <div>{cur > 0 ? <Button onClick={() => setStep(cur - 1)}>Back</Button> : <Button onClick={onClose}>Not yet</Button>}</div>
+          <div>{cur > 0 ? <Button onClick={() => setStep(cur - 1)}>{t("p9tx.glBack")}</Button> : <Button onClick={onClose}>{t("p9fr.spNotYet")}</Button>}</div>
           <div className="flex gap-2">
-            {cur > 0 && <Button onClick={onClose}>Not yet</Button>}
+            {cur > 0 && <Button onClick={onClose}>{t("p9fr.spNotYet")}</Button>}
             {cur < 2 ? (
-              <Button variant="primary" disabled={!stepDone[cur]} onClick={() => setStep(cur + 1)}>Next</Button>
+              <Button variant="primary" disabled={!stepDone[cur]} onClick={() => setStep(cur + 1)}>{t("p9tx.glNext")}</Button>
             ) : (
-              <Button variant="primary" disabled={!ready || !reply.includes("@") || !!busy} onClick={() => { void saveReply().then(onGoLive); }} className="!bg-[#e9a915] !border-[#e9a915] !text-[#2a1d00]">{busy ? "Going live…" : "Go live"}</Button>
+              <Button variant="primary" disabled={!ready || !reply.includes("@") || !!busy} onClick={() => { void saveReply().then(onGoLive); }} className="!bg-[#e9a915] !border-[#e9a915] !text-[#2a1d00]">{busy ? t("p9tx.glGoingLive") : t("p9tx.glGoLive")}</Button>
             )}
           </div>
         </div>

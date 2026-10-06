@@ -675,8 +675,8 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
           {applied ? (
             <>
               <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3.5 py-3 text-[12.5px] leading-[1.6] text-[var(--ink)]">
-                <b>Your dates are changed.</b> It&rsquo;s confirmed, so there&rsquo;s nothing more to wait for.
-                {applied.fee > 0 && <> An admin fee of {money(applied.fee)} has been added to this booking and is due to pay.</>}
+                <b>{t("p9tx.mbDatesChanged")}</b> {t("p9tx.mbDatesChangedBody")}
+                {applied.fee > 0 && <> {t("p9tx.mbAdminFee", { fee: money(applied.fee) })}</>}
               </div>
               <div className="flex justify-end"><Button variant="primary" onClick={() => onDone(true)}>{t("parent.closeText")}</Button></div>
             </>
@@ -825,6 +825,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
 
 /** An unpaid bank-transfer booking: where to send the money and what to quote, always findable. */
 function BankTransferBox({ b }: { b: Booking }) {
+  const tt = useT();
   const [bank, setBank] = useState<{ bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number } | null>(null);
   const wanted = /bank|transfer/i.test(String(b.method ?? "")) && b.pay !== "Paid" && b.status !== "Cancelled" && b.status !== "Declined" && b.status !== "Waitlisted";
   useEffect(() => {
@@ -836,13 +837,13 @@ function BankTransferBox({ b }: { b: Booking }) {
   if (!wanted || !bank) return null;
   return (
     <div className="mt-2 rounded-xl border-2 border-[#1d3a8f] bg-[#eef3ff] p-3 text-[12.5px]">
-      <div className="font-extrabold uppercase tracking-wide text-[#1d3a8f]">Pay by bank transfer · {money(bank.amount ?? b.amount)}</div>
+      <div className="font-extrabold uppercase tracking-wide text-[#1d3a8f]">{tt("p7pub.bankTitle")} · {money(bank.amount ?? b.amount)}</div>
       <div className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[#171534]">
-        {bank.bankName && (<><span className="text-[#6a6785]">Bank</span><b>{bank.bankName}</b></>)}
-        {bank.accountName && (<><span className="text-[#6a6785]">Account name</span><b>{bank.accountName}</b></>)}
-        {bank.sortCode && (<><span className="text-[#6a6785]">Sort code</span><b>{bank.sortCode}</b></>)}
-        {bank.accountNumber && (<><span className="text-[#6a6785]">Account number</span><b>{bank.accountNumber}</b></>)}
-        <span className="text-[#6a6785]">Reference</span><b>{bank.reference}</b>
+        {bank.bankName && (<><span className="text-[#6a6785]">{tt("p7pub.bankName")}</span><b>{bank.bankName}</b></>)}
+        {bank.accountName && (<><span className="text-[#6a6785]">{tt("p7pub.accountName")}</span><b>{bank.accountName}</b></>)}
+        {bank.sortCode && (<><span className="text-[#6a6785]">{tt("p7pub.sortCode")}</span><b>{bank.sortCode}</b></>)}
+        {bank.accountNumber && (<><span className="text-[#6a6785]">{tt("p7pub.accountNumber")}</span><b>{bank.accountNumber}</b></>)}
+        <span className="text-[#6a6785]">{tt("p9tx.ckBankRefLbl")}</span><b>{bank.reference}</b>
       </div>
     </div>
   );
@@ -1193,8 +1194,8 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           <DefRow label={t("parent.methodLabel")} value={b.method} />
           {(b.discountOff ?? 0) > 0 && b.listPrice != null && (
             <>
-              <DefRow label="Price before discount" value={money(b.listPrice)} />
-              <DefRow label={`Discount${b.discountNames?.length ? ` (${b.discountNames.join(", ")})` : ""}`} value={`− ${money(b.discountOff ?? 0)}`} />
+              <DefRow label={t("p9tx.ckPriceBefore")} value={money(b.listPrice)} />
+              <DefRow label={b.discountNames?.length ? t("p9tx.ckDiscountWith", { names: b.discountNames.join(", ") }) : t("p9tx.ckDiscount")} value={`− ${money(b.discountOff ?? 0)}`} />
             </>
           )}
           <DefRow label={t("parent.totalLabel")} value={money(b.amount)} />
@@ -1481,7 +1482,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
         const shown = restF.filter(match);
         const tabs: { key: BookingFilter; label: string }[] = [
           { key: "all", label: tr("parent.tabAll") },
-          { key: "topay", label: "Still to pay" },
+          { key: "topay", label: tr("p9tx.mbStillToPay") },
           { key: "upcoming", label: tr("parent.tabUpcoming") },
           { key: "past", label: tr("parent.tabPast") },
           { key: "cancelled", label: tr("parent.tabCancelledRefunded") },

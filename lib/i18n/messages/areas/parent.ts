@@ -886,6 +886,19 @@ parent.pl = Object.assign(clone(), {
   moreInfo: "Więcej informacji",
   quickBook: "Szybka rezerwacja",
   wordPlaceholder: "np. Bluebell",
+  perWeek: "tydzień",
+  perDay: "dzień",
+  perSession: "sesja",
+  perNDays: "{n} dni",
+  onDate: "W wybranym dniu",
+  saveBadge: "OSZCZĘDZASZ {n}%",
+  moreOffers: "+{n} więcej",
+  showLess: "Pokaż mniej",
+  hideFilters: "Filtry",
+  showFilters: "Filtry",
+  queueLine: "{place} w kolejce na {date}",
+  queueManual: "Organizator wybiera, komu zaoferować miejsce, gdy się zwolni, więc to wskazówka, a nie gwarancja.",
+  queueAuto: "Miejsca są oferowane automatycznie w tej kolejności.",
 });
 
 // Romanian
@@ -1307,6 +1320,19 @@ parent.ro = Object.assign(clone(), {
   moreInfo: "Mai multe informații",
   quickBook: "Rezervare rapidă",
   wordPlaceholder: "de ex. Bluebell",
+  perWeek: "săptămână",
+  perDay: "zi",
+  perSession: "sesiune",
+  perNDays: "{n} zile",
+  onDate: "La o dată anume",
+  saveBadge: "ECONOMISEȘTI {n}%",
+  moreOffers: "+{n} în plus",
+  showLess: "Arată mai puțin",
+  hideFilters: "Filtre",
+  showFilters: "Filtre",
+  queueLine: "{place} în coadă pentru {date}",
+  queueManual: "Furnizorul alege cui i se oferă un loc când se eliberează unul, așa că este o orientare, nu o garanție.",
+  queueAuto: "Locurile sunt oferite automat în această ordine.",
 });
 
 // Spanish
@@ -1728,6 +1754,19 @@ parent.es = Object.assign(clone(), {
   moreInfo: "Más información",
   quickBook: "Reserva rápida",
   wordPlaceholder: "p. ej. Bluebell",
+  perWeek: "semana",
+  perDay: "día",
+  perSession: "sesión",
+  perNDays: "{n} días",
+  onDate: "En una fecha concreta",
+  saveBadge: "AHORRA {n}%",
+  moreOffers: "+{n} más",
+  showLess: "Mostrar menos",
+  hideFilters: "Filtros",
+  showFilters: "Filtros",
+  queueLine: "{place} en la cola para {date}",
+  queueManual: "El proveedor elige a quién se le ofrece una plaza cuando se libera, así que es una orientación, no una garantía.",
+  queueAuto: "Las plazas se ofrecen automáticamente en este orden.",
 });
 
 // French
@@ -2149,6 +2188,19 @@ parent.fr = Object.assign(clone(), {
   moreInfo: "Plus d’informations",
   quickBook: "Réservation rapide",
   wordPlaceholder: "p. ex. Bluebell",
+  perWeek: "semaine",
+  perDay: "jour",
+  perSession: "séance",
+  perNDays: "{n} jours",
+  onDate: "À une date précise",
+  saveBadge: "ÉCONOMISEZ {n} %",
+  moreOffers: "+{n} de plus",
+  showLess: "Afficher moins",
+  hideFilters: "Filtres",
+  showFilters: "Filtres",
+  queueLine: "{place} dans la file pour le {date}",
+  queueManual: "L'organisateur choisit à qui proposer une place lorsqu'elle se libère ; c'est donc une indication, pas une garantie.",
+  queueAuto: "Les places sont proposées automatiquement dans cet ordre.",
 });
 
 // Portuguese
@@ -2581,6 +2633,9 @@ parent.pt = Object.assign(clone(), {
   showFilters: "Filtros",
   wordPlaceholder: "ex. Bluebell",
   appliedOnceBackend: "Aplicado quando o sistema estiver pronto (§U)",
+  queueLine: "{place} na fila para {date}",
+  queueManual: "O prestador escolhe a quem é oferecido um lugar quando este abre, por isso é uma indicação e não uma garantia.",
+  queueAuto: "Os lugares são oferecidos automaticamente por esta ordem.",
 });
 
 // The remaining locales (Urdu, Panjabi, Bengali, Arabic, Welsh) inherit the full
@@ -3017,6 +3072,9 @@ parent.ur = Object.assign(clone(), {
   tabCancelledRefunded: "منسوخ اور واپس شدہ",
   noBookingsMatch: "ان فلٹرز سے کوئی بُکنگ میل نہیں کھاتی۔",
   nothingHereRightNow: "ابھی یہاں کچھ نہیں۔",
+  queueLine: "{date} کے لیے قطار میں {place} نمبر",
+  queueManual: "جب کوئی جگہ خالی ہوتی ہے تو فراہم کنندہ طے کرتا ہے کہ کسے پیشکش ہوگی، اس لیے یہ رہنمائی ہے، ضمانت نہیں۔",
+  queueAuto: "جگہیں اسی ترتیب سے خود بخود پیش کی جاتی ہیں۔",
 });
 parent.pa = Object.assign(clone(), {
   myKidsAges: "ਮੇਰੇ ਬੱਚਿਆਂ ਦੀਆਂ ਉਮਰਾਂ",
@@ -3449,6 +3507,9 @@ parent.pa = Object.assign(clone(), {
   tabCancelledRefunded: "ਰੱਦ ਅਤੇ ਰਿਫੰਡ ਕੀਤੀਆਂ",
   noBookingsMatch: "ਇਹਨਾਂ ਫਿਲਟਰਾਂ ਨਾਲ ਕੋਈ ਬੁਕਿੰਗ ਮੇਲ ਨਹੀਂ ਖਾਂਦੀ।",
   nothingHereRightNow: "ਹੁਣੇ ਇੱਥੇ ਕੁਝ ਨਹੀਂ।",
+  queueLine: "{date} ਲਈ ਕਤਾਰ ਵਿੱਚ {place}",
+  queueManual: "ਜਦੋਂ ਕੋਈ ਥਾਂ ਖਾਲੀ ਹੁੰਦੀ ਹੈ ਤਾਂ ਪ੍ਰਦਾਤਾ ਚੁਣਦਾ ਹੈ ਕਿ ਕਿਸਨੂੰ ਪੇਸ਼ਕਸ਼ ਹੋਵੇਗੀ, ਇਸ ਲਈ ਇਹ ਇੱਕ ਸੇਧ ਹੈ, ਗਾਰੰਟੀ ਨਹੀਂ।",
+  queueAuto: "ਥਾਵਾਂ ਇਸੇ ਕ੍ਰਮ ਵਿੱਚ ਆਪਣੇ-ਆਪ ਪੇਸ਼ ਕੀਤੀਆਂ ਜਾਂਦੀਆਂ ਹਨ।",
 });
 parent.bn = Object.assign(clone(), {
   myKidsAges: "আমার সন্তানদের বয়স",
@@ -3881,6 +3942,9 @@ parent.bn = Object.assign(clone(), {
   tabCancelledRefunded: "বাতিল ও ফেরত",
   noBookingsMatch: "এই ফিল্টারগুলির সাথে কোনো বুকিং মেলে না।",
   nothingHereRightNow: "এখন এখানে কিছু নেই।",
+  queueLine: "{date}-এর জন্য সারিতে {place}",
+  queueManual: "কোনো আসন খালি হলে প্রদানকারী ঠিক করেন কাকে প্রস্তাব দেওয়া হবে, তাই এটি একটি নির্দেশনা, নিশ্চয়তা নয়।",
+  queueAuto: "আসনগুলো এই ক্রমে স্বয়ংক্রিয়ভাবে প্রস্তাব করা হয়।",
 });
 parent.ar = Object.assign(clone(), {
   myKidsAges: "أعمار أطفالي",
@@ -4313,6 +4377,9 @@ parent.ar = Object.assign(clone(), {
   tabCancelledRefunded: "الملغاة والمستردة",
   noBookingsMatch: "لا حجوزات تطابق هذه الفلاتر.",
   nothingHereRightNow: "لا شيء هنا الآن.",
+  queueLine: "{place} في قائمة الانتظار ليوم {date}",
+  queueManual: "يختار مقدّم الخدمة من يُعرض عليه المكان عند توفّره، لذا هذا مجرد دليل وليس ضمانًا.",
+  queueAuto: "تُعرض الأماكن تلقائيًا بهذا الترتيب.",
 });
 parent.cy = Object.assign(clone(), {
   myKidsAges: "Oedrannau fy mhlant",
@@ -4745,6 +4812,9 @@ parent.cy = Object.assign(clone(), {
   tabCancelledRefunded: "Wedi'u canslo a'u had-dalu",
   noBookingsMatch: "Nid oes archebion yn cyfateb i'r hidlwyr hyn.",
   nothingHereRightNow: "Dim byd yma ar hyn o bryd.",
+  queueLine: "{place} yn y ciw ar gyfer {date}",
+  queueManual: "Mae'r darparwr yn dewis pwy a gynigir lle pan ddaw un ar gael, felly canllaw yw hwn yn hytrach na gwarant.",
+  queueAuto: "Cynigir lleoedd yn awtomatig yn y drefn hon.",
 });
 
 export default parent;

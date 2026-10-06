@@ -615,7 +615,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             )}
             {b.cancel?.amount != null && b.cancel.amount > 0 && (
               <div className="w-full text-[12px] font-semibold leading-[1.5] text-[var(--ink)]">
-                Refund requested: {money(b.cancel.amount)}
+                {t("p9tx.bdRefundReq", { amt: money(b.cancel.amount) })}
                 {b.amount > 0 && <> of {money(b.amount)} paid ({Math.round((b.cancel.amount / b.amount) * 100)}%)</>}
                 {b.cancel.msg && <span className="font-normal text-[var(--ink-2)]"> · {b.cancel.msg}</span>}
               </div>
@@ -867,17 +867,17 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         <DefRow label={t("p7bd.lblMethod")} value={methodLabel(b.method)} />
         {/bank|transfer/i.test(String(b.method ?? "")) && b.pay !== "Paid" && b.status !== "Cancelled" && (
           <div className="my-1.5 rounded-lg border border-[#c9d7f5] bg-[#eef3ff] px-3 py-2 text-[12.5px] text-[#171534]">
-            <b>Waiting for a bank transfer.</b> The family was told to quote the reference <b>{b.ref}</b>. Look for that reference on your bank statement, then press <b>Mark paid</b>.
+            <Rich text={t("p9tx.bdWaitBank", { ref: b.ref })} />
           </div>
         )}
         {(b.discountOff ?? 0) > 0 && b.listPrice != null && (
           <>
-            <DefRow label="Price before discount" value={money(b.listPrice)} />
+            <DefRow label={t("p9tx.ckPriceBefore")} value={money(b.listPrice)} />
             <DefRow label={`Discount${b.discountNames?.length ? ` (${b.discountNames.join(", ")})` : ""}`} value={`− ${money(b.discountOff ?? 0)}`} />
           </>
         )}
         {b.priceOverride && (
-          <DefRow label="Price set by provider" value={`${money(b.priceOverride.originalAmount)} → ${money(b.priceOverride.amount)} · ${b.priceOverride.by}${b.priceOverride.reason ? ` · ${b.priceOverride.reason}` : ""}`} />
+          <DefRow label={t("p9tx.bdPriceSet")} value={`${money(b.priceOverride.originalAmount)} → ${money(b.priceOverride.amount)} · ${b.priceOverride.by}${b.priceOverride.reason ? ` · ${b.priceOverride.reason}` : ""}`} />
         )}
         <DefRow label={t("p7bd.totalLbl")} value={money(b.amount)} />
         {(/tax.?free|\btfc\b/i.test(b.method ?? "") || /tax.?free|\btfc\b/i.test(b.voucherScheme ?? "")) && (

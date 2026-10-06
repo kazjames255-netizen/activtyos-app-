@@ -511,7 +511,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                         <span className="text-[var(--ink-3)]">{t("p7bkl.fromLbl")}</span> <b>{fmtRowDate(moveReq.moves[0].from)}</b> <span className="text-[var(--ink-3)]">{t("p7bkl.toLbl")}</span> <b>{fmtRowDate(moveReq.moves[0].to)}</b>
                       </span>
                     ) : (
-                      <span className="text-[12.5px] text-[var(--ink)]">{moveReq.moves.length} date changes — <span className="font-semibold text-[var(--brand-2)]">{t("p7bkl.openViewAll")}</span></span>
+                      <span className="text-[12.5px] text-[var(--ink)]">{t("p9tx.blDateChanges", { n: String(moveReq.moves.length) })} <span className="font-semibold text-[var(--brand-2)]">{t("p7bkl.openViewAll")}</span></span>
                     )}
                     {denyingRef !== b.ref && (
                       <span className="ms-auto flex items-center gap-1.5">
