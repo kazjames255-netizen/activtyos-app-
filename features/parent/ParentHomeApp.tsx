@@ -79,6 +79,77 @@ function OfferCard({ b, time, onAccepted }: { b: Booking; time: string | null; o
   );
 }
 
+/** "Your family week": Monday to Sunday of the next week with anything on it, one tile a day, a dot per child (green booked, amber waiting list, blue place offered). */
+function WeekStrip({ live, today }: { live: Booking[]; today: string }) {
+  const t = useT();
+  const items = live.filter((b) => ["Confirmed", "Waitlisted", "Offered"].includes(b.status)).flatMap((b) => bookingDays(b).map((d) => ({ b, d })));
+  const future = items.map((x) => x.d).filter((d) => d >= today).sort();
+  const anchor = future[0] ?? today;
+  const a = new Date(`${anchor}T00:00:00Z`);
+  const back = (a.getUTCDay() + 6) % 7; // Monday = 0
+  const monday = new Date(a.getTime() - back * 86_400_000);
+  const days = Array.from({ length: 7 }, (_, i) => new Date(monday.getTime() + i * 86_400_000));
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const loc = dateLocale();
+  const tone: Record<string, string> = { Confirmed: "#16a34a", Waitlisted: "#f59e0b", Offered: "#2563eb" };
+  const range = `${days[0].toLocaleDateString(loc, { day: "numeric", month: "short", timeZone: "UTC" })} to ${days[6].toLocaleDateString(loc, { day: "numeric", month: "short", timeZone: "UTC" })}`;
+  return (
+    <section aria-label={t("p7shell.weekTitle")}>
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <h2 className="m-0 text-[20px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t("p7shell.weekTitle")}</h2>
+        <span className="text-[14px] text-[var(--ink-3)]">{range}</span>
+      </div>
+      <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5">
+        {days.map((d) => {
+          const k = iso(d);
+          const here = items.filter((x) => x.d === k);
+          const isToday = k === today;
+          const weekend = d.getUTCDay() === 0 || d.getUTCDay() === 6;
+          const first = here[0];
+          const tileStyle = { background: isToday ? "var(--ink)" : weekend ? "var(--panel, #eef1f7)" : "var(--surface)", color: isToday ? "var(--surface)" : "var(--ink)", border: "1px solid var(--line)" };
+          const tileCls = "flex min-h-[92px] flex-col justify-between rounded-2xl p-2 no-underline sm:min-h-[120px] sm:p-3";
+          return first ? (
+            <Link key={k} href={`/custdash/bookings?open=${encodeURIComponent(first.b.ref)}`} className={tileCls} style={tileStyle}>
+              <span>
+                <span className="block text-[11px] font-bold uppercase opacity-70 sm:text-[12.5px]">{d.toLocaleDateString(loc, { weekday: "short", timeZone: "UTC" })}</span>
+                <span className="block text-[22px] font-extrabold leading-none sm:text-[30px]">{d.getUTCDate()}</span>
+              </span>
+              <span className="flex flex-col gap-0.5">
+                {here.slice(0, 3).map(({ b }) => (
+                  <span key={b.ref} className="flex items-center gap-1 truncate text-[11px] font-semibold sm:text-[13px]">
+                    <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: tone[b.status] }} aria-hidden />
+                    <span className="truncate">{firstName(b.child || "")}</span>
+                  </span>
+                ))}
+              </span>
+            </Link>
+          ) : (
+            <div key={k} className={tileCls} style={tileStyle}>
+              <span>
+                <span className="block text-[11px] font-bold uppercase opacity-70 sm:text-[12.5px]">{d.toLocaleDateString(loc, { weekday: "short", timeZone: "UTC" })}</span>
+                <span className="block text-[22px] font-extrabold leading-none sm:text-[30px]">{d.getUTCDate()}</span>
+              </span>
+              <span className="flex flex-col gap-0.5">
+                {here.slice(0, 3).map(({ b }) => (
+                  <span key={b.ref} className="flex items-center gap-1 truncate text-[11px] font-semibold sm:text-[13px]">
+                    <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: tone[b.status] }} aria-hidden />
+                    <span className="truncate">{firstName(b.child || "")}</span>
+                  </span>
+                ))}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-[var(--ink-3)]">
+        <span><span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: tone.Confirmed }} />{t("p7shell.weekBooked")}</span>
+        <span><span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: tone.Waitlisted }} />{t("p7shell.weekWaiting")}</span>
+        <span><span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: tone.Offered }} />{t("p7shell.weekOffered")}</span>
+      </div>
+    </section>
+  );
+}
+
 function bookingDays(b: Booking): string[] {
   const own = b.days ?? [];
   if (own.length) return own;
@@ -423,6 +494,7 @@ export function ParentHomeApp() {
           {greeting}
           {starter}
           {attentionBlock}
+          {!loading && !starter && live.length > 0 && <WeekStrip live={live} today={today} />}
           {starter ? null : nextBlock}
           <div className="flex flex-col gap-5 lg:hidden">{starter ? null : childrenBlock}{tilesBlock}</div>
         </div>
