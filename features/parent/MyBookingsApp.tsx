@@ -445,14 +445,14 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
               ["card", t("parent.backToCard")],
             ];
         return (
-          <div className="mt-2">
-            <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">{t("p7bk.sendRefundTo", { amt: money(effRefund) })}</div>
+          <div className="mt-3 border-t border-[var(--line)] pt-3">
+            <div className="mb-1.5 text-[12.5px] font-extrabold text-[var(--ink)]">{t("p7bk.sendRefundTo", { amt: money(effRefund) })}</div>
             {options.length > 0 && (
               <div className={`grid ${options.length === 1 ? "grid-cols-1" : "grid-cols-2"} gap-2`}>
                 {options.map(([v, l]) => (
-                  <button key={v} type="button" onClick={() => setRefundPref(v)} className="rounded-lg border bg-[var(--surface)] p-2 text-[12px] font-extrabold"
-                    style={refundPref === v ? { borderColor: "var(--brand-2)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink)" }}>
-                    {l}
+                  <button key={v} type="button" onClick={() => setRefundPref(v)} className="min-h-[44px] rounded-lg border-2 bg-[var(--surface)] px-2 py-2.5 text-[13px] font-extrabold"
+                    style={refundPref === v ? { borderColor: "var(--brand-2)", color: "var(--brand-ink)", boxShadow: "inset 0 0 0 1px var(--brand-2)" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
+                    {refundPref === v ? "\u2713 " : ""}{l}
                   </button>
                 ))}
               </div>
@@ -470,7 +470,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
       })()}
 
       {error && <div className="mt-1 text-[12px] text-[var(--red)]">{error}</div>}
-      <div className="mt-2 flex gap-2">
+      <div className="mt-4 flex gap-2 [&>button]:w-full [&>button]:min-h-[44px] sm:[&>button]:w-auto">
         <Button variant="danger" sm onClick={submit} disabled={busy || (partialMode && (pickedSlots.length === 0 || !movesReady))}>
           {busy ? t("parent.sending") : !partialMode ? t("p7bk.btnSendCancel")
             : !pickedSlots.length ? t("p7bk.btnChooseDays")
@@ -479,7 +479,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
             : t("p7bk.btnCancelDays", { days: pickPlural(t, locale, "p7bk.dayN", pickedSlots.length) })}
         </Button>
       </div>
-      <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">
+      <div className="mt-2.5 text-[12px] leading-[1.5] text-[var(--ink-3)]">
         {t("p7bk.reviewNote")} {advice ? t("p7bk.adviceYes") : t("p7bk.adviceNo")}
       </div>
     </div>
