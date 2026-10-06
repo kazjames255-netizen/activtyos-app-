@@ -1102,7 +1102,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Cancel and refund",
         "stage": "Refunds",
-        "line": "When you cancel or refund, you choose full, partial or no refund. Name TBC never moves money, so you action the refund in your own payment provider, and those same actions — approve, decline, promote from the waitlist or mark a booking paid — sit as buttons at the top of the booking, right above.",
+        "line": "When you cancel or refund, you choose full, partial or no refund. Card refunds go back to the parent's card from here; for bank, cash or voucher payments you send the money yourself and confirm it, and those same actions — approve, decline, promote from the waitlist or mark a booking paid — sit as buttons at the top of the booking, right above.",
         "bodyHtml": "<div class=\"frm\"><div class=\"fl\">REFUND THE PARENT?</div><div class=\"chips\"><span class=\"ochip\">Yes — full (£240.00)</span><span class=\"ochip\">Partial</span><span class=\"ochip\">No refund</span></div><div class=\"fl\">REFUND AMOUNT (£)</div><div class=\"field ph\">120.00</div><div class=\"hint\">Name TBC never moves money — action any refund in your own payment provider.</div><div class=\"row2\"><div class=\"btn amber\">Confirm cancellation</div><div class=\"btn ghost\">Keep booking</div></div></div>"
       }
     ]

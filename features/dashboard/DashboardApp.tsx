@@ -433,7 +433,7 @@ export function DashboardApp() {
       // The last-5-weeks mini graphs are fixed windows, independent of 3/6/12m.
       const ws = b.createdAt || b.days?.[0] || "";
       const t = Date.parse(ws.length === 10 ? `${ws}T00:00:00Z` : ws);
-      if (!Number.isNaN(t)) for (let i = 0; i < wkStarts.length; i++) { if (t >= wkStarts[i] && t < wkStarts[i] + 7 * 86400000) { weekly[i]++; weeklyIncome[i] += collectedNet(b); break; } }
+      if (!Number.isNaN(t)) for (let i = 0; i < wkStarts.length; i++) { if (t >= wkStarts[i] && t < wkStarts[i] + 7 * 86400000) { if (!isCancelled(b)) weekly[i]++; /* cancelled / declined are not "new bookings", same rule as the server figure */ weeklyIncome[i] += collectedNet(b); break; } }
 
       // Everything else honours the selected 3/6/12-month period.
       const m = monthOf(b);
