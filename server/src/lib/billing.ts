@@ -44,18 +44,23 @@ export async function saveSub(tenantId: string, patch: Partial<SubRecord>): Prom
   await tenants().doc(tenantId).set({ subscription: patch }, { merge: true });
 }
 
-/** The single Stripe Product all plan Prices hang off. Its id is kept in
- *  platform/billing so restarts don't create duplicates. */
+/** The single Stripe Product all plan Prices hang off. Its id is kept in platform/billing so restarts don't create duplicates.
+ *  The database is shared by the live site and local test runs, so an id is kept PER MODE (live / test) and checked to still exist:
+ *  a product made under the test keys does not exist under the live keys ("No such product"), which used to stop every trial start. */
 export async function ensureProduct(): Promise<string> {
+  const mode = (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_live") ? "live" : "test";
   const ref = db.collection("platform").doc("billing");
   const snap = await ref.get();
-  const existing = snap.exists ? (snap.get("productId") as string | undefined) : undefined;
-  if (existing) return existing;
+  const existing = snap.exists ? (snap.get(`productIds.${mode}`) as string | undefined) : undefined;
+  if (existing) {
+    const alive = await stripe!.products.retrieve(existing).then((p) => !(p as { deleted?: boolean }).deleted).catch((e: { code?: string; statusCode?: number }) => (e?.code === "resource_missing" || e?.statusCode === 404 ? false : true));
+    if (alive) return existing;
+  }
   const product = await stripe!.products.create({
     name: `${BRAND} subscription`,
     metadata: { aos: "subscription" },
   });
-  await ref.set({ productId: product.id }, { merge: true });
+  await ref.set({ productIds: { [mode]: product.id } }, { merge: true });
   return product.id;
 }
 
