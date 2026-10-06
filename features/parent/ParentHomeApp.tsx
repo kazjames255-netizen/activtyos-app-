@@ -139,7 +139,10 @@ export function ParentHomeApp() {
   const consentWaiting = trips.filter((tr) => tr.askConsent && tr.status === "planned" && tr.date >= today).reduce((s, tr) => s + tr.children.filter((c) => c.consent === "pending").length, 0);
   const requests = live.filter((b) => b.dateChangeRequest?.status === "pending" || b.cancel?.refund === "pending").length;
   const offers = live.filter((b) => b.status === "Offered").length;
+  const offerOne = offers === 1 ? live.find((b) => b.status === "Offered") : undefined;
   const waiting = live.filter((b) => b.status === "Waitlisted").length;
+  // One place on the list: the card opens that exact booking (its queue position and dates), not the whole list.
+  const waitingOne = waiting === 1 ? live.find((b) => b.status === "Waitlisted") : undefined;
 
   // Next up: confirmed places with a session still ahead, soonest first.
   const upcoming = useMemo(() => {
@@ -223,8 +226,8 @@ export function ParentHomeApp() {
             <Link href={toPay.length === 1 ? `/custdash/bookings?cancel=${encodeURIComponent(toPay[0].ref)}` : "/custdash/bookings?filter=topay"} className="self-end px-2 text-[13.5px] font-bold text-[var(--ink-2)] underline">{h("CancelUnpaid", { n: toPay.length })}</Link>
           </div>
         )}
-        {waiting > 0 && attn("/custdash/bookings", "#d97706", "\u23F3", h("Waiting", { n: waiting }), h("WaitingSub"))}
-        {offers > 0 && attn("/custdash/bookings", "#15b364", "🎟️", h("Offers", { n: offers }), h("OffersSub"))}
+        {waiting > 0 && attn(waitingOne ? `/custdash/bookings?open=${encodeURIComponent(waitingOne.ref)}` : "/custdash/bookings", "#d97706", "\u23F3", h("Waiting", { n: waiting }), h("WaitingSub"))}
+        {offers > 0 && attn(offerOne ? `/custdash/bookings?open=${encodeURIComponent(offerOne.ref)}` : "/custdash/bookings", "#15b364", "🎟️", h("Offers", { n: offers }), h("OffersSub"))}
         {consentWaiting > 0 && attn("/custdash/trips", "#f59e0b", "🚌", h("Consent", { n: consentWaiting }), h("ConsentSub"))}
         {unread > 0 && attn("/custdash/messages", "#7a5af8", "✉️", h("Unread", { n: unread }), h("UnreadSub"))}
         {requests > 0 && attn("/custdash/bookings", "#0ea5a5", "🕑", h("Requests", { n: requests }), h("RequestsSub"))}
