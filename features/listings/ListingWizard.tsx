@@ -2289,6 +2289,17 @@ function SafetyStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
 }
 
 // ── Step: When it runs ─────────────────────────────────────────────────────
+/** A date box typed as "26/10/20" yields the year 0020 (and 20 weeks becomes 58 weeks of nothing). Two-digit and three-digit years mean 20xx. */
+function fixYear(v: string): string {
+  const m = /^(\d{1,6})-(\d{2})-(\d{2})$/.exec(v);
+  if (!m) return v;
+  const y = Number(m[1]);
+  if (y >= 1000 && y <= 9999) return v;
+  if (y < 100) return `${2000 + y}-${m[2]}-${m[3]}`;
+  if (y < 1000) return v; // still being typed: keep waiting for four digits
+  return v;
+}
+
 function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
   const tr = useT();
   const { locale } = useI18n();
@@ -2307,8 +2318,8 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
       <div className="grid items-start gap-4 md:grid-cols-2">
         <RichCard icon="🗓️" title={tr("p8lst.wbRunDatesTitle")} subtitle={tr("p8lst.wbRunDatesSub")}>
           <div className="mb-3 flex gap-3">
-            <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">{tr("p8lst.wbRunsFrom")}</FieldLabel><Input id="wiz-run-from" type="date" value={d.runFrom} onChange={(e) => upd({ runFrom: e.target.value })} className="w-full" /></div>
-            <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">{tr("p8lst.wbRunsTo")}</FieldLabel><Input id="wiz-run-to" type="date" value={d.runTo} onChange={(e) => upd({ runTo: e.target.value })} className="w-full" /></div>
+            <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">{tr("p8lst.wbRunsFrom")}</FieldLabel><Input id="wiz-run-from" type="date" value={d.runFrom} onChange={(e) => upd({ runFrom: fixYear(e.target.value) })} className="w-full" /></div>
+            <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">{tr("p8lst.wbRunsTo")}</FieldLabel><Input id="wiz-run-to" type="date" value={d.runTo} onChange={(e) => upd({ runTo: fixYear(e.target.value) })} className="w-full" /></div>
           </div>
           <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">{tr("p8lst.wbBlockSize")}</span>
           <div className="mb-3 flex flex-wrap gap-1.5">
@@ -2330,6 +2341,9 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
           </div>
         </RichCard>
 
+        {(weeks.length > 40 || (d.runFrom && Number(d.runFrom.slice(0, 4)) < 2000)) && (
+          <div className="md:col-span-2 -mb-1 flex items-start gap-2 rounded-xl border-2 border-[#e9a915] bg-[#fff6dc] px-3 py-2 text-[12.5px] font-bold text-[#7a4b00]"><span aria-hidden>⚠️</span><span>{tr("p9tx.runTooLong", { n: weeks.length })}</span></div>
+        )}
         <RichCard icon="📆" title={pickPlural(tr, locale, "p8lst.wbCalTitle", weeks.length)} subtitle={tr("p8lst.wbCalSub", { n: live })} tint="teal">
           {dates.length === 0 ? (
             <div className="rounded-lg border border-dashed border-[var(--line)] p-4 text-center text-[12px] text-[var(--ink-3)]">
@@ -3453,6 +3467,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
         <span className="text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>{tr("p7bw.chooseDatesTimes")}</span>
         {b.pass && <span className="text-[13px] text-[#7a8194]">{tr("p7bw.fromWord")} <b style={{ color: DEEP }}>{money(b.unitPrice)}</b></span>}
       </div>
+      <div className="mt-2 text-[12.5px] font-bold" style={{ color: DEEP }}>👆 {tr("p9tx.bkTapHint")}</div>
       {b.hint && (
         <div className="mt-2.5 flex items-start gap-2 rounded-2xl px-3 py-2 text-[12px] font-bold" style={{ background: SOFTb, color: DEEP }}>
           <span aria-hidden>👉</span><span>{b.hint}</span>
@@ -3648,6 +3663,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
           <span className="text-[15px] font-black italic uppercase text-white">{tr("p7bw.chooseDatesTimes")}</span>
           {b.pass && <span className="text-[11px] text-[#cfe8ff]">{tr("p7bw.fromWord")} <b className="italic text-white">{money(b.unitPrice)}</b></span>}
         </div>
+        <div className="mt-1.5 text-[11.5px] font-bold text-white/90">👆 {tr("p9tx.bkTapHint")}</div>
         {b.hint && (
           <div className="mt-1.5 flex items-start gap-1.5 rounded bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
             <span aria-hidden>👉</span><span>{b.hint}</span>
