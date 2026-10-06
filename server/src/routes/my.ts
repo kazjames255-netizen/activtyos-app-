@@ -563,7 +563,10 @@ my.get("/providers", async (req, res) => {
   // A family who signs up through a provider's own link is written into that
   // provider's customers (see POST /providers/follow), so they resolve through
   // custSnap above — no separate store.
+  // The provider they picked at sign-up counts from day one (it brands their portal and names it in Browse), even before a first booking.
+  const homeTenant = req.user?.uid ? ((await db.collection("users").doc(req.user.uid).get()).get("homeTenantId") as string | undefined) : undefined;
   const ids = [...new Set([
+    ...(homeTenant ? [homeTenant] : []),
     ...bySnap.docs.map((d) => (d.data() as { tenantId?: string }).tenantId),
     ...custSnap.docs.map((d) => (d.data() as { tenantId?: string }).tenantId),
     ...custSnapLc.docs.map((d) => (d.data() as { tenantId?: string }).tenantId),

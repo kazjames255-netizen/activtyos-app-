@@ -180,7 +180,13 @@ listings.get("/", async (req, res) => {
     const email = req.user?.email?.toLowerCase();
     if (email) {
       const mine = await db.collection("bookings").where("email", "==", email).get();
-      for (const b of mine.docs) { const t = b.data().tenantId as string | undefined; if (t) allowed.add(t); }
+      for (const b of mine.docs) { const t = b.data().tenantId as string | undefined; if (t) allowed.add(t); }    }
+    // The provider a parent picked when they signed up is THEIR provider from day one: their listings show in Browse even before a first booking
+    // and even if that provider has not joined the wider marketplace.
+    if (req.user?.uid) {
+      const me = await db.collection("users").doc(req.user.uid).get();
+      const home = me.get("homeTenantId") as string | undefined;
+      if (home) allowed.add(home);
     }
     visible = visible.filter((d) => allowed.has(d.data().tenantId as string));
   }
