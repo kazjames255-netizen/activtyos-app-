@@ -777,6 +777,22 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           )}
         </div>
 
+        {b.status === "Waitlisted" && (() => {
+          // Plain answer for the provider: is there a free place for this family RIGHT NOW? (live block availability)
+          if (!blockAvail) return null;
+          const days = sessionIsoDates(b);
+          const seats = b.seats ?? Math.max(1, bookingKids(b).length);
+          const free = days.length > 0 && days.every((d) => (blockAvail.sessions.find((x) => x.date === d)?.spotsLeft ?? 0) >= seats);
+          const dates = days.length ? days.map((d) => sessionDayLabel(d)).join(", ") : b.dates;
+          const child = b.child || b.booker;
+          return (
+            <div className="mt-3 rounded-xl border-2 px-4 py-3 text-[15px] font-extrabold leading-[1.4]"
+              style={free ? { borderColor: "#15b364", background: "#e8f8ee", color: "#0f6b34" } : { borderColor: "#f0c96b", background: "#fff7e0", color: "#8a5300" }}>
+              {t(free ? "p7bd.waitFreeBanner" : "p7bd.waitNoneBanner", { dates, child })}
+            </div>
+          );
+        })()}
+
         {b.cardFailed && b.status !== "Cancelled" && b.status !== "Declined" && (
           <div className="mt-2.5 rounded-xl border border-[#f6c9cc] bg-[#fdebec] px-3.5 py-2.5 text-[12.5px] text-[#c02636]">
             <Rich text={t("p7bd.cardFailedBody")} />

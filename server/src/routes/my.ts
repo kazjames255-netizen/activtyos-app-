@@ -1909,6 +1909,12 @@ my.post("/bookings", async (req, res) => {
           } : {}),
           addons: grp.flatMap((g) => g.addons ?? []),
           addonLines: grp.flatMap((g) => g.addonLines ?? []),
+          // `first` may be a £0 row (a 100% code covers one week's pass; the add-on sits on another week) — the merged booking
+          // takes the pay state and method from a row that owes money, not from that first row alone.
+          ...(first.pay === "Funded" && grp.some((g) => g.pay !== "Funded") ? (() => {
+            const live = grp.find((g) => g.pay !== "Funded")!;
+            return { pay: live.pay, method: live.method };
+          })() : {}),
           ...(payRefs.length ? { payRefs } : {}),
           ...(grp.some((g) => g.walletApplied) ? { walletApplied: sum((g) => g.walletApplied ?? 0) } : {}),
         });
@@ -2166,7 +2172,9 @@ my.post("/bookings", async (req, res) => {
           category: "booking",
           key: "booking-new",
           title: `${kind} · ${primary.ref} · ${bookerName}`,
-          body: `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(input.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
+          body: waitlisted
+            ? `${kids || bookerName} joined the waiting list for ${listing.name}${primary.dates ? ` (${primary.dates})` : ""}. There is NO free place right now, so there is nothing to do yet. You will be told the moment one opens.`
+            : `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(input.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
           subject: `${BRAND}: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
           href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
           ref: primary.ref,

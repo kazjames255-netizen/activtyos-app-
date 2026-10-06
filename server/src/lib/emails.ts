@@ -1169,6 +1169,7 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
         <div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#3f78d8">${escapeHtml(a.providerName)}</div>
         <h1 style="font-size:23px;line-height:1.25;margin:4px 0 2px;color:#171534">${heading}</h1>
         <div style="font-size:15px;font-weight:700;color:#4a4763;margin-top:6px">${escapeHtml(a.listingName)}</div>
+        ${a.kind === "Waitlist join" ? `<div style="margin:14px 0 0;padding:12px 14px;background:#fff7e6;border:1px solid #f5d38a;border-radius:10px;font-size:14px;line-height:1.5;color:#7a5200"><b>There is no free place right now, so there is nothing for you to do yet.</b> ${escapeHtml(a.bookerName)}'s family is on the waiting list and nothing has been charged. When a place opens you will be told (or, on an automatic waiting list, the place is offered to the first family for you).</div>` : ""}
         ${/awaiting bank/i.test(a.kind) ? `<div style="margin:14px 0 0;padding:12px 14px;background:#fff7e6;border:1px solid #f5d38a;border-radius:10px;font-size:14px;line-height:1.5;color:#7a5200"><b>Pending payment.</b> The place is held, but ${escapeHtml(a.bookerName)} has not paid yet. They are paying by bank transfer, so look for the reference <b>${escapeHtml(a.ref)}</b> in your bank, then open the booking and press <b>Mark paid</b>.</div>` : ""}
 
         <p style="font-size:14.5px;line-height:1.6;color:#3b3860;margin:16px 0 4px">
