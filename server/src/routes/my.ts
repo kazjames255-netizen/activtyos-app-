@@ -215,6 +215,12 @@ const cancelSchema = z.object({
   // Where the family wants any refund to land. Recorded on the request; the
   // money only moves when the provider approves it.
   refundPref: z.enum(["card", "wallet"]).optional(),
+  // Only used when the booking was paid by bank transfer (nothing to refund to a card): where to send the money.
+  refundBank: z.object({
+    accountName: z.string().trim().min(2).max(60),
+    sortCode: z.string().trim().regex(/^\d{2}[- ]?\d{2}[- ]?\d{2}$/, "Sort code should be 6 digits, like 12-34-56"),
+    accountNumber: z.string().trim().regex(/^\d{6,8}$/, "Account number should be 6 to 8 digits"),
+  }).optional(),
   // ── Partial (per-day) cancellation ──────────────────────────────────────
   // A strict subset of the booking's remaining days, released rather than the
   // whole booking. Single-child bookings send `days`, multi-child ones send
@@ -2914,6 +2920,11 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
         if (policyReason) b.cancel.msg = `${b.cancel.msg} (${policyReason})`;
       }
       if (parsed.data.refundPref && b.cancel) b.cancel.refundTo = parsed.data.refundPref;
+      // A bank-transfer booking has no card to refund to: the provider needs the family's account details to pay it back.
+      if (b.cancel && isBankMethod(b.method) && !b.voucherScheme && (b.cancel.amount ?? 0) > 0 && b.cancel.refundTo !== "wallet") {
+        if (!parsed.data.refundBank) throw new HttpError(400, "Please add your bank details so the provider can send your refund.");
+        b.cancel.refundBank = { ...parsed.data.refundBank, sortCode: parsed.data.refundBank.sortCode.replace(/\D/g, "").replace(/(\d{2})(\d{2})(\d{2})/, "$1-$2-$3") };
+      }
       // Credit note instead of a nil refund: the provider approves it like any
       // refund, and approval pays it into the wallet (never to card).
       if (creditNote > 0 && b.cancel && pendingBefore === 0) {

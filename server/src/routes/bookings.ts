@@ -712,6 +712,9 @@ bookings.post("/:ref/actions", async (req, res) => {
             b.declineReason = action.reason.trim();
       }
 
+      // The family's bank details (typed for a bank-transfer refund) are kept only until the provider has dealt with the request.
+      if ((action.type === "refund-approve" || action.type === "refund-decline") && b.cancel?.refundBank) delete b.cancel.refundBank;
+
       // Keep the block's place counts — total AND per day — in step with
       // the status transition (promote may intentionally exceed capacity —
       // operator's overbook). Firestore requires all reads before writes.

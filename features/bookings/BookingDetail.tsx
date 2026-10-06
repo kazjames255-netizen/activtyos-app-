@@ -621,6 +621,14 @@ export function BookingDetail({ booking }: { booking: Booking }) {
                 {b.cancel.msg && <span className="font-normal text-[var(--ink-2)]"> · {b.cancel.msg}</span>}
               </div>
             )}
+            {b.cancel?.refundBank && (
+              <div className="w-full rounded-lg border-2 border-[#3f78d8] bg-[#eef3ff] px-3 py-2.5 text-[13px] leading-[1.6] text-[#16306e]">
+                <div className="text-[11px] font-extrabold uppercase tracking-wide">{"\uD83C\uDFE6 "}{t("p7bk.bankRefundTitle")}</div>
+                <div>{t("p7pub.accountName")}: <b>{b.cancel.refundBank.accountName}</b></div>
+                <div>{t("p7pub.sortCode")}: <b className="num">{b.cancel.refundBank.sortCode}</b> · {t("p7pub.accountNumber")}: <b className="num">{b.cancel.refundBank.accountNumber}</b></div>
+                <div className="mt-1 text-[11px] text-[#4a5a8a]">{t("p7bk.bankRefundNote")}</div>
+              </div>
+            )}
             {isVoucher && (
               <div className="w-full rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] leading-[1.5] text-[#7a5b06]">
                 <Rich text={t("p7bd.voucherBox", { scheme: b.voucherScheme ?? t("p7bd.voucherWord"), scheme2: b.voucherScheme ?? t("p7bk.schemeThe") })} />

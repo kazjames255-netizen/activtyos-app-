@@ -121,6 +121,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const [otherReason, setOtherReason] = useState("");
   const [msg, setMsg] = useState("");
   const [refundPref, setRefundPref] = useState<"card" | "wallet">("card");
+  const [bk, setBk] = useState({ accountName: "", sortCode: "", accountNumber: "" });
   const [cfg, setCfg] = useState<{
     policies: NamedPolicy[];
     reasons: { id: string; label: string }[];
@@ -229,6 +230,9 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const paidByBank = !noBankRefund && /bank|transfer/i.test(booking.method ?? "");
   const paidOffline = !noBankRefund && !paidByBank && /cash|other/i.test(booking.method ?? "") && !/card/i.test(booking.method ?? "");
   const walletOn = cfg?.walletEnabled ?? false;
+  // A bank-transfer booking refunded to the bank (not wallet): we need the family's account details.
+  const needBank = paidByBank && refundDue && refundPref === "card";
+  const bankOk = bk.accountName.trim().length >= 2 && /^\d{2}[- ]?\d{2}[- ]?\d{2}$/.test(bk.sortCode.trim()) && /^\d{6,8}$/.test(bk.accountNumber.trim());
   // A voucher/TFC refund can only go to the wallet — force it there when the
   // provider offers store credit (otherwise the provider reimburses via the
   // scheme; there's nothing for the family to choose).
@@ -237,6 +241,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   }, [noBankRefund, walletOn]);
 
   async function submit() {
+    if (needBank && !bankOk) { setError(t("p7bk.bankRefundNeed")); return; }
     setBusy(true);
     setError(null);
     try {
@@ -281,6 +286,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
         reason: effReason || undefined,
         msg: [effReason, msg.trim()].filter(Boolean).join(" — ") || undefined,
         refundPref,
+        ...(needBank ? { refundBank: bk } : {}),
         resolution: partialMode ? res ?? undefined : undefined,
         ...partial,
       });
@@ -440,7 +446,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
           to a bank card, so those bookings are only ever offered the wallet (and
           only when the provider runs store credit). Everyone else may choose
           card vs wallet when the provider lets them. */}
-      {refundDue && (cfg?.letChoose || noBankRefund) && (() => {
+      {refundDue && (cfg?.letChoose || noBankRefund || paidByBank) && (() => {
         const options: readonly (readonly ["wallet" | "card", string])[] = noBankRefund
           ? (walletOn ? [["wallet", t("parent.walletCreditBtn")]] : [])
           : [
@@ -458,6 +464,21 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                     {refundPref === v ? "\u2713 " : ""}{l}
                   </button>
                 ))}
+              </div>
+            )}
+            {needBank && (
+              <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
+                <div className="text-[12.5px] font-extrabold text-[var(--ink)]">{t("p7bk.bankRefundTitle")}</div>
+                <p className="mt-1 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">{t("p7bk.bankRefundNote")}</p>
+                <div className="mt-2 grid gap-2">
+                  {([["accountName", "p7pub.accountName", "name", "text"], ["sortCode", "p7pub.sortCode", "off", "text"], ["accountNumber", "p7pub.accountNumber", "off", "text"]] as const).map(([k, lab, ac, ty]) => (
+                    <label key={k} className="block text-[11.5px] font-bold text-[var(--ink-2)]">{t(lab)}
+                      <input value={bk[k]} onChange={(e) => setBk((x) => ({ ...x, [k]: k === "accountName" ? e.target.value : e.target.value.replace(/[^\d -]/g, "") }))} autoComplete={ac} type={ty} inputMode={k === "accountName" ? "text" : "numeric"}
+                        placeholder={k === "sortCode" ? "12-34-56" : k === "accountNumber" ? "12345678" : ""}
+                        className="mt-0.5 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[14px] font-semibold text-[var(--ink)] outline-none" />
+                    </label>
+                  ))}
+                </div>
               </div>
             )}
             {noBankRefund && (
