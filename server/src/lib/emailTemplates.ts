@@ -285,14 +285,15 @@ export function cancellationRequestNotice(
   const vScheme = updated.voucherScheme;
   const isVoucher = !!vScheme || /voucher|tax-?free|tfc|childcare|haf/i.test(updated.method ?? "");
   const destTxt = updated.cancel?.refundTo === "wallet"
-    ? "to their WALLET (store credit)"
-    : isVoucher ? `via ${vScheme ?? (/tax-?free|tfc/i.test(updated.method ?? "") ? "Tax-Free Childcare" : "their voucher scheme")} (not a bank card)` : /bank|transfer/i.test(updated.method ?? "") ? "back to their BANK ACCOUNT (they paid by bank transfer)" : "back to their CARD";
+    ? "to their wallet"
+    : isVoucher ? `via ${vScheme ?? (/tax-?free|tfc/i.test(updated.method ?? "") ? "Tax-Free Childcare" : "their voucher scheme")} (not a bank card)` : /bank|transfer/i.test(updated.method ?? "") ? "to their bank account" : "back to their card";
   const refundTxt = updated.cancel?.refund === "none" || amt <= 0
     ? "No refund is due under your cancellation policy."
     : `${fmtMoney(amt)} refund requested ${destTxt}.`;
   // What the parent told us: the reason they picked and/or what they typed in "Anything to add?" (the stock fallback isn't a reason).
-  const said = (updated.cancel?.msg ?? "").trim();
-  const typed = said && said !== "Cancelled by the parent." ? said : "";
+  // The stored message also carries our own words (the stock "Cancelled by the parent." and the policy explanation in brackets): keep only the parent's.
+  const said = (updated.cancel?.msg ?? "").replace(/^Cancelled by the parent\.?\s*/i, "").replace(/\s*\((?:Cancelled|Credit note|Within|Outside)[^)]*\)\s*$/i, "").replace(/^\s*[—-]\s*/, "").trim();
+  const typed = said;
   const reasonPart = [updated.cancel?.reason, typed ? `"${typed}"` : ""].filter(Boolean).join(" — ");
   const reasonTxt = reasonPart ? ` Reason: ${reasonPart}${/[.!?]$/.test(reasonPart) ? "" : "."}` : "";
   return {

@@ -287,7 +287,7 @@ test("ME-005 cancellation request: card refund, amount, kids, ref, reason and ap
   assert.match(n.body, /Booking SSC-1042/);
   assert.match(n.body, /Asha, Ravi/);
   assert.match(n.body, /Reason: Illness\./);
-  assert.match(n.body, /£52\.50 refund requested back to their CARD\./);
+  assert.match(n.body, /£52\.50 refund requested back to their card\./);
 });
 
 test("ME-005 cancellation request: the parent's typed note is included, the stock fallback is not", () => {
@@ -295,7 +295,7 @@ test("ME-005 cancellation request: the parent's typed note is included, the stoc
   assert.match(typed.body, /Reason: "We are moving house"\./);
   const both = cancellationRequestNotice(booking({ cancel: { amount: 5, reason: "Illness", msg: "Chickenpox" } }), money);
   assert.match(both.body, /Reason: Illness — "Chickenpox"\./);
-  const stock = cancellationRequestNotice(booking({ cancel: { amount: 5, msg: "Cancelled by the parent." } }), money);
+  const stock = cancellationRequestNotice(booking({ cancel: { amount: 5, msg: "Cancelled by the parent. (Cancelled 21 days before it starts — your policy gives a full refund.)" } }), money);
   assert.doesNotMatch(stock.body, /Reason:/);
 });
 
@@ -309,7 +309,7 @@ test("ME-005 cancellation request: voucher / Tax-Free Childcare bookings are rou
   assert.match(v.body, /via Kidsco \(not a bank card\)/);
   const tfc = cancellationRequestNotice(booking({ method: "Tax-Free Childcare", cancel: { amount: 10 } }), money);
   assert.match(tfc.body, /via Tax-Free Childcare \(not a bank card\)/);
-  assert.doesNotMatch(tfc.body, /CARD/);
+  assert.doesNotMatch(tfc.body, /card\./);
 });
 
 test("ME-005 cancellation request: no refund due under policy says so and does not mention an amount", () => {
