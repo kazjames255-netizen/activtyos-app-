@@ -3227,31 +3227,17 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
       </div>
       <BookingOpens value={d.opensAt ?? ""} onChange={(v) => upd({ opensAt: v })} />
       <BookingCutoff value={d.bookingCutoffHours ?? ""} onChange={(v) => upd({ bookingCutoffHours: v })} />
-      <SectionHead icon="📋">{tr("p8lst.wbBookWaitHead")}</SectionHead>
+      <SectionHead icon="📋">{tr("p8lst.wbApproveHead")}</SectionHead>
       <div className="mb-2 flex flex-wrap gap-1.5">
         {book.map(([k, label]) => (
           <button key={k} type="button" onClick={() => upd({ bookingType: k })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold" style={d.bookingType === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{d.bookingType === k ? "✓ " : ""}{label}</button>
         ))}
       </div>
+      <SectionHead icon="⏳">{tr("p8lst.wbWaitHead")}</SectionHead>
       <YesNo label={tr("p8lst.wbWaitlistLabel")} value={d.waitlist} onChange={(v) => upd({ waitlist: v })} help={tr("p8lst.wbWaitlistHelp")} />
       {d.waitlist && (
         <div className="mt-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-          <div className="mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{tr("p8lst.wbWhenFrees")}</div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {([
-              ["auto", tr("p8lst.wbWaitAutoTitle"), tr("p8lst.wbWaitAutoDesc")],
-              ["manual", tr("p8lst.wbWaitManualTitle"), tr("p8lst.wbWaitManualDesc")],
-            ] as const).map(([k, label, desc]) => {
-              const on = (d.waitlistMode ?? "manual") === k; // unset = manual on the server too, so show what will really happen
-              return (
-                <button key={k} type="button" onClick={() => upd({ waitlistMode: k })} className="rounded-xl border p-3 text-start"
-                  style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
-                  <div className="text-[12.5px] font-extrabold">{on ? "● " : ""}{label}</div>
-                  <div className="mt-1 text-[11px] leading-[1.5] text-[var(--ink-3)]">{desc}</div>
-                </button>
-              );
-            })}
-          </div>
+          <YesNo label={tr("p8lst.wbAutoOfferLabel")} value={(d.waitlistMode ?? "manual") === "auto"} onChange={(v) => upd({ waitlistMode: v ? "auto" : "manual" })} help={tr("p8lst.wbAutoOfferHelp")} />
           <div className="mt-2.5 w-[150px]">
             <FieldLabel>{tr("p8lst.wbMaxWaiting")}</FieldLabel>
             <Input type="number" min={0} value={d.waitlistSize} onChange={(e) => upd({ waitlistSize: e.target.value })} placeholder={tr("p8lst.wbNoLimit")} className="w-full" />
