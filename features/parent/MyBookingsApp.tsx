@@ -1150,7 +1150,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
       {b.status === "Offered" && (
         <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2.5 text-[12.5px] text-[#7a5200]">
           <b>{t("parent.placeOpenedUp")}</b> {t("parent.placeHeldFor")}
-          {b.offerExpiresAt ? ` ${t("parent.until", { time: new Date(b.offerExpiresAt).toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" }) })}` : ""} —
+          {b.offerExpiresAt ? ` ${t("parent.until", { time: new Date(b.offerExpiresAt).toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) })}` : ""} —
           {t("parent.acceptOrPasses")}
           <div className="mt-2 flex gap-2">
             <Button sm variant="primary" disabled={offerBusy} onClick={() => answerOffer("accept-offer")}>

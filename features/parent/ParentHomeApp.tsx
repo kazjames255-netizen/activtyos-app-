@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { get as apiGet } from "@/lib/api";
+import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useT } from "@/lib/i18n/provider";
 import { dateLocale } from "@/lib/i18n/format";
@@ -33,6 +33,51 @@ type ListingBrief = {
 
 const NO_PLACE_YET = ["Waitlisted", "Offered", "Approval needed"];
 const isoToday = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+
+/** An offered place on the home page: everything needed to decide (child, date, price, time left) and one Accept button. */
+function OfferCard({ b, time, onAccepted }: { b: Booking; time: string | null; onAccepted: (ref: string) => void }) {
+  const t = useT();
+  const [now, setNow] = useState(() => Date.now());
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 15_000); return () => clearInterval(id); }, []);
+  const end = b.offerExpiresAt ? new Date(b.offerExpiresAt).getTime() : 0;
+  const left = end ? Math.max(0, end - now) : 0;
+  const mins = Math.floor(left / 60_000);
+  const clock = left <= 0 ? t("p7shell.offerExpired") : mins >= 60 ? t("p7shell.offerLeftHM", { h: Math.floor(mins / 60), m: mins % 60 }) : t("p7shell.offerLeftM", { m: Math.max(1, mins) });
+  const until = end ? new Date(end).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) : "";
+  const days = bookingDays(b).sort();
+  const when = days.length ? (days.length === 1 ? fmtDay(days[0]) : `${fmtDay(days[0])} to ${fmtDay(days[days.length - 1])}`) : b.dates;
+  const accept = async () => {
+    setBusy(true); setErr(null);
+    try {
+      await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/accept-offer${b.tenantId ? `?tenantId=${encodeURIComponent(b.tenantId)}` : ""}`, {});
+      onAccepted(b.ref);
+    } catch (e) { setErr(e instanceof Error ? e.message : t("parent.errSomethingWrong")); setBusy(false); }
+  };
+  return (
+    <div className="rounded-2xl border-2 p-4" style={{ borderColor: "#15b364", background: "var(--surface)" }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[13px] font-extrabold uppercase tracking-wide" style={{ color: "#0f7a43" }}>{t("p7shell.offerHead")}</div>
+          <div className="mt-0.5 text-[18px] font-extrabold leading-tight text-[var(--ink)]">{b.listing}</div>
+          <div className="mt-1 text-[15px] text-[var(--ink-2)]">{[b.child, when, time].filter(Boolean).join(" · ")}</div>
+          <div className="mt-0.5 text-[17px] font-extrabold text-[var(--ink)]">{money(b.amount ?? 0)} <span className="text-[13px] font-semibold text-[var(--ink-3)]">{t("p7shell.offerPayOnly")}</span></div>
+        </div>
+        <div className="shrink-0 rounded-xl px-3 py-2 text-center" style={{ background: left > 0 && mins < 20 ? "#fdebec" : "#e8f8ee", color: left > 0 && mins < 20 ? "#c02636" : "#0f6b34" }}>
+          <div className="text-[18px] leading-none" aria-hidden>{"\u23F1"}</div>
+          <div className="mt-1 text-[14px] font-extrabold leading-tight">{clock}</div>
+          {until && <div className="text-[11.5px] font-semibold opacity-80">{t("p7shell.offerUntil", { time: until })}</div>}
+        </div>
+      </div>
+      {err && <div className="mt-2 text-[13px] font-semibold text-[var(--red)]">{err}</div>}
+      <div className="mt-3 flex flex-wrap items-center gap-2.5">
+        <button type="button" onClick={accept} disabled={busy || left <= 0} className="min-h-[48px] rounded-full px-6 text-[15px] font-extrabold text-white disabled:opacity-50" style={{ background: "#15b364" }}>{t("p7shell.offerAccept")}</button>
+        <Link href={`/custdash/bookings?open=${encodeURIComponent(b.ref)}`} className="inline-flex min-h-[48px] items-center rounded-full border border-[var(--line)] px-5 text-[14px] font-bold text-[var(--ink)] no-underline">{t("p7shell.offerMore")}</Link>
+      </div>
+    </div>
+  );
+}
 
 function bookingDays(b: Booking): string[] {
   const own = b.days ?? [];
@@ -227,7 +272,9 @@ export function ParentHomeApp() {
           </div>
         )}
         {waiting > 0 && attn(waitingOne ? `/custdash/bookings?open=${encodeURIComponent(waitingOne.ref)}` : "/custdash/bookings", "#d97706", "\u23F3", h("Waiting", { n: waiting }), h("WaitingSub"))}
-        {offers > 0 && attn(offerOne ? `/custdash/bookings?open=${encodeURIComponent(offerOne.ref)}` : "/custdash/bookings", "#15b364", "🎟️", h("Offers", { n: offers }), h("OffersSub"))}
+        {live.filter((b) => b.status === "Offered").slice(0, 3).map((b) => (
+          <OfferCard key={b.ref} b={b} time={timeFor(b)} onAccepted={(ref) => { window.location.assign(`/custdash/bookings?pay=${encodeURIComponent(ref)}`); }} />
+        ))}
         {consentWaiting > 0 && attn("/custdash/trips", "#f59e0b", "🚌", h("Consent", { n: consentWaiting }), h("ConsentSub"))}
         {unread > 0 && attn("/custdash/messages", "#7a5af8", "✉️", h("Unread", { n: unread }), h("UnreadSub"))}
         {requests > 0 && attn("/custdash/bookings", "#0ea5a5", "🕑", h("Requests", { n: requests }), h("RequestsSub"))}
