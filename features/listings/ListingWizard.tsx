@@ -2128,6 +2128,25 @@ function CapacityStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft
           <AgeCaps d={d} upd={upd} />
         </RichCard>
       </div>
+      <div className="mt-4">
+      <SectionHead icon="⏳">{tr("p8lst.wbWaitHead")}</SectionHead>
+      <YesNo label={tr("p8lst.wbWaitlistLabel")} value={d.waitlist} onChange={(v) => upd({ waitlist: v })} help={tr("p8lst.wbWaitlistHelp")} />
+      {d.waitlist && (
+        <div className="mt-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+          <YesNo label={tr("p8lst.wbAutoOfferLabel")} value={(d.waitlistMode ?? "manual") === "auto"} onChange={(v) => upd({ waitlistMode: v ? "auto" : "manual" })} help={tr("p8lst.wbAutoOfferHelp")} />
+          {(d.waitlistMode ?? "manual") !== "auto" && (
+            <div className="mt-2 rounded-lg bg-[#fff7e0] px-2.5 py-2 text-[12px] font-semibold leading-[1.5] text-[#8a5300]">
+              {tr("p8lst.wbPreferNoAlert")}{" "}
+              <a href={`/${typeof window !== "undefined" ? window.location.pathname.split("/")[1] || "freelancer" : "freelancer"}/email?tab=automatic`} target="_blank" rel="noopener noreferrer" className="font-extrabold underline">{tr("p8lst.wbPreferNoAlertLink")}</a>
+            </div>
+          )}
+          <div className="mt-2.5 w-[150px]">
+            <FieldLabel>{tr("p8lst.wbMaxWaiting")}</FieldLabel>
+            <Input type="number" min={0} value={d.waitlistSize} onChange={(e) => upd({ waitlistSize: e.target.value })} placeholder={tr("p8lst.wbNoLimit")} className="w-full" />
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   );
 }
@@ -3233,17 +3252,6 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
           <button key={k} type="button" onClick={() => upd({ bookingType: k })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold" style={d.bookingType === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{d.bookingType === k ? "✓ " : ""}{label}</button>
         ))}
       </div>
-      <SectionHead icon="⏳">{tr("p8lst.wbWaitHead")}</SectionHead>
-      <YesNo label={tr("p8lst.wbWaitlistLabel")} value={d.waitlist} onChange={(v) => upd({ waitlist: v })} help={tr("p8lst.wbWaitlistHelp")} />
-      {d.waitlist && (
-        <div className="mt-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-          <YesNo label={tr("p8lst.wbAutoOfferLabel")} value={(d.waitlistMode ?? "manual") === "auto"} onChange={(v) => upd({ waitlistMode: v ? "auto" : "manual" })} help={tr("p8lst.wbAutoOfferHelp")} />
-          <div className="mt-2.5 w-[150px]">
-            <FieldLabel>{tr("p8lst.wbMaxWaiting")}</FieldLabel>
-            <Input type="number" min={0} value={d.waitlistSize} onChange={(e) => upd({ waitlistSize: e.target.value })} placeholder={tr("p8lst.wbNoLimit")} className="w-full" />
-          </div>
-        </div>
-      )}
       <SectionHead icon="📄">{tr("p8lst.wbCancelPolicy")}</SectionHead>
       <Select
         value={d.cancellationPolicyId ?? ownPolicies[0]?.id ?? ""}

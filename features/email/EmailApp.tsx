@@ -34,6 +34,8 @@ const AUTO_EMAILS: { key: AutoKey; title: string; sub: string; desc: string; cor
   { key: "bookings", title: "Bookings & approvals", sub: "Booking confirmed, request approved/declined & cancellation emails", core: true, desc: "Automatic emails to the parent for: booking confirmed, request-to-book approved, request declined, and cancellation confirmed. Core transactional emails — best left on." },
   { key: "payments", title: "Payments", sub: "Receipts, refunds & payment-failed emails", desc: "Sends a receipt when a payment succeeds, a note when a refund is issued, and an alert if a card payment fails." },
   { key: "sessionReminder", title: "Session reminders", sub: "A pre-session reminder with the key details & what to bring", timing: "sessionTiming", desc: "Sent before the session. Includes the child’s name, date, start & finish times, venue and what to bring. Any outstanding balance is shown; once it’s paid the price isn’t re-quoted." },
+  { key: "waitlistStartAlert", title: "You now have a waiting list", sub: "", desc: "" },
+  { key: "waitlistJoinAlert", title: "Email me every time someone joins a waiting list", sub: "", desc: "" },
   { key: "waitlistFreeAlert", title: "Alert me when a place frees up", sub: "", desc: "" },
   { key: "waitlist", title: "Waitlist", sub: "Tells a waitlisted parent when a place opens or they move up", desc: "When a place frees up, the next waitlisted parent is emailed an offer with a time limit to claim it. They can also be told when they move up the queue." },
   { key: "dayOf", title: "Day-of alerts", sub: "On-the-day arrival alerts (incl. logged incidents)", desc: "On-the-day operational alerts: a child not yet signed in 30 minutes after a session starts, and a notification when an incident is logged (the incident detail stays restricted to Head Office and the staff who logged it)." },
@@ -69,7 +71,7 @@ function AutoEmails({ settings, save }: { settings: TenantSettings; save: (patch
       <div className="flex flex-col gap-2.5">
         {AUTO_EMAILS.map((c) => {
           // Effective on-state: everything defaults ON except announcements (opt-in re-marketing).
-          const value = (ae[c.key] as boolean | undefined) ?? (c.key === "announcements" ? false : true);
+          const value = (ae[c.key] as boolean | undefined) ?? (c.key === "announcements" || c.key === "waitlistJoinAlert" ? false : true);
           return (
             <div key={c.key} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
               <div className="flex items-start gap-3">
@@ -2022,7 +2024,8 @@ export function EmailApp() {
   // Land on Compose when arriving from a hand-off (newsletter/register), else on
   // the Inbox (the manual's default Email view).
   type Tab = "inbox" | "campaigns" | "audiences" | "templates" | "automatic" | "analytics" | "compose" | "settings";
-  const [tab, setTab] = useState<Tab>(seedAud ? "campaigns" : seedMail ? "inbox" : nlDraft || presetTo ? "compose" : "inbox");
+  const seedTab = searchParams.get("tab");
+  const [tab, setTab] = useState<Tab>(seedTab === "automatic" ? "automatic" : seedAud ? "campaigns" : seedMail ? "inbox" : nlDraft || presetTo ? "compose" : "inbox");
   const savedImages: SavedImage[] = settings.emailAssets?.images ?? [];
   const momentById = new Map((moments ?? []).map((m) => [m.id, m]));
   // Read the live moment so a photo carries its own message + marketing quote
