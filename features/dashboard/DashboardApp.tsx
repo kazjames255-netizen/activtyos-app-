@@ -75,13 +75,13 @@ const monthOf = (b: Booking): string | null => {
 
 // The last few weeks as columns: a rounded brand-gradient bar per week, this week strongest, quiet weeks a faint stub with a dash
 // (a flat line of "£0 £0 £0" read as "nothing ever happened"). Values only sit above bars that have one.
-function WeekChart({ data, labels, caption, fmt, unit, onDark }: { data: number[]; labels: string[]; caption: string; fmt: (n: number) => string; unit?: string; onDark?: boolean }) {
+function WeekChart({ data, labels, caption, fmt, unit }: { data: number[]; labels: string[]; caption: string; fmt: (n: number) => string; unit?: string }) {
   const max = Math.max(...data, 0);
   const last = data.length - 1;
   return (
     <div className="mt-3">
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <span className="text-[10.5px] font-extrabold uppercase tracking-[0.08em]" style={{ color: onDark ? "rgba(255,255,255,.8)" : "var(--ink-3)" }}>{caption}</span>
+        <span className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{caption}</span>
         {max > 0 && <span className="text-[11px] font-semibold text-[var(--ink-3)]">{unit ?? ""}</span>}
       </div>
       <div className="flex items-end gap-2" style={{ height: 96 }}>
@@ -90,26 +90,26 @@ function WeekChart({ data, labels, caption, fmt, unit, onDark }: { data: number[
           const now = i === last;
           return (
             <div key={i} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1" style={{ height: "100%" }} title={`${labels[i]}: ${fmt(v)}`}>
-              <span className="text-[11.5px] font-extrabold tabular-nums" style={{ color: onDark ? "#fff" : v > 0 ? (now ? "var(--brand)" : "var(--ink-2)") : "var(--ink-3)", opacity: v > 0 ? (onDark && !now ? 0.8 : 1) : 0.55 }}>{v > 0 ? fmt(v) : "\u2013"}</span>
+              <span className="text-[11.5px] font-extrabold tabular-nums" style={{ color: v > 0 ? (now ? "var(--brand)" : "var(--ink-2)") : "var(--ink-3)", opacity: v > 0 ? 1 : 0.5 }}>{v > 0 ? fmt(v) : "\u2013"}</span>
               {v > 0
-                ? <div className="w-full rounded-t-lg" style={{ height: `${pct}%`, minHeight: 8, background: onDark ? (now ? "#fff" : "rgba(255,255,255,.55)") : now ? "linear-gradient(180deg,#5b8af0,#1d3a8f)" : "linear-gradient(180deg,#a9c0f0,#7fa0e6)" }} />
-                : <div className="w-full rounded-full" style={{ height: 4, background: onDark ? "rgba(255,255,255,.3)" : "var(--line)" }} />}
+                ? <div className="w-full rounded-t-lg" style={{ height: `${pct}%`, minHeight: 8, background: now ? "linear-gradient(180deg,#5b8af0,#1d3a8f)" : "linear-gradient(180deg,#a9c0f0,#7fa0e6)" }} />
+                : <div className="w-full rounded-full" style={{ height: 4, background: "var(--line)" }} />}
             </div>
           );
         })}
       </div>
-      <div className="mt-1.5 flex gap-2 text-[11px] font-bold" style={{ color: onDark ? "rgba(255,255,255,.8)" : "var(--ink-3)" }}>{labels.map((l, i) => <span key={i} className="min-w-0 flex-1 text-center" style={{ color: onDark ? "#fff" : i === last ? "var(--brand)" : undefined, fontWeight: i === last ? 800 : undefined }}>{i === last ? "This week" : l}</span>)}</div>
+      <div className="mt-1.5 flex gap-2 text-[11px] font-bold text-[var(--ink-3)]">{labels.map((l, i) => <span key={i} className="min-w-0 flex-1 text-center" style={{ color: i === last ? "var(--brand)" : undefined }}>{i === last ? "This week" : l}</span>)}</div>
     </div>
   );
 }
 const poundsExact = (n: number) => (n >= 100 ? `£${Math.round(n)}` : `£${n.toFixed(2)}`);
 function MiniLine({ data, labels, caption }: { data: number[]; labels: string[]; caption: string }) {
-  return <WeekChart data={data} labels={labels} caption={caption} fmt={poundsExact} onDark />;
+  return <WeekChart data={data} labels={labels} caption={caption} fmt={poundsExact} />;
 }
 
 // Bookings per week, same chart.
 function MiniBars({ data, labels, caption }: { data: number[]; labels: string[]; caption: string }) {
-  return <WeekChart data={data} labels={labels} caption={caption} fmt={(n) => String(n)} onDark />;
+  return <WeekChart data={data} labels={labels} caption={caption} fmt={(n) => String(n)} />;
 }
 
 // A single-percentage ring gauge — white on a coloured KPI tile (à la the "Tasks 33%" dial).
@@ -537,21 +537,21 @@ export function DashboardApp() {
       {/* Live operational KPIs (from /api/dashboard) */}
       <CollapsibleStats id="dashboard-kpis" className="mt-4" label={t("dashboard.liveKpis")}>
       <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile vivid label={t("dashboard.newBookings")} icon="📈" value={`${a.weekly.reduce((s, v) => s + v, 0)}`} sub={t("dashboard.inLast5Weeks")} grad={GRAD.blue}>
+        <Tile label={t("dashboard.newBookings")} icon="📈" value={`${a.weekly.reduce((s, v) => s + v, 0)}`} sub={t("dashboard.inLast5Weeks")} grad={GRAD.blue}>
           {bookings && <MiniBars data={a.weekly} labels={a.weeklyLabels} caption={t("dashboard.perWeek")} />}
         </Tile>
-        <Tile vivid
+        <Tile
           label={t("dashboard.spacesLeftLive")}
           icon="🎟️"
           value={`${Math.max(0, d.occupancy.capacity - d.occupancy.booked)}`}
           sub={t("dashboard.spacesLeftSub", { pct: 100 - d.occupancy.pct, booked: d.occupancy.booked, capacity: d.occupancy.capacity })}
           grad={GRAD.teal}
-          aside={<Ring pct={d.occupancy.pct} label={`${d.occupancy.pct}%`} stroke="#fff" track="rgba(255,255,255,.28)" />}
+          aside={<Ring pct={d.occupancy.pct} label={`${d.occupancy.pct}%`} />}
         />
-        <Tile vivid label={t("dashboard.takenThisWeek")} icon="💷" value={money(d.money.takenThisWeek)} sub={pickPlural(t, locale, "p7dash.newBk", d.bookings.newThisWeek)} grad={GRAD.green}>
+        <Tile label={t("dashboard.takenThisWeek")} icon="💷" value={money(d.money.takenThisWeek)} sub={pickPlural(t, locale, "p7dash.newBk", d.bookings.newThisWeek)} grad={GRAD.green}>
           {bookings && <MiniLine data={a.weeklyIncome} labels={a.weeklyLabels} caption={t("dashboard.collectedLast5Weeks")} />}
         </Tile>
-        <Tile vivid
+        <Tile
           label={t("dashboard.outstanding")}
           icon="⏳"
           value={money(d.money.outstanding)}
@@ -801,10 +801,8 @@ export function DashboardApp() {
                       className="-mx-1 flex items-center gap-2 rounded-lg px-1 py-2 text-start text-[12.5px] transition-colors hover:bg-[var(--panel)]"
                       title={t("dashboard.openThisBooking")}
                     >
-                      <span className="grid h-9 w-9 flex-none place-items-center rounded-full text-[13px] font-extrabold text-white" style={{ background: actColor(b.child || b.booker || "?") }} aria-hidden>{((b.child || b.booker || "?").trim().match(/\p{L}/u)?.[0] ?? "?").toUpperCase()}</span>
-                      <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-extrabold">{b.child || b.booker}</span><span className="block truncate text-[12px] text-[var(--ink-3)]">{b.listing}</span></span>
-                      <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: b.status === "Confirmed" ? "#e7f8ee" : b.status === "Waitlisted" || b.status === "Offered" ? "#fdf3d8" : b.status === "Cancelled" || b.status === "Declined" ? "#eceff6" : "#eaf0fc", color: b.status === "Confirmed" ? "#0f7a43" : b.status === "Waitlisted" || b.status === "Offered" ? "#8a5300" : b.status === "Cancelled" || b.status === "Declined" ? "#4a4763" : "#1d3a8f" }}>{w(b.status)}</span>
-                      <span className="whitespace-nowrap text-[13.5px] font-extrabold tabular-nums">{money(b.amount)}</span>
+                      <span className="min-w-0 flex-1 truncate"><b>{b.child || b.booker}</b> <span className="text-[var(--ink-3)]">· {b.listing}</span></span>
+                      <span className="whitespace-nowrap font-extrabold tabular-nums">{money(b.amount)}</span>
                     </button>
                   ))}
                 </div>
