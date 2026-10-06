@@ -289,6 +289,18 @@ export function isUnreconciled(b: Booking): boolean {
   return !settled && ((b.amount ?? 0) > 0 || !!b.voucherScheme);
 }
 
+/** The payment route a booking is paying by, as a tidy bucket (same buckets as the Reconciliation page). */
+export function payMethodCat(b: Booking): string {
+  const m = (b.method ?? "").toLowerCase();
+  if (/tax.?free|tfc/.test(m) || /tax.?free|\btfc\b/i.test(b.voucherScheme ?? "")) return "Tax-Free Childcare";
+  if (b.voucherScheme || /voucher/.test(m)) return "Childcare vouchers";
+  if (/cash/.test(m)) return "Cash";
+  if (/bank|transfer/.test(m)) return "Bank transfer";
+  if (/haf|funded/.test(m) || b.pay === "Funded") return "HAF / funded";
+  if (/card/.test(m)) return "Card";
+  return "Other";
+}
+
 export function matchesFilter(b: Booking, f: BookingFilter): boolean {
   switch (f) {
     case "all":

@@ -11,6 +11,7 @@ import {
   attendeeCount,
   bookingKids,
   matchesFilter,
+  payMethodCat,
   matchesSearch,
   money,
   payLabel,
@@ -127,6 +128,9 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   const season = useBookingsStore((s) => s.seasonFilter);
   const setSeason = useBookingsStore((s) => s.setSeasonFilter);
   const [exporting, setExporting] = useState(false);
+  // Sub-filter by how they are paying, under the "Unpaid / invoiced" and "Unreconciled" tabs.
+  const [payCat, setPayCat] = useState("");
+  useEffect(() => { setPayCat(""); }, [filter]);
 
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
@@ -144,6 +148,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
       (b) =>
         matchesFilter(b, filter) &&
         matchesSearch(b, query) &&
+        (!payCat || payMethodCat(b) === payCat) &&
         (!listing || b.listing === listing) &&
         // A booking is "in" a season when its listing's seasonId matches.
         (!seasonObj || (!!b.listingId && listingSeason[b.listingId] === seasonObj.id)) &&
@@ -154,7 +159,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
     // seen. Sorted here rather than relying on whatever order the API returns.
     .sort(byNewest),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [bookings, filter, query, listing, seasonObj, listingSeason, bounds, day]);
+  [bookings, filter, query, payCat, listing, seasonObj, listingSeason, bounds, day]);
 
   // Counts come from what the status tab and search already left, so a
   // listing showing "(3)" means three you can actually get to.
@@ -228,6 +233,26 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
           );
         })}
       </div>
+
+      {/* How are they paying? Only where money is still owed / unmatched. */}
+      {(filter === "unpaid" || filter === "unreconciled") && (() => {
+        const base = bookings.filter((b) => matchesFilter(b, filter));
+        const counts = new Map<string, number>();
+        for (const b of base) counts.set(payMethodCat(b), (counts.get(payMethodCat(b)) ?? 0) + 1);
+        const order = ["Bank transfer", "Card", "Cash", "Childcare vouchers", "Tax-Free Childcare", "HAF / funded", "Other"];
+        const label = (c: string) => c === "Bank transfer" ? t("p8fin.recMBank") : c === "Card" ? t("p8fin.recMCard") : c === "Cash" ? t("p8fin.recMCash") : c === "Childcare vouchers" ? t("p8fin.recMVouchers") : c === "HAF / funded" ? t("p8fin.recMHaf") : c === "Other" ? t("p8fin.catOther") : c;
+        const chips: [string, string, number][] = [["", t("p8fin.recStatusAll"), base.length], ...order.filter((c) => counts.has(c)).map((c) => [c, label(c), counts.get(c)!] as [string, string, number])];
+        return (
+          <div className="mb-2.5 flex flex-wrap items-center gap-[6px]">
+            {chips.map(([key, text, n]) => (
+              <button key={key || "all"} onClick={() => setPayCat(key)}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-[4px] text-[12px] font-bold ${payCat === key ? "border-[var(--brand-2)] bg-[var(--brand-2)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]"}`}>
+                {text} <span className={payCat === key ? "opacity-80" : "text-[var(--ink-3)]"}>{n}</span>
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Search */}
       <div className="mb-2.5">
