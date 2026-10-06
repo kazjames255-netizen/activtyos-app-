@@ -1861,10 +1861,21 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
       <RichCard icon="📍" title={tr("p8lst.waWhereWhen")} subtitle={tr("p8lst.waWhereWhenSub")}>
       <SectionHead icon="🚗">{tr("p8lst.waDeliver")}</SectionHead>
       <div className="mb-2 flex flex-wrap gap-1.5">
-        {([["venue", tr("p8lst.waDel_venue")], ["home-visit", tr("p8lst.waDel_home")], ["both", tr("p8lst.waDel_both")]] as [NonNullable<WizardDraft["deliveryMode"]>, string][]).map(([mode, label]) => {
-          const on = (d.deliveryMode ?? "venue") === mode;
+        {([["venue", tr("p8lst.waDel_venue")], ["online", "💻 " + tr("p9tx.delOnline")], ["home-visit", tr("p8lst.waDel_home")], ["both", tr("p8lst.waDel_both")]] as [NonNullable<WizardDraft["deliveryMode"]> | "online", string][]).map(([mode, label]) => {
+          const isOnl = isOnlineVenue(local.venues.find((v) => v.id === d.venueId)) && (d.deliveryMode ?? "venue") === "venue";
+          const on = mode === "online" ? isOnl : mode === "venue" ? !isOnl && (d.deliveryMode ?? "venue") === "venue" : (d.deliveryMode ?? "venue") === mode;
           return (
-            <button key={mode} type="button" onClick={() => upd({ deliveryMode: mode, ...(mode === "home-visit" && !d.coverageArea ? { coverageArea: { mode: "postcodePrefixes", postcodePrefixes: [] } } : {}) })}
+            <button key={mode} type="button" onClick={() => {
+              if (mode === "online") {
+                // Online sessions have no address: use (or create) the account's "Online" place, so every page already knows how to show it.
+                const existing = local.venues.find((v) => isOnlineVenue(v));
+                const id = existing?.id ?? uid();
+                if (!existing) patchLocal((st) => ({ ...st, venues: [...st.venues, { id, name: "Online", address: "", kind: "online" }] }));
+                upd({ deliveryMode: "venue", venueId: id, coverageArea: null });
+              } else {
+                upd({ deliveryMode: mode, ...(mode === "venue" && isOnl ? { venueId: null } : {}), ...(mode === "home-visit" && !d.coverageArea ? { coverageArea: { mode: "postcodePrefixes", postcodePrefixes: [] } } : {}) });
+              }
+            }}
               className="rounded-full border px-3 py-1.5 text-[12px] font-bold"
               style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
               {on ? "✓ " : ""}{label}
@@ -1879,7 +1890,20 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
         </div>
       )}
 
-      {(d.deliveryMode ?? "venue") !== "home-visit" && (<>
+      {(d.deliveryMode ?? "venue") === "venue" && isOnlineVenue(local.venues.find((v) => v.id === d.venueId)) && (() => {
+        const ov = local.venues.find((v) => v.id === d.venueId)!;
+        return (
+          <div className="mb-3 rounded-xl border-2 border-[#2f6bd8] bg-[#eef4ff] p-3">
+            <div className="text-[13px] font-extrabold text-[#1d3a8f]">💻 {tr("p9tx.onlineTitle")}</div>
+            <div className="mt-0.5 text-[12px] font-semibold text-[#3d4763]">{tr("p9tx.onlineNote")}</div>
+            <div className="mt-2.5 opacity-60"><FieldLabel>{tr("p8lst.waVenue")}</FieldLabel><Select value={ov.id} disabled className="w-full max-w-[360px]"><option value={ov.id}>{ov.name}: {tr("p9tx.noAddressNeeded")}</option></Select></div>
+            <div className="mt-2.5"><FieldLabel>{tr("p9tx.howJoin")}</FieldLabel>
+              <textarea rows={3} value={ov.directions ?? ""} onChange={(e) => patchLocal((st) => ({ ...st, venues: st.venues.map((v) => (v.id === ov.id ? { ...v, directions: e.target.value } : v)) }))}
+                placeholder={tr("p9tx.howJoinPh")} className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[var(--brand-2)]" /></div>
+          </div>
+        );
+      })()}
+      {(d.deliveryMode ?? "venue") !== "home-visit" && !(((d.deliveryMode ?? "venue") === "venue") && isOnlineVenue(local.venues.find((v) => v.id === d.venueId))) && (<>
         <SectionHead icon="📍">{tr("p8lst.waVenue")}</SectionHead>
         <Select value={d.venueId ?? ""} onChange={(e) => upd({ venueId: e.target.value || null })} className="mb-1 w-full max-w-[360px]">
           <option value="">{tr("p8lst.waSelectVenue")}</option>
