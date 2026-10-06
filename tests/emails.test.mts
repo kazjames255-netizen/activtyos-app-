@@ -285,52 +285,61 @@ test("ME-005 cancellation request: card refund, amount, kids, ref, reason and ap
   const n = cancellationRequestNotice(b, money);
   assert.equal(n.title, "Priya wants to cancel");
   assert.equal(n.subject, "Priya Patel — cancellation request");
-  assert.match(n.body, /Asha, Ravi/);
-  assert.match(n.body, /Mon 20 Jul/);
-  assert.match(n.body, /£52\.50 refund requested back to card\./);
-  assert.match(n.body, /Reason: Illness\./);
+  assert.match(n.detail, /Asha, Ravi/);
+  assert.match(n.detail, /Mon 20 Jul/);
+  assert.match(n.detail, /£52\.50 refund requested back to card\./);
+  assert.match(n.detail, /Reason: Illness\./);
 });
 
 test("ME-005 cancellation request: the parent's typed note is included, the stock fallback is not", () => {
   const typed = cancellationRequestNotice(booking({ cancel: { amount: 5, msg: "We are moving house" } }), money);
-  assert.match(typed.body, /Reason: "We are moving house"\./);
+  assert.match(typed.detail, /Reason: "We are moving house"\./);
   const both = cancellationRequestNotice(booking({ cancel: { amount: 5, reason: "Illness", msg: "Chickenpox" } }), money);
-  assert.match(both.body, /Reason: Illness — "Chickenpox"\./);
+  assert.match(both.detail, /Reason: Illness — "Chickenpox"\./);
   const stock = cancellationRequestNotice(booking({ cancel: { amount: 5, msg: "Cancelled by the parent. (Cancelled 21 days before it starts — your policy gives a full refund.)" } }), money);
-  assert.doesNotMatch(stock.body, /Reason:/);
+  assert.doesNotMatch(stock.detail, /Reason:/);
 });
 
 test("ME-005 cancellation request: wallet destination is named WALLET", () => {
   const n = cancellationRequestNotice(booking({ cancel: { refundTo: "wallet", amount: 20 } }), money);
-  assert.match(n.body, /£20\.00 refund requested to wallet\./);
+  assert.match(n.detail, /£20\.00 refund requested to wallet\./);
 });
 
 test("ME-005 cancellation request: voucher / Tax-Free Childcare bookings are routed via the scheme, never 'CARD'", () => {
   const v = cancellationRequestNotice(booking({ voucherScheme: "Kidsco", cancel: { amount: 10 } }), money);
-  assert.match(v.body, /via Kidsco\./);
+  assert.match(v.detail, /via Kidsco\./);
   const tfc = cancellationRequestNotice(booking({ method: "Tax-Free Childcare", cancel: { amount: 10 } }), money);
-  assert.match(tfc.body, /via Tax-Free Childcare\./);
-  assert.doesNotMatch(tfc.body, /card\./);
+  assert.match(tfc.detail, /via Tax-Free Childcare\./);
+  assert.doesNotMatch(tfc.detail, /card\./);
 });
 
 test("ME-005 cancellation request: no refund due under policy says so and does not mention an amount", () => {
   const n = cancellationRequestNotice(booking({ cancel: { refund: "none", amount: 0 } }), money);
-  assert.match(n.body, /No refund due\./);
-  assert.doesNotMatch(n.body, /£/);
+  assert.match(n.detail, /No refund due\./);
+  assert.doesNotMatch(n.detail, /£/);
 });
 
 test("ME-005 cancellation request: falls back to the child name, then booker, when there is no kids list; no junk strings", () => {
   const n1 = cancellationRequestNotice(booking({ kids: undefined, dates: undefined, cancel: { amount: 5 } }), money);
-  assert.match(n1.body, /^Asha · /);
+  assert.match(n1.detail, /^Asha · /);
   const n2 = cancellationRequestNotice(booking({ kids: undefined, dates: undefined, child: "", cancel: { amount: 5 } }), money);
-  assert.match(n2.body, /^Priya Patel · /);
-  noJunk("n1", n1.title + n1.subject + n1.body);
-  noJunk("n2", n2.title + n2.subject + n2.body);
+  assert.match(n2.detail, /^Priya Patel · /);
+  noJunk("n1", n1.title + n1.subject + n1.detail);
+  noJunk("n2", n2.title + n2.subject + n2.detail);
 });
 
 test("ME-005 cancellation request: duplicate kid names are listed once", () => {
   const n = cancellationRequestNotice(booking({ kids: [{ name: "Asha" }, { name: "Asha" }], dates: undefined, cancel: { amount: 5 } }), money);
-  assert.match(n.body, /^Asha · /);
+  assert.match(n.detail, /^Asha · /);
+});
+
+
+test("ME-005 bell line is tiny: day and money only (it gets cut off after about 35 characters)", () => {
+  const n = cancellationRequestNotice(booking({ days: ["2026-10-26"], cancel: { amount: 0.3, refund: "full" } }), money);
+  assert.equal(n.title, "Priya wants to cancel");
+  assert.equal(n.body, "Mon 26 Oct · £0.30");
+  const none = cancellationRequestNotice(booking({ days: ["2026-10-26"], cancel: { amount: 0, refund: "none" } }), money);
+  assert.equal(none.body, "Mon 26 Oct · no refund");
 });
 
 // ───────────────────────── ME-006 refund approved ─────────────────────────

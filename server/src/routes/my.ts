@@ -2181,7 +2181,8 @@ my.post("/bookings", async (req, res) => {
                 category: "booking",
                 key: "waitlist-started",
                 title: `New waiting list · ${listing.name}`,
-                body: `${kids || bookerName} · ${shortWhen(primary)} · first on the list. No free place yet. You will be told when one opens. (You will not get another email when more families join.)`,
+                body: `${shortWhen(primary)} · first on the list`,
+                emailHtml: `<p>${(kids || bookerName).replace(/&/g, "&amp;").replace(/</g, "&lt;")} is the first family on the waiting list for ${listing.name.replace(/&/g, "&amp;").replace(/</g, "&lt;")} (${shortWhen(primary)}). There is no free place right now, so there is nothing to do yet. You will be told the moment one opens. You will not get another email when more families join.</p>`,
                 subject: `You now have a waiting list for ${listing.name}`,
                 href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
                 ref: primary.ref,
@@ -2197,7 +2198,7 @@ my.post("/bookings", async (req, res) => {
           ...(waitlisted && !wlPrefs?.waitlistJoinAlert ? { bellOnly: true } : {}),
           title: waitlisted ? `${firstWord(kids || bookerName)} joined the waiting list` : `${kind} · ${primary.ref} · ${bookerName}`,
           body: waitlisted
-            ? `${listing.name} · ${shortWhen(primary)} · no free place yet, nothing to do. You will be told when one opens.`
+            ? `${shortWhen(primary)} · ${listing.name}`
             : `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(input.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
           subject: `${BRAND}: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
           href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
@@ -3020,6 +3021,7 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
         key: "booking-cancel",
         title: notice.title,
         body: notice.body,
+        emailHtml: `<p>${notice.detail.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`,
         subject: notice.subject,
         href: `/company/bookings?ref=${encodeURIComponent(updated.ref)}`,
         ref: updated.ref,

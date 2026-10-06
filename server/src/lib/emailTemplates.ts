@@ -288,7 +288,7 @@ export function familyBookingCreatedEmail(
 export function cancellationRequestNotice(
   updated: Booking,
   fmtMoney: (n: number) => string,
-): { title: string; body: string; subject: string } {
+): { title: string; body: string; detail: string; subject: string } {
   const kids = [...new Set((updated.kids ?? []).map((k) => k.name).filter(Boolean))].join(", ") || updated.child || updated.booker;
   const amt = updated.cancel?.amount ?? 0;
   // Say WHERE the family asked the money to go — wallet, card, or a scheme.
@@ -309,9 +309,12 @@ export function cancellationRequestNotice(
   const said = (updated.cancel?.msg ?? "").replace(/^Cancelled by the parent\.?\s*/i, "").replace(/\s*\((?:Cancelled|Credit note|Within|Outside)[^)]*\)\s*$/i, "").replace(/^\s*[—-]\s*/, "").trim();
   const reasonPart = [updated.cancel?.reason, said ? `"${said}"` : ""].filter(Boolean).join(" — ");
   const reasonTxt = reasonPart ? ` Reason: ${reasonPart}${/[.!?]$/.test(reasonPart) ? "" : "."}` : "";
+  // The bell line is deliberately tiny (it gets cut off after ~35 characters): who, day, money. The email carries the full detail.
+  const bellMoney = updated.cancel?.refund === "none" || amt <= 0 ? "no refund" : fmtMoney(amt);
   return {
     title: `${firstWord(updated.booker)} wants to cancel`,
-    body: `${kids} · ${shortWhen(updated)} · ${refundTxt}${reasonTxt}`,
+    body: `${shortWhen(updated)} · ${bellMoney}`,
+    detail: `${kids} · ${shortWhen(updated)} · ${refundTxt}${reasonTxt}`,
     subject: `${updated.booker} — cancellation request`,
   };
 }
