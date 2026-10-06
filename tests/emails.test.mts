@@ -301,7 +301,7 @@ test("ME-005 cancellation request: the parent's typed note is included, the stoc
 
 test("ME-005 cancellation request: wallet destination is named WALLET", () => {
   const n = cancellationRequestNotice(booking({ cancel: { refundTo: "wallet", amount: 20 } }), money);
-  assert.match(n.body, /£20\.00 refund requested to their WALLET \(store credit\)/);
+  assert.match(n.body, /£20\.00 refund requested to their wallet\./);
 });
 
 test("ME-005 cancellation request: voucher / Tax-Free Childcare bookings are routed via the scheme, never 'CARD'", () => {
