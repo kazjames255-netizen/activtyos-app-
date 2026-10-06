@@ -21,7 +21,7 @@ import { useT } from "@/lib/i18n/provider";
  *              the context of the club their child attends, so the provider is
  *              asked for before the credentials.
  */
-type Provider = { id: string; name: string; town?: string; postcode?: string };
+type Provider = { id: string; name: string; town?: string; postcode?: string; emailHint?: string; fullAddress?: string };
 
 // The directory is public (the parent has no account yet), so this bypasses the
 // lib/api token wrapper — but it still has to reach the Express API, not Next.
@@ -239,9 +239,14 @@ function ParentAuth() {
                         style={{ background: i === hi ? "var(--brand-soft)" : "transparent" }}
                       >
                         <span className="text-[13.5px] font-extrabold" style={{ color: "var(--ink)" }}>{p.name}</span>
-                        {(p.town || p.postcode) && (
+                        {(p.fullAddress || p.town || p.postcode) && (
                           <span className="text-[11.5px]" style={{ color: "var(--ink-2)" }}>
-                            &#128205; {[p.town, p.postcode].filter(Boolean).join(" \u00b7 ")}
+                            &#128205; {p.fullAddress ? p.fullAddress : [p.town, p.postcode].filter(Boolean).join(" \u00b7 ")}
+                          </span>
+                        )}
+                        {p.emailHint && (
+                          <span className="text-[11.5px]" style={{ color: "var(--ink-3)" }}>
+                            &#9993; {p.emailHint}
                           </span>
                         )}
                       </button>

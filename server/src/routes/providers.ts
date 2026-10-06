@@ -20,7 +20,15 @@ const outward = (pc: string) => { const c = pc.replace(/\s+/g, "").toUpperCase()
 
 export const providersPublic = Router();
 
-type Provider = { id: string; name: string; town?: string; postcode?: string };
+/** "sam.taylor@riverside.co.uk" -> "sa***@riverside.co.uk": enough to tell two similarly named providers apart, never the usable address. */
+function maskEmail(e?: string): string | undefined {
+  const m = /^([^@\s]+)@([^@\s]+\.[^@\s]+)$/.exec((e ?? "").trim());
+  if (!m) return undefined;
+  const local = m[1];
+  return `${local.slice(0, Math.min(2, Math.max(1, local.length - 1)))}***@${m[2].toLowerCase()}`;
+}
+
+type Provider = { id: string; name: string; town?: string; postcode?: string; emailHint?: string; fullAddress?: string };
 /** What a row can be matched on: the trading name AND the registered one. */
 type Row = Provider & { terms: string[] };
 
@@ -89,7 +97,7 @@ async function directory(): Promise<Row[]> {
       const t = doc.data() as { name?: string; postcode?: string };
       const settings = (libs[i]?.data()?.settings ?? {}) as {
         providerName?: string;
-        billing?: { businessName?: string; address?: string };
+        billing?: { businessName?: string; address?: string; email?: string; showAddressPublicly?: boolean };
       };
       // Same precedence as the portal chrome (/api/me): the name the provider
       // chose to trade under wins over the tenant doc's original name.
@@ -108,7 +116,9 @@ async function directory(): Promise<Row[]> {
       if (seen.has(key)) return;
       seen.add(key);
 
-      rows.push({ id: doc.id, name, town: townFrom(settings.billing?.address), postcode, terms });
+      // The full address is shown ONLY when the provider ticked 'show my address when parents search' in Setup. Default: never.
+      const fullAddress = settings.billing?.showAddressPublicly === true ? (settings.billing?.address ?? "").replace(/\s+/g, " ").trim() || undefined : undefined;
+      rows.push({ id: doc.id, name, town: townFrom(settings.billing?.address), postcode, terms, emailHint: maskEmail(settings.billing?.email), fullAddress });
     });
 
     rows.sort((a, b) => a.name.localeCompare(b.name));
@@ -131,7 +141,7 @@ providersPublic.get("/", async (req, res) => {
   if (typeof req.query.id === "string" && req.query.id.trim()) {
     try {
       const hit = (await directory()).find((r) => r.id === req.query.id);
-      res.json(hit ? [{ id: hit.id, name: hit.name, town: hit.town, postcode: hit.postcode ? outward(hit.postcode) : hit.postcode }] : []);
+      res.json(hit ? [{ id: hit.id, name: hit.name, town: hit.town, postcode: hit.postcode ? outward(hit.postcode) : hit.postcode, emailHint: hit.emailHint, fullAddress: hit.fullAddress }] : []);
     } catch { res.status(503).json({ error: "Provider directory unavailable" }); }
     return;
   }
@@ -168,7 +178,7 @@ providersPublic.get("/", async (req, res) => {
       // Outward code only ("MK14", not "MK14 6BN"): for a sole trader the
       // business postcode is often their home. Enough to tell two same-named
       // providers apart; matching above uses the same outward code.
-      .map(({ r }): Provider => ({ id: r.id, name: r.name, town: r.town, postcode: r.postcode ? outward(r.postcode) : r.postcode }));
+      .map(({ r }): Provider => ({ id: r.id, name: r.name, town: r.town, postcode: r.postcode ? outward(r.postcode) : r.postcode, emailHint: r.emailHint, fullAddress: r.fullAddress }));
 
     res.json(scored);
   } catch (err) {

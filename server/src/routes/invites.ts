@@ -282,6 +282,27 @@ invites.post("/:token/resend", async (req, res) => {
 // Now it disables the account they joined with: every API call is refused
 // (middleware/role.ts attachRole) and their sessions are revoked.
 const statusSchema = z.object({ status: z.enum(["active", "deactivated"]) });
+/** A person whose account is switched off has left the team: take them out of the "meet the team" lists parents read (the library's staff
+ *  list, head office's or their franchise's) and off every listing's on-site staff, so a leaver is never shown to families. Team members are
+ *  stored as `u_<uid>` in those lists. Switching them back on does not re-add them: the provider re-assigns them if they want. */
+async function dropLeaverFromParentPages(tenantId: string, uid: string, franchiseId: string | null | undefined): Promise<number> {
+  const sid = `u_${uid}`;
+  const key = franchiseId ? `${tenantId}__fr__${franchiseId}` : tenantId;
+  for (const k of new Set([key, tenantId])) {
+    const ref = db.collection("libraries").doc(k);
+    const snap = await ref.get();
+    const staff = snap.exists ? (snap.get("staff") as { id?: string }[] | undefined) : undefined;
+    if (Array.isArray(staff) && staff.some((m) => m.id === sid)) await ref.update({ staff: staff.filter((m) => m.id !== sid) });
+  }
+  const listings = await db.collection("listings").where("tenantId", "==", tenantId).get();
+  let n = 0;
+  for (const d of listings.docs) {
+    const ids = d.get("staffIds") as string[] | undefined;
+    if (Array.isArray(ids) && ids.includes(sid)) { await d.ref.update({ staffIds: ids.filter((x) => x !== sid) }); n++; }
+  }
+  return n;
+}
+
 /** Unassign a person's shifts from today on, in every rota of this tenant
  *  (head office's and each franchise's). Returns how many were released. */
 async function releaseFutureShifts(tenantId: string, name: string): Promise<number> {
@@ -332,6 +353,7 @@ invites.patch("/:token/status", async (req, res) => {
       // Their future shifts go back to "needs staff" rather than sitting on a
       // rota under someone who's left (acceptance test d16s6).
       if (off) released = await releaseFutureShifts(req.auth!.tenantId!, String(u.get("name") ?? found.d.name ?? "")).catch(() => 0);
+      if (off && found.d.role === "staff") await dropLeaverFromParentPages(req.auth!.tenantId!, uid, (u.get("franchiseId") as string | null | undefined) ?? null).catch((e) => console.error("[invites] drop leaver:", (e as Error).message));
       // Switching a FRANCHISE off switches off its whole team too — its staff carry the franchise's id and would
       // otherwise keep full access to its children's records after head office has cut the franchise loose.
       // Switching it back on re-enables only the staff that this cascade switched off (never one head office
@@ -342,6 +364,7 @@ invites.patch("/:token/status", async (req, res) => {
         for (const m of team.docs) {
           if (off && m.get("disabled") !== true) {
             await m.ref.set({ disabled: true, disabledAt: at, disabledBy: req.user?.email ?? req.user?.uid ?? null, disabledByFranchiseOff: fid }, { merge: true });
+            await dropLeaverFromParentPages(req.auth!.tenantId!, m.id, fid).catch((e) => console.error("[invites] drop leaver:", (e as Error).message));
             await authAdmin.revokeRefreshTokens(m.id).catch((e) => console.error("[invites] revoke:", (e as Error).message)); forgetRevocation(m.id);
           } else if (!off && m.get("disabledByFranchiseOff") === fid) {
             await m.ref.set({ disabled: false, disabledAt: null, disabledBy: null, disabledByFranchiseOff: null }, { merge: true });

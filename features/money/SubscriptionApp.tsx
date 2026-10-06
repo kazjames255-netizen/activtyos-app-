@@ -168,6 +168,8 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
   // In-portal card-capture modal: set to the plan being started when the
   // tenant has no card on file yet (fresh start or a lapsed win-back).
   const [payFor, setPayFor] = useState<Plan | null>(null);
+  // Set right after a card is saved and the trial starts: shows a big confirmation so the change is impossible to miss.
+  const [justStarted, setJustStarted] = useState(false);
   // "Update card" modal — swaps the card on file without touching the plan.
   const [updatingCard, setUpdatingCard] = useState(false);
 
@@ -297,7 +299,7 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
             band={bandFor(chosen)}
             cadence={annual ? "year" : "month"}
             cta={t("money.subStartNDayTrial", { n: data.trialDays ?? 7 })}
-            onDone={() => { if (gate) onStarted?.(); else refresh(); }}
+            onDone={() => { if (gate) onStarted?.(); else { setJustStarted(true); refresh(); try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch { /* ignore */ } } }}
             onError={setError}
           />
         </div>
@@ -365,6 +367,18 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {error && <div role="alert" className="mb-3 flex items-start justify-between gap-3 rounded-lg border border-[#f4c7c7] bg-[#fdf2f2] px-3 py-2.5 text-[13px] font-bold text-[#b91c1c]"><span>{error}</span><button type="button" onClick={() => setError(null)} aria-label="Dismiss" className="text-[16px] leading-none">×</button></div>}
+      {justStarted && data.current.status !== "none" && (
+        <div role="status" className="mb-3.5 overflow-hidden rounded-2xl text-white shadow-[0_14px_34px_-14px_rgba(15,122,67,.7)]" style={{ background: "linear-gradient(120deg,#0f7a43,#17a35e)" }}>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-6">
+            <div className="min-w-0">
+              <div className="text-[26px] font-extrabold leading-tight sm:text-[30px]" style={{ fontFamily: "var(--ff-display)" }}>✓ {t("p9tx.planOnTitle", { plan: data.plans.find((x) => x.id === data.current.plan)?.name ?? "" })}</div>
+              <div className="mt-1 text-[15px] font-semibold text-white/95">{t("p9tx.planOnBody", { date: fmtDay(data.current.trialEndsAt) || "", card: data.current.cardLast4 ? `${data.current.cardBrand ?? ""} ${t("p9tx.planOnEnding")} ${data.current.cardLast4}` : "" })}</div>
+            </div>
+            <button type="button" onClick={() => setJustStarted(false)} className="rounded-full bg-white/20 px-4 py-2 text-[14px] font-bold text-white hover:bg-white/30">{t("p9tx.planOnGotIt")}</button>
+          </div>
+          <div className="bg-black/15 px-5 py-2.5 text-[13.5px] font-semibold sm:px-6">{t("p9tx.planOnNext")}</div>
+        </div>
+      )}
       {billingDown && <div role="alert" className="mb-3 rounded-lg border border-[#f4c7c7] bg-[#fdf2f2] px-3 py-2.5 text-[12.5px] font-bold text-[#b91c1c]">{t("p9jr.billingDown")}</div>}
       {/* Hero — matches the other Money pages (Expenses / Purchasing). */}
       <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), var(--hero-grad)`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>

@@ -64,6 +64,14 @@ interface SessionChild {
 
 // GET /api/ratios?date= — every session the tenant runs that day, with its
 // children, the required staff, the assigned staff and the group breakdown.
+
+/** Team members whose account has been switched off (they left). A leaver saved on a day's group earlier must not still count as cover:
+ *  the register would say the ratio is met with someone who is no longer there. Team members are stored as `u_<uid>`. */
+async function leaverStaffIds(tenantId: string): Promise<Set<string>> {
+  const snap = await db.collection("users").where("tenantId", "==", tenantId).where("disabled", "==", true).get();
+  return new Set(snap.docs.map((u) => `u_${u.id}`));
+}
+
 ratios.get("/", async (req, res) => {
   const auth = req.auth!;
   if (auth.role === "parent") {
@@ -102,6 +110,7 @@ ratios.get("/", async (req, res) => {
     return;
   }
 
+  const leavers = await leaverStaffIds(tenantId!);
   const [bookingSnaps, groupSnaps, listingSnaps] = await Promise.all([
     Promise.all(todays.map(({ id }) => db.collection("bookings").where("blockId", "==", id).get())),
     db.getAll(...todays.map(({ id }) => db.collection("ratioGroups").doc(groupId(id, date)))),
@@ -160,7 +169,7 @@ ratios.get("/", async (req, res) => {
       .sort((a, b) => (a.name < b.name ? -1 : 1));
 
     const doc = groupSnaps[i].exists ? (groupSnaps[i].data() as RatioDoc) : null;
-    const groups: Group[] = doc?.groups ?? [];
+    const groups: Group[] = (doc?.groups ?? []).map((g) => ({ ...g, staffIds: g.staffIds.filter((x) => !leavers.has(x)) }));
     const assignedStaff = new Set(groups.flatMap((g) => g.staffIds));
     const assignedChildIds = new Set(groups.flatMap((g) => g.childIds));
 
@@ -393,7 +402,8 @@ ratios.put("/:blockId/:date", async (req, res) => {
     res.status(400).json({ error: `This block has no session on ${date}` });
     return;
   }
-  const doc: RatioDoc = { tenantId: auth.tenantId, blockId, date, groups: parsed.data.groups };
+  const leavers = await leaverStaffIds(auth.tenantId);
+  const doc: RatioDoc = { tenantId: auth.tenantId, blockId, date, groups: parsed.data.groups.map((g) => ({ ...g, staffIds: g.staffIds.filter((x) => !leavers.has(x)) })) };
   await db.collection("ratioGroups").doc(groupId(blockId, date)).set(doc);
   res.json({ ok: true });
 });

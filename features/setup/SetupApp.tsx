@@ -1572,6 +1572,11 @@ export function SetupApp() {
             ] as const).map(([k, label, ph]) => (
               <div key={k}><FieldLabel>{label}</FieldLabel><Input value={settings.billing?.[k] ?? ""} placeholder={ph} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), [k]: e.target.value } } })} className="w-full" /></div>
             ))}
+            <label className="col-span-full mt-1 flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[12.5px]">
+              <input type="checkbox" className="mt-0.5 h-4 w-4" checked={(settings.billing as { showAddressPublicly?: boolean } | undefined)?.showAddressPublicly === true}
+                onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), showAddressPublicly: e.target.checked } as typeof settings.billing } })} />
+              <span><b>{t("p9tx.showAddrTitle")}</b><br /><span className="text-[var(--ink-3)]">{t("p9tx.showAddrNote")}</span></span>
+            </label>
           </div>
         </Section>
       )}
