@@ -454,6 +454,29 @@ export function ParentHomeApp() {
     </section>
   );
 
+  // Wallet and coupons already show in the quick links above, so this slot carries the care and feedback shortcuts instead.
+  const careBlock = (
+    <section aria-label={h("CareTitle")}>
+      <SectionTitle>{h("CareTitle")}</SectionTitle>
+      <div className="grid grid-cols-1 gap-2.5">
+        {([
+          { href: "/custdash/medication", icon: "💊", label: h("CareMeds"), sub: h("CareMedsSub") },
+          { href: "/custdash/accidents", icon: "🩹", label: h("CareFirstAid"), sub: h("CareFirstAidSub") },
+          { href: "/custdash/feedback", icon: "⭐", label: h("CareFeedback"), sub: h("CareFeedbackSub") },
+        ]).map((x) => (
+          <Link key={x.href} href={x.href} className={`${cardCls} flex min-h-[64px] items-center gap-3 p-3 no-underline`}>
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[22px]" style={{ background: "var(--brand-soft, #eaf0fc)" }} aria-hidden>{x.icon}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-extrabold leading-tight text-[var(--ink)]">{x.label}</span>
+              <span className="block text-[14px] text-[var(--ink-2)]">{x.sub}</span>
+            </span>
+            <span className="shrink-0 text-[20px] text-[var(--ink-3)]" aria-hidden>›</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+
   const tilesBlock = (
     <section aria-label={h("Quick")}>
       <SectionTitle>{h("Quick")}</SectionTitle>
@@ -536,7 +559,7 @@ export function ParentHomeApp() {
         <div className="hidden min-w-0 flex-col gap-5 lg:flex">
           {tilesBlock}
           {starter ? null : childrenBlock}
-          {walletBlock}
+          {careBlock}
           {newsBlock}
         </div>
       </div>
