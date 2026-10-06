@@ -139,6 +139,7 @@ export function ParentHomeApp() {
   const consentWaiting = trips.filter((tr) => tr.askConsent && tr.status === "planned" && tr.date >= today).reduce((s, tr) => s + tr.children.filter((c) => c.consent === "pending").length, 0);
   const requests = live.filter((b) => b.dateChangeRequest?.status === "pending" || b.cancel?.refund === "pending").length;
   const offers = live.filter((b) => b.status === "Offered").length;
+  const waiting = live.filter((b) => b.status === "Waitlisted").length;
 
   // Next up: confirmed places with a session still ahead, soonest first.
   const upcoming = useMemo(() => {
@@ -171,7 +172,7 @@ export function ParentHomeApp() {
   const loading = bookings === null || kids === null;
   const noKids = !loading && kids.length === 0;
   const noBookings = !loading && live.length === 0;
-  const attention = toPay.length > 0 || consentWaiting > 0 || unread > 0 || requests > 0 || offers > 0;
+  const attention = toPay.length > 0 || consentWaiting > 0 || unread > 0 || requests > 0 || offers > 0 || waiting > 0;
   const browseOn = area.browse !== false;
 
   const tiles: { href: string; icon: string; label: string; sub?: string; show: boolean; badge?: number }[] = [
@@ -222,6 +223,7 @@ export function ParentHomeApp() {
             <Link href={toPay.length === 1 ? `/custdash/bookings?cancel=${encodeURIComponent(toPay[0].ref)}` : "/custdash/bookings?filter=topay"} className="self-end px-2 text-[13.5px] font-bold text-[var(--ink-2)] underline">{h("CancelUnpaid", { n: toPay.length })}</Link>
           </div>
         )}
+        {waiting > 0 && attn("/custdash/bookings", "#d97706", "\u23F3", h("Waiting", { n: waiting }), h("WaitingSub"))}
         {offers > 0 && attn("/custdash/bookings", "#15b364", "🎟️", h("Offers", { n: offers }), h("OffersSub"))}
         {consentWaiting > 0 && attn("/custdash/trips", "#f59e0b", "🚌", h("Consent", { n: consentWaiting }), h("ConsentSub"))}
         {unread > 0 && attn("/custdash/messages", "#7a5af8", "✉️", h("Unread", { n: unread }), h("UnreadSub"))}
