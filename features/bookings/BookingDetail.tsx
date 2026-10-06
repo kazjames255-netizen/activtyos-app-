@@ -621,14 +621,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
                 {b.cancel.msg && <span className="font-normal text-[var(--ink-2)]"> · {b.cancel.msg}</span>}
               </div>
             )}
-            {b.cancel?.refundBank && (
-              <div className="w-full rounded-lg border-2 border-[#3f78d8] bg-[#eef3ff] px-3 py-2.5 text-[13px] leading-[1.6] text-[#16306e]">
-                <div className="text-[11px] font-extrabold uppercase tracking-wide">{"\uD83C\uDFE6 "}{t("p7bk.bankRefundTitle")}</div>
-                <div>{t("p7pub.accountName")}: <b>{b.cancel.refundBank.accountName}</b></div>
-                <div>{t("p7pub.sortCode")}: <b className="num">{b.cancel.refundBank.sortCode}</b> · {t("p7pub.accountNumber")}: <b className="num">{b.cancel.refundBank.accountNumber}</b></div>
-                <div className="mt-1 text-[11px] text-[#4a5a8a]">{t("p7bk.bankRefundNote")}</div>
-              </div>
-            )}
+            {b.cancel?.refundBank && <BankReveal bookingRef={b.ref} last4={b.cancel.refundBank.last4} />}
             {isVoucher && (
               <div className="w-full rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] leading-[1.5] text-[#7a5b06]">
                 <Rich text={t("p7bd.voucherBox", { scheme: b.voucherScheme ?? t("p7bd.voucherWord"), scheme2: b.voucherScheme ?? t("p7bk.schemeThe") })} />
@@ -1083,5 +1076,47 @@ function RefundSummary({ booking }: { booking: Booking }) {
         </div>
       </div>
     </>
+  );
+}
+
+
+/** The family's bank details for a bank-transfer refund: masked until the provider presses Reveal; shown for 30 seconds, then hidden and
+ *  (server side) already deleted — the platform does not keep them. */
+function BankReveal({ bookingRef, last4 }: { bookingRef: string; last4: string }) {
+  const t = useT();
+  const [d, setD] = useState<{ accountName: string; sortCode: string; accountNumber: string } | null>(null);
+  const [left, setLeft] = useState(0);
+  const [gone, setGone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!d) return;
+    if (left <= 0) { setD(null); setGone(true); return; }
+    const id = setTimeout(() => setLeft((x) => x - 1), 1000);
+    return () => clearTimeout(id);
+  }, [d, left]);
+  async function reveal() {
+    setErr(null);
+    try { setD(await apiPost<{ accountName: string; sortCode: string; accountNumber: string }>(`/api/bookings/${encodeURIComponent(bookingRef)}/refund-bank/reveal`, {})); setLeft(30); }
+    catch (e) { setErr(e instanceof Error ? e.message : "Could not reveal"); }
+  }
+  return (
+    <div className="w-full rounded-lg border-2 border-[#3f78d8] bg-[#eef3ff] px-3 py-2.5 text-[13px] leading-[1.6] text-[#16306e]">
+      <div className="text-[11px] font-extrabold uppercase tracking-wide">{"\uD83C\uDFE6 "}{t("p7bk.bankRefundTitle")}</div>
+      {d ? (
+        <>
+          <div>{t("p7pub.accountName")}: <b>{d.accountName}</b></div>
+          <div>{t("p7pub.sortCode")}: <b className="num">{d.sortCode}</b> · {t("p7pub.accountNumber")}: <b className="num">{d.accountNumber}</b></div>
+          <div className="mt-1 text-[11.5px] font-bold text-[#b45309]">{t("p7bk.bankRevealWarn", { s: left })}</div>
+        </>
+      ) : gone ? (
+        <div className="text-[12px]">{t("p7bk.bankRevealGone")}</div>
+      ) : (
+        <>
+          <div>{t("p7pub.accountNumber")}: <b className="num">{"\u2022\u2022\u2022\u2022"}{last4}</b></div>
+          <button type="button" onClick={reveal} className="mt-1.5 rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white hover:brightness-110">{t("p7bk.bankRevealBtn")}</button>
+          {err && <div className="mt-1 text-[12px] font-semibold text-[#c0392b]">{err}</div>}
+        </>
+      )}
+    </div>
   );
 }

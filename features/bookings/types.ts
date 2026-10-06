@@ -56,9 +56,10 @@ export interface CancelInfo {
    *  store credit with this provider; "card" (the default) refunds the payment
    *  method. Honoured when the operator approves the refund. */
   refundTo?: "card" | "wallet";
-  /** Where to send a refund for a booking that was PAID BY BANK TRANSFER (there is no card to refund to). Typed by the parent on the cancel
-   *  screen; only the provider reads it; wiped by the server once the refund is approved or declined. Never put in an email or notification. */
-  refundBank?: { accountName: string; sortCode: string; accountNumber: string };
+  /** A bank-transfer booking has no card to refund to, so the parent types their account details on the cancel screen. The details are NOT
+   *  kept on the booking: they sit in a separate `refundBanks` doc, are shown to the provider ONCE (reveal, then deleted), and are also
+   *  deleted when the refund is approved/declined. The booking only carries this marker (last 4 digits) so the provider knows they exist. */
+  refundBank?: { last4: string };
   /** Where the approved money actually went (set by the server on approve):
    *  "wallet" credit, back to the "card", or "offline" — a voucher/TFC/cash
    *  booking the provider reimburses outside the app. */

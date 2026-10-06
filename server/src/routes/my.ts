@@ -2898,7 +2898,9 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
   }
 
   try {
+    let bankToStore: { accountName: string; sortCode: string; accountNumber: string } | null = null;
     const updated = await db.runTransaction(async (tx) => {
+      bankToStore = null; // (a retried transaction starts clean)
       const snap = await tx.get(ref);
       if (!snap.exists) throw new HttpError(404, "Booking not found");
       const b = fromDoc(snap.data() as BookingDoc);
@@ -2923,7 +2925,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       // A bank-transfer booking has no card to refund to: the provider needs the family's account details to pay it back.
       if (b.cancel && isBankMethod(b.method) && !b.voucherScheme && (b.cancel.amount ?? 0) > 0 && b.cancel.refundTo !== "wallet") {
         if (!parsed.data.refundBank) throw new HttpError(400, "Please add your bank details so the provider can send your refund.");
-        b.cancel.refundBank = { ...parsed.data.refundBank, sortCode: parsed.data.refundBank.sortCode.replace(/\D/g, "").replace(/(\d{2})(\d{2})(\d{2})/, "$1-$2-$3") };
+        bankToStore = { ...parsed.data.refundBank, sortCode: parsed.data.refundBank.sortCode.replace(/\D/g, "").replace(/(\d{2})(\d{2})(\d{2})/, "$1-$2-$3") };
+        b.cancel.refundBank = { last4: parsed.data.refundBank.accountNumber.slice(-4) };
       }
       // Credit note instead of a nil refund: the provider approves it like any
       // refund, and approval pays it into the wallet (never to card).
@@ -2953,6 +2956,11 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
       return b;
     });
+    // The family's bank details live in their own doc (never on the booking): shown to the provider once, then deleted.
+    if (bankToStore && updated.tenantId) {
+      await db.collection("refundBanks").doc(`${updated.tenantId}_${updated.ref}`).set({ tenantId: updated.tenantId, ref: updated.ref, ...(bankToStore as object), createdAt: new Date().toISOString() })
+        .catch((e) => console.error("[my/cancel] could not store refund bank details:", (e as Error).message));
+    }
     // A cancellation frees seats — the queue gets first refusal (auto mode).
     if (updated.blockId) void triggerWaitlist(updated.blockId);
     // …and frees the discount code it was booked with.

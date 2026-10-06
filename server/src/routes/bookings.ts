@@ -503,6 +503,29 @@ bookings.post("/", async (req, res) => {
 });
 
 // POST /api/bookings/:ref/actions — every single-booking mutation
+// POST /api/bookings/:ref/refund-bank/reveal — hand the provider the family's bank details for a bank-transfer refund, ONCE: the doc is
+// deleted the moment they are read, so the platform does not keep them. (If the provider misses them they ask the family again.)
+bookings.post("/:ref/refund-bank/reveal", async (req, res) => {
+  const scope = operatorScope(req, res);
+  if (!scope || !requireWrite(req, res)) return;
+  const tenantId = scope.tenantId ?? (req.query.tenantId as string | undefined);
+  if (!tenantId) { res.status(400).json({ error: "tenantId required for platform accounts" }); return; }
+  const bref = await resolveBookingRef(tenantId, req.params.ref);
+  const bsnap = await bref.get();
+  if (!bsnap.exists || !inScope(bsnap.data() as BookingDoc, scope)) { res.status(404).json({ error: "Booking not found" }); return; }
+  const docRef = db.collection("refundBanks").doc(`${tenantId}_${req.params.ref}`);
+  const out = await db.runTransaction(async (tx) => {
+    const s = await tx.get(docRef);
+    if (!s.exists) return null;
+    const d = s.data() as { accountName?: string; sortCode?: string; accountNumber?: string };
+    tx.delete(docRef);
+    return { accountName: d.accountName ?? "", sortCode: d.sortCode ?? "", accountNumber: d.accountNumber ?? "" };
+  });
+  if (!out) { res.status(404).json({ error: "These bank details were already shown once and have been deleted. Ask the family to send them again." }); return; }
+  res.setHeader("Cache-Control", "no-store");
+  res.json(out);
+});
+
 bookings.post("/:ref/actions", async (req, res) => {
   const scope = operatorScope(req, res);
   if (!scope || !requireWrite(req, res)) return;
@@ -712,9 +735,6 @@ bookings.post("/:ref/actions", async (req, res) => {
             b.declineReason = action.reason.trim();
       }
 
-      // The family's bank details (typed for a bank-transfer refund) are kept only until the provider has dealt with the request.
-      if ((action.type === "refund-approve" || action.type === "refund-decline") && b.cancel?.refundBank) delete b.cancel.refundBank;
-
       // Keep the block's place counts — total AND per day — in step with
       // the status transition (promote may intentionally exceed capacity —
       // operator's overbook). Firestore requires all reads before writes.
@@ -786,6 +806,13 @@ bookings.post("/:ref/actions", async (req, res) => {
         source: moved.via === "wallet" ? "Wallet" : moved.via === "offline" ? "Offline" : "Card",
       });
       await ref.set({ cancel: { ...updated.cancel, refundError: FieldValue.delete() }, pay: updated.pay, refundedApproved: updated.refundedApproved, walletRefunded: updated.walletRefunded, refundLog: updated.refundLog }, { merge: true });
+    }
+
+    // The family's bank details (typed for a bank-transfer refund) are not kept once the provider has dealt with the request.
+    if ((action.type === "refund-approve" || action.type === "refund-decline") && updated.cancel?.refundBank && updated.tenantId) {
+      delete updated.cancel.refundBank;
+      await ref.update({ "cancel.refundBank": FieldValue.delete() }).catch(() => {});
+      await db.collection("refundBanks").doc(`${updated.tenantId}_${updated.ref}`).delete().catch(() => {});
     }
 
     // A cancelled child/day given back as WALLET CREDIT is instant by design: credit the wallet and put it
