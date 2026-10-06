@@ -1416,7 +1416,12 @@ export function ListingWizard({
             {stepKey === "run" && <RunStep d={d} upd={upd} />}
             {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} onCreateBlock={openBlocks} />}
             {stepKey === "discounts" && <DiscountsStep d={d} upd={upd} tickets={tickets} />}
-            {stepKey === "preview" && <div><StepHead n={10} kicker={tr("p8lst.waKickPreview")} title={tr("p8lst.waStep_preview")} lede={tr("p8lst.waPreviewLede")} /><HeadingsEditor d={d} upd={upd} /><ParentPreview {...previewProps} full /></div>}
+            {stepKey === "preview" && <div><StepHead n={10} kicker={tr("p8lst.waKickPreview")} title={tr("p8lst.waStep_preview")} lede={tr("p8lst.waPreviewLede")} /><HeadingsEditor d={d} upd={upd} />
+              <div className="sticky top-0 z-10 mx-3 mb-3 rounded-2xl border-2 bg-white p-3.5 sm:mx-5" style={{ borderColor: "#e9a915", boxShadow: "0 12px 30px -16px rgba(233,169,21,.8)" }}>
+                <FieldLabel>{tr("p8lst.waThemeLbl")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.waThemeNote")}</span></FieldLabel>
+                <div className="mt-1"><ThemePicker value={resolveTheme(d.pageStyle)} onChange={(t) => upd({ pageStyle: t })} /></div>
+                <div className="mt-1.5 text-[11.5px] font-semibold text-[#7a4b00]">{tr("p9tx.wpThemeLive")}</div>
+              </div><ParentPreview {...previewProps} full /></div>}
             {stepKey === "addons" && <AddonsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "staff" && <StaffStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "policy" && (
@@ -1812,10 +1817,6 @@ function BasicsStep({ d, upd, local, patchLocal, blocks, onCreateBlock }: { d: W
           <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel={tr("p8lst.waAddGallery")} previewAspect="1 / 1" />
           <div className="mt-1 text-[11px] text-[var(--ink-3)]">{tr("p8lst.waGalleryHint")}</div>
         </RichCard>
-      </div>
-      <div className="mt-4 rounded-2xl border border-[var(--line)] bg-white p-3.5">
-        <FieldLabel>{tr("p8lst.waThemeLbl")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.waThemeNote")}</span></FieldLabel>
-        <div className="mt-1"><ThemePicker value={resolveTheme(d.pageStyle)} onChange={(t) => upd({ pageStyle: t })} /></div>
       </div>
     </div>
   );
