@@ -34,7 +34,26 @@ export const colorFor = (s: string) => ACT_C[[...(s || "?")].reduce((a, c) => a 
 // A KPI tile: plain card, colour carried by the numeral and a thin left rail.
 // `grad` is kept as the prop name so the ~70 call sites don't need touching, but
 // it now takes a plain accent colour rather than a gradient.
-export function Tile({ label, value, sub, grad, icon, aside, children }: { label: string; value: string; sub?: ReactNode; grad: string; icon?: string; aside?: ReactNode; children?: ReactNode }) {
+export function Tile({ label, value, sub, grad, icon, aside, children, vivid }: { label: string; value: string; sub?: ReactNode; grad: string; icon?: string; aside?: ReactNode; children?: ReactNode; vivid?: boolean }) {
+  // vivid: the whole card wears its gradient with white type (used for the dashboard's live KPI row), instead of a white card with a thin accent rail.
+  if (vivid) {
+    return (
+      <div className="relative overflow-hidden rounded-3xl p-4 text-white" style={{ background: grad, boxShadow: "0 14px 30px -16px rgba(16,35,86,.55)" }}>
+        <div className="pointer-events-none absolute -end-8 -top-10 h-32 w-32 rounded-full bg-white/10" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-12 -start-6 h-28 w-28 rounded-full bg-white/[.07]" aria-hidden />
+        {aside && <div className="absolute end-3 top-1/2 -translate-y-1/2">{aside}</div>}
+        <div className={`relative min-w-0 ${aside ? "pe-[76px]" : ""}`}>
+          <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/85">
+            {icon && <span className="grid h-7 w-7 flex-none place-items-center rounded-xl bg-white/20 text-[14px]">{icon}</span>}
+            <span className="truncate">{label}</span>
+          </div>
+          <div className="mt-2.5 text-[38px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{value}</div>
+          {sub && <div className="mt-2 text-[12.5px] font-semibold text-white/90">{sub}</div>}
+        </div>
+        <div className="relative">{children}</div>
+      </div>
+    );
+  }
   return (
     <div
       className="relative overflow-hidden rounded-2xl p-4 ps-[18px]"
