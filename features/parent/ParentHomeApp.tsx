@@ -83,12 +83,13 @@ function OfferCard({ b, time, onAccepted }: { b: Booking; time: string | null; o
 /** "Your family week": Monday to Sunday of the next week with anything on it, one tile a day, a dot per child (green booked, amber waiting list, blue place offered). */
 function WeekStrip({ live, today, detail }: { live: Booking[]; today: string; detail: (b: Booking) => { time: string | null; place: string | null } }) {
   const t = useT();
+  const [offset, setOffset] = useState(0); // weeks away from the first week that has something on
   const items = live.filter((b) => ["Confirmed", "Waitlisted", "Offered"].includes(b.status)).flatMap((b) => bookingDays(b).map((d) => ({ b, d })));
   const future = items.map((x) => x.d).filter((d) => d >= today).sort();
   const anchor = future[0] ?? today;
   const a = new Date(`${anchor}T00:00:00Z`);
   const back = (a.getUTCDay() + 6) % 7; // Monday = 0
-  const monday = new Date(a.getTime() - back * 86_400_000);
+  const monday = new Date(a.getTime() - back * 86_400_000 + offset * 7 * 86_400_000);
   const days = Array.from({ length: 7 }, (_, i) => new Date(monday.getTime() + i * 86_400_000));
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   const loc = dateLocale();
@@ -99,6 +100,12 @@ function WeekStrip({ live, today, detail }: { live: Booking[]; today: string; de
       <div className="mb-2 flex items-baseline justify-between gap-2">
         <h2 className="m-0 text-[20px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t("p7shell.weekTitle")}</h2>
         <span className="text-[14px] text-[var(--ink-3)]">{range}</span>
+      </div>
+      <div className="mb-2.5 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => setOffset((o) => o - 1)} className="min-h-[40px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 text-[14px] font-bold text-[var(--ink)]">&larr; {t("p7shell.weekPrev")}</button>
+        <button type="button" onClick={() => setOffset(0)} disabled={offset === 0} className="min-h-[40px] rounded-full px-4 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: "var(--brand, #2f6bd8)" }}>{t("p7shell.weekThis")}</button>
+        <button type="button" onClick={() => setOffset((o) => o + 1)} className="min-h-[40px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 text-[14px] font-bold text-[var(--ink)]">{t("p7shell.weekNext")} &rarr;</button>
+        <button type="button" onClick={() => setOffset((o) => o + 4)} className="min-h-[40px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 text-[14px] font-bold text-[var(--ink-2)]">{t("p7shell.weekMonth")}</button>
       </div>
       <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5">
         {days.map((d) => {
