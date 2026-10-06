@@ -83,34 +83,34 @@ function MiniLine({ data, labels, caption }: { data: number[]; labels: string[];
   const area = `${path} L${x(n - 1)},${H - PAD} L${x(0)},${H - PAD} Z`;
   return (
     <div className="mt-3">
-      <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.08em] text-white/60">{caption}</div>
-      <div className="mb-0.5 flex gap-1 text-[8.5px] font-extrabold tabular-nums text-white/85">{data.map((v, i) => <span key={i} className="flex-1 text-center" style={{ opacity: i === data.length - 1 ? 1 : 0.7 }}>{compactMoney(v)}</span>)}</div>
+      <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">{caption}</div>
+      <div className="mb-0.5 flex gap-1 text-[8.5px] font-extrabold tabular-nums text-[var(--ink-2)]">{data.map((v, i) => <span key={i} className="flex-1 text-center" style={{ opacity: i === data.length - 1 ? 1 : 0.7 }}>{compactMoney(v)}</span>)}</div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 42 }} preserveAspectRatio="none">
-        <defs><linearGradient id="mlg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".28" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient></defs>
+        <defs><linearGradient id="mlg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#2f6bd8" stopOpacity=".28" /><stop offset="1" stopColor="#2f6bd8" stopOpacity="0" /></linearGradient></defs>
         <path d={area} fill="url(#mlg)" />
-        <path d={path} fill="none" stroke="#fff" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        <circle cx={x(n - 1)} cy={y(data[n - 1] ?? 0)} r={2.6} fill="#fff" vectorEffect="non-scaling-stroke" />
+        <path d={path} fill="none" stroke="#2f6bd8" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        <circle cx={x(n - 1)} cy={y(data[n - 1] ?? 0)} r={2.6} fill="#1d3a8f" vectorEffect="non-scaling-stroke" />
       </svg>
-      <div className="mt-1 flex gap-1 text-[8.5px] font-semibold text-white/60">{labels.map((l, i) => <span key={i} className="flex-1 text-center">{l}</span>)}</div>
+      <div className="mt-1 flex gap-1 text-[8.5px] font-semibold text-[var(--ink-3)]">{labels.map((l, i) => <span key={i} className="flex-1 text-center">{l}</span>)}</div>
     </div>
   );
 }
 
-// A white mini bar chart drawn on a coloured tile — the last few weeks at a glance.
+// A brand-blue mini bar chart drawn on the white KPI tile — the last few weeks at a glance.
 function MiniBars({ data, labels, caption }: { data: number[]; labels: string[]; caption: string }) {
   const max = Math.max(1, ...data);
   return (
     <div className="mt-2.5">
-      <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.06em] text-white/70">{caption}</div>
+      <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--ink-3)]">{caption}</div>
       <div className="flex items-end gap-1" style={{ height: 40 }}>
         {data.map((v, i) => (
           <div key={i} className="flex flex-1 flex-col items-center justify-end" style={{ height: "100%" }} title={`${labels[i]}: ${v}`}>
             <span className="mb-0.5 text-[9px] font-extrabold tabular-nums" style={{ opacity: i === data.length - 1 ? 1 : 0.75 }}>{v}</span>
-            <div className="w-full rounded-t-[3px] bg-[var(--surface)]" style={{ height: `${Math.max(8, (v / max) * 100)}%`, opacity: i === data.length - 1 ? 1 : 0.5 }} />
+            <div className="w-full rounded-t-[3px] bg-[var(--brand-2,#2f6bd8)]" style={{ height: `${Math.max(8, (v / max) * 100)}%`, opacity: i === data.length - 1 ? 1 : 0.5 }} />
           </div>
         ))}
       </div>
-      <div className="mt-1 flex gap-1 text-[8.5px] font-bold text-white/70">{labels.map((l, i) => <span key={i} className="flex-1 text-center">{l}</span>)}</div>
+      <div className="mt-1 flex gap-1 text-[8.5px] font-bold text-[var(--ink-3)]">{labels.map((l, i) => <span key={i} className="flex-1 text-center">{l}</span>)}</div>
     </div>
   );
 }

@@ -2169,18 +2169,19 @@ my.post("/bookings", async (req, res) => {
 
         // Waiting-list joins: an email per join is noisy, so it is OFF by default (Setup > Email > Automatic emails). The bell always shows.
         const wlPrefs = waitlisted ? await autoEmailPrefs(listing.tenantId) : null;
+        let firstOnList = false; // the first family on this listing's list gets ONE notice ("you now have a waiting list"), not two
         if (waitlisted && wlPrefs?.waitlistStartAlert) {
           // ONE email per listing, the first time anyone joins its waiting list.
           try {
             const { fireOnce } = await import("../lib/scheduler");
-            await fireOnce(`firstwait_${input.listingId}`, { tenantId: listing.tenantId }, () =>
+            firstOnList = await fireOnce(`firstwait_${input.listingId}`, { tenantId: listing.tenantId }, () =>
               notify({
                 tenantId: listing.tenantId,
                 to: { kind: "tenant" },
                 category: "booking",
                 key: "waitlist-started",
                 title: `You now have a waiting list · ${listing.name}`,
-                body: `${kids || bookerName} is the first family on the waiting list for ${listing.name}. There is no free place right now, so there is nothing to do yet. You will be told the moment one opens. (You will not get another email when more families join.)`,
+                body: `${kids || bookerName} is the first family on the waiting list for ${listing.name}. No free place yet, nothing to do. You will be told when one opens. (You will not get another email when more families join.)`,
                 subject: `You now have a waiting list for ${listing.name}`,
                 href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
                 ref: primary.ref,
@@ -2188,15 +2189,15 @@ my.post("/bookings", async (req, res) => {
             );
           } catch (e) { console.error("[my] waiting-list-started notice failed:", (e as Error).message); }
         }
-        await notify({
+        if (!(waitlisted && firstOnList)) await notify({
           tenantId: listing.tenantId,
           to: { kind: "tenant" },
           category: "booking",
           key: "booking-new",
           ...(waitlisted && !wlPrefs?.waitlistJoinAlert ? { bellOnly: true } : {}),
-          title: `${kind} · ${primary.ref} · ${bookerName}`,
+          title: waitlisted ? `${kids || bookerName} joined the waiting list` : `${kind} · ${primary.ref} · ${bookerName}`,
           body: waitlisted
-            ? `${kids || bookerName} joined the waiting list for ${listing.name}${primary.dates ? ` (${primary.dates})` : ""}. There is NO free place right now, so there is nothing to do yet. You will be told the moment one opens.`
+            ? `${kids || bookerName} joined the waiting list for ${listing.name}${primary.dates ? ` (${primary.dates})` : ""}. No free place yet, nothing to do. You will be told when one opens.`
             : `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(input.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
           subject: `${BRAND}: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
           href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
