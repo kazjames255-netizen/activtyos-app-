@@ -3239,10 +3239,10 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
           <div className="mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{tr("p8lst.wbWhenFrees")}</div>
           <div className="grid gap-2 sm:grid-cols-2">
             {([
-              ["manual", tr("p8lst.wbWaitManualTitle"), tr("p8lst.wbWaitManualDesc")],
               ["auto", tr("p8lst.wbWaitAutoTitle"), tr("p8lst.wbWaitAutoDesc")],
+              ["manual", tr("p8lst.wbWaitManualTitle"), tr("p8lst.wbWaitManualDesc")],
             ] as const).map(([k, label, desc]) => {
-              const on = (d.waitlistMode ?? "manual") === k;
+              const on = (d.waitlistMode ?? "manual") === k; // unset = manual on the server too, so show what will really happen
               return (
                 <button key={k} type="button" onClick={() => upd({ waitlistMode: k })} className="rounded-xl border p-3 text-start"
                   style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
@@ -3280,7 +3280,6 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
       <div className="mt-1 text-[11px] text-[var(--ink-3)]">
         <Rich text={tr("p8lst.wbPolicyFrom")} />
       </div>
-      <div className="mt-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]">{d.cancellation}</div>
         </div>
       </RichCard>
     </div>
