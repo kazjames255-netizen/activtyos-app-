@@ -93,6 +93,8 @@ interface BPeriod { id: string; title: string; start: string; finish: string }
 interface BPass { id: string; name: string; days: number; details?: string }
 interface BBlock {
   id: string; name: string; periodIds: string[]; passIds: string[];
+  /** Creation order on the server (higher = newer). */
+  order?: number;
   /** False until the provider has set prices (Blocks > Set prices). */
   priced?: boolean;
   masterPrice?: number; calcOn?: boolean; passFlat?: Record<string, number>; passMode?: Record<string, string>;
@@ -132,6 +134,7 @@ async function fetchBlocks(): Promise<BlocksStore> {
       name: b.name,
       periodIds: b.periodIds,
       passIds: b.passIds,
+      order: (b as { order?: number }).order,
       priced: b.priced,
       masterPrice: b.masterPrice ?? undefined,
       calcOn: b.calcOn,
@@ -2385,6 +2388,16 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
 function TicketsStep({ d, upd, blocks, tickets, onCreateBlock }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; blocks: BlocksStore; tickets: { name: string; days: number; price: number }[]; onCreateBlock: () => void }) {
   const tr = useT();
   const { locale } = useI18n();
+  const [blkQ, setBlkQ] = useState("");
+  const [blkSort, setBlkSort] = useState<"new" | "az">("new");
+  // Newest first by default; or A to Z. Search matches the name. The block already picked stays visible while searching.
+  const shownBlocks = useMemo(() => {
+    const q = blkQ.trim().toLowerCase();
+    const list = blocks.library.filter((b) => !q || b.name.toLowerCase().includes(q) || b.id === d.blockId);
+    return [...list].sort(blkSort === "az"
+      ? (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true })
+      : (a, b) => (b.order ?? 0) - (a.order ?? 0));
+  }, [blocks.library, blkQ, blkSort, d.blockId]);
   const ovUpd = (name: string, field: keyof TicketOverride, value: string) =>
     upd({ ticketOverrides: { ...d.ticketOverrides, [name]: { ...d.ticketOverrides[name], [field]: value } } });
   const toggleHidden = (name: string, hidden: boolean) =>
@@ -2422,7 +2435,17 @@ function TicketsStep({ d, upd, blocks, tickets, onCreateBlock }: { d: WizardDraf
         </Card>
       ) : (
         <div className="flex flex-col gap-2">
-          {blocks.library.map((b) => {
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[200px] flex-1"><span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[14px]" aria-hidden>🔍</span>
+              <input value={blkQ} onChange={(e) => setBlkQ(e.target.value)} placeholder={tr("p9tx.blkSearchPh")} aria-label={tr("p9tx.blkSearchPh")} className="w-full rounded-full border border-[var(--line)] bg-white py-2 ps-9 pe-3 text-[13px] outline-none focus:border-[var(--brand-2)]" /></div>
+            <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] bg-white text-[12px] font-extrabold" role="group" aria-label={tr("p9tx.blkSortLbl")}>
+              {([["new", tr("p9tx.blkSortNew")], ["az", tr("p9tx.blkSortAz")]] as const).map(([k, label]) => (
+                <button key={k} type="button" aria-pressed={blkSort === k} onClick={() => setBlkSort(k)} className="px-3.5 py-2" style={blkSort === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-2)" }}>{label}</button>
+              ))}
+            </div>
+          </div>
+          {shownBlocks.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] p-3 text-center text-[12.5px] text-[var(--ink-3)]">{tr("p9tx.blkNoMatch")}</div>}
+          {shownBlocks.map((b, bi) => {
             const on = b.id === d.blockId;
             const openBlocks = onCreateBlock;
             if (on) return (
