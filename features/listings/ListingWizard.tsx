@@ -2134,20 +2134,20 @@ function CapacityStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft
       <YesNo label={tr("p8lst.wbWaitlistLabel")} value={d.waitlist} onChange={(v) => upd({ waitlist: v })} help={tr("p8lst.wbWaitlistHelp")} />
       {d.waitlist && (
         <div className="mt-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-          <YesNo label={tr("p8lst.wbAutoOfferLabel")} value={(d.waitlistMode ?? "manual") === "auto"} onChange={(v) => upd({ waitlistMode: v ? "auto" : "manual" })} help={tr("p8lst.wbAutoOfferHelp")} />
+          <YesNo label={tr("p8lst.wbAutoOfferLabel")} value={(d.waitlistMode ?? "manual") === "auto"} onChange={(v) => upd({ waitlistMode: v ? "auto" : "manual" })} help={(d.waitlistMode ?? "manual") === "auto" ? tr("p8lst.wbAutoOnHelp") : tr("p8lst.wbAutoOffHelp")} />
           {(d.waitlistMode ?? "manual") !== "auto" && (() => {
             const alertOn = settings.autoEmails?.waitlistFreeAlert !== false;
             return (
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-[#fff7e0] px-2.5 py-2 text-[12px] font-semibold leading-[1.5] text-[#8a5300]">
-                <span className="min-w-0 flex-1">{alertOn ? tr("p8lst.wbAlertOnNote") : tr("p8lst.wbAlertOffNote")}</span>
-                <button type="button"
-                  onClick={() => {
-                    if (alertOn && !window.confirm(tr("p8em.emWaitAlertOffWarn"))) return;
-                    void save({ settings: { ...settings, autoEmails: { ...(settings.autoEmails ?? {}), waitlistFreeAlert: !alertOn } } });
+              <div className="mt-2 rounded-lg bg-[#fff7e0] px-2.5 py-2">
+                <YesNo
+                  label={tr("p8lst.wbAlertQ")}
+                  value={alertOn}
+                  onChange={(v) => {
+                    if (!v && !window.confirm(tr("p8em.emWaitAlertOffWarn"))) return;
+                    void save({ settings: { ...settings, autoEmails: { ...(settings.autoEmails ?? {}), waitlistFreeAlert: v } } });
                   }}
-                  className="rounded-full border-2 border-[#8a5300] bg-white px-3.5 py-1.5 text-[12px] font-extrabold text-[#8a5300]">
-                  {alertOn ? tr("p8lst.wbAlertTurnOff") : tr("p8lst.wbAlertTurnOn")}
-                </button>
+                  help={alertOn ? tr("p8lst.wbAlertOnNote") : tr("p8lst.wbAlertOffNote")}
+                />
               </div>
             );
           })()}
