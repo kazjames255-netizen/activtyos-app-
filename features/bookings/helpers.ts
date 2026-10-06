@@ -552,8 +552,11 @@ export const isMoneyIn = (p: { type?: string; status?: string }) =>
   p.type !== "refund" && (p.status === "recorded" || p.status === "succeeded");
 
 export function nowStr(): string {
+  // UK wall clock, not the machine's: the server runs in UTC, so this was an hour out all summer.
+  const now = new Date();
   return (
-    new Date().toLocaleDateString(dl()) + ", " + new Date().toTimeString().slice(0, 5)
+    now.toLocaleDateString(dl(), { timeZone: "Europe/London" }) + ", " +
+    now.toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
   );
 }
 
