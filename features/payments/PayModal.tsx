@@ -73,6 +73,13 @@ export function PayModal({ refs = [], tenantId, mealOrderIds, onClose, onPaid }:
   const [error, setError] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
   const meals = !!mealOrderIds?.length;
+  // A parent who has just paid goes back to their home page (after a moment to read "payment complete").
+  const toHome = typeof window !== "undefined" && window.location.pathname.startsWith("/custdash");
+  useEffect(() => {
+    if (!paid || !toHome) return;
+    const id = setTimeout(() => window.location.assign("/custdash/home"), 3500);
+    return () => clearTimeout(id);
+  }, [paid, toHome]);
   const nCount = meals ? (mealOrderIds?.length ?? 0) : refs.length;
 
   useEffect(() => {
@@ -110,8 +117,9 @@ export function PayModal({ refs = [], tenantId, mealOrderIds, onClose, onPaid }:
           <div className="py-4 text-center">
             <div className="text-[22px]">✅</div>
             <p className="mt-1 text-[13.5px]">{pickPlural(t, locale, meals ? "p8lst.pmThanksMeal" : "p8lst.pmThanksBooking", nCount)}</p>
-            <Button variant="primary" onClick={onClose} className="mt-3">
-              {t("p8lst.pmDone")}
+            {toHome && <p className="mt-2 text-[12.5px] text-[#8a86a3]">{t("p8lst.pmGoingHome")}</p>}
+            <Button variant="primary" onClick={() => { if (toHome) window.location.assign("/custdash/home"); else onClose(); }} className="mt-3">
+              {toHome ? t("p8lst.pmBackHome") : t("p8lst.pmDone")}
             </Button>
           </div>
         ) : !PK ? (

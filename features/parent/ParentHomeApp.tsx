@@ -81,7 +81,7 @@ function OfferCard({ b, time, onAccepted }: { b: Booking; time: string | null; o
 }
 
 /** "Your family week": Monday to Sunday of the next week with anything on it, one tile a day, a dot per child (green booked, amber waiting list, blue place offered). */
-function WeekStrip({ live, today }: { live: Booking[]; today: string }) {
+function WeekStrip({ live, today, detail }: { live: Booking[]; today: string; detail: (b: Booking) => { time: string | null; place: string | null } }) {
   const t = useT();
   const items = live.filter((b) => ["Confirmed", "Waitlisted", "Offered"].includes(b.status)).flatMap((b) => bookingDays(b).map((d) => ({ b, d })));
   const future = items.map((x) => x.d).filter((d) => d >= today).sort();
@@ -108,13 +108,26 @@ function WeekStrip({ live, today }: { live: Booking[]; today: string }) {
           const weekend = d.getUTCDay() === 0 || d.getUTCDay() === 6;
           const first = here[0];
           const tileStyle = { background: isToday ? "var(--ink)" : weekend ? "var(--panel, #eef1f7)" : "var(--surface)", color: isToday ? "var(--surface)" : "var(--ink)", border: "1px solid var(--line)" };
-          const tileCls = "flex min-h-[92px] flex-col justify-between rounded-2xl p-2 no-underline sm:min-h-[120px] sm:p-3";
+          const tileCls = "group relative flex min-h-[92px] flex-col justify-between rounded-2xl p-2 no-underline sm:min-h-[120px] sm:p-3";
           return first ? (
             <Link key={k} href={`/custdash/bookings?open=${encodeURIComponent(first.b.ref)}`} className={tileCls} style={tileStyle}>
               <span>
                 <span className="block text-[11px] font-bold uppercase opacity-70 sm:text-[12.5px]">{d.toLocaleDateString(loc, { weekday: "short", timeZone: "UTC" })}</span>
                 <span className="block text-[22px] font-extrabold leading-none sm:text-[30px]">{d.getUTCDate()}</span>
               </span>
+              {here.length > 0 && (
+                <span role="tooltip" className="pointer-events-none absolute start-1/2 top-full z-30 mt-1.5 hidden w-[240px] -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-start text-[12.5px] leading-[1.45] font-semibold text-[var(--ink)] shadow-xl group-hover:block group-focus-visible:block">
+                  {here.map(({ b }) => { const dd = detail(b); return (
+                    <span key={b.ref} className="mb-2 block last:mb-0">
+                      <span className="block text-[13px] font-extrabold">{b.child} <span className="font-semibold" style={{ color: tone[b.status] }}>· {t("p7shell.week_" + b.status)}</span></span>
+                      <span className="block">{b.listing}</span>
+                      {dd.time && <span className="block opacity-80">🕒 {dd.time}</span>}
+                      {dd.place && <span className="block opacity-80">📍 {dd.place}</span>}
+                      <span className="block opacity-80">{money(b.amount ?? 0)}</span>
+                    </span>
+                  ); })}
+                </span>
+              )}
               <span className="flex flex-col gap-0.5">
                 {here.slice(0, 3).map(({ b }) => (
                   <span key={b.ref} className="flex items-center gap-1 truncate text-[11px] font-semibold sm:text-[13px]">
@@ -130,6 +143,19 @@ function WeekStrip({ live, today }: { live: Booking[]; today: string }) {
                 <span className="block text-[11px] font-bold uppercase opacity-70 sm:text-[12.5px]">{d.toLocaleDateString(loc, { weekday: "short", timeZone: "UTC" })}</span>
                 <span className="block text-[22px] font-extrabold leading-none sm:text-[30px]">{d.getUTCDate()}</span>
               </span>
+              {here.length > 0 && (
+                <span role="tooltip" className="pointer-events-none absolute start-1/2 top-full z-30 mt-1.5 hidden w-[240px] -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-start text-[12.5px] leading-[1.45] font-semibold text-[var(--ink)] shadow-xl group-hover:block group-focus-visible:block">
+                  {here.map(({ b }) => { const dd = detail(b); return (
+                    <span key={b.ref} className="mb-2 block last:mb-0">
+                      <span className="block text-[13px] font-extrabold">{b.child} <span className="font-semibold" style={{ color: tone[b.status] }}>· {t("p7shell.week_" + b.status)}</span></span>
+                      <span className="block">{b.listing}</span>
+                      {dd.time && <span className="block opacity-80">🕒 {dd.time}</span>}
+                      {dd.place && <span className="block opacity-80">📍 {dd.place}</span>}
+                      <span className="block opacity-80">{money(b.amount ?? 0)}</span>
+                    </span>
+                  ); })}
+                </span>
+              )}
               <span className="flex flex-col gap-0.5">
                 {here.slice(0, 3).map(({ b }) => (
                   <span key={b.ref} className="flex items-center gap-1 truncate text-[11px] font-semibold sm:text-[13px]">
@@ -273,7 +299,7 @@ export function ParentHomeApp() {
 
   // Venue + time for the few cards shown (one read per listing, once).
   const [briefs, setBriefs] = useState<Record<string, ListingBrief | null>>({});
-  const upIds = upcoming.map((u) => u.b.listingId).filter(Boolean).join(",");
+  const upIds = [...new Set([...upcoming.map((u) => u.b.listingId), ...live.filter((b) => ["Confirmed", "Waitlisted", "Offered"].includes(b.status)).slice(0, 12).map((b) => b.listingId)])].filter(Boolean).join(",");
   useEffect(() => {
     for (const id of upIds.split(",").filter(Boolean)) {
       if (asked.current.has(id)) continue;
@@ -495,7 +521,7 @@ export function ParentHomeApp() {
           {greeting}
           {starter}
           {attentionBlock}
-          {!loading && !starter && live.length > 0 && <WeekStrip live={live} today={today} />}
+          {!loading && !starter && live.length > 0 && <WeekStrip live={live} today={today} detail={(b) => ({ time: timeFor(b), place: (b.listingId ? briefs[b.listingId]?.library?.venue?.name ?? briefs[b.listingId]?.location : null) ?? null })} />}
           {starter ? null : nextBlock}
           <div className="flex flex-col gap-5 lg:hidden">{starter ? null : childrenBlock}{tilesBlock}</div>
         </div>
