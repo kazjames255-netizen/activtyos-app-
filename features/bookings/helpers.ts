@@ -401,6 +401,8 @@ export function payLabel(pay: string): string {
 export function payLabelFor(b: { pay: string; status?: string; voucherScheme?: string; method?: string }): string {
   // Nothing is owed until a waitlisted place is offered and accepted.
   if (b.status && waitingForPlace(b.status)) return "Waiting list - nothing owed";
+  // A cancelled / declined booking that never paid owes nothing: "Unpaid" read as money still due.
+  if ((b.status === "Cancelled" || b.status === "Declined") && (b.pay === "Unpaid" || b.pay === "Invoice sent")) return b.status === "Declined" ? "Declined - nothing owed" : "Cancelled - nothing owed";
   // Every off-platform route shares one status, so the words come from the method.
   if (b.pay === "Awaiting voucher payment") return pendingPayWords(b).chip;
   const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
