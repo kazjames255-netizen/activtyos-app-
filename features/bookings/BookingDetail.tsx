@@ -25,6 +25,7 @@ import {
   statusTone,
   type BlockAvail,
   refundButtonKind,
+  refundableSoFar,
 } from "./helpers";
 import { Badge, Button, Card, DefRow, Input, SectionHead, Select } from "@/components/ui";
 import { useTenantSettings, reasonsFor } from "@/lib/settings";
@@ -283,6 +284,9 @@ function CancelPanel({ booking }: { booking: Booking }) {
   const doCancel = useBookingsStore((s) => s.doCancel);
   const cancelAbort = useBookingsStore((s) => s.cancelAbort);
   const rt = booking._refundType || "full";
+  // A waiting-list / never-paid booking has nothing to give back: no policy advice, no refund choice, and the cancel records no refund.
+  const nothingPaid = refundableSoFar(booking) <= 0;
+  useEffect(() => { if (nothingPaid && booking._refundType !== "none") setRefund(booking.ref, "none"); }, [nothingPaid, booking._refundType, booking.ref, setRefund]);
   const { settings } = useTenantSettings();
   // What the provider's own policy says is owed, given how much notice this
   // cancellation actually gives. A recommendation, not an action: it prefills
@@ -376,7 +380,7 @@ function CancelPanel({ booking }: { booking: Booking }) {
       </div>
 
       {/* Only worth asking when there's more than one to choose from. */}
-      {initiator === "parent" && settings.cancellationPolicies.length > 1 && (
+      {initiator === "parent" && !nothingPaid && settings.cancellationPolicies.length > 1 && (
         <div className="mb-3">
           <div className="mb-[7px] text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
             {t("p7bd.whichPolicy")}
@@ -445,7 +449,10 @@ function CancelPanel({ booking }: { booking: Booking }) {
         </div>
       )}
 
-      {advice && (
+      {nothingPaid && (
+        <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-bold text-[var(--ink-2)]">{t("p7bd.nothingPaidNote")}</div>
+      )}
+      {advice && !nothingPaid && (
         <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
           <div className="text-[12.5px] font-extrabold">
             {t("p7bd.policySays", { what: advice.percent === 100 ? t("p7bd.adviceFull") : advice.percent === 0 ? t("p7bd.adviceNone") : t("p7bd.advicePct", { pct: advice.percent, amt: money(advice.amount) }) })}
@@ -455,6 +462,7 @@ function CancelPanel({ booking }: { booking: Booking }) {
           </div>
         </div>
       )}
+      {!nothingPaid && (<>
       <div className="mb-[7px] text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
         {t("p7bd.refundParentQ")}
       </div>
@@ -463,7 +471,8 @@ function CancelPanel({ booking }: { booking: Booking }) {
         <RBtn t="partial" label={t("p7bd.partialLbl")} />
         <RBtn t="none" label={t("p7bd.noRefundBtn")} />
       </div>
-      {rt === "partial" && (
+      </>)}
+      {!nothingPaid && rt === "partial" && (
         <div className="mt-2.5">
           <label className="mb-[3px] block text-[11px] font-bold text-[var(--ink-3)]">
             {t("p7bd.refundAmountGbp")}
