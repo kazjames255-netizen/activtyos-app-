@@ -527,6 +527,19 @@ function Page1() {
           { src: "golive-3-reply-to", alt: "Go live pop-up, step 3: where replies go", caption: "Step 3 · reply-to, then Go live" },
         ]} />
 
+      <Stage n="6b" color={C.golive} title="Where parents' replies go" tag="Go live step 3 · welcome email item 3"
+        facts={[
+          { k: "What it is", v: "When a parent replies to any email the platform sends in the provider's name (booking confirmation, receipts, reminders, messages), the reply goes to this one address, not to a no-reply box." },
+          { k: "Where it comes from", v: "It is the contact email saved on the account. It starts as the provider's login email at sign-up, and they confirm it in Go live step 3. If that is ever empty, the platform falls back to an address on the provider record, and last of all to the owner's login email, so a reply never goes nowhere." },
+          { k: "How to change it", v: "Type a new address in Go live step 3 and press Save, or later in Setup, Company setup, in the Email field. It applies to every email sent from then on." },
+          { k: "Why we ask", v: "It must be an inbox the provider actually reads. A parent who asks a question or cancels by replying to an email is writing to this address, so a dead address means missed families." },
+          { k: "Where the provider is reminded", v: "Go live step 3, and item 3 of the welcome email (\"Check where replies go\")." },
+        ]}
+        shots={[
+          { src: "golive-3-reply-to", alt: "Go live pop-up, step 3: where replies go", caption: "Go live step 3 · the address is filled in, press Save" },
+          { src: "/manual/emails/01-welcome-desktop.jpg", alt: "Welcome email with the Check where replies go item", caption: "Welcome email · item 3, Check where replies go" },
+        ]} />
+
       <Stage n="7" color={C.billing} title="Billing & payouts" tag="Checklist job 4"
         facts={[
           { k: "What they see", v: "One page, two tabs. \"Your plan\" is what they pay the platform. \"Get paid by parents\" is how parents pay them." },
