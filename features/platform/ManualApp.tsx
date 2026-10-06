@@ -208,7 +208,7 @@ function Stage({ n, color, title, tag, facts, shots }: {
     <Section>
       <div className="flex flex-wrap items-center gap-3 rounded-2xl px-4 py-3.5 text-white" style={{ background: `linear-gradient(120deg, ${color}, color-mix(in srgb, ${color} 62%, #0b1f5c))` }}>
         <span className="grid h-10 w-10 flex-none place-items-center rounded-full bg-white text-[18px] font-extrabold" style={{ color }}>{n}</span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[12rem] flex-1">
           <h2 className="m-0 text-[22px] font-extrabold leading-tight sm:text-[25px]" style={display}>{title}</h2>
         </div>
         <span className="rounded-full bg-white/20 px-3 py-1 text-[12px] font-bold">{tag}</span>
@@ -355,7 +355,7 @@ function PayMethods() {
   return (
     <div className="grid grid-cols-1 gap-3 min-[720px]:grid-cols-2">
       {col(C.golive, "Card payments", "Parents see the card form once the provider has finished card set-up. Apple Pay and Google Pay appear automatically on phones and browsers that support them.", ["Cards", "Apple Pay", "Google Pay"], "the provider's own Stripe account, then their bank")}
-      {col(C.block, "Bank and benefits", "Parents are told how to pay in their booking email and in My bookings, quoting their booking reference. The bank details are never shown on a public pay link, and the provider marks the payment received. This is why bank details are compulsory. These options show when the provider has switched them on, per listing in the editor or by default under Setup, Payments.", ["Bank transfer", "Tax-Free Childcare", "Vouchers"], "the provider's bank account")}
+      {col(C.block, "Bank and benefits", "For bank transfer, parents see the details on the confirmation screen straight after booking, in their booking email and in My bookings, quoting their booking reference. Tax-Free Childcare and vouchers show the details set in Setup, Childcare vouchers. The bank details are never shown on a public pay link, and the provider marks the payment received. This is why bank details are compulsory. These options show when the provider has switched them on, per listing in the editor or by default under Setup, Payments.", ["Bank transfer", "Tax-Free Childcare", "Vouchers"], "the provider's bank account")}
     </div>
   );
 }
@@ -516,7 +516,7 @@ function Page1() {
         facts={[
           { k: "When it appears", v: "When a new provider presses Publish and the plan or bank details are not done yet. Once both are done, Publish goes straight through. Accounts that predate this flow, and franchise branches (which ride on head office's plan), are never held up." },
           { k: "Step 1 · free trial", v: "Add a card to start the 7-day free trial. It opens in a new tab and ticks itself when they return. Nothing is charged until the trial ends." },
-          { k: "Step 2 · bank details (required)", v: "Bank name, sort code and account number. Bank transfers, Tax-Free Childcare and vouchers pay into this account and it is shown on invoices. Below it, card payments through Stripe are optional and recommended, and can be done later." },
+          { k: "Step 2 · bank details (required)", v: "Bank name, sort code and account number. Parents who choose bank transfer are shown them after they book, and they are printed on invoices (see \"When parents see your bank details\", under Billing & payouts). Below it, card payments through Stripe are optional and recommended, and can be done later." },
           { k: "Step 3 · reply-to", v: "Where parents' replies go. It is filled in from their login email. They press Save, then Go live." },
           { k: "Enforced by the server", v: "Publishing without a started plan or saved bank details is refused, so no other screen can skip this." },
           { k: "Common mistakes", v: "Closing the pop-up with Not yet: the listing stays saved as a draft and the pop-up returns at the next Publish." },
@@ -541,14 +541,36 @@ function Page1() {
           { src: "billing-your-plan", alt: "Billing and payouts, your plan tab", caption: "Your plan" },
         ]} />
 
+      <Stage n="7b" color={C.billing} title="When parents see your bank details" tag="Billing & payouts · bank transfer"
+        facts={[
+          { k: "1 · Before they choose", v: "Never. The public booking page only learns yes or no: can this provider take bank transfers. Bank transfer appears under How you'll pay only when bank details are saved and Bank transfer is switched on for the provider and the listing. The numbers are not sent to the page." },
+          { k: "2 · When they pick Bank transfer", v: "Still not on the screen. The button reads Confirm booking, the amount, to pay by bank transfer. The details come after the booking exists, because that is when the booking reference exists to quote." },
+          { k: "3 · Straight after they confirm", v: "The confirmation screen shows bank name, account name, sort code, account number and their own booking reference. It does not show for a booking waiting for the provider's approval or for a waiting-list place." },
+          { k: "4 · In the confirmation email", v: "The same panel is in the Booking confirmed email sent when the booking is confirmed. If the provider approves bookings by hand, the later approved email does not repeat the numbers; the parent finds them in My bookings." },
+          { k: "5 · In My bookings", v: "On that booking, any time until it is paid. It goes once the booking is paid, cancelled, declined or waitlisted. Only the signed-in parent who made the booking sees it." },
+          { k: "Invoices", v: "Invoices the provider sends print the bank details at the foot." },
+          { k: "Never on a pay link", v: "The public pay link says the details are in the booking email and under My bookings, and shows only the reference to quote. Anyone holding the link sees no account numbers." },
+          { k: "Tax-Free Childcare and vouchers", v: "These do not use this panel. They show the account, Ofsted and reference details the provider enters in Setup, Childcare vouchers, in the same places (confirmation screen and email)." },
+        ]}
+        shots={[
+          { src: "bank-1-method-choice", alt: "Checkout, How you'll pay: Bank transfer chosen, no bank details yet", caption: "2 · Pay step with Bank transfer chosen: no account numbers yet" },
+          { src: "bank-2-confirmation", alt: "Confirmation screen showing the bank details and reference", caption: "3 · Straight after Confirm booking: details and the parent's own reference" },
+          { src: "bank-4-email", alt: "Booking confirmed email with the bank transfer panel", caption: "4 · The Booking confirmed email carries the same panel" },
+          { src: "bank-3-my-bookings", alt: "My bookings showing the bank details on the unpaid booking", caption: "5 · My bookings, on the unpaid booking, until it is paid" },
+          { src: "bank-5-pay-link", alt: "Public pay link page: reference only, no account numbers", caption: "Never · the public pay link shows the reference only" },
+        ]} />
+
       <Stage n="8" color={C.cancel} title="Set your cancellation policy" tag="Checklist job 5"
         facts={[
-          { k: "What they see", v: "Setup, Cancellations & refunds, with four ready-made policies: Standard, Flexible, Strict and No refunds. Standard is the default and what a new listing starts on: full refund a week ahead, half back at 48 hours, nothing after." },
-          { k: "What to do", v: "Edit the notice periods and percentages, rename it if they like, and press Done. The wording parents read writes itself from the rows." },
-          { k: "What ticks it", v: "Pressing Set my policy marks it as reviewed, and saving a policy ticks it too. Keeping the standard policy is fine." },
-          { k: "Good to know", v: "When a family cancels, the platform works out what they are owed from this policy and shows it. The provider always decides whether to send the refund, and the platform never moves the money." },
+          { k: "What they see", v: "Not the full editor. The first visit from the checklist opens a short screen: \"We've chosen a common cancellation policy for you\". It shows the Standard policy as two coloured chips and one plain sentence: full refund a week ahead, half back at 48 hours, nothing after. Standard is also what a new listing starts on." },
+          { k: "What to do", v: "Press Keep this and move on, and that is it. They can change it now (Change it now opens the full editor with four ready-made policies: Standard, Flexible, Strict and No refunds), or at any time later in Setup, Cancellations & refunds." },
+          { k: "What ticks it", v: "Keep this and move on counts the checklist job as done and takes them to the next job, or back to the dashboard when none are left. Opening the editor and saving a policy ticks it too." },
+          { k: "Good to know", v: "When a family cancels, the platform works out what they are owed from this policy and shows it. The provider always decides whether to send the refund, and the platform never moves the money. Each listing can use a different policy." },
         ]}
-        shots={[{ src: "cancellation-policy", alt: "Cancellations and refunds setup", caption: "The standard policy, ready to edit" }]} />
+        shots={[
+          { src: "cancel-welcome", alt: "First visit to cancellations: a common policy has been chosen", caption: "First visit · the chosen policy, with Keep this and move on" },
+          { src: "cancel-editor", alt: "Cancellations and refunds editor", caption: "After Change it now · the full editor, any time from Setup" },
+        ]} />
 
       <Stage n="9" color={C.open} title="Set up done: parents can book" tag="Checklist 5 of 5"
         facts={[

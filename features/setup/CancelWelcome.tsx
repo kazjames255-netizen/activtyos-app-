@@ -29,7 +29,7 @@ export function CancelWelcome({ policy, onEdit }: { policy: NamedPolicy; onEdit:
       <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <div className="text-[13px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{policy.name}</div>
         <div className="mt-2 flex flex-wrap gap-2">
-          {bands.map((b, i) => {
+          {bands.filter((b) => !(b.hoursBefore === 0 && b.refundPercent === 0)).map((b, i) => {
             const c = tone(b.refundPercent);
             const label = b.hoursBefore > 0 ? noticeLabelT(t, locale, b.hoursBefore) : null;
             return (
