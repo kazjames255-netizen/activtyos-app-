@@ -1,6 +1,7 @@
 "use client";
 
 import { StepDonePrompt } from "@/features/dashboard/StepDonePrompt";
+import { CancelWelcome } from "./CancelWelcome";
 import { settingsOwner } from "@/lib/franchiseTerms";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
@@ -1397,6 +1398,8 @@ export function SetupApp() {
   const backLabel = fromView ? (FROM_LABELS[fromView] ? navLabel(t, FROM_LABELS[fromView]) : fromView.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase())) : "";
   const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "announcements", "roles", "reviews", "learning", "hub", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
+  // The set-up checklist links to ?tab=cancel&welcome=1: the first visit shows the chosen policy and a one-tap "keep and move on" instead of the full editor.
+  const [cancelWelcome, setCancelWelcome] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("welcome") === "1");
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
@@ -2300,6 +2303,9 @@ export function SetupApp() {
 
       {activeTab === "cancel" && (
         <>
+          {cancelWelcome && settings.cancellationPolicies[0] ? (
+            <CancelWelcome policy={settings.cancellationPolicies[0]} onEdit={() => setCancelWelcome(false)} />
+          ) : (<>
           <StepDonePrompt step="cancel" />
           <Section
             title={t("p8set.cnTitle")}
@@ -2411,6 +2417,7 @@ export function SetupApp() {
               <Rich k="p8set.amDearer" slots={{}} />
             </div>
           </Section>
+          </>)}
         </>
       )}
 
