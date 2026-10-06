@@ -44,7 +44,7 @@
   function makeFrame(kind, id) {
     var frame = document.createElement("iframe");
     frame.src = pageUrl(kind, id);
-    frame.title = "Book with ActivityOS";
+    frame.title = "Book online";
     frame.allow = "payment *"; // Stripe wallets inside the frame
     frame.style.border = "0";
     frame.style.width = "100%";

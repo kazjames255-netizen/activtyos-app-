@@ -6,6 +6,7 @@ import Link from "next/link";
 import { apiPublic } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/provider";
 import { isRTL } from "@/lib/i18n/config";
+import { BRAND as BRAND_NAME } from "@/lib/i18n/config";
 
 // Public "Book a demo" lead form — the marketing site's demo/talk-to-us buttons
 // point here. Posts to the public POST /api/leads (no login); the lead lands in
@@ -186,7 +187,7 @@ export default function DemoPage() {
               <span className="logo" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff" /></svg>
               </span>
-              <span>Activ<span className="os">ly</span></span>
+              <span>{BRAND_NAME}</span>
             </Link>
             <nav className="nav-links">
               <Link className="navtab" href="/v2/activly.html">{t("p8pub.dmNavHome")}</Link>

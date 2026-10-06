@@ -11,6 +11,7 @@ import { AUTH_LIGHT, AosMark } from "@/components/auth/AuthBrand";
 import { useI18n, tNow } from "@/lib/i18n/provider";
 import { safeNext } from "@/lib/safe-next";
 import { isRTL } from "@/lib/i18n/config";
+import { BRAND as BRAND_NAME } from "@/lib/i18n/config";
 
 type AccountType = "parent" | "freelancer" | "company" | "franchise";
 
@@ -668,7 +669,7 @@ function Hero({ emoji, eyebrow, title, lede, steps, step }: { emoji: string; eye
       <div className="mb-4 flex items-center gap-2.5">
         <AosMark />
         <span className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          <span style={{ color: "#fff" }}>Activ</span><span style={{ color: "var(--gold, #f5b81f)" }}>ly</span>
+          <span style={{ color: "#fff" }}>{BRAND_NAME}</span>
         </span>
       </div>
       {typeof step === "number" && steps && (

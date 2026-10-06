@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { BRAND } from "@/lib/i18n/config";
 
 // Auth screens run the marketing-site palette so the hand-off from the website
 // into sign-up feels like one product. That palette is the blue + gold one —
@@ -40,8 +41,7 @@ export function AosMark({ size = 30 }: { size?: number }) {
 export function AosWordmark({ className = "" }: { className?: string }) {
   return (
     <span className={className} style={{ fontFamily: "var(--ff-display)" }}>
-      <span style={{ color: "var(--ink, #171534)" }}>Activ</span>
-      <span style={{ color: "var(--gold, #f5b81f)" }}>ly</span>
+      <span style={{ color: "var(--ink, #171534)" }}>{BRAND}</span>
     </span>
   );
 }
