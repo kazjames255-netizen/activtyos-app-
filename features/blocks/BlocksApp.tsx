@@ -1398,12 +1398,13 @@ function PricingCalculator({
   // WITHIN a pass are pro-rata'd (by hours) from that pass's price.
   const [passFlat, setPassFlat] = useState<Record<string, string>>(() => {
     const seed: Record<string, string> = {};
-    block.resolved.passes.forEach((p, i) => { if (i > 0) seed[p.id] = String(p.price); });
+    // A pass that already has its own real price keeps it. Passes never priced start on AUTO (calculated from the longest pass).
+    block.resolved.passes.forEach((p, i) => { if (i > 0 && p.price > 0) seed[p.id] = String(p.price); });
     return { ...seed, ...Object.fromEntries(Object.entries(block.passFlat).map(([k, v]) => [k, String(v)])) };
   });
   const [passMode, setPassMode] = useState<Record<string, "flat">>(() => {
     const seed: Record<string, "flat"> = {};
-    block.resolved.passes.forEach((p, i) => { if (i > 0) seed[p.id] = "flat"; });
+    block.resolved.passes.forEach((p, i) => { if (i > 0 && p.price > 0) seed[p.id] = "flat"; });
     return { ...seed, ...block.passMode };
   });
   const [periodPrice, setPeriodPriceState] = useState<Record<string, string>>(() =>
@@ -1482,10 +1483,18 @@ function PricingCalculator({
   // passes update as you type, not only after Save.
   const passDisplayPrice = (passId: string, idx: number, resolvedPrice: number): number => {
     if (idx === 0) return num(masterPrice);
-    // Each pass keeps its own price — never derived from the longest pass.
+    // A pass the provider priced themselves keeps that price. Every other pass is CALCULATED live from the longest pass (price per day x its days).
     if (passMode[passId] === "flat") return num(passFlat[passId] ?? "0");
+    if (calcOn) return autoPassPrice(passId, resolvedPrice);
     return resolvedPrice;
   };
+  const autoPassPrice = (passId: string, fallback: number): number => {
+    const top = passes[0];
+    const me = passes.find((x) => x.id === passId);
+    if (!top || !me || !top.days) return fallback;
+    return Math.round((num(masterPrice) * me.days / top.days) * 100) / 100;
+  };
+  const recalcAll = () => { setPassFlat({}); setPassMode({}); };
 
   // Per-timing price, computed LIVE from the typed master price so the boxes
   // fill in as you type (not only after Save). A timing costs its share of the
@@ -1525,23 +1534,44 @@ function PricingCalculator({
           : t("p8lst.blkCalcOffHelp")}
       </p>
 
+      {calcOn && passes.length > 1 && (
+        <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] text-[#0b5a3f]">
+          <span className="font-extrabold">✨ {t("p8lst.blkCalcAllNote")}</span>
+          <button type="button" onClick={recalcAll} className="ms-auto rounded-full bg-[#0f7a43] px-3 py-1 text-[11.5px] font-extrabold text-white">{t("p8lst.blkCalcAllBtn")}</button>
+        </div>
+      )}
       {passes.length === 0 ? (
         <div className="text-[11.5px] text-[var(--ink-3)]">{t("p8lst.blkAddPassesToPrice")}</div>
       ) : (
         <div className="flex flex-col gap-1.5">
           {passes.map((q, idx) => {
             const isM = idx === 0;
+            // Every pass gets its own colour so they are easy to tell apart (the longest, set-first pass is always gold).
+            const PASS_COLS = ["#e9a915", "#2f6bd8", "#0f9d6b", "#8a4fd6", "#e0457b", "#0e8fa8", "#d9692a"];
+            const pc = PASS_COLS[idx % PASS_COLS.length];
             const isFlat = passMode[q.id] === "flat";
             const price = passDisplayPrice(q.id, idx, q.price);
             const open = openAll !== toggled.has(q.id);
             return (
-              <div key={q.id} className="overflow-hidden rounded-lg border border-[var(--line)]">
+              <div key={q.id} className="overflow-hidden rounded-lg border" style={{ borderColor: pc, borderWidth: isM ? 3 : 2, borderInlineStartWidth: 8, boxShadow: isM ? "0 14px 34px -16px rgba(233,169,21,.8)" : `0 8px 22px -16px ${pc}` }}>
+                {isM && (
+                  <div className="flex flex-wrap items-center gap-2 px-3 py-2 text-[12.5px] font-extrabold text-[#2a1d00]" style={{ background: "linear-gradient(120deg,#f3c24a,#e9a915)" }}>
+                    <span className="grid h-6 w-6 place-items-center rounded-full bg-[#2a1d00] text-[13px] text-[#f3c24a]">1</span>
+                    {t("p8lst.blkStartHere")}
+                    <span className="font-semibold opacity-85">{t("p8lst.blkStartHereSub")}</span>
+                  </div>
+                )}
+                {!isM && idx === 1 && (
+                  <div className="border-b border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-3)]">{t("p8lst.blkThenOthers")}</div>
+                )}
                 <button
                   type="button"
                   onClick={() => { setToggled((s) => { const n = new Set(s); if (n.has(q.id)) n.delete(q.id); else n.add(q.id); return n; }); }}
-                  className="flex w-full items-center gap-2 bg-[var(--panel)] px-2.5 py-1.5 text-start"
+                  className="flex w-full items-center gap-2 px-2.5 py-1.5 text-start"
+                  style={{ background: `color-mix(in srgb, ${pc} ${isM ? 22 : 16}%, #fff)` }}
                 >
-                  <span className="text-[13px] font-extrabold">{q.name}</span>
+                  <span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[12px] font-extrabold text-white" style={{ background: pc }}>{idx + 1}</span>
+                  <span className="text-[14px] font-extrabold">{q.name}</span>
                   <span className="text-[11px] text-[var(--ink-3)]">
                     {pickPlural(t, locale, "p8lst.blkDays", q.days)}
                     {isM ? ` · ${t("p8lst.blkLongest")}` : ""}
@@ -1555,7 +1585,7 @@ function PricingCalculator({
                     {/* The driver: this pass's own full price, up top and clearly
                         highlighted. Each pass is priced on its own — a day pass
                         isn't a fraction of the week. Its timings calculate from it. */}
-                    <div className="mb-2.5 rounded-lg border-2 p-2.5" style={{ borderColor: "#e0a020", background: "#fdf6ea" }}>
+                    <div className="mb-2.5 rounded-lg border-2 p-2.5" style={{ borderColor: pc, background: `color-mix(in srgb, ${pc} ${isM ? 20 : 12}%, #fff)` }}>
                       <label className="block text-[11.5px] font-extrabold leading-[1.45] text-[#8a5a09]">
                         {t("p8lst.blkFullPrice")}
                         {longestTiming && timingRows.length > 1 ? (
@@ -1569,11 +1599,15 @@ function PricingCalculator({
                         <Input
                           type="number"
                           step="0.01"
-                          value={isM ? masterPrice : passFlat[q.id] ?? ""}
+                          value={isM ? masterPrice : (isFlat ? (passFlat[q.id] ?? "") : (calcOn ? (num(masterPrice) ? autoPassPrice(q.id, 0).toFixed(2) : "") : (passFlat[q.id] ?? "")))}
                           onChange={(e) => (isM ? setMasterPrice(e.target.value) : setFlat(q.id, e.target.value))}
                           placeholder="0.00"
-                          className="w-[130px] text-[15px] font-bold"
+                          className={isM ? "w-[170px] text-[18px] font-extrabold" : "w-[130px] text-[15px] font-bold"}
                         />
+                        {!isM && calcOn && !isFlat && <span className="rounded-full bg-[#e7f6ee] px-2.5 py-1 text-[11px] font-extrabold text-[#0f7a43]">✨ {t("p8lst.blkCalcAuto")}</span>}
+                        {!isM && isFlat && calcOn && (
+                          <button type="button" onClick={() => resetPass(q.id)} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] font-extrabold text-[var(--brand)]">↺ {t("p8lst.blkCalcBack")}</button>
+                        )}
                       </div>
                     </div>
                     <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
