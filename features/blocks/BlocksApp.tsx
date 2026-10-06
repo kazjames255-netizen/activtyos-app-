@@ -121,35 +121,50 @@ const num = (v: string): number => {
 };
 
 
-/** When someone presses "+ Add to block", the card visibly flies across the page into the block column (and the page scrolls there on narrow
- *  screens), then the block box flashes. Respects "reduce motion". Purely visual: the real add happens in the caller. */
+/** When someone presses "+ Add to block", the card lifts off the page, hovers with a glow, and visibly travels across (scrolling the page along if the
+ *  block box is out of sight) into the block box, which then pulses. Respects "reduce motion". Purely visual: the real add happens in the caller. */
 function flyToBlock(from: HTMLElement | null) {
   if (typeof window === "undefined" || !from) return;
   const target = document.querySelector<HTMLElement>("[data-block-drop]");
   if (!target) return;
   const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  const narrow = window.matchMedia?.("(max-width: 1023px)").matches;
-  if (narrow) target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+  const tr0 = target.getBoundingClientRect();
+  const offscreen = tr0.top < 90 || tr0.bottom > window.innerHeight - 30;
+  if (offscreen) target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
   if (reduce) return;
   const a = from.getBoundingClientRect();
   const clone = from.cloneNode(true) as HTMLElement;
-  Object.assign(clone.style, { position: "fixed", left: `${a.left}px`, top: `${a.top}px`, width: `${a.width}px`, height: `${a.height}px`, margin: "0", zIndex: "2147483000", pointerEvents: "none", boxShadow: "0 18px 40px -10px rgba(0,0,0,.35)", transformOrigin: "center" });
+  Object.assign(clone.style, { position: "fixed", left: `${a.left}px`, top: `${a.top}px`, width: `${a.width}px`, height: `${a.height}px`, margin: "0", zIndex: "2147483000", pointerEvents: "none", transformOrigin: "center", background: "#fff8e3", color: "#171534", border: "2px solid #e9a915", borderRadius: "14px" });
   document.body.appendChild(clone);
-  const go = () => {
-    const b = target.getBoundingClientRect();
-    const dx = b.left + Math.min(b.width, 260) / 2 - (a.left + a.width / 2);
-    const dy = b.top + Math.min(b.height, 120) / 2 - (a.top + a.height / 2);
-    const anim = clone.animate(
-      [{ transform: "translate(0,0) scale(1)", opacity: 1 }, { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 40}px) scale(0.9)`, opacity: 1, offset: 0.5 }, { transform: `translate(${dx}px, ${dy}px) scale(0.35)`, opacity: 0.15 }],
-      { duration: 650, easing: "cubic-bezier(.2,.8,.2,1)" },
-    );
-    anim.onfinish = () => {
-      clone.remove();
-      target.animate([{ boxShadow: "0 0 0 0 rgba(233,169,21,.0)" }, { boxShadow: "0 0 0 6px rgba(233,169,21,.55)" }, { boxShadow: "0 0 0 0 rgba(233,169,21,0)" }], { duration: 700 });
-    };
+  // 1. lift off and glow (while any scrolling happens), 2. fly in a high arc to the block box, 3. land and pulse the box.
+  const lift = clone.animate(
+    [{ transform: "translateY(0) scale(1)", boxShadow: "0 0 0 0 rgba(233,169,21,0)" }, { transform: "translateY(-14px) scale(1.06) rotate(-2deg)", boxShadow: "0 24px 50px -10px rgba(233,169,21,.75)" }],
+    { duration: 260, easing: "ease-out", fill: "forwards" },
+  );
+  lift.onfinish = () => {
+    window.setTimeout(() => {
+      const b = target.getBoundingClientRect();
+      const tx = b.left + Math.min(b.width, 300) / 2;
+      const ty = b.top + Math.min(Math.max(b.height, 80), 160) / 2;
+      const dx = tx - (a.left + a.width / 2);
+      const dy = ty - (a.top + a.height / 2);
+      const fly = clone.animate(
+        [
+          { transform: "translateY(-14px) scale(1.06) rotate(-2deg)", opacity: 1 },
+          { transform: `translate(${dx * 0.45}px, ${Math.min(dy * 0.45, 0) - 90}px) scale(0.9) rotate(4deg)`, opacity: 1, offset: 0.5 },
+          { transform: `translate(${dx}px, ${dy}px) scale(0.42) rotate(0deg)`, opacity: 0.95 },
+        ],
+        { duration: 950, easing: "cubic-bezier(.45,.05,.2,1)", fill: "forwards" },
+      );
+      fly.onfinish = () => {
+        clone.animate([{ opacity: 0.95 }, { opacity: 0 }], { duration: 160, fill: "forwards" }).onfinish = () => clone.remove();
+        target.animate(
+          [{ boxShadow: "0 0 0 0 rgba(233,169,21,0)", transform: "scale(1)" }, { boxShadow: "0 0 0 10px rgba(233,169,21,.6)", transform: "scale(1.025)" }, { boxShadow: "0 0 0 0 rgba(233,169,21,0)", transform: "scale(1)" }],
+          { duration: 650, easing: "ease-out" },
+        );
+      };
+    }, offscreen ? 420 : 0);
   };
-  // On a narrow screen wait for the scroll to settle before measuring the target.
-  if (narrow) window.setTimeout(go, 350); else go();
 }
 
 // ── Manual chrome ──────────────────────────────────────────────────────────
