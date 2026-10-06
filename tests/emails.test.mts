@@ -286,9 +286,18 @@ test("ME-005 cancellation request: card refund, amount, kids, ref, reason and ap
   assert.equal(n.subject, "Priya Patel — cancellation request");
   assert.match(n.body, /Booking SSC-1042/);
   assert.match(n.body, /Asha, Ravi/);
-  assert.match(n.body, /Reason: Illness\./);
+  assert.match(n.body, /Reason given by the parent: Illness\./);
   assert.match(n.body, /£52\.50 refund requested back to their CARD — approve or decline\./);
   assert.match(n.body, /Open the booking to approve or decline\./);
+});
+
+test("ME-005 cancellation request: the parent's typed note is included, the stock fallback is not", () => {
+  const typed = cancellationRequestNotice(booking({ cancel: { amount: 5, msg: "We are moving house" } }), money);
+  assert.match(typed.body, /Reason given by the parent: "We are moving house"\./);
+  const both = cancellationRequestNotice(booking({ cancel: { amount: 5, reason: "Illness", msg: "Chickenpox" } }), money);
+  assert.match(both.body, /Reason given by the parent: Illness — "Chickenpox"\./);
+  const stock = cancellationRequestNotice(booking({ cancel: { amount: 5, msg: "Cancelled by the parent." } }), money);
+  assert.doesNotMatch(stock.body, /Reason given/);
 });
 
 test("ME-005 cancellation request: wallet destination is named WALLET", () => {

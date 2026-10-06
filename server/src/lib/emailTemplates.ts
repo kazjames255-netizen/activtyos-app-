@@ -294,7 +294,7 @@ export function cancellationRequestNotice(
   const said = (updated.cancel?.msg ?? "").trim();
   const typed = said && said !== "Cancelled by the parent." ? said : "";
   const reasonPart = [updated.cancel?.reason, typed ? `"${typed}"` : ""].filter(Boolean).join(" — ");
-  const reasonTxt = reasonPart ? ` Reason given by the parent: ${reasonPart}${/[.!?"]$/.test(reasonPart) ? "" : "."}` : "";
+  const reasonTxt = reasonPart ? ` Reason given by the parent: ${reasonPart}${/[.!?]$/.test(reasonPart) ? "" : "."}` : "";
   return {
     title: `${updated.booker} asked to cancel — ${updated.listing}`,
     body: `Booking ${updated.ref} · ${updated.listing} · ${kids}${updated.dates ? ` · ${updated.dates}` : ""}.${reasonTxt} ${refundTxt} Open the booking to approve or decline.`,
