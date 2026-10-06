@@ -249,6 +249,7 @@ export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [bundles, setBundles] = useState<Bundle[] | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [view, setView] = useState<"make" | "library">("make");
+  const [justId, setJustId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
 
@@ -326,14 +327,26 @@ export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
       ) : (
         <>
           {/* Two panes that slide: making blocks (left) and the block library (right). */}
-          <div className="mb-3 flex flex-wrap items-center gap-2" role="tablist" aria-label="Blocks">
-            {([["make", t("p8lst.blkTabMake")], ["library", `${t("p8lst.blkTabLib")} (${(bundles ?? []).filter((b) => !b.archived).length})`]] as const).map(([k, label]) => {
+          <div className="mb-4 grid gap-2.5 sm:grid-cols-2" role="tablist" aria-label="Blocks">
+            {([
+              ["make", "🛠️", t("p8lst.blkTabMake"), t("p8lst.blkTabMakeSub"), "linear-gradient(120deg,#e9a915,#f3c24a)", "#2a1d00"],
+              ["library", "📚", t("p8lst.blkTabLib"), t("p8lst.blkTabLibSub"), "linear-gradient(120deg,#5b3fd6,#2f6bd8)", "#fff"],
+            ] as const).map(([k, icon, label, sub, bg, fg]) => {
               const on = view === k;
+              const count = (bundles ?? []).filter((b) => !b.archived).length;
               return (
-                <button key={k} type="button" role="tab" aria-selected={on} onClick={() => setView(k)}
-                  className="rounded-full border-2 px-4 py-2 text-[13.5px] font-extrabold transition-colors"
-                  style={on ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
-                  {k === "library" ? "" : "‹ "}{label}{k === "library" ? " ›" : ""}
+                <button key={k} type="button" role="tab" aria-selected={on} onClick={() => { setView(k); if (k === "make") setJustId(null); }}
+                  className="relative flex items-center gap-3 rounded-2xl px-4 py-3 text-start transition-all"
+                  style={on
+                    ? { background: bg, color: fg, boxShadow: "0 12px 28px -12px rgba(30,40,120,.55)", transform: "translateY(-1px)" }
+                    : { background: "var(--surface)", color: "var(--ink-2)", border: "2px solid var(--line)", opacity: 0.92 }}>
+                  <span className="grid h-10 w-10 flex-none place-items-center rounded-xl text-[22px]" style={{ background: on ? "rgba(255,255,255,.28)" : "var(--panel)" }} aria-hidden>{icon}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[16px] font-extrabold leading-tight">{label}{k === "library" ? ` (${count})` : ""}</span>
+                    <span className="block text-[12px] leading-snug opacity-85">{sub}</span>
+                  </span>
+                  <span className="text-[22px] font-extrabold" aria-hidden>{k === "make" ? "‹" : "›"}</span>
+                  {k === "library" && justId && view !== "library" && <span className="absolute -end-1 -top-1 h-3.5 w-3.5 rounded-full bg-[#e9a915] ring-2 ring-white" />}
                 </button>
               );
             })}
@@ -348,17 +361,17 @@ export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
                   <Arrow />
                   <PassesColumn passes={passes} draft={draft} setDraft={setDraft} act={act} />
                   <Arrow />
-                  <BuildColumn periods={periods} passes={passes} draft={draft} setDraft={setDraft} act={act} onSaved={() => setView("library")} />
+                  <BuildColumn periods={periods} passes={passes} draft={draft} setDraft={setDraft} act={act} onSaved={(id) => { setJustId(id ?? null); setView("library"); }} />
                 </div>
                 <div className="mt-3 flex justify-end">
-                  <Button onClick={() => setView("library")}>{t("p8lst.blkToLib")} ›</Button>
+                  <button type="button" onClick={() => setView("library")} className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-extrabold text-white shadow-lg transition hover:brightness-110" style={{ background: "linear-gradient(120deg,#5b3fd6,#2f6bd8)" }}>📚 {t("p8lst.blkToLib")} ›</button>
                 </div>
               </>
             }
             library={
               <>
-                <div className="mb-1"><Button onClick={() => setView("make")}>‹ {t("p8lst.blkToMake")}</Button></div>
-                <BlockLibrary bundles={bundles} periods={periods} passes={passes} listings={listings} act={act} />
+                <div className="mb-2"><button type="button" onClick={() => { setView("make"); setJustId(null); }} className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-extrabold shadow-md transition hover:brightness-105" style={{ background: "linear-gradient(120deg,#e9a915,#f3c24a)", color: "#2a1d00" }}>‹ 🛠️ {t("p8lst.blkToMake")}</button></div>
+                <BlockLibrary bundles={bundles} periods={periods} passes={passes} listings={listings} act={act} pinnedId={justId} />
               </>
             }
           />
@@ -707,7 +720,7 @@ function BuildColumn({
   draft: Draft;
   setDraft: React.Dispatch<React.SetStateAction<Draft>>;
   act: Act;
-  onSaved?: () => void;
+  onSaved?: (newId?: string) => void;
 }) {
   const t = useT();
   const [over, setOver] = useState(false);
@@ -747,9 +760,10 @@ function BuildColumn({
       passIds: draft.passIds,
     };
     setBusy(true);
-    const ok = await act(() => apiPost<Bundle>("/api/block-bundles", body));
+    let createdId: string | undefined;
+    const ok = await act(async () => { const made = await apiPost<Bundle>("/api/block-bundles", body); createdId = made?.id; return made; });
     setBusy(false);
-    if (ok) { setDraft(EMPTY_DRAFT); onSaved?.(); }
+    if (ok) { setDraft(EMPTY_DRAFT); onSaved?.(createdId); }
   }
 
   return (
@@ -837,12 +851,14 @@ function BlockLibrary({
   passes,
   listings,
   act,
+  pinnedId,
 }: {
   bundles: Bundle[];
   periods: Period[];
   passes: Pass[];
   listings: Listing[];
   act: Act;
+  pinnedId?: string | null;
 }) {
   const t = useT();
   const [query, setQuery] = useState("");
@@ -852,7 +868,10 @@ function BlockLibrary({
   const q = query.trim().toLowerCase();
   const active = bundles.filter((b) => !b.archived);
   const archived = bundles.filter((b) => b.archived);
-  const filtered = q ? active.filter((b) => b.name.toLowerCase().includes(q)) : active;
+  // Alphabetical, except the block just created, which sits on its own at the top (highlighted) until they leave and come back.
+  const byName = [...(q ? active.filter((b) => b.name.toLowerCase().includes(q)) : active)].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true }));
+  const pinned = !q && pinnedId ? byName.find((b) => b.id === pinnedId) ?? null : null;
+  const filtered = pinned ? byName.filter((b) => b.id !== pinned.id) : byName;
 
   const expandAll = () => setCollapsed(new Set());
   const collapseAll = () => setCollapsed(new Set(active.map((b) => b.id)));
@@ -928,11 +947,18 @@ function BlockLibrary({
             ? t("p8lst.blkNoBlocks")
             : t("p8lst.blkAllArchived")}
         </Card>
-      ) : filtered.length === 0 ? (
+      ) : filtered.length === 0 && !pinned ? (
         <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">
           {t("p8lst.blkNoMatch", { q: query })}
         </Card>
       ) : (
+        <>
+        {pinned && (
+          <div className="mb-4 rounded-2xl p-3" style={{ background: "linear-gradient(120deg, #fff3cf, #ffe3a3)", border: "2px solid #e9a915", boxShadow: "0 10px 30px -14px rgba(233,169,21,.7)" }}>
+            <div className="mb-2 flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-wide text-[#7a4b00]"><span aria-hidden>✨</span>{t("p8lst.blkJustCreated")}</div>
+            <LibraryCard block={pinned} periods={periods} passes={passes} listings={listings} act={act} color={blockColor(pinned.id)} expanded={!collapsed.has(pinned.id)} onToggle={() => toggle(pinned.id)} onDropBlock={(draggedId) => reorder(draggedId, pinned.id)} />
+          </div>
+        )}
         <div className="grid gap-3 lg:grid-cols-2">
           {filtered.map((b) => (
             <LibraryCard
@@ -949,6 +975,7 @@ function BlockLibrary({
             />
           ))}
         </div>
+        </>
       )}
 
       {archived.length > 0 && (
