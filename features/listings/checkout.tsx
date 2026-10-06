@@ -959,6 +959,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     for (const { kid: k, date } of mealSlots) { if (k !== kid) continue; const match = menuForDate(date)?.items.find((i) => i.name === name); if (match) b.pickMeal(kid, date, match.id); }
   };
   const calculated = b.total + addonTotal + mealTotal;
+  // What the family would be offered the place(s) at if one opens: the pass price per child (at least one), before any code or credit.
+  const waitOfferAmt = b.basket.reduce((s, x) => s + x.price * Math.max(1, b.childrenOn(x.id).length), 0);
   const grandTotal = b.totalOverride ?? calculated;
   const [overrideReason, setOverrideReason] = useState("");
 
@@ -1472,7 +1474,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             const days = new Set(b.basket.flatMap((x) => x.dates)).size;
             return (
               <div className="mt-3 text-[15px] font-bold" style={{ color: tk.ink }} data-ui="who-status">
-                {tr("p7ck.whoStatus", { kids: pickPlural(tr, locale, "p7ck.kidsN", roster.length), days: pickPlural(tr, locale, "p7ck.daysN", days), amt: money(b.total) })}
+                {b.waitlistOnly
+                  ? tr("p7ck.waitStatus", { kids: pickPlural(tr, locale, "p7ck.kidsN", roster.length), days: pickPlural(tr, locale, "p7ck.daysN", days), amt: money(waitOfferAmt) })
+                  : tr("p7ck.whoStatus", { kids: pickPlural(tr, locale, "p7ck.kidsN", roster.length), days: pickPlural(tr, locale, "p7ck.daysN", days), amt: money(b.total) })}
               </div>
             );
           })()}
@@ -2180,7 +2184,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       {ckStage === "pay" && grandTotal <= 0 && parentMode && (
         <div className={`mt-3 border px-3 py-2.5 text-[12.5px] leading-[1.5] ${tk.round}`}
           style={{ borderColor: tk.line, color: tk.ink }}>
-          <Rich text={tr("p7ck.freeHead")} />
+          {/* A waiting-list join is not "free": say what it will cost IF a place opens. */}
+          <Rich text={b.waitlistOnly ? tr("p7ck.waitPayHead", { amt: money(waitOfferAmt) }) : tr("p7ck.freeHead")} />
         </div>
       )}
 
