@@ -210,6 +210,16 @@ export function placeOfferedSpec(b: Booking, providerName: string, baseUrl: stri
   };
 }
 
+/** The family's hold ran out (they didn't take an offered place in time): say sorry, and that they are back on the waiting list. */
+export function offerExpiredSpec(b: Booking, providerName: string): CustomerEmailSpec {
+  return {
+    subject: `Sorry, you missed the place, but you are back on the waiting list — ${b.listing}`,
+    title: "Sorry, you missed out. You are back on the waiting list",
+    body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — the place we held for you at ${escapeHtml(providerName)} was not taken in time, so it has gone to the next family.</p>
+     <p style="font-size:14px"><b>You have been put back on the waiting list automatically</b>, at the back of the queue. Nothing has been charged. If another place opens we will email you straight away. If you no longer want to wait, you can leave the list from My bookings.</p>`,
+  };
+}
+
 export function paymentReceivedSpec(b: Booking, providerName: string, opts: { label: string; amount: number; refs?: string[]; fullyPaid?: boolean }): CustomerEmailSpec {
   // One payment can settle several bookings (a basket spanning weeks): one email names them all.
   const many = (opts.refs?.length ?? 0) > 1;

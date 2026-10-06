@@ -272,10 +272,13 @@ function EmailsTable() {
   const rows: { who: string; c: string; what: string; when: string }[] = [
     { who: "Parent", c: C.block, what: "Booking confirmed", when: "Straight after booking, for bank transfer, cash, free and voucher bookings. Bank transfer shows the provider's bank details and the booking reference. NOT sent for a card booking." },
     { who: "Parent", c: C.block, what: "Payment received", when: "Card: once the card has gone through (this is the only confirmation, nothing is sent before it). Bank transfer: when the provider presses Mark paid." },
-    { who: "Parent", c: C.block, what: "Waiting list", when: "When they join the waiting list. A later offer email follows if a place opens." },
+    { who: "Parent", c: C.block, what: "Waiting list", when: "When they join the waiting list. Nothing is charged while they wait." },
+    { who: "Parent", c: C.block, what: "A place is yours", when: "When a place opens for them: held for 2 hours, with one Accept and pay button. They pay only if they accept." },
+    { who: "Parent", c: C.block, what: "Sorry, you missed out", when: "If the 2 hours run out. They are put back on the waiting list automatically (at the back of the queue), nothing charged, and told so." },
     { who: "Parent", c: C.block, what: "Refund approved", when: "When the provider approves a refund (or wallet credit). Declined has its own email." },
     { who: "Parent", c: C.block, what: "Session reminder", when: "Once per booking, before its first booked day. A 30-day camp sends one, not 30. A single-day booking still gets its own." },
     { who: "Provider", c: C.billing, what: "New booking", when: "Each new booking, with every child, allergies and notes. Card bookings say \"awaiting card payment\"; bank transfer says \"awaiting bank transfer payment\", and the booking shows a Pending payment box." },
+    { who: "Provider", c: C.billing, what: "A place has opened up", when: "Manual waiting list only: when a cancellation frees a place and a family is waiting. Bell and email, linking to that booking and its Offer place button. Can be switched off in Setup, Email, Automatic emails, with a warning that you must then check the list yourself. An Automatic waiting list offers the place itself and needs no alert." },
     { who: "Provider", c: C.billing, what: "Cancellation request", when: "When a parent cancels. Short wording: the refund asked for, where it goes, and only the parent's own reason." },
     { who: "Provider", c: C.billing, what: "Moved their dates", when: "When a parent moves their own dates (if the setting is on)." },
   ];

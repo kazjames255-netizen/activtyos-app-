@@ -4,7 +4,7 @@ import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
 import { applyRowAction } from "../../../features/bookings/mutations";
 import { bookingDays, countsUpdate, daysHaveSpace, type BlockDoc } from "./blockDomain";
-import { emailPlaceOffered } from "./emails";
+import { emailOfferExpired, emailPlaceOffered } from "./emails";
 import { notify } from "./notify";
 import { passCap, bookingHasPass } from "./passBooking";
 import { loadSettings } from "./tenantLibrary";
@@ -202,7 +202,9 @@ export async function expireOffers(): Promise<void> {
     for (const doc of snap.docs) {
       const b = fromDoc(doc.data() as BookingDoc);
       if (!b.offerExpiresAt || new Date(b.offerExpiresAt).getTime() > now) continue;
+      let expired: Booking | null = null;
       await db.runTransaction(async (tx) => {
+        expired = null; // (a retried transaction starts clean)
         const fresh = await tx.get(doc.ref);
         if (!fresh.exists) return;
         const cur = fromDoc(fresh.data() as BookingDoc);
@@ -223,7 +225,26 @@ export async function expireOffers(): Promise<void> {
         cur.note = "Offer expired — back in the queue.";
         tx.set(fresh.ref, toDoc(cur));
         if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
+        expired = cur;
       });
+      // The family missed out: tell them (sorry + back on the waiting list automatically), by email and bell.
+      const exp = expired as Booking | null;
+      if (exp && exp.email?.includes("@") && exp.tenantId) {
+        try {
+          const tn = ((await db.collection("tenants").doc(exp.tenantId).get()).get("name") as string | undefined) || "your activity provider";
+          emailOfferExpired(exp, tn);
+          void notify({
+            tenantId: exp.tenantId,
+            to: { kind: "parent", email: exp.email },
+            category: "booking",
+            bellOnly: true,
+            title: `Sorry, you missed the place · ${exp.ref}`,
+            body: `${exp.listing}${exp.child ? ` · ${exp.child}` : ""} — the place was not taken in time. You are back on the waiting list automatically (nothing charged).`,
+            href: `/custdash/bookings?open=${encodeURIComponent(exp.ref)}`,
+            ref: exp.ref,
+          });
+        } catch (e) { console.error("[waitlist] expiry notice failed:", (e as Error).message); }
+      }
       if (b.blockId) touchedBlocks.add(b.blockId);
     }
     for (const blockId of touchedBlocks) await triggerWaitlist(blockId);

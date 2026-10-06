@@ -31,7 +31,8 @@ import {
   paymentLinkSpec,
   paymentReceivedSpec,
   placeOfferedSpec,
-  refundApprovedSpec, waitlistJoinedSpec,
+  offerExpiredSpec,
+  refundApprovedSpec, waitlistJoinedSpec, offerExpiredSpec,
   requestReceivedSpec,
   type CustomerEmailSpec,
 } from "../server/src/lib/emailTemplates";
@@ -562,4 +563,13 @@ test("every customer email renders clean HTML with no junk strings for the stand
     noJunk(s.subject, s.subject + s.title);
     assert.ok(html.includes(WEB), "links should be absolute to the web origin");
   }
+});
+
+test("waiting list: a family that misses an offered place is told sorry AND that they are back on the list, nothing charged", () => {
+  const m = offerExpiredSpec(booking({}), PROVIDER);
+  const t = text(m.body);
+  assert.match(m.subject, /missed/i);
+  assert.match(m.subject, /back on the waiting list/i);
+  assert.match(t, /put back on the waiting list automatically/i);
+  assert.match(t, /Nothing has been charged/i);
 });
