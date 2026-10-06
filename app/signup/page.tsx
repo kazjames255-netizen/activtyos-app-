@@ -203,7 +203,7 @@ function SignupForm() {
       if (address.trim().length < 2) return t("p8pub.suVWhere");
       if (postcode.trim().length < 2) return t("p8pub.suVPostcode");
     }
-    if (id === "identity" && providerNameMode === "person" && name.trim().length < 2)
+    if (id === "identity" && name.trim().length < 2)
       return t("p8pub.suVPerson");
     if (id === "hear" && !heard) return t("p8pub.suVHear");
     if (id === "login") {
@@ -534,9 +534,7 @@ function SignupForm() {
                 })}
               </div>
             </div>
-            {providerNameMode === "person" && (
               <div><FieldLabel htmlFor="i-name">{t("p8pub.suYourName")}</FieldLabel><Input id="i-name" autoComplete="name" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("p8pub.suEg", { x: "Sam Taylor" })} className="w-full" /></div>
-            )}
             <div>
               <FieldLabel>{t("p8pub.suLogo")} <span className="font-normal text-[var(--ink-3)]">{t("p8pub.suLogoHelp")}</span></FieldLabel>
               <div className="flex items-center gap-3">

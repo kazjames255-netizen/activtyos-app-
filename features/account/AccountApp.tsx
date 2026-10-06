@@ -187,8 +187,11 @@ export function AccountApp() {
 
   async function saveProfile() {
     setError(null); setOk(null);
+    // A browser autofill can drop the email into the postcode box; send it as empty rather than let the whole save fail.
+    const cleanPostcode = looksEmail(postcode) ? "" : postcode.trim().slice(0, 16);
+    if (cleanPostcode !== postcode) setPostcode(cleanPostcode);
     try {
-      await api("/api/account", { method: "PUT", body: JSON.stringify({ name, phone, address, postcode, marketingConsent: marketing, ...(p?.role === "parent" ? { emergencyName: emergencyName.trim(), emergencyPhone: emergencyPhone.trim() } : {}) }) });
+      await api("/api/account", { method: "PUT", body: JSON.stringify({ name, phone, address, postcode: cleanPostcode, marketingConsent: marketing, ...(p?.role === "parent" ? { emergencyName: emergencyName.trim(), emergencyPhone: emergencyPhone.trim() } : {}) }) });
       setOk(t("account.saved"));
       // Let the header (and anything else showing my name) update without a reload.
       window.dispatchEvent(new CustomEvent("aos:me-updated", { detail: { name: name.trim() } }));
@@ -377,12 +380,12 @@ export function AccountApp() {
             <div>
               <FieldLabel>{t("account.name")}</FieldLabel>
               {/* Staff: the name links their shifts, certificates and training, so the manager sets it. */}
-              <Input value={name} onChange={(e) => setName(e.target.value)} className="w-full" readOnly={p.role === "staff" && !!p.name} />
+              <Input name="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="w-full" readOnly={p.role === "staff" && !!p.name} />
               {p.role === "staff" && !!p.name && <p className="mt-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">{t("account.nameSetByManager")}</p>}
             </div>
-            <div><FieldLabel>{t("account.phone")}</FieldLabel><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full" placeholder={t("account.phonePh")} /></div>
-            <div className="sm:col-span-2"><FieldLabel>{t("account.homeAddress")}</FieldLabel><Input value={address} onChange={(e) => setAddress(e.target.value)} className="w-full" placeholder={t("account.homeAddressPh")} /></div>
-            <div><FieldLabel>{t("account.postcode")}</FieldLabel><Input value={postcode} onChange={(e) => setPostcode(e.target.value)} className="w-full" placeholder={t("account.postcodePh")} /></div>
+            <div><FieldLabel>{t("account.phone")}</FieldLabel><Input name="phone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full" placeholder={t("account.phonePh")} /></div>
+            <div className="sm:col-span-2"><FieldLabel>{t("account.homeAddress")}</FieldLabel><Input name="address" autoComplete="street-address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full" placeholder={t("account.homeAddressPh")} /></div>
+            <div><FieldLabel>{t("account.postcode")}</FieldLabel><Input name="postcode" autoComplete="postal-code" maxLength={16} value={postcode} onChange={(e) => setPostcode(e.target.value)} className="w-full" placeholder={t("account.postcodePh")} /></div>
           </div>
           {p?.role === "parent" && <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("account.addressHelp")}</p>}
           {p?.role === "parent" && (
