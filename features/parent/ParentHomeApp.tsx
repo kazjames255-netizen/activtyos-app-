@@ -103,7 +103,7 @@ function WeekStrip({ live, today, detail }: { live: Booking[]; today: string; de
       </div>
       <div className="mb-2.5 flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => setOffset((o) => o - 1)} className="min-h-[40px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 text-[14px] font-bold text-[var(--ink)]">&larr; {t("p7shell.weekPrev")}</button>
-        <button type="button" onClick={() => setOffset(0)} disabled={offset === 0} className="min-h-[40px] rounded-full px-4 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: "var(--brand, #2f6bd8)" }}>{t("p7shell.weekThis")}</button>
+        <button type="button" onClick={() => setOffset(0)} aria-pressed={offset === 0} className="min-h-[40px] rounded-full border px-4 text-[14px] font-extrabold" style={offset === 0 ? { background: "var(--brand, #1d3a8f)", borderColor: "var(--brand, #1d3a8f)", color: "#fff" } : { background: "var(--surface)", borderColor: "var(--brand-2, #2f6bd8)", color: "var(--brand, #1d3a8f)" }}>{offset === 0 ? "\u2713 " : ""}{t("p7shell.weekThis")}</button>
         <button type="button" onClick={() => setOffset((o) => o + 1)} className="min-h-[40px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 text-[14px] font-bold text-[var(--ink)]">{t("p7shell.weekNext")} &rarr;</button>
         <button type="button" onClick={() => setOffset((o) => o + 4)} className="min-h-[40px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 text-[14px] font-bold text-[var(--ink-2)]">{t("p7shell.weekMonth")}</button>
       </div>
