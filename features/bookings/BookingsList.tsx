@@ -519,6 +519,10 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                       <button onClick={(e) => { e.stopPropagation(); askConfirm(b.ref, { kind: "paid" }); }} title={t("p7bkl.confirmVoucherTip")}
                         className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{pendingPayActionT(t, w, b)}</button>
                     )}
+                    {(b.pay === "Unpaid" || b.pay === "Invoice sent") && !off && b.status !== "Cancelled" && b.status !== "Declined" && !waitingForPlace(b.status) && (
+                      <button onClick={(e) => { e.stopPropagation(); askConfirm(b.ref, { kind: "paid" }); }}
+                        className="flex-none whitespace-nowrap rounded-full bg-[#15b364] px-4 py-[6px] text-[12px] font-extrabold text-white shadow-[0_6px_16px_-6px_rgba(21,179,100,.7)] ring-2 ring-[#15b364]/30 hover:brightness-110">{"\u2713 "}{t("p7bd.markPaid")}</button>
+                    )}
                     {refundPending && (
                       <button onClick={(e) => { e.stopPropagation(); askConfirm(b.ref, { kind: "refund-approve" }); }} title={isVoucherBk ? t("p7bkl.refundSchemeTip") : t("p7bkl.approveIssueTip")}
                         className="flex-none whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_10px_22px_-10px_rgba(194,100,0,.7)] hover:brightness-110" style={{ background: "linear-gradient(120deg,#d97706,#f59e0b)" }}>↩ {isVoucherBk ? t("p7bkl.markSent") : t("p7bkl.approveRefund")}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}</button>
