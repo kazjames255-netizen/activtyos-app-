@@ -1856,11 +1856,6 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
       <StepHead n={2} kicker={tr("p8lst.waKickDetails")} title={tr("p8lst.waDetailsTitle")} lede={tr("p8lst.waDetailsLede")} />
       <div className="grid items-start gap-4 md:grid-cols-2">
       <RichCard icon="📍" title={tr("p8lst.waWhereWhen")} subtitle={tr("p8lst.waWhereWhenSub")}>
-      <div className="mb-3 flex gap-3">
-        <div className="w-[110px]"><FieldLabel>{tr("p8lst.waAgeFrom")}</FieldLabel><Input type="number" min={0} value={d.ageFrom} onChange={(e) => upd({ ageFrom: e.target.value })} className="w-full" /></div>
-        <div className="w-[110px]"><FieldLabel>{tr("p8lst.waAgeTo")}</FieldLabel><Input type="number" min={0} value={d.ageTo} onChange={(e) => upd({ ageTo: e.target.value })} className="w-full" /></div>
-      </div>
-
       <SectionHead icon="🚗">{tr("p8lst.waDeliver")}</SectionHead>
       <div className="mb-2 flex flex-wrap gap-1.5">
         {([["venue", tr("p8lst.waDel_venue")], ["home-visit", tr("p8lst.waDel_home")], ["both", tr("p8lst.waDel_both")]] as [NonNullable<WizardDraft["deliveryMode"]>, string][]).map(([mode, label]) => {
@@ -2039,6 +2034,10 @@ function CapacityStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft
       <StepHead n={3} kicker={tr("p8lst.waKickCapacity")} title={tr("p8lst.waCapacityTitle")} lede={tr("p8lst.waCapacityLede")} />
       <div className="grid items-start gap-4 md:grid-cols-2">
         <RichCard icon="👧👦" title={tr("p8lst.waPlacesSpaces")}>
+      <div className="mb-3 flex gap-3 rounded-xl border border-[var(--line)] bg-white p-3">
+        <div className="w-[110px]"><FieldLabel>{tr("p8lst.waAgeFrom")}</FieldLabel><Input type="number" min={0} value={d.ageFrom} onChange={(e) => upd({ ageFrom: e.target.value })} className="w-full" /></div>
+        <div className="w-[110px]"><FieldLabel>{tr("p8lst.waAgeTo")}</FieldLabel><Input type="number" min={0} value={d.ageTo} onChange={(e) => upd({ ageTo: e.target.value })} className="w-full" /></div>
+      </div>
           <YesNo label={tr("p8lst.waAllowOOR")} value={d.allowOutOfRange} onChange={(v) => upd({ allowOutOfRange: v })} help={tr("p8lst.waAllowOORHelp")} />
           {d.allowOutOfRange && (
             <div className="mb-2 flex items-start gap-2 rounded-lg border border-[#f0d9b5] bg-[#fdf6ea] px-3 py-2 text-[11.5px] leading-[1.5] text-[#8a5a09]">
