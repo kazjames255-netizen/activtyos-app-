@@ -73,47 +73,43 @@ const monthOf = (b: Booking): string | null => {
   return /^\d{4}-\d{2}$/.test(m) ? m : null;
 };
 
-// A clean white line sparkline on a coloured tile — money over recent weeks.
-function MiniLine({ data, labels, caption }: { data: number[]; labels: string[]; caption: string }) {
-  const max = Math.max(1, ...data);
-  const W = 320, H = 46, PAD = 6;
-  const n = Math.max(1, data.length);
-  const x = (i: number) => PAD + (i * (W - 2 * PAD)) / Math.max(1, n - 1);
-  const y = (v: number) => H - PAD - (v / max) * (H - 2 * PAD);
-  const path = data.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-  const area = `${path} L${x(n - 1)},${H - PAD} L${x(0)},${H - PAD} Z`;
+// The last few weeks as columns: a rounded brand-gradient bar per week, this week strongest, quiet weeks a faint stub with a dash
+// (a flat line of "£0 £0 £0" read as "nothing ever happened"). Values only sit above bars that have one.
+function WeekChart({ data, labels, caption, fmt, unit }: { data: number[]; labels: string[]; caption: string; fmt: (n: number) => string; unit?: string }) {
+  const max = Math.max(...data, 0);
+  const last = data.length - 1;
   return (
     <div className="mt-3">
-      <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">{caption}</div>
-      <div className="mb-0.5 flex gap-1 text-[8.5px] font-extrabold tabular-nums text-[var(--ink-2)]">{data.map((v, i) => <span key={i} className="flex-1 text-center" style={{ opacity: i === data.length - 1 ? 1 : 0.7 }}>{compactMoney(v)}</span>)}</div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 42 }} preserveAspectRatio="none">
-        <defs><linearGradient id="mlg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#2f6bd8" stopOpacity=".28" /><stop offset="1" stopColor="#2f6bd8" stopOpacity="0" /></linearGradient></defs>
-        <path d={area} fill="url(#mlg)" />
-        <path d={path} fill="none" stroke="#2f6bd8" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        <circle cx={x(n - 1)} cy={y(data[n - 1] ?? 0)} r={2.6} fill="#1d3a8f" vectorEffect="non-scaling-stroke" />
-      </svg>
-      <div className="mt-1 flex gap-1 text-[8.5px] font-semibold text-[var(--ink-3)]">{labels.map((l, i) => <span key={i} className="flex-1 text-center">{l}</span>)}</div>
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <span className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{caption}</span>
+        {max > 0 && <span className="text-[11px] font-semibold text-[var(--ink-3)]">{unit ?? ""}</span>}
+      </div>
+      <div className="flex items-end gap-2" style={{ height: 96 }}>
+        {data.map((v, i) => {
+          const pct = max > 0 ? Math.max(14, (v / max) * 100) : 0;
+          const now = i === last;
+          return (
+            <div key={i} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1" style={{ height: "100%" }} title={`${labels[i]}: ${fmt(v)}`}>
+              <span className="text-[11.5px] font-extrabold tabular-nums" style={{ color: v > 0 ? (now ? "var(--brand)" : "var(--ink-2)") : "var(--ink-3)", opacity: v > 0 ? 1 : 0.5 }}>{v > 0 ? fmt(v) : "\u2013"}</span>
+              {v > 0
+                ? <div className="w-full rounded-t-lg" style={{ height: `${pct}%`, minHeight: 8, background: now ? "linear-gradient(180deg,#5b8af0,#1d3a8f)" : "linear-gradient(180deg,#a9c0f0,#7fa0e6)" }} />
+                : <div className="w-full rounded-full" style={{ height: 4, background: "var(--line)" }} />}
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-1.5 flex gap-2 text-[11px] font-bold text-[var(--ink-3)]">{labels.map((l, i) => <span key={i} className="min-w-0 flex-1 text-center" style={{ color: i === last ? "var(--brand)" : undefined }}>{i === last ? "This week" : l}</span>)}</div>
     </div>
   );
 }
+const poundsExact = (n: number) => (n >= 100 ? `£${Math.round(n)}` : `£${n.toFixed(2)}`);
+function MiniLine({ data, labels, caption }: { data: number[]; labels: string[]; caption: string }) {
+  return <WeekChart data={data} labels={labels} caption={caption} fmt={poundsExact} />;
+}
 
-// A brand-blue mini bar chart drawn on the white KPI tile — the last few weeks at a glance.
+// Bookings per week, same chart.
 function MiniBars({ data, labels, caption }: { data: number[]; labels: string[]; caption: string }) {
-  const max = Math.max(1, ...data);
-  return (
-    <div className="mt-2.5">
-      <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--ink-3)]">{caption}</div>
-      <div className="flex items-end gap-1" style={{ height: 40 }}>
-        {data.map((v, i) => (
-          <div key={i} className="flex flex-1 flex-col items-center justify-end" style={{ height: "100%" }} title={`${labels[i]}: ${v}`}>
-            <span className="mb-0.5 text-[9px] font-extrabold tabular-nums" style={{ opacity: i === data.length - 1 ? 1 : 0.75 }}>{v}</span>
-            <div className="w-full rounded-t-[3px] bg-[var(--brand-2,#2f6bd8)]" style={{ height: `${Math.max(8, (v / max) * 100)}%`, opacity: i === data.length - 1 ? 1 : 0.5 }} />
-          </div>
-        ))}
-      </div>
-      <div className="mt-1 flex gap-1 text-[8.5px] font-bold text-[var(--ink-3)]">{labels.map((l, i) => <span key={i} className="flex-1 text-center">{l}</span>)}</div>
-    </div>
-  );
+  return <WeekChart data={data} labels={labels} caption={caption} fmt={(n) => String(n)} />;
 }
 
 // A single-percentage ring gauge — white on a coloured KPI tile (à la the "Tasks 33%" dial).
