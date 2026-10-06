@@ -24,4 +24,4 @@ jobs:
           FIREBASE_PROJECT_ID: demo-activityos
         run: server/node_modules/.bin/tsx --test --test-reporter=spec tests/*.test.mts tests/regression/*.test.mts
       - name: Type check
-        run: npx tsc --noEmit -p tsconfig.build.json && npm --prefix server run typecheck
+        run: npx next typegen && npx tsc --noEmit -p tsconfig.build.json && npm --prefix server run typecheck
