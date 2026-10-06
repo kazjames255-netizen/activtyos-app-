@@ -290,7 +290,11 @@ export function cancellationRequestNotice(
   const refundTxt = updated.cancel?.refund === "none" || amt <= 0
     ? "No refund is due under your cancellation policy."
     : `${fmtMoney(amt)} refund requested ${destTxt} — approve or decline.`;
-  const reasonTxt = updated.cancel?.reason ? ` Reason: ${updated.cancel.reason}.` : "";
+  // What the parent told us: the reason they picked and/or what they typed in "Anything to add?" (the stock fallback isn't a reason).
+  const said = (updated.cancel?.msg ?? "").trim();
+  const typed = said && said !== "Cancelled by the parent." ? said : "";
+  const reasonPart = [updated.cancel?.reason, typed ? `"${typed}"` : ""].filter(Boolean).join(" — ");
+  const reasonTxt = reasonPart ? ` Reason given by the parent: ${reasonPart}${/[.!?"]$/.test(reasonPart) ? "" : "."}` : "";
   return {
     title: `${updated.booker} asked to cancel — ${updated.listing}`,
     body: `Booking ${updated.ref} · ${updated.listing} · ${kids}${updated.dates ? ` · ${updated.dates}` : ""}.${reasonTxt} ${refundTxt} Open the booking to approve or decline.`,
