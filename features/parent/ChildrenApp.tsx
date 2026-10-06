@@ -469,18 +469,19 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
           emoji: "🔒",
           title: t("parent.safeguarding"),
           sub: t("parent.safeguardingSub"),
-          ok: true,
+          ok: settings.collectionCheck === "off" || collectionPassword.trim().length > 0,
           body: (
             <>
               {settings.collectionCheck !== "off" && (
                 <div>
-                  <FieldLabel>{pinMode ? t("parent.collectionPin") : t("parent.collectionPassword")}</FieldLabel>
+                  <FieldLabel>{pinMode ? t("parent.collectionPin") : t("parent.collectionPassword")} <span className="font-extrabold text-[#c0392b]">· {t("p9tx.required")}</span></FieldLabel>
                   <div className="mb-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">
                     <Rich text={t(pinMode ? "p8par.chPinHintPin" : "p8par.chPinHintWord")} bClass="text-[var(--ink-2)]" />
                   </div>
                   <Input value={collectionPassword} onChange={(e) => setCollectionPassword(e.target.value)}
                     maxLength={CHILD_LIMITS.collectionPassword} inputMode={pinMode ? "numeric" : undefined}
                     placeholder={pinMode ? t("parent.pinPlaceholder") : t("parent.wordPlaceholder")} className="w-full" />
+                  {!collectionPassword.trim() && <div className="mt-1 text-[11.5px] font-bold text-[#c0392b]">{t("p9tx.collPwNeeded")}</div>}
                   {pinPrefilled && (
                     <div className="mt-1 text-[10.5px] font-semibold text-[var(--brand-ink,var(--brand))]">
                       {t(pinMode ? "p8par.chSamePin" : "p8par.chSameWord")}
@@ -519,7 +520,9 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
   // index that no longer exists (a provider config that drops a slide). Clamp.
   const safeStep = Math.min(step, last);
   const canNext = slides[safeStep].ok;
-  const canSave = canLeaveAbout && emergencyOk && questionsOk;
+  // The collection password is required whenever the provider has the collection check switched on (a child can never be handed over without one).
+  const collectionOk = settings.collectionCheck === "off" || collectionPassword.trim().length > 0;
+  const canSave = canLeaveAbout && emergencyOk && questionsOk && collectionOk;
   const next = () => canNext && setStep((s) => Math.min(last, s + 1));
   const back = () => setStep((s) => Math.max(0, s - 1));
 
