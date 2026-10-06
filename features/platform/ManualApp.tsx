@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { Card } from "@/components/ui";
+import { ManualLegal } from "./ManualLegal";
 
 /**
  * platform/manual — the HQ manual. Content-array driven: add a page by pushing another entry onto MANUAL_PAGES.
@@ -212,7 +213,7 @@ function Stage({ n, color, title, tag, facts, shots }: {
         </div>
         <span className="rounded-full bg-white/20 px-3 py-1 text-[12px] font-bold">{tag}</span>
       </div>
-      <div className="mt-4 grid grid-cols-1 gap-5 min-[900px]:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      <div className="mt-4 grid grid-cols-1 gap-5 min-[900px]:grid-cols-[minmax(0,4fr)_minmax(0,7fr)]">
         <Facts color={color} rows={facts} />
         <div className="min-w-0 min-[900px]:sticky min-[900px]:top-4 min-[900px]:self-start"><Gallery shots={shots} color={color} /></div>
       </div>
@@ -607,6 +608,7 @@ function Page1() {
 /** Add future manual pages here. */
 const MANUAL_PAGES: { id: string; label: string; render: () => ReactNode }[] = [
   { id: "provider-onboarding", label: "Page 1 · Provider onboarding", render: () => <Page1 /> },
+  { id: "legal", label: "Page 2 · Legal documents", render: () => <ManualLegal /> },
 ];
 
 export function ManualApp() {
@@ -614,7 +616,7 @@ export function ManualApp() {
   const page = MANUAL_PAGES.find((p) => p.id === id) ?? MANUAL_PAGES[0];
   return (
     <div className="min-w-0 pb-10 text-[var(--ink)]">
-      <nav aria-label="Manual pages" className="mx-auto mb-5 flex max-w-[1040px] gap-2 overflow-x-auto pb-1">
+      <nav aria-label="Manual pages" className="mx-auto mb-5 flex max-w-[1240px] gap-2 overflow-x-auto pb-1">
         {MANUAL_PAGES.map((p) => {
           const on = p.id === page.id;
           return (
@@ -631,7 +633,7 @@ export function ManualApp() {
           );
         })}
       </nav>
-      <article className="mx-auto max-w-[1040px]">{page.render()}</article>
+      <article className="mx-auto max-w-[1240px]">{page.render()}</article>
     </div>
   );
 }

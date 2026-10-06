@@ -12,6 +12,7 @@ import { useI18n, tNow } from "@/lib/i18n/provider";
 import { safeNext } from "@/lib/safe-next";
 import { isRTL } from "@/lib/i18n/config";
 import { BRAND as BRAND_NAME } from "@/lib/i18n/config";
+import { TERMS_VERSION } from "@/lib/legal";
 
 type AccountType = "parent" | "freelancer" | "company" | "franchise";
 
@@ -66,7 +67,6 @@ type StepId = "type" | "you" | "business" | "identity" | "hear" | "login" | "pay
 
 // Legal versions a provider agrees to at sign-up (bump when the docs change so
 // re-acceptance can be prompted). Stored on the tenant as evidence of consent.
-const TERMS_VERSION = "2026-09-05";
 const DPA_VERSION = "2026-09-05";
 const STEP_META: Record<StepId, { emoji: string; title: string; lede: string }> = {
   type: { emoji: "", title: "p8pub.suTypeT", lede: "p8pub.suTypeL" },
@@ -577,9 +577,9 @@ function SignupForm() {
               <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[12.5px] leading-snug text-[var(--ink-2)]">
                 <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-[#FF3D7F]" />
                 <span>{t("p8pub.suAgree").split(/(\{terms\}|\{dpa\}|\{privacy\})/).map((part, i) =>
-                  part === "{terms}" ? <a key={i} href="/terms.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">{t("p8pub.suTerms")}</a>
-                  : part === "{dpa}" ? <a key={i} href="/dpa.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">{t("p8pub.suDpa")}</a>
-                  : part === "{privacy}" ? <a key={i} href="/privacy.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">{t("p8pub.suPrivacy")}</a>
+                  part === "{terms}" ? <a key={i} href="/v2/terms.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">{t("p8pub.suTerms")}</a>
+                  : part === "{dpa}" ? <a key={i} href="/v2/dpa.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">{t("p8pub.suDpa")}</a>
+                  : part === "{privacy}" ? <a key={i} href="/v2/privacy.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">{t("p8pub.suPrivacy")}</a>
                   : <span key={i}>{part}</span>)}</span>
               </label>
             )}
