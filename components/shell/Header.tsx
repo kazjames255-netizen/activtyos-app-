@@ -155,6 +155,8 @@ export function Header({ portal }: { portal: PortalKey }) {
           // Families promoted to the top bar — quick access to the family list.
           // Hidden in the head-office combined view (families are per-franchise).
           ...(!hoCombined && findNavItem(portal, "customers") && !staffHides("customers") ? [{ view: "customers", href: `/${portal}/customers`, label: t("header.families"), icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: t("header.families") }] : []),
+          // Blocks & listings promoted to the top bar, next to Families / Contact.
+          ...(!hoCombined && portal !== "platform" && findNavItem(portal, "listings") && !staffHides("listings") ? [{ view: "listings", href: `/${portal}/listings`, label: t("p7shell.tabListings"), icon: BOOK, wide: false, badge: 0, accent: "#d97706", accentLight: "#fbbf24", tip: t("p7shell.tabListings") }] : []),
         ];
 
   // The green "Communication" top-bar tab: a dropdown gathering the comms
