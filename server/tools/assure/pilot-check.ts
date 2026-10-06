@@ -65,6 +65,8 @@ export function evaluate(c: PilotCtx): Check[] {
       : bad("payrec", "Payment record matches the booking", `records total £${total.toFixed(2)}, booking amount £${num(b.amount).toFixed(2)}`));
   } else if (num(b.amount) === 0) {
     out.push(na("payrec", "Payment record", "£0 booking, nothing to pay"));
+  } else if (/bank/i.test(String(b.method ?? "")) && b.pay !== "Paid") {
+    out.push(ok("payrec", "Bank transfer awaiting payment", "no payment record yet is expected until the provider marks it paid"));
   } else {
     out.push(bad("payrec", "Payment record", `booking is ${b.pay}, no succeeded payment record found`));
   }
