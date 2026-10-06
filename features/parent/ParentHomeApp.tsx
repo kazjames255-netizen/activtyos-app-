@@ -112,9 +112,8 @@ function WeekStrip({ live, today, detail }: { live: Booking[]; today: string; de
           const k = iso(d);
           const here = items.filter((x) => x.d === k);
           const isToday = k === today;
-          const weekend = d.getUTCDay() === 0 || d.getUTCDay() === 6;
-          const first = here[0];
-          const tileStyle = { background: isToday ? "var(--ink)" : weekend ? "var(--panel, #eef1f7)" : "var(--surface)", color: isToday ? "var(--surface)" : "var(--ink)", border: "1px solid var(--line)" };
+                    const first = here[0];
+          const tileStyle = { background: isToday ? "var(--duo-camp, linear-gradient(135deg,#1d3a8f,#2f6bd8 70%,#5b8af0))" : "var(--brand-soft, #eaf0fc)", color: isToday ? "#fff" : "var(--brand, #1d3a8f)", border: isToday ? "none" : "1px solid var(--brand-line, #cdddf7)" };
           const tileCls = "group relative flex min-h-[92px] flex-col justify-between rounded-2xl p-2 no-underline sm:min-h-[120px] sm:p-3";
           return first ? (
             <Link key={k} href={`/custdash/bookings?open=${encodeURIComponent(first.b.ref)}`} className={tileCls} style={tileStyle}>
@@ -353,15 +352,16 @@ export function ParentHomeApp() {
 
   // ── blocks (rendered in different columns on desktop) ──────────────────
   const greeting = (
-    <div>
-      <h1 className="m-0 text-[26px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>
+    <div className="rounded-3xl px-5 py-5 text-white sm:px-7 sm:py-6" style={{ background: "var(--duo-camp, linear-gradient(135deg,#1d3a8f,#2f6bd8 70%,#5b8af0))", boxShadow: "var(--shadow, 0 8px 26px rgba(16,35,86,.1))" }}>
+      <h1 className="m-0 text-[30px] font-extrabold leading-tight sm:text-[36px]" style={{ fontFamily: "var(--ff-display)" }}>
         {name ? h("Hello", { name }) : h("HelloNoName")}
       </h1>
-      <p className="m-0 mt-1 min-h-[21px] text-[15px] text-[var(--ink-2)]">
-        {provider ? h("With", { provider }) : " "}
+      <p className="m-0 mt-1 min-h-[21px] text-[15px] text-white/90">
+        {provider ? h("With", { provider }) : " "}
       </p>
     </div>
   );
+
 
   const attentionBlock = loading ? (
     <div><Sk className="mb-2 h-5 w-44" /><Sk className="h-[66px] w-full" /></div>
