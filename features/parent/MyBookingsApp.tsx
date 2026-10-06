@@ -225,6 +225,9 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const scheme = booking.voucherScheme;
   const noBankRefund = !!scheme || /voucher|tax.?free|childcare|\btfc\b/i.test(booking.method ?? "");
   const isVoucher = noBankRefund;
+  // Paid by bank transfer or cash: there is no card to refund to, so don't offer "Back to card".
+  const paidByBank = !noBankRefund && /bank|transfer/i.test(booking.method ?? "");
+  const paidOffline = !noBankRefund && !paidByBank && /cash|other/i.test(booking.method ?? "") && !/card/i.test(booking.method ?? "");
   const walletOn = cfg?.walletEnabled ?? false;
   // A voucher/TFC refund can only go to the wallet — force it there when the
   // provider offers store credit (otherwise the provider reimburses via the
@@ -442,7 +445,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
           ? (walletOn ? [["wallet", t("parent.walletCreditBtn")]] : [])
           : [
               ...(walletOn ? ([["wallet", t("parent.walletCreditBtn")]] as const) : []),
-              ["card", t("parent.backToCard")],
+              ["card", paidByBank ? t("p7bk.backToBank") : paidOffline ? t("p7bk.refundFromProvider") : t("parent.backToCard")],
             ];
         return (
           <div className="mt-3 border-t border-[var(--line)] pt-3">

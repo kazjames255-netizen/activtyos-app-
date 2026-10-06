@@ -286,7 +286,7 @@ export function cancellationRequestNotice(
   const isVoucher = !!vScheme || /voucher|tax-?free|tfc|childcare|haf/i.test(updated.method ?? "");
   const destTxt = updated.cancel?.refundTo === "wallet"
     ? "to their WALLET (store credit)"
-    : isVoucher ? `via ${vScheme ?? (/tax-?free|tfc/i.test(updated.method ?? "") ? "Tax-Free Childcare" : "their voucher scheme")} (not a bank card)` : "back to their CARD";
+    : isVoucher ? `via ${vScheme ?? (/tax-?free|tfc/i.test(updated.method ?? "") ? "Tax-Free Childcare" : "their voucher scheme")} (not a bank card)` : /bank|transfer/i.test(updated.method ?? "") ? "back to their BANK ACCOUNT (they paid by bank transfer)" : "back to their CARD";
   const refundTxt = updated.cancel?.refund === "none" || amt <= 0
     ? "No refund is due under your cancellation policy."
     : `${fmtMoney(amt)} refund requested ${destTxt} — approve or decline.`;
