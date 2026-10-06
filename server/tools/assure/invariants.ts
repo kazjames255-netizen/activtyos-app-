@@ -245,14 +245,8 @@ export const INVARIANTS: Invariant[] = [
     s.bookings.filter((b) => live(b) && !seededFixture(b) && (b.blockMissing || b.listingMissing)).map((b) => ({ refs: [b.ref], message: `${b.ref}: ${b.blockMissing ? "block" : "listing"} missing` }))),
   rule("state.date-change-pending-has-moves", "state", "A pending date-change request actually lists moves", (s) =>
     s.bookings.filter((b) => b.dateChangeStatus === "pending" && !(b.dateChangeMoves && b.dateChangeMoves > 0)).map((b) => ({ refs: [b.ref], message: `${b.ref}: pending date change with no moves` }))),
-  rule("state.date-change-orig-date-sane", "state", "A moved booking remembers an original first date no later than its first date now, and counts the moves", (s) =>
-    s.bookings.filter((b) => b.origFirstDate && live(b)).flatMap((b) => {
-      const first = [...b.days].sort()[0];
-      const out: { refs: string[]; message: string }[] = [];
-      if (first && b.origFirstDate! > first) out.push({ refs: [b.ref], message: `${b.ref}: original first date ${b.origFirstDate} is later than its first date now ${first}` });
-      if (!(b.amendMovesApproved && b.amendMovesApproved > 0)) out.push({ refs: [b.ref], message: `${b.ref}: has an original first date but no approved moves counted` });
-      return out;
-    })),
+  rule("state.date-change-orig-date-sane", "state", "A booking that remembers an original first date has approved moves counted (the refund notice uses the earlier of that date and today's)", (s) =>
+    s.bookings.filter((b) => b.origFirstDate && live(b) && !(b.amendMovesApproved && b.amendMovesApproved > 0)).map((b) => ({ refs: [b.ref], message: `${b.ref}: has an original first date ${b.origFirstDate} but no approved moves counted` }))),
   rule("state.days-unique", "state", "A booking never lists the same day twice", (s) =>
     s.bookings.filter((b) => new Set(b.days).size !== b.days.length).map((b) => ({ refs: [b.ref], message: `${b.ref}: days list repeats a date (${b.days.join(",")})` }))),
   rule("state.auto-waitlist-no-missed-offer", "state", "In automatic mode a waiting family is offered a free place within 20 minutes", (s) =>

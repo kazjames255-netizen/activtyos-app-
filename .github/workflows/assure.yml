@@ -18,6 +18,10 @@ jobs:
       - run: npm ci
       - run: npm --prefix server ci
       - name: Pure test suites (existing + regression)
+        # Some modules import the Firestore client at load time. The emulator host makes it initialise without credentials; the pure tests never touch the network.
+        env:
+          FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+          FIREBASE_PROJECT_ID: demo-activityos
         run: server/node_modules/.bin/tsx --test --test-reporter=spec tests/*.test.mts tests/regression/*.test.mts
       - name: Type check
         run: npx tsc --noEmit -p tsconfig.build.json && npm --prefix server run typecheck

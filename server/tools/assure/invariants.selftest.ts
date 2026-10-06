@@ -87,7 +87,7 @@ const BREAK: Record<string, (s: Snapshot) => void> = {
   "state.seats-cover-kids": (s) => { R(s, "R1").kidsLive = 3; },
   "state.refs-resolve": (s) => { R(s, "R1").blockMissing = true; },
   "state.date-change-pending-has-moves": (s) => { R(s, "R1").dateChangeStatus = "pending"; R(s, "R1").dateChangeMoves = 0; },
-  "state.date-change-orig-date-sane": (s) => { R(s, "R1").origFirstDate = "2099-01-01"; R(s, "R1").amendMovesApproved = 1; },
+  "state.date-change-orig-date-sane": (s) => { R(s, "R1").origFirstDate = "2026-10-01"; R(s, "R1").amendMovesApproved = 0; },
   "state.days-unique": (s) => { R(s, "R1").days = [D1, D1]; },
   "state.auto-waitlist-no-missed-offer": (s) => { R(s, "R2").createdAt = "2026-10-06T08:00:00.000Z"; s.listings[0].ticketCaps = {}; s.listings[0].ageCaps = undefined; },
   "state.homevisit-has-service-address": (s) => { s.listings[0].deliveryMode = "home-visit"; },
