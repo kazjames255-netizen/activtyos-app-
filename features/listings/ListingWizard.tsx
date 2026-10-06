@@ -1874,7 +1874,12 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
           );
         })}
       </div>
-      <div className="mb-3 text-[11px] text-[var(--ink-3)]">{tr("p8lst.waHomeHint")}</div>
+      <div className="mb-1 text-[11px] text-[var(--ink-3)]">{tr("p8lst.waHomeHint")}</div>
+      {(d.deliveryMode === "home-visit" || d.deliveryMode === "both") && (
+        <div className="mb-3 flex items-start gap-2 rounded-xl border-2 border-[#12805a] bg-[#e9f9f2] px-3 py-2 text-[12.5px] font-bold leading-snug text-[#0b5a3f]">
+          <span aria-hidden>🔒</span><span>{tr("p9tx.hvPrivacy")}</span>
+        </div>
+      )}
 
       {(d.deliveryMode ?? "venue") !== "home-visit" && (<>
         <SectionHead icon="📍">{tr("p8lst.waVenue")}</SectionHead>
@@ -1917,7 +1922,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
           ) : (
             <div className="flex flex-wrap items-end gap-3">
               <div>
-                <FieldLabel>{tr("p8lst.waBasePc")}</FieldLabel>
+                <FieldLabel>{tr("p8lst.waBasePc")} <span className="font-normal text-[#0b5a3f]">{tr("p9tx.hvBaseHidden")}</span></FieldLabel>
                 <Input value={d.coverageArea?.basePostcode ?? ""} onChange={(e) => upd({ coverageArea: { ...(d.coverageArea ?? { mode: "radius" }), mode: "radius", basePostcode: e.target.value } })} placeholder={tr("p8lst.waBasePcPh")} className="w-[160px]" />
               </div>
               <div>
@@ -1943,6 +1948,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
       <div className="text-[11px] leading-[1.4] text-[var(--ink-3)]"><Rich text={tr("p8lst.waSiteHint")} /></div>
 
       </RichCard>
+      <div className="flex flex-col gap-4">
       <RichCard icon="🏷️" title={tr("p8lst.waCategories")} subtitle={tr("p8lst.waCategoriesSub")} tint="teal">
       <div>
       <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.waCatHint")}</div>
@@ -2002,9 +2008,6 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
 
       </div>
       </RichCard>
-      </div>
-
-      <div className="mt-4">
         <RichCard icon="💳" title={tr("p8lst.waPayTitle")} subtitle={tr("p8lst.waPaySub")} tint="teal">
           <div className="mb-2.5 text-[11.5px] leading-[1.5] text-[var(--ink-3)]"><Rich text={tr("p8lst.waPayHint")} /></div>
           <div className="flex flex-wrap gap-1.5">
@@ -2022,6 +2025,8 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
           </div>
         </RichCard>
       </div>
+      </div>
+
     </div>
   );
 }

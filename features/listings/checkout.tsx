@@ -2708,6 +2708,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             {serviceAddress.postcode.trim()
               ? (addressPrefilled ? tr("p7ck.addrPrefilled") : tr("p7ck.addrWhere"))
               : tr("p7ck.addrNeed")}
+            <div className="mt-0.5 font-bold">🔒 {tr("p9tx.hvParentAddr")}</div>
           </div>
         </div>
       )}

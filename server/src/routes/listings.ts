@@ -120,6 +120,15 @@ async function withBlocks(
 // private — those listings only come back from GET /api/listings/:id (the
 // direct link). With ?mine=1, ALL of the caller's own tenant's listings
 // (drafts and hidden included — the operator management view).
+/** A home-visit provider's base postcode is usually their own home. Parents never need it (the server checks the distance), so it never leaves the server
+ *  in a response to anyone but the owning provider. The postcode areas they cover and the radius are kept: those are the service area, not an address. */
+function withoutBaseAddress<T extends { coverageArea?: unknown }>(l: T): T {
+  const c = l.coverageArea as { basePostcode?: string } | null | undefined;
+  if (!c || typeof c !== "object" || !("basePostcode" in c)) return l;
+  const { basePostcode: _hidden, ...rest } = c;
+  return { ...l, coverageArea: rest };
+}
+
 listings.get("/", async (req, res) => {
   if (req.query.mine === "1") {
     const auth = req.auth!;
@@ -276,7 +285,7 @@ listings.get("/", async (req, res) => {
       const timings = timingsFor(l.blockId as string | undefined);
       // The provider's current display name, not the one frozen on the listing
       // when it was created (acceptance d1s4).
-      return { ...l, tenantName: displayNameByTenant.get(l.tenantId as string) ?? l.tenantName, title, categories, season, offers, bestOfferPercent, acceptsTFC, acceptsVouchers, timings, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
+      return { ...withoutBaseAddress(l), tenantName: displayNameByTenant.get(l.tenantId as string) ?? l.tenantName, title, categories, season, offers, bestOfferPercent, acceptsTFC, acceptsVouchers, timings, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
     }),
   );
 });
@@ -379,7 +388,7 @@ listings.get("/:id", async (req, res) => {
   // A signed-in family that already used a fixed-£ early bird this season: the booking page prices without it, as checkout will.
   const hasFixedEarly = ((l.discounts as { kind?: string; enabled?: boolean; method?: string }[] | undefined) ?? []).some((r) => r.kind === "early" && r.enabled !== false && r.method !== "percent");
   const earlyUsed = hasFixedEarly && req.user?.email ? await earlyFixedBooking(l.tenantId as string, req.user.email.toLowerCase(), earlyBirdScopeOf(snap.id, l.seasonId as string | undefined)) : null;
-  res.json({ ...joined, tenantName: providerName || joined.tenantName, bundle, library, mealMenus, ...(earlyUsed ? { earlyFixedUsed: true, earlyFixedRef: earlyUsed.ref, earlyFixedUnpaid: earlyUsed.unpaid } : {}) });
+  res.json({ ...(own ? joined : withoutBaseAddress(joined)), tenantName: providerName || joined.tenantName, bundle, library, mealMenus, ...(earlyUsed ? { earlyFixedUsed: true, earlyFixedRef: earlyUsed.ref, earlyFixedUnpaid: earlyUsed.unpaid } : {}) });
 });
 
 // Operators manage their own tenant's listings. (Bookings keep a denormalised
