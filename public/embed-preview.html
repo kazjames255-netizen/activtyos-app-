@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sample website</title>
+<style>body{font-family:system-ui,-apple-system,sans-serif;max-width:900px;margin:0 auto;padding:24px 16px;color:#1b1b2f}
+.bar{background:#fff7d6;border:1px solid #f1dc85;border-radius:10px;padding:10px 14px;font-size:13.5px;margin-bottom:22px}
+h1{font-size:26px;margin:0 0 6px}p{line-height:1.55;color:#4a4a63}.fake{height:12px;background:#eef0f6;border-radius:6px;margin:10px 0}</style></head>
+<body>
+<div class="bar">This is a sample page, only to show how the booking code looks and works on a website. Nothing here is saved. Close this tab when you have finished looking.</div>
+<h1>Your club website</h1>
+<p>Some text on your page, before the booking part.</p>
+<div class="fake" style="width:70%"></div><div class="fake" style="width:55%"></div>
+<div id="slot" style="margin:22px 0"></div>
+<p>Some more of your page, after the booking part.</p>
+<div class="fake" style="width:65%"></div>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var kind = q.get("kind") === "store" ? "store" : "listing";
+  var id = q.get("id") || "";
+  if (!id) { document.getElementById("slot").textContent = "No listing or storefront was given."; return; }
+  var s = document.createElement("script");
+  s.src = "/embed.js";
+  s.async = true;
+  s.setAttribute("data-" + kind, id);
+  if (q.get("mode") === "inline") s.setAttribute("data-mode", "inline");
+  if (q.get("label")) s.setAttribute("data-label", q.get("label"));
+  if (q.get("color")) s.setAttribute("data-color", q.get("color"));
+  // The same mount-element form the embed supports, so this page works the way a hoisted/deferred script would.
+  var d = document.createElement("div");
+  d.setAttribute(kind === "store" ? "data-activityos-store" : "data-activityos-book", id);
+  if (q.get("mode") === "inline") d.setAttribute("data-mode", "inline");
+  if (q.get("label")) d.setAttribute("data-label", q.get("label"));
+  if (q.get("color")) d.setAttribute("data-color", q.get("color"));
+  document.getElementById("slot").appendChild(d);
+  document.body.appendChild(Object.assign(document.createElement("script"), { src: "/embed.js", async: true }));
+})();
+</script>
+</body></html>

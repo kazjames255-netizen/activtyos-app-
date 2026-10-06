@@ -573,6 +573,25 @@ function Page1() {
           { src: "bank-5-pay-link", alt: "Public pay link page: reference only, no account numbers", caption: "Never · the public pay link shows the reference only" },
         ]} />
 
+      <Stage n="7c" color={C.listing} title="Put booking on your website" tag="Optional · Blocks & listings, Embed button"
+        facts={[
+          { k: "What it does", v: "A provider pastes one line of code into their own website (Wix, WordPress, Squarespace or plain HTML). Visitors book and pay without leaving it. Payments still go to the provider's own account." },
+          { k: "Two kinds of code", v: "Whole storefront: one code that shows every live listing as a grid. Individual listing: one code per live listing, for a Book button on just that activity. Each can be a button that opens booking in a window, or booking shown on the page." },
+          { k: "Live listings only", v: "The panel offers a code only for listings that are live: not drafts, not ended, not archived. A draft shows one line, \"Publish a listing to get its embed code\"." },
+          { k: "It updates by itself", v: "The storefront code reads the live listings every time a visitor loads the page, so a listing appears the moment it goes live and disappears when it ends or is unpublished. Nobody pastes it again. A listing's own code starts working the moment that listing goes live; before then, and after it ends, visitors see a friendly \"This booking isn't open right now\" message, not an error." },
+          { k: "Where to find it", v: "Blocks & listings, the Embed button at the top for the storefront, or the Embed option on a listing's menu (it opens the same panel on that listing). Choose button text and colour, press Copy code, and use \"Test it on a sample page\" to see it working before pasting." },
+          { k: "What parents see", v: "A button (or the booking page) on the provider's site. They sign in or create an account inside the window, pick dates and pay with the methods the provider has switched on, including Apple Pay and Google Pay where available." },
+        ]}
+        shots={[
+          { src: "embed-panel", alt: "The Add booking to your website panel", caption: "The panel: style options, the storefront code and a Copy button" },
+          { src: "embed-panel-listing", alt: "The panel opened on one live listing", caption: "One code per live listing; opened from the listing's own Embed option" },
+          { src: "embed-host-button", alt: "A Book now button on a provider's website", caption: "On the provider's website: the button" },
+          { src: "embed-overlay-listing", alt: "The booking page opened over the website", caption: "Pressing it opens the real booking page over the site" },
+          { src: "embed-overlay-store", alt: "The storefront grid inside the window", caption: "The storefront code: every live listing" },
+          { src: "embed-inline-store", alt: "The storefront shown directly on the page", caption: "Booking shown on the page, sized to fit" },
+          { src: "embed-not-open", alt: "The friendly not-open message", caption: "A draft or ended listing shows a kind message, not an error" },
+        ]} />
+
       <Stage n="8" color={C.cancel} title="Set your cancellation policy" tag="Checklist job 5"
         facts={[
           { k: "What they see", v: "Not the full editor. The first visit from the checklist opens a short screen: \"We've chosen a common cancellation policy for you\". It shows the Standard policy as two coloured chips and one plain sentence: full refund a week ahead, half back at 48 hours, nothing after. Standard is also what a new listing starts on." },

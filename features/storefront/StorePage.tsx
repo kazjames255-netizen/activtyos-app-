@@ -9,6 +9,7 @@ import { apiPublic, post as apiPost } from "@/lib/api";
 import { money } from "@/features/bookings/helpers";
 import { DEFAULT_SETTINGS, useTenantSettings } from "@/lib/settings";
 import { brandAccent, brandLogo } from "@/lib/brand-theme";
+import { startEmbedHeightReports } from "@/lib/embedHeight";
 import { CroppedImage, type ServerListing } from "@/features/listings/ListingWizard";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -50,15 +51,7 @@ export function StorePage({ tenantId }: { tenantId: string }) {
 
   useEffect(() => {
     if (!embedded) return;
-    const post = () =>
-      window.parent?.postMessage(
-        { type: "activityos:height", value: Math.ceil(document.documentElement.scrollHeight) },
-        "*",
-      );
-    const ro = new ResizeObserver(post);
-    ro.observe(document.body);
-    post();
-    return () => ro.disconnect();
+    return startEmbedHeightReports();
   }, [embedded]);
 
   if (error)
@@ -74,7 +67,7 @@ export function StorePage({ tenantId }: { tenantId: string }) {
   const logo = brandLogo(settings);
 
   return (
-    <div className="min-h-screen bg-[#f4f7ff] pb-16">
+    <div className={`${embedded ? "" : "min-h-screen "}bg-[#f4f7ff] pb-16`}>
       {accent && <div className="h-1" style={{ background: accent.bg }} />}
       <div className="mx-auto max-w-[1080px] px-4 pt-6">
         <div className="mb-4 flex items-center gap-3">

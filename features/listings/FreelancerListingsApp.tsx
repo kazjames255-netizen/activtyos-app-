@@ -1,6 +1,8 @@
 "use client";
 
 import { StepDonePrompt } from "@/features/dashboard/StepDonePrompt";
+import { EmbedPanel, type EmbedListingRow } from "./EmbedPanel";
+import { peekMe } from "@/components/auth/PortalGuard";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useT, useI18n, tNow } from "@/lib/i18n/provider";
 import { Rich } from "@/components/i18n/Rich";
@@ -37,6 +39,19 @@ import { optionLabel, whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, CroppedIm
 // `serverDraft` returns null for those and localStorage remains the fallback.
 type Listing = ServerListing;
 const serverDraft = (l: Listing): WizardDraft | null => (l.title != null ? draftFromListing(l) : null);
+/** The listings that can have an embed code: live (not a draft), not ended, not archived. Everything else is not offered. */
+function embedRows(listings: Listing[]): EmbedListingRow[] {
+  const all = loadDrafts();
+  return listings.flatMap((l) => {
+    const dr = serverDraft(l) ?? all[l.id];
+    const info = dr ? listingRowInfo(dr) : null;
+    const isLive = info ? info.live : true;
+    const isDraft = (dr?.status ?? "live") === "draft";
+    const archived = l.archived ?? getDraftArchived(l.id);
+    if (isDraft || !isLive || archived) return [];
+    return [{ id: l.id, title: (l.title || l.name || "").trim(), dates: info?.dateLabel ?? "", linkOnly: (l as { visibility?: string }).visibility === "hidden" }];
+  });
+}
 interface Category {
   id: string;
   name: string;
@@ -260,6 +275,8 @@ export function FreelancerListingsApp() {
   const [local, setLocal] = useState<LocalState | null>(null);
   const [wizard, setWizard] = useState<{ draft: WizardDraft; key: string } | null>(null);
   const [tick, setTick] = useState(0);
+  // The "Add booking to your website" panel (embed codes); focus = a listing to scroll to when opened from its own card.
+  const [embedFor, setEmbedFor] = useState<{ focus: string | null } | null>(null);
   // In-progress drafts (never published) — resumable from the Listings tab.
   // How many listings sit behind each category / venue. Both library tabs show
   // it, and it's what makes an unused entry obvious.
@@ -436,18 +453,7 @@ export function FreelancerListingsApp() {
           <>
             <button
               type="button"
-              onClick={() => {
-                // The whole-storefront widget for the operator's own website.
-                const tid = (listings?.[0] as { tenantId?: string } | undefined)?.tenantId;
-                if (!tid) {
-                  alert(t9("p8lst.flEmbedNeed"));
-                  return;
-                }
-                const snippet = `<script src="${window.location.origin}/embed.js" data-store="${tid}" async></script>`;
-                navigator.clipboard?.writeText(snippet).then(() =>
-                  alert(t9("p8lst.flEmbedStoreAlert", { snippet, tid })),
-                ).catch(() => {});
-              }}
+              onClick={() => setEmbedFor({ focus: null })}
               className="rounded-full bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#2f5fd0] shadow-sm transition hover:bg-white/10"
             >
               {t9("p8lst.flEmbedBtn")}
@@ -519,12 +525,21 @@ export function FreelancerListingsApp() {
           visTick={tick}
           onError={setError}
           refresh={refresh}
+          onEmbed={(l) => setEmbedFor({ focus: l.id })}
         />
       )}
       {tab === "blocks" && <><StepDonePrompt step="block" /><BlocksApp embedded /></>}
       {tab === "locations" && <StepDonePrompt step="venue" />}
       {tab === "locations" && <LocationsTab local={local} patch={patchLocal} usage={usage} onNewListing={startNew} />}
 
+      {embedFor && listings && (
+        <EmbedPanel
+          tenantId={(listings[0] as { tenantId?: string } | undefined)?.tenantId ?? peekMe()?.tenantId ?? null}
+          rows={embedRows(listings)}
+          focusId={embedFor.focus}
+          onClose={() => setEmbedFor(null)}
+        />
+      )}
       {wizard && (
         <ListingWizard
           initial={wizard.draft}
@@ -598,6 +613,7 @@ function ListingsTab({
   visTick,
   onError,
   refresh,
+  onEmbed,
 }: {
   listings: Listing[];
   drafts: [string, WizardDraft][];
@@ -609,6 +625,7 @@ function ListingsTab({
   visTick: number;
   onError: (m: string) => void;
   refresh: () => Promise<Listing[] | null>;
+  onEmbed: (l: Listing) => void;
 }) {
   const t = useT();
   const { locale } = useI18n();
@@ -720,14 +737,8 @@ function ListingsTab({
       if (isDraft) { setLinkWarnId(l.id); setTimeout(() => setLinkWarnId((v) => (v === l.id ? null : v)), 8000); }
     }).catch(() => {});
   };
-  // The one-line "Book now" widget for the operator's OWN website — pastes
-  // anywhere HTML goes (Wix/WordPress/Squarespace embed blocks included).
-  const copyEmbed = (l: Listing) => {
-    const snippet = `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/embed.js" data-listing="${l.id}" async></script>`;
-    navigator.clipboard?.writeText(snippet)
-      .then(() => alert(t("p8lst.flEmbedOneAlert", { snippet, id: l.id })))
-      .catch(() => {});
-  };
+  // The one-line "Book now" widget for the operator's OWN website: opens the Add-booking-to-your-website panel on this listing.
+  const copyEmbed = (l: Listing) => onEmbed(l);
 
   // Read localStorage once per render, then decorate each listing with the
   // numbers the filters, the sort and the card all need.

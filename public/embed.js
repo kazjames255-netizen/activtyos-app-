@@ -1,18 +1,18 @@
 /**
- * ActivityOS "Book now" embed (build item 11).
+ * "Book now" embed: puts a provider's booking button (or their whole storefront) on their own website.
  *
  * Plain HTML sites — ONE line where the button should appear:
  *
- *   <script src="https://YOUR-ACTIVITYOS/embed.js" data-listing="LISTING_ID" async></script>
+ *   <script src="https://YOUR-PLATFORM/embed.js" data-listing="LISTING_ID" async></script>
  *
  * React / Next.js / anything that hoists or defers scripts — a MOUNT
  * ELEMENT where the button goes, plus the script anywhere (next/script,
  * layout, whatever):
  *
  *   <div data-activityos-book="LISTING_ID"></div>
- *   <script src="https://YOUR-ACTIVITYOS/embed.js" async></script>
+ *   <script src="https://YOUR-PLATFORM/embed.js" async></script>
  *
- * Both render a Book-now button that opens the real ActivityOS booking
+ * Both render a Book-now button that opens the real booking
  * page (the customer page the operator designed, paying through their own
  * Stripe) in an overlay. Options, on the script tag or the mount element:
  *
@@ -22,11 +22,12 @@
  *   data-mode     "button" (default) | "inline" — inline embeds the whole
  *                 booking page, auto-sized to its content
  *   data-label    button text (default "Book now")
- *   data-color    button background (default ActivityOS green)
+ *   data-color    button background (default green)
  *
  * Mount elements are picked up whenever they appear (SPA navigations and
  * client-side renders included) and are never mounted twice. No
- * dependencies; one global (window.ActivityOSEmbed.scan). The ActivityOS
+ * dependencies; one global (window.BookingEmbed.scan; window.ActivityOSEmbed is kept as an alias for
+ * snippets already pasted). The platform
  * origin is derived from this script's own src, so the same snippet works
  * in dev and production.
  */
@@ -54,7 +55,7 @@
   // The booking page reports its height so inline embeds never scroll-in-scroll.
   function listenForHeight(frame) {
     window.addEventListener("message", function (e) {
-      if (e.origin !== origin || !e.data || e.data.type !== "activityos:height") return;
+      if (e.origin !== origin || !e.data || (e.data.type !== "booking-embed:height" && e.data.type !== "activityos:height")) return;
       if (e.source === frame.contentWindow) frame.style.height = e.data.value + "px";
     });
   }
@@ -145,8 +146,8 @@
     }
   }
 
-  if (!window.ActivityOSEmbed) {
-    window.ActivityOSEmbed = { scan: scan };
+  if (!window.BookingEmbed && !window.ActivityOSEmbed) {
+    window.BookingEmbed = window.ActivityOSEmbed = { scan: scan };
     var observer = new MutationObserver(scan);
     function watch() {
       scan();

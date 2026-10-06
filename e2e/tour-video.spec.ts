@@ -209,11 +209,9 @@ const ALL_SCENES: Scene[] = [
   { view: "listings", step: "Listings", expect: /Half-Term Multi-Activity Camp/, beats: [
     { cap: "Listings: every camp and club with its own cover photo, price, dates and places left.", act: async ({ page }) => wander(page, [[330, 430], [700, 430], [1080, 430]]) },
     { cap: "Share a booking link or QR code for any listing, so parents can book and pay online.", act: async ({ page }) => { await safe("link", async () => { await clickAt(page, btn(page, /\blink\b/i)); }); } },
-    { cap: "Embed puts a Book now button on your own website with one line of code.", act: async ({ page, dialogs }) => {
-      await safe("embed", async () => {
-        dialogs.length = 0; await clickAt(page, btn(page, /embed/i)); await page.waitForTimeout(800);
-        if (dialogs[0]) await panel(page, "Embed code (copied to your clipboard)", dialogs[0].replace(/https?:\/\/localhost:\d+/g, "https://activtyos-app-zayoxs-projects.vercel.app"));
-      });
+    { cap: "Embed puts a Book now button on your own website with one line of code.", act: async ({ page }) => {
+      // The Embed button now opens the "Add booking to your website" panel (code box + Copy), not a browser alert.
+      await safe("embed", async () => { await clickAt(page, btn(page, /embed/i)); await page.waitForTimeout(1200); await wander(page, [[640, 300], [640, 520]]); await page.keyboard.press("Escape"); });
     } },
   ] },
   { view: "setup", path: "/company/setup?tab=cancel", step: "Cancellations", expect: /Cancellation|refund/i, beats: [
@@ -350,7 +348,8 @@ test("record the product tour video", async ({ browser }) => {
   await cw.close();
   if (problems.length) console.warn("SCENES NOT READY:", problems.join("; "));
 
-  const ctx = await browser.newContext({ storageState: state, viewport: { width: W, height: H }, permissions: ["clipboard-read", "clipboard-write"], ...(PROBE ? {} : { recordVideo: { dir, size: { width: W, height: H } } }) });
+  // recorded at double pixel density (2x): Playwright's built-in capture is low-bitrate, and 2x keeps the text crisp after compression
+  const ctx = await browser.newContext({ storageState: state, viewport: { width: W, height: H }, deviceScaleFactor: 2, permissions: ["clipboard-read", "clipboard-write"], ...(PROBE ? {} : { recordVideo: { dir, size: { width: W * 2, height: H * 2 } } }) });
   await ctx.addInitScript({ content: INIT_JS });
   // a seeded email DRAFT for the Email view (drafts live in the browser); nothing is ever sent
   await ctx.addInitScript({ content: `try { if (!localStorage.getItem("aos.email.campaigns.v1")) localStorage.setItem("aos.email.campaigns.v1", ${JSON.stringify(JSON.stringify([DEMO_DRAFT]))}); } catch (e) {}` });

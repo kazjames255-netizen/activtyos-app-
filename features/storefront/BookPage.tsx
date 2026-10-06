@@ -9,6 +9,7 @@ import { firebaseAuth } from "@/lib/firebase/client";
 import { CustomerPage, type ServerListing } from "@/features/listings/ListingWizard";
 import { confirmLeavingBasket, keepBasketForAuth } from "@/features/listings/booking";
 import { DEFAULT_SETTINGS, useTenantSettings } from "@/lib/settings";
+import { startEmbedHeightReports } from "@/lib/embedHeight";
 import { brandAccent, brandLogo, brandVars } from "@/lib/brand-theme";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -22,6 +23,7 @@ export function BookPage({ id }: { id: string }) {
   const t = useT();
   const [listing, setListing] = useState<ServerListing | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // ?embed=1 = we're inside a provider's website via public/embed.js:
   // hide the Name TBC chrome and report our height to the parent so
@@ -62,37 +64,35 @@ export function BookPage({ id }: { id: string }) {
   useEffect(() => {
     apiPublic<ServerListing>(`/api/listings/${encodeURIComponent(id)}`)
       .then((l) => { setListing(l); if (embedded) window.parent?.postMessage({ type: "activityos:debug", kind: "listing", msg: "listing loaded" }, "*"); })
-      .catch((e) => { setError(e instanceof Error ? e.message : t("p7pub.errLoadListing")); if (embedded) window.parent?.postMessage({ type: "activityos:debug", kind: "listing-error", msg: String(e?.message ?? e) }, "*"); });
+      .catch((e) => { setNotFound((e as { status?: number })?.status === 404); setError(e instanceof Error ? e.message : t("p7pub.errLoadListing")); if (embedded) window.parent?.postMessage({ type: "activityos:debug", kind: "listing-error", msg: String(e?.message ?? e) }, "*"); });
   }, [id]);
   useEffect(() => firebaseAuth.onAuthStateChanged((u) => setSignedIn(!!u)), []);
   useEffect(() => {
     if (!embedded) return;
-    const post = () =>
-      window.parent?.postMessage(
-        { type: "activityos:height", value: Math.ceil(document.documentElement.scrollHeight) },
-        "*",
-      );
-    const ro = new ResizeObserver(post);
-    ro.observe(document.body);
-    post();
-    return () => ro.disconnect();
+    return startEmbedHeightReports();
   }, [embedded]);
 
-  if (error)
+  if (error) {
+    // A listing that is not live (draft, ended, unpublished) answers 404: say so kindly instead of "not found", and inside a provider's
+    // website never offer a link to the platform's home page (it would navigate their visitor out of the embed).
+    const notOpen = notFound;
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f4f7ff] p-6">
+      <div className={`${embedded ? "" : "min-h-screen "}flex items-center justify-center bg-[#f4f7ff] p-6`}>
         <div className="max-w-[420px] rounded-2xl border border-[#e8edf7] bg-white p-6 text-center">
-          <div className="text-[16px] font-extrabold text-[#171534]">{t("p7pub.listingNA")}</div>
-          <p className="mt-1 text-[13px] text-[#8a86a3]">{error}</p>
-          <Link href="/" className="mt-3 inline-block text-[13px] font-bold text-[#2f6bd8] underline">
-            {t("p7pub.homeLink")}
-          </Link>
+          <div className="text-[16px] font-extrabold text-[#171534]">{notOpen ? t("p7pub.listingNotOpenTitle") : t("p7pub.listingNA")}</div>
+          <p className="mt-1 text-[13px] text-[#8a86a3]">{notOpen ? t("p7pub.listingNotOpenBody") : error}</p>
+          {!embedded && (
+            <Link href="/" className="mt-3 inline-block text-[13px] font-bold text-[#2f6bd8] underline">
+              {t("p7pub.homeLink")}
+            </Link>
+          )}
         </div>
       </div>
     );
+  }
   if (!listing)
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f4f7ff] text-[13px] text-[#8a86a3]">
+      <div className={`${embedded ? "min-h-[40vh] " : "min-h-screen "}flex items-center justify-center bg-[#f4f7ff] text-[13px] text-[#8a86a3]`}>
         {t("p7pub.loadingWord")}
       </div>
     );
@@ -132,7 +132,7 @@ export function BookPage({ id }: { id: string }) {
   const accent = brandAccent(picked);
 
   return (
-    <div className="min-h-screen pb-16" style={brandVars(picked) as React.CSSProperties}>
+    <div className={`${embedded ? "" : "min-h-screen "}pb-16`} style={brandVars(picked) as React.CSSProperties}>
       {accent && <div className="h-1" style={{ background: accent.bg }} />}
       {preview && (
         // Provider-only bar; parents never see this. Distinct amber so it reads
