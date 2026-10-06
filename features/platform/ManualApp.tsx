@@ -200,10 +200,12 @@ function Facts({ color, rows }: { color: string; rows: { k: string; v: ReactNode
 }
 
 /** One stage of onboarding: coloured band with number + title, facts on the left, screenshots on the right. */
-function Stage({ n, color, title, tag, facts, shots }: {
+function Stage({ n, color, title, tag, facts, shots, visual }: {
   n: string; color: string; title: string; tag: string;
   facts: { k: string; v: ReactNode }[];
-  shots: ShotDef[];
+  shots?: ShotDef[];
+  /** A diagram shown in place of screenshots. */
+  visual?: ReactNode;
 }) {
   return (
     <Section>
@@ -216,9 +218,82 @@ function Stage({ n, color, title, tag, facts, shots }: {
       </div>
       <div className="mt-4 grid grid-cols-1 gap-5 min-[900px]:grid-cols-[minmax(0,4fr)_minmax(0,7fr)]">
         <Facts color={color} rows={facts} />
-        <div className="min-w-0 min-[900px]:sticky min-[900px]:top-4 min-[900px]:self-start"><Gallery shots={shots} color={color} /></div>
+        <div className="min-w-0 min-[900px]:sticky min-[900px]:top-4 min-[900px]:self-start">{visual ?? (shots && shots.length > 0 ? <Gallery shots={shots} color={color} /> : null)}</div>
       </div>
     </Section>
+  );
+}
+
+
+/* ---------- 6 Oct additions: status ladder, refund routes, emails table ---------- */
+
+/** Confirmed / Paid / Reconciled: three different things on a booking. */
+function StatusLadder() {
+  const steps = [
+    { t: "Confirmed", d: "The place is held. Says nothing about money.", c: C.block },
+    { t: "Paid", d: "The money is in: card paid, or the provider pressed Mark paid.", c: C.billing },
+    { t: "Reconciled", d: "Matched to a real payment and stamped by who did it.", c: C.open },
+  ];
+  return (
+    <div className="grid gap-2">
+      {steps.map((x, i) => (
+        <div key={x.t} className="flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5" style={{ borderLeft: `4px solid ${x.c}` }}>
+          <span className="grid h-7 w-7 flex-none place-items-center rounded-full text-[13px] font-extrabold text-white" style={{ background: x.c }}>{i + 1}</span>
+          <div><div className="text-[14px] font-extrabold" style={{ color: x.c }}>{x.t}</div><div className="text-[13.5px] leading-snug text-[var(--ink-2)]">{x.d}</div></div>
+        </div>
+      ))}
+      <p className="m-0 text-[12.5px] text-[var(--ink-3)]">A bank transfer booking is Confirmed and Unpaid until the provider presses Mark paid.</p>
+    </div>
+  );
+}
+
+/** Where a refund goes, by how the booking was paid. */
+function RefundRoutes() {
+  const rows: { paid: string; choice: string; how: string; c: string }[] = [
+    { paid: "Card", choice: "Wallet, or back to my card", how: "On approval the platform refunds through Stripe (card) or adds wallet credit.", c: C.billing },
+    { paid: "Bank transfer", choice: "Wallet, or back to my bank account", how: "Parent types name, sort code, account number. Provider pays it back from their own bank, then approves.", c: C.golive },
+    { paid: "Cash", choice: "Wallet, or refunded by the provider", how: "Settled directly between provider and parent. Approving records it.", c: C.cancel },
+    { paid: "Voucher / Tax-Free Childcare", choice: "Returned through the scheme", how: "Not refunded to a bank. The provider returns it through the scheme.", c: C.listing },
+  ];
+  return (
+    <div className="grid gap-2">
+      {rows.map((r) => (
+        <div key={r.paid} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5" style={{ borderLeft: `4px solid ${r.c}` }}>
+          <div className="flex flex-wrap items-center gap-2"><Pill color={r.c}>Paid by {r.paid}</Pill><span className="text-[13px] font-bold text-[var(--ink)]">{r.choice}</span></div>
+          <div className="mt-1 text-[13.5px] leading-snug text-[var(--ink-2)]">{r.how}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Which email goes to whom, and when. */
+function EmailsTable() {
+  const rows: { who: string; c: string; what: string; when: string }[] = [
+    { who: "Parent", c: C.block, what: "Booking confirmed", when: "Straight after booking, for bank transfer, cash, free and voucher bookings. Bank transfer shows the provider's bank details and the booking reference. NOT sent for a card booking." },
+    { who: "Parent", c: C.block, what: "Payment received", when: "Card: once the card has gone through (this is the only confirmation, nothing is sent before it). Bank transfer: when the provider presses Mark paid." },
+    { who: "Parent", c: C.block, what: "Waiting list", when: "When they join the waiting list. A later offer email follows if a place opens." },
+    { who: "Parent", c: C.block, what: "Refund approved", when: "When the provider approves a refund (or wallet credit). Declined has its own email." },
+    { who: "Parent", c: C.block, what: "Session reminder", when: "Once per booking, before its first booked day. A 30-day camp sends one, not 30. A single-day booking still gets its own." },
+    { who: "Provider", c: C.billing, what: "New booking", when: "Each new booking, with every child, allergies and notes. Card bookings say \"awaiting card payment\"; bank transfer says \"awaiting bank transfer payment\", and the booking shows a Pending payment box." },
+    { who: "Provider", c: C.billing, what: "Cancellation request", when: "When a parent cancels. Short wording: the refund asked for, where it goes, and only the parent's own reason." },
+    { who: "Provider", c: C.billing, what: "Moved their dates", when: "When a parent moves their own dates (if the setting is on)." },
+  ];
+  return (
+    <div className="overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+      <table className="w-full border-collapse text-[13.5px]">
+        <thead><tr>{["To", "Email", "When it is sent"].map((h) => <th key={h} className="px-3 py-2 text-start text-[11.5px] font-extrabold uppercase tracking-wider text-[var(--ink-2)]">{h}</th>)}</tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.what + r.who} className="border-t border-[var(--line)] align-top">
+              <td className="px-3 py-2"><Pill color={r.c}>{r.who}</Pill></td>
+              <td className="px-3 py-2 font-bold text-[var(--ink)]">{r.what}</td>
+              <td className="px-3 py-2 leading-relaxed text-[var(--ink-2)]">{r.when}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -598,11 +673,44 @@ function Page1() {
           { k: "What they see", v: "Not the full editor. The first visit from the checklist opens a short screen: \"We've chosen a common cancellation policy for you\". It shows the Standard policy as two coloured chips and one plain sentence: full refund a week ahead, half back at 48 hours, nothing after. Standard is also what a new listing starts on." },
           { k: "What to do", v: "Press Keep this and move on, and that is it. They can change it now (Change it now opens the full editor with four ready-made policies: Standard, Flexible, Strict and No refunds), or at any time later in Setup, Cancellations & refunds." },
           { k: "What ticks it", v: "Keep this and move on counts the checklist job as done and takes them to the next job, or back to the dashboard when none are left. Opening the editor and saving a policy ticks it too." },
-          { k: "Good to know", v: "When a family cancels, the platform works out what they are owed from this policy and shows it. The provider always decides whether to send the refund, and the platform never moves the money. Each listing can use a different policy." },
+          { k: "Good to know", v: "When a family cancels, the platform works out what they are owed from this policy and shows it. The provider always approves a refund. A card refund then goes back through Stripe; bank and cash refunds are settled directly by the provider (see Cancellations and refunds). Each listing can use a different policy." },
         ]}
         shots={[
           { src: "cancel-welcome", alt: "First visit to cancellations: a common policy has been chosen", caption: "First visit · the chosen policy, with Keep this and move on" },
           { src: "cancel-editor", alt: "Cancellations and refunds editor", caption: "After Change it now · the full editor, any time from Setup" },
+        ]} />
+
+      <Stage n="7d" color={C.billing} title="Paying by bank transfer, end to end" tag="Parent books · provider marks paid"
+        visual={<StatusLadder />}
+        facts={[
+          { k: "1 · Parent books", v: "They pick Bank transfer. The booking is Confirmed straight away but Unpaid. They see the provider's bank details and their own reference, and get the Booking confirmed email with the same panel." },
+          { k: "2 · Provider is told", v: "The new booking email and bell say \"awaiting bank transfer payment\". Inside the booking is a Pending payment box with the reference to look for on the bank statement." },
+          { k: "3 · Money arrives, press Mark paid", v: "On Bookings there is a big green Mark paid button on the unpaid booking card itself, and the same button inside the booking. Pressing it asks to confirm, then the booking is Paid and the parent gets one Payment received email." },
+          { k: "Finding them", v: "Bookings, Unpaid/invoiced, then the chips under it: Bank transfer, Card, Cash, vouchers and so on. The same chips sit under Unreconciled." },
+          { k: "Reconciliation", v: "A bank transfer booking appears in Reconciliation under Bank transfer. Reconcile it there, or Undo if it was a mistake: the booking goes back to Unpaid and no email is sent." },
+          { k: "Confirmed, Paid, Reconciled", v: "Three different things, shown on the right. Confirmed is the place. Paid is the money. Reconciled is someone matching it to a real payment." },
+        ]} />
+
+      <Stage n="8b" color={C.cancel} title="Cancellations and refunds" tag="Parent cancels · provider approves"
+        visual={<RefundRoutes />}
+        facts={[
+          { k: "Parent's cancel screen", v: "It shows what they get back under the provider's policy: full, 50% or nothing, worked out by the server. They pick a reason, may add a note, and choose where a refund goes." },
+          { k: "Refund choice", v: "Wallet credit, or back to how they paid. Paid by card: Back to my card. Paid by bank transfer: Back to my bank account. Paid by cash: Refunded by the provider. The send button is full width on phones." },
+          { k: "Bank-paid bookings", v: "If a refund is due and they chose the bank, they must type account name, sort code and account number. It is required." },
+          { k: "Provider is told", v: "A bell and email: the parent, the booking, the refund asked for and where it goes. It shows only the parent's own reason, not the platform's wording." },
+          { k: "Provider approves or declines", v: "A card refund is made through Stripe on approval. Bank and cash refunds are settled directly: the provider pays the parent back themselves, then approves to record it. Wallet credit is added at once. The parent gets a Refund approved or Declined email." },
+          { k: "If it was a mistake", v: "A wrong Mark paid or reconcile can be undone with Undo. It puts the booking back to Unpaid." },
+          { k: "Bank details privacy", v: "The parent's bank details are stored in a separate record, never on the booking, and never in an email. The booking only carries the last 4 digits. The provider presses Reveal bank details: they show for 30 seconds, then are deleted. They are deleted on reveal and when the refund is approved or declined. Ones nobody opened are deleted after 30 days. If the provider misses them, they ask the parent again." },
+        ]} />
+
+      <Stage n="8c" color={C.cancel} title="Parents moving dates, and other notes" tag="Settings and small things"
+        facts={[
+          { k: "Let parents move their own dates", v: "Setup, Cancellations & refunds, Amending dates. It sits under Offer date changes at all and is ON by default. A move is only to another running date of the same listing with space. The provider gets a \"moved their dates\" notice. Switch it off and parents have to ask." },
+          { k: "Payments go to the provider", v: "Card payments land in the provider's own Stripe account, not the platform's. Stripe takes the card, the platform never holds booking money." },
+          { k: "A blocked first live payment", v: "A first live card payment on a new Stripe account can be blocked by Stripe itself, before the platform sees it. The checkout then says nothing was charged and to try again or use another card. If it keeps happening, check the account in Stripe." },
+          { k: "Shared booking links", v: "A signed-out visitor who opens a shared booking link gets a Sign in / Create account pop-up up front, so they can book after." },
+          { k: "Top bar", v: "A Listings tab sits next to Families and Contact." },
+          { k: "Replies", v: "A parent's reply to any email goes to the provider's contact email (Reply-To). The sender parents see is the platform's own address until the rename." },
         ]} />
 
       <Stage n="9" color={C.open} title="Set up done: parents can book" tag="Checklist 5 of 5"
@@ -634,6 +742,10 @@ function Page1() {
         <H2>The emails a new provider gets</H2>
         <Lede>The day 1, 3 and 5 emails go to freelancer and company owners in their first six days. Every one checks at send time and is skipped if the provider has already done the thing, so a reminder never arrives after the action it reminds about, and the series stops once a listing is live. Each has an unsubscribe link; billing emails are always sent.</Lede>
         <Card className="p-4"><EmailTimeline /></Card>
+        <H2>Which emails parents and providers get</H2>
+        <Lede>All sent in the provider&apos;s name. A card booking is never confirmed by email before the card has gone through.</Lede>
+        <EmailsTable />
+        <div className="h-4" />
         <H2>What the emails look like</H2>
         <Lede>The real templates, filled with example details. Flick through them, or click one to see it full size. The brand name shown inside these emails comes from one setting on the server and will change with the rename.</Lede>
         <div className="max-w-[760px]"><Gallery color={C.billing} shots={[
@@ -643,12 +755,12 @@ function Page1() {
           { src: "/manual/emails/04-day5-desktop", alt: "Day 5: you are nearly live", caption: "Day 5. Only if no listing is live yet, and only the steps that are left." },
           { src: "/manual/emails/05-trial-ending-desktop", alt: "Trial ending in 3 days", caption: "3 days before the trial ends, only while a trial is running. Also appears in the bell." },
           { src: "/manual/emails/06-payment-received-desktop", alt: "Payment received (to the parent)", caption: "One email per card payment, in the provider's name. The card processor's own receipt is off." },
-          { src: "/manual/emails/07-booking-confirmed-desktop", alt: "Booking confirmed (to the parent)", caption: "When a booking is confirmed. If it is not yet paid it shows the provider's bank details and the booking reference." },
+          { src: "/manual/emails/07-booking-confirmed-desktop", alt: "Booking confirmed (to the parent)", caption: "Bank transfer, cash, free and voucher bookings, straight away. Unpaid bank transfers show the bank details and reference. Not sent for card bookings." },
         ]} /></div>
         <div className="mt-3 grid grid-cols-1 gap-3 min-[720px]:grid-cols-2">
           <Card className="p-3.5">
             <h3 className="m-0 mb-1 text-[16px] font-extrabold text-[var(--ink)]" style={display}>Where parents&apos; replies go</h3>
-            <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">To the reply-to address confirmed in Go live step 3, filled in from the provider&apos;s login email. Emails are sent from the platform&apos;s own verified address under the provider&apos;s business name, so there is nothing to set up.</p>
+            <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">To the reply-to address confirmed in Go live step 3, filled in from the provider&apos;s login email. Emails are sent from the platform&apos;s own verified address under the provider&apos;s business name, so there is nothing to set up. Parents see the platform&apos;s address as the sender until the rename.</p>
           </Card>
           <Card className="p-3.5">
             <h3 className="m-0 mb-1 text-[16px] font-extrabold text-[var(--ink)]" style={display}>One receipt per payment</h3>

@@ -39,7 +39,7 @@ const PILOTS: Pilot[] = [
   { n: "P5", title: "Bank transfer", tag: "No card",
     kaz: "Book and choose Bank transfer. Look at the bank details panel, then pay it yourself from a bank app and mark it paid in the provider portal.",
     stripe: "Nothing appears in Stripe. This one never touches it.",
-    tool: "Booking confirmed, no card checks run, bank details shown only after booking, one confirmation email.",
+    tool: "Booking confirmed, no card checks run, bank details shown only after booking, a Booking confirmed email, then one Payment received email once marked paid.",
     shot: "The bank panel on the confirmation screen and in My bookings." },
   { n: "P6", title: "Cash on the day", tag: "No card",
     kaz: "Book choosing Cash on the day. Then mark it paid in the provider portal when you 'receive' it.",
