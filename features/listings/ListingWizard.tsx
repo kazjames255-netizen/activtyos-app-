@@ -2492,6 +2492,16 @@ function TicketsStep({ d, upd, blocks, tickets, onCreateBlock }: { d: WizardDraf
           <p className="mb-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
             <Rich text={tr("p8lst.wbCapPerDay")} />
           </p>
+          {tickets.some((x) => x.days > 1) && (
+            <div className="aos-rule-flash mb-3 flex items-start gap-3 rounded-2xl border-2 border-[#e9a915] px-4 py-3 text-[#5a3500]" style={{ background: "linear-gradient(120deg,#fff3cf,#ffe3a3)" }} role="note">
+              <span className="text-[26px] leading-none" aria-hidden>👇</span>
+              <div>
+                <div className="text-[15px] font-extrabold">{tr("p9tx.ruleBannerTitle")}</div>
+                <div className="mt-0.5 text-[13px] font-semibold leading-snug">{tr("p9tx.ruleBannerBody")}</div>
+              </div>
+            </div>
+          )}
+          <style>{`@keyframes aosRuleFlash{0%,100%{box-shadow:0 0 0 0 rgba(233,169,21,0)}50%{box-shadow:0 0 0 9px rgba(233,169,21,.55)}}.aos-rule-flash{animation:aosRuleFlash 1.1s ease-in-out 5}.aos-rule-label{animation:aosRuleFlash 1.1s ease-in-out 5;border-radius:10px;padding:4px 8px;display:inline-block}@media (prefers-reduced-motion: reduce){.aos-rule-flash,.aos-rule-label{animation:none}}`}</style>
           {anyRuleReset && (
             <div className="mb-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] font-semibold text-[#7a5b06]">
               {tr("p8lst.wbRuleReset")}
@@ -2564,7 +2574,7 @@ function TicketsStep({ d, upd, blocks, tickets, onCreateBlock }: { d: WizardDraf
                     const wasReset = !!stored && !okFor(stored);
                     return (
                       <div className="mt-2.5 border-t border-dashed border-[var(--line)] pt-2">
-                        <FieldLabel>{tr("p8lst.wbHowBook")}{wasReset && <span className="ms-1 font-bold text-[#c0392b]"> {tr("p8lst.wbResetConfirm")}</span>}</FieldLabel>
+                        <FieldLabel><span className="aos-rule-label" style={{ background: "#fff3cf", color: "#5a3500" }}>👉 {tr("p8lst.wbHowBook")}</span>{wasReset && <span className="ms-1 font-bold text-[#c0392b]"> {tr("p8lst.wbResetConfirm")}</span>}</FieldLabel>
                         <div className="flex flex-wrap gap-1.5">
                           {BOOK_RULES.map((r) => {
                             const disabled = !okFor(r.key);
