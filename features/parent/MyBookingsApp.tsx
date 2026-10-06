@@ -1467,6 +1467,16 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
             </Card>
           );
 
+        // Opened from the home page's waiting-list card (or a notification): show THAT waiting-list place on its own, not the whole bookings page.
+        const focusWait = openRef ? waiting.find((b) => b.ref === openRef) : undefined;
+        if (focusWait)
+          return (
+            <div className="flex flex-col gap-3">
+              <WaitlistCard key={`${focusWait.tenantId}-${focusWait.ref}`} b={focusWait} refresh={refresh} />
+              <Link href="/custdash/bookings" className="text-[13px] font-bold text-[var(--brand-2)]">&larr; {tr("parent.myBookings")}</Link>
+            </div>
+          );
+
         const todayIso = new Date().toISOString().slice(0, 10);
         const isCancelled = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
         const lastDay = (b: Booking) => [...(b.days ?? [])].sort().at(-1) ?? "";
