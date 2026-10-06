@@ -684,9 +684,13 @@ function ListingsTab({
       // read-only fields like tenantId/blocks); legacy docs copy name+passes.
       const dr = serverDraft(l);
       const copyName = t("p8lst.flCopyName", { name: l.name });
+      // An older listing (made before the wizard saved its full draft) has no `title`: copy every field it does have (venue, add-ons,
+      // capacity, discounts, dates...) instead of just the name and passes, so the copy is a true copy. The server drops anything it owns.
+      const legacy = { ...(l as unknown as Record<string, unknown>) };
+      for (const k of ["id", "tenantId", "tenantName", "franchiseId", "blocks", "bundle", "library", "createdAt", "updatedAt", "offers", "bestOfferPercent", "acceptsTFC", "acceptsVouchers", "timings", "location", "season", "categories", "spotsLeft"]) delete legacy[k];
       const body = dr
         ? { ...dr, id: undefined, title: copyName, name: copyName, status: "draft", archived: false, passes: l.passes }
-        : { name: copyName, passes: l.passes };
+        : { ...legacy, name: copyName, passes: l.passes, status: "draft", archived: false };
       const created = await apiPost<{ id: string }>("/api/listings", body);
       copyDraft(l.id, created.id, { title: copyName, archived: false });
       refresh();
