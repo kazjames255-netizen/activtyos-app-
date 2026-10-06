@@ -7,6 +7,7 @@ export default fromRows({
   taskProg: ["In progress", "W toku", "În desfășurare", "جاری ہے", "ਜਾਰੀ ਹੈ", "চলমান", "قيد التنفيذ", "Em curso", "En curso", "En cours", "ar y gweill"],
   taskDone: ["Done", "Zrobione", "Finalizat", "مکمل", "ਹੋ ਗਿਆ", "সম্পন্ন", "منجز", "Concluído", "Hecho", "Terminé", "Wedi gorffen"],
   noSeason: ["No season", "Brak sezonu", "Fără sezon", "کوئی سیزن نہیں", "ਕੋਈ ਸੀਜ਼ਨ ਨਹੀਂ", "কোনো মৌসুম নেই", "بلا موسم", "Sem época", "Sin temporada", "Aucune saison", "Dim tymor"],
+  daysFull: ["{n} of {d} days full", "{n} z {d} dni pełnych", "{n} din {d} zile pline", "{d} میں سے {n} دن بھرے", "{d} ਵਿੱਚੋਂ {n} ਦਿਨ ਭਰੇ", "{d} এর মধ্যে {n} দিন পূর্ণ", "{n} من {d} أيام ممتلئة", "{n} de {d} dias cheios", "{n} de {d} días llenos", "{n} jour(s) complet(s) sur {d}", "{n} o {d} diwrnod yn llawn"],
   fullWord: ["full", "pełne", "complet", "بھرا ہوا", "ਭਰਿਆ ਹੋਇਆ", "পূর্ণ", "ممتلئ", "lotado", "completo", "complet", "llawn"],
   nLeft: ["{n} left", "zostało: {n}", "{n} rămase", "{n} باقی", "{n} ਬਾਕੀ", "{n}টি বাকি", "متبقي {n}", "restam {n}", "quedan {n}", "{n} restantes", "{n} ar ôl"],
   sessRun_one: ["{n} session running", "{n} sesja trwa", "{n} sesiune în desfășurare", "{n} سیشن جاری", "{n} ਸੈਸ਼ਨ ਚੱਲ ਰਿਹਾ ਹੈ", "{n}টি সেশন চলছে", "جلسة واحدة قيد التشغيل", "{n} sessão a decorrer", "{n} sesión en curso", "{n} séance en cours", "{n} sesiwn ar waith"],

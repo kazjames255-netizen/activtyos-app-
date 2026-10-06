@@ -27,7 +27,7 @@ interface Dash {
   today: { date: string; booked: number; sessions: { listing: string; start: string; end: string; booked: number; capacity: number }[] };
   next: { date: string; start: string; end: string; listing: string } | null;
   upcoming: { date: string; start: string; end: string; listing: string; spotsLeft: number }[];
-  byListing: { listingId: string; listing: string; capacity: number; booked: number; spotsLeft: number; pct: number; nextDate: string }[];
+  byListing: { listingId: string; listing: string; capacity: number; booked: number; spotsLeft: number; pct: number; nextDate: string; perDay?: boolean; days?: number; fullDays?: number; fullDate?: string | null; placesTaken?: number; placesTotal?: number }[];
   bookings: { live: number; newThisWeek: number; waitlist: number };
   occupancy: { booked: number; capacity: number; pct: number };
   money: { takenThisWeek: number; outstanding: number; overdueVouchers: number; awaitingVoucher: number };
@@ -626,19 +626,25 @@ export function DashboardApp() {
             <div className="flex flex-col gap-2">
               {d.byListing.map((l) => {
                 const c = actColor(l.listing);
-                const tone = availTone(l.spotsLeft, l.capacity);
+                // A per-day listing is shown on the SAME basis as the "Spaces left" tile (all its days together), so the two never contradict:
+                // "1/5 places taken", with the full days named, instead of "1/1 full" from its busiest day.
+                const pd = !!l.perDay && (l.placesTotal ?? 0) > 0;
+                const showBooked = pd ? (l.placesTaken ?? 0) : l.booked;
+                const showCap = pd ? (l.placesTotal ?? 0) : l.capacity;
+                const showPct = showCap ? Math.round((showBooked / showCap) * 100) : l.pct;
+                const tone = pd ? availTone(showCap - showBooked, showCap) : availTone(l.spotsLeft, l.capacity);
                 return (
                   <button key={l.listingId} type="button" onClick={() => router.push(`/${portal}/listings`)} title={t("dashboard.manageListings")} className="flex w-full items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-start transition-shadow hover:shadow-sm" style={{ borderInlineStart: `4px solid ${c}` }}>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{l.listing}</div>
                       <div className="mt-1.5 flex items-center gap-2">
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${l.pct}%`, background: c }} /></div>
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${showPct}%`, background: c }} /></div>
                         <span className="whitespace-nowrap text-[11px] font-bold text-[var(--ink-3)]">{t("dashboard.fromDate", { date: fmtDay(l.nextDate) })}</span>
                       </div>
                     </div>
                     <div className="text-end">
-                      <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">{l.booked}/{l.capacity}</div>
-                      <div className="text-[10px] font-bold text-[var(--ink-3)]">{t("dashboard.pctFull", { pct: l.pct })}</div>
+                      <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">{showBooked}/{showCap}</div>
+                      <div className="text-[10px] font-bold text-[var(--ink-3)]">{pd && (l.fullDays ?? 0) > 0 ? t("p7dash.daysFull", { n: l.fullDays ?? 0, d: l.days ?? 0 }) : t("dashboard.pctFull", { pct: showPct })}</div>
                     </div>
                     <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: tone.bg, color: tone.fg }}>{tone.label === "full" ? t("p7dash.fullWord") : t("p7dash.nLeft", { n: tone.label })}</span>
                   </button>

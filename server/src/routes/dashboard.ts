@@ -234,7 +234,7 @@ async function buildDashboard(tenantId: string, venueId: string | null, franchis
   // share a name (e.g. two "After-School Football Club" sessions at
   // different venues/times), and keying by name silently merged their
   // capacity/booked/spotsLeft into one row and dropped the other entirely.
-  const perListing = new Map<string, { listing: string; capacity: number; booked: number; spotsLeft: number; nextDate: string }>();
+  const perListing = new Map<string, { listing: string; capacity: number; booked: number; spotsLeft: number; nextDate: string; perDay?: boolean; days?: number; fullDays?: number; fullDate?: string; placesTaken?: number; placesTotal?: number }>();
   for (const d of blocksSnap.docs) {
     const doc = d.data() as BlockDoc;
     if (!inVenue(doc.listingId)) continue;
@@ -247,6 +247,16 @@ async function buildDashboard(tenantId: string, venueId: string | null, franchis
       openCapacity += occ.capacity; openBooked += occ.booked;
       const cur = perListing.get(doc.listingId) ?? { listing, capacity: 0, booked: 0, spotsLeft: 0, nextDate: "9999-99-99" };
       addRunToListing(cur, doc, sum);
+      // A listing with a limit PER DAY: also report it on the same basis as the "Spaces left" tile (all days together), so the row and the tile agree.
+      if ((doc as { capacityScope?: string }).capacityScope === "day") {
+        cur.perDay = true;
+        cur.days = (cur.days ?? 0) + future.length;
+        for (const sn of future) {
+          cur.placesTotal = (cur.placesTotal ?? 0) + sn.capacity;
+          cur.placesTaken = (cur.placesTaken ?? 0) + sn.bookedCount;
+          if (sn.spotsLeft <= 0) { cur.fullDays = (cur.fullDays ?? 0) + 1; if (!cur.fullDate || sn.date < cur.fullDate) cur.fullDate = sn.date; }
+        }
+      }
       const nd = future.map((s) => s.date).sort()[0];
       if (nd < cur.nextDate) cur.nextDate = nd;
       perListing.set(doc.listingId, cur);
@@ -256,7 +266,7 @@ async function buildDashboard(tenantId: string, venueId: string | null, franchis
   sessions.sort((a, b) => (`${a.date} ${a.start}` < `${b.date} ${b.start}` ? -1 : 1));
 
   const byListing = [...perListing.entries()]
-    .map(([listingId, v]) => ({ listingId, listing: v.listing, capacity: v.capacity, booked: v.booked, spotsLeft: v.spotsLeft, pct: v.capacity ? Math.round((v.booked / v.capacity) * 100) : 0, nextDate: v.nextDate }))
+    .map(([listingId, v]) => ({ listingId, listing: v.listing, perDay: !!v.perDay, days: v.days ?? 0, fullDays: v.fullDays ?? 0, fullDate: v.fullDate ?? null, placesTaken: v.placesTaken ?? 0, placesTotal: v.placesTotal ?? 0, capacity: v.capacity, booked: v.booked, spotsLeft: v.spotsLeft, pct: v.capacity ? Math.round((v.booked / v.capacity) * 100) : 0, nextDate: v.nextDate }))
     .sort((a, b) => (a.nextDate < b.nextDate ? -1 : 1))
     .slice(0, 8);
 
