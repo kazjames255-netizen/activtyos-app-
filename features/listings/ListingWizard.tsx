@@ -514,7 +514,7 @@ export function emptyDraft(defaults?: {
     descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], toBring: [], safety: [], send: [],
     runFrom: "", runTo: "", blockMode: "weekly", days: defaults?.defaultRunningDays ?? [1, 2, 3, 4, 5], datesOff: [], blockId: null,
     mealsEnabled: false, mealPlan: {},
-    ticketOverrides: {}, bookRules: {}, addonIds: [], staffIds: [], visibility: "public", bookingType: "auto", waitlist: true, waitlistSize: "20", waitlistMode: "manual",
+    ticketOverrides: {}, bookRules: {}, addonIds: [], staffIds: [], visibility: "public", bookingType: "auto", waitlist: true, waitlistSize: "20", waitlistMode: "auto",
     // The first policy still in use — a new listing must never start on one
     // the provider has switched off.
     cancellation: firstLive ? policyWording({ ...firstLive, wording: undefined }) : CANCELLATION_POLICIES[3],
