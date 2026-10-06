@@ -966,6 +966,18 @@ export async function onboardingRetentionPurge(): Promise<void> {
   }
 }
 
+/** Family bank details typed for a bank-transfer refund are never kept long: anything not revealed/dealt with within 30 days is deleted
+ *  (they are also deleted the moment the provider reveals them, and when the refund is approved or declined). */
+export async function refundBankPurge(): Promise<void> {
+  const cutoff = new Date(Date.now() - 30 * 24 * 3_600_000).toISOString();
+  const old = await db.collection("refundBanks").where("createdAt", "<", cutoff).limit(400).get();
+  if (old.empty) return;
+  const batch = db.batch();
+  old.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+  console.log(`[sweeps] refund-bank-purge deleted ${old.size} unread bank-detail record(s) older than 30 days`);
+}
+
 export function startSweeps(): void {
   // Every 5 minutes is plenty — the windows are hours wide, not minutes.
   sweep("task-reminders", 5 * 60_000, taskReminders);
@@ -995,6 +1007,7 @@ export function startSweeps(): void {
   void import("./octSends").then((m) => m.startOctSweeps());
   // Once a day is plenty for a retention purge — see the policy comment above.
   sweep("onboarding-retention", 24 * 60 * 60_000, onboardingRetentionPurge);
+  sweep("refund-bank-purge", 24 * 60 * 60_000, refundBankPurge);
   // New-provider emails (day 1 / 3 / 5): decided from live facts at send time, so nobody is reminded of something already done.
   sweep("onboarding-nudges", 60 * 60_000, async () => { const m = await import("./onboardingNudges"); await m.onboardingNudges(); });
 }
