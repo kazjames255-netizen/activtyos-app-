@@ -20,7 +20,7 @@ import { entryFor, registerRows } from "../lib/registerRows";
 import { refPrefixFor } from "../lib/bookingRef";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/mealCutoff";
-import { cancellationRequestNotice } from "../lib/emailTemplates";
+import { cancellationRequestNotice, shortWhen, firstWord } from "../lib/emailTemplates";
 import { money, paidSoFar as totalPaid, realPhone, refundableSoFar, sessionIsoDates } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
@@ -2180,8 +2180,8 @@ my.post("/bookings", async (req, res) => {
                 to: { kind: "tenant" },
                 category: "booking",
                 key: "waitlist-started",
-                title: `You now have a waiting list · ${listing.name}`,
-                body: `${kids || bookerName} is the first family on the waiting list for ${listing.name}. No free place yet, nothing to do. You will be told when one opens. (You will not get another email when more families join.)`,
+                title: `New waiting list · ${listing.name}`,
+                body: `${kids || bookerName} · ${shortWhen(primary)} · first on the list. No free place yet. You will be told when one opens. (You will not get another email when more families join.)`,
                 subject: `You now have a waiting list for ${listing.name}`,
                 href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
                 ref: primary.ref,
@@ -2195,9 +2195,9 @@ my.post("/bookings", async (req, res) => {
           category: "booking",
           key: "booking-new",
           ...(waitlisted && !wlPrefs?.waitlistJoinAlert ? { bellOnly: true } : {}),
-          title: waitlisted ? `${kids || bookerName} joined the waiting list` : `${kind} · ${primary.ref} · ${bookerName}`,
+          title: waitlisted ? `${firstWord(kids || bookerName)} joined the waiting list` : `${kind} · ${primary.ref} · ${bookerName}`,
           body: waitlisted
-            ? `${kids || bookerName} joined the waiting list for ${listing.name}${primary.dates ? ` (${primary.dates})` : ""}. No free place yet, nothing to do. You will be told when one opens.`
+            ? `${listing.name} · ${shortWhen(primary)} · no free place yet, nothing to do. You will be told when one opens.`
             : `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(input.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
           subject: `${BRAND}: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
           href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,

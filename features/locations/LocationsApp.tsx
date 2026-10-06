@@ -18,7 +18,7 @@ import { fetchDeployment, resolveDeployment, saveDeployment, type LocStaff } fro
 
 interface Listing { id: string; title?: string; name?: string; venueId?: string | null; seasonId?: string | null; status?: string; visibility?: string; archived?: boolean }
 interface Store { staff: LocStaff[] }
-const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+const initials = (n: string) => n.split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const AV_COL = ["#c2268f", "#0f857b", "#2f6bd8", "#c06a10", "#6366f1", "#b45309"];
 const avColour = (id: string) => AV_COL[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % AV_COL.length];
 const CHIP_ON = { borderColor: "#22b365", background: "#eef8f1", color: "#0f7a43" } as const;

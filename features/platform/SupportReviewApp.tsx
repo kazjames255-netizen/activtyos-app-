@@ -44,7 +44,7 @@ const TIER_CHIP: Record<Tier, { label: string; bg: string; fg: string }> = {
   franchise: { label: H("Franchise"), bg: "#E8EEFD", fg: "#2f5fd0" },
 };
 const chipFor = (p: { tier: Tier; franchiseId: string | null }) => (p.tier === "franchise" && !p.franchiseId ? { label: H("Head office"), bg: "#E2F6EC", fg: "#0f7a43" } : TIER_CHIP[p.tier]);
-const initials = (s: string) => (s.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
+const initials = (s: string) => (s.trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
 const GRADS = ["linear-gradient(135deg,#2f5fd0,#2f5fd0)", "linear-gradient(135deg,#2f5fd0,#5aa0f0)", "linear-gradient(135deg,#274ba3,#2f5fd0)", "linear-gradient(135deg,#6d28d9,#5a3fd0)"];
 const grad = (s: string) => GRADS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
 const fmtWhen = (iso: string) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "");

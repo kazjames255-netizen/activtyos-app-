@@ -14,7 +14,7 @@ const GREEN = "#0f9d58", BLUE = "#1d3a8f", AMBER = "#b45309";
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const toMin = (iso?: string) => { if (!iso) return null; const d = new Date(iso); return d.getHours() * 60 + d.getMinutes(); };
 const hourLabel = (m: number) => { const h = Math.floor(m / 60), mm = m % 60; const intl = localTime(h, mm); if (intl) return intl; const ap = h >= 12 ? "pm" : "am"; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr}${mm ? ":" + String(mm).padStart(2, "0") : ""}${ap}`; };
-const initials = (n: string) => n.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+const initials = (n: string) => n.split(" ").filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const checkedIn = (r: ClockRecord) => !!r.clockInAt;
 
 export function StaffAttendanceBoard() {

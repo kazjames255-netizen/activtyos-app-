@@ -46,7 +46,7 @@ const HUES = [
   { soft: "#e8ecfb", text: "#2f3fa8", bar: "linear-gradient(135deg,#6d84e8,#2f3fa8)" },
 ];
 const hueFor = (label: string) => HUES[[...(label || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % HUES.length];
-const initials = (name: string) => (name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "?").toUpperCase();
+const initials = (name: string) => (name.trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).join("").slice(0, 2) || "?").toUpperCase();
 
 const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);

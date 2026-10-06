@@ -38,7 +38,7 @@ const tenure = (d: number) => (d >= 365 ? hq("{n} yrs", { n: (d / 365).toFixed(1
 const PLAN_C: Record<string, string> = { freelancer: "#3f78d8", company: "#1d3a8f", franchise: "#7c3aed" };
 const STATUS_C: Record<string, string> = { active: "#0f7a43", trialing: "#1d3a8f", canceling: "#a5670a", canceled: "#c02636", none: "#8a86a3" };
 const GRADS = ["linear-gradient(135deg,#1d3a8f,#3f78d8)", "linear-gradient(135deg,#3f78d8,#5aa0f0)", "linear-gradient(135deg,#274ba3,#4f8bf5)", "linear-gradient(135deg,#6d28d9,#a855f7)", "linear-gradient(135deg,#0f7a43,#34c17b)"];
-const initials = (s: string) => (s.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
+const initials = (s: string) => (s.trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
 const grad = (s: string) => GRADS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
 
 interface RecentProv { id: string; name: string; type: string; createdAt: string | null; subscription: Record<string, unknown> | null }

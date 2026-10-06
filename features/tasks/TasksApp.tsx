@@ -272,7 +272,7 @@ function LinkChip({ link, size = "sm" }: { link: TaskLink; size?: "sm" | "xs" })
 // with initials in --ink (>=8.9:1 on every one).
 const AV = ["#FDE7EF", "#E2F6EC", "#E8EEFD", "#FCF1DC", "#DEF4F1", "#EDE9FD", "#FCF1DC", "#E8EEFD"];
 const avBg = (n: string) => AV[[...(n || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
-const initials = (n: string) => (n || "?").split(/\s+/).map((x) => x[0]).slice(0, 2).join("").toUpperCase();
+const initials = (n: string) => (n || "?").split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((x) => x[0]).slice(0, 2).join("").toUpperCase();
 
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const shiftIso = (iso: string, by: number) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + by); return d.toISOString().slice(0, 10); };

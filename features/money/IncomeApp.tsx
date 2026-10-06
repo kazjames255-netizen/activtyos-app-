@@ -84,7 +84,7 @@ const HUES = [
 // Stable hue per label so a category always gets the same colour.
 const hueFor = (label: string) => HUES[[...label].reduce((a, c) => a + c.charCodeAt(0), 0) % HUES.length];
 // Up-to-two-letter initials for a name, for tidy avatar chips.
-const initials = (name: string) => (name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "?").toUpperCase();
+const initials = (name: string) => (name.trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).join("").slice(0, 2) || "?").toUpperCase();
 // Refined monochrome line icons for the at-a-glance tiles (classy, not emoji).
 const statSvg = { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 const IcCoins = () => <svg {...statSvg}><ellipse cx="12" cy="6" rx="8" ry="3" /><path d="M4 6v6c0 1.66 3.58 3 8 3s8-1.34 8-3V6" /><path d="M4 12v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" /></svg>;

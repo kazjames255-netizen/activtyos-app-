@@ -25,7 +25,7 @@ import { Rich } from "@/components/i18n/Rich";
 import { pickPlural } from "@/lib/i18n/plural";
 import { useAp, kindL, statusL, ratingL, goalL, pipL, fbL, lvl, boxLabel, boxAction } from "./apprI18n";
 
-const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+const initials = (n: string) => n.split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "id" + Math.floor(performance.now() * 1000));
 type Sub = "reviews" | "feedback" | "talent" | "templates" | "pip" | "settings";
 

@@ -18,7 +18,7 @@ import {
 } from "./data";
 
 const gbp = (n: number) => "£" + (n || 0).toLocaleString(dl(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+const initials = (n: string) => n.split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 type Tab = "in" | "sheets" | "settings";
 
 export function TimesheetsApp() {

@@ -62,7 +62,9 @@ function personName(raw: string): string {
 
 // Two letters for the avatar disc — initials of a name, else the first letters.
 const initials = (name: string) => {
-  const parts = (name || "?").trim().split(/\s+/).filter(Boolean);
+  // Only words that start with a letter count: "Kaz (parent) James" is K + J, never "K(".
+  const parts = (name || "?").trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w));
+  if (!parts.length) return "?";
   const letters = parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : (parts[0] ?? "?").slice(0, 2);
   return letters.toUpperCase();
 };

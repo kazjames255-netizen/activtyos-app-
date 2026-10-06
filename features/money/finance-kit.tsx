@@ -27,7 +27,7 @@ export const ACT_C = ["#2f5fd0", "#0f7a43", "#C81E5E", "#5a3fd0", "#F5A524", "#0
 // Ink for text sitting ON one of those marks (rank badges, segment labels).
 export const ON_ACT = "#FFFFFF";
 export const money = (n: number) => (n < 0 ? `−£${Math.abs(Math.round(n * 100) / 100).toFixed(2)}` : `£${(Math.round(n * 100) / 100).toFixed(2)}`);
-export const compactMoney = (n: number) => (Math.abs(n) >= 1000 ? `£${(n / 1000).toFixed(Math.abs(n) >= 10000 ? 0 : 1)}k` : `£${Math.round(n)}`);
+export const compactMoney = (n: number) => (Math.abs(n) >= 1000 ? `£${(n / 1000).toFixed(Math.abs(n) >= 10000 ? 0 : 1)}k` : Math.abs(n) > 0 && Math.abs(n) < 10 && n % 1 !== 0 ? `£${n.toFixed(2)}` : `£${Math.round(n)}`);
 export const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" });
 export const colorFor = (s: string) => ACT_C[[...(s || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % ACT_C.length];
 

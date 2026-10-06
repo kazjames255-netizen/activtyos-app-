@@ -297,18 +297,34 @@ export function cancellationRequestNotice(
   const destTxt = updated.cancel?.refundTo === "wallet"
     ? "to their wallet"
     : isVoucher ? `via ${vScheme ?? (/tax-?free|tfc/i.test(updated.method ?? "") ? "Tax-Free Childcare" : "their voucher scheme")} (not a bank card)` : /bank|transfer/i.test(updated.method ?? "") ? "to their bank account" : "back to their card";
+  // One short line each: who, the child, the day, the money.
+  const destShort = updated.cancel?.refundTo === "wallet"
+    ? "to wallet"
+    : isVoucher ? `via ${vScheme ?? (/tax-?free|tfc/i.test(updated.method ?? "") ? "Tax-Free Childcare" : "their voucher scheme")}` : /bank|transfer/i.test(updated.method ?? "") ? "to bank account" : "back to card";
   const refundTxt = updated.cancel?.refund === "none" || amt <= 0
-    ? "No refund is due under your cancellation policy."
-    : `${fmtMoney(amt)} refund requested ${destTxt}.`;
+    ? "No refund due."
+    : `${fmtMoney(amt)} refund requested ${destShort}.`;
   // What the parent told us: the reason they picked and/or what they typed in "Anything to add?" (the stock fallback isn't a reason).
   // The stored message also carries our own words (the stock "Cancelled by the parent." and the policy explanation in brackets): keep only the parent's.
   const said = (updated.cancel?.msg ?? "").replace(/^Cancelled by the parent\.?\s*/i, "").replace(/\s*\((?:Cancelled|Credit note|Within|Outside)[^)]*\)\s*$/i, "").replace(/^\s*[—-]\s*/, "").trim();
-  const typed = said;
-  const reasonPart = [updated.cancel?.reason, typed ? `"${typed}"` : ""].filter(Boolean).join(" — ");
+  const reasonPart = [updated.cancel?.reason, said ? `"${said}"` : ""].filter(Boolean).join(" — ");
   const reasonTxt = reasonPart ? ` Reason: ${reasonPart}${/[.!?]$/.test(reasonPart) ? "" : "."}` : "";
   return {
-    title: `${updated.booker} asked to cancel — ${updated.listing}`,
-    body: `Booking ${updated.ref} · ${updated.listing} · ${kids}${updated.dates ? ` · ${updated.dates}` : ""}.${reasonTxt} ${refundTxt}`,
+    title: `${firstWord(updated.booker)} wants to cancel`,
+    body: `${kids} · ${shortWhen(updated)} · ${refundTxt}${reasonTxt}`,
     subject: `${updated.booker} — cancellation request`,
   };
+}
+
+/** "Kaz (parent) James" → "Kaz". */
+export function firstWord(name: string | undefined): string {
+  return (name ?? "").trim().split(/\s+/)[0] || "A parent";
+}
+
+/** A booking's day(s) in a few words: "Mon 26 Oct", or "Mon 26 Oct +4 days" for a run. Falls back to the stored label. */
+export function shortWhen(b: Booking): string {
+  const days = [...(b.days ?? [])].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+  if (!days.length) return (b.dates ?? "").trim() || "dates to be confirmed";
+  const first = new Date(`${days[0]}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  return days.length > 1 ? `${first} +${days.length - 1} more` : first;
 }

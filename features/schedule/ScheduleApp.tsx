@@ -34,7 +34,7 @@ const durH = (a: string, b: string) => Math.max(0, mins(b) - mins(a)) / 60;
 const hourOf = (t: string) => Math.floor(mins(t) / 60);
 const hLabel = hmShort;
 const to12 = (t: string) => { const [h, m] = t.split(":").map(Number); const intl = localTime(h, m); if (intl) return intl; const ap = h < 12 ? "am" : "pm"; const hh = ((h + 11) % 12) + 1; return `${hh}:${String(m).padStart(2, "0")}${ap}`; };
-const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+const initials = (n: string) => n.split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const addDays = (s: string, n: number) => { const x = dt(s); x.setUTCDate(x.getUTCDate() + n); return iso(x); };
 const overlaps = (a: { start: string; end: string }, b: { start: string; end: string }) => mins(a.start) < mins(b.end) && mins(b.start) < mins(a.end);
 const HOURS = Array.from({ length: 13 }, (_, i) => 7 + i); // 7am–7pm

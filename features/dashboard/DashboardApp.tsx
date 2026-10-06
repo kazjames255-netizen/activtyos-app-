@@ -52,7 +52,8 @@ const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateStri
 const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 // Compact money for the narrow sparkline columns: £1.2k, £320, £0.
-const compactMoney = (n: number) => (n >= 1000 ? `£${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `£${Math.round(n)}`);
+// Small amounts keep their pence: £0.30 must not read as £0 (that made a real payment look like "no payments").
+const compactMoney = (n: number) => (n >= 1000 ? `£${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : n > 0 && n < 10 && n % 1 !== 0 ? `£${n.toFixed(2)}` : `£${Math.round(n)}`);
 
 // A stable colour per activity name, and an availability tone (green→amber→red).
 const actColor = (s: string) => ACT_C[[...(s || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % ACT_C.length];
@@ -116,7 +117,7 @@ function MiniBars({ data, labels, caption }: { data: number[]; labels: string[];
 }
 
 // A single-percentage ring gauge — white on a coloured KPI tile (à la the "Tasks 33%" dial).
-function Ring({ pct, size = 62, label, stroke = "#fff", track = "rgba(255,255,255,.22)" }: { pct: number; size?: number; label: string; stroke?: string; track?: string }) {
+function Ring({ pct, size = 62, label, stroke = "var(--brand-2, #2f6bd8)", track = "var(--line, #e3e9f5)" }: { pct: number; size?: number; label: string; stroke?: string; track?: string }) {
   const sw = 7, r = size / 2 - sw / 2, c = 2 * Math.PI * r;
   const dash = c * Math.min(1, Math.max(0, pct / 100));
   return (

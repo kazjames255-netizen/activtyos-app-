@@ -31,7 +31,7 @@ const gbp = (n: number) => `£${n.toLocaleString(dl())}`;
 const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "—");
 
 const GRADS = ["linear-gradient(135deg,#1d3a8f,#3f78d8)", "linear-gradient(135deg,#3f78d8,#5aa0f0)", "linear-gradient(135deg,#274ba3,#4f8bf5)", "linear-gradient(135deg,#16306e,#2f6bd8)"];
-const initials = (s: string) => (s.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
+const initials = (s: string) => (s.trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
 const grad = (s: string) => GRADS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
 // A franchise is a company tenant on the franchise plan; freelancer/company come from the tenant type.
 const kindOf = (p: Provider) => ((p.subscription?.plan as string) === "franchise" ? "franchise" : p.type);
