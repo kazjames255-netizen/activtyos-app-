@@ -2096,6 +2096,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
 // ── Step: Capacity (its own page — the age-caps make it tall) ─────────────────
 function CapacityStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
   const tr = useT();
+  const { settings, save } = useSettings();
   return (
     <div className="mx-auto max-w-[1120px]">
       <StepHead n={3} kicker={tr("p8lst.waKickCapacity")} title={tr("p8lst.waCapacityTitle")} lede={tr("p8lst.waCapacityLede")} />
@@ -2134,12 +2135,22 @@ function CapacityStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft
       {d.waitlist && (
         <div className="mt-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
           <YesNo label={tr("p8lst.wbAutoOfferLabel")} value={(d.waitlistMode ?? "manual") === "auto"} onChange={(v) => upd({ waitlistMode: v ? "auto" : "manual" })} help={tr("p8lst.wbAutoOfferHelp")} />
-          {(d.waitlistMode ?? "manual") !== "auto" && (
-            <div className="mt-2 rounded-lg bg-[#fff7e0] px-2.5 py-2 text-[12px] font-semibold leading-[1.5] text-[#8a5300]">
-              {tr("p8lst.wbPreferNoAlert")}{" "}
-              <a href={`/${typeof window !== "undefined" ? window.location.pathname.split("/")[1] || "freelancer" : "freelancer"}/email?tab=automatic`} target="_blank" rel="noopener noreferrer" className="font-extrabold underline">{tr("p8lst.wbPreferNoAlertLink")}</a>
-            </div>
-          )}
+          {(d.waitlistMode ?? "manual") !== "auto" && (() => {
+            const alertOn = settings.autoEmails?.waitlistFreeAlert !== false;
+            return (
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-[#fff7e0] px-2.5 py-2 text-[12px] font-semibold leading-[1.5] text-[#8a5300]">
+                <span className="min-w-0 flex-1">{alertOn ? tr("p8lst.wbAlertOnNote") : tr("p8lst.wbAlertOffNote")}</span>
+                <button type="button"
+                  onClick={() => {
+                    if (alertOn && !window.confirm(tr("p8em.emWaitAlertOffWarn"))) return;
+                    void save({ settings: { ...settings, autoEmails: { ...(settings.autoEmails ?? {}), waitlistFreeAlert: !alertOn } } });
+                  }}
+                  className="rounded-full border-2 border-[#8a5300] bg-white px-3.5 py-1.5 text-[12px] font-extrabold text-[#8a5300]">
+                  {alertOn ? tr("p8lst.wbAlertTurnOff") : tr("p8lst.wbAlertTurnOn")}
+                </button>
+              </div>
+            );
+          })()}
           <div className="mt-2.5 w-[150px]">
             <FieldLabel>{tr("p8lst.wbMaxWaiting")}</FieldLabel>
             <Input type="number" min={0} value={d.waitlistSize} onChange={(e) => upd({ waitlistSize: e.target.value })} placeholder={tr("p8lst.wbNoLimit")} className="w-full" />
