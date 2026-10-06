@@ -17,7 +17,7 @@ import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
 // ─────────────────────────────────────────────────────────────────────────
 // Task Manager — the operator to-do system. A task hangs off a real record
-// (camp / booking / compliance / venue) — that's what makes it ActivityOS
+// (camp / booking / compliance / venue) — that's what makes it Name TBC
 // Tasks, not a generic list, and drives the P2 auto-spawn engine.
 // Views: My Tasks (grouped list) · Board (kanban) · Calendar · Team.
 // ─────────────────────────────────────────────────────────────────────────

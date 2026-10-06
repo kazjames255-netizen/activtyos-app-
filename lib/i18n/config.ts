@@ -35,7 +35,7 @@ export const localeDef = (code: string): LocaleDef =>
 export const isRTL = (code: string): boolean => !!localeDef(code).rtl;
 
 /** The product name, shown in user-facing text. The product is being renamed: change it HERE only. Catalogue strings use the {brand} token (filled automatically by translate()). */
-export const BRAND = "ActivityOS";
+export const BRAND = "Name TBC";
 
 /** Cookie mirror of the picked language, so the server can render the first paint in the right language + direction (no English flash). */
 export const LOCALE_COOKIE = "aos.locale";

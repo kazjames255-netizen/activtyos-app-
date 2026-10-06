@@ -189,7 +189,7 @@ const VIEW_LEVEL_WRITES: RegExp[] = [
 ];
 /** Never refused by the matrix: logging a safeguarding concern, an incident or
  *  an accident (anyone who works with children must be able to — one POST,
- *  kind decides), and messaging ActivityOS support. */
+ *  kind decides), and messaging Name TBC support. */
 const NEVER_REFUSED: { method: string | null; re: RegExp }[] = [
   { method: "POST", re: /^\/api\/incidents\/?$/ },
   { method: null, re: /^\/api\/messages\/support(\/|$)/ },

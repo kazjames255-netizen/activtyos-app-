@@ -12,7 +12,7 @@ import { PaymentsApp } from "@/features/payments/PaymentsApp";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Billing and payouts: ONE page for the two separate money flows.
-//   · Your Activly plan  — the provider pays ActivityOS (card, 7-day trial, monthly).
+//   · Your Name TBC plan  — the provider pays Name TBC (card, 7-day trial, monthly).
 //   · Get paid by parents — parents pay the provider (Stripe Connect, or bank details on invoices).
 // They are separate Stripe things on purpose, so the page says so up front. The old "Subscription" and "Get paid"
 // routes still work; this view just puts them side by side with plain wording.

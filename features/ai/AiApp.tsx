@@ -12,7 +12,7 @@ import { useT } from "@/lib/i18n/provider";
 import { AnswerVisual, splitVisuals } from "./AnswerVisuals";
 
 // ─────────────────────────────────────────────────────────────────────────
-// AI co-pilot — a conversational assistant with the ActivityOS robot as its
+// AI co-pilot — a conversational assistant with the Name TBC robot as its
 // face. Chats over the account's LIVE data (POST /api/ai/chat, read-only,
 // role-scoped). The robot reacts (idle / thinking / talking / listening), reads
 // answers aloud in the British co-pilot voice, takes voice input, and drops

@@ -36,7 +36,7 @@ export function AosMark({ size = 30 }: { size?: number }) {
   );
 }
 
-// Wordmark — Activly.
+// Wordmark — Name TBC.
 export function AosWordmark({ className = "" }: { className?: string }) {
   return (
     <span className={className} style={{ fontFamily: "var(--ff-display)" }}>

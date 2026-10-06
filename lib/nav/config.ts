@@ -62,7 +62,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "newsfeed", legacyView: "admin-newsfeed", label: "Newsfeed", hidden: true, icon: { type: "glyph", value: "📢" }, badge: null },
         { view: "messages", legacyView: "messages", label: "Messages", hidden: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M4 7.5l8 5.5 8-5.5\"></path></svg>" }, badge: null },
-        { view: "activityos", legacyView: "activityos", label: "Message ActivityOS", hidden: true, icon: null, badge: null },
+        { view: "activityos", legacyView: "activityos", label: "Message Name TBC", hidden: true, icon: null, badge: null },
         { view: "email", legacyView: "admin-email", label: "Email", hidden: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M3.5 7l8.5 6 8.5-6\"></path></svg>" }, badge: null },
       ],
     },
@@ -286,7 +286,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "newsfeed", legacyView: "franchise-newsfeed", label: "Newsfeed", icon: { type: "glyph", value: "📢" }, badge: null },
         { view: "messages", legacyView: "franchise-messages", label: "Messages", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M4 7.5l8 5.5 8-5.5\"></path></svg>" }, badge: null },
-        { view: "activityos", legacyView: "franchise-activityos", label: "Message ActivityOS", hidden: true, icon: null, badge: null },
+        { view: "activityos", legacyView: "franchise-activityos", label: "Message Name TBC", hidden: true, icon: null, badge: null },
         { view: "email", legacyView: "franchise-email", label: "Email", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M3.5 7l8.5 6 8.5-6\"></path></svg>" }, badge: null },
       ],
     },
@@ -316,7 +316,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "newsfeed", legacyView: "freelancer-newsfeed", label: "Newsfeed", hidden: true, icon: { type: "glyph", value: "📢" }, badge: null },
         { view: "messages", legacyView: "freelancer-messages", label: "Messages", hidden: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M4 7.5l8 5.5 8-5.5\"></path></svg>" }, badge: null },
-        { view: "activityos", legacyView: "freelancer-activityos", label: "Message ActivityOS", hidden: true, icon: null, badge: null },
+        { view: "activityos", legacyView: "freelancer-activityos", label: "Message Name TBC", hidden: true, icon: null, badge: null },
         { view: "email", legacyView: "freelancer-email", label: "Email", hidden: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M3.5 7l8.5 6 8.5-6\"></path></svg>" }, badge: null },
       ],
     },
@@ -601,7 +601,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "leads", legacyView: "platform-leads", label: "Prospective leads", icon: { type: "glyph", value: "💬" }, badge: null },
         { view: "venture-lakes", legacyView: "platform-venture-lakes", label: "Leads Lakes/Country Parks", icon: { type: "glyph", value: "🚵" }, badge: null },
         { view: "international-expansion", legacyView: "platform-international-expansion", label: "International Expansion", icon: { type: "glyph", value: "🌍" }, badge: null },
-        { view: "activly-site", legacyView: "platform-activly-site", label: "Activly site", icon: { type: "glyph", value: "🔗" }, badge: null },
+        { view: "activly-site", legacyView: "platform-activly-site", label: "Name TBC site", icon: { type: "glyph", value: "🔗" }, badge: null },
         { view: "sales", legacyView: "platform-sales", label: "Sales pipeline", icon: { type: "glyph", value: "💼" }, badge: null },
         { view: "features", legacyView: "platform-features", label: "Provider features", icon: { type: "glyph", value: "◐" }, badge: null },
       ],

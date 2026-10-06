@@ -1,7 +1,7 @@
 "use client";
 
 // Staff self-service — "My learning": a Certificates tab (upload & renew your own
-// DBS, First Aid, etc.) plus an optional My-courses tab (assigned ActivityOS
+// DBS, First Aid, etc.) plus an optional My-courses tab (assigned Name TBC
 // courses + progress). The manager verifies certificates in the Staff area. Demo
 // store; real file storage + per-user identity are Amir's.
 import { useEffect, useState } from "react";

@@ -742,7 +742,7 @@ export const CREATE_STEPS: Record<string, LiveTourSteps> = {
       },
       {
         "find": "their@email.com (optional)",
-        "line": "There are two ways to invite. Pop in an email and ActivityOS sends the invite straight to them; leave it blank and it just makes a link you can copy and share by hand. Company accounts also get a button to invite a whole franchise, and that one stays hidden for everyone else."
+        "line": "There are two ways to invite. Pop in an email and Name TBC sends the invite straight to them; leave it blank and it just makes a link you can copy and share by hand. Company accounts also get a button to invite a whole franchise, and that one stays hidden for everyone else."
       },
       {
         "find": "Invite links",
@@ -754,7 +754,7 @@ export const CREATE_STEPS: Record<string, LiveTourSteps> = {
       },
       {
         "find": "their@email.com (optional)",
-        "line": "We'll pop in Jordan's email here. That's all ActivityOS needs to send her a personal invite link.",
+        "line": "We'll pop in Jordan's email here. That's all Name TBC needs to send her a personal invite link.",
         "fill": [
           [
             "their@email.com",
@@ -764,7 +764,7 @@ export const CREATE_STEPS: Record<string, LiveTourSteps> = {
       },
       {
         "find": "+ Invite staff",
-        "line": "And that's it — press Invite staff, and ActivityOS emails Jordan her invite link right away. Had we left the email blank, this would simply create a link for us to copy and share ourselves."
+        "line": "And that's it — press Invite staff, and Name TBC emails Jordan her invite link right away. Had we left the email blank, this would simply create a link for us to copy and share ourselves."
       }
     ]
   },
@@ -988,12 +988,12 @@ export const CREATE_STEPS: Record<string, LiveTourSteps> = {
   },
   "email": {
     "title": "Email",
-    "introLine": "This is your whole comms hub — a Gmail-style inbox and composer for writing to parents one-to-one, a marketing pipeline for branded campaigns to your live audiences, and the automatic emails ActivityOS sends for you.",
-    "doneLine": "Write to parents from the Inbox, fire branded campaigns at your live audiences, let ActivityOS send the routine emails for you, and read the numbers to see what's landing.",
+    "introLine": "This is your whole comms hub — a Gmail-style inbox and composer for writing to parents one-to-one, a marketing pipeline for branded campaigns to your live audiences, and the automatic emails Name TBC sends for you.",
+    "doneLine": "Write to parents from the Inbox, fire branded campaigns at your live audiences, let Name TBC send the routine emails for you, and read the numbers to see what's landing.",
     "steps": [
       {
         "find": "Inbox",
-        "line": "Everything on this page lives under a row of eight tabs — the first two are your one-to-one mailbox and writing desk, the middle three run your bulk marketing, and the last three are the emails ActivityOS sends automatically plus your settings."
+        "line": "Everything on this page lives under a row of eight tabs — the first two are your one-to-one mailbox and writing desk, the middle three run your bulk marketing, and the last three are the emails Name TBC sends automatically plus your settings."
       },
       {
         "find": "Audiences",
@@ -1001,7 +1001,7 @@ export const CREATE_STEPS: Record<string, LiveTourSteps> = {
       },
       {
         "find": "Automatic emails",
-        "line": "Beyond what you write, ActivityOS quietly sends a batch on your behalf — booking confirmations, receipts, session reminders, late-collection alerts and review requests — and this tab is where you switch any off or change when the reminders go out."
+        "line": "Beyond what you write, Name TBC quietly sends a batch on your behalf — booking confirmations, receipts, session reminders, late-collection alerts and review requests — and this tab is where you switch any off or change when the reminders go out."
       },
       {
         "find": "Compose",
@@ -1342,7 +1342,7 @@ export const CREATE_SETTINGS: Record<string, SettingsLink[]> = {
       "icon": "💸",
       "label": "Money settings",
       "tab": "money",
-      "note": "Choose cash or accrual basis, switch on the Purchase orders tab, and fold your own ActivityOS plan fee in as a monthly cost."
+      "note": "Choose cash or accrual basis, switch on the Purchase orders tab, and fold your own Name TBC plan fee in as a monthly cost."
     },
     {
       "icon": "🗓️",

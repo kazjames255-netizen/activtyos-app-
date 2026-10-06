@@ -486,7 +486,7 @@ export const ROLE_CAPS: { key: string; label: string; group: string; sensitive?:
   { key: "marketing", label: "Marketing & referrals", group: "Growth" },
   { key: "messaging", label: "Messages & newsfeed", group: "Communication" },
   { key: "email", label: "Email", group: "Communication" },
-  { key: "support", label: "Message ActivityOS (support)", group: "Communication" },
+  { key: "support", label: "Message Name TBC (support)", group: "Communication" },
   { key: "franchise", label: "Franchise Support Framework", group: "Admin" },
   { key: "settings", label: "Setup & features", group: "Admin" },
 ];
@@ -499,7 +499,7 @@ const capsAt = (level: CapLevel): Record<string, CapLevel> =>
 export const DEFAULT_STAFF_ROLES: string[] = ["Lead Coach", "Coach", "Activity Instructor", "Lifeguard", "First Aider", "Activity Assistant"];
 
 /** Company-wide scheduling defaults, surfaced on the location Scheduling tab.
- *  Recorded/behavioural only — ActivityOS never moves money. */
+ *  Recorded/behavioural only — Name TBC never moves money. */
 export interface SchedulingSettings {
   firstDay: "mon" | "sun";
   defaultShiftHours: number;
@@ -591,7 +591,7 @@ export const HO_ROLE_AREAS: { key: string; label: string; group: string; sensiti
   { key: "marketing", label: "Reviews & referrals", group: "Marketing" },
   { key: "messaging", label: "Newsfeed & messages", group: "Communication" },
   { key: "email", label: "Email", group: "Communication" },
-  { key: "support", label: "Message ActivityOS (support)", group: "Communication" },
+  { key: "support", label: "Message Name TBC (support)", group: "Communication" },
   { key: "staff", label: "Head-office staff & invites", group: "Team" },
   { key: "incidents", label: "Safeguarding oversight (incidents & accidents)", group: "Oversight", sensitive: true },
   { key: "medication", label: "Medication oversight", group: "Oversight", sensitive: true },
@@ -673,7 +673,7 @@ export interface TenantSettings {
 
   /**
    * Money → Expenses preferences. `includeSubscription` folds the operator's
-   * own ActivityOS plan fee into their expense totals; `categories` is the
+   * own Name TBC plan fee into their expense totals; `categories` is the
    * persistent custom-category registry (so a category can exist — and be
    * renamed or deleted — independently of whether any expense uses it yet).
    */
@@ -718,7 +718,7 @@ export interface TenantSettings {
   };
 
   /**
-   * Automatic (system) emails — which transactional/reminder emails ActivityOS
+   * Automatic (system) emails — which transactional/reminder emails Name TBC
    * sends on the provider's behalf, and their timing. Edited on the Email page
    * ("Automatic emails" tab). The SENDING is a backend job (see
    * docs/email-notifications-handoff.md); this block is just the on/off + timing
@@ -1188,7 +1188,7 @@ export interface TenantSettings {
   /** Company-wide scheduling defaults (location Scheduling tab). */
   scheduling?: SchedulingSettings;
   /** What referees are asked (Team → Onboarding → References → ⚙). Unset means
-   *  the ActivityOS default set. Editing only affects NEW requests: each one
+   *  the Name TBC default set. Editing only affects NEW requests: each one
    *  stores the questions it was sent under. */
   referenceQuestions?: RefSection[];
   /** Ask the operator why, when they cancel. Off = don't make them answer. */

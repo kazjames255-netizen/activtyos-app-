@@ -348,7 +348,7 @@ export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?:
   // « toggle if they want more room.
   const [collapsed, setCollapsed] = useState(false);
 
-  // The workspace is branded with the provider's own name, not "ActivityOS" —
+  // The workspace is branded with the provider's own name, not "Name TBC" —
   // that moves to the footer. For an operator that's their tenant (business)
   // name; for a parent (no tenant) it's the provider they're linked to.
   const [brand, setBrand] = useState<string | null>(null);
@@ -390,7 +390,7 @@ export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?:
       })
       .catch(() => {});
   }, []);
-  // Never flash "Activly" while the name loads: show the last known provider name (remembered per portal, PER SIGNED-IN ACCOUNT, on this
+  // Never flash "Name TBC" while the name loads: show the last known provider name (remembered per portal, PER SIGNED-IN ACCOUNT, on this
   // browser) and, until there is one, a blank line — the real name replaces it a moment later. Keyed by uid too: without that, switching
   // accounts on the same browser (a tutor testing as themselves, then as a parent, then as another test account) briefly — or, if the
   // fresh /api/my/providers call ever fails silently, permanently — shows the PREVIOUS account's provider name instead of this one's.
@@ -687,7 +687,7 @@ export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?:
         );
       })}
 
-      {/* The ActivityOS wordmark lives at the foot now the provider's name owns
+      {/* The Name TBC wordmark lives at the foot now the provider's name owns
           the top — "powered by". mt-auto pins it to the bottom whether or not a
           portal has a footer nav group above it. */}
       <div className="mt-auto px-4 pb-2 pt-3">

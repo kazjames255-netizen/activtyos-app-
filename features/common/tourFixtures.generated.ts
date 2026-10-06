@@ -7331,7 +7331,7 @@ export const GENERATED_FIXTURES: Record<string, Record<string, unknown>> = {
           "date": "2026-07-02",
           "category": "Software",
           "amount": 29,
-          "supplier": "ActivityOS",
+          "supplier": "Name TBC",
           "notes": "Pro plan subscription — July",
           "status": "paid",
           "paidAt": "2026-07-02T00:05:00.000Z",

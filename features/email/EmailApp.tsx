@@ -24,7 +24,7 @@ import { CampaignDesigner, renderDesignHtml, renderDesignText, loadMyTemplates, 
 import { GmailSetupWalkthrough } from "@/features/email/GmailSetupWalkthrough";
 import { DEMO_INBOX, bestBody, htmlToText, type ServerMail } from "@/features/email/inbox-data";
 
-// ── "Automatic emails" — which system emails ActivityOS sends on the provider's
+// ── "Automatic emails" — which system emails Name TBC sends on the provider's
 // behalf, mirroring the Build Manual's Email screen. Toggles + reminder timing
 // persist to settings.autoEmails; the actual sending is a backend job (see
 // docs/email-notifications-handoff.md).
@@ -37,7 +37,7 @@ const AUTO_EMAILS: { key: AutoKey; title: string; sub: string; desc: string; cor
   { key: "waitlist", title: "Waitlist", sub: "Tells a waitlisted parent when a place opens or they move up", desc: "When a place frees up, the next waitlisted parent is emailed an offer with a time limit to claim it. They can also be told when they move up the queue." },
   { key: "dayOf", title: "Day-of alerts", sub: "On-the-day arrival alerts (incl. logged incidents)", desc: "On-the-day operational alerts: a child not yet signed in 30 minutes after a session starts, and a notification when an incident is logged (the incident detail stays restricted to Head Office and the staff who logged it)." },
   { key: "lateCollection", title: "Late collection", sub: "Alerts you when children aren’t collected on time", desc: "30 minutes after a session ends (or your Registers-tab threshold), if any children are still signed in you’re alerted that some haven’t been collected. The alert doesn’t name them — open the register to see who." },
-  { key: "announcements", title: "New camp announcements", sub: "Email your past & opted-in customers when new camps open", desc: "A one-off email to your OWN past and opted-in customers announcing new camps or dates. This is re-marketing to people who have already booked with you — ActivityOS has no public marketplace or ‘followers’." },
+  { key: "announcements", title: "New camp announcements", sub: "Email your past & opted-in customers when new camps open", desc: "A one-off email to your OWN past and opted-in customers announcing new camps or dates. This is re-marketing to people who have already booked with you — Name TBC has no public marketplace or ‘followers’." },
   { key: "reviewRequests", title: "Review requests", sub: "Asks a parent to leave a review after their final session", desc: "Sent once, after the parent’s LAST booked session (not after every booking). The link takes them straight to the review screen." },
 ];
 
@@ -334,7 +334,7 @@ const MAIL_HOSTS = [
     ] as [string, string][],
     steps: [
       "Tick “Enable forwarding”.",
-      "Paste your ActivityOS address into the box.",
+      "Paste your Name TBC address into the box.",
       "Tick “Keep a copy of forwarded messages” so nothing leaves your own inbox.",
       "Press Save.",
     ],
@@ -344,7 +344,7 @@ const MAIL_HOSTS = [
     id: "gmail", label: "Gmail", emoji: "✉️",
     links: [["Open Gmail forwarding settings", "https://mail.google.com/mail/u/0/#settings/fwdandpop"]] as [string, string][],
     steps: [
-      "Click “Add a forwarding address” and paste your ActivityOS address.",
+      "Click “Add a forwarding address” and paste your Name TBC address.",
       "Google emails a confirmation code to us — it appears on this page within a minute.",
       "Type that code back into Gmail and press Verify.",
       "Choose “Forward a copy… and keep Gmail’s copy in the Inbox”, then Save Changes.",
@@ -357,7 +357,7 @@ const MAIL_HOSTS = [
     steps: [
       "Sign in to your email provider’s website (not the app).",
       "Look for Settings → Forwarding, or “Forwarders” if your website host runs your email.",
-      "Paste your ActivityOS address and save.",
+      "Paste your Name TBC address and save.",
       "Keep a copy in your own inbox if it offers the choice.",
     ],
     note: "Yahoo only allows forwarding on its paid plan. If you’re stuck, send us the name of your email provider and we’ll write the steps for you.",

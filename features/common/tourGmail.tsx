@@ -17,7 +17,7 @@ const g = (k: string, v?: Record<string, string | number>) => tNow(["p8misc", "g
 
 const INK = "#12203c", INK2 = "#3a4a68", FAINT = "#9aa6bd", LINE = "#e6ebf5", BLUE = "#1a73e8";
 
-// A faux browser window so a mock reads as "a screen", not part of ActivityOS.
+// A faux browser window so a mock reads as "a screen", not part of Name TBC.
 function chrome(url: string, body: string): string {
   return `
   <div style="width:min(540px,100%);border:1px solid ${LINE};border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 14px 34px -14px rgba(20,48,110,.4)">
@@ -70,13 +70,13 @@ export function gmailTour(address: string, code = "184973"): LiveTourSteps {
     title: "Connect your Gmail",
     slides: true,
     introLine:
-      "Let me show you how to connect your Gmail — it takes about two minutes, and you only do it once. Your Gmail keeps working exactly as it does now; you just also get parents' replies here in ActivityOS.",
+      "Let me show you how to connect your Gmail — it takes about two minutes, and you only do it once. Your Gmail keeps working exactly as it does now; you just also get parents' replies here in Name TBC.",
     doneLine:
-      "And that's it — from now on, parents' emails arrive in your normal Gmail and here in ActivityOS. Nothing about your Gmail changes, and you can reply from either place.",
+      "And that's it — from now on, parents' emails arrive in your normal Gmail and here in Name TBC. Nothing about your Gmail changes, and you can reply from either place.",
     steps: [
       // 1 — copy your address
       {
-        line: "First, copy your ActivityOS address. This private address is yours alone — nobody else can use it. You'll paste it into Gmail in a moment.",
+        line: "First, copy your Name TBC address. This private address is yours alone — nobody else can use it. You'll paste it into Gmail in a moment.",
         slide: centre(`
           <div style="font:800 11px/1 system-ui;text-transform:uppercase;letter-spacing:.6px;color:${FAINT}">${g("step1")}</div>
           <div style="display:flex;align-items:center;gap:10px;border:1px solid ${LINE};background:#f7f9fd;border-radius:14px;padding:12px 14px">
@@ -163,7 +163,7 @@ export function gmailTour(address: string, code = "184973"): LiveTourSteps {
       },
       // 7 — done (also carried by doneLine; this slide is the visual payoff)
       {
-        line: "You're connected. Every email now arrives in both your Gmail and here in ActivityOS.",
+        line: "You're connected. Every email now arrives in both your Gmail and here in Name TBC.",
         slide: centre(`
           <div style="display:flex;align-items:center;gap:16px">
             ${flowBox(g("your_gmail"), gmailMark, "#cdeacd", "#f3fbf3", "#127a3e")}

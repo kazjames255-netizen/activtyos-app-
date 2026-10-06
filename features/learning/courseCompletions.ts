@@ -1,4 +1,4 @@
-// Per-staff INTERNAL course completions (ActivityOS training). The live progress
+// Per-staff INTERNAL course completions (Name TBC training). The live progress
 // store (aos.learn.progress.v1) is single-learner in the demo, so who-completed-
 // -what across the team is seeded here. Real per-user completion + scores are
 // Amir's backend. Shared by the manager oversight (CredentialsApp) and could feed

@@ -1,6 +1,6 @@
 "use client";
 
-// The referee's page (/reference/{token}) — the one part of ActivityOS a person
+// The referee's page (/reference/{token}) — the one part of Name TBC a person
 // with no account ever fills in. No sign-in, no chrome, no navigation: the
 // unguessable token in the link is the authorisation, exactly like the invoice
 // pay page. Single-use — once submitted or declined the link 410s, so a
