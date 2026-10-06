@@ -123,7 +123,7 @@ export function evaluate(c: PilotCtx): Check[] {
   if (mail == null) out.push(warn("mail", "Emails (one payment-received, none early)", "not verifiable: the mail log is unavailable"));
   else {
     const to = String(b.email ?? "").toLowerCase();
-    const mine2 = mail.filter((m) => m.to.toLowerCase() === to && (!listing || m.subject.includes(listing)) && m.status !== "failed");
+    const mine2 = mail.filter((m) => m.to.toLowerCase() === to && (!listing || m.subject.includes(listing)) && m.status !== "failed" && !(Number.isFinite(t(String(b.createdAt ?? b.bookedAt ?? ""))) && t(m.at) < t(String(b.createdAt ?? b.bookedAt)) - 120_000)); // only mail sent since THIS booking (same parent + listing can have earlier bookings)
     const payMails = mine2.filter((m) => /^Payment received/i.test(m.subject));
     const bookedMails = mine2.filter((m) => /^Booking confirmed/i.test(m.subject));
     const payAt = paidRecs.map((p) => t(p.createdAt)).filter(Number.isFinite).sort()[0];
