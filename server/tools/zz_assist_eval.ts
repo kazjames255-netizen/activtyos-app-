@@ -89,6 +89,14 @@ export const QUESTIONS: string[] = [
   "can parents pay with Klarna or PayPal or Amazon Pay",
   "do I have to give bank details to go live",
   "what do I need to publish my first listing",
+  "a parent booked by bank transfer, what do they see and what do I do when the money arrives",
+  "what is the difference between Confirmed, Paid and Reconciled, and can I undo a reconcile",
+  "do parents get a booked in email when they pay by card",
+  "a parent cancelled a bank transfer booking, how do they get their refund and where do their bank details go",
+  "how long can I see a parent's bank details for a refund",
+  "can parents move their own dates without me approving, and how do I turn that off",
+  "the first card payment says nothing was charged, is something broken, and when does the money reach me",
+  "how many reminder emails does a parent get for a 30 day camp, and where do their replies go",
 ];
 
 async function token(email: string, password: string) {
