@@ -36,7 +36,7 @@ function CardForm({ token, base, info, onPaid, onError }: { token: string; base:
     setBusy(true);
     const { error } = await stripeJs.confirmPayment({ elements, redirect: "if_required" });
     if (error) {
-      onError(error.message ?? t("p7pub.payFailed"));
+      onError(`${error.message ?? t("p7pub.payFailed")}${error.type === "card_error" ? ` ${t("p7ck.declineRetry")}` : ""}`);
       setBusy(false);
       return;
     }

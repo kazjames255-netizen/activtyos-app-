@@ -38,7 +38,7 @@ function PayForm({ info, onPaid, onError }: { info: CheckoutInfo; onPaid: () => 
     setBusy(true);
     const { error } = await stripeJs.confirmPayment({ elements, redirect: "if_required" });
     if (error) {
-      onError(error.message ?? t("p8lst.pmPayFailed"));
+      onError(`${error.message ?? t("p8lst.pmPayFailed")}${error.type === "card_error" ? ` ${t("p7ck.declineRetry")}` : ""}`);
       setBusy(false);
       return;
     }
