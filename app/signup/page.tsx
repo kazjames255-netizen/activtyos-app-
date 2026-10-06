@@ -314,6 +314,7 @@ function SignupForm() {
           ? {
               plan: accountType,
               businessName: businessName.trim(),
+              ...(name.trim() ? { ownerName: name.trim() } : {}),
               providerNameMode,
               providerName: (providerNameMode === "person" ? name.trim() : businessName.trim()) || businessName.trim(),
               ...(kinds.length ? { activityKinds: kinds } : {}),

@@ -46,6 +46,16 @@ const putSchema = z.object({
 type Territory = { areas: { id: string; name: string; color: string; rings: { lat: number; lng: number }[] }[]; status?: "draft" | "proposed" | "agreed"; by?: "ho" | "franchise"; agreedAt?: string; agreedBy?: string };
 type UserProfile = { name?: string; phone?: string; address?: string; postcode?: string; marketingConsent?: boolean; emergencyName?: string; emergencyPhone?: string; locale?: string; franchiseName?: string; franchiseArea?: string; franchiseTerritory?: Territory };
 
+
+async function providerNameFallback(tenantId?: string | null): Promise<string> {
+  if (!tenantId) return "";
+  try {
+    const [t, lib] = await Promise.all([db.collection("tenants").doc(tenantId).get(), db.collection("libraries").doc(tenantId).get()]);
+    const settings = (lib.data()?.settings ?? {}) as { providerName?: string; billing?: { businessName?: string } };
+    return (settings.providerName || settings.billing?.businessName || (t.get("name") as string | undefined) || "").trim();
+  } catch { return ""; }
+}
+
 account.get("/", async (req, res) => {
   const auth = req.auth!;
   const uid = req.user?.uid;
@@ -58,7 +68,8 @@ account.get("/", async (req, res) => {
     email: req.user?.email ?? null,
     // A change of sign-in email that's waiting for its verification link.
     pendingEmail: u.pendingEmail && u.pendingEmail !== (req.user?.email ?? "").toLowerCase() ? u.pendingEmail : null,
-    name: u.name ?? req.user?.name ?? "",
+    // Falls back, for a provider who never gave a personal name, to the name parents see (trading name, then business name), so Profile is never blank.
+    name: u.name || req.user?.name || (await providerNameFallback(auth.tenantId)),
     phone: u.phone ?? "",
     address: u.address ?? "",
     postcode: u.postcode ?? "",

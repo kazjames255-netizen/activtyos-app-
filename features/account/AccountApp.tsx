@@ -384,8 +384,8 @@ export function AccountApp() {
               {p.role === "staff" && !!p.name && <p className="mt-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">{t("account.nameSetByManager")}</p>}
             </div>
             <div><FieldLabel>{t("account.phone")}</FieldLabel><Input name="phone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full" placeholder={t("account.phonePh")} /></div>
-            <div className="sm:col-span-2"><FieldLabel>{t("account.homeAddress")}</FieldLabel><Input name="address" autoComplete="street-address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full" placeholder={t("account.homeAddressPh")} /></div>
-            <div><FieldLabel>{t("account.postcode")}</FieldLabel><Input name="postcode" autoComplete="postal-code" maxLength={16} value={postcode} onChange={(e) => setPostcode(e.target.value)} className="w-full" placeholder={t("account.postcodePh")} /></div>
+            <div className="sm:col-span-2"><FieldLabel>{t("account.homeAddress")}</FieldLabel><Input name="aos_address" autoComplete="off" data-lpignore="true" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full" placeholder={t("account.homeAddressPh")} /></div>
+            <div><FieldLabel>{t("account.postcode")}</FieldLabel><Input name="aos_postcode" autoComplete="off" data-lpignore="true" maxLength={16} value={postcode} onChange={(e) => setPostcode(e.target.value)} className="w-full" placeholder={t("account.postcodePh")} /></div>
           </div>
           {p?.role === "parent" && <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("account.addressHelp")}</p>}
           {p?.role === "parent" && (

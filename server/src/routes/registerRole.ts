@@ -30,6 +30,8 @@ const schema = z.discriminatedUnion("role", [
   z.object({
     role: z.enum(["company", "freelancer"]),
     businessName: z.string().trim().min(2).max(80),
+    // The person signing up (their own name, always asked for). Saved on their profile so Profile > Name is never blank.
+    ownerName: z.string().trim().min(2).max(80).optional(),
     // What parents see the provider called. The client resolves it (their own
     // name vs the business name) since the person's name lives only on the
     // Firebase profile; we store the result and the mode they picked.
@@ -120,7 +122,7 @@ registerRole.post("/", async (req, res) => {
     return;
   }
 
-  const { role, businessName, providerName, providerNameMode, activityKinds, address, postcode, logoUrl, billing, heardAbout, referredBy, plan, contactEmail, phone, agreedTermsAt, termsVersion, dpaVersion } = parsed.data;
+  const { role, businessName, ownerName, providerName, providerNameMode, activityKinds, address, postcode, logoUrl, billing, heardAbout, referredBy, plan, contactEmail, phone, agreedTermsAt, termsVersion, dpaVersion } = parsed.data;
   const tenantRef = db.collection("tenants").doc();
   const libRef = db.collection("libraries").doc(tenantRef.id);
   // Only carry the billing keys that were actually given (drop undefineds so we
@@ -160,7 +162,8 @@ registerRole.post("/", async (req, res) => {
       role,
       chosen: true,
       tenantId: tenantRef.id,
-    });
+      ...(ownerName ? { name: ownerName } : {}),
+    }, { merge: true });
     // Seed the library with everything gathered at onboarding, so the
     // storefront, Ratios roster, Setup and invoices all read it from the very
     // first load rather than starting empty.
