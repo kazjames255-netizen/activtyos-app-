@@ -72,3 +72,11 @@ Stripe: APF live account is `acct_1UNGYjFOxwOtOU0V`. Both £0.30 payments landed
 - `lib/testTracker/catalogue.ts` and `docs/test-tracker/catalogue-notes.md`: 345 hand checks.
 - `tests/regression/`: permanent tests that run on every push.
 - Git history: https://github.com/kazjames255-netizen/activtyos-app-/commits/main
+
+
+## Update, 7 Oct 2026 (early hours)
+- Automatic waiting list tested end to end on the real listing: APF-10320 (Marnie) was offered the place by itself the moment APF-10319 cancelled, accepted and paid. Found and fixed: accepting an offered card place emailed "Booking confirmed" before payment.
+- Parent home page rebuilt as option 3 (blue banner, "Your family week" strip with Last/This/Next week and hover details, green offer card with a "time left to pay" clock, Health and feedback tiles with numbers, big Home tab on every portal, back to home after paying).
+- Provider side: Pupils group (First aid, Medication, Log concern, Moments) back in the sidebar; quick links on each child on the Families page; Teaching Hub switched on for APF (it is the only opt-in feature).
+- Money review for APF against the database: all money screens agree (in £1.50, refunds £1.20, net £0.30). Fixed: New bookings tile, Spaces-left vs Live-listings row, refund wording, Collected label. Open: bank refund APF-10314 is recorded as Refunded but is "to-reimburse" until the provider ticks that they sent it.
+- Tracker spreadsheet: ~/Desktop/Progress-tracker.xlsx (Everything, By person, Real bookings tabs).
