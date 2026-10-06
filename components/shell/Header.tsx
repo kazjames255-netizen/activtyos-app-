@@ -131,7 +131,10 @@ export function Header({ portal }: { portal: PortalKey }) {
     return () => document.removeEventListener("mousedown", h);
   }, [commOpen]);
   useEffect(() => { setCommOpen(false); }, [view]);
-  const tabs: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number; fancy?: boolean; accent?: string; accentLight?: string; tip?: string }[] =
+  // A big, always-visible Home tab on every page, first in the bar (each portal's home is a different view).
+  const HOME_VIEW: Record<string, string> = { custdash: "home", company: "dashboard", franchise: "dash", freelancer: "dash", staff: "dash", platform: "analytics" };
+  const homeTab = { view: HOME_VIEW[portal] ?? "dash", href: `/${portal}/${HOME_VIEW[portal] ?? "dash"}`, label: t("p7nav.home"), icon: HOUSE, wide: false, badge: 0, big: true, tip: t("p7nav.home") };
+  const tabsBase: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number; fancy?: boolean; big?: boolean; accent?: string; accentLight?: string; tip?: string }[] =
     portal === "custdash"
       ? [
           ...(customerArea.messaging && !customerArea.simpleMode ? [{ view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? t("p7shell.unreadTip", { n: unread }) : messageLabel }] : []),
@@ -158,6 +161,7 @@ export function Header({ portal }: { portal: PortalKey }) {
           // Blocks & listings promoted to the top bar, next to Families / Contact.
           ...(!hoCombined && portal !== "platform" && findNavItem(portal, "listings") && !staffHides("listings") ? [{ view: "listings", href: `/${portal}/listings`, label: t("p7shell.tabListings"), icon: BOOK, wide: false, badge: 0, accent: "#d97706", accentLight: "#fbbf24", tip: t("p7shell.tabListings") }] : []),
         ];
+  const tabs: typeof tabsBase = [homeTab, ...tabsBase];
 
   // The green "Communication" top-bar tab: a dropdown gathering the comms
   // views (Newsfeed, Messages, Email) so they're out of the sidebar.
@@ -233,6 +237,9 @@ export function Header({ portal }: { portal: PortalKey }) {
             // Marketing-site nav treatment: muted ink that goes pink on hover,
             // and the current view stays pink and heavier (.navtab/.navactive).
             // Outlined pills so each tab reads as a button; the current one is filled.
+            const homeStyle = active
+              ? { background: "var(--brand,#1d3a8f)", color: "#fff", border: "2px solid var(--brand,#1d3a8f)", boxShadow: "0 10px 22px -12px var(--brand,#1d3a8f)" }
+              : { background: "var(--brand,#1d3a8f)", color: "#fff", border: "2px solid var(--brand,#1d3a8f)", opacity: 0.92 };
             const colourStyle = active
               ? { background: "var(--brand-soft,#eaf0fc)", color: "var(--brand-ink,#102356)", border: "2px solid var(--brand,#1d3a8f)", boxShadow: "0 8px 18px -12px var(--brand,#1d3a8f)" }
               : { background: "var(--surface,#fff)", color: "var(--ink-2)", border: "2px solid var(--line,#ece6f1)" };
@@ -244,9 +251,9 @@ export function Header({ portal }: { portal: PortalKey }) {
                 // shrink-0 so a crowded bar never squeezes a tab to an
                 // unreadable icon+sliver — the label always shows from sm up.
                 className={`relative inline-flex shrink-0 items-center gap-1.5 text-[14.5px] no-underline transition-colors duration-150 ${
-                  t.fancy ? "rounded-full px-4 py-1.5 text-[12.5px] font-extrabold" : `rounded-full px-2.5 py-1.5 text-[13px] hover:border-[var(--brand)] hover:text-[var(--brand)] xl:px-3.5 xl:text-[14.5px] ${active ? "font-extrabold" : "font-bold"}`
+                  t.big ? "rounded-full px-4 py-2 text-[16px] font-extrabold [&_svg]:!h-5 [&_svg]:!w-5" : t.fancy ? "rounded-full px-4 py-1.5 text-[12.5px] font-extrabold" : `rounded-full px-2.5 py-1.5 text-[13px] hover:border-[var(--brand)] hover:text-[var(--brand)] xl:px-3.5 xl:text-[14.5px] ${active ? "font-extrabold" : "font-bold"}`
                 }`}
-                style={t.fancy ? fancyStyle : colourStyle}
+                style={t.big ? homeStyle : t.fancy ? fancyStyle : colourStyle}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{t.icon}</span>
                 {/* Icon-only on phones; the label returns from sm up. */}
@@ -493,6 +500,9 @@ const SEARCH = (
 );
 const CALENDAR = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="6" width="18" height="15" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+);
+const HOUSE = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 11l9-8 9 8" /><path d="M5 10v10h5v-6h4v6h5V10" /></svg>
 );
 const BOOK = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z" /><path d="M4 19V5.5M8 7h8" /></svg>

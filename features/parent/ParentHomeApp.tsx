@@ -237,6 +237,22 @@ export function ParentHomeApp() {
   const [trips, setTrips] = useState<TripRow[]>([]);
   const [post, setPost] = useState<PostRow | null>(null);
   const [failed, setFailed] = useState(false);
+  // Care numbers for the Health tiles: only RECENT first aid records are counted (so an accident a year ago does not sit there for ever),
+  // plus anything still waiting for the parent's OK whatever its age. Medication counts the medicines currently on record.
+  const [careAid, setCareAid] = useState<{ recent: number; needOk: number } | null>(null);
+  const [careMeds, setCareMeds] = useState<number | null>(null);
+  useEffect(() => {
+    apiGet<{ date?: string; createdAt?: string; acknowledgedAt?: string; requireAck?: boolean }[]>("/api/incidents")
+      .then((rows) => {
+        const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
+        const recent = (rows ?? []).filter((x) => (x.date ?? x.createdAt ?? "").slice(0, 10) >= cutoff).length;
+        const needOk = (rows ?? []).filter((x) => x.requireAck && !x.acknowledgedAt).length;
+        setCareAid({ recent, needOk });
+      })
+      .catch(() => setCareAid(null));
+    apiGet<unknown[]>("/api/medications").then((m) => setCareMeds((m ?? []).length)).catch(() => setCareMeds(null));
+  }, []);
+
   const asked = useRef<Set<string>>(new Set());
 
   const loadCore = useCallback(() => {
@@ -459,8 +475,8 @@ export function ParentHomeApp() {
       <SectionTitle>{h("CareTitle")}</SectionTitle>
       <div className="grid grid-cols-1 gap-2.5">
         {([
-          { href: "/custdash/medication", icon: "💊", label: h("CareMeds"), sub: h("CareMedsSub") },
-          { href: "/custdash/accidents", icon: "🩹", label: h("CareFirstAid"), sub: h("CareFirstAidSub") },
+          { href: "/custdash/medication", icon: "💊", label: h("CareMeds"), sub: careMeds === null ? h("CareMedsSub") : careMeds === 0 ? h("CareMedsNone") : h("CareMedsN", { n: careMeds }), badge: careMeds ?? 0 },
+          { href: "/custdash/accidents", icon: "🩹", label: h("CareFirstAid"), sub: careAid === null ? h("CareFirstAidSub") : careAid.needOk > 0 ? h("CareAidOk", { n: careAid.needOk }) : careAid.recent > 0 ? h("CareAidRecent", { n: careAid.recent }) : h("CareAidNone"), badge: (careAid?.needOk ?? 0) > 0 ? careAid!.needOk : careAid?.recent ?? 0, alert: (careAid?.needOk ?? 0) > 0 },
           { href: "/custdash/feedback", icon: "⭐", label: h("CareFeedback"), sub: h("CareFeedbackSub") },
         ]).map((x) => (
           <Link key={x.href} href={x.href} className={`${cardCls} flex min-h-[64px] items-center gap-3 p-3 no-underline`}>
@@ -469,6 +485,7 @@ export function ParentHomeApp() {
               <span className="block text-[15px] font-extrabold leading-tight text-[var(--ink)]">{x.label}</span>
               <span className="block text-[14px] text-[var(--ink-2)]">{x.sub}</span>
             </span>
+            {"badge" in x && (x.badge as number) > 0 && <span className="flex h-[26px] min-w-[26px] shrink-0 items-center justify-center rounded-full px-2 text-[14px] font-extrabold text-white" style={{ background: "alert" in x && x.alert ? "var(--red, #e21d27)" : "var(--brand, #1d3a8f)" }}>{x.badge as number}</span>}
             <span className="shrink-0 text-[20px] text-[var(--ink-3)]" aria-hidden>›</span>
           </Link>
         ))}

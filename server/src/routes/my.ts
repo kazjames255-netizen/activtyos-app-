@@ -2573,7 +2573,13 @@ my.post("/bookings/:ref/accept-offer", async (req, res) => {
       return b;
     });
     const tenant = await db.collection("tenants").doc(updated.tenantId!).get();
-    emailBookingConfirmed(updated, tenant.data()?.name ?? "Your activity provider");
+    // Same rule as a fresh booking: a CARD booking is not "booked in" until the card has gone through (the one "Payment received" email follows).
+    // Bank transfer gets its confirmation with the provider's bank details and reference.
+    const cardUnpaid = /card/i.test(String(updated.method ?? "")) && !updated.voucherScheme && (updated.amount ?? 0) > 0 && updated.pay !== "Paid";
+    if (!cardUnpaid) {
+      const bank = isBankMethod(updated.method) && (updated.amount ?? 0) > 0 && updated.tenantId ? await bankPayDetails(updated.tenantId, updated.ref, updated.amount ?? 0) : null;
+      emailBookingConfirmed(updated, tenant.data()?.name ?? "Your activity provider", bank);
+    }
     res.json(updated);
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });

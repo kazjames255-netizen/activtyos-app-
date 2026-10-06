@@ -169,10 +169,10 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "incidents", legacyView: "admin-incidents", label: "Log concern", hidden: true, icon: { type: "glyph", value: "⚑" }, badge: null },
-        { view: "medication", legacyView: "admin-medication", label: "Medication", hidden: true, icon: { type: "glyph", value: "💊" }, badge: null },
-        { view: "accidents", legacyView: "admin-accidents", label: "First aid", hidden: true, icon: { type: "glyph", value: "⛑" }, badge: null },
-        { view: "moments", legacyView: "admin-moments", label: "Moments", hidden: true, icon: { type: "glyph", value: "📷" }, badge: null },
+        { view: "incidents", legacyView: "admin-incidents", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
+        { view: "medication", legacyView: "admin-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
+        { view: "accidents", legacyView: "admin-accidents", label: "First aid", icon: { type: "glyph", value: "⛑" }, badge: null },
+        { view: "moments", legacyView: "admin-moments", label: "Moments", icon: { type: "glyph", value: "📷" }, badge: null },
       ],
     },
     {
@@ -394,10 +394,10 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "incidents", legacyView: "freelancer-incidents", label: "Log concern", hidden: true, icon: { type: "glyph", value: "⚑" }, badge: null },
-        { view: "medication", legacyView: "freelancer-medication", label: "Medication", hidden: true, icon: { type: "glyph", value: "💊" }, badge: null },
-        { view: "accidents", legacyView: "freelancer-accidents", label: "First aid", hidden: true, icon: { type: "glyph", value: "⛑" }, badge: null },
-        { view: "moments", legacyView: "freelancer-moments", label: "Moments", hidden: true, icon: { type: "glyph", value: "📷" }, badge: null },
+        { view: "incidents", legacyView: "freelancer-incidents", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
+        { view: "medication", legacyView: "freelancer-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
+        { view: "accidents", legacyView: "freelancer-accidents", label: "First aid", icon: { type: "glyph", value: "⛑" }, badge: null },
+        { view: "moments", legacyView: "freelancer-moments", label: "Moments", icon: { type: "glyph", value: "📷" }, badge: null },
       ],
     },
     {
