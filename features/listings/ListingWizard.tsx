@@ -95,6 +95,7 @@ interface BBlock {
   id: string; name: string; periodIds: string[]; passIds: string[];
   /** Creation order on the server (higher = newer). */
   order?: number;
+  createdAt?: string;
   /** False until the provider has set prices (Blocks > Set prices). */
   priced?: boolean;
   masterPrice?: number; calcOn?: boolean; passFlat?: Record<string, number>; passMode?: Record<string, string>;
@@ -135,6 +136,7 @@ async function fetchBlocks(): Promise<BlocksStore> {
       periodIds: b.periodIds,
       passIds: b.passIds,
       order: (b as { order?: number }).order,
+      createdAt: (b as { createdAt?: string }).createdAt,
       priced: b.priced,
       masterPrice: b.masterPrice ?? undefined,
       calcOn: b.calcOn,
@@ -2420,7 +2422,7 @@ function TicketsStep({ d, upd, blocks, tickets, onCreateBlock }: { d: WizardDraf
     const list = blocks.library.filter((b) => !q || b.name.toLowerCase().includes(q) || b.id === d.blockId);
     return [...list].sort(blkSort === "az"
       ? (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true })
-      : (a, b) => (b.order ?? 0) - (a.order ?? 0));
+      : (a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "") || (b.order ?? 0) - (a.order ?? 0));
   }, [blocks.library, blkQ, blkSort, d.blockId]);
   const ovUpd = (name: string, field: keyof TicketOverride, value: string) =>
     upd({ ticketOverrides: { ...d.ticketOverrides, [name]: { ...d.ticketOverrides[name], [field]: value } } });
@@ -2498,7 +2500,7 @@ function TicketsStep({ d, upd, blocks, tickets, onCreateBlock }: { d: WizardDraf
                 style={{ borderColor: "var(--line)" }}>
                 <div>
                   <div className="text-[13.5px] font-extrabold">▥ {b.name}</div>
-                  <div className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.wbPeriodsPasses", { p: b.periodIds.length, q: b.passIds.length })}</div>
+                  <div className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.wbPeriodsPasses", { p: b.periodIds.length, q: b.passIds.length })}{b.createdAt ? ` · ${tr("p9tx.blkCreated", { date: new Date(b.createdAt).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) })}` : ""}</div>
                 </div>
                 <span className="flex items-center gap-2">
                   {b.priced === false && <span className="whitespace-nowrap rounded-full bg-[#fdf0e3] px-2 py-0.5 text-[10px] font-extrabold text-[#b45309]">{tr("p9jr.needsPrices")}</span>}

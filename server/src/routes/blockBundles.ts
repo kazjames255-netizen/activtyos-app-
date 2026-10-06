@@ -264,7 +264,8 @@ blockBundles.get("/", async (req, res) => {
   if (!tenantId) return;
   const snap = await bundlesCol.where("tenantId", "==", tenantId).get();
   const ctx = await pricingContext(tenantId);
-  const list = await scopeRows(req.auth!, snap.docs.map((d) => bundleOut(d.id, d.data() as BundleDoc, ctx)), req.query.franchiseId);
+  // Blocks made before the date was stored fall back to when Firestore first created the document.
+  const list = await scopeRows(req.auth!, snap.docs.map((d) => bundleOut(d.id, { ...(d.data() as BundleDoc), createdAt: (d.data().createdAt as string | undefined) ?? d.createTime.toDate().toISOString() } as BundleDoc, ctx)), req.query.franchiseId);
   list.sort((a, b) => a.order - b.order);
   res.json(list);
 });
@@ -284,7 +285,7 @@ blockBundles.post("/", async (req, res) => {
   }
   const existing = await bundlesCol.where("tenantId", "==", tenantId).get();
   const order = existing.docs.reduce((m, d) => Math.max(m, (d.data().order as number) ?? 0), -1) + 1;
-  const doc: BundleDoc = { ...parsed.data, listingIds: [], order, tenantId, franchiseId: franchiseStamp(req.auth!), createdBy: req.user?.email ?? "unknown" };
+  const doc: BundleDoc = { ...parsed.data, listingIds: [], order, tenantId, franchiseId: franchiseStamp(req.auth!), createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() } as BundleDoc;
   const ref = await bundlesCol.add(doc);
   res.status(201).json(bundleOut(ref.id, doc, await pricingContext(tenantId)));
 });
@@ -342,7 +343,7 @@ blockBundles.post("/:id/duplicate", async (req, res) => {
   const src = snap.data() as BundleDoc;
   const existing = await bundlesCol.where("tenantId", "==", tenantId).get();
   const order = existing.docs.reduce((m, d) => Math.max(m, (d.data().order as number) ?? 0), -1) + 1;
-  const copy: BundleDoc = { ...src, name: `${src.name} (copy)`, listingIds: [], order };
+  const copy: BundleDoc = { ...src, name: `${src.name} (copy)`, listingIds: [], order, createdAt: new Date().toISOString() } as BundleDoc;
   const ref = await bundlesCol.add(copy);
   res.status(201).json(bundleOut(ref.id, copy, await pricingContext(tenantId)));
 });
