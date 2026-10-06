@@ -248,6 +248,7 @@ export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [passes, setPasses] = useState<Pass[] | null>(null);
   const [bundles, setBundles] = useState<Bundle[] | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [view, setView] = useState<"make" | "library">("make");
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
 
@@ -324,30 +325,70 @@ export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8lst.blkLoading")}</div>
       ) : (
         <>
-          {/* .blkFlow — 3 columns */}
-          <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1fr]">
-            <PeriodsColumn periods={periods} draft={draft} setDraft={setDraft} act={act} />
-            <Arrow />
-            <PassesColumn passes={passes} draft={draft} setDraft={setDraft} act={act} />
-            <Arrow />
-            <BuildColumn
-              periods={periods}
-              passes={passes}
-              draft={draft}
-              setDraft={setDraft}
-              act={act}
-            />
+          {/* Two panes that slide: making blocks (left) and the block library (right). */}
+          <div className="mb-3 flex flex-wrap items-center gap-2" role="tablist" aria-label="Blocks">
+            {([["make", t("p8lst.blkTabMake")], ["library", `${t("p8lst.blkTabLib")} (${(bundles ?? []).filter((b) => !b.archived).length})`]] as const).map(([k, label]) => {
+              const on = view === k;
+              return (
+                <button key={k} type="button" role="tab" aria-selected={on} onClick={() => setView(k)}
+                  className="rounded-full border-2 px-4 py-2 text-[13.5px] font-extrabold transition-colors"
+                  style={on ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+                  {k === "library" ? "" : "‹ "}{label}{k === "library" ? " ›" : ""}
+                </button>
+              );
+            })}
           </div>
-
-          <BlockLibrary
-            bundles={bundles}
-            periods={periods}
-            passes={passes}
-            listings={listings}
-            act={act}
+          <SlidePanes
+            view={view}
+            make={
+              <>
+                {/* .blkFlow — 3 columns */}
+                <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1fr]">
+                  <PeriodsColumn periods={periods} draft={draft} setDraft={setDraft} act={act} />
+                  <Arrow />
+                  <PassesColumn passes={passes} draft={draft} setDraft={setDraft} act={act} />
+                  <Arrow />
+                  <BuildColumn periods={periods} passes={passes} draft={draft} setDraft={setDraft} act={act} onSaved={() => setView("library")} />
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <Button onClick={() => setView("library")}>{t("p8lst.blkToLib")} ›</Button>
+                </div>
+              </>
+            }
+            library={
+              <>
+                <div className="mb-1"><Button onClick={() => setView("make")}>‹ {t("p8lst.blkToMake")}</Button></div>
+                <BlockLibrary bundles={bundles} periods={periods} passes={passes} listings={listings} act={act} />
+              </>
+            }
           />
         </>
       )}
+    </div>
+  );
+}
+
+
+/** A two-pane slider: the panes sit side by side and slide across (not stacked underneath). The container follows the visible pane's height. */
+function SlidePanes({ view, make, library }: { view: "make" | "library"; make: React.ReactNode; library: React.ReactNode }) {
+  const aRef = useRef<HTMLDivElement>(null);
+  const bRef = useRef<HTMLDivElement>(null);
+  const [h, setH] = useState<number | null>(null);
+  useEffect(() => {
+    const el = view === "make" ? aRef.current : bRef.current;
+    if (!el) return;
+    const measure = () => setH(el.offsetHeight);
+    measure();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, [view]);
+  return (
+    <div className="overflow-hidden" style={{ height: h ?? undefined, transition: "height 380ms cubic-bezier(.2,.8,.2,1)" }}>
+      <div className="flex items-start" style={{ width: "200%", transform: view === "library" ? "translateX(-50%)" : "translateX(0)", transition: "transform 480ms cubic-bezier(.2,.8,.2,1)" }}>
+        <div ref={aRef} className="w-1/2 flex-none px-0.5" aria-hidden={view !== "make"} {...(view !== "make" ? { inert: true } : {})}>{make}</div>
+        <div ref={bRef} className="w-1/2 flex-none px-0.5" aria-hidden={view !== "library"} {...(view !== "library" ? { inert: true } : {})}>{library}</div>
+      </div>
     </div>
   );
 }
@@ -659,12 +700,14 @@ function BuildColumn({
   draft,
   setDraft,
   act,
+  onSaved,
 }: {
   periods: Period[];
   passes: Pass[];
   draft: Draft;
   setDraft: React.Dispatch<React.SetStateAction<Draft>>;
   act: Act;
+  onSaved?: () => void;
 }) {
   const t = useT();
   const [over, setOver] = useState(false);
@@ -706,7 +749,7 @@ function BuildColumn({
     setBusy(true);
     const ok = await act(() => apiPost<Bundle>("/api/block-bundles", body));
     setBusy(false);
-    if (ok) setDraft(EMPTY_DRAFT);
+    if (ok) { setDraft(EMPTY_DRAFT); onSaved?.(); }
   }
 
   return (

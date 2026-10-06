@@ -4,6 +4,10 @@ import { fromRows } from "../_rows";
 export default fromRows({
   blkInBlock: ["✓ In block", "✓ W bloku", "✓ În bloc", "✓ بلاک میں", "✓ ਬਲਾਕ ਵਿੱਚ", "✓ ব্লকে আছে", "✓ في الكتلة", "✓ No bloco", "✓ En el bloque", "✓ Dans le bloc", "✓ Yn y bloc"],
   blkUndo: ["Undo", "Cofnij", "Anulează", "واپس کریں", "ਵਾਪਸ ਲਓ", "পূর্বাবস্থায়", "تراجع", "Anular", "Deshacer", "Annuler", "Dadwneud"],
+  blkTabMake: ["Make your blocks", "Twórz bloki", "Creați blocuri", "اپنے بلاکس بنائیں", "ਆਪਣੇ ਬਲਾਕ ਬਣਾਓ", "আপনার ব্লক তৈরি করুন", "أنشئ كتلك", "Crie os seus blocos", "Crea tus bloques", "Créez vos blocs", "Creu eich blociau"],
+  blkTabLib: ["Block library", "Biblioteka bloków", "Biblioteca de blocuri", "بلاک لائبریری", "ਬਲਾਕ ਲਾਇਬ੍ਰੇਰੀ", "ব্লক লাইব্রেরি", "مكتبة الكتل", "Biblioteca de blocos", "Biblioteca de bloques", "Bibliothèque de blocs", "Llyfrgell blociau"],
+  blkToLib: ["Go to the block library", "Przejdź do biblioteki bloków", "Mergeți la biblioteca de blocuri", "بلاک لائبریری پر جائیں", "ਬਲਾਕ ਲਾਇਬ੍ਰੇਰੀ ਤੇ ਜਾਓ", "ব্লক লাইব্রেরিতে যান", "الانتقال إلى مكتبة الكتل", "Ir para a biblioteca de blocos", "Ir a la biblioteca de bloques", "Aller à la bibliothèque de blocs", "Mynd i'r llyfrgell blociau"],
+  blkToMake: ["Back to making blocks", "Wróć do tworzenia bloków", "Înapoi la crearea blocurilor", "بلاکس بنانے پر واپس", "ਬਲਾਕ ਬਣਾਉਣ ਤੇ ਵਾਪਸ", "ব্লক তৈরিতে ফিরে যান", "العودة إلى إنشاء الكتل", "Voltar a criar blocos", "Volver a crear bloques", "Retour à la création de blocs", "Yn ôl i wneud blociau"],
   blkAddToBlock: ["+ Add to block", "+ Dodaj do bloku", "+ Adaugă în bloc", "+ بلاک میں شامل کریں", "+ ਬਲਾਕ ਵਿੱਚ ਜੋੜੋ", "+ ব্লকে যোগ করুন", "+ إضافة إلى الكتلة", "+ Adicionar ao bloco", "+ Añadir al bloque", "+ Ajouter au bloc", "+ Ychwanegu at y bloc"],
   blkEdit: ["Edit", "Edytuj", "Editează", "ترمیم کریں", "ਸੋਧੋ", "সম্পাদনা", "تعديل", "Editar", "Editar", "Modifier", "Golygu"],
   blkDelete: ["Delete", "Usuń", "Șterge", "حذف کریں", "ਮਿਟਾਓ", "মুছুন", "حذف", "Eliminar", "Eliminar", "Supprimer", "Dileu"],
