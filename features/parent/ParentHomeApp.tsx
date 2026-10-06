@@ -66,7 +66,8 @@ function OfferCard({ b, time, onAccepted }: { b: Booking; time: string | null; o
         </div>
         <div className="shrink-0 rounded-xl px-3 py-2 text-center" style={{ background: left > 0 && mins < 20 ? "#fdebec" : "#e8f8ee", color: left > 0 && mins < 20 ? "#c02636" : "#0f6b34" }}>
           <div className="text-[18px] leading-none" aria-hidden>{"\u23F1"}</div>
-          <div className="mt-1 text-[14px] font-extrabold leading-tight">{clock}</div>
+          <div className="text-[10.5px] font-extrabold uppercase leading-tight tracking-wide">{t("p7shell.offerClockLabel")}</div>
+          <div className="mt-1 text-[16px] font-extrabold leading-tight">{clock}</div>
           {until && <div className="text-[11.5px] font-semibold opacity-80">{t("p7shell.offerUntil", { time: until })}</div>}
         </div>
       </div>
