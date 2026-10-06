@@ -131,12 +131,19 @@ function flyToBlock(from: HTMLElement | null) {
   const tr0 = target.getBoundingClientRect();
   const offscreen = tr0.top < 90 || tr0.bottom > window.innerHeight - 30;
   if (offscreen) target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
-  if (reduce) return;
+  // "Reduce motion" is on in the system settings: still show where the card went, but with one short straight slide (no arc, spin or bounce).
   const a = from.getBoundingClientRect();
   const clone = from.cloneNode(true) as HTMLElement;
   Object.assign(clone.style, { position: "fixed", left: `${a.left}px`, top: `${a.top}px`, width: `${a.width}px`, height: `${a.height}px`, margin: "0", zIndex: "2147483000", pointerEvents: "none", transformOrigin: "center", background: "#fff8e3", color: "#171534", border: "2px solid #e9a915", borderRadius: "14px" });
   document.body.appendChild(clone);
   // 1. lift off and glow (while any scrolling happens), 2. fly in a high arc to the block box, 3. land and pulse the box.
+  if (reduce) {
+    const b0 = target.getBoundingClientRect();
+    const dx0 = b0.left + Math.min(b0.width, 300) / 2 - (a.left + a.width / 2);
+    const dy0 = b0.top + Math.min(Math.max(b0.height, 80), 160) / 2 - (a.top + a.height / 2);
+    clone.animate([{ transform: "translate(0,0) scale(1)", opacity: 1 }, { transform: `translate(${dx0}px, ${dy0}px) scale(0.5)`, opacity: 0.2 }], { duration: 380, easing: "ease-in-out", fill: "forwards" }).onfinish = () => clone.remove();
+    return;
+  }
   const lift = clone.animate(
     [{ transform: "translateY(0) scale(1)", boxShadow: "0 0 0 0 rgba(233,169,21,0)" }, { transform: "translateY(-14px) scale(1.06) rotate(-2deg)", boxShadow: "0 24px 50px -10px rgba(233,169,21,.75)" }],
     { duration: 260, easing: "ease-out", fill: "forwards" },
