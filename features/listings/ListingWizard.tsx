@@ -721,7 +721,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; slots?: { pass: string; timing: string; dates: string[] }[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean; listPrice?: number; discountOff?: number; discountNames?: string[]; visitAt?: string; extras?: string[] } | null>(null);
+  const [done, setDone] = useState<{ cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; waitOffer?: number; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; slots?: { pass: string; timing: string; dates: string[] }[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean; listPrice?: number; discountOff?: number; discountNames?: string[]; visitAt?: string; extras?: string[] } | null>(null);
   const [payClosed, setPayClosed] = useState(false);
   const [paidNow, setPaidNow] = useState(false);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
@@ -781,7 +781,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       for (const l of lines) byBlock.set(l.blockId, [...(byBlock.get(l.blockId) ?? []), l]);
       const refs: string[] = [];
       let total = 0;
-      let listSum = 0, offSum = 0; const offNames = new Set<string>(); const extraLines: string[] = [];
+      let listSum = 0, offSum = 0, waitOffer = 0; const offNames = new Set<string>(); const extraLines: string[] = [];
       let voucherDetails: { label: string; value: string }[] | undefined;
       let bankPay: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number } | undefined;
       let heldForApproval = false;
@@ -842,7 +842,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         if (res.bookings.some((x) => x.status === "Approval needed")) heldForApproval = true;
         if (res.bookings.some((x) => x.status !== "Waitlisted")) seated = true;
         total += res.total;
-        for (const x of res.bookings as { amount?: number; listPrice?: number; discountOff?: number; discountNames?: string[]; addons?: string[]; addonLines?: { child: string; label: string; price: number }[]; kids?: unknown[] }[]) { addonLinesFor(x).forEach((l) => extraLines.push(l)); listSum += x.listPrice ?? x.amount ?? 0; offSum += x.discountOff ?? 0; (x.discountNames ?? []).forEach((n) => offNames.add(n)); }
+        for (const x of res.bookings as { status?: string; amount?: number; listPrice?: number; discountOff?: number; discountNames?: string[]; addons?: string[]; addonLines?: { child: string; label: string; price: number }[]; kids?: unknown[] }[]) { addonLinesFor(x).forEach((l) => extraLines.push(l)); if (x.status === "Waitlisted") waitOffer += x.amount ?? 0; listSum += x.listPrice ?? x.amount ?? 0; offSum += x.discountOff ?? 0; (x.discountNames ?? []).forEach((n) => offNames.add(n)); }
         if (res.voucher?.details?.length) voucherDetails = res.voucher.details;
         if (res.bank) bankPay = res.bank;
       }
@@ -864,6 +864,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         ...(serviceAddress?.postcode?.trim() ? { visitAt: [serviceAddress.address, serviceAddress.postcode].map((x) => (x ?? "").trim()).filter(Boolean).join(", ") } : {}),
         needsApproval: heldForApproval,
         waitlisted: !seated,
+        ...(!seated && waitOffer > 0 ? { waitOffer: Math.round(waitOffer * 100) / 100 } : {}),
         payByCard: (/^card$/i.test(String(method)) || (/^tfc$/i.test(String(method)) && /^card$/i.test(tfc?.remainderVia ?? "") && (tfc?.amount ?? 0) < total)) && seated,
         // Part-paid TFC: the card remainder the family pays now (the HMRC share is awaited, shown via the scheme card).
         ...(/^tfc$/i.test(String(method)) && /^card$/i.test(tfc?.remainderVia ?? "") && (tfc?.amount ?? 0) < total ? { cardDue: Math.round((total - (tfc?.amount ?? 0)) * 100) / 100 } : {}),
@@ -982,6 +983,8 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
                 ? <b className="text-[15px] text-[#a5670a]">{t("p7cl.toPayVia", { amt: money(done.total), scheme })}</b>
                 : needsApproval
                 ? <b className="text-[15px] text-[#8a5300]">{t("p7cl.payableOnApproval", { amt: money(done.total) })}</b>
+                : done.waitlisted && (done.waitOffer ?? 0) > 0
+                ? <b className="text-[15px] text-[#8a5300]">{t("p7cl.waitOffered", { amt: money(done.waitOffer!) })}</b>
                 : <b className="text-[15px] text-[#171534]">{money(done.total)}</b>}
             </div>
           </div>

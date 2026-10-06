@@ -1476,7 +1476,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               <div className="mt-3 text-[15px] font-bold" style={{ color: tk.ink }} data-ui="who-status">
                 {b.waitlistOnly
                   ? tr("p7ck.waitStatus", { kids: pickPlural(tr, locale, "p7ck.kidsN", roster.length), days: pickPlural(tr, locale, "p7ck.daysN", days), amt: money(waitOfferAmt) })
-                  : tr("p7ck.whoStatus", { kids: pickPlural(tr, locale, "p7ck.kidsN", roster.length), days: pickPlural(tr, locale, "p7ck.daysN", days), amt: money(b.total) })}
+                  // Children are added before they are put on a pass: until then the total reads £0.00, which looks like a free booking. Show the price instead.
+                  : tr("p7ck.whoStatus", { kids: pickPlural(tr, locale, "p7ck.kidsN", roster.length), days: pickPlural(tr, locale, "p7ck.daysN", days), amt: money(b.total > 0 || b.basket.length === 0 ? b.total : waitOfferAmt) })}
               </div>
             );
           })()}
