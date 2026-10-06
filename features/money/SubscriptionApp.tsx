@@ -214,7 +214,8 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
 
   const shown = useMemo(() => (!data ? [] : gate ? data.plans.filter((p) => p.id === data.current.plan) : data.plans), [data, gate]);
 
-  if (error) return <div className="p-4 text-[12.5px] text-[var(--red)]">{error}</div>;
+  // A failed LOAD replaces the page; an error after that (a declined card, a failed action) shows as a banner so the plans stay on screen and the person can try again.
+  if (error && !data) return <div className="p-4 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!data) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("money.subLoadingPlans")}</div>;
 
   const toggle = (
@@ -363,6 +364,7 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
   const onFranchise = c.plan === "franchise";
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+      {error && <div role="alert" className="mb-3 flex items-start justify-between gap-3 rounded-lg border border-[#f4c7c7] bg-[#fdf2f2] px-3 py-2.5 text-[13px] font-bold text-[#b91c1c]"><span>{error}</span><button type="button" onClick={() => setError(null)} aria-label="Dismiss" className="text-[16px] leading-none">×</button></div>}
       {billingDown && <div role="alert" className="mb-3 rounded-lg border border-[#f4c7c7] bg-[#fdf2f2] px-3 py-2.5 text-[12.5px] font-bold text-[#b91c1c]">{t("p9jr.billingDown")}</div>}
       {/* Hero — matches the other Money pages (Expenses / Purchasing). */}
       <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), var(--hero-grad)`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
