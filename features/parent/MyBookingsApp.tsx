@@ -1295,8 +1295,11 @@ const placeInLine = (n: number) => {
 
 // A waitlisted place, shown up front so a parent can see exactly which dates
 // and times they're queued for — not buried in the general list.
-function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
+function WaitlistCard({ b, refresh, focus }: { b: Booking; refresh: () => void; focus?: boolean }) {
   const t = useT();
+  // Arrived from the home page / a notification for THIS booking: bring it into view and ring it.
+  const cardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (focus) cardRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }); }, [focus]);
   const [busy, setBusy] = useState(false);
   const leave = async () => {
     if (!confirm(t("parent.leaveWaitlistConfirm", { listing: b.listing }))) return;
@@ -1310,7 +1313,7 @@ function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
     }
   };
   return (
-    <div data-ui="card" className="rounded-xl border border-[#fed7aa] bg-[#fff7ed] p-3.5">
+    <div ref={cardRef} data-ui="card" className="rounded-xl border border-[#fed7aa] bg-[#fff7ed] p-3.5" style={focus ? { boxShadow: "0 0 0 3px #f59e0b", scrollMarginTop: 80 } : undefined}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <div className="text-[14px] font-extrabold text-[#9a3412]">{b.listing}</div>
@@ -1551,7 +1554,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                 </button>
                 {waitShown && (
                   <div className="flex flex-col gap-2.5 bg-[var(--surface)] p-3">
-                    {waiting.map((b) => <WaitlistCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} />)}
+                    {waiting.map((b) => <WaitlistCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} focus={b.ref === openRef} />)}
                   </div>
                 )}
               </div>
