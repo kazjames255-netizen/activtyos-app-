@@ -2009,7 +2009,12 @@ my.post("/bookings", async (req, res) => {
         // every ref). Bank transfer keeps the first booking's own figures - its payment reference is per booking.
         const sameState = bookings.length > 1 && bookings.every((x) => x.status === b0.status) && !isBankMethod(input.method);
         const { merged, refs } = sameState ? mergeBookings(bookings) : { merged: b0, refs: [b0.ref] };
-        if (b0.status === "Confirmed") emailBookingConfirmed(merged, provider, isBankMethod(input.method) ? await bankPayDetails(listing.tenantId, b0.ref, b0.amount) : null, refs);
+        // A card booking holds the place BEFORE the family pays. "You're booked in" must not go out until the card has actually gone through
+        // (a declined or abandoned payment would leave a confirmation for a booking that isn't paid): the "Payment received" email that follows
+        // a successful payment is the single confirmation. Cash, funded (GBP 0), bank transfer and voucher bookings confirm straight away.
+        const cardUnpaid = /^card$/i.test(String(input.method)) && (merged.amount ?? 0) > 0 && !onBehalf;
+        if (b0.status === "Confirmed" && cardUnpaid) { /* confirmed by the payment-received email once the card succeeds */ }
+        else if (b0.status === "Confirmed") emailBookingConfirmed(merged, provider, isBankMethod(input.method) ? await bankPayDetails(listing.tenantId, b0.ref, b0.amount) : null, refs);
         // A waiting-list place is NOT "a request pending approval" - it gets its own message.
         else if (b0.status === "Waitlisted") emailWaitlistJoined(merged, provider, refs);
         else emailBookingRequestReceived(merged, provider, refs);
