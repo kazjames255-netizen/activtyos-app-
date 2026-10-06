@@ -17,6 +17,7 @@ export interface AutoEmailPrefs {
   paymentDueTiming: number; // hours before the due date
   sessionReminder: boolean; // pre-session reminder
   sessionTiming: number;    // hours before the session
+  waitlistFreeAlert: boolean; // tell the PROVIDER when a place frees up on a manual waiting list
   waitlist: boolean;        // place-opened / moved-up
   dayOf: boolean;           // not-arrived alerts (30 min after session start)
   lateCollection: boolean;  // late-checkout alert
@@ -32,6 +33,7 @@ export const AUTO_EMAIL_DEFAULTS: AutoEmailPrefs = {
   sessionReminder: true,
   sessionTiming: 48,
   waitlist: true,
+  waitlistFreeAlert: true,
   dayOf: true,
   lateCollection: true,
   announcements: false,

@@ -34,6 +34,7 @@ const AUTO_EMAILS: { key: AutoKey; title: string; sub: string; desc: string; cor
   { key: "bookings", title: "Bookings & approvals", sub: "Booking confirmed, request approved/declined & cancellation emails", core: true, desc: "Automatic emails to the parent for: booking confirmed, request-to-book approved, request declined, and cancellation confirmed. Core transactional emails — best left on." },
   { key: "payments", title: "Payments", sub: "Receipts, refunds & payment-failed emails", desc: "Sends a receipt when a payment succeeds, a note when a refund is issued, and an alert if a card payment fails." },
   { key: "sessionReminder", title: "Session reminders", sub: "A pre-session reminder with the key details & what to bring", timing: "sessionTiming", desc: "Sent before the session. Includes the child’s name, date, start & finish times, venue and what to bring. Any outstanding balance is shown; once it’s paid the price isn’t re-quoted." },
+  { key: "waitlistFreeAlert", title: "Alert me when a place frees up", sub: "", desc: "" },
   { key: "waitlist", title: "Waitlist", sub: "Tells a waitlisted parent when a place opens or they move up", desc: "When a place frees up, the next waitlisted parent is emailed an offer with a time limit to claim it. They can also be told when they move up the queue." },
   { key: "dayOf", title: "Day-of alerts", sub: "On-the-day arrival alerts (incl. logged incidents)", desc: "On-the-day operational alerts: a child not yet signed in 30 minutes after a session starts, and a notification when an incident is logged (the incident detail stays restricted to Head Office and the staff who logged it)." },
   { key: "lateCollection", title: "Late collection", sub: "Alerts you when children aren’t collected on time", desc: "30 minutes after a session ends (or your Registers-tab threshold), if any children are still signed in you’re alerted that some haven’t been collected. The alert doesn’t name them — open the register to see who." },
@@ -88,7 +89,7 @@ function AutoEmails({ settings, save }: { settings: TenantSettings; save: (patch
                     </label>
                   )}
                 </div>
-                <Toggle on={value} onClick={() => set({ [c.key]: !value })} label={t("p8em.emAuto_" + c.key + "_title")} />
+                <Toggle on={value} onClick={() => { if (c.key === "waitlistFreeAlert" && value && !window.confirm(t("p8em.emWaitAlertOffWarn"))) return; set({ [c.key]: !value }); }} label={t("p8em.emAuto_" + c.key + "_title")} />
               </div>
               {c.key === "payments" && value && (
                 <div className="mt-3 flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">

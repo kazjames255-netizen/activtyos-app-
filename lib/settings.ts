@@ -732,6 +732,7 @@ export interface TenantSettings {
     sessionReminder?: boolean;  // pre-session reminder with the key details & what to bring
     sessionTiming?: number;     // hours before the session (12 / 24 / 48 / 72)
     waitlist?: boolean;         // place-opened / moved-up-the-queue emails
+    waitlistFreeAlert?: boolean; // tell the PROVIDER (bell + email) when a place frees up on a manual waiting list
     dayOf?: boolean;            // on-the-day register / arrival / incident-logged alerts
     lateCollection?: boolean;   // alert when a child is checked out late
     announcements?: boolean;    // re-marketing to past/opted-in customers when new camps open (opt-in)
@@ -1315,7 +1316,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   emergencyContacts: 1,
   collectionCheck: "password",
   charLimits: { allergies: 140, medical: 140, dietary: 140, send: 200, likes: 80, dislikes: 80 },
-  autoEmails: { bookings: true, payments: true, paymentDue: true, paymentDueTiming: 24, sessionReminder: true, sessionTiming: 48, waitlist: true, dayOf: true, lateCollection: true, announcements: false, reviewRequests: true },
+  autoEmails: { bookings: true, payments: true, paymentDue: true, paymentDueTiming: 24, sessionReminder: true, sessionTiming: 48, waitlist: true, waitlistFreeAlert: true, dayOf: true, lateCollection: true, announcements: false, reviewRequests: true },
   brandColor: "#2f6bd8",
   staff: { assignByLeads: false, requireDBS: true, requireCompliance: true, defaultRatioTarget: 8, inviteMessage: "" },
   announcements: { enabled: true, leadsCanPost: true, requireAck: false, dashboardDays: 1, defaultAudience: "all", defaultImportant: false },

@@ -136,8 +136,42 @@ export async function triggerWaitlist(blockId: string): Promise<void> {
     const listing = listingSnap.data() as
       | { waitlistMode?: string; status?: string; archived?: boolean; tenantName?: string; name?: string }
       | undefined;
-    if (!listing || listing.waitlistMode !== "auto") return;
+    if (!listing) return;
     if ((listing.status ?? "live") !== "live" || listing.archived) return;
+    if (listing.waitlistMode !== "auto") {
+      // MANUAL mode: nobody is offered anything automatically, so TELL THE PROVIDER the moment a queued family could now be given a place
+      // (bell + email, deep-linked to that booking). Without this they would have to check the waiting list by hand, all the time.
+      // Setup > Email > Automatic emails > "Alert me when a place frees up" (on by default; a provider may switch it off, with a warning).
+      const { autoEmailPrefs } = await import("./autoEmails");
+      if (!(await autoEmailPrefs(block.tenantId)).waitlistFreeAlert) return;
+      const queue = await queuedBookings(blockId);
+      const fitting = queue.filter((q) => {
+        const days = bookingDays(q, block);
+        const seats = q.seats ?? 1;
+        return (block.capacityScope ?? "listing") === "day"
+          ? daysHaveSpace(block, Object.fromEntries(days.map((d) => [d, seats]))).fits
+          : block.bookedCount + seats <= block.capacity;
+      });
+      if (fitting.length) {
+        const first = fitting[0];
+        const sig = `${block.bookedCount}_${JSON.stringify((block as { counts?: unknown }).counts ?? {})}`;
+        const { fireOnce } = await import("./scheduler");
+        await fireOnce(`waitfree_${blockId}_${first.ref}_${sig}`, { tenantId: block.tenantId }, () =>
+          notify({
+            tenantId: block.tenantId,
+            to: { kind: "tenant" },
+            category: "booking",
+            key: "waitlist-place-free",
+            title: `A place has opened up · ${first.listing}`,
+            body: `${fitting.length === 1 ? "1 family is" : `${fitting.length} families are`} waiting and a place is now free (first in line: ${first.child || first.booker}, booking ${first.ref}). Open it and press Offer place.`,
+            subject: `A place has opened up for ${first.listing}`,
+            href: `/company/bookings?ref=${encodeURIComponent(first.ref)}`,
+            ref: first.ref,
+          }),
+        );
+      }
+      return;
+    }
 
     // Try the queue in order; makeOffer re-checks space transactionally, so
     // we just stop once nothing more fits.
