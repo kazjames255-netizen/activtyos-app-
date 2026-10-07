@@ -35,6 +35,7 @@ export const HO_COMBINED_KEEP = new Set<string>([
 import { get as apiGet } from "@/lib/api";
 import { useUnreadMessages, useCouponCount } from "@/lib/use-unread";
 import { useCustomerArea, useOperatorFeatures, useMoneyShow, MONEY_OUTGOING_VIEWS, MONEY_INCOMING_VIEWS, SIMPLE_ALLOWED, CORE_VIEWS, featureOff, type CustomerArea } from "@/lib/use-customer-area";
+import { useAddonOrdersLive } from "@/lib/use-addon-orders";
 import type { Me } from "@/lib/roles";
 import { capAreaForView, capLevel, featureKeysForView, firstOff } from "@/lib/accessMap";
 
@@ -441,6 +442,8 @@ export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?:
   //  • operator — modules the operator switched off (Setup → Features).
   const customerArea = useCustomerArea(portal);
   const features = useOperatorFeatures(portal);
+  // "Add-on orders" appears only when there are live orders with add-ons (the page itself stays reachable by URL).
+  const addonOrders = useAddonOrdersLive(portal);
   const moneyShow = useMoneyShow(portal);
   const moneyHidden = moneyShow === "outgoing" ? MONEY_INCOMING_VIEWS : moneyShow === "incoming" ? MONEY_OUTGOING_VIEWS : [];
   const caHidden = new Set<string>();
@@ -473,6 +476,7 @@ export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?:
       if (firstOff(features, featureKeysForView(portal, v)) || (area && capLevel(caps, area) === "none")) caHidden.add(v);
     }
     for (const v of moneyHidden) caHidden.add(v);
+    if (!addonOrders) caHidden.add("kit");
     // Franchisor-only tools stay hidden until a head office actually has a franchise.
     if (portal === "company" && !hasFranchises) { caHidden.add("splitfees"); caHidden.add("territories"); }
     // Head office "Whole business (all)" view = slim oversight nav. Operational

@@ -21,7 +21,8 @@ export type BellKind =
   | "change-request"
   | "day-released"
   | "addon-request"
-  | "place-free";
+  | "place-free"
+  | "addon-orders";
 
 /** One fixed label per kind. Each is at most 20 characters so the reference always fits after it. */
 export const BELL_LABEL: Record<BellKind, string> = {
@@ -39,6 +40,7 @@ export const BELL_LABEL: Record<BellKind, string> = {
   "day-released": "Day released",
   "addon-request": "Extra request",
   "place-free": "Place free",
+  "addon-orders": "Add-on orders",
 };
 
 /** 'New booking · APF-10334', or 'New booking · APF-10334 +1' when one checkout made several bookings. Never longer than BELL_TITLE_MAX. */

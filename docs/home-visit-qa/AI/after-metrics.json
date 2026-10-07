@@ -1,0 +1,104 @@
+[
+  {
+    "label": "1440",
+    "key": "7d",
+    "bars": false
+  },
+  {
+    "label": "1440",
+    "key": "month",
+    "bars": false
+  },
+  {
+    "label": "1440",
+    "key": "6m",
+    "bars": true,
+    "w": 1118,
+    "hscroll": false,
+    "labels": "May|'26|Jun||Jul||Aug||Sept||Oct|so far"
+  },
+  {
+    "label": "1440",
+    "key": "9m",
+    "bars": true,
+    "w": 1118,
+    "hscroll": false,
+    "labels": "Feb|'26|Mar||Apr||May||Jun||Jul||Aug||Sept||Oct|so far"
+  },
+  {
+    "label": "1440",
+    "key": "year",
+    "bars": true,
+    "w": 1118,
+    "hscroll": false,
+    "labels": "Nov|'25|Dec||Jan|'26|Feb||Mar||Apr||May||Jun||Jul||Aug||Sept||Oct|so far"
+  },
+  {
+    "label": "390",
+    "key": "7d",
+    "bars": false
+  },
+  {
+    "label": "390",
+    "key": "month",
+    "bars": false
+  },
+  {
+    "label": "390",
+    "key": "6m",
+    "bars": true,
+    "w": 332,
+    "hscroll": false,
+    "labels": "May|'26|Jun||Jul||Aug||Sept||Oct|so far"
+  },
+  {
+    "label": "390",
+    "key": "9m",
+    "bars": true,
+    "w": 332,
+    "hscroll": false,
+    "labels": "Feb|'26|Apr||Jun||Aug||Oct|so far"
+  },
+  {
+    "label": "390",
+    "key": "year",
+    "bars": true,
+    "w": 332,
+    "hscroll": false,
+    "labels": "Nov|'25|Feb||May||Aug||Oct|so far"
+  },
+  {
+    "label": "1440-ar",
+    "key": "7d",
+    "bars": false
+  },
+  {
+    "label": "1440-ar",
+    "key": "month",
+    "bars": false
+  },
+  {
+    "label": "1440-ar",
+    "key": "6m",
+    "bars": true,
+    "w": 1118,
+    "hscroll": false,
+    "labels": "مايو|'26|يونيو||يوليو||أغسطس||سبتمبر||أكتوبر|حتى الآن"
+  },
+  {
+    "label": "1440-ar",
+    "key": "9m",
+    "bars": true,
+    "w": 1118,
+    "hscroll": false,
+    "labels": "فبراير|'26|مارس||أبريل||مايو||يونيو||يوليو||أغسطس||سبتمبر||أكتوبر|حتى الآن"
+  },
+  {
+    "label": "1440-ar",
+    "key": "year",
+    "bars": true,
+    "w": 1118,
+    "hscroll": false,
+    "labels": "نوفمبر|'25|ديسمبر||يناير|'26|فبراير||مارس||أبريل||مايو||يونيو||يوليو||أغسطس||سبتمبر||أكتوبر|حتى الآن"
+  }
+]

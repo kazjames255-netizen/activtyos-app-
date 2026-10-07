@@ -390,6 +390,7 @@ export const PROVIDER_NOTIFICATIONS: { key: string; group: string; label: string
   { key: "med-consent", group: "Care & safeguarding", label: "Parent authorised a medication" },
   { key: "med-note", group: "Care & safeguarding", label: "Parent left a note on a medication" },
   { key: "leave-request", group: "Care & safeguarding", label: "A member of staff requested leave" },
+  { key: "kit-day-before", group: "Daily reminders", label: "Add-on orders to prepare tomorrow (evening before)" },
   { key: "task-due", group: "Daily reminders", label: "A task of yours is due today" },
   { key: "task-overdue", group: "Daily reminders", label: "A task of yours is overdue" },
   { key: "calendar-reminder", group: "Daily reminders", label: "Calendar event reminders" },

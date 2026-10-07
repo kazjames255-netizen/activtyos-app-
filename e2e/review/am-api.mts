@@ -1,0 +1,10 @@
+import fs from "node:fs";
+import { fbSignIn } from "../helpers/accounts";
+const A = JSON.parse(fs.readFileSync("docs/home-visit-qa/AM/accounts.json", "utf8"));
+const s = await fbSignIn(A.provider.email);
+const g = async (p: string) => { const r = await fetch("http://localhost:4030" + p, { headers: { Authorization: `Bearer ${s.idToken}` } }); return r.json(); };
+console.log(JSON.stringify(await g("/api/kit/live")));
+const d = await g(`/api/kit/days?from=${A.day}&to=2026-10-31`);
+console.log(JSON.stringify(d).slice(0, 1500));
+const bk = await g("/api/bookings"); console.log(JSON.stringify((bk.bookings ?? bk).slice?.(0, 2)).slice(0, 600));
+process.exit(0);

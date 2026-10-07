@@ -1,0 +1,10 @@
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import { fbSignUp, apiPost } from "../helpers/accounts";
+const A = JSON.parse(fs.readFileSync("docs/home-visit-qa/AM/accounts.json", "utf8"));
+const email = `hvqa-am-${A.ts}-empty@activityos-test.com`;
+const p = await fbSignUp(email);
+const reg = await apiPost<{ tenantId: string }>("/api/register-role", p.idToken, { role: "freelancer", businessName: "HVQA-AM Empty", providerName: "HVQA-AM Empty", providerNameMode: "business" });
+execFileSync("npm", ["--prefix", `${process.cwd()}/server`, "run", "e2e-unwall", "--", reg.tenantId], { stdio: "inherit" });
+A.empty = { email }; fs.writeFileSync("docs/home-visit-qa/AM/accounts.json", JSON.stringify(A, null, 2));
+process.exit(0);

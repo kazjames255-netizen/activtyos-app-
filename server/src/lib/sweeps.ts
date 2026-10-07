@@ -13,6 +13,8 @@ import { performEmailSend } from "./emailSend";
 import { isFirstBookedSession } from "./bookingRules";
 import { bookingRefOfKey, entryFor, registerRows } from "./registerRows";
 import type { Booking } from "../../../features/bookings/types";
+import { kitNamesSentence, kitReminderKey, kitUnticked, type KitBooking } from "../../../features/bookings/addons";
+import { bellBody, bellTitle } from "./bellText";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Every time-based behaviour in the platform, as scheduler sweeps (see
@@ -417,6 +419,54 @@ async function sessionReminders(): Promise<void> {
         ).catch((err) => console.error(`[sweeps] session reminder ${b.ref}/${s.date}:`, (err as Error).message));
       }
     }
+  }
+}
+
+// ── Add-on orders: the evening-before reminder ───────────────────────────
+// From 17:00 UK the day before a day that has add-on items (T-shirts, bottles, lunches...) NOT yet ticked off, ONE bell (and email, per the
+// provider's Setup > Notifications "kit-day-before" switch, default on) tells the team how many items to get ready and which. Once per provider
+// (and franchise) per day, via fireOnce; nothing is sent when there is nothing left to prepare. The same switch is on the Add-on orders screen.
+async function addonOrdersDayBefore(): Promise<void> {
+  const { date: today, minutes } = ukNow();
+  if (minutes < 17 * 60) return;
+  const tomorrow = addDays(today, 1);
+  const blocks = (await upcomingBlocks(today)).filter((b) => (b.sessions ?? []).some((s) => s.date === tomorrow));
+  if (!blocks.length) return;
+  const bookingsFor = blockBookingsLoader();
+  const byOwner = new Map<string, { tenantId: string; franchiseId: string | null; bookings: KitBooking[] }>();
+  for (const block of blocks) {
+    for (const b of (await bookingsFor(block.id)) as unknown as (KitBooking & { franchiseId?: string | null })[]) {
+      if (b.status !== "Confirmed") continue;
+      const fr = b.franchiseId ?? null;
+      const k = `${block.tenantId}|${fr ?? ""}`;
+      const g = byOwner.get(k) ?? { tenantId: block.tenantId, franchiseId: fr, bookings: [] };
+      g.bookings.push(b);
+      byOwner.set(k, g);
+    }
+  }
+  for (const g of byOwner.values()) {
+    try {
+      const ticks = await db.collection("kitTicks").where("tenantId", "==", g.tenantId).where("date", "==", tomorrow).get();
+      const left = kitUnticked(g.bookings, tomorrow, new Set(ticks.docs.map((d) => String(d.get("key")))));
+      if (left.items <= 0) continue;
+      const sentence = kitNamesSentence(left.byName);
+      const when = niceDate(tomorrow);
+      await fireOnce(`${kitReminderKey(g.tenantId, tomorrow)}_${g.franchiseId ?? "all"}`, { tenantId: g.tenantId }, () =>
+        notify({
+          tenantId: g.tenantId,
+          to: { kind: "tenant" },
+          franchiseId: g.franchiseId,
+          category: "booking",
+          key: "kit-day-before",
+          // The bell is a short label + the day and three short facts; the longer wording is in the email.
+          title: bellTitle("addon-orders", when),
+          body: bellBody([`${left.items} item${left.items === 1 ? "" : "s"}`, ...Object.entries(left.byName).sort((a, c) => c[1] - a[1] || a[0].localeCompare(c[0])).slice(0, 2).map(([n, c]) => `${n} ×${c}`)]),
+          subject: `Add-on orders to prepare for ${when}`,
+          emailHtml: `<p><b>${left.items} add-on item${left.items === 1 ? "" : "s"}</b> still to prepare for <b>${esc(when)}</b>:</p><p>${esc(sentence)}</p><p>Open <b>Add-on orders</b> to see who each one is for and tick them off.</p>`,
+          href: `/company/kit?date=${tomorrow}`,
+        }),
+      );
+    } catch (err) { console.error(`[sweeps] add-on orders reminder ${g.tenantId}:`, (err as Error).message); }
   }
 }
 
@@ -1001,6 +1051,8 @@ export function startSweeps(): void {
   // Automatic emails (Setup → Email → Automatic emails).
   sweep("session-reminders", 30 * 60_000, sessionReminders);
   sweep("payment-due", 60 * 60_000, paymentDueReminders);
+  // Evening before: add-on items still to prepare (Add-on orders screen / Setup > Notifications "kit-day-before").
+  sweep("addon-orders-day-before", 30 * 60_000, addonOrdersDayBefore);
   // Manual-approval card holds: reminder to the provider, lapsed holds declined, never-entered cards cleared (lib/cardHold.ts).
   sweep("card-holds", 15 * 60_000, async () => { const m = await import("./cardHold"); await m.cardHoldSweep(); });
   sweep("review-requests", 6 * 60 * 60_000, reviewRequests);

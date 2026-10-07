@@ -1,0 +1,52 @@
+[
+  {
+    "label": "1440",
+    "key": "7d",
+    "bars": false
+  },
+  {
+    "label": "1440",
+    "key": "month",
+    "bars": false
+  },
+  {
+    "label": "1440",
+    "key": "6m",
+    "bars": false
+  },
+  {
+    "label": "1440",
+    "key": "9m",
+    "bars": false
+  },
+  {
+    "label": "1440",
+    "key": "year",
+    "bars": false
+  },
+  {
+    "label": "390",
+    "key": "7d",
+    "bars": false
+  },
+  {
+    "label": "390",
+    "key": "month",
+    "bars": false
+  },
+  {
+    "label": "390",
+    "key": "6m",
+    "bars": false
+  },
+  {
+    "label": "390",
+    "key": "9m",
+    "bars": false
+  },
+  {
+    "label": "390",
+    "key": "year",
+    "bars": false
+  }
+]

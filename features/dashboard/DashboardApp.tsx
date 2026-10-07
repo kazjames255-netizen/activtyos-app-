@@ -22,6 +22,9 @@ import { useI18n, useT, useWord } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
 import { GRAD, Tile } from "@/features/money/finance-kit";
+import { useAddonOrdersLive } from "@/lib/use-addon-orders";
+import { useAddonWeek } from "@/features/kit/useAddonWeek";
+import { ADDON_ICON } from "@/features/bookings/addons";
 
 interface Dash {
   today: { date: string; booked: number; sessions: { listing: string; start: string; end: string; booked: number; capacity: number }[] };
@@ -232,6 +235,7 @@ const BANNER_BTN = "whitespace-nowrap rounded-full bg-white/15 px-3 py-1 text-[1
 const BANNER_BADGE = "whitespace-nowrap rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-extrabold text-white ring-1 ring-white/25";
 const BAND = {
   blue: "linear-gradient(120deg,#16306e 0%,#274ba3 55%,#3f78d8 100%)",
+  amber: "linear-gradient(120deg,#8a4b00 0%,#c2670a 55%,#f2a231 100%)",
   teal: "linear-gradient(120deg,#0b5566 0%,#0e7490 55%,#17a2b8 100%)",
   green: "linear-gradient(120deg,#0b5a33 0%,#0f7a43 55%,#17c06d 100%)",
 };
@@ -359,6 +363,9 @@ export function DashboardApp() {
   useEffect(() => { apiGet<{ name?: string }>("/api/me").then(setMe).catch(() => {}); }, []);
   const router = useRouter();
   const portal = (usePathname() ?? "/").split("/")[1] || "app";
+  // Add-on orders card: only when the provider has live add-on orders (the same rule as the sidebar item).
+  const addonLive = useAddonOrdersLive(portal as import("@/lib/nav/config").PortalKey);
+  const addonWeek = useAddonWeek(addonLive);
   const scope = useHoScope(); // head-office "view as franchise" — null = whole business
 
   const load = useCallback(() => {
@@ -576,8 +583,8 @@ export function DashboardApp() {
           themselves. The same board is still on Timesheets if they want it. */}
       {portal !== "freelancer" && <div className="mt-3"><OnSiteNowCard /></div>}
 
-      {/* Today · Live listings · Tasks today — three across */}
-      <div className="mt-3 grid gap-3 lg:grid-cols-3">
+      {/* Today · Add-on orders (only when there are live orders) · Live listings · Tasks today */}
+      <div className={`mt-3 grid gap-3 ${addonLive ? "sm:grid-cols-2 xl:grid-cols-4" : "lg:grid-cols-3"}`}>
         <BannerPanel
           glyph="☀️"
           title={t("dashboard.today")}
@@ -610,6 +617,41 @@ export function DashboardApp() {
             </div>
           )}
         </BannerPanel>
+        {addonLive && (
+          <BannerPanel
+            glyph={ADDON_ICON}
+            title={t("p8lst.dashAddonBtn")}
+            sub={t("p8lst.dashAddonSub")}
+            grad={BAND.amber}
+            action={<button type="button" onClick={() => router.push(`/${portal}/kit`)} className={BANNER_BTN}>{t("p8lst.dashAddonBtn")} →</button>}
+          >
+            {!addonWeek ? (
+              <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.loading")}</div>
+            ) : addonWeek.total === 0 ? (
+              <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]" data-testid="dash-addon-none">{t("p8lst.dashAddonNoneWeek")}</div>
+            ) : (
+              <div className="flex flex-col gap-1.5" data-testid="dash-addon-card">
+                {(() => {
+                  const empty = addonWeek.rows.filter((r) => r.items === 0).length;
+                  // A quiet week: show only the days with orders; otherwise every day, the empty ones muted.
+                  const rows = empty > 3 ? addonWeek.rows.filter((r) => r.items > 0) : addonWeek.rows;
+                  return rows.map((r) => {
+                    const day = new Date(`${r.date}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", timeZone: "UTC" });
+                    return r.items > 0 ? (
+                      <button key={r.date} type="button" onClick={() => router.push(`/${portal}/kit?date=${r.date}`)} className="flex w-full flex-col items-start gap-0.5 rounded-xl border border-[#f2c98a] bg-[#fff6e8] px-3 py-2 text-start hover:opacity-90">
+                        <span className="text-[13px] font-extrabold text-[#8a4b00]">{r.items === 1 ? t("p8lst.kitChipOne", { day }) : t("p8lst.kitChipMany", { day, n: r.items })}</span>
+                        <span className="text-[11.5px] font-semibold text-[#8a4b00]">{r.byName.slice(0, 3).map((x) => `${x.name} ×${x.count}`).join(" · ")}</span>
+                      </button>
+                    ) : (
+                      <div key={r.date} className="flex items-center justify-between rounded-xl px-3 py-1 text-[12px] text-[var(--ink-3)]"><span>{day}</span><span>—</span></div>
+                    );
+                  });
+                })()}
+                <div className="mt-1 text-center text-[11.5px] font-extrabold text-[var(--ink-2)]">{t("p8lst.dashAddonTotal", { n: addonWeek.total })}</div>
+              </div>
+            )}
+          </BannerPanel>
+        )}
         <BannerPanel
           glyph="🎟️"
           title={t("dashboard.liveListings")}

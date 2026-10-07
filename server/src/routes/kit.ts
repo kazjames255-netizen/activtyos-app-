@@ -7,10 +7,12 @@ import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { franchiseListingIds } from "../lib/franchiseScope";
 import { staffSiteScope } from "../lib/siteScope";
 import { ukToday } from "../lib/ukDate";
-import { kitForDay, type KitBooking } from "../../../features/bookings/addons";
+import { hasLiveAddonOrders, kitForDay, kitTally, type KitBooking } from "../../../features/bookings/addons";
+import { libraryDocId } from "../lib/tenantLibrary";
+import { loadSettings } from "../lib/tenantLibrary";
 
 // ─────────────────────────────────────────────────────────────────────────
-// KIT TO PREPARE — the provider's pick list of extras (T-shirts, bottles, lunches…) for ONE day.
+// ADD-ON ORDERS (was "Kit to prepare") — the provider's pick list of extras (T-shirts, bottles, lunches…) for ONE day.
 //
 // Built from the bookings that hold a place in that day's sessions (the same way the registers find them), grouped by item and choice, each
 // child a line with a tick the team ticks when it is prepared / handed over. The ticks live in `kitTicks` (one doc per tenant + booking + child +
@@ -35,25 +37,59 @@ async function tenantOf(req: import("express").Request, res: import("express").R
   return tenantId;
 }
 
-// GET /api/kit?date=YYYY-MM-DD — what to prepare that day (default today).
+/** The blocks this account may see that have a session in [from, to] (franchise and site scoped, like the registers). */
+async function scopedBlocks(auth: NonNullable<import("express").Request["auth"]>, tenantId: string, from: string, to: string) {
+  let franchiseListings: Set<string> | null = null;
+  if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) franchiseListings = await franchiseListingIds(tenantId, auth.franchiseId);
+  const site = await staffSiteScope(auth);
+  const blocksSnap = await db.collection("blocks").where("tenantId", "==", tenantId).get();
+  return blocksSnap.docs
+    .map((d) => ({ id: d.id, block: d.data() as BlockDoc }))
+    .filter(({ block }) => !franchiseListings || franchiseListings.has(block.listingId))
+    .filter(({ block }) => !site || site.listings.has(block.listingId))
+    .filter(({ block }) => block.sessions.some((s) => s.date >= from && s.date <= to));
+}
+
+/** The bookings of those blocks (every booking; the pure functions keep only the Confirmed ones). */
+async function bookingsOfBlocks(blocks: { id: string }[]): Promise<KitBooking[]> {
+  const snaps = await Promise.all(blocks.map(({ id }) => db.collection("bookings").where("blockId", "==", id).get()));
+  return snaps.flatMap((s) => s.docs.map((d) => fromDoc(d.data() as BookingDoc) as KitBooking));
+}
+
+// A minute of caching for the cheap summaries (sidebar, dashboard card, strip, month): they are read on every page load, and an order shows
+// within the minute (the screens also refresh on the realtime "bookings" channel, which bypasses nothing: the day view itself is never cached).
+const memo = new Map<string, { at: number; v: unknown }>();
+async function cached<T>(key: string, ttlMs: number, make: () => Promise<T>): Promise<T> {
+  const hit = memo.get(key);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.v as T;
+  const v = await make();
+  memo.set(key, { at: Date.now(), v });
+  if (memo.size > 500) for (const k of memo.keys()) { memo.delete(k); if (memo.size < 400) break; }
+  return v;
+}
+const scopeKey = (req: import("express").Request, tenantId: string) => `${tenantId}|${req.auth!.role}|${req.auth!.franchiseId ?? ""}|${req.user?.uid ?? ""}`;
+
+/** Only roles that may message families see a booker's email (the same people who can tick). */
+const stripPrivate = (groups: ReturnType<typeof kitForDay>, allowed: boolean) =>
+  allowed ? groups : groups.map((g) => ({ ...g, children: g.children.map(({ email: _e, ...c }) => c) }));
+
+const KIT_REMINDER_KEY = "kit-day-before";
+async function reminderOn(tenantId: string, auth: NonNullable<import("express").Request["auth"]>): Promise<boolean> {
+  const n = ((await loadSettings(tenantId, auth.franchiseId ?? null)).notifications ?? {}) as Record<string, boolean | "bell">;
+  return n[KIT_REMINDER_KEY] !== false;
+}
+
+// GET /api/kit?date=YYYY-MM-DD&name=T-shirt — what to prepare that day (default today), optionally one add-on only.
 kit.get("/", async (req, res) => {
   const tenantId = await tenantOf(req, res);
   if (!tenantId) return;
   const auth = req.auth!;
   const date = typeof req.query.date === "string" && DAY.test(req.query.date) ? req.query.date : ukToday();
-  let franchiseListings: Set<string> | null = null;
-  if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) franchiseListings = await franchiseListingIds(tenantId, auth.franchiseId);
-  const site = await staffSiteScope(auth);
-  const blocksSnap = await db.collection("blocks").where("tenantId", "==", tenantId).get();
-  const todays = blocksSnap.docs
-    .map((d) => ({ id: d.id, block: d.data() as BlockDoc }))
-    .filter(({ block }) => !franchiseListings || franchiseListings.has(block.listingId))
-    .filter(({ block }) => !site || site.listings.has(block.listingId))
-    .filter(({ block }) => block.sessions.some((s) => s.date === date));
+  const name = typeof req.query.name === "string" ? req.query.name.slice(0, 80) : "";
+  const todays = await scopedBlocks(auth, tenantId, date, date);
   if (!todays.length) { res.json({ date, canTick: canTick(auth.role), groups: [], ticked: 0, total: 0 }); return; }
-  const snaps = await Promise.all(todays.map(({ id }) => db.collection("bookings").where("blockId", "==", id).get()));
-  const bookings: KitBooking[] = snaps.flatMap((s) => s.docs.map((d) => fromDoc(d.data() as BookingDoc) as KitBooking));
-  const groups = kitForDay(bookings, date);
+  const bookings = await bookingsOfBlocks(todays);
+  const groups = stripPrivate(kitForDay(bookings, date, { name }), canTick(auth.role));
   const tickSnap = groups.length ? await ticksCol.where("tenantId", "==", tenantId).where("date", "==", date).get() : null;
   const ticks = new Map<string, { by?: string; at?: string }>();
   tickSnap?.docs.forEach((d) => ticks.set(String(d.get("key")), { by: d.get("by"), at: d.get("at") }));
@@ -69,6 +105,66 @@ kit.get("/", async (req, res) => {
     }),
   }));
   res.json({ date, canTick: canTick(auth.role), groups: out, ticked, total });
+});
+
+// GET /api/kit/days?from=&to=[&name=] — items per day (and per add-on) in a range of up to 93 days, plus the add-on names in it.
+// Feeds the "days with orders" strip, the month tally and the Dashboard's next-7-days card.
+kit.get("/days", async (req, res) => {
+  const tenantId = await tenantOf(req, res);
+  if (!tenantId) return;
+  const auth = req.auth!;
+  const from = typeof req.query.from === "string" && DAY.test(req.query.from) ? req.query.from : ukToday();
+  let to = typeof req.query.to === "string" && DAY.test(req.query.to) ? req.query.to : from;
+  const limit = new Date(`${from}T00:00:00Z`); limit.setUTCDate(limit.getUTCDate() + 92);
+  if (to < from) to = from;
+  if (to > limit.toISOString().slice(0, 10)) to = limit.toISOString().slice(0, 10);
+  const name = typeof req.query.name === "string" ? req.query.name.slice(0, 80) : "";
+  const out = await cached(`days|${scopeKey(req, tenantId)}|${from}|${to}|${name.toLowerCase()}`, 20_000, async () => {
+    const blocks = await scopedBlocks(auth, tenantId, from, to);
+    const bookings = blocks.length ? await bookingsOfBlocks(blocks) : [];
+    const t = kitTally(bookings, from, to, { name });
+    const days = Object.entries(t.days).map(([date, v]) => ({ date, items: v.items, byName: v.byName })).sort((a, c) => a.date.localeCompare(c.date));
+    const totals: Record<string, number> = {};
+    let total = 0;
+    for (const d of days) { total += d.items; for (const [n, c] of Object.entries(d.byName)) totals[n] = (totals[n] ?? 0) + c; }
+    return { from, to, days, names: t.names, total, totals };
+  });
+  res.json({ ...out, canTick: canTick(auth.role), canRemind: auth.role === "company" || auth.role === "freelancer" || auth.role === "franchise", reminder: await reminderOn(tenantId, auth) });
+});
+
+// GET /api/kit/live — does this provider have LIVE add-on orders (a Confirmed booking with an extra still to prepare today or later)?
+// The sidebar shows "Add-on orders" only when this is true, and the Dashboard card likewise. Cached for a minute.
+kit.get("/live", async (req, res) => {
+  const tenantId = await tenantOf(req, res);
+  if (!tenantId) return;
+  const auth = req.auth!;
+  const today = ukToday();
+  const live = await cached(`live|${scopeKey(req, tenantId)}|${today}`, 60_000, async () => {
+    const blocks = await scopedBlocks(auth, tenantId, today, "9999-12-31");
+    if (!blocks.length) return false;
+    return hasLiveAddonOrders(await bookingsOfBlocks(blocks), today);
+  });
+  res.json({ live });
+});
+
+// PUT /api/kit/reminder {on} — the "Remind me the day before" switch on the Add-on orders screen. It is the same Setup > Notifications switch
+// ("kit-day-before"), so it can be changed in either place. Only accounts that can edit Setup may change it.
+kit.put("/reminder", async (req, res) => {
+  const tenantId = await tenantOf(req, res);
+  if (!tenantId) return;
+  const auth = req.auth!;
+  if (!(auth.role === "company" || auth.role === "freelancer" || auth.role === "franchise")) { res.status(403).json({ error: "Only the account owner can change this" }); return; }
+  const parsed = z.object({ on: z.boolean() }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const ref = db.collection("libraries").doc(libraryDocId(tenantId, auth.role === "franchise" ? auth.franchiseId : null));
+  const snap = await ref.get();
+  const lib = (snap.data() ?? {}) as Record<string, unknown>;
+  const settings = (lib.settings ?? {}) as Record<string, unknown>;
+  const notifications = { ...((settings.notifications ?? {}) as Record<string, boolean | "bell">) };
+  // On keeps a "bell only" choice made in Setup; off is an explicit false (absent = on).
+  if (parsed.data.on) { if (notifications[KIT_REMINDER_KEY] === false) delete notifications[KIT_REMINDER_KEY]; } else notifications[KIT_REMINDER_KEY] = false;
+  await ref.set({ ...lib, tenantId, settings: { ...settings, notifications } });
+  res.json({ ok: true, on: parsed.data.on });
 });
 
 const tickSchema = z.object({ key: z.string().min(3).max(300), ref: z.string().min(1).max(60), date: z.string().regex(DAY), done: z.boolean() });
