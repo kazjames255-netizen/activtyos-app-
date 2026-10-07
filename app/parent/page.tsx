@@ -8,7 +8,7 @@ import { safeNext } from "@/lib/safe-next";
 import { post as apiPost } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { FieldLabel, Input } from "@/components/ui";
-import { AddressFields } from "@/features/common/AddressFields";
+import { AddressFields, type PostcodeState } from "@/features/common/AddressFields";
 import { composeAddress, isFullAddress, type AddressParts } from "@/lib/addressComplete";
 import { AUTH_LIGHT, AosMark, AosWordmark } from "@/components/auth/AuthBrand";
 import { useT } from "@/lib/i18n/provider";
@@ -45,6 +45,7 @@ function ParentAuth() {
   const [lastName, setLastName] = useState("");
   // The parent's FULL home address is compulsory (a home-visit provider has to find the door): house number/name, street, town, postcode.
   const [home, setHome] = useState<AddressParts>({ house: "", street: "", town: "", postcode: "" });
+  const [homePc, setHomePc] = useState<PostcodeState>("idle");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [provider, setProvider] = useState("");
@@ -115,7 +116,8 @@ function ParentAuth() {
       if (!picked) { setError(t("p8par.lgPickProvider")); return; }
       const fn = firstName.trim(), ln = lastName.trim();
       if (!fn || !ln) { setError(t("p9jr.parentNameRequired")); return; }
-      if (!isFullAddress(composeAddress(home), home.postcode)) { setError(t("p7ck.adrIncomplete")); return; }
+      if (!isFullAddress(composeAddress(home), home.postcode)) { setError(home.house.trim() && home.street.trim() && home.town.trim() && home.postcode.trim() ? t("p7ck.pcFormat") : t("p7ck.adrIncomplete")); return; }
+      if (homePc === "bad") { setError(t("p7ck.pcNotFoundMsg")); return; }
       if (password.length < 6) { setError(t("p8par.lgPwShort")); return; }
       setBusy(true);
       try {
@@ -285,7 +287,7 @@ function ParentAuth() {
         )}
 
         {tab === "up" && (
-          <AddressFields value={home} onChange={setHome} idPrefix="parent" />
+          <AddressFields value={home} onChange={setHome} idPrefix="parent" onPostcodeState={setHomePc} />
         )}
 
         <div>

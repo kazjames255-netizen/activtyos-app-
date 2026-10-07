@@ -206,7 +206,7 @@ test("checkCoverage: postcode list SW1, SW2", async (t) => {
   await t.test("N1 9GU is refused with the coverage message", async () => {
     const r = await checkCoverage(area, "N1 9GU");
     assert.equal(r.ok, false);
-    assert.match(r.ok ? "" : r.reason, /outside this provider's home-visit coverage area/);
+    assert.match(r.ok ? "" : r.reason, /doesn't travel to this address/);
   });
   await t.test("no postcode is refused", async () => assert.equal((await checkCoverage(area, "")).ok, false));
   await t.test("no coverage area configured = nothing to enforce", async () => assert.deepEqual(await checkCoverage(null, "N1 9GU"), { ok: true }));

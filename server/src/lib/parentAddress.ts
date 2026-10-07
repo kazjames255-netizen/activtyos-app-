@@ -1,4 +1,5 @@
 import { addressMissing, isFullAddress } from "../../../lib/addressComplete";
+import { lookupPostcode } from "./postcodeLookup";
 
 // A parent's FULL home address (house number/name, street, town, postcode) is compulsory at registration and when they edit their profile, because
 // a home-visit provider has to find the door. Enforced on the live API (Railway) and in production builds; local dev stacks and the e2e/fuzz harnesses
@@ -19,3 +20,18 @@ export function parentAddressProblem(address: string | undefined, postcode: stri
 }
 
 export { addressMissing };
+
+export const POSTCODE_NOT_FOUND_MESSAGE = "We can't find that postcode — please check it";
+export const POSTCODE_FORMAT_MESSAGE = "That doesn't look like a UK postcode — check it and try again";
+
+/** After the shape check: does the postcode really EXIST (official postcode database)? null = fine / not enforced / the lookup service is down
+ *  (fails OPEN, logged: a provider's outage must not stop families signing up). */
+export async function parentPostcodeProblem(postcode: string | undefined): Promise<string | null> {
+  if (!enforceParentAddress() || !postcode?.trim()) return null;
+  const r = await lookupPostcode(postcode);
+  if (r.ok) return null;
+  if (r.code === "format") return POSTCODE_FORMAT_MESSAGE;
+  if (r.code === "notfound") return POSTCODE_NOT_FOUND_MESSAGE;
+  console.warn(`[parentAddress] postcode lookup unavailable, accepted ${postcode} without checking it exists`);
+  return null;
+}

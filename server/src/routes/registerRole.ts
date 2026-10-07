@@ -4,7 +4,7 @@ import { z } from "zod";
 import { auth as authAdmin, db } from "../firebase";
 import { emailParentWelcome, emailProviderWelcome } from "../lib/emails";
 import { notify } from "../lib/notify";
-import { parentAddressProblem } from "../lib/parentAddress";
+import { parentAddressProblem, parentPostcodeProblem } from "../lib/parentAddress";
 
 // Account provisioning at signup — one shot, then locked:
 //   {role: "parent"}                               → parent account
@@ -88,6 +88,8 @@ registerRole.post("/", async (req, res) => {
   if (parsed.data.role === "parent") {
     const addrProblem = parentAddressProblem(parsed.data.address, parsed.data.postcode);
     if (addrProblem) { res.status(400).json({ error: addrProblem }); return; }
+    const pcProblem = await parentPostcodeProblem(parsed.data.postcode);
+    if (pcProblem) { res.status(400).json({ error: pcProblem }); return; }
     // Only a provider that really exists can be a parent's home provider; an unknown id is ignored, not an error.
     let homeTenantId: string | null = null;
     let homeProviderName: string | undefined;

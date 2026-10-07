@@ -43,7 +43,17 @@ async function geocodeCached(pc: string): Promise<{ lat: number; lng: number } |
   const key = normalisePostcode(pc).replace(/\s/g, "");
   const hit = geoCache.get(key);
   if (hit && Date.now() - hit.at < (hit.v ? 24 * 3_600_000 : 60_000)) return hit.v;
-  const v = await geocodeAddress(pc);
+  let v: { lat: number; lng: number } | null = null;
+  try {
+    const compact = key;
+    const isOutward = /^[A-Z]{1,2}\d[A-Z\d]?$/.test(compact);
+    const r = await fetch(`https://api.postcodes.io/${isOutward ? "outcodes" : "postcodes"}/${encodeURIComponent(compact)}`, { signal: AbortSignal.timeout(3000) });
+    if (r.ok) {
+      const j = (await r.json()) as { result?: { latitude?: number | null; longitude?: number | null } };
+      if (typeof j.result?.latitude === "number" && typeof j.result?.longitude === "number") v = { lat: j.result.latitude, lng: j.result.longitude };
+    }
+  } catch { /* fall back to the geocoder */ }
+  if (!v) v = await geocodeAddress(pc);
   if (geoCache.size > 2000) geoCache.clear();
   geoCache.set(key, { at: Date.now(), v });
   return v;
@@ -52,10 +62,17 @@ async function geocodeCached(pc: string): Promise<{ lat: number; lng: number } |
 /** true / false when we can tell whether `postcode` is inside the coverage area; null when we cannot (no postcode, or it could not be located). */
 export async function coverageVerdict(coverage: CoverageArea | null | undefined, postcode: string | undefined | null): Promise<boolean | null> {
   if (!postcode?.trim() || !coverage) return null;
-  const r = await checkCoverage(coverage, postcode);
+  const r = await Promise.race([
+    checkCoverage(coverage, postcode),
+    new Promise<{ ok: false; reason: string }>((resolve) => setTimeout(() => resolve({ ok: false, reason: "Couldn't check (timed out)" }), 2500)),
+  ]);
   if (r.ok) return true;
   return /couldn't check/i.test(r.reason) ? null : false;
 }
+
+/** The ONE refusal text for an address outside the provider's area. It never carries a distance, a radius, a base postcode or the list of areas
+ *  (a few refused quotes would otherwise let anyone triangulate the provider's home). */
+export const OUT_OF_AREA_MESSAGE = "Sorry, this provider doesn't travel to this address — it's outside the area they cover.";
 
 /** Is `postcode` inside the listing's coverage area? Never throws — a
  *  geocode failure on radius mode is reported as a clear "couldn't check"
@@ -80,7 +97,7 @@ export async function checkCoverage(
       return true;
     };
     const hit = prefixes.some(matches);
-    return hit ? { ok: true } : { ok: false, reason: `Sorry, ${pc} is outside this provider's home-visit coverage area` };
+    return hit ? { ok: true } : { ok: false, reason: OUT_OF_AREA_MESSAGE };
   }
 
   // radius mode
@@ -92,5 +109,5 @@ export async function checkCoverage(
   const miles = haversineMiles(base, dest);
   return miles <= coverage.radiusMiles
     ? { ok: true }
-    : { ok: false, reason: `Sorry, ${pc} is about ${miles.toFixed(1)} miles from this provider's base — outside their ${coverage.radiusMiles}-mile home-visit coverage area` };
+    : { ok: false, reason: OUT_OF_AREA_MESSAGE };
 }

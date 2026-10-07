@@ -153,7 +153,7 @@ test("LT-006 checkout coverage: postcode prefixes match the outward code, case/s
   assert.equal((await checkCoverage(area, "E2 7AB")).ok, true);
   const out = await checkCoverage(area, "M1 1AA");
   assert.equal(out.ok, false);
-  assert.match((out as { reason: string }).reason, /outside this provider's home-visit coverage area/);
+  assert.match((out as { reason: string }).reason, /doesn't travel to this address/);
   assert.equal((await checkCoverage(area, "")).ok, false); // postcode required
   assert.equal((await checkCoverage(null, "M1 1AA")).ok, true); // nothing configured
   assert.equal((await checkCoverage({ mode: "radius", radiusMiles: 5 }, "M1 1AA")).ok, true); // unfinished radius never blocks

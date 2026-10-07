@@ -83,7 +83,7 @@ import { heldByNoAnswer } from "../lib/questionHold";
 import { bookingCutoffLabel, cutoffHours, pastCutoff } from "../lib/bookingCutoff";
 import { customerAreaOn } from "../lib/customerArea";
 import { NOT_TAKING_BOOKINGS, takesNewBookings } from "../middleware/subscription";
-import { checkCoverage, type CoverageArea } from "../lib/coverageArea";
+import { checkCoverage, OUT_OF_AREA_MESSAGE, type CoverageArea } from "../lib/coverageArea";
 import { cleanVisitNotes } from "../lib/visitNotes";
 import { lookupPostcode } from "../lib/postcodeLookup";
 import { TFC_SCHEME, canonicalMethod, isTfcMethod, methodAllowed, methodKey, splitTfc } from "../lib/payMethods";
@@ -920,9 +920,14 @@ my.post("/bookings", async (req, res) => {
       res.status(400).json({ error: "That doesn't look like a UK postcode — check it and try again" });
       return;
     }
+    if (!looked.ok && looked.code === "notfound") {
+      res.status(400).json({ error: "We can't find that postcode — please check it" });
+      return;
+    }
     const coverage = await checkCoverage(listing.coverageArea, serviceAddress.postcode);
     if (!coverage.ok) {
-      res.status(409).json({ error: coverage.reason });
+      const msg = coverage.reason === OUT_OF_AREA_MESSAGE && listing.tenantName ? `Sorry, ${listing.tenantName} doesn't travel to this address — it's outside the area they cover.` : coverage.reason;
+      res.status(409).json({ error: msg });
       return;
     }
     const accessNotes = cleanVisitNotes(serviceAddress.notes);

@@ -6,7 +6,7 @@ import { areaFromLabel, formatPostcode, isUkPostcodeFormat, labelMatchesPostcode
 
 export type PostcodeLookup =
   | { ok: true; postcode: string; area?: string; lat: number; lng: number }
-  | { ok: false; code: "format" | "notfound"; postcode: string };
+  | { ok: false; code: "format" | "notfound" | "unavailable"; postcode: string };
 
 const cache = new Map<string, { at: number; v: PostcodeLookup }>();
 const TTL_MS = 60 * 60_000;
@@ -16,9 +16,11 @@ export async function lookupPostcode(raw: string): Promise<PostcodeLookup> {
   if (!isUkPostcodeFormat(postcode)) return { ok: false, code: "format", postcode };
   const hit = cache.get(postcode);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.v;
+  let reachable = false; // did the official postcode database answer at all (200 or 404)?
   // The official postcode database first (exact town / ward and coordinates); the place-name geocoder only if it is unreachable.
   try {
     const r = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode.replace(/\s+/g, ""))}`, { signal: AbortSignal.timeout(4000) });
+    if (r.ok || r.status === 404) reachable = true;
     if (r.ok) {
       const j = (await r.json()) as { result?: { postcode?: string; admin_district?: string | null; admin_ward?: string | null; latitude?: number | null; longitude?: number | null } };
       const x = j.result;
@@ -36,7 +38,7 @@ export async function lookupPostcode(raw: string): Promise<PostcodeLookup> {
   const v: PostcodeLookup =
     g && labelMatchesPostcode(g.label, postcode)
       ? { ok: true, postcode, area: areaFromLabel(g.label, postcode), lat: g.lat, lng: g.lng }
-      : { ok: false, code: "notfound", postcode };
+      : { ok: false, code: reachable ? "notfound" : "unavailable", postcode };
   // only a real answer is cached: a geocoder hiccup must not make a good postcode look wrong for an hour
   if (v.ok) cache.set(postcode, { at: Date.now(), v });
   return v;

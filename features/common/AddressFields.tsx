@@ -9,10 +9,13 @@ import { isUkPostcodeShape, type AddressParts } from "@/lib/addressComplete";
 // type ("✓ Recognised: MK10 9NR · Milton Keynes") using the public /api/postcode-recognise (it works before the account exists, at sign-up).
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-export function AddressFields({ value, onChange, idPrefix = "adr", showWhy = true }: { value: AddressParts; onChange: (v: AddressParts) => void; idPrefix?: string; showWhy?: boolean }) {
+export type PostcodeState = "idle" | "checking" | "ok" | "bad" | "format";
+
+export function AddressFields({ value, onChange, idPrefix = "adr", showWhy = true, onPostcodeState }: { value: AddressParts; onChange: (v: AddressParts) => void; idPrefix?: string; showWhy?: boolean; onPostcodeState?: (s: PostcodeState) => void }) {
   const t = useT();
   const set = (k: keyof AddressParts) => (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...value, [k]: k === "postcode" ? e.target.value.toUpperCase() : e.target.value });
-  const [pc, setPc] = useState<{ state: "idle" | "checking" | "ok" | "bad" | "format"; place?: string }>({ state: "idle" });
+  const [pc, setPc] = useState<{ state: PostcodeState; place?: string }>({ state: "idle" });
+  useEffect(() => { onPostcodeState?.(pc.state); }, [pc.state]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const raw = value.postcode.trim();
     if (!raw) { setPc({ state: "idle" }); return; }
@@ -29,7 +32,7 @@ export function AddressFields({ value, onChange, idPrefix = "adr", showWhy = tru
   }, [value.postcode]);
   return (
     <div className="flex flex-col gap-3">
-      <div className="text-[13px] font-extrabold">{t("p7ck.adrTitle")}</div>
+      <div className="text-[13px] font-extrabold text-[var(--ink)]">{t("p7ck.adrTitle")}</div>
       {showWhy && <p className="-mt-2 text-[11.5px] text-[var(--ink-3)]">{t("p7ck.adrWhy")}</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         <div><FieldLabel htmlFor={`${idPrefix}-house`}>{t("p7ck.adrHouse")}</FieldLabel><Input id={`${idPrefix}-house`} required autoComplete="address-line1" value={value.house} onChange={set("house")} className="w-full" /></div>

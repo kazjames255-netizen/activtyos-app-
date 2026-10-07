@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { parentAddressProblem } from "../lib/parentAddress";
+import { parentAddressProblem, parentPostcodeProblem } from "../lib/parentAddress";
 import { displayNameFallback } from "../lib/directoryRules";
 import { z } from "zod";
 import { auth as authAdmin, db } from "../firebase";
@@ -127,6 +127,10 @@ account.put("/", async (req, res) => {
     const cur = (await db.collection("users").doc(uid).get()).data() as { address?: string; postcode?: string } | undefined;
     const problem = parentAddressProblem(data.address ?? cur?.address, data.postcode ?? cur?.postcode);
     if (problem) { res.status(400).json({ error: problem }); return; }
+    if (data.postcode !== undefined && data.postcode !== cur?.postcode) {
+      const pcProblem = await parentPostcodeProblem(data.postcode);
+      if (pcProblem) { res.status(400).json({ error: pcProblem }); return; }
+    }
   }
   // A franchise drawing/editing its own border always re-opens negotiation: the
   // status becomes proposed (has areas) or draft (none), stamped "by franchise"
