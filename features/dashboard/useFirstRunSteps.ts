@@ -31,14 +31,15 @@ function readStore(tenant: string): FirstRunStored {
 }
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
 
-const cache = new Map<string, { at: number; facts: Facts | null; p?: Promise<void> }>();
+const cache = new Map<string, { at: number; facts: Facts | null; p?: Promise<void>; again?: boolean }>();
 const listeners = new Set<() => void>();
 const bump = () => listeners.forEach((f) => f());
 
 function fetchFacts(tenant: string, portal: string, force: boolean) {
   const c = cache.get(tenant) ?? { at: 0, facts: null };
   cache.set(tenant, c);
-  if (c.p) return;
+  // A change that lands while a read is already in flight must not be dropped (that read may predate it): run once more when it ends.
+  if (c.p) { if (force) c.again = true; return; }
   if (!force && c.facts && Date.now() - c.at < TTL) return;
   const safe = <T,>(p: Promise<T>, d: T) => p.catch(() => d);
   c.p = Promise.all([
@@ -61,7 +62,7 @@ function fetchFacts(tenant: string, portal: string, force: boolean) {
     };
     c.at = Date.now();
     if (c.facts.listings > 0 && c.facts.bookings > 0) lsSet(doneKey(tenant), "1");
-  }).finally(() => { c.p = undefined; bump(); });
+  }).finally(() => { c.p = undefined; bump(); if (c.again) { c.again = false; fetchFacts(tenant, portal, true); } });
 }
 
 export function useFirstRunSteps() {
@@ -84,7 +85,7 @@ export function useFirstRunSteps() {
   useEffect(() => { if (enabled) fetchFacts(tenant, portal, false); }, [enabled, tenant, portal, pathname]);
   // Server-side changes refetch (shared listener), but only for a tenant still being set up.
   const onRt = useCallback(() => { if (enabled) fetchFacts(tenant, portal, true); }, [enabled, tenant, portal]);
-  useRealtime(["bookings", "blocks", "listings", "library", "tenants"], onRt); // library = venues, bank details, policies
+  useRealtime(["bookings", "blocks", "blockBundles", "listings", "library", "tenants"], onRt); // library = venues, bank details, policies; blockBundles = the blocks a provider builds
 
   const store = tenant && typeof window !== "undefined" ? readStore(tenant) : {};
   const facts = tenant ? cache.get(tenant)?.facts ?? null : null;
