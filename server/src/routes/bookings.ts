@@ -15,6 +15,7 @@ import { releaseDiscountCodes } from "../lib/discountRedemptions";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { creditWallet } from "../lib/wallet";
 import { captureHolds, releaseHolds } from "../lib/cardHold";
+import { RESEND_COOLDOWN_MS, remindersPatch, reminderDateLabel, resendWaitSeconds } from "../lib/invoiceResend";
 import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
@@ -72,14 +73,16 @@ import { attachChildcareRefs, childcareOf, isChildcare, paymentRecordsOf, type C
 /** The email alone is easy to miss (and is held back while mail isn't live), so a
  *  booking made on the family's behalf also raises their bell with the amount
  *  and a straight link to the payment. */
-function bellPayLink(b: { tenantId?: string; email: string; ref: string; listing: string; child?: string; amount: number }, tenantId: string): void {
+function bellPayLink(b: { tenantId?: string; email: string; ref: string; listing: string; child?: string; amount: number }, tenantId: string, reminder?: { n: number }): void {
   void notify({
     tenantId: b.tenantId ?? tenantId,
     to: { kind: "parent", email: b.email },
     category: "billing",
     bellOnly: true,
-    title: `Payment needed · ${b.ref}`,
-    body: `${b.listing}${b.child ? ` · ${b.child}` : ""} — your provider has booked this for you. Pay £${b.amount.toFixed(2)} to complete it.`,
+    title: reminder ? `Payment reminder · ${b.ref}` : `Payment needed · ${b.ref}`,
+    body: reminder
+      ? `${b.listing}${b.child ? ` · ${b.child}` : ""} — reminder ${reminder.n}: £${b.amount.toFixed(2)} is still to pay to complete this booking.`
+      : `${b.listing}${b.child ? ` · ${b.child}` : ""} — your provider has booked this for you. Pay £${b.amount.toFixed(2)} to complete it.`,
     href: `/custdash/bookings?pay=${encodeURIComponent(b.ref)}`,
     ref: b.ref,
   });
@@ -568,6 +571,12 @@ bookings.post("/:ref/actions", async (req, res) => {
       const snap = await ref.get();
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
+      // A double click must not mail the family twice: one re-send per booking every 30 seconds.
+      const waitS = resendWaitSeconds(b.invoiceResends, Date.now());
+      if (waitS > 0) { res.status(429).json({ error: `You re-sent this a moment ago. Please wait ${waitS} seconds before sending it again.` }); return; }
+      // This send is REMINDER number n (the first email was the original): the email and bell say so.
+      const patch = remindersPatch(b, new Date().toISOString(), req.user?.name || req.user?.email || "provider");
+      const reminder = { n: patch.invoiceResends.count, firstAt: reminderDateLabel(patch.invoiceSentAt) };
       if (b.email.includes("@")) {
         if (b.pay === "Awaiting voucher payment" && b.voucherScheme) {
           const lib = (await db.collection("libraries").doc(b.tenantId!).get()).data() ?? {};
@@ -579,11 +588,14 @@ bookings.post("/:ref/actions", async (req, res) => {
             // first email, and the reference is the point of it.
             payRefs: (childcareOf(b as ChildcareBooking).refs ?? []).map((r) => ({ child: r.child, reference: r.paymentReference })),
           });
-          else { emailPaymentLink(b, await tenantName()); bellPayLink(b, b.tenantId ?? ""); }
+          else { emailPaymentLink(b, await tenantName(), { reminder }); bellPayLink(b, b.tenantId ?? "", reminder); }
         } else {
-          emailPaymentLink(b, await tenantName());
-          bellPayLink(b, b.tenantId ?? "");
+          emailPaymentLink(b, await tenantName(), { reminder });
+          bellPayLink(b, b.tenantId ?? "", reminder);
         }
+        // ONE reminders log (Resend invoice, Chase and the automatic reminder all count here): the provider sees "Reminder sent 2× · last 7 Oct 19:50".
+        Object.assign(b, patch);
+        await ref.set(patch, { merge: true });
       }
       res.json(b);
       return;
@@ -1256,15 +1268,24 @@ bookings.post("/:ref/nudge", async (req, res) => {
       const b = fromDoc(snap.data() as BookingDoc);
       const why = nudgeBlockedMessage(b);
       if (why) throw new Conflict(why);
-      b.nudges = (b.nudges ?? 0) + 1;
-      b.lastNudgedAt = new Date().toISOString();
+      // A double click must not remind the family twice: one reminder per booking every 30 seconds.
+      const waitS = resendWaitSeconds(b.invoiceResends ?? (b.lastNudgedAt ? { count: b.nudges ?? 1, lastAt: b.lastNudgedAt } : undefined), Date.now());
+      if (waitS > 0) throw new TooSoon(`You reminded them a moment ago. Please wait ${waitS} seconds before chasing again.`);
+      Object.assign(b, remindersPatch({ invoiceResends: b.invoiceResends ?? (b.nudges ? { count: b.nudges, lastAt: b.lastNudgedAt ?? "" } : undefined), invoiceSentAt: b.invoiceSentAt, createdAt: b.createdAt }, new Date().toISOString(), req.user?.name || req.user?.email || "provider"));
       tx.set(ref, toDoc(b));
       return b;
     });
     const outstanding = Math.max(0, (updated.amount ?? 0) - (updated.amountPaid ?? 0));
     const bookedMs = Date.parse(updated.createdAt ?? "");
     const days = Number.isNaN(bookedMs) ? 0 : Math.max(0, Math.floor((Date.now() - bookedMs) / 86400000));
-    if (updated.email?.includes("@")) {
+    const nRem = updated.invoiceResends?.count ?? 1;
+    // A card booking gets the pay-link email as a REMINDER (same pay button); bank / voucher bookings keep their instructions-style reminder below.
+    const cardChase = /card/i.test(updated.method ?? "") && !updated.voucherScheme && outstanding > 0;
+    if (cardChase && updated.email?.includes("@")) {
+      const tn = (await tenantsCol.doc(tenantId).get()).get("name") as string | undefined;
+      emailPaymentLink(updated, tn || "Your activity provider", { reminder: { n: nRem, firstAt: reminderDateLabel(updated.invoiceSentAt) } });
+      bellPayLink(updated, tenantId, { n: nRem });
+    } else if (updated.email?.includes("@")) {
       const how = updated.voucherScheme ? `${updated.voucherScheme} voucher` : updated.method;
       const when = updated.dates ? ` on ${updated.dates}` : "";
       const times = (updated.sessions ?? []).slice(0, 3).join("; ");
@@ -1273,8 +1294,8 @@ bookings.post("/:ref/nudge", async (req, res) => {
         to: { kind: "parent", email: updated.email },
         category: "billing",
         title: `Payment reminder · ${updated.ref}`,
-        body: `A friendly reminder about ${updated.child}'s place on ${updated.listing}${when}: £${outstanding.toFixed(2)} is still to pay${days ? ` (booked ${days} day${days === 1 ? "" : "s"} ago)` : ""}.${times ? ` Sessions: ${times}.` : ""} Please complete your ${how} payment when you can — thank you!`,
-        subject: `Payment reminder for ${updated.ref}`,
+        body: `Reminder ${nRem}: a friendly reminder about ${updated.child}'s place on ${updated.listing}${when}: £${outstanding.toFixed(2)} is still to pay${days ? ` (booked ${days} day${days === 1 ? "" : "s"} ago)` : ""}.${times ? ` Sessions: ${times}.` : ""} Please complete your ${how} payment when you can — thank you!`,
+        subject: `Payment reminder ${nRem} for ${updated.ref}`,
         href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
         ref: updated.ref,
       });
@@ -1282,6 +1303,7 @@ bookings.post("/:ref/nudge", async (req, res) => {
     res.json(updated);
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else if (e instanceof TooSoon) res.status(429).json({ error: e.message });
     else if (e instanceof Conflict) res.status(409).json({ error: e.message });
     else throw e;
   }
@@ -1632,3 +1654,4 @@ type RefundSnapshot = { refund?: NonNullable<Booking["cancel"]>["refund"]; pay: 
 class NotFound extends Error {}
 class BadRequest extends Error {}
 class Conflict extends Error {}
+class TooSoon extends Error {}

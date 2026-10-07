@@ -361,11 +361,13 @@ export function emailWaitlistJoined(b: Booking, providerName: string, refs?: str
   sendCustomerEmail(b, providerName, "waitlist", m.subject, m.title, m.body + refsNote(refs), m.enrich);
 }
 
-export function emailPaymentLink(b: Booking, providerName: string, approved = false): void {
+export function emailPaymentLink(b: Booking, providerName: string, opts: boolean | { approved?: boolean; reminder?: { n: number; firstAt?: string } } = false): void {
+  const approved = typeof opts === "boolean" ? opts : !!opts.approved;
+  const reminder = typeof opts === "boolean" ? undefined : opts.reminder;
   void (async () => {
     // A public pay page (no sign-in) — the unguessable link pays this one booking's balance by card.
     const payUrl = await bookingPayUrl(b.tenantId, b.ref);
-    const m = paymentLinkSpec(b, providerName, payUrl, approved);
+    const m = paymentLinkSpec(b, providerName, payUrl, approved, reminder);
     sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body, m.enrich);
   })().catch((e) => console.error("[mail] payment link build failed:", (e as Error).message));
 }

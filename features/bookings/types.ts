@@ -151,6 +151,10 @@ export interface Booking {
    * stripeAccount is the provider's connected account it was charged on
    * (null = dev platform fallback). Refund-approve refunds through these. */
   paymentIntentId?: string;
+  /** The payment link / invoice email has been re-sent this many times (server-side, on every 'Resend invoice'). `lastBy` = who pressed it. */
+  invoiceResends?: { count: number; lastAt: string; lastBy?: string };
+  /** When the invoice / payment link was first sent (the booking's creation when never stamped). */
+  invoiceSentAt?: string;
   stripeAccount?: string | null;
   /** Manual-approval listing paid by card: the card is AUTHORISED when the family books (money held, not taken) and captured when
    *  the provider approves. awaiting = the family hasn't entered the card yet; held = authorised; captured / released / expired = done.

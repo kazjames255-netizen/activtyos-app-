@@ -83,6 +83,8 @@ interface BookingsState {
 
   saveNote: (ref: string, text: string) => void;
 
+  /** A short confirmation shown in the page (replaces window.alert), e.g. 'Reminder sent to … · reminder 2'. Cleared after a few seconds. */
+  notice: { ref: string; text: string } | null;
   /** The money action the provider is being asked to confirm, and on which booking. */
   confirm: { ref: string; intent: ConfirmIntent } | null;
   /** Opens the booking and its confirm panel — the action itself runs only from the panel. */
@@ -157,6 +159,7 @@ export const useBookingsStore = create<BookingsState>()(
       selected: {},
       openRef: null,
       confirm: null,
+      notice: null,
       showCreate: false,
       createListingId: null,
       emailCompose: null,
@@ -310,7 +313,10 @@ export const useBookingsStore = create<BookingsState>()(
           set((s) => void (s.confirm = null));
           if (action === "resend") {
             const b = get().bookings.find((x) => x.ref === ref);
-            if (b) setTimeout(() => alert(tNow("p8lst.bsResent", { email: b.email })), 20);
+            if (b) {
+              set((s) => void (s.notice = { ref, text: tNow("p7bd.invResentToast", { email: b.email, n: String(b.invoiceResends?.count ?? 1) }) }));
+              setTimeout(() => set((s) => void (s.notice?.ref === ref && (s.notice = null))), 7000);
+            }
           }
         });
       },

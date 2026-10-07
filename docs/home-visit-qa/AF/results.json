@@ -1,0 +1,80 @@
+[
+  {
+    "k": "banner",
+    "v": "💳 This page shows STRIPE CARD PAYMENTS only. Bank transfers, cash, vouchers and Tax-Free Childcare never appear here: see Revenue for those."
+  },
+  {
+    "k": "table rows",
+    "v": [
+      {
+        "state": "part",
+        "text": "7 Oct 2026 Kaz (parent) James Card AF-1003 Part refunded £1.00£0.60 Refunded £0.40 on 7 Oct"
+      },
+      {
+        "state": "paid",
+        "text": "7 Oct 2026 Kaz (parent) James Card AF-1002 Succeeded £0.30"
+      },
+      {
+        "state": "refunded",
+        "text": "7 Oct 2026 Kaz (parent) James Card AF-1001 Refunded £0.30£0.00 Refunded £0.30 on 7 Oct"
+      }
+    ]
+  },
+  {
+    "k": "tile labels",
+    "v": [
+      "💳 This page shows STRIPE CARD PAYMENTS only. Bank transfers, cash, vouchers and Tax-Free Childcare never appear here: see Revenue for those.",
+      "ON THE WAY (EST.) · STRIPE CARD",
+      "IN YOUR BANK (EST.) · STRIPE CARD",
+      "EST. FEES · STRIPE CARD",
+      "CARD MONEY KEPT (PERIOD)"
+    ]
+  },
+  {
+    "k": "last-reminder before",
+    "v": [
+      "Last reminder sent 7 Oct, 20:12 · 1 so far"
+    ]
+  },
+  {
+    "k": "last-reminder after",
+    "v": [
+      "Last reminder sent 7 Oct, 20:12 · 1 so far"
+    ]
+  },
+  {
+    "k": "toast",
+    "v": []
+  },
+  {
+    "k": "chase disabled",
+    "v": false
+  },
+  {
+    "k": "chase tooltip",
+    "v": "Emails the family and rings their bell: this payment is still to come."
+  },
+  {
+    "k": "resend visible",
+    "v": true
+  },
+  {
+    "k": "badge after resend",
+    "v": [
+      "✓ Reminder sent to hvqa-af-muyb14n0-parent@activityos-test.com · reminder 2.",
+      "Reminder sent 2× · last 7 Oct, 20:15"
+    ]
+  },
+  {
+    "k": "toast after resend",
+    "v": [
+      "✓ Reminder sent to hvqa-af-muyb14n0-parent@activityos-test.com · reminder 2."
+    ]
+  },
+  {
+    "k": "second click (within 30s)",
+    "v": [
+      "You re-sent this a moment ago. Please wait 28 seconds before sending it again."
+    ]
+  }
+]

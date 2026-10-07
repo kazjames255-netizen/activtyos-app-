@@ -21,7 +21,7 @@ import { useT, useWord } from "@/lib/i18n/provider";
 import { BRAND } from "@/lib/i18n/config";
 import { rich } from "./rich";
 import { methodLabel } from "./finI18n";
-import { financeFigures, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, type PaymentRecord } from "./financeFigures";
+import { financeFigures, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, payoutRows, type PaymentRecord } from "./financeFigures";
 
 // ── Types for the extra ledgers we fold in (subset of each route's shape) ──
 interface Invoice { id: string; customerName: string; amount: number; date: string; dueDate?: string; status: string; overdue?: boolean }
@@ -210,6 +210,35 @@ export function FinanceAnalyticsApp() {
     return m;
   }, [bookings]);
   const payerName = (p: PaymentRecord) => (p.refs ?? []).map((r) => nameByRef.get(r)).find(Boolean) || p.email || "—";
+  const payerNameOf = (refs: string[], email?: string) => refs.map((r) => nameByRef.get(r)).find(Boolean) || email || "—";
+  // The Card payouts (Stripe) table: settled card charges with what went back to the card afterwards (refunded rows are struck through).
+  const payouts = useMemo(() => payoutRows(payments), [payments]);
+
+  // Debts → Chase: sends a REMINDER (email + the family's bell) through the server's one reminders log; View just opens the booking.
+  const [reminded, setReminded] = useState<Record<string, { count: number; lastAt: string; sentMs?: number }>>({});
+  const [chaseAsk, setChaseAsk] = useState<string | null>(null);
+  const [chaseMsg, setChaseMsg] = useState<{ ref: string; text: string; ok: boolean } | null>(null);
+  const [tickMs, setTickMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!Object.values(reminded).some((r) => r.sentMs && Date.now() - r.sentMs < 30_000)) return;
+    const id = setInterval(() => setTickMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [reminded]);
+  const lastReminder = (o: { ref: string; reminders: { count: number; lastAt: string } | null }) => reminded[o.ref] ?? o.reminders;
+  const chaseWaitS = (ref: string) => { const s = reminded[ref]?.sentMs; return s ? Math.max(0, Math.ceil((30_000 - (tickMs - s)) / 1000)) : 0; };
+  async function chase(o: { ref: string; email: string }) {
+    setChaseAsk(null);
+    try {
+      const b = await apiPost<{ invoiceResends?: { count: number; lastAt: string }; nudges?: number; lastNudgedAt?: string }>(`/api/bookings/${encodeURIComponent(o.ref)}/nudge`, {});
+      const rec = b.invoiceResends ?? { count: b.nudges ?? 1, lastAt: b.lastNudgedAt ?? new Date().toISOString() };
+      setReminded((m) => ({ ...m, [o.ref]: { ...rec, sentMs: Date.now() } }));
+      setTickMs(Date.now());
+      setChaseMsg({ ref: o.ref, ok: true, text: t("p8fin.faChaseToast", { email: o.email || "—", n: String(rec.count) }) });
+    } catch (e) {
+      setChaseMsg({ ref: o.ref, ok: false, text: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  const whenLabel = (iso: string) => new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   // Export the filtered, in-window bookings an accountant would want — one row
   // per booking with the money broken out. Honours the Season/Location filters.
@@ -258,7 +287,7 @@ export function FinanceAnalyticsApp() {
         actions={periodToggle}
       />
       <TabStrip
-        tabs={[["overview", t("p8fin.exTabOverview")], ["revenue", t("p8fin.faTabRevenue")], ["payouts", t("p8fin.faTabPayouts")], ["debts", t("p8fin.faTabDebts")], ["insights", t("p8fin.faTabInsights")]]}
+        tabs={[["overview", t("p8fin.exTabOverview")], ["revenue", t("p8fin.faTabRevenue")], ["payouts", t("p8fin.faTabCardPayouts")], ["debts", t("p8fin.faTabDebts")], ["insights", t("p8fin.faTabInsights")]]}
         value={tab}
         onChange={(tb) => { setTabTouched(true); setTab(tb); }}
       />
@@ -297,7 +326,7 @@ export function FinanceAnalyticsApp() {
             <Tile label={t("p8fin.faRevCollected")} icon="💰" grad={GRAD.green} value={money(a.collected)} sub={<>{t("p8fin.faOfBooked", { amount: money(a.booked) })}<Delta pct={a.collectedDelta} /></>} aside={<Ring pct={a.booked ? (a.collected / a.booked) * 100 : 0} label={`${a.booked ? Math.round((a.collected / a.booked) * 100) : 0}%`} />} />
             <Tile label={t("p8fin.faOwedToYou")} icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub={a.owed > 0 ? t("p8fin.faOwedNow") : t("p8fin.faAllSettled")} note={t("p8fin.faOwedNote")} />
             <Tile label={t("p8fin.faRefunds")} icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub={t("p8fin.faRefundsGiven", { n: months })} />
-            <Tile label={t("p8fin.faEstNet")} icon="🏦" grad={GRAD.blue} value={money(a.net)} sub={t("p8fin.faAfterFees", { fees: money(a.fees) })} />
+            <Tile label={t("p8fin.faEstNet")} icon="🏦" grad={GRAD.blue} value={money(a.net)} sub={t("p8fin.faAfterFees", { fees: money(a.fees) })} note={t("p8fin.faNoteOverviewNet")} />
           </div>
           </CollapsibleStats>
           <WalletOwedCard />
@@ -369,29 +398,45 @@ export function FinanceAnalyticsApp() {
               <button type="button" onClick={manage} disabled={connecting} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[12.5px] font-bold text-[var(--ink)] disabled:opacity-60">{connecting ? t("p8fin.faOpening") : t("p8fin.faManagePayouts")}</button>
             </div>
           )}
+          {/* The scope of this page, impossible to miss: Stripe card payments ONLY. */}
+          <div data-ui="stripe-only-banner" className="rounded-2xl border-2 border-[#1d3a8f] bg-[#eef3ff] px-4 py-3 text-[13.5px] font-bold leading-snug text-[#16306e]">💳 {t("p8fin.faStripeOnlyBanner")}</div>
           <CollapsibleStats id="finance-payouts">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label={t("p8fin.faOnTheWay")} icon="🚚" grad={GRAD.amber} value={money(a.inTransit)} sub={t("p8fin.faCardLast7")} />
-            <Tile label={t("p8fin.faInBank")} icon="🏦" grad={GRAD.green} value={money(a.inBank)} sub={t("p8fin.faCardSettled")} />
-            <Tile label={t("p8fin.faEstFees")} icon="✂️" grad={GRAD.violet} value={money(a.fees)} sub={t("p8fin.faFeesFormula")} />
-            <Tile label={t("p8fin.faEstNetPeriod")} icon="💷" grad={GRAD.blue} value={money(a.net)} sub={t("p8fin.faCollectedMinusFees")} />
+            <Tile label={`${t("p8fin.faOnTheWay")} · ${t("p8fin.faStripeCardTag")}`} icon="🚚" grad={GRAD.amber} value={money(a.inTransit)} sub={t("p8fin.faCardLast7")} note={t("p8fin.faNoteOnWay")} />
+            <Tile label={`${t("p8fin.faInBank")} · ${t("p8fin.faStripeCardTag")}`} icon="🏦" grad={GRAD.green} value={money(a.inBank)} sub={t("p8fin.faCardSettled")} note={t("p8fin.faNoteInBank")} />
+            <Tile label={`${t("p8fin.faEstFees")} · ${t("p8fin.faStripeCardTag")}`} icon="✂️" grad={GRAD.violet} value={money(a.fees)} sub={t("p8fin.faFeesFormula")} note={t("p8fin.faNoteFees")} />
+            <Tile label={t("p8fin.faCardNet")} icon="💷" grad={GRAD.blue} value={money(a.cardNet)} sub={t("p8fin.faCollectedMinusFees")} note={t("p8fin.faNoteCardNet")} />
           </div>
           </CollapsibleStats>
           <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">{t("p8fin.faPayoutNote", { brand: BRAND })}</div>
           <Panel title={t("p8fin.faPayoutTx")}>
-            {payments.filter(isCardPayment).length ? (
+            {payouts.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] text-[12.5px]">
                   <thead><tr className="border-b border-[var(--line)] text-start text-[10.5px] uppercase tracking-wide text-[var(--ink-3)]"><th className="py-2 font-bold">{t("p8fin.gDate")}</th><th className="font-bold">{t("p8fin.faPaidBy")}</th><th className="font-bold">{t("p8fin.recMethod")}</th><th className="font-bold">{t("p8fin.recReference")}</th><th className="font-bold">{t("p8fin.gStatus")}</th><th className="py-2 text-end font-bold">{t("p8fin.gAmount")}</th></tr></thead>
                   <tbody>
-                    {payments.filter(isCardPayment).slice(0, 40).map((p) => (
-                      <tr key={p.id} className="border-b border-[var(--line)]">
-                        <td className="py-2 text-[var(--ink-2)]">{new Date(p.createdAt).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}</td>
-                        <td className="font-semibold text-[var(--ink)]">{payerName(p)}</td>
+                    {payouts.slice(0, 40).map((p) => (
+                      <tr key={p.id} className="border-b border-[var(--line)]" data-state={p.state}>
+                        <td className="py-2 text-[var(--ink-2)]">{new Date(p.at).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}</td>
+                        <td className="font-semibold text-[var(--ink)]">{payerNameOf(p.refs, p.email)}</td>
                         <td className="text-[var(--ink-2)]">{methodLabel(t, p.method || "Card")}</td>
-                        <td className="text-[var(--ink-3)]">{p.refs?.join(", ") || "—"}</td>
-                        <td><span className="rounded-full bg-[#e2f5ea] px-2 py-0.5 text-[10.5px] font-bold capitalize text-[#0b8446]">{w(p.status)}</span></td>
-                        <td className="py-2 text-end font-extrabold tabular-nums">{money(p.amount)}</td>
+                        <td className="text-[var(--ink-3)]">{p.refs.join(", ") || "—"}</td>
+                        <td>
+                          {p.state === "paid"
+                            ? <span className="rounded-full bg-[#e2f5ea] px-2 py-0.5 text-[10.5px] font-bold capitalize text-[#0b8446]">{w("succeeded")}</span>
+                            : p.state === "refunded"
+                              ? <span className="rounded-full bg-[#eceff6] px-2 py-0.5 text-[10.5px] font-bold text-[#4a4763]">{t("p8fin.faStRefunded")}</span>
+                              : <span className="rounded-full bg-[#fdf3d8] px-2 py-0.5 text-[10.5px] font-bold text-[#8a5300]">{t("p8fin.faStPartRefunded")}</span>}
+                        </td>
+                        <td className="py-2 text-end tabular-nums">
+                          {p.state === "paid"
+                            ? <span className="font-extrabold">{money(p.gross)}</span>
+                            : <>
+                                <span className="font-bold text-[var(--ink-3)] line-through">{money(p.gross)}</span>
+                                <span className="ms-2 font-extrabold">{money(p.net)}</span>
+                                <div className="text-[10.5px] font-semibold text-[var(--ink-3)]">{t("p8fin.faRefundedOn", { amt: money(p.refunded), date: p.refundedAt ? new Date(p.refundedAt).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "—" })}</div>
+                              </>}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -414,14 +459,37 @@ export function FinanceAnalyticsApp() {
           <Panel title={t("p8fin.faWhoOwes")} right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{t("p8fin.faBookingsOwed", { n: a.owing.length, amount: money(a.owed) })}</span>}>
             {a.owing.length ? (
               <div className="flex flex-col divide-y divide-[var(--line)]">
-                {a.owing.slice(0, 30).map((o) => (
-                  <div key={o.ref} className="flex items-center gap-3 py-2.5 text-[12.5px]">
-                    <span className="min-w-0 flex-1 truncate"><b>{o.name}</b>{o.listing && <span className="text-[var(--ink-3)]"> · {o.listing}</span>}</span>
-                    <span className="hidden whitespace-nowrap text-[11px] text-[var(--ink-3)] sm:inline">{o.when ? new Date(o.when.length === 10 ? `${o.when}T00:00:00` : o.when).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : ""}</span>
-                    <span className="w-20 text-end font-extrabold tabular-nums text-[#c02636]">{money(o.owed)}</span>
-                    <button type="button" onClick={() => router.push(`/${portal}/bookings?ref=${encodeURIComponent(o.ref)}`)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]">{t("p8fin.faChaseView")}</button>
-                  </div>
-                ))}
+                {a.owing.slice(0, 30).map((o) => {
+                  const last = lastReminder(o);
+                  const waitS = chaseWaitS(o.ref);
+                  const recent = !!last?.lastAt && Date.now() - Date.parse(last.lastAt) < 24 * 3_600_000;
+                  return (
+                    <div key={o.ref} className="py-2.5 text-[12.5px]">
+                      <div className="flex items-center gap-3">
+                        <span className="min-w-0 flex-1 truncate"><b>{o.name}</b>{o.listing && <span className="text-[var(--ink-3)]"> · {o.listing}</span>}</span>
+                        <span className="hidden whitespace-nowrap text-[11px] text-[var(--ink-3)] sm:inline">{o.when ? new Date(o.when.length === 10 ? `${o.when}T00:00:00` : o.when).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : ""}</span>
+                        <span className="w-20 text-end font-extrabold tabular-nums text-[#c02636]">{money(o.owed)}</span>
+                        <button type="button" disabled={waitS > 0} title={waitS > 0 ? t("p8fin.faChaseWait", { s: String(waitS) }) : t("p8fin.faChaseTip")}
+                          onClick={() => (recent ? setChaseAsk(o.ref) : void chase(o))}
+                          className="rounded-full bg-[#c02636] px-3 py-1 text-[11px] font-extrabold text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">{waitS > 0 ? `${t("p8fin.faChase")} · ${waitS}s` : t("p8fin.faChase")}</button>
+                        <button type="button" onClick={() => router.push(`/${portal}/bookings?ref=${encodeURIComponent(o.ref)}`)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]">{t("p8fin.faView")}</button>
+                      </div>
+                      <div className="mt-1 text-[11px] text-[var(--ink-3)]" data-testid="last-reminder">
+                        {last?.lastAt ? t("p8fin.faLastReminder", { when: whenLabel(last.lastAt), n: String(last.count) }) : t("p8fin.faNoReminder")}
+                      </div>
+                      {chaseAsk === o.ref && (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2 rounded-lg border border-[#f0c96b] bg-[#fff7e0] px-3 py-2 text-[12px] font-semibold text-[#7a4b00]">
+                          {t("p8fin.faChaseAgain", { when: last?.lastAt ? whenLabel(last.lastAt) : "" })}
+                          <button type="button" onClick={() => void chase(o)} className="rounded-full bg-[#c02636] px-3 py-1 text-[11px] font-extrabold text-white">{t("p8fin.faChaseSend")}</button>
+                          <button type="button" onClick={() => setChaseAsk(null)} className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-bold text-[var(--ink-2)]">{t("p8fin.faChaseCancel")}</button>
+                        </div>
+                      )}
+                      {chaseMsg?.ref === o.ref && (
+                        <div role="status" className={`mt-1.5 rounded-lg px-3 py-1.5 text-[12px] font-bold ${chaseMsg.ok ? "bg-[#e8f8ee] text-[#0f6b34]" : "bg-[#fdebec] text-[#c02636]"}`}>{chaseMsg.text}</div>
+                      )}
+                    </div>
+                  );
+                })}
                 {a.owing.length > 30 && <div className="pt-2 text-center text-[11px] text-[var(--ink-3)]">{t("p8fin.faMoreShowing", { n: a.owing.length - 30 })}</div>}
               </div>
             ) : <Empty>{t("p8fin.faNobodyOwes")}</Empty>}

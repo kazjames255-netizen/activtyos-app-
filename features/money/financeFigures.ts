@@ -9,7 +9,45 @@ import type { Booking } from "../bookings/types";
 import { ACT_C, money, colorFor } from "./finance-kit";
 
 /** A payment record as GET /api/payments returns it (the fields we use). */
-export interface PaymentRecord { id: string; refs?: string[]; email?: string; method?: string; amount: number; type?: string; status: string; createdAt: string; paidAt?: string; offline?: boolean; paymentIntentId?: string }
+export interface PaymentRecord { id: string; refs?: string[]; email?: string; method?: string; amount: number; type?: string; status: string; createdAt: string; paidAt?: string; offline?: boolean; paymentIntentId?: string; via?: string }
+
+/** One row of the Card payouts (Stripe) table: a settled card charge, with what went back to the card afterwards. */
+export interface PayoutRow {
+  id: string; at: string; refs: string[]; email?: string; method?: string;
+  gross: number; refunded: number; net: number; refundedAt?: string;
+  /** paid = nothing refunded; refunded = the whole charge went back to the card; part = some of it did. */
+  state: "paid" | "refunded" | "part";
+}
+
+/**
+ * The Payout transactions table. Only STRIPE card charges (isCardPayment). A charge whose booking was later cancelled and refunded to the card
+ * shows as "refunded" (net £0.00), a part refund as "part": the refund rows of the same payments ledger are matched by PaymentIntent (or, on older
+ * rows with no intent, by booking ref), and wallet / offline refunds never count: they did not go back to the card.
+ */
+export function payoutRows(payments: PaymentRecord[]): PayoutRow[] {
+  const cardRefund = (p: PaymentRecord) => p.type === "refund" && p.status === "succeeded" && !p.offline && p.via !== "wallet" && p.method !== "wallet" && p.method !== "offline";
+  const refunds = payments.filter(cardRefund);
+  const used = new Set<string>();
+  const charges = payments.filter(isCardPayment).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  // Pass 1: by PaymentIntent. Pass 2: refunds with no intent, by booking ref (shared out charge by charge, never counted twice).
+  return charges.map((c) => {
+    let refunded = 0, refundedAt: string | undefined;
+    for (const r of refunds) {
+      if (used.has(r.id)) continue;
+      const hit = r.paymentIntentId ? r.paymentIntentId === c.paymentIntentId : (r.refs ?? []).some((x) => (c.refs ?? []).includes(x));
+      if (!hit) continue;
+      used.add(r.id);
+      refunded += Number(r.amount) || 0;
+      if (!refundedAt || (r.createdAt || "") > refundedAt) refundedAt = r.createdAt;
+    }
+    const gross = round2(Number(c.amount) || 0);
+    refunded = round2(Math.min(gross, refunded));
+    return {
+      id: c.id, at: c.paidAt ?? c.createdAt, refs: c.refs ?? [], email: c.email, method: c.method, gross, refunded, net: round2(gross - refunded), refundedAt,
+      state: refunded <= 0.005 ? "paid" : refunded >= gross - 0.005 ? "refunded" : "part",
+    } satisfies PayoutRow;
+  });
+}
 
 // Same hexes as the page's palette.
 const BLUE = "#1d3a8f", GREEN = "#0f7a43";
@@ -154,7 +192,7 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
   const bookersInWin = new Set<string>();
   const learnersInWin = new Set<string>();
   const ages: number[] = [];
-  const owing: { ref: string; name: string; listing: string; owed: number; when: string }[] = [];
+  const owing: { ref: string; name: string; email: string; listing: string; owed: number; when: string; reminders: { count: number; lastAt: string } | null }[] = [];
   let booked = 0, collected = 0, refunds = 0, owed = 0, paidBookings = 0, paidSessions = 0, freeSessions = 0;
   let prevCollected = 0, prevBooked = 0;
   let newBookers = 0, returningBookers = 0, newLearners = 0, returningLearners = 0;
@@ -174,7 +212,7 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
     for (const [rm, amt] of refundSplit(b)) if (rm && inWindow.has(rm)) refunds += amt;
     // Owed NOW — the one rule the Dashboard uses too (owedNow, d19s7).
     const o = round2(owedNow(b));
-    if (isOwed(o)) { owed += o; owing.push({ ref: b.ref, name: b.booker || b.email || "—", listing: b.listing || "", owed: o, when: b.createdAt || b.days?.[0] || "" }); }
+    if (isOwed(o)) { owed += o; owing.push({ ref: b.ref, name: b.booker || b.email || "—", email: b.email || "", listing: b.listing || "", owed: o, when: b.createdAt || b.days?.[0] || "", reminders: b.invoiceResends?.count ? { count: b.invoiceResends.count, lastAt: b.invoiceResends.lastAt } : b.nudges ? { count: b.nudges, lastAt: b.lastNudgedAt ?? "" } : null }); }
     if (col > 0) { paidBookings++; bySource.set(SOURCE_OF(b), (bySource.get(SOURCE_OF(b)) ?? 0) + col); }
     if (!isCancelled(b) && (b.listingId || b.listing) && (inWin || col > 0)) {
       const key = b.listingId || b.listing!;
@@ -225,7 +263,13 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
   // card money too, but they belong to no listing, so only when unfiltered.
   if (!season && !venue) for (const p of payIdx.loneCard) cardEvents.push({ gross: p.amount, net: p.amount, at: p.at });
 
-  const fees = cardEvents.filter((e) => { const m = monthOfStamp(e.at); return m != null && inWindow.has(m); }).reduce((s, e) => s + CARD_FEE(e.gross), 0);
+  const cardInWin = cardEvents.filter((e) => { const m = monthOfStamp(e.at); return m != null && inWindow.has(m); });
+  const fees = cardInWin.reduce((s, e) => s + CARD_FEE(e.gross), 0);
+  // STRIPE CARD money only (the Card payouts tab): what was taken by card in the period, less what went back to the card, less the fees
+  // (Stripe keeps its fee on a refunded payment, so the fee is on the GROSS). Bank transfers, cash, vouchers and Tax-Free Childcare are not in it.
+  const cardGross = round2(cardInWin.reduce((s, e) => s + e.gross, 0));
+  const cardBack = round2(cardInWin.reduce((s, e) => s + (e.gross - e.net), 0));
+  const cardNet = round2(cardGross - cardBack - fees);
 
   // Expected payout split: settled (older than 7 days) vs on-the-way (last 7 days).
   const weekAgo = nowMs - 7 * 86400000;
@@ -249,7 +293,7 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
     bookedByMonth, collectedByMonth,
     booked, collected, refunds, owed, net: collected - fees, fees,
     prevCollected, prevBooked, collectedDelta: pctChange(collected, prevCollected), bookedDelta: pctChange(booked, prevBooked),
-    inTransit, inBank,
+    inTransit, inBank, cardGross, cardBack, cardNet,
     source: sourceRows.map(([label, value]) => ({ label, value, color: label.startsWith("Childcare") ? GREEN : label === "Card" ? BLUE : colorFor(label) })),
     topListings, topCustomers,
     owing: owing.sort((x, y) => y.owed - x.owed),

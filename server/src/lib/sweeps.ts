@@ -1,5 +1,6 @@
 import { db } from "../firebase";
 import { esc } from "./html";
+import { remindersPatch } from "./invoiceResend";
 import { fireOnce, sweep, toMinutes, ukNow } from "./scheduler";
 import { addDays, ukToday } from "./ukDate";
 import { notify, parentEmailForChild, channelFor, notifyTenantMember} from "./notify";
@@ -474,7 +475,7 @@ async function paymentDueReminders(): Promise<void> {
     const leadMs = await wants(b.tenantId);
     if (leadMs === null || !inWindow(b.voucherSendBy, leadMs)) continue;
     const scheme = b.voucherScheme ?? "childcare voucher";
-    await fireOnce(`vouchdue_${b.tenantId}_${b.ref}_${b.voucherSendBy}`, { tenantId: b.tenantId }, () =>
+    const sentVoucher = await fireOnce(`vouchdue_${b.tenantId}_${b.ref}_${b.voucherSendBy}`, { tenantId: b.tenantId }, () =>
       notify({
         tenantId: b.tenantId!,
         to: { kind: "parent", email: b.email! },
@@ -485,7 +486,9 @@ async function paymentDueReminders(): Promise<void> {
         href: "/custdash/bookings",
         ref: b.ref,
       }),
-    ).catch((err) => console.error(`[sweeps] voucher due ${b.ref}:`, (err as Error).message));
+    ).catch((err) => { console.error(`[sweeps] voucher due ${b.ref}:`, (err as Error).message); return false; });
+    // The automatic reminder is a reminder like any other: it goes in the booking's ONE reminders log (counts never contradict Resend / Chase).
+    if (sentVoucher) await d.ref.set(remindersPatch(b as { invoiceResends?: { count: number; lastAt: string }; createdAt?: string }, new Date().toISOString(), "automatic reminder"), { merge: true }).catch(() => {});
   }
 }
 

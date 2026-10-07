@@ -569,6 +569,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
   const w = useWord();
   const close = useBookingsStore((s) => s.close);
   const act = useBookingsStore((s) => s.act);
+  const notice = useBookingsStore((s) => s.notice);
   const askConfirm = useBookingsStore((s) => s.askConfirm);
   const cancelOpen = useBookingsStore((s) => s.cancelOpen);
   const saveNote = useBookingsStore((s) => s.saveNote);
@@ -710,6 +711,9 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           </Card>
         </div>
       )}
+      {notice && notice.ref === booking.ref && (
+        <div role="status" className="mb-3 rounded-lg border border-[#15b364] bg-[#e8f8ee] px-3 py-2 text-[13px] font-bold text-[#0f6b34]">{notice.text}</div>
+      )}
       <div className="mb-3">
         <button
           onClick={close}
@@ -767,6 +771,10 @@ export function BookingDetail({ booking }: { booking: Booking }) {
 
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           <Badge tone={statusTone(b.status)}>{w(b.status)}</Badge>
+          {/* ONE reminders log: Resend invoice, Chase and the automatic reminder all count here. */}
+          {b.invoiceResends?.count ? (
+            <Badge tone={{ bg: "#e8f0ff", fg: "#1d3a8f" }}>{t("p7bd.invResent", { n: String(b.invoiceResends.count), when: new Date(b.invoiceResends.lastAt).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}</Badge>
+          ) : null}
           {/* Once cancelled/declined the payment state is moot — a cancelled
               booking isn't "awaiting" anything. */}
           {b.status !== "Cancelled" && b.status !== "Declined" && (

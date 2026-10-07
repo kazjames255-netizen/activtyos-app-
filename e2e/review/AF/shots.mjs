@@ -1,0 +1,60 @@
+// AF screenshots on the isolated stack (web :3023, API :4023): node e2e/review/AF/shots.mjs   (accounts from /tmp/af-accounts.json)
+import { chromium } from "playwright";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../docs/home-visit-qa/AF");
+const acc = JSON.parse(fs.readFileSync("/tmp/af-accounts.json", "utf8"));
+const B = "http://localhost:3023";
+const out = [];
+const log = (k, v) => { out.push({ k, v }); console.log(k, JSON.stringify(v)); };
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+const page = await ctx.newPage();
+await page.goto(`${B}/login`, { waitUntil: "load" });
+await page.getByLabel(/email/i).first().fill(acc.email);
+await page.locator('input[type="password"]').first().fill(acc.password);
+await page.getByRole("button", { name: /^sign in$/i }).click();
+await page.waitForURL(/freelancer/, { timeout: 60000 });
+// ── A: Card payouts (Stripe)
+await page.goto(`${B}/freelancer/finance`, { waitUntil: "load" });
+await page.waitForTimeout(4000);
+await page.getByRole("button", { name: /card payouts/i }).first().click({ timeout: 30000 }).catch(async () => { await page.getByText(/card payouts/i).first().click(); });
+await page.waitForTimeout(2500);
+await page.screenshot({ path: path.join(dir, "01-card-payouts.png"), fullPage: true });
+log("banner", await page.locator('[data-ui="stripe-only-banner"]').innerText().catch(() => null));
+const rows = await page.locator("tr[data-state]").evaluateAll((trs) => trs.map((tr) => ({ state: tr.getAttribute("data-state"), text: tr.innerText.replace(/\s+/g, " ").trim() })));
+log("table rows", rows);
+log("tile labels", await page.locator("text=/Stripe card|Card money kept/i").allInnerTexts());
+// ── B: Debts: Chase / View
+await page.getByRole("button", { name: /^debts$/i }).first().click();
+await page.waitForTimeout(2000);
+await page.screenshot({ path: path.join(dir, "02-debts-before.png"), fullPage: true });
+log("last-reminder before", await page.locator('[data-testid="last-reminder"]').allInnerTexts());
+await page.getByRole("button", { name: /^chase/i }).first().click();
+await page.waitForTimeout(2500);
+await page.screenshot({ path: path.join(dir, "03-debts-after-chase.png"), fullPage: true });
+log("last-reminder after", await page.locator('[data-testid="last-reminder"]').allInnerTexts());
+log("toast", await page.locator('[role="status"]').allInnerTexts());
+log("chase disabled", await page.getByRole("button", { name: /^chase/i }).first().isDisabled());
+log("chase tooltip", await page.getByRole("button", { name: /^chase/i }).first().getAttribute("title"));
+// ── C: booking detail: Resend invoice twice
+// client-side navigation (the dev server's chunk loading times out on a full reload): top bar Bookings, then the AF-1005 row
+await page.getByRole("button", { name: /^bookings/i }).or(page.getByRole("link", { name: /^bookings/i })).first().click({ timeout: 30000 });
+await page.getByText("AF-1005").first().waitFor({ timeout: 90000 });
+await page.getByText("AF-1005").first().click();
+await page.waitForTimeout(2500);
+await page.screenshot({ path: path.join(dir, "04-booking-before-resend.png"), fullPage: false });
+const resend = page.getByRole("button", { name: /resend invoice/i }).first();
+log("resend visible", await resend.isVisible().catch(() => false));
+await resend.click();
+await page.waitForTimeout(2500);
+await page.screenshot({ path: path.join(dir, "05-booking-after-resend.png"), fullPage: false });
+log("badge after resend", await page.locator("text=/Reminder sent/i").allInnerTexts());
+log("toast after resend", await page.locator('[role="status"]').allInnerTexts());
+await resend.click().catch(() => {});
+await page.waitForTimeout(1500);
+log("second click (within 30s)", (await page.locator("text=/wait \\d+ seconds|moment ago/i").allInnerTexts()).slice(0, 2));
+await page.screenshot({ path: path.join(dir, "06-booking-second-resend.png"), fullPage: false });
+fs.writeFileSync(path.join(dir, "results.json"), JSON.stringify(out, null, 2));
+await browser.close();

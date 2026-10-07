@@ -145,7 +145,19 @@ export function waitlistJoinedSpec(b: Booking, providerName: string): CustomerEm
   };
 }
 
-export function paymentLinkSpec(b: Booking, providerName: string, payUrl: string, approved = false): CustomerEmailSpec {
+export function paymentLinkSpec(b: Booking, providerName: string, payUrl: string, approved = false, reminder?: { n: number; firstAt?: string }): CustomerEmailSpec {
+  // A re-send / chase is a REMINDER and must say so (Kaz: the resent email was identical to the first one).
+  if (reminder && !approved) {
+    const first = reminder.firstAt ? ` We first emailed you on ${escapeHtml(reminder.firstAt)}.` : "";
+    return {
+      subject: `Reminder: complete your booking — ${b.listing}`,
+      title: "Reminder: your booking is reserved — payment inside",
+      body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)}, this is a friendly reminder: ${escapeHtml(providerName)} has reserved this booking for you and it still needs paying.</p>
+     <p style="font-size:13px;color:#6a6785"><b>This is reminder ${reminder.n}.</b>${first}</p>
+     <p><a href="${payUrl}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(b.amount)} securely</a></p>
+     <p style="color:#8a86a3;font-size:12px">No account or sign-in needed — the link opens a secure card payment for this booking.</p>`,
+    };
+  }
   // A request the provider has APPROVED but the family still has to pay (its card hold was lost when a sibling on the same card was approved first).
   if (approved) {
     return {
