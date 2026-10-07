@@ -143,9 +143,11 @@ export interface KitBooking extends BookingAddonSource {
   ref: string;
   status: string;
   days?: string[];
+  /** A family's requests to change / cancel an extra (features/bookings/addonRequests.ts): a PENDING one shows a small marker on that child's item. */
+  addonRequests?: { key: string; kind: "change" | "cancel"; status: string }[];
 }
 
-export interface KitChild { key: string; ref: string; child: string; qty: number }
+export interface KitChild { key: string; ref: string; child: string; qty: number; /** A request to change / cancel this item is waiting for the provider. */ pending?: "change" | "cancel" }
 export interface KitGroup { id: string; name: string; choiceValue: string; choice: string; meal: boolean; total: number; children: KitChild[] }
 
 /** Does this extra need preparing on `date`? A per-day extra (a lunch, a daily snack) on each of its days; a one-off extra (a T-shirt) on the FIRST day it is for. */
@@ -167,7 +169,8 @@ export function kitForDay(bookings: KitBooking[], date: string): KitGroup[] {
       // A per-day extra is one item on each of its days (its stored qty is the number of days); a one-off extra is its own quantity.
       const qty = l.perDay || l.meal ? 1 : l.qty;
       g.total += qty;
-      g.children.push({ key: kitKey(b.ref, l.child, l.name, l.choiceValue, date), ref: b.ref, child: l.child, qty });
+      const req = (b.addonRequests ?? []).find((r) => r.status === "pending" && r.key === addonLineKey(l.child, l.label));
+      g.children.push({ key: kitKey(b.ref, l.child, l.name, l.choiceValue, date), ref: b.ref, child: l.child, qty, ...(req ? { pending: req.kind } : {}) });
       groups.set(id, g);
     }
   }
@@ -184,3 +187,7 @@ export function addonSentences(b: BookingAddonSource, withPrice = true): string[
     return `${who}${addonShort(l)}${days}${withPrice ? ` — £${l.price.toFixed(2)}` : ""}`;
   });
 }
+
+/** Stable key for one extra on one booking: the child and the label as stored. A family buys each extra once per child, so it is unique. Used by
+ *  the change / cancel REQUESTS (features/bookings/addonRequests.ts) to point at a line. */
+export const addonLineKey = (child: string, label: string): string => `${(child ?? "").trim().toLowerCase()}|${(label ?? "").trim()}`;

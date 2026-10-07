@@ -212,7 +212,10 @@ export interface Booking {
   discountCode?: string;
   addons: string[];
   /** The same extras, structured: who each is for and on which days. Older bookings only have `addons` strings. */
-  addonLines?: { child: string; label: string; price: number; days: string[]; perDay: boolean; meal?: boolean; name?: string; answers?: { label: string; value: string }[]; qty?: number }[];
+  addonLines?: { child: string; label: string; price: number; days: string[]; perDay: boolean; meal?: boolean; name?: string; answers?: { label: string; value: string }[]; qty?: number; addonId?: string }[];
+  /** A family's REQUESTS to change or cancel one extra. Never automatic: the provider approves or declines each one, and it is separate from
+   *  cancelling the booking itself. See features/bookings/addonRequests.ts. */
+  addonRequests?: AddonRequest[];
   /** ISO dates a meal was bought for at checkout (meals ride the add-on lines;
    *  this is the clean structured signal the meals area reads). */
   mealDates?: string[];
@@ -293,3 +296,29 @@ export type BookingFilter =
   | "cancelled"
   | "requests"
   | "refunds";
+
+export type AddonRequestKind = "change" | "cancel";
+export type AddonRequestStatus = "pending" | "approved" | "declined" | "withdrawn";
+export interface AddonRequest {
+  id: string;
+  /** Which extra line (see addonLineKey): child + label at the time of the request. */
+  key: string;
+  kind: AddonRequestKind;
+  child: string;
+  /** The line's label when asked, e.g. "tshirty (size: m)". */
+  label: string;
+  /** Change only: the answers wanted, by question label ("size" -> "L"), and the readable new label. */
+  to?: Record<string, string>;
+  toLabel?: string;
+  note?: string;
+  /** What the extra costs now, and the price difference a change would make (0 for a plain size/colour change). */
+  price: number;
+  priceDiff?: number;
+  status: AddonRequestStatus;
+  createdAt: string;
+  decidedAt?: string;
+  decidedBy?: string;
+  declineReason?: string;
+  /** What the provider chose for the money when approving. Nothing moves unless they say so. */
+  money?: { resolution: "refund" | "wallet" | "none" | "charge" | "waive"; amount: number };
+}

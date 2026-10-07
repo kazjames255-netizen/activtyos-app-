@@ -2395,6 +2395,9 @@ export function SetupApp() {
             <Row label={t("p8set.amFee")} hint={t("p8set.amFeeHint")}>
               <NumberBox value={settings.amendFee} onChange={(n) => set("amendFee", n)} min={0} max={200} suffix="£" />
             </Row>
+            <Row label={t("p8set.adLabel")} hint={t("p8set.adHint")}>
+              <NumberBox value={settings.addonRequestDays ?? 3} onChange={(n) => set("addonRequestDays", n)} min={0} max={60} suffix={t("p8set.sfxDays")} />
+            </Row>
             <Row label={t("p8set.amCheaper")} hint={t("p8set.amCheaperHint")}>
               <Toggle on={settings.amendAllowCheaper} onChange={(v) => set("amendAllowCheaper", v)} />
             </Row>

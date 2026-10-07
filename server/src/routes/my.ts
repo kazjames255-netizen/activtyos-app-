@@ -24,7 +24,10 @@ import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/mealCutoff";
 import { cancellationRequestNotice, shortWhen, firstWord } from "../lib/emailTemplates";
 import { money, paidSoFar as totalPaid, realPhone, refundableSoFar, sessionIsoDates, visitAddressLabel } from "../../../features/bookings/helpers";
-import type { Booking } from "../../../features/bookings/types";
+import type { Booking, AddonRequest } from "../../../features/bookings/types";
+import { AddonRequestError, addAddonRequest, buildAddonRequest, currentAnswers, defForLine, withdrawAddonRequest } from "../lib/addonRequests";
+import { addonLineKey, parseAddonLabel } from "../../../features/bookings/addons";
+import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, requestDeadline } from "../../../features/bookings/addonRequests";
 import { applyParentCancel, applyPartialCancel, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
 import { applyDiscounts, DISCOUNT_KIND_LABEL, type DiscountRule } from "../../../features/listings/discounts";
@@ -1248,7 +1251,7 @@ my.post("/bookings", async (req, res) => {
         const it = menu?.get(meal.menuItemId);
         if (!it) throw new HttpError(400, "A chosen meal isn't on that day's menu — refresh and try again");
         const price = round2(it.price);
-        addons.push({ name: it.name, price, label: `🍽 ${it.name} · ${prettyDay(meal.date)}`, perDay: true, unit: price, onDays: [meal.date], suffix: "", meal: true });
+        addons.push({ addonId: "", name: it.name, price, label: `🍽 ${it.name} · ${prettyDay(meal.date)}`, perDay: true, unit: price, onDays: [meal.date], suffix: "", meal: true });
       }
       // The days grouped by owning block. One booking doc per block keeps
       // capacity, registers, waitlists and cancellations — all keyed on a
@@ -1820,7 +1823,7 @@ my.post("/bookings", async (req, res) => {
             addons: segAddons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
             // Who each extra is for, and on which days (the strings above say neither). Registers, kitchen and booking views read this so
             // one child's T-shirt size or lunch never shows against a sibling.
-            addonLines: segAddons.map((a) => ({ child: rc.name, label: a.label, price: a.price, days: a.onDays, perDay: a.perDay, ...(a.meal ? { meal: true } : {}), name: a.name, ...((a as { answers?: unknown[] }).answers?.length ? { answers: (a as { answers: { label: string; value: string }[] }).answers } : {}), qty: a.perDay && !a.meal ? a.onDays.length : 1 })),
+            addonLines: segAddons.map((a) => ({ child: rc.name, label: a.label, price: a.price, days: a.onDays, perDay: a.perDay, ...(a.meal ? { meal: true } : {}), name: a.name, ...((a as { addonId?: string }).addonId ? { addonId: (a as { addonId?: string }).addonId } : {}), ...((a as { answers?: unknown[] }).answers?.length ? { answers: (a as { answers: { label: string; value: string }[] }).answers } : {}), qty: a.perDay && !a.meal ? a.onDays.length : 1 })),
             // The ISO dates a meal was bought for on this segment — a clean
             // signal for the customer "what's being served" gate + read-out,
             // separate from the human-readable add-on strings.
@@ -2918,6 +2921,115 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     res.json(updated);
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
+    else throw e;
+  }
+});
+
+// ——— Add-on requests: a family asks to CHANGE (size, colour...) or CANCEL one extra. Never automatic, never the same as cancelling the booking:
+// it waits for the provider to approve or decline (routes/bookings.ts addon-approve / addon-decline).
+const addonReqSchema = z.object({
+  key: z.string().min(1).max(300),
+  kind: z.enum(["change", "cancel"]),
+  answers: z.record(z.string().max(200)).optional(),
+  note: z.string().max(300).optional(),
+});
+
+async function addonCutoffDays(b: Booking): Promise<number> {
+  if (!b.tenantId) return DEFAULT_ADDON_REQUEST_DAYS;
+  const v = Number(((await loadSettings(b.tenantId, b.franchiseId ?? null)) as Record<string, unknown>).addonRequestDays);
+  return Number.isFinite(v) && v >= 0 ? Math.min(60, Math.floor(v)) : DEFAULT_ADDON_REQUEST_DAYS;
+}
+
+// GET /api/my/bookings/:ref/addon-options — each extra on the booking, what the family may ask for, and why not (cut-off / already asked).
+my.get("/bookings/:ref/addon-options", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  const found = await myBookingByRef(req, email, String(req.params.ref));
+  if ("error" in found) { res.status(found.status).json({ error: found.error }); return; }
+  const b = fromDoc(found.snap.data() as BookingDoc);
+  const cutoffDays = await addonCutoffDays(b);
+  const today = ukToday();
+  const lines = [];
+  for (const line of b.addonLines ?? []) {
+    // (an older booking that only has the text lines has no addonLines: the family messages the provider instead)
+    const l = { key: addonLineKey(line.child, line.label), name: line.name ?? parseAddonLabel(line.label).name };
+    const block = addonRequestBlock(b, { key: l.key, days: line.days }, today, cutoffDays);
+    const def = line.meal ? null : await defForLine(b, line);
+    const questions = (def?.questions ?? []).filter((q) => q.type === "choice" && (q.options ?? []).length).map((q) => ({ id: q.id, label: q.label, options: q.options ?? [], required: !!q.required }));
+    const first = firstDayOf({ days: line.days }, b.days);
+    lines.push({
+      key: l.key, child: line.child, label: line.label, name: l.name, meal: !!line.meal, price: line.price, block,
+      canCancel: block === "none", canChange: block === "none" && !line.meal && questions.length > 0,
+      questions, current: currentAnswers(line),
+      pending: (b.addonRequests ?? []).find((r) => r.status === "pending" && r.key === l.key) ?? null,
+      ...(block === "cutoff" && first ? { until: requestDeadline(first, cutoffDays) } : {}),
+    });
+  }
+  res.json({ cutoffDays, today, lines, history: (b.addonRequests ?? []).filter((r) => r.status !== "pending").slice(-10) });
+});
+
+// POST /api/my/bookings/:ref/addon-requests — send a request. Changes nothing on the booking until the provider approves.
+my.post("/bookings/:ref/addon-requests", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  const parsed = addonReqSchema.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: "Please check the request and try again." }); return; }
+  const found = await myBookingByRef(req, email, String(req.params.ref));
+  if ("error" in found) { res.status(found.status).json({ error: found.error }); return; }
+  try {
+    let created: AddonRequest | null = null;
+    let after: Booking | null = null;
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(found.snap.ref);
+      const b = fromDoc(snap.data() as BookingDoc);
+      if (b.email !== email) throw new AddonRequestError(403, "Not your booking");
+      const r = await buildAddonRequest(b, parsed.data, ukToday(), await addonCutoffDays(b));
+      addAddonRequest(b, r);
+      tx.set(found.snap.ref, toDoc(b));
+      created = r; after = b;
+    });
+    const b = after as Booking | null;
+    const r = created as AddonRequest | null;
+    if (b?.tenantId && r) {
+      const what = describeRequest(r);
+      void notify({
+        tenantId: b.tenantId,
+        to: { kind: "tenant" },
+        category: "booking",
+        key: "addon-request",
+        title: `Extra request · ${b.ref} · ${r.child}`,
+        body: `${what} — ${b.listing}. Approve or decline in Bookings → Requests.`,
+        subject: `${what} (${b.ref})`,
+        href: `/company/bookings?ref=${encodeURIComponent(b.ref)}`,
+        ref: b.ref,
+        emailHtml: `<p>${what.replace(/&/g, "&amp;").replace(/</g, "&lt;")}.</p><p>${(b.listing ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")} · booking ${b.ref}${r.note ? ` · note: ${r.note.replace(/&/g, "&amp;").replace(/</g, "&lt;")}` : ""}</p><p>Nothing changes until you approve or decline it. It is separate from cancelling the booking.</p>`,
+      });
+    }
+    res.status(201).json(r);
+  } catch (e) {
+    if (e instanceof AddonRequestError) res.status(e.status).json({ error: e.message });
+    else throw e;
+  }
+});
+
+// POST /api/my/bookings/:ref/addon-requests/:id/withdraw — the family changes their mind before the provider answers.
+my.post("/bookings/:ref/addon-requests/:id/withdraw", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  const found = await myBookingByRef(req, email, String(req.params.ref));
+  if ("error" in found) { res.status(found.status).json({ error: found.error }); return; }
+  try {
+    let out: AddonRequest | null = null;
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(found.snap.ref);
+      const b = fromDoc(snap.data() as BookingDoc);
+      if (b.email !== email) throw new AddonRequestError(403, "Not your booking");
+      out = withdrawAddonRequest(b, String(req.params.id));
+      tx.set(found.snap.ref, toDoc(b));
+    });
+    res.json(out);
+  } catch (e) {
+    if (e instanceof AddonRequestError) res.status(e.status).json({ error: e.message });
     else throw e;
   }
 });

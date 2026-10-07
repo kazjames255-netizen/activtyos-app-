@@ -15,6 +15,7 @@ import { AddonBlock } from "@/features/bookings/AddonBlock";
 import { addonCount } from "@/features/bookings/addons";
 import { isNonCardMethod, visitAddressLabel, bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, refundableSoFar } from "@/features/bookings/helpers";
 import { SessionTiles } from "@/features/bookings/SessionTiles";
+import { AddonRequests } from "./AddonRequests";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
@@ -1206,6 +1207,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           {/* Extras — the true add-ons (meal lines are pulled out into their
               own section below so they don't double up). */}
           {addonCount(b) > 0 && <AddonBlock booking={b} meals={false} />}
+          {addonCount(b) > 0 && <AddonRequests booking={b} onChanged={refresh} />}
           {mealRows.length > 0 && (
             <>
               <SectionHead>{t("parent.mealsSection")}</SectionHead>

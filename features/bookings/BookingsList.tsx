@@ -613,6 +613,15 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 </div>
               </div>
 
+              {/* A family asking to change / cancel one extra: a quiet line, the answer is given in the opened booking (it needs a money choice). */}
+              {(b.addonRequests ?? []).some((r) => r.status === "pending") && (
+                <div onClick={() => open(b.ref)} className="flex cursor-pointer flex-wrap items-center gap-x-3 border-t border-[#e6dbf5] bg-[#faf6ff] px-4 py-1.5 text-[12.5px] hover:opacity-90" data-testid="addon-request-chip">
+                  <span className="font-extrabold text-[#6b3fb3]">🎁 {t("p8lst.arvChip")}</span>
+                  <span className="min-w-0 truncate text-[var(--ink)]">{(b.addonRequests ?? []).filter((r) => r.status === "pending").map((r) => (r.kind === "cancel" ? t("p8lst.arvAsksCancel", { who: r.child.trim().split(/\s+/)[0] || "Child", item: r.label }) : t("p8lst.arvAsksChange", { who: r.child.trim().split(/\s+/)[0] || "Child", from: r.label, to: r.toLabel ?? "" }))).join(" · ")}</span>
+                  <span className="ms-auto font-semibold text-[var(--brand-2)]">{t("p7bkl.openViewAll")}</span>
+                </div>
+              )}
+
               {/* Date-change request on its own full-width line so nothing is
                   cramped — the exact swap, then approve/deny without opening. */}
               {moveReq && (

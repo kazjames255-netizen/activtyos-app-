@@ -36,6 +36,7 @@ import { refundFor, effectiveRefundDate, policyById, adviceReasonT } from "@/lib
 import { post as apiPost, get as apiGet } from "@/lib/api";
 import { ChildCard, type ChildInfo } from "@/features/registers/ChildCard";
 import { MoneyConfirm } from "./MoneyConfirm";
+import { AddonRequestsPanel } from "./AddonRequestsPanel";
 
 interface MsgTemplate { id: string; name: string; subject?: string; body: string }
 
@@ -863,6 +864,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         {tab === "booking" && (<>
         <div className="mt-3" />
         <DateChangePanel booking={b} />
+        <AddonRequestsPanel booking={b} />
 
         {b._cancelling && <CancelPanel booking={b} />}
 

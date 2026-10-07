@@ -16,6 +16,7 @@ import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { creditWallet } from "../lib/wallet";
 import { captureHolds, releaseHolds } from "../lib/cardHold";
 import { RESEND_COOLDOWN_MS, remindersPatch, reminderDateLabel, resendWaitSeconds } from "../lib/invoiceResend";
+import { AddonRequestError, approveAddonRequest, declineAddonRequest } from "../lib/addonRequests";
 import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
@@ -40,6 +41,7 @@ import {
 } from "../lib/blockDomain";
 import {
   emailBookingConfirmed,
+  emailAddonDecision,
   emailBookingDeclined,
   emailDateChangeResolved,
   emailPaymentLink,
@@ -153,6 +155,15 @@ const actionSchema = z.discriminatedUnion("type", [
     newDate: z.string().min(1),
   }),
   z.object({ type: z.literal("note"), text: z.string() }),
+  // A family's request to change / cancel ONE extra (never automatic, separate from cancelling the booking). The provider decides, and decides
+  // the money: "refund" = a pending refund they send, "wallet" = instant credit, "none"/"waive" = nothing, "charge" = the price difference is owed.
+  z.object({
+    type: z.literal("addon-approve"),
+    requestId: z.string().min(1).max(80),
+    resolution: z.enum(["refund", "wallet", "none", "charge", "waive"]).optional(),
+    amount: z.number().nonnegative().max(1_000_000).optional(),
+  }),
+  z.object({ type: z.literal("addon-decline"), requestId: z.string().min(1).max(80), reason: z.string().max(300).optional() }),
 ]);
 
 const createSchema = z.object({
@@ -754,6 +765,20 @@ bookings.post("/:ref/actions", async (req, res) => {
           if (b.status === "Cancelled") throw new Conflict("This booking is already cancelled");
           release = applyCancelDay(b, action.ki, action.date, { resolution: action.resolution, amount: action.amount });
           break;
+        case "addon-approve":
+        case "addon-decline": {
+          if (b.status === "Cancelled" || b.status === "Declined") throw new Conflict("This booking is cancelled, so there is nothing to change.");
+          try {
+            if (action.type === "addon-approve") {
+              const out = approveAddonRequest(b, action.requestId, { resolution: action.resolution, amount: action.amount, by: "Provider" });
+              release = out.release as typeof release;
+            } else declineAddonRequest(b, action.requestId, action.reason, "Provider");
+          } catch (e) {
+            if (e instanceof AddonRequestError) throw e.status === 409 ? new Conflict(e.message) : new BadRequest(e.message);
+            throw e;
+          }
+          break;
+        }
         case "change-day":
           break; // fully handled above, block-aware
         case "note":
@@ -957,6 +982,25 @@ bookings.post("/:ref/actions", async (req, res) => {
             : updated.cancel?.refundVia === "offline"
               ? `£${amt.toFixed(2)} refund approved for ${updated.listing} — ${updated.voucherScheme ? `returned through ${updated.voucherScheme}` : "your provider will return it the way you paid"}.`
               : `£${amt.toFixed(2)} refund approved for ${updated.listing} — on its way back to your card.`,
+          href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
+          ref: updated.ref,
+        });
+      }
+    }
+
+    // The family hears the provider's answer to an extra request (once: a repeated approve is a 409 above and never reaches here).
+    if ((action.type === "addon-approve" || action.type === "addon-decline") && updated.email?.includes("@")) {
+      const r = (updated.addonRequests ?? []).find((x) => x.id === action.requestId);
+      if (r) {
+        const providerName = await tenantName();
+        emailAddonDecision(updated, providerName, r);
+        void notify({
+          tenantId: scope.tenantId!,
+          to: { kind: "parent", email: updated.email },
+          category: "booking",
+          bellOnly: true,
+          title: `${r.status === "approved" ? "Extra request approved" : "Extra request declined"} · ${updated.ref}`,
+          body: `${updated.listing} — ${r.kind === "cancel" ? `cancel ${r.label}` : `change ${r.label} to ${r.toLabel ?? ""}`}.${r.status === "approved" && r.money && r.money.amount > 0 ? ` £${r.money.amount.toFixed(2)} ${r.money.resolution === "charge" ? "to pay" : r.money.resolution === "wallet" ? "added to your wallet" : "to be refunded"}.` : ""}${r.status === "declined" && r.declineReason ? ` ${r.declineReason}` : ""}`,
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });

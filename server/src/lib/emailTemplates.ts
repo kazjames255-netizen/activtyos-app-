@@ -2,7 +2,7 @@
 // Firestore, no sendMail, no network: lib/emails.ts resolves branding, the
 // listing's venue and the pay URL, then hands the results to these functions
 // (which is also what lets tests/emails.test.mts check the content).
-import type { Booking } from "../../../features/bookings/types";
+import type { AddonRequest, Booking } from "../../../features/bookings/types";
 import { BRAND } from "./brand";
 import { addonSentences } from "../../../features/bookings/addons";
 
@@ -186,6 +186,24 @@ export function bookingConfirmedSpec(b: Booking, providerName: string, bank?: Ba
     title: "You're booked in ✓",
     body: `<p style="font-size:14px">${closing}</p>${bank ? bankPayHtml(bank) : ""}`,
     enrich: { whatIncluded: true, map: true }, // hero + location + what's included / to bring + venue map (skipped automatically for home-visit)
+  };
+}
+
+/** The provider's answer to a family's request to change or cancel an extra. Separate from the booking: it stands either way. */
+export function addonDecisionSpec(b: Booking, providerName: string, r: AddonRequest): CustomerEmailSpec {
+  const who = escapeHtml((r.child ?? "").trim().split(/\s+/)[0] || "your child");
+  const approved = r.status === "approved";
+  const what = r.kind === "cancel" ? `cancel ${escapeHtml(r.label)}` : `change ${escapeHtml(r.label)} to ${escapeHtml(r.toLabel ?? "")}`;
+  const money = approved && r.money && r.money.amount > 0
+    ? r.money.resolution === "charge" ? ` The difference of <b>${gbp(r.money.amount)}</b> is to pay.`
+      : r.money.resolution === "wallet" ? ` <b>${gbp(r.money.amount)}</b> has been added to your wallet.`
+      : r.money.resolution === "refund" ? ` <b>${gbp(r.money.amount)}</b> will be refunded.` : ""
+    : approved && r.kind === "cancel" && r.money && r.money.resolution === "none" ? " No refund is due for this extra." : "";
+  const why = !approved && r.declineReason ? `<p style="margin:12px 0;padding:10px 12px;border-left:3px solid #d9736b;background:#fbf1f1;border-radius:6px;font-size:14px">${escapeHtml(r.declineReason)}</p>` : "";
+  return {
+    subject: `${approved ? "Extra request approved" : "Extra request declined"} — ${b.listing}`,
+    title: approved ? "Your request was approved" : "Your request was declined",
+    body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} ${approved ? "approved" : "couldn't approve"} your request for ${who} to ${what}.${money}</p>${why}<p style="font-size:13px;color:#6a6785">Your booking itself is unchanged.</p>`,
   };
 }
 

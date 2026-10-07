@@ -159,6 +159,12 @@ function settleRelease(b: Booking, label: string, value: number, opts?: ReleaseO
   return { resolution, amount: amt };
 }
 
+/** An approved request to cancel ONE extra: the money for it, by the same rules as releasing a child's day (a pending refund the provider sends,
+ *  instant wallet credit, or nothing). The booking itself stands. */
+export function applyAddonRelease(b: Booking, label: string, amount: number, resolution: ReleaseResolution): ReleaseResult {
+  return settleRelease(b, `${label} (extra)`, amount, { resolution, amount });
+}
+
 export function applyCancelChild(b: Booking, ki: number, opts?: ReleaseOpts): ReleaseResult | null {
   const kids = bookingKids(b);
   const k = kids[ki];

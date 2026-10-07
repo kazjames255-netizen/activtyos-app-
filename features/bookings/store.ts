@@ -69,6 +69,8 @@ interface BookingsState {
   clearSel: () => void;
   selectMany: (refs: string[]) => void;
   resolveMove: (ref: string, approve: boolean, reason?: string, approveIndexes?: number[]) => void;
+  /** Answer a family's request to change / cancel one extra: approve (with what to do about the money) or decline. */
+  resolveAddon: (ref: string, requestId: string, decision: { approve: true; resolution?: string; amount?: number } | { approve: false; reason?: string }) => void;
   bulk: (action: UiBulkAction) => void;
   emailClose: () => void;
   sendBulkEmail: (subject: string, body: string) => Promise<boolean>;
@@ -304,6 +306,14 @@ export const useBookingsStore = create<BookingsState>()(
           applyServer(await apiPost<Booking>(actionsUrl(ref), approve
             ? { type: "move-approve", ...(approveIndexes ? { approveIndexes } : {}), reason: reason?.trim() || undefined }
             : { type: "move-deny", reason: reason?.trim() || undefined }));
+        });
+      },
+
+      resolveAddon: (ref, requestId, decision) => {
+        void run(async () => {
+          applyServer(await apiPost<Booking>(actionsUrl(ref), decision.approve
+            ? { type: "addon-approve", requestId, ...(decision.resolution ? { resolution: decision.resolution } : {}), ...(decision.amount != null ? { amount: decision.amount } : {}) }
+            : { type: "addon-decline", requestId, reason: decision.reason?.trim() || undefined }));
         });
       },
 

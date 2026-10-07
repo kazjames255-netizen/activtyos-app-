@@ -1227,6 +1227,8 @@ export interface TenantSettings {
   amendLimit: number;
   /** Admin fee charged per amend, in whole pounds (0 = free). */
   amendFee: number;
+  /** A family may ASK to change or cancel an extra (add-on) up to this many days before the session (0 = until the day of it). Always a request the provider approves. */
+  addonRequestDays: number;
   /** Whether a parent may move to a CHEAPER pass/date at all. */
   amendAllowCheaper: boolean;
 
@@ -1397,6 +1399,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   amendNoticeHours: 48,
   amendLimit: 2,
   amendFee: 0,
+  addonRequestDays: 3,
   amendAllowCheaper: true,
   allowCardRefund: true,
   refundLetCustomerChoose: true,

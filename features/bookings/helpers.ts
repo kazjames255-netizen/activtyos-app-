@@ -25,7 +25,9 @@ export const FILTER_TABS: [BookingFilter, string][] = [
 export function needsDecision(b: Booking): boolean {
   const refundReq = !!(b.cancel && ["full", "partial", "pending"].includes(b.cancel.refund ?? ""));
   const moveReq = b.dateChangeRequest?.status === "pending";
-  return refundReq || moveReq;
+  // A family asking to change / cancel one extra also waits for the provider (features/bookings/addonRequests.ts).
+  const addonReq = (b.addonRequests ?? []).some((r) => r.status === "pending");
+  return refundReq || moveReq || addonReq;
 }
 
 // ── Export ────────────────────────────────────────────────────────────────

@@ -37,6 +37,7 @@ export function priceAddon(
   }
   const suffix = answers.length ? ` (${answers.map((x) => `${x.label}: ${x.value}`).join(", ")})` : "";
   return {
+    addonId: def.id,
     name: def.name,
     price,
     label: (def.type === "perday" ? `${def.name} × ${onDays.length}` : def.name) + suffix,

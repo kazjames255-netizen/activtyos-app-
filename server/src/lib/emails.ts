@@ -12,7 +12,7 @@ import { AOS_MARK_PNG_B64 } from "./brandLogo";
 import { geocodeAddress } from "../routes/geo";
 import {
   gbp, escapeHtml, layout, bankPayHtml, type BankPayDetails,
-  requestReceivedSpec, waitlistJoinedSpec, paymentLinkSpec, bookingConfirmedSpec, bookingDeclinedSpec,
+  requestReceivedSpec, waitlistJoinedSpec, paymentLinkSpec, bookingConfirmedSpec, bookingDeclinedSpec, addonDecisionSpec,
   refundApprovedSpec,
   refundDeclinedSpec, placeOfferedSpec, offerExpiredSpec, paymentReceivedSpec, familyBookingCreatedEmail,
 } from "./emailTemplates";
@@ -381,6 +381,11 @@ const refsNote = (refs?: string[]) =>
 export function emailBookingConfirmed(b: Booking, providerName: string, bank?: BankPayDetails | null, refs?: string[]): void {
   const m = bookingConfirmedSpec(b, providerName, bank);
   sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body + refsNote(refs), m.enrich);
+}
+
+export function emailAddonDecision(b: Booking, providerName: string, r: import("../../../features/bookings/types").AddonRequest): void {
+  const m = addonDecisionSpec(b, providerName, r);
+  sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body, m.enrich);
 }
 
 export function emailBookingDeclined(b: Booking, providerName: string, reason?: string): void {

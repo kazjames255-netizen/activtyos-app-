@@ -13,7 +13,7 @@ import { ADDON_ICON } from "@/features/bookings/addons";
 // and records the ticks.
 // ─────────────────────────────────────────────────────────────────────────
 
-interface KitChild { key: string; ref: string; child: string; qty: number; done: boolean; by?: string }
+interface KitChild { key: string; ref: string; child: string; qty: number; done: boolean; by?: string; pending?: "change" | "cancel" }
 interface KitGroup { id: string; name: string; choiceValue: string; choice: string; meal: boolean; total: number; children: KitChild[] }
 interface KitDay { date: string; canTick: boolean; groups: KitGroup[]; ticked: number; total: number }
 
@@ -78,6 +78,7 @@ export function KitApp() {
                     <label className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-[14px]">
                       <input type="checkbox" checked={c.done} disabled={!data?.canTick} onChange={() => void tick(g, c)} className="h-5 w-5 flex-none accent-[#15b364]" data-testid="kit-tick" />
                       <span className="font-bold" style={c.done ? { textDecoration: "line-through", opacity: 0.6 } : undefined}>{c.child}</span>
+                      {c.pending && <span className="rounded-full bg-[#faf6ff] px-2 py-[1px] text-[11px] font-extrabold text-[#6b3fb3] ring-1 ring-[#d9c7f2]" data-testid="kit-pending">{c.pending === "cancel" ? t("p8lst.kitPendingCancel") : t("p8lst.kitPendingChange")}</span>}
                       <span className="ms-auto text-[12px] text-[var(--ink-3)]">{c.ref}</span>
                     </label>
                   </li>
