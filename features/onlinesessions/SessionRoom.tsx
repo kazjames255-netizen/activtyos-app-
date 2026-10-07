@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { ApiError, post as apiPost } from "@/lib/api";
 import { useT } from "@/lib/i18n/provider";
 import { Button, Card } from "@/components/ui";
+import { getDefaultView, type PortalKey } from "@/lib/nav/config";
 import { DailyFrame, type FrameFail } from "@/features/learninghub/live/LessonStage";
 import { useCallObject } from "@/features/learninghub/live/board/callObject";
 import type { JoinInfo } from "@/features/learninghub/live/lessonTypes";
@@ -30,7 +31,10 @@ export function SessionRoom() {
   const [expires, setExpires] = useState<string | null>(null);
   const [stayBusy, setStayBusy] = useState(false);
   const [stayErr, setStayErr] = useState<string | null>(null);
-  const back = portal === "custdash" ? "/custdash/bookings" : `/${portal}/bookings`;
+  // A family goes back to My bookings; a provider/host to their own home (where "Today's online sessions" lives), never to a parent label.
+  const isHost = portal !== "custdash";
+  const back = isHost ? `/${portal}/${getDefaultView(portal as PortalKey)}` : "/custdash/bookings";
+  const backLabel = isHost ? t("p9tx.osBackHost") : t("p9tx.osBack");
 
   // Join (retry while the host hasn't started: parents are held at the door, never in an empty room).
   useEffect(() => {
@@ -73,7 +77,7 @@ export function SessionRoom() {
   if (left) return (
     <Card className="mx-auto max-w-[520px] p-6 text-center" data-testid="os-left">
       <div className="text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("p9tx.osLeftTitle")}</div>
-      <div className="mt-4 flex justify-center gap-2.5"><Button onClick={() => { setJoin(null); setErr(null); setLeft(false); }}>{t("p9tx.osRejoin")}</Button><Link href={back}><Button variant="primary">{t("p9tx.osBack")}</Button></Link></div>
+      <div className="mt-4 flex justify-center gap-2.5"><Button onClick={() => { setJoin(null); setErr(null); setLeft(false); }}>{t("p9tx.osRejoin")}</Button><Link href={back}><Button variant="primary">{backLabel}</Button></Link></div>
     </Card>
   );
   // The platform's video service isn't switched on (no key on the server). A host is told what to do instead; a family is never left at a dead end.
@@ -85,7 +89,7 @@ export function SessionRoom() {
         <p className="mt-2 text-[14px] text-[var(--ink-2)]">{host ? t("p9tx.osVideoOffHostBody") : t("p9tx.osVideoOffFamilyBody")}</p>
         <div className="mt-4 flex flex-wrap justify-center gap-2.5">
           {host && <Link href={`/${portal}/listings?edit=${encodeURIComponent(listingId)}`}><Button variant="primary">{t("p9tx.osVideoOffEdit")}</Button></Link>}
-          <Link href={back}><Button>{t("p9tx.osBack")}</Button></Link>
+          <Link href={back}><Button>{backLabel}</Button></Link>
         </div>
       </Card>
     );
@@ -94,7 +98,7 @@ export function SessionRoom() {
     <Card className="mx-auto max-w-[520px] p-6 text-center" data-testid={err.code === "waiting_for_host" ? "os-room-waiting" : "os-room-error"}>
       <div className="text-[18px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{err.code === "waiting_for_host" ? t("p9tx.osWaiting") : t("p9tx.osCantJoin")}</div>
       <p className="mt-2 text-[14px] text-[var(--ink-2)]">{err.message}</p>
-      <div className="mt-4"><Link href={back}><Button>{t("p9tx.osBack")}</Button></Link></div>
+      <div className="mt-4"><Link href={back}><Button>{backLabel}</Button></Link></div>
     </Card>
   );
   if (!join) return <div className="py-16 text-center text-[14px] text-[var(--ink-3)]">{t("p9tx.osOpening")}</div>;

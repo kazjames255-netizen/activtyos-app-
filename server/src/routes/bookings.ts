@@ -180,6 +180,15 @@ export const bookingDocId = (tenantId: string, ref: string) => `${tenantId}_${re
  *  landed — a rich branded email (dates, venue, who's on it, amount) AND the
  *  in-app bell. Called wherever a booking is settled: the reconcile action and
  *  the bookings-area "Mark received". Fire-and-forget. */
+/** Is this listing an ONLINE one (its venue is the account's online place)? Best-effort: any failure reads as not online. */
+async function isOnlineListing(listingId: string | undefined): Promise<boolean> {
+  if (!listingId) return false;
+  try {
+    const { onlineListing } = await import("../lib/onlineSessions");
+    return !!(await onlineListing(listingId));
+  } catch { return false; }
+}
+
 /** The family's "payment received" email + bell. Exported because a CARD
  *  payment settles in lib/settlePayment.ts (shared with the Stripe webhook),
  *  which sent nothing at all — a family paying by card heard from Stripe, if
@@ -195,6 +204,8 @@ export async function notifyPaymentReceived(tenantId: string, b: Booking, label:
   const { merged, refs } = mergeBookings(all);
   const kidsLabel = merged.kids?.length ? merged.kids.map((k) => k.name).join(", ") : merged.child;
   const dateLabel = (merged.sessions ?? [])[0]?.split(" · ")[0];
+  // "See you there!" reads wrong for a video session: the bell says "See you online!" for an online listing (same rule as the email).
+  const seeYou = (await isOnlineListing(b.listingId)) ? "See you online!" : "See you there!";
   emailPaymentReceived(merged, provider, { label, amount: merged.amount ?? 0, refs, fullyPaid: all.every((x) => x.pay === "Paid"), approved, confirmedNow });
   void notify({
     tenantId,
@@ -202,9 +213,9 @@ export async function notifyPaymentReceived(tenantId: string, b: Booking, label:
     category: "billing",
     title: approved ? `Booking approved and payment received · ${refs.join(", ")}` : confirmedNow ? `You're booked in and paid · ${refs.join(", ")}` : `Payment received · ${refs.join(", ")}`,
     body: confirmedNow
-      ? `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — your booking is confirmed and £${(merged.amount ?? 0).toFixed(2)} has been received${dateLabel ? ` · ${dateLabel}` : ""}. See you there!`
+      ? `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — your booking is confirmed and £${(merged.amount ?? 0).toFixed(2)} has been received${dateLabel ? ` · ${dateLabel}` : ""}. ${seeYou}`
       : approved
-      ? `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — your booking is approved and £${(merged.amount ?? 0).toFixed(2)} has been taken from your card${dateLabel ? ` · ${dateLabel}` : ""}. See you there!`
+      ? `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — your booking is approved and £${(merged.amount ?? 0).toFixed(2)} has been taken from your card${dateLabel ? ` · ${dateLabel}` : ""}. ${seeYou}`
       : `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — £${(merged.amount ?? 0).toFixed(2)} received via ${label}${dateLabel ? ` · ${dateLabel}` : ""}. Fully paid — thank you!`,
     href: `/custdash/bookings?open=${encodeURIComponent(b.ref)}`,
     ref: b.ref,

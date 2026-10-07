@@ -6,7 +6,7 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useT, useWord, tNow } from "@/lib/i18n/provider";
 import { useSettings } from "@/lib/settings";
-import { bookingDateSummary, money, owedOf, payLabelFor, payTone, refundedTotal } from "@/features/bookings/helpers";
+import { bookingDateSummary, isNonCardMethod, money, owedOf, payLabelFor, payTone, refundedTotal } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { PayModal } from "@/features/payments/PayModal";
 import { downloadReceipts, type ReceiptCtx } from "./paymentReceipt";
@@ -64,7 +64,7 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
       )}
       {action && (
         <Button sm variant="primary" className="max-sm:min-h-[44px] max-sm:w-full" onClick={onPay}>
-          {t("parent.payNow")}
+          {isNonCardMethod(b.method) ? t("p8lst.payByCardInstead") : t("parent.payNow")}
         </Button>
       )}
     </div>

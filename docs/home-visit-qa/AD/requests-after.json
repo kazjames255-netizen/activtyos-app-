@@ -1,0 +1,32 @@
+{
+  "label": "after",
+  "count": 1,
+  "hits": [
+    {
+      "t": 2928,
+      "url": "/api/listings"
+    }
+  ],
+  "allApi": {
+    "GET /api/me": 1,
+    "GET /api/messages/threads": 1,
+    "POST /api/events/ticket": 1,
+    "GET /api/my/coupons": 1,
+    "GET /api/learning-hub/providers": 1,
+    "GET /api/my/providers": 1,
+    "GET /api/my/children": 1,
+    "GET /api/notifications": 1,
+    "GET /api/my/bookings": 1,
+    "GET /api/account": 1,
+    "GET /api/posts": 2,
+    "GET /api/listings": 1,
+    "GET /api/events": 1,
+    "GET /api/geo/search": 1,
+    "GET /api/timetables/published": 1,
+    "GET /api/moments": 1,
+    "GET /api/my/meal-days": 1,
+    "GET /api/my/trips": 1,
+    "GET /api/incidents": 1,
+    "GET /api/medications": 1
+  }
+}

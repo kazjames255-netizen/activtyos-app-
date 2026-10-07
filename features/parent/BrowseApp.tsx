@@ -196,11 +196,20 @@ export function BrowseApp() {
   const [venueGeo, setVenueGeo] = useState<Record<string, LatLng | null>>({});
   const geoReqRef = useRef<Set<string>>(new Set());
 
+  // The feed is fetched ONCE on mount. Live "listings/blocks changed" pings (every provider's edit reaches every open Browse) are coalesced:
+  // a burst of them makes ONE refetch (trailing, 1.5 s), never one request per ping, and nothing is set after the page is gone.
+  const alive = useRef(true);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; if (refreshTimer.current) clearTimeout(refreshTimer.current); }; }, []);
   const loadListings = useCallback(() => {
     apiGet<ListingSummary[]>("/api/listings")
-      .then(setListings)
-      .catch((e) => setError(e instanceof Error ? e.message : tNow("p8par.brFailed")));
+      .then((l) => { if (alive.current) setListings(l); })
+      .catch((e) => { if (alive.current) setError(e instanceof Error ? e.message : tNow("p8par.brFailed")); });
   }, []);
+  const refreshSoon = useCallback(() => {
+    if (refreshTimer.current) return; // a refetch is already queued: this ping is covered by it
+    refreshTimer.current = setTimeout(() => { refreshTimer.current = null; loadListings(); }, 1500);
+  }, [loadListings]);
 
   useEffect(() => {
     loadListings();
@@ -220,7 +229,7 @@ export function BrowseApp() {
       })
       .catch(() => {});
   }, [loadListings]);
-  useRealtime(["listings", "blocks"], loadListings);
+  useRealtime(["listings", "blocks"], refreshSoon);
 
   // The family's children, so parents can filter to activities that accept their
   // own kids' ages. Age comes straight off the record, or is worked out from DOB.

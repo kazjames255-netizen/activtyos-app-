@@ -1,0 +1,10 @@
+{
+  "label": "before-churn",
+  "count": 1,
+  "hits": [
+    {
+      "t": 3296,
+      "url": "/api/listings"
+    }
+  ]
+}

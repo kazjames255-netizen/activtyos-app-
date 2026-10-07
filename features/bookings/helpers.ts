@@ -742,3 +742,7 @@ export function visitAddressLabel(sa?: { address?: string; postcode?: string; ar
   const area = (sa.area ?? "").split(",").map((x) => x.trim()).filter((part) => part && !have.includes(norm(part))).join(", ");
   return area ? `${line} · ${area}` : line;
 }
+
+/** A booking whose chosen way to pay is NOT the card (bank transfer, cash, voucher, Tax-Free Childcare): its pay button opens a CARD form, so it is
+ *  labelled "Pay by card instead" and not a plain "Pay". One rule for My bookings and the Payments page. */
+export const isNonCardMethod = (method: string | undefined | null): boolean => /bank|transfer|cash|voucher|tfc|tax[- ]?free/i.test(method ?? "");

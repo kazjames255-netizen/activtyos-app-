@@ -11,7 +11,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useI18n, useT, useWord, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
-import { visitAddressLabel, addonLinesFor, bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, refundableSoFar } from "@/features/bookings/helpers";
+import { isNonCardMethod, visitAddressLabel, addonLinesFor, bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, refundableSoFar } from "@/features/bookings/helpers";
 import { SessionTiles } from "@/features/bookings/SessionTiles";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
@@ -1120,7 +1120,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
       <div className="mt-2 flex flex-wrap gap-2 max-sm:[&_button]:min-h-[44px] max-sm:[&_button]:text-[14px]">
         {payable && (<>
           <Button sm variant="primary" className="max-sm:w-full" onClick={() => setPaying(true)}>
-            {/bank|transfer|cash|voucher|tfc|tax-?free/i.test(b.method ?? "") ? t("p8lst.payByCardInstead") + " · " + money(owedOf(b)) : t("parent.payAmount", { amount: money(owedOf(b)) })}
+            {isNonCardMethod(b.method) ? t("p8lst.payByCardInstead") + " · " + money(owedOf(b)) : t("parent.payAmount", { amount: money(owedOf(b)) })}
           </Button>
           {/bank|transfer/i.test(b.method ?? "") && <span className="self-center text-[11.5px] text-[var(--ink-3)]">{t("p8lst.payByCardAlt")}</span>}
         </>)}
