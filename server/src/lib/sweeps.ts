@@ -10,6 +10,7 @@ import { syncFromStripe, updateMeteredQuantities } from "./billing";
 import { clearSubscriptionCache } from "../middleware/subscription";
 import { AUTO_EMAIL_DEFAULTS, type AutoEmailPrefs } from "./autoEmails";
 import { performEmailSend } from "./emailSend";
+import { notifyPostPublished } from "./postNotify";
 import { isFirstBookedSession } from "./bookingRules";
 import { refundReminderPeriod, REFUND_REMIND_MAX_PER_RUN } from "./refundReminder";
 import { bellBody, bellMoney, bellTitle, paymentType } from "./bellText";
@@ -713,6 +714,7 @@ export async function scheduledPostPublishes(): Promise<void> {
     if (!at || at > now) continue;
     const stamp = new Date().toISOString();
     await d.ref.set({ status: "published", publishedAt: stamp, createdAt: stamp }, { merge: true })
+      .then(() => notifyPostPublished(d.id))
       .catch((err) => console.error(`[sweeps] scheduled post ${d.id}:`, (err as Error).message));
   }
 }

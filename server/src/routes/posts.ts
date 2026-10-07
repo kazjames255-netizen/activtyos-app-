@@ -5,6 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { customerAreaOn } from "../lib/customerArea";
+import { notifyPostPublished } from "../lib/postNotify";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Newsfeed (Communication) — a provider's announcements to their families.
@@ -217,6 +218,7 @@ posts.post("/", async (req, res) => {
   };
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
+  if (doc.status === "published") void notifyPostPublished(ref.id).catch((e) => console.error("[posts] notify:", (e as Error).message));
 });
 
 async function own(req: Request, id: string) {
@@ -242,6 +244,8 @@ posts.put("/:id", async (req, res) => {
   await o.snap.ref.set(patch, { merge: true });
   const after = await o.snap.ref.get();
   res.json({ id: after.id, ...after.data() });
+  // A draft being published now tells the families (once: notifiedAt guards re-publishing / editing a live post).
+  if (patch.status === "published") void notifyPostPublished(after.id).catch((e) => console.error("[posts] notify:", (e as Error).message));
 });
 
 posts.delete("/:id", async (req, res) => {

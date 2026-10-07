@@ -19,14 +19,16 @@ Tested on a private test stack (web 3012 / API 4012) with throwaway @activityos-
 - MEDIUM: Parent API responses leaked the staff member's sign-in email and other families' internal ids (comment reply, newsfeed like/RSVP maps). Fixed.
 - LOW: Likes / "Got it" / RSVP were remembered only on one device. Fixed: the server now returns each parent's own choices.
 - LOW: Parent Moments now shows the child's name on each card, lazy-loads photos, has a close button and Esc for the full-size photo, and the reply box follows the theme.
-(Commit hashes are in the git log of branch worktree-agent-ab60bb7e7fa181265.)
+- FOLLOW-UP (Kaz approved): families now get a bell + email when a provider publishes a Newsfeed post. Only families who can see the post are told (audience rules above); scheduled posts notify when they go live; each post notifies once (editing does not re-send). Families the provider has unsubscribed get the bell only; a family can mute the new "newsfeed" category. Tested with MAIL_LIVE=0 (e2e/review/mn-notify.mts, all pass). Bell/email text is English, same as the existing Moments notification.
+(Commit hashes are in the version history of branch worktree-agent-ab60bb7e7fa181265.)
 
 ## Needs Kaz's decision
-- Parents get no bell/email when a provider posts to the Newsfeed (Moments do notify). Add one?
-- Group photos: should parents see them at all if another family's child is in the shot? (Names and replies are now private per family; the photo itself is still shared.)
+- Group photos: still open (who sees a photo with several families' children in it). Unchanged.
+- Newsfeed bell/email wording is English only (same as Moments). Translate server notification text into all 11 languages?
 - There is no true dark theme in the parent area or provider content, so dark-mode checks were not applicable.
 
 ## Manual/assistant update needed
 - Newsfeed "Schedule for later": it now actually publishes at the time chosen (UK time).
 - "Chosen families" posts reach only families booked on the chosen listings.
 - Parents' Moments: other families' replies and children's names are no longer shown.
+- Families now receive a bell and email for new Newsfeed posts (can be muted; unsubscribed families get the bell only).
