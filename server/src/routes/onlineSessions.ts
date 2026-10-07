@@ -118,6 +118,9 @@ const bodySchema = z.object({ listingId: z.string().min(1).max(200), date: z.str
 
 function windowOf(s: SessionDoc) { return joinWindow(s.startsAt, s.durationMins, s.roomUntil); }
 
+// GET /api/online-sessions/status — is the platform video-room service switched on? (public-safe: a yes/no, never the key.)
+onlineSessions.get("/status", (_req, res) => { res.json({ videoReady: videoConfigured() }); });
+
 // GET /api/online-sessions/mine — the signed-in family's upcoming online sessions (today and the next 60 days, plus yesterday's still-open ones).
 onlineSessions.get("/mine", async (req, res) => {
   const email = lc(req.user?.email);

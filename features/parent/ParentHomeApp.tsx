@@ -10,6 +10,9 @@ import { dateLocale } from "@/lib/i18n/format";
 import { useCustomerArea } from "@/lib/use-customer-area";
 import { useCouponCount, useUnreadMessages } from "@/lib/use-unread";
 import { money } from "@/features/bookings/helpers";
+import { deliveryLabel } from "@/features/listings/delivery";
+import { createPortal } from "react-dom";
+import { sortByStart, popoverPlacement, type PopPos } from "@/features/parent/weekPopover";
 import { OnlineSessionsPanel } from "@/features/onlinesessions/OnlineSessionsPanel";
 import type { Booking } from "@/features/bookings/types";
 
@@ -29,7 +32,8 @@ type TripRow = { id: string; date: string; status: string; askConsent: boolean; 
 type PostRow = { id: string; title?: string; body: string; tenantName?: string; createdAt?: string; pinned?: boolean };
 type ListingBrief = {
   location?: string | null;
-  library?: { venue?: { name?: string } | null } | null;
+  library?: { venue?: { name?: string; kind?: string } | null } | null;
+  deliveryMode?: string | null;
   bundle?: { periods?: { title: string; start?: string; finish?: string }[] } | null;
 };
 
@@ -82,8 +86,92 @@ function OfferCard({ b, time, onAccepted }: { b: Booking; time: string | null; o
   );
 }
 
+/** One day of the family week. The popover listing that day's bookings opens on hover, keyboard focus and tap (a first tap on a touch screen opens it,
+ *  a second tap opens the booking), closes on Escape / outside tap, and is drawn in a portal at a fixed position so nothing around the tile can clip or cover it. */
+function WeekDayTile({ d, k, here, isToday, loc, tone, detail }: {
+  d: Date; k: string; here: { b: Booking; d: string }[]; isToday: boolean; loc: string; tone: Record<string, string>;
+  detail: (b: Booking) => { time: string | null; place: string | null; delivery?: string | null };
+}) {
+  const t = useT();
+  const wrap = useRef<HTMLDivElement>(null);
+  const pop = useRef<HTMLDivElement>(null);
+  const pointer = useRef<string>("mouse");
+  const timer = useRef<number | undefined>(undefined);
+  const [pos, setPos] = useState<PopPos | null>(null);
+  const first = here[0];
+  const rows = useMemo(() => sortByStart(here, (x) => detail(x.b).time), [here, detail]);
+  const open = pos !== null;
+  const show = () => {
+    window.clearTimeout(timer.current);
+    if (!here.length || !wrap.current) return;
+    setPos(popoverPlacement(wrap.current.getBoundingClientRect(), window.innerWidth, window.innerHeight, here.length));
+  };
+  const hideSoon = () => { window.clearTimeout(timer.current); timer.current = window.setTimeout(() => setPos(null), 140); };
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => { const n = e.target as Node; if (!wrap.current?.contains(n) && !pop.current?.contains(n)) setPos(null); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPos(null); };
+    const onMove = () => setPos(null); // scrolling / resizing moves the tile: just close
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onMove, true);
+    window.addEventListener("resize", onMove);
+    return () => { document.removeEventListener("pointerdown", onDown); document.removeEventListener("keydown", onKey); window.removeEventListener("scroll", onMove, true); window.removeEventListener("resize", onMove); };
+  }, [open]);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  const tileStyle = { background: isToday ? "var(--duo-camp, linear-gradient(135deg,#1d3a8f,#2f6bd8 70%,#5b8af0))" : "var(--brand-soft, #eaf0fc)", color: isToday ? "#fff" : "var(--brand, #1d3a8f)", border: isToday ? "none" : "1px solid var(--brand-line, #cdddf7)" };
+  const tileCls = "relative flex min-h-[92px] flex-col justify-between rounded-2xl p-2 no-underline sm:min-h-[120px] sm:p-3";
+  const inner = (
+    <>
+      <span>
+        <span className="block text-[11px] font-bold uppercase opacity-70 sm:text-[12.5px]">{d.toLocaleDateString(loc, { weekday: "short", timeZone: "UTC" })}</span>
+        <span className="block text-[22px] font-extrabold leading-none sm:text-[30px]">{d.getUTCDate()}</span>
+      </span>
+      <span className="flex flex-col gap-0.5">
+        {here.slice(0, 3).map(({ b }) => (
+          <span key={b.ref} className="flex items-center gap-1 truncate text-[11px] font-semibold sm:text-[13px]">
+            <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: tone[b.status] }} aria-hidden />
+            <span className="truncate">{firstName(b.child || "")}</span>
+          </span>
+        ))}
+      </span>
+    </>
+  );
+  const dayName = d.toLocaleDateString(loc, { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  return (
+    <div ref={wrap} onMouseEnter={() => { if (pointer.current !== "touch") show(); }} onMouseLeave={hideSoon} onFocus={show} onBlur={(e) => { if (!pop.current?.contains(e.relatedTarget as Node)) hideSoon(); }}>
+      {first ? (
+        <Link href={`/custdash/bookings?open=${encodeURIComponent(first.b.ref)}`} className={tileCls} style={tileStyle} aria-haspopup="true" aria-expanded={open}
+          onPointerDown={(e) => { pointer.current = e.pointerType || "mouse"; }}
+          onClick={(e) => { if (pointer.current === "touch" && !open) { e.preventDefault(); show(); } }}>
+          {inner}
+        </Link>
+      ) : (
+        <div className={tileCls} style={tileStyle}>{inner}</div>
+      )}
+      {open && pos && typeof document !== "undefined" && createPortal(
+        <div ref={pop} role="group" aria-label={t("p7shell.weekPopLabel", { day: dayName })} onMouseEnter={() => window.clearTimeout(timer.current)} onMouseLeave={hideSoon}
+          className="fixed z-[200] w-[264px] max-w-[calc(100vw-16px)] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-start text-[12.5px] font-semibold leading-[1.45] text-[var(--ink)] shadow-xl"
+          style={{ left: pos.left, top: pos.top, bottom: pos.bottom }}>
+          {rows.map(({ b }) => { const dd = detail(b); return (
+            <Link key={b.ref} href={`/custdash/bookings?open=${encodeURIComponent(b.ref)}`} className="mb-2 block rounded-lg px-1 py-0.5 text-[var(--ink)] no-underline last:mb-0 hover:bg-[var(--brand-soft,#eaf0fc)]" title={t("p7shell.weekPopOpen")}>
+              <span className="block text-[13px] font-extrabold">{b.child} <span className="font-semibold" style={{ color: tone[b.status] }}>· {t("p7shell.week_" + b.status)}</span></span>
+              <span className="block">{b.listing}</span>
+              {dd.time && <span className="block opacity-80">🕒 {dd.time}</span>}
+              {(dd.delivery || dd.place) && <span className="block opacity-80">{dd.delivery ? dd.delivery : `📍 ${dd.place}`}</span>}
+              <span className="block opacity-80">{money(b.amount ?? 0)}</span>
+            </Link>
+          ); })}
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
+
 /** "Your family week": Monday to Sunday of the next week with anything on it, one tile a day, a dot per child (green booked, amber waiting list, blue place offered). */
-function WeekStrip({ live, today, detail }: { live: Booking[]; today: string; detail: (b: Booking) => { time: string | null; place: string | null } }) {
+function WeekStrip({ live, today, detail }: { live: Booking[]; today: string; detail: (b: Booking) => { time: string | null; place: string | null; delivery?: string | null } }) {
   const t = useT();
   const [offset, setOffset] = useState(0); // weeks away from the first week that has something on
   const items = live.filter((b) => ["Confirmed", "Waitlisted", "Offered"].includes(b.status)).flatMap((b) => bookingDays(b).map((d) => ({ b, d })));
@@ -112,67 +200,7 @@ function WeekStrip({ live, today, detail }: { live: Booking[]; today: string; de
         {days.map((d) => {
           const k = iso(d);
           const here = items.filter((x) => x.d === k);
-          const isToday = k === today;
-                    const first = here[0];
-          const tileStyle = { background: isToday ? "var(--duo-camp, linear-gradient(135deg,#1d3a8f,#2f6bd8 70%,#5b8af0))" : "var(--brand-soft, #eaf0fc)", color: isToday ? "#fff" : "var(--brand, #1d3a8f)", border: isToday ? "none" : "1px solid var(--brand-line, #cdddf7)" };
-          const tileCls = "group relative flex min-h-[92px] flex-col justify-between rounded-2xl p-2 no-underline sm:min-h-[120px] sm:p-3";
-          return first ? (
-            <Link key={k} href={`/custdash/bookings?open=${encodeURIComponent(first.b.ref)}`} className={tileCls} style={tileStyle}>
-              <span>
-                <span className="block text-[11px] font-bold uppercase opacity-70 sm:text-[12.5px]">{d.toLocaleDateString(loc, { weekday: "short", timeZone: "UTC" })}</span>
-                <span className="block text-[22px] font-extrabold leading-none sm:text-[30px]">{d.getUTCDate()}</span>
-              </span>
-              {here.length > 0 && (
-                <span role="tooltip" className="pointer-events-none absolute start-1/2 top-full z-30 mt-1.5 hidden w-[240px] -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-start text-[12.5px] leading-[1.45] font-semibold text-[var(--ink)] shadow-xl group-hover:block group-focus-visible:block">
-                  {here.map(({ b }) => { const dd = detail(b); return (
-                    <span key={b.ref} className="mb-2 block last:mb-0">
-                      <span className="block text-[13px] font-extrabold">{b.child} <span className="font-semibold" style={{ color: tone[b.status] }}>· {t("p7shell.week_" + b.status)}</span></span>
-                      <span className="block">{b.listing}</span>
-                      {dd.time && <span className="block opacity-80">🕒 {dd.time}</span>}
-                      {dd.place && <span className="block opacity-80">📍 {dd.place}</span>}
-                      <span className="block opacity-80">{money(b.amount ?? 0)}</span>
-                    </span>
-                  ); })}
-                </span>
-              )}
-              <span className="flex flex-col gap-0.5">
-                {here.slice(0, 3).map(({ b }) => (
-                  <span key={b.ref} className="flex items-center gap-1 truncate text-[11px] font-semibold sm:text-[13px]">
-                    <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: tone[b.status] }} aria-hidden />
-                    <span className="truncate">{firstName(b.child || "")}</span>
-                  </span>
-                ))}
-              </span>
-            </Link>
-          ) : (
-            <div key={k} className={tileCls} style={tileStyle}>
-              <span>
-                <span className="block text-[11px] font-bold uppercase opacity-70 sm:text-[12.5px]">{d.toLocaleDateString(loc, { weekday: "short", timeZone: "UTC" })}</span>
-                <span className="block text-[22px] font-extrabold leading-none sm:text-[30px]">{d.getUTCDate()}</span>
-              </span>
-              {here.length > 0 && (
-                <span role="tooltip" className="pointer-events-none absolute start-1/2 top-full z-30 mt-1.5 hidden w-[240px] -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-start text-[12.5px] leading-[1.45] font-semibold text-[var(--ink)] shadow-xl group-hover:block group-focus-visible:block">
-                  {here.map(({ b }) => { const dd = detail(b); return (
-                    <span key={b.ref} className="mb-2 block last:mb-0">
-                      <span className="block text-[13px] font-extrabold">{b.child} <span className="font-semibold" style={{ color: tone[b.status] }}>· {t("p7shell.week_" + b.status)}</span></span>
-                      <span className="block">{b.listing}</span>
-                      {dd.time && <span className="block opacity-80">🕒 {dd.time}</span>}
-                      {dd.place && <span className="block opacity-80">📍 {dd.place}</span>}
-                      <span className="block opacity-80">{money(b.amount ?? 0)}</span>
-                    </span>
-                  ); })}
-                </span>
-              )}
-              <span className="flex flex-col gap-0.5">
-                {here.slice(0, 3).map(({ b }) => (
-                  <span key={b.ref} className="flex items-center gap-1 truncate text-[11px] font-semibold sm:text-[13px]">
-                    <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: tone[b.status] }} aria-hidden />
-                    <span className="truncate">{firstName(b.child || "")}</span>
-                  </span>
-                ))}
-              </span>
-            </div>
-          );
+          return <WeekDayTile key={k} d={d} k={k} here={here} isToday={k === today} loc={loc} tone={tone} detail={detail} />;
         })}
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-[var(--ink-3)]">
@@ -588,7 +616,7 @@ export function ParentHomeApp() {
             </div>
           )}
           {attentionBlock}
-          {!loading && !starter && live.length > 0 && <WeekStrip live={live} today={today} detail={(b) => ({ time: timeFor(b), place: (b.listingId ? briefs[b.listingId]?.library?.venue?.name ?? briefs[b.listingId]?.location : null) ?? null })} />}
+          {!loading && !starter && live.length > 0 && <WeekStrip live={live} today={today} detail={(b) => ({ delivery: (() => { const br = b.listingId ? briefs[b.listingId] : null; return br ? deliveryLabel(t, { deliveryMode: br.deliveryMode, venueKind: br.library?.venue?.kind }, null, "parent") : null; })(), time: timeFor(b), place: (b.listingId ? briefs[b.listingId]?.library?.venue?.name ?? briefs[b.listingId]?.location : null) ?? null })} />}
           {starter ? null : nextBlock}
           <div className="flex flex-col gap-5 lg:hidden">{starter ? null : childrenBlock}{tilesBlock}</div>
         </div>

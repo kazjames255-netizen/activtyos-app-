@@ -1938,6 +1938,9 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
   // Categories are created right here now (no separate Categories tab): type a
   // new one, it's added to the tenant library and selected on this listing.
   const tr = useT();
+  // Is the platform's video-room service switched on? (a yes/no from the server; unknown = say nothing)
+  const [videoReady, setVideoReady] = useState<boolean | null>(null);
+  useEffect(() => { apiGet<{ videoReady: boolean }>("/api/online-sessions/status").then((r) => setVideoReady(r.videoReady)).catch(() => undefined); }, []);
   const w = useWord();
   const { locale } = useI18n();
   const [newCat, setNewCat] = useState("");
@@ -2017,6 +2020,9 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
                   </label>
                 );
               })}
+              {(d.videoMode ?? "platform") === "platform" && videoReady === false && (
+                <div className="mt-2 rounded-lg border border-[#f0c96b] bg-[#fff7e0] px-3 py-2 text-[12px] font-semibold text-[#7a4b00]">{tr("p9tx.vmNotReady")}</div>
+              )}
               {(d.videoMode ?? "platform") === "own" ? (
                 <div className="mt-2.5">
                   <FieldLabel htmlFor="wiz-own-link">{tr("p9tx.ownLinkLbl")}</FieldLabel>

@@ -76,6 +76,20 @@ export function SessionRoom() {
       <div className="mt-4 flex justify-center gap-2.5"><Button onClick={() => { setJoin(null); setErr(null); setLeft(false); }}>{t("p9tx.osRejoin")}</Button><Link href={back}><Button variant="primary">{t("p9tx.osBack")}</Button></Link></div>
     </Card>
   );
+  // The platform's video service isn't switched on (no key on the server). A host is told what to do instead; a family is never left at a dead end.
+  if (err && !join && err.code === "video_unavailable") {
+    const host = portal !== "custdash";
+    return (
+      <Card className="mx-auto max-w-[520px] p-6 text-center" data-testid="os-room-video-off">
+        <div className="text-[18px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{host ? t("p9tx.osVideoOffHostTitle") : t("p9tx.osVideoOffFamilyTitle")}</div>
+        <p className="mt-2 text-[14px] text-[var(--ink-2)]">{host ? t("p9tx.osVideoOffHostBody") : t("p9tx.osVideoOffFamilyBody")}</p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2.5">
+          {host && <Link href={`/${portal}/listings?edit=${encodeURIComponent(listingId)}`}><Button variant="primary">{t("p9tx.osVideoOffEdit")}</Button></Link>}
+          <Link href={back}><Button>{t("p9tx.osBack")}</Button></Link>
+        </div>
+      </Card>
+    );
+  }
   if (err && !join) return (
     <Card className="mx-auto max-w-[520px] p-6 text-center" data-testid={err.code === "waiting_for_host" ? "os-room-waiting" : "os-room-error"}>
       <div className="text-[18px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{err.code === "waiting_for_host" ? t("p9tx.osWaiting") : t("p9tx.osCantJoin")}</div>

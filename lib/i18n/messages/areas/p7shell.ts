@@ -90,6 +90,8 @@ export default fromRows({
   weekThis: ["This week", "Ten tydzień", "Săptămâna aceasta", "یہ ہفتہ", "ਇਹ ਹਫ਼ਤਾ", "এই সপ্তাহ", "هذا الأسبوع", "Esta semana", "Esta semana", "Cette semaine", "Yr wythnos hon"],
   weekNext: ["Next week", "Następny tydzień", "Săptămâna viitoare", "اگلا ہفتہ", "ਅਗਲਾ ਹਫ਼ਤਾ", "পরের সপ্তাহ", "الأسبوع القادم", "Próxima semana", "Próxima semana", "Semaine suivante", "Wythnos nesaf"],
   weekMonth: ["+4 weeks", "+4 tygodnie", "+4 săptămâni", "+4 ہفتے", "+4 ਹਫ਼ਤੇ", "+৪ সপ্তাহ", "+4 أسابيع", "+4 semanas", "+4 semanas", "+4 semaines", "+4 wythnos"],
+  weekPopLabel: ["Bookings on {day}", "Rezerwacje: {day}", "Rezervări pe {day}", "{day} کی بکنگز", "{day} ਦੀਆਂ ਬੁਕਿੰਗਾਂ", "{day}-এর বুকিং", "حجوزات {day}", "Reservas em {day}", "Reservas el {day}", "Réservations le {day}", "Archebion ar {day}"],
+  weekPopOpen: ["Open booking", "Otwórz rezerwację", "Deschide rezervarea", "بکنگ کھولیں", "ਬੁਕਿੰਗ ਖੋਲ੍ਹੋ", "বুকিং খুলুন", "افتح الحجز", "Abrir reserva", "Abrir reserva", "Ouvrir la réservation", "Agor yr archeb"],
   weekTitle: ["Your family week", "Twój rodzinny tydzień", "Săptămâna familiei tale", "آپ کے خاندان کا ہفتہ", "ਤੁਹਾਡੇ ਪਰਿਵਾਰ ਦਾ ਹਫ਼ਤਾ", "আপনার পরিবারের সপ্তাহ", "أسبوع عائلتك", "A semana da sua família", "La semana de tu familia", "La semaine de votre famille", "Wythnos eich teulu"],
   weekBooked: ["Booked", "Zarezerwowane", "Rezervat", "بک", "ਬੁੱਕ", "বুক করা", "محجوز", "Reservado", "Reservado", "Réservé", "Archebwyd"],
   weekWaiting: ["Waiting list", "Lista oczekujących", "Listă de așteptare", "ویٹنگ لسٹ", "ਉਡੀਕ ਸੂਚੀ", "অপেক্ষা তালিকা", "قائمة الانتظار", "Lista de espera", "Lista de espera", "Liste d'attente", "Rhestr aros"],

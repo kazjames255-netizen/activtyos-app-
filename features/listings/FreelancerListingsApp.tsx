@@ -279,6 +279,17 @@ export function FreelancerListingsApp() {
   const [local, setLocal] = useState<LocalState | null>(null);
   const [wizard, setWizard] = useState<{ draft: WizardDraft; key: string } | null>(null);
   const [tick, setTick] = useState(0);
+  // A deep link ?edit=<listing id> (e.g. from the online-session page) opens that listing's wizard once the listings have loaded.
+  const editParam = searchParams?.get("edit") ?? null;
+  const [editDone, setEditDone] = useState<string | null>(null);
+  useEffect(() => {
+    if (!editParam || editDone === editParam || !listings) return;
+    const l = listings.find((x) => x.id === editParam);
+    setEditDone(editParam);
+    if (!l) return;
+    const saved = serverDraft(l) ?? loadDrafts()[l.id];
+    setWizard({ draft: saved ?? { ...emptyDraft(), id: l.id, title: l.name }, key: l.id });
+  }, [editParam, editDone, listings]);
   // The "Add booking to your website" panel (embed codes); focus = a listing to scroll to when opened from its own card.
   const [embedFor, setEmbedFor] = useState<{ focus: string | null } | null>(null);
   // In-progress drafts (never published) — resumable from the Listings tab.

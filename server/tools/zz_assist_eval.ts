@@ -59,6 +59,8 @@ export const QUESTIONS: string[] = [
   "where does a parent pay by card instead if they chose bank transfer for an online session",
   "can parents tell me how to find their house or where to park",
   "i booked several online sessions, how do i find the next one to join",
+  "my online session says video isn't available, what do i do as the provider",
+  "how do i see what my child has on a day in the family week",
   "how long till money arrives in my bank",
   "what do I need to go live",
   "is there a free trial",
