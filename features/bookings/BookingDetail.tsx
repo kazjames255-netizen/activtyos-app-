@@ -1016,6 +1016,15 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         </>)}
 
       </Card>
+      {/* The page is long: the same way back also sits at the bottom. */}
+      <div className="mt-3">
+        <button
+          onClick={close}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 py-2 text-[13px] font-extrabold text-white shadow-sm transition hover:-translate-y-px hover:opacity-95"
+        >
+          <span className="text-[15px] leading-none">‹</span> {t("p7bd.backToBookings")}
+        </button>
+      </div>
     </div>
   );
 }
