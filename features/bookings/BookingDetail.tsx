@@ -29,6 +29,7 @@ import {
   visitAddressLabel,
 } from "./helpers";
 import { Badge, Button, Card, DefRow, Input, SectionHead, Select } from "@/components/ui";
+import { EventDateBanner, FamilyNoteCallout } from "./EventDateBanner";
 import { useTenantSettings, reasonsFor } from "@/lib/settings";
 import { refundFor, effectiveRefundDate, policyById, adviceReasonT } from "@/lib/cancellation";
 import { post as apiPost, get as apiGet } from "@/lib/api";
@@ -777,6 +778,9 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>{t("p7bd.cardFailedBadge")}</Badge>
           )}
         </div>
+
+        <EventDateBanner b={b} />
+        <FamilyNoteCallout b={b} />
 
         {b.status === "Approval needed" && b.cardHold && (b.cardHold.state === "held" || b.cardHold.state === "awaiting") && (
           <div className="mt-3 rounded-xl border-2 px-4 py-3 text-[14px] font-bold leading-[1.45]" style={{ borderColor: "#f0c96b", background: "#fff7e0", color: "#7a4b00" }}>

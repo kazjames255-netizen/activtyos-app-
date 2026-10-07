@@ -502,7 +502,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>{seasonNameOf(b.listingId)}</span>
                   )}
                   <span className="text-[var(--ink-3)]">·</span>
-                  <span className="text-[12.5px] font-semibold text-[var(--ink-2)]"><span className="num font-extrabold text-[var(--ink)]">{bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))}</span> <span className="text-[var(--ink-3)]">· {pickPlural(t, locale, "p7bk.sessN", sessionCount(b))} · {pickPlural(t, locale, "p7bk.kidN", att)}</span></span>
+                  <span className="text-[12.5px] font-semibold text-[var(--ink-2)]"><span className="num rounded-md px-2 py-[1px] text-[13px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#1d3a8f,#2f6bd8)" }}>{bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))}</span> <span className="text-[var(--ink-3)]">· {pickPlural(t, locale, "p7bk.sessN", sessionCount(b))} · {pickPlural(t, locale, "p7bk.kidN", att)}</span></span>
                   <span className="inline-flex items-center gap-1.5">
                     <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay, b.status).bg, color: payTone(b.pay, b.status).fg }}>{b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : b.status === "Approval needed" && b.cardHold?.state === "awaiting" ? t("p8lst.holdWaitBadge") : w(payLabelFor(b))}</span>
                     <span className="text-[11px] font-semibold text-[var(--ink-3)]">{w(payMethodLabel(b))}</span>
@@ -512,7 +512,10 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   )}
 
                   {b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) && (
-                    <span className="basis-full text-[12.5px] font-bold text-[#0b5a3f]">🚗 {t("p9tx.hvVisitAt")} {visitAddressLabel(b.serviceAddress)}{b.serviceAddress.notes ? <span className="font-semibold text-[var(--ink-2)]"> · 📝 {b.serviceAddress.notes.replace(/\s+/g, " ").slice(0, 70)}{b.serviceAddress.notes.length > 70 ? "…" : ""}</span> : null}</span>
+                    <span className="basis-full text-[12.5px] font-bold text-[#0b5a3f]">🚗 {t("p9tx.hvVisitAt")} {visitAddressLabel(b.serviceAddress)}</span>
+                  )}
+                  {b.serviceAddress?.notes && (
+                    <span className="basis-full rounded-md px-2 py-[2px] text-[12.5px] font-extrabold" style={{ background: "#fff4cc", color: "#5a3d00" }}>📝 {b.serviceAddress.notes.replace(/\s+/g, " ").slice(0, 90)}{b.serviceAddress.notes.length > 90 ? "…" : ""}</span>
                   )}
                   {/* Contextual actions, pushed to the right */}
                   <span className="ms-auto flex flex-wrap items-center justify-end gap-1.5">
