@@ -581,7 +581,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     <span className="basis-full text-[12.5px] font-bold text-[#0b5a3f]">🚗 {t("p9tx.hvVisitAt")} {visitAddressLabel(b.serviceAddress)}</span>
                   )}
                   {b.serviceAddress?.notes && (
-                    <span className="basis-full rounded-md px-2 py-[2px] text-[12.5px] font-extrabold" style={{ background: "#fff4cc", color: "#5a3d00" }}>📝 {b.serviceAddress.notes.replace(/\s+/g, " ").slice(0, 90)}{b.serviceAddress.notes.length > 90 ? "…" : ""}</span>
+                    <span className="basis-full truncate border-s-2 border-[var(--line)] ps-2 text-[12px] font-medium text-[var(--ink-2)]">📝 {b.serviceAddress.notes.replace(/\s+/g, " ").slice(0, 90)}{b.serviceAddress.notes.length > 90 ? "…" : ""}</span>
                   )}
                   {/* Contextual actions, pushed to the right */}
                   <span className="ms-auto flex flex-wrap items-center justify-end gap-1.5">

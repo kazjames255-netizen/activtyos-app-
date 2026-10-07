@@ -66,9 +66,9 @@ export function FamilyNoteCallout({ b }: { b: Booking }) {
   const note = b.serviceAddress?.notes?.trim();
   if (!note) return null;
   return (
-    <div className="mt-3 rounded-2xl border-2 px-4 py-3" style={{ borderColor: "#e0a100", background: "#fff4cc", color: "#5a3d00" }}>
-      <div className="text-[11.5px] font-extrabold uppercase tracking-[0.06em]">📝 {t("p8lst.noteFromFamily")}</div>
-      <div className="mt-1 whitespace-pre-wrap break-words text-[17px] font-extrabold leading-[1.35]">{note}</div>
+    <div className="mt-3 rounded-xl border px-3.5 py-2.5" style={{ borderColor: "#eadfb8", background: "#fffaec", color: "#4d3f12" }}>
+      <div className="text-[11px] font-bold uppercase tracking-[0.06em] opacity-80">📝 {t("p8lst.noteFromFamily")}</div>
+      <div className="mt-0.5 whitespace-pre-wrap break-words text-[14px] font-semibold leading-[1.4]">{note}</div>
     </div>
   );
 }

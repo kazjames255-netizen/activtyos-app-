@@ -735,6 +735,10 @@ export function addonLinesFor(b: { addons?: string[]; addonLines?: { child: stri
 export function visitAddressLabel(sa?: { address?: string; postcode?: string; area?: string } | null): string {
   if (!sa) return "";
   const line = [sa.address, sa.postcode].map((x) => (x ?? "").trim()).filter(Boolean).join(", ");
-  const area = (sa.area ?? "").trim();
+  // The recognised area often repeats the town the family typed ("12 Corris Court, Milton Keynes, MK10 9NR · Broughton & Moulsoe, Milton Keynes"):
+  // keep only the parts of the area that the address line does not already say.
+  const norm = (s: string) => ` ${s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+  const have = norm(line);
+  const area = (sa.area ?? "").split(",").map((x) => x.trim()).filter((part) => part && !have.includes(norm(part))).join(", ");
   return area ? `${line} · ${area}` : line;
 }
