@@ -2061,15 +2061,16 @@ my.post("/bookings", async (req, res) => {
       if (voucher) { /* handled by the voucher email below */ }
       else {
         // A checkout spanning weeks made one booking per week: ONE email describes the whole thing (total, every date,
-        // every ref). Bank transfer keeps the first booking's own figures - its payment reference is per booking.
-        const sameState = bookings.length > 1 && bookings.every((x) => x.status === b0.status) && !isBankMethod(input.method);
+        // every ref). That includes bank transfer: it used to keep only the FIRST week's figures, so a 6-week GBP 84 term told
+        // the family to pay GBP 14 under one reference. The bank box now carries the same total and reference list the done screen shows.
+        const sameState = bookings.length > 1 && bookings.every((x) => x.status === b0.status);
         const { merged, refs } = sameState ? mergeBookings(bookings) : { merged: b0, refs: [b0.ref] };
         // A card booking holds the place BEFORE the family pays. "You're booked in" must not go out until the card has actually gone through
         // (a declined or abandoned payment would leave a confirmation for a booking that isn't paid): the "Payment received" email that follows
         // a successful payment is the single confirmation. Cash, funded (GBP 0), bank transfer and voucher bookings confirm straight away.
         const cardIsUnpaid = cardUnpaid(input.method, merged.amount, onBehalf);
         if (b0.status === "Confirmed" && cardIsUnpaid) { /* confirmed by the payment-received email once the card succeeds */ }
-        else if (b0.status === "Confirmed") emailBookingConfirmed(merged, provider, isBankMethod(input.method) ? await bankPayDetails(listing.tenantId, b0.ref, b0.amount) : null, refs);
+        else if (b0.status === "Confirmed") emailBookingConfirmed(merged, provider, isBankMethod(input.method) ? await bankPayDetails(listing.tenantId, refs.join(", "), merged.amount) : null, refs);
         // A waiting-list place is NOT "a request pending approval" - it gets its own message.
         else if (b0.status === "Waitlisted") emailWaitlistJoined(merged, provider, refs);
         // A card-HOLD request is announced (to the family and the provider) once the card is actually held - see lib/cardHold.ts.
