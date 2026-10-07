@@ -131,7 +131,9 @@ export interface LocalState {
 }
 
 // Date-rail formatting for the listing card.
-const monthOf = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" });
+// The year is shown only when it is not THIS year, so a mistyped (or old / far-future) date is obvious at a glance.
+const notThisYear = (iso: string) => !!iso && Number(iso.slice(0, 4)) !== new Date().getFullYear();
+const monthOf = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { month: "short", ...(notThisYear(iso) ? { year: "numeric" as const } : {}), timeZone: "UTC" });
 const dayOf = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDate();
 // Scheduled-open badge. Compared as local strings, matching the datetime-local
 // input the operator typed — no timezone shifting.
@@ -140,10 +142,10 @@ const openLabel = (v: string) => {
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return v;
   const time = d.getMinutes() ? d.toLocaleTimeString(dl(), { hour: "numeric", minute: "2-digit" }) : d.toLocaleTimeString(dl(), { hour: "numeric" });
-  return `${d.getDate()} ${d.toLocaleDateString(dl(), { month: "short" })}, ${time.replace(/\s/g, "").toLowerCase()}`;
+  return `${d.getDate()} ${d.toLocaleDateString(dl(), { month: "short", ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" as const } : {}) })}, ${time.replace(/\s/g, "").toLowerCase()}`;
 };
 const shortDate = (iso: string) =>
-  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" }) : tNow("p8lst.flTbc");
+  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", ...(notThisYear(iso) ? { year: "numeric" as const } : {}), timeZone: "UTC" }) : tNow("p8lst.flTbc");
 
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
