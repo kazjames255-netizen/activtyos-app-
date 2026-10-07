@@ -2030,11 +2030,10 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
           </div>
           {(d.coverageArea?.mode ?? "postcodePrefixes") === "postcodePrefixes" ? (
             <>
-              <Input
-                value={(d.coverageArea?.postcodePrefixes ?? []).join(", ")}
-                onChange={(e) => upd({ coverageArea: { ...(d.coverageArea ?? { mode: "postcodePrefixes" }), mode: "postcodePrefixes", postcodePrefixes: e.target.value.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean) } })}
+              <PostcodeListInput
+                prefixes={d.coverageArea?.postcodePrefixes ?? []}
                 placeholder={tr("p8lst.waPcPh")}
-                className="mb-1 w-full max-w-[360px]"
+                onChange={(list) => upd({ coverageArea: { ...(d.coverageArea ?? { mode: "postcodePrefixes" }), mode: "postcodePrefixes", postcodePrefixes: list } })}
               />
               <div className="text-[11px] text-[var(--ink-3)]">{tr("p8lst.waPcHint")}</div>
             </>
@@ -2042,6 +2041,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
             <div className="flex flex-wrap items-end gap-3">
               <div>
                 <FieldLabel>{tr("p8lst.waBasePc")} <span className="font-normal text-[#0b5a3f]">{tr("p9tx.hvBaseHidden")}</span></FieldLabel>
+                <PostcodeRecognised value={d.coverageArea?.basePostcode ?? ""} />
                 <Input value={d.coverageArea?.basePostcode ?? ""} onChange={(e) => upd({ coverageArea: { ...(d.coverageArea ?? { mode: "radius" }), mode: "radius", basePostcode: e.target.value } })} placeholder={tr("p8lst.waBasePcPh")} className="w-[160px]" />
               </div>
               <div>
@@ -4812,5 +4812,44 @@ function YesNo({ label, value, onChange, help }: { label: string; value: boolean
       </div>
       {help && <div className="mt-1 text-[11px] text-[var(--ink-3)]">{help}</div>}
     </div>
+  );
+}
+
+/** "✓ Recognised: Camden, London" / "✗ We can't find that postcode" under a postcode as the provider types (debounced; asks the server). */
+function PostcodeRecognised({ value }: { value: string }) {
+  const tr = useT();
+  const [state, setState] = useState<{ q: string; ok: boolean; place: string } | "checking" | null>(null);
+  useEffect(() => {
+    const q = value.trim();
+    if (q.length < 2) { setState(null); return; }
+    setState("checking");
+    let alive = true;
+    const id = setTimeout(() => {
+      apiGet<{ ok: boolean; postcode: string; place?: string }>(`/api/geo/recognise?q=${encodeURIComponent(q)}`)
+        .then((r) => alive && setState({ q, ok: r.ok, place: [r.postcode, r.place].filter(Boolean).join(" · ") }))
+        .catch(() => alive && setState(null));
+    }, 500);
+    return () => { alive = false; clearTimeout(id); };
+  }, [value]);
+  if (!state) return null;
+  if (state === "checking") return <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.pcChecking")}</div>;
+  return <div className="mb-1 text-[11.5px] font-bold" style={{ color: state.ok ? "#0f7a43" : "#c02636" }}>{state.ok ? tr("p8lst.pcRecognised", { place: state.place }) : tr("p8lst.pcNotFound")}</div>;
+}
+
+/** The comma-separated list of areas the provider travels to. Keeps what is TYPED (so a comma stays put) and hands the cleaned list up;
+ *  each entry gets its own recognised / not-found line. */
+function PostcodeListInput({ prefixes, onChange, placeholder }: { prefixes: string[]; onChange: (list: string[]) => void; placeholder: string }) {
+  const [text, setText] = useState(prefixes.join(", "));
+  const list = text.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
+  return (
+    <>
+      <Input
+        value={text}
+        onChange={(e) => { setText(e.target.value); onChange(e.target.value.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)); }}
+        placeholder={placeholder}
+        className="mb-1 w-full max-w-[360px]"
+      />
+      {[...new Set(list)].slice(0, 8).map((p) => <PostcodeRecognised key={p} value={p} />)}
+    </>
   );
 }

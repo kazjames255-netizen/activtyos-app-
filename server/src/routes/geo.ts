@@ -1,3 +1,5 @@
+import { formatPostcode, isUkPostcodeFormat, labelMatchesPostcode } from "../lib/postcodeArea";
+import { lookupPostcode } from "../lib/postcodeLookup";
 import { Router } from "express";
 import proj4 from "proj4";
 
@@ -96,6 +98,38 @@ export async function geocodeHit(q: string): Promise<GeoHit | null> {
     return null;
   }
 }
+
+// GET /api/geo/recognise?q= — is this a real UK postcode (or outward code like "NW1")? Used by the provider's coverage-area form to show
+// "Recognised: <place>" (or not) as they type. Answers {ok, postcode, place}; never throws.
+geo.get("/recognise", async (req, res) => {
+  const raw = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  const full = formatPostcode(raw);
+  const compactIn = raw.toUpperCase().replace(/\s+/g, "");
+  try {
+    if (isUkPostcodeFormat(full)) {
+      const r = await lookupPostcode(full);
+      res.json(r.ok ? { ok: true, postcode: r.postcode, place: r.area ?? "" } : { ok: false, postcode: full });
+      return;
+    }
+    // a district / outward code on its own ("NW1", "MK10", "SW1A"): postcodes.io knows every UK district and names the boroughs it covers
+    if (/^[A-Z]{1,2}\d[A-Z\d]?$/.test(compactIn)) {
+      try {
+        const r = await fetch(`https://api.postcodes.io/outcodes/${compactIn}`, { signal: AbortSignal.timeout(4000) });
+        if (r.ok) {
+          const j = (await r.json()) as { result?: { admin_district?: string[] } };
+          res.json({ ok: true, postcode: compactIn, place: (j.result?.admin_district ?? []).slice(0, 3).join(", ") });
+          return;
+        }
+        if (r.status === 404) { res.json({ ok: false, postcode: compactIn }); return; }
+      } catch { /* fall through to the geocoder */ }
+      const h = await geocodeHit(compactIn);
+      if (h && labelMatchesPostcode(h.label, compactIn)) { res.json({ ok: true, postcode: compactIn, place: "" }); return; }
+    }
+    res.json({ ok: false, postcode: raw.toUpperCase() });
+  } catch {
+    res.json({ ok: false, postcode: raw.toUpperCase() });
+  }
+});
 
 // GET /api/geo/search?q= — operator address lookup (auth-scoped).
 geo.get("/search", async (req, res) => {
