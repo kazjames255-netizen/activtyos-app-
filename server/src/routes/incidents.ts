@@ -13,6 +13,7 @@ import { notify, parentEmailForChild } from "../lib/notify";
 import { alertDsl, isSafeguardingLead, leadCovers, namesALead } from "../lib/dslAlert";
 import { whereInChunks } from "../lib/firestoreIn";
 import { auditIncidentDeletion } from "../lib/incidentDeletionAudit";
+import { actorName } from "../lib/actorName";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Incidents & Accidents (Pupils) — the safeguarding log every OFSTED-
@@ -322,7 +323,7 @@ incidents.post("/", async (req, res) => {
     // belongs to the franchise that logged it.
     franchiseId: req.auth!.franchiseId ?? null,
     recordedBy: req.user?.email ?? req.user?.uid ?? "unknown",
-    recordedByName: req.user?.name ?? req.user?.email ?? "Staff",
+    recordedByName: await actorName(req),
     createdAt: new Date().toISOString(),
   };
   const ref = await col.add(doc);
@@ -532,7 +533,7 @@ incidents.post("/:id/note", async (req, res) => {
     res.status(403).json({ error: "You can't add a note here" }); return;
   }
   const note = {
-    by: req.user?.name ?? req.user?.email ?? (role === "parent" ? "Parent" : "Staff"),
+    by: role === "parent" ? (req.user?.name ?? req.user?.email ?? "Parent") : await actorName(req),
     role, text: parsed.data.text, at: new Date().toISOString(),
   };
   const notes = Array.isArray(data.notes) ? data.notes : [];

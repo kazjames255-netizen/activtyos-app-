@@ -13,6 +13,7 @@ import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
 import { csvText } from "@/lib/csv";
 import { ChildCard, type ChildInfo } from "./ChildCard";
+import { OwnerNameAsk } from "./OwnerNameAsk";
 import { seasonDisplayName } from "@/lib/seasons";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -965,7 +966,8 @@ export function RegistersApp() {
   const goDay = (delta: number) => { const d = shiftDay(date, delta); setDate(d); ensureDay(d); };
   const pickDate = (d: string) => { if (!d) return; setDate(d); ensureDay(d); };
   const [meName, setMeName] = useState("You");
-  useEffect(() => { apiGet<{ role: string; name?: string }>("/api/me").then((me) => { setReadOnly(me.role === "platform"); setRole(me.role); if (me.name?.trim()) setMeName(me.name.trim()); }).catch(() => {}); }, []);
+  const [nameAsk, setNameAsk] = useState<{ emailLocal: string } | null>(null); // a provider working alone with only a login word as a name: asked once
+  useEffect(() => { apiGet<{ role: string; name?: string; nameIsPlaceholder?: boolean; emailLocal?: string }>("/api/me").then((me) => { setReadOnly(me.role === "platform"); setRole(me.role); setNameAsk(me.nameIsPlaceholder ? { emailLocal: me.emailLocal ?? "" } : null); if (me.name?.trim()) setMeName(me.name.trim()); }).catch(() => {}); }, []);
   useRealtime(["registers", "bookings", "blocks"], refresh);
 
   // A network-level failure (offline, can't reach the API — ApiError status 0,
@@ -1279,6 +1281,7 @@ export function RegistersApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+      {nameAsk && <OwnerNameAsk emailLocal={nameAsk.emailLocal} onSaved={(nm) => { setMeName(nm); setNameAsk(null); }} />}
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{error}</div>}
       {outboxRefs.size > 0 && <div className="mb-3 rounded-lg border border-[#fdd9a0] bg-[#fff6e6] px-3 py-2 text-[12.5px] font-semibold text-[#8a5300]">{t("p8ops.rgOutbox", { n: outboxRefs.size })}</div>}
       {listingsAll.length === 0 ? (
