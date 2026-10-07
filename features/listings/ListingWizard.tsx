@@ -4245,7 +4245,7 @@ function spVars(V: ThemeTokens): React.CSSProperties {
   const v: Record<string, string | number> = {
     "--sp-ink": t.ink, "--sp-body": t.ink, "--sp-faint": t.mute, "--sp-bad": V.dark ? "#ff5d5d" : "#b3261e", "--sp-line": t.line, "--sp-acc": t.acc, "--sp-sec": t.sec, "--sp-panel": t.surf,
     "--sp-bandink": t.bandInk, "--sp-stripink": t.stripInk, "--sp-barink": t.phInk, "--sp-rs": `${t.rs}px`,
-    "--t-display": FONT_STACK[V.font], "--t-dw": V.dw, "--t-dstyle": V.dstyle ?? "normal", "--t-dcase": V.dcase ?? "none", "--t-dtrack": V.dtrack ?? (V.dw >= 800 ? "-.02em" : "0"),
+    "--t-display": FONT_STACK[V.font], "--t-dw": V.dw, "--t-dstyle": V.dstyle ?? "normal", "--t-dcase": V.dcase ?? "none", "--t-dtrack": V.dtrack ?? "0",
     "--t-btncase": t.btncase ?? "none", "--t-btnstyle": t.btnstyle ?? "normal", "--t-grain": t.grain,
   };
   return v as React.CSSProperties;
@@ -4650,7 +4650,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
       ) : (
       <div className="relative overflow-hidden" style={{ aspectRatio: imgs.length ? heroAspect : "6 / 1", minHeight: imgs.length ? undefined : 72 }}>
         <HeroImages imgs={imgs} fallback={`linear-gradient(120deg,${EL},#00a3ff 70%,#003)`} />
-        <div className="pointer-events-none absolute inset-0 z-[1]" style={{ backgroundImage: "repeating-linear-gradient(115deg,transparent 0 46px,rgba(255,255,255,.05) 46px 48px)" }} />
+        {/* A real photo is shown clean: no pattern or streaks over it (the decorative artwork is only for listings with NO photo). */}
         {heroCat && <span className="absolute start-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em]" style={{ background: LIME, color: INK, transform: V ? undefined : "skewX(-8deg)", borderRadius: k?.rs }}>{optionLabel(heroCat.name)}</span>}
       </div>
       )}
