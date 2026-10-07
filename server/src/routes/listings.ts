@@ -1,7 +1,8 @@
 import { Router, type Request } from "express";
 import { personRuleProblem } from "../lib/discountRules";
 import { gateAppliesOnPublish } from "../../../lib/billingRules";
-import { withoutBaseAddress, touchesCapacity, withHomeTenant } from "../lib/publicListing";
+import { withoutBaseAddress, touchesCapacity, withHomeTenant, homeVisitVisibility } from "../lib/publicListing";
+import { coverageVerdict, type CoverageArea } from "../lib/coverageArea";
 import { z } from "zod";
 import { db } from "../firebase";
 import { FieldValue } from "firebase-admin/firestore";
@@ -278,8 +279,25 @@ listings.get("/", async (req, res) => {
     // Bookability guard: at least one block (a dated run with sessions) that
     // hasn't already ended — otherwise there's literally nothing to book.
     .filter((l) => Array.isArray(l.blocks) && (l.blocks as unknown[]).length > 0 && hasUpcomingBlock(l.blocks as unknown[]));
+  // A home-visit listing the signed-in family's saved postcode is OUTSIDE of is not shown to them at all (a "both" listing stays, venue only).
+  // Unknown postcode = shown (checkout asks, and refuses an uncovered one). A provider browsing is never filtered on their own listings.
+  const venueOnly = new Set<string>();
+  const homeOnes = list.filter((l) => (l.deliveryMode === "home-visit" || l.deliveryMode === "both") && l.coverageArea && l.tenantId !== req.auth?.tenantId);
+  let shown = list;
+  if (homeOnes.length && req.user?.uid) {
+    const pc = ((await db.collection("users").doc(req.user.uid).get()).get("postcode") as string | undefined) ?? "";
+    if (pc.trim()) {
+      const hide = new Set<string>();
+      await Promise.all(homeOnes.map(async (l) => {
+        const v = homeVisitVisibility(l.deliveryMode as string, await coverageVerdict(l.coverageArea as CoverageArea, pc));
+        if (v === "hide") hide.add(l.id as string);
+        else if (v === "venue-only") venueOnly.add(l.id as string);
+      }));
+      shown = list.filter((l) => !hide.has(l.id as string));
+    }
+  }
   const payload = (
-    list.map((l) => {
+    shown.map((l) => {
       const libOf = (m: Map<string, Map<string, any>>) => (l.franchiseId ? m.get(l.franchiseId as string) : undefined);
       const byCat = catNames.get(l.tenantId as string);
       // Prefer the names denormalised onto the listing at save; fall back to a
@@ -307,7 +325,7 @@ listings.get("/", async (req, res) => {
       const timings = timingsFor(l.blockId as string | undefined);
       // The provider's current display name, not the one frozen on the listing
       // when it was created (acceptance d1s4).
-      return { ...withoutBaseAddress(l), tenantName: displayNameByTenant.get(l.tenantId as string) ?? l.tenantName, title, categories, season, offers, bestOfferPercent, acceptsTFC, acceptsVouchers, timings, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
+      return { ...withoutBaseAddress(l), ...(venueOnly.has(l.id as string) ? { homeVisitAvailable: false } : {}), tenantName: displayNameByTenant.get(l.tenantId as string) ?? l.tenantName, title, categories, season, offers, bestOfferPercent, acceptsTFC, acceptsVouchers, timings, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
     })
   );
   if (browseCache.size > 300) browseCache.clear();
@@ -420,7 +438,16 @@ listings.get("/:id", async (req, res) => {
     const pols = ((await loadSettings(l.tenantId as string, (l.franchiseId as string | null | undefined) ?? null)).cancellationPolicies ?? []) as NamedPolicy[];
     cancellation = policyWording(policyById(pols, l.cancellationPolicyId as string | undefined) ?? DEFAULT_POLICY);
   } catch { /* keep whatever the listing stored */ }
-  res.json({ ...(own ? joined : withoutBaseAddress(joined)), tenantName: providerName || joined.tenantName, ...(cancellation ? { cancellation } : {}), bundle, library, mealMenus, ...(earlyUsed ? { earlyFixedUsed: true, earlyFixedRef: earlyUsed.ref, earlyFixedUnpaid: earlyUsed.unpaid } : {}) });
+  // The direct link still opens (a signed-out visitor, or a family whose postcode we don't know, is unaffected) but tells a signed-in family whose
+  // saved postcode is OUTSIDE the provider's area so the page can say so instead of letting them go through checkout to be refused.
+  let areaFlag: { outOfArea?: true; homeVisitAvailable?: false } = {};
+  if (!own && req.user?.uid && (l.deliveryMode === "home-visit" || l.deliveryMode === "both") && l.coverageArea) {
+    const pc = ((await db.collection("users").doc(req.user.uid).get()).get("postcode") as string | undefined) ?? "";
+    const v = homeVisitVisibility(l.deliveryMode as string, await coverageVerdict(l.coverageArea as CoverageArea, pc));
+    if (v === "hide") areaFlag = { outOfArea: true };
+    else if (v === "venue-only") areaFlag = { homeVisitAvailable: false };
+  }
+  res.json({ ...areaFlag, ...(own ? joined : withoutBaseAddress(joined)), tenantName: providerName || joined.tenantName, ...(cancellation ? { cancellation } : {}), bundle, library, mealMenus, ...(earlyUsed ? { earlyFixedUsed: true, earlyFixedRef: earlyUsed.ref, earlyFixedUnpaid: earlyUsed.unpaid } : {}) });
 });
 
 // Operators manage their own tenant's listings. (Bookings keep a denormalised

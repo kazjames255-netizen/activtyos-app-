@@ -36,6 +36,27 @@ function haversineMiles(a: { lat: number; lng: number }, b: { lat: number; lng: 
   return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
 }
 
+// A postcode never moves: remember where it is for a day (a failed lookup for a minute) so the browse feed can judge every home-visit listing for a
+// family without a network call each time.
+const geoCache = new Map<string, { at: number; v: { lat: number; lng: number } | null }>();
+async function geocodeCached(pc: string): Promise<{ lat: number; lng: number } | null> {
+  const key = normalisePostcode(pc).replace(/\s/g, "");
+  const hit = geoCache.get(key);
+  if (hit && Date.now() - hit.at < (hit.v ? 24 * 3_600_000 : 60_000)) return hit.v;
+  const v = await geocodeAddress(pc);
+  if (geoCache.size > 2000) geoCache.clear();
+  geoCache.set(key, { at: Date.now(), v });
+  return v;
+}
+
+/** true / false when we can tell whether `postcode` is inside the coverage area; null when we cannot (no postcode, or it could not be located). */
+export async function coverageVerdict(coverage: CoverageArea | null | undefined, postcode: string | undefined | null): Promise<boolean | null> {
+  if (!postcode?.trim() || !coverage) return null;
+  const r = await checkCoverage(coverage, postcode);
+  if (r.ok) return true;
+  return /couldn't check/i.test(r.reason) ? null : false;
+}
+
 /** Is `postcode` inside the listing's coverage area? Never throws — a
  *  geocode failure on radius mode is reported as a clear "couldn't check"
  *  reason rather than silently passing or crashing the booking. */
@@ -64,7 +85,7 @@ export async function checkCoverage(
 
   // radius mode
   if (!coverage.basePostcode || !coverage.radiusMiles) return { ok: true }; // not fully configured — don't block
-  const [base, dest] = await Promise.all([geocodeAddress(coverage.basePostcode), geocodeAddress(pc)]);
+  const [base, dest] = await Promise.all([geocodeCached(coverage.basePostcode), geocodeCached(pc)]);
   if (!base || !dest) {
     return { ok: false, reason: "Couldn't check that postcode against the provider's coverage area — try their full address instead" };
   }

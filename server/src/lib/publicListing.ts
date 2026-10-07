@@ -23,3 +23,15 @@ export function withHomeTenant(allowed: Set<string>, home: string | undefined | 
   if (home) allowed.add(home);
   return allowed;
 }
+
+/** What a PARENT sees of a home-visit listing, given whether their saved postcode is inside the provider's coverage area.
+ *  `covered` is true / false when we KNOW, and null when we do not (no saved postcode, or the postcode could not be located): unknown never hides a listing,
+ *  because checkout asks for the postcode and refuses an uncovered one.
+ *   - a venue listing is unaffected;
+ *   - a home-visit-only listing outside the area is hidden altogether;
+ *   - a "both" listing outside the area stays (the venue still works) but the home-visit option is switched off. */
+export function homeVisitVisibility(deliveryMode: string | undefined | null, covered: boolean | null): "show" | "hide" | "venue-only" {
+  if (deliveryMode !== "home-visit" && deliveryMode !== "both") return "show";
+  if (covered !== false) return "show";
+  return deliveryMode === "home-visit" ? "hide" : "venue-only";
+}
