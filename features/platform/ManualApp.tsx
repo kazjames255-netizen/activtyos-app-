@@ -586,6 +586,8 @@ function Page1() {
           { k: "What ticks it", v: "A listing exists. It counts once saved, even as a draft, but parents only see it after Publish." },
           { k: "The green prompt", v: "Appears on the Listings tab when the listing job is done and shows the next job." },
           { k: "Common mistakes", v: "Choosing no block: the editor says \"Pick a block so the listing has passes and prices\" and the link in that box jumps to step 8." },
+          { k: "Dates on My listings", v: "Each listing card shows its dates on the left. The year is added whenever it is not this year, for example Aug 2006, so a mistyped year stands out straight away. Listings in the current year show just the day and month. A listing whose dates are all in the past is not shown to parents." },
+          { k: "Home visits", v: "If the listing is delivered by home visit, the travel area is set on step 2: see stage 7f, Home visits." },
         ]}
         shots={[
           { src: "listings-empty", alt: "Empty listings tab", caption: "New listing starts here" },
@@ -716,6 +718,18 @@ function Page1() {
           { k: "Two children, one card", v: "One basket is one card and one hold, with one booking row per child. Approving takes the amount for the booking you approve. Stripe can only take a held payment once, so any other child still waiting loses the hold: when you approve that child later, the family pays the ordinary way (a pay link). Approve both together (or use bulk approve) to take everything in one go." },
           { k: "What you see on Bookings", v: "The status shows Approval needed with a Card held badge (or Waiting for card), and a yellow box with the amount and the deadline. Mark paid and Resend invoice are hidden while a card is held, because the payment is taken when you press Approve. Mark paid is also refused by the server for a held booking." },
           { k: "In Stripe", v: "A held card shows as Uncaptured, then Succeeded after approval. A declined or expired hold shows as Canceled with a net of £0.00. The payment lands in the provider's own Stripe account, so Stripe fees apply as normal on approval." },
+        ]} />
+
+      <Stage n="7f" color={C.billing} title="Home visits" tag="Travel area · who can see it · the family's address"
+        facts={[
+          { k: "Setting it up", v: "On the listing's Where & when step choose How sessions are delivered: Home visits (or Both, which is a venue plus home visits). A Coverage area box appears. Choose Postcode list (comma-separated districts you travel to, for example MK10, NW1, SW1 or TW9 1) or Radius from base (a base postcode and a number of miles). The listing cannot be published without a travel area." },
+          { k: "Recognised as you type", v: "Each postcode you type shows a line under it: a green tick and the place, for example Recognised: Camden, Westminster, or a red cross with We can't find that postcode, please check it. A comma now stays where you type it, so a list like MK10, NW1 works as expected." },
+          { k: "Your base postcode is private", v: "Parents never see your home address or your base postcode. They only ever see that the visit is a home visit." },
+          { k: "Who can see the listing", v: "A signed-in parent whose saved postcode is outside your travel area does not see the listing at all: not in browse or search, not by its direct link, QR code or shared booking link. To them it behaves as if it does not exist. A parent with no saved postcode, or someone not signed in, still sees it and is refused at checkout if their address is outside the area. A family who already booked it can still open their own booking." },
+          { k: "At checkout: the visit address", v: "The family is asked Is this the address you want us to come to? and shown the address saved on their account, with Yes and No buttons. Yes uses that address. No lets them type a different postcode, which is recognised live, for example Recognised: MK10 9NR · Broughton and Milton Keynes. If the saved or new address is outside your area they see Sorry, [your name] doesn't travel to this address, it's outside the area they cover, and they cannot pay. A family with no saved address goes straight to typing a postcode." },
+          { k: "Notes for the visit", v: "An optional box asks Anything we should know to find you? (how to get there, parking, door or gate codes, pets). It is capped at 500 characters and only the provider sees it, including any codes the family type. It is not put in the family's own emails." },
+          { k: "What you see", v: "The new-booking email, the bell, the booking, the Bookings list and the registers all show Home visit at [address], [postcode] · [area], plus the family's note (shortened in the list). The booking is checked again on the server, so a postcode outside your area is refused even if the screen was bypassed." },
+          { k: "Common mistakes", v: "Dates in the wrong year (the listing shows no sessions to parents), a radius too small for the base postcode, or a postcode list that starts with a space or a full postcode when you meant the district. If a parent says they cannot find your listing, check their saved postcode is inside your area." },
         ]} />
 
       <Stage n="8b" color={C.cancel} title="Cancellations and refunds" tag="Parent cancels · provider approves"
