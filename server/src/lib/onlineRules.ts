@@ -29,3 +29,34 @@ export function bookingJoinable(b: Booking, date: string): boolean {
 export function ownLinkVisible(listing: { videoMode?: string; ownLink?: string; showLinkNow?: boolean }, windowOpen: boolean): boolean {
   return listing.videoMode === "own" && !!listing.ownLink && (windowOpen || listing.showLinkNow === true);
 }
+
+/** Confirmed, NOT yet paid, and the child is on that day: the family should be told the join link unlocks once they pay. */
+export function bookingAwaitingPayOnline(b: Booking, date: string): boolean {
+  if (b.status !== "Confirmed" || b.pay !== "Unpaid") return false;
+  return registerRows(b, date).some((r) => r.expected);
+}
+
+/** Is this a usable own-session link: a full https URL (anything else is refused at publish: families tap it on a phone). */
+export function validOwnLink(v: string | undefined | null): boolean {
+  const s = (v ?? "").trim();
+  if (!/^https:\/\/[^\s/$.?#][^\s]*$/i.test(s)) return false;
+  try { return !!new URL(s).hostname.includes("."); } catch { return false; }
+}
+
+export type JoinState = "unpaid" | "early" | "early_own" | "waiting_host" | "open" | "finished" | "no_link";
+
+/** What a family sees about joining one online session. ONE place decides it (the browser only draws it).
+ *  unpaid: the join link is locked until the booking is paid. early: our room, window not open yet. early_own: the provider's own link, not shown yet.
+ *  waiting_host: window open but the host has not started (children never enter an empty room). open: Join / Open link now. no_link: own-link
+ *  listing without a link. finished: past the join window. */
+export function joinState(p: { paid: boolean; mode: "platform" | "own"; now: number; opensAt: number; closesAt: number; hostLive: boolean; hasLink: boolean; showLinkNow?: boolean }): JoinState {
+  if (p.now > p.closesAt) return "finished";
+  if (!p.paid) return "unpaid";
+  const open = p.now >= p.opensAt;
+  if (p.mode === "own") {
+    if (!p.hasLink) return "no_link";
+    return open || p.showLinkNow === true ? "open" : "early_own";
+  }
+  if (!open) return "early";
+  return p.hostLive ? "open" : "waiting_host";
+}

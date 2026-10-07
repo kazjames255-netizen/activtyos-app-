@@ -284,7 +284,7 @@ async function listingContext(
         try {
           const { onlineJoinText } = await import("./onlineSessions");
           const next = (b.days ?? []).filter((d) => d >= new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date())).sort()[0] ?? b.days?.[0];
-          joinInfo = await onlineJoinText({ id: (b.listingId as string) || "", tenantId: b.tenantId, name: String(listing.name ?? ""), blockId: listing.blockId as string | undefined, videoMode: listing.videoMode as "platform" | "own" | undefined, ownLink: listing.ownLink as string | undefined, showLinkNow: listing.showLinkNow === true }, next, b.timing, (listing.videoMode === "own" ? undefined : joinInfo));
+          joinInfo = await onlineJoinText({ id: (b.listingId as string) || "", tenantId: b.tenantId, name: String(listing.name ?? ""), blockId: listing.blockId as string | undefined, videoMode: listing.videoMode as "platform" | "own" | undefined, ownLink: listing.ownLink as string | undefined, showLinkNow: listing.showLinkNow === true }, next, b.timing, (listing.videoMode === "own" ? undefined : joinInfo), b.pay === "Unpaid");
         } catch { /* keep the venue's own text */ }
       }
       else if (v) { location = [v.name, v.address].filter(Boolean).join(", ") || undefined; lat = v.lat; lng = v.lng; venueAddress = v.address; }

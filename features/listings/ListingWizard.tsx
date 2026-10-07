@@ -417,6 +417,7 @@ import { emptyRule, ruleSummary, prettyRuleName, ruleDisplayName, type DiscountK
 import { useT, useI18n, useWord, tNow } from "@/lib/i18n/provider";
 import { Rich } from "@/components/i18n/Rich";
 import { PayModal } from "@/features/payments/PayModal";
+import { OnlineSessionsPanel } from "@/features/onlinesessions/OnlineSessionsPanel";
 import { pickPlural } from "@/lib/i18n/plural";
 import { seasonDisplayName } from "@/lib/seasons";
 
@@ -487,7 +488,7 @@ export function publishBlockers(d: WizardDraft, ticketCount: number, visibleTick
   if (!d.title.trim()) out.push({ step: at("basics"), what: tNow("p8lst.waBlkName") });
   const homeVisit = d.deliveryMode === "home-visit" || d.deliveryMode === "both";
   if (d.deliveryMode !== "home-visit" && !d.venueId) out.push({ step: at("details"), what: tNow("p8lst.waBlkVenue") });
-  if (d.videoMode === "own" && !(d.ownLink ?? "").trim()) out.push({ step: at("details"), what: tNow("p9tx.vmNeedLink") });
+  if (d.videoMode === "own" && !/^https:\/\/[^\s/$.?#][^\s]*\.[^\s]+$/i.test((d.ownLink ?? "").trim())) out.push({ step: at("details"), what: tNow("p9tx.vmNeedLink") });
   if (homeVisit && !d.coverageArea) out.push({ step: at("details"), what: tNow("p8lst.waBlkArea") });
   else if (homeVisit && d.coverageArea?.mode === "postcodePrefixes" && !(d.coverageArea.postcodePrefixes ?? []).length)
     out.push({ step: at("details"), what: tNow("p8lst.waBlkPrefix") });
@@ -972,7 +973,10 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
           <div className="p-4">
             {kids && <div className={rowCls}><span className={labCls}>{t("p7cl.lblWho")}</span><span className={valCls}>{kids}</span></div>}
             {(() => { const ov = listing.library?.venue as unknown as { kind?: string; directions?: string } | null | undefined; return ov?.kind === "online" ? (
-              <div className="mb-1 rounded-xl border-2 border-[#2f6bd8] bg-[#eef4ff] p-3 text-[13px]"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">💻 {t("p7pg.howToJoin")}</div><div className="mt-1 whitespace-pre-line font-semibold text-[#171534]">{(ov.directions ?? "").trim() || t("p9tx.joinLater")}</div></div>
+              <div className="mb-1 rounded-xl border-2 border-[#2f6bd8] bg-[#eef4ff] p-3 text-start text-[13px]"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">💻 {t("p7pg.howToJoin")}</div>
+                {(ov.directions ?? "").trim() && <div className="mt-1 whitespace-pre-line font-semibold text-[#171534]">{(ov.directions ?? "").trim()}</div>}
+                {/* What actually happens, from the server: pay to unlock / opens at HH:MM / host starts first / Join now. */}
+                <div className="mt-1.5"><OnlineSessionsPanel refs={done.refs} providerName={listing.tenantName} /></div></div>
             ) : null; })()}
             {done.visitAt && <div className={rowCls}><span className={labCls}>🚗 {t("p9tx.hvWeCome")}</span><span className={valCls}>{done.visitAt}</span></div>}
             {done.passes.length > 0 && <div className={rowCls}><span className={labCls}>{t("p7cl.lblPass")}</span><span className={valCls}>{done.passes.join(", ")}</span></div>}
@@ -1965,7 +1969,8 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
                 const pick = onlineVenueChoice(local.venues, uid());
                 const id = pick.id;
                 if (pick.create) patchLocal((st) => ({ ...st, venues: [...st.venues, { id, name: "Online", address: "", kind: "online" }] }));
-                upd({ deliveryMode: "venue", venueId: id, coverageArea: null });
+                // Online: how families join is a real, saved choice from the start (ActivityOS room unless the provider picks their own link).
+                upd({ deliveryMode: "venue", venueId: id, coverageArea: null, videoMode: d.videoMode ?? "platform" });
               } else {
                 upd(deliveryPatch(mode, local.venues, d.venueId, !!d.coverageArea));
               }

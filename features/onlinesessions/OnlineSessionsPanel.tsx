@@ -14,12 +14,16 @@ export interface MySession {
   listingId: string; listingName: string; date: string; children: string[];
   startsAt: string; endsAt: string; opensAt: string; closesAt: string;
   mode: "platform" | "own"; state: "early" | "open"; hostLive: boolean; link?: string; noLink?: boolean;
+  /** The server decides what to show (lib/onlineRules joinState); this component only draws it. */
+  joinState?: "unpaid" | "early" | "early_own" | "waiting_host" | "open" | "finished" | "no_link";
+  paid?: boolean; amountDue?: number; method?: string; ref?: string; refs?: string[];
 }
 
 const clock = (iso: string) => new Date(iso).toLocaleTimeString(dateLocale(), { hour: "numeric", minute: "2-digit" });
 const day = (iso: string) => new Date(iso).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short" });
 
-export function OnlineSessionsPanel() {
+/** `refs` limits the panel to those bookings (the "you are booked" screen); `providerName` words the bank-transfer hint. */
+export function OnlineSessionsPanel({ refs, providerName }: { refs?: string[]; providerName?: string } = {}) {
   const t = useT();
   const router = useRouter();
   const [list, setList] = useState<MySession[] | null>(null);
@@ -28,18 +32,31 @@ export function OnlineSessionsPanel() {
   useEffect(() => { load(); }, [load]);
   // Re-check every 10 s (whether the host has started, and whether the window has just opened).
   useEffect(() => { const id = window.setInterval(() => { tick((n) => n + 1); load(); }, 10_000); return () => window.clearInterval(id); }, [load]);
-  if (!list || !list.length) return null;
+  const shown = (list ?? []).filter((s) => !refs?.length || (s.refs ?? []).some((r) => refs.includes(r)));
+  if (!shown.length) return null;
   const now = Date.now();
   const btn = "inline-flex min-h-[44px] items-center justify-center rounded-full px-5 text-[14px] font-extrabold";
   return (
     <div data-testid="online-sessions-panel"><Card className="mb-4 p-4">
       <div className="mb-2 flex items-center gap-2 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span aria-hidden>💻</span>{t("p9tx.osTitle")}</div>
       <div className="flex flex-col gap-2">
-        {list.map((s) => {
+        {shown.map((s) => {
           const open = now >= new Date(s.opensAt).getTime();
           const key = `${s.listingId}_${s.date}`;
           let action: React.ReactNode;
-          if (s.mode === "own") {
+          let explain: React.ReactNode = null;
+          const mins = Math.max(1, Math.round((new Date(s.startsAt).getTime() - new Date(s.opensAt).getTime()) / 60_000));
+          const opensDay = new Date(s.opensAt).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short" });
+          if (s.joinState === "unpaid") {
+            // Booked but not paid: the join link is locked, and the family is told exactly why and what to do.
+            action = <button type="button" onClick={() => router.push(`/custdash/bookings?pay=${encodeURIComponent(s.ref ?? "")}`)} className={`${btn} bg-[#d98b06] text-white`} data-testid="os-unpaid">{t("p9tx.osPayCard")}</button>;
+            explain = <div className="mt-1 text-[12.5px] font-semibold text-[#7a4b00]" data-testid="os-unpaid-text">{t("p9tx.osUnpaid")}{/bank|transfer/i.test(s.method ?? "") ? ` ${t("p9tx.osUnpaidWait", { provider: providerName || t("p7cl.theProvider") })}` : ""}</div>;
+          } else if (s.joinState === "early" || s.joinState === "early_own") {
+            explain = <div className="mt-1 text-[12.5px] font-semibold text-[#0f6b34]" data-testid="os-early-text">{t(s.joinState === "early" ? "p9tx.osEarly" : "p9tx.osEarlyOwn", { time: clock(s.opensAt), day: opensDay, mins })}</div>;
+          }
+          if (s.joinState === "unpaid") {
+            /* action already set above */
+          } else if (s.mode === "own") {
             action = s.link
               ? <a href={s.link} target="_blank" rel="noreferrer" onClick={() => { void apiPost("/api/online-sessions/attended", { listingId: s.listingId, date: s.date }).catch(() => undefined); }} className={`${btn} bg-[#0f9d6b] text-white`} data-testid="os-open-link">{t("p9tx.osOpenLink")}</a>
               : <span className={`${btn} cursor-not-allowed bg-[var(--line)] text-[var(--ink-3)]`} data-testid="os-link-later">{s.noLink ? t("p9tx.osNoLink") : t("p9tx.osLinkAt", { time: clock(s.opensAt) })}</span>;
@@ -55,7 +72,8 @@ export function OnlineSessionsPanel() {
               <div className="min-w-0">
                 <div className="truncate text-[14.5px] font-extrabold">{s.listingName}</div>
                 <div className="text-[12.5px] text-[var(--ink-3)]">{day(s.startsAt)} · {clock(s.startsAt)} · {t("p9tx.osOnline")}{s.children.length ? ` · ${t("p9tx.osFor", { names: s.children.join(", ") })}` : ""}</div>
-                {s.mode !== "own" && open && !s.hostLive && <div className="mt-0.5 text-[12px] font-semibold text-[#7a4b00]">{t("p9tx.osWaitingHint")}</div>}
+                {s.mode !== "own" && open && !s.hostLive && s.joinState !== "unpaid" && <div className="mt-0.5 text-[12px] font-semibold text-[#7a4b00]">{t("p9tx.osWaitingHint")}</div>}
+                {explain}
               </div>
               {action}
             </div>

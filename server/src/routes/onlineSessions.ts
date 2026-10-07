@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ownLinkVisible } from "../lib/onlineRules";
+import { ownLinkVisible, bookingAwaitingPayOnline, joinState } from "../lib/onlineRules";
 import { z } from "zod";
 import { db } from "../firebase";
 import { rateLimit } from "../lib/rateLimit";
@@ -130,13 +130,17 @@ onlineSessions.get("/mine", async (req, res) => {
   const out: Record<string, unknown>[] = [];
   for (const [lid, bs] of byListing) {
     // cheap in-memory check first: a family with years of past bookings must not pay a listing + library read for every one of them
+    // (paid bookings can join; unpaid ones are listed too, so the family is told the link unlocks when they pay)
     const dates = new Set<string>();
-    for (const b of bs) for (const d of b.days ?? []) if (d >= from && d <= to && bookingJoinable(b, d)) dates.add(d);
+    for (const b of bs) for (const d of b.days ?? []) if (d >= from && d <= to && (bookingJoinable(b, d) || bookingAwaitingPayOnline(b, d))) dates.add(d);
     if (!dates.size) continue;
     const listing = await onlineListing(lid);
     if (!listing) continue;
     for (const date of [...dates].sort()) {
-      const mine = bs.filter((b) => bookingJoinable(b, date));
+      const paidMine = bs.filter((b) => bookingJoinable(b, date));
+      const unpaidMine = bs.filter((b) => bookingAwaitingPayOnline(b, date));
+      const paid = paidMine.length > 0;
+      const mine = paid ? paidMine : unpaidMine;
       const rows = mine.flatMap((b) => registerRows(b, date).filter((r) => r.expected));
       const sess = (await sessionsCol.doc(sessionId(lid, date)).get()).data() as SessionDoc | undefined;
       const t = sess ? { startsAt: new Date(sess.startsAt), durationMins: sess.durationMins } : await sessionTimes(listing, date, mine[0]?.timing);
@@ -145,15 +149,19 @@ onlineSessions.get("/mine", async (req, res) => {
       if (now > w.closesAt.getTime()) continue;
       const own = listing.videoMode === "own";
       const open = now >= w.opensAt.getTime();
+      const hostLive = !!sess && sess.status === "live" && !sess.needsHost;
       out.push({
         listingId: lid, listingName: listing.title || listing.name, date, ref: mine[0]?.ref, refs: mine.map((b) => b.ref), children: rows.map((r) => first(r.name)),
         startsAt: t.startsAt.toISOString(), endsAt: w.endsAt.toISOString(), opensAt: w.opensAt.toISOString(), closesAt: w.closesAt.toISOString(),
         mode: own ? "own" : "platform", state: open ? "open" : "early",
-        hostLive: !!sess && sess.status === "live" && !sess.needsHost,
-        ...(ownLinkVisible(listing, open) ? { link: listing.ownLink } : {}),
+        // One decision for every screen (done page, My bookings, Home): the browser only draws it.
+        joinState: joinState({ paid, mode: own ? "own" : "platform", now, opensAt: w.opensAt.getTime(), closesAt: w.closesAt.getTime(), hostLive, hasLink: !!listing.ownLink, showLinkNow: listing.showLinkNow }),
+        paid, amountDue: paid ? 0 : Math.round(mine.reduce((s, b) => s + (b.amount ?? 0), 0) * 100) / 100, method: mine[0]?.method ?? "",
+        hostLive,
+        ...(paid && ownLinkVisible(listing, open) ? { link: listing.ownLink } : {}),
         ...(own && !listing.ownLink ? { noLink: true } : {}),
       });
-      if (sess) void mirrorToHub(listing, date, sess, mine);
+      if (sess && paid) void mirrorToHub(listing, date, sess, mine);
     }
   }
   out.sort((a, b) => String(a.startsAt).localeCompare(String(b.startsAt)));

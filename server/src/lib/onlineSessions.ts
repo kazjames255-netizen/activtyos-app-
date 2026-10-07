@@ -69,13 +69,15 @@ export async function hubOn(tenantId: string, franchiseId: string | null): Promi
 }
 
 /** The "how to join" wording for emails: our own room points to My bookings from 10 minutes before; an own link is shown only when the listing says so. Never an address. */
-export async function onlineJoinText(listing: ListingLite & { videoMode?: string }, date: string | undefined, timing?: string | null, venueNote?: string): Promise<string> {
+export async function onlineJoinText(listing: ListingLite & { videoMode?: string }, date: string | undefined, timing?: string | null, venueNote?: string, unpaid?: boolean): Promise<string> {
   const day = date ?? ukDay();
   const t = await sessionTimes(listing, day, timing);
   const opens = new Date(t.startsAt.getTime() - 10 * 60_000);
   const clock = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "numeric", minute: "2-digit", hour12: true }).format(opens).replace(" ", "").toLowerCase();
   const dayLabel = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }).format(t.startsAt);
   const lines: string[] = [];
+  // Not paid yet: say so first. The join link / button is locked until the booking is paid (card in My bookings, or when the provider marks a bank transfer received).
+  if (unpaid) lines.push("Your join link unlocks once your booking is paid: pay by card in My bookings, or it unlocks as soon as your provider marks your bank transfer as received.");
   if (listing.videoMode === "own") {
     if (listing.ownLink && listing.showLinkNow) lines.push(`Your session link: ${listing.ownLink}`);
     else lines.push(`Your session link appears in My bookings from ${clock} on ${dayLabel}, 10 minutes before the start.`);

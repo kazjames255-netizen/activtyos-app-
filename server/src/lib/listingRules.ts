@@ -1,4 +1,5 @@
 // Pure listing rules (zod schemas + publish requirements), moved verbatim out of routes/listings.ts so they can be unit-tested.
+import { validOwnLink } from "./onlineRules";
 import { addDaysIso } from "./listingChecks";
 import { z } from "zod";
 import { desiredRuns } from "./listingRunsPure";
@@ -248,6 +249,8 @@ export function publishProblems(merged: Record<string, unknown>, opts?: { today?
     else if (coverage.mode === "radius" ? !coverage.basePostcode || !coverage.radiusMiles : !(coverage.postcodePrefixes ?? []).length)
       problems.push("a home-visit coverage area");
   }
+  // An own-link online listing needs a real https link families can tap (an empty or malformed link would hand them nothing at join time).
+  if (merged.videoMode === "own" && !validOwnLink(merged.ownLink as string | undefined)) problems.push("a session link that starts with https://");
   const recipe = runRecipeOf(merged);
   const runs = desiredRuns(recipe, { start: "09:00", end: "15:30" });
   if (!runs.length) problems.push("dates with at least one running day");

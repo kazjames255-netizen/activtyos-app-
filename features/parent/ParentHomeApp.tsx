@@ -10,6 +10,7 @@ import { dateLocale } from "@/lib/i18n/format";
 import { useCustomerArea } from "@/lib/use-customer-area";
 import { useCouponCount, useUnreadMessages } from "@/lib/use-unread";
 import { money } from "@/features/bookings/helpers";
+import { OnlineSessionsPanel } from "@/features/onlinesessions/OnlineSessionsPanel";
 import type { Booking } from "@/features/bookings/types";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -412,6 +413,8 @@ export function ParentHomeApp() {
 
   const nextBlock = (
     <section aria-label={h("NextUp")}>
+      {/* Online sessions: the Join button (or why there is none yet) right on the home page. */}
+      <OnlineSessionsPanel />
       <SectionTitle action={!loading && live.length > 0 ? <Link href="/custdash/bookings" className="inline-flex min-h-[44px] items-center text-[14px] font-bold text-[var(--brand)] no-underline">{h("SeeAll")}</Link> : undefined}>{h("NextUp")}</SectionTitle>
       {loading ? (
         <Sk className="h-[112px] w-full" />
