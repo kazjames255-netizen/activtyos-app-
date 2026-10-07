@@ -56,6 +56,7 @@ export const QUESTIONS: string[] = [
   "what does the button say when a parent books a manual approval listing with a card",
   "the second child on a held card was approved later, what does the family get",
   "can parents tell me how to find their house or where to park",
+  "i booked several online sessions, how do i find the next one to join",
   "how long till money arrives in my bank",
   "what do I need to go live",
   "is there a free trial",

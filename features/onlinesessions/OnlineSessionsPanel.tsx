@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { dateLocale } from "@/lib/i18n/format";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n, useT } from "@/lib/i18n/provider";
+import { isRTL } from "@/lib/i18n/config";
+import { indexAfterReload, orderSessions, sessionKey } from "./order";
 import { Card } from "@/components/ui";
 
 // Parent side: "Your online sessions" at the top of My bookings. A booked online session shows a Join button that wakes up 10 minutes before the
@@ -25,7 +27,11 @@ const day = (iso: string) => new Date(iso).toLocaleDateString(dateLocale(), { we
 /** `refs` limits the panel to those bookings (the "you are booked" screen); `providerName` words the bank-transfer hint. */
 export function OnlineSessionsPanel({ refs, providerName }: { refs?: string[]; providerName?: string } = {}) {
   const t = useT();
+  const { locale } = useI18n();
+  const rtl = isRTL(locale);
   const router = useRouter();
+  const [curKey, setCurKey] = useState<string | null>(null);
+  const touchX = useRef<number | null>(null);
   const [list, setList] = useState<MySession[] | null>(null);
   const [, tick] = useState(0);
   const load = useCallback(() => { apiGet<MySession[]>("/api/online-sessions/mine").then(setList).catch(() => setList([])); }, []);
@@ -33,14 +39,43 @@ export function OnlineSessionsPanel({ refs, providerName }: { refs?: string[]; p
   // Re-check every 10 s (whether the host has started, and whether the window has just opened).
   useEffect(() => { const id = window.setInterval(() => { tick((n) => n + 1); load(); }, 10_000); return () => window.clearInterval(id); }, [load]);
   const shown = (list ?? []).filter((s) => !refs?.length || (s.refs ?? []).some((r) => refs.includes(r)));
-  if (!shown.length) return null;
+  const ordered = orderSessions(shown);
+  if (!ordered.length) return null;
   const now = Date.now();
+  // One session at a time, nearest first. The list reloads every 10 s: stay on the session being looked at while it still exists.
+  const idx = indexAfterReload(ordered, curKey);
+  const total = ordered.length;
+  const go = (to: number) => setCurKey(sessionKey(ordered[(to + total) % total]));
+  const next = () => go(idx + 1);
+  const prev = () => go(idx - 1);
   const btn = "inline-flex min-h-[44px] items-center justify-center rounded-full px-5 text-[14px] font-extrabold";
   return (
     <div data-testid="online-sessions-panel"><Card className="mb-4 p-4">
-      <div className="mb-2 flex items-center gap-2 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span aria-hidden>💻</span>{t("p9tx.osTitle")}</div>
-      <div className="flex flex-col gap-2">
-        {shown.map((s) => {
+      <div className="mb-2 flex items-center gap-2 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span aria-hidden>💻</span>{t("p9tx.osTitle")}{total > 1 ? ` · ${total}` : ""}
+        {total > 1 && (
+          <div className="ms-auto flex items-center gap-1.5" data-testid="os-nav">
+            <button type="button" onClick={prev} aria-label={t("p9tx.osPrev")} data-testid="os-prev" className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--panel)] text-[20px] font-extrabold hover:bg-[var(--brand-soft)]"><span aria-hidden>{rtl ? "›" : "‹"}</span></button>
+            <span className="min-w-[3.2rem] text-center text-[12.5px] font-bold text-[var(--ink-2)]" aria-live="polite" data-testid="os-counter">{t("p9tx.osCounter", { n: idx + 1, total })}</span>
+            <button type="button" onClick={next} aria-label={t("p9tx.osNext")} data-testid="os-next" className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--panel)] text-[20px] font-extrabold hover:bg-[var(--brand-soft)]"><span aria-hidden>{rtl ? "‹" : "›"}</span></button>
+          </div>
+        )}
+      </div>
+      <div
+        className="flex flex-col gap-2"
+        role="group"
+        aria-roledescription="carousel"
+        onKeyDown={(e) => { if (total < 2) return; if (e.key === "ArrowRight") { e.preventDefault(); rtl ? prev() : next(); } else if (e.key === "ArrowLeft") { e.preventDefault(); rtl ? next() : prev(); } }}
+        onTouchStart={(e) => { touchX.current = e.touches[0]?.clientX ?? null; }}
+        onTouchEnd={(e) => {
+          const x0 = touchX.current; touchX.current = null;
+          const x1 = e.changedTouches[0]?.clientX;
+          if (total < 2 || x0 == null || x1 == null || Math.abs(x1 - x0) < 48) return;
+          // swipe left = next (right-to-left languages mirror it)
+          const left = x1 < x0;
+          (left !== rtl) ? next() : prev();
+        }}
+      >
+        {[ordered[idx]].map((s) => {
           const open = now >= new Date(s.opensAt).getTime();
           const key = `${s.listingId}_${s.date}`;
           let action: React.ReactNode;
@@ -79,6 +114,11 @@ export function OnlineSessionsPanel({ refs, providerName }: { refs?: string[]; p
             </div>
           );
         })}
+        {total > 1 && total <= 7 && (
+          <div className="flex justify-center gap-1.5" aria-hidden data-testid="os-dots">
+            {ordered.map((o, i) => <button key={sessionKey(o)} type="button" tabIndex={-1} onClick={() => go(i)} className="h-2 w-2 rounded-full" style={{ background: i === idx ? "var(--brand-2)" : "var(--line)" }} />)}
+          </div>
+        )}
       </div>
     </Card></div>
   );
