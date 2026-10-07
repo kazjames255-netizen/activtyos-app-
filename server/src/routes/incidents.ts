@@ -127,6 +127,14 @@ async function safeguardingSettings(tenantId: string, childId?: string | null) {
 }
 
 const kindWord = (kind: string) => (kind === "accident" ? "accident" : kind === "safeguarding" ? "safeguarding concern" : "incident");
+// "An accident" / "An incident" / "A safeguarding concern" (it used to say "An safeguarding concern").
+const anWord = (word: string) => `${/^[aeiou]/i.test(word) ? "An" : "A"} ${word}`;
+/** The parent list's visibility rule as one test: a parent reaches (and may
+ *  reply to or acknowledge) a record only when it is an accident or staff chose
+ *  to share it. Internal behaviour notes, safeguarding concerns, confidential
+ *  records and concerns about staff stay off their side entirely. */
+const parentMaySee = (x: { kind?: unknown; shareWithParent?: unknown; confidential?: unknown; subject?: unknown }) =>
+  x.shareWithParent === true || (x.kind === "accident" && x.confidential !== true && x.subject !== "staff");
 // Whether a record should reach the parent: accidents always (per settings),
 // behaviour when the setting is on OR staff ticked share, safeguarding only
 // when staff explicitly chose to share (it's confidential by default).
@@ -333,11 +341,11 @@ incidents.post("/", async (req, res) => {
       tenantId: scope.tenantId!,
       to: { kind: "parent", email },
       category: doc.kind === "accident" ? "accident" : "incident",
-      title: `An ${word} was recorded for ${doc.childName}`,
+      title: `${anWord(word)} was recorded for ${doc.childName}`,
       body: `${doc.description}${doc.treatment ? ` Treatment: ${doc.treatment}.` : ""}`,
       subject: `${doc.childName}: ${word} recorded on ${doc.date}`,
       emailHtml:
-        `<p>An ${word} involving <b>${esc(doc.childName)}</b> was recorded on <b>${when}</b>.</p>` +
+        `<p>${anWord(word)} involving <b>${esc(doc.childName)}</b> was recorded on <b>${when}</b>.</p>` +
         `<p>${esc(doc.description)}</p>` +
         (doc.injury ? `<p><b>Injury:</b> ${esc(doc.injury)}${doc.bodyPart ? ` (${esc(doc.bodyPart)})` : ""}</p>` : "") +
         (doc.treatment ? `<p><b>Treatment given:</b> ${esc(doc.treatment)}${doc.firstAider ? ` — by ${esc(doc.firstAider)}` : ""}</p>` : "") +
@@ -433,7 +441,7 @@ incidents.put("/:id", async (req, res) => {
       tenantId: String(rec.tenantId),
       to: { kind: "parent", email },
       category: kind === "accident" ? "accident" : "incident",
-      title: `An ${word} record for ${rec.childName} was updated`,
+      title: `${anWord(word)} record for ${rec.childName} was updated`,
       body: String(rec.description ?? ""),
       subject: `${rec.childName}: ${word} record updated`,
       emailHtml:
@@ -457,7 +465,7 @@ incidents.post("/:id/acknowledge", async (req, res) => {
   const childId = snap.data()!.childId as string | undefined;
   if (!childId) { res.status(404).json({ error: "Record not found" }); return; }
   const child = await db.collection("children").doc(childId).get();
-  if (!child.exists || child.data()!.parentUid !== req.user!.uid) { res.status(404).json({ error: "Record not found" }); return; }
+  if (!child.exists || child.data()!.parentUid !== req.user!.uid || !parentMaySee(snap.data()!)) { res.status(404).json({ error: "Record not found" }); return; }
   const firstAck = !snap.data()!.acknowledgedAt;
   const who = req.user?.name ?? req.user?.email ?? "Parent";
   await snap.ref.set({ acknowledgedAt: new Date().toISOString(), acknowledgedBy: who }, { merge: true });
@@ -499,7 +507,7 @@ incidents.post("/:id/note", async (req, res) => {
     const childId = data.childId as string | undefined;
     if (!childId) { res.status(404).json({ error: "Record not found" }); return; }
     const child = await db.collection("children").doc(childId).get();
-    if (!child.exists || child.data()!.parentUid !== req.user!.uid) { res.status(404).json({ error: "Record not found" }); return; }
+    if (!child.exists || child.data()!.parentUid !== req.user!.uid || !parentMaySee(data)) { res.status(404).json({ error: "Record not found" }); return; }
     role = "parent";
   } else if (canRecord(auth.role) && auth.tenantId) {
     // Same reach as editing: this tenant, this franchise, and — for staff — only
