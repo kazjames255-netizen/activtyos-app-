@@ -1025,7 +1025,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
             {b.serviceAddress?.address || b.serviceAddress?.postcode ? (
               <span className="block text-[11px] font-semibold text-[var(--ink-2)]">{t("p8par.mbComeToYou", { addr: visitAddressLabel(b.serviceAddress) })}</span>
             ) : (<>
-              {loc.location && <span className="block text-[11px] font-semibold text-[var(--ink-2)]">📍 {loc.location}</span>}
+              {venue?.online ? <span className="block text-[11px] font-extrabold text-[var(--brand)]">{t("p8lst.dlvOnline")}</span> : loc.location && <span className="block text-[11px] font-semibold text-[var(--ink-2)]">📍 {loc.location}</span>}
               {(loc.address || loc.city) && <span className="block text-[10.5px] text-[var(--ink-3)]">{[loc.address, loc.city].filter(Boolean).join(", ")}</span>}
             </>)}
           </PCol>
@@ -1177,7 +1177,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
               {b.serviceAddress?.address || b.serviceAddress?.postcode ? (
                 <div className="py-[4px] text-[12.5px] font-semibold">{t("p8par.mbComeToYou", { addr: visitAddressLabel(b.serviceAddress) })}</div>
               ) : (<>
-                {loc.location && <div className="py-[4px] text-[12.5px] font-semibold">{venue?.online ? "💻" : "📍"} {loc.location}</div>}
+                {loc.location && <div className="py-[4px] text-[12.5px] font-semibold">{venue?.online ? <><span className="font-extrabold text-[var(--brand)]">{t("p8lst.dlvOnline")}</span> · {loc.location}</> : <>📍 {loc.location}</>}</div>}
                 {venue?.online && (
                   <div className="my-1 rounded-xl border-2 border-[#2f6bd8] bg-[#eef4ff] p-3 text-[12.5px]">
                     <div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">{t("p7pg.howToJoin")}</div>

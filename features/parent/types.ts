@@ -31,6 +31,9 @@ export interface ListingSummary {
   /** The listing's venue name (resolved server-side) — the browse Location
    *  filter groups by it. Null when the listing has no venue set. */
   location?: string | null;
+  /** How it is delivered: at a venue, at the family's home, or both. An ONLINE listing is a venue whose kind is 'online' (venueKind). */
+  deliveryMode?: "venue" | "home-visit" | "both";
+  venueKind?: string | null;
   /** The venue's address (resolved server-side), shown on the browse card. */
   address?: string | null;
   /** The venue's town/city (resolved server-side) — the browse Location filter

@@ -12,6 +12,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useT, tNow } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
+import { deliveryLabel } from "@/features/listings/delivery";
 import type { ListingSummary } from "./types";
 import { CroppedImage } from "@/features/listings/ListingWizard";
 import { confirmLeavingBasket } from "@/features/listings/booking";
@@ -40,8 +41,9 @@ function liveCategories(listings: ListingSummary[] | null, t: (k: string, v?: Re
   try { return new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(parts); } catch { return parts.join(", "); }
 }
 
+// The year is added when it is not THIS year, so a wrong (or old / far-off) date stands out.
 const fmtDay = (iso?: string) =>
-  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" }) : null;
+  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", ...(Number(iso.slice(0, 4)) !== new Date().getFullYear() ? { year: "numeric" as const } : {}), timeZone: "UTC" }) : null;
 
 // The age band a listing accepts, worded for either or both ends being open.
 function agesLabel(l: ListingSummary, t: (k: string, v?: Record<string, string | number>) => string): string | null {
@@ -623,7 +625,11 @@ export function BrowseApp() {
                 </div>
               </button>
               <div className="p-4">
-                {l.location && (
+                {deliveryLabel(t, l, l.location, "parent") ? (
+                  <div data-testid="delivery-badge" className="inline-flex max-w-full items-center rounded-full bg-[#eef4ff] px-2.5 py-[3px] text-[12px] font-extrabold text-[var(--brand)]">
+                    <span className="truncate">{deliveryLabel(t, l, l.location, "parent")}</span>
+                  </div>
+                ) : l.location && (
                   <div className="flex min-w-0 items-center gap-1.5 text-[12px] text-[var(--ink-2)]">
                     <span aria-hidden>📍</span>
                     <span className="truncate"><span className="font-semibold text-[var(--ink)]">{l.location}</span>{l.address ? <span className="text-[var(--ink-3)]"> · {l.address}</span> : null}</span>

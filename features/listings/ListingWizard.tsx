@@ -1,5 +1,6 @@
 "use client";
 
+import { deliveryLabel } from "./delivery";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { addonLinesFor } from "@/features/bookings/helpers";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -904,7 +905,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
           ? `${fmtDay(done.firstDate)} – ${fmtDay(done.lastDate)}`
           : fmtDay(done.firstDate);
     const kids = done.children.length > 1 ? new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(done.children) : done.children.join(", ");
-    const where = venue?.name ? [venue.name, venue.address].filter(Boolean).join(", ") : null;
+    const where = (venue as { kind?: string } | null | undefined)?.kind === "online" ? t("p8lst.dlvOnline") : venue?.name ? [venue.name, venue.address].filter(Boolean).join(", ") : null;
     // Voucher bookings are NOT paid yet — the family pays through their scheme's
     // own site. Surface that + a link, instead of a false "paid".
     const scheme = done.voucherScheme;
@@ -4295,7 +4296,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 
         {/* fancy fact strip (under the image) */}
         <div className="relative z-10 mx-2 -mt-6 flex flex-col overflow-hidden rounded-2xl bg-white sm:flex-row" style={{ boxShadow: "0 18px 34px -18px rgba(30,50,90,.35)" }}>
-          {([["📍", tr("p7pg.whereLbl"), (d.deliveryMode === "home-visit" ? tr("p9tx.hvWeCome") : venue?.name || town || tr("p7pg.venueTbc")), "#eef4ff", venue?.address || null], ["📆", tr("p7pg.whenLbl"), runLabel, "#e4f8ee", null], ["👧👦", tr("p7pg.agesLbl"), d.ageFrom && d.ageTo ? tr("p7pg.agesYears", { from: d.ageFrom, to: d.ageTo }) : tr("p7pg.allAges"), "#fff0f5", null]] as [string, string, string, string, string | null][]).map(([e, k, v, tint, sub], i) => (
+          {([["📍", tr("p7pg.whereLbl"), (deliveryLabel(tr, { deliveryMode: d.deliveryMode, venueKind: (venue as { kind?: string } | null | undefined)?.kind }, venue?.name, "parent") ?? (venue?.name || town || tr("p7pg.venueTbc"))), "#eef4ff", venue?.address || null], ["📆", tr("p7pg.whenLbl"), runLabel, "#e4f8ee", null], ["👧👦", tr("p7pg.agesLbl"), d.ageFrom && d.ageTo ? tr("p7pg.agesYears", { from: d.ageFrom, to: d.ageTo }) : tr("p7pg.allAges"), "#fff0f5", null]] as [string, string, string, string, string | null][]).map(([e, k, v, tint, sub], i) => (
             <div key={k} className={`flex flex-1 items-center gap-3 px-4 py-3.5 ${i ? "border-t border-[#eef2fb] sm:border-s sm:border-t-0" : ""}`}>
               <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[16px]" style={{ background: tint }}>{e}</span>
               <div className="min-w-0"><div className="text-[9.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">{k}</div><div className="truncate text-[13px] font-extrabold" style={{ color: DEEP }}>{v}</div>{sub && <div className="truncate text-[11px] font-medium text-[#7a8194]">{sub}</div>}</div>
@@ -4475,7 +4476,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
       )}
       {/* fancy info strip (under the image) */}
       <div className="flex flex-col border-y sm:flex-row" style={{ borderColor: LINEs, background: STRIPBG, color: STRIPINK }}>
-        {([["📍", (d.deliveryMode === "home-visit" ? tr("p9tx.hvWeCome") : venue?.name || town || tr("p7pg.venueTbc")), venue?.address || null], ["📆", runLabel, null], ["👧👦", d.ageFrom && d.ageTo ? tr("p7pg.agesRange", { from: d.ageFrom, to: d.ageTo }) : tr("p7pg.allAges"), null]] as [string, string, string | null][]).map(([e, v, sub], i) => (
+        {([["📍", (deliveryLabel(tr, { deliveryMode: d.deliveryMode, venueKind: (venue as { kind?: string } | null | undefined)?.kind }, venue?.name, "parent") ?? (venue?.name || town || tr("p7pg.venueTbc"))), venue?.address || null], ["📆", runLabel, null], ["👧👦", d.ageFrom && d.ageTo ? tr("p7pg.agesRange", { from: d.ageFrom, to: d.ageTo }) : tr("p7pg.allAges"), null]] as [string, string, string | null][]).map(([e, v, sub], i) => (
           <div key={i} className={`flex flex-1 items-center gap-2.5 px-5 py-3 ${i ? "border-t sm:border-s sm:border-t-0" : ""}`} style={i ? { borderColor: LINEs } : undefined}>
             <span className="text-[15px]">{e}</span>
             <span className="min-w-0 flex-1">

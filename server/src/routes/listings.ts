@@ -214,7 +214,7 @@ listings.get("/", async (req, res) => {
   const tenantIds = [...new Set(visible.map((d) => d.data().tenantId).filter(Boolean))];
   const libs = await Promise.all(tenantIds.map((id) => db.collection("libraries").doc(id).get()));
   const catNames = new Map<string, Map<string, string>>();
-  const venueById = new Map<string, Map<string, { name: string; address?: string; city?: string; lat?: number; lng?: number }>>();
+  const venueById = new Map<string, Map<string, { name: string; address?: string; city?: string; lat?: number; lng?: number; kind?: string }>>();
   const seasonNames = new Map<string, Map<string, string>>(); // tenant → seasonId → name
   const payMethodsByTenant = new Map<string, string[]>();     // tenant → accepted payment methods
   const displayNameByTenant = new Map<string, string>();      // tenant → the name families see (Setup → Display name)
@@ -228,10 +228,10 @@ listings.get("/", async (req, res) => {
   allLibs.forEach((snap, i) => {
     const data = snap.data() ?? {};
     const cats = (data.categories ?? []) as { id: string; name: string }[];
-    const venues = (data.venues ?? []) as { id: string; name: string; address?: string; city?: string; lat?: number; lng?: number }[];
+    const venues = (data.venues ?? []) as { id: string; name: string; address?: string; city?: string; lat?: number; lng?: number; kind?: string }[];
     const settings = (data.settings ?? {}) as { seasons?: { id: string; name: string }[]; payMethods?: string[] };
     catNames.set(libKeys[i], new Map(cats.map((c) => [c.id, c.name])));
-    venueById.set(libKeys[i], new Map(venues.map((v) => [v.id, { name: v.name, address: v.address, city: v.city, lat: v.lat, lng: v.lng }])));
+    venueById.set(libKeys[i], new Map(venues.map((v) => [v.id, { name: v.name, address: v.address, city: v.city, lat: v.lat, lng: v.lng, kind: v.kind }])));
     seasonNames.set(libKeys[i], new Map((settings.seasons ?? []).map((s) => [s.id, s.name])));
     payMethodsByTenant.set(libKeys[i], settings.payMethods ?? []);
     if (typeof (settings as { providerName?: string }).providerName === "string" && (settings as { providerName?: string }).providerName!.trim()) displayNameByTenant.set(libKeys[i], (settings as { providerName?: string }).providerName!.trim());
@@ -325,7 +325,7 @@ listings.get("/", async (req, res) => {
       const timings = timingsFor(l.blockId as string | undefined);
       // The provider's current display name, not the one frozen on the listing
       // when it was created (acceptance d1s4).
-      return { ...withoutBaseAddress(l), ...(venueOnly.has(l.id as string) ? { homeVisitAvailable: false } : {}), tenantName: displayNameByTenant.get(l.tenantId as string) ?? l.tenantName, title, categories, season, offers, bestOfferPercent, acceptsTFC, acceptsVouchers, timings, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
+      return { ...withoutBaseAddress(l), ...(venueOnly.has(l.id as string) ? { homeVisitAvailable: false } : {}), tenantName: displayNameByTenant.get(l.tenantId as string) ?? l.tenantName, title, categories, season, offers, bestOfferPercent, acceptsTFC, acceptsVouchers, timings, location: venue?.name ?? null, venueKind: venue?.kind ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
     })
   );
   if (browseCache.size > 300) browseCache.clear();

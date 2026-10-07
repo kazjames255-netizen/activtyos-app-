@@ -1,5 +1,6 @@
 "use client";
 
+import { deliveryLabel } from "./delivery";
 import { duplicateBody } from "@/lib/uiRules";
 import { StepDonePrompt } from "@/features/dashboard/StepDonePrompt";
 import { EmbedPanel, type EmbedListingRow } from "./EmbedPanel";
@@ -766,6 +767,8 @@ function ListingsTab({
       l, dr, info,
       vn: dr ? local.venues.find((v) => v.id === dr.venueId)?.name ?? "" : "",
       venueId: dr?.venueId ?? null,
+      deliveryMode: dr?.deliveryMode,
+      venueKind: dr ? local.venues.find((v) => v.id === dr.venueId)?.kind : undefined,
       seasonId: dr?.seasonId ?? null,
       categoryIds: dr?.categoryIds ?? [],
       cap, spaces, left, booked,
@@ -911,7 +914,7 @@ function ListingsTab({
       {activeShown.length === 0 ? (
         <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">{q || dateFilter || venueFilter || catFilter ? (dateFilter ? t("p8lst.flNoMatchDate") : t("p8lst.flNoMatch")) : t("p8lst.flNoActive")}</Card>
       ) : (
-        activeShown.map(({ l, info, vn, cap, spaces, isLive, isDraft, seasonId }) => {
+        activeShown.map(({ l, info, vn, cap, spaces, isLive, isDraft, seasonId, deliveryMode, venueKind }) => {
           const season = seasonName(seasonId);
           return (
             <Card key={l.id} className="overflow-visible p-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-20px_rgba(20,35,90,.35)]">
@@ -948,7 +951,7 @@ function ListingsTab({
                     )}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12.5px] text-[var(--ink-3)]">
-                    <span>{vn || t("p8lst.flNoVenue")}</span>
+                    <span>{deliveryLabel(t, { deliveryMode, venueKind }, vn, "provider") ?? (vn || t("p8lst.flNoVenue"))}</span>
                     {ownerOf && <span data-testid="listing-owner" title={t("p8lst.ownerLabel")} className="rounded-full bg-[var(--panel)] px-1.5 py-[1px] text-[10.5px] font-semibold text-[var(--ink-2)] ring-1 ring-[var(--line)]">{t("p8lst.ownerLabel")}: {ownerOf(l)}</span>}
                     {season && <span title={t("p8lst.flSeason")} className="rounded-full bg-[var(--panel)] px-1.5 py-[1px] text-[10.5px] font-semibold text-[var(--ink-2)] ring-1 ring-[var(--line)]">🗓 {season}</span>}
                   </div>
