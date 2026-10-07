@@ -25,7 +25,8 @@ import { MatchedThemes } from "./MatchedThemes";
 import { brandFromSettings } from "@/features/setup/BrandColours";
 import { policyWording, type NamedPolicy } from "@/lib/cancellation";
 import { CheckoutPanel } from "./checkout";
-import { HMRC_CONNECTED, TFC_FAILURE_COPY, payBookings, type TfcChildPayment, type TfcFailure } from "./tfc";
+import { TFC_COPY_STEM } from "@/lib/tfc";
+import { HMRC_CONNECTED, payBookings, type TfcChildPayment, type TfcFailure } from "./tfc";
 import { ThemeHero, useThemeFont } from "./ThemeHero";
 import { THEME_TOKENS, themeArtOn, NEW_THEME_KEYS, FONT_STACK, type NewThemeKey, type ThemeTokens } from "./pageThemes";
 import { BlocksApp } from "@/features/blocks/BlocksApp";
@@ -1129,8 +1130,8 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         {/* HMRC couldn't take it from here: why, then the manual way to pay. */}
         {done.tfcFailure && !done.waitlisted && (
           <div className="mt-3 rounded-2xl border border-[#f5c2c2] bg-[#fdecec] p-4 text-start text-[12.5px] leading-relaxed text-[#8a1f1f]">
-            <div className="font-extrabold">{TFC_FAILURE_COPY[done.tfcFailure.failure]?.title}</div>
-            <div className="mt-1">{TFC_FAILURE_COPY[done.tfcFailure.failure]?.detail}</div>
+            <div className="font-extrabold">{t(`p7ck.${TFC_COPY_STEM[done.tfcFailure.failure] ?? "tfcConnFailed"}_title`)}</div>
+            <div className="mt-1">{t(`p7ck.${TFC_COPY_STEM[done.tfcFailure.failure] ?? "tfcConnFailed"}_detail`)}</div>
             {done.tfcFailure.uncertain && <div className="mt-1 font-bold">{t("p7cl.tfcUncertain")}</div>}
           </div>
         )}

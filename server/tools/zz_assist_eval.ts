@@ -68,6 +68,7 @@ export const QUESTIONS: string[] = [
   "the second child on a held card was approved later, what does the family get",
   "where does a parent pay by card instead if they chose bank transfer for an online session",
   "can parents tell me how to find their house or where to park",
+  "what does a parent see if HMRC says my childcare registration or bank details are wrong for Tax-Free Childcare",
   "where can I see which t-shirt size each child ordered",
   "how do I know what extras to get ready for tomorrow",
   "can staff tick off that a water bottle has been handed out",

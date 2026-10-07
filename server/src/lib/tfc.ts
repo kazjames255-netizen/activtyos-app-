@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from "node:crypto";
-import type { TfcFailure } from "../../../lib/tfc";
+import { tfcFailureForCode, type TfcFailure } from "../../../lib/tfc";
 
 // ─────────────────────────────────────────────────────────────────────────
 // HMRC Tax-Free Childcare Payments API — the real client (v1.2).
@@ -110,24 +110,14 @@ export interface TfcTokens {
 //          incomplete) — nothing the parent can do                 → not-connected
 //   ETFC2  "Bearer Token did not return a valid record"            → connection-expired
 //   E0401  auth failure behind HMRC's 500                          → connection-expired
-//   E0043  the parent has no TFC account at all. No designed
-//          screen exists for it; the link-failure screen is the
-//          closest and its "try again" is harmless.                → connection-failed
-const CODE_FAILURES: Record<string, TfcFailure> = {
-  E0033: "insufficient-funds",
-  E0027: "provider-not-added",
-  E0030: "not-connected",
-  ETFC2: "connection-expired",
-  E0401: "connection-expired",
-};
-
-/** Map one HMRC error body onto a designed failure screen. */
+//   E0043  the parent has no TFC account at all                   → no-tfc-account
+//   E0035  HMRC blocks payments from the account                   → account-blocked
+//   E0025/E0026/E0032 reference and date of birth don't match      → reference-mismatch
+//   E0031/E0036/E0042 the CHILDCARE PROVIDER can't be paid         → provider-unavailable
+//   E0024  OUR EPP identifiers don't match (our configuration)     → not-connected
+/** Map one HMRC error body onto a designed failure screen (the table lives in lib/tfc.ts so tests and the UI share it). */
 export function failureForCode(code: string | undefined, status: number): TfcFailure {
-  if (code && CODE_FAILURES[code]) return CODE_FAILURES[code];
-  // A 401/403 from the gateway is the token, not the request — the same state
-  // the spec calls "connection expired".
-  if (status === 401 || status === 403) return "connection-expired";
-  return "connection-failed";
+  return tfcFailureForCode(code, status);
 }
 
 // ── HTTP ─────────────────────────────────────────────────────────────────

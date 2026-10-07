@@ -56,6 +56,22 @@ export const TFC_FAILURE_COPY: Record<TfcFailure, { title: string; detail: strin
     title: "HMRC connection expired",
     detail: "Your link to HMRC has expired — sign in again to reconnect.",
   },
+  "no-tfc-account": {
+    title: "You need a Tax-Free Childcare account first",
+    detail: "HMRC says there is no Tax-Free Childcare account for this sign-in. Create one on GOV.UK, then come back. You can pay another way for now.",
+  },
+  "account-blocked": {
+    title: "Please contact Tax-Free Childcare customer services",
+    detail: "HMRC is not allowing payments from this Tax-Free Childcare account right now. Only they can fix this. You can pay another way meanwhile.",
+  },
+  "reference-mismatch": {
+    title: "Check your child's reference and date of birth",
+    detail: "HMRC could not match this payment reference with the child's date of birth. Check both on your Tax-Free Childcare account and try again.",
+  },
+  "provider-unavailable": {
+    title: "This provider can't take Tax-Free Childcare yet",
+    detail: "HMRC could not pay this provider: their childcare registration or bank details are not set up for Tax-Free Childcare. Nothing was taken from your account. Pay another way, or ask the provider.",
+  },
 };
 
 export interface TfcLink { linked: boolean; reference?: string; failure?: TfcFailure }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { linkAccount, HMRC_CONNECTED, type TfcFailure } from "./tfc";
+import { TFC_COPY_STEM } from "@/lib/tfc";
 import { useT } from "@/lib/i18n/provider";
 import { Rich } from "@/components/i18n/Rich";
 
@@ -50,7 +51,7 @@ export function TfcConnect({ childName, providerName, reference, onLinked, onClo
 }) {
   const tr = useT();
   // Same wording the checkout uses for each designed HMRC failure (p7ck.tfc*), so the two screens never disagree.
-  const failureKey: Record<TfcFailure, string> = { "not-connected": "tfcNotConnected", "insufficient-funds": "tfcInsufficient", "provider-not-added": "tfcProviderNotAdded", "connection-failed": "tfcConnFailed", "connection-expired": "tfcConnExpired" };
+  const failureKey = TFC_COPY_STEM;
   const [stage, setStage] = useState<Stage>("consent");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<TfcFailure>("connection-failed");

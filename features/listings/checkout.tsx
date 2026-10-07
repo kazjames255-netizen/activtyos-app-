@@ -30,6 +30,7 @@ import { uploadPlan, PLAN_MAX_BYTES } from "./planUpload";
 import { dobRequired } from "@/lib/childDob";
 import { useTenantSettings, questionsFor, asksEveryBooking, limitFor, liveVouchers, detailsForListing } from "@/lib/settings";
 import { voucherWindow } from "@/lib/vouchers";
+import { TFC_COPY_STEM } from "@/lib/tfc";
 import { HMRC_CONNECTED, TFC_FAILURE_COPY, balance as tfcBalance, linkedChildren, referenceHint, referencePrefix, type TfcBalance, type TfcFailure } from "./tfc";
 import { TfcConnect } from "./TfcConnect";
 import { QuestionFields, unansweredRequired } from "@/components/QuestionFields";
@@ -1325,7 +1326,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     parentMode ? "Pay" : "Payment",
   ];
   // The step names double as identifiers (the "Meals" pill is styled by name), so translate at display time only.
-  const tfcCopy = (f: keyof typeof TFC_FAILURE_COPY, part: "title" | "detail") => { const k = ({ "not-connected": "tfcNotConnected", "insufficient-funds": "tfcInsufficient", "provider-not-added": "tfcProviderNotAdded", "connection-failed": "tfcConnFailed", "connection-expired": "tfcConnExpired" } as Record<string, string>)[f]; return k ? tr(`p7ck.${k}_${part}`) : TFC_FAILURE_COPY[f][part]; };
+  const tfcCopy = (f: keyof typeof TFC_FAILURE_COPY, part: "title" | "detail") => { const k = (TFC_COPY_STEM as Record<string, string>)[f]; return k ? tr(`p7ck.${k}_${part}`) : TFC_FAILURE_COPY[f][part]; };
   const stepLabel = (n: string) => ({ Dates: tr("p7ck.stepDates"), Parent: tr("p7ck.stepParent"), Children: tr("p7ck.stepChildren"), Meals: tr("p7ck.stepMeals"), Pay: tr("p7ck.stepPay"), Payment: tr("p7ck.stepPayment") } as Record<string, string>)[n] ?? n;
   /** Where "Children" sits — one further along for an operator. */
   const whoAt = parentMode ? 1 : 2;

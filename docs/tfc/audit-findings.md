@@ -118,3 +118,5 @@ Everything here is unconfirmed from public material and is deliberately not assu
 11. Q11: whether one parent may link several children under one access token, and whether `epp_reg_reference`
     differs per franchise or tenant (see the TODO in `server/src/routes/tfc.ts` on franchise providers).
 12. Q12: sandbox test data (references, error triggers) for each error code, to replace the stubbed tests.
+    **ANSWERED 7 Oct 2026** from HMRC's v1.2 Testing page: 4 success references (AAAA/AABB/AACC/AADD00000TFC) and 12 error references (EERR, EETT, EEBD, EEPP, EEQQ, EEVV, EERS, EEUU, EEYY, EEYZ, EEBC, EEWW + 00000TFC) with their codes. Mapped and unit-tested in `tests/regression/tfc-sandbox-scenarios.test.mts`; results table in `docs/tfc/sandbox-test-evidence.md`.
+    Also answered from the same page: **Q4 (partly)** E0024, E0025, E0026, E0027, E0030, E0031, E0032, E0033, E0035, E0036, E0042 and E0043 are all HTTP 400 and mean the request was NOT processed (E0043 = parent has no TFC account; E0030 = the EPP record is inactive). E0401 and ETFC2 are not in the public scenarios and stay open. **Q3 (partly)** test balances and `payment_amount` are integer pence.
