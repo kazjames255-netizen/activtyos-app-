@@ -3526,7 +3526,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
         ))}
       </Select>
       <div className="mt-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
-        {d.cancellation || tr("p8lst.wbPickPolicy")}
+        {d.cancellation ? d.cancellation.charAt(0).toLocaleUpperCase() + d.cancellation.slice(1) : tr("p8lst.wbPickPolicy")}
       </div>
       <div className="mt-1 text-[11px] text-[var(--ink-3)]">
         <Rich text={tr("p8lst.wbPolicyFrom")} />
