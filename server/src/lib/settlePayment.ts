@@ -87,6 +87,7 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
 
   const batch = db.batch();
   const settled: Booking[] = [];
+  const confirmedNow = new Set<string>();
   for (const bookingRef of claimed.refs ?? []) {
     const bSnap = await db.collection("bookings").doc(bookingDocId(claimed.tenantId, bookingRef)).get();
     if (!bSnap.exists) continue;
@@ -95,6 +96,9 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
     // portion is still awaited, so the booking stays "Awaiting voucher payment"
     // (operator: Mark Tax-Free Childcare received) with the split recorded.
     const tfcSplit = (b.tfcAmount ?? 0) > 0 && (b.amount ?? 0) > (b.tfcAmount ?? 0);
+    // A parent's own card booking (pay 'Unpaid', place Confirmed) had its 'booked in' email held back until the card went through: the
+    // payment email is then the ONE confirmation. (An operator's invoice, or a part-paid voucher, was confirmed earlier.)
+    if (b.status === "Confirmed" && b.pay === "Unpaid" && !tfcSplit && !b.cardHold) confirmedNow.add(b.ref);
     if (tfcSplit) {
       const taken = balanceOf(b);
       b.cardPaid = Math.round(((b.cardPaid ?? 0) + taken) * 100) / 100;
@@ -124,7 +128,7 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
   const famKey = (b: (typeof settled)[number]) => `${(b.email ?? "").toLowerCase()}|${b.listingId ?? b.listing ?? ""}`;
   for (const b of settled) byFamily.set(famKey(b), [...(byFamily.get(famKey(b)) ?? []), b]);
   for (const grp of byFamily.values()) {
-    await notifyPaymentReceived(claimed.tenantId, grp[0], "card", grp)
+    await notifyPaymentReceived(claimed.tenantId, grp[0], "card", grp, false, grp.every((x) => confirmedNow.has(x.ref)))
       .catch((e) => console.error(`[settle] payment-received notice for ${grp[0].ref}:`, (e as Error).message));
   }
   return "settled";

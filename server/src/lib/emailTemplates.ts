@@ -270,7 +270,16 @@ export function bookingCancelledSpec(
   };
 }
 
-export function paymentReceivedSpec(b: Booking, providerName: string, opts: { label: string; amount: number; refs?: string[]; fullyPaid?: boolean; approved?: boolean }): CustomerEmailSpec {
+export function paymentReceivedSpec(b: Booking, providerName: string, opts: { label: string; amount: number; refs?: string[]; fullyPaid?: boolean; approved?: boolean; confirmedNow?: boolean }): CustomerEmailSpec {
+  // An ordinary (auto-confirm) card booking: ONE message - booked in AND paid - because the 'booked in' email was held until the card succeeded.
+  if (opts.confirmedNow) {
+    return {
+      subject: `You're booked in — payment received — ${b.listing}`,
+      title: "You're booked in ✓ — payment received",
+      body: `<p style="font-size:14px">Great news ${escapeHtml(b.booker)} — your booking with ${escapeHtml(providerName)} is <b>confirmed</b> and your <b>${escapeHtml(opts.label)}</b> payment of <b>${gbp(opts.amount)}</b> has been received. Your booking is fully paid. See you there!</p>`,
+      enrich: { whatIncluded: true, map: true },
+    };
+  }
   // A card HOLD that the provider has just approved: ONE message - booked in AND paid - not an approval email plus a receipt.
   if (opts.approved) {
     return {

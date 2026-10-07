@@ -183,7 +183,7 @@ export const bookingDocId = (tenantId: string, ref: string) => `${tenantId}_${re
  *  payment settles in lib/settlePayment.ts (shared with the Stripe webhook),
  *  which sent nothing at all — a family paying by card heard from Stripe, if
  *  anything, but never from ActivityOS. */
-export async function notifyPaymentReceived(tenantId: string, b: Booking, label: string, group?: Booking[], approved = false): Promise<void> {
+export async function notifyPaymentReceived(tenantId: string, b: Booking, label: string, group?: Booking[], approved = false, confirmedNow = false): Promise<void> {
   if (!b.email?.includes("@")) return;
   const email = b.email;
   const tenantDoc = await db.collection("tenants").doc(tenantId).get();
@@ -194,13 +194,15 @@ export async function notifyPaymentReceived(tenantId: string, b: Booking, label:
   const { merged, refs } = mergeBookings(all);
   const kidsLabel = merged.kids?.length ? merged.kids.map((k) => k.name).join(", ") : merged.child;
   const dateLabel = (merged.sessions ?? [])[0]?.split(" · ")[0];
-  emailPaymentReceived(merged, provider, { label, amount: merged.amount ?? 0, refs, fullyPaid: all.every((x) => x.pay === "Paid"), approved });
+  emailPaymentReceived(merged, provider, { label, amount: merged.amount ?? 0, refs, fullyPaid: all.every((x) => x.pay === "Paid"), approved, confirmedNow });
   void notify({
     tenantId,
     to: { kind: "parent", email },
     category: "billing",
-    title: approved ? `Booking approved and payment received · ${refs.join(", ")}` : `Payment received · ${refs.join(", ")}`,
-    body: approved
+    title: approved ? `Booking approved and payment received · ${refs.join(", ")}` : confirmedNow ? `You're booked in and paid · ${refs.join(", ")}` : `Payment received · ${refs.join(", ")}`,
+    body: confirmedNow
+      ? `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — your booking is confirmed and £${(merged.amount ?? 0).toFixed(2)} has been received${dateLabel ? ` · ${dateLabel}` : ""}. See you there!`
+      : approved
       ? `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — your booking is approved and £${(merged.amount ?? 0).toFixed(2)} has been taken from your card${dateLabel ? ` · ${dateLabel}` : ""}. See you there!`
       : `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — £${(merged.amount ?? 0).toFixed(2)} received via ${label}${dateLabel ? ` · ${dateLabel}` : ""}. Fully paid — thank you!`,
     href: `/custdash/bookings?open=${encodeURIComponent(b.ref)}`,
