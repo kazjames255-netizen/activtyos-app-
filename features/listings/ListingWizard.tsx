@@ -1530,7 +1530,7 @@ export function ListingWizard({
     <div className="fixed inset-0 z-[9999] flex flex-col bg-[#eef2f9] text-[var(--ink)]"
       style={{ ["--bg" as string]: "#f5f8fd", ["--surface" as string]: "#fff", ["--panel" as string]: "#fbf8fc", ["--ink" as string]: "#171534", ["--ink-2" as string]: "#4a4763", ["--ink-3" as string]: "#8a86a3", ["--line" as string]: "#ece6f1" } as React.CSSProperties}>
 
-      {goLiveOpen && <GoLiveModal onClose={() => setGoLiveOpen(false)} onGoLive={() => void publishAction()} busy={busy} />}
+      {goLiveOpen && <GoLiveModal onClose={() => { setGoLiveOpen(false); void syncApi(saveStatusFor(d.status), true); setMsg(tr("p8lst.wbNotLiveYet")); }} onGoLive={() => void publishAction()} busy={busy} />}
       {/* Fancy blue header + segmented progress — the campaign-wizard slideshow look. */}
       <div className="flex-none px-5 py-4 text-white sm:px-6" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
         <div className="mx-auto flex max-w-[1160px] flex-wrap items-center justify-between gap-2">
