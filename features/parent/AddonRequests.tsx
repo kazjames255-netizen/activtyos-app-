@@ -31,7 +31,7 @@ export function AddonRequests({ booking, providerName, onChanged }: { booking: B
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [form, setForm] = useState<{ key: string; kind: "change" | "cancel"; answers: Record<string, string>; note: string } | null>(null);
-  const provider = providerName || t("p7cl.theProvider");
+  const provider = providerName || t("p9tx.osYourProvider");
   const tenantQ = booking.tenantId ? `?tenantId=${encodeURIComponent(booking.tenantId)}` : "";
   const base = `/api/my/bookings/${encodeURIComponent(booking.ref)}`;
 

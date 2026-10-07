@@ -169,6 +169,17 @@ async function payByCard(tok: string, ref: string) {
     const cx = await call(prov.idToken, "POST", `/api/bookings/${refC}/actions`, { type: "cancel", refund: "none", reason: "QA" });
     const optsC3 = await call(parent.idToken, "GET", `/api/my/bookings/${refC}/addon-options`);
     T("a cancelled booking: nothing can be requested", cx.status < 300 && (optsC3.json?.lines ?? []).every((l: any) => l.block === "cancelled"), JSON.stringify((optsC3.json?.lines ?? []).map((l: any) => l.block)));
+    // ── the Kit to prepare list (AC1) follows requests ──
+    const kitDay = (r: any) => (r.json?.groups ?? []) as any[];
+    const kPend = await call(parent.idToken, "POST", `/api/my/bookings/${refD}/addon-requests`, { key: (await call(parent.idToken, "GET", `/api/my/bookings/${refD}/addon-options`)).json?.lines?.find((l: any) => l.name === "water bottle")?.key, kind: "change", answers: { "red or blue": "blue" } });
+    const k1 = await call(prov.idToken, "GET", `/api/kit?date=${far}`);
+    const bottleRed = kitDay(k1).find((g: any) => /water bottle/i.test(g.name) && /red/i.test(g.choiceValue));
+    T("kit view: a pending change shows a 'change' marker on that child's item", kPend.status === 201 && bottleRed?.children?.some((c: any) => c.ref === refD && c.pending === "change"), `${kPend.status} ${JSON.stringify(bottleRed?.children?.map((c: any) => [c.ref, c.pending]))}`);
+    await call(prov.idToken, "POST", `/api/bookings/${refD}/actions`, { type: "addon-approve", requestId: kPend.json?.id });
+    const k2 = await call(prov.idToken, "GET", `/api/kit?date=${far}`);
+    const blue = kitDay(k2).find((g: any) => /water bottle/i.test(g.name) && /blue/i.test(g.choiceValue));
+    const stillRedD = kitDay(k2).find((g: any) => /water bottle/i.test(g.name) && /red/i.test(g.choiceValue))?.children?.some((c: any) => c.ref === refD);
+    T("kit view: once approved the item is under the NEW choice (blue), the marker is gone, and it is no longer under red", !!blue?.children?.some((c: any) => c.ref === refD && !c.pending) && !stillRedD, JSON.stringify(blue?.children?.map((c: any) => [c.ref, c.pending])));
     console.log("API phase done", JSON.stringify({ refA, refB, refC, refD }));
     return;
   }
