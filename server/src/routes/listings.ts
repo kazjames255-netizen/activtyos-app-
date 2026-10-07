@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { FieldValue } from "firebase-admin/firestore";
 import { librarySnap, libraryDocId, loadSettings } from "../lib/tenantLibrary";
+import { videoModeDefault } from "../lib/onlineRules";
 import { DEFAULT_POLICY, policyById, policyWording, type NamedPolicy } from "../../../lib/cancellation";
 import { canWrite } from "../middleware/role";
 import { isFranchise, visibleToFranchise } from "../lib/franchiseScope";
@@ -524,6 +525,7 @@ listings.post("/", async (req, res) => {
     if (enforceListingChecks()) { const why = await homeVisitPostcodeProblem(data as Record<string, unknown>); if (why) { res.status(400).json({ error: `Can't publish yet — ${why}.` }); return; } }
     { const why = await goLiveRefusal(auth.tenantId); if (why) { res.status(402).json({ error: why, code: "go_live_requirements" }); return; } }
   }
+  await defaultVideoMode(data as Record<string, unknown>, auth.tenantId, auth.role === "franchise" ? auth.franchiseId : null);
   const name = (data.title ?? data.name)!;
   const doc = {
     ...data,
@@ -551,6 +553,19 @@ listings.post("/", async (req, res) => {
 // Multi-person (sibling) discounts are percentage-only: a £ amount is taken per child per line, so a family
 // could split a week into single days and out-discount the weekly pass. Rules already saved with another
 // method keep working (stored id + method unchanged); only NEW or CHANGED ones are refused.
+
+/** An ONLINE listing (its venue is the account's "online" place) always stores which way it is hosted: unset used to mean "ActivityOS room"
+ *  only by accident of the join code, so a listing saved with no choice looked unconfigured. Sets videoMode = "platform" when none was given. */
+async function defaultVideoMode(doc: Record<string, unknown>, tenantId: string, franchiseId: string | null, venueIdOverride?: string): Promise<void> {
+  const venueId = venueIdOverride ?? (doc.venueId as string | undefined);
+  if (doc.videoMode || !venueId) return;
+  try {
+    const lib = await librarySnap(tenantId, franchiseId);
+    const venues = ((lib.data() as { venues?: { id: string; kind?: string }[] } | undefined)?.venues ?? []);
+    const mode = videoModeDefault(venues, venueId, undefined);
+    if (mode) doc.videoMode = mode;
+  } catch { /* the choice is only a default: never block a save on it */ }
+}
 
 // Load a listing and verify it belongs to the caller's tenant.
 async function ownListing(req: Request, id: string) {
@@ -632,6 +647,7 @@ listings.put("/:id", async (req, res) => {
   if ("categoryIds" in data) {
     patch.categoryNames = await categoryNamesFor(own.snap.data()!.tenantId as string, data.categoryIds);
   }
+  if (!own.snap.data()!.videoMode) await defaultVideoMode(patch, own.snap.data()!.tenantId as string, (own.snap.data()!.franchiseId as string | null | undefined) ?? null, (patch.venueId as string | undefined) ?? (own.snap.data()!.venueId as string | undefined));
   const merged = { ...own.snap.data()!, ...patch };
   // Refuse — BEFORE anything is written — an edit that would take a date off
   // while children are booked on it (lib/listingRuns bookedDatesDropped).

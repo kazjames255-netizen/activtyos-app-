@@ -21,8 +21,9 @@ export interface MySession {
   paid?: boolean; amountDue?: number; method?: string; ref?: string; refs?: string[];
 }
 
-const clock = (iso: string) => new Date(iso).toLocaleTimeString(dateLocale(), { hour: "numeric", minute: "2-digit" });
-const day = (iso: string) => new Date(iso).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short" });
+// UK time on purpose: the booking, the register and the emails all show the session in UK time, so the panel must not drift to the viewer's browser zone.
+const clock = (iso: string) => new Date(iso).toLocaleTimeString(dateLocale(), { hour: "numeric", minute: "2-digit", timeZone: "Europe/London" });
+const day = (iso: string) => new Date(iso).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/London" });
 
 /** `refs` limits the panel to those bookings (the "you are booked" screen); `providerName` words the bank-transfer hint. */
 /** `compact` (the "you are booked" screen, which already has its own heading box): no card and no title, just the session state(s). */
@@ -82,7 +83,7 @@ export function OnlineSessionsPanel({ refs, providerName, compact }: { refs?: st
           let action: React.ReactNode;
           let explain: React.ReactNode = null;
           const mins = Math.max(1, Math.round((new Date(s.startsAt).getTime() - new Date(s.opensAt).getTime()) / 60_000));
-          const opensDay = new Date(s.opensAt).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short" });
+          const opensDay = new Date(s.opensAt).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/London" });
           if (s.joinState === "unpaid") {
             // Booked but not paid: the join link is locked, and the family is told exactly why and what to do.
             // No pay button here: paying lives on the booking card ("Pay by card instead").

@@ -1,0 +1,292 @@
+[
+  {
+    "id": "stack",
+    "ok": true,
+    "note": "stripe key mode sk_test_"
+  },
+  {
+    "id": "setup: provider + 3 parents",
+    "ok": true,
+    "note": "tenant D6MlQDuP6dSPKxIFnZ10"
+  },
+  {
+    "id": "1a. publish an online listing with hosting = ActivityOS room",
+    "ok": true,
+    "note": "201"
+  },
+  {
+    "id": "1b. hosting choice is stored explicitly (videoMode = platform)",
+    "ok": true,
+    "note": "videoMode=platform"
+  },
+  {
+    "id": "1c. a listing saved with NO hosting choice defaults to ActivityOS room explicitly",
+    "ok": false,
+    "note": "status 201 videoMode=undefined"
+  },
+  {
+    "id": "1d. publish refused for own-link mode with no link",
+    "ok": true,
+    "note": "400 {\"error\":\"Can't publish yet — this listing needs a session link that starts with https://.\"}"
+  },
+  {
+    "id": "1e. publish refused for own link that is not https",
+    "ok": true,
+    "note": "400"
+  },
+  {
+    "id": "1f. (info) a live online listing with only past dates (server rule only applies on production builds)",
+    "ok": true,
+    "note": "status 201"
+  },
+  {
+    "id": "1g. parent can see the online listing and its blocks",
+    "ok": true,
+    "note": "blocks 1, today block 8riQez3HxsvOgKvZ4xJJ"
+  },
+  {
+    "id": "2a. card parent books today's online session",
+    "ok": true,
+    "note": "201 HVQ-10312 total 0.3"
+  },
+  {
+    "id": "2b. test card 4242 pays the booking -> Paid",
+    "ok": true,
+    "note": "200 {\"status\":\"succeeded\",\"paid\":true,\"refs\":[\"HVQ-10312\"]}"
+  },
+  {
+    "id": "2c. booking is Confirmed + Paid on the provider side",
+    "ok": true,
+    "note": "Confirmed/Paid"
+  },
+  {
+    "id": "3a. bank-transfer parent books",
+    "ok": true,
+    "note": "201 HVQ-10313 bank"
+  },
+  {
+    "id": "3b. unpaid bank booking: panel state is 'unpaid' (pay to unlock), no join/link",
+    "ok": true,
+    "note": "{\"listingId\":\"2v9I2DkmuqUVapaVAY7l\",\"listingName\":\"E1 Online Maths (ActivityOS room)\",\"date\":\"2026-10-07\",\"ref\":\"HVQ-10313\",\"refs\":[\"HVQ-10313\"],\"children\":[\"Bankchild\"],\"startsAt\":\"2026-10-07T13:52:00.000Z\",\"endsAt\":\"2026-10-07T14:52:00.00"
+  },
+  {
+    "id": "3c. unpaid family cannot get a token (join refused)",
+    "ok": true,
+    "note": "404 not_your_session"
+  },
+  {
+    "id": "4a. paid, before the window: state 'early' with the REAL opening time",
+    "ok": true,
+    "note": "{\"state\":\"early\",\"joinState\":\"early\",\"opensAt\":\"2026-10-07T13:42:00.000Z\",\"startsAt\":\"2026-10-07T13:52:00.000Z\"}"
+  },
+  {
+    "id": "4b. window opens 10 minutes before the start",
+    "ok": true,
+    "note": "14:42 -> 14:52"
+  },
+  {
+    "id": "4c. join before the window is refused (early)",
+    "ok": true,
+    "note": "409 early"
+  },
+  {
+    "id": "4d. another family (no booking) cannot join",
+    "ok": true,
+    "note": "404"
+  },
+  {
+    "id": "4e. signed-out request cannot join",
+    "ok": true,
+    "note": "401"
+  },
+  {
+    "id": "4f. host can start no earlier than the window (early host start refused or allowed: record)",
+    "ok": true,
+    "note": "200 "
+  },
+  {
+    "id": "5a. provider cancels a booking",
+    "ok": true,
+    "note": "200"
+  },
+  {
+    "id": "6a. /mine returns today + 3 later sessions for the carousel",
+    "ok": true,
+    "note": "2026-10-07,2026-10-08,2026-10-09,2026-10-10"
+  },
+  {
+    "id": "3d. provider 'Mark paid' unlocks the bank family (state moves from unpaid to early)",
+    "ok": true,
+    "note": "200 early"
+  },
+  {
+    "id": "7a. inside the window, host not started: family refused with 'waiting_for_host'",
+    "ok": true,
+    "note": "409 waiting_for_host (end:200)"
+  },
+  {
+    "id": "7b. panel state inside the window with host not started is 'waiting'",
+    "ok": true,
+    "note": "{\"state\":\"open\",\"joinState\":\"waiting_host\",\"hostLive\":false}"
+  },
+  {
+    "id": "8a. host starts the session: real Daily room + owner token",
+    "ok": true,
+    "note": "200 room hub-6d70bfc1fc954a9d1e0d "
+  },
+  {
+    "id": "8b. the Daily room is PRIVATE and has an expiry and a participant cap",
+    "ok": true,
+    "note": "privacy=private exp=1791384840 max=8"
+  },
+  {
+    "id": "8c. family joins once the host is in (token, not owner, first name only)",
+    "ok": true,
+    "note": "200 user=Cardchild room=hub-6d70bfc1fc954a9d1e0d"
+  },
+  {
+    "id": "8d. same room for host and family",
+    "ok": true,
+    "note": ""
+  },
+  {
+    "id": "8e. the bank-transfer family (marked paid) joins too",
+    "ok": true,
+    "note": "200 "
+  },
+  {
+    "id": "8f. an unrelated family still cannot join (404, no token)",
+    "ok": true,
+    "note": "404"
+  },
+  {
+    "id": "9a. attendance call accepted",
+    "ok": true,
+    "note": "200 {\"ok\":true,\"children\":1}"
+  },
+  {
+    "id": "9b. the child is marked present on the provider's register",
+    "ok": true,
+    "note": "{\"HVQ-10312\":{\"status\":\"in\",\"inAt\":\"2026-10-07T13:42:45.020Z\",\"by\":\"online-session\",\"at\":\"2026-10-07T13:42:45.020Z\"}}"
+  },
+  {
+    "id": "10. provider 'today' list: booked 2 (card + bank), joined >= 1, status live",
+    "ok": true,
+    "note": "{\"listingId\":\"2v9I2DkmuqUVapaVAY7l\",\"name\":\"E1 Online Maths (ActivityOS room)\",\"date\":\"2026-10-07\",\"startsAt\":\"2026-10-07T13:52:00.000Z\",\"endsAt\":\"2026-10-07T14:52:00.000Z\",\"opensAt\":\"2026-10-07T13:42:00.000Z\",\"closesAt\":\"2026-10-07T15:22:00.000Z\",\"status\":\"live\",\"mode\":\"platform\",\"booked\":2,\"joined\":1}"
+  },
+  {
+    "id": "11a. host can extend the session (+15 min) or is told the limit",
+    "ok": true,
+    "note": "200 {\"roomExpiresAt\":\"2026-10-07T15:09:00.000Z\",\"closesAt\":\"2026-10-07T15:39:00.000Z\",\"promptSeconds\":120}"
+  },
+  {
+    "id": "12. a CANCELLED booking cannot get a token",
+    "ok": true,
+    "note": "404"
+  },
+  {
+    "id": "13. host ends: room torn down, family cannot rejoin until the host returns",
+    "ok": true,
+    "note": "200 409 waiting_for_host"
+  },
+  {
+    "id": "14. a finished session (window closed) drops from the parent's list, later ones stay",
+    "ok": false,
+    "note": "2026-10-07,2026-10-08,2026-10-09,2026-10-10"
+  },
+  {
+    "id": "UI-1. parent My bookings shows the 'Your online sessions' panel",
+    "ok": true,
+    "note": ""
+  },
+  {
+    "id": "UI-2. panel title shows the count and a 1 of N counter",
+    "ok": true,
+    "note": "💻 | Your online sessions · 4 | ‹ | 1 of 4 | › | E1 Online Maths (ActivityOS room) | Wed 7 Oct · 13:42 · Online · for Cardchild | You "
+  },
+  {
+    "id": "UI-3. the first card is TODAY's session (nearest first) and says waiting for the host",
+    "ok": true,
+    "note": "💻 | Your online sessions · 4 | ‹ | 1 of 4 | › | E1 Online Maths (ActivityOS room) | Wed 7 Oct · 13:42 · Online · for Cardchild | You can join as soon as your host starts. This page checks every few seconds. | Waitin"
+  },
+  {
+    "id": "UI-4. next arrow shows the next day's session (opens later)",
+    "ok": true,
+    "note": "💻 | Your online sessions · 4 | ‹ | 2 of 4 | › | E1 Online Maths (ActivityOS room) | Thu 8 Oct · 17:52 · Online · for Cardchild | ✅ You're booked. A Join button appears here at 17:42 on Thu 8 Oct, 10 "
+  },
+  {
+    "id": "UI-5. once the host has started, a Join button appears on the parent's panel (live refresh)",
+    "ok": true,
+    "note": "join buttons 1"
+  },
+  {
+    "id": "UI-6. Join opens the room page with a real video frame (Daily)",
+    "ok": true,
+    "note": "room=true iframe=true"
+  },
+  {
+    "id": "UI-7. the home page shows the same online-sessions panel",
+    "ok": true,
+    "note": ""
+  },
+  {
+    "id": "UI-8. no sideways scroll on the phone",
+    "ok": true,
+    "note": ""
+  },
+  {
+    "id": "UI-9. provider dashboard has the 'Online sessions today' card",
+    "ok": true,
+    "note": ""
+  },
+  {
+    "id": "UI-10. provider session page opens the room (video frame present)",
+    "ok": true,
+    "note": ""
+  },
+  {
+    "id": "15. a session that already finished today (06:00-07:00 UK) is NOT in the parent's list",
+    "ok": true,
+    "note": "listed dates for L2: "
+  },
+  {
+    "id": "16. joining a finished session is refused ('This session has finished')",
+    "ok": true,
+    "note": "409 outside_join_window"
+  },
+  {
+    "id": "17a. with no video key the status endpoint says videoReady=false",
+    "ok": true,
+    "note": "{\"videoReady\":false}"
+  },
+  {
+    "id": "17b. host start with no key -> clear 503 video_unavailable (no crash, no room)",
+    "ok": true,
+    "note": "503 video_unavailable"
+  },
+  {
+    "id": "17c. family join with no key and host not started -> waiting_for_host (not an error page)",
+    "ok": true,
+    "note": "409 waiting_for_host"
+  },
+  {
+    "id": "17d. provider session page: friendly 'video rooms aren't switched on yet' + own-link advice + Edit button",
+    "ok": true,
+    "note": "HVQA E1 Video Tutors | « | ▦ | Dashboard | 📚 | Teaching Hub | ▤ | Blocks & listings | RUN THE DAY | ▾ | MARKETING | ▾ | MONEY | ▾ | AI | ▾ | SETTINGS | ▾ | PUPILS | ▾ | ⏏ | Sign out | POWERED BY | Name TBC | The unfair advantage for camps, clubs & coaches | H"
+  },
+  {
+    "id": "17e. listing wizard shows the 'video rooms are not switched on' note under ActivityOS room",
+    "ok": true,
+    "note": "ActivityOS room option present"
+  },
+  {
+    "id": "17f. family panel with no key: 'waiting for host' wording, no dead end",
+    "ok": true,
+    "note": "💻 | Your online sessions · 4 | ‹ | 1 of 4 | › | E1 Online Maths (ActivityOS room) | Wed 7 Oct · 13:42 · Online · for Cardchild | You can join as soon as your host starts. This page checks every few s"
+  },
+  {
+    "id": "18. FIX: with the browser in Dubai (+4) the panel still shows UK clock times",
+    "ok": true,
+    "note": "want 14:52/14:42: 💻 | Your online sessions · 4 | ‹ | 2 of 4 | › | E1 Online Maths (ActivityOS room) | Thu 8 Oct · 14:52 · Online · for Cardchild | ✅ You're booked. A Join button appears here at 14:42 on Thu 8 Oct, 10 "
+  }
+]

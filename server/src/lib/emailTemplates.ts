@@ -27,6 +27,11 @@ export function datesGridHtml(sessions: string[]): string {
  *  session dates, a button straight to the booking, and "powered by ActivityOS"
  *  at the bottom. `hasLogo` gates the inline provider logo (cid:provider-logo).
  *  `title`/`bodyHtml` are HTML, inserted raw. */
+/** "See you there!" reads wrong for a video session. */
+export function onlineWording(html: string): string {
+  return html.replace(/See you there!/g, "See you online!");
+}
+
 export function layout(
   brand: { name: string; hasLogo: boolean },
   title: string,
@@ -38,6 +43,8 @@ export function layout(
 ): string {
   const kids = b.kids?.length ? b.kids.map((k) => k.name).join(", ") : b.child;
   const bookingUrl = `${baseUrl}/custdash/bookings?open=${encodeURIComponent(b.ref)}`;
+  // An online session has no "there": say so (the How to join block below carries the details).
+  if (ctx.online) bodyHtml = onlineWording(bodyHtml);
   // Label above value, one block per row: a two-column table squeezed the values to the right on phones and dropped them entirely in
   // some clients when the mail was forwarded. Stacked blocks read the same everywhere.
   const row = (label: string, value: string) =>
