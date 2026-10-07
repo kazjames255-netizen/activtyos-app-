@@ -523,6 +523,8 @@ export function referenceLooksValid(b: ChildcareBooking): boolean {
 // of the four designed failure states. Plus the managed list of schemes.
 export interface ChildcareSettings {
   settingName: string;
+  /** Ofsted / CIW / Care Inspectorate / Other: shown in Setup; the number is what HMRC checks. */
+  regulator?: string;
   registrationNumber: string;
   postcode: string;
   schemes: string[];
@@ -566,7 +568,10 @@ export function normaliseChildcareSettings(raw: unknown): Partial<ChildcareSetti
   // stray one is the difference between a parent finding us and not.
   const registrationNumber = str("registrationNumber", 40).replace(/\s+/g, "");
   const postcode = tidyPostcode(str("postcode", 12));
+  const regulatorRaw = str("regulator", 40);
+  const regulator = ["Ofsted", "CIW", "Care Inspectorate", "Other"].find((r) => r.toLowerCase() === regulatorRaw.toLowerCase());
   if (settingName) out.settingName = settingName;
+  if (regulator) out.regulator = regulator;
   if (registrationNumber) out.registrationNumber = registrationNumber;
   if (postcode) out.postcode = postcode;
   if (v.schemes !== undefined && v.schemes !== null) {
@@ -608,6 +613,7 @@ export async function loadChildcareSettings(tenantId: string, franchiseId?: stri
   const schemes = cc.schemes?.length ? cc.schemes : [...new Set(["HMRC Tax-Free Childcare", ...fromVouchers])];
   return {
     settingName,
+    ...(cc.regulator ? { regulator: cc.regulator } : {}),
     registrationNumber: (cc.registrationNumber ?? "").trim(),
     postcode: (cc.postcode ?? "").trim(),
     schemes,

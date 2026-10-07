@@ -54,6 +54,7 @@ import { policyWordingT, sortBands, HOURS, type CancellationPolicy, type NamedPo
 import { defaultSeasonNames, type Season } from "@/lib/seasons";
 import { SG_CATEGORIES, DEFAULT_PROTOCOL } from "@/features/incidents/safeguarding";
 import { MembershipTierCard } from "@/features/parent/MembershipsApp";
+import { TfcProviderDetails } from "./TfcProviderDetails";
 import { CERT_TEMPLATES, CERT_ACCENTS, certTemplateOf, certificateDoc, openCertificate, CERT_SAMPLE } from "@/features/learning/certificates";
 import { useCredentials } from "@/features/learning/credentials";
 import { useTeam } from "@/features/team/useTeam";
@@ -2894,6 +2895,11 @@ export function SetupApp() {
 
       {activeTab === "vouchers" && (
         <>
+          <TfcProviderDetails
+            value={settings.childcare}
+            providerName={String(settings.providerName ?? "").trim() || undefined}
+            onSave={(v) => set("childcare", { ...(settings.childcare ?? {}), ...v })}
+          />
           <Section
             title={t("p8set.cvTitle")}
             lede={t("p8set.cvLede")}

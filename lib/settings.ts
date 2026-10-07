@@ -1084,6 +1084,8 @@ export interface TenantSettings {
    *  here. */
   childcare?: {
     settingName?: string;
+    /** Who registered the setting: Ofsted / CIW / Care Inspectorate / Other (the registration number below is theirs). */
+    regulator?: string;
     registrationNumber?: string;
     postcode?: string;
   };

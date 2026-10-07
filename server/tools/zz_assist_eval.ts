@@ -160,6 +160,9 @@ export const QUESTIONS: string[] = [
   "what does the bell say when a new booking comes in, it used to be cut off halfway through a sentence",
   "why are the bell notifications so short now and where do I see the full details of a booking",
   "I work alone as a freelancer, can I take registers and do I need to add myself as staff",
+  "why cant parents pay with Tax-Free Childcare on my listing, it says the provider has not finished setting it up",
+  "where do I put my Ofsted registration number and postcode for Tax-Free Childcare",
+
 
 ];
 

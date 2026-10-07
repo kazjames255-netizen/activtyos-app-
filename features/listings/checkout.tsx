@@ -12,6 +12,7 @@
 // right.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { tfcReady } from "@/lib/tfcReady";
 import { GenderQuickAdd } from "@/features/common/GenderQuickAdd";
 import { HowItWorks } from "@/components/HowItWorks";
 import { dateLocale as dl } from "@/lib/i18n/format";
@@ -826,6 +827,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // quote. If it's too close for the money to clear, the deadline note below
   // still cautions the family — but the option no longer silently vanishes.
   if (payList.some((m) => /voucher/i.test(m)) && vouchers.length) parentOpts.push(["voucher", tr("p7ck.methodVouchers")]);
+  // Tax-Free Childcare is only offered when HMRC can actually PAY this provider: their registered name, regulator registration number and postcode
+  // (Setup > Tax-Free Childcare). Without them every payment would fail with "provider not added", so the option waits and the family is told why.
+  const tfcBlocked = parentMode && parentOpts.some(([k]) => k === "tfc") && !tfcReady(ckSettings.childcare, ckSettings.providerName).ready;
+  if (tfcBlocked) parentOpts.splice(parentOpts.findIndex(([k]) => k === "tfc"), 1);
   // A parent whose chosen method has been taken off the list (Card, when the provider has not finished Stripe) moves to the first one left.
   const method = parentMode
     ? (parentOpts.length === 0 || parentOpts.some(([k]) => k === rawMethod) ? rawMethod : parentOpts[0][0])
@@ -2277,6 +2282,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           </select>
           {parentMode && parentOpts.length === 0 && (
             <p className="mt-2 text-[12px]" style={{ color: tk.muted }}>{tr("p9tx.ckNoOnlinePay")}</p>
+          )}
+          {tfcBlocked && (
+            <p className="mt-2 text-[12px] font-semibold" style={{ color: tk.muted }} data-testid="tfc-not-ready">{tr("p8lst.tfcNotReady")}</p>
           )}
 
           {/* Paying by voucher happens on the scheme's own website, so this
