@@ -699,6 +699,24 @@ async function dayOfAlerts(): Promise<void> {
   }
 }
 
+// ── Scheduled newsfeed posts ──────────────────────────────────────────────
+// The Newsfeed composer's "Schedule for later" saves status "scheduled" + a UK
+// wall-clock publishAt (datetime-local). Nothing ever flipped it, so a
+// scheduled post never reached families. Publish each one once its time
+// arrives; it then sorts as new (createdAt = the moment it went live).
+export async function scheduledPostPublishes(): Promise<void> {
+  const { date, minutes } = ukNow();
+  const now = `${date}T${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+  const snap = await db.collection("posts").where("status", "==", "scheduled").get();
+  for (const d of snap.docs) {
+    const at = String(d.get("publishAt") ?? "").slice(0, 16);
+    if (!at || at > now) continue;
+    const stamp = new Date().toISOString();
+    await d.ref.set({ status: "published", publishedAt: stamp, createdAt: stamp }, { merge: true })
+      .catch((err) => console.error(`[sweeps] scheduled post ${d.id}:`, (err as Error).message));
+  }
+}
+
 // ── Scheduled email sends ─────────────────────────────────────────────────
 // The Email composer's "Schedule send": fire each queued email through the
 // send engine once its UK wall-clock sendAt arrives. The queue doc keeps the
@@ -1095,6 +1113,7 @@ export function startSweeps(): void {
   sweep("review-requests", 6 * 60 * 60_000, reviewRequests);
   sweep("day-of-alerts", 10 * 60_000, dayOfAlerts);
   sweep("scheduled-emails", 60_000, scheduledEmailSends);
+  sweep("scheduled-posts", 60_000, scheduledPostPublishes);
   // Learning Hub parent digest + homework nudges — inert unless HUB_DIGEST_ENABLED=1 (lib/hubDigestStore.ts).
   void import("./hubDigestStore").then((m) => m.startDigestSweeps());
   // Caterer digest, schedule reminders, learning chasers (lib/octSends.ts).

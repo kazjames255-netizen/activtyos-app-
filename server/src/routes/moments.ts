@@ -239,7 +239,13 @@ moments.get("/", async (req, res) => {
     const forParent = (await forViewing(list as (Record<string, unknown> & { childIds?: string[] })[], "parent")).map((m) => {
       const { postedBy: _pb, ...rest } = m as Record<string, unknown> & { postedBy?: unknown; postedByName?: unknown };
       const nm = typeof rest.postedByName === "string" ? rest.postedByName : "";
-      return { ...rest, postedByName: nm.includes("@") ? "The team" : nm };
+      // A group shot tags other families' children too: this parent sees only THEIR OWN child's name/id, and only the
+      // team's comments plus their own — never another family's name or reply.
+      const tagged = Array.isArray(rest.childIds) ? (rest.childIds as string[]) : [];
+      const names = Array.isArray(rest.childNames) ? (rest.childNames as string[]) : [];
+      const mineIdx = tagged.map((id, i) => (ids.includes(id) ? i : -1)).filter((i) => i >= 0);
+      const comments = (Array.isArray(rest.comments) ? (rest.comments as { role?: string; by?: string }[]) : []).filter((c) => c.role !== "parent" || c.by === req.user!.uid);
+      return { ...rest, postedByName: nm.includes("@") ? "The team" : nm, childIds: mineIdx.map((i) => tagged[i]), childNames: mineIdx.map((i) => names[i] ?? ""), comments };
     });
     res.json(forParent);
     return;
@@ -420,6 +426,8 @@ moments.post("/:id/comment", async (req, res) => {
   const comment = { by: req.user?.uid ?? req.user?.email ?? "unknown", byName: req.user?.name ?? (auth.role === "parent" ? "Parent" : "Staff"), role: auth.role === "parent" ? "parent" : "staff", text: parsed.data.text, at: new Date().toISOString(), marketing: false };
   const comments = Array.isArray(m.comments) ? m.comments : [];
   await snap.ref.set({ comments: [...comments, comment] }, { merge: true });
+  // A parent gets no copy of the document back (it carries the poster's sign-in email and other families' children); their feed refetches the safe version.
+  if (auth.role === "parent") { res.json({ ok: true }); return; }
   const after = await snap.ref.get();
   res.json({ id: after.id, ...after.data(), photoUrl: signImageUrl(after.get("photoUrl")) });
 });

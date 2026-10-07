@@ -22,7 +22,7 @@ interface Post {
   id: string; tpl?: Tpl; title?: string; body: string; photoUrl?: string; imageAspect?: string; imageX?: number; imageY?: number; imageZoom?: number;
   colour?: string; pinned?: boolean; priority?: "normal" | "urgent"; ackRequired?: boolean; react?: boolean;
   date?: string; time?: string; location?: string; cta?: Cta | null; rsvp?: Rsvp | null;
-  seen?: number; reactions?: number; tenantId?: string; tenantName?: string; createdAt?: string; newsletter?: Newsletter | null;
+  mine?: { reacted?: boolean; rsvp?: "yes" | "no" | "maybe" | null; acked?: boolean }; seen?: number; reactions?: number; tenantId?: string; tenantName?: string; createdAt?: string; newsletter?: Newsletter | null;
 }
 type Mine = { rsvp?: "yes" | "no" | "maybe"; acked?: boolean; reacted?: boolean };
 
@@ -48,7 +48,11 @@ export function ParentNewsfeedApp() {
   const router = useRouter();
 
   const refresh = useCallback(() => {
-    apiGet<Post[]>("/api/posts").then((p) => { setPosts(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : ""));
+    apiGet<Post[]>("/api/posts").then((p) => {
+      setPosts(p); setError(null);
+      // The server remembers each parent's own like / RSVP / "Got it", so a second device shows the same state.
+      setMine((cur) => { const next = { ...cur }; for (const x of p) if (x.mine) next[x.id] = { ...next[x.id], reacted: !!x.mine.reacted, acked: !!x.mine.acked, ...(x.mine.rsvp ? { rsvp: x.mine.rsvp } : {}) }; return next; });
+    }).catch((e) => setError(e instanceof Error ? e.message : ""));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["posts"], refresh);

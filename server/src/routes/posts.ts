@@ -98,6 +98,17 @@ async function parentFranchiseIds(email: string): Promise<Set<string>> {
   return set;
 }
 
+// The listings a parent has booked (any status) — a post aimed at "chosen families" (audience "listing")
+// is for the families of those listings only, not every family of the provider.
+async function parentListingIds(email: string): Promise<Set<string>> {
+  const snap = await db.collection("bookings").where("email", "==", email).get();
+  const set = new Set<string>();
+  for (const d of snap.docs) { const l = (d.data() as { listingId?: string }).listingId; if (l) set.add(l); }
+  return set;
+}
+const postListingIds = (p: { audience?: string; audId?: string; audIds?: string[] }): string[] =>
+  p.audience === "listing" ? [...(p.audIds ?? []), ...(p.audId ? [p.audId] : [])] : [];
+
 // The distinct tenants a parent has any booking with — the providers whose
 // feed they're entitled to see.
 async function parentTenantIds(email: string) {
@@ -131,13 +142,20 @@ posts.get("/", async (req, res) => {
     // A parent sees a post if it's network-wide (no franchiseId) OR targeted to
     // a franchise they belong to.
     const franSet = await parentFranchiseIds(email);
+    const myListings = await parentListingIds(email);
+    const uid = req.user?.uid ?? "";
     const list = (snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string; pinned?: boolean; status?: string; franchiseId?: string | null })[])
       .filter((p) => (p.status ?? "published") === "published")
-      .filter((p) => !p.franchiseId || franSet.has(p.franchiseId));
+      .filter((p) => !p.franchiseId || franSet.has(p.franchiseId))
+      .filter((p) => { const ids = postListingIds(p as { audience?: string; audId?: string; audIds?: string[] }); return !ids.length || ids.some((i) => myListings.has(i)); });
     list.sort(feedSort);
     // Families see the sender as authorLabel ("Head office" / the franchise / the brand) — never a staff member's
     // sign-in email, which postedBy / postedByName carry.
-    res.json(list.map(({ postedBy: _pb, postedByName: _pn, ...rest }) => rest));
+    // The per-person maps (reactedBy / rsvpBy / ackBy, keyed by uid) stay server-side; each parent gets only their OWN state back as `mine`.
+    res.json(list.map(({ postedBy: _pb, postedByName: _pn, reactedBy, rsvpBy, ackBy, ...rest }) => ({
+      ...rest,
+      mine: { reacted: !!(reactedBy as Record<string, true> | undefined)?.[uid], rsvp: (rsvpBy as Record<string, string> | undefined)?.[uid] ?? null, acked: !!(ackBy as Record<string, true> | undefined)?.[uid] },
+    })));
     return;
   }
   const tenantId = auth.role === "platform" ? (typeof req.query.tenantId === "string" ? req.query.tenantId : null) : auth.tenantId;
@@ -265,6 +283,8 @@ async function canSeePost(req: Request, post: PostData): Promise<boolean> {
       if (!franSet.has(post.franchiseId)) return false;
     }
     if (!(await customerAreaOn(post.tenantId, "newsfeed"))) return false;
+    const aud = postListingIds(post as { audience?: string; audId?: string; audIds?: string[] });
+    if (aud.length) { const mine = await parentListingIds(email); if (!aud.some((i) => mine.has(i))) return false; }
     const tenantIds = await parentTenantIds(email);
     return tenantIds.includes(post.tenantId);
   }
