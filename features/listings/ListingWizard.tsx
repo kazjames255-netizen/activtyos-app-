@@ -3798,7 +3798,8 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
     </div>
   );
   return (
-    <div className="rounded-[26px] bg-white p-5" style={{ boxShadow: "0 24px 50px -26px rgba(47,107,216,.5)" }}>
+    <div className="aos-pb-card rounded-[26px] bg-white p-5" style={{ boxShadow: "0 24px 50px -26px rgba(47,107,216,.5)" }}>
+      <div className="aos-pb-main min-w-0">
       <div className="flex items-baseline justify-between">
         <span className="text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>{tr("p7bw.chooseDatesTimes")}</span>
         {b.pass && <span className="text-[13px] text-[#7a8194]">{tr("p7bw.fromWord")} <b style={{ color: DEEP }}>{money(b.unitPrice)}</b></span>}
@@ -3832,7 +3833,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
           {weeks.length ? <div className="flex flex-col gap-3">
             {weeks.slice(0, 8).map((w) => <div key={w.mon}>
               <div className="mb-1.5 text-[11px] font-bold" style={{ color: BLUE }}>{tr("p7bw.weekN", { n: w.n })} <span className="font-semibold text-[#a6adba]">{tr("p7bw.fromDate", { date: fmtDate(w.mon) })}</span></div>
-              <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
+              <div className="aos-pb-days flex flex-wrap gap-1.5">{w.days.map((iso) => {
                 const dOff = b.off(iso); const dClosed = !b.past(iso) && b.closed(iso); const dPast = b.past(iso) || dClosed; const on = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
                 // Availability speaks only when it's bad news — a number on
                 // every cell turns the calendar into a spreadsheet.
@@ -3843,7 +3844,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
                 return <button key={iso} type="button" disabled={dPast || dOff || (full && !queueable)}
                   onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
                   title={dClosed ? tr("p9tx.wzClosed") : dPast ? tr("p7bw.dayPassed") : full ? (queueable ? (waiting ? tr("p7bw.onWaitTap") : tr("p7bw.fullTapJoin")) : tr("p7bw.fullWord")) : left === null ? undefined : d.showSpaces ? (low ? tr("p7bw.onlyLeft", { n: left }) : tr("p7bw.placesLeftN", { n: left })) : (low ? tr("p7bw.almostFull") : tr("p7bw.spaceAvail"))}
-                  className="relative flex w-[44px] flex-col items-center rounded-xl border-2 py-1.5 disabled:cursor-not-allowed"
+                  className="aos-pb-day relative flex w-[44px] flex-col items-center rounded-xl border-2 py-1.5 disabled:cursor-not-allowed"
                   style={waiting ? { borderColor: "#c2410c", color: "#c2410c", background: "#fff7ed" }
                     : dPast ? { borderColor: LINEp, color: "#cdd2db", background: "#f3f4f7", opacity: 0.6 }
                     : dOff || full ? { borderColor: LINEp, color: "#c8ccd4", background: "#fafbfd" }
@@ -3928,7 +3929,8 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
           )}
         </>
       )}
-      <div className="mt-5 border-t-2 border-dashed pt-4" style={{ borderColor: LINEp }}>
+      </div>
+      <div className="aos-pb-basket mt-5 border-t-2 border-dashed pt-4" style={{ borderColor: LINEp }}>
         <div className="mb-2 flex items-center justify-between"><span className="text-[13.5px] font-extrabold" style={{ color: INKp }}>{tr("p7bw.yourBasket")}</span>{b.basket.length > 1 && (<button type="button" onClick={() => { if (window.confirm(tr("p9tx.wzEmptyConfirm"))) b.clearBasket(); }} className="ms-2 text-[11.5px] font-bold underline opacity-80">{tr("p9tx.wzClearBasket")}</button>)}<span className="rounded-full px-2 py-[2px] text-[10px] font-extrabold" style={{ background: SOFTb, color: BLUE }}>{b.basket.length}</span></div>
         {b.basket.length === 0 ? <div className="text-[12.5px] text-[#a6adba]">{tr("p7bw.nothingAdded")}</div> :
           <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-start justify-between gap-2 rounded-xl px-2.5 py-2 text-[12px]" style={{ background: "#f4f7ff" }}><span className="min-w-0"><b className="block" style={{ color: INKp }}>{x.name}</b><span className="block text-[11px] leading-snug" style={{ color: "#5b6478" }}>{b.datesPretty(x.dates)}</span>{x.timing ? <span className="block text-[11px] font-bold" style={{ color: BLUE }}>🕘 {x.timing}</span> : null}</span><span className="flex items-baseline gap-2"><b style={{ color: INKp }}>{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#c8ccd4] hover:text-[#e21d27]">✕</button></span></div>)}</div>}

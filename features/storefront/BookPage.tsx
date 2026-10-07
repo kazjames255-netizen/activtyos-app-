@@ -194,7 +194,7 @@ export function BookPage({ id }: { id: string }) {
       )}
       {quick ? (
         // Quick book: a compact branded header, then only the booking flow (dates, children, pay).
-        <div className="mx-auto max-w-[620px] px-3 pt-4">
+        <div className="aos-quick mx-auto max-w-[760px] px-3 pt-4 lg:max-w-[1160px] lg:px-6">
           <div className="flex items-center justify-between gap-3 rounded-t-2xl px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,var(--brand-strong,#1d3a8f) 0%,var(--brand-2,#2f6bd8) 100%)" }}>
             <div className="min-w-0">
               <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/70">{t("parent.quickBook")}</div>

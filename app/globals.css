@@ -625,3 +625,14 @@ html[dir="rtl"] .aos-th2 .aos-disp,html[dir="rtl"] .aos-th2 .font-black.italic:n
 .aos-art.th-poster .rows{font-size:78px;inset:0 0 0 36px;align-content:center}
 .aos-bh.th-plum::before{opacity:.28!important}
 .aos-art.th-sherbet::after{opacity:.14}
+
+/* Quick book (/book/<id>?quick=1) on a wide screen: the dates step uses the width: dates on the left, the basket sticky on the right,
+   and each week is one row of larger day tiles. Phones and tablets keep the single column. */
+@media (min-width: 1024px) {
+  .aos-quick .aos-pb-card { display: grid; grid-template-columns: minmax(0, 1fr) 340px; column-gap: 32px; align-items: start; padding: 28px; }
+  .aos-quick .aos-pb-basket { position: sticky; top: 16px; margin-top: 0; padding-top: 0; border-top: 0; padding-inline-start: 28px; border-inline-start: 2px dashed var(--line, #e3e9f5); }
+  .aos-quick .aos-pb-days { display: grid; grid-template-columns: repeat(5, minmax(0, 104px)); gap: 12px; }
+  .aos-quick .aos-pb-day { width: 100% !important; padding-block: 12px; border-radius: 16px; }
+  .aos-quick .aos-pb-day span:nth-child(1) { font-size: 11px; }
+  .aos-quick .aos-pb-day span:nth-child(2) { font-size: 24px; }
+}
