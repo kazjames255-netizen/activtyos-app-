@@ -22,10 +22,13 @@ const METHODS: Record<string, string> = {
   "HAF (funded £0)": "p8fin.mthHaf", "Free place": "p8fin.mthFree", "Invoice": "p8fin.mthInvoice", "Store credit": "p8fin.mthStoreCredit",
 };
 
+const CANON_METHOD: Record<string, string> = { card: "Card", bank: "Bank transfer", "bank transfer": "Bank transfer", cash: "Cash", voucher: "Childcare vouchers", vouchers: "Childcare vouchers", "childcare vouchers": "Childcare vouchers", other: "Other" };
+
 /** Payment-method display label (canonical English kept in data; Tax-Free Childcare / PayPal stay as-is). */
 export function methodLabel(t: T, method: string | null | undefined): string {
   if (!method) return method ?? "";
-  const k = METHODS[method];
+  // The stored value can be lower-case ("bank", "card"): look it up case-insensitively so the chart says "Bank transfer", not "bank".
+  const k = METHODS[method] ?? METHODS[CANON_METHOD[method.trim().toLowerCase()] ?? ""];
   return k ? t(k) : method;
 }
 

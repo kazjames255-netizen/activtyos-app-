@@ -295,7 +295,7 @@ export function FinanceAnalyticsApp() {
           <CollapsibleStats id="finance-overview">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label={t("p8fin.faRevCollected")} icon="💰" grad={GRAD.green} value={money(a.collected)} sub={<>{t("p8fin.faOfBooked", { amount: money(a.booked) })}<Delta pct={a.collectedDelta} /></>} aside={<Ring pct={a.booked ? (a.collected / a.booked) * 100 : 0} label={`${a.booked ? Math.round((a.collected / a.booked) * 100) : 0}%`} />} />
-            <Tile label={t("p8fin.faOwedToYou")} icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub={a.owed > 0 ? t("p8fin.faOwedNow") : t("p8fin.faAllSettled")} />
+            <Tile label={t("p8fin.faOwedToYou")} icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub={a.owed > 0 ? t("p8fin.faOwedNow") : t("p8fin.faAllSettled")} note={t("p8fin.faOwedNote")} />
             <Tile label={t("p8fin.faRefunds")} icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub={t("p8fin.faRefundsGiven", { n: months })} />
             <Tile label={t("p8fin.faEstNet")} icon="🏦" grad={GRAD.blue} value={money(a.net)} sub={t("p8fin.faAfterFees", { fees: money(a.fees) })} />
           </div>
@@ -447,7 +447,7 @@ export function FinanceAnalyticsApp() {
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label={t("p8fin.faTotalBookers")} icon="👤" grad={GRAD.blue} value={String(a.totalBookers)} sub={t("p8fin.faInLastMonths", { n: months })} />
             <Tile label={t("p8fin.faTotalLearners")} icon="🧒" grad={GRAD.teal} value={String(a.totalLearners)} sub={t("p8fin.faChildrenBooked")} />
-            <Tile label={t("p8fin.faReturningBookers")} icon="🔁" grad={GRAD.pink} value={String(a.returningBookers)} sub={t("p8fin.faNNew", { n: a.newBookers })} aside={<Ring pct={a.totalBookers ? (a.returningBookers / a.totalBookers) * 100 : 0} label={`${a.totalBookers ? Math.round((a.returningBookers / a.totalBookers) * 100) : 0}%`} />} />
+            <Tile label={t("p8fin.faReturningBookers")} icon="🔁" grad={GRAD.pink} value={String(a.returningBookers)} sub={t("p8fin.faNNew", { n: a.newBookers })} note={t("p8fin.faReturningNote")} aside={<Ring pct={a.totalBookers ? (a.returningBookers / a.totalBookers) * 100 : 0} label={`${a.totalBookers ? Math.round((a.returningBookers / a.totalBookers) * 100) : 0}%`} />} />
             <Tile label={t("p8fin.faSpendPerCustomer")} icon="💷" grad={GRAD.green} value={money(a.spendPerCustomer)} sub={t("p8fin.faCollectedDivBookers")} />
           </div>
           </CollapsibleStats>

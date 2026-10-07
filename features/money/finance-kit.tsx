@@ -34,7 +34,7 @@ export const colorFor = (s: string) => ACT_C[[...(s || "?")].reduce((a, c) => a 
 // A KPI tile: plain card, colour carried by the numeral and a thin left rail.
 // `grad` is kept as the prop name so the ~70 call sites don't need touching, but
 // it now takes a plain accent colour rather than a gradient.
-export function Tile({ label, value, sub, grad, icon, aside, children }: { label: string; value: string; sub?: ReactNode; grad: string; icon?: string; aside?: ReactNode; children?: ReactNode }) {
+export function Tile({ label, value, sub, note, grad, icon, aside, children }: { label: string; value: string; sub?: ReactNode; note?: ReactNode; grad: string; icon?: string; aside?: ReactNode; children?: ReactNode }) {
   return (
     <div
       className="relative overflow-hidden rounded-2xl p-4 ps-[18px]"
@@ -49,10 +49,11 @@ export function Tile({ label, value, sub, grad, icon, aside, children }: { label
       <div className={`min-w-0 ${aside ? "pe-[68px]" : ""}`}>
         <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">
           {icon && <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-[var(--panel)] text-[11px]">{icon}</span>}
-          <span className="truncate">{label}</span>
+          <span className="min-w-0 leading-tight">{label}</span>
         </div>
         <div className="mt-2 text-[27px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", color: grad }}>{value}</div>
         {sub && <div className="mt-1.5 text-[11px] font-semibold text-[var(--ink-3)]">{sub}</div>}
+        {note && <div className="mt-1.5 text-[11px] leading-snug text-[var(--ink-3)]">{note}</div>}
       </div>
       {children}
     </div>
