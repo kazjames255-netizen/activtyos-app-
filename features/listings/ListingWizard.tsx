@@ -892,7 +892,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   if (done) {
     const venue = lib?.venue;
     const fmtDay = (iso?: string) =>
-      iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" }) : null;
+      iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", ...(Number(iso.slice(0, 4)) !== new Date().getFullYear() ? { year: "numeric" as const } : {}) }) : null;
     // Say exactly which days were booked: a run of consecutive days (weekends skipped) reads "Mon 19 Oct – Fri 23 Oct", but two or three
     // separate days read "Mon 19 Oct and Fri 23 Oct" (not a range that implies every day in between).
     const ds = done.dates ?? [];
@@ -925,7 +925,8 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
     const website = websiteD ? (/^https?:\/\//i.test(websiteD.value) ? websiteD.value : `https://${websiteD.value}`) : null;
     const isUrlD = (d: { label: string; value: string }) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value);
     // The same test as the "Pay now" button below: a card booking with money still to pay is held, not yet complete.
-    const awaitingCard = !!done.payByCard && !needsApproval && !done.waitlisted && (!scheme || !!done.cardDue) && (done.cardDue ?? done.total) > 0;
+    // Once the card has been paid the booking is complete: no more 'Nearly there - pay to finish' (an auto-confirm listing is simply booked).
+    const awaitingCard = !paidNow && !!done.payByCard && !needsApproval && !done.waitlisted && (!scheme || !!done.cardDue) && (done.cardDue ?? done.total) > 0;
     const rowCls = "flex items-start gap-3 py-1.5 text-[13px]";
     const labCls = "w-[92px] flex-none text-[#8a86a3]";
     const valCls = "font-semibold text-[#171534]";
