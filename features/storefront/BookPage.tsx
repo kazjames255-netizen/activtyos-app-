@@ -11,6 +11,7 @@ import { confirmLeavingBasket, keepBasketForAuth } from "@/features/listings/boo
 import { DEFAULT_SETTINGS, useTenantSettings } from "@/lib/settings";
 import { startEmbedHeightReports } from "@/lib/embedHeight";
 import { brandAccent, brandLogo, brandVars } from "@/lib/brand-theme";
+import { listingLinkKindOf, listingLinkPath } from "@/lib/listingLinks";
 
 // ─────────────────────────────────────────────────────────────────────────
 // /book/{id} — the provider's public storefront page. Renders the exact
@@ -60,6 +61,10 @@ export function BookPage({ id }: { id: string }) {
   // home page / My bookings / Back to activities), so a provider previewing
   // isn't handed links that drop them into the parent app.
   const preview = sp.get("preview") === "1";
+  // ?quick=1 — the QUICK BOOK link: straight to the booking form (no sales page). Same sign-in rules as the storefront link.
+  const quick = listingLinkKindOf(sp) === "quick";
+  // Where a sign-in / create-account round trip must come back to: the SAME link (quick flag and embed flag kept).
+  const nextPath = listingLinkPath(id, quick ? "quick" : "storefront", { embed: embedded });
   // The listing's provider's public settings — for their logo + brand colour.
   const { settings, ready } = useTenantSettings(listing?.tenantId, listing?.id);
 
@@ -134,7 +139,7 @@ export function BookPage({ id }: { id: string }) {
     <button type="button" onClick={() => window.close()} className={linkCls}>{t("p7pub.closePreview")}</button>
   ) : signedIn === false ? (
     // Inside an embed, keep ?embed=1 through the sign-in round trip.
-    <Link href={`/login?next=${encodeURIComponent(`/book/${id}${embedded ? "?embed=1" : ""}`)}`} onClick={keepBasketForAuth} className={linkCls}>{t("p7pub.signIn")}</Link>
+    <Link href={`/login?next=${encodeURIComponent(nextPath)}`} onClick={keepBasketForAuth} className={linkCls}>{t("p7pub.signIn")}</Link>
   ) : signedIn && !embedded ? (
     // Not shown in embeds — navigating a provider's iframe into the dashboard
     // would trap the parent page's visitor.
@@ -178,7 +183,7 @@ export function BookPage({ id }: { id: string }) {
                 <button key={key} type="button" className="rounded-full border-2 border-[#2f6bd8] px-4 py-3 text-[14px] font-extrabold" style={primary ? { background: "#2f6bd8", color: "#fff" } : { color: "#2f6bd8" }}
                   onClick={() => {
                     keepBasketForAuth();
-                    const here = encodeURIComponent(`/book/${id}`);
+                    const here = encodeURIComponent(nextPath);
                     window.location.assign(`${base}${base.endsWith("&") ? "" : "?"}next=${here}${base.endsWith("&") && listing.tenantId ? `&provider=${encodeURIComponent(listing.tenantId)}` : ""}`);
                   }}>{t(key)}</button>
               ))}
@@ -187,7 +192,24 @@ export function BookPage({ id }: { id: string }) {
           </div>
         </div>
       )}
-      <CustomerPage listing={listing} topRight={topRight} logo={brandLogo(settings)} />
+      {quick ? (
+        // Quick book: a compact branded header, then only the booking flow (dates, children, pay).
+        <div className="mx-auto max-w-[620px] px-3 pt-4">
+          <div className="flex items-center justify-between gap-3 rounded-t-2xl px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,var(--brand-strong,#1d3a8f) 0%,var(--brand-2,#2f6bd8) 100%)" }}>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/70">{t("parent.quickBook")}</div>
+              <div className="truncate text-[15px] font-extrabold">{listing.title || listing.name}</div>
+              {listing.tenantName && <div className="truncate text-[11.5px] text-white/75">{listing.tenantName}</div>}
+            </div>
+            <span className="flex-none text-[12px] [&_a]:text-white">{topRight}</span>
+          </div>
+          <div className="rounded-b-2xl bg-[#f4f7ff] p-4 ring-1 ring-[#e3e9f5]">
+            <CustomerPage listing={listing} bookingOnly logo={brandLogo(settings)} />
+          </div>
+        </div>
+      ) : (
+        <CustomerPage listing={listing} topRight={topRight} logo={brandLogo(settings)} />
+      )}
       <div id="book"></div>
     </div>
   );

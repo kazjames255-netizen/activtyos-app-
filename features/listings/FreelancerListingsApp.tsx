@@ -1,6 +1,7 @@
 "use client";
 
 import { deliveryLabel } from "./delivery";
+import { listingLinkUrl, type ListingLinkKind } from "@/lib/listingLinks";
 import { duplicateBody } from "@/lib/uiRules";
 import { StepDonePrompt } from "@/features/dashboard/StepDonePrompt";
 import { EmbedPanel, type EmbedListingRow } from "./EmbedPanel";
@@ -656,6 +657,17 @@ function ListingsTab({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [linkWarnId, setLinkWarnId] = useState<string | null>(null);
   const [qrFor, setQrFor] = useState<Listing | null>(null);
+  // The Link button opens a chooser (storefront page vs quick-book form); the QR modal has the same choice.
+  const [linkMenuId, setLinkMenuId] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [qrKind, setQrKind] = useState<ListingLinkKind>("storefront");
+  // Escape closes the Link chooser.
+  useEffect(() => {
+    if (!linkMenuId) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLinkMenuId(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [linkMenuId]);
   const [archiveTick, setArchiveTick] = useState(0);
   const [showArchived, setShowArchived] = useState(false);
   // Confirmation + undo so archiving doesn't feel like the listing vanished.
@@ -741,11 +753,11 @@ function ListingsTab({
       setJustArchived(null);
     }
   };
-  const copyLink = (l: Listing, isDraft?: boolean) => {
-    const link = `${typeof window !== "undefined" ? window.location.origin : ""}/book/${l.id}`;
+  const copyLink = (l: Listing, kind: ListingLinkKind, isDraft?: boolean) => {
+    const link = listingLinkUrl(typeof window !== "undefined" ? window.location.origin : "", l.id, kind);
     navigator.clipboard?.writeText(link).then(() => {
-      setCopiedId(l.id);
-      setTimeout(() => setCopiedId(null), 1500);
+      setCopiedKey(`${l.id}|${kind}`);
+      setTimeout(() => setCopiedKey((k) => (k === `${l.id}|${kind}` ? null : k)), 1500);
       // The /book link only opens for the public once the listing is Live.
       // While it's a draft it 404s for everyone but the signed-in owner, so
       // warn rather than let the operator send a link that silently fails.
@@ -1039,9 +1051,34 @@ function ListingsTab({
                       {!isDraft && isLive && (
                         <Button sm className="!border-[#bbe7cb] !bg-[#eaf7ef] !text-[#0f7a43] hover:!bg-[#dcf0e4]" onClick={() => takeBooking(l)}>{t("p8lst.flBookForCustomer")}</Button>
                       )}
-                      <Button sm className="!border-[#c3d6f7] !bg-[#eef4ff] !text-[#1d3a8f] hover:!bg-[#e2ecfd]" onClick={() => copyLink(l, isDraft)}>{copiedId === l.id ? t("p8lst.flCopied") : t("p8lst.flLink")}</Button>
+                      <span className="relative inline-block">
+                        <Button sm aria-haspopup="menu" aria-expanded={linkMenuId === l.id} className="!border-[#c3d6f7] !bg-[#eef4ff] !text-[#1d3a8f] hover:!bg-[#e2ecfd]" onClick={() => setLinkMenuId((v) => (v === l.id ? null : l.id))}>{copiedKey?.startsWith(`${l.id}|`) ? t("p8lst.flCopied") : `${t("p8lst.flLink")} ▾`}</Button>
+                        {linkMenuId === l.id && (
+                          <>
+                            <button type="button" aria-label={t("common.cancel")} className="fixed inset-0 z-[40] cursor-default" onClick={() => setLinkMenuId(null)} />
+                            <div role="menu" data-ui="link-menu" className="absolute end-0 top-full z-[41] mt-1.5 w-[320px] max-w-[calc(100vw-32px)] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-start shadow-2xl">
+                              <div className="mb-2 text-[12.5px] font-extrabold text-[var(--ink)]">{t("p8lst.flLinkMenuTitle")}</div>
+                              {(["storefront", "quick"] as const).map((kind) => {
+                                const url = listingLinkUrl(typeof window !== "undefined" ? window.location.origin : "", l.id, kind);
+                                return (
+                                  <div key={kind} role="menuitem" data-link-kind={kind} className="mb-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
+                                    <div className="text-[12.5px] font-extrabold text-[var(--ink)]">{kind === "storefront" ? t("p8lst.flLinkStore") : t("p8lst.flLinkQuick")}</div>
+                                    <div className="mt-0.5 text-[11.5px] leading-snug text-[var(--ink-3)]">{kind === "storefront" ? t("p8lst.flLinkStoreDesc") : t("p8lst.flLinkQuickDesc")}</div>
+                                    <div className="mt-1.5 truncate rounded bg-[var(--surface)] px-2 py-1 text-[10.5px] text-[var(--ink-3)]" dir="ltr">{url}</div>
+                                    <div className="mt-2 flex gap-1.5">
+                                      <Button sm variant="primary" className="flex-1" onClick={() => copyLink(l, kind, isDraft)}>{copiedKey === `${l.id}|${kind}` ? t("p8lst.flCopied") : t("p8lst.flLinkCopy")}</Button>
+                                      <Button sm className="flex-1" onClick={() => window.open(url, "_blank", "noopener")}>{t("p8lst.flLinkOpen")}</Button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              <div className="text-[11px] leading-snug text-[var(--ink-3)]">{t("p8lst.flLinkSignInNote")}</div>
+                            </div>
+                          </>
+                        )}
+                      </span>
                       {/* QR to the /book page — parents scan it (flyer, door, table). */}
-                      <Button sm className="!border-[#ddd0f7] !bg-[#f3effe] !text-[#6d28d9] hover:!bg-[#ece2fc]" onClick={() => setQrFor(l)}>{t("p8lst.flQr")}</Button>
+                      <Button sm className="!border-[#ddd0f7] !bg-[#f3effe] !text-[#6d28d9] hover:!bg-[#ece2fc]" onClick={() => { setQrKind("storefront"); setQrFor(l); }}>{t("p8lst.flQr")}</Button>
                       {/* Opens the real parent page (/book/{id}) in a new tab —
                           the exact storefront a parent sees. ?preview=1 tells the
                           page to show a "Preview" bar instead of the parent-portal
@@ -1093,7 +1130,7 @@ function ListingsTab({
       {/* QR to the booking page — parents scan it from a flyer, door or table. */}
       {qrFor && (() => {
         const origin = typeof window !== "undefined" ? window.location.origin : "";
-        const url = `${origin}/book/${qrFor.id}`;
+        const url = listingLinkUrl(origin, qrFor.id, qrKind);
         const qr = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=12&data=${encodeURIComponent(url)}`;
         const draft = (serverDraft(qrFor)?.status ?? allDrafts[qrFor.id]?.status ?? "live") === "draft";
         const printPoster = () => {
@@ -1110,7 +1147,13 @@ function ListingsTab({
               </div>
               <div className="truncate text-[12.5px] font-bold text-[var(--ink-2)]">{qrFor.name}</div>
               <img src={qr} alt={t("p8lst.flQrAlt", { name: qrFor.name })} className="mx-auto mt-3 h-[240px] w-[240px] rounded-xl border border-[var(--line)]" />
-              <p className="mt-2.5 text-center text-[11.5px] text-[var(--ink-3)]">{t("p8lst.flQrHelp")}</p>
+              <div className="mt-2.5 flex items-center justify-center gap-1.5 text-[11.5px] text-[var(--ink-3)]">
+                <span>{t("p8lst.flQrWhich")}</span>
+                {(["storefront", "quick"] as const).map((k) => (
+                  <button key={k} type="button" aria-pressed={qrKind === k} onClick={() => setQrKind(k)} className="rounded-full border px-2.5 py-0.5 font-bold" style={qrKind === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)" }}>{k === "storefront" ? t("p8lst.flLinkStoreShort") : t("p8lst.flLinkQuickShort")}</button>
+                ))}
+              </div>
+              <p className="mt-2 text-center text-[11.5px] text-[var(--ink-3)]">{t("p8lst.flQrHelp")}</p>
               {draft && <div className="mt-2 rounded-lg border border-[#fed7aa] bg-[#fff7ed] px-3 py-2 text-[11.5px] text-[#9a3412]"><Rich text={t("p8lst.flQrDraft")} /></div>}
               <div className="mt-2 truncate rounded-lg bg-[var(--panel)] px-3 py-2 text-center text-[11px] text-[var(--ink-3)]">{url}</div>
               <div className="mt-3 flex gap-2">
