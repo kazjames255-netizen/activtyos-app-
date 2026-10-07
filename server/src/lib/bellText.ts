@@ -22,7 +22,7 @@ export type BellKind =
   | "day-released"
   | "addon-request"
   | "place-free"
-  | "addon-orders";
+  | "addon-orders"
   | "refundToSend";
 
 /** One fixed label per kind. Each is at most 20 characters so the reference always fits after it. */
