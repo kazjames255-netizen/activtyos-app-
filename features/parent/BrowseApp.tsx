@@ -12,7 +12,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useT, tNow } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
-import { deliveryLabel } from "@/features/listings/delivery";
+import { deliveryLabel, deliveryOf } from "@/features/listings/delivery";
 import type { ListingSummary } from "./types";
 import { CroppedImage } from "@/features/listings/ListingWizard";
 import { confirmLeavingBasket } from "@/features/listings/booking";
@@ -142,6 +142,7 @@ export function BrowseApp() {
   const [catFilter, setCatFilter] = useState("");
   const [locFilter, setLocFilter] = useState("");
   const [seasonF, setSeasonF] = useState("");
+  const [deliveryF, setDeliveryF] = useState(""); // "" | "location" | "home" | "online" (a listing that is both venue and home matches location AND home)
   // The filter bar folds into the title card (open/close), remembered per browser.
   const [filtersOpen, setFiltersOpen] = useState(true);
   useEffect(() => { try { if (localStorage.getItem("aos.browse.filters") === "0") setFiltersOpen(false); } catch { /* storage off */ } }, []);
@@ -361,9 +362,16 @@ export function BrowseApp() {
   const allSeasons = [...new Set(visible.map((l) => l.season).filter((v): v is string => !!v))].sort();
   const filtered = visible.filter((l) => {
     if (catFilter && !(l.categories ?? []).includes(catFilter)) return false;
-    if (locFilter && placeOf(l) !== locFilter) return false;
+    // How it is delivered. Venue / distance filters only make sense for venue-based listings: once the family has CHOSEN "At my home" or
+    // "Online", those listings are not hidden for having no venue.
+    const dv = deliveryOf(l);
+    if (deliveryF === "location" && !(dv === "venue" || dv === "both")) return false;
+    if (deliveryF === "home" && !(dv === "home" || dv === "both")) return false;
+    if (deliveryF === "online" && dv !== "online") return false;
+    const noVenueNeeded = deliveryF === "home" || deliveryF === "online";
+    if (locFilter && !noVenueNeeded && placeOf(l) !== locFilter) return false;
     if (seasonF && l.season !== seasonF) return false;
-    if (radius > 0 && myCoords) {
+    if (radius > 0 && myCoords && !noVenueNeeded) {
       const d = distanceOf(l);
       if (d == null || d > radius) return false;
     }
@@ -393,7 +401,7 @@ export function BrowseApp() {
   else if (sort === "price-desc") shown.sort((a, b) => fromPrice(b) - fromPrice(a));
   else if (sort === "soonest") shown.sort((a, b) => firstStartMs(a) - firstStartMs(b));
   else if (myCoords) shown.sort((a, b) => (distanceOf(a) ?? Infinity) - (distanceOf(b) ?? Infinity));
-  const activeFilters = [q.trim(), catFilter, locFilter, seasonF, childAge.trim(), maxPrice.trim(), availOnly, myKidsOnly, duration, whenF, onDate, radius > 0 && !!myCoords];
+  const activeFilters = [q.trim(), catFilter, locFilter, seasonF, deliveryF, childAge.trim(), maxPrice.trim(), availOnly, myKidsOnly, duration, whenF, onDate, radius > 0 && !!myCoords];
   const activeCount = activeFilters.filter(Boolean).length;
   const filtersActive = activeCount > 0;
   const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--ink-2)] shadow-[0_2px_8px_-4px_rgba(29,58,143,.25)] outline-none transition-colors hover:border-[var(--brand)] focus:border-[var(--brand)]";
@@ -455,6 +463,12 @@ export function BrowseApp() {
               {allLocs.map((l) => <option key={l} value={l}>{l}</option>)}
             </select>
           )}
+          <select value={deliveryF} onChange={(e) => setDeliveryF(e.target.value)} className={pill} aria-label={t("p8lst.dlvFilterAria")}>
+            <option value="">{t("p8lst.dlvFilterAll")}</option>
+            <option value="location">📍 {t("p8lst.dlvFilterLoc")}</option>
+            <option value="home">🏠 {t("p8lst.dlvFilterHome")}</option>
+            <option value="online">💻 {t("p8lst.dlvFilterOnline")}</option>
+          </select>
           {allSeasons.length > 0 && (
             <select value={seasonF} onChange={(e) => setSeasonF(e.target.value)} className={pill} aria-label={t("parent.filterBySeason")}>
               <option value="">{t("parent.allSeasons")}</option>
@@ -534,7 +548,7 @@ export function BrowseApp() {
             </select>
           </span>
           {filtersActive && (
-            <button type="button" onClick={() => { setQ(""); setCatFilter(""); setLocFilter(""); setSeasonF(""); setRadius(0); setChildAge(""); setMaxPrice(""); setAvailOnly(false); setMyKidsOnly(false); setDuration(""); setWhenF(""); setOnDate(""); }}
+            <button type="button" onClick={() => { setQ(""); setCatFilter(""); setLocFilter(""); setSeasonF(""); setDeliveryF(""); setRadius(0); setChildAge(""); setMaxPrice(""); setAvailOnly(false); setMyKidsOnly(false); setDuration(""); setWhenF(""); setOnDate(""); }}
               className="text-[12px] font-bold text-[var(--brand-2,var(--brand-2))]">{t("parent.clearAll")}</button>
           )}
         </div>
@@ -575,8 +589,14 @@ export function BrowseApp() {
                   <div className="flex w-full items-center justify-center text-[26px] text-white/85" style={{ aspectRatio: "16 / 9", background: "linear-gradient(135deg,var(--brand),var(--brand-2) 70%,#5b8af0)" }}>🎪</div>
                 )}
                 {/* Distance + opens-later, stacked top-left over the image. */}
-                {(dist != null || opensLater) && (
-                  <div className="absolute start-2.5 top-2.5 flex flex-col items-start gap-1.5">
+                {(dist != null || opensLater || deliveryLabel(t, l, l.location, "parent")) && (
+                  <div className="absolute start-2.5 top-2.5 flex max-w-[75%] flex-col items-start gap-1.5">
+                    {/* How it is delivered (online / at your home) - big and first, so it can't be missed on any photo. */}
+                    {deliveryLabel(t, l, l.location, "parent") && (
+                      <span className="inline-flex max-w-full items-center rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[12px] font-extrabold text-white shadow-[0_4px_12px_-2px_rgba(0,0,0,.45)] ring-2 ring-white/90">
+                        <span className="truncate">{deliveryLabel(t, l, l.location, "parent")}</span>
+                      </span>
+                    )}
                     {dist != null && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-[4px] text-[11px] font-extrabold text-[var(--brand)] shadow-sm">🧭 {dist < 10 ? dist.toFixed(1) : Math.round(dist)} {t("parent.miAway")}</span>
                     )}
