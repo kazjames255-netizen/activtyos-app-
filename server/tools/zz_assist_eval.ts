@@ -42,6 +42,7 @@ export const QUESTIONS: string[] = [
   "will parents see my home address or base postcode",
   "a parent outside my area, can they still see my home visit listing",
   "how do I know my postcode was recognised in the listing",
+  "can I run a week now and another week in six months without creating all the weeks in between",
   "how do I see which children are coming next week in my bookings list",
   "will parents see that my listing is online or at their home",
   "where does a parent see the video link for my online session",

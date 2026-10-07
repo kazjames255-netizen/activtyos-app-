@@ -58,3 +58,39 @@ export function dateProblem(iso: string | undefined, today: string = todayIso(),
   if (iso! > maxRunIso(today)) return "far";
   return null;
 }
+
+// ── Separate date periods (e.g. a week now and another in 6 months: nothing in between) ───────────────────────────────────────────────
+export type RunPeriod = { from: string; to: string };
+
+/** A draft's run-days: each period on its own (nothing generated in the gaps), or the single From..To range. Switched-off days are NOT removed here. */
+export function periodDates(d: { runFrom: string; runTo: string; days: number[]; runPeriods?: RunPeriod[] }, gen: (from: string, to: string, days: number[]) => string[]): string[] {
+  const periods = (d.runPeriods ?? []).filter((p) => p.from && p.to);
+  if (!periods.length) return gen(d.runFrom, d.runTo, d.days);
+  const all = new Set<string>();
+  for (const p of periods) for (const x of gen(p.from, p.to, d.days)) all.add(x);
+  return [...all].sort();
+}
+
+/** The outer span of the periods (what runFrom / runTo hold, for the screens that show one range). */
+export function periodSpan(periods: RunPeriod[]): { from: string; to: string } {
+  const ok = periods.filter((p) => p.from && p.to);
+  if (!ok.length) return { from: periods[0]?.from ?? "", to: periods[0]?.to ?? "" };
+  return { from: ok.map((p) => p.from).sort()[0], to: ok.map((p) => p.to).sort().reverse()[0] };
+}
+
+/** What is wrong with a list of periods (first problem only), or null. */
+export function periodsProblem(periods: RunPeriod[]): "incomplete" | "endBefore" | "overlap" | null {
+  const list = periods ?? [];
+  if (list.some((p) => !p.from || !p.to)) return "incomplete";
+  if (list.some((p) => p.to < p.from)) return "endBefore";
+  const sorted = [...list].sort((a, b) => (a.from < b.from ? -1 : 1));
+  for (let i = 1; i < sorted.length; i++) if (sorted[i].from <= sorted[i - 1].to) return "overlap";
+  return null;
+}
+
+/** Tick a whole week on or off: its days go in / out of the switched-off list. */
+export function setWeekOff(datesOff: string[], weekDays: string[], off: boolean): string[] {
+  const set = new Set(datesOff);
+  for (const d of weekDays) { if (off) set.add(d); else set.delete(d); }
+  return [...set].sort();
+}

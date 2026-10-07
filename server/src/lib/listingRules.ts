@@ -138,6 +138,8 @@ export const baseListingSchema = z
     blockMode: z.enum(["weekly", "custom"]).optional(),
     days: z.array(z.number().int().min(0).max(6)).max(7).optional(),
     datesOff: z.array(z.string().max(10)).max(400).optional(),
+    // separate date ranges (e.g. a week now and another in 6 months): when present the dated blocks are made ONLY for these ranges
+    runPeriods: z.array(z.object({ from: z.string().max(10), to: z.string().max(10) })).max(24).optional(),
     // meals — whether this listing offers meals, and what runs each run-day
     // (ISO date → the menu + which of its dishes are served that day). A legacy
     // plain menu-id string still parses (= the whole menu). Parents pick from
@@ -219,7 +221,7 @@ export const createSchema = baseListingSchema.refine((d) => d.name || d.title, {
 export type ListingInput = z.infer<typeof baseListingSchema>;
 
 /** Fields whose change means the dated blocks must be re-synced. */
-export const RUN_FIELDS = ["runFrom", "runTo", "blockMode", "days", "datesOff", "maxAttendees", "capacityScope", "blockId"] as const;
+export const RUN_FIELDS = ["runFrom", "runTo", "blockMode", "days", "datesOff", "runPeriods", "maxAttendees", "capacityScope", "blockId"] as const;
 
 export function runRecipeOf(doc: Record<string, unknown>) {
   return {
@@ -228,6 +230,7 @@ export function runRecipeOf(doc: Record<string, unknown>) {
     blockMode: doc.blockMode as "weekly" | "custom" | undefined,
     days: doc.days as number[] | undefined,
     datesOff: doc.datesOff as string[] | undefined,
+    runPeriods: doc.runPeriods as { from: string; to: string }[] | undefined,
     maxAttendees: doc.maxAttendees as string | undefined,
     capacityScope: doc.capacityScope as "day" | "listing" | undefined,
     blockId: doc.blockId as string | null | undefined,

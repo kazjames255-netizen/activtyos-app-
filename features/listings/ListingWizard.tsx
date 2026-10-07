@@ -231,7 +231,7 @@ function slotsOf(lines: { pass: string; dates: string[]; timing?: string }[]): {
 }
 
 export { isOnlineVenue } from "./wizardRules";
-import { isOnlineVenue, fixYear, runLooksWrong, saveStatusFor, onlineVenueChoice, deliveryPatch, dateProblem, todayIso, maxRunIso } from "./wizardRules";
+import { isOnlineVenue, fixYear, runLooksWrong, saveStatusFor, onlineVenueChoice, deliveryPatch, dateProblem, todayIso, maxRunIso, periodDates, periodSpan, periodsProblem, setWeekOff } from "./wizardRules";
 
 /** The dated run covering a date, when the server has told us about them. */
 
@@ -364,6 +364,8 @@ export interface WizardDraft {
   blockMode: "weekly" | "custom";
   days: number[];
   datesOff: string[];
+  /** Separate date ranges (e.g. a week now and another in 6 months). Absent = the single runFrom..runTo range. runFrom/runTo then hold their outer span. */
+  runPeriods?: { from: string; to: string }[];
   blockId: string | null;
   /** Whether this listing offers meals. When on, the menu + allergens auto-show
    *  to parents at checkout, and `mealPlan` says which saved menu runs each day. */
@@ -494,10 +496,11 @@ export function publishBlockers(d: WizardDraft, ticketCount: number, visibleTick
     out.push({ step: at("details"), what: tNow("p8lst.waBlkPrefix") });
   else if (homeVisit && d.coverageArea?.mode === "radius" && (!d.coverageArea.basePostcode || !d.coverageArea.radiusMiles))
     out.push({ step: at("details"), what: tNow("p8lst.waBlkRadius") });
-  if (!d.runFrom || !d.runTo) out.push({ step: at("run"), what: tNow("p8lst.waBlkDates") });
+  if (d.runPeriods?.length && periodsProblem(d.runPeriods)) out.push({ step: at("run"), what: tNow("p8lst.wbPeriodsBad") });
+  else if (!d.runFrom || !d.runTo) out.push({ step: at("run"), what: tNow("p8lst.waBlkDates") });
   else if (d.runTo < d.runFrom) out.push({ step: at("run"), what: tNow("p8lst.waBlkEndBefore") });
   else if (dateProblem(d.runTo) === "past" || dateProblem(d.runTo) === "far" || dateProblem(d.runFrom, todayIso(), 365) === "past") out.push({ step: at("run"), what: tNow("p8lst.waBlkPast") });
-  else if (!genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x)).length) {
+  else if (!periodDates(d, genDates).filter((x) => !(d.datesOff ?? []).includes(x)).length) {
     // The trap: a range that only covers days the operator has unticked.
     out.push({ step: at("run"), what: tNow("p8lst.waBlkNoDays") });
   }
@@ -611,7 +614,7 @@ export function setDraftArchived(key: string, archived: boolean) {
 // Summary bits for the Listings-tab row (image, dates, total days).
 export function listingRowInfo(draft: WizardDraft): { cover: ListingImage | null; dateLabel: string | null; from: string; to: string; totalDays: number; capacity: number | null; capacityScope: "day" | "listing"; showSpaces: boolean; live: boolean; opensAt: string } {
   const imgs = ((draft.images as unknown as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
-  const dates = genDates(draft.runFrom, draft.runTo, draft.days).filter((x) => !(draft.datesOff || []).includes(x));
+  const dates = periodDates(draft, genDates).filter((x) => !(draft.datesOff || []).includes(x));
   // Show the year when the run leaves the current one — otherwise a mistyped
   // end year looks identical to a normal range while quietly inflating the
   // day count.
@@ -634,7 +637,7 @@ export function listingIsLive(draft: WizardDraft): boolean {
 // True if the listing has a live running day on the given ISO date.
 export function listingRunsOn(draft: WizardDraft, iso: string): boolean {
   if (!iso) return true;
-  return genDates(draft.runFrom, draft.runTo, draft.days).includes(iso) && !(draft.datesOff || []).includes(iso);
+  return periodDates(draft, genDates).includes(iso) && !(draft.datesOff || []).includes(iso);
 }
 
 // True while the camp is currently on — today within the run window. Gates the
@@ -1163,7 +1166,7 @@ export function BookingOnly({ listing, onBook, bookState, mode = "operator", the
 }) {
   const d = draftFromListing(listing);
   const lib = listing.library;
-  const dates = genDates(d.runFrom, d.runTo, d.days);
+  const dates = periodDates(d, genDates);
   const capParsed = parseInt(d.maxAttendees, 10);
   return (
     <BookingWidget
@@ -2470,7 +2473,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
   const tr = useT();
   const { locale } = useI18n();
   const weekly = d.blockMode === "weekly";
-  const dates = useMemo(() => genDates(d.runFrom, d.runTo, d.days), [d.runFrom, d.runTo, d.days]);
+  const dates = useMemo(() => periodDates(d, genDates), [d.runFrom, d.runTo, d.days, d.runPeriods]);
   const weeks = useMemo(() => groupWeeks(dates), [dates]);
   const live = dates.filter((x) => !d.datesOff.includes(x)).length;
   // Changing the dates/days doesn't wipe the per-pass booking rules: the Tickets
@@ -2483,10 +2486,35 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
       <StepHead n={5} kicker={tr("p8lst.wbKickRun")} title={tr("p8lst.wbRunTitle")} lede={tr("p8lst.wbRunLede")} />
       <div className="grid items-start gap-4 md:grid-cols-2">
         <RichCard icon="🗓️" title={tr("p8lst.wbRunDatesTitle")} subtitle={tr("p8lst.wbRunDatesSub")}>
-          <div className="mb-3 flex gap-3">
+          {!(d.runPeriods?.length) && (<div className="mb-3 flex gap-3">
             <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">{tr("p8lst.wbRunsFrom")}</FieldLabel><Input id="wiz-run-from" type="date" min={todayIso()} max={maxRunIso()} value={d.runFrom} onChange={(e) => upd({ runFrom: e.target.value })} onBlur={(e) => upd({ runFrom: fixYear(e.target.value) })} className="w-full" />{dateProblem(d.runFrom, todayIso(), 365) && <div className="mt-1 text-[11.5px] font-bold text-[#c02636]">{dateProblem(d.runFrom, todayIso(), 365) === "past" ? tr("p8lst.dateInPast") : tr("p8lst.dateTooFar")}</div>}</div>
             <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">{tr("p8lst.wbRunsTo")}</FieldLabel><Input id="wiz-run-to" type="date" min={todayIso()} max={maxRunIso()} value={d.runTo} onChange={(e) => upd({ runTo: e.target.value })} onBlur={(e) => upd({ runTo: fixYear(e.target.value) })} className="w-full" />{dateProblem(d.runTo) && <div className="mt-1 text-[11.5px] font-bold text-[#c02636]">{dateProblem(d.runTo) === "past" ? tr("p8lst.dateInPast") : tr("p8lst.dateTooFar")}</div>}</div>
-          </div>
+          </div>)}
+          {/* Separate periods: a week now and another in 6 months, with nothing generated in between. */}
+          {(d.runPeriods?.length ?? 0) > 0 && (
+            <div className="mb-3 flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-white p-2.5">
+              {d.runPeriods!.map((p, i) => {
+                const setP = (patch: Partial<{ from: string; to: string }>) => {
+                  const next = d.runPeriods!.map((x, j) => (j === i ? { ...x, ...patch } : x));
+                  const span = periodSpan(next);
+                  upd({ runPeriods: next, runFrom: span.from, runTo: span.to });
+                };
+                return (
+                  <div key={i} className="flex flex-wrap items-end gap-2">
+                    <span className="w-[70px] pb-2 text-[11.5px] font-extrabold text-[#16306e]">{tr("p8lst.wbPeriodN", { n: i + 1 })}</span>
+                    <Input type="date" aria-label={tr("p8lst.wbRunsFrom")} min={todayIso()} max={maxRunIso()} value={p.from} onChange={(e) => setP({ from: e.target.value })} onBlur={(e) => setP({ from: fixYear(e.target.value) })} className="w-[150px]" />
+                    <Input type="date" aria-label={tr("p8lst.wbRunsTo")} min={todayIso()} max={maxRunIso()} value={p.to} onChange={(e) => setP({ to: e.target.value })} onBlur={(e) => setP({ to: fixYear(e.target.value) })} className="w-[150px]" />
+                    {d.runPeriods!.length > 1 && (
+                      <button type="button" onClick={() => { const next = d.runPeriods!.filter((_, j) => j !== i); const span = periodSpan(next); upd(next.length > 1 ? { runPeriods: next, runFrom: span.from, runTo: span.to } : { runPeriods: undefined, runFrom: next[0]?.from ?? "", runTo: next[0]?.to ?? "" }); }} className="pb-2 text-[12px] font-bold text-[var(--ink-3)] hover:text-[var(--red)]" title={tr("p8lst.wbPeriodRemove")}>✕</button>
+                    )}
+                  </div>
+                );
+              })}
+              {periodsProblem(d.runPeriods!) === "overlap" || periodsProblem(d.runPeriods!) === "endBefore" ? <div className="text-[11.5px] font-bold text-[#c02636]">{tr("p8lst.wbPeriodsBad")}</div> : null}
+              <div className="text-[11px] text-[var(--ink-3)]">{tr("p8lst.wbPeriodsNote")}</div>
+            </div>
+          )}
+          <button type="button" onClick={() => upd(d.runPeriods?.length ? { runPeriods: [...d.runPeriods, { from: "", to: "" }] } : { runPeriods: [{ from: d.runFrom, to: d.runTo }, { from: "", to: "" }] })} className="mb-3 block text-[12px] font-bold text-[var(--brand-ink)] underline">{tr("p8lst.wbAddPeriod")}</button>
           <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">{tr("p8lst.wbBlockSize")}</span>
           <div className="mb-3 flex flex-wrap gap-1.5">
             {[["weekly", tr("p8lst.wbBlockWeekly")], ["custom", tr("p8lst.wbBlockCustom")]].map(([k, label]) => (
@@ -2516,12 +2544,20 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
               {tr("p8lst.wbCalEmpty")}
             </div>
           ) : (
+            <>
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-[11.5px] font-bold text-[var(--ink-2)]">
+              <span>{tr("p8lst.wbWeeksSelected", { n: weeks.filter((w) => w.days.some((x) => !d.datesOff.includes(x))).length, total: weeks.length })}</span>
+              <button type="button" onClick={() => upd({ datesOff: setWeekOff(d.datesOff, weeks.flatMap((w) => w.days), false) })} className="underline">{tr("p8lst.wbSelectAll")}</button>
+              <button type="button" onClick={() => upd({ datesOff: setWeekOff(d.datesOff, weeks.flatMap((w) => w.days), true) })} className="underline">{tr("p8lst.wbSelectNone")}</button>
+            </div>
             <div className="flex max-h-[300px] flex-col gap-2 overflow-y-auto pe-1">
               {weeks.map((w, i) => {
                 const col = WEEK_PAL[i % WEEK_PAL.length];
+                const weekOn = w.days.some((x) => !d.datesOff.includes(x));
                 return (
-                  <div key={w.mon} className="shrink-0 overflow-hidden rounded-xl border border-[var(--line)]">
+                  <div key={w.mon} className="shrink-0 overflow-hidden rounded-xl border border-[var(--line)]" style={weekOn ? undefined : { opacity: 0.55 }}>
                     <div className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-extrabold text-white" style={{ background: col }}>
+                      <input type="checkbox" checked={weekOn} aria-label={tr("p8lst.wbIncludeWeek")} onChange={() => upd({ datesOff: setWeekOff(d.datesOff, w.days, weekOn) })} className="h-4 w-4 accent-white" />
                       {tr("p8lst.wbWeekN", { n: w.n })} <span className="font-semibold opacity-80">{tr("p8lst.wbWeekFrom", { date: fmtDate(w.mon) })}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5 p-2.5">
@@ -2540,6 +2576,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
                 );
               })}
             </div>
+            </>
           )}
         </RichCard>
       </div>
@@ -2575,7 +2612,7 @@ function TicketsStep({ d, upd, blocks, tickets, onCreateBlock }: { d: WizardDraf
   // Booking-rule validity for multi-day passes — how many days a single week
   // offers vs the whole run. A pass can only book a way that actually fits.
   const weekLen = d.blockMode === "weekly" ? (d.days?.length || 5) : 7;
-  const totalRun = genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x)).length;
+  const totalRun = periodDates(d, genDates).filter((x) => !(d.datesOff ?? []).includes(x)).length;
   const ruleValid = (days: number, k: BookRule) => k === "week" ? days <= weekLen : k === "blocks" ? (days === weekLen || days === totalRun) : days <= totalRun;
   const anyRuleReset = multiDay.some((t) => { const s = (d.bookRules ?? {})[t.name]; return s && !ruleValid(t.days, s); });
   return (
@@ -4020,7 +4057,7 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   const imgs = d.images;
   const town = venue?.address?.split(",").slice(-1)[0]?.trim() || venue?.address || "";
   const runLabel = d.runFrom && d.runTo ? `${fmtDate(d.runFrom)} – ${fmtDate(d.runTo)}` : tr("p7pg.datesTbc");
-  const dates = genDates(d.runFrom, d.runTo, d.days);
+  const dates = periodDates(d, genDates);
   const weeks = groupWeeks(dates);
   // Blank capacity means "not set", not zero — `|| 0` was showing "Sold out"
   // on listings that had never had a limit typed in.
@@ -4597,7 +4634,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   // Counted in dates, because that's the unit a parent books in
                   // — "15 places left" doesn't say whether the days they want
                   // are among them.
-                  const dates = genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x));
+                  const dates = periodDates(d, genDates).filter((x) => !(d.datesOff ?? []).includes(x));
                   if (!dates.length || !blocks?.length) return null;
                   const leftOnDate = (iso: string) => { const blk = blockOn(blocks, iso); if (!blk) return null; if (!blk.open) return 0; return blk.capacityScope === "day" ? blk.sessions?.find((q) => q.date === iso)?.spotsLeft ?? blk.spotsLeft : blk.spotsLeft; };
                   const open = dates.filter((x) => (leftOnDate(x) ?? 1) > 0);

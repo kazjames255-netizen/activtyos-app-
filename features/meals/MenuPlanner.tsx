@@ -10,6 +10,7 @@ import { FieldLabel, Input, Select } from "@/components/ui";
 import { MasterCard } from "@/components/OperatorPage";
 import { SeasonPicker } from "@/components/SeasonPicker";
 import { genDates, groupWeeks, fmtDate } from "@/features/listings/format";
+import { periodDates } from "@/features/listings/wizardRules";
 import { mealDayPlan, type MealDayPlan } from "./plan";
 import { SavedMenus, type SavedMenu } from "./SavedMenus";
 import { MenuSharing } from "./MenuSharing";
@@ -85,7 +86,7 @@ export function MenuPlanner() {
     setBrushMenuId(null); setFocusDay(null); setErase(false);
   }, [listing]);
 
-  const dates = useMemo(() => (listing ? genDates(listing.runFrom ?? "", listing.runTo ?? "", listing.days ?? []).filter((x) => !(listing.datesOff ?? []).includes(x)) : []), [listing]);
+  const dates = useMemo(() => (listing ? periodDates({ runFrom: listing.runFrom ?? "", runTo: listing.runTo ?? "", days: listing.days ?? [], runPeriods: (listing as { runPeriods?: { from: string; to: string }[] }).runPeriods }, genDates).filter((x) => !(listing.datesOff ?? []).includes(x)) : []), [listing]);
   const weeks = useMemo(() => groupWeeks(dates), [dates]);
   const weekdaysPresent = [1, 2, 3, 4, 5, 6, 0].filter((n) => dates.some((iso) => new Date(`${iso}T00:00:00Z`).getUTCDay() === n));
 
