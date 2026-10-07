@@ -19,6 +19,8 @@ import { LOW_LEFT, blockOn, capacityNote } from "./capacity";
 import { useTenantSettings, useSettings, detailsForListing } from "@/lib/settings";
 import { policyWording, type NamedPolicy } from "@/lib/cancellation";
 import { CheckoutPanel } from "./checkout";
+import { ThemeHero, useThemeFont } from "./ThemeHero";
+import { THEME_TOKENS, NEW_THEME_KEYS, FONT_STACK, type NewThemeKey, type ThemeTokens } from "./pageThemes";
 import { BlocksApp } from "@/features/blocks/BlocksApp";
 import { listingPrereqs, titleMissing, mayCreateOnServer, isAbandonedDraft, newBlockId, bookingLink } from "./prereqs";
 import type { ChildProfile } from "./checkout";
@@ -399,7 +401,7 @@ export interface WizardDraft {
   archived?: boolean;
   pageStyle?: PageTheme;
 }
-export type PageTheme = "playful" | "sport" | "emerald" | "teal" | "royal" | "aubergine" | "burgundy" | "terracotta" | "slate" | "crimson";
+export type PageTheme = "playful" | "sport" | "emerald" | "teal" | "royal" | "aubergine" | "burgundy" | "terracotta" | "slate" | "crimson" | NewThemeKey;
 
 // ── Automatic discounts ────────────────────────────────────────────────────
 // The engine lives in ./discounts — shared verbatim with the server, which
@@ -3726,7 +3728,14 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
   const MUTs = surf.muted;
   const BAR = surf.bar;          // section-banner gradient
   const LINEs = surf.line, PANEL = surf.panel, CELL = surf.cell, CELLOFF = surf.cellOff;
-  const idle = { background: CELL, color: "#dfe6f2", borderColor: LINEs };
+  useThemeFont(surf.key);
+  const V = surf.v2, k = V?.t;
+  const light = !!V && !V.dark;
+  const INKT = k?.ink ?? "#fff", BODYC = k?.ink ?? "#c3ccdb", FAINT = k?.mute ?? "#8f9bb0";
+  const ACCT = k?.sec ?? LIME;                       // accent used as TEXT (labels)
+  const WARN = light ? "#8a4b00" : "#ffb020", BAD = light ? "#b3261e" : "#ff5470", GOOD = light ? "#0a7a4a" : "#3ddc84";
+  const TRACK = k?.line ?? "#26304a";
+  const idle = { background: CELL, color: k?.ink ?? "#dfe6f2", borderColor: LINEs };
   // Numbered so the order to work through is obvious. Timing is skipped when
   // the block has none, so dates become step 2.
   const step = (n: number, text: string) => (
@@ -3735,35 +3744,38 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
       <span className="text-[9.5px] font-black uppercase tracking-[0.14em]" style={{ color: MUTs }}>{text}</span>
     </div>
   );
-  const on = { background: "rgba(198,255,0,.1)", color: LIME, borderColor: LIME };
-  const skew = { transform: "skewX(-6deg)" } as const, unskew = { display: "inline-block", transform: "skewX(6deg)" } as const;
-  const wrap = "border", wrapStyle = { borderColor: LINEs, background: PANEL };
+  const on = k ? { background: `${k.sel}1f`, color: k.selInk, borderColor: k.sel } : { background: "rgba(198,255,0,.1)", color: LIME, borderColor: LIME };
+  const skew: React.CSSProperties = V ? {} : { transform: "skewX(-6deg)" }, unskew: React.CSSProperties = V ? {} : { display: "inline-block", transform: "skewX(6deg)" };
+  const wrap = V ? `border aos-th2${V.key === "poster" ? " aos-poster" : ""}` : "border";
+  const wrapStyle: React.CSSProperties = V ? { borderColor: LINEs, background: PANEL, color: INKT, borderRadius: k!.r, overflow: "hidden", ...spVars(V) } : { borderColor: LINEs, background: PANEL };
+  const ctaBg = k?.cta ?? LIME, ctaInk = k?.ctaInk ?? INK, ctaSh = k?.ctaSh;
+  const BARINK = k?.phInk ?? "#fff";
   if (b.stage === "done") return (
     <div className={wrap} style={wrapStyle}>
       <div className="p-5 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center text-[26px] font-black" style={{ background: LIME, color: INK }}>✓</div>
-        <div className="mt-3 text-[18px] font-black italic uppercase tracking-[-0.01em] text-white">Booked{b.child ? ` · ${b.child}` : ""}</div>
-        <div className="mt-2 text-[12.5px] text-[#8f9bb0]">{d.bookingType === "auto" ? tr("p7bw.instantlyConfirmed") : tr("p7bw.providerApproves")} {tr("p7bw.confEmailOnWay")}</div>
-        <button className="mt-4 px-6 py-2.5 text-[13px] font-black italic uppercase" style={{ ...skew, background: LIME, color: INK }} onClick={b.reset}><span style={unskew}>{tr("p7bw.bookAgain")}</span></button>
+        <div className="mt-3 text-[18px] font-black italic uppercase tracking-[-0.01em] text-[color:var(--sp-ink,#fff)]">Booked{b.child ? ` · ${b.child}` : ""}</div>
+        <div className="mt-2 text-[12.5px] text-[color:var(--sp-faint,#8f9bb0)]">{d.bookingType === "auto" ? tr("p7bw.instantlyConfirmed") : tr("p7bw.providerApproves")} {tr("p7bw.confEmailOnWay")}</div>
+        <button className="mt-4 px-6 py-2.5 text-[13px] font-black italic uppercase" style={{ ...skew, background: ctaBg, color: ctaInk, borderRadius: k?.rb }} onClick={b.reset}><span style={unskew}>{tr("p7bw.bookAgain")}</span></button>
       </div>
     </div>
   );
   if (b.stage === "checkout") return (
     <div className={wrap} style={wrapStyle}>
-      <div className="px-5 py-3.5 text-[18px] font-black italic uppercase text-white" style={{ background: BAR }}>{tr("p7bw.checkoutHead")}</div>
-      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tenantId={tenantId} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: INK, round: "", inputBg: CELL, bar: BAR, barInk: "#fff" }} />
+      <div className="aos-bh px-5 py-3.5 text-[18px] font-black italic uppercase" style={{ background: BAR, color: BARINK }}>{tr("p7bw.checkoutHead")}</div>
+      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tenantId={tenantId} tk={{ bg: PANEL, line: LINEs, ink: k?.ink ?? "#ffffff", muted: MUTs, accent: k?.cta ?? LIME, accentInk: k?.ctaInk ?? INK, round: "", inputBg: CELL, bar: BAR, barInk: BARINK }} />
     </div>
   );
   return (
     <div className={wrap} style={wrapStyle}>
-      <div className="px-4 py-2.5" style={{ background: BAR }}>
+      <div className={`aos-bh px-4 py-2.5${V ? " th-" + V.key : ""}`} style={{ background: BAR, color: BARINK }}>
         <div className="flex items-baseline justify-between">
-          <span className="text-[15px] font-black italic uppercase text-white">{tr("p7bw.chooseDatesTimes")}</span>
-          {b.pass && <span className="text-[11px] text-[#cfe8ff]">{tr("p7bw.fromWord")} <b className="italic text-white">{money(b.unitPrice)}</b></span>}
+          <span className="text-[15px] font-black italic uppercase">{tr("p7bw.chooseDatesTimes")}</span>
+          {b.pass && <span className="text-[11px]" style={{ color: k ? BARINK : "#cfe8ff" }}>{tr("p7bw.fromWord")} <b className="italic" style={{ color: k ? BARINK : "#fff" }}>{money(b.unitPrice)}</b></span>}
         </div>
-        <div className="mt-1.5 text-[11.5px] font-bold text-white/90">👆 {tr("p9tx.bkTapHint")}</div>
+        <div className="mt-1.5 text-[11.5px] font-bold" style={{ color: k ? BARINK : "rgba(255,255,255,.9)" }}>👆 {tr("p9tx.bkTapHint")}</div>
         {b.hint && (
-          <div className="mt-1.5 flex items-start gap-1.5 rounded bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+          <div className="mt-1.5 flex items-start gap-1.5 rounded bg-white/15 px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm" style={{ color: k ? BARINK : "#fff" }}>
             <span aria-hidden>👉</span><span>{b.hint}</span>
           </div>
         )}
@@ -3779,7 +3791,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             here overlaps when the widget sits in a narrow sidebar. */}
         <div className="flex flex-col gap-4">
         <div className="min-w-0">
-        {b.passes.length === 0 ? <div className="text-[13px] text-[#8f9bb0]">{tr("p7bw.pickBlock")}</div> : (
+        {b.passes.length === 0 ? <div className="text-[13px] text-[color:var(--sp-faint,#8f9bb0)]">{tr("p7bw.pickBlock")}</div> : (
           <>
             {step(1, tr("p7bw.stepPass"))}
             <div className="flex flex-wrap gap-2">{b.passes.map((t) => { const closed = b.passClosed(t.id); const fits = b.passFits(t); const off = closed || !fits; return <button key={t.id} type="button" disabled={off} onClick={() => { if (!off) b.pickPass(t.id); }} title={closed ? tr("p7bw.passClosedTip") : !fits ? tr("p7bw.notEnoughTip", { n: t.days }) : undefined} className="border px-3 py-1.5 text-[12px] font-bold disabled:cursor-not-allowed" style={off ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? on : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed ? <span className="ms-1.5 no-underline">{tr("p7bw.closedTag")}</span> : !fits ? <span className="ms-1.5 no-underline">{tr("p7bw.notEnoughTag")}</span> : null}</button>; })}</div>
@@ -3788,9 +3800,9 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
               <div className="flex flex-wrap gap-2">{b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="border px-3 py-1.5 text-start text-[11.5px] font-bold leading-tight" style={p.id === b.periodId ? on : idle}>{p.range}{b.pass ? <span className="block text-[10px] font-semibold opacity-80">{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}</div>
             </>}
             {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? tr("p7bw.stepAnyDates") : tr("p7bw.stepDates"))}
-            {b.pass && cutoffNote(d, "#8f9bb0", tr, locale)}
+            {b.pass && cutoffNote(d, FAINT, tr, locale)}
             {weeks.length ? <div className="flex flex-col gap-3">{weeks.slice(0, 8).map((w) => <div key={w.mon}>
-              <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">{tr("p9tx.wzWeekFrom", { n: String(w.n), date: String(fmtDate(w.mon)) })}</div>
+              <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[color:var(--sp-faint,#8f9bb0)]">{tr("p9tx.wzWeekFrom", { n: String(w.n), date: String(fmtDate(w.mon)) })}</div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
                 const dOff = b.off(iso); const dClosed = !b.past(iso) && b.closed(iso); const dPast = b.past(iso) || dClosed; const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
                 const left = b.leftOn(iso); const held = b.heldByBasket(iso); const full = !dOff && !dPast && left !== null && left < 1 && !held; const low = !full && left !== null && (held || b.isLow(iso, left));
@@ -3801,16 +3813,16 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                   onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
                   title={dClosed ? tr("p9tx.wzClosed") : dPast ? tr("p7bw.dayPassed") : full ? (queueable ? (waiting ? tr("p7bw.onWaitTap") : tr("p7bw.fullTapJoin")) : tr("p7bw.fullWord")) : left === null ? undefined : d.showSpaces ? (low ? tr("p7bw.onlyLeft", { n: left }) : tr("p7bw.placesLeftN", { n: left })) : (low ? tr("p7bw.almostFull") : tr("p7bw.spaceAvail"))}
                   className="relative flex w-[40px] flex-col items-center border py-1 disabled:cursor-not-allowed"
-                  style={waiting ? { borderColor: "#ffb020", color: "#ffb020", background: "#2a2110" }
-                    : dPast ? { borderColor: LINEs, color: "#454d5e", background: CELLOFF, opacity: 0.5 }
-                    : dOff || full ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF }
-                    : sel ? { borderColor: LIME, color: INK, background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}>
+                  style={waiting ? { borderColor: WARN, color: WARN, background: light ? k!.surf2 : "#2a2110" }
+                    : dPast ? { borderColor: LINEs, color: k ? MUTs : "#454d5e", background: CELLOFF, opacity: 0.5 }
+                    : dOff || full ? { borderColor: LINEs, color: k ? MUTs : "#5a6478", background: CELLOFF, opacity: k ? 0.7 : undefined }
+                    : sel ? { borderColor: k?.chip ?? LIME, color: k?.chipInk ?? INK, background: k?.chip ?? LIME } : { borderColor: LINEs, color: INKT, background: CELL }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString(dl(), { weekday: "short", timeZone: "UTC" })}</span>
                   <span className="text-[13px] font-black leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
                   {dClosed && <span className="mt-0.5 text-[7px] font-bold uppercase leading-none">closed</span>}
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5" style={{ background: dot }} />}
                 </button>; })}</div>
-            </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>{tr("p7bw.setDatesWhen")}</div>}
+            </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[color:var(--sp-faint,#6a7488)]" style={{ borderColor: LINEs }}>{tr("p7bw.setDatesWhen")}</div>}
             {b.hasCounts && (
               <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-bold" style={{ color: MUTs }}>
                 {([["#3ddc84", tr("p7bw.legendSpace")], ["#ffb020", tr("p7bw.almostFull")], ["#ff5470", tr("p7bw.fullWord")]] as const).map(([c, l]) => (
@@ -3821,25 +3833,25 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             {(() => {
               const note = capacityNote(d, b.seatsLeft ?? spacesLeft, tr, locale);
               if (!note) return null;
-              const col = note.tone === "gone" ? "#ff5470" : note.tone === "low" ? "#ffb020" : "#3ddc84";
+              const col = note.tone === "gone" ? BAD : note.tone === "low" ? WARN : GOOD;
               return <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: col }}>
                 <span className="inline-block h-2 w-2" style={{ background: col }} />{note.text}</div>;
             })()}
-            <MealsAtCheckout d={d} dates={b.sel} tone="dark" />
-            <WaitlistPanel b={b} d={d} tone="dark" />
+            <MealsAtCheckout d={d} dates={b.sel} tone={light ? "light" : "dark"} />
+            <WaitlistPanel b={b} d={d} tone={light ? "light" : "dark"} />
             {b.dupNote && (
-              <div className="mt-3 border px-3 py-2.5 text-[12.5px] font-semibold leading-[1.5]" style={{ borderColor: "#ffb020", background: "#2a2008", color: "#ffd98a" }} role="alert">⚠ {b.dupNote}</div>
+              <div className="mt-3 border px-3 py-2.5 text-[12.5px] font-semibold leading-[1.5]" style={{ borderColor: WARN, background: light ? k!.surf2 : "#2a2008", color: light ? WARN : "#ffd98a" }} role="alert">⚠ {b.dupNote}</div>
             )}
             {b.basket.length > 0 && b.sel.length === 0 && !b.canAdd ? (
               <div className="mt-4 flex items-start gap-2.5 border p-3" style={{ borderColor: LIME, background: CELL }}>
                 <span className="aos-point-inline text-[22px] leading-none" aria-hidden>👆</span>
-                <p className="text-[12.5px] leading-[1.5]" style={{ color: "#d7ffa8" }}>
+                <p className="text-[12.5px] leading-[1.5]" style={{ color: BODYC }}>
                   <Rich text={tr("p7bw.inBasket")} />
                 </p>
               </div>
             ) : (
             <div className="relative mt-6">
-            <button className={`w-full py-3 text-[12.5px] font-black italic uppercase disabled:opacity-40 ${b.canAdd ? "aos-ready" : ""}`} style={{ ...skew, background: LIME, color: INK, ["--aos-ready-ring" as string]: surf.ring } as React.CSSProperties} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
+            <button className={`w-full py-3 text-[12.5px] font-black italic uppercase disabled:opacity-40 ${b.canAdd ? "aos-ready" : ""}`} style={{ ...skew, background: ctaBg, color: ctaInk, borderRadius: k?.rb, boxShadow: ctaSh, ["--aos-ready-ring" as string]: surf.ring } as React.CSSProperties} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
                 {b.locked ? tr("p7bw.notOpenYet") : b.soldOut ? (d.waitlist ? tr("p7bw.soldOutJoin") : tr("p7bw.soldOut")) : !b.hasSpace ? (b.fullDates.length === 1 ? tr("p7bw.dateIsFull", { date: fmtDate(b.fullDates[0]) }) : pickPlural(tr, locale, "p7bw.nDaysFull", b.fullDates.length)) : b.canAdd ? (
                   <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
                     <span>{b.isSingle ? tr("p7bw.addSingleBasket", { n: b.sel.length, name: b.pass?.name ?? "" }) : tr("p7bw.addPassBasket", { name: b.pass?.name ?? "" })}</span>
@@ -3855,17 +3867,17 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             )}
             {b.addPreview && (
               <div className="mt-2 border-s-[3px] p-3" style={{ borderInlineStartColor: LIME, background: CELL }}>
-                <div className="text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>
+                <div className="text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: ACCT }}>
                   ⚡ {b.addPreview.lines.length === 1 ? tr("p7bw.discApplied") : tr("p7bw.discsApplied", { n: b.addPreview.lines.length })}
                 </div>
                 <div className="mt-1.5 flex flex-col gap-1">
                   {b.addPreview.lines.map((l, i) => (
                     <div key={i} className="flex items-start justify-between gap-3 text-[11.5px]">
                       <span className="min-w-0">
-                        <span className="block" style={{ color: "#c3ccdb" }}>{l.name}</span>
+                        <span className="block" style={{ color: BODYC }}>{l.name}</span>
                         <span className="block text-[10px]" style={{ color: MUTs }}>{l.scope}</span>
                       </span>
-                      <b className="flex-none" style={{ color: LIME }}>−{money(l.amount)}</b>
+                      <b className="flex-none" style={{ color: ACCT }}>−{money(l.amount)}</b>
                     </div>
                   ))}
                 </div>
@@ -3873,7 +3885,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                   <span className="text-[11.5px] font-bold" style={{ color: MUTs }}>{tr("p7bw.youllPay")}</span>
                   <span className="flex items-baseline gap-2">
                     <s className="text-[11px]" style={{ color: MUTs }}>{money(b.addPreview.gross)}</s>
-                    <b className="text-[16px] font-black italic uppercase text-white">{money(b.addPreview.total)}</b>
+                    <b className="text-[16px] font-black italic uppercase text-[color:var(--sp-ink,#fff)]">{money(b.addPreview.total)}</b>
                   </span>
                 </div>
               </div>
@@ -3882,13 +3894,13 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
         )}
         </div>
         <div className="mt-1 border-t pt-4" style={{ borderColor: LINEs }}>
-          <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-black italic uppercase text-white">{tr("p7bw.yourBasket")}</span>{b.basket.length > 1 && (<button type="button" onClick={() => { if (window.confirm(tr("p9tx.wzEmptyConfirm"))) b.clearBasket(); }} className="ms-2 text-[11.5px] font-bold underline opacity-80">{tr("p9tx.wzClearBasket")}</button>)}<span className="px-2 py-[2px] text-[10px] font-black" style={{ background: CELL, color: LIME }}>{b.basket.length}</span></div>
-          {b.basket.length === 0 ? <div className="text-[12.5px] text-[#6a7488]">{tr("p7bw.nothingAdded")}</div> :
-            <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-start justify-between gap-2 text-[12px] text-[#c3ccdb]"><span className="min-w-0"><b className="block text-white">{x.name}</b><span className="block text-[11px] leading-snug" style={{ color: MUTs }}>{b.datesPretty(x.dates)}</span>{x.timing ? <span className="block text-[11px] font-bold" style={{ color: LIME }}>🕘 {x.timing}</span> : null}</span><span className="flex items-baseline gap-2"><b className="text-white">{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#5c6678] hover:text-[#ff5d5d]">✕</button></span></div>)}</div>}
+          <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-black italic uppercase text-[color:var(--sp-ink,#fff)]">{tr("p7bw.yourBasket")}</span>{b.basket.length > 1 && (<button type="button" onClick={() => { if (window.confirm(tr("p9tx.wzEmptyConfirm"))) b.clearBasket(); }} className="ms-2 text-[11.5px] font-bold underline opacity-80">{tr("p9tx.wzClearBasket")}</button>)}<span className="px-2 py-[2px] text-[10px] font-black" style={{ background: CELL, color: LIME }}>{b.basket.length}</span></div>
+          {b.basket.length === 0 ? <div className="text-[12.5px] text-[color:var(--sp-faint,#6a7488)]">{tr("p7bw.nothingAdded")}</div> :
+            <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-start justify-between gap-2 text-[12px] text-[color:var(--sp-body,#c3ccdb)]"><span className="min-w-0"><b className="block text-[color:var(--sp-ink,#fff)]">{x.name}</b><span className="block text-[11px] leading-snug" style={{ color: MUTs }}>{b.datesPretty(x.dates)}</span>{x.timing ? <span className="block text-[11px] font-bold" style={{ color: LIME }}>🕘 {x.timing}</span> : null}</span><span className="flex items-baseline gap-2"><b className="text-[color:var(--sp-ink,#fff)]">{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[color:var(--sp-faint,#5c6678)] hover:text-[color:var(--sp-bad,#ff5d5d)]">✕</button></span></div>)}</div>}
           {b.basket.length > 0 && b.discountLines.length > 0 && (
-            <div className="mt-2 border p-2" style={{ borderColor: LIME, background: "rgba(198,255,0,.08)" }}>
+            <div className="mt-2 border p-2" style={{ borderColor: k?.sel ?? LIME, background: k ? `${k.sel}14` : "rgba(198,255,0,.08)" }}>
               {b.discountLines.map((l, i) => (
-                <div key={i} className="flex items-baseline justify-between text-[11.5px]" style={{ color: LIME }}>
+                <div key={i} className="flex items-baseline justify-between text-[11.5px]" style={{ color: ACCT }}>
                   <span className="pe-2">{l.name}</span><b>−{money(l.amount)}</b>
                 </div>
               ))}
@@ -3898,10 +3910,10 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             <span style={{ color: MUTs }}>{tr("p7bw.totalLbl")}</span>
             <span className="flex items-baseline gap-2">
               {b.saved > 0 && <s className="text-[12px]" style={{ color: MUTs }}>{money(b.subtotal)}</s>}
-              <b className="italic text-white">{money(b.total)}</b>
+              <b className="italic text-[color:var(--sp-ink,#fff)]">{money(b.total)}</b>
             </span>
           </div>
-          <button className="mt-3 w-full py-3 text-[12.5px] font-black italic uppercase disabled:opacity-40" style={{ ...skew, background: LIME, color: INK }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}><span style={unskew}>{mode === "parent" ? tr("p7bw.nextAddChildren") : tr("p7bw.checkoutN", { n: b.basket.length })}</span></button>
+          <button className="mt-3 w-full py-3 text-[12.5px] font-black italic uppercase disabled:opacity-40" style={{ ...skew, background: ctaBg, color: ctaInk, borderRadius: k?.rb, boxShadow: ctaSh }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}><span style={unskew}>{mode === "parent" ? tr("p7bw.nextAddChildren") : tr("p7bw.checkoutN", { n: b.basket.length })}</span></button>
         </div>
         </div>
       </div>
@@ -3988,7 +4000,27 @@ type Surf = {
   bg: string; panel: string; line: string; cell: string; cellOff: string;
   accent: string; accentInk: string; el: string; secondary: string; muted: string;
   header?: string; bar: string; ring: string;
+  /** Set for the round-three themes: every colour role as a token (see pageThemes.ts). Absent = the original ten. */
+  v2?: ThemeTokens;
 };
+/** CSS variables a round-three themed page sets on its root so the shared bits (rows, sections, headings) follow the theme. */
+function spVars(V: ThemeTokens): React.CSSProperties {
+  const t = V.t;
+  const v: Record<string, string | number> = {
+    "--sp-ink": t.ink, "--sp-body": t.ink, "--sp-faint": t.mute, "--sp-bad": V.dark ? "#ff5d5d" : "#b3261e", "--sp-line": t.line, "--sp-acc": t.acc, "--sp-sec": t.sec, "--sp-panel": t.surf,
+    "--sp-bandink": t.bandInk, "--sp-stripink": t.stripInk, "--sp-barink": t.phInk, "--sp-rs": `${t.rs}px`,
+    "--t-display": FONT_STACK[V.font], "--t-dw": V.dw, "--t-dstyle": V.dstyle ?? "normal", "--t-dcase": V.dcase ?? "none", "--t-dtrack": V.dtrack ?? (V.dw >= 800 ? "-.02em" : "0"),
+    "--t-btncase": t.btncase ?? "none", "--t-btnstyle": t.btnstyle ?? "normal", "--t-grain": t.grain,
+  };
+  return v as React.CSSProperties;
+}
+function themeFromTokens(V: ThemeTokens): Surf {
+  const t = V.t;
+  return {
+    key: V.key, label: V.label, swatch: V.dot, bg: t.bg, panel: t.surf, line: t.line, cell: t.bg, cellOff: t.surf2,
+    accent: t.acc, accentInk: t.accInk, el: t.chip, secondary: t.sec, muted: t.mute, header: t.band, bar: t.ph, ring: `${t.cta}66`, v2: V,
+  };
+}
 const THEMES: Record<PageTheme, Surf> = {
   playful:    { key: "playful",    label: "Playful",     swatch: "#2f6bd8", bg: "#ffffff", panel: "#eef4fd", line: "#dbe7fb", cell: "#f4f9ff", cellOff: "#eaf1fc", accent: "#2f6bd8", accentInk: "#ffffff", el: "#2f6bd8", secondary: "#2f6bd8", muted: "#5a6b86", bar: "linear-gradient(120deg,#2f6bd8,#4f9dff)", ring: "rgba(47,107,216,.5)" },
   sport:      { key: "sport",      label: "Midnight",    swatch: "#c6ff00", bg: "#0b0d12", panel: "#12161f", line: "#1e2430", cell: "#0e131c", cellOff: "#0c0f16", accent: "#c6ff00", accentInk: "#12280a", el: "#0047ff", secondary: "#00c2ff", muted: "#adb8ca", bar: "linear-gradient(120deg,#0047ff,#0090ff)", ring: "rgba(198,255,0,.55)" },
@@ -4000,6 +4032,7 @@ const THEMES: Record<PageTheme, Surf> = {
   terracotta: { key: "terracotta", label: "Terracotta",  swatch: "#c2410c", bg: "#2a140c", panel: "#3c1e12", line: "#5a2e1a", cell: "#331810", cellOff: "#26120a", accent: "#fbbf24", accentInk: "#2e1e04", el: "#f97316", secondary: "#fdba74", muted: "#e6c3ac", header: "linear-gradient(120deg,#3c1e12 0%,#5c3016 100%)", bar: "linear-gradient(120deg,#ea580c,#f97316)", ring: "rgba(251,191,36,.5)" },
   slate:      { key: "slate",      label: "Slate",       swatch: "#64748b", bg: "#14181d", panel: "#1c222b", line: "#2b333f", cell: "#171c24", cellOff: "#12161c", accent: "#f59e0b", accentInk: "#2e1e04", el: "#38bdf8", secondary: "#7dd3fc", muted: "#aab6c6", header: "linear-gradient(120deg,#1c222b 0%,#2b3644 100%)", bar: "linear-gradient(120deg,#0ea5e9,#38bdf8)", ring: "rgba(245,158,11,.5)" },
   crimson:    { key: "crimson",    label: "Crimson",     swatch: "#dc2626", bg: "#2a0a0a", panel: "#3d1212", line: "#5a1c1c", cell: "#330f0f", cellOff: "#260a0a", accent: "#fbbf24", accentInk: "#2e1e04", el: "#ef4444", secondary: "#fca5a5", muted: "#e6b3b3", header: "linear-gradient(120deg,#3d1212 0%,#5c1e1e 100%)", bar: "linear-gradient(120deg,#dc2626,#ef4444)", ring: "rgba(251,191,36,.5)" },
+  ...(Object.fromEntries(NEW_THEME_KEYS.map((k) => [k, themeFromTokens(THEME_TOKENS[k])])) as Record<NewThemeKey, Surf>),
 };
 // Resolve a stored/absent page style to a valid theme: legacy "navy" → the new
 // "royal", anything unknown → "sport". Keeps old listings rendering.
@@ -4066,13 +4099,13 @@ function PlayCard({ e, tint, title, sub, children }: { e: string; tint: string; 
 }
 // Bordered row + section header for the Sport page.
 function SportRow({ children }: { children: React.ReactNode }) {
-  return <div className="flex items-center gap-2.5 border border-s-[3px] px-3.5 py-3 text-[13.5px] font-bold text-white" style={{ borderColor: "#1e2430", borderInlineStartColor: "#c6ff00", background: "#12161f" }}>{children}</div>;
+  return <div className="flex items-center gap-2.5 border border-s-[3px] px-3.5 py-3 text-[13.5px] font-bold text-[color:var(--sp-ink,#fff)]" style={{ borderColor: "var(--sp-line,#1e2430)", borderInlineStartColor: "var(--sp-acc,#c6ff00)", background: "var(--sp-panel,#12161f)" }}>{children}</div>;
 }
 function SportSec({ eye, title, children }: { eye: string; title: string; children: React.ReactNode }) {
   return (
-    <div className="border-t pt-6" style={{ borderColor: "#1e2430" }}>
-      <div className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-[#c6ff00]">{eye}</div>
-      <div className="mb-3 mt-1 text-[24px] font-black italic uppercase tracking-[-0.01em] text-white">{title}</div>
+    <div className="border-t pt-6" style={{ borderColor: "var(--sp-line,#1e2430)" }}>
+      <div className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-[color:var(--sp-sec,#c6ff00)]">{eye}</div>
+      <div className="mb-3 mt-1 text-[24px] font-black italic uppercase tracking-[-0.01em] text-[color:var(--sp-ink,#fff)]">{title}</div>
       {children}
     </div>
   );
@@ -4307,7 +4340,17 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
   const CY = surf.secondary;     // location / secondary
   const MUTs = surf.muted;       // muted body text
   const headerBg = surf.header;  // top-bar gradient (undefined = plain ground)
-  const cond = "italic uppercase tracking-[-0.01em]";
+  useThemeFont(surf.key);
+  const V = surf.v2, k = V?.t;
+  const light = !!V && !V.dark;
+  const INKT = k?.ink ?? "#fff", BODYC = k?.ink ?? "#c3ccdb";
+  const ACCT = k?.sec ?? LIME, PRICE = k?.price ?? LIME, EYEB = k?.eyebrow ?? LIME;   // accent as TEXT: labels / prices / eyebrow on the header
+  const BANDINK = k?.bandInk ?? "#fff", MUTBAND = k ? BANDINK : MUTs;
+  const STRIPBG = k?.strip ?? PANEL, STRIPINK = k?.stripInk ?? "#fff";
+  const CHIPBG = k ? `${k.stripInk}17` : "rgba(255,255,255,.06)";
+  const WARN = light ? "#8a4b00" : "#ffb020", BAD = light ? "#b3261e" : "#ff5470";
+  const TRACK = k?.line ?? "#26304a";
+  const cond = V ? "aos-disp" : "italic uppercase tracking-[-0.01em]";
   const grid2 = full ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1";
   // Fixed ASPECT (not height) so the hero crops the same on every screen and
   // matches the wizard's crop preview exactly — WYSIWYG.
@@ -4320,69 +4363,77 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
   const passesShown = morePasses ? passSummary : passSummary.slice(0, PASS_LIMIT);
   const passesExtra = passSummary.length - PASS_LIMIT;
   return (
-    <div className={`overflow-hidden ${full ? "" : "rounded-[18px] border"}`} style={{ background: BG, color: "#fff", borderColor: LINEs, fontFamily: "system-ui,-apple-system,sans-serif" }}>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-6 py-4" style={{ borderColor: LINEs, background: headerBg }}>
+    <div className={`overflow-hidden ${full ? "" : "rounded-[18px] border"}${V ? ` aos-th2${V.key === "poster" ? " aos-poster" : ""}` : ""}`} style={{ background: BG, color: INKT, borderColor: LINEs, fontFamily: "system-ui,-apple-system,sans-serif", ...(V ? { ...spVars(V), ...(full ? {} : { borderRadius: k!.r }) } : {}) }}>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-6 py-4" style={{ borderColor: LINEs, background: headerBg, color: BANDINK }}>
         <span className="flex min-w-0 items-center gap-2.5">
           {logo && <img src={logo} alt={`${brand} logo`} className="h-9 w-9 flex-none rounded-lg bg-white object-contain p-0.5" />}
           <span className={`text-[18px] font-black ${cond}`}>{brand}</span>
         </span>
-        <span className="flex items-center gap-4 [&_a]:text-white">
+        <span className="flex items-center gap-4 [&_a]:text-[color:var(--sp-bandink,#fff)]">
           {topRight}
-          <span className="text-[11px]" style={{ color: MUTs }}>{tr("p7pg.secureCheckout")}</span>
+          <span className="text-[11px]" style={{ color: MUTBAND, opacity: k ? 0.85 : 1 }}>{tr("p7pg.secureCheckout")}</span>
         </span>
       </div>
       {/* title above the image — every chosen type listed, sized to fit */}
-      <div className="flex items-start justify-between gap-4 px-6 pb-4 pt-6">
+      <div className="flex items-start justify-between gap-4 px-6 pb-4 pt-6" style={k ? { background: k.band, color: BANDINK } : undefined}>
         <div className="min-w-0 flex-1">
         {/* Types in lime, location in cyan — one colour for both ran them together. */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-black uppercase leading-tight tracking-[0.12em]">
           {cats.length ? cats.map((c, i) => (
             <span key={c.id} className="inline-flex items-center gap-2">
-              {i > 0 && <span style={{ color: MUTs, opacity: 0.5 }}>/</span>}
-              <span style={{ color: LIME }}>{optionLabel(c.name)}</span>
+              {i > 0 && <span style={{ color: MUTBAND, opacity: 0.5 }}>/</span>}
+              <span style={{ color: EYEB }}>{optionLabel(c.name)}</span>
             </span>
-          )) : <span style={{ color: LIME }}>{tr("p7pg.holidayCamp")}</span>}
+          )) : <span style={{ color: EYEB }}>{tr("p7pg.holidayCamp")}</span>}
           {town && (
             <>
-              <span style={{ color: MUTs, opacity: 0.5 }}>|</span>
-              <span style={{ color: CY }}>{town}</span>
+              <span style={{ color: MUTBAND, opacity: 0.5 }}>|</span>
+              <span style={{ color: k ? BANDINK : CY }}>{town}</span>
             </>
           )}
         </div>
-        <h1 className={`mt-1.5 font-black ${cond}`} style={{ fontSize: full ? 38 : 26, lineHeight: .94, color: "#fff" }}>{d.title || tr("p7pg.yourListingTitle")}</h1>
+        <h1 className={`mt-1.5 font-black ${cond}`} style={{ fontSize: full ? 38 : 26, lineHeight: .94, color: BANDINK }}>{d.title || tr("p7pg.yourListingTitle")}</h1>
         </div>
         {opens.locked && (
           <div className="flex-none border px-3.5 py-2 text-end" style={{ borderColor: LIME, background: PANEL }}>
-            <div className="text-[9.5px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>{tr("p7pg.bookingOpensIn")}</div>
-            <div className="text-[17px] font-black leading-tight tabular-nums text-white">{opens.countdown}</div>
+            <div className="text-[9.5px] font-black uppercase tracking-[0.12em]" style={{ color: ACCT }}>{tr("p7pg.bookingOpensIn")}</div>
+            <div className="text-[17px] font-black leading-tight tabular-nums" style={{ color: INKT }}>{opens.countdown}</div>
             <div className="text-[10px]" style={{ color: MUTs }}>{opens.opensLabel}</div>
           </div>
         )}
       </div>
       {/* hero image (no text on it) */}
+      {V && !imgs.length ? (
+        // No photo: the theme's own artwork (a listing with a photo keeps its photo).
+        <div className="relative overflow-hidden">
+          <ThemeHero theme={V.key} title={d.title} run={runLabel} brand={brand} />
+          {heroCat && <span className="absolute start-0 top-4 z-[6] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em]" style={{ background: LIME, color: INK, borderRadius: `0 ${k!.rs}px ${k!.rs}px 0`, paddingInlineStart: 20 }}>{optionLabel(heroCat.name)}</span>}
+        </div>
+      ) : (
       <div className="relative overflow-hidden" style={{ aspectRatio: imgs.length ? heroAspect : "6 / 1", minHeight: imgs.length ? undefined : 72 }}>
         <HeroImages imgs={imgs} fallback={`linear-gradient(120deg,${EL},#00a3ff 70%,#003)`} />
         <div className="pointer-events-none absolute inset-0 z-[1]" style={{ backgroundImage: "repeating-linear-gradient(115deg,transparent 0 46px,rgba(255,255,255,.05) 46px 48px)" }} />
-        {heroCat && <span className="absolute start-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em]" style={{ background: LIME, color: INK, transform: "skewX(-8deg)" }}>{optionLabel(heroCat.name)}</span>}
+        {heroCat && <span className="absolute start-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em]" style={{ background: LIME, color: INK, transform: V ? undefined : "skewX(-8deg)", borderRadius: k?.rs }}>{optionLabel(heroCat.name)}</span>}
       </div>
+      )}
       {/* fancy info strip (under the image) */}
-      <div className="flex flex-col border-y sm:flex-row" style={{ borderColor: LINEs, background: PANEL }}>
+      <div className="flex flex-col border-y sm:flex-row" style={{ borderColor: LINEs, background: STRIPBG, color: STRIPINK }}>
         {([["📍", (d.deliveryMode === "home-visit" ? tr("p9tx.hvWeCome") : venue?.name || town || tr("p7pg.venueTbc")), venue?.address || null], ["📆", runLabel, null], ["👧👦", d.ageFrom && d.ageTo ? tr("p7pg.agesRange", { from: d.ageFrom, to: d.ageTo }) : tr("p7pg.allAges"), null]] as [string, string, string | null][]).map(([e, v, sub], i) => (
           <div key={i} className={`flex flex-1 items-center gap-2.5 px-5 py-3 ${i ? "border-t sm:border-s sm:border-t-0" : ""}`} style={i ? { borderColor: LINEs } : undefined}>
             <span className="text-[15px]">{e}</span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[12px] font-bold uppercase tracking-[0.05em] text-white">{v}</span>
-              {sub && <span className="block truncate text-[10.5px] font-medium normal-case text-white/60">{sub}</span>}
+              <span className="block truncate text-[12px] font-bold uppercase tracking-[0.05em]" style={{ color: STRIPINK }}>{v}</span>
+              {sub && <span className="block truncate text-[10.5px] font-medium normal-case" style={{ color: k ? STRIPINK : "rgba(255,255,255,.6)", opacity: k ? 0.78 : 1 }}>{sub}</span>}
             </span>
             <span className="h-2 w-2 flex-none" style={{ background: LIME }} />
           </div>
         ))}
       </div>
       {d.payMethods && d.payMethods.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 border-b px-5 py-2.5" style={{ borderColor: LINEs, background: PANEL }}>
-          <span className="me-0.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white/60">{tr("p7pg.waysToPay")}</span>
-          <span className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: `${LIME}26`, border: `1px solid ${LIME}` }}>{tr("p7pg.cardWord")}</span>
-          {d.payMethods.map((m) => <span key={m} className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: "rgba(255,255,255,.06)", border: `1px solid ${LINEs}` }}>{m}</span>)}
+        <div className="flex flex-wrap items-center gap-1.5 border-b px-5 py-2.5" style={{ borderColor: LINEs, background: STRIPBG, color: STRIPINK }}>
+          <span className="me-0.5 text-[10px] font-extrabold uppercase tracking-[0.1em]" style={{ color: k ? STRIPINK : "rgba(255,255,255,.6)", opacity: k ? 0.78 : 1 }}>{tr("p7pg.waysToPay")}</span>
+          <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ color: STRIPINK, background: `${LIME}26`, border: `1px solid ${LIME}` }}>{tr("p7pg.cardWord")}</span>
+          {d.payMethods.map((m) => <span key={m} className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ color: STRIPINK, background: CHIPBG, border: `1px solid ${LINEs}` }}>{m}</span>)}
         </div>
       )}
       <div className={full ? "px-6 pb-8 lg:px-8" : "px-5 pb-6"}>
@@ -4411,8 +4462,8 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className={lab} style={{ color: MUTs }}>{headingOf(d, "team", "eyebrow")}</div>
-                      <div className={`mt-1 truncate text-[15px] font-black ${cond} text-white`}>{headingOf(d, "team", "title")}</div>
-                      <div className="mt-1 truncate text-[11px]" style={{ color: "#c3ccdb" }}>{staffNames.join(" · ")}</div>
+                      <div className={`mt-1 truncate text-[15px] font-black ${cond} text-[color:var(--sp-ink,#fff)]`}>{headingOf(d, "team", "title")}</div>
+                      <div className="mt-1 truncate text-[11px]" style={{ color: BODYC }}>{staffNames.join(" · ")}</div>
                     </div>
                     <span className="flex h-5 w-5 flex-none items-center justify-center text-[14px] font-black" style={{ background: LIME, color: INK }}>{teamOpen ? "–" : "+"}</span>
                   </div>
@@ -4433,9 +4484,9 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   // it's what made a listing with a booking look empty.
                   if (!blocks?.length) {
                     return spacesLeft === null
-                      ? <div className={`mt-1 text-[18px] font-black ${cond} text-white`}>—</div>
+                      ? <div className={`mt-1 text-[18px] font-black ${cond} text-[color:var(--sp-ink,#fff)]`}>—</div>
                       : (<>
-                          <div className={`mt-1 truncate text-[18px] font-black ${cond} text-white`}>Up to {spacesLeft}</div>
+                          <div className={`mt-1 truncate text-[18px] font-black ${cond} text-[color:var(--sp-ink,#fff)]`}>Up to {spacesLeft}</div>
                           <div className="mt-1 text-[10.5px]" style={{ color: MUTs }}>{tr("p7pg.bookingsShowOnce")}</div>
                         </>);
                   }
@@ -4452,10 +4503,10 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   return (
                     <>
                       <div className={`mt-1 truncate text-[18px] font-black ${cond}`}
-                        style={{ fontVariantNumeric: "tabular-nums", color: left <= 0 ? "#ff5470" : "#fff" }}>
+                        style={{ fontVariantNumeric: "tabular-nums", color: left <= 0 ? BAD : INKT }}>
                         {left <= 0 ? tr("p7pg.soldOut") : perDay ? tr("p9tx.wzPlacesADay", { total: String(total) }) : tr("p7pg.leftOfTotal", { left, total })}
                       </div>
-                      <div className="mt-1.5 h-1 w-full" style={{ background: "#26304a" }}>
+                      <div className="mt-1.5 h-1 w-full" style={{ background: TRACK }}>
                         <div className="h-full" style={{ width: `${pct}%`, background: left <= 0 ? "#ff5470" : LIME }} />
                       </div>
                       <div className="mt-1 text-[10.5px]" style={{ color: MUTs }}>{perDay ? tr("p9tx.wzBusiest", { used: String(used), total: String(total) }) : tr("p9tx.wzBookedPct", { used: String(used), pct: String(pct) })}</div>
@@ -4492,11 +4543,11 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                       {/* Only worth saying once some dates have actually gone. */}
                       {open.length < dates.length && (
                         <div className="mt-1.5 text-[10.5px]" style={{ color: MUTs }}>
-                          {(() => { const parts = tr("p9tx.wzDatesSpace", { open: "\u0000", total: String(dates.length) }).split("\u0000"); return <>{parts[0]}<b className="text-white">{open.length}</b>{parts[1]}</>; })()}
+                          {(() => { const parts = tr("p9tx.wzDatesSpace", { open: "\u0000", total: String(dates.length) }).split("\u0000"); return <>{parts[0]}<b className="text-[color:var(--sp-ink,#fff)]">{open.length}</b>{parts[1]}</>; })()}
                         </div>
                       )}
                       {spans.length > 0 && (
-                        <div className="mt-1 text-[10.5px] font-bold leading-[1.45]" style={{ color: "#ffb020" }}>
+                        <div className="mt-1 text-[10.5px] font-bold leading-[1.45]" style={{ color: WARN }}>
                           {tr("p7pg.nearlyFull", { spans: spans.slice(0, 3).map(label).join(" · ") + (spans.length > 3 ? " " + tr("p7pg.plusMore", { n: spans.length - 3 }) : "") })}
                         </div>
                       )}
@@ -4520,8 +4571,8 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
               )}
               {d.sitePhone && listingRunningNow(d) && (
                 <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
-                  <div className={lab} style={{ color: LIME }}>{tr("p7pg.campOnNowShort")}</div>
-                  <a href={`tel:${d.sitePhone.replace(/\s+/g, "")}`} className={`mt-1 block text-[17px] font-black ${cond}`} style={{ color: "#fff" }}>{d.sitePhone}</a>
+                  <div className={lab} style={{ color: ACCT }}>{tr("p7pg.campOnNowShort")}</div>
+                  <a href={`tel:${d.sitePhone.replace(/\s+/g, "")}`} className={`mt-1 block text-[17px] font-black ${cond}`} style={{ color: INKT }}>{d.sitePhone}</a>
                 </div>
               )}
               {passSummary.length > 0 && (
@@ -4535,16 +4586,16 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                         <div key={pp.name} className="overflow-hidden rounded-md" style={{ background: surf.cell, borderInlineStart: `2px solid ${LIME}` }}>
                           <button type="button" onClick={() => canOpen && setOpenPass(isOpen ? null : pp.name)} className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-start">
                             <span className="min-w-0">
-                              <span className={`block truncate text-[10.5px] font-bold text-white ${cond}`}>{pp.name}</span>
+                              <span className={`block truncate text-[10.5px] font-bold text-[color:var(--sp-ink,#fff)] ${cond}`}>{pp.name}</span>
                               {pp.days ? <span className="block whitespace-nowrap text-[9px]" style={{ color: MUTs }}>{pickPlural(tr, locale, "p8lst.wbDaysN", pp.days)}{canOpen ? ` ${tr("p8lst.wbDetailsSfx")}` : ""}</span> : null}
                             </span>
                             <span className="flex flex-none items-center gap-1">
-                              <b className="text-[12px] font-black" style={{ color: LIME, fontVariantNumeric: "tabular-nums" }}>{money(pp.price)}</b>
-                              {canOpen && <span className="text-[10px] font-black transition-transform" style={{ color: LIME, transform: isOpen ? "rotate(180deg)" : "none" }}>⌄</span>}
+                              <b className="text-[12px] font-black" style={{ color: PRICE, fontVariantNumeric: "tabular-nums" }}>{money(pp.price)}</b>
+                              {canOpen && <span className="text-[10px] font-black transition-transform" style={{ color: ACCT, transform: isOpen ? "rotate(180deg)" : "none" }}>⌄</span>}
                             </span>
                           </button>
                           {isOpen && (
-                            <div className="border-t px-2 py-1.5 text-[10.5px] leading-[1.5]" style={{ borderColor: LINEs, color: "#d7deea" }}>
+                            <div className="border-t px-2 py-1.5 text-[10.5px] leading-[1.5]" style={{ borderColor: LINEs, color: k ? INKT : "#d7deea" }}>
                               {pp.details || tr("p7pg.passDetail", { n: pp.days ?? "" })}
                             </div>
                           )}
@@ -4568,14 +4619,14 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                     {live.slice(0, 3).map((r) => (
                       <div key={r.id} className="flex items-start justify-between gap-2">
                         <span className="min-w-0">
-                          <span className="block text-[11px] leading-snug" style={{ color: "#c3ccdb" }}>{ruleDisplayName(r, { tr, locale })}</span>
+                          <span className="block text-[11px] leading-snug" style={{ color: BODYC }}>{ruleDisplayName(r, { tr, locale })}</span>
                           {/* Which tickets it covers — a rule on one pass shouldn't look universal. */}
                           <span className="block text-[9.5px]" style={{ color: MUTs }}>
                             {r.passNames.length === 0 ? tr("p7pg.allPasses") : r.passNames.join(", ")}
                             {r.kind === "early" && r.beforeDate ? " " + tr("p7pg.bookBy", { date: fmtDate(r.beforeDate) }) : ""}
                           </span>
                         </span>
-                        <b className="flex-none text-[12px] font-black" style={{ color: LIME, fontVariantNumeric: "tabular-nums" }}>
+                        <b className="flex-none text-[12px] font-black" style={{ color: PRICE, fontVariantNumeric: "tabular-nums" }}>
                           {r.method === "percent" ? `-${r.value}%` : `-${money(r.value)}`}
                         </b>
                       </div>
@@ -4591,7 +4642,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                     {staff.map((m) => (
                       <div key={m.id} className="border p-3.5" style={{ borderColor: LINEs, background: BG }}>
                         <div className="flex items-center gap-2.5">
-                          <span className={`flex h-9 w-9 flex-none items-center justify-center font-black ${cond} text-[15px] text-white`} style={{ background: EL }}>{(m.first[0] || "?").toUpperCase()}</span>
+                          <span className={`flex h-9 w-9 flex-none items-center justify-center font-black ${cond} text-[15px]`} style={{ background: EL, color: k?.chipInk ?? "#fff" }}>{(m.first[0] || "?").toUpperCase()}</span>
                           <b className="text-[13.5px]">{m.first} {m.last}</b>
                         </div>
                         {m.bio && <p className="mt-2 text-[12.5px] leading-[1.55]" style={{ color: MUTs }}>{m.bio}</p>}
@@ -4606,9 +4657,9 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
 
         <div className={`mt-8 ${full ? "grid items-start gap-7 lg:grid-cols-[1fr_360px]" : ""}`}>
           <div className="flex flex-col gap-6">
-            {d.description && <div><div className="text-[12px] font-extrabold uppercase tracking-[0.14em]" style={{ color: LIME }}>{headingOf(d, "about", "title")}</div><p className="mt-1.5 text-[13.5px] leading-[1.65]" style={{ color: "#c3ccdb" }}>{d.description}</p></div>}
+            {d.description && <div><div className="text-[12px] font-extrabold uppercase tracking-[0.14em]" style={{ color: ACCT }}>{headingOf(d, "about", "title")}</div><p className="mt-1.5 text-[13.5px] leading-[1.65]" style={{ color: BODYC }}>{d.description}</p></div>}
             {!full && <div id="aos-book">{widget}</div>}
-            {d.sections.some((s) => s.text) && <SportSec eye={headingOf(d, "about", "eyebrow")} title={headingOf(d, "about", "title")}>{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: CY }}>{s.type}</div><p className="mt-1 text-[14px] leading-[1.6]" style={{ color: "#c3ccdb" }}>{s.text}</p></div>)}</SportSec>}
+            {d.sections.some((s) => s.text) && <SportSec eye={headingOf(d, "about", "eyebrow")} title={headingOf(d, "about", "title")}>{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: CY }}>{s.type}</div><p className="mt-1 text-[14px] leading-[1.6]" style={{ color: BODYC }}>{s.text}</p></div>)}</SportSec>}
             {d.outcomes.length > 0 && <SportSec eye={headingOf(d, "learn", "eyebrow")} title={headingOf(d, "learn", "title")}><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => <SportRow key={o}><span className={`w-6 font-black ${cond}`} style={{ color: CY }}>{String(i + 1).padStart(2, "0")}</span>{optionLabel(o)}</SportRow>)}</div></SportSec>}
             {d.provided.length > 0 && <SportSec eye={headingOf(d, "included", "eyebrow")} title={headingOf(d, "included", "title")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o) => <SportRow key={o}><span>{emo(o, "✅")}</span>{optionLabel(o)}</SportRow>)}</div></SportSec>}
             {d.toBring.length > 0 && <SportSec eye={tr("p7pg.pleasePack")} title={tr("p7pg.whatToBring")}><div className={`grid gap-2 ${grid2}`}>{d.toBring.map((o) => <SportRow key={o}><span>{emo(o, "🎒")}</span>{optionLabel(o)}</SportRow>)}</div></SportSec>}
@@ -4618,34 +4669,34 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
               <div className="border-t pt-6" style={{ borderColor: LINEs }}>
                 <button type="button" onClick={() => setWhereOpen((o) => !o)} className="flex w-full items-center justify-between border px-4 py-3 text-start" style={{ borderColor: LINEs, background: PANEL }}>
                   <span className="flex items-baseline gap-2.5">
-                    <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: LIME }}>{whereHead.eyebrow}</span>
-                    <span className={`text-[16px] font-black ${cond} text-white`}>{whereHead.title}</span>
+                    <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: ACCT }}>{whereHead.eyebrow}</span>
+                    <span className={`text-[16px] font-black ${cond} text-[color:var(--sp-ink,#fff)]`}>{whereHead.title}</span>
                   </span>
                   <span className="flex h-6 w-6 items-center justify-center text-[16px] font-black" style={{ background: LIME, color: INK }}>{whereOpen ? "–" : "+"}</span>
                 </button>
                 {whereOpen && (<div className="mt-3">
-                <div className="text-[14px] font-black text-white">{venue.name}</div>
+                <div className="text-[14px] font-black text-[color:var(--sp-ink,#fff)]">{venue.name}</div>
                 {isOnlineVenue(venue) ? <div className="mt-0.5 text-[13px]" style={{ color: MUTs }}>{tr("p7pg.runsOnline")}</div> : venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTs }}>{venue.address}</div>}
                 {!isOnlineVenue(venue) && venue.lat !== undefined && <div className="mt-3"><VenueMap lat={venue.lat} lng={venue.lng} zoom={venue.zoom} height={170} /></div>}
                 {!!venue.facilities?.length && (
                   <div className="mt-3 flex flex-wrap gap-1.5">{venue.facilities.map((f) => (
-                    <span key={f} className="border px-2.5 py-1 text-[11.5px] font-bold" style={{ borderColor: LINEs, background: PANEL, color: "#fff" }}>{f}</span>
+                    <span key={f} className="border px-2.5 py-1 text-[11.5px] font-bold" style={{ borderColor: LINEs, background: PANEL, color: INKT }}>{f}</span>
                   ))}</div>
                 )}
                 {!isOnlineVenue(venue) && (venue.what3words || venue.transport) && (
                   <div className="mt-3 flex flex-wrap gap-2 text-[12.5px] font-bold">
                     {venue.what3words && (
                       <a href={`https://what3words.com/${encodeURIComponent(venue.what3words.replace(/^\/+/, ""))}`} target="_blank" rel="noreferrer noopener"
-                        className="border px-3 py-2" style={{ borderColor: LIME, color: LIME }}>{"///"} {venue.what3words.replace(/^\/+/, "")}</a>
+                        className="border px-3 py-2" style={{ borderColor: ACCT, color: ACCT }}>{"///"} {venue.what3words.replace(/^\/+/, "")}</a>
                     )}
                     {venue.transport && (
-                      <span className="border px-3 py-2" style={{ borderColor: LINEs, background: PANEL, color: "#fff" }}>🚌 {venue.transport}</span>
+                      <span className="border px-3 py-2" style={{ borderColor: LINEs, background: PANEL, color: INKT }}>🚌 {venue.transport}</span>
                     )}
                   </div>
                 )}
                 {venue.directions && (
                   <div className="mt-3 border p-3.5" style={{ borderColor: LINEs, background: PANEL }}>
-                    <div className="text-[10.5px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>{isOnlineVenue(venue) ? tr("p7pg.howToJoin") : tr("p7pg.gettingThere")}</div>
+                    <div className="text-[10.5px] font-black uppercase tracking-[0.12em]" style={{ color: ACCT }}>{isOnlineVenue(venue) ? tr("p7pg.howToJoin") : tr("p7pg.gettingThere")}</div>
                     <p className="mt-1 whitespace-pre-line text-[13px] leading-[1.6]" style={{ color: MUTs }}>{venue.directions}</p>
                   </div>
                 )}
@@ -4655,14 +4706,14 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
             {addons.length > 0 && <SportSec eye={headingOf(d, "addons", "eyebrow")} title={headingOf(d, "addons", "title")}>{addons.map((a, i) => <div key={i} className="mt-2 flex items-center justify-between border px-4 py-3 first:mt-0" style={{ borderColor: LINEs, background: PANEL }}><span className="flex items-center gap-2.5 text-[13.5px] font-bold">{a.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={a.image} alt="" className="h-8 w-8 flex-none object-cover" />
-            ) : a.emoji ? <span className="text-[16px]">{a.emoji}</span> : null}{a.name}</span><span className={`font-black ${cond}`} style={{ color: LIME }}>{money(a.price)}<span className="ms-1 text-[10.5px] font-semibold normal-case not-italic opacity-70">{a.type === "perday" ? tr("p8lst.ck8PerDay") : tr("p8lst.ck8OneOff")}</span></span></div>)}</SportSec>}
+            ) : a.emoji ? <span className="text-[16px]">{a.emoji}</span> : null}{a.name}</span><span className={`font-black ${cond}`} style={{ color: PRICE }}>{money(a.price)}<span className="ms-1 text-[10.5px] font-semibold normal-case not-italic opacity-70">{a.type === "perday" ? tr("p8lst.ck8PerDay") : tr("p8lst.ck8OneOff")}</span></span></div>)}</SportSec>}
             {d.gallery.length > 0 && <SportSec eye={headingOf(d, "gallery", "eyebrow")} title={headingOf(d, "gallery", "title")}><div className={`grid gap-2 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} style={{ aspectRatio: "1 / 1" }} />)}</div></SportSec>}
           </div>
           {full && <div id="aos-book" className="self-start lg:sticky lg:top-4">{widget}</div>}
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t px-6 py-5 text-[12px]" style={{ borderColor: LINEs, color: MUTs }}>
-        <span className={`font-black ${cond} text-white`}>{brand}</span>
+        <span className={`font-black ${cond} text-[color:var(--sp-ink,#fff)]`}>{brand}</span>
         <span>{tr("p7pg.poweredBy")}</span>
       </div>
     </div>

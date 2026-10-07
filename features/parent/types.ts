@@ -23,7 +23,7 @@ export interface ListingSummary {
   title?: string;
   description?: string;
   images?: { src: string; x: number; y: number; zoom: number }[];
-  pageStyle?: "playful" | "sport" | "navy";
+  pageStyle?: string;
   opensAt?: string;
   /** The category names this listing is tagged with (resolved server-side from
    *  the tenant's library) — drives the browse header's live category list. */

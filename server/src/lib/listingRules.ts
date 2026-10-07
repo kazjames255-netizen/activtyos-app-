@@ -2,6 +2,13 @@
 import { z } from "zod";
 import { desiredRuns } from "./listingRunsPure";
 
+/** Booking-page colour themes a listing may be saved with. Keep in step with features/listings/pageThemes.ts + THEMES in ListingWizard.tsx (a regression test asserts they match). "navy" is the legacy name for "royal". */
+export const PAGE_STYLES = [
+  "playful", "sport", "emerald", "teal", "royal", "aubergine", "burgundy", "terracotta", "slate", "crimson", "navy",
+  "lagoon", "arcade", "aurora", "sherbet", "varsity", "plum", "halftone", "wildwood", "pirouette", "riso", "brite", "pitch", "frost", "mint", "poster",
+] as const;
+
+
 export const imageSchema = z.object({
   src: z
     .string()
@@ -182,7 +189,7 @@ export const baseListingSchema = z
     // first policy whatever the parent had been shown (acceptance d4s6).
     cancellationPolicyId: z.string().trim().max(60).optional(),
     // presentation & lifecycle
-    pageStyle: z.enum(["playful", "sport", "emerald", "teal", "royal", "aubergine", "burgundy", "terracotta", "slate", "crimson", "navy"]).optional(),
+    pageStyle: z.enum(PAGE_STYLES).optional(),
     status: z.enum(["draft", "live"]).optional(),
     archived: z.boolean().optional(),
   });
