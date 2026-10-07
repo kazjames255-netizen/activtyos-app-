@@ -24,6 +24,8 @@ import { DISCOUNT_KIND_LABEL, ruleDisplayName, type DiscountRule } from "../../.
 import { accessFor, subscriptionState } from "../middleware/subscription";
 
 export const listings = Router();
+// Any listing write (create, edit, publish, archive, delete) makes the cached browse feed stale: drop it.
+listings.use((req, res, next) => { if (req.method !== "GET") res.on("finish", () => clearBrowseCache()); next(); });
 
 const col = db.collection("listings");
 
@@ -60,6 +62,11 @@ import { BRAND } from "../lib/brand";
 // the whole `blocks` collection (every tenant's) on every listings request,
 // which got slower as the platform grew.
 const IN_CHUNK = 30; // Firestore's max values per `in` filter
+
+// Short-lived copy of the public browse feed, per asker. Cleared on any listing write so an operator's edit shows at once.
+const BROWSE_CACHE_MS = 8000;
+const browseCache = new Map<string, { until: number; body: unknown }>();
+export const clearBrowseCache = () => browseCache.clear();
 
 async function withBlocks(
   docs: { id: string; data: Record<string, unknown> }[],
@@ -148,6 +155,12 @@ listings.get("/", async (req, res) => {
   // ?tenantId= narrows the public feed to ONE provider — the storefront
   // page and embed widget use it ("all of this provider's activities").
   const tenantFilter = typeof req.query.tenantId === "string" ? req.query.tenantId : null;
+  // The browse feed is a pure function of (who is asking, which provider) and the clock, and building it reads every
+  // listing, its blocks and its provider's library. A parent flicking between Browse and a listing re-asked for all
+  // of it each time. Keep each answer for a few seconds; a listing write below clears the lot, and `?fresh=1` skips it.
+  const browseKey = `${req.user?.uid ?? "anon"}|${tenantFilter ?? ""}`;
+  const hit = req.query.fresh === "1" ? undefined : browseCache.get(browseKey);
+  if (hit && hit.until > Date.now()) { res.json(hit.body); return; }
   const snap = await col.orderBy("name").get();
   let visible = snap.docs.filter((d) => {
     const l = d.data();
@@ -265,7 +278,7 @@ listings.get("/", async (req, res) => {
     // Bookability guard: at least one block (a dated run with sessions) that
     // hasn't already ended — otherwise there's literally nothing to book.
     .filter((l) => Array.isArray(l.blocks) && (l.blocks as unknown[]).length > 0 && hasUpcomingBlock(l.blocks as unknown[]));
-  res.json(
+  const payload = (
     list.map((l) => {
       const libOf = (m: Map<string, Map<string, any>>) => (l.franchiseId ? m.get(l.franchiseId as string) : undefined);
       const byCat = catNames.get(l.tenantId as string);
@@ -295,8 +308,11 @@ listings.get("/", async (req, res) => {
       // The provider's current display name, not the one frozen on the listing
       // when it was created (acceptance d1s4).
       return { ...withoutBaseAddress(l), tenantName: displayNameByTenant.get(l.tenantId as string) ?? l.tenantName, title, categories, season, offers, bestOfferPercent, acceptsTFC, acceptsVouchers, timings, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
-    }),
+    })
   );
+  if (browseCache.size > 300) browseCache.clear();
+  browseCache.set(browseKey, { until: Date.now() + BROWSE_CACHE_MS, body: payload });
+  res.json(payload);
 });
 
 // GET /api/listings/:id — the direct link (`/book/{id}` reads this). Returns
