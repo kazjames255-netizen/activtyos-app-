@@ -29,7 +29,7 @@ import { uploadPlan, PLAN_MAX_BYTES } from "./planUpload";
 import { dobRequired } from "@/lib/childDob";
 import { useTenantSettings, questionsFor, asksEveryBooking, limitFor, liveVouchers, detailsForListing } from "@/lib/settings";
 import { voucherWindow } from "@/lib/vouchers";
-import { HMRC_CONNECTED, TFC_FAILURE_COPY, balance as tfcBalance, referenceHint, referencePrefix, type TfcBalance, type TfcFailure } from "./tfc";
+import { HMRC_CONNECTED, TFC_FAILURE_COPY, balance as tfcBalance, linkedChildren, referenceHint, referencePrefix, type TfcBalance, type TfcFailure } from "./tfc";
 import { TfcConnect } from "./TfcConnect";
 import { QuestionFields, unansweredRequired } from "@/components/QuestionFields";
 import type { useBooking, BasketItem } from "./booking";
@@ -842,11 +842,25 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // A link belongs to the CHILD, not to this checkout. Anyone who linked on a
   // previous booking comes back already connected — they shouldn't be sent to
   // HMRC a second time to be told what they already told it.
+  // The saved reference always pre-fills the reference box. Whether the child
+  // counts as LINKED is a separate question: with HMRC connected only the
+  // server knows (a live sign-in for that child), because the manual path saves
+  // a reference too — treating that as a link skipped the GOV.UK sign-in and
+  // the payment then failed.
   useEffect(() => {
     const known = Object.fromEntries(saved.filter((c) => (c.tfcReference ?? "").trim()).map((c) => [c.name, c.tfcReference!.trim()]));
-    if (!Object.keys(known).length) return;
-    setTfcLinked((m) => ({ ...known, ...m }));       // a fresh link this session wins
-    setVoucherRefs((m) => ({ ...known, ...m }));
+    if (Object.keys(known).length) setVoucherRefs((m) => ({ ...known, ...m }));
+    if (!HMRC_CONNECTED) {
+      if (Object.keys(known).length) setTfcLinked((m) => ({ ...known, ...m })); // a fresh link this session wins
+      return;
+    }
+    let live = true;
+    void linkedChildren().then((byId) => {
+      if (!live) return;
+      const linked = Object.fromEntries(saved.filter((c) => c.id && byId[c.id]).map((c) => [c.name, byId[c.id!]]));
+      if (Object.keys(linked).length) setTfcLinked((m) => ({ ...linked, ...m }));
+    });
+    return () => { live = false; };
   }, [saved]);
   const { roster, setRoster } = b;
   // Store the EXCEPTIONS, not the assignments: who has been taken off which

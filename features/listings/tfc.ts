@@ -216,23 +216,51 @@ function simulatedBalance(reference: string): TfcBalance {
   return { amount: Math.round((20 + (h % 120)) * 100) / 100, simulated: true };
 }
 
-export interface TfcPayResult { ok: boolean; failure?: TfcFailure; /** The request may have reached HMRC — do NOT offer an automatic retry. */ uncertain?: boolean }
+/** One child's HMRC payment, as the server reports it. */
+export type TfcChildPayment =
+  | { child: string; refs: string[]; amount: number; ok: true; paymentReference: string; estimatedPaymentDate: string }
+  | { child: string; refs: string[]; amount: number; ok: false; failure: TfcFailure; uncertain?: boolean };
 
-/** Ask HMRC to send `amount` to this provider against `reference`.
+export interface TfcPayResult {
+  ok: boolean;
+  failure?: TfcFailure;
+  /** The request may have reached HMRC — do NOT offer an automatic retry. */
+  uncertain?: boolean;
+  /** One entry per child paid (each child has their own TFC account). */
+  payments?: TfcChildPayment[];
+  /** Nothing was owed to HMRC (e.g. every place went to the waiting list). */
+  nothingDue?: boolean;
+}
+
+/** Ask HMRC to pay the provider for these bookings from each child's TFC account.
  *
+ *  The server works out the amount, the child and the account from the
+ *  parent's own bookings — the browser only names which bookings.
  *  `idempotencyKey` identifies ONE intended payment: the server never sends the
- *  same key to HMRC twice. Pass the same key when retrying the same payment;
- *  omit it and each call is a new payment (a key is generated for the call). */
-export async function pay(args: { reference: string; amount: number; tenantId?: string; idempotencyKey?: string }): Promise<TfcPayResult> {
+ *  same key to HMRC twice. Pass the same key when retrying the same payment. */
+export async function payBookings(args: { tenantId: string; refs: string[]; idempotencyKey?: string }): Promise<TfcPayResult> {
   if (!HMRC_CONNECTED) return { ok: false, failure: "not-connected" };
   const idempotencyKey = args.idempotencyKey || newKey();
   try {
-    const r = await post<{ ok: boolean; failure?: TfcFailure; uncertain?: boolean }>("/api/my/tfc/pay", { ...args, idempotencyKey });
-    return r?.ok ? { ok: true } : { ok: false, failure: r?.failure ?? "connection-failed", ...(r?.uncertain ? { uncertain: true } : {}) };
+    const r = await post<TfcPayResult>("/api/my/tfc/pay", { tenantId: args.tenantId, refs: args.refs, idempotencyKey });
+    return r ?? { ok: false, failure: "connection-failed", uncertain: true };
   } catch {
     // The request may or may not have arrived — the parent must check HMRC
     // before paying again, so flag it rather than implying a clean failure.
     return { ok: false, failure: "connection-failed", uncertain: true };
+  }
+}
+
+/** The caller's children that hold a LIVE HMRC link (child id → reference).
+ *  "Linked" means HMRC gave us a sign-in for that child — a reference saved on
+ *  the child is not that (the manual path saves one too). */
+export async function linkedChildren(): Promise<Record<string, string>> {
+  if (!HMRC_CONNECTED) return {};
+  try {
+    const r = await get<{ links?: { childId: string; reference: string }[] }>("/api/my/tfc/links");
+    return Object.fromEntries((r?.links ?? []).map((l) => [l.childId, l.reference]));
+  } catch {
+    return {};
   }
 }
 

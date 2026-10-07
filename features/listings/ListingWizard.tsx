@@ -22,6 +22,7 @@ import { MatchedThemes } from "./MatchedThemes";
 import { brandFromSettings } from "@/features/setup/BrandColours";
 import { policyWording, type NamedPolicy } from "@/lib/cancellation";
 import { CheckoutPanel } from "./checkout";
+import { HMRC_CONNECTED, TFC_FAILURE_COPY, payBookings, type TfcChildPayment, type TfcFailure } from "./tfc";
 import { ThemeHero, useThemeFont } from "./ThemeHero";
 import { THEME_TOKENS, themeArtOn, NEW_THEME_KEYS, FONT_STACK, type NewThemeKey, type ThemeTokens } from "./pageThemes";
 import { BlocksApp } from "@/features/blocks/BlocksApp";
@@ -746,7 +747,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ holdCard?: boolean; cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; waitOffer?: number; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; slots?: { pass: string; timing: string; dates: string[] }[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean; listPrice?: number; discountOff?: number; discountNames?: string[]; visitAt?: string; extras?: string[] } | null>(null);
+  const [done, setDone] = useState<{ holdCard?: boolean; cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; waitOffer?: number; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; slots?: { pass: string; timing: string; dates: string[] }[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean; listPrice?: number; discountOff?: number; discountNames?: string[]; visitAt?: string; extras?: string[]; tfcPaid?: Extract<TfcChildPayment, { ok: true }>[]; tfcFailure?: { failure: TfcFailure; uncertain?: boolean } } | null>(null);
   const [payClosed, setPayClosed] = useState(false);
   const [paidNow, setPaidNow] = useState(false);
   const [payInstead, setPayInstead] = useState(false); // bank-transfer done screen: "Pay by card instead" opens the card form
@@ -874,8 +875,23 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         if (res.voucher?.details?.length) voucherDetails = res.voucher.details;
         if (res.bank) bankPay = res.bank;
       }
+      // Tax-Free Childcare with HMRC connected: ask HMRC to pay the provider now,
+      // from each child's linked TFC account. The server works out what is owed
+      // from the bookings just made; a waiting-list place owes nothing. Any
+      // failure leaves the booking exactly as before — awaiting the scheme's
+      // money — and the family gets the manual instructions below.
+      let tfcPaid: Extract<TfcChildPayment, { ok: true }>[] | undefined;
+      let tfcFailure: { failure: TfcFailure; uncertain?: boolean } | undefined;
+      if (/^tfc$/i.test(String(method)) && HMRC_CONNECTED && seated && listing.tenantId) {
+        const r = await payBookings({ tenantId: listing.tenantId, refs });
+        const ok = (r.payments ?? []).filter((x): x is Extract<TfcChildPayment, { ok: true }> => x.ok);
+        if (ok.length) tfcPaid = ok;
+        if (!r.ok && !r.nothingDue) tfcFailure = { failure: r.failure ?? "connection-failed", ...(r.uncertain ? { uncertain: true } : {}) };
+      }
       const allDates = lines.flatMap((l) => l.dates).sort();
       setDone({
+        ...(tfcPaid ? { tfcPaid } : {}),
+        ...(tfcFailure ? { tfcFailure } : {}),
         refs,
         total,
         ...(extraLines.length ? { extras: extraLines } : {}),
@@ -1087,7 +1103,37 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
           </div>
         )}
 
-        {scheme && (
+        {/* Tax-Free Childcare paid through HMRC from the checkout: say so, with
+            HMRC's own payment reference and when the money lands. */}
+        {!!done.tfcPaid?.length && (
+          <div className="mt-3 rounded-2xl border border-[#bfe5cc] bg-[#e8f8ee] p-4 text-start text-[12.5px] leading-relaxed text-[#0f5c2e]">
+            <Rich text={t("p7cl.tfcPaidHead", { amt: money(done.tfcPaid.reduce((s, x) => s + x.amount, 0)), provider: listing.tenantName || t("p7cl.yourProvider") })} />
+            <table className="mt-2.5" cellPadding={0}>
+              <tbody>
+                {done.tfcPaid.map((x) => (
+                  <tr key={x.paymentReference}>
+                    <td className="pe-4 align-top text-[#3c7d55]">{x.child}</td>
+                    <td className="align-top font-extrabold text-[#0f5c2e]">{t("p7cl.tfcPaidLine", { amt: money(x.amount), ref: x.paymentReference, date: x.estimatedPaymentDate })}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* HMRC couldn't take it from here: why, then the manual way to pay. */}
+        {done.tfcFailure && !done.waitlisted && (
+          <div className="mt-3 rounded-2xl border border-[#f5c2c2] bg-[#fdecec] p-4 text-start text-[12.5px] leading-relaxed text-[#8a1f1f]">
+            <div className="font-extrabold">{TFC_FAILURE_COPY[done.tfcFailure.failure]?.title}</div>
+            <div className="mt-1">{TFC_FAILURE_COPY[done.tfcFailure.failure]?.detail}</div>
+            {done.tfcFailure.uncertain && <div className="mt-1 font-bold">{t("p7cl.tfcUncertain")}</div>}
+          </div>
+        )}
+
+        {/* The "go and pay in your scheme account" card — only when something is
+            actually owed: never for a waiting-list place (nothing to pay until a
+            place is offered) and never once HMRC has been asked from here. */}
+        {scheme && !done.waitlisted && !(done.tfcPaid?.length && !done.tfcFailure) && (
           <div className="mt-3 rounded-2xl border border-[#f3d98a] bg-[#fdf6e3] p-4 text-start text-[12.5px] leading-relaxed text-[#7a5a12]">
             <Rich text={t("p7cl.almostThere", { scheme, amt: money(done.total), provider: listing.tenantName || t("p7cl.yourProvider") })} />
             {vDetails.length > 0 && (

@@ -21,6 +21,10 @@ import {
   type TfcTokens,
 } from "../lib/tfc";
 import type { TfcFailure } from "../../../lib/tfc";
+import type { Booking } from "../../../features/bookings/types";
+import { owedOf } from "../../../features/bookings/helpers";
+import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
+import { bookingDocId } from "./bookings";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Tax-Free Childcare — the parent-facing routes behind features/listings/tfc.ts.
@@ -29,7 +33,8 @@ import type { TfcFailure } from "../../../lib/tfc";
 //   POST /api/my/tfc/link/start    — begin the GOV.UK hand-off for one child
 //   GET  /api/my/tfc/link/status   — has that hand-off finished?
 //   POST /api/my/tfc/balance       — the live balance for a linked child
-//   POST /api/my/tfc/pay           — ask HMRC to pay the provider
+//   POST /api/my/tfc/pay           — ask HMRC to pay the provider for the parent's bookings
+//   GET  /api/my/tfc/links         — which of the parent's children hold a live link
 //   GET  /api/tfc/callback         — HMRC's OAuth redirect (public, see below)
 //
 // SCOPE. Every route is parent-only and resolves the child from the CALLER's
@@ -69,6 +74,7 @@ const childrenCol = db.collection("children");
 const linksCol = db.collection("tfcLinks");
 const statesCol = db.collection("tfcLinkStates");
 const paymentsCol = db.collection("tfcPayments");
+const bookingsCol = db.collection("bookings");
 
 /** A hand-off is only worth this long. Long enough to sign in at GOV.UK with
  *  a password manager and a two-factor code, short enough that an abandoned
@@ -350,9 +356,12 @@ async function linkForReference(uid: string, reference: string): Promise<LinkDoc
 
 // ── POST /api/my/tfc/pay ─────────────────────────────────────────────────
 const paySchema = z.object({
-  reference: z.string().trim().min(1).max(40),
-  amount: z.number().positive().max(10_000),
-  tenantId: z.string().trim().max(60).optional(),
+  /** The provider whose bookings these are (booking numbers repeat across providers). */
+  tenantId: z.string().trim().min(1).max(60),
+  /** The bookings to pay from Tax-Free Childcare. The amount, the child and the
+   *  TFC account are all worked out HERE from the parent's own bookings and
+   *  links — the browser never names a sum, a payee or a reference. */
+  refs: z.array(z.string().trim().min(1).max(40)).min(1).max(40),
   /** One id per payment the parent intends. A repeat with the same key (a
    *  retry, a double-click) replays the first outcome and never re-sends. */
   idempotencyKey: z.string().trim().min(8).max(80).regex(/^[A-Za-z0-9_-]+$/).optional(),
@@ -377,6 +386,17 @@ const payStore: PayStore = {
 };
 
 const PAY_LOCK_MS = 60_000;
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** What HMRC is asked for on one booking: the TFC share of a part-paid booking,
+ *  else everything still owed on it. */
+const tfcDueOf = (b: Booking) => round2(Number(b.tfcAmount ?? 0) > 0 ? Number(b.tfcAmount) : owedOf(b));
+
+/** One child's slice of the request — one HMRC payment per child, because each
+ *  child has their own TFC account. */
+type ChildPayResult =
+  | { childId: string; child: string; refs: string[]; amount: number; ok: true; paymentReference: string; estimatedPaymentDate: string }
+  | { childId: string | null; child: string; refs: string[]; amount: number; ok: false; failure: TfcFailure; uncertain?: boolean };
 
 tfc.post("/pay", async (req, res) => {
   const cfg = tfcConfig();
@@ -384,65 +404,133 @@ tfc.post("/pay", async (req, res) => {
   const p = paySchema.safeParse(req.body);
   if (!p.success) { res.status(400).json({ error: p.error.issues }); return; }
   const uid = req.user!.uid;
-  const link = await linkForReference(uid, p.data.reference);
-  const tokens = link ? tokensOf(link) : null;
-  if (!link || !tokens || !link.reference) { res.json({ ok: false, failure: "not-connected" satisfies TfcFailure }); return; }
-  // A link that never completed (or was marked dead) is not a link to pay from.
-  if (link.linked !== true) {
-    res.json({ ok: false, failure: link.failure === "connection-expired" ? "connection-expired" : "not-connected" });
-    return;
-  }
+  const email = req.user?.email;
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  const { tenantId, refs } = p.data;
 
-  const provider = await providerIdentity(p.data.tenantId);
+  // The parent's own bookings at this provider — email-scoped, so another
+  // family's booking number is simply never found.
+  const snaps = await Promise.all([...new Set(refs)].map((ref) => bookingsCol.doc(bookingDocId(tenantId, ref)).get()));
+  const mine = snaps.filter((d) => d.exists && d.get("email") === email);
+  if (mine.length !== new Set(refs).size) { res.status(404).json({ error: "Booking not found" }); return; }
+
+  // Only places that are actually held and still waiting on the scheme's money.
+  // A waiting-list place owes nothing; one already requested is never sent twice.
+  const due = mine
+    .map((d) => ({ snap: d, b: fromDoc(d.data() as BookingDoc) }))
+    .filter(({ b }) => b.status !== "Waitlisted" && b.status !== "Cancelled" && b.pay === "Awaiting voucher payment" && !b.tfcPayment && tfcDueOf(b) > 0);
+  if (!due.length) { res.json({ ok: true, payments: [], nothingDue: true }); return; }
+
+  const provider = await providerIdentity(tenantId);
   if (!provider) {
-    // We can't name ourselves to HMRC, so there is nothing to ask for. The
-    // parent gets the manual path and the provider gets told (in Setup) that
+    // We can't name the provider to HMRC, so there is nothing to ask for. The
+    // parent gets the manual path and the provider is told (in Setup) that
     // their childcare registration details are missing.
-    console.warn(`[tfc] payment skipped: tenant ${p.data.tenantId ?? "(none)"} has no settings.childcare registration number / postcode`);
+    console.warn(`[tfc] payment skipped: tenant ${tenantId} has no settings.childcare registration number / postcode`);
     res.json({ ok: false, failure: "not-connected" satisfies TfcFailure });
     return;
   }
 
-  // One payment in flight per child: a second request while the first is out
-  // is refused rather than queued (double-submit / two tabs).
-  const lockRef = db.collection("tfcPayLocks").doc(link.childId);
-  const locked = await db.runTransaction(async (tx) => {
-    const cur = await tx.get(lockRef);
-    if (cur.exists && (cur.get("expiresAt") as number) > Date.now()) return false;
-    tx.set(lockRef, { parentUid: uid, expiresAt: Date.now() + PAY_LOCK_MS });
-    return true;
-  });
-  if (!locked) { res.status(409).json({ ok: false, failure: "connection-failed", error: "A payment for this child is already in progress." }); return; }
+  // Group by child: each child pays from their own linked TFC account.
+  const myChildren = await childrenCol.where("parentUid", "==", uid).get();
+  const childIdByName = new Map(myChildren.docs.map((c) => [String(c.get("name") ?? "").trim().toLowerCase(), c.id]));
+  const groups = new Map<string, { childId: string | null; child: string; items: typeof due }>();
+  for (const it of due) {
+    const childId = it.b.childId ?? childIdByName.get(String(it.b.child ?? "").trim().toLowerCase()) ?? null;
+    const key = childId ?? `name:${it.b.child}`;
+    const g = groups.get(key) ?? { childId, child: it.b.child ?? "", items: [] };
+    g.items.push(it);
+    groups.set(key, g);
+  }
 
-  // The intent is written BEFORE HMRC is called, keyed by the idempotency key
-  // (or a fresh id), so a crash between "HMRC paid" and "we recorded it" leaves
-  // a pending row to reconcile rather than no trace at all.
-  const payId = p.data.idempotencyKey ? `${link.childId}_${p.data.idempotencyKey}` : `${link.childId}_${randomBytes(12).toString("hex")}`;
-  let r;
-  try {
-    r = await payOnce(payStore, payId, async () => {
-      // Audit context on the row (no tokens, no secrets).
-      await paymentsCol.doc(payId).set({
-        parentUid: uid, childId: link.childId, reference: link.reference, tenantId: p.data.tenantId ?? null, amount: p.data.amount,
-      }, { merge: true }).catch((e) => console.error("[tfc] could not annotate payment intent:", (e as Error).message));
-      return withFreshTokens(cfg, tokens, (t) => saveTokens(link.childId, t), (t) =>
-        submitPayment(cfg, t, {
-          outboundChildPaymentRef: link.reference!,
-          amount: p.data.amount,
-          ccpRegReference: provider.registrationNumber,
-          ccpPostcode: provider.postcode,
-        }));
+  const results: ChildPayResult[] = [];
+  for (const g of groups.values()) {
+    const amount = round2(g.items.reduce((sum, it) => sum + tfcDueOf(it.b), 0));
+    const base = { child: g.child, refs: g.items.map((it) => it.b.ref), amount };
+    const linkSnap = g.childId ? await linksCol.doc(g.childId).get() : null;
+    const link = linkSnap?.exists ? (linkSnap.data() as LinkDoc) : null;
+    const tokens = link && link.parentUid === uid ? tokensOf(link) : null;
+    if (!g.childId || !link || link.parentUid !== uid || !tokens || !link.reference || link.linked !== true) {
+      results.push({ ...base, childId: g.childId, ok: false, failure: link?.failure === "connection-expired" ? "connection-expired" : "not-connected" });
+      continue;
+    }
+    const childId = g.childId;
+
+    // One payment in flight per child: a second request while the first is out
+    // is refused rather than queued (double-submit / two tabs).
+    const lockRef = db.collection("tfcPayLocks").doc(childId);
+    const locked = await db.runTransaction(async (tx) => {
+      const cur = await tx.get(lockRef);
+      if (cur.exists && (cur.get("expiresAt") as number) > Date.now()) return false;
+      tx.set(lockRef, { parentUid: uid, expiresAt: Date.now() + PAY_LOCK_MS });
+      return true;
     });
-  } finally {
-    await lockRef.delete().catch(() => { /* expires in a minute anyway */ });
+    if (!locked) { results.push({ ...base, childId, ok: false, failure: "connection-failed" }); continue; }
+
+    // The intent is written BEFORE HMRC is called, keyed by the idempotency key
+    // (or a fresh id), so a crash between "HMRC paid" and "we recorded it" leaves
+    // a pending row to reconcile rather than no trace at all.
+    const payId = p.data.idempotencyKey ? `${childId}_${p.data.idempotencyKey}` : `${childId}_${randomBytes(12).toString("hex")}`;
+    let r;
+    try {
+      r = await payOnce(payStore, payId, async () => {
+        // Audit context on the row (no tokens, no secrets).
+        await paymentsCol.doc(payId).set({
+          parentUid: uid, childId, reference: link.reference, tenantId, refs: base.refs, amount,
+        }, { merge: true }).catch((e) => console.error("[tfc] could not annotate payment intent:", (e as Error).message));
+        return withFreshTokens(cfg, tokens, (t) => saveTokens(childId, t), (t) =>
+          submitPayment(cfg, t, {
+            outboundChildPaymentRef: link.reference!,
+            amount,
+            ccpRegReference: provider.registrationNumber,
+            ccpPostcode: provider.postcode,
+          }));
+      });
+    } finally {
+      await lockRef.delete().catch(() => { /* expires in a minute anyway */ });
+    }
+
+    if (!r.ok) {
+      if (r.failure === "connection-expired") await linksCol.doc(childId).set({ linked: false, failure: r.failure }, { merge: true });
+      results.push({ ...base, childId, ok: false, failure: r.failure, ...(r.uncertain ? { uncertain: true } : {}) });
+      continue;
+    }
+    // HMRC has accepted the request; the money reaches the provider on or
+    // around the estimated date, so the booking keeps waiting on the scheme
+    // ("Awaiting voucher payment") and carries the payment so it is never
+    // requested twice and the provider can match it when it lands.
+    const tfcPayment = {
+      paymentReference: r.data.paymentReference,
+      estimatedPaymentDate: r.data.estimatedPaymentDate,
+      amount,
+      requestedAt: new Date().toISOString(),
+    };
+    await Promise.all(g.items.map((it) =>
+      it.snap.ref.set({ tfcPayment: { ...tfcPayment, amount: tfcDueOf(it.b) } }, { merge: true }).catch((e) =>
+        console.error(`[tfc] paid but could not stamp booking ${it.b.ref}:`, (e as Error).message))));
+    results.push({ ...base, childId, ok: true, paymentReference: r.data.paymentReference, estimatedPaymentDate: r.data.estimatedPaymentDate });
   }
 
-  if (!r.ok) {
-    if (r.failure === "connection-expired") await linksCol.doc(link.childId).set({ linked: false, failure: r.failure }, { merge: true });
-    res.json({ ok: false, failure: r.failure, ...(r.uncertain ? { uncertain: true } : {}) });
-    return;
-  }
-  res.json({ ok: true, paymentReference: r.data.paymentReference, estimatedPaymentDate: r.data.estimatedPaymentDate });
+  const failed = results.find((x) => !x.ok) as Extract<ChildPayResult, { ok: false }> | undefined;
+  res.json({
+    ok: !failed,
+    payments: results,
+    ...(failed ? { failure: failed.failure, ...(results.some((x) => !x.ok && x.uncertain) ? { uncertain: true } : {}) } : {}),
+  });
+});
+
+// ── GET /api/my/tfc/links ────────────────────────────────────────────────
+// Which of the caller's children hold a live HMRC link. The checkout shows
+// "linked" from THIS, never from a reference saved on the child: the manual
+// path saves a reference too, and a reference is not a sign-in.
+tfc.get("/links", async (req, res) => {
+  if (!tfcConfig()) { res.json({ configured: false, links: [] }); return; }
+  const q = await linksCol.where("parentUid", "==", req.user!.uid).get();
+  const links = q.docs
+    .map((d) => d.data() as LinkDoc)
+    .filter((l) => l.linked === true && !!l.reference && !!l.accessToken)
+    .map((l) => ({ childId: l.childId, childName: l.childName ?? null, reference: l.reference }));
+  res.json({ configured: true, links });
 });
 
 /**

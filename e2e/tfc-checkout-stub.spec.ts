@@ -21,9 +21,8 @@ import { startHmrcStub, startTfcHarness, type HmrcStub, type TfcHarness } from "
 //     alone). The browser's /api/my/tfc/* calls are proxied to the harness, so
 //     the screen runs the same routes against the stub.
 //
-// Why two parts: checkout.tsx never calls pay() today (recorded defect: the
-// confirm button books with the HMRC scheme name and the parent pays in HMRC
-// later), so "pay" is proven at the route/client layer, where it exists.
+// Pay is by BOOKING: the browser names the bookings, the server works out the
+// amount, the child and the TFC account from them (never from the request).
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe.configure({ mode: "serial" });
@@ -46,8 +45,17 @@ async function linkedChild(tag: string) {
   childIds.push(id);
   return { id, reference };
 }
-const pay = (reference: string, key: string, amount = 12.5, extra: Record<string, unknown> = { tenantId }) =>
-  api.post("/api/my/tfc/pay", api.as(uid), { reference, amount, idempotencyKey: key, ...extra });
+const email = `${uid}@activityos-test.com`;
+let bseq = 0;
+/** A booking for this child, waiting on the scheme's money — what /pay pays for. */
+async function bookingFor(childId: string, amount = 12.5, extra: { tenantId?: string; status?: string; pay?: string; email?: string } = {}) {
+  const ref = `TFS-${run}-${++bseq}`;
+  const t = extra.tenantId ?? tenantId;
+  await api.seedBooking({ tenantId: t, ref, email: extra.email ?? email, child: childId, childId, amount, ...(extra.status ? { status: extra.status } : {}), ...(extra.pay ? { pay: extra.pay } : {}) });
+  return ref;
+}
+const pay = (refs: string[], key: string, t = tenantId) =>
+  api.post("/api/my/tfc/pay", api.as(uid), { tenantId: t, refs, idempotencyKey: key });
 
 test.describe("Part 1: real routes against the HMRC stub", () => {
   test.beforeAll(async () => {
@@ -56,7 +64,7 @@ test.describe("Part 1: real routes against the HMRC stub", () => {
     await api.seedTenant(tenantId);
   });
   test.afterAll(async () => {
-    await api?.cleanup({ uid, childIds, tenantIds: [tenantId] }).catch((e) => console.error("cleanup", e));
+    await api?.cleanup({ uid, childIds, tenantIds: [tenantId, `tfcstub-${run}-no-such-tenant`] }).catch((e) => console.error("cleanup", e));
     await api?.stop();
     await stub?.close();
   });
@@ -107,57 +115,62 @@ test.describe("Part 1: real routes against the HMRC stub", () => {
 
   test("pay succeeds once, and a double-click sends ONE payment to HMRC", async () => {
     const { id, reference } = await linkedChild("dbl");
+    const ref = await bookingFor(id, 12.5);
     // Slow HMRC so the two requests genuinely overlap (a real double-click).
     stub.set("pay", { delayMs: 700 });
-    const [a, b] = await Promise.all([pay(reference, "dblclick-key-1"), pay(reference, "dblclick-key-1")]);
+    const [a, b] = await Promise.all([pay([ref], "dblclick-key-1"), pay([ref], "dblclick-key-1")]);
     const oks = [a, b].filter((r) => r.status === 200 && r.body.ok === true);
-    expect(oks).toHaveLength(1);
-    // The loser is refused while the first is in flight (409) or replays its outcome: never a second send.
-    const loser = [a, b].find((r) => r !== oks[0])!;
-    expect([200, 409]).toContain(loser.status);
+    expect(oks.length).toBeGreaterThanOrEqual(1);
+    expect(stub.payments()).toHaveLength(1);
+    const paid = oks[0].body.payments[0];
+    expect(paid).toMatchObject({ ok: true, amount: 12.5, refs: [ref] });
+
+    // The booking now carries the payment, so asking again sends nothing.
+    expect(await api.booking(tenantId, ref)).toMatchObject({ pay: "Awaiting voucher payment", tfcPayment: { paymentReference: paid.paymentReference, amount: 12.5 } });
+    const replay = await pay([ref], "dblclick-key-1");
+    expect(replay.body).toMatchObject({ ok: true, nothingDue: true });
     expect(stub.payments()).toHaveLength(1);
 
-    // Retrying the SAME key later replays the first outcome and still does not re-send.
-    const replay = await pay(reference, "dblclick-key-1");
-    expect(replay.body).toMatchObject({ ok: true, paymentReference: oks[0].body.paymentReference });
-    expect(stub.payments()).toHaveLength(1);
-
-    // What went to HMRC: whole pence, payee CCP, and the PROVIDER's identity from the tenant's Setup, not from the request.
+    // What went to HMRC: whole pence, payee CCP, the amount from the BOOKING, and the PROVIDER's identity from Setup.
     const sent = stub.payments()[0];
     expect(sent.body).toMatchObject({ payment_amount: 1250, payee_type: "CCP", ccp_reg_reference: "EY123456", ccp_postcode: "AB1 2CD", outbound_child_payment_ref: reference });
     expect(sent.bearer).toMatch(/^stub-(seed|access)-/);
     expect((await api.payRecords(id)).map((r) => ({ s: r.status, a: r.amount }))).toEqual([{ s: "ok", a: 12.5 }]);
 
-    // A genuinely new payment (new key) is a second payment: idempotency is per intent, not per child.
-    const second = await pay(reference, "dblclick-key-2", 3);
+    // Another booking is another payment.
+    const second = await pay([await bookingFor(id, 3)], "dblclick-key-2");
     expect(second.body.ok).toBe(true);
     expect(stub.payments()).toHaveLength(2);
+    expect(stub.payments()[1].body).toMatchObject({ payment_amount: 300 });
   });
 
   test("insufficient funds and provider-not-added come back as their designed failures", async () => {
-    const { reference } = await linkedChild("fail");
+    const { id } = await linkedChild("fail");
     stub.set("pay", { status: 400, body: { errorCode: "E0033", errorDescription: "insufficient funds" } });
-    const low = await pay(reference, "insuf-key-0001");
-    expect(low.body).toEqual({ ok: false, failure: "insufficient-funds" });
-    // The same key replays the recorded refusal instead of asking HMRC again.
-    expect((await pay(reference, "insuf-key-0001")).body).toEqual({ ok: false, failure: "insufficient-funds" });
+    const ref = await bookingFor(id);
+    const low = await pay([ref], "insuf-key-0001");
+    expect(low.body).toMatchObject({ ok: false, failure: "insufficient-funds" });
+    // The same key replays the recorded refusal instead of asking HMRC again; the booking is untouched.
+    expect((await pay([ref], "insuf-key-0001")).body).toMatchObject({ ok: false, failure: "insufficient-funds" });
     expect(stub.payments()).toHaveLength(1);
+    expect(await api.booking(tenantId, ref)).toMatchObject({ pay: "Awaiting voucher payment", tfcPayment: null });
 
     stub.set("pay", { status: 400, body: { errorCode: "E0027" } });
-    expect((await pay(reference, "notadded-key-01")).body).toEqual({ ok: false, failure: "provider-not-added" });
+    expect((await pay([await bookingFor(id)], "notadded-key-01")).body).toMatchObject({ ok: false, failure: "provider-not-added" });
 
     stub.set("pay", { status: 400, body: { errorCode: "E0030" } });
-    expect((await pay(reference, "inactive-key-01")).body).toEqual({ ok: false, failure: "not-connected" });
+    expect((await pay([await bookingFor(id)], "inactive-key-01")).body).toMatchObject({ ok: false, failure: "not-connected" });
   });
 
   test("HMRC unavailable (5xx / dropped connection) is flagged uncertain and never blindly re-sent", async () => {
     const { id, reference } = await linkedChild("down");
     stub.set("pay", { status: 503, body: { code: "SERVER_ERROR" } });
-    const r = await pay(reference, "down-key-000001");
-    expect(r.body).toEqual({ ok: false, failure: "connection-failed", uncertain: true });
+    const ref = await bookingFor(id);
+    const r = await pay([ref], "down-key-000001");
+    expect(r.body).toMatchObject({ ok: false, failure: "connection-failed", uncertain: true });
     // The parent may retry with the same key, but that must NOT reach HMRC again: the first attempt may have been paid.
     stub.set("pay", "ok");
-    const again = await pay(reference, "down-key-000001");
+    const again = await pay([ref], "down-key-000001");
     expect(again.body.ok).toBe(false);
     expect(again.body.uncertain).toBe(true);
     expect(stub.payments()).toHaveLength(1);
@@ -165,7 +178,7 @@ test.describe("Part 1: real routes against the HMRC stub", () => {
 
     // A socket dropped after the request arrived is the same: uncertain, and the link survives.
     stub.set("pay", { drop: true });
-    const dropped = await pay(reference, "drop-key-000001");
+    const dropped = await pay([await bookingFor(id)], "drop-key-000001");
     expect(dropped.body).toMatchObject({ ok: false, failure: "connection-failed", uncertain: true });
     expect(await api.link(id)).toMatchObject({ linked: true });
 
@@ -175,29 +188,41 @@ test.describe("Part 1: real routes against the HMRC stub", () => {
   });
 
   test("expired authorisation: refresh refused -> connection-expired, link marked dead, no further payment attempts", async () => {
-    const { id, reference } = await linkedChild("exp");
+    const { id } = await linkedChild("exp");
     stub.set("pay", { status: 401, body: { code: "INVALID_CREDENTIALS" } });
     stub.set("token", { status: 400, body: { error: "invalid_grant" } });
-    const r = await pay(reference, "exp-key-0000001");
-    expect(r.body).toEqual({ ok: false, failure: "connection-expired" });
+    const r = await pay([await bookingFor(id)], "exp-key-0000001");
+    expect(r.body).toMatchObject({ ok: false, failure: "connection-expired" });
     expect(stub.calls.some((c) => c.path === "/oauth/token" && c.body?.grant_type === "refresh_token")).toBe(true);
     expect(await api.link(id)).toMatchObject({ linked: false, failure: "connection-expired" });
 
     // With the link dead, a NEW payment never even reaches HMRC: straight to the re-authorise screen.
     stub.reset();
-    const after = await pay(reference, "exp-key-0000002");
-    expect(after.body).toEqual({ ok: false, failure: "connection-expired" });
+    const after = await pay([await bookingFor(id)], "exp-key-0000002");
+    expect(after.body).toMatchObject({ ok: false, failure: "connection-expired" });
     expect(stub.payments()).toHaveLength(0);
   });
 
-  test("not linked / unknown reference / provider without registration -> not-connected, HMRC never called", async () => {
-    const { reference } = await linkedChild("nl");
-    expect((await pay("NOPE12345TFC", "nolink-key-0001")).body).toEqual({ ok: false, failure: "not-connected" });
-    // Provider whose Setup has no childcare registration: we cannot name ourselves to HMRC.
-    const noReg = await pay(reference, "noreg-key-0001", 5, { tenantId: `tfcstub-${run}-no-such-tenant` });
-    expect(noReg.body).toEqual({ ok: false, failure: "not-connected" });
+  test("not linked / not yours / waiting list / provider without registration -> nothing sent to HMRC", async () => {
+    const { id } = await linkedChild("nl");
+    // A child with no HMRC link.
+    const loose = `tfcstub-${run}-nolink`;
+    await api.seedChild({ id: loose, uid, name: "Stub Nolink", dob: "2018-05-14" });
+    childIds.push(loose);
+    expect((await pay([await bookingFor(loose)], "nolink-key-0001")).body).toMatchObject({ ok: false, failure: "not-connected" });
+    // Another family's booking is never found.
+    expect((await pay([await bookingFor(id, 5, { email: "someone-else@activityos-test.com" })], "other-key-0001")).status).toBe(404);
+    // A waiting-list place owes nothing yet.
+    expect((await pay([await bookingFor(id, 5, { status: "Waitlisted", pay: "Unpaid" })], "wait-key-00001")).body).toMatchObject({ ok: true, nothingDue: true });
+    // Provider whose Setup has no childcare registration: we cannot name them to HMRC.
+    const other = `tfcstub-${run}-no-such-tenant`;
+    expect((await pay([await bookingFor(id, 5, { tenantId: other })], "noreg-key-0001", other)).body).toMatchObject({ ok: false, failure: "not-connected" });
     // Not a parent account.
-    expect((await api.post("/api/my/tfc/pay", { ...api.as(uid), "x-stub-role": "company" }, { reference, amount: 5 })).status).toBe(403);
+    expect((await api.post("/api/my/tfc/pay", { ...api.as(uid), "x-stub-role": "company" }, { tenantId, refs: ["X"] })).status).toBe(403);
+    // Only what a parent's live links say counts as linked.
+    const links = await api.get("/api/my/tfc/links", api.as(uid));
+    expect(links.body.links.map((l: { childId: string }) => l.childId)).toContain(id);
+    expect(links.body.links.map((l: { childId: string }) => l.childId)).not.toContain(loose);
     expect(stub.calls).toHaveLength(0);
   });
 

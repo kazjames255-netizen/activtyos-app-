@@ -129,6 +129,10 @@ export interface Booking {
    *  way (`tfcRemainderVia`, usually "card" — payable now). Absent = not a split. */
   tfcAmount?: number;
   tfcRemainderVia?: string;
+  /** Tax-Free Childcare: HMRC accepted a payment request for this booking (the
+   *  money reaches the provider on or around estimatedPaymentDate). Set once;
+   *  a booking carrying it is never requested from HMRC again. */
+  tfcPayment?: { paymentReference: string; estimatedPaymentDate: string; amount: number; requestedAt: string };
   /** Provider-only reconciliation notes — never shown to the parent. A running
    *  log; each entry is time-stamped and attributed. */
   reconNotes?: { at: string; by?: string; text: string }[];

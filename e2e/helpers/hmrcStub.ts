@@ -176,7 +176,8 @@ app.use("/api/tfc/callback", tfcCallback);
 app.use("/api/my/tfc", (rq, rs, next) => {
   const uid = rq.header("x-stub-uid");
   if (!uid) { rs.status(401).json({ error: "no uid" }); return; }
-  rq.user = { uid };
+  // The pay route finds the family's bookings by email, like every parent route.
+  rq.user = { uid, email: rq.header("x-stub-email") || uid + "@activityos-test.com" };
   rq.auth = { role: rq.header("x-stub-role") || "parent" };
   next();
 }, tfc);
@@ -187,6 +188,7 @@ app.post("/__seed", async (rq, rs) => {
   if (b.kind === "child") await db.collection("children").doc(b.id).set({ parentUid: b.uid, name: b.name, dob: b.dob, ...(b.tfcReference ? { tfcReference: b.tfcReference } : {}), e2eStub: true });
   else if (b.kind === "tenant") await db.collection("libraries").doc(b.id).set({ tenantId: b.id, settings: { providerName: "Stub Provider", childcare: { settingName: "Stub Provider", registrationNumber: "EY123456", postcode: "AB1 2CD" } }, e2eStub: true });
   else if (b.kind === "link") await db.collection("tfcLinks").doc(b.childId).set({ parentUid: b.uid, childId: b.childId, childName: b.name, reference: b.reference, linked: true, linkedAt: new Date().toISOString(), failure: null, accessToken: "stub-seed-access", refreshToken: "stub-seed-refresh", expiresAt: Date.now() + 3600000 });
+  else if (b.kind === "booking") await db.collection("bookings").doc(b.tenantId + "_" + b.ref).set({ tenantId: b.tenantId, ref: b.ref, email: b.email, child: b.child, childId: b.childId, status: b.status || "Confirmed", pay: b.pay || "Awaiting voucher payment", amount: b.amount, method: "tfc", e2eStub: true });
   else { rs.status(400).json({ error: "kind" }); return; }
   rs.json({ ok: true });
 });
@@ -199,9 +201,14 @@ app.get("/__payments/:childId", async (rq, rs) => {
   const q = await db.collection("tfcPayments").where("childId", "==", rq.params.childId).get();
   rs.json(q.docs.map((d) => ({ id: d.id, status: d.get("status"), amount: d.get("amount"), failure: d.get("failure") ?? null })));
 });
+app.get("/__booking/:tenantId/:ref", async (rq, rs) => {
+  const s = await db.collection("bookings").doc(rq.params.tenantId + "_" + rq.params.ref).get();
+  rs.json(s.exists ? { pay: s.get("pay"), tfcPayment: s.get("tfcPayment") ?? null } : null);
+});
 app.post("/__cleanup", async (rq, rs) => {
   const { childIds = [], tenantIds = [], uid } = rq.body;
-  const out = { children: 0, links: 0, payments: 0, locks: 0, states: 0, tenants: 0 };
+  const out = { children: 0, links: 0, payments: 0, locks: 0, states: 0, tenants: 0, bookings: 0 };
+  for (const t of tenantIds) for (const b of (await db.collection("bookings").where("tenantId", "==", t).get()).docs) if (b.get("e2eStub") === true) { await b.ref.delete(); out.bookings++; }
   for (const id of childIds) {
     const c = await db.collection("children").doc(id).get();
     // Refuse to touch a child that is not the caller's own throwaway.
@@ -236,6 +243,9 @@ export interface TfcHarness {
   seedChild: (o: { id: string; uid: string; name: string; dob: string; tfcReference?: string }) => Promise<void>;
   seedTenant: (id: string) => Promise<void>;
   seedLink: (o: { childId: string; uid: string; name: string; reference: string }) => Promise<void>;
+  /** A parent's booking at a tenant, waiting on the scheme's money (the thing /pay pays for). */
+  seedBooking: (o: { tenantId: string; ref: string; email: string; child: string; childId: string; amount: number; status?: string; pay?: string }) => Promise<void>;
+  booking: (tenantId: string, ref: string) => Promise<{ pay: string; tfcPayment: { paymentReference: string; estimatedPaymentDate: string; amount: number } | null } | null>;
   link: (childId: string) => Promise<{ linked: boolean; failure: string | null; reference: string | null; hasTokens: boolean } | null>;
   payRecords: (childId: string) => Promise<{ id: string; status: string; amount: number; failure: string | null }[]>;
   cleanup: (o: { uid: string; childIds: string[]; tenantIds?: string[] }) => Promise<Record<string, number>>;
@@ -277,6 +287,8 @@ export async function startTfcHarness(stubUrl: string): Promise<TfcHarness> {
     seedChild: (o) => seed({ kind: "child", ...o }),
     seedTenant: (id) => seed({ kind: "tenant", id }),
     seedLink: (o) => seed({ kind: "link", ...o }),
+    seedBooking: (o) => seed({ kind: "booking", ...o }),
+    booking: async (t, r) => (await call("GET", `/__booking/${t}/${r}`, {})).body,
     link: async (id) => (await call("GET", `/__link/${id}`, {})).body,
     payRecords: async (id) => (await call("GET", `/__payments/${id}`, {})).body,
     cleanup: async (o) => (await call("POST", "/__cleanup", {}, o)).body,
