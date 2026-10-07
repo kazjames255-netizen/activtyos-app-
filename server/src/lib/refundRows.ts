@@ -41,3 +41,32 @@ export function refundsOf(b: Booking): RefundRow[] {
   }
   return out;
 }
+
+/** When a bank/offline refund was actually sent. Tolerant of the field names the "mark refund sent" work may use: until that exists every offline refund reads as awaiting. */
+const offlineSentAt = (b: Booking): string | null => {
+  const x = b as unknown as { refundSentAt?: string; cancel?: { refundSentAt?: string; sentAt?: string } };
+  return x.refundSentAt || x.cancel?.refundSentAt || x.cancel?.sentAt || null;
+};
+
+export type RefundSummary = {
+  /** Everything handed back so far, whichever way (card, wallet credit, offline). */
+  amount: number;
+  /** none / part (some of what was paid) / full / awaiting (an offline refund recorded but not yet transferred). */
+  state: "none" | "part" | "full" | "awaiting";
+  /** The money of that state that is only RECORDED so far (offline and not marked sent). */
+  awaitingAmount: number;
+  lastDate: string | null;
+};
+
+/** One booking's refund position, for the Reconciliation ledger chips and filters. */
+export function refundSummaryOf(b: Booking): RefundSummary {
+  const rows = refundsOf(b);
+  const amount = round2(rows.reduce((s, r) => s + r.amount, 0));
+  if (amount <= 0) return { amount: 0, state: "none", awaitingAmount: 0, lastDate: null };
+  const sent = offlineSentAt(b);
+  const awaitingAmount = sent ? 0 : round2(rows.filter((r) => r.via === "offline").reduce((s, r) => s + r.amount, 0));
+  const paid = b.amountPaid ?? 0;
+  const full = b.pay === "Refunded" || (paid > 0 && amount >= paid - 0.005);
+  const lastDate = rows.map((r) => r.date).filter((d): d is string => !!d).sort().pop() ?? null;
+  return { amount, state: awaitingAmount > 0 ? "awaiting" : full ? "full" : "part", awaitingAmount, lastDate };
+}

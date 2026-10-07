@@ -11,6 +11,7 @@ import { useI18n, useT, useWord } from "@/lib/i18n/provider";
 import { isRTL } from "@/lib/i18n/config";
 import { rich } from "@/features/money/rich";
 import { seasonDisplayName } from "@/lib/seasons";
+import { catCountsOf, filterItems, methodCat, parseFilterParams, refundPanelRows, withFilterParams, type RefundState, type StatusFilter } from "./refundFilters";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Reconciliation — the full off-platform payment ledger. Card that settled
@@ -31,6 +32,8 @@ interface Item {
   // Money to hand back or credit (server/src/routes/reconciliation.ts, d8s7/d8s8):
   // more logged than the booking costs, or logged after it was cancelled.
   status?: string; overpaid?: number; needsRefund?: number;
+  // Refund position (server/src/lib/refundRows.ts refundSummaryOf): drives the chips and the Refunded / Hide refunded filters.
+  refundedAmount?: number; refundState?: RefundState; refundAwaitingAmount?: number; refundedAt?: string | null; refundedOnly?: boolean;
 }
 interface RefundRow { ref: string; booker: string; listing: string; listingId: string | null; method: string; via: "card" | "wallet" | "offline" | null; kind: "cancellation" | "released"; label: string; amount: number; date: string | null }
 interface Recon {
@@ -43,18 +46,7 @@ interface ListingLite { id: string; title?: string; name?: string; seasonId?: st
 
 const fmt = (iso?: string | null) => (iso ? new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—");
 
-// Bucket a booking's payment route into a tidy category for the tabs.
 const PREF_ORDER = ["Card", "Childcare vouchers", "Tax-Free Childcare", "Cash", "Bank transfer", "HAF / funded", "Other"];
-function methodCat(it: Item): string {
-  const m = (it.method || "").toLowerCase();
-  if (/tax.?free|tfc/.test(m) || /tax.?free|\btfc\b/i.test(it.voucherScheme || "")) return "Tax-Free Childcare";
-  if (it.voucherScheme || /voucher/.test(m)) return "Childcare vouchers";
-  if (/cash/.test(m)) return "Cash";
-  if (/bank|transfer/.test(m)) return "Bank transfer";
-  if (/haf|funded/.test(m) || it.pay === "Funded") return "HAF / funded";
-  if (/card/.test(m)) return "Card";
-  return it.method || "Other";
-}
 type TFn = (key: string, vars?: Record<string, string | number>) => string;
 // Display label for a canonical payment-route bucket (the bucket string itself stays English: it drives filtering).
 function catDisp(t: TFn, c: string): string {
@@ -80,7 +72,10 @@ export function ReconciliationApp() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [cat, setCat] = useState("All");
-  const [status, setStatus] = useState<"all" | "awaiting" | "reconciled">("awaiting");
+  const [status, setStatus] = useState<StatusFilter>("awaiting");
+  const [hideRefunded, setHideRefunded] = useState(false);
+  const [refundsOpen, setRefundsOpen] = useState(true);
+  const [urlReady, setUrlReady] = useState(false);
   const [listingId, setListingId] = useState("");
   const [seasonId, setSeasonId] = useState("");
   const [from, setFrom] = useState("");
@@ -99,6 +94,21 @@ export function ReconciliationApp() {
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<ListingLite[]>("/api/listings?mine=1").then((l) => setListings(Array.isArray(l) ? l : [])).catch(() => {}); }, []);
   useRealtime(["bookings", "payments"], refresh);
+
+  // The two refund controls live in the page URL (?status=refunded&hideRefunded=1) and the Refunds panel's open/closed state is remembered per browser.
+  useEffect(() => {
+    const q = parseFilterParams(window.location.search);
+    if (q.status) setStatus(q.status);
+    if (q.hideRefunded) setHideRefunded(true);
+    try { if (window.localStorage.getItem("aos.recon.refundsOpen") === "0") setRefundsOpen(false); } catch { /* storage blocked: stays open */ }
+    setUrlReady(true);
+  }, []);
+  useEffect(() => {
+    if (!urlReady) return;
+    const next = withFilterParams(window.location.search, status, hideRefunded);
+    if (next !== window.location.search) window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);
+  }, [urlReady, status, hideRefunded]);
+  const toggleRefundsOpen = () => setRefundsOpen((o) => { try { window.localStorage.setItem("aos.recon.refundsOpen", o ? "0" : "1"); } catch { /* ignore */ } return !o; });
 
   const seasons = settings.seasons ?? [];
   const listingSeason = useMemo(() => Object.fromEntries(listings.filter((l) => l.seasonId).map((l) => [l.id, l.seasonId as string])), [listings]);
@@ -121,20 +131,19 @@ export function ReconciliationApp() {
   // The category tabs and voucher-provider chips each used to re-filter the WHOLE
   // ledger once per button on every render (a growing off-platform ledger, not a
   // handful of rows) just to show its count — one pass per dimension instead.
-  const catCounts = useMemo(() => { const m = new Map<string, number>(); for (const it of items) { const c = methodCat(it); m.set(c, (m.get(c) ?? 0) + 1); } return m; }, [items]);
+  // Tab counts follow the Hide refunded toggle (and never count a refunded-only row the status chip would hide).
+  const catCounts = useMemo(() => catCountsOf(items, status, hideRefunded), [items, status, hideRefunded]);
   const voucherCounts = useMemo(() => { const m = new Map<string, number>(); for (const it of items) if (it.voucherScheme && methodCat(it) === "Childcare vouchers") m.set(it.voucherScheme, (m.get(it.voucherScheme) ?? 0) + 1); return m; }, [items]);
 
-  const filtered = useMemo(() => items.filter((it) => {
-    if (cat !== "All" && methodCat(it) !== cat) return false;
-    if (cat === "Childcare vouchers" && voucherSub && it.voucherScheme !== voucherSub) return false;
-    if (status === "awaiting" && it.reconciled) return false;
-    if (status === "reconciled" && !it.reconciled) return false;
-    if (listingId && it.listingId !== listingId) return false;
-    if (seasonId && (it.listingId ? listingSeason[it.listingId] : "") !== seasonId) return false;
-    if (from && (!it.date || it.date < from)) return false;
-    if (to && (!it.date || it.date > to)) return false;
-    return true;
-  }), [items, cat, voucherSub, status, listingId, seasonId, from, to, listingSeason]);
+  const filtered = useMemo(
+    () => filterItems(items, { cat, status, hideRefunded, voucherSub, listingId, seasonId, from, to }, listingSeason),
+    [items, cat, voucherSub, status, hideRefunded, listingId, seasonId, from, to, listingSeason],
+  );
+  // The Refunds panel follows the same hide rule and the same tab / listing / season / date filters as the list.
+  const panelRows = useMemo(
+    () => refundPanelRows(data?.refunds ?? [], items, { cat, status, hideRefunded, voucherSub, listingId, seasonId, from, to }, listingSeason),
+    [data, items, cat, status, hideRefunded, voucherSub, listingId, seasonId, from, to, listingSeason],
+  );
 
   // ── Childcare roll-up ─────────────────────────────────────────────────────
   // Two independent axes, deliberately not merged:
@@ -176,7 +185,7 @@ export function ReconciliationApp() {
     void save({ settings: { ...settings, childcare: { ...cc, ...patch } } });
 
   const shownOutstanding = filtered.filter((i) => !i.reconciled).reduce((s, i) => s + i.outstanding, 0);
-  const anyFilter = cat !== "All" || status !== "awaiting" || listingId || seasonId || from || to;
+  const anyFilter = cat !== "All" || status !== "awaiting" || hideRefunded || listingId || seasonId || from || to;
 
   async function reconcile(it: Item, undo = false) {
     setBusy(it.ref);
@@ -317,20 +326,26 @@ export function ReconciliationApp() {
 
       {/* Refunds — every refund on the bookings list, dated, so today's can be
           totalled against it (d9s7). Honours the listing/season/date filters. */}
-      {data && (data.refunds?.length ?? 0) > 0 && (
-        <RefundsPanel rows={(data.refunds ?? []).filter((r) =>
-          (!listingId || r.listingId === listingId)
-          && (!seasonId || (r.listingId ? listingSeason[r.listingId] : "") === seasonId))}
-          from={from} to={to} />
-      )}
+      {data && (data.refunds?.length ?? 0) > 0 && (hideRefunded ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-2.5 text-[12.5px] text-[var(--ink-3)]">
+          <span>↩️ {t("p8fin.recRefundsHiddenBar")}</span>
+          <button type="button" onClick={() => setHideRefunded(false)} className="font-bold text-[#2f6bd8]">{t("p8fin.recShowRefundsBtn")}</button>
+        </div>
+      ) : (
+        <RefundsPanel rows={panelRows} from={from} to={to} open={refundsOpen} onToggle={toggleRefundsOpen} />
+      ))}
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3">
         <div className="inline-flex items-center gap-0.5 rounded-full border border-[var(--line)] p-0.5 text-[11.5px] font-bold">
-          {([["all", t("p8fin.recStatusAll")], ["awaiting", t("p8fin.recTileAwaiting")], ["reconciled", t("p8fin.recTileReconciled")]] as const).map(([v, l]) => (
+          {([["all", t("p8fin.recStatusAll")], ["awaiting", t("p8fin.recTileAwaiting")], ["reconciled", t("p8fin.recTileReconciled")], ["refunded", t("p8fin.recStatusRefunded")]] as const).map(([v, l]) => (
             <button key={v} type="button" onClick={() => setStatus(v)} className="rounded-full px-2.5 py-1 transition-colors" style={status === v ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>
           ))}
         </div>
+        <button type="button" aria-pressed={hideRefunded} onClick={() => setHideRefunded((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold transition-colors"
+          style={hideRefunded ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
+          {hideRefunded ? "✓ " : ""}{t("p8fin.recHideRefunded")}
+        </button>
         <select value={listingId} onChange={(e) => setListingId(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
           <option value="">{t("p8fin.recAllListings")}</option>
           {listings.map((l) => <option key={l.id} value={l.id}>{l.title || l.name || t("p8fin.recListingFallback")}</option>)}
@@ -343,7 +358,7 @@ export function ReconciliationApp() {
         )}
         <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.recFrom")} <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px]" /></label>
         <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.recTo")} <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px]" /></label>
-        {anyFilter && <button type="button" onClick={() => { setCat("All"); setVoucherSub(""); setStatus("awaiting"); setListingId(""); setSeasonId(""); setFrom(""); setTo(""); }} className="text-[11.5px] font-bold text-[#2f6bd8]">{t("p8fin.recClearFilters")}</button>}
+        {anyFilter && <button type="button" onClick={() => { setCat("All"); setVoucherSub(""); setStatus("awaiting"); setHideRefunded(false); setListingId(""); setSeasonId(""); setFrom(""); setTo(""); }} className="text-[11.5px] font-bold text-[#2f6bd8]">{t("p8fin.recClearFilters")}</button>}
         <span className="ms-auto text-[12px] text-[var(--ink-3)]">{shownOutstanding > 0 ? t("p8fin.recShownOut", { n: filtered.length, amount: money(shownOutstanding) }) : t("p8fin.recShown", { n: filtered.length })}</span>
       </div>
 
@@ -384,6 +399,7 @@ export function ReconciliationApp() {
           )}
           <p className="px-1 text-[11px] leading-snug text-[var(--ink-3)]">{t("p8fin.recSplitNote")}</p>
           {filtered.map((it) => {
+            if (it.refundedOnly) return <RefundedRow key={it.ref} it={it} />;
             const c = methodCat(it);
             const tone = CAT_C[c] ?? "#8a86a3";
             const refCount = it.payRefs?.length ?? (it.paymentRef ? 1 : 0);
@@ -428,6 +444,7 @@ export function ReconciliationApp() {
                   ) : (
                     <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white" style={{ background: tone }}>{it.voucherScheme ? t("p8fin.recVoucherScheme", { scheme: it.voucherScheme }) : catDisp(t, c)}</span>
                   )}
+                  <RefundChip it={it} />
                   {it.overdue && <span className="rounded-full bg-[#fdebec] px-2 py-0.5 text-[11px] font-bold text-[#c02636]">{it.voucherReceiveBy ? t("p8fin.recOverdueSince", { date: fmt(it.voucherReceiveBy) }) : t("p8fin.recOverdueBadge")}</span>}
                   {(it.overpaid ?? 0) > 0 && <span title={t("p8fin.recOverpaidTip")} className="rounded-full bg-[#fdf6e3] px-2 py-0.5 text-[11px] font-bold text-[#7a5a12] ring-1 ring-[#f3d98a]">{t("p8fin.recOverpaidBadge", { amount: money(it.overpaid!) })}</span>}
                   {(it.needsRefund ?? 0) > 0 && <span title={t("p8fin.recNeedsRefundTip")} className="rounded-full bg-[#fdebec] px-2 py-0.5 text-[11px] font-bold text-[#c02636]">{t("p8fin.recNeedsRefundBadge", { status: w(it.status ?? "Cancelled"), amount: money(it.needsRefund!) })}</span>}
@@ -552,7 +569,7 @@ const VIA_KEY: Record<string, string> = { card: "p8fin.recViaCard", wallet: "p8f
 
 // Refunds by day. Today by default; "All" lists every one. When the page's
 // From/To dates are set, those win — the same range as the ledger below.
-function RefundsPanel({ rows, from, to }: { rows: RefundRow[]; from: string; to: string }) {
+function RefundsPanel({ rows, from, to, open, onToggle }: { rows: RefundRow[]; from: string; to: string; open: boolean; onToggle: () => void }) {
   const t = useT();
   const arrow = isRTL(useI18n().locale) ? "←" : "→";
   const w = useWord();
@@ -570,16 +587,17 @@ function RefundsPanel({ rows, from, to }: { rows: RefundRow[]; from: string; to:
       <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-4 py-2.5">
         <span className="text-[13.5px] font-extrabold">{t("p8fin.recRefunds")}</span>
         <span className="rounded-full bg-[#fdf1e2] px-2 py-0.5 text-[11px] font-bold text-[#b45309]">{t("p8fin.recTodaySum", { amount: money(todayRows.reduce((s, r) => s + r.amount, 0)), n: todayRows.length })}</span>
-        {!ranged && (
-          <div className="ms-auto inline-flex items-center gap-0.5 rounded-full border border-[var(--line)] p-0.5 text-[11.5px] font-bold">
+        <button type="button" onClick={onToggle} aria-expanded={open} className="ms-auto text-[11.5px] font-bold text-[#2f6bd8]">{open ? t("p8fin.recRefundsListHide") : t("p8fin.recRefundsListShow")}</button>
+        {!ranged && open && (
+          <div className="inline-flex items-center gap-0.5 rounded-full border border-[var(--line)] p-0.5 text-[11.5px] font-bold">
             {([[false, t("p8fin.recToday")], [true, t("p8fin.recStatusAll")]] as const).map(([v, l]) => (
               <button key={l} type="button" onClick={() => setAll(v)} className="rounded-full px-2.5 py-1 transition-colors" style={all === v ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>
             ))}
           </div>
         )}
-        {ranged && <span className="ms-auto text-[11.5px] text-[var(--ink-3)]">{fmt(from || null)} – {fmt(to || null)}</span>}
+        {ranged && open && <span className="text-[11.5px] text-[var(--ink-3)]">{fmt(from || null)} – {fmt(to || null)}</span>}
       </div>
-      {shown.length ? (
+      {!open ? null : shown.length ? (
         <div className="flex flex-col divide-y divide-[var(--line)]">
           {shown.slice(0, 50).map((r, i) => (
             <div key={`${r.ref}-${i}`} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-4 py-2 text-[12.5px]">
@@ -597,6 +615,43 @@ function RefundsPanel({ rows, from, to }: { rows: RefundRow[]; from: string; to:
       ) : (
         <div className="px-4 py-3 text-[12px] text-[var(--ink-3)]">{ranged ? t("p8fin.recNoRefundsRange") : all ? t("p8fin.recNoRefundsAll") : t("p8fin.recNoRefundsToday")}</div>
       )}
+    </div>
+  );
+}
+
+/** The refund chip on a ledger row: Refunded / Part refunded £x / Refund awaiting transfer (a bank refund that is only recorded so far). */
+function RefundChip({ it }: { it: Item }) {
+  const t = useT();
+  const st = it.refundState ?? "none";
+  if (st === "none") return null;
+  if (st === "awaiting") return <span title={t("p8fin.recRefundOfflineTip")} className="rounded-full bg-[#fdf6e3] px-2 py-0.5 text-[11px] font-bold text-[#7a5a12] ring-1 ring-[#f3d98a]">{t("p8fin.recChipRefundAwaiting")}</span>;
+  if (st === "part") return <span className="rounded-full bg-[#fdf1e2] px-2 py-0.5 text-[11px] font-bold text-[#b45309]">{t("p8fin.recChipPartRefunded", { amount: money(it.refundedAmount ?? 0) })}</span>;
+  return <span className="rounded-full bg-[#fdf1e2] px-2 py-0.5 text-[11px] font-bold text-[#b45309]">{t("p8fin.recChipRefunded")}</span>;
+}
+
+/** A booking that is on the list only because money went back (cancelled / card): muted, nothing to reconcile. */
+function RefundedRow({ it }: { it: Item }) {
+  const t = useT();
+  const w = useWord();
+  const c = methodCat(it);
+  return (
+    <div data-ui="refunded-row" className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] opacity-80">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5">
+        <span className="w-1.5 self-stretch rounded-full bg-[#d9b99b]" />
+        <div className="min-w-[160px] flex-1 text-start">
+          <div className="flex flex-wrap items-center gap-2 text-[13px]">
+            <span className="font-extrabold">#{it.ref}</span>
+            <span className="text-[var(--ink-2)]">{it.booker} · {it.child}</span>
+          </div>
+          <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{it.listing} · {fmt(it.date)} · {w(it.voucherScheme || it.method || c)}</div>
+        </div>
+        <RefundChip it={it} />
+        <div className="text-end">
+          <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink-3)] line-through">{money(it.amountPaid || it.amount)}</div>
+          <div className="text-[10.5px] font-bold text-[#b45309]">{t("p8fin.recReceivedRefunded", { paid: money(it.amountPaid), refunded: money(it.refundedAmount ?? 0) })}</div>
+        </div>
+        <span className="max-w-[220px] text-end text-[11.5px] text-[var(--ink-3)]">{t("p8fin.recRefundedOnlyNote")}</span>
+      </div>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import type { Booking } from "../../../features/bookings/types";
 import { ukToday } from "../lib/ukDate";
 import { realPhone, refundableSoFar } from "../../../features/bookings/helpers";
 import { bookingDocId } from "./bookings";
-import { refundsOf } from "../lib/refundRows";
+import { refundsOf, refundSummaryOf } from "../lib/refundRows";
 import {
   childcareOf, childcareRoute, isChildcare, isUnreconciled, loadChildcareSettings,
   childcareSettingsComplete, paymentRecordsOf, referenceProblem, referenceLooksValid,
@@ -91,8 +91,11 @@ reconciliation.get("/", async (req, res) => {
 
   const items = snap.docs
     .map((d) => fromDoc(d.data() as BookingDoc) as ChildcareBooking)
-    .filter((b) => relevant(b) || needsRefundOf(b) > 0)
+    // A refunded booking (cancelled, or paid by card) is on the list too, marked refundedOnly: it is not a payment to reconcile, but the Refunded filter
+    // and the Refunds panel need it so the list can say where the money went.
+    .filter((b) => relevant(b) || needsRefundOf(b) > 0 || refundSummaryOf(b).amount > 0)
     .map((b) => {
+      const rs = refundSummaryOf(b);
       // Childcare bookings carry the spec's block as well as the flat fields
       // (docs/tfc-build-spec.md). Additive — every existing field below is
       // untouched, so nothing reading this response has to change.
@@ -111,6 +114,12 @@ reconciliation.get("/", async (req, res) => {
       outstanding: cancelledish(b) ? 0 : outstandingOf(b),
       reconciled: !cancelledish(b) && isReconciled(b) && overpaidOf(b) <= 0,
       status: b.status,
+      // Refund position: the screen's chips and its Refunded / Hide refunded filters read these.
+      refundedAmount: rs.amount,
+      refundState: rs.state,
+      refundAwaitingAmount: rs.awaitingAmount,
+      refundedAt: rs.lastDate,
+      refundedOnly: !(relevant(b) || needsRefundOf(b) > 0),
       overpaid: cancelledish(b) ? 0 : overpaidOf(b),
       needsRefund: needsRefundOf(b),
       reconciledBy: b.reconciledBy ?? null,
@@ -169,7 +178,9 @@ reconciliation.get("/", async (req, res) => {
     v.amount = round2(v.amount + r.amount);
   }
 
-  const awaiting = items.filter((i) => !i.reconciled && i.outstanding > 0);
+  // Refunded-only rows are not payments to reconcile: every ledger count below ignores them (the tiles must not move).
+  const ledger = items.filter((i) => !i.refundedOnly);
+  const awaiting = ledger.filter((i) => !i.reconciled && i.outstanding > 0);
   const byMethod: Record<string, { count: number; outstanding: number }> = {};
   for (const it of awaiting) {
     const key = it.voucherScheme && !isTfcMethod(it.voucherScheme) ? `Voucher · ${it.voucherScheme}` : it.method || "Other";
@@ -182,13 +193,13 @@ reconciliation.get("/", async (req, res) => {
     refunds,
     summary: {
       count: awaiting.length,
-      reconciledCount: items.filter((i) => i.reconciled).length,
+      reconciledCount: ledger.filter((i) => i.reconciled).length,
       outstanding: Math.round(awaiting.reduce((s, i) => s + i.outstanding, 0) * 100) / 100,
-      overdue: items.filter((i) => i.overdue).length,
-      awaitingVoucher: items.filter((i) => i.pay === "Awaiting voucher payment").length,
+      overdue: ledger.filter((i) => i.overdue).length,
+      awaitingVoucher: ledger.filter((i) => i.pay === "Awaiting voucher payment").length,
       byMethod,
-      overpaid: { count: items.filter((i) => i.overpaid > 0).length, total: round2(items.reduce((s, i) => s + i.overpaid, 0)) },
-      needsRefund: { count: items.filter((i) => i.needsRefund > 0).length, total: round2(items.reduce((s, i) => s + i.needsRefund, 0)) },
+      overpaid: { count: ledger.filter((i) => i.overpaid > 0).length, total: round2(ledger.reduce((s, i) => s + i.overpaid, 0)) },
+      needsRefund: { count: ledger.filter((i) => i.needsRefund > 0).length, total: round2(ledger.reduce((s, i) => s + i.needsRefund, 0)) },
       refunds: {
         count: refunds.length,
         total: round2(refunds.reduce((s, r) => s + r.amount, 0)),
@@ -200,7 +211,7 @@ reconciliation.get("/", async (req, res) => {
       // date-ranged version (with the gross series) is GET /childcare below.
       // Cancelled bookings only appear in `items` when money is stuck on them
       // (needsRefund) — that's a refund to make, not childcare still to collect.
-      childcare: rollUp(items.filter((i) => i.childcareRoute && i.status !== "Cancelled" && i.status !== "Declined")),
+      childcare: rollUp(ledger.filter((i) => i.childcareRoute && i.status !== "Cancelled" && i.status !== "Declined")),
     },
   });
 });

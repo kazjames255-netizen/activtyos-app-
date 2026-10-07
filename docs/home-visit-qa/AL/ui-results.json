@@ -1,0 +1,99 @@
+{
+  "base": "http://localhost:3029/freelancer",
+  "default": {
+    "shown": "2 shown",
+    "refs": [
+      "#HVQ-10314",
+      "#HVQ-10315",
+      "#HVQ-10316",
+      "#HVQ-10313"
+    ],
+    "tabs": [
+      "Card0",
+      "Tax-Free Childcare0",
+      "Bank transfer3"
+    ]
+  },
+  "statusAll": {
+    "shown": "5 shown",
+    "refs": [
+      "#HVQ-10314",
+      "#HVQ-10315",
+      "#HVQ-10316",
+      "#HVQ-10313",
+      "#HVQ-10312"
+    ],
+    "tabs": [
+      "Card1",
+      "Tax-Free Childcare0",
+      "Bank transfer4"
+    ],
+    "chips": [
+      "Refund awaiting transfer",
+      "Refunded"
+    ]
+  },
+  "statusRefunded": {
+    "shown": "3 shown",
+    "refs": [
+      "#HVQ-10314",
+      "#HVQ-10315",
+      "#HVQ-10316"
+    ],
+    "url": "http://localhost:3029/freelancer/reconciliation?status=refunded"
+  },
+  "bankTab": {
+    "refs": [
+      "#HVQ-10315",
+      "#HVQ-10316",
+      "#HVQ-10313",
+      "#HVQ-10312"
+    ],
+    "panel": "↩️ Refunds Today £0.60 · 2 Hide list Today All 7 Oct 2026 #HVQ-10315 Reconparent QA · Refund approved · HVQA AL Camp muybi0kv bank → Paid back by hand −£0.30 7 Oct 2026 #HVQ-10316 Reconparent QA · Day released · HVQA AL Camp muybi0kv bank → Paid back by hand −£0.30 Refunds: 2 −£0.60"
+  },
+  "cardTab": {
+    "refs": [
+      "#HVQ-10314"
+    ],
+    "panel": "↩️ Refunds Today £0.30 · 1 Hide list Today All 7 Oct 2026 #HVQ-10314 Reconparent QA · Refund approved · HVQA AL Camp muybi0kv Card → Back to card −£0.30 Refunds: 1 −£0.30"
+  },
+  "hideStatusAllRefs": [
+    "#HVQ-10313",
+    "#HVQ-10312"
+  ],
+  "hide": {
+    "shown": "2 shown",
+    "refs": [
+      "#HVQ-10313",
+      "#HVQ-10312"
+    ],
+    "tabs": [
+      "Card0",
+      "Tax-Free Childcare0",
+      "Bank transfer2"
+    ],
+    "url": "http://localhost:3029/freelancer/reconciliation?status=all&hideRefunded=1",
+    "panelBar": true,
+    "panelListVisible": 0
+  },
+  "hideAfterReload": {
+    "pressed": "true",
+    "url": "http://localhost:3029/freelancer/reconciliation?status=refunded&hideRefunded=1"
+  },
+  "afterClear": {
+    "pressed": "false",
+    "url": "http://localhost:3029/freelancer/reconciliation"
+  },
+  "beforeCollapse": "HVQA-AL Provider muybi0kv « ▦ Dashboard ▤ Blocks & listings RUN THE DAY ▾ MARKETING ▾ MONEY ▾ £ Finance & analytics Money out Money in ⇄ Reconciliation 📦 Inventory AI ▾ SETTINGS ▾ PUPILS ▾ ⏏ Sign out POWERED BY Name TBC The unfair advantage for camps, clubs & coaches Home Bookings Families Listings Contact ▼ Find a child 🇬🇧 EN ▼ 🐞 5 Sign out ⇄ Reconciliation Match the money that lands off-platform — vouchers, Tax-Free Childcare, cash and manual card payments. Marking one reconciled settles the booking and lets the family know. ℹ️ How it works OVERVIEW ▴ Hide ⏳ AWAITING 1 payments to match ",
+  "collapsedAfterReload": 1,
+  "urlStatus": {
+    "refs": [
+      "#HVQ-10316",
+      "#HVQ-10315",
+      "#HVQ-10314"
+    ]
+  },
+  "phone": {
+    "overflowX": false
+  }
+}
