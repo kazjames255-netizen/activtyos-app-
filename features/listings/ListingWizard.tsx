@@ -627,7 +627,7 @@ export function listingRowInfo(draft: WizardDraft): { cover: ListingImage | null
   const yearOf = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCFullYear();
   const showYear = !!draft.runFrom && !!draft.runTo && (yearOf(draft.runFrom) !== thisYear || yearOf(draft.runTo) !== thisYear || yearOf(draft.runFrom) !== yearOf(draft.runTo));
   const withYear = (iso: string) => (showYear ? `${fmtDate(iso)} ${yearOf(iso)}` : fmtDate(iso));
-  const dateLabel = draft.runFrom && draft.runTo ? `${withYear(draft.runFrom)} – ${withYear(draft.runTo)}` : null;
+  const dateLabel = draft.runFrom && draft.runTo ? (draft.runFrom === draft.runTo ? withYear(draft.runFrom) : `${withYear(draft.runFrom)} – ${withYear(draft.runTo)}`) : null;
   const capacity = parseInt(draft.maxAttendees, 10) || null;
   return { cover: imgs[0] || null, dateLabel, from: draft.runFrom, to: draft.runTo, totalDays: dates.length, capacity, capacityScope: draft.capacityScope, showSpaces: draft.showSpaces, live: listingIsLive(draft), opensAt: draft.opensAt ?? "" };
 }
@@ -2773,7 +2773,7 @@ function TicketsStep({ d, upd, blocks, tickets, onCreateBlock }: { d: WizardDraf
           <p className="mb-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
             <Rich text={tr("p8lst.wbCapPerDay")} />
           </p>
-          {tickets.some((x) => x.days > 1) && (
+          {tickets.some((x) => x.days > 1 && x.days <= totalRun) && (
             <div className="aos-rule-flash mb-3 flex items-start gap-3 rounded-2xl border-2 border-[#e9a915] px-4 py-3 text-[#5a3500]" style={{ background: "linear-gradient(120deg,#fff3cf,#ffe3a3)" }} role="note">
               <span className="text-[26px] leading-none" aria-hidden>👇</span>
               <div>
@@ -4187,7 +4187,7 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   const cats = local.categories.filter((c) => d.categoryIds.includes(c.id));
   const imgs = d.images;
   const town = venue?.address?.split(",").slice(-1)[0]?.trim() || venue?.address || "";
-  const runLabel = d.runFrom && d.runTo ? `${fmtDate(d.runFrom)} – ${fmtDate(d.runTo)}` : tr("p7pg.datesTbc");
+  const runLabel = d.runFrom && d.runTo ? (d.runFrom === d.runTo ? fmtDate(d.runFrom) : `${fmtDate(d.runFrom)} – ${fmtDate(d.runTo)}`) : tr("p7pg.datesTbc");
   const dates = periodDates(d, genDates);
   const weeks = groupWeeks(dates);
   // Blank capacity means "not set", not zero — `|| 0` was showing "Sold out"
