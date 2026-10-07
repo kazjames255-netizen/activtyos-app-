@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { addressMissing, isFullAddress } from "@/lib/addressComplete";
 import type { CSSProperties, ReactNode } from "react";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail, verifyBeforeUpdateEmail } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
@@ -190,6 +191,8 @@ export function AccountApp() {
     // A browser autofill can drop the email into the postcode box; send it as empty rather than let the whole save fail.
     const cleanPostcode = looksEmail(postcode) ? "" : postcode.trim().slice(0, 16);
     if (cleanPostcode !== postcode) setPostcode(cleanPostcode);
+    // A parent's FULL home address (house number/name, street, town, postcode) is compulsory: a home-visit provider has to find the door.
+    if (p?.role === "parent" && !isFullAddress(address, cleanPostcode)) { setError(t(addressMissing(address, cleanPostcode).includes("house") && address.trim() ? "p7ck.adrNeedHouse" : "p7ck.adrIncomplete")); return; }
     try {
       await api("/api/account", { method: "PUT", body: JSON.stringify({ name, phone, address, postcode: cleanPostcode, marketingConsent: marketing, ...(p?.role === "parent" ? { emergencyName: emergencyName.trim(), emergencyPhone: emergencyPhone.trim() } : {}) }) });
       setOk(t("account.saved"));

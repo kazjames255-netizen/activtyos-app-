@@ -43,6 +43,7 @@ export const QUESTIONS: string[] = [
   "a parent outside my area, can they still see my home visit listing",
   "how do I know my postcode was recognised in the listing",
   "will parents see that my listing is online or at their home",
+  "do parents have to give their full address with a house number when they sign up",
   "can parents tell me how to find their house or where to park",
   "how long till money arrives in my bank",
   "what do I need to go live",

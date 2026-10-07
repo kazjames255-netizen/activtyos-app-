@@ -1,6 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { AddressFields } from "@/features/common/AddressFields";
+import { composeAddress, isFullAddress, type AddressParts } from "@/lib/addressComplete";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -145,6 +147,8 @@ function SignupForm() {
   const [providerNameMode, setProviderNameMode] = useState<"person" | "business">("business");
   const [postcode, setPostcode] = useState("");
   const [address, setAddress] = useState("");
+  // A parent's FULL home address (house number/name, street, town, postcode): compulsory, see lib/addressComplete.ts.
+  const [home, setHome] = useState<AddressParts>({ house: "", street: "", town: "", postcode: "" });
   const [phone, setPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [kinds, setKinds] = useState<string[]>([]);
@@ -203,6 +207,7 @@ function SignupForm() {
       if (address.trim().length < 2) return t("p8pub.suVWhere");
       if (postcode.trim().length < 2) return t("p8pub.suVPostcode");
     }
+    if (id === "you" && !isFullAddress(composeAddress(home), home.postcode)) return t("p7ck.adrIncomplete");
     if (id === "identity" && name.trim().length < 2)
       return t("p8pub.suVPerson");
     if (id === "hear" && !heard) return t("p8pub.suVHear");
@@ -309,7 +314,7 @@ function SignupForm() {
       const role = accountType === "freelancer" ? "freelancer" : accountType === "parent" ? "parent" : "company";
       await apiPost("/api/register-role", {
         role,
-        ...(accountType === "parent" && postcode.trim() ? { postcode: postcode.trim() } : {}),
+        ...(accountType === "parent" ? { address: composeAddress(home), postcode: home.postcode.trim().toUpperCase() } : {}),
         ...(isOperator
           ? {
               plan: accountType,
@@ -473,11 +478,7 @@ function SignupForm() {
         {current === "you" && (
           <div className="flex flex-col gap-4">
             <div><FieldLabel htmlFor="p-name">{t("p8pub.suYourName")}</FieldLabel><Input id="p-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("p8pub.suEg", { x: "Sam Taylor" })} className="w-full" /></div>
-            <div>
-              <FieldLabel htmlFor="p-pc">{t("p8pub.suPostcode")} <span className="font-normal text-[var(--ink-3)]">{t("p8pub.suOptional")}</span></FieldLabel>
-              <Input id="p-pc" autoComplete="postal-code" value={postcode} onChange={(e) => setPostcode(e.target.value.toUpperCase())} placeholder={t("p8pub.suEg", { x: "NN5 7EA" })} className="w-full" />
-              <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("p8pub.suPcHelp")}</p>
-            </div>
+            <AddressFields value={home} onChange={setHome} idPrefix="p" />
           </div>
         )}
 

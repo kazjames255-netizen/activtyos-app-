@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useT } from "@/lib/i18n/provider";
 import type { Me } from "@/lib/roles";
+import { addressMissing } from "@/lib/addressComplete";
 
 interface GeoHit { label: string; lat: number; lng: number }
 const UK_POSTCODE = /\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i;
@@ -100,7 +101,9 @@ export function ParentWelcome() {
 
   const set = (k: keyof AccountProfile) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const firstName = form.name.trim().split(/\s+/)[0] || "";
-  const detailsOk = !!form.name.trim() && !!form.phone.trim() && !!form.address.trim() && !!form.postcode.trim()
+  const addrMissing = addressMissing(form.address, form.postcode);
+  // a FULL address is compulsory: house number/name, street, town and postcode (a provider has to find the door)
+  const detailsOk = !!form.name.trim() && !!form.phone.trim() && addrMissing.length === 0
     && !!form.emergencyName.trim() && !!form.emergencyPhone.trim();
 
   async function saveDetails() {
@@ -202,6 +205,8 @@ export function ParentWelcome() {
               <div className="sm:col-span-2">
                 <span className={label}>{t("parent.homeAddress")} <span className="text-[#e21d27]">*</span></span>
                 <input className={inp} style={inpStyle} value={form.address} onChange={set("address")} placeholder={t("parent.homeAddressPlaceholder")} />
+                {form.address.trim() && addrMissing.includes("house") && <div className="mt-1 text-[12px] font-bold" style={{ color: "#c02636" }}>{t("p7ck.adrNeedHouse")}</div>}
+                {form.address.trim() && !addrMissing.includes("house") && addrMissing.includes("town") && <div className="mt-1 text-[12px] font-bold" style={{ color: "#c02636" }}>{t("p7ck.adrIncomplete")}</div>}
               </div>
               <div>
                 <span className={label}>{t("parent.postcode")} <span className="text-[#e21d27]">*</span></span>

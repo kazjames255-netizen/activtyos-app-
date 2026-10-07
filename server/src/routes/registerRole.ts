@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth as authAdmin, db } from "../firebase";
 import { emailParentWelcome, emailProviderWelcome } from "../lib/emails";
 import { notify } from "../lib/notify";
+import { parentAddressProblem } from "../lib/parentAddress";
 
 // Account provisioning at signup — one shot, then locked:
 //   {role: "parent"}                               → parent account
@@ -21,6 +22,8 @@ const schema = z.discriminatedUnion("role", [
   z.object({
     role: z.literal("parent"),
     postcode: z.string().trim().max(12).optional(),
+    // The parent's home address as one line ("12 Corris Court, Milton Keynes"); with the postcode it must be COMPLETE (see lib/parentAddress.ts).
+    address: z.string().trim().max(300).optional(),
     // The provider the parent picked on the sign-up page (a tenant id from /api/providers). Remembered on the account as the parent's home provider.
     providerId: z.string().trim().max(80).optional(),
     // Parent sign-up asks for a real name so providers see "Jane Smith", not an email handle.
@@ -83,6 +86,8 @@ registerRole.post("/", async (req, res) => {
   }
 
   if (parsed.data.role === "parent") {
+    const addrProblem = parentAddressProblem(parsed.data.address, parsed.data.postcode);
+    if (addrProblem) { res.status(400).json({ error: addrProblem }); return; }
     // Only a provider that really exists can be a parent's home provider; an unknown id is ignored, not an error.
     let homeTenantId: string | null = null;
     let homeProviderName: string | undefined;
@@ -103,6 +108,7 @@ registerRole.post("/", async (req, res) => {
       ...(parsed.data.firstName ? { firstName: parsed.data.firstName } : {}),
       ...(parsed.data.lastName ? { lastName: parsed.data.lastName } : {}),
       ...(parsed.data.postcode ? { postcode: parsed.data.postcode } : {}),
+      ...(parsed.data.address ? { address: parsed.data.address } : {}),
       ...(homeTenantId ? { homeTenantId } : {}),
     });
     // Welcome email with a direct sign-in link (still behind the MAIL_LIVE gate; bell/email failures never block sign-up)

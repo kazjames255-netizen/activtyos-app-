@@ -20,7 +20,9 @@ import { tNow, useI18n } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
 import Link from "next/link";
-import { get as apiGet, api } from "@/lib/api";
+import { get as apiGet, put as apiPut, api } from "@/lib/api";
+import { AddressFields } from "@/features/common/AddressFields";
+import { composeAddress, isFullAddress, splitAddress, visitLineHasHouse, type AddressParts } from "@/lib/addressComplete";
 import { money, PAY_METHODS } from "@/features/bookings/helpers";
 import { fmtDate, ordinal } from "./format";
 import { uploadPlan, PLAN_MAX_BYTES } from "./planUpload";
@@ -1008,6 +1010,26 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // The saved account address is OFFERED first ("is this where you want us to come?"); null = none saved. useSaved: null = not answered yet.
   const [savedAddr, setSavedAddr] = useState<{ address: string; postcode: string } | null>(null);
   const [useSaved, setUseSaved] = useState<boolean | null>(null);
+  // A saved address with no house number/name (or a missing town) can't be offered with "Yes, come here": the provider could not find the door.
+  // The family completes it right here, and it is saved back to their account.
+  const savedIncomplete = !!savedAddr && !isFullAddress(savedAddr.address, savedAddr.postcode);
+  const [fix, setFix] = useState<AddressParts | null>(null);
+  const [fixBusy, setFixBusy] = useState(false);
+  const [fixErr, setFixErr] = useState<string | null>(null);
+  const fixParts: AddressParts = fix ?? splitAddress(savedAddr?.address ?? "", savedAddr?.postcode ?? "");
+  async function saveFix() {
+    const addr = composeAddress(fixParts);
+    if (!isFullAddress(addr, fixParts.postcode)) { setFixErr(tr("p7ck.adrIncomplete")); return; }
+    setFixBusy(true); setFixErr(null);
+    try {
+      await apiPut("/api/account", { address: addr, postcode: fixParts.postcode.trim().toUpperCase() });
+      const pc = fixParts.postcode.trim().toUpperCase();
+      setSavedAddr({ address: addr, postcode: pc });
+      setServiceAddress((s) => ({ ...s, address: addr, postcode: pc }));
+      setUseSaved(true);
+    } catch (e) { setFixErr(e instanceof Error ? e.message : tr("p7ck.adrIncomplete")); }
+    setFixBusy(false);
+  }
   const askSaved = homeVisit && !!savedAddr && useSaved === null;
   const [addressPrefilled, setAddressPrefilled] = useState(false);
   // The postcode step: recognised by the SERVER (real UK postcode + the town it is in + inside this provider's area), shown as the family types.
@@ -2784,7 +2806,17 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       {ckStage === "pay" && homeVisit && (
         <div className="mt-3">
           <label className="mb-1 block text-[11px] font-bold" style={{ color: tk.muted }}>{tr("p7ck.weCome")}</label>
-          {savedAddr && useSaved !== false ? (
+          {savedAddr && savedIncomplete && useSaved !== false ? (
+            <div className={`border p-3 ${tk.round}`} style={{ background: tk.inputBg, borderColor: "#dc2626" }}>
+              <div className="mb-2 text-[13px] font-extrabold" style={{ color: "#dc2626" }}>{tr("p7ck.adrNeedHouse")}</div>
+              <AddressFields value={fixParts} onChange={setFix} idPrefix="ck-fix" showWhy={false} />
+              {fixErr && <div className="mt-2 text-[12px] font-bold" style={{ color: "#dc2626" }}>{fixErr}</div>}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" disabled={fixBusy} onClick={() => void saveFix()} className="rounded-full px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "#15b364" }}>{fixBusy ? tr("p7ck.adrSaving") : tr("p7ck.adrSave")}</button>
+                <button type="button" onClick={() => { setUseSaved(false); setAddressPrefilled(false); setServiceAddress((s) => ({ ...s, address: "", postcode: "" })); }} className="rounded-full border px-4 py-2 text-[13px] font-extrabold" style={{ borderColor: tk.line, color: tk.ink }}>{tr("p7ck.addrNo")}</button>
+              </div>
+            </div>
+          ) : savedAddr && useSaved !== false ? (
             <div className={`border p-3 ${tk.round}`} style={{ background: tk.inputBg, borderColor: useSaved ? "#15b364" : tk.accent }}>
               <div className="text-[13px] font-extrabold" style={{ color: tk.ink }}>{tr("p7ck.addrConfirmQ")}</div>
               <div className="mt-1 text-[14px] font-bold" style={{ color: tk.ink }}>
@@ -2816,9 +2848,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             {pcState.status === "bad" && <span style={{ color: "#dc2626" }}>{pcState.msg}</span>}
             {(pcState.status === "idle") && <span style={{ color: tk.muted }}>{serviceAddress.postcode.trim() ? (addressPrefilled ? tr("p7ck.addrPrefilled") : tr("p7ck.addrWhere")) : tr("p7ck.addrNeed")}</span>}
           </div>
-          <input value={serviceAddress.address} onChange={(e) => setServiceAddress((s) => ({ ...s, address: e.target.value }))} placeholder={tr("p7ck.pcStreet")}
+          <input value={serviceAddress.address} onChange={(e) => setServiceAddress((s) => ({ ...s, address: e.target.value }))} placeholder={tr("p7ck.adrVisitLine")}
             className={`mt-2 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
             style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
+          {serviceAddress.address.trim() && !visitLineHasHouse(serviceAddress.address) && <div className="mt-1 text-[12px] font-bold" style={{ color: "#dc2626" }}>{tr("p7ck.adrNeedHouse")}</div>}
           <div className="mt-1 text-[11px]" style={{ color: tk.muted }}>
             {tr("p7ck.pcWhy")}
             <div className="mt-0.5 font-bold">🔒 {tr("p9tx.hvParentAddr")}</div>
@@ -2833,7 +2866,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       )}
 
       {ckStage === "pay" && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || (parentMode && !phoneOk) || (homeVisit && (askSaved || !serviceAddress.postcode.trim() || pcState.status === "bad" || pcState.status === "checking")) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || existingClashes.length > 0 || ticketAgeBlocks || !!booking?.busy || (method === "voucher" && !!chosenVoucher && refKids.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
+        disabled={(!parentMode && !b.parent) || (parentMode && !phoneOk) || (homeVisit && (askSaved || (savedIncomplete && useSaved !== false) || !serviceAddress.postcode.trim() || pcState.status === "bad" || pcState.status === "checking" || (useSaved !== true && !visitLineHasHouse(serviceAddress.address)))) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || existingClashes.length > 0 || ticketAgeBlocks || !!booking?.busy || (method === "voucher" && !!chosenVoucher && refKids.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // With an onBook handler the confirm actually books — the parent

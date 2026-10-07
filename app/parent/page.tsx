@@ -8,6 +8,8 @@ import { safeNext } from "@/lib/safe-next";
 import { post as apiPost } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { FieldLabel, Input } from "@/components/ui";
+import { AddressFields } from "@/features/common/AddressFields";
+import { composeAddress, isFullAddress, type AddressParts } from "@/lib/addressComplete";
 import { AUTH_LIGHT, AosMark, AosWordmark } from "@/components/auth/AuthBrand";
 import { useT } from "@/lib/i18n/provider";
 
@@ -41,6 +43,8 @@ function ParentAuth() {
   const [tab, setTab] = useState<"in" | "up">(params.get("tab") === "up" ? "up" : "in");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  // The parent's FULL home address is compulsory (a home-visit provider has to find the door): house number/name, street, town, postcode.
+  const [home, setHome] = useState<AddressParts>({ house: "", street: "", town: "", postcode: "" });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [provider, setProvider] = useState("");
@@ -111,6 +115,7 @@ function ParentAuth() {
       if (!picked) { setError(t("p8par.lgPickProvider")); return; }
       const fn = firstName.trim(), ln = lastName.trim();
       if (!fn || !ln) { setError(t("p9jr.parentNameRequired")); return; }
+      if (!isFullAddress(composeAddress(home), home.postcode)) { setError(t("p7ck.adrIncomplete")); return; }
       if (password.length < 6) { setError(t("p8par.lgPwShort")); return; }
       setBusy(true);
       try {
@@ -119,7 +124,7 @@ function ParentAuth() {
           // The name goes on the sign-in profile first, so the token the API sees (and every booking, message and Families row after it) carries "First Last", not an email handle.
           await updateProfile(cred.user, { displayName: `${fn} ${ln}` });
           await cred.user.getIdToken(true);
-          await apiPost("/api/register-role", { role: "parent", providerId: picked.id, firstName: fn, lastName: ln });
+          await apiPost("/api/register-role", { role: "parent", providerId: picked.id, firstName: fn, lastName: ln, address: composeAddress(home), postcode: home.postcode.trim().toUpperCase() });
         } catch {
           setError(t("p8par.lgCreateFailed"));
           setBusy(false);
@@ -277,6 +282,10 @@ function ParentAuth() {
               <Input id="parent-last" required autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full" />
             </div>
           </div>
+        )}
+
+        {tab === "up" && (
+          <AddressFields value={home} onChange={setHome} idPrefix="parent" />
         )}
 
         <div>

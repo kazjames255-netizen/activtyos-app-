@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { isFullAddress } from "@/lib/addressComplete";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -251,6 +252,13 @@ export function ParentHomeApp() {
       })
       .catch(() => setCareAid(null));
     apiGet<unknown[]>("/api/medications").then((m) => setCareMeds((m ?? []).length)).catch(() => setCareMeds(null));
+  }, []);
+
+  // A saved home address without a house number/name (older sign-ups) is nudged ONCE a week: providers need the full address for home visits.
+  const [addrNudge, setAddrNudge] = useState(false);
+  useEffect(() => {
+    try { const at = Number(localStorage.getItem("aos.addrNudge") ?? 0); if (at && Date.now() - at < 7 * 86_400_000) return; } catch { /* storage blocked: still show it */ }
+    apiGet<{ address?: string; postcode?: string }>("/api/account").then((a) => { if (a && !isFullAddress(a.address, a.postcode)) setAddrNudge(true); }).catch(() => {});
   }, []);
 
   const asked = useRef<Set<string>>(new Set());
@@ -566,6 +574,16 @@ export function ParentHomeApp() {
         <div className="flex min-w-0 flex-col gap-5">
           {greeting}
           {starter}
+          {addrNudge && (
+            <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border-2 px-4 py-3" style={{ borderColor: "#f0c96b", background: "#fff7e0", color: "#7a4b00" }}>
+              <div className="min-w-[200px] flex-1">
+                <div className="text-[14px] font-extrabold">{t("p7ck.adrBannerTitle")}</div>
+                <div className="text-[12.5px] font-semibold">{t("p7ck.adrBannerBody")}</div>
+              </div>
+              <a href="/custdash/account" className="rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white">{t("p7ck.adrBannerBtn")}</a>
+              <button type="button" onClick={() => { try { localStorage.setItem("aos.addrNudge", String(Date.now())); } catch { /* ignore */ } setAddrNudge(false); }} className="text-[12.5px] font-bold underline">{t("p7ck.adrNotNow")}</button>
+            </div>
+          )}
           {attentionBlock}
           {!loading && !starter && live.length > 0 && <WeekStrip live={live} today={today} detail={(b) => ({ time: timeFor(b), place: (b.listingId ? briefs[b.listingId]?.library?.venue?.name ?? briefs[b.listingId]?.location : null) ?? null })} />}
           {starter ? null : nextBlock}

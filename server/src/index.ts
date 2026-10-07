@@ -91,7 +91,7 @@ import { trips } from "./routes/trips";
 import { calendarEvents } from "./routes/calendarEvents";
 import { inventory } from "./routes/inventory";
 import { registerRole } from "./routes/registerRole";
-import { geo, tiles } from "./routes/geo";
+import { geo, tiles, recogniseHandler } from "./routes/geo";
 import { ratios } from "./routes/ratios";
 import { registers } from "./routes/registers";
 import { children } from "./routes/children";
@@ -265,6 +265,8 @@ app.use("/api/demo-slots", demoSlotsPublic);
 // Provider directory for the parent sign-up picker — a parent has no account
 // yet, so this must sit above requireAuth. Name + rough location only.
 app.use("/api/providers", rateLimit("providers", 120), providersPublic);
+// "Is that a real UK postcode?" for the parent sign-up address form (no account exists yet, so above requireAuth). Postcode only, rate limited.
+app.get("/api/postcode-recognise", rateLimit("pc-recognise", 60), recogniseHandler);
 // Public "which version is running?" check: the Git commit Railway built from (when it deploys from Git) and when this process started.
 const STARTED_AT = new Date().toISOString();
 app.get("/api/version", (_req, res) => {

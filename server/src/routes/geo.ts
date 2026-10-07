@@ -101,7 +101,7 @@ export async function geocodeHit(q: string): Promise<GeoHit | null> {
 
 // GET /api/geo/recognise?q= — is this a real UK postcode (or outward code like "NW1")? Used by the provider's coverage-area form to show
 // "Recognised: <place>" (or not) as they type. Answers {ok, postcode, place}; never throws.
-geo.get("/recognise", async (req, res) => {
+export async function recogniseHandler(req: import("express").Request, res: import("express").Response): Promise<void> {
   const raw = typeof req.query.q === "string" ? req.query.q.trim() : "";
   const full = formatPostcode(raw);
   const compactIn = raw.toUpperCase().replace(/\s+/g, "");
@@ -129,7 +129,8 @@ geo.get("/recognise", async (req, res) => {
   } catch {
     res.json({ ok: false, postcode: raw.toUpperCase() });
   }
-});
+}
+geo.get("/recognise", recogniseHandler);
 
 // GET /api/geo/search?q= — operator address lookup (auth-scoped).
 geo.get("/search", async (req, res) => {

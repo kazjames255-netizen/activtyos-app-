@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { parentAddressProblem } from "../lib/parentAddress";
 import { displayNameFallback } from "../lib/directoryRules";
 import { z } from "zod";
 import { auth as authAdmin, db } from "../firebase";
@@ -121,6 +122,12 @@ account.put("/", async (req, res) => {
   const parsed = putSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const data = parsed.data;
+  // A parent editing their address (or postcode) must leave a COMPLETE one: house number/name, street, town, postcode (lib/parentAddress.ts).
+  if (auth.role === "parent" && (data.address !== undefined || data.postcode !== undefined)) {
+    const cur = (await db.collection("users").doc(uid).get()).data() as { address?: string; postcode?: string } | undefined;
+    const problem = parentAddressProblem(data.address ?? cur?.address, data.postcode ?? cur?.postcode);
+    if (problem) { res.status(400).json({ error: problem }); return; }
+  }
   // A franchise drawing/editing its own border always re-opens negotiation: the
   // status becomes proposed (has areas) or draft (none), stamped "by franchise"
   // so head office is the one who signs it off. A franchise can never mark its own
