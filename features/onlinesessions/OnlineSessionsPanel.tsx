@@ -27,7 +27,7 @@ const day = (iso: string) => ukDay(iso, dateLocale());
 
 /** `refs` limits the panel to those bookings (the "you are booked" screen); `providerName` words the bank-transfer hint. */
 /** `compact` (the "you are booked" screen, which already has its own heading box): no card and no title, just the session state(s). */
-export function OnlineSessionsPanel({ refs, providerName, compact }: { refs?: string[]; providerName?: string; compact?: boolean } = {}) {
+export function OnlineSessionsPanel({ refs, providerName, compact, reloadKey }: { refs?: string[]; providerName?: string; compact?: boolean; reloadKey?: number } = {}) {
   const t = useT();
   const { locale } = useI18n();
   const rtl = isRTL(locale);
@@ -37,7 +37,8 @@ export function OnlineSessionsPanel({ refs, providerName, compact }: { refs?: st
   const [list, setList] = useState<MySession[] | null>(null);
   const [, tick] = useState(0);
   const load = useCallback(() => { apiGet<MySession[]>("/api/online-sessions/mine").then(setList).catch(() => setList([])); }, []);
-  useEffect(() => { load(); }, [load]);
+  // `reloadKey` changes the moment a payment completes on the "you are booked" screen: re-ask at once, so "Pay to unlock" never sits next to "✓ Paid".
+  useEffect(() => { load(); }, [load, reloadKey]);
   // Re-check every 10 s (whether the host has started, and whether the window has just opened).
   useEffect(() => { const id = window.setInterval(() => { tick((n) => n + 1); load(); }, 10_000); return () => window.clearInterval(id); }, [load]);
   const shown = (list ?? []).filter((s) => !refs?.length || (s.refs ?? []).some((r) => refs.includes(r)));

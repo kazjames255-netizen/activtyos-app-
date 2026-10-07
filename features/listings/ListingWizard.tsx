@@ -998,7 +998,9 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
               <div className="mb-1 rounded-xl border-2 border-[#2f6bd8] bg-[#eef4ff] p-3 text-start text-[13px]"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">💻 {t("p7pg.howToJoin")}</div>
                 {(ov.directions ?? "").trim() && <div className="mt-1 whitespace-pre-line font-semibold text-[#171534]">{(ov.directions ?? "").trim()}</div>}
                 {/* What actually happens, from the server: pay to unlock / opens at HH:MM / host starts first / Join now. */}
-                <div className="mt-1.5"><OnlineSessionsPanel refs={done.refs} providerName={listing.tenantName} compact /></div></div>
+                {needsApproval
+                  ? <div className="mt-1.5 font-semibold text-[#4a4763]">{t("p9tx.osAfterApproval")}</div>
+                  : <div className="mt-1.5"><OnlineSessionsPanel refs={done.refs} providerName={listing.tenantName} compact reloadKey={paidNow ? 1 : 0} /></div>}</div>
             ) : null; })()}
             {done.visitAt && <div className={rowCls}><span className={labCls}>🚗 {t("p9tx.hvWeCome")}</span><span className={valCls}>{done.visitAt}</span></div>}
             {done.passes.length > 0 && <div className={rowCls}><span className={labCls}>{t("p7cl.lblPass")}</span><span className={valCls}>{done.passes.join(", ")}</span></div>}

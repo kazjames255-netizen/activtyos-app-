@@ -22,7 +22,7 @@ import { registerRows } from "../lib/registerRows";
 import { money, realPhone, refundableSoFar, receivedOf, cashReceivedOf } from "../../../features/bookings/helpers";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
-import { canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval } from "../lib/bookingGuards";
+import { approveBlockedMessage, declineBlockedMessage, nudgeBlockedMessage, canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval } from "../lib/bookingGuards";
 import {
   blockCountDelta,
   applyPlacesDelta,
@@ -601,6 +601,10 @@ bookings.post("/:ref/actions", async (req, res) => {
 
       // A card that is only HELD is settled by approving (the payment is taken then): "Mark paid" would count the money twice.
       if (action.type === "paid" && (b.cardHold?.state === "held" || b.cardHold?.state === "awaiting")) throw new Conflict("This booking's card is only held, not charged. Approving the booking takes the payment.");
+      // Approve only a request that is waiting; decline only one that is waiting / on the list; never resurrect a cancelled or refunded booking
+      // or keep a paid one's money while telling the family "nothing was taken".
+      if (action.type === "approve") { const why = approveBlockedMessage(b.status); if (why) throw new Conflict(why); }
+      if (action.type === "decline") { const why = declineBlockedMessage(b.status); if (why) throw new Conflict(why); }
       // A manual-approval booking paid by card can only be approved once the family's card is actually held.
       if (action.type === "approve" && b.cardHold?.state === "awaiting") throw new Conflict("The family hasn't entered their card yet, so this can't be approved. It will be cancelled automatically if they don't.");
       // An offer must be backed by a real free place (§E: "reject if the
@@ -1239,6 +1243,8 @@ bookings.post("/:ref/nudge", async (req, res) => {
       const snap = await tx.get(ref);
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
+      const why = nudgeBlockedMessage(b);
+      if (why) throw new Conflict(why);
       b.nudges = (b.nudges ?? 0) + 1;
       b.lastNudgedAt = new Date().toISOString();
       tx.set(ref, toDoc(b));
@@ -1265,6 +1271,7 @@ bookings.post("/:ref/nudge", async (req, res) => {
     res.json(updated);
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else if (e instanceof Conflict) res.status(409).json({ error: e.message });
     else throw e;
   }
 });
@@ -1410,7 +1417,8 @@ bookings.post("/bulk", async (req, res) => {
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) continue;
       const b = fromDoc(snap.data() as BookingDoc);
       const oldStatus = b.status;
-      if (action === "approve" && b.cardHold?.state === "awaiting") continue; // card not entered yet: nothing to approve
+      if (action === "approve" && (b.cardHold?.state === "awaiting" || approveBlockedMessage(b.status) || b.status === "Confirmed")) continue; // card not entered yet / not a waiting request: nothing to approve
+      if (action === "decline" && declineBlockedMessage(b.status)) continue; // a confirmed or cancelled booking is not declined
       // Cancelling a booking that has taken money needs a refund decision (the policy figure, to the card or the wallet): that is the single
       // cancel's job. Bulk used to cancel it, keep the money and tell the family "No refund".
       if (action === "cancel" && blocksBulkCancel(b)) paidRefs.push(b.ref);

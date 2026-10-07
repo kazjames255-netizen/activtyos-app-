@@ -125,6 +125,8 @@ export const QUESTIONS: string[] = [
   "I have not approved a card booking request for a week, what happens",
   "I declined a booking, what does the parent see, and will it show on their bank statement",
   "why is there no Mark paid button on a booking that needs approval",
+  "can I decline a booking that is already confirmed and paid",
+  "I approved a booking by mistake after the parent cancelled it, can I approve it again",
   "a parent booked two children on one card and I approved just one, what happens to the other",
   "what emails and notifications do I and the parent get when a manual approval card booking comes in and I approve it",
   "does a family who has an invoice or a voucher still to be paid get the join link for my online session",

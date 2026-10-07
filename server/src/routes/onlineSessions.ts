@@ -142,8 +142,12 @@ onlineSessions.get("/mine", async (req, res) => {
     for (const date of [...dates].sort()) {
       const paidMine = bs.filter((b) => bookingJoinable(b, date));
       const unpaidMine = bs.filter((b) => bookingAwaitingPayOnline(b, date));
-      const paid = paidMine.length > 0;
-      const mine = paid ? paidMine : unpaidMine;
+      // A family with a PAID booking and an UNPAID one (another child, bank transfer) for the same session sees BOTH: the paid child can join,
+      // the unpaid one is told to pay. (It used to list only the paid ones and silently drop the other child.)
+      const groups: { paid: boolean; mine: Booking[] }[] = [];
+      if (paidMine.length) groups.push({ paid: true, mine: paidMine });
+      if (unpaidMine.length) groups.push({ paid: false, mine: unpaidMine });
+      for (const { paid, mine } of groups) {
       const rows = mine.flatMap((b) => registerRows(b, date).filter((r) => r.expected));
       const sess = (await sessionsCol.doc(sessionId(lid, date)).get()).data() as SessionDoc | undefined;
       const t = sess ? { startsAt: new Date(sess.startsAt), durationMins: sess.durationMins } : await sessionTimes(listing, date, mine[0]?.timing);
@@ -166,6 +170,7 @@ onlineSessions.get("/mine", async (req, res) => {
         ...(own && !listing.ownLink ? { noLink: true } : {}),
       });
       if (sess && paid) void mirrorToHub(listing, date, sess, mine);
+      }
     }
   }
   out.sort((a, b) => String(a.startsAt).localeCompare(String(b.startsAt)));

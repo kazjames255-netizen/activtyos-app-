@@ -4,7 +4,7 @@
 // and checked against the Dashboard on its own (acceptance d19s1/s2/s7).
 // ─────────────────────────────────────────────────────────────────────────
 import { isOwed, round2, ukMonth } from "./bookingIncome";
-import { collectedNet, isMoneyIn, owedNow, receivedOf } from "../bookings/helpers";
+import { cashReceivedOf, collectedNet, isMoneyIn, owedNow, receivedOf } from "../bookings/helpers";
 import type { Booking } from "../bookings/types";
 import { ACT_C, money, colorFor } from "./finance-kit";
 
@@ -212,7 +212,9 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
   const CARD_FEE = (gross: number) => gross * 0.014 + 0.2;
   const cardEvents: { gross: number; net: number; at: string }[] = [];
   for (const b of all) {
-    const gross = isCardBooking(b) ? receivedOf(b) : Math.max(0, Math.min(b.cardPaid ?? 0, receivedOf(b)));
+    // CARD money only: the wallet credit a family spent on the booking never touched the payout account (it was counted as card money, so the
+    // "on the way / est. net" figures were overstated by every pound of store credit).
+    const gross = isCardBooking(b) ? cashReceivedOf(b) : Math.max(0, Math.min(b.cardPaid ?? 0, cashReceivedOf(b)));
     if (gross <= 0) continue;
     const c = b.cancel;
     const backToCard = c?.refundVia === "card" ? Math.max(0, (b.refundedApproved ?? c.amount ?? 0) - (b.walletRefunded ?? 0)) : 0;
