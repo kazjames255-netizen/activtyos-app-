@@ -148,7 +148,7 @@ test("ME-001 confirmed: home-visit booking says 'We'll come to you' and labels t
   const s = bookingConfirmedSpec(b, PROVIDER);
   assert.match(s.body, /We'll come to you!/);
   assert.doesNotMatch(s.body, /See you there/);
-  assert.match(text(render(s, b, { location: "5 Elm Rd, LS1 1AA", homeVisit: true })), /We'll come to you at\s+5 Elm Rd, LS1 1AA/);
+  assert.match(text(render(s, b, { location: "5 Elm Rd, LS1 1AA", homeVisit: true })), /At your home\s+5 Elm Rd, LS1 1AA/);
 });
 
 test("ME-001 confirmed: bank-transfer details (reference + amount) appear when supplied", () => {
