@@ -31,7 +31,6 @@ import {
   paymentLinkSpec,
   paymentReceivedSpec,
   placeOfferedSpec,
-  offerExpiredSpec,
   refundApprovedSpec, waitlistJoinedSpec, offerExpiredSpec,
   requestReceivedSpec,
   type CustomerEmailSpec,
