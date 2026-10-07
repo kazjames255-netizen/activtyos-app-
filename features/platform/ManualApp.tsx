@@ -4,12 +4,11 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type CSSPrope
 import { createPortal } from "react-dom";
 import { Card } from "@/components/ui";
 import { ManualLegal } from "./ManualLegal";
-import { ManualPilot } from "./ManualPilot";
 
 /**
  * platform/manual — the HQ manual. Content-array driven: add a page by pushing another entry onto MANUAL_PAGES.
  * English only (internal team doc). Colours come from the app's CSS variables; tints are mixed from the surface so
- * they read in light and dark. Screenshots live in /public/manual/onboarding (taken from the real app, brand-neutral).
+ * they read in light and dark. Screenshots live in /public/manual/onboarding (taken from the real app, brand-neutral); card-hold screenshots in /public/manual/hold.
  * The page never names the product: it says "the platform".
  */
 
@@ -272,12 +271,18 @@ function EmailsTable() {
   const rows: { who: string; c: string; what: string; when: string }[] = [
     { who: "Parent", c: C.block, what: "Booking confirmed", when: "Straight after booking, for bank transfer, cash, free and voucher bookings. Bank transfer shows the provider's bank details and the booking reference. NOT sent for a card booking." },
     { who: "Parent", c: C.block, what: "Payment received", when: "Card: once the card has gone through (this is the only confirmation, nothing is sent before it). Bank transfer: when the provider presses Mark paid." },
+    { who: "Parent", c: C.block, what: "We've got your booking request (card held)", when: "Manual-approval listing paid by card, sent once the card has been put on hold. It says: your card has NOT been charged, the amount is held, the payment is taken only if the provider approves, and if they decline or don't reply within 7 days the hold is released and you pay nothing." },
+    { who: "Parent", c: C.block, what: "Booking approved and payment received", when: "When the provider approves a held booking. ONE message (email and bell): the booking is approved and the held amount has now been taken. No separate \"You're booked in\" email and no second receipt." },
+    { who: "Parent", c: C.block, what: "Your booking request was declined", when: "When the provider declines. For a held card it says: nothing was taken from your account, the held amount has been released, and the bank may keep showing it as pending for a few days before it disappears. Any message the provider typed is included." },
     { who: "Parent", c: C.block, what: "Waiting list", when: "When they join the waiting list. Nothing is charged while they wait." },
     { who: "Parent", c: C.block, what: "A place is yours", when: "When a place opens for them: held for 2 hours, with one Accept and pay button. They pay only if they accept." },
     { who: "Parent", c: C.block, what: "Sorry, you missed out", when: "If the 2 hours run out. They are put back on the waiting list automatically (at the back of the queue), nothing charged, and told so." },
     { who: "Parent", c: C.block, what: "Refund approved", when: "When the provider approves a refund (or wallet credit). Declined has its own email." },
     { who: "Parent", c: C.block, what: "Session reminder", when: "Once per booking, before its first booked day. A 30-day camp sends one, not 30. A single-day booking still gets its own." },
     { who: "Provider", c: C.billing, what: "New booking", when: "Each new booking, with every child, allergies and notes. Card bookings say \"awaiting card payment\"; bank transfer says \"awaiting bank transfer payment\", and the booking shows a Pending payment box." },
+    { who: "Provider", c: C.billing, what: "Booking request: approve or decline by [date]", when: "Manual-approval booking with a held card, bell and email, sent once the card is held. It shows the amount held and the deadline (7 days after the card was held) and warns: if you have not answered by then, Stripe cancels the hold, nothing is taken and the booking is cancelled automatically." },
+    { who: "Provider", c: C.billing, what: "Last chance to answer", when: "One reminder, bell and email, when about 48 hours are left to approve or decline a held booking." },
+    { who: "Provider", c: C.billing, what: "Request expired", when: "Bell only, when a held booking ran out of time and was cancelled automatically." },
     { who: "Provider", c: C.billing, what: "A place has opened up", when: "Manual waiting list only: when a cancellation frees a place and a family is waiting. Bell and email, linking to that booking and its Offer place button. Can be switched off in Setup, Email, Automatic emails, with a warning that you must then check the list yourself. An Automatic waiting list offers the place itself and needs no alert." },
     { who: "Provider", c: C.billing, what: "Cancellation request", when: "When a parent cancels. Short wording: the refund asked for, where it goes, and only the parent's own reason." },
     { who: "Provider", c: C.billing, what: "Moved their dates", when: "When a parent moves their own dates (if the setting is on)." },
@@ -694,6 +699,25 @@ function Page1() {
           { k: "Confirmed, Paid, Reconciled", v: "Three different things, shown on the right. Confirmed is the place. Paid is the money. Reconciled is someone matching it to a real payment." },
         ]} />
 
+      <Stage n="7e" color={C.billing} title="Manual approval and card holds" tag="Money does not leave the parent until you approve"
+        shots={[
+          { src: "/manual/hold/01-request-received-page", alt: "What the parent sees after booking", caption: "The parent's confirmation: Request received, and a green box saying the card is held and nothing has been charged." },
+          { src: "/manual/hold/03-request-received-email", alt: "Request received email (to the parent)", caption: "The email the parent gets once the card is held: your card has not been charged, and what happens if the provider declines or does not reply." },
+          { src: "/manual/hold/02-provider-bell", alt: "The provider's bell", caption: "The provider's bell and email: the amount held and the deadline, with the warning that Stripe cancels the hold and the booking if nobody answers." },
+        ]}
+        facts={[
+          { k: "Which bookings", v: "A listing set to Manual approval (Setup step: Booking approval), paid by card. A booking can also need approval on an auto-confirm listing, for example a child outside the age range: the same card hold applies. Bank transfer, cash, vouchers and free places are unchanged." },
+          { k: "1 · Parent books", v: "A card form opens straight away with a yellow note: the card is held, not charged. The button says Hold £X on my card. Nothing is taken. The place is kept while the request waits." },
+          { k: "2 · Provider is told", v: "Only once the card is really held. A bell and email say who, how much is held, and the deadline: approve or decline within 7 days. Until the card is entered the booking shows Waiting for card and cannot be approved." },
+          { k: "3a · Provider approves", v: "The payment is taken from the held card, the booking becomes Confirmed and Paid, and the parent gets ONE message: booking approved and payment received. If Stripe says the hold has expired, nothing is taken and the booking goes back to Approval needed with a clear error." },
+          { k: "3b · Provider declines or cancels", v: "The hold is released. Nothing is taken. The parent's email says nothing was taken from their account, and that their bank may show it as pending for a few days. A parent who cancels while it is held releases it too." },
+          { k: "3c · Nobody answers", v: "Stripe only keeps a card hold for about 7 days. The provider gets a reminder with about 48 hours left. After that the hold is cancelled, no money moves, the booking is declined automatically, the place is freed and the family is told." },
+          { k: "Card never entered", v: "If the family never enters their card, the request is cancelled automatically after 24 hours. It is never shown as approvable in the meantime." },
+          { k: "Two children, one card", v: "One basket is one card and one hold, with one booking row per child. Approving takes the amount for the booking you approve. Stripe can only take a held payment once, so any other child still waiting loses the hold: when you approve that child later, the family pays the ordinary way (a pay link). Approve both together (or use bulk approve) to take everything in one go." },
+          { k: "What you see on Bookings", v: "The status shows Approval needed with a Card held badge (or Waiting for card), and a yellow box with the amount and the deadline. Mark paid and Resend invoice are hidden while a card is held, because the payment is taken when you press Approve. Mark paid is also refused by the server for a held booking." },
+          { k: "In Stripe", v: "A held card shows as Uncaptured, then Succeeded after approval. A declined or expired hold shows as Canceled with a net of £0.00. The payment lands in the provider's own Stripe account, so Stripe fees apply as normal on approval." },
+        ]} />
+
       <Stage n="8b" color={C.cancel} title="Cancellations and refunds" tag="Parent cancels · provider approves"
         visual={<RefundRoutes />}
         facts={[
@@ -746,7 +770,7 @@ function Page1() {
         <Lede>The day 1, 3 and 5 emails go to freelancer and company owners in their first six days. Every one checks at send time and is skipped if the provider has already done the thing, so a reminder never arrives after the action it reminds about, and the series stops once a listing is live. Each has an unsubscribe link; billing emails are always sent.</Lede>
         <Card className="p-4"><EmailTimeline /></Card>
         <H2>Which emails parents and providers get</H2>
-        <Lede>All sent in the provider&apos;s name. A card booking is never confirmed by email before the card has gone through.</Lede>
+        <Lede>All sent in the provider&apos;s name. A card booking is never confirmed by email before the card has gone through, and a held card is never described as paid: the parent is told it is held, not charged, until the provider approves.</Lede>
         <EmailsTable />
         <div className="h-4" />
         <H2>What the emails look like</H2>
@@ -779,7 +803,6 @@ function Page1() {
 const MANUAL_PAGES: { id: string; label: string; render: () => ReactNode }[] = [
   { id: "provider-onboarding", label: "Page 1 · Provider onboarding", render: () => <Page1 /> },
   { id: "legal", label: "Page 2 · Legal documents", render: () => <ManualLegal /> },
-  { id: "pilot", label: "Page 3 · Pilot: first real bookings", render: () => <ManualPilot /> },
 ];
 
 export function ManualApp() {
