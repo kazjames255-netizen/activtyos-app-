@@ -1,7 +1,7 @@
 import { Router, type Request } from "express";
 import { personRuleProblem } from "../lib/discountRules";
 import { gateAppliesOnPublish } from "../../../lib/billingRules";
-import { withoutBaseAddress, touchesCapacity, withHomeTenant, homeVisitVisibility } from "../lib/publicListing";
+import { withoutBaseAddress, touchesCapacity, withHomeTenant, homeVisitVisibility, directLinkHiddenByArea } from "../lib/publicListing";
 import { coverageVerdict, type CoverageArea } from "../lib/coverageArea";
 import { z } from "zod";
 import { db } from "../firebase";
@@ -356,6 +356,23 @@ listings.get("/:id", async (req, res) => {
     return;
   }
 
+  // A home-visit listing the signed-in family's saved postcode is OUTSIDE of does not exist for them: the same 404 as a missing listing, on every
+  // route to it (direct link, /book page, QR, quick book). Signed out, or postcode unknown = visible (checkout asks, and refuses an uncovered one).
+  // A family that already booked it keeps access to its details.
+  if (!own && req.user?.uid && (l.deliveryMode === "home-visit" || l.deliveryMode === "both") && l.coverageArea) {
+    const pc = ((await db.collection("users").doc(req.user.uid).get()).get("postcode") as string | undefined) ?? "";
+    if (pc.trim()) {
+      const covered = await coverageVerdict(l.coverageArea as CoverageArea, pc);
+      const hasBooking = covered === false && !!req.user.email
+        ? !(await db.collection("bookings").where("email", "==", req.user.email).where("listingId", "==", snap.id).limit(1).get()).empty
+        : false;
+      if (directLinkHiddenByArea(l.deliveryMode as string, covered, hasBooking)) {
+        res.status(404).json({ error: "Listing not found" });
+        return;
+      }
+    }
+  }
+
   const [joined] = await withBlocks([{ id: snap.id, data: l }]);
 
   // Block-bundle pricing (passes × timings), resolved server-side.
@@ -438,16 +455,7 @@ listings.get("/:id", async (req, res) => {
     const pols = ((await loadSettings(l.tenantId as string, (l.franchiseId as string | null | undefined) ?? null)).cancellationPolicies ?? []) as NamedPolicy[];
     cancellation = policyWording(policyById(pols, l.cancellationPolicyId as string | undefined) ?? DEFAULT_POLICY);
   } catch { /* keep whatever the listing stored */ }
-  // The direct link still opens (a signed-out visitor, or a family whose postcode we don't know, is unaffected) but tells a signed-in family whose
-  // saved postcode is OUTSIDE the provider's area so the page can say so instead of letting them go through checkout to be refused.
-  let areaFlag: { outOfArea?: true; homeVisitAvailable?: false } = {};
-  if (!own && req.user?.uid && (l.deliveryMode === "home-visit" || l.deliveryMode === "both") && l.coverageArea) {
-    const pc = ((await db.collection("users").doc(req.user.uid).get()).get("postcode") as string | undefined) ?? "";
-    const v = homeVisitVisibility(l.deliveryMode as string, await coverageVerdict(l.coverageArea as CoverageArea, pc));
-    if (v === "hide") areaFlag = { outOfArea: true };
-    else if (v === "venue-only") areaFlag = { homeVisitAvailable: false };
-  }
-  res.json({ ...areaFlag, ...(own ? joined : withoutBaseAddress(joined)), tenantName: providerName || joined.tenantName, ...(cancellation ? { cancellation } : {}), bundle, library, mealMenus, ...(earlyUsed ? { earlyFixedUsed: true, earlyFixedRef: earlyUsed.ref, earlyFixedUnpaid: earlyUsed.unpaid } : {}) });
+  res.json({ ...(own ? joined : withoutBaseAddress(joined)), tenantName: providerName || joined.tenantName, ...(cancellation ? { cancellation } : {}), bundle, library, mealMenus, ...(earlyUsed ? { earlyFixedUsed: true, earlyFixedRef: earlyUsed.ref, earlyFixedUnpaid: earlyUsed.unpaid } : {}) });
 });
 
 // Operators manage their own tenant's listings. (Bookings keep a denormalised

@@ -29,9 +29,17 @@ export function withHomeTenant(allowed: Set<string>, home: string | undefined | 
  *  because checkout asks for the postcode and refuses an uncovered one.
  *   - a venue listing is unaffected;
  *   - a home-visit-only listing outside the area is hidden altogether;
- *   - a "both" listing outside the area stays (the venue still works) but the home-visit option is switched off. */
+ *   - a "both" listing is hidden too: booking one always needs the family's postcode inside the area (there is no separate venue-only booking
+ *     path), so showing it outside the area would only end in a refusal at checkout. */
 export function homeVisitVisibility(deliveryMode: string | undefined | null, covered: boolean | null): "show" | "hide" | "venue-only" {
   if (deliveryMode !== "home-visit" && deliveryMode !== "both") return "show";
   if (covered !== false) return "show";
-  return deliveryMode === "home-visit" ? "hide" : "venue-only";
+  return "hide";
+}
+
+/** Should the DIRECT LINK (GET /api/listings/:id, the /book page, QR, quick book) answer "not found" for this family?
+ *  Yes when the listing is hidden from them by area. One exception: a family that ALREADY has a booking on it keeps being able to open it
+ *  (their own booking details read the listing), even if they have since moved. The answer is the same 404 as a missing listing: it never says why. */
+export function directLinkHiddenByArea(deliveryMode: string | undefined | null, covered: boolean | null, hasBooking: boolean): boolean {
+  return homeVisitVisibility(deliveryMode, covered) === "hide" && !hasBooking;
 }
