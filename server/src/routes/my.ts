@@ -2841,6 +2841,9 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
         b.cancel.refund = total >= (paid || 0) && paid > 0 ? "full" : total > 0 ? "partial" : "none";
         if (policyReason) b.cancel.msg = `${b.cancel.msg} (${policyReason})`;
       }
+      // Nothing was paid, so there is nothing to refund: "pending" would put an "Approve refund" button (and a Refunds-tab count)
+      // on a booking the same screen calls "nothing owed".
+      if (b.cancel && paid <= 0 && pendingBefore === 0 && creditNote === 0) b.cancel.refund = "none";
       if (parsed.data.refundPref && b.cancel) b.cancel.refundTo = parsed.data.refundPref;
       // A bank-transfer booking has no card to refund to: the provider needs the family's account details to pay it back.
       if (b.cancel && isBankMethod(b.method) && !b.voucherScheme && (b.cancel.amount ?? 0) > 0 && b.cancel.refundTo !== "wallet") {
