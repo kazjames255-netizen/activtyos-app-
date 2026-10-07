@@ -19,6 +19,7 @@ import { mealDayPlan, dishesForDay, type MealPlanValue } from "@/features/meals/
 import { useBooking, useOpensAt, type BasketItem } from "./booking";
 import { LOW_LEFT, blockOn, capacityNote } from "./capacity";
 import { useTenantSettings, useSettings, detailsForListing, DEFAULT_SETTINGS } from "@/lib/settings";
+import { providerBrand } from "@/lib/placeholderName";
 import { MatchedThemes } from "./MatchedThemes";
 import { brandFromSettings } from "@/features/setup/BrandColours";
 import { policyWording, type NamedPolicy } from "@/lib/cancellation";
@@ -1241,6 +1242,9 @@ export function BookingOnly({ listing, onBook, bookState, mode = "operator", the
 
 // Standalone customer-page preview (for the "View" action on the Listings tab).
 export function ListingPreview({ draft, local, runs }: { draft: WizardDraft; local: LocalState; runs?: RunBlock[] }) {
+  const tr0 = useT();
+  const { settings: lpSettings, publicName: lpPublicName } = useTenantSettings();
+  const lpBrand = providerBrand({ publicName: lpPublicName, providerName: lpSettings.providerName, businessName: lpSettings.billing?.businessName });
   const blocks = useBlocks();
   const [theme, setTheme] = useState<PageTheme>(resolveTheme(draft.pageStyle));
   const norm = (arr: unknown) => ((arr as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
@@ -1248,7 +1252,7 @@ export function ListingPreview({ draft, local, runs }: { draft: WizardDraft; loc
   const venue = local.venues.find((v) => v.id === draft.venueId) || null;
   const booking = withoutHiddenPasses(blockBooking(blocks, draft.blockId), d2.ticketOverrides);
   const addons = local.addons.filter((a) => draft.addonIds.includes(a.id));
-  return <ParentPreview d={d2} venue={venue} local={local} booking={booking} addons={addons} blocks={runs} theme={theme} onTheme={setTheme} full />;
+  return <ParentPreview d={d2} venue={venue} local={local} booking={booking} addons={addons} blocks={runs} theme={theme} onTheme={setTheme} brand={lpBrand.placeholder ? tr0("p8lst.brandYourBusiness") : lpBrand.name} full />;
 }
 
 async function fileToImage(file: File): Promise<string> {
@@ -1289,6 +1293,9 @@ export function ListingWizard({
 }) {
   const tr = useT();
   const { locale: loc } = useI18n();
+  // The name parents will see on this provider's page (Setup > Display name, then business name): NOT the sign-in account's own name.
+  const { settings: pbSettings, publicName: pbPublicName } = useTenantSettings();
+  const previewBrand = providerBrand({ publicName: pbPublicName, providerName: pbSettings.providerName, businessName: pbSettings.billing?.businessName });
   const [d, setD] = useState<WizardDraft>(() => {
     const norm = (arr: unknown) =>
       ((arr as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
@@ -1503,7 +1510,10 @@ export function ListingWizard({
     if (await syncApi("live")) { setGoLiveOpen(false); onSaved(); setPublishedId(savedIdRef.current ?? d.id ?? null); }
   };
 
-  const previewProps = { d, venue, local, booking, addons, theme: resolveTheme(d.pageStyle), onTheme: (t: PageTheme) => upd({ pageStyle: t }) };
+  const brandPrompt = previewBrand.placeholder ? (
+    <a href={`/${typeof window !== "undefined" ? window.location.pathname.split("/")[1] || "company" : "company"}/setup`} className="text-[11px] font-bold underline" style={{ color: "#ffd36a" }}>{tr("p8lst.brandSetName")}</a>
+  ) : undefined;
+  const previewProps = { d, venue, local, booking, addons, theme: resolveTheme(d.pageStyle), onTheme: (t: PageTheme) => upd({ pageStyle: t }), brand: previewBrand.placeholder ? tr("p8lst.brandYourBusiness") : previewBrand.name, topRight: brandPrompt };
   const stepKey = STEPS[step].key;
 
   return (
@@ -3519,8 +3529,8 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
 
 // ── Live parent preview — mirrors the manual's customer storefront ─────────
 function myBrand() {
-  const u = firebaseAuth.currentUser;
-  return u?.displayName || (u?.email ? u.email.split("@")[0] : "") || "Your business";
+  // Kept as a last resort only: never a login-ish name such as "support" or an email's local part.
+  return "Your business";
 }
 /**
  * Scheduled open (step 11). The listing stays browsable — only booking is held

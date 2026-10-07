@@ -1603,7 +1603,7 @@ export function heldForReview(qs: ChildQuestion[], answers?: Record<string, stri
 
 export const answerKey = (q: ChildQuestion): string => q.id;
 
-type LibraryShape = { settings?: Partial<TenantSettings>; childQuestions?: ChildQuestion[] };
+type LibraryShape = { settings?: Partial<TenantSettings>; childQuestions?: ChildQuestion[]; /** The name families see for this provider (server-resolved). */ publicName?: string };
 
 export interface SettingsState {
   settings: TenantSettings;
@@ -1734,8 +1734,8 @@ export function useSettings(): SettingsState {
  * Falls back to the defaults on any error: a parent must never be blocked from
  * booking because a settings fetch failed.
  */
-export function useTenantSettings(tenantId?: string, listingId?: string): { settings: TenantSettings; questions: ChildQuestion[]; ready: boolean } {
-  const [state, setState] = useState<{ settings: TenantSettings; questions: ChildQuestion[]; ready: boolean }>({
+export function useTenantSettings(tenantId?: string, listingId?: string): { settings: TenantSettings; questions: ChildQuestion[]; ready: boolean; publicName?: string } {
+  const [state, setState] = useState<{ settings: TenantSettings; questions: ChildQuestion[]; ready: boolean; publicName?: string }>({
     settings: DEFAULT_SETTINGS,
     questions: SEEDED_QUESTIONS,
     ready: false,
@@ -1749,6 +1749,7 @@ export function useTenantSettings(tenantId?: string, listingId?: string): { sett
         settings: withDefaults(lib?.settings),
         questions: lib?.childQuestions ?? SEEDED_QUESTIONS,
         ready: true,
+        publicName: lib?.publicName,
       });
     };
     const publicRead = () =>

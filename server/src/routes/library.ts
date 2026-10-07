@@ -1,3 +1,4 @@
+import { displayNameFallback } from "../lib/directoryRules";
 import { isPayrollAdmin } from "./payroll";
 import { Router } from "express";
 import { db } from "../firebase";
@@ -58,6 +59,13 @@ function libDocId(auth: { role: string; tenantId: string | null; franchiseId: st
 }
 
 // GET /api/library — any member of the tenant (staff included).
+async function publicNameFor(tenantId: string, settings?: { providerName?: string; billing?: { businessName?: string } }): Promise<string> {
+  try {
+    const t = await db.collection("tenants").doc(tenantId).get();
+    return displayNameFallback(settings, t.get("name") as string | undefined);
+  } catch { return displayNameFallback(settings, undefined); }
+}
+
 library.get("/", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId) {
@@ -83,10 +91,13 @@ library.get("/", async (req, res) => {
   const billing = (data?.settings as { billing?: Record<string, unknown> } | undefined)?.billing;
   if (data && auth.role === "staff" && billing) {
     const { bankName: _b, accountName: _a, sortCode: _s, accountNumber: _n, ...rest } = billing;
-    res.json({ ...data, settings: { ...data.settings, billing: rest } });
+    res.json({ ...data, settings: { ...data.settings, billing: rest }, publicName: auth.tenantId ? await publicNameFor(auth.tenantId, data.settings as { providerName?: string; billing?: { businessName?: string } }) : "" });
     return;
   }
-  res.json(data);
+  // The name parents see for this provider (Setup > Display name, then business name, then the tenant name): the web app's previews use it
+  // instead of the signed-in account's own name ("support").
+  const publicName = auth.tenantId ? await publicNameFor(auth.tenantId, data?.settings as { providerName?: string; billing?: { businessName?: string } } | undefined) : "";
+  res.json(data ? { ...data, publicName } : data);
 });
 
 // PUT /api/library — replace the whole library (operators only).
