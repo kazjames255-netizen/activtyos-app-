@@ -45,6 +45,7 @@ export const QUESTIONS: string[] = [
   "will parents see that my listing is online or at their home",
   "can parents filter the browse page to only online or at-home activities",
   "do parents have to give their full address with a house number when they sign up",
+  "will I get a notification when a family has paid by card after I got the awaiting card payment one",
   "can parents tell me how to find their house or where to park",
   "how long till money arrives in my bank",
   "what do I need to go live",

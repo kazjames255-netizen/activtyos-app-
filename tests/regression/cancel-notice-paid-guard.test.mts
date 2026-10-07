@@ -23,7 +23,8 @@ test("cancellation notice: subject, child, date and the money in one sentence", 
   assert.match(m.body, /Jack/);
   assert.match(m.body, /Mon 26 Oct 2026/);
   assert.match(m.body, /refund of £40\.00 is pending/);
-  assert.match(m.bell.title, /^October half term cancelled · £40\.00 refund pending$/);
+  assert.equal(m.bell.title, "Booking cancelled · APF-9");
+  assert.match(m.bell.body, /October half term · Jack · .* — APF cancelled this booking\. £40\.00 refund pending\./);
 });
 
 test("money line covers wallet credit, nothing owed and no refund per policy", () => {

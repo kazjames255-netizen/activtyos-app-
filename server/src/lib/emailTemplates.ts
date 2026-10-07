@@ -251,6 +251,13 @@ export function cancelMoneyLine(b: Booking, providerName: string, paid: number):
   return { full: "Nothing was paid, so nothing is owed.", short: "nothing owed" };
 }
 
+/** The parent's bell line for a cancellation: says plainly WHAT happened (title: 'Booking cancelled · <ref>'), then the listing, child, date, who cancelled and the money. */
+export function cancelBell(b: Pick<Booking, "ref" | "listing">, providerName: string, by: "provider" | "family", kids: string, when: string, moneyShort: string): { title: string; body: string } {
+  const who = by === "family" ? "You cancelled this booking" : `${providerName} cancelled this booking`;
+  const money = moneyShort ? ` ${moneyShort.charAt(0).toUpperCase()}${moneyShort.slice(1)}.` : "";
+  return { title: `Booking cancelled · ${b.ref}`, body: `${b.listing}${kids ? ` · ${kids}` : ""}${when ? ` · ${when}` : ""} — ${who}.${money}` };
+}
+
 /** The family's "your booking is cancelled" notice (email + a one-line bell). Sent once, when the booking flips to Cancelled. */
 export function bookingCancelledSpec(
   b: Booking,
@@ -266,7 +273,7 @@ export function bookingCancelledSpec(
     title: "Your booking is cancelled",
     body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${who} the booking for <b>${escapeHtml(kids)}</b> on <b>${escapeHtml(b.listing)}</b> (${escapeHtml(b.dates || when)}).</p>
      <p style="font-size:14px"><b>Your money:</b> ${escapeHtml(money.full)}</p>`,
-    bell: { title: `${b.listing} cancelled · ${money.short}`, body: when },
+    bell: cancelBell(b, providerName, opts.by, kids, when, money.short),
   };
 }
 

@@ -2,6 +2,8 @@ import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
 import { bookingDocId, notifyPaymentReceived } from "../routes/bookings";
+import { notify } from "./notify";
+import { providerPaidBell } from "./providerPaidBell";
 import { paidSoFar, receivedOf } from "../../../features/bookings/helpers";
 import { balanceOf } from "./payGate";
 import type { Booking } from "../../../features/bookings/types";
@@ -130,6 +132,19 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
   for (const grp of byFamily.values()) {
     await notifyPaymentReceived(claimed.tenantId, grp[0], "card", grp, false, grp.every((x) => confirmedNow.has(x.ref)))
       .catch((e) => console.error(`[settle] payment-received notice for ${grp[0].ref}:`, (e as Error).message));
+    // The provider's bell said 'awaiting card payment' when the family booked: tell them it has now landed.
+    const pb = providerPaidBell(grp, grp.every((x) => confirmedNow.has(x.ref)));
+    void notify({
+      tenantId: claimed.tenantId,
+      to: { kind: "tenant" },
+      category: "billing",
+      key: "booking-new",
+      bellOnly: true,
+      title: pb.title,
+      body: pb.body,
+      href: `/company/bookings?ref=${encodeURIComponent(grp[0].ref)}`,
+      ref: grp[0].ref,
+    });
   }
   return "settled";
 }

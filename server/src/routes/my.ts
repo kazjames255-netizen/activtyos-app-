@@ -2214,7 +2214,7 @@ my.post("/bookings", async (req, res) => {
           category: "booking",
           key: "booking-new",
           ...(waitlisted && !wlPrefs?.waitlistJoinAlert ? { bellOnly: true } : {}),
-          title: waitlisted ? `${firstWord(kids || bookerName)} joined the waiting list` : `${kind} · ${primary.ref} · ${bookerName}`,
+          title: waitlisted ? `${firstWord(kids || bookerName)} joined the waiting list` : `${kind.replace(/\(awaiting card payment\)/, "— place held, waiting for card payment")} · ${primary.ref} · ${bookerName}`,
           body: waitlisted
             ? `${shortWhen(primary)} · ${listing.name}`
             : `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(input.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,

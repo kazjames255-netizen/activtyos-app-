@@ -1424,6 +1424,11 @@ bookings.post("/bulk", async (req, res) => {
     res.status(409).json({ error: `Approving these would put ${updated.block} ${updated.over} place${updated.over === 1 ? "" : "s"} over capacity — approve fewer, or waitlist the rest.`, code: "over_capacity", over: updated.over });
     return;
   }
+  // A bulk cancel is still a provider cancellation: each family hears about it once (email + bell), like a single cancel.
+  if (action === "cancel") {
+    const nm = ((await db.collection("tenants").doc(updated[0]?.tenantId ?? "none").get()).get("name") as string) || "Your activity provider";
+    for (const b of updated) if (b.status === "Cancelled") notifyFamilyCancelled(b, nm, "provider");
+  }
   // Card holds (manual approval): approving takes the held payments, declining / cancelling releases them.
   if (action === "approve") {
     const toTake = updated.filter((b) => b.status === "Confirmed" && b.cardHold?.state === "held");
