@@ -238,9 +238,22 @@ export function refundApprovedSpec(b: Booking, providerName: string): CustomerEm
         // A voucher / Tax-Free Childcare / cash booking: the app can't send it
         // back, and it was never on a card — don't say it's going there.
         ? `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved the refund for this booking${amt ? ` (<b>${amt}</b>)` : ""}.
-           ${b.voucherScheme ? `It will be returned through <b>${escapeHtml(b.voucherScheme)}</b>, the way you paid.` : "They'll return it the way you paid."} If you have questions, reply to this email.</p>`
+           ${b.voucherScheme ? `It will be returned through <b>${escapeHtml(b.voucherScheme)}</b>, the way you paid.` : /bank|transfer|bacs/i.test(b.method ?? "") ? `${escapeHtml(providerName)} will send it to you <b>by bank transfer</b>. We'll email you again as soon as it has been sent.` : "They'll return it the way you paid."} If you have questions, reply to this email.</p>`
         : `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved the refund for this booking.
          ${amt ? `Amount: <b>${amt}</b>. It usually reaches your original payment method within 5–10 working days, depending on your bank.` : ""}</p>`,
+  };
+}
+
+/** The provider confirmed they SENT an offline refund (the app cannot send it): the only message that says it has actually been sent. */
+export function refundSentSpec(b: Booking, providerName: string): CustomerEmailSpec {
+  const amt = b.cancel?.amount ? gbp(b.cancel.amount) : "";
+  const on = b.cancel?.refundSentAt ? new Date(b.cancel.refundSentAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/London" }) : "";
+  const how = b.voucherScheme ? `through <b>${escapeHtml(b.voucherScheme)}</b>` : /bank|transfer|bacs/i.test(b.method ?? "") ? "<b>by bank transfer</b>" : "the way you paid";
+  return {
+    subject: `Your refund has been sent — ${b.listing}`,
+    title: "Your refund has been sent",
+    body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has sent your refund${amt ? ` of <b>${amt}</b>` : ""} ${how}${on ? ` on <b>${escapeHtml(on)}</b>` : ""}.
+       Bank transfers usually arrive the same day, but can take up to 2 working days. If it hasn't arrived by then, reply to this email.</p>`,
   };
 }
 

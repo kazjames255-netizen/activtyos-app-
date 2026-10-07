@@ -21,6 +21,7 @@ import { useT, useWord } from "@/lib/i18n/provider";
 import { BRAND } from "@/lib/i18n/config";
 import { rich } from "./rich";
 import { methodLabel } from "./finI18n";
+import { RefundsToSend } from "./RefundsToSend";
 import { financeFigures, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, payoutRows, type PaymentRecord } from "./financeFigures";
 import { genderSplit, type KidSex } from "./genderSplit";
 
@@ -322,9 +323,9 @@ export function FinanceAnalyticsApp() {
         <div className="flex flex-col gap-4">
           <CollapsibleStats id="finance-overview">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label={t("p8fin.faRevCollected")} icon="💰" grad={GRAD.green} value={money(a.collected)} sub={<>{t("p8fin.faOfBooked", { amount: money(a.booked) })}<Delta pct={a.collectedDelta} /></>} aside={<Ring pct={a.booked ? (a.collected / a.booked) * 100 : 0} label={`${a.booked ? Math.round((a.collected / a.booked) * 100) : 0}%`} />} />
+            <Tile label={t("p8fin.faRevCollected")} icon="💰" grad={GRAD.green} value={money(a.collected)} note={a.refundsAwaiting > 0 ? t("p8lst.rfaCollectedNote", { amt: money(a.refundsAwaiting) }) : undefined} sub={<>{t("p8fin.faOfBooked", { amount: money(a.booked) })}<Delta pct={a.collectedDelta} /></>} aside={<Ring pct={a.booked ? (a.collected / a.booked) * 100 : 0} label={`${a.booked ? Math.round((a.collected / a.booked) * 100) : 0}%`} />} />
             <Tile label={t("p8fin.faOwedToYou")} icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub={a.owed > 0 ? t("p8fin.faOwedNow") : t("p8fin.faAllSettled")} note={t("p8fin.faOwedNote")} />
-            <Tile label={t("p8fin.faRefunds")} icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub={t("p8fin.faRefundsGiven", { n: months })} />
+            <Tile label={t("p8fin.faRefunds")} icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub={t("p8fin.faRefundsGiven", { n: months })} note={a.refundsAwaiting > 0 ? t("p8lst.rfaTileAwait", { amt: money(a.refundsAwaiting) }) : undefined} />
             <Tile label={t("p8fin.faEstNet")} icon="🏦" grad={GRAD.blue} value={money(a.net)} sub={t("p8fin.faAfterFees", { fees: money(a.fees) })} note={t("p8fin.faNoteOverviewNet")} />
           </div>
           </CollapsibleStats>
@@ -356,7 +357,7 @@ export function FinanceAnalyticsApp() {
             <Tile label={t("p8fin.faTotalBooked")} icon="🎫" grad={GRAD.blue} value={money(a.booked)} sub={<><span>{t("p8fin.faMonthValue", { n: months })}</span><Delta pct={a.bookedDelta} /></>} />
             <Tile label={t("p8fin.faCollected")} icon="✅" grad={GRAD.green} value={money(a.collected)} sub={<><span>{t("p8fin.faByDatePaid")}</span><Delta pct={a.collectedDelta} /></>} />
             <Tile label={t("p8fin.recTileOutstanding")} icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.teal} value={money(a.owed)} sub={t("p8fin.faOwedNow")} />
-            <Tile label={t("p8fin.faRefunds")} icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub={t("p8fin.faIssuedPeriod")} />
+            <Tile label={t("p8fin.faRefunds")} icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub={t("p8fin.faIssuedPeriod")} note={a.refundsAwaiting > 0 ? t("p8lst.rfaTileAwait", { amt: money(a.refundsAwaiting) }) : undefined} />
           </div>
           </CollapsibleStats>
           <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">{t("p8fin.faRevenueNote")}</div>
@@ -451,10 +452,11 @@ export function FinanceAnalyticsApp() {
             <Tile label={t("p8fin.faOwedByFamilies")} icon="🧾" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub={t("p8fin.faWheneverBooked")} />
             <Tile label={t("p8fin.faUnpaidInvoices")} icon="📄" grad={GRAD.amber} value={money(invoices?.summary.outstanding ?? 0)} sub={t("p8fin.faNOpen", { n: invoices?.items.filter((i) => i.status === "sent").length ?? 0 })} />
             <Tile label={t("p8fin.faOverdueInvoices")} icon="⏰" grad={GRAD.pink} value={money(invoices?.summary.overdue ?? 0)} sub={t("p8fin.faNPastDue", { n: invoices?.items.filter((i) => i.overdue).length ?? 0 })} />
-            <Tile label={t("p8fin.faRefundsIssued")} icon="↩️" grad={GRAD.violet} value={money(a.refunds)} sub={t("p8fin.faRefundsGiven", { n: months })} />
+            <Tile label={t("p8fin.faRefundsIssued")} icon="↩️" grad={GRAD.violet} value={money(a.refunds)} sub={t("p8fin.faRefundsGiven", { n: months })} note={a.refundsAwaiting > 0 ? t("p8lst.rfaTileAwait", { amt: money(a.refundsAwaiting) }) : undefined} />
           </div>
           </CollapsibleStats>
           <WalletOwedCard />
+          <RefundsToSend rows={a.refundsToSend} onSent={load} />
           <Panel title={t("p8fin.faWhoOwes")} right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{t("p8fin.faBookingsOwed", { n: a.owing.length, amount: money(a.owed) })}</span>}>
             {a.owing.length ? (
               <div className="flex flex-col divide-y divide-[var(--line)]">

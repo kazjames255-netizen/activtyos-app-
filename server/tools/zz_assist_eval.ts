@@ -47,6 +47,8 @@ export const QUESTIONS: string[] = [
   "why does awaiting payment say all paid up when someone owes me money",
   "how do I hide refunded bookings in reconciliation",
   "can I run a week now and another week in six months without creating all the weeks in between",
+  "I approved a refund for a bank transfer booking but I have not sent the money yet, what does the booking say",
+  "where do I see the refunds I still need to send to families",
   "how do I see which children are coming next week in my bookings list",
   "will parents see that my listing is online or at their home",
   "why does my gender split say no gender recorded and how do families add it",

@@ -4,7 +4,7 @@
 // and checked against the Dashboard on its own (acceptance d19s1/s2/s7).
 // ─────────────────────────────────────────────────────────────────────────
 import { isOwed, round2, ukMonth } from "./bookingIncome";
-import { cashReceivedOf, collectedNet, isMoneyIn, owedNow, receivedOf } from "../bookings/helpers";
+import { cashReceivedOf, collectedNet, isMoneyIn, owedNow, receivedOf, refundAwaitingTransfer, refundTransferAmount } from "../bookings/helpers";
 import type { Booking } from "../bookings/types";
 import { ACT_C, money, colorFor } from "./finance-kit";
 
@@ -193,6 +193,10 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
   const learnersInWin = new Set<string>();
   const ages: number[] = [];
   const owing: { ref: string; name: string; email: string; listing: string; owed: number; when: string; reminders: { count: number; lastAt: string } | null }[] = [];
+  // Offline refunds (bank transfer / cash / voucher) the provider has RECORDED but not yet sent: money still owed back to families.
+  // `refundsAwaiting` is the part of the windowed Refunds figure that has not actually been transferred yet.
+  const refundsToSend: { ref: string; name: string; listing: string; amount: number; since: string; method: string }[] = [];
+  let refundsAwaiting = 0;
   let booked = 0, collected = 0, refunds = 0, owed = 0, paidBookings = 0, paidSessions = 0, freeSessions = 0;
   let prevCollected = 0, prevBooked = 0;
   let newBookers = 0, returningBookers = 0, newLearners = 0, returningLearners = 0;
@@ -209,7 +213,15 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
       if (inWindow.has(pm)) { collectedByMonth[keys.indexOf(pm)].value += amt; col += amt; }
     }
     collected += col;
-    for (const [rm, amt] of refundSplit(b)) if (rm && inWindow.has(rm)) refunds += amt;
+    let refundInWin = 0;
+    for (const [rm, amt] of refundSplit(b)) if (rm && inWindow.has(rm)) { refunds += amt; refundInWin += amt; }
+    if (refundAwaitingTransfer(b)) {
+      const owedBack = round2(refundTransferAmount(b));
+      if (owedBack > 0.004) {
+        refundsAwaiting += Math.min(owedBack, refundInWin);
+        refundsToSend.push({ ref: b.ref, name: b.booker || b.email || "—", listing: b.listing || "", amount: owedBack, since: b.cancel?.refundRecordedAt || b.cancel?.refundedAt || b.cancel?.on || "", method: b.voucherScheme || b.method || "" });
+      }
+    }
     // Owed NOW — the one rule the Dashboard uses too (owedNow, d19s7).
     const o = round2(owedNow(b));
     if (isOwed(o)) { owed += o; owing.push({ ref: b.ref, name: b.booker || b.email || "—", email: b.email || "", listing: b.listing || "", owed: o, when: b.createdAt || b.days?.[0] || "", reminders: b.invoiceResends?.count ? { count: b.invoiceResends.count, lastAt: b.invoiceResends.lastAt } : b.nudges ? { count: b.nudges, lastAt: b.lastNudgedAt ?? "" } : null }); }
@@ -291,7 +303,7 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
   return {
     keys, windowStart,
     bookedByMonth, collectedByMonth,
-    booked, collected, refunds, owed, net: collected - fees, fees,
+    booked, collected, refunds, refundsAwaiting: round2(refundsAwaiting), refundsToSend: refundsToSend.sort((x, y) => x.since.localeCompare(y.since)), owed, net: collected - fees, fees,
     prevCollected, prevBooked, collectedDelta: pctChange(collected, prevCollected), bookedDelta: pctChange(booked, prevBooked),
     inTransit, inBank, cardGross, cardBack, cardNet,
     source: sourceRows.map(([label, value]) => ({ label, value, color: label.startsWith("Childcare") ? GREEN : label === "Card" ? BLUE : colorFor(label) })),

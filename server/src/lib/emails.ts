@@ -14,6 +14,7 @@ import {
   gbp, escapeHtml, layout, bankPayHtml, type BankPayDetails,
   requestReceivedSpec, waitlistJoinedSpec, paymentLinkSpec, bookingConfirmedSpec, bookingDeclinedSpec, addonDecisionSpec,
   refundApprovedSpec,
+  refundSentSpec,
   refundDeclinedSpec, placeOfferedSpec, offerExpiredSpec, paymentReceivedSpec, familyBookingCreatedEmail,
 } from "./emailTemplates";
 import { BRAND } from "./brand";
@@ -458,6 +459,11 @@ export function emailBookingCancelled(b: Booking, providerName: string, m: { sub
 
 export function emailRefundApproved(b: Booking, providerName: string): void {
   const m = refundApprovedSpec(b, providerName);
+  sendCustomerEmail(b, providerName, "payments", m.subject, m.title, m.body, m.enrich);
+}
+
+export function emailRefundSent(b: Booking, providerName: string): void {
+  const m = refundSentSpec(b, providerName);
   sendCustomerEmail(b, providerName, "payments", m.subject, m.title, m.body, m.enrich);
 }
 

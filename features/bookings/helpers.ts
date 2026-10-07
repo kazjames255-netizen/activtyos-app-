@@ -723,6 +723,19 @@ export function refundButtonKind(b: { voucherScheme?: string; method?: string; p
   return dest === "card" ? "bank" : "plain";
 }
 
+/** An approved OFFLINE refund (bank transfer / cash / voucher) the provider has RECORDED but not yet confirmed as sent. Card and wallet refunds are never "awaiting":
+ *  Stripe sends the card refund at once and wallet credit is instant. An older offline refund with no `refundTransfer` counts as awaiting (its ledger row is "to-reimburse"). */
+export function refundAwaitingTransfer(b: { cancel?: { refund?: string; refundVia?: string; refundTransfer?: string } | null }): boolean {
+  const c = b.cancel;
+  return !!c && c.refund === "approved" && c.refundVia === "offline" && c.refundTransfer !== "sent";
+}
+
+/** The money the provider still has to send back for an awaiting offline refund (what was approved, less any wallet credit already returned). */
+export function refundTransferAmount(b: { cancel?: { amount?: number } | null; walletRefunded?: number; refundedApproved?: number }): number {
+  const asked = b.refundedApproved && b.refundedApproved > 0 ? b.refundedApproved : (b.cancel?.amount ?? 0);
+  return Math.round(Math.max(0, asked - (b.walletRefunded ?? 0)) * 100) / 100;
+}
+
 /** A booking's extras as readable lines. With several children on one booking each line says whose it is ("Camp T-shirt (T-shirt size: M) — £12.00 · for Ava"),
  *  because the plain `addons` strings carry no name. Older bookings (no structured lines) fall back to the strings. */
 export function addonLinesFor(b: { addons?: string[]; addonLines?: { child: string; label: string; price: number }[]; kids?: unknown[] }): string[] {

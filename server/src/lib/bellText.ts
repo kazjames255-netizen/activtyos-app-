@@ -23,6 +23,7 @@ export type BellKind =
   | "addon-request"
   | "place-free"
   | "addon-orders";
+  | "refundToSend";
 
 /** One fixed label per kind. Each is at most 20 characters so the reference always fits after it. */
 export const BELL_LABEL: Record<BellKind, string> = {
@@ -41,6 +42,7 @@ export const BELL_LABEL: Record<BellKind, string> = {
   "addon-request": "Extra request",
   "place-free": "Place free",
   "addon-orders": "Add-on orders",
+  "refundToSend": "Refund to send",
 };
 
 /** 'New booking · APF-10334', or 'New booking · APF-10334 +1' when one checkout made several bookings. Never longer than BELL_TITLE_MAX. */

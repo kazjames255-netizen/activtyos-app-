@@ -11,6 +11,8 @@ import { clearSubscriptionCache } from "../middleware/subscription";
 import { AUTO_EMAIL_DEFAULTS, type AutoEmailPrefs } from "./autoEmails";
 import { performEmailSend } from "./emailSend";
 import { isFirstBookedSession } from "./bookingRules";
+import { refundReminderPeriod, REFUND_REMIND_MAX_PER_RUN } from "./refundReminder";
+import { bellBody, bellMoney, bellTitle, paymentType } from "./bellText";
 import { bookingRefOfKey, entryFor, registerRows } from "./registerRows";
 import type { Booking } from "../../../features/bookings/types";
 import { kitNamesSentence, kitReminderKey, kitUnticked, type KitBooking } from "../../../features/bookings/addons";
@@ -1031,6 +1033,40 @@ export async function refundBankPurge(): Promise<void> {
   console.log(`[sweeps] refund-bank-purge deleted ${old.size} unread bank-detail record(s) older than 30 days`);
 }
 
+/** Refunds the provider RECORDED (bank transfer / cash / voucher: the app cannot send them) but has not confirmed as sent. Once a refund has waited 3 days
+ *  (and again every 3 days after) the provider's bell reminds them, so a family is never left waiting for money nobody remembers to send. */
+export async function refundTransferReminders(): Promise<void> {
+  const snap = await db.collection("payments").where("status", "==", "to-reimburse").limit(300).get();
+  const now = Date.now();
+  let sent = 0;
+  for (const d of snap.docs) {
+    if (sent >= REFUND_REMIND_MAX_PER_RUN) break;
+    const p = d.data() as { tenantId?: string; type?: string; refs?: string[]; amount?: number; createdAt?: string };
+    if (p.type !== "refund" || !p.tenantId || !p.createdAt) continue;
+    const period = refundReminderPeriod(p.createdAt, now);
+    if (period == null) continue;
+    const ref = (p.refs ?? [])[0] ?? "";
+    const days = Math.floor((now - Date.parse(p.createdAt)) / 86_400_000);
+    // One reminder per refund per 3-day period (fireOnce keys on the period).
+    const fired = await fireOnce(`refundsend_${d.id}_${period}`, { tenantId: p.tenantId }, () =>
+      notify({
+        tenantId: p.tenantId!,
+        to: { kind: "tenant" },
+        category: "billing",
+        key: "refund-to-send",
+        // The bell is short and fixed (lib/bellText.ts); the long wording lives in the email.
+        title: bellTitle("refundToSend", ref),
+        body: bellBody([paymentType({ method: (p as { method?: string }).method, amount: p.amount ?? 0 }), bellMoney(p.amount ?? 0), `${days} days`]),
+        subject: `Refund to send: ${ref} (£${(p.amount ?? 0).toFixed(2)}, ${days} days)`,
+        emailHtml: `<p>You approved a refund of <b>£${(p.amount ?? 0).toFixed(2)}</b> for booking <b>${esc(ref)}</b> ${days} days ago, but you haven't confirmed you've sent it. Open the booking, send the money (Reveal bank details shows the account for 30 seconds), then press <b>"I've sent the refund"</b>. The family is waiting for it.</p>`,
+        href: `/company/bookings?ref=${encodeURIComponent(ref)}`,
+        ref,
+      }),
+    ).catch((e) => { console.error(`[sweeps] refund-transfer reminder ${d.id}:`, (e as Error).message); return false; });
+    if (fired) sent++;
+  }
+}
+
 export function startSweeps(): void {
   // Every 5 minutes is plenty — the windows are hours wide, not minutes.
   sweep("task-reminders", 5 * 60_000, taskReminders);
@@ -1053,6 +1089,8 @@ export function startSweeps(): void {
   sweep("payment-due", 60 * 60_000, paymentDueReminders);
   // Evening before: add-on items still to prepare (Add-on orders screen / Setup > Notifications "kit-day-before").
   sweep("addon-orders-day-before", 30 * 60_000, addonOrdersDayBefore);
+  // Recorded bank-transfer / cash / voucher refunds still to be sent: remind the provider every 3 days (lib/sweeps.ts refundTransferReminders).
+  sweep("refund-transfer", 6 * 60 * 60_000, refundTransferReminders);
   // Manual-approval card holds: reminder to the provider, lapsed holds declined, never-entered cards cleared (lib/cardHold.ts).
   sweep("card-holds", 15 * 60_000, async () => { const m = await import("./cardHold"); await m.cardHoldSweep(); });
   sweep("review-requests", 6 * 60 * 60_000, reviewRequests);

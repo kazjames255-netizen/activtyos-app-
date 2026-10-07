@@ -1,0 +1,16 @@
+{
+  "chipDetail": true,
+  "sentBtn": true,
+  "revealBtn": true,
+  "nothingToDoShown": false,
+  "listChip": 1,
+  "finUrl": "http://localhost:3025/freelancer/finance",
+  "refundsTileNote": true,
+  "refundsToSendVisible": true,
+  "refundsToSendText": "Familytwo QA · HVQA AH Camp muycxuxk · HVQ-10314\nwaiting 0 days\n£0.15\nView\nI've sent the refund",
+  "approvePanel": "Approve the £0.30 refund?\nThis records the refund and tells Familyone QA it is on its way. It does not send any money: send £0.30 yourself, then press “I've sent the refund”.\nApprove and record\nI've already sent it\nNot yet",
+  "sentPanel": "Have you sent the £0.15 refund?\nThis app can't send bank transfers. Press Yes only once you have sent £0.15 to Familytwo QA from your own account. We'll then tell them it has been sent.\nYes, I've sent it\nNot yet",
+  "greenAfter": "✓ Refunded on 7 Oct 2026 (bank transfer)",
+  "badgeAfter": true,
+  "parentText": null
+}

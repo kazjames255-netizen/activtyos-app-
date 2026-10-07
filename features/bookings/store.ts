@@ -8,6 +8,7 @@ import type { BulkAction, CreateBookingInput, RefundType, ReleaseOpts, RowAction
 export type ConfirmIntent =
   | { kind: "paid" }
   | { kind: "refund-approve" }
+  | { kind: "refund-sent" }
   | { kind: "cancel-child"; ki: number }
   | { kind: "cancel-day"; ki: number; dt: string };
 
@@ -76,7 +77,7 @@ interface BookingsState {
   sendBulkEmail: (subject: string, body: string) => Promise<boolean>;
   open: (ref: string) => void;
   close: () => void;
-  act: (ref: string, action: UiRowAction, reason?: string) => void;
+  act: (ref: string, action: UiRowAction, reason?: string, extra?: { alreadySent?: boolean }) => void;
 
   cancelOpen: (ref: string) => void;
   cancelAbort: (ref: string) => void;
@@ -317,9 +318,9 @@ export const useBookingsStore = create<BookingsState>()(
         });
       },
 
-      act: (ref, action, reason) => {
+      act: (ref, action, reason, extra) => {
         void run(async () => {
-          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: action, ...(reason?.trim() ? { reason: reason.trim() } : {}) }));
+          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: action, ...(reason?.trim() ? { reason: reason.trim() } : {}), ...(extra?.alreadySent ? { alreadySent: true } : {}) }));
           set((s) => void (s.confirm = null));
           if (action === "resend") {
             const b = get().bookings.find((x) => x.ref === ref);

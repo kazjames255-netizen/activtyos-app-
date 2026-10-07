@@ -67,6 +67,14 @@ export interface CancelInfo {
   /** When the approved refund was actually settled (ISO) — `on` is when it
    *  was asked for. Set by the server on approve. */
   refundedAt?: string;
+  /** An OFFLINE refund (bank transfer / cash / voucher) is only RECORDED when the provider approves it: the app cannot move that money.
+   *  "awaiting" = recorded, the provider still has to send it ("Refund recorded - awaiting your transfer"); "sent" = the provider confirmed
+   *  they sent it. Absent on an older offline refund = awaiting (the ledger row is still "to-reimburse"). Card and wallet refunds never set it. */
+  refundTransfer?: "awaiting" | "sent";
+  /** When the offline refund was recorded / confirmed sent (ISO), and who confirmed it. */
+  refundRecordedAt?: string;
+  refundSentAt?: string;
+  refundSentBy?: string;
   /** The last refund attempt failed (e.g. Stripe refused) — the refund went
    *  back to awaiting approval rather than claiming money that never moved. */
   refundError?: string;

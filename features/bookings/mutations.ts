@@ -4,7 +4,7 @@
 // drift. No React/zustand/Firebase imports allowed here.
 
 import type { Booking } from "./types";
-import { bookingKids, kidActiveDays, nowStr, refundableSoFar, refundedTotal, releaseValue, sessionDayLabel } from "./helpers";
+import { bookingKids, kidActiveDays, nowStr, refundAwaitingTransfer, refundableSoFar, refundedTotal, releaseValue, sessionDayLabel } from "./helpers";
 import { accumulatePendingRelease } from "../../lib/cancellation";
 
 export type RowAction =
@@ -15,6 +15,8 @@ export type RowAction =
   | "promote"
   | "refund-approve"
   | "refund-decline"
+  // The provider confirms they have SENT an offline (bank transfer / cash / voucher) refund they had only recorded.
+  | "refund-sent"
   // Approve / deny a parent's pending date-change request. Approve applies the
   // day swaps; both clear the pending flag.
   | "move-approve"
@@ -74,6 +76,8 @@ export function applyRowAction(b: Booking, action: RowAction): void {
   } else if (action === "refund-approve") {
     // Only a refund that actually returns money makes the booking "Refunded" (a no-refund cancellation approved by mistake must not).
     if (b.cancel && b.cancel.refund !== "none" && (b.cancel.amount ?? 1) > 0.004) { b.cancel.refund = "approved"; b.pay = "Refunded"; }
+  } else if (action === "refund-sent") {
+    if (refundAwaitingTransfer(b) && b.cancel) { b.cancel.refundTransfer = "sent"; b.cancel.refundSentAt = nowIso(); }
   } else if (action === "refund-decline") {
     if (b.cancel) b.cancel.refund = "declined";
     if (b.pay === "Refund pending") b.pay = "Paid";
@@ -93,6 +97,16 @@ export function applyRowAction(b: Booking, action: RowAction): void {
   } else if (action === "move-deny") {
     if (b.dateChangeRequest) { b.dateChangeRequest.status = "denied"; b.note = "Date change declined."; }
   }
+}
+
+/** After an approved refund moved the money: an OFFLINE refund (the app cannot send it) is only RECORDED until the provider confirms the transfer;
+ *  `alreadySent` lets a provider who sent it first confirm in one step. Card / wallet refunds are not touched. */
+export function markRefundRecorded(b: Booking, via: "wallet" | "card" | "offline", alreadySent: boolean, by?: string): void {
+  if (!b.cancel || via !== "offline") return;
+  const at = nowIso();
+  b.cancel.refundRecordedAt = at;
+  b.cancel.refundTransfer = alreadySent ? "sent" : "awaiting";
+  if (alreadySent) { b.cancel.refundSentAt = at; if (by) b.cancel.refundSentBy = by; }
 }
 
 export function applyBulkAction(b: Booking, action: BulkAction): void {

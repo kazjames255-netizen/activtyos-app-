@@ -21,6 +21,7 @@ import {
   refundableSoFar,
   refundButtonKind,
   refundOwedOf,
+  refundTransferAmount,
   releaseValue,
   sessionDayLabel,
 } from "./helpers";
@@ -45,6 +46,7 @@ export function MoneyConfirm({ booking }: { booking: Booking }) {
     <div ref={box}>
       {intent.kind === "paid" ? <PaidConfirm booking={booking} />
         : intent.kind === "refund-approve" ? <RefundSentConfirm booking={booking} />
+        : intent.kind === "refund-sent" ? <RefundTransferConfirm booking={booking} />
         : <ReleaseConfirm key={`${intent.kind}-${intent.ki}-${intent.kind === "cancel-day" ? intent.dt : ""}`} booking={booking} ki={intent.ki} dt={intent.kind === "cancel-day" ? intent.dt : undefined} />}
     </div>
   );
@@ -74,6 +76,21 @@ function RefundSentConfirm({ booking: b }: { booking: Booking }) {
   const kind = refundButtonKind(b);
   const amt = money(refundOwedOf(b) || b.cancel?.amount || 0);
   const stripe = kind === "stripe";
+  // A bank transfer / cash / voucher refund cannot be sent by the app: approving only RECORDS it ("awaiting your transfer"); the provider confirms
+  // the transfer afterwards with "I've sent the refund" (or says up front that they already sent it).
+  if (kind !== "stripe" && kind !== "wallet") {
+    return (
+      <div className={shell} data-ui="money-confirm" data-kind="refund-record">
+        <div className={head}>{t("p8lst.rfaApproveHead", { amt })}</div>
+        <div className="mb-3 text-[12px] text-[var(--ink-2)]">{t("p8lst.rfaApproveBody", { amt, name: b.booker })}</div>
+        <div className="flex flex-wrap gap-[7px]">
+          <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>{t("p8lst.rfaApproveYes")}</Button>
+          <Button onClick={() => act(b.ref, "refund-approve", undefined, { alreadySent: true })}>{t("p8lst.rfaApproveSentYes")}</Button>
+          <Button onClick={clear}>{t("p7bd.cfNotYet")}</Button>
+        </div>
+      </div>
+    );
+  }
   const body = kind === "wallet" ? t("p7bd.cfRefWallet", { amt }) : stripe ? t("p7bd.cfRefStripe", { amt }) : t("p7bd.cfRefManual", { amt, name: b.booker });
   return (
     <div className={shell} data-ui="money-confirm" data-kind="refund-sent">
@@ -81,6 +98,24 @@ function RefundSentConfirm({ booking: b }: { booking: Booking }) {
       <div className="mb-3 text-[12px] text-[var(--ink-2)]">{body}</div>
       <div className="flex gap-[7px]">
         <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>{stripe ? t("p7bd.cfRefYesStripe") : t("p7bd.cfRefYes")}</Button>
+        <Button onClick={clear}>{t("p7bd.cfNotYet")}</Button>
+      </div>
+    </div>
+  );
+}
+
+/** The provider confirms they have SENT a recorded offline refund. */
+function RefundTransferConfirm({ booking: b }: { booking: Booking }) {
+  const t = useT();
+  const act = useBookingsStore((s) => s.act);
+  const clear = useBookingsStore((s) => s.clearConfirm);
+  const amt = money(refundTransferAmount(b));
+  return (
+    <div className={shell} data-ui="money-confirm" data-kind="refund-transfer-sent">
+      <div className={head}>{t("p8lst.rfaConfirmHead", { amt })}</div>
+      <div className="mb-3 text-[12px] text-[var(--ink-2)]">{t("p8lst.rfaConfirmBody", { amt, name: b.booker })}</div>
+      <div className="flex gap-[7px]">
+        <Button variant="primary" onClick={() => act(b.ref, "refund-sent")}>{t("p8lst.rfaConfirmYes")}</Button>
         <Button onClick={clear}>{t("p7bd.cfNotYet")}</Button>
       </div>
     </div>

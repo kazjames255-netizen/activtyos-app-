@@ -6,7 +6,7 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useT, useWord, tNow } from "@/lib/i18n/provider";
 import { useSettings } from "@/lib/settings";
-import { bookingDateSummary, isNonCardMethod, money, owedOf, payLabelFor, payTone, refundedTotal } from "@/features/bookings/helpers";
+import { bookingDateSummary, isNonCardMethod, money, owedOf, payLabelFor, payTone, refundAwaitingTransfer, refundedTotal } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { PayModal } from "@/features/payments/PayModal";
 import { downloadReceipts, type ReceiptCtx } from "./paymentReceipt";
@@ -149,14 +149,15 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
     // "Partially refunded" (a released day on a paid booking) is still money paid — it needs its receipt (which nets off the refund).
     const paid = all.filter((b) => b.pay === "Paid" || b.pay === "Funded" || b.pay === "Partially refunded")
       .sort((a, b) => ((a.createdAt ?? "") < (b.createdAt ?? "") ? 1 : -1));
-    const refunds = all.flatMap((b) => (b.refundLog ?? []).map((r) => ({ ...r, ref: b.ref, listing: b.listing })));
+    // An offline refund that is only approved/recorded (not yet sent by the provider) must not read as money already back.
+    const refunds = all.flatMap((b) => (b.refundLog ?? []).map((r) => ({ ...r, ref: b.ref, listing: b.listing, awaiting: refundAwaitingTransfer(b) && /^refund approved/i.test(r.label || ''), bank: /bank|transfer|bacs/i.test(b.method ?? '') })));
     return {
       owed,
       paid,
       refunds,
       owedTotal: owed.reduce((s, b) => s + owedOf(b), 0),
       paidTotal: paid.reduce((s, b) => s + b.amount - refundedTotal(b), 0),
-      refundTotal: refunds.reduce((s, r) => s + (r.amount || 0), 0),
+      refundTotal: refunds.filter((r) => !r.awaiting).reduce((s, r) => s + (r.amount || 0), 0),
     };
   }, [bookings, matchF]);
 
@@ -285,7 +286,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
           {refunds.map((r, i) => (
             <div key={i} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[12.5px] font-bold">{r.label}</div>
+                <div className="truncate text-[12.5px] font-bold">{r.awaiting ? (r.bank ? tr("p8lst.rfaParentApproved") : tr("p8lst.rfaParentApprovedOther")) : r.label}</div>
                 <div className="text-[11.5px] text-[var(--ink-3)]">{r.listing} · {tr("p8par.mbRef", { ref: r.ref })} · {r.on}</div>
               </div>
               <span className="text-[13px] font-extrabold text-[var(--brand-2)]">+{money(r.amount || 0)}</span>

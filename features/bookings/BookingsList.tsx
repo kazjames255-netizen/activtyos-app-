@@ -21,6 +21,8 @@ import {
   pendingPayActionT,
   payMethodLabel,
   payTone,
+  refundAwaitingTransfer,
+  refundTransferAmount,
   waitingForPlace,
   bookedOn,
   byNewest,
@@ -492,7 +494,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                       "truncate text-[10.5px] " + (on ? "text-white/75" : "text-[var(--ink-3)]")
                     }
                   >
-                    {b.listing} · {w(waitingForPlace(b.status) ? payLabelFor(b) : payLabel(b.pay))}
+                    {b.listing} · {refundAwaitingTransfer(b) ? t("p8lst.rfaChip") : w(waitingForPlace(b.status) ? payLabelFor(b) : payLabel(b.pay))}
                   </div>
                 </button>
               );
@@ -533,7 +535,9 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
             const isVoucherBk = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
             const moveReq = b.dateChangeRequest?.status === "pending" ? b.dateChangeRequest : null;
             // a cancelled row fades back, unless it still needs the provider to act (a refund to approve), which must stand out
-            const off = b.status === "Cancelled" && !moveReq && !refundPending;
+            // An offline refund the provider has recorded but not yet sent also needs them to act: it stays prominent too.
+            const awaitingTransfer = refundAwaitingTransfer(b);
+            const off = b.status === "Cancelled" && !moveReq && !refundPending && !awaitingTransfer;
             return (
               <div
                 key={b.ref}
@@ -575,7 +579,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     <span className="inline-flex whitespace-nowrap rounded-full bg-[#eef3ff] px-2.5 py-[3px] text-[11px] font-extrabold text-[#1d3a8f]" data-testid="addon-chip" title={bookingAddonLines(b).map((l) => `${l.child ? l.child + ": " : ""}${addonShort(l)}`).join("\n")}>{ADDON_ICON} {t("p8lst.extrasChip", { n: String(addonCount(b)) })}</span>
                   )}
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay, b.status).bg, color: payTone(b.pay, b.status).fg }}>{b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : b.status === "Approval needed" && b.cardHold?.state === "awaiting" ? t("p8lst.holdWaitBadge") : w(payLabelFor(b))}</span>
+                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={awaitingTransfer ? { background: "#fdf3d8", color: "#9a5a00" } : { background: payTone(b.pay, b.status).bg, color: payTone(b.pay, b.status).fg }}>{awaitingTransfer ? t("p8lst.rfaChipAmt", { amt: money(refundTransferAmount(b)) }) : b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : b.status === "Approval needed" && b.cardHold?.state === "awaiting" ? t("p8lst.holdWaitBadge") : w(payLabelFor(b))}</span>
                     <span className="text-[11px] font-semibold text-[var(--ink-3)]">{w(payMethodLabel(b))}</span>
                     {b.invoiceResends?.count ? (
                       <span className="whitespace-nowrap rounded-full bg-[#e8f0ff] px-2 py-[2px] text-[10.5px] font-bold text-[#1d3a8f]">{t("p7bd.invResent", { n: String(b.invoiceResends.count), when: new Date(b.invoiceResends.lastAt).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}</span>
@@ -605,7 +609,11 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                       <button onClick={(e) => { e.stopPropagation(); askConfirm(b.ref, { kind: "refund-approve" }); }} title={isVoucherBk ? t("p7bkl.refundSchemeTip") : t("p7bkl.approveIssueTip")}
                         className="flex-none whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_10px_22px_-10px_rgba(194,100,0,.7)] hover:brightness-110" style={{ background: "linear-gradient(120deg,#d97706,#f59e0b)" }}>↩ {isVoucherBk ? t("p7bkl.markSent") : t("p7bkl.approveRefund")}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}</button>
                     )}
-                    {!refundPending && b.cancel?.amount != null && b.cancel.amount > 0 && b.cancel.refund !== "none" && (
+                    {awaitingTransfer && (
+                      <button onClick={(e) => { e.stopPropagation(); askConfirm(b.ref, { kind: "refund-sent" }); }}
+                        className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-4 py-[6px] text-[12px] font-extrabold text-white hover:brightness-110">↩ {t("p8lst.rfaBtnSent")}</button>
+                    )}
+                    {!refundPending && !awaitingTransfer && b.cancel?.amount != null && b.cancel.amount > 0 && b.cancel.refund !== "none" && (
                       <span title={b.amount > 0 ? `${money(b.cancel.amount)} — ${Math.round((b.cancel.amount / b.amount) * 100)}% of ${money(b.amount)}` : undefined}
                         className="flex-none whitespace-nowrap rounded-full bg-[#fdebec] px-2.5 py-[3px] text-[11px] font-bold text-[#c0392b]">{t("p7bkl.refundChip", { amt: money(b.cancel.amount) })}</span>
                     )}

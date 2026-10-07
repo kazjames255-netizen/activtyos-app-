@@ -13,7 +13,7 @@ import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
 import { AddonBlock } from "@/features/bookings/AddonBlock";
 import { addonCount } from "@/features/bookings/addons";
-import { isNonCardMethod, visitAddressLabel, bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, refundableSoFar } from "@/features/bookings/helpers";
+import { isNonCardMethod, visitAddressLabel, bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, refundAwaitingTransfer, refundableSoFar } from "@/features/bookings/helpers";
 import { SessionTiles } from "@/features/bookings/SessionTiles";
 import { AddonRequests } from "./AddonRequests";
 import { PayModal } from "@/features/payments/PayModal";
@@ -1107,7 +1107,10 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           <span aria-hidden className="text-[#c0392b]">✕</span>
           <span>
             <b className="text-[var(--ink)]">{b.status === "Declined" ? w("Declined") : w("Cancelled")}</b>{b.cancel?.on && b.status !== "Declined" ? " · " + t("p7bk.requestedOn", { date: b.cancel.on }) : ""}
-            {refundIssued ? (
+            {refundAwaitingTransfer(b) ? (
+              // An OFFLINE refund the provider has approved but not yet sent: don't claim it is back yet.
+              <> — <b className="text-[#9a5a00]">{/bank|transfer|bacs/i.test(b.method ?? "") ? t("p8lst.rfaParentApproved") : t("p8lst.rfaParentApprovedOther")}</b> ({money(refundAmt || b.amount)})</>
+            ) : refundIssued ? (
               <> — <b className="text-[var(--brand)]">{isVoucher ? t("p7bk.refundedVoucher", { amt: money(refundAmt || b.amount) }) : b.cancel?.refundTo === "wallet" ? t("p7bk.refundedWallet", { amt: money(refundAmt || b.amount) }) : t("p7bk.refundedCard", { amt: money(refundAmt || b.amount) })}</b>.{!isVoucher && b.cancel?.refundTo !== "wallet" && <> {t("p7bk.refundTiming")}</>}</>
             ) : refundOwed && refundAmt > 0 ? (
               <> — <Rich text={isVoucher ? t("p7bk.refundDueVoucher", { amt: money(refundAmt) }) : t("p7bk.refundDueCard", { amt: money(refundAmt) })} />{!isVoucher && b.cancel?.refundTo !== "wallet" && <> {t("p7bk.refundTiming")}</>}</>

@@ -24,6 +24,8 @@ import {
   statusTone,
   type BlockAvail,
   refundButtonKind,
+  refundAwaitingTransfer,
+  refundTransferAmount,
   refundableSoFar,
   visitAddressLabel,
 } from "./helpers";
@@ -654,8 +656,23 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           </>
         );
       })()}
+      {/* An OFFLINE refund (bank transfer / cash / voucher) that is recorded but not yet sent: the app can't send it, so the provider does and confirms here. */}
+      {refundAwaitingTransfer(b) && (
+        <>
+          <div className="w-full rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[12.5px] font-bold leading-[1.5] text-[#7a5b06]" data-ui="refund-awaiting">
+            ⏳ {t("p8lst.rfaChipAmt", { amt: money(refundTransferAmount(b)) })}
+          </div>
+          {b.cancel?.refundBank && <BankReveal bookingRef={b.ref} last4={b.cancel.refundBank.last4} />}
+          <Button variant="primary" onClick={() => askConfirm(b.ref, { kind: "refund-sent" })}>{t("p8lst.rfaBtnSent")}</Button>
+        </>
+      )}
+      {b.cancel?.refund === "approved" && b.cancel.refundVia === "offline" && b.cancel.refundTransfer === "sent" && b.cancel.refundSentAt && (
+        <div className="w-full rounded-lg border border-[#bfe3cc] bg-[#e8f8ee] px-3 py-2 text-[12.5px] font-bold text-[#0f6b34]" data-ui="refund-sent">
+          ✓ {t(/bank|transfer|bacs/i.test(b.method ?? "") ? "p8lst.rfaSentChipBank" : "p8lst.rfaSentChip", { date: new Date(b.cancel.refundSentAt).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) })}
+        </div>
+      )}
       {/* A cancelled booking with no refund waiting has nothing left to action: say so, and don't offer to chase a payment for it. */}
-      {b.status === "Cancelled" && !(b.cancel?.refund === "full" || b.cancel?.refund === "partial" || b.cancel?.refund === "pending") && (
+      {b.status === "Cancelled" && !refundAwaitingTransfer(b) && !(b.cancel?.refund === "full" || b.cancel?.refund === "partial" || b.cancel?.refund === "pending") && (
         <div className="w-full rounded-lg border border-[#e0e3ee] bg-[#f6f7fb] px-3 py-2 text-[12px] font-semibold leading-[1.5] text-[#4a4763]">
           {t("p7bd.cancelledNothingToDo")}
           {(b.pay === "Invoice sent" || b.pay === "Unpaid") && <> {t("p7bd.cancelledNoPayment")}</>}
@@ -779,7 +796,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {/* Once cancelled/declined the payment state is moot — a cancelled
               booking isn't "awaiting" anything. */}
           {b.status !== "Cancelled" && b.status !== "Declined" && (
-            <Badge tone={payTone(b.pay, b.status)}>{b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : w(payLabelFor(b))}</Badge>
+            <Badge tone={refundAwaitingTransfer(b) ? { bg: "#fdf3d8", fg: "#9a5a00" } : payTone(b.pay, b.status)}>{refundAwaitingTransfer(b) ? t("p8lst.rfaChip") : b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : w(payLabelFor(b))}</Badge>
           )}
           {b.status === "Waitlisted" && b.waitlist && b.waitlist.length > 0 && (
             <Badge tone={{ bg: "#fff1d6", fg: "#9a5a00" }}>{b.waitlist.map((x) => `${t("p9tx.wlPlace", { n: x.position })} · ${new Date(`${x.date}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" })}`).join("  ")}</Badge>

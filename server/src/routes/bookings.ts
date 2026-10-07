@@ -21,7 +21,7 @@ import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
 import { registerRows } from "../lib/registerRows";
-import { money, realPhone, refundableSoFar, receivedOf, cashReceivedOf } from "../../../features/bookings/helpers";
+import { money, realPhone, refundableSoFar, receivedOf, cashReceivedOf, refundTransferAmount } from "../../../features/bookings/helpers";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
 import { approveBlockedMessage, declineBlockedMessage, nudgeBlockedMessage, canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval } from "../lib/bookingGuards";
@@ -49,6 +49,7 @@ import {
   emailPlaceOffered,
   emailRefundApproved,
   emailRefundDeclined,
+  emailRefundSent,
   emailVoucherInstructions,
 } from "../lib/emails";
 import { applyHoNetFilter } from "../lib/franchiseScope";
@@ -62,6 +63,7 @@ import {
   applyNote,
   applyRowAction,
   buildBooking,
+  markRefundRecorded,
 } from "../../../features/bookings/mutations";
 import { attachChildcareRefs, childcareOf, isChildcare, paymentRecordsOf, type ChildcareBooking, type ChildcarePayment } from "../lib/childcare";
 
@@ -108,12 +110,16 @@ const actionSchema = z.discriminatedUnion("type", [
       "offer",
       "refund-approve",
       "refund-decline",
+      // The provider confirms they SENT an offline (bank transfer / cash / voucher) refund that was only recorded when they approved it.
+      "refund-sent",
       // resend mutates nothing — it re-sends the payment-link email
       "resend",
     ]),
     // Optional free-text the operator gives when declining a booking; it's
     // relayed to the family in the decline email. Ignored for other types.
     reason: z.string().max(300).optional(),
+    // refund-approve on an offline refund: the provider already sent the money, so record it as sent in one step.
+    alreadySent: z.boolean().optional(),
   }),
   // Approve a parent's date-change request. approveIndexes lets the operator
   // approve only SOME swaps (omit = all); reason explains any declined ones.
@@ -741,6 +747,13 @@ bookings.post("/:ref/actions", async (req, res) => {
         refundBefore = { refund: b.cancel.refund, pay: b.pay, refundable: refundableSoFar(b), attempts: (b.cancel as { refundAttempts?: number }).refundAttempts ?? 0 };
       }
 
+      // The provider confirms they SENT an offline refund that was only recorded at approval.
+      if (action.type === "refund-sent") {
+        if (!b.cancel || b.cancel.refund !== "approved" || b.cancel.refundVia !== "offline")
+          throw new Conflict("There is no recorded bank / cash / voucher refund waiting to be sent on this booking");
+        if (b.cancel.refundTransfer === "sent") throw new Conflict("This refund is already marked as sent");
+      }
+
       // Marking a booking paid only makes sense for one that is live: on a cancelled / declined / waiting-list booking it used to
       // record a payment and email "Payment received" for a place the family doesn't have.
       if (action.type === "paid" && !canMarkPaid(b.status))
@@ -781,6 +794,10 @@ bookings.post("/:ref/actions", async (req, res) => {
         }
         case "change-day":
           break; // fully handled above, block-aware
+        case "refund-sent":
+          applyRowAction(b, "refund-sent");
+          if (b.cancel) b.cancel.refundSentBy = req.user?.email ?? "operator";
+          break;
         case "note":
           applyNote(b, action.text);
           break;
@@ -875,6 +892,11 @@ bookings.post("/:ref/actions", async (req, res) => {
       // refundedAt: when the money actually moved (cancel.on is when it was
       // asked for) — Reconciliation's "refunded today" keys off this (d9s7).
       updated.cancel = { ...(updated.cancel ?? { on: "", by: "" }), refundVia: moved.via, refundedAt: new Date().toISOString(), refundError: undefined };
+      // An OFFLINE refund (bank transfer / cash / voucher) is only RECORDED: the app cannot send it. It stays "awaiting your transfer" until the
+      // provider confirms they sent it (action "refund-sent"), unless they say they already did.
+      const alreadySent = "alreadySent" in action && action.alreadySent === true;
+      markRefundRecorded(updated, moved.via, alreadySent, req.user?.email ?? "operator");
+      if (moved.via === "offline" && alreadySent && updated.tenantId) await markOfflineRefundSent(updated.tenantId, updated.ref, req.user?.email ?? "operator").catch((e) => console.error("[refund-sent] ledger update failed:", (e as Error).message));
       if (moved.partial) updated.pay = "Partially refunded";
       updated.refundedApproved = Math.round(((updated.refundedApproved ?? 0) + moved.owed) * 100) / 100;
       updated.walletRefunded = Math.round(((updated.walletRefunded ?? 0) + moved.walletPart) * 100) / 100;
@@ -895,7 +917,9 @@ bookings.post("/:ref/actions", async (req, res) => {
     }
 
     // The family's bank details (typed for a bank-transfer refund) are not kept once the provider has dealt with the request.
-    if ((action.type === "refund-approve" || action.type === "refund-decline") && updated.cancel?.refundBank && updated.tenantId) {
+    // (An approved OFFLINE refund keeps them until the provider has sent it: they need the account details to make the transfer.)
+    const keepBank = action.type === "refund-approve" && updated.cancel?.refundVia === "offline" && updated.cancel?.refundTransfer === "awaiting";
+    if ((action.type === "refund-approve" || action.type === "refund-decline" || action.type === "refund-sent") && updated.cancel?.refundBank && updated.tenantId && !keepBank) {
       delete updated.cancel.refundBank;
       await ref.update({ "cancel.refundBank": FieldValue.delete() }).catch(() => {});
       await db.collection("refundBanks").doc(`${updated.tenantId}_${updated.ref}`).delete().catch(() => {});
@@ -965,6 +989,22 @@ bookings.post("/:ref/actions", async (req, res) => {
           ref: updated.ref,
         });
       }
+      else if (action.type === "refund-sent") {
+        // The provider confirmed the transfer: flip the ledger row, then tell the family it has actually been sent.
+        if (updated.tenantId) await markOfflineRefundSent(updated.tenantId, updated.ref, req.user?.email ?? "operator").catch((e) => console.error("[refund-sent] ledger update failed:", (e as Error).message));
+        emailRefundSent(updated, await tenantName());
+        const sentAmt = refundTransferAmount(updated);
+        void notify({
+          tenantId: scope.tenantId!,
+          to: { kind: "parent", email: updated.email },
+          category: "billing",
+          bellOnly: true,
+          title: `Refund sent · ${updated.ref}`,
+          body: `£${sentAmt.toFixed(2)} for ${updated.listing} has been sent${updated.voucherScheme ? ` through ${updated.voucherScheme}` : " by bank transfer"}${updated.cancel?.refundSentAt ? ` on ${ukDateLabel(updated.cancel.refundSentAt)}` : ""}.`,
+          href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
+          ref: updated.ref,
+        });
+      }
       else if (action.type === "refund-approve") {
         emailRefundApproved(updated, await tenantName());
         // …and raise the family's in-app bell (email-only before, so it never
@@ -980,7 +1020,7 @@ bookings.post("/:ref/actions", async (req, res) => {
           body: toWallet
             ? `£${amt.toFixed(2)} added to your wallet for ${updated.listing} — it's there now, ready to spend on your next booking.`
             : updated.cancel?.refundVia === "offline"
-              ? `£${amt.toFixed(2)} refund approved for ${updated.listing} — ${updated.voucherScheme ? `returned through ${updated.voucherScheme}` : "your provider will return it the way you paid"}.`
+              ? `£${amt.toFixed(2)} refund approved for ${updated.listing} — ${updated.voucherScheme ? `returned through ${updated.voucherScheme}` : /bank|transfer|bacs/i.test(updated.method ?? "") ? "your provider will send it by bank transfer (we'll tell you when it's sent)" : "your provider will return it the way you paid"}.`
               : `£${amt.toFixed(2)} refund approved for ${updated.listing} — on its way back to your card.`,
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
@@ -1568,6 +1608,23 @@ bookings.post("/bulk", async (req, res) => {
   }
   res.json(updated);
 });
+
+/** The provider confirmed they sent an offline refund: its payments-ledger row(s) go from "to-reimburse" to "succeeded" (the totals every money
+ *  screen reads are unchanged: both statuses count). Idempotent. */
+export async function markOfflineRefundSent(tenantId: string, bookingRef: string, by: string): Promise<number> {
+  const snap = await db.collection("payments").where("refs", "array-contains", bookingRef).get();
+  const batch = db.batch();
+  let n = 0;
+  for (const d of snap.docs) {
+    const p = d.data() as { tenantId?: string; type?: string; status?: string };
+    if (p.tenantId === tenantId && p.type === "refund" && p.status === "to-reimburse") { batch.update(d.ref, { status: "succeeded", sentAt: new Date().toISOString(), sentBy: by }); n++; }
+  }
+  if (n) await batch.commit();
+  return n;
+}
+
+/** "7 Oct 2026" from an ISO stamp, in UK time. */
+const ukDateLabel = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/London" });
 
 /**
  * Move the money for an approved refund. Returns once it has actually moved.
