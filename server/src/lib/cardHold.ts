@@ -187,7 +187,7 @@ export async function captureHolds(rows: Booking[]): Promise<CaptureResult> {
     }
     if (group[0].cardHold?.paymentId) batch.update(db.collection("payments").doc(group[0].cardHold.paymentId), { status: "succeeded", paidAt: at, settledAuto: true, capturedAmount: amount });
     await batch.commit();
-    await notifyPaymentReceived(tenantId, settled[0], "card", settled).catch((e) => console.error("[cardHold] payment-received notice:", (e as Error).message));
+    await notifyPaymentReceived(tenantId, settled[0], "card", settled, true).catch((e) => console.error("[cardHold] payment-received notice:", (e as Error).message));
   }
   return { ok: true };
 }

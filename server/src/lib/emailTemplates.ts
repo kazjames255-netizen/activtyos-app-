@@ -270,7 +270,16 @@ export function bookingCancelledSpec(
   };
 }
 
-export function paymentReceivedSpec(b: Booking, providerName: string, opts: { label: string; amount: number; refs?: string[]; fullyPaid?: boolean }): CustomerEmailSpec {
+export function paymentReceivedSpec(b: Booking, providerName: string, opts: { label: string; amount: number; refs?: string[]; fullyPaid?: boolean; approved?: boolean }): CustomerEmailSpec {
+  // A card HOLD that the provider has just approved: ONE message - booked in AND paid - not an approval email plus a receipt.
+  if (opts.approved) {
+    return {
+      subject: `Booking approved and payment received — ${b.listing}`,
+      title: "You're booked in ✓ — payment received",
+      body: `<p style="font-size:14px">Great news ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has <b>approved your booking</b> and <b>${gbp(opts.amount)}</b> has been taken from the card you put on hold. Your booking is fully paid. See you there!</p>`,
+      enrich: { whatIncluded: true, map: true },
+    };
+  }
   // One payment can settle several bookings (a basket spanning weeks): one email names them all.
   const many = (opts.refs?.length ?? 0) > 1;
   return {
