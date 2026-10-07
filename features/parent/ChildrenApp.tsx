@@ -1,5 +1,7 @@
 "use client";
 
+import { GenderChoice, type Sex } from "@/features/common/GenderChoice";
+import { toGender } from "@/lib/childGender";
 import { collectionOk as collectionOkRule } from "@/lib/uiRules";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -133,7 +135,9 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
 
   const [name, setName] = useState(child?.name ?? "");
   const [dob, setDob] = useState(child?.dob ?? "");
-  const [sex, setSex] = useState<"boy" | "girl" | "">((child?.sex as "boy" | "girl") ?? "");
+  const [sex, setSex] = useState<Sex>((toGender(child?.sex) as Sex) ?? "");
+  // Optional. On a provider's own booking flow it follows that provider's Setup toggle; on the family's own My children page it is always offered.
+  const showGender = tenantId ? settings.collectGender : true;
   // School is no longer a built-in question (a provider can add it as their own
   // custom question). Preserve any value already on the record, but don't ask.
   const [school] = useState(child?.school ?? "");
@@ -241,7 +245,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
     const body = {
       name: name.trim(),
       ...blank(dob, "dob"),
-      ...(sex ? { sex } : {}),
+      ...(sex ? { sex } : editing && child?.sex ? { sex: "" } : {}),
       ...blank(school, "school"),
       ...blank(allergies, "allergies"),
       ...blank(medical, "medical"),
@@ -275,7 +279,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
   // Compulsory: a name, a date of birth (unless the provider made it optional
   // and nothing age-gated needs it), and — when the provider asks gender — a
   // choice of boy/girl. Everything else on this slide is optional.
-  const canLeaveAbout = !!name.trim() && (!!dob.trim() || !needDob) && (!settings.collectGender || !!sex);
+  const canLeaveAbout = !!name.trim() && (!!dob.trim() || !needDob);
   const emergencyOk = !!emergencyName.trim() && !!emergencyPhone.trim();
   const missingQuestions = unansweredRequired(askQuestions, answers);
   const questionsOk = missingQuestions.length === 0;
@@ -292,7 +296,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
       title: t("parent.aboutChildTitle"),
       sub: t("parent.aboutChildSub"),
       ok: canLeaveAbout,
-      hint: t(needDob ? (settings.collectGender ? "p8par.chNeedNameDobGender" : "p8par.chNeedNameDob") : (settings.collectGender ? "p8par.chNeedNameGender" : "p8par.chNeedName")),
+      hint: t(needDob ? "p8par.chNeedNameDob" : "p8par.chNeedName"),
       body: (
         <>
           {settings.collectPhoto && (
@@ -319,18 +323,11 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
             <FieldLabel>{t("parent.dateOfBirth")} {needDob ? <span className="text-[var(--red)]">*</span> : <span className="font-normal text-[var(--ink-3)]">{t("parent.optionalSuffix")}</span>}</FieldLabel>
             <Input required={needDob} type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full" />
           </div>
-          {settings.collectGender && (
+          {showGender && (
             <div>
-              <FieldLabel>{t("parent.boyOrGirl")} <span className="text-[var(--red)]">*</span></FieldLabel>
-              <div className="grid grid-cols-2 gap-2">
-                {([["boy", t("parent.boyOption")], ["girl", t("parent.girlOption")]] as const).map(([v, l]) => (
-                  <button key={v} type="button" onClick={() => setSex(sex === v ? "" : v)} className="rounded-xl border p-2.5 text-[12.5px] font-extrabold"
-                    style={sex === v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink)" }}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-1 text-[11px] text-[var(--ink-3)]">{t("parent.genderNote")}</div>
+              <FieldLabel>{t("p8lst.genLabel")}</FieldLabel>
+              <GenderChoice value={sex} onChange={setSex} />
+              <div className="mt-1 text-[11px] text-[var(--ink-3)]">{t("p8lst.genNote")}</div>
             </div>
           )}
         </>

@@ -1,3 +1,4 @@
+import { attachGender } from "../lib/childGender";
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { auth, db } from "../firebase";
@@ -241,6 +242,9 @@ customers.get("/", async (req, res) => {
         const booked = await tenantChildIdsFor(cTenantId);
         const have = new Set((c.children ?? []).map((k) => (k.name ?? "").trim().toLowerCase()));
         const haveIds = new Set((c.children ?? []).map((k) => String((k as { childId?: string }).childId ?? "")).filter(Boolean));
+        // Gender the family recorded (optional) lives on the child record; the customer record's own children came from bookings and carry none.
+        // Only for children actually booked with THIS provider: never another provider's view of the family.
+        c.children = attachGender(c.children ?? [], kids.docs.filter((k) => booked.has(k.id)).map((k) => ({ id: k.id, name: k.get("name") as string | undefined, sex: k.get("sex") })));
         const extra = kids.docs
           .filter((k) => booked.has(k.id) && !haveIds.has(k.id))
           .map((k) => ({ id: k.id, ...(k.data() as Record<string, unknown>) }))

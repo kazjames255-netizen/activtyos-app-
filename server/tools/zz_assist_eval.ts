@@ -48,6 +48,7 @@ export const QUESTIONS: string[] = [
   "can I run a week now and another week in six months without creating all the weeks in between",
   "how do I see which children are coming next week in my bookings list",
   "will parents see that my listing is online or at their home",
+  "why does my gender split say no gender recorded and how do families add it",
   "where does a parent see the video link for my online session",
   "can I cancel several paid bookings at once and refund them",
   "if a family uses wallet credit how much do they pay by card",

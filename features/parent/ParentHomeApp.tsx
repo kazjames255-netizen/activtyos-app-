@@ -1,5 +1,7 @@
 "use client";
 
+import { GenderQuickAdd } from "@/features/common/GenderQuickAdd";
+import { toGender } from "@/lib/childGender";
 import Link from "next/link";
 import { isFullAddress } from "@/lib/addressComplete";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -26,7 +28,7 @@ import type { Booking } from "@/features/bookings/types";
 // Every block reserves its space while loading so nothing jumps.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Kid = { id: string; name: string; photo?: string };
+type Kid = { id: string; name: string; photo?: string; sex?: string };
 type WalletBalance = { balance: number };
 type TripRow = { id: string; date: string; status: string; askConsent: boolean; children: { consent: string }[] };
 type PostRow = { id: string; title?: string; body: string; tenantName?: string; createdAt?: string; pinned?: boolean };
@@ -300,6 +302,13 @@ export function ParentHomeApp() {
   useEffect(() => {
     try { const at = Number(localStorage.getItem("aos.addrNudge") ?? 0); if (at && Date.now() - at < 7 * 86_400_000) return; } catch { /* storage blocked: still show it */ }
     apiGet<{ address?: string; postcode?: string }>("/api/account").then((a) => { if (a && !isFullAddress(a.address, a.postcode)) setAddrNudge(true); }).catch(() => {});
+  }, []);
+
+  // A child with no gender recorded gets a gentle, optional prompt (one child at a time); "Not now" hides it for 30 days.
+  const [genHidden, setGenHidden] = useState(true);
+  useEffect(() => {
+    try { const at = Number(localStorage.getItem("aos.genNudge") ?? 0); if (at && Date.now() - at < 30 * 86_400_000) return; } catch { /* storage blocked: still show it */ }
+    setGenHidden(false);
   }, []);
 
   const asked = useRef<Set<string>>(new Set());
@@ -627,6 +636,10 @@ export function ParentHomeApp() {
               <button type="button" onClick={() => { try { localStorage.setItem("aos.addrNudge", String(Date.now())); } catch { /* ignore */ } setAddrNudge(false); }} className="text-[12.5px] font-bold underline">{t("p7ck.adrNotNow")}</button>
             </div>
           )}
+          {!genHidden && !loading && !starter && (() => {
+            const k = (kids ?? []).find((x) => x.id && !toGender(x.sex));
+            return k ? <GenderQuickAdd key={k.id} kid={{ id: k.id, name: k.name }} variant="banner" onSkip={() => { try { localStorage.setItem("aos.genNudge", String(Date.now())); } catch { /* ignore */ } setGenHidden(true); }} /> : null;
+          })()}
           {attentionBlock}
           {!loading && !starter && live.length > 0 && <WeekStrip live={live} today={today} detail={(b) => ({ delivery: (() => { const br = b.listingId ? briefs[b.listingId] : null; return br ? deliveryLabel(t, { deliveryMode: br.deliveryMode, venueKind: br.library?.venue?.kind }, null, "parent") : null; })(), time: timeFor(b), place: (b.listingId ? briefs[b.listingId]?.library?.venue?.name ?? briefs[b.listingId]?.location : null) ?? null })} />}
           {starter ? null : nextBlock}

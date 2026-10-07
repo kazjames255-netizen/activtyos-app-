@@ -12,6 +12,7 @@
 // right.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { GenderQuickAdd } from "@/features/common/GenderQuickAdd";
 import { HowItWorks } from "@/components/HowItWorks";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import type { DiscountKind } from "./discounts";
@@ -102,8 +103,8 @@ export type ChildProfile = {
   tfcReference?: string;
   photoConsent?: boolean;
   /** Required when adding a child; optional on the type because children saved
-   *  before this was asked for don't have one. Those keep the neutral chip. */
-  sex?: "boy" | "girl";
+   *  before this was asked for don't have one. Those keep the neutral chip. Optional for the family. */
+  sex?: "boy" | "girl" | "other" | "na";
   /** Answers to the provider's own child questions, keyed by question id.
    *  Set in Setup & features — see lib/settings.ts. */
   answers?: Record<string, string>;
@@ -291,7 +292,6 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
     // Compulsory unless the provider has said otherwise — and never optional
     // while a question is age-gated, because there is no age without it.
     !draft.dob && needDob && tr("p7ck.missDob"),
-    !draft.sex && settings.collectGender && tr("p7ck.missSex"),
     // A question the provider marked "must be answered" is as required as the
     // built-ins, and joins the same one-shot list rather than being a second
     // rejection after this one is satisfied.
@@ -344,6 +344,9 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
         return <div className="mt-0.5 text-[14px]" style={{ color: tk.muted }}><Rich text={tr("p7ck.listingFor", { range, tail: d.allowOutOfRange ? tr("p7ck.tailOthers") : "." })} /></div>;
       })()}
 
+      {settings.collectGender && cards.filter((c) => c.id && !c.sex).slice(0, 3).map((c) => (
+        <GenderQuickAdd key={c.id} kid={{ id: c.id!, name: c.name }} variant="inline" />
+      ))}
       <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {/* One card style for everyone: saved children and ones just added here. Tap = on every chosen date, tap again = off. */}
         {cards.map((sv) => {
@@ -450,22 +453,23 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               Setup — asking a parent to sex their child for no purpose isn't
               a neutral default. */}
           {settings.collectGender && (
-          <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>{tr("p7ck.lblBoyGirl")} <span style={{ color: "#f87171" }}>*</span></span>
-            {([["boy", tr("p7ck.boy")], ["girl", tr("p7ck.girl")]] as const).map(([v, l]) => {
-              const on = draft.sex === v;
-              const c = sexTint(v);
-              return (
-                <button key={v} type="button" onClick={() => setDraft({ ...draft, sex: on ? undefined : v })}
-                  className={`border-2 px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
-                  style={on
-                    ? { borderColor: c.border, background: c.bg, color: c.ink }
-                    : { borderColor: `${tk.ink}59`, color: tk.ink, ...flag(!draft.sex) }}>
-                  {l}
-                </button>
-              );
-            })}
-            <span className="w-full text-[10.5px]" style={{ color: tk.muted }}>{tr("p7ck.boyGirlNote")}</span>
+          <div className="mt-2.5">
+            <div className="mb-1 text-[12px]" style={{ color: tk.ink }}>{tr("p8lst.genLabel")}</div>
+            <div className="flex flex-wrap gap-2">
+              {(["boy", "girl", "other", "na"] as const).map((v) => {
+                const on = draft.sex === v;
+                const c = sexTint(v);
+                const lbl = v === "boy" ? tr("p8lst.genBoy") : v === "girl" ? tr("p8lst.genGirl") : v === "other" ? tr("p8lst.genOther") : tr("p8lst.genNa");
+                return (
+                  <button key={v} type="button" onClick={() => setDraft({ ...draft, sex: on ? undefined : v })}
+                    className={`border-2 px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
+                    style={on ? { borderColor: c.border, background: c.bg, color: c.ink } : { borderColor: `${tk.ink}59`, color: tk.ink }}>
+                    {lbl}
+                  </button>
+                );
+              })}
+            </div>
+            <span className="mt-1 block text-[10.5px]" style={{ color: tk.muted }}>{tr("p8lst.genNote")}</span>
           </div>
           )}
           <QuestionFields

@@ -1,5 +1,6 @@
 "use client";
 
+import { toGender } from "@/lib/childGender";
 import { useState, type ReactNode } from "react";
 import { needsNappies, type ChildQuestion } from "@/lib/settings";
 import { openFile } from "@/lib/api";
@@ -207,7 +208,7 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
         <div className="min-w-0">
           <h2 className="text-[23px] font-extrabold leading-tight tracking-[-0.025em]" style={{ fontFamily: "var(--ff-display)" }}>{info.name}</h2>
           <div className="mt-1.5 text-[12.5px] text-white/70">
-            {[info.age != null ? t("registers.ageLabel", { age: info.age }) : "", info.dob ? t("registers.bornLabel", { dob: info.dob }) : "", info.sex || ""].filter(Boolean).join(" · ")}
+            {[info.age != null ? t("registers.ageLabel", { age: info.age }) : "", info.dob ? t("registers.bornLabel", { dob: info.dob }) : "", (({ boy: t("p8lst.genBoy"), girl: t("p8lst.genGirl"), other: t("p8lst.genOther") } as Record<string, string>)[toGender(info.sex)] ?? "")].filter(Boolean).join(" · ")}
           </div>
           {info.school && <div className="mt-0.5 truncate text-[12px] text-white/55">🏫 {info.school}</div>}
         </div>

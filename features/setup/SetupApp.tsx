@@ -2233,6 +2233,7 @@ export function SetupApp() {
             )}
             <Row label={t("p8set.ppGender")} hint={t("p8set.ppGenderHint")}>
               <Toggle on={settings.collectGender} onChange={(v) => set("collectGender", v)} />
+              <div className="mt-1 max-w-[520px] text-[11.5px] text-[var(--ink-3)]">{t("p8lst.genSetupNote")}</div>
             </Row>
             {settings.collectGender && (
               <Row label={t("p8set.ppOptions")} hint={t("p8set.ppOptionsHint")} note={t("p8set.ppOptionsNote")}>

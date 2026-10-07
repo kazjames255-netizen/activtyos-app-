@@ -1,0 +1,6 @@
+{
+  "before": "\ni\n2\n2 WITH GENDER SET\nGirl\n1\nNon-binary or other\n1\n2 of 3 children have a gender recorded\nBusiest days of the week\n1\nSun\n0\n2\nMon\n2\n3\nTue\n0\n4\nWed\n0\n5\nThu\n0\n6\nFri\n0\n7\nSat\n0",
+  "promptVisible": true,
+  "saved": false,
+  "after": "\ni\n3\n3 WITH GENDER SET\nBoy\n1\nGirl\n1\nNon-binary or other\n1\n3 of 3 children have a gender recorded\nBusiest days of the week\n1\nSun\n0\n2\nMon\n2\n3\nTue\n0\n4\nWed\n0\n5\nThu\n0\n6\nFri\n0\n7\nSat\n0"
+}

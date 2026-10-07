@@ -22,6 +22,8 @@ import { BRAND } from "@/lib/i18n/config";
 import { rich } from "./rich";
 import { methodLabel } from "./finI18n";
 import { financeFigures, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, payoutRows, type PaymentRecord } from "./financeFigures";
+import { genderSplit, type KidSex } from "./genderSplit";
+import { financeFigures, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, type PaymentRecord } from "./financeFigures";
 
 // ── Types for the extra ledgers we fold in (subset of each route's shape) ──
 interface Invoice { id: string; customerName: string; amount: number; date: string; dueDate?: string; status: string; overdue?: boolean }
@@ -63,7 +65,7 @@ export function FinanceAnalyticsApp() {
   const [listingVenueId, setListingVenueId] = useState<Record<string, string>>({}); // id → venueId
   const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
   const [addonMeta, setAddonMeta] = useState<Record<string, { name: string; price: number }>>({}); // addon id → name/price
-  const [childSex, setChildSex] = useState<Record<string, "boy" | "girl">>({}); // learner name → sex
+  const [childKids, setChildKids] = useState<KidSex[]>([]); // the customers' children, with the gender their family recorded (if any)
   const [connecting, setConnecting] = useState(false);
   const router = useRouter();
   const portal = (usePathname() ?? "/").split("/")[1] || "app";
@@ -110,14 +112,11 @@ export function FinanceAnalyticsApp() {
       setVenues((lib?.venues ?? []).filter((v) => used.has(v.id)));
       setAddonMeta(Object.fromEntries((lib?.addons ?? []).map((x) => [x.id, { name: x.name || t("p8fin.faAddonFallback"), price: Number(x.price) || 0 }])));
     }).catch(() => {});
-    // Child sex lives on the customer/child record (a booking learner links by
-    // name), so the gender split needs the customers list. Empty if not collected.
-    apiGet<{ children?: { name?: string; sex?: "boy" | "girl" }[] }[]>("/api/customers")
-      .then((cs) => {
-        const m: Record<string, "boy" | "girl"> = {};
-        for (const c of cs ?? []) for (const k of c.children ?? []) if (k.name && (k.sex === "boy" || k.sex === "girl")) m[k.name.trim().toLowerCase()] = k.sex;
-        setChildSex(m);
-      }).catch(() => {});
+    // Gender lives on the child's own record (the family records it, optional). /api/customers hands each child back with it, joined by child id
+    // for children booked with THIS provider only, so the split reads it from there, never from a name.
+    apiGet<{ children?: KidSex[] }[]>("/api/customers")
+      .then((cs) => setChildKids((cs ?? []).flatMap((c) => c.children ?? [])))
+      .catch(() => {});
   }, [t]);
   useEffect(load, [load]);
   useRealtime(["bookings", "payments", "invoices"], load);
@@ -158,7 +157,7 @@ export function FinanceAnalyticsApp() {
 
     const addonAgg = new Map<string, { count: number; rev: number }>();
     const byPass = new Map<string, { count: number; revenue: number }>();
-    const gender = { boy: 0, girl: 0, unknown: 0 };
+    const winBks: Booking[] = [];
     const dow = [0, 0, 0, 0, 0, 0, 0];
     const amounts: number[] = [];
     const seenLearner = new Set<string>();
@@ -168,6 +167,7 @@ export function FinanceAnalyticsApp() {
       const m = monthOf(b);
       if (!m || !inWindow.has(m) || isCancelled(b)) continue;
       winBookings++;
+      winBks.push(b);
       amounts.push(b.amount);
       if (b.pass) { const p = byPass.get(b.pass) ?? { count: 0, revenue: 0 }; p.count++; p.revenue += collectedNet(b); byPass.set(b.pass, p); }
       const ad = b.addons ?? [];
@@ -182,7 +182,6 @@ export function FinanceAnalyticsApp() {
         addonUnits++; addonRevenue += amt;
       }
       for (const d of b.days ?? []) { const wd = new Date(`${d}T00:00:00Z`).getUTCDay(); if (wd >= 0 && wd <= 6) dow[wd]++; }
-      for (const ln of learnerNames(b)) { const k = ln.toLowerCase(); if (seenLearner.has(k)) continue; seenLearner.add(k); const s = childSex[k]; if (s === "boy") gender.boy++; else if (s === "girl") gender.girl++; else gender.unknown++; }
     }
 
     const valueBands = VALUE_BANDS.map(([label, lo, hi], i) => { const n = amounts.filter((v) => v >= lo && v < hi).length; return { label, value: n, sub: String(n), color: ACT_C[i % ACT_C.length] }; });
@@ -191,6 +190,7 @@ export function FinanceAnalyticsApp() {
     const passRows = [...byPass.entries()].sort((x, y) => y[1].revenue - x[1].revenue).slice(0, 8).map(([label, v], i) => ({ label, value: v.revenue, sub: `${money(v.revenue)} · ${v.count}`, color: ACT_C[i % ACT_C.length] }));
     const dowRows = DOW.map((i) => ({ label: dowShort(i), value: dow[i], sub: String(dow[i]), color: LIGHTB }));
 
+    const split = genderSplit(winBks, childKids);
     return {
       winBookings,
       attachRate: winBookings ? Math.round((bookingsWithAddon / winBookings) * 100) : 0,
@@ -198,10 +198,10 @@ export function FinanceAnalyticsApp() {
       avgBookingValue: amounts.length ? amounts.reduce((s, v) => s + v, 0) / amounts.length : 0,
       medianValue: amounts.length ? [...amounts].sort((x, y) => x - y)[Math.floor(amounts.length / 2)] : 0,
       valueBands, passRows,
-      gender, genderKnown: gender.boy + gender.girl,
+      gender: split, genderKnown: split.known,
       dowRows,
     };
-  }, [bookings, months, nowMs, season, venue, listingSeason, listingVenueId, addonMeta, childSex, t]);
+  }, [bookings, months, nowMs, season, venue, listingSeason, listingVenueId, addonMeta, childKids, t]);
 
   // ref → booker name, so a payout row can name who paid (payments carry only refs).
   const nameByRef = useMemo(() => {
@@ -561,7 +561,7 @@ export function FinanceAnalyticsApp() {
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label={t("p8fin.faAvgBooking")} icon="🧮" grad={GRAD.blue} value={money(mix.avgBookingValue)} sub={t("p8fin.faAcrossN", { n: mix.winBookings })} />
             <Tile label={t("p8fin.faMedian")} icon="📊" grad={GRAD.teal} value={money(mix.medianValue)} sub={t("p8fin.faTypicalBasket")} />
-            <Tile label={t("p8fin.faBoysGirls")} icon="🚻" grad={GRAD.violet} value={mix.genderKnown ? `${Math.round((mix.gender.boy / mix.genderKnown) * 100)}:${Math.round((mix.gender.girl / mix.genderKnown) * 100)}` : "—"} sub={mix.genderKnown ? t("p8fin.faNWithGender", { n: mix.genderKnown }) : t("p8fin.faNoGenderShort")} />
+            <Tile label={t("p8fin.faBoysGirls")} icon="🚻" grad={GRAD.violet} value={mix.gender.boy + mix.gender.girl ? `${Math.round((mix.gender.boy / (mix.gender.boy + mix.gender.girl)) * 100)}:${Math.round((mix.gender.girl / (mix.gender.boy + mix.gender.girl)) * 100)}` : "—"} sub={mix.genderKnown ? t("p8fin.faNWithGender", { n: mix.genderKnown }) : t("p8fin.faNoGenderShort")} />
             <Tile label={t("p8fin.faBusiestDay")} icon="📅" grad={GRAD.amber} value={mix.dowRows.reduce((m, r) => (r.value > m.value ? r : m), mix.dowRows[0]).value ? mix.dowRows.reduce((m, r) => (r.value > m.value ? r : m), mix.dowRows[0]).label : "—"} sub={t("p8fin.faMostSessions")} />
           </div>
           </CollapsibleStats>
@@ -573,7 +573,21 @@ export function FinanceAnalyticsApp() {
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <Panel title={t("p8fin.faGenderSplit")} right={<Info text={t("p8fin.faGenderInfo")} />}>
-              {mix.genderKnown ? <Donut segments={[{ label: t("p8fin.faBoys"), value: mix.gender.boy, color: LIGHTB }, { label: t("p8fin.faGirls"), value: mix.gender.girl, color: PINK }]} center={`${Math.round((mix.gender.boy / mix.genderKnown) * 100)}%`} sub={t("p8fin.faBoysSub")} /> : <Empty>{t("p8fin.faNoGenderTurnOn")}</Empty>}
+              {mix.genderKnown ? (
+                <>
+                  <Donut
+                    segments={[
+                      { label: t("p8lst.genBoy"), value: mix.gender.boy, color: LIGHTB },
+                      { label: t("p8lst.genGirl"), value: mix.gender.girl, color: PINK },
+                      { label: t("p8lst.genOther"), value: mix.gender.other, color: GOLD },
+                      { label: t("p8lst.genNa"), value: mix.gender.na, color: "#8a86a3" },
+                    ].filter((x) => x.value > 0)}
+                    center={String(mix.genderKnown)}
+                    sub={t("p8lst.genChildren")}
+                  />
+                  <div className="mt-3 text-[12px] font-semibold text-[var(--ink-3)]">{t("p8lst.genKnown", { known: mix.genderKnown, total: mix.gender.total })}</div>
+                </>
+              ) : <Empty>{t("p8lst.genCta")}</Empty>}
             </Panel>
             <Panel title={t("p8fin.faBusiestWeek")}>
               <Breakdown entries={mix.dowRows} />
