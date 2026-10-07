@@ -7,6 +7,7 @@ import { useHoScope } from "@/components/franchise/HoScope";
 import { withHoNet } from "@/lib/ho-net";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
+import { MoneyBars, type MoneyBarPoint } from "./MoneyBars";
 import { bookingNetIn, bookingRefundOwed, isStandaloneInvoiceIn, ukDay } from "@/features/money/bookingIncome";
 import { bookingMoney, matchesShow, sumRows, REFUND_STATE_CSV, SHOW_FILTERS, type BookingMoney, type ShowFilter } from "@/features/money/incomeRows";
 import type { Booking as FullBooking } from "@/features/bookings/types";
@@ -64,7 +65,10 @@ function normaliseMethod(raw?: string): string {
 
 const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
-const monthKeyOf = (d: Date) => ukDay(d.toISOString()).slice(0, 7); // UK wall-clock month
+const monthKeyOf = (d: Date) => ukDay(d.toISOString()).slice(0, 7); // UK wall-clock month of an INSTANT (e.g. now)
+// A calendar month picked by its own year/month (new Date(y, m, 1)): key it by those parts. Converting that local-midnight instant to a UK date
+// slips back a month for any browser east of the UK (the chart then missed the current month and "last month" was two months ago).
+const monthKeyOfDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
 type Tab = "overview" | "ledger" | "categories";
 type Range = "all" | "month" | "lastmonth" | "year";
@@ -173,7 +177,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const logged = useMemo(() => data?.items ?? [], [data]); // real, editable income
   const now = useMemo(() => new Date(), []);
   const thisMonthKey = monthKeyOf(now);
-  const lastMonthKey = monthKeyOf(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+  const lastMonthKey = monthKeyOfDate(new Date(now.getFullYear(), now.getMonth() - 1, 1));
   const thisYear = String(now.getFullYear());
 
   // Money in from bookings taken through the platform — read-only rows, tagged
@@ -217,11 +221,30 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     const months = trendMode === "6m" ? 6 : trendMode === "9m" ? 9 : 12;
     return Array.from({ length: months }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1);
-      const key = monthKeyOf(d);
+      const key = monthKeyOfDate(d);
       const rows = allItems.filter((x) => (x.date || "").slice(0, 7) === key);
       return { key, label: d.toLocaleDateString(dl(), { month: "short" }), total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length, current: key === thisMonthKey };
     });
   }, [allItems, trendMode, now, thisMonthKey]);
+
+  // Monthly bars (6 / 9 / 12 months): Collected (the ledger) beside Booked (bookings taken that month, not cancelled / declined / waitlisted).
+  const monthPoints = useMemo<MoneyBarPoint[]>(() => {
+    if (trendMode === "7d" || trendMode === "month") return [];
+    const months = trendMode === "6m" ? 6 : trendMode === "9m" ? 9 : 12;
+    return Array.from({ length: months }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1);
+      const key = monthKeyOfDate(d);
+      const rows = allItems.filter((x) => (x.date || "").slice(0, 7) === key);
+      const made = bookings.filter((b) => ukDay(b.createdAt || "").slice(0, 7) === key && !["Cancelled", "Declined", "Waitlisted"].includes((b as unknown as { status?: string }).status ?? ""));
+      return {
+        key, month: d.getMonth(), year: d.getFullYear(),
+        monthShort: d.toLocaleDateString(dl(), { month: "short" }), monthLong: d.toLocaleDateString(dl(), { month: "long" }),
+        total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length,
+        booked: made.reduce((s, b) => s + (b.amount ?? 0), 0), bookedCount: made.length,
+        current: key === thisMonthKey,
+      };
+    });
+  }, [allItems, bookings, trendMode, now, thisMonthKey]);
 
   const sumWhere = (pred: (x: Income) => boolean) => allItems.filter(pred).reduce((s, x) => s + x.amount, 0);
   const thisMonthTotal = useMemo(() => sumWhere((x) => (x.date || "").slice(0, 7) === thisMonthKey), [allItems, thisMonthKey]);
@@ -519,15 +542,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
             return (
               <Card className="p-4">
                 {header}
-                <div className="flex items-end gap-3 overflow-x-auto">
-                  {trend.map((m) => (
-                    <div key={m.key} className="flex flex-1 flex-col items-center" title={t("p8fin.inMonthTip", { label: m.label, amount: money(m.total), n: m.count })}>
-                      <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-2)]">{m.total > 0 ? money(m.total) : ""}</div>
-                      <div className="w-full max-w-[42px] rounded-t-[3px]" style={{ height: `${6 + (m.total / max) * 98}px`, background: m.current ? `linear-gradient(180deg,${ACCENT},${ACCENT_DK})` : "linear-gradient(180deg,#6f9beb,#3f78d8)" }} />
-                      <div className="mt-1.5 text-[11px] font-bold text-[var(--ink-3)]">{m.label}</div>
-                    </div>
-                  ))}
-                </div>
+                <MoneyBars points={monthPoints} series={t("p8fin.mbCollected")} color={ACCENT} colorDark={ACCENT_DK} showBooked emptyText={t("p8fin.mbNothing")} />
               </Card>
             );
           })()}

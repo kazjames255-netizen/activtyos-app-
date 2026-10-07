@@ -9,6 +9,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
+import { MoneyBars } from "./MoneyBars";
 import { StaffClaimsPanel } from "./StaffClaimsPanel";
 import { csvText } from "@/lib/csv";
 import { useT, useWord } from "@/lib/i18n/provider";
@@ -215,7 +216,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const monthly = useMemo(() => {
     const months = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      return { key: monthKeyOf(d), label: d.toLocaleDateString(dl(), { month: "short" }) };
+      return { key: monthKeyOf(d), label: d.toLocaleDateString(dl(), { month: "short" }), long: d.toLocaleDateString(dl(), { month: "long" }), month: d.getMonth(), year: d.getFullYear() };
     });
     return months.map((m) => {
       const rows = allItems.filter((x) => (x.date || "").slice(0, 7) === m.key);
@@ -444,22 +445,16 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
           </Card>
 
           {(() => {
-            const max = Math.max(1, ...monthly.map((m) => m.total));
             return (
               <Card className="p-4">
                 <div className="mb-3 flex items-baseline justify-between">
                   <div className="text-[13.5px] font-extrabold">{t("p8fin.exLast6")}</div>
                   <div className="text-[11px] text-[var(--ink-3)]">{t("p8fin.exPerMonth")}</div>
                 </div>
-                <div className="flex items-end gap-3 overflow-x-auto">
-                  {monthly.map((m) => (
-                    <div key={m.key} className="flex flex-1 flex-col items-center" title={t("p8fin.exMonthTip", { label: m.label, amount: money(m.total), n: m.count })}>
-                      <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-2)]">{m.total > 0 ? money(m.total) : ""}</div>
-                      <div className="w-full max-w-[46px] rounded-t-[4px]" style={{ height: `${8 + (m.total / max) * 96}px`, background: m.key === thisMonthKey ? "linear-gradient(180deg,#1d3a8f,#16306e)" : "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }} />
-                      <div className="mt-1.5 text-[11px] font-bold text-[var(--ink-3)]">{m.label}</div>
-                    </div>
-                  ))}
-                </div>
+                <MoneyBars
+                  points={monthly.map((m) => ({ key: m.key, month: m.month, year: m.year, monthShort: m.label, monthLong: m.long, total: m.total, count: m.count, current: m.key === thisMonthKey }))}
+                  series={t("p8fin.mbSpent")} color="#4f8bf5" colorDark="#1d3a8f" emptyText={t("p8fin.mbNothingSpent")}
+                />
               </Card>
             );
           })()}
