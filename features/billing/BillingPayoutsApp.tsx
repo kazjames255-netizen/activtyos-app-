@@ -86,6 +86,14 @@ export function BillingPayoutsApp() {
     if (typeof window === "undefined") return "plan";
     return new URLSearchParams(window.location.search).get("tab") === "paid" ? "paid" : "plan";
   });
+  // The state initialiser can't see the URL when the page is server-rendered first (it says "plan"), so a deep link like
+  // /billing?tab=paid opened the wrong tab. Re-read the address once mounted, and on back/forward.
+  useEffect(() => {
+    const sync = () => { const q = new URLSearchParams(window.location.search).get("tab"); if (q === "paid" || q === "plan") setTab(q); };
+    sync();
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
   const pick = (t: Tab) => {
     setTab(t);
     try { const u = new URL(window.location.href); u.searchParams.set("tab", t); window.history.replaceState(null, "", u.toString()); } catch { /* ignore */ }
