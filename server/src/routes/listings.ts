@@ -1,7 +1,7 @@
 import { Router, type Request } from "express";
 import { personRuleProblem } from "../lib/discountRules";
 import { gateAppliesOnPublish } from "../../../lib/billingRules";
-import { withoutBaseAddress, touchesCapacity, withHomeTenant, homeVisitVisibility, directLinkHiddenByArea } from "../lib/publicListing";
+import { withoutBaseAddress, touchesCapacity, withHomeTenant, homeVisitVisibility, directLinkHiddenByArea, outOfAreaBody } from "../lib/publicListing";
 import { coverageVerdict, type CoverageArea } from "../lib/coverageArea";
 import { z } from "zod";
 import { db } from "../firebase";
@@ -367,7 +367,8 @@ listings.get("/:id", async (req, res) => {
         ? !(await db.collection("bookings").where("email", "==", req.user.email).where("listingId", "==", snap.id).limit(1).get()).empty
         : false;
       if (directLinkHiddenByArea(l.deliveryMode as string, covered, hasBooking)) {
-        res.status(404).json({ error: "Listing not found" });
+        // Still a 404 (nothing about the listing is returned), but with a code so the /book page can say it kindly: the family was SENT this link.
+        res.status(404).json(outOfAreaBody(l.tenantName as string | undefined, l.tenantId as string | undefined, pc));
         return;
       }
     }

@@ -24,6 +24,8 @@ export function BookPage({ id }: { id: string }) {
   const [listing, setListing] = useState<ServerListing | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  // A home-visit listing the family's saved postcode is outside of: the API answers 404 + code "out_of_area" (provider name, the family's own district).
+  const [outOfArea, setOutOfArea] = useState<{ provider: string; tenantId?: string; district: string } | null>(null);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // ?embed=1 = we're inside a provider's website via public/embed.js:
   // hide the Name TBC chrome and report our height to the parent so
@@ -64,7 +66,7 @@ export function BookPage({ id }: { id: string }) {
   useEffect(() => {
     apiPublic<ServerListing>(`/api/listings/${encodeURIComponent(id)}`)
       .then((l) => { setListing(l); if (embedded) window.parent?.postMessage({ type: "activityos:debug", kind: "listing", msg: "listing loaded" }, "*"); })
-      .catch((e) => { setNotFound((e as { status?: number })?.status === 404); setError(e instanceof Error ? e.message : t("p7pub.errLoadListing")); if (embedded) window.parent?.postMessage({ type: "activityos:debug", kind: "listing-error", msg: String(e?.message ?? e) }, "*"); });
+      .catch((e) => { setNotFound((e as { status?: number })?.status === 404); const b = (e as { body?: { code?: string; provider?: { name?: string; tenantId?: string }; district?: string } })?.body; if (b?.code === "out_of_area") setOutOfArea({ provider: b.provider?.name || "", tenantId: b.provider?.tenantId, district: b.district || "" }); setError(e instanceof Error ? e.message : t("p7pub.errLoadListing")); if (embedded) window.parent?.postMessage({ type: "activityos:debug", kind: "listing-error", msg: String(e?.message ?? e) }, "*"); });
   }, [id]);
   const [gateDismissed, setGateDismissed] = useState(false);
   useEffect(() => firebaseAuth.onAuthStateChanged((u) => setSignedIn(!!u)), []);
@@ -73,6 +75,23 @@ export function BookPage({ id }: { id: string }) {
     return startEmbedHeightReports();
   }, [embedded]);
 
+  if (error && outOfArea) {
+    const prov = outOfArea.provider || t("p7cl.theProvider");
+    return (
+      <div className={`${embedded ? "" : "min-h-screen "}flex items-center justify-center bg-[#f4f7ff] p-6`}>
+        <div className="max-w-[460px] rounded-2xl border border-[#e8edf7] bg-white p-6 text-center">
+          <div className="text-[18px] font-extrabold text-[#171534]">{t("p7pub.areaTitle", { provider: prov })}</div>
+          <p className="mt-2 text-[13.5px] leading-[1.5] text-[#4a4763]">{t("p7pub.areaBody", { provider: prov, district: outOfArea.district || "your area" })}</p>
+          {!embedded && (
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <Link href="/custdash/browse" className="rounded-xl bg-[#2f6bd8] px-4 py-2 text-[13px] font-bold text-white">{t("p7pub.areaBrowse")}</Link>
+              {outOfArea.tenantId && <Link href={`/custdash/messages?compose=1&tenant=${encodeURIComponent(outOfArea.tenantId)}`} className="rounded-xl border border-[#dbe0ec] bg-white px-4 py-2 text-[13px] font-bold text-[#4a4763]">{t("p7pub.areaMessage", { provider: prov })}</Link>}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
   if (error) {
     // A listing that is not live (draft, ended, unpublished) answers 404: say so kindly instead of "not found", and inside a provider's
     // website never offer a link to the platform's home page (it would navigate their visitor out of the embed).

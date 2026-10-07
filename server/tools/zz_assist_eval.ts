@@ -46,6 +46,7 @@ export const QUESTIONS: string[] = [
   "where do I see the note a parent left about pets or parking for a home visit",
   "can parents filter the browse page to only online or at-home activities",
   "do parents have to give their full address with a house number when they sign up",
+  "what does a parent see if I send them the link to my home visit but they live outside my area",
   "will I get a notification when a family has paid by card after I got the awaiting card payment one",
   "can parents tell me how to find their house or where to park",
   "how long till money arrives in my bank",

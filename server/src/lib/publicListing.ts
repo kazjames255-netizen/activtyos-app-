@@ -43,3 +43,14 @@ export function homeVisitVisibility(deliveryMode: string | undefined | null, cov
 export function directLinkHiddenByArea(deliveryMode: string | undefined | null, covered: boolean | null, hasBooking: boolean): boolean {
   return homeVisitVisibility(deliveryMode, covered) === "hide" && !hasBooking;
 }
+
+/** The body of the direct-link 404 for a family outside a home-visit listing's area. Same status and message as a missing listing, plus a machine
+ *  `code` so the /book page can show a friendly "doesn't cover your area" screen instead of "not found". It carries ONLY the provider's public name
+ *  and id, and the family's OWN postcode district (e.g. "MK10"): never the base postcode, the radius or the coverage list. */
+export function outOfAreaBody(providerName: string | undefined | null, tenantId: string | undefined | null, familyPostcode: string): {
+  error: string; code: "out_of_area"; provider: { name: string; tenantId?: string }; district: string;
+} {
+  const compact = (familyPostcode ?? "").toUpperCase().replace(/\s+/g, "");
+  const district = compact.length > 3 ? compact.slice(0, -3) : compact;
+  return { error: "Listing not found", code: "out_of_area", provider: { name: providerName || "", ...(tenantId ? { tenantId } : {}) }, district };
+}
