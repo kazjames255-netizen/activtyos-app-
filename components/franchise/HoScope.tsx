@@ -129,7 +129,7 @@ export function HoScopeSwitcher({ portal }: { portal: string }) {
   // viewing" control at a glance.
   return (
     <label
-      className="inline-flex cursor-pointer items-center gap-2 rounded-full border bg-white px-2 py-1 shadow-sm transition-transform hover:-translate-y-px"
+      className="inline-flex min-w-0 shrink cursor-pointer items-center gap-2 rounded-full border bg-white px-2 py-1 shadow-sm transition-transform hover:-translate-y-px"
       style={{ borderColor: drilled ? "#d9cffb" : "#dbe6fb" }}
       title={t("p8fr.scopeTitle")}
     >
@@ -137,7 +137,7 @@ export function HoScopeSwitcher({ portal }: { portal: string }) {
       <select
         value={scope ?? ""}
         onChange={(e) => setHoScopeId(e.target.value || null)}
-        className="max-w-[160px] cursor-pointer appearance-none truncate border-0 bg-transparent pe-1 text-[12.5px] font-extrabold outline-none min-[1440px]:max-w-[210px]"
+        className="min-w-0 max-w-[110px] cursor-pointer appearance-none truncate sm:max-w-[160px] border-0 bg-transparent pe-1 text-[12.5px] font-extrabold outline-none min-[1440px]:max-w-[210px]"
         style={{ color: accent }}
       >
         <option value="" className="text-[var(--ink)]">{t("p8fr.scopeAll")}</option>

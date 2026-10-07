@@ -48,18 +48,18 @@ function Avatar({ child, size = 44, accent }: { child: Pick<Child, "name" | "pho
         src={child.photo}
         alt={child.name}
         className="rounded-full object-cover"
-        style={{ width: size, height: size, boxShadow: accent ? `0 0 0 2.5px ${accent}33` : undefined }}
+        style={{ width: size, height: size, boxShadow: accent ? `0 0 0 2.5px color-mix(in srgb, ${accent} 20%, transparent)` : undefined }}
       />
     );
   }
   return (
     <div
-      className="flex items-center justify-center rounded-full font-extrabold text-white"
+      className={`flex items-center justify-center rounded-full font-extrabold ${accent ? "text-white" : "text-[var(--brand-ink)]"}`}
       style={{
         width: size,
         height: size,
         fontSize: size * 0.42,
-        background: accent ? `linear-gradient(140deg, ${accent}, ${accent}cc)` : "var(--brand-soft)",
+        background: accent ? `linear-gradient(140deg, ${accent}, color-mix(in srgb, ${accent} 80%, transparent))` : "var(--brand-soft)",
       }}
     >
       {child.name ? child.name[0].toUpperCase() : "?"}

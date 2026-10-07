@@ -134,7 +134,7 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label, varian
             const main = variant === "flat" && meta.key === "live" && !soon; // the headline function (Live lessons) gets presence
             const dot = tab.dot ?? (variant === "flat" && meta.key === "live" && liveNow);
             const style: CSSProperties = on
-              ? { background: "transparent", color: "var(--on-brand, #fff)", borderColor: "transparent" }
+              ? { background: pill ? "transparent" : pillBg, color: "var(--on-brand, #fff)", borderColor: "transparent" }
               : soon
                 ? { background: "var(--panel)", color: "var(--ink)", borderColor: "var(--ink-3)", borderStyle: "dashed" }
                 : main

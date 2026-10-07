@@ -53,7 +53,7 @@ export function StaffWelcome() {
 
   return (
     <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl">
         <div className="relative overflow-hidden px-6 py-6 text-white" style={{ background: allDone ? "linear-gradient(135deg,#166534,#37b26a)" : "linear-gradient(135deg,#1d3a8f,#3f7ae0)" }}>
           <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 400 140" preserveAspectRatio="xMidYMid slice" aria-hidden><circle cx="368" cy="18" r="66" fill="#fff" opacity="0.1" /><circle cx="330" cy="140" r="44" fill="#fff" opacity="0.07" /></svg>
           <div className="relative">
@@ -66,11 +66,11 @@ export function StaffWelcome() {
         {!allDone && (
           <div className="space-y-2 px-5 py-4">
             {STEPS.map(([num, icon, title, sub, view, , hint]) => (
-              <button key={view} type="button" onClick={() => go(view)} className="flex w-full items-center gap-3 rounded-xl border border-[var(--line)] p-3 text-start transition-colors hover:border-[#1d3a8f] hover:bg-[#f6f9ff]">
+              <button key={view} type="button" onClick={() => go(view)} className="flex w-full items-center gap-3 rounded-xl border border-[var(--line)] p-3 text-start transition-colors hover:border-[var(--brand)] hover:bg-[var(--brand-soft)]">
                 <span className="grid h-9 w-9 flex-none place-items-center rounded-full bg-[#1d3a8f] text-[14px] font-extrabold text-white">{num}</span>
-                <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[#eef4ff] text-[17px]">{icon}</span>
+                <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[var(--brand-soft)] text-[17px]">{icon}</span>
                 <span className="min-w-0 flex-1"><span className="block text-[13.5px] font-extrabold text-[var(--ink)]">{title}</span><span className="block text-[11.5px] text-[var(--ink-3)]">{sub}</span></span>
-                <span className="flex-none rounded-full bg-[#eef4ff] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">{hint}</span>
+                <span className="flex-none rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[10.5px] font-extrabold text-[var(--brand-ink)]">{hint}</span>
               </button>
             ))}
             {laterCount > 0 && (
