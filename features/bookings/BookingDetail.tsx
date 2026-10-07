@@ -29,6 +29,7 @@ import {
   visitAddressLabel,
 } from "./helpers";
 import { Badge, Button, Card, DefRow, Input, SectionHead, Select } from "@/components/ui";
+import { SessionTiles } from "./SessionTiles";
 import { EventDateBanner, FamilyNoteCallout } from "./EventDateBanner";
 import { useTenantSettings, reasonsFor } from "@/lib/settings";
 import { refundFor, effectiveRefundDate, policyById, adviceReasonT } from "@/lib/cancellation";
@@ -892,20 +893,11 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         )}
 
         {/* Sessions */}
-        <SectionHead>{t("p7bd.secDates")}</SectionHead>
-        <div className="mb-1 text-[12px] font-bold text-[var(--ink-2)]">{b.listing}</div>
-        {(b.sessions || []).map((s, i) => {
-          const parts = s.split(" · ");
-          return (
-            <div
-              key={i}
-              className="flex justify-between border-b border-dashed border-[var(--line)] py-[3px] text-[12px] text-[var(--ink)]"
-            >
-              <span>{parts[0]}</span>
-              <b>{parts[1] || ""}</b>
-            </div>
-          );
-        })}
+        <div className="mb-2 mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-[4px] text-[11px] font-extrabold uppercase tracking-[0.05em] text-white" style={{ background: "linear-gradient(120deg,#1d3a8f,#2f6bd8)" }}>
+          📅 {t("p7bd.secDates")}
+        </div>
+        <div className="mb-1.5 text-[12.5px] font-extrabold text-[var(--ink)]">{b.listing}</div>
+        <SessionTiles sessions={b.sessions || []} place={b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) ? `🏠 ${t("p8lst.evAtHome")}` : null} />
 
         {/* Payment */}
         <SectionHead>{t("p7bd.secPayment")}</SectionHead>

@@ -12,6 +12,7 @@ import { useI18n, useT, useWord, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
 import { visitAddressLabel, addonLinesFor, bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, refundableSoFar } from "@/features/bookings/helpers";
+import { SessionTiles } from "@/features/bookings/SessionTiles";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
@@ -1199,11 +1200,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
             </>
           )}
           <SectionHead>{t("parent.sessionsSection")}</SectionHead>
-          {(b.sessions || []).map((s, i) => (
-            <div key={i} className="border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">
-              {s}
-            </div>
-          ))}
+          <SessionTiles sessions={b.sessions || []} />
           {/* Extras — the true add-ons (meal lines are pulled out into their
               own section below so they don't double up). */}
           {(() => { const extras = addonLinesFor(b).filter((a) => !a.startsWith("🍽")); return extras.length > 0 && (
