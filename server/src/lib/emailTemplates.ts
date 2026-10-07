@@ -172,7 +172,7 @@ export function bookingDeclinedSpec(b: Booking, providerName: string, reason?: s
     subject: `Booking update — ${b.listing}`,
     title: "Your booking request was declined",
     body: `<p style="font-size:14px">Sorry ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} couldn't take this booking.
-     Nothing has been charged. Feel free to browse other dates or activities.</p>${note}`,
+     ${b.cardHold ? `<b>Nothing was taken from your account.</b> The £${(b.cardHold.amount ?? b.amount ?? 0).toFixed(2)} that was held on your card has been released. Your bank may keep showing it as "pending" for a few days before it disappears — that is normal, and you will not be charged.` : "Nothing has been charged."} Feel free to browse other dates or activities.</p>${note}`,
   };
 }
 
