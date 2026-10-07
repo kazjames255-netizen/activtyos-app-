@@ -299,6 +299,7 @@ platform.get("/page-engagement", async (req, res) => {
 
 // Churn-risk model shared by the dedicated At-risk page.
 const RISK_RANK: Record<string, number> = { payment_failed: 0, cancelling: 1, trial_ending: 2, never_launched: 3, quiet: 4 };
+const atRiskCache = ttlCache<Awaited<ReturnType<typeof computeAtRisk>>>(30_000);
 async function computeAtRisk() {
   const now = Date.now(), DAY = 86_400_000;
   const [tenantsSnap, bookingsSnap, libsSnap] = await Promise.all([
@@ -311,7 +312,9 @@ async function computeAtRisk() {
   const lastBooking: Record<string, number> = {};
   for (const dd of bookingsSnap.docs) { const b = dd.data() as { tenantId?: string; createdAt?: string }; if (b.tenantId && b.createdAt) { const t = Date.parse(b.createdAt); if (!lastBooking[b.tenantId] || t > lastBooking[b.tenantId]) lastBooking[b.tenantId] = t; } }
   const QUIET_DAYS = 45, LAUNCH_GRACE = 14, TRIAL_SOON = 3;
-  const rows: { id: string; name: string; type: string; fee: number; contactEmail: string | null; phone: string | null; reason: string; detail: string; contactedAt: string | null }[] = [];
+  type RiskRow = { id: string; name: string; type: string; fee: number; contactEmail: string | null; phone: string | null; reason: string; detail: string; contactedAt: string | null };
+  const rows: RiskRow[] = [];
+  const needOwner: { row: RiskRow; uid: string }[] = [];
   for (const d of tenantsSnap.docs) {
     const t = d.data() as Record<string, unknown> & { name?: string; type?: string; createdAt?: string; ownerUid?: string; subscription?: Record<string, unknown>; retentionContactedAt?: string };
     const sub = t.subscription ?? {};
@@ -330,10 +333,13 @@ async function computeAtRisk() {
     else if (daysSince != null && daysSince > QUIET_DAYS) { reason = "quiet"; detail = `No bookings in ${daysSince}d`; }
     if (!reason) continue;
     const billing = (settingsById[d.id]?.billing as Record<string, unknown> | undefined) ?? {};
-    let contactEmail: string | null = (billing.email as string) || null;
-    if (!contactEmail && t.ownerUid) { try { contactEmail = (await auth.getUser(t.ownerUid)).email ?? null; } catch { /* owner gone */ } }
-    rows.push({ id: d.id, name: t.name ?? d.id, type: t.type ?? "freelancer", fee: price, contactEmail, phone: (billing.phone as string) ?? null, reason, detail, contactedAt: t.retentionContactedAt ?? null });
+    const contactEmail: string | null = (billing.email as string) || null;
+    const row: RiskRow = { id: d.id, name: t.name ?? d.id, type: t.type ?? "freelancer", fee: price, contactEmail, phone: (billing.phone as string) ?? null, reason, detail, contactedAt: t.retentionContactedAt ?? null };
+    rows.push(row);
+    if (!contactEmail && t.ownerUid) needOwner.push({ row, uid: t.ownerUid });
   }
+  // Owner-email fallbacks were one awaited Auth call per row, in series; run them together.
+  await Promise.all(needOwner.map(async ({ row, uid }) => { try { row.contactEmail = (await auth.getUser(uid)).email ?? null; } catch { /* owner gone */ } }));
   rows.sort((a, b) => (RISK_RANK[a.reason] - RISK_RANK[b.reason]) || (b.fee - a.fee));
   return rows;
 }
@@ -341,7 +347,7 @@ async function computeAtRisk() {
 // GET /api/platform/at-risk — full churn-risk list (with contacted state).
 platform.get("/at-risk", async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
-  res.json({ rows: await computeAtRisk() });
+  res.json({ rows: await atRiskCache.wrap("all", computeAtRisk) }); // same list for every platform admin: share for 30s
 });
 
 // POST /api/platform/at-risk/:id/contacted — mark (or un-mark) as contacted.
@@ -351,7 +357,7 @@ platform.post("/at-risk/:id/contacted", async (req, res) => {
   // Same as the features toggle: merge-set on a missing id would mint a phantom tenant that then shows up in every HQ list.
   if (!(await db.collection("tenants").doc(req.params.id).get()).exists) { res.status(404).json({ error: "No such provider" }); return; }
   await db.collection("tenants").doc(req.params.id).set({ retentionContactedAt: contacted ? new Date().toISOString() : null }, { merge: true });
-  invalidateCollection("tenants"); // the At-risk list must show the new contacted state on its next read
+  atRiskCache.clear(); invalidateCollection("tenants"); // the At-risk list must show the new contacted state on its next read
   res.json({ ok: true, contactedAt: contacted ? new Date().toISOString() : null });
 });
 
@@ -377,11 +383,15 @@ platform.get("/churn", async (req, res) => {
 // churn, tenure, conversion, signups & GMV over 12 months, attribution, top
 // providers, at-risk, and a simple MRR projection. Full-collection reads at
 // current scale (becomes a scheduled rollup later).
+const analyticsCache = ttlCache<unknown>(30_000);
 platform.get("/analytics", async (req, res) => {
   if (req.auth!.role !== "platform") {
     res.status(403).json({ error: "Requires the platform role" });
     return;
   }
+  res.json(await analyticsCache.wrap("all", computeAnalytics)); // identical for every platform admin: share for 30s
+});
+async function computeAnalytics() {
   const [tenantsSnap, bookingsSnap, libsSnap] = await Promise.all([
     cachedCollection("tenants"),
     cachedCollection("bookings"),
@@ -477,7 +487,7 @@ platform.get("/analytics", async (req, res) => {
   const projection = [1, 2, 3].map((n) => ({ month: mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + n, 1))), mrr: Math.max(0, Math.round(lastMrr + avgDelta * n)) }));
 
   topProviders.sort((a, b) => b.fee - a.fee);
-  res.json({
+  return {
     summary: {
       mrr, arr: mrr * 12, mrrPaying, mrrTrial, arrPaying: mrrPaying * 12, totalProviders: tenants.length, active, trialing, canceling, canceled,
       avgTenureDays, churnRate, trialConversion, newThisMonth: signBuckets[months[months.length - 1]] ?? 0,
@@ -486,8 +496,8 @@ platform.get("/analytics", async (req, res) => {
     byPlan, byStatus, byType, attribution,
     signupsByMonth, mrrByMonth, mrrPayingByMonth, activeByMonth, gmvByMonth, projection,
     topProviders: topProviders.slice(0, 8),
-  });
-});
+  };
+}
 
 // ── GET /inbox — the newest provider mail, network-wide ─────────────────────
 // HQ has no mailbox of its own (inbound mail always files against a provider

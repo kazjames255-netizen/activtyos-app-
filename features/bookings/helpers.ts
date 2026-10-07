@@ -520,7 +520,7 @@ export const refundedGross = (b: Booking) => {
   // Approving a cancellation refund writes a "Refund approved…" line into the
   // log, so the log ALREADY holds that money. Adding the cancellation amount
   // as well took it off twice and showed a booking that kept £10 as £0.
-  const approvalLogged = (b.refundLog || []).some((x) => /^refund approved/i.test(x.label || ""));
+  const approvalLogged = (b.refundLog || []).some((x) => /^refund approved/i.test(x.label || "") && (x.amount || 0) > 0);
   return log + (wholeRefunded && !approvalLogged ? (c!.amount || 0) : 0);
 };
 

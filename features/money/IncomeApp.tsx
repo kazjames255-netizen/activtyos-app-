@@ -7,7 +7,7 @@ import { useHoScope } from "@/components/franchise/HoScope";
 import { withHoNet } from "@/lib/ho-net";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
-import { bookingNetIn, bookingRefundOwed } from "@/features/money/bookingIncome";
+import { bookingNetIn, bookingRefundOwed, isStandaloneInvoiceIn, ukDay } from "@/features/money/bookingIncome";
 import type { Booking as FullBooking } from "@/features/bookings/types";
 import { Card } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
@@ -61,7 +61,7 @@ function normaliseMethod(raw?: string): string {
 
 const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
-const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+const monthKeyOf = (d: Date) => ukDay(d.toISOString()).slice(0, 7); // UK wall-clock month
 
 type Tab = "overview" | "ledger" | "categories";
 type Range = "all" | "month" | "lastmonth" | "year";
@@ -172,15 +172,15 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
       return { b, paid: net, back, owed: bookingRefundOwed(b as unknown as FullBooking) };
     })
     .filter(({ paid }) => paid > 0)
-    .map(({ b, paid, back, owed }) => ({ id: `bk-${b.ref}`, date: (b.createdAt || "").slice(0, 10), category: BOOKINGS_CAT, amount: paid, source: b.booker || b.listing, notes: [b.listing, b.ref, back > 0 ? t("p8fin.inRefunded", { amount: `£${back.toFixed(2)}` }) : "", owed > 0 ? t("p8fin.inRefundOwed", { amount: `£${owed.toFixed(2)}` }) : ""].filter(Boolean).join(" · "), method: normaliseMethod(b.method), virtual: true, listingId: b.listingId })), [bookings, t]);
+    .map(({ b, paid, back, owed }) => ({ id: `bk-${b.ref}`, date: ukDay(b.createdAt || ""), category: BOOKINGS_CAT, amount: paid, source: b.booker || b.listing, notes: [b.listing, b.ref, back > 0 ? t("p8fin.inRefunded", { amount: `£${back.toFixed(2)}` }) : "", owed > 0 ? t("p8fin.inRefundOwed", { amount: `£${owed.toFixed(2)}` }) : ""].filter(Boolean).join(" · "), method: normaliseMethod(b.method), virtual: true, listingId: b.listingId })), [bookings, t]);
 
   // Paid invoices ARE money in — folded in as read-only rows so Income shows the
   // whole picture without you re-keying them. Dated by when they were paid.
   const invoiceRows = useMemo<Income[]>(() => invoices
     // An invoice that settled a booking is already inside that booking's
     // amountPaid — counting it again double-counts the money (d18s4).
-    .filter((v) => v.status === "paid" && !v.bookingSettledAt)
-    .map((v) => ({ id: `inv-${v.id}`, date: (v.paidAt || v.date || "").slice(0, 10), category: INVOICE_CAT, amount: v.amount, source: v.customerName, notes: v.reference ? t("p8fin.inInvoiceRef", { ref: v.reference }) : t("p8fin.mthInvoice"), method: "Invoice", virtual: true })), [invoices, t]);
+    .filter(isStandaloneInvoiceIn)
+    .map((v) => ({ id: `inv-${v.id}`, date: ukDay(v.paidAt || v.date || ""), category: INVOICE_CAT, amount: v.amount, source: v.customerName, notes: v.reference ? t("p8fin.inInvoiceRef", { ref: v.reference }) : t("p8fin.mthInvoice"), method: "Invoice", virtual: true })), [invoices, t]);
 
   const allItems = useMemo(() => [...bookingRows, ...invoiceRows, ...logged], [bookingRows, invoiceRows, logged]);
 

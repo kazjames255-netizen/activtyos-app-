@@ -3,6 +3,7 @@
 // component (FinanceAnalyticsApp.tsx) so the maths the page shows can be run
 // and checked against the Dashboard on its own (acceptance d19s1/s2/s7).
 // ─────────────────────────────────────────────────────────────────────────
+import { isOwed, round2, ukMonth } from "./bookingIncome";
 import { collectedNet, isMoneyIn, owedNow, receivedOf } from "../bookings/helpers";
 import type { Booking } from "../bookings/types";
 import { ACT_C, money, colorFor } from "./finance-kit";
@@ -14,11 +15,11 @@ export interface PaymentRecord { id: string; refs?: string[]; email?: string; me
 const BLUE = "#1d3a8f", GREEN = "#0f7a43";
 export const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 export const isCancelled = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
-export const monthOf = (b: Booking): string | null => { const s = b.createdAt || b.days?.[0] || ""; const m = s.slice(0, 7); return /^\d{4}-\d{2}$/.test(m) ? m : null; };
+export const monthOf = (b: Booking): string | null => { const s = b.createdAt || b.days?.[0] || ""; const m = ukMonth(s); return /^\d{4}-\d{2}$/.test(m) ? m : null; };
 // "YYYY-MM" from an ISO stamp or the en-GB "13/09/2026, 10:30" refunds carry.
 const monthOfStamp = (s?: string | null): string | null => {
   if (!s) return null;
-  if (/^\d{4}-\d{2}/.test(s)) return s.slice(0, 7);
+  if (/^\d{4}-\d{2}/.test(s)) return ukMonth(s);
   const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s);
   return m ? `${m[3]}-${m[2].padStart(2, "0")}` : null;
 };
@@ -63,7 +64,7 @@ export function payIndex(bookings: Booking[], payments: PaymentRecord[]): PayInd
     for (const r of refs) {
       const share = tot > 0 ? (price.get(r) ?? 0) / tot : 1 / refs.length;
       const list = byRef.get(r) ?? [];
-      list.push({ month, at, amount: (Number(p.amount) || 0) * share, card });
+      list.push({ month, at, amount: round2((Number(p.amount) || 0) * share), card });
       byRef.set(r, list);
     }
   }
@@ -110,16 +111,16 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
   const collectedSplit = (b: Booking): [string, number][] => {
     const net = collectedNet(b);
     const booked = monthOf(b);
-    if (net <= 0) return [];
+    if (net <= 0.005) return [];
     const recs = payIdx.byRef.get(b.ref) ?? [];
     const received = receivedOf(b);
     const recTotal = recs.reduce((s, r) => s + r.amount, 0);
-    if (!recs.length || received <= 0) return booked ? [[booked, net]] : [];
+    if (!recs.length || received <= 0) return booked ? [[booked, round2(net)]] : [];
     // Scaled so the parts always add up to collectedNet — the all-time
     // figure is unchanged, only when it lands moves.
     const k = net / Math.max(received, recTotal);
-    const parts: [string, number][] = recs.map((r) => [r.month, r.amount * k]);
-    if (received > recTotal && booked) parts.push([booked, (received - recTotal) * k]);
+    const parts: [string, number][] = recs.map((r) => [r.month, round2(r.amount * k)]);
+    if (received > recTotal && booked) parts.push([booked, round2((received - recTotal) * k)]);
     return parts;
   };
   // refundedGross(), split by when each refund was given.
@@ -172,8 +173,8 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
     collected += col;
     for (const [rm, amt] of refundSplit(b)) if (rm && inWindow.has(rm)) refunds += amt;
     // Owed NOW — the one rule the Dashboard uses too (owedNow, d19s7).
-    const o = owedNow(b);
-    if (o > 0) { owed += o; owing.push({ ref: b.ref, name: b.booker || b.email || "—", listing: b.listing || "", owed: o, when: b.createdAt || b.days?.[0] || "" }); }
+    const o = round2(owedNow(b));
+    if (isOwed(o)) { owed += o; owing.push({ ref: b.ref, name: b.booker || b.email || "—", listing: b.listing || "", owed: o, when: b.createdAt || b.days?.[0] || "" }); }
     if (col > 0) { paidBookings++; bySource.set(SOURCE_OF(b), (bySource.get(SOURCE_OF(b)) ?? 0) + col); }
     if (!isCancelled(b) && (b.listingId || b.listing) && (inWin || col > 0)) {
       const key = b.listingId || b.listing!;

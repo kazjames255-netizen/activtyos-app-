@@ -21,7 +21,7 @@ export const owedLite = (b: BkLite) => owedNow(b as unknown as Booking);
 
 /** "Outstanding": confirmed (place-holding) bookings still owing, plus the voucher counts. */
 export function outstandingFigures(liveBookings: BkLite[], today: string) {
-  const owing = liveBookings.filter((b) => owedLite(b) > 0);
+  const owing = liveBookings.filter((b) => owedLite(b) > 0.005);
   return {
     outstanding: round2(owing.reduce((s, b) => s + owedLite(b), 0)),
     overdueVouchers: owing.filter((b) => b.pay === "Awaiting voucher payment" && !!b.voucherReceiveBy && b.voucherReceiveBy < today).length,
@@ -48,14 +48,14 @@ export function takenThisWeekFigure(
     // Same statuses reconcileMath counts: an approved offline refund ("to-reimburse") and a recorded one are money going back too.
     .filter((p) => p.type === "refund" && (p.status === "succeeded" || p.status === "recorded" || p.status === "to-reimburse" || p.status === "credited") && (p.paidAt ?? p.createdAt ?? "") >= weekAgo)
     .filter((p) => !venueRefs || (p.refs ?? []).some((r) => venueRefs.has(r)))
-    .reduce((s, p) => s + (p.amount ?? 0) * shareIn(p.refs ?? []), 0);
+    .reduce((s, p) => s + round2((p.amount ?? 0) * shareIn(p.refs ?? [])), 0);
   return round2(
     payments
       // A card record is created when checkout STARTS; paidAt is when it paid.
       .filter((p) => isMoneyIn(p) && (p.paidAt ?? p.createdAt ?? "") >= weekAgo)
       .filter((p) => !(p.refs ?? []).some((r) => goneRefs.has(r)))
       .filter((p) => !venueRefs || (p.refs ?? []).some((r) => venueRefs.has(r)))
-      .reduce((s, p) => s + (p.amount ?? 0) * shareIn(p.refs ?? []), 0) - refundedThisWeek,
+      .reduce((s, p) => s + round2((p.amount ?? 0) * shareIn(p.refs ?? [])), 0) - refundedThisWeek,
   );
 }
 

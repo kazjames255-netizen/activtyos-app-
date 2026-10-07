@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
-import { bookingNetIn, bookingRefundOwed } from "@/features/money/bookingIncome";
+import { bookingNetIn, bookingRefundOwed, isStandaloneInvoiceIn, ukDay } from "@/features/money/bookingIncome";
 import type { Booking as FullBooking } from "@/features/bookings/types";
 import { InvoicesWithBookings } from "@/features/money/BookingInvoices";
 import { IncomeApp } from "@/features/money/IncomeApp";
@@ -18,10 +18,11 @@ const LIGHT_PALETTE = {
   "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
 } as CSSProperties;
 
-interface Invoice { status?: string; amount?: number; date?: string; paidAt?: string }
+interface Invoice { status?: string; amount?: number; date?: string; paidAt?: string; bookingSettledAt?: string }
 interface Income { date?: string; amount?: number }
 interface Booking { pay?: string; amount?: number; amountPaid?: number; createdAt?: string; refundLog?: unknown; cancel?: unknown }
-const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+// UK wall-clock month, whatever the browser's zone (matches the Income tab and Finance).
+const monthKeyOf = (d: Date) => ukDay(d.toISOString()).slice(0, 7);
 const sameLen = (a: unknown[], b: unknown[]) => { try { return a.length === b.length && JSON.stringify(a) === JSON.stringify(b); } catch { return false; } };
 
 // Money IN hub. Customer Invoices (raise, send, get paid) plus Income (cash on
@@ -47,15 +48,15 @@ export function MoneyInApp() {
 
   const now = useMemo(() => new Date(), []);
   const thisMonthKey = monthKeyOf(now);
-  const thisYear = String(now.getFullYear());
+  const thisYear = thisMonthKey.slice(0, 4);
 
-  const paidInv = useMemo(() => invoices.filter((v) => v.status === "paid").map((v) => ({ date: (v.paidAt || v.date || "").slice(0, 10), amount: v.amount ?? 0 })), [invoices]);
+  const paidInv = useMemo(() => invoices.filter(isStandaloneInvoiceIn).map((v) => ({ date: ukDay(v.paidAt || v.date || ""), amount: v.amount ?? 0 })), [invoices]);
   const outstanding = useMemo(() => invoices.filter((v) => v.status === "sent").reduce((s, v) => s + (v.amount ?? 0), 0), [invoices]);
   // Booking money, dated by when the booking was taken. Same rule as the Dashboard's "Income
   // collected" and the Income tab: NET of refunds (received - refunded); `back` is the refunded part.
   const bookingIn = useMemo(() => bookings.map((b) => {
     const { got, back, net } = bookingNetIn(b as unknown as FullBooking);
-    return { date: (b.createdAt || "").slice(0, 10), amount: net, got, back, owed: bookingRefundOwed(b as unknown as FullBooking) };
+    return { date: ukDay(b.createdAt || ""), amount: net, got, back, owed: bookingRefundOwed(b as unknown as FullBooking) };
   }).filter((r) => r.got > 0), [bookings]);
 
   // Refunds agreed with a family but not yet sent — still inside the figures above until "Mark refund sent".
