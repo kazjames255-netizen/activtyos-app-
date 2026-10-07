@@ -24,6 +24,7 @@ log("staff1 POST incident (shared)", s1s.s);
 await new Promise((r) => setTimeout(r, 2500));
 const pl = await call("/api/incidents", P);
 log("parent GET kinds", pl.j.map((x: any) => `${x.kind}:${x.description.slice(0, 12)}`));
+log("auto-notified stamp on company list", (await call("/api/incidents?kind=accident", CA)).j.map((x: any) => `${x.parentNotified}:${x.parentNotifiedHow}`));
 const bell = await call("/api/notifications", P);
 log("parent bell", bell.j.notifications?.map((n: any) => n.title));
 const tbell = await call("/api/notifications", CA);

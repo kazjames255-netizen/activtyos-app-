@@ -107,6 +107,10 @@ const logSchema = z.object({
   photoUrl: z.string().max(500).optional(),
   followUp: z.string().trim().max(2_000).optional(),
 });
+/** Latest day an event may be dated: tomorrow in UTC, so a provider whose local day is
+ *  ahead of UTC (or a late-night entry) is never refused, but a typo year is. */
+const latestEventDay = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+const FUTURE_DATE_MSG = "That date is in the future. Pick today or an earlier day.";
 const KINDS = ["accident", "incident", "safeguarding"] as const;
 const isKind = (v: unknown): v is (typeof KINDS)[number] => typeof v === "string" && (KINDS as readonly string[]).includes(v);
 
@@ -298,6 +302,7 @@ incidents.post("/", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
+  if (parsed.data.date > latestEventDay()) { res.status(400).json({ error: FUTURE_DATE_MSG }); return; }
   // Only a child this provider actually has — else the record lands on another
   // provider's child (their parent is emailed; the dossier hands their family back).
   if (parsed.data.childId && !(await childVisibleTo({ ...req.auth!, tenantId: scope.tenantId }, parsed.data.childId))) {
@@ -353,6 +358,12 @@ incidents.post("/", async (req, res) => {
       href: "/custdash/accidents",
       ref: ref.id,
     });
+    // The automatic email + bell IS the family being told: record it, so the log's
+    // "Parent informed" count and the record's detail line reflect it without staff
+    // also having to tick "I told them in person".
+    if (!doc.parentNotifiedAt) {
+      await ref.set({ parentNotified: true, parentNotifiedAt: new Date().toISOString(), parentNotifiedHow: doc.parentNotifiedHow || "app" }, { merge: true });
+    }
   })();
 });
 
@@ -401,6 +412,7 @@ incidents.put("/:id", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
+  if (parsed.data.date !== undefined && parsed.data.date !== own.snap.data()!.date && parsed.data.date > latestEventDay()) { res.status(400).json({ error: FUTURE_DATE_MSG }); return; }
   if (parsed.data.childId && parsed.data.childId !== own.snap.data()!.childId && !(await childVisibleTo(auth, parsed.data.childId))) {
     res.status(403).json({ error: "That child isn't booked with you", code: "child_not_yours" });
     return;

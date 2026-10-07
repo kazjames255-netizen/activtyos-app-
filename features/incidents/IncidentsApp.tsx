@@ -107,6 +107,7 @@ function LogForm({ kind, notifies, existing, initialChild, onSaved, onCancel }: 
 
   async function save() {
     if (!d.childName.trim() || !d.description.trim()) { setError(t("p7inc.errAddChild")); return; }
+    if (d.date > todayIso()) { setError(t("p7inc.errFuture")); return; }
     setBusy(true); setError(null);
     const treatment = kind === "accident" ? ([...treatSel, treatOther.trim()].filter(Boolean).join("; ") || undefined) : d.treatment;
     const actionTaken = kind === "incident" ? ([...actSel, actOther.trim()].filter(Boolean).join("; ") || undefined) : d.actionTaken;

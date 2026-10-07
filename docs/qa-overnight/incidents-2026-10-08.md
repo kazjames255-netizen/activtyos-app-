@@ -23,11 +23,14 @@
 - Parent gets the bell for accidents and for shared behaviour notes, not for internal ones. "Quiet" edits send nothing.
 - Bad dates and empty text are refused. Odd characters are shown as plain text, not run.
 
-## Needs a decision from Kaz
-- "Parent informed" tile counts only the tick "I also told the parent in person". The automatic email and bell are not counted, so it shows 0 even after the parent was notified. Should the automatic notice count?
-- The system accepts a first aid date in the future if someone bypasses the form (the form itself blocks it). Block it on the server too?
-- Parent emails and bells for accidents are English only, even if the parent uses another language.
-- These pages are always light, even in a dark browser setting. There is no dark version, by design of the app shell.
+## Follow-ups Kaz approved (done)
+- "Parent informed" now counts the automatic email and bell too (the record is stamped "told by the app" when the notice goes out). Older records are not changed.
+- A first aid or behaviour date in the future is refused by the server with a plain message, and the form says so before saving. Tomorrow is still allowed so late-night entries are never blocked.
+- Parent emails/bells stay English only: the app has no per-parent language setting for these emails (only the Learning Hub digest has one). Needs a build, not a quick fix.
+
+## Still needs a decision from Kaz
+- Should parent language be stored so these emails can be translated?
+- These pages are always light, even in a dark browser setting (by design of the app shell).
 - "Recorded by" shows the email address when the person has no name set.
 
 ## Manual/assistant update needed
@@ -35,3 +38,5 @@
 - A parent can only reply to or acknowledge records the provider has shown them.
 - Notices say "A safeguarding concern was recorded" rather than "An safeguarding concern".
 - Severity buttons on step 3 of the first aid form now read Minor, Moderate, Serious in the user's language.
+- "Parent informed" count now includes parents told automatically by the app.
+- Future dates are refused on first aid and behaviour records ("That date is in the future...").
