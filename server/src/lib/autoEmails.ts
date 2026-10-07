@@ -12,6 +12,7 @@ import { db } from "../firebase";
 
 export interface AutoEmailPrefs {
   bookings: boolean;        // booking confirmed / approved / declined / cancelled
+  cancellation: boolean;    // "your booking is cancelled" notice to the family (once per cancellation)
   payments: boolean;        // receipts, refunds, payment-failed, voucher instructions
   paymentDue: boolean;      // payment-due reminder
   paymentDueTiming: number; // hours before the due date
@@ -29,6 +30,7 @@ export interface AutoEmailPrefs {
 
 export const AUTO_EMAIL_DEFAULTS: AutoEmailPrefs = {
   bookings: true,
+  cancellation: true,
   payments: true,
   paymentDue: true,
   paymentDueTiming: 24,

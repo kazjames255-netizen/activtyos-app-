@@ -515,7 +515,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   )}
                   {/* Contextual actions, pushed to the right */}
                   <span className="ms-auto flex flex-wrap items-center justify-end gap-1.5">
-                    {b.pay === "Awaiting voucher payment" && !off && !waitingForPlace(b.status) && (
+                    {b.pay === "Awaiting voucher payment" && !off && b.status !== "Cancelled" && b.status !== "Declined" && !waitingForPlace(b.status) && (
                       <button onClick={(e) => { e.stopPropagation(); askConfirm(b.ref, { kind: "paid" }); }} title={t("p7bkl.confirmVoucherTip")}
                         className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{pendingPayActionT(t, w, b)}</button>
                     )}

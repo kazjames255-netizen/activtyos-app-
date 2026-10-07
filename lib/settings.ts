@@ -731,6 +731,7 @@ export interface TenantSettings {
     paymentDueTiming?: number;  // hours before the due date (12 / 24 / 48 / 72)
     sessionReminder?: boolean;  // pre-session reminder with the key details & what to bring
     sessionTiming?: number;     // hours before the session (12 / 24 / 48 / 72)
+    cancellation?: boolean;     // "your booking is cancelled" notice to the family (default on)
     waitlist?: boolean;         // place-opened / moved-up-the-queue emails
     waitlistJoinAlert?: boolean;   // email the provider every time a family joins a waiting list (default OFF)
     waitlistStartAlert?: boolean;  // one email per listing the first time anyone joins its waiting list (default on)
@@ -1324,7 +1325,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   emergencyContacts: 1,
   collectionCheck: "password",
   charLimits: { allergies: 140, medical: 140, dietary: 140, send: 200, likes: 80, dislikes: 80 },
-  autoEmails: { bookings: true, payments: true, paymentDue: true, paymentDueTiming: 24, sessionReminder: true, sessionTiming: 48, waitlist: true, waitlistFreeAlert: true, waitlistJoinAlert: false, waitlistStartAlert: true, dayOf: true, lateCollection: true, announcements: false, reviewRequests: true },
+  autoEmails: { bookings: true, cancellation: true, payments: true, paymentDue: true, paymentDueTiming: 24, sessionReminder: true, sessionTiming: 48, waitlist: true, waitlistFreeAlert: true, waitlistJoinAlert: false, waitlistStartAlert: true, dayOf: true, lateCollection: true, announcements: false, reviewRequests: true },
   brandColor: "#2f6bd8",
   staff: { assignByLeads: false, requireDBS: true, requireCompliance: true, defaultRatioTarget: 8, inviteMessage: "" },
   announcements: { enabled: true, leadsCanPost: true, requireAck: false, dashboardDays: 1, defaultAudience: "all", defaultImportant: false },

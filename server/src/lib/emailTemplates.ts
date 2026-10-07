@@ -220,6 +220,46 @@ export function offerExpiredSpec(b: Booking, providerName: string): CustomerEmai
   };
 }
 
+/** What happens to the family's money when a booking is cancelled, in one plain sentence (email) and a few words (bell).
+ *  `paid` is what the family actually handed over (refundableSoFar). */
+export function cancelMoneyLine(b: Booking, providerName: string, paid: number): { full: string; short: string } {
+  const c = b.cancel;
+  const amt = c?.amount ?? 0;
+  if (c && c.refund !== "none" && amt > 0.004) {
+    const a = gbp(amt);
+    if (c.refund === "approved") return { full: `Your refund of ${a} has been approved.`, short: `${a} refunded` };
+    if (c.refundTo === "wallet")
+      return { full: `${a} will be added to your wallet as credit once ${providerName} approves it.`, short: `${a} wallet credit pending` };
+    const offline = !!b.voucherScheme || /voucher|tax-?free|tfc|childcare|haf|cash|bank|transfer/i.test(b.method ?? "");
+    return offline
+      ? { full: `A refund of ${a} is pending and will be returned the way you paid once ${providerName} approves it.`, short: `${a} refund pending` }
+      : { full: `A refund of ${a} is pending and goes back to your payment method once ${providerName} approves it.`, short: `${a} refund pending` };
+  }
+  if ((b.refundLog ?? []).some((r) => /wallet/i.test(`${r.source ?? ""} ${r.label ?? ""}`)))
+    return { full: "The value of your booking has been added to your wallet as credit.", short: "wallet credit added" };
+  if (paid > 0.004) return { full: "No refund is due under the cancellation policy.", short: "no refund" };
+  return { full: "Nothing was paid, so nothing is owed.", short: "nothing owed" };
+}
+
+/** The family's "your booking is cancelled" notice (email + a one-line bell). Sent once, when the booking flips to Cancelled. */
+export function bookingCancelledSpec(
+  b: Booking,
+  providerName: string,
+  opts: { by: "provider" | "family"; paid: number },
+): CustomerEmailSpec & { bell: { title: string; body: string } } {
+  const kids = [...new Set((b.kids ?? []).map((k) => k.name).filter(Boolean))].join(", ") || b.child || b.booker;
+  const money = cancelMoneyLine(b, providerName, opts.paid);
+  const when = shortWhen(b);
+  const who = opts.by === "family" ? "You cancelled" : `${escapeHtml(providerName)} cancelled`;
+  return {
+    subject: `Your booking for ${b.listing} is cancelled`,
+    title: "Your booking is cancelled",
+    body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${who} the booking for <b>${escapeHtml(kids)}</b> on <b>${escapeHtml(b.listing)}</b> (${escapeHtml(b.dates || when)}).</p>
+     <p style="font-size:14px"><b>Your money:</b> ${escapeHtml(money.full)}</p>`,
+    bell: { title: `${b.listing} cancelled · ${money.short}`, body: when },
+  };
+}
+
 export function paymentReceivedSpec(b: Booking, providerName: string, opts: { label: string; amount: number; refs?: string[]; fullyPaid?: boolean }): CustomerEmailSpec {
   // One payment can settle several bookings (a basket spanning weeks): one email names them all.
   const many = (opts.refs?.length ?? 0) > 1;

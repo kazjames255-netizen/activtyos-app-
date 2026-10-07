@@ -216,6 +216,14 @@ export function applyParentCancel(b: Booking, msg?: string, reason?: string): vo
   };
 }
 
+/** Once a parent's cancellation carries a refund (cancel.amount set from the policy / credit note), a booking that was
+ *  fully paid reads "Refund pending" right away, exactly like an operator cancel — until the provider approves (then
+ *  "Refunded") or declines (back to "Paid", see refund-decline). Unpaid / part-refunded bookings are left alone. */
+export function markRefundPending(b: Booking): void {
+  const c = b.cancel;
+  if (b.status === "Cancelled" && c && c.refund !== "none" && c.refund !== "declined" && (c.amount ?? 0) > 0.004 && b.pay === "Paid") b.pay = "Refund pending";
+}
+
 /** A family releases individual days of a multi-day pass (partial cancel).
  *
  *  Releases are per child, in ISO dates. The booking stays Confirmed for

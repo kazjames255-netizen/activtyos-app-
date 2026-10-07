@@ -9,6 +9,8 @@ import { checkCode, normaliseCode, reservedEmails, type DiscountCodeDoc } from "
 import { redeemCodesInTx, releaseDiscountCodes, type CodeToRedeem } from "../lib/discountRedemptions";
 import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../lib/wallet";
 import { notify } from "../lib/notify";
+import { notifyFamilyCancelledFor } from "../lib/familyCancelNotice";
+import { shouldNotifyCancelled } from "../lib/bookingGuards";
 import { autoEmailPrefs } from "../lib/autoEmails";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { friendPaidAmount } from "../lib/referralSpend";
@@ -23,7 +25,7 @@ import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/me
 import { cancellationRequestNotice, shortWhen, firstWord } from "../lib/emailTemplates";
 import { money, paidSoFar as totalPaid, realPhone, refundableSoFar, sessionIsoDates } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
-import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
+import { applyParentCancel, applyPartialCancel, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
 import { applyDiscounts, DISCOUNT_KIND_LABEL, type DiscountRule } from "../../../features/listings/discounts";
 import { earlyBirdScopeOf, earlyFixedUsed, claimEarlyBird } from "../lib/earlyBird";
@@ -2838,6 +2840,8 @@ async function partialCancel(
       ref: existing.ref,
     });
   }
+  // Releasing the LAST standing day cancels the whole booking: tell the family once, like any other cancellation.
+  if (shouldNotifyCancelled(existing.status, updated.status)) void notifyFamilyCancelledFor(updated, "family");
   // Freed days go to whoever is queued for them.
   if (updated.blockId) void triggerWaitlist(updated.blockId);
   return updated;
@@ -2938,6 +2942,7 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
 
   try {
     let bankToStore: { accountName: string; sortCode: string; accountNumber: string } | null = null;
+    let statusBefore = "";
     const updated = await db.runTransaction(async (tx) => {
       bankToStore = null; // (a retried transaction starts clean)
       const snap = await tx.get(ref);
@@ -2946,6 +2951,7 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       if (b.email !== email) throw new HttpError(403, "Not your booking");
       if (b.status === "Cancelled") throw new HttpError(400, "Already cancelled");
       const oldStatus = b.status;
+      statusBefore = oldStatus;
       const heldBefore = structuredClone({ status: b.status, seats: b.seats, days: b.days, kids: b.kids });
       // Days already released and awaiting approval: that refund is owed whatever the policy says about the rest, so
       // cancelling the remainder must ADD to it, never replace it.
@@ -2975,6 +2981,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
         b.cancel.refundTo = "wallet";
         b.cancel.msg = `${b.cancel.msg} (credit note in place of a refund)`;
       }
+      // A cancelled-but-paid booking must read "Refund pending" straight away, like an operator cancel, not "Paid" until the refund is approved.
+      markRefundPending(b);
       // Free the block places the booking held — total AND its days
       // (all reads before writes).
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;
@@ -3027,6 +3035,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
         ref: updated.ref,
       });
     }
+    // …and the family gets their own one-line bell + email saying it is cancelled and what happens to their money.
+    if (shouldNotifyCancelled(statusBefore, updated.status)) void notifyFamilyCancelledFor(updated, "family");
     res.json(updated);
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });

@@ -109,7 +109,7 @@ export function aosLogoAttachment(): MailAttachment {
  *  sendMail: a suppressed or failed email never fails the booking. */
 function sendGated(
   tenantId: string | undefined,
-  key: keyof Pick<AutoEmailPrefs, "bookings" | "payments" | "waitlist">,
+  key: keyof Pick<AutoEmailPrefs, "bookings" | "payments" | "waitlist" | "cancellation">,
   to: string,
   subject: string,
   html: string,
@@ -318,7 +318,7 @@ async function listingContext(
 function sendCustomerEmail(
   b: Booking,
   providerName: string,
-  key: "bookings" | "payments" | "waitlist",
+  key: "bookings" | "payments" | "waitlist" | "cancellation",
   subject: string,
   title: string,
   body: string,
@@ -442,6 +442,10 @@ export function emailDateChangeResolved(
     title,
     `${lead}${table}${note}${refLine}`,
   );
+}
+
+export function emailBookingCancelled(b: Booking, providerName: string, m: { subject: string; title: string; body: string }): void {
+  sendCustomerEmail(b, providerName, "cancellation", m.subject, m.title, m.body, undefined);
 }
 
 export function emailRefundApproved(b: Booking, providerName: string): void {

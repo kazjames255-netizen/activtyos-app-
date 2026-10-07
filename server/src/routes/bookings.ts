@@ -19,6 +19,8 @@ import { bookingInSite, staffSiteScope } from "../lib/siteScope";
 import { registerRows } from "../lib/registerRows";
 import { money, realPhone, refundableSoFar, receivedOf } from "../../../features/bookings/helpers";
 import { notify } from "../lib/notify";
+import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
+import { canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled } from "../lib/bookingGuards";
 import {
   blockCountDelta,
   applyPlacesDelta,
@@ -576,6 +578,8 @@ bookings.post("/:ref/actions", async (req, res) => {
     // What had already come in before "Mark paid" — only the balance is new
     // money. Recording the full price double-counted a part-payment (d19s7).
     let receivedBefore = 0;
+    // The status before the action, so the family is told about a cancellation exactly once (on the flip).
+    let statusBefore = "";
     // Set by cancel-child / cancel-day: wallet credit is the one resolution that
     // moves money straight away (after the transaction commits).
     let release: ReturnType<typeof applyCancelDay> = null;
@@ -584,6 +588,7 @@ bookings.post("/:ref/actions", async (req, res) => {
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
       const oldStatus = b.status;
+      statusBefore = oldStatus;
       // What the booking held BEFORE this action (per child) — so cancelling ONE child frees ONE place (CN-019).
       const heldBefore = structuredClone({ status: b.status, seats: b.seats, days: b.days, kids: b.kids });
       receivedBefore = receivedOf(b);
@@ -687,6 +692,11 @@ bookings.post("/:ref/actions", async (req, res) => {
         // refundable is worked out from this, not from the flipped booking.
         refundBefore = { refund: b.cancel.refund, pay: b.pay, refundable: refundableSoFar(b), attempts: (b.cancel as { refundAttempts?: number }).refundAttempts ?? 0 };
       }
+
+      // Marking a booking paid only makes sense for one that is live: on a cancelled / declined / waiting-list booking it used to
+      // record a payment and email "Payment received" for a place the family doesn't have.
+      if (action.type === "paid" && !canMarkPaid(b.status))
+        throw new Conflict(paidBlockedMessage(b.status));
 
       switch (action.type) {
         case "cancel":
@@ -828,8 +838,11 @@ bookings.post("/:ref/actions", async (req, res) => {
 
     // Status-change emails to the booker (fire-and-forget).
     if (updated.email.includes("@")) {
-      if (action.type === "approve" || action.type === "promote")
-        emailBookingConfirmed(updated, await tenantName());
+      if (action.type === "approve" || action.type === "promote") {
+        // "Booking confirmed" goes out ONCE per confirmation: approving / promoting a booking that was already Confirmed (a double click, or
+        // an approve after the family accepted an offered place) changes nothing and must not mail the family a second time.
+        if (shouldEmailConfirmed(action.type, statusBefore)) emailBookingConfirmed(updated, await tenantName());
+      }
       else if (action.type === "offer") {
         emailPlaceOffered(updated, await tenantName());
         // The email alone is easy to miss (and is held back while mail isn't
@@ -883,6 +896,10 @@ bookings.post("/:ref/actions", async (req, res) => {
         });
       }
     }
+
+    // The family hears about a cancellation once: on the action that flipped the booking to Cancelled (a repeat cancel is a 409).
+    if ((action.type === "cancel" || action.type === "cancel-child" || action.type === "cancel-day") && shouldNotifyCancelled(statusBefore, updated.status))
+      notifyFamilyCancelled(updated, await tenantName(), "provider");
 
     // Offline settlements (TFC, HAF, PayPal, cash) become payment records
     // too — reconciliation needs an entry, not just a flag.
