@@ -41,7 +41,7 @@ await page.getByTitle(/\. When it runs$/).click();
 await page.getByLabel("Runs from").fill("2027-03-01");
 await page.getByLabel("Runs to").fill("2027-03-12");
 await page.getByTitle(/\. Tickets & pricing$/).click();
-await page.getByRole("button", { name: "Loop block" }).click();
+await page.getByRole("button", { name: "Loop block" }).first().click();
 await page.getByTitle(/\. Content$/).click();
 const ta = page.locator("textarea").first();
 await ta.click();
