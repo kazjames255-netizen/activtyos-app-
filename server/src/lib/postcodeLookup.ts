@@ -16,6 +16,22 @@ export async function lookupPostcode(raw: string): Promise<PostcodeLookup> {
   if (!isUkPostcodeFormat(postcode)) return { ok: false, code: "format", postcode };
   const hit = cache.get(postcode);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.v;
+  // The official postcode database first (exact town / ward and coordinates); the place-name geocoder only if it is unreachable.
+  try {
+    const r = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode.replace(/\s+/g, ""))}`, { signal: AbortSignal.timeout(4000) });
+    if (r.ok) {
+      const j = (await r.json()) as { result?: { postcode?: string; admin_district?: string | null; admin_ward?: string | null; latitude?: number | null; longitude?: number | null } };
+      const x = j.result;
+      if (x && typeof x.latitude === "number" && typeof x.longitude === "number") {
+        const area = [x.admin_ward, x.admin_district].filter((s, i, a) => s && a.indexOf(s) === i).join(", ") || undefined;
+        const v: PostcodeLookup = { ok: true, postcode: x.postcode ?? postcode, area, lat: x.latitude, lng: x.longitude };
+        cache.set(postcode, { at: Date.now(), v });
+        return v;
+      }
+    } else if (r.status === 404) {
+      return { ok: false, code: "notfound", postcode };
+    }
+  } catch { /* fall back to the geocoder below */ }
   const g = await geocodeHit(postcode);
   const v: PostcodeLookup =
     g && labelMatchesPostcode(g.label, postcode)
