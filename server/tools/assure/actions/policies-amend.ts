@@ -69,6 +69,21 @@ const markPaid = async (c: ActionCtx, b: any) => { if (/^(paid|funded)$/i.test(b
 const candidates = async (c: ActionCtx) =>
   (await W(c).bookings()).filter((b) => b.status === "Confirmed" && b.amount > 0 && !b.cancel && b.dateChangeRequest?.status !== "pending" && days(b).length >= 1 && !(b.kids ?? []).some((k: any) => k.cancelled));
 
+/** The provider's amend rules as STORED right now. Fuzz processes started by other agents can lease the same throwaway provider (leases are per process) and
+ *  overwrite its Setup; when the stored rules differ from what this seed set, adopt them and say so instead of blaming the product. */
+async function rulesStillHold(c: ActionCtx): Promise<boolean> {
+  const s = S(c); const w = W(c);
+  const st0 = ((await w.api("GET", "/api/library")).json?.settings ?? {}) as Record<string, unknown>;
+  const stored: Rules = {
+    allowDateChanges: st0.allowDateChanges !== false, amendNoticeHours: Number(st0.amendNoticeHours) || 0, amendLimit: Number(st0.amendLimit) || 0,
+    amendFee: Number(st0.amendFee) || 0, amendSelfService: st0.amendSelfService !== false, amendAllowCheaper: st0.amendAllowCheaper !== false,
+  };
+  if (JSON.stringify(stored) === JSON.stringify(s.rules)) return true;
+  w.warnings.push(`provider settings changed under this seed (another fuzz process shares the provider): ${JSON.stringify(s.rules)} -> ${JSON.stringify(stored)}`);
+  s.rules = stored;
+  return false;
+}
+
 /** Try a parent move and check the amend rules decided it correctly. Returns what happened. */
 async function tryAmend(c: ActionCtx, t: any, from: string, to: string): Promise<{ r: { status: number; json: any }; text: string }> {
   const w = W(c); const s = S(c);
@@ -82,11 +97,12 @@ async function tryAmend(c: ActionCtx, t: any, from: string, to: string): Promise
   const illegalNow = !rules.allowDateChanges || !!amendNoticeError(rawMoves, rules.amendNoticeHours, before) || !!amendLimitError(rawMoves, approved, rules.amendLimit);
   const legalLater = rules.allowDateChanges && !amendNoticeError(rawMoves, rules.amendNoticeHours, after) && !amendLimitError(rawMoves, approved, rules.amendLimit);
   const msg = String(r.json?.error ?? "");
+  if (((ok(r) && illegalNow) || (!ok(r) && legalLater && /too close|date changes? per booking|already had its|doesn't offer date changes/i.test(msg))) && !(await rulesStillHold(c))) return { r, text: `move ${from}->${to}: ${st(r)} (rules changed by another process, not judged)` };
   if (ok(r) && illegalNow) flag(c, "pa-amend-illegal-accepted", "state", t.ref, `${t.ref}: move ${from}->${to} was accepted (${r.status}) but the provider's rules forbid it (changes ${rules.allowDateChanges ? "on" : "off"}, notice ${rules.amendNoticeHours}h, limit ${rules.amendLimit}, ${approved} used)`);
   if (!ok(r) && legalLater && /too close|date changes? per booking|already had its|doesn't offer date changes/i.test(msg)) flag(c, "pa-amend-legal-refused", "state", t.ref, `${t.ref}: move ${from}->${to} refused ("${msg.slice(0, 80)}") although notice ${rules.amendNoticeHours}h / limit ${rules.amendLimit} / ${approved} used allow it`);
   if (ok(r)) {
     const doc = await refetch(c, t.ref);
-    if (doc) {
+    if (doc && (await rulesStillHold(c))) {
       const applied = r.json?.amendApplied === true;
       if (applied && !rules.amendSelfService) flag(c, "pa-amend-selfservice-off", "state", t.ref, `${t.ref}: move applied at once although self-service date changes are off`);
       if (applied && !days(doc).includes(to)) flag(c, "pa-amend-applied-no-day", "state", t.ref, `${t.ref}: move reported applied but ${to} is not on the booking (${days(doc).join(",")})`);

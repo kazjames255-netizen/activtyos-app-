@@ -70,7 +70,7 @@ export function assertTestEmail(email: string) {
 async function rawCall(tok: string | null, method: string, url: string, body?: unknown, setup = true): Promise<ApiResult> {
   for (let attempt = 0; ; attempt++) {
     try {
-      const res = await fetch(`${API}${url}`, { method, headers: { "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+      const res = await fetch(`${API}${url}`, { method, headers: { "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(300_000) }); // a request in flight when the API restarts never answers: time out, then the catch below retries
       let json: any = null; try { json = await res.json(); } catch { /* empty */ }
       if (setup && res.status === 503 && attempt < 6) { await sleep(2500); continue; } // setup only: ride out 'we're busy' bursts
       return { status: res.status, json };

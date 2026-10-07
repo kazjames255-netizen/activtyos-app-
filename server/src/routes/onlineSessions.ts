@@ -129,10 +129,12 @@ onlineSessions.get("/mine", async (req, res) => {
   for (const b of bookings) byListing.set(b.listingId!, [...(byListing.get(b.listingId!) ?? []), b]);
   const out: Record<string, unknown>[] = [];
   for (const [lid, bs] of byListing) {
-    const listing = await onlineListing(lid);
-    if (!listing) continue;
+    // cheap in-memory check first: a family with years of past bookings must not pay a listing + library read for every one of them
     const dates = new Set<string>();
     for (const b of bs) for (const d of b.days ?? []) if (d >= from && d <= to && bookingJoinable(b, d)) dates.add(d);
+    if (!dates.size) continue;
+    const listing = await onlineListing(lid);
+    if (!listing) continue;
     for (const date of [...dates].sort()) {
       const mine = bs.filter((b) => bookingJoinable(b, date));
       const rows = mine.flatMap((b) => registerRows(b, date).filter((r) => r.expected));

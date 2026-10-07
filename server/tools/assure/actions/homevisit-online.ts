@@ -192,7 +192,7 @@ function scan(c: ActionCtx, who: string, url: string, body: unknown, needles: st
   }
 }
 async function anon(url: string) {
-  const r = await fetch(`${API}${url}`, { headers: { accept: "application/json" } });
+  const r = await fetch(`${API}${url}`, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(300_000) });
   let json: any = null; try { json = await r.json(); } catch { /* not json */ }
   return { status: r.status, json };
 }
@@ -201,7 +201,9 @@ async function anon(url: string) {
 const sessionDoc = async (l: OnL) => (await db.collection("onlineSessions").doc(`${l.id}_${l.date}`).get()).data() as any;
 /** Where "now" sits relative to the join window of this listing's session (session doc may have been extended by the host: only judge clear cases). */
 function phase(l: OnL): "early" | "open" | "late" | "edge" {
-  const { mins } = ukParts(); const sec = new Date().getSeconds(); const now = mins + sec / 60;
+  const u = ukParts(); const sec = new Date().getSeconds();
+  const dayDiff = Math.round((Date.parse(`${u.date}T00:00:00Z`) - Date.parse(`${l.date}T00:00:00Z`)) / 864e5); // a seed can run past midnight
+  const now = dayDiff * 1440 + u.mins + sec / 60;
   const opens = l.start - 10, closes = l.finish + 30;
   if (Math.abs(now - opens) < 1.5 || Math.abs(now - closes) < 1.5) return "edge";
   return now < opens ? "early" : now > closes + 20 ? "late" : now > closes ? "edge" : "open";
@@ -293,19 +295,20 @@ const ACTIONS_HVO: ActionDef[] = [
       return { summary: `${other.key} reads /api/my/bookings: ${r.status}; owner ${owner} sees own ${b.ref}: ${has}` };
     } },
 
-  { id: "hvo-privacy-scan", area: "homevisit-online", weight: 9, applicable: ready,
+  { id: "hvo-privacy-scan", area: "homevisit-online", weight: 5, applicable: ready,
     async run(c) {
       const w = W(c); const s = S(c);
       const secrets = [...s.baseSeen, ...s.unique.filter((u) => u.includes("SECRETLINK"))];
       const p = pick(w.rng, w.parents);
       const ids = [...s.hv, ...s.on].map((l) => l.id);
-      const list = await anon("/api/listings"); // anonymous
-      scan(c, "anonymous", "/api/listings", list.json, secrets, "privacy.listing-leak");
+      const tq = `?tenantId=${w.op.tenantId}`; // this provider only: the whole public list is huge on a shared test database
+      const list = await anon(`/api/listings${tq}`); // anonymous
+      scan(c, "anonymous", `/api/listings${tq}`, list.json, secrets, "privacy.listing-leak");
       const one = pick(w.rng, ids);
       const oneAnon = await anon(`/api/listings/${one}`);
       scan(c, "anonymous", `/api/listings/${one}`, oneAnon.json, secrets, "privacy.listing-leak");
-      const lp = await w.api("GET", "/api/listings", undefined, p.key);
-      scan(c, p.key, "/api/listings", lp.json, secrets, "privacy.listing-leak");
+      const lp = await w.api("GET", `/api/listings${tq}`, undefined, p.key);
+      scan(c, p.key, `/api/listings${tq}`, lp.json, secrets, "privacy.listing-leak");
       const op1 = await w.api("GET", `/api/listings/${one}`, undefined, p.key);
       scan(c, p.key, `/api/listings/${one}`, op1.json, secrets, "privacy.listing-leak");
       // own-link must also not leak through the sessions list of a family that has no booking on it, or the provider's today view to a parent

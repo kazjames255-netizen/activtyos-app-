@@ -164,7 +164,7 @@ async function shrink(first: SeedResult, kit: Kit, actions: ActionDef[]): Promis
       if (r.harnessError && !INJECT) { await sleep(2000); const again = await runSeed(seed, kit, actions, { steps: INJECT ? 6 : STEPS }); if (!again.harnessError || again.ok === false) r = again; }
       results.push(r);
       process.stdout.write(r.harnessError ? "h" : r.ok ? "." : "x");
-      if (VERBOSE) console.log(`\n seed ${seed}: ${r.ok ? "clean" : r.harnessError ?? r.violations[0]?.rule} in ${(r.ms / 1000).toFixed(1)}s`);
+      if (VERBOSE) console.log(`\n seed ${seed}: ${r.harnessError ? "HARNESS ERROR " + r.harnessError : r.ok ? "clean" : r.violations[0]?.rule} in ${(r.ms / 1000).toFixed(1)}s`);
     }
   };
   await Promise.all(Array.from({ length: Math.min(CONC, seeds.length) }, worker));
