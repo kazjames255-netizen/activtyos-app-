@@ -22,7 +22,7 @@ import { brandFromSettings } from "@/features/setup/BrandColours";
 import { policyWording, type NamedPolicy } from "@/lib/cancellation";
 import { CheckoutPanel } from "./checkout";
 import { ThemeHero, useThemeFont } from "./ThemeHero";
-import { THEME_TOKENS, NEW_THEME_KEYS, FONT_STACK, type NewThemeKey, type ThemeTokens } from "./pageThemes";
+import { THEME_TOKENS, themeArtOn, NEW_THEME_KEYS, FONT_STACK, type NewThemeKey, type ThemeTokens } from "./pageThemes";
 import { BlocksApp } from "@/features/blocks/BlocksApp";
 import { listingPrereqs, titleMissing, mayCreateOnServer, isAbandonedDraft, newBlockId, bookingLink } from "./prereqs";
 import type { ChildProfile } from "./checkout";
@@ -402,6 +402,8 @@ export interface WizardDraft {
   status: "draft" | "live";
   archived?: boolean;
   pageStyle?: PageTheme;
+  /** Draw the theme's artwork when the listing has no photo (default true; false = a plain themed header strip). A photo always wins. */
+  themeArt?: boolean;
 }
 export type PageTheme = "playful" | "sport" | "emerald" | "teal" | "royal" | "aubergine" | "burgundy" | "terracotta" | "slate" | "crimson" | NewThemeKey;
 
@@ -1223,6 +1225,8 @@ export function ListingWizard({
   }, [brandLoading, brandSettings.defaultListingTheme, initial.id, initial.pageStyle]);
   const pickTheme = (t: PageTheme) => {
     upd({ pageStyle: t });
+    // Only a NEW listing updates the remembered default; editing an existing one never overwrites it.
+    if (initial.id || savedIdRef.current) return;
     if (brandLoading || brandSettings.defaultListingTheme === t) { setThemeSaved(!brandLoading); return; }
     setThemeSaved(false);
     void saveBrandSettings({ settings: { ...brandSettings, defaultListingTheme: t } }).then(() => setThemeSaved(true)).catch(() => { /* the listing keeps its own theme either way */ });
@@ -1464,6 +1468,10 @@ export function ListingWizard({
             {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} onCreateBlock={openBlocks} />}
             {stepKey === "discounts" && <DiscountsStep d={d} upd={upd} tickets={tickets} />}
             {stepKey === "preview" && <div><StepHead n={10} kicker={tr("p8lst.waKickPreview")} title={tr("p8lst.waStep_preview")} lede={tr("p8lst.waPreviewLede")} /><HeadingsEditor d={d} upd={upd} />
+              <label data-testid="theme-art-switch" className="mx-3 mb-3 flex cursor-pointer items-start gap-2.5 rounded-xl border bg-white px-3.5 py-2.5 sm:mx-5" style={{ borderColor: "var(--line)" }}>
+                <input type="checkbox" className="mt-1 h-4 w-4" checked={themeArtOn(d)} onChange={(e) => upd({ themeArt: e.target.checked })} />
+                <span><span className="block text-[13px] font-bold text-[var(--ink)]">{tr("p8lst.waThemeArt")}</span><span className="block text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.waThemeArtHint")}</span></span>
+              </label>
               {brandColours && <MatchedThemes brand={brandColours} value={resolveTheme(d.pageStyle)} onPick={(k) => pickTheme(k as PageTheme)} label={(k) => tr("p8lst.wbTheme_" + k)} saved={themeSaved}
                 allThemes={<ThemePicker value={resolveTheme(d.pageStyle)} onChange={pickTheme} />} />}
               {!brandColours && <div className="sticky top-0 z-10 mx-3 mb-3 rounded-2xl border-2 bg-white p-3.5 sm:mx-5" style={{ borderColor: "#e9a915", boxShadow: "0 12px 30px -16px rgba(233,169,21,.8)" }}>
@@ -4430,8 +4438,10 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
       {/* hero image (no text on it) */}
       {V && !imgs.length ? (
         // No photo: the theme's own artwork (a listing with a photo keeps its photo).
-        <div className="relative overflow-hidden">
-          <ThemeHero theme={V.key} title={d.title} run={runLabel} brand={brand} />
+        <div className="relative overflow-hidden" data-testid="theme-hero" data-theme-art={themeArtOn(d) ? "on" : "off"}>
+          {!themeArtOn(d)
+            ? <div aria-hidden style={{ height: 72, background: `linear-gradient(90deg, ${k!.band}, ${k!.acc})` }} />
+            : <ThemeHero theme={V.key} title={d.title} run={runLabel} brand={brand} />}
           {heroCat && <span className="absolute start-0 top-4 z-[6] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em]" style={{ background: LIME, color: INK, borderRadius: `0 ${k!.rs}px ${k!.rs}px 0`, paddingInlineStart: 20 }}>{optionLabel(heroCat.name)}</span>}
         </div>
       ) : (

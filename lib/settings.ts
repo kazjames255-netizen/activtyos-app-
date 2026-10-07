@@ -1655,12 +1655,12 @@ export function useSettings(): SettingsState {
   }, [load]);
   useRealtime(["library"], () => void load());
 
-  const flush = useCallback(async () => {
+  const flush = useCallback(async (keepalive = false) => {
     const body = pending.current;
     pending.current = {};
     if (!Object.keys(body).length) return;
     try {
-      await api("/api/library", { method: "PUT", body: JSON.stringify(body) });
+      await api("/api/library", { method: "PUT", body: JSON.stringify(body), ...(keepalive ? { keepalive: true } : {}) });
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't save — your change may not have stuck");
@@ -1691,6 +1691,16 @@ export function useSettings(): SettingsState {
     },
     [flush],
   );
+
+  // Closing / backgrounding the tab inside the 500ms debounce must not lose the change either: flush on hide
+  // (keepalive lets the request outlive the page). pagehide covers iOS Safari, visibilitychange the rest.
+  useEffect(() => {
+    const hideNow = () => { if (timer.current) clearTimeout(timer.current); void flush(true); };
+    const onHide = () => { if (document.visibilityState === "hidden") hideNow(); };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", hideNow);
+    return () => { document.removeEventListener("visibilitychange", onHide); window.removeEventListener("pagehide", hideNow); };
+  }, [flush]);
 
   // Leaving the screen mid-keystroke must not lose the change.
   useEffect(

@@ -283,3 +283,6 @@ export function matchThemes(brand: BrandColours, n = 3): ThemeMatch[] {
   scored.sort((a, b) => a.score - b.score || a.idx - b.idx);
   return scored.slice(0, Math.max(0, n)).map(({ key, score, slot }) => ({ key, score, slot }));
 }
+
+/** Does a listing with no photo draw its theme artwork? Default yes (undefined = on); only an explicit false gives the plain themed strip. */
+export const themeArtOn = (d: { themeArt?: boolean } | null | undefined): boolean => d?.themeArt !== false;

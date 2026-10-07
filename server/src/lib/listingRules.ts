@@ -202,6 +202,8 @@ export const baseListingSchema = z
     cancellationPolicyId: z.string().trim().max(60).optional(),
     // presentation & lifecycle
     pageStyle: z.enum(PAGE_STYLES).optional(),
+    // Draw the theme artwork when the listing has no photo (undefined / true = yes, the default; false = a plain themed strip).
+    themeArt: z.boolean().optional(),
     status: z.enum(["draft", "live"]).optional(),
     archived: z.boolean().optional(),
   });
