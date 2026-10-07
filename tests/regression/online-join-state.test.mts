@@ -44,3 +44,14 @@ test("awaiting-pay: confirmed + Unpaid + the child is on that day", () => {
   assert.equal(bookingAwaitingPayOnline({ ...b, pay: "Paid" } as Booking, "2026-10-21"), false);
   assert.equal(bookingAwaitingPayOnline({ ...b, status: "Declined" } as Booking, "2026-10-21"), false);
 });
+
+test("unpaid online email wording: says the link unlocks once paid (bank transfer: when the provider marks it received) and does not push 'pay by card in My bookings'", async () => {
+  const { onlineJoinText } = await import("../../server/src/lib/onlineSessions");
+  const text = await onlineJoinText({ id: "L1", tenantId: "T1" } as never, "2026-10-21", null, undefined, true);
+  assert.match(text, /join link unlocks once your booking is paid/i);
+  assert.match(text, /bank transfer/i);
+  assert.match(text, /marks your payment as received/i);
+  assert.doesNotMatch(text, /pay by card in My bookings/i);
+  const paid = await onlineJoinText({ id: "L1", tenantId: "T1" } as never, "2026-10-21", null, undefined, false);
+  assert.doesNotMatch(paid, /unlocks once/i);
+});

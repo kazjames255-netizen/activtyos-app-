@@ -25,7 +25,8 @@ const clock = (iso: string) => new Date(iso).toLocaleTimeString(dateLocale(), { 
 const day = (iso: string) => new Date(iso).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short" });
 
 /** `refs` limits the panel to those bookings (the "you are booked" screen); `providerName` words the bank-transfer hint. */
-export function OnlineSessionsPanel({ refs, providerName }: { refs?: string[]; providerName?: string } = {}) {
+/** `compact` (the "you are booked" screen, which already has its own heading box): no card and no title, just the session state(s). */
+export function OnlineSessionsPanel({ refs, providerName, compact }: { refs?: string[]; providerName?: string; compact?: boolean } = {}) {
   const t = useT();
   const { locale } = useI18n();
   const rtl = isRTL(locale);
@@ -50,8 +51,8 @@ export function OnlineSessionsPanel({ refs, providerName }: { refs?: string[]; p
   const prev = () => go(idx - 1);
   const btn = "inline-flex min-h-[44px] items-center justify-center rounded-full px-5 text-[14px] font-extrabold";
   return (
-    <div data-testid="online-sessions-panel"><Card className="mb-4 p-4">
-      <div className="mb-2 flex items-center gap-2 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span aria-hidden>💻</span>{t("p9tx.osTitle")}{total > 1 ? ` · ${total}` : ""}
+    <div data-testid="online-sessions-panel"><Shell compact={compact}>
+      {(!compact || total > 1) && <div className="mb-2 flex items-center gap-2 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span aria-hidden>💻</span>{t("p9tx.osTitle")}{total > 1 ? ` · ${total}` : ""}
         {total > 1 && (
           <div className="ms-auto flex items-center gap-1.5" data-testid="os-nav">
             <button type="button" onClick={prev} aria-label={t("p9tx.osPrev")} data-testid="os-prev" className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--panel)] text-[20px] font-extrabold hover:bg-[var(--brand-soft)]"><span aria-hidden>{rtl ? "›" : "‹"}</span></button>
@@ -59,7 +60,7 @@ export function OnlineSessionsPanel({ refs, providerName }: { refs?: string[]; p
             <button type="button" onClick={next} aria-label={t("p9tx.osNext")} data-testid="os-next" className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--panel)] text-[20px] font-extrabold hover:bg-[var(--brand-soft)]"><span aria-hidden>{rtl ? "‹" : "›"}</span></button>
           </div>
         )}
-      </div>
+      </div>}
       <div
         className="flex flex-col gap-2"
         role="group"
@@ -84,8 +85,9 @@ export function OnlineSessionsPanel({ refs, providerName }: { refs?: string[]; p
           const opensDay = new Date(s.opensAt).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short" });
           if (s.joinState === "unpaid") {
             // Booked but not paid: the join link is locked, and the family is told exactly why and what to do.
-            action = <button type="button" onClick={() => router.push(`/custdash/bookings?pay=${encodeURIComponent(s.ref ?? "")}`)} className={`${btn} bg-[#d98b06] text-white`} data-testid="os-unpaid">{t("p9tx.osPayCard")}</button>;
-            explain = <div className="mt-1 text-[12.5px] font-semibold text-[#7a4b00]" data-testid="os-unpaid-text">{t("p9tx.osUnpaid")}{/bank|transfer/i.test(s.method ?? "") ? ` ${t("p9tx.osUnpaidWait", { provider: providerName || t("p7cl.theProvider") })}` : ""}</div>;
+            // No pay button here: paying lives on the booking card ("Pay by card instead").
+            action = null;
+            explain = <div className="mt-1 text-[12.5px] font-semibold text-[#7a4b00]" data-testid="os-unpaid-text">{t("p9tx.osUnpaid", { provider: providerName || t("p7cl.theProvider") })}</div>;
           } else if (s.joinState === "early" || s.joinState === "early_own") {
             explain = <div className="mt-1 text-[12.5px] font-semibold text-[#0f6b34]" data-testid="os-early-text">{t(s.joinState === "early" ? "p9tx.osEarly" : "p9tx.osEarlyOwn", { time: clock(s.opensAt), day: opensDay, mins })}</div>;
           }
@@ -120,6 +122,10 @@ export function OnlineSessionsPanel({ refs, providerName }: { refs?: string[]; p
           </div>
         )}
       </div>
-    </Card></div>
+    </Shell></div>
   );
+}
+
+function Shell({ compact, children }: { compact?: boolean; children: React.ReactNode }) {
+  return compact ? <div>{children}</div> : <Card className="mb-4 p-4">{children}</Card>;
 }
