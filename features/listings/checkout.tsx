@@ -2831,7 +2831,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 <button type="button" onClick={() => { setUseSaved(false); setAddressPrefilled(false); setServiceAddress((s) => ({ ...s, address: "", postcode: "" })); }} className="mt-2 text-[12px] font-bold underline" style={{ color: tk.accent }}>{tr("p7ck.addrChange")}</button>
               ) : (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button type="button" disabled={pcState.status === "bad" || pcState.status === "checking"} onClick={() => setUseSaved(true)} className="rounded-full px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "#15b364" }}>{"\u2713 "}{tr("p7ck.addrYes")}</button>
+                  <button type="button" disabled={pcState.status === "bad" || pcState.status === "checking"} onClick={() => setUseSaved(true)} className="rounded-full border px-4 py-2 text-[13px] font-extrabold disabled:opacity-40" style={{ borderColor: tk.accent, color: tk.ink, background: tk.inputBg }}>{tr("p7ck.addrYes")}</button>
                   <button type="button" onClick={() => { setUseSaved(false); setAddressPrefilled(false); setServiceAddress((s) => ({ ...s, address: "", postcode: "" })); }} className="rounded-full border px-4 py-2 text-[13px] font-extrabold" style={{ borderColor: tk.line, color: tk.ink, background: tk.inputBg }}>{tr("p7ck.addrNo")}</button>
                 </div>
               )}

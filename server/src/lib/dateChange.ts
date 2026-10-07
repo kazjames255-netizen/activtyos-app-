@@ -3,7 +3,7 @@
 // validation) and routes/bookings.ts (move-approve) so they can be unit-tested
 // without Firestore. Behaviour-preserving.
 import type { Booking } from "../../../features/bookings/types";
-import { receivedOf } from "../../../features/bookings/helpers";
+import { cashReceivedOf } from "../../../features/bookings/helpers";
 
 export const prettyDay = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -175,7 +175,7 @@ export function amendLimitError(moves: AmendMove[], used: number, limit: number 
 export function addAmendFee(b: Booking, fee: number | undefined): number {
   const f = Math.round((Number(fee) || 0) * 100) / 100;
   if (f <= 0 || (b.amount ?? 0) <= 0 || b.pay === "Funded" || b.status === "Cancelled" || b.status === "Declined") return 0;
-  const received = receivedOf(b);
+  const received = cashReceivedOf(b);
   if (received > 0) b.amountPaid = received;
   b.amount = Math.round(((b.amount ?? 0) + f) * 100) / 100;
   if (b.pay === "Paid") b.pay = "Partially paid";

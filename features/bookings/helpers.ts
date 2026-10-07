@@ -506,6 +506,15 @@ export const receivedOf = (b: Booking) => {
     : wallet;
 };
 
+/** The CASH (card / bank / cash) that came in on this booking, WITHOUT store credit. `amount` is already net of store credit, so
+ *  "what is still owed" must be `amount - cashReceivedOf`: using receivedOf (which adds the wallet back for the income screens)
+ *  took the credit off twice and asked the card for £2.50 on a £7.50 balance (QA-C D1). */
+export const cashReceivedOf = (b: Booking) => {
+  const paid = Number(b.amountPaid);
+  if (Number.isFinite(paid) && paid > 0) return paid;
+  return b.pay === "Paid" || b.pay === "Funded" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded" ? (b.amount || 0) : 0;
+};
+
 /** Everything actually refunded on this booking: per-day/child refunds
  *  (`refundLog`) PLUS an APPROVED whole-booking refund (`cancel.amount`). A
  *  still-pending refund request is NOT counted — the money hasn't moved.
@@ -528,7 +537,7 @@ export const refundedGross = (b: Booking) => {
 export const collectedNet = (b: Booking) => Math.max(0, receivedOf(b) - refundedGross(b));
 
 /** Money still owed on a live (non-cancelled) booking = price − received. */
-export const owedOf = (b: Booking) => Math.max(0, (b.amount || 0) - receivedOf(b));
+export const owedOf = (b: Booking) => Math.max(0, (b.amount || 0) - cashReceivedOf(b));
 
 /** Does this booking hold a place? Cancelled/declined don't, and nor does
  *  anything still waiting for one (NO_PLACE_YET) — nothing is owed on those. */

@@ -102,7 +102,10 @@ test("wallet credit applied counts as money received", () => {
   assert.equal(receivedOf(bk({ pay: "Unpaid", amount: 70, walletApplied: 30 })), 30);
   assert.equal(receivedOf(bk({ pay: "Paid", amount: 70, amountPaid: 70, walletApplied: 30 })), 100);
   assert.equal(receivedOf(bk({ pay: "Paid", amount: 70, walletApplied: 30 })), 100);
-  assert.equal(owedNow(bk({ status: "Confirmed", amount: 70, walletApplied: 70 })), 0);
+  // `amount` is already NET of store credit (a fully covered booking is amount 0 / Funded): what is still owed is amount less CASH received,
+  // never less the wallet again (QA-C D1: the card was asked for £2.50 on a £7.50 balance).
+  assert.equal(owedNow(bk({ status: "Confirmed", pay: "Funded", amount: 0, walletApplied: 70 })), 0);
+  assert.equal(owedNow(bk({ status: "Confirmed", amount: 70, walletApplied: 30 })), 70);
 });
 
 test("dashboard spaces left: per-day limit is judged per day, not once per run", () => {

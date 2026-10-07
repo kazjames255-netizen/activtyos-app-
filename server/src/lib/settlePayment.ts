@@ -4,7 +4,7 @@ import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
 import { bookingDocId, notifyPaymentReceived } from "../routes/bookings";
 import { notify } from "./notify";
 import { providerPaidBell } from "./providerPaidBell";
-import { paidSoFar, receivedOf } from "../../../features/bookings/helpers";
+import { paidSoFar, cashReceivedOf } from "../../../features/bookings/helpers";
 import { balanceOf } from "./payGate";
 import type { Booking } from "../../../features/bookings/types";
 
@@ -104,7 +104,7 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
     if (tfcSplit) {
       const taken = balanceOf(b);
       b.cardPaid = Math.round(((b.cardPaid ?? 0) + taken) * 100) / 100;
-      b.amountPaid = Math.round((receivedOf(b) + taken) * 100) / 100;
+      b.amountPaid = Math.round((cashReceivedOf(b) + taken) * 100) / 100;
       b.pay = b.amountPaid >= (b.amount ?? 0) - 0.005 ? "Paid" : "Awaiting voucher payment";
     } else {
     b.pay = "Paid";
@@ -139,9 +139,10 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
       to: { kind: "tenant" },
       category: "billing",
       key: "booking-new",
-      bellOnly: true,
       title: pb.title,
       body: pb.body,
+      subject: pb.title,
+      emailHtml: `<p>${pb.body.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p><p style="font-size:13px;color:#6a6785">The card payment has landed, so there is nothing left to chase on this booking.</p>`,
       href: `/company/bookings?ref=${encodeURIComponent(grp[0].ref)}`,
       ref: grp[0].ref,
     });

@@ -44,6 +44,8 @@ export const QUESTIONS: string[] = [
   "how do I know my postcode was recognised in the listing",
   "will parents see that my listing is online or at their home",
   "where does a parent see the video link for my online session",
+  "can I cancel several paid bookings at once and refund them",
+  "if a family uses wallet credit how much do they pay by card",
   "where do I see the note a parent left about pets or parking for a home visit",
   "can parents filter the browse page to only online or at-home activities",
   "do parents have to give their full address with a house number when they sign up",

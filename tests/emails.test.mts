@@ -282,7 +282,8 @@ test("ME-003 approved: the approval email is the booking-confirmed email (provid
 test("ME-005 cancellation request: card refund, amount, kids, ref, reason and approve/decline prompt", () => {
   const b = booking({ cancel: { refundTo: "card", amount: 52.5, refund: "partial", reason: "Illness" } });
   const n = cancellationRequestNotice(b, money);
-  assert.equal(n.title, "Priya wants to cancel");
+  assert.match(n.title, /^Priya wants to cancel · /);
+  assert.match(n.body, /£52\.50 refund requested/);
   assert.equal(n.subject, "Priya Patel — cancellation request");
   assert.match(n.detail, /Asha, Ravi/);
   assert.match(n.detail, /Mon 20 Jul/);
@@ -333,12 +334,13 @@ test("ME-005 cancellation request: duplicate kid names are listed once", () => {
 });
 
 
-test("ME-005 bell line is tiny: day and money only (it gets cut off after about 35 characters)", () => {
+test("ME-005 bell names the booking: ref, activity, child, day and the refund requested (QA-C D4)", () => {
   const n = cancellationRequestNotice(booking({ days: ["2026-10-26"], cancel: { amount: 0.3, refund: "full" } }), money);
-  assert.equal(n.title, "Priya wants to cancel");
-  assert.equal(n.body, "Mon 26 Oct · £0.30");
+  assert.match(n.title, /^Priya wants to cancel · [A-Z]+-\d+$/);
+  assert.match(n.body, /Football Camp/);
+  assert.match(n.body, /Mon 26 Oct — £0\.30 refund requested$/);
   const none = cancellationRequestNotice(booking({ days: ["2026-10-26"], cancel: { amount: 0, refund: "none" } }), money);
-  assert.equal(none.body, "Mon 26 Oct · no refund");
+  assert.match(none.body, /Mon 26 Oct — no refund requested$/);
 });
 
 // ───────────────────────── ME-006 refund approved ─────────────────────────

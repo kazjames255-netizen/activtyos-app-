@@ -15,10 +15,11 @@ import { releaseDiscountCodes } from "../lib/discountRedemptions";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { creditWallet } from "../lib/wallet";
 import { captureHolds, releaseHolds } from "../lib/cardHold";
+import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
 import { registerRows } from "../lib/registerRows";
-import { money, realPhone, refundableSoFar, receivedOf } from "../../../features/bookings/helpers";
+import { money, realPhone, refundableSoFar, receivedOf, cashReceivedOf } from "../../../features/bookings/helpers";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
 import { canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval } from "../lib/bookingGuards";
@@ -596,7 +597,7 @@ bookings.post("/:ref/actions", async (req, res) => {
       statusBefore = oldStatus;
       // What the booking held BEFORE this action (per child) — so cancelling ONE child frees ONE place (CN-019).
       const heldBefore = structuredClone({ status: b.status, seats: b.seats, days: b.days, kids: b.kids });
-      receivedBefore = receivedOf(b);
+      receivedBefore = cashReceivedOf(b);
 
       // A card that is only HELD is settled by approving (the payment is taken then): "Mark paid" would count the money twice.
       if (action.type === "paid" && (b.cardHold?.state === "held" || b.cardHold?.state === "awaiting")) throw new Conflict("This booking's card is only held, not charged. Approving the booking takes the payment.");
@@ -1182,7 +1183,7 @@ bookings.post("/:ref/reconcile", async (req, res) => {
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
       if (!undo && cardHeldBlocksPayment(b)) throw new Conflict(CARD_HELD_MESSAGE);
-      receivedBefore = receivedOf(b);
+      receivedBefore = cashReceivedOf(b);
       if (undo) {
         b.amountPaid = 0;
         b.pay = (b.amount ?? 0) <= 0 ? "Funded" : b.voucherScheme ? "Awaiting voucher payment" : "Unpaid";
@@ -1381,6 +1382,8 @@ bookings.put("/:ref/payment-ref", async (req, res) => {
   }
 });
 
+/** Bulk cancel cannot carry a refund decision: a booking that has received money must be cancelled one at a time (QA-C D2). */
+class BulkPaidCancel extends Error { constructor(public refs: string[]) { super("paid_cancel"); } }
 class BulkOverCapacity extends Error { constructor(public block: string, public over: number) { super("over_capacity"); } }
 
 bookings.post("/bulk", async (req, res) => {
@@ -1402,11 +1405,15 @@ bookings.post("/bulk", async (req, res) => {
     // too (undefined days = every session, resolved once the block loads).
     const out: { snap: FirebaseFirestore.DocumentSnapshot; b: Booking }[] = [];
     const deltas = new Map<string, { delta: number; days?: string[] }[]>();
+    const paidRefs: string[] = [];
     for (const snap of snaps) {
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) continue;
       const b = fromDoc(snap.data() as BookingDoc);
       const oldStatus = b.status;
       if (action === "approve" && b.cardHold?.state === "awaiting") continue; // card not entered yet: nothing to approve
+      // Cancelling a booking that has taken money needs a refund decision (the policy figure, to the card or the wallet): that is the single
+      // cancel's job. Bulk used to cancel it, keep the money and tell the family "No refund".
+      if (action === "cancel" && blocksBulkCancel(b)) paidRefs.push(b.ref);
       applyBulkAction(b, action);
       if (b.blockId) {
         const d = blockCountDelta(oldStatus, b.status, bookingSeats(b));
@@ -1418,6 +1425,7 @@ bookings.post("/bulk", async (req, res) => {
       }
       out.push({ snap, b });
     }
+    if (paidRefs.length) throw new BulkPaidCancel(paidRefs);
     const blockSnaps = await Promise.all(
       [...deltas.keys()].map((id) => tx.get(db.collection("blocks").doc(id))),
     );
@@ -1440,7 +1448,11 @@ bookings.post("/bulk", async (req, res) => {
       });
     }
     return out.map((x) => x.b);
-  }).catch((e: unknown) => { if (e instanceof BulkOverCapacity) return e; throw e; });
+  }).catch((e: unknown) => { if (e instanceof BulkOverCapacity || e instanceof BulkPaidCancel) return e; throw e; });
+  if (updated instanceof BulkPaidCancel) {
+    res.status(409).json({ error: `Paid bookings must be cancelled one at a time so the refund is decided (${updated.refs.slice(0, 5).join(", ")}${updated.refs.length > 5 ? " …" : ""}). Open each booking and choose Cancel, then pick the refund.`, code: "paid_cancel_single", refs: updated.refs });
+    return;
+  }
   if (updated instanceof BulkOverCapacity) {
     res.status(409).json({ error: `Approving these would put ${updated.block} ${updated.over} place${updated.over === 1 ? "" : "s"} over capacity — approve fewer, or waitlist the rest.`, code: "over_capacity", over: updated.over });
     return;

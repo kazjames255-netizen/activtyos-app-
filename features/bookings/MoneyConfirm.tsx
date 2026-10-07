@@ -17,7 +17,7 @@ import {
   kidActiveDays,
   money,
   payMethodLabel,
-  receivedOf,
+  cashReceivedOf,
   refundableSoFar,
   refundButtonKind,
   refundOwedOf,
@@ -54,7 +54,7 @@ function PaidConfirm({ booking: b }: { booking: Booking }) {
   const t = useT();
   const act = useBookingsStore((s) => s.act);
   const clear = useBookingsStore((s) => s.clearConfirm);
-  const amt = money(round2(Math.max(0, (b.amount ?? 0) - receivedOf(b))));
+  const amt = money(round2(Math.max(0, (b.amount ?? 0) - cashReceivedOf(b))));
   return (
     <div className={shell} data-ui="money-confirm" data-kind="paid">
       <div className={head}>{t("p7bd.cfPaidHead", { amt, method: payMethodLabel(b) })}</div>

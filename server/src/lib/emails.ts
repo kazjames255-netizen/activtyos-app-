@@ -1122,7 +1122,7 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
   const heading =
     a.kind === "Waitlist join" ? "New waitlist join"
     : a.kind === "Booking request" ? "New booking request"
-    : /awaiting card payment/i.test(a.kind) ? "New booking — awaiting card payment"
+    : /waiting for card payment/i.test(a.kind) ? "New booking — place held, waiting for card payment"
     : /awaiting bank/i.test(a.kind) ? "New booking — pending payment (bank transfer)"
     : "You have a new booking";
 
@@ -1149,7 +1149,7 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
   // Only show a payment line that actually has money against it — a card-only
   // booking shouldn't display "Childcare payment £0", and vice versa.
   const payRows = ([
-    ...(a.cardAmount > 0 ? [[/awaiting card payment/i.test(a.kind) ? "Card payment (not paid yet)" : /awaiting bank/i.test(a.kind) ? "Bank transfer (NOT PAID YET)" : "Card payment", money(a.cardAmount)]] : []),
+    ...(a.cardAmount > 0 ? [[/waiting for card payment/i.test(a.kind) ? "Card payment (not paid yet)" : /awaiting bank/i.test(a.kind) ? "Bank transfer (NOT PAID YET)" : "Card payment", money(a.cardAmount)]] : []),
     ...(a.childcareAmount > 0 ? [[a.childcareLabel || "Childcare payment", money(a.childcareAmount)]] : []),
   ] as [string, string][])
     .map(
@@ -1182,7 +1182,7 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
         ${/awaiting bank/i.test(a.kind) ? `<div style="margin:14px 0 0;padding:12px 14px;background:#fff7e6;border:1px solid #f5d38a;border-radius:10px;font-size:14px;line-height:1.5;color:#7a5200"><b>Pending payment.</b> The place is held, but ${escapeHtml(a.bookerName)} has not paid yet. They are paying by bank transfer, so look for the reference <b>${escapeHtml(a.ref)}</b> in your bank, then open the booking and press <b>Mark paid</b>.</div>` : ""}
 
         <p style="font-size:14.5px;line-height:1.6;color:#3b3860;margin:16px 0 4px">
-          Hi ${escapeHtml(a.providerName)}, <b>${escapeHtml(a.bookerName)}</b> has ${a.kind === "Booking request" ? "requested a place on" : a.kind === "Waitlist join" ? "joined the waiting list for" : "booked"} <b>${escapeHtml(a.listingName)}</b>${a.needsApproval ? " — this one needs your approval." : /awaiting card payment/i.test(a.kind) ? ". The place is held; they have not paid by card yet — you will get a payment-received message when they do." : "."}
+          Hi ${escapeHtml(a.providerName)}, <b>${escapeHtml(a.bookerName)}</b> has ${a.kind === "Booking request" ? "requested a place on" : a.kind === "Waitlist join" ? "joined the waiting list for" : "booked"} <b>${escapeHtml(a.listingName)}</b>${a.needsApproval ? " — this one needs your approval." : /waiting for card payment/i.test(a.kind) ? ". The place is held; they have not paid by card yet — you will get a “Paid ✓” bell and email the moment they do." : "."}
         </p>
 
         ${a.extraHtml ?? ""}

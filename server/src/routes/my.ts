@@ -3230,7 +3230,7 @@ export function notifyProviderNewBooking(ctx: ProviderNoticeCtx): void {
     // A card booking is created (place held) BEFORE the family pays: say so, or the provider reads "new booking" as "paid".
     const awaitingCard = !onBehalf && /^card$/i.test(String(ctx.method)) && total > 0;
     const awaitingBank = !onBehalf && isBankMethod(ctx.method) && total > 0 && !waitlisted && !needsApproval;
-    const kind = waitlisted ? "Waitlist join" : needsApproval ? "Booking request" : awaitingCard ? "New booking (awaiting card payment)" : awaitingBank ? "New booking (awaiting bank transfer payment)" : "New booking";
+    const kind = waitlisted ? "Waitlist join" : needsApproval ? "Booking request" : awaitingCard ? "New booking — place held, waiting for card payment" : awaitingBank ? "New booking (awaiting bank transfer payment)" : "New booking";
     // Rich, beautifully-presented provider email: listing photo, every
     // attendee with their allergies/medical/SEND notes, a payment split, and
     // any EHCP plans as real attachments. Built async (child profiles, venue
@@ -3369,7 +3369,7 @@ export function notifyProviderNewBooking(ctx: ProviderNoticeCtx): void {
         category: "booking",
         key: "booking-new",
         ...(waitlisted && !wlPrefs?.waitlistJoinAlert ? { bellOnly: true } : {}),
-        title: waitlisted ? `${firstWord(kids || bookerName)} joined the waiting list` : ctx.heldUntil ? `${kind} · ${primary.ref} · ${bookerName} — approve by ${deadlineLabel(ctx.heldUntil)}` : `${kind.replace(/\(awaiting card payment\)/, "— place held, waiting for card payment")} · ${primary.ref} · ${bookerName}`,
+        title: waitlisted ? `${firstWord(kids || bookerName)} joined the waiting list` : ctx.heldUntil ? `${kind} · ${primary.ref} · ${bookerName} — approve by ${deadlineLabel(ctx.heldUntil)}` : `${kind} · ${primary.ref} · ${bookerName}`,
         body: waitlisted
           ? `${shortWhen(primary)} · ${listing.name}`
           : `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${bookings.find((x) => x.serviceAddress?.notes)?.serviceAddress?.notes ? ` Note: ${String(bookings.find((x) => x.serviceAddress?.notes)?.serviceAddress?.notes).replace(/\s+/g, " ").slice(0, 80)}` : ""}${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(ctx.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,

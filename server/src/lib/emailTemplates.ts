@@ -397,8 +397,9 @@ export function cancellationRequestNotice(
   // The bell line is deliberately tiny (it gets cut off after ~35 characters): who, day, money. The email carries the full detail.
   const bellMoney = updated.cancel?.refund === "none" || amt <= 0 ? "no refund" : fmtMoney(amt);
   return {
-    title: `${firstWord(updated.booker)} wants to cancel`,
-    body: `${shortWhen(updated)} · ${bellMoney}`,
+    // The bell names the booking (ref), the listing and the child: 'QA wants to cancel · Thu 29 Oct · £0.30' did not say WHICH booking (QA-C D4).
+    title: `${firstWord(updated.booker)} wants to cancel · ${updated.ref}`,
+    body: `${updated.listing} · ${kids} · ${shortWhen(updated)} — ${bellMoney === "no refund" ? "no refund requested" : `${bellMoney} refund requested`}`,
     detail: `${kids} · ${shortWhen(updated)} · ${refundTxt}${reasonTxt}`,
     subject: `${updated.booker} — cancellation request`,
   };
