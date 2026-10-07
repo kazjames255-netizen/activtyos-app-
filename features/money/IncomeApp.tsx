@@ -15,7 +15,9 @@ import { useSettings } from "@/lib/settings";
 import { SeasonPicker } from "@/components/SeasonPicker";
 import { csvText } from "@/lib/csv";
 import { useT } from "@/lib/i18n/provider";
+import { usePathname, useRouter } from "next/navigation";
 import { rich } from "./rich";
+import { buildAwaiting, type AwaitingBookingIn, type AwaitingRow } from "./awaitingPayment";
 import { catLabel, methodLabel } from "./finI18n";
 
 const LIGHT_PALETTE = {
@@ -243,8 +245,25 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const awaiting = useMemo(() => invoices
     .filter((v) => v.status === "sent")
     .sort((a, b) => b.amount - a.amount), [invoices]);
-  const awaitingTotal = useMemo(() => awaiting.reduce((s, v) => s + v.amount, 0), [awaiting]);
   const overdueCount = useMemo(() => awaiting.filter((v) => v.overdue).length, [awaiting]);
+  // The Awaiting payment panel: sent invoices + bookings with a payment request out; never "all paid up" while money is owed (awaitingPayment.ts).
+  const awaitingR = useMemo(() => buildAwaiting(invoices, bookings as unknown as AwaitingBookingIn[]), [invoices, bookings]);
+  const router = useRouter();
+  const portal = (usePathname() ?? "/").split("/")[1] || "app";
+  const [chasing, setChasing] = useState<string | null>(null);
+  const [chaseMsg, setChaseMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const chase = useCallback(async (r: AwaitingRow) => {
+    if (!r.bookingRef) return;
+    setChasing(r.id); setChaseMsg(null);
+    try {
+      await apiPost(`/api/bookings/${encodeURIComponent(r.bookingRef)}/nudge`, {});
+      setChaseMsg({ ok: true, text: t("p8fin.inChaseDone", { name: r.name }) });
+      refresh();
+    } catch (e) {
+      setChaseMsg({ ok: false, text: e instanceof Error ? e.message : t("p8fin.gLoadFailed") });
+    }
+    setChasing(null);
+  }, [refresh, t]);
 
   // This year at a glance — best month, run-rate, biggest single payment.
   const yearStats = useMemo(() => {
@@ -354,6 +373,62 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     const a = document.createElement("a"); a.href = url; a.download = `income-${range}-${todayIso()}.csv`; a.click(); URL.revokeObjectURL(url);
   }
 
+  // The Awaiting payment panel, also shown when there is no income yet (a provider who is owed money must still see it).
+  const awaitingPanel = (
+            <Card className="p-4">
+              <div className="mb-0.5 flex items-baseline justify-between">
+                <div className="text-[13.5px] font-extrabold">{t("p8fin.inAwaitingTitle")}</div>
+                <div className="text-[12px] font-extrabold tabular-nums" data-testid="awaiting-total">{money(awaitingR.total)}{overdueCount > 0 && <span className="ms-1.5 rounded-full bg-[#fdebec] px-1.5 py-0.5 text-[10px] font-bold text-[#c02532]">{t("p8fin.inOverdueN", { n: overdueCount })}</span>}</div>
+              </div>
+              <div className="mb-2 text-[10.5px] text-[var(--ink-3)]">{t("p8fin.inAwaitingNote2")}</div>
+              {awaitingR.empty === "paidUp" ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]" data-testid="awaiting-paid-up">{t("p8fin.inAllPaidUp")}</div> : awaitingR.empty === "owedNoRequest" ? (
+                <div className="rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-3 text-[12px] leading-[1.5] text-[#7a5b06]" data-testid="awaiting-owed-no-request">
+                  {t("p8fin.inOwedNoRequest", { amount: money(awaitingR.owedAll) })}{" "}
+                  <button type="button" onClick={() => router.push(`/${portal}/finance`)} className="font-extrabold underline">{t("p8fin.inSeeWhoOwes")}</button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {(showAllAwaiting ? awaitingR.rows : awaitingR.rows.slice(0, 5)).map((v) => (
+                    <div key={v.id} className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-[var(--panel)]" data-testid={`awaiting-row-${v.reference ?? v.id}`}>
+                      <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-extrabold" style={v.overdue ? { background: "#fdebec", color: "#c02532" } : { background: "#eaf0fc", color: "#16306e" }}>{initials(v.name)}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[12.5px] font-bold">{v.name}{v.listing && <span className="font-normal text-[var(--ink-3)]"> · {v.listing}</span>}</div>
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10.5px] text-[var(--ink-3)]">
+                          {v.reference && <span className="truncate">{v.reference}</span>}
+                          {v.kind === "invoice"
+                            ? (v.dueDate ? (v.overdue ? <span className="rounded-full bg-[#fdebec] px-1.5 py-px font-bold text-[#c02532]">{t("p8fin.inOverdueDate", { date: fmtDay(v.dueDate) })}</span> : <span>{t("p8fin.inDueDate", { date: fmtDay(v.dueDate) })}</span>) : <span>{t("p8fin.inNoDueDate")}</span>)
+                            : <>
+                                {v.sentAt && <span>{t("p8fin.inSentOn", { date: fmtDay(ukDay(v.sentAt)) })}</span>}
+                                {(v.reminders ?? 0) > 0 && <span className="rounded-full bg-[#eaf0fc] px-1.5 py-px font-bold text-[#16306e]">{t("p8fin.inRemindedN", { n: v.reminders ?? 0 })}</span>}
+                              </>}
+                        </div>
+                      </div>
+                      <div className="flex-none text-[13px] font-extrabold tabular-nums">{money(v.amount)}</div>
+                      {v.bookingRef && (
+                        <div className="flex flex-none items-center gap-1">
+                          <button type="button" disabled={chasing === v.id} onClick={() => void chase(v)} className="rounded-full bg-[#1d3a8f] px-2.5 py-1 text-[11px] font-bold text-white hover:brightness-110 disabled:opacity-60">{chasing === v.id ? t("p8fin.inChasing") : t("p8fin.inChase")}</button>
+                          <button type="button" onClick={() => router.push(`/${portal}/bookings?ref=${encodeURIComponent(v.bookingRef!)}`)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]">{t("p8fin.inViewBtn")}</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {awaitingR.rows.length > 5 && (
+                    <button type="button" onClick={() => setShowAllAwaiting((v) => !v)} className="mt-1 flex items-center justify-center gap-1 rounded-lg border border-[var(--line)] py-1.5 text-[11.5px] font-bold text-[#16306e] transition hover:bg-[var(--panel)]">
+                      {showAllAwaiting ? t("p8fin.inShowLess") : t("p8fin.inShowMore", { n: awaitingR.rows.length - 5 })}
+                    </button>
+                  )}
+                  {awaitingR.notRequestedOwed > 0.005 && (
+                    <div className="mt-1.5 rounded-lg bg-[#fdf6e6] px-2.5 py-2 text-[11px] leading-[1.45] text-[#7a5b06]" data-testid="awaiting-other-owed">
+                      {t("p8fin.inOtherOwed", { amount: money(awaitingR.notRequestedOwed) })}{" "}
+                      <button type="button" onClick={() => router.push(`/${portal}/finance`)} className="font-extrabold underline">{t("p8fin.inSeeWhoOwes")}</button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {chaseMsg && <div className={`mt-2 text-[11.5px] font-bold ${chaseMsg.ok ? "text-[#0f6b34]" : "text-[#c02532]"}`} role="status">{chaseMsg.text}</div>}
+            </Card>
+  );
+
   return (
     <div className={embedded ? "text-[var(--ink)]" : "-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]"} style={embedded ? undefined : LIGHT_PALETTE}>
       {!embedded && (
@@ -380,14 +455,15 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
       </div>
 
       {!data ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8fin.gLoading")}</div>
-      : allItems.length === 0 ? (
+      : allItems.length === 0 ? (<>
         <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">
           <div className="text-[30px]">💰</div>
           <div className="mt-1 text-[15px] font-extrabold text-[var(--ink)]">{t("p8fin.inNoneYet")}</div>
           <p className="mx-auto mt-1 max-w-[420px] leading-[1.6]">{t("p8fin.inNoneBody")}</p>
           <button type="button" onClick={openAdd} className={`${btnPrimary} mx-auto mt-4`}>{t("p8fin.inLogFirst")}</button>
         </Card>
-      ) : tab === "overview" ? (
+        {awaitingR.empty !== "paidUp" && <div className="mt-3.5">{awaitingPanel}</div>}
+      </>) : tab === "overview" ? (
         <div className="flex flex-col gap-3.5">
           <Card className="grid gap-3 p-4 sm:grid-cols-4">
             <div><div className="text-[20px] font-extrabold leading-none">{money(thisMonthTotal)}</div><div className="mt-1 flex items-center gap-1.5 text-[11.5px] text-[var(--ink-3)]">{t("p8fin.inInMonth")}{deltaPct !== null && <span className={`font-bold ${deltaPct >= 0 ? "text-[#1d3a8f]" : "text-[#d0693b]"}`}>{deltaPct >= 0 ? "▲" : "▼"}{Math.abs(deltaPct)}%</span>}</div></div>
@@ -522,36 +598,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
           )}
 
           <div className="grid gap-3.5 lg:grid-cols-2">
-            {/* Awaiting payment — money you're still owed (unpaid invoices) */}
-            <Card className="p-4">
-              <div className="mb-0.5 flex items-baseline justify-between">
-                <div className="text-[13.5px] font-extrabold">{t("p8fin.miAwaiting")}</div>
-                <div className="text-[12px] font-extrabold tabular-nums">{money(awaitingTotal)}{overdueCount > 0 && <span className="ms-1.5 rounded-full bg-[#fdebec] px-1.5 py-0.5 text-[10px] font-bold text-[#c02532]">{t("p8fin.inOverdueN", { n: overdueCount })}</span>}</div>
-              </div>
-              <div className="mb-2 text-[10.5px] text-[var(--ink-3)]">{t("p8fin.inAwaitingNote")}</div>
-              {awaiting.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{t("p8fin.inAllPaidUp")}</div> : (
-                <div className="flex flex-col gap-1">
-                  {(showAllAwaiting ? awaiting : awaiting.slice(0, 5)).map((v) => (
-                    <div key={v.id} className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-[var(--panel)]">
-                      <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-extrabold" style={v.overdue ? { background: "#fdebec", color: "#c02532" } : { background: "#eaf0fc", color: "#16306e" }}>{initials(v.customerName)}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-[12.5px] font-bold">{v.customerName}</div>
-                        <div className="flex items-center gap-1.5 text-[10.5px] text-[var(--ink-3)]">
-                          {v.reference && <span className="truncate">{v.reference}</span>}
-                          {v.dueDate ? (v.overdue ? <span className="rounded-full bg-[#fdebec] px-1.5 py-px font-bold text-[#c02532]">{t("p8fin.inOverdueDate", { date: fmtDay(v.dueDate) })}</span> : <span>{t("p8fin.inDueDate", { date: fmtDay(v.dueDate) })}</span>) : <span>{t("p8fin.inNoDueDate")}</span>}
-                        </div>
-                      </div>
-                      <div className="flex-none text-[13px] font-extrabold tabular-nums">{money(v.amount)}</div>
-                    </div>
-                  ))}
-                  {awaiting.length > 5 && (
-                    <button type="button" onClick={() => setShowAllAwaiting((v) => !v)} className="mt-1 flex items-center justify-center gap-1 rounded-lg border border-[var(--line)] py-1.5 text-[11.5px] font-bold text-[#16306e] transition hover:bg-[var(--panel)]">
-                      {showAllAwaiting ? t("p8fin.inShowLess") : t("p8fin.inShowMore", { n: awaiting.length - 5 })}
-                    </button>
-                  )}
-                </div>
-              )}
-            </Card>
+            {awaitingPanel}
 
             {/* This year at a glance — featured hero + supporting trio */}
             <Card className="p-4">

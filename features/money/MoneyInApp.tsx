@@ -11,6 +11,7 @@ import { IncomeApp } from "@/features/money/IncomeApp";
 import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
 import { useT } from "@/lib/i18n/provider";
+import { buildAwaiting, type AwaitingBookingIn, type AwaitingInvoice } from "./awaitingPayment";
 import { rich } from "./rich";
 
 const LIGHT_PALETTE = {
@@ -51,7 +52,10 @@ export function MoneyInApp() {
   const thisYear = thisMonthKey.slice(0, 4);
 
   const paidInv = useMemo(() => invoices.filter(isStandaloneInvoiceIn).map((v) => ({ date: ukDay(v.paidAt || v.date || ""), amount: v.amount ?? 0 })), [invoices]);
-  const outstanding = useMemo(() => invoices.filter((v) => v.status === "sent").reduce((s, v) => s + (v.amount ?? 0), 0), [invoices]);
+  // Awaiting payment: sent invoices + bookings with a payment request out (same helper as the Income tab panel, features/money/awaitingPayment.ts), so
+  // the headline never reads £0.00 while a family still owes money on a booking you chased.
+  const awaitingR = useMemo(() => buildAwaiting(invoices as unknown as AwaitingInvoice[], bookings as unknown as AwaitingBookingIn[]), [invoices, bookings]);
+  const outstanding = awaitingR.total;
   // Booking money, dated by when the booking was taken. Same rule as the Dashboard's "Income
   // collected" and the Income tab: NET of refunds (received - refunded); `back` is the refunded part.
   const bookingIn = useMemo(() => bookings.map((b) => {
@@ -112,10 +116,10 @@ export function MoneyInApp() {
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
           <Kpi big={money(inMonth)} sub={t("p8fin.miInMonth")} note={t("p8fin.miNetNote", { got: money(inMonth + refMonth), ref: money(refMonth) })} />
           <Kpi big={money(inYear)} sub={t("p8fin.miInYear", { year: thisYear })} note={t("p8fin.miNetNote", { got: money(inYear + refYear), ref: money(refYear) })} />
-          <Kpi big={money(outstanding)} sub={t("p8fin.miAwaiting")} />
+          <Kpi big={money(outstanding)} sub={t("p8fin.inAwaitingTitle")} />
         </div>
         <div className="mt-2 text-[11px] text-white/75">{rich(t("p8fin.miReceivedLine", { bk: money(bkMonth), inv: money(invMonth), inc: money(incMonth) }))}</div>
-        <div className="mt-0.5 text-[10.5px] text-white/60">{rich(t("p8fin.miAwaitingNote"))}</div>
+        <div className="mt-0.5 text-[10.5px] text-white/60">{rich(t("p8fin.miAwaitingNote2"))}{awaitingR.notRequestedOwed > 0.005 && <> {t("p8fin.inOtherOwed", { amount: money(awaitingR.notRequestedOwed) })}</>}</div>
         {refundsOwed > 0 && <div data-ui="refunds-owed" className="mt-1 text-[11px] font-semibold text-[#ffe3a3]">{rich(t("p8fin.miRefundsOwed", { amount: money(refundsOwed) }))}</div>}
         </>)}
       </div>
