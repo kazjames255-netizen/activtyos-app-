@@ -16,10 +16,14 @@ export function ukWallToUtc(date: string, time: string): Date {
   return new Date(utc);
 }
 
-/** Is this booking's child on this session today: confirmed, not cancelled/declined/waitlisted, on that date, and not left unpaid or refunded. */
+/** Pay states that count as PAID for the join link: money received, nothing owed (Funded = a £0 / fully covered place), or paid and later part-released.
+ *  Everything else (Unpaid, Invoice sent, Awaiting voucher payment, Partially paid, Pending, Refunded, Refund pending...) does NOT unlock the link. */
+const JOIN_PAID = new Set(["Paid", "Funded", "Partially refunded"]);
+
+/** Is this booking's child on this session today: confirmed, not cancelled/declined/waitlisted, on that date, and PAID (see JOIN_PAID). */
 export function bookingJoinable(b: Booking, date: string): boolean {
   if (b.status !== "Confirmed") return false;
-  if (b.pay === "Unpaid" || b.pay === "Refunded" || b.pay === "Refund pending") return false;
+  if (!JOIN_PAID.has(String(b.pay))) return false;
   return registerRows(b, date).some((r) => r.expected);
 }
 
@@ -30,10 +34,16 @@ export function ownLinkVisible(listing: { videoMode?: string; ownLink?: string; 
   return listing.videoMode === "own" && !!listing.ownLink && (windowOpen || listing.showLinkNow === true);
 }
 
-/** Confirmed, NOT yet paid, and the child is on that day: the family should be told the join link unlocks once they pay. */
+/** Confirmed, NOT yet paid (unpaid, invoice sent, awaiting a voucher, part-paid...; not refunded) and the child is on that day: the family should be told the join link unlocks once they pay. */
 export function bookingAwaitingPayOnline(b: Booking, date: string): boolean {
-  if (b.status !== "Confirmed" || b.pay !== "Unpaid") return false;
+  if (b.status !== "Confirmed" || JOIN_PAID.has(String(b.pay)) || b.pay === "Refunded" || b.pay === "Refund pending") return false;
   return registerRows(b, date).some((r) => r.expected);
+}
+
+/** May the confirmation EMAIL print the provider's own link? Only when the listing says "show the link straight away" AND the family has paid: an unpaid
+ *  family is told it unlocks on payment (the link used to be printed under that very sentence). */
+export function emailShowsOwnLink(listing: { videoMode?: string; ownLink?: string; showLinkNow?: boolean }, unpaid: boolean | undefined): boolean {
+  return listing.videoMode === "own" && !!listing.ownLink && listing.showLinkNow === true && !unpaid;
 }
 
 /** Is this a usable own-session link: a full https URL (anything else is refused at publish: families tap it on a phone). */

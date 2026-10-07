@@ -57,6 +57,7 @@ async function subscriptionRefusal(req: Request): Promise<string | null> {
 // here so a listing document can never blow Firestore's 1MB limit.
 
 import { baseListingSchema, createSchema, publishProblems, RUN_FIELDS, runRecipeOf, type ListingInput } from "../lib/listingRules";
+import { validOwnLink } from "../lib/onlineRules";
 import { enforceListingChecks, homeVisitPostcodeProblem, cleanCoverage } from "../lib/listingChecks";
 import { BRAND } from "../lib/brand";
 
@@ -621,6 +622,15 @@ listings.put("/:id", async (req, res) => {
     const oldMenus = new Set(Object.values(stored.mealPlan ?? {}).map(menuOf));
     const mealPlan = data.mealPlan ? Object.fromEntries(Object.entries(data.mealPlan).filter(([, v]) => !oldMenus.has(menuOf(v)))) : undefined;
     const bad = await foreignRefProblem(req.auth!, req.auth!.tenantId!, { blockId: data.blockId && data.blockId !== stored.blockId ? data.blockId : null, mealPlan }); if (bad) { res.status(400).json({ error: bad }); return; } }
+  // Editing a listing that is ALREADY live skips the publish checks below (no status in the body), so a bad own session link could be saved over a
+  // good one and families would be handed a dead link: whenever the link or hosting mode is part of the edit, the link must still be a full https URL.
+  {
+    const merged = { ...own.snap.data()!, ...data } as Record<string, unknown>;
+    if (("ownLink" in data || "videoMode" in data) && merged.status === "live" && merged.videoMode === "own" && !validOwnLink(merged.ownLink as string | undefined)) {
+      res.status(400).json({ error: "Can't save: the session link must be a full https:// link, for example https://zoom.us/j/123456789." });
+      return;
+    }
+  }
   if (data.status === "live") {
     const problems = publishProblems({ ...own.snap.data()!, ...data }, enforceListingChecks() ? { today: ukToday() } : undefined);
     if (problems.length) {

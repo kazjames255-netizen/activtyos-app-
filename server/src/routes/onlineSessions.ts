@@ -159,6 +159,7 @@ onlineSessions.get("/mine", async (req, res) => {
         mode: own ? "own" : "platform", state: open ? "open" : "early",
         // One decision for every screen (done page, My bookings, Home): the browser only draws it.
         joinState: joinState({ paid, mode: own ? "own" : "platform", now, opensAt: w.opensAt.getTime(), closesAt: w.closesAt.getTime(), hostLive, hasLink: !!listing.ownLink, showLinkNow: listing.showLinkNow }),
+        providerName: (listing as { tenantName?: string }).tenantName ?? "",
         paid, amountDue: paid ? 0 : Math.round(mine.reduce((s, b) => s + (b.amount ?? 0), 0) * 100) / 100, method: mine[0]?.method ?? "",
         hostLive,
         ...(paid && ownLinkVisible(listing, open) ? { link: listing.ownLink } : {}),
@@ -267,7 +268,8 @@ onlineSessions.post("/attended", async (req, res) => {
   const { ref, s } = await loadOrMake(listing, date, items[0].b.timing);
   const w = windowOf(s);
   const nowMs = Date.now();
-  if (nowMs > w.closesAt.getTime() || (nowMs < w.opensAt.getTime() && !(listing.videoMode === "own" && listing.showLinkNow))) { res.status(409).json({ error: "This session isn't open.", code: "outside_join_window" }); return; }
+  // Attendance only counts INSIDE the join window. "Show the link straight away" lets the family SEE the link early, but opening it days ahead must not tick the child present.
+  if (nowMs > w.closesAt.getTime() || nowMs < w.opensAt.getTime()) { res.status(409).json({ error: "This session isn't open.", code: "outside_join_window" }); return; }
   if (listing.videoMode !== "own" && s.status !== "live") { res.status(409).json({ error: "This session hasn't started.", code: "waiting_for_host" }); return; }
   const at = nowIso();
   const patch: Record<string, string> = {};

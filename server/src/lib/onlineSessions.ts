@@ -2,7 +2,7 @@ import { db } from "../firebase";
 import { librarySnap } from "./tenantLibrary";
 import { fromDoc, type BookingDoc } from "./bookingDoc";
 import { registerRows } from "./registerRows";
-import { ukWallToUtc, bookingJoinable } from "./onlineRules";
+import { ukWallToUtc, bookingJoinable, emailShowsOwnLink } from "./onlineRules";
 export { ukWallToUtc, bookingJoinable };
 import { effectiveSettings } from "../middleware/access";
 import { firstOff } from "../../../lib/accessMap";
@@ -79,7 +79,7 @@ export async function onlineJoinText(listing: ListingLite & { videoMode?: string
   // Not paid yet: say so first. The join link / button is locked until the booking is paid (by card, or for a bank transfer once the provider marks it received).
   if (unpaid) lines.push("Your join link unlocks once your booking is paid (if you pay by bank transfer, as soon as your provider marks your payment as received).");
   if (listing.videoMode === "own") {
-    if (listing.ownLink && listing.showLinkNow) lines.push(`Your session link: ${listing.ownLink}`);
+    if (emailShowsOwnLink(listing, unpaid)) lines.push(`Your session link: ${listing.ownLink}`);
     else lines.push(`Your session link appears in My bookings from ${clock} on ${dayLabel}, 10 minutes before the start.`);
   } else {
     lines.push(`Join from My bookings from ${clock} on ${dayLabel}. Press "Join session", with your camera on, as soon as your host has started.`);

@@ -2073,6 +2073,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
                 <div className="mt-2.5">
                   <FieldLabel htmlFor="wiz-own-link">{tr("p9tx.ownLinkLbl")}</FieldLabel>
                   <Input id="wiz-own-link" type="url" value={d.ownLink ?? ""} onChange={(e) => upd({ ownLink: e.target.value })} placeholder="https://" className="w-full" />
+                  {(d.ownLink ?? "").trim() && !/^https:\/\/[^\s/$.?#][^\s]*\.[^\s]+$/i.test((d.ownLink ?? "").trim()) && <div role="alert" className="mt-1 text-[12px] font-semibold text-[#c02636]" data-testid="wiz-own-link-bad">{tr("p9tx.ownLinkBad")}</div>}
                   <label className="mt-2 flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold"><input type="checkbox" checked={d.showLinkNow === true} onChange={(e) => upd({ showLinkNow: e.target.checked })} />{tr("p9tx.showNow")}</label>
                 </div>
               ) : (

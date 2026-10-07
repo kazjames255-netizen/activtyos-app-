@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { dateLocale } from "@/lib/i18n/format";
+import { ukClock, ukDay } from "./time";
 import { useI18n, useT } from "@/lib/i18n/provider";
 import { isRTL } from "@/lib/i18n/config";
 import { indexAfterReload, orderSessions, sessionKey } from "./order";
@@ -18,12 +19,11 @@ export interface MySession {
   mode: "platform" | "own"; state: "early" | "open"; hostLive: boolean; link?: string; noLink?: boolean;
   /** The server decides what to show (lib/onlineRules joinState); this component only draws it. */
   joinState?: "unpaid" | "early" | "early_own" | "waiting_host" | "open" | "finished" | "no_link";
-  paid?: boolean; amountDue?: number; method?: string; ref?: string; refs?: string[];
+  paid?: boolean; amountDue?: number; method?: string; ref?: string; refs?: string[]; providerName?: string;
 }
 
-// UK time on purpose: the booking, the register and the emails all show the session in UK time, so the panel must not drift to the viewer's browser zone.
-const clock = (iso: string) => new Date(iso).toLocaleTimeString(dateLocale(), { hour: "numeric", minute: "2-digit", timeZone: "Europe/London" });
-const day = (iso: string) => new Date(iso).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/London" });
+const clock = (iso: string) => ukClock(iso, dateLocale());
+const day = (iso: string) => ukDay(iso, dateLocale());
 
 /** `refs` limits the panel to those bookings (the "you are booked" screen); `providerName` words the bank-transfer hint. */
 /** `compact` (the "you are booked" screen, which already has its own heading box): no card and no title, just the session state(s). */
@@ -83,12 +83,12 @@ export function OnlineSessionsPanel({ refs, providerName, compact }: { refs?: st
           let action: React.ReactNode;
           let explain: React.ReactNode = null;
           const mins = Math.max(1, Math.round((new Date(s.startsAt).getTime() - new Date(s.opensAt).getTime()) / 60_000));
-          const opensDay = new Date(s.opensAt).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/London" });
+          const opensDay = ukDay(s.opensAt, dateLocale());
           if (s.joinState === "unpaid") {
             // Booked but not paid: the join link is locked, and the family is told exactly why and what to do.
             // No pay button here: paying lives on the booking card ("Pay by card instead").
             action = null;
-            explain = <div className="mt-1 text-[12.5px] font-semibold text-[#7a4b00]" data-testid="os-unpaid-text">{t("p9tx.osUnpaid", { provider: providerName || t("p7cl.theProvider") })}</div>;
+            explain = <div className="mt-1 text-[12.5px] font-semibold text-[#7a4b00]" data-testid="os-unpaid-text">{t("p9tx.osUnpaid", { provider: s.providerName || providerName || t("p7cl.theProvider").toLocaleLowerCase(dateLocale()) })}</div>;
           } else if (s.joinState === "early" || s.joinState === "early_own") {
             explain = <div className="mt-1 text-[12.5px] font-semibold text-[#0f6b34]" data-testid="os-early-text">{t(s.joinState === "early" ? "p9tx.osEarly" : "p9tx.osEarlyOwn", { time: clock(s.opensAt), day: opensDay, mins })}</div>;
           }

@@ -126,6 +126,7 @@ export const QUESTIONS: string[] = [
   "why is there no Mark paid button on a booking that needs approval",
   "a parent booked two children on one card and I approved just one, what happens to the other",
   "what emails and notifications do I and the parent get when a manual approval card booking comes in and I approve it",
+  "does a family who has an invoice or a voucher still to be paid get the join link for my online session",
 ];
 
 async function token(email: string, password: string) {

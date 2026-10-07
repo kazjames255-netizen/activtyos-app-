@@ -10,7 +10,7 @@ import { Card, Button } from "@/components/ui";
 
 // Provider side: "Online sessions today" with who has booked and who has joined, and the Start / Join-as-host button.
 interface Row { listingId: string; name: string; date: string; startsAt: string; endsAt: string; status: "scheduled" | "live" | "ended"; mode: "platform" | "own"; booked: number; joined: number; link?: string | null }
-const clock = (iso: string) => new Date(iso).toLocaleTimeString(dateLocale(), { hour: "numeric", minute: "2-digit" });
+const clock = (iso: string) => new Date(iso).toLocaleTimeString(dateLocale(), { hour: "numeric", minute: "2-digit", timeZone: "Europe/London" }); // UK time everywhere (not the browser's timezone)
 
 export function HostSessionsCard() {
   const t = useT();
