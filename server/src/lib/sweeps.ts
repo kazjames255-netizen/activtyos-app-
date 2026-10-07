@@ -998,6 +998,8 @@ export function startSweeps(): void {
   // Automatic emails (Setup → Email → Automatic emails).
   sweep("session-reminders", 30 * 60_000, sessionReminders);
   sweep("payment-due", 60 * 60_000, paymentDueReminders);
+  // Manual-approval card holds: reminder to the provider, lapsed holds declined, never-entered cards cleared (lib/cardHold.ts).
+  sweep("card-holds", 15 * 60_000, async () => { const m = await import("./cardHold"); await m.cardHoldSweep(); });
   sweep("review-requests", 6 * 60 * 60_000, reviewRequests);
   sweep("day-of-alerts", 10 * 60_000, dayOfAlerts);
   sweep("scheduled-emails", 60_000, scheduledEmailSends);

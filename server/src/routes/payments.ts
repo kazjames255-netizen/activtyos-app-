@@ -9,6 +9,7 @@ import { ensurePayDomains } from "../lib/payDomains";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { bookingDocId } from "./bookings";
 import { settlePaymentRecord } from "../lib/settlePayment";
+import { markHeld } from "../lib/cardHold";
 import { bookingForToken } from "../lib/bookingPayToken";
 import { payable, balanceOf } from "../lib/payGate";
 import { buildPayOptions } from "../lib/publicPayOptions";
@@ -376,7 +377,14 @@ payments.post("/checkout", async (req, res) => {
     res.status(400).json({ error: "These bookings belong to different providers — pay them separately" });
     return;
   }
-  const notPayable = bookings.find((b) => !payable(b));
+  // Manual-approval booking paid by card: the card is HELD now (authorised, not charged) and taken when the provider approves.
+  const awaitingHold = (b: (typeof bookings)[number]) => b.status === "Approval needed" && b.cardHold?.state === "awaiting";
+  const holdPay = bookings.some(awaitingHold);
+  if (holdPay && !bookings.every(awaitingHold)) {
+    res.status(409).json({ error: "These bookings can't be paid together — pay them separately" });
+    return;
+  }
+  const notPayable = bookings.find((b) => !holdPay && !payable(b));
   if (notPayable) {
     res.status(409).json({
       error:
@@ -391,7 +399,9 @@ payments.post("/checkout", async (req, res) => {
     res.status(409).json({ error: `Booking ${settledAlready.ref} is already paid` });
     return;
   }
-  const amount = Math.round(bookings.reduce((sum, b) => sum + balanceOf(b), 0) * 100) / 100;
+  const amount = holdPay
+    ? Math.round(bookings.reduce((sum, b) => sum + (b.cardHold?.amount ?? 0), 0) * 100) / 100
+    : Math.round(bookings.reduce((sum, b) => sum + balanceOf(b), 0) * 100) / 100;
   if (amount <= 0) {
     res.status(409).json({ error: "Nothing to pay" });
     return;
@@ -421,8 +431,9 @@ payments.post("/checkout", async (req, res) => {
         amount: toPence(amount),
         currency: "gbp",
         automatic_payment_methods: { enabled: true },
+        ...(holdPay ? { capture_method: "manual" as const } : {}),
         description: `${tenant.data()?.name ?? `${BRAND}`} — booking${bookings.length > 1 ? "s" : ""} ${bookings.map((b) => b.ref).join(", ")}`,
-        metadata: { tenantId, refs: bookings.map((b) => b.ref).join(","), email },
+        metadata: { tenantId, refs: bookings.map((b) => b.ref).join(","), email, ...(holdPay ? { hold: "1" } : {}) },
         // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).
       },
       stripeAccount ? { stripeAccount } : undefined,
@@ -441,6 +452,7 @@ payments.post("/checkout", async (req, res) => {
     stripeAccount,
     platformFallback: !stripeAccount,
     status: "created",
+    ...(holdPay ? { hold: true } : {}),
     createdAt: new Date().toISOString(),
   };
   const ref = await paymentsCol.add(record);
@@ -449,6 +461,7 @@ payments.post("/checkout", async (req, res) => {
     clientSecret: intent.client_secret,
     stripeAccount,
     amount,
+    ...(holdPay ? { hold: true } : {}),
   });
 });
 
@@ -476,6 +489,12 @@ payments.post("/checkout/:id/confirm", async (req, res) => {
     {},
     rec.stripeAccount ? { stripeAccount: rec.stripeAccount } : undefined,
   );
+  // Card HOLD: the card is authorised (money held, not taken) - record it and tell the provider; the payment is taken on approval.
+  if (intent.status === "requires_capture") {
+    await markHeld(snap.id);
+    res.json({ status: "requires_capture", paid: false, held: true, refs: rec.refs ?? [] });
+    return;
+  }
   if (intent.status !== "succeeded") {
     res.json({ status: intent.status, paid: false });
     return;

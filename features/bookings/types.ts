@@ -148,6 +148,18 @@ export interface Booking {
    * (null = dev platform fallback). Refund-approve refunds through these. */
   paymentIntentId?: string;
   stripeAccount?: string | null;
+  /** Manual-approval listing paid by card: the card is AUTHORISED when the family books (money held, not taken) and captured when
+   *  the provider approves. awaiting = the family hasn't entered the card yet; held = authorised; captured / released / expired = done.
+   *  `intentId` is shared by every booking row of one basket (one card, one hold). `amount` is THIS row's share. */
+  cardHold?: {
+    state: "awaiting" | "held" | "captured" | "released" | "expired";
+    intentId?: string;
+    paymentId?: string;
+    amount: number;
+    heldAt?: string;
+    /** ISO time the card hold lapses (Stripe cancels it). The provider must approve before this. */
+    expiresAt?: string;
+  };
   /** When the booking was taken. Absent on anything created before this. */
   createdAt?: string;
   booker: string;

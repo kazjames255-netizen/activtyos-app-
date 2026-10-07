@@ -107,6 +107,16 @@ export interface CustomerEmailSpec {
 }
 
 export function requestReceivedSpec(b: Booking, providerName: string): CustomerEmailSpec {
+  // Card HOLD: the card is authorised, not charged - say so plainly, and what happens if nobody answers.
+  if (b.cardHold?.state === "held") {
+    return {
+      subject: `Booking request received — ${b.listing}`,
+      title: "We've got your booking request",
+      body: `<p style="font-size:14px">Thanks ${escapeHtml(b.booker)} — your request is with ${escapeHtml(providerName)} for approval.</p>
+       <p style="font-size:14px"><b>Your card has not been charged.</b> £${(b.cardHold.amount ?? b.amount ?? 0).toFixed(2)} is held on your card. The payment is taken only if ${escapeHtml(providerName)} approves your booking; if they decline, or don't reply within 7 days, the hold is released and you pay nothing.</p>`,
+      enrich: {},
+    };
+  }
   return {
     subject: `Booking request received — ${b.listing}`,
     title: "We've got your booking request",

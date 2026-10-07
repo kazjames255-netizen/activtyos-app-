@@ -14,6 +14,7 @@ import { positionsFrom, sortQueue } from "../lib/waitlistQueue";
 import { releaseDiscountCodes } from "../lib/discountRedemptions";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { creditWallet } from "../lib/wallet";
+import { captureHolds, releaseHolds } from "../lib/cardHold";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
 import { registerRows } from "../lib/registerRows";
@@ -593,6 +594,8 @@ bookings.post("/:ref/actions", async (req, res) => {
       const heldBefore = structuredClone({ status: b.status, seats: b.seats, days: b.days, kids: b.kids });
       receivedBefore = receivedOf(b);
 
+      // A manual-approval booking paid by card can only be approved once the family's card is actually held.
+      if (action.type === "approve" && b.cardHold?.state === "awaiting") throw new Conflict("The family hasn't entered their card yet, so this can't be approved. It will be cancelled automatically if they don't.");
       // An offer must be backed by a real free place (§E: "reject if the
       // date is still full") — promote stays the overbooking override.
       if (action.type === "offer") {
@@ -771,6 +774,19 @@ bookings.post("/:ref/actions", async (req, res) => {
       if (moveUpdate) tx.update(moveUpdate.ref, { ...moveUpdate.counts });
       return b;
     });
+
+    // Manual-approval card hold: approving TAKES the held payment (and WAITS for it - a hold that has lapsed puts the request back);
+    // declining or cancelling lets the family's card go.
+    if (action.type === "approve" && updated.cardHold?.state === "held") {
+      const cap = await captureHolds([updated]);
+      if (!cap.ok) {
+        await ref.set({ status: "Approval needed" }, { merge: true });
+        res.status(502).json({ error: cap.error });
+        return;
+      }
+    } else if ((action.type === "decline" || action.type === "cancel") && (updated.cardHold?.state === "held" || updated.cardHold?.state === "awaiting")) {
+      await releaseHolds([updated]).catch((e) => console.error("[cardHold] release failed:", (e as Error).message));
+    }
 
     // Approving a refund sends the money — and WAITS for it. It used to be
     // fire-and-forget: the booking said Refunded and the family was told the
@@ -1362,6 +1378,7 @@ bookings.post("/bulk", async (req, res) => {
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) continue;
       const b = fromDoc(snap.data() as BookingDoc);
       const oldStatus = b.status;
+      if (action === "approve" && b.cardHold?.state === "awaiting") continue; // card not entered yet: nothing to approve
       applyBulkAction(b, action);
       if (b.blockId) {
         const d = blockCountDelta(oldStatus, b.status, bookingSeats(b));
@@ -1399,6 +1416,20 @@ bookings.post("/bulk", async (req, res) => {
   if (updated instanceof BulkOverCapacity) {
     res.status(409).json({ error: `Approving these would put ${updated.block} ${updated.over} place${updated.over === 1 ? "" : "s"} over capacity — approve fewer, or waitlist the rest.`, code: "over_capacity", over: updated.over });
     return;
+  }
+  // Card holds (manual approval): approving takes the held payments, declining / cancelling releases them.
+  if (action === "approve") {
+    const toTake = updated.filter((b) => b.status === "Confirmed" && b.cardHold?.state === "held");
+    if (toTake.length) {
+      const cap = await captureHolds(toTake);
+      if (!cap.ok) {
+        await Promise.all(toTake.map((b) => db.collection("bookings").doc(bookingDocId(b.tenantId!, b.ref)).set({ status: "Approval needed" }, { merge: true })));
+        res.status(502).json({ error: cap.error });
+        return;
+      }
+    }
+  } else if (action === "decline" || action === "cancel") {
+    await releaseHolds(updated.filter((b) => b.cardHold?.state === "held" || b.cardHold?.state === "awaiting")).catch((e) => console.error("[cardHold] bulk release failed:", (e as Error).message));
   }
   // Bulk declines/cancellations free seats — let the queues know.
   if (action === "decline" || action === "cancel" || action === "waitlist") {

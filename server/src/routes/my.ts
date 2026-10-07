@@ -31,6 +31,7 @@ import { applyDiscounts, DISCOUNT_KIND_LABEL, type DiscountRule } from "../../..
 import { earlyBirdScopeOf, earlyFixedUsed, claimEarlyBird } from "../lib/earlyBird";
 import { mergeBookings } from "../lib/mergeBookings";
 import { ageRangeFor, isOutOfRange, passHidden, addonRefusal, isQueuedOn, cardUnpaid } from "../lib/bookingRules";
+import { wantsCardHold, releaseHolds } from "../lib/cardHold";
 import {
   resolveBundlePricing,
   type BundleDoc,
@@ -1969,6 +1970,8 @@ my.post("/bookings", async (req, res) => {
         const blk = working.get(id)!;
         tx.update(db.collection("blocks").doc(id), { bookedCount: blk.bookedCount, dayCounts: blk.dayCounts ?? {} });
       }
+      // Manual approval + card: the family's card is AUTHORISED now (money held, not taken) and captured when the provider approves.
+      for (const b of created) if (wantsCardHold(b, input.method, onBehalf)) b.cardHold = { state: "awaiting", amount: round2(b.amount ?? 0) };
       for (const b of created) tx.set(bookingsCol.doc(bookingDocId(listing.tenantId, b.ref)), toDoc(b));
       return created;
     });
@@ -2048,13 +2051,14 @@ my.post("/bookings", async (req, res) => {
         else if (b0.status === "Confirmed") emailBookingConfirmed(merged, provider, isBankMethod(input.method) ? await bankPayDetails(listing.tenantId, b0.ref, b0.amount) : null, refs);
         // A waiting-list place is NOT "a request pending approval" - it gets its own message.
         else if (b0.status === "Waitlisted") emailWaitlistJoined(merged, provider, refs);
-        else emailBookingRequestReceived(merged, provider, refs);
+        // A card-HOLD request is announced (to the family and the provider) once the card is actually held - see lib/cardHold.ts.
+        else if (!b0.cardHold) emailBookingRequestReceived(merged, provider, refs);
       }
     }
     // Tell the PROVIDER a booking just came in — bell + email. This was never
     // wired: the create path only ever emailed the parent, so operators got no
     // heads-up on new bookings. Fires once per basket, not per child.
-    if (listing.tenantId && bookings.length) {
+    if (listing.tenantId && bookings.length && !bookings.some((b) => b.cardHold)) {
       const total = round2(bookings.reduce((s, b) => s + (b.amount ?? 0), 0));
       const places = bookings.reduce((s, b) => s + (b.seats ?? b.kids?.length ?? 1), 0);
       const kids = [...new Set(bookings.map((b) => b.child).filter(Boolean))].join(", ");
@@ -3008,6 +3012,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       await db.collection("refundBanks").doc(`${updated.tenantId}_${updated.ref}`).set({ tenantId: updated.tenantId, ref: updated.ref, ...(bankToStore as object), createdAt: new Date().toISOString() })
         .catch((e) => console.error("[my/cancel] could not store refund bank details:", (e as Error).message));
     }
+    // A card HOLD (manual approval, not yet approved): nothing was taken, so just let the family's card go.
+    if (updated.cardHold?.state === "held" || updated.cardHold?.state === "awaiting") await releaseHolds([updated]).catch((e) => console.error("[cardHold] release on cancel failed:", (e as Error).message));
     // A cancellation frees seats — the queue gets first refusal (auto mode).
     if (updated.blockId) void triggerWaitlist(updated.blockId);
     // …and frees the discount code it was booked with.

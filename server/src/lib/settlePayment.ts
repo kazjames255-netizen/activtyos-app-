@@ -67,6 +67,8 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
     if (!snap.exists) return null;
     const rec = snap.data() as PaymentRec;
     if (rec.status === "succeeded") return null;
+    // A card HOLD is captured booking-by-booking when the provider approves (lib/cardHold.ts), never settled as a whole here.
+    if ((rec as PaymentRec & { hold?: boolean }).hold) return null;
     tx.update(payRef, { status: "succeeded", paidAt: at, settledAuto: by.auto });
     return rec;
   });

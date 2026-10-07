@@ -6,6 +6,7 @@ import { markPastDue, notifyBilling, syncFromStripe, tenantForCustomer } from ".
 import { markCardFailed, paymentForIntent, settleInvoicePayment, settlePaymentRecord } from "../lib/settlePayment";
 import { clearSubscriptionCache } from "../middleware/subscription";
 import { BRAND } from "../lib/brand";
+import { markHeld, holdCanceledByStripe } from "../lib/cardHold";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Stripe webhook — two jobs.
@@ -161,6 +162,19 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
           ? await settleInvoicePayment(id, rec.invoiceId, pi.id, by)
           : await settlePaymentRecord(id, by);
         if (result === "settled") console.log(`[stripe-webhook] settled payment ${id} (${pi.id}) from the webhook — the payer's browser never confirmed`);
+        break;
+      }
+      // Card HOLD (manual-approval booking): the card was authorised; or the hold lapsed / was cancelled.
+      case "payment_intent.amount_capturable_updated": {
+        const pi = event.data.object;
+        if (pi.status !== "requires_capture") break;
+        const found = await paymentForIntent(pi.id);
+        if (found && (found.rec as { hold?: boolean }).hold) await markHeld(found.id);
+        break;
+      }
+      case "payment_intent.canceled": {
+        const found = await paymentForIntent(event.data.object.id);
+        if (found && (found.rec as { hold?: boolean }).hold) await holdCanceledByStripe(found.id);
         break;
       }
       case "payment_intent.payment_failed": {

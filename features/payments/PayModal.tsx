@@ -24,9 +24,11 @@ interface CheckoutInfo {
   clientSecret: string;
   stripeAccount: string | null;
   amount: number;
+  /** Manual-approval booking: the card is HELD (authorised), taken only if the provider approves. */
+  hold?: boolean;
 }
 
-function PayForm({ info, onPaid, onError }: { info: CheckoutInfo; onPaid: () => void; onError: (m: string) => void }) {
+function PayForm({ info, onPaid, onHeld, onError }: { info: CheckoutInfo; onPaid: () => void; onHeld: () => void; onError: (m: string) => void }) {
   const t = useT();
   const w = useWord();
   const stripeJs = useStripe();
@@ -43,11 +45,12 @@ function PayForm({ info, onPaid, onError }: { info: CheckoutInfo; onPaid: () => 
       return;
     }
     try {
-      const res = await apiPost<{ paid: boolean; status: string }>(
+      const res = await apiPost<{ paid: boolean; held?: boolean; status: string }>(
         `/api/payments/checkout/${info.paymentId}/confirm`,
         {},
       );
       if (res.paid) onPaid();
+      else if (res.held) onHeld();
       else onError(t("p8lst.pmNotCompleted", { status: res.status === "succeeded" ? t("p8lst.pmSucceeded") : res.status === "failed" ? t("p8lst.pmFailed") : w(res.status) }));
     } catch (e) {
       onError(e instanceof Error ? e.message : t("p8lst.pmVerifyFail"));
@@ -59,19 +62,20 @@ function PayForm({ info, onPaid, onError }: { info: CheckoutInfo; onPaid: () => 
     <>
       <PaymentElement />
       <Button variant="primary" disabled={busy || !stripeJs} onClick={pay} className="mt-3 w-full">
-        {busy ? t("p8lst.pmPaying") : t("p8lst.pmPay", { amount: money(info.amount) })}
+        {busy ? t("p8lst.pmPaying") : info.hold ? t("p8lst.holdBtn", { amount: money(info.amount) }) : t("p8lst.pmPay", { amount: money(info.amount) })}
       </Button>
     </>
   );
 }
 
-export function PayModal({ refs = [], tenantId, mealOrderIds, onClose, onPaid }: { refs?: string[]; tenantId?: string; mealOrderIds?: string[]; onClose: () => void; onPaid: () => void }) {
+export function PayModal({ refs = [], tenantId, tenantName, mealOrderIds, onClose, onPaid }: { refs?: string[]; tenantId?: string; tenantName?: string; mealOrderIds?: string[]; onClose: () => void; onPaid: () => void }) {
   const t = useT();
   const { locale } = useI18n();
   const [info, setInfo] = useState<CheckoutInfo | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
+  const [held, setHeld] = useState(false);
   const meals = !!mealOrderIds?.length;
   // A parent who has just paid goes back to their home page (after a moment to read "payment complete").
   const toHome = typeof window !== "undefined" && window.location.pathname.startsWith("/custdash");
@@ -116,7 +120,7 @@ export function PayModal({ refs = [], tenantId, mealOrderIds, onClose, onPaid }:
         {paid ? (
           <div className="py-4 text-center">
             <div className="text-[22px]">✅</div>
-            <p className="mt-1 text-[13.5px]">{pickPlural(t, locale, meals ? "p8lst.pmThanksMeal" : "p8lst.pmThanksBooking", nCount)}</p>
+            <p className="mt-1 text-[13.5px]">{held ? t("p8lst.holdDone") : pickPlural(t, locale, meals ? "p8lst.pmThanksMeal" : "p8lst.pmThanksBooking", nCount)}</p>
             {toHome && <p className="mt-2 text-[12.5px] text-[#8a86a3]">{t("p8lst.pmGoingHome")}</p>}
             <Button variant="primary" onClick={() => { if (toHome) window.location.assign("/custdash/home"); else onClose(); }} className="mt-3">
               {toHome ? t("p8lst.pmBackHome") : t("p8lst.pmDone")}
@@ -130,9 +134,15 @@ export function PayModal({ refs = [], tenantId, mealOrderIds, onClose, onPaid }:
           <div className="py-6 text-center text-[13px] text-[#8a86a3]">{t("p8lst.pmPreparing")}</div>
         ) : (
           <Elements stripe={stripePromise} options={{ clientSecret: info.clientSecret }}>
+            {info.hold && <p className="mb-3 rounded-lg bg-[#fff7e0] px-3 py-2 text-[12.5px] font-semibold text-[#7a4b00]">{t("p8lst.holdNote", { provider: tenantName || t("p7cl.theProvider") })}</p>}
             <PayForm
               info={info}
               onError={setError}
+              onHeld={() => {
+                setHeld(true);
+                setPaid(true);
+                onPaid();
+              }}
               onPaid={() => {
                 setPaid(true);
                 onPaid();

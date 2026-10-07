@@ -71,6 +71,7 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
   const [done, setDone] = useState<{ refs: string[]; status: string; total: number } | null>(null);
   const [paying, setPaying] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [holdCard, setHoldCard] = useState(false);
   // Discount code the parent enters — validated against the live subtotal, then
   // redeemed server-side at booking (preview == charge).
   const [codeInput, setCodeInput] = useState("");
@@ -157,11 +158,13 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
         ...(Number.isFinite(parseInt(k.age, 10)) ? { age: parseInt(k.age, 10) } : {}),
         ...(addonIds.length ? { addons: addonIds.map((id) => ({ id })) } : {}),
       }));
-      const res = await api<{ bookings: { ref: string; status: string }[]; total: number }>("/api/my/bookings", {
+      const res = await api<{ bookings: { ref: string; status: string; cardHold?: { state?: string } }[]; total: number }>("/api/my/bookings", {
         method: "POST",
         body: JSON.stringify({ listingId: listing.id, blockId: block.id, method, items, ...(appliedCode ? { discountCode: appliedCode.code } : {}) }),
       });
       setDone({ refs: res.bookings.map((b) => b.ref), status: res.bookings[0]?.status ?? "", total: res.total });
+      // Manual approval + card: the card is held now (taken only if the provider approves).
+      if (res.bookings.some((b) => b.cardHold?.state === "awaiting")) { setHoldCard(true); setPaying(true); }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("p8lst.bpFail"));
     }
@@ -205,6 +208,11 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
           >
             {t("p8lst.bpPayNow", { amount: money(done.total) })}
           </button>
+        ) : holdCard ? (
+          <>
+            <p className="mt-2 text-[12.5px] font-semibold text-[#7a4b00]">{t("p8lst.holdNote", { provider: listing.tenantName || "" })}</p>
+            <button type="button" className={S.cta + " mt-3"} onClick={() => setPaying(true)}>{t("p8lst.holdAddCard")}</button>
+          </>
         ) : (
           <p className="mt-1 text-[12px] text-[#8a86a3]">{t("p8lst.bpPayAfterConfirm")}</p>
         )}

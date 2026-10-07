@@ -594,7 +594,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
       {b.past === true && <Badge tone={{ bg: "#eef0f6", fg: "#5b6478" }}>{t("p7bd.activityCompleted")}</Badge>}
       {b.status === "Approval needed" && (
         <>
-          <Button variant="primary" onClick={() => act(b.ref, "approve")}>{t("p7bd.approveBtn")}</Button>
+          <Button variant="primary" disabled={b.cardHold?.state === "awaiting"} onClick={() => act(b.ref, "approve")}>{t("p7bd.approveBtn")}</Button>
           <Button onClick={() => { setDeclineReason(""); setDeclining(true); }}>{t("p7bd.declineWord")}</Button>
         </>
       )}
@@ -776,6 +776,14 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>{t("p7bd.cardFailedBadge")}</Badge>
           )}
         </div>
+
+        {b.status === "Approval needed" && b.cardHold && (b.cardHold.state === "held" || b.cardHold.state === "awaiting") && (
+          <div className="mt-3 rounded-xl border-2 px-4 py-3 text-[14px] font-bold leading-[1.45]" style={{ borderColor: "#f0c96b", background: "#fff7e0", color: "#7a4b00" }}>
+            {b.cardHold.state === "held"
+              ? t("p8lst.holdProvHeld", { amt: money(b.cardHold.amount), by: b.cardHold.expiresAt ? new Date(b.cardHold.expiresAt).toLocaleString(dl(), { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) : "—" })
+              : t("p8lst.holdProvWait")}
+          </div>
+        )}
 
         {b.status === "Waitlisted" && (() => {
           // Plain answer for the provider: is there a free place for this family RIGHT NOW? (live block availability)

@@ -729,7 +729,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; waitOffer?: number; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; slots?: { pass: string; timing: string; dates: string[] }[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean; listPrice?: number; discountOff?: number; discountNames?: string[]; visitAt?: string; extras?: string[] } | null>(null);
+  const [done, setDone] = useState<{ holdCard?: boolean; cardDue?: number; bank?: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number }; waitlisted?: boolean; waitOffer?: number; refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; dates?: string[]; slots?: { pass: string; timing: string; dates: string[] }[]; voucherScheme?: string; voucherDetails?: { label: string; value: string }[]; needsApproval?: boolean; payByCard?: boolean; payCash?: boolean; listPrice?: number; discountOff?: number; discountNames?: string[]; visitAt?: string; extras?: string[] } | null>(null);
   const [payClosed, setPayClosed] = useState(false);
   const [paidNow, setPaidNow] = useState(false);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
@@ -793,6 +793,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       let voucherDetails: { label: string; value: string }[] | undefined;
       let bankPay: { bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string; reference: string; amount?: number } | undefined;
       let heldForApproval = false;
+      let holdCard = false; // manual approval + card: the card is held now, taken only if the provider approves
       let seated = false; // any booking the server actually placed (not Waitlisted)
       // A basket spanning two blocks POSTs twice; discount codes must ride on
       // just ONE of them, or they'd come off each block's subtotal (and count as
@@ -848,6 +849,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         refs.push(...res.bookings.map((x) => x.ref));
         // the server's own verdict: an auto-confirm listing still holds the place for approval when, say, a child is outside the listing's age range
         if (res.bookings.some((x) => x.status === "Approval needed")) heldForApproval = true;
+        if ((res.bookings as { cardHold?: { state?: string } }[]).some((x) => x.cardHold?.state === "awaiting")) holdCard = true;
         if (res.bookings.some((x) => x.status !== "Waitlisted")) seated = true;
         total += res.total;
         for (const x of res.bookings as { status?: string; amount?: number; listPrice?: number; discountOff?: number; discountNames?: string[]; addons?: string[]; addonLines?: { child: string; label: string; price: number }[]; kids?: unknown[] }[]) { addonLinesFor(x).forEach((l) => extraLines.push(l)); if (x.status === "Waitlisted") waitOffer += x.amount ?? 0; listSum += x.listPrice ?? x.amount ?? 0; offSum += x.discountOff ?? 0; (x.discountNames ?? []).forEach((n) => offNames.add(n)); }
@@ -871,6 +873,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         bank: bankPay,
         ...(serviceAddress?.postcode?.trim() ? { visitAt: [serviceAddress.address, serviceAddress.postcode].map((x) => (x ?? "").trim()).filter(Boolean).join(", ") } : {}),
         needsApproval: heldForApproval,
+        ...(holdCard ? { holdCard: true } : {}),
         waitlisted: !seated,
         ...(!seated && waitOffer > 0 ? { waitOffer: Math.round(waitOffer * 100) / 100 } : {}),
         payByCard: (/^card$/i.test(String(method)) || (/^tfc$/i.test(String(method)) && /^card$/i.test(tfc?.remainderVia ?? "") && (tfc?.amount ?? 0) < total)) && seated,
@@ -1018,6 +1021,25 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
           <div className="mt-3 rounded-2xl border-2 border-[#0f6b34] bg-[#e8f8ee] p-4 text-start">
             <div className="text-[13px] font-extrabold uppercase tracking-wide text-[#0f6b34]">{t("p9tx.ckCashTitle", { amt: money(done.total) })}</div>
             <div className="mt-1 text-[14px] text-[#171534]">{t("p9tx.ckCashBody", { amt: money(done.total) })}</div>
+          </div>
+        )}
+
+        {/* Manual approval + card: the card is HELD now (not charged); the provider's approval takes the payment. */}
+        {done.holdCard && needsApproval && (
+          <div className="mt-3">
+            {paidNow ? (
+              <div className="rounded-xl bg-[#e8f8ee] px-4 py-3 text-[14px] font-extrabold text-[#0f6b34]">✓ {t("p8lst.holdDone")}</div>
+            ) : (
+              <>
+                <p className="mb-2 rounded-lg bg-[#fff7e0] px-3 py-2 text-start text-[12.5px] font-semibold text-[#7a4b00]">{t("p8lst.holdNote", { provider: listing.tenantName || t("p7cl.theProvider") })}</p>
+                <button type="button" onClick={() => setPayClosed(false)} className="w-full rounded-full px-5 py-3.5 text-[15px] font-extrabold text-white" style={{ background: "#1d3a8f" }}>
+                  {t("p8lst.holdAddCard")}
+                </button>
+              </>
+            )}
+            {!payClosed && !paidNow && (
+              <PayModal refs={done.refs} tenantId={listing.tenantId} tenantName={listing.tenantName} onClose={() => setPayClosed(true)} onPaid={() => { setPaidNow(true); setPayClosed(true); }} />
+            )}
           </div>
         )}
 
