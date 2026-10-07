@@ -48,7 +48,13 @@ locationStaff.get("/", async (req, res) => {
       assignment: (u.get("assignment") ?? null) as { mode: string; ids: string[] } | null,
     }))
     .filter((p) => p.name);
-  res.json({ staff: (doc.get("staff") as unknown[] | undefined) ?? null, team });
+  // The signed-in manager (a freelancer running it alone, or the company owner) is "You" in the listing wizard's Staff onsite step: their own
+  // uid, display name and sign-in name only - never anyone else's email.
+  const uid = req.user?.uid ?? "";
+  const me = uid ? await db.collection("users").doc(uid).get() : null;
+  const email = (req.user?.email ?? "").toString();
+  const owner = uid ? { uid, name: String(me?.get("name") ?? req.user?.name ?? "").trim(), role: auth.role, emailLocal: email.split("@")[0] ?? "" } : null;
+  res.json({ staff: (doc.get("staff") as unknown[] | undefined) ?? null, team, owner });
 });
 
 locationStaff.put("/", async (req, res) => {

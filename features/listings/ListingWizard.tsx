@@ -5,6 +5,7 @@ import { dateLocale as dl } from "@/lib/i18n/format";
 import { addonLinesFor } from "@/features/bookings/helpers";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GoLiveModal, fetchGoLive, goLiveReady } from "@/features/billing/GoLiveModal";
+import { isPlaceholderName } from "@/lib/ownerName";
 import { api, get as apiGet, post as apiPost, isDemoMode, ApiError } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money, visitAddressLabel } from "@/features/bookings/helpers";
@@ -1580,7 +1581,7 @@ export function ListingWizard({
                 <div className="mt-1.5 text-[11.5px] font-semibold text-[#7a4b00]">{tr("p9tx.wpThemeLive")}</div>
               </div>}<ParentPreview {...previewProps} full /></div>}
             {stepKey === "addons" && <AddonsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
-            {stepKey === "staff" && <StaffStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
+            {stepKey === "staff" && <StaffStep d={d} upd={upd} local={local} patchLocal={patchLocal} isNew={!initial.id && !savedIdRef.current} />}
             {stepKey === "policy" && (
               <>
                 {blockers.length > 0 && (
@@ -3280,20 +3281,52 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
   );
 }
 
-function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
+function StaffStep({ d, upd, local, patchLocal, isNew }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void; isNew: boolean }) {
   const tr = useT();
   const [q, setQ] = useState("");
   const [bioN, setBioN] = useState<Record<string, number>>({});
   // The tenant's real team (people who have joined through Team & invites) — so onboarding someone makes them
   // tickable here without re-typing them into the library's own staff list. Managers only: anyone else gets a 403 and keeps the library list.
   const [team, setTeam] = useState<{ uid: string; name: string }[]>([]);
-  useEffect(() => { apiGet<{ team?: { uid: string; name: string }[] }>("/api/location-staff").then((r) => setTeam(r.team ?? [])).catch(() => {}); }, []);
+  const [owner, setOwner] = useState<{ uid: string; name: string; role: string; emailLocal: string } | null>(null);
+  useEffect(() => { apiGet<{ team?: { uid: string; name: string }[]; owner?: { uid: string; name: string; role: string; emailLocal: string } | null }>("/api/location-staff").then((r) => { setTeam(r.team ?? []); setOwner(r.owner ?? null); }).catch(() => {}); }, []);
   const teamId = (uid: string) => `u_${uid}`;
   const toMember = (t: { uid: string; name: string }): StaffMember => { const [first, ...rest] = t.name.trim().split(/\s+/); return { id: teamId(t.uid), first: first || t.name, last: rest.join(" "), bio: "" }; };
   const known = new Set(local.staff.map((m) => m.id));
-  const all: StaffMember[] = [...local.staff, ...team.filter((t) => !known.has(teamId(t.uid))).map(toMember)];
+  // The account owner is ALWAYS listed first, as "You" (a freelancer running it alone is the person who turns up).
+  const ownerId = owner ? teamId(owner.uid) : null;
+  const ownerNameBad = !!owner && isPlaceholderName(owner.name, owner.emailLocal);
+  const ownerFromLib = ownerId ? local.staff.find((m) => m.id === ownerId) : undefined;
+  const ownerMember: StaffMember | null = owner && ownerId ? (ownerFromLib ? { ...ownerFromLib, ...(ownerNameBad ? {} : { first: toMember(owner).first, last: toMember(owner).last }) } : toMember(owner)) : null;
+  const rest: StaffMember[] = [...local.staff, ...team.filter((t) => !known.has(teamId(t.uid))).map(toMember)].filter((m) => m.id !== ownerId);
+  const all: StaffMember[] = ownerMember ? [ownerMember, ...rest] : rest;
+  const isFreelancer = owner?.role === "freelancer";
+  const [ownerName, setOwnerName] = useState("");
+  const [nameBusy, setNameBusy] = useState(false);
+  const saveOwnerName = async () => {
+    const nm = ownerName.trim();
+    if (!owner || nm.length < 2 || isPlaceholderName(nm, owner.emailLocal)) return;
+    setNameBusy(true);
+    try {
+      await api("/api/account", { method: "PUT", body: JSON.stringify({ name: nm }) });
+      setOwner({ ...owner, name: nm });
+      const m = toMember({ uid: owner.uid, name: nm });
+      patchLocal((s) => (s.staff.some((x) => x.id === m.id) ? { ...s, staff: s.staff.map((x) => (x.id === m.id ? { ...x, first: m.first, last: m.last } : x)) } : s));
+    } catch { /* the prompt stays so they can try again */ }
+    setNameBusy(false);
+  };
+  // A freelancer is the one who turns up: on a NEW listing they are assigned by default (they can untick). Once per step visit, never on an edit.
+  const defaulted = useRef(false);
+  useEffect(() => {
+    if (defaulted.current || !isNew || !isFreelancer || !ownerMember || ownerNameBad) return;
+    defaulted.current = true;
+    if (d.staffIds.length === 0) { adoptRef.current?.(ownerMember); upd({ staffIds: [ownerMember.id] }); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, isFreelancer, ownerMember?.id, ownerNameBad]);
   // A team member joins the library list (what customer pages read) the moment they're ticked or given a bio.
   const adopt = (m: StaffMember, patch: Partial<StaffMember> = {}) => patchLocal((s) => (s.staff.some((x) => x.id === m.id) ? { ...s, staff: s.staff.map((x) => (x.id === m.id ? { ...x, ...patch } : x)) } : { ...s, staff: [...s.staff, { ...m, ...patch }] }));
+  const adoptRef = useRef<typeof adopt | null>(null);
+  adoptRef.current = adopt;
   const updMember = (m: StaffMember, patch: Partial<StaffMember>) => adopt(m, patch);
   // "Write with AI" works from the few words the person typed. Pressing it again must reuse THOSE words, not read back the bio it just wrote
   // (that produced gibberish like "a gift for tom, lead, friendly"). Typing in the box starts a fresh set of words.
@@ -3324,10 +3357,19 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
                 <div className="mb-2 flex items-center gap-2">
                   <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white font-extrabold text-[var(--brand-ink)] ring-1 ring-[var(--brand-2)]/30">{(m.first[0] || "?").toUpperCase()}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{m.first} {m.last}</div>
+                    <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{m.id === ownerId ? <><span>{ownerNameBad ? tr("p8lst.ownYou") : `${m.first} ${m.last}`.trim()}</span> <span className="ms-1 rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[10.5px] font-extrabold text-[var(--brand-ink)]">{isFreelancer ? tr("p8lst.ownYouFreelancer") : tr("p8lst.ownYouOwner")}</span></> : <>{m.first} {m.last}</>}</div>
+                    {m.id === ownerId && ownerNameBad && (
+                      <div className="mt-1 rounded-lg border border-[#f0c96b] bg-[#fff7e0] p-2">
+                        <div className="mb-1 text-[11.5px] font-bold text-[#7a4b00]">{tr("p8lst.ownNamePrompt")}</div>
+                        <div className="flex gap-1.5">
+                          <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder={tr("p8lst.ownNamePh")} className="min-w-0 flex-1" />
+                          <Button sm variant="primary" disabled={nameBusy || ownerName.trim().length < 2 || isPlaceholderName(ownerName, owner?.emailLocal)} onClick={() => void saveOwnerName()}>{tr("p8lst.ownNameSave")}</Button>
+                        </div>
+                      </div>
+                    )}
                     <div className="truncate text-[10.5px] text-[var(--ink-3)]">{m.bio ? m.bio : tr("p8lst.wbNoBio")}</div>
                   </div>
-                  <Button sm variant={on ? "primary" : "default"} onClick={() => { if (!on) adopt(m); upd({ staffIds: toggle(d.staffIds, m.id) }); }}>{on ? tr("p8lst.wbOnsite") : tr("p8lst.wbAssign")}</Button>
+                  <Button sm variant={on ? "primary" : "default"} disabled={m.id === ownerId && ownerNameBad && !on} onClick={() => { if (!on) adopt(m); upd({ staffIds: toggle(d.staffIds, m.id) }); }}>{on ? tr("p8lst.wbOnsite") : tr("p8lst.wbAssign")}</Button>
                 </div>
                 <div className="mb-1 flex items-center justify-between">
                   <FieldLabel>{tr("p8lst.wbBio")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.wbParentsSeeThis")}</span></FieldLabel>
@@ -3338,6 +3380,13 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
               </div>
             );
           })}
+        </div>
+      )}
+      {isFreelancer && rest.length === 0 && (
+        <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12px] text-[var(--ink-2)]">
+          {tr("p8lst.ownSolo", { link: "\u0000" }).split("\u0000").map((part, i, arr) => (
+            <span key={i}>{part}{i < arr.length - 1 && <a className="font-extrabold text-[var(--brand-ink)] underline" href={`/${typeof window !== "undefined" ? window.location.pathname.split("/")[1] : "freelancer"}/staff`}>{tr("p8lst.ownSoloLink")}</a>}</span>
+          ))}
         </div>
       )}
       <div className="mt-2 text-[11px] text-[var(--ink-3)]"><Rich text={tr("p8lst.wbStaffNote")} /></div>
