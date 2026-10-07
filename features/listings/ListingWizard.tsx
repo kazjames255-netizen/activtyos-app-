@@ -1939,7 +1939,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
       <RichCard icon="📍" title={tr("p8lst.waWhereWhen")} subtitle={tr("p8lst.waWhereWhenSub")}>
       <SectionHead icon="🚗">{tr("p8lst.waDeliver")}</SectionHead>
       <div className="mb-2 flex flex-wrap gap-1.5">
-        {([["venue", tr("p8lst.waDel_venue")], ["online", "💻 " + tr("p9tx.delOnline")], ["home-visit", tr("p8lst.waDel_home")], ["both", tr("p8lst.waDel_both")]] as [NonNullable<WizardDraft["deliveryMode"]> | "online", string][]).map(([mode, label]) => {
+        {([["venue", tr("p8lst.waDel_venue")], ["online", "💻 " + tr("p9tx.delOnline")], ["home-visit", tr("p8lst.waDel_home")], ...(d.deliveryMode === "both" ? [["both", tr("p8lst.waDel_both")]] : [])] as [NonNullable<WizardDraft["deliveryMode"]> | "online", string][]).map(([mode, label]) => {
           const isOnl = isOnlineVenue(local.venues.find((v) => v.id === d.venueId)) && (d.deliveryMode ?? "venue") === "venue";
           const on = mode === "online" ? isOnl : mode === "venue" ? !isOnl && (d.deliveryMode ?? "venue") === "venue" : (d.deliveryMode ?? "venue") === mode;
           return (
