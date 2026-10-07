@@ -236,7 +236,7 @@ function slotsOf(lines: { pass: string; dates: string[]; timing?: string }[]): {
 }
 
 export { isOnlineVenue } from "./wizardRules";
-import { isOnlineVenue, fixYear, runLooksWrong, saveStatusFor, onlineVenueChoice, deliveryPatch, dateProblem, todayIso, maxRunIso, periodDates, periodSpan, periodsProblem, setWeekOff } from "./wizardRules";
+import { isOnlineVenue, fixYear, runLooksWrong, saveStatusFor, onlineVenueChoice, deliveryPatch, dateProblem, todayIso, maxRunIso, periodDates, periodSpan, periodsProblem, setWeekOff, mergeSaved } from "./wizardRules";
 
 /** The dated run covering a date, when the server has told us about them. */
 
@@ -1318,6 +1318,8 @@ export function ListingWizard({
   const [saveState, setSaveState] = useState<"idle" | "dirty" | "saving" | "saved" | "error">("idle");
   const blocks = useBlocks();
   const upd = (patch: Partial<WizardDraft>) => setD((p) => ({ ...p, ...patch }));
+  const latestD = useRef(d); // the newest draft, for async saves to merge into
+  latestD.current = d;
   // Brand colours (Setup → Branding / first-run) drive the "Matched to your brand" themes on the Preview step; the theme the
   // provider approves is also saved as their default (settings.defaultListingTheme) so every NEW listing starts on it.
   const { settings: brandSettings, loading: brandLoading, save: saveBrandSettings } = useSettings();
@@ -1397,9 +1399,13 @@ export function ListingWizard({
       else { const created = await apiPost<{ id: string; updatedAt?: number }>("/api/listings", body); id = created.id; saved = created; }
       if (typeof saved.updatedAt === "number") updatedAtRef.current = saved.updatedAt;
       savedIdRef.current = id ?? null;
-      const next = { ...d, images, gallery, id, status };
-      selfUpdate.current = true; // this setD is our own save result — don't let it re-trigger autosave
-      setD(next);
+      // Merge into the CURRENT draft (not the snapshot this save started from) so keystrokes typed during the request survive.
+      const sentDraft = d;
+      const edited = latestD.current !== sentDraft; // typed while saving: let the next autosave pick it up
+      if (!edited) selfUpdate.current = true; // this setD is our own save result — don't let it re-trigger autosave
+      const next = mergeSaved(latestD.current, sentDraft, { id, status, images, gallery });
+      latestD.current = next;
+      setD((p) => mergeSaved(p, sentDraft, { id, status, images, gallery }));
       saveDraft(id!, next);
       if (!quiet) setBusy(false);
       return true;
