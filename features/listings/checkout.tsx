@@ -2941,9 +2941,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           : parentMode && method === "cash" ? `Confirm booking · pay ${money(amountDue)} in cash on the day`
           : parentMode && method === "tfc" ? `Confirm booking · ${money(amountDue)} to pay with Tax-Free Childcare`
           : parentMode && method === "haf" ? tr("p7ck.ctaConfirm")
+          : parentMode && method === "card" && d.bookingType === "manual" ? tr("p8lst.holdCtaBtn", { amt: money(amountDue) })
           : parentMode ? tr("p7ck.ctaConfirmPay", { amt: money(amountDue) })
           : tr("p7ck.ctaSendLink", { amt: money(amountDue) })}
       </button>}
+      {parentMode && method === "card" && d.bookingType === "manual" && grandTotal > 0 && (
+        <div className="mt-2 rounded-lg px-3 py-2 text-[12px] font-semibold leading-[1.5]" style={{ background: "#fff7e0", color: "#7a4b00" }}>{tr("p8lst.holdCheckoutNote", { amt: money(amountDue) })}</div>
+      )}
 
       <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>{d.cancellation ? d.cancellation.charAt(0).toLocaleUpperCase() + d.cancellation.slice(1) : d.cancellation}</div>
       </div>

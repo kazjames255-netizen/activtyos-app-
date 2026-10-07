@@ -50,6 +50,8 @@ export const QUESTIONS: string[] = [
   "why can't I publish my listing it says the date is in the past",
   "what does a parent see if I send them the link to my home visit but they live outside my area",
   "will I get a notification when a family has paid by card after I got the awaiting card payment one",
+  "what does the button say when a parent books a manual approval listing with a card",
+  "the second child on a held card was approved later, what does the family get",
   "can parents tell me how to find their house or where to park",
   "how long till money arrives in my bank",
   "what do I need to go live",

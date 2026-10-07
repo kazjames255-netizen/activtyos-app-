@@ -1031,7 +1031,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           </PCol>
           <PCol label={t("parent.datesCol")} w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{pickPlural(t, locale, "p7bk.sessN", sessCount)} · {pickPlural(t, locale, "p7bk.kidN", childCount)}{sessCount > 1 ? " · " + t("p7bk.tapViewAll") : ""}</span></PCol>
           <PCol label={t("parent.statusCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? t("parent.dateChangeStatus") : w(b.status)}</span></PCol>
-          {!cancelled && <PCol label={t("parent.paymentCol")} w="w-[104px]"><span className="inline-flex max-w-full whitespace-normal rounded-xl px-2.5 py-[3px] text-[11px] font-extrabold leading-tight" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{w(payLabelFor(b))}</span></PCol>}
+          {!cancelled && <PCol label={t("parent.paymentCol")} w="w-[104px]"><span className="inline-flex max-w-full whitespace-normal rounded-xl px-2.5 py-[3px] text-[11px] font-extrabold leading-tight" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdParentBadge") : b.status === "Approval needed" && b.cardHold?.state === "awaiting" ? t("p8lst.holdWaitBadge") : w(payLabelFor(b))}</span></PCol>}
           {attendLabel && <PCol label={t("p7bk.todayCol")} w="w-[130px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={attend?.status === "in" ? { background: "#dcfce7", color: "#166534" } : attend?.status === "absent" ? { background: "#fee2e2", color: "#991b1b" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{attendLabel}</span></PCol>}
           <div className="ms-auto flex-none text-end">
             <div className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)] sm:text-[8.5px]">{t("parent.amountCol")}</div>
@@ -1102,13 +1102,13 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
         <div className="mt-2 flex items-start gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)]">
           <span aria-hidden className="text-[#c0392b]">✕</span>
           <span>
-            <b className="text-[var(--ink)]">{w("Cancelled")}</b>{b.cancel?.on ? " · " + t("p7bk.requestedOn", { date: b.cancel.on }) : ""}
+            <b className="text-[var(--ink)]">{b.status === "Declined" ? w("Declined") : w("Cancelled")}</b>{b.cancel?.on && b.status !== "Declined" ? " · " + t("p7bk.requestedOn", { date: b.cancel.on }) : ""}
             {refundIssued ? (
               <> — <b className="text-[var(--brand)]">{isVoucher ? t("p7bk.refundedVoucher", { amt: money(refundAmt || b.amount) }) : b.cancel?.refundTo === "wallet" ? t("p7bk.refundedWallet", { amt: money(refundAmt || b.amount) }) : t("p7bk.refundedCard", { amt: money(refundAmt || b.amount) })}</b>.{!isVoucher && b.cancel?.refundTo !== "wallet" && <> {t("p7bk.refundTiming")}</>}</>
             ) : refundOwed && refundAmt > 0 ? (
               <> — <Rich text={isVoucher ? t("p7bk.refundDueVoucher", { amt: money(refundAmt) }) : t("p7bk.refundDueCard", { amt: money(refundAmt) })} />{!isVoucher && b.cancel?.refundTo !== "wallet" && <> {t("p7bk.refundTiming")}</>}</>
             ) : (
-              <> — {t("p7bk.noRefundWasDue")}</>
+              <> — {b.cardHold || b.status === "Declined" ? t("p8lst.holdDeclinedNote") : t("p7bk.noRefundWasDue")}</>
             )}
           </span>
         </div>
@@ -1117,11 +1117,12 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
       <BankTransferBox b={b} />
 
       <div className="mt-2 flex flex-wrap gap-2 max-sm:[&_button]:min-h-[44px] max-sm:[&_button]:text-[14px]">
-        {payable && (
+        {payable && (<>
           <Button sm variant="primary" className="max-sm:w-full" onClick={() => setPaying(true)}>
-            {t("parent.payAmount", { amount: money(owedOf(b)) })}
+            {/bank|transfer|cash|voucher|tfc|tax-?free/i.test(b.method ?? "") ? t("p8lst.payByCardInstead") + " · " + money(owedOf(b)) : t("parent.payAmount", { amount: money(owedOf(b)) })}
           </Button>
-        )}
+          {/bank|transfer/i.test(b.method ?? "") && <span className="self-center text-[11.5px] text-[var(--ink-3)]">{t("p8lst.payByCardAlt")}</span>}
+        </>)}
         <Button sm onClick={() => setExpanded((x) => !x)}>
           {expanded ? t("parent.hideDetails") : t("parent.details")}
         </Button>

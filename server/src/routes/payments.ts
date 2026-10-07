@@ -430,8 +430,8 @@ payments.post("/checkout", async (req, res) => {
       {
         amount: toPence(amount),
         currency: "gbp",
-        automatic_payment_methods: { enabled: true },
-        ...(holdPay ? { capture_method: "manual" as const } : {}),
+        // A card HOLD is a card authorisation: only methods that can be held (card, incl. Apple/Google Pay), not Revolut/Amazon Pay etc.
+        ...(holdPay ? { payment_method_types: ["card"], capture_method: "manual" as const } : { automatic_payment_methods: { enabled: true } }),
         description: `${tenant.data()?.name ?? `${BRAND}`} — booking${bookings.length > 1 ? "s" : ""} ${bookings.map((b) => b.ref).join(", ")}`,
         metadata: { tenantId, refs: bookings.map((b) => b.ref).join(","), email, ...(holdPay ? { hold: "1" } : {}) },
         // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).

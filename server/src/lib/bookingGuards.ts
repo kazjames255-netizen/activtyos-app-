@@ -23,3 +23,24 @@ export function shouldEmailConfirmed(action: string, statusBefore: string | unde
 export function shouldNotifyCancelled(oldStatus: string | undefined, newStatus: string | undefined): boolean {
   return newStatus === "Cancelled" && !!oldStatus && !["Cancelled", "Declined", "Waitlisted", "Offered"].includes(oldStatus);
 }
+
+// ── Card HOLD (manual approval paid by card) ──────────────────────────────────────────────────────────────────────────────────────────
+type HoldLike = { cardHold?: { state?: string } | null } | undefined;
+
+/** A card that is only HELD (or not yet entered) is settled by approving: money recorded by hand against it would count twice, and after a
+ *  decline it would leave a "Paid" booking nobody paid for. record-payment / reconcile / Mark paid refuse these. */
+export const cardHeldBlocksPayment = (b: HoldLike): boolean => b?.cardHold?.state === "held" || b?.cardHold?.state === "awaiting";
+
+export const CARD_HELD_MESSAGE = "This booking's card is only held, not charged. Approving the booking takes the payment, so there is nothing to record.";
+
+/** Approving a held request captures the card and announces it ONCE: only the approval that moves it out of "Approval needed" does it
+ *  (a double click / retry sees it already Confirmed and does nothing). */
+export function isFirstHeldApproval(action: string, statusBefore: string | undefined, b: HoldLike): boolean {
+  return action === "approve" && statusBefore === "Approval needed" && b?.cardHold?.state === "held";
+}
+
+/** Approved, but the family's card hold was lost (the other child on the same card was approved first and the capture dropped the rest of
+ *  the authorisation): nothing has been taken, so the family must be ASKED TO PAY - not told "you're booked in". */
+export function shouldAskToPayAfterApproval(action: string, b: { status?: string; pay?: string; amount?: number; cardHold?: { state?: string } | null }): boolean {
+  return action === "approve" && b.status === "Confirmed" && b.cardHold?.state === "released" && b.pay !== "Paid" && b.pay !== "Funded" && (b.amount ?? 0) > 0;
+}

@@ -60,7 +60,7 @@ export function layout(
         <div style="margin-top:16px">
           ${row("Activity", escapeHtml(b.listing))}
           ${row("Pass", escapeHtml(b.pass))}
-          ${ctx.location ? row(ctx.homeVisit ? "At your home" : ctx.online ? "Online" : "Location", escapeHtml(ctx.online ? "Online — the joining details are below" : ctx.location)) : ""}
+          ${ctx.location ? row(ctx.homeVisit ? "At your home" : ctx.online ? "Online" : "Location", escapeHtml(ctx.online ? "The joining details are below" : ctx.location)) : ""}
           ${row("Child", escapeHtml(kids || "—"))}
           ${b.listPrice != null && (b.discountOff ?? 0) > 0 ? `${row("Price before discount", gbp(b.listPrice))}${row(`Discount${b.discountNames?.length ? ` (${b.discountNames.join(", ")})` : ""}`, `− ${gbp(b.discountOff ?? 0)}`)}` : ""}
           ${(b.addons ?? []).length ? row("Extras", (b.addonLines?.length && new Set(b.addonLines.map((l) => l.child)).size > 1 ? b.addonLines.map((l) => `${escapeHtml(l.label)} — ${gbp(l.price)} <span style="color:#8a86a3">(${escapeHtml(l.child)})</span>`) : (b.addons ?? []).map((a) => escapeHtml(a))).join("<br>")) : ""}
@@ -137,7 +137,17 @@ export function waitlistJoinedSpec(b: Booking, providerName: string): CustomerEm
   };
 }
 
-export function paymentLinkSpec(b: Booking, providerName: string, payUrl: string): CustomerEmailSpec {
+export function paymentLinkSpec(b: Booking, providerName: string, payUrl: string, approved = false): CustomerEmailSpec {
+  // A request the provider has APPROVED but the family still has to pay (its card hold was lost when a sibling on the same card was approved first).
+  if (approved) {
+    return {
+      subject: `Your booking is approved — please pay — ${b.listing}`,
+      title: "Your booking is approved — please pay to complete it",
+      body: `<p style="font-size:14px">Good news ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has <b>approved</b> your booking for ${escapeHtml(b.child || b.listing)}. Nothing has been taken yet: please pay to complete it.</p>
+     <p><a href="${payUrl}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(b.amount)} securely</a></p>
+     <p style="color:#8a86a3;font-size:12px">No account or sign-in needed — the link opens a secure card payment for this booking.</p>`,
+    };
+  }
   return {
     subject: `Complete your booking — ${b.listing}`,
     title: "Your booking is reserved — payment inside",
@@ -172,7 +182,7 @@ export function bookingDeclinedSpec(b: Booking, providerName: string, reason?: s
     subject: `Booking update — ${b.listing}`,
     title: "Your booking request was declined",
     body: `<p style="font-size:14px">Sorry ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} couldn't take this booking.
-     ${b.cardHold ? `<b>Nothing was taken from your account.</b> The £${(b.cardHold.amount ?? b.amount ?? 0).toFixed(2)} that was held on your card has been released. Your bank may keep showing it as "pending" for a few days before it disappears — that is normal, and you will not be charged.` : "Nothing has been charged."} Feel free to browse other dates or activities.</p>${note}`,
+     ${b.cardHold ? (b.cardHold.heldAt ? `<b>Nothing was taken from your account.</b> The £${(b.cardHold.amount ?? b.amount ?? 0).toFixed(2)} that was held on your card has been released. Your bank may keep showing it as "pending" for a few days before it disappears — that is normal, and you will not be charged.` : `<b>Nothing was taken from your account.</b>`) : "Nothing has been charged."} Feel free to browse other dates or activities.</p>${note}`,
   };
 }
 

@@ -31,7 +31,7 @@ import { applyDiscounts, DISCOUNT_KIND_LABEL, type DiscountRule } from "../../..
 import { earlyBirdScopeOf, earlyFixedUsed, claimEarlyBird } from "../lib/earlyBird";
 import { mergeBookings } from "../lib/mergeBookings";
 import { ageRangeFor, isOutOfRange, passHidden, addonRefusal, isQueuedOn, cardUnpaid } from "../lib/bookingRules";
-import { wantsCardHold, releaseHolds } from "../lib/cardHold";
+import { wantsCardHold, releaseHolds, deadlineLabel, deadlineWarningHtml } from "../lib/cardHold";
 import {
   resolveBundlePricing,
   type BundleDoc,
@@ -2070,161 +2070,7 @@ my.post("/bookings", async (req, res) => {
     // wired: the create path only ever emailed the parent, so operators got no
     // heads-up on new bookings. Fires once per basket, not per child.
     if (listing.tenantId && bookings.length && !bookings.some((b) => b.cardHold)) {
-      const total = round2(bookings.reduce((s, b) => s + (b.amount ?? 0), 0));
-      const places = bookings.reduce((s, b) => s + (b.seats ?? b.kids?.length ?? 1), 0);
-      const kids = [...new Set(bookings.map((b) => b.child).filter(Boolean))].join(", ");
-      const needsApproval = bookings.some((b) => b.status === "Approval needed");
-      const waitlisted = bookings.every((b) => b.status === "Waitlisted");
-      const primary = bookings.find((b) => b.status !== "Waitlisted") ?? bookings[0];
-      const refs = bookings.map((b) => b.ref);
-      // A basket books one row per child — the deep-link opens the FIRST ref, so
-      // lead the notification with that exact ref (and list the rest) so it's
-      // clear which booking it opens.
-      // A card booking is created (place held) BEFORE the family pays: say so, or the provider reads "new booking" as "paid".
-      const awaitingCard = !onBehalf && /^card$/i.test(String(input.method)) && total > 0;
-      const awaitingBank = !onBehalf && isBankMethod(input.method) && total > 0 && !waitlisted && !needsApproval;
-      const kind = waitlisted ? "Waitlist join" : needsApproval ? "Booking request" : awaitingCard ? "New booking (awaiting card payment)" : awaitingBank ? "New booking (awaiting bank transfer payment)" : "New booking";
-      // Rich, beautifully-presented provider email: listing photo, every
-      // attendee with their allergies/medical/SEND notes, a payment split, and
-      // any EHCP plans as real attachments. Built async (child profiles, venue
-      // and file bytes are all reads) but still fire-and-forget.
-      void (async () => {
-        // Full child profiles (allergies/medical/SEND/EHCP) for the booked
-        // children — the resolve maps above only carry id/name/age.
-        const fullById = new Map<string, Record<string, unknown>>();
-        const fullByName = new Map<string, Record<string, unknown>>();
-        if (accountUid) {
-          const kidsSnap = await childrenCol.where("parentUid", "==", accountUid).get();
-          for (const d of kidsSnap.docs) {
-            const data = d.data() as Record<string, unknown>;
-            fullById.set(d.id, data);
-            fullByName.set(String(data.name ?? "").trim().toLowerCase(), data);
-          }
-        }
-        // One row per child (deduped by name), each tied to its pass.
-        const seen = new Set<string>();
-        const seeds: { name: string; age?: number; childId?: string; pass?: string }[] = [];
-        for (const b of bookings) {
-          const list = b.kids?.length ? b.kids.map((k) => ({ name: k.name, age: k.age, childId: k.childId })) : [{ name: b.child, age: b.age, childId: b.childId }];
-          for (const k of list) {
-            const key = (k.name ?? "").trim().toLowerCase();
-            if (!key || seen.has(key)) continue;
-            seen.add(key);
-            seeds.push({ ...k, pass: b.pass });
-          }
-        }
-        const attendees: NewBookingAttendee[] = [];
-        for (const s of seeds) {
-          const rec = (s.childId && fullById.get(s.childId)) || fullByName.get((s.name ?? "").trim().toLowerCase()) || {};
-          const str = (k: string) => { const v = rec[k]; return typeof v === "string" && v.trim() ? v.trim() : undefined; };
-          attendees.push({
-            name: s.name,
-            age: s.age,
-            ticket: s.pass,
-            allergies: str("allergies"),
-            medical: str("medical"),
-            dietary: str("dietary"),
-            send: str("send"),
-            // An EHCP is special-category data — never attached. The email links
-            // straight to the secure /plan viewer, which re-checks access.
-            ehcpFileId: str("sendPlanId"),
-          });
-        }
-        // Card vs childcare split — by the method chosen at checkout.
-        const isChildcare = (b: Booking) => !!b.voucherScheme || /voucher|tax-?free|tfc|childcare|haf/i.test(b.method ?? "");
-        const childcareAmount = round2(bookings.filter(isChildcare).reduce((s, b) => s + (b.amount ?? 0), 0));
-        const cardAmount = round2(total - childcareAmount);
-        const childcareLabel = bookings.find(isChildcare)?.voucherScheme || (childcareAmount > 0 ? "Childcare payment" : undefined);
-        // Venue (name + address) from the tenant library.
-        let location: string | undefined;
-        const venueId = (listing as { venueId?: string | null }).venueId;
-        if (venueId) {
-          const lib = (await librarySnap(listing.tenantId, (listing as { franchiseId?: string | null }).franchiseId)).data() ?? {};
-          const venues = (lib.venues ?? []) as { id: string; name?: string; address?: string; kind?: string }[];
-          const v = venues.find((x) => x.id === venueId);
-          if (v && (v as { kind?: string }).kind === "online") location = "Online (the family is sent the joining details)";
-          else if (v) location = [v.name, v.address].filter(Boolean).join(", ") || undefined;
-        }
-        // A home visit: the provider needs to know WHERE to go, which is the address the family gave at checkout (never a venue).
-        const visit = bookings.find((b) => b.serviceAddress?.postcode || b.serviceAddress?.address)?.serviceAddress;
-        if (visit) location = `Home visit at ${visitAddressLabel(visit)}`;
-        // Hero image — embed inline (cid) so it renders even from a localhost/
-        // dev URL a mail client's image proxy can't reach (same as the logo).
-        // The bytes live in the `images` collection (see routes/uploads.ts).
-        const attachments = [aosLogoAttachment()];
-        let heroCid: string | undefined;
-        const rawSrc = (listing as { images?: { src?: string }[] }).images?.[0]?.src;
-        const imgId = rawSrc?.match(/\/api\/images\/([^/?#]+)/)?.[1];
-        if (imgId) {
-          const imgDoc = await db.collection("images").doc(imgId).get();
-          const img = imgDoc.data() as { contentType?: string; b64?: string } | undefined;
-          if (img?.b64) {
-            attachments.push({ filename: "listing", content: Buffer.from(img.b64, "base64"), contentType: img.contentType || "image/jpeg", cid: "listing-hero" });
-            heroCid = "cid:listing-hero";
-          }
-        }
-        const sessions = [...new Set(bookings.flatMap((b) => b.sessions ?? []))];
-
-        const emailFullHtml = newBookingProviderEmail({
-          providerName: listing.tenantName ?? listing.name,
-          kind,
-          bookerName,
-          listingName: listing.name,
-          listingImage: heroCid,
-          pass: primary.pass,
-          sessions,
-          attendees,
-          location,
-          accessNotes: visit?.notes,
-          cardAmount,
-          childcareAmount,
-          childcareLabel,
-          total,
-          bookingId: primary.bid ?? primary.ref,
-          ref: primary.ref,
-          needsApproval,
-        });
-
-        // Waiting-list joins: an email per join is noisy, so it is OFF by default (Setup > Email > Automatic emails). The bell always shows.
-        const wlPrefs = waitlisted ? await autoEmailPrefs(listing.tenantId) : null;
-        let firstOnList = false; // the first family on this listing's list gets ONE notice ("you now have a waiting list"), not two
-        if (waitlisted && wlPrefs?.waitlistStartAlert) {
-          // ONE email per listing, the first time anyone joins its waiting list.
-          try {
-            const { fireOnce } = await import("../lib/scheduler");
-            firstOnList = await fireOnce(`firstwait_${input.listingId}`, { tenantId: listing.tenantId }, () =>
-              notify({
-                tenantId: listing.tenantId,
-                to: { kind: "tenant" },
-                category: "booking",
-                key: "waitlist-started",
-                title: `New waiting list · ${listing.name}`,
-                body: `${shortWhen(primary)} · first on the list`,
-                emailHtml: `<p>${(kids || bookerName).replace(/&/g, "&amp;").replace(/</g, "&lt;")} is the first family on the waiting list for ${listing.name.replace(/&/g, "&amp;").replace(/</g, "&lt;")} (${shortWhen(primary)}). There is no free place right now, so there is nothing to do yet. You will be told the moment one opens. You will not get another email when more families join.</p>`,
-                subject: `You now have a waiting list for ${listing.name}`,
-                href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
-                ref: primary.ref,
-              }),
-            );
-          } catch (e) { console.error("[my] waiting-list-started notice failed:", (e as Error).message); }
-        }
-        if (!(waitlisted && firstOnList)) await notify({
-          tenantId: listing.tenantId,
-          to: { kind: "tenant" },
-          category: "booking",
-          key: "booking-new",
-          ...(waitlisted && !wlPrefs?.waitlistJoinAlert ? { bellOnly: true } : {}),
-          title: waitlisted ? `${firstWord(kids || bookerName)} joined the waiting list` : `${kind.replace(/\(awaiting card payment\)/, "— place held, waiting for card payment")} · ${primary.ref} · ${bookerName}`,
-          body: waitlisted
-            ? `${shortWhen(primary)} · ${listing.name}`
-            : `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${bookings.find((x) => x.serviceAddress?.notes)?.serviceAddress?.notes ? ` Note: ${String(bookings.find((x) => x.serviceAddress?.notes)?.serviceAddress?.notes).replace(/\s+/g, " ").slice(0, 80)}` : ""}${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(input.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
-          subject: `${BRAND}: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
-          href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
-          ref: primary.ref,
-          emailFullHtml,
-          attachments, // inline brand mark (cid:aos-mark) + listing hero (cid:listing-hero)
-        });
-      })().catch((e) => console.error("[my] new-booking notify failed:", (e as Error).message));
+      notifyProviderNewBooking({ listing, bookings, onBehalf, method: input.method, listingId: input.listingId, accountUid, bookerName });
     }
     // Keep Customers & families current (one upsert per child, same family).
     void upsertFamilyFromBasket(listing.tenantId, {
@@ -2975,7 +2821,7 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       applyParentCancel(b, parsed.data.msg, parsed.data.reason);
       // The policy's recommended refund rides on the request (pending the
       // provider's approval; refund-approve refunds this figure via Stripe).
-      if (policyAmount !== null && b.cancel) {
+      if (policyAmount !== null && b.cancel && paid > 0) {
         const frac = paid > 0 ? policyAmount / paid : 0;
         const total = pendingBefore > 0 ? Math.min(paid, Math.round((pendingBefore + Math.max(0, paid - pendingBefore) * frac) * 100) / 100) : policyAmount;
         b.cancel.amount = total;
@@ -3038,7 +2884,15 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     // -booking cancel never notified anyone, so operators found out only by
     // chance.)
     if (updated.tenantId) {
-      const notice = cancellationRequestNotice(updated, money);
+      const heldCancel = existing.cardHold && (existing.cardHold.state === "held" || existing.cardHold.state === "awaiting");
+      const notice = heldCancel
+        ? {
+            title: `Request withdrawn · ${updated.ref} · ${updated.booker}`,
+            body: `${updated.listing}${updated.child ? ` · ${updated.child}` : ""} — the family withdrew their request. Their card hold was released: nothing was taken.`,
+            detail: `${updated.booker} withdrew their request for ${updated.listing} (${updated.ref}). Their card hold has been released and nothing was taken, so there is nothing to refund.`,
+            subject: `Request withdrawn — ${updated.listing} (${updated.ref})`,
+          }
+        : cancellationRequestNotice(updated, money);
       void notify({
         tenantId: updated.tenantId,
         to: { kind: "tenant" },
@@ -3346,4 +3200,184 @@ class HttpError extends Error {
   ) {
     super(message);
   }
+}
+
+/** What the provider is told when a new booking / request comes in: bell + the rich email (photo, every child with allergies/medical/SEND,
+ *  the venue or the home-visit address + the family's access note, the money split). Fire-and-forget. A card HOLD passes `heldUntil` so the
+ *  email carries the approve-by deadline; it is announced once the card is actually held (lib/cardHold.ts), not when the family clicks Book. */
+export interface ProviderNoticeCtx {
+  listing: { tenantId: string; tenantName?: string; name: string };
+  bookings: Booking[];
+  onBehalf?: unknown;
+  method: unknown;
+  listingId: string;
+  accountUid?: string | null;
+  bookerName: string;
+  heldUntil?: string;
+}
+export function notifyProviderNewBooking(ctx: ProviderNoticeCtx): void {
+  const { listing, bookings, onBehalf, accountUid, bookerName } = ctx;
+  const total = round2(bookings.reduce((s, b) => s + (b.amount ?? 0), 0));
+    const places = bookings.reduce((s, b) => s + (b.seats ?? b.kids?.length ?? 1), 0);
+    const kids = [...new Set(bookings.map((b) => b.child).filter(Boolean))].join(", ");
+    const needsApproval = bookings.some((b) => b.status === "Approval needed");
+    const waitlisted = bookings.every((b) => b.status === "Waitlisted");
+    const primary = bookings.find((b) => b.status !== "Waitlisted") ?? bookings[0];
+    const refs = bookings.map((b) => b.ref);
+    // A basket books one row per child — the deep-link opens the FIRST ref, so
+    // lead the notification with that exact ref (and list the rest) so it's
+    // clear which booking it opens.
+    // A card booking is created (place held) BEFORE the family pays: say so, or the provider reads "new booking" as "paid".
+    const awaitingCard = !onBehalf && /^card$/i.test(String(ctx.method)) && total > 0;
+    const awaitingBank = !onBehalf && isBankMethod(ctx.method) && total > 0 && !waitlisted && !needsApproval;
+    const kind = waitlisted ? "Waitlist join" : needsApproval ? "Booking request" : awaitingCard ? "New booking (awaiting card payment)" : awaitingBank ? "New booking (awaiting bank transfer payment)" : "New booking";
+    // Rich, beautifully-presented provider email: listing photo, every
+    // attendee with their allergies/medical/SEND notes, a payment split, and
+    // any EHCP plans as real attachments. Built async (child profiles, venue
+    // and file bytes are all reads) but still fire-and-forget.
+    void (async () => {
+      // Full child profiles (allergies/medical/SEND/EHCP) for the booked
+      // children — the resolve maps above only carry id/name/age.
+      const fullById = new Map<string, Record<string, unknown>>();
+      const fullByName = new Map<string, Record<string, unknown>>();
+      if (accountUid) {
+        const kidsSnap = await childrenCol.where("parentUid", "==", accountUid).get();
+        for (const d of kidsSnap.docs) {
+          const data = d.data() as Record<string, unknown>;
+          fullById.set(d.id, data);
+          fullByName.set(String(data.name ?? "").trim().toLowerCase(), data);
+        }
+      }
+      // Announced later (a held card): no signed-in account here, so read the booked children by id.
+      if (!accountUid) {
+        for (const id of new Set(bookings.flatMap((b) => [b.childId, ...(b.kids ?? []).map((k) => k.childId)]).filter((x): x is string => !!x))) {
+          const d = await childrenCol.doc(id).get();
+          if (d.exists) fullById.set(id, d.data() as Record<string, unknown>);
+        }
+      }
+      // One row per child (deduped by name), each tied to its pass.
+      const seen = new Set<string>();
+      const seeds: { name: string; age?: number; childId?: string; pass?: string }[] = [];
+      for (const b of bookings) {
+        const list = b.kids?.length ? b.kids.map((k) => ({ name: k.name, age: k.age, childId: k.childId })) : [{ name: b.child, age: b.age, childId: b.childId }];
+        for (const k of list) {
+          const key = (k.name ?? "").trim().toLowerCase();
+          if (!key || seen.has(key)) continue;
+          seen.add(key);
+          seeds.push({ ...k, pass: b.pass });
+        }
+      }
+      const attendees: NewBookingAttendee[] = [];
+      for (const s of seeds) {
+        const rec = (s.childId && fullById.get(s.childId)) || fullByName.get((s.name ?? "").trim().toLowerCase()) || {};
+        const str = (k: string) => { const v = rec[k]; return typeof v === "string" && v.trim() ? v.trim() : undefined; };
+        attendees.push({
+          name: s.name,
+          age: s.age,
+          ticket: s.pass,
+          allergies: str("allergies"),
+          medical: str("medical"),
+          dietary: str("dietary"),
+          send: str("send"),
+          // An EHCP is special-category data — never attached. The email links
+          // straight to the secure /plan viewer, which re-checks access.
+          ehcpFileId: str("sendPlanId"),
+        });
+      }
+      // Card vs childcare split — by the method chosen at checkout.
+      const isChildcare = (b: Booking) => !!b.voucherScheme || /voucher|tax-?free|tfc|childcare|haf/i.test(b.method ?? "");
+      const childcareAmount = round2(bookings.filter(isChildcare).reduce((s, b) => s + (b.amount ?? 0), 0));
+      const cardAmount = round2(total - childcareAmount);
+      const childcareLabel = bookings.find(isChildcare)?.voucherScheme || (childcareAmount > 0 ? "Childcare payment" : undefined);
+      // Venue (name + address) from the tenant library.
+      let location: string | undefined;
+      const venueId = (listing as { venueId?: string | null }).venueId;
+      if (venueId) {
+        const lib = (await librarySnap(listing.tenantId, (listing as { franchiseId?: string | null }).franchiseId)).data() ?? {};
+        const venues = (lib.venues ?? []) as { id: string; name?: string; address?: string; kind?: string }[];
+        const v = venues.find((x) => x.id === venueId);
+        if (v && (v as { kind?: string }).kind === "online") location = "Online (the family is sent the joining details)";
+        else if (v) location = [v.name, v.address].filter(Boolean).join(", ") || undefined;
+      }
+      // A home visit: the provider needs to know WHERE to go, which is the address the family gave at checkout (never a venue).
+      const visit = bookings.find((b) => b.serviceAddress?.postcode || b.serviceAddress?.address)?.serviceAddress;
+      if (visit) location = `Home visit at ${visitAddressLabel(visit)}`;
+      // Hero image — embed inline (cid) so it renders even from a localhost/
+      // dev URL a mail client's image proxy can't reach (same as the logo).
+      // The bytes live in the `images` collection (see routes/uploads.ts).
+      const attachments = [aosLogoAttachment()];
+      let heroCid: string | undefined;
+      const rawSrc = (listing as { images?: { src?: string }[] }).images?.[0]?.src;
+      const imgId = rawSrc?.match(/\/api\/images\/([^/?#]+)/)?.[1];
+      if (imgId) {
+        const imgDoc = await db.collection("images").doc(imgId).get();
+        const img = imgDoc.data() as { contentType?: string; b64?: string } | undefined;
+        if (img?.b64) {
+          attachments.push({ filename: "listing", content: Buffer.from(img.b64, "base64"), contentType: img.contentType || "image/jpeg", cid: "listing-hero" });
+          heroCid = "cid:listing-hero";
+        }
+      }
+      const sessions = [...new Set(bookings.flatMap((b) => b.sessions ?? []))];
+
+      const emailFullHtml = newBookingProviderEmail({
+        providerName: listing.tenantName ?? listing.name,
+        kind,
+        bookerName,
+        listingName: listing.name,
+        listingImage: heroCid,
+        pass: primary.pass,
+        sessions,
+        attendees,
+        location,
+        accessNotes: visit?.notes,
+        cardAmount,
+        childcareAmount,
+        childcareLabel,
+        total,
+        bookingId: primary.bid ?? primary.ref,
+        ref: primary.ref,
+        needsApproval,
+        ...(ctx.heldUntil ? { extraHtml: `<p style="font-size:14px;color:#3b3860;margin:12px 0 0">Their card has been authorised for <b>${money(total)}</b> — <b>held, not charged yet</b>. Approving the booking takes the payment; declining releases the hold.</p>${deadlineWarningHtml(ctx.heldUntil)}` } : {}),
+      });
+
+      // Waiting-list joins: an email per join is noisy, so it is OFF by default (Setup > Email > Automatic emails). The bell always shows.
+      const wlPrefs = waitlisted ? await autoEmailPrefs(listing.tenantId) : null;
+      let firstOnList = false; // the first family on this listing's list gets ONE notice ("you now have a waiting list"), not two
+      if (waitlisted && wlPrefs?.waitlistStartAlert) {
+        // ONE email per listing, the first time anyone joins its waiting list.
+        try {
+          const { fireOnce } = await import("../lib/scheduler");
+          firstOnList = await fireOnce(`firstwait_${ctx.listingId}`, { tenantId: listing.tenantId }, () =>
+            notify({
+              tenantId: listing.tenantId,
+              to: { kind: "tenant" },
+              category: "booking",
+              key: "waitlist-started",
+              title: `New waiting list · ${listing.name}`,
+              body: `${shortWhen(primary)} · first on the list`,
+              emailHtml: `<p>${(kids || bookerName).replace(/&/g, "&amp;").replace(/</g, "&lt;")} is the first family on the waiting list for ${listing.name.replace(/&/g, "&amp;").replace(/</g, "&lt;")} (${shortWhen(primary)}). There is no free place right now, so there is nothing to do yet. You will be told the moment one opens. You will not get another email when more families join.</p>`,
+              subject: `You now have a waiting list for ${listing.name}`,
+              href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
+              ref: primary.ref,
+            }),
+          );
+        } catch (e) { console.error("[my] waiting-list-started notice failed:", (e as Error).message); }
+      }
+      if (!(waitlisted && firstOnList)) await notify({
+        tenantId: listing.tenantId,
+        to: { kind: "tenant" },
+        category: "booking",
+        key: "booking-new",
+        ...(waitlisted && !wlPrefs?.waitlistJoinAlert ? { bellOnly: true } : {}),
+        title: waitlisted ? `${firstWord(kids || bookerName)} joined the waiting list` : ctx.heldUntil ? `${kind} · ${primary.ref} · ${bookerName} — approve by ${deadlineLabel(ctx.heldUntil)}` : `${kind.replace(/\(awaiting card payment\)/, "— place held, waiting for card payment")} · ${primary.ref} · ${bookerName}`,
+        body: waitlisted
+          ? `${shortWhen(primary)} · ${listing.name}`
+          : `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${bookings.find((x) => x.serviceAddress?.notes)?.serviceAddress?.notes ? ` Note: ${String(bookings.find((x) => x.serviceAddress?.notes)?.serviceAddress?.notes).replace(/\s+/g, " ").slice(0, 80)}` : ""}${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(ctx.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
+        subject: ctx.heldUntil ? `${BRAND}: approve or decline by ${deadlineLabel(ctx.heldUntil)} — ${listing.name} from ${bookerName} (${primary.ref})` : `${BRAND}: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
+        href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
+        ref: primary.ref,
+        emailFullHtml,
+        attachments, // inline brand mark (cid:aos-mark) + listing hero (cid:listing-hero)
+      });
+    })().catch((e) => console.error("[my] new-booking notify failed:", (e as Error).message));
 }

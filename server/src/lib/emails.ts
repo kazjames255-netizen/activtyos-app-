@@ -361,11 +361,11 @@ export function emailWaitlistJoined(b: Booking, providerName: string, refs?: str
   sendCustomerEmail(b, providerName, "waitlist", m.subject, m.title, m.body + refsNote(refs), m.enrich);
 }
 
-export function emailPaymentLink(b: Booking, providerName: string): void {
+export function emailPaymentLink(b: Booking, providerName: string, approved = false): void {
   void (async () => {
     // A public pay page (no sign-in) — the unguessable link pays this one booking's balance by card.
     const payUrl = await bookingPayUrl(b.tenantId, b.ref);
-    const m = paymentLinkSpec(b, providerName, payUrl);
+    const m = paymentLinkSpec(b, providerName, payUrl, approved);
     sendCustomerEmail(b, providerName, "bookings", m.subject, m.title, m.body, m.enrich);
   })().catch((e) => console.error("[mail] payment link build failed:", (e as Error).message));
 }
@@ -1085,6 +1085,8 @@ export interface NewBookingEmailArgs {
   bookingId: string;
   ref: string;
   needsApproval?: boolean;
+  /** Extra HTML shown under the intro (e.g. the approve-by deadline of a held card). */
+  extraHtml?: string;
 }
 
 function detailRow(label: string, valueHtml: string): string {
@@ -1183,6 +1185,7 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
           Hi ${escapeHtml(a.providerName)}, <b>${escapeHtml(a.bookerName)}</b> has ${a.kind === "Booking request" ? "requested a place on" : a.kind === "Waitlist join" ? "joined the waiting list for" : "booked"} <b>${escapeHtml(a.listingName)}</b>${a.needsApproval ? " — this one needs your approval." : /awaiting card payment/i.test(a.kind) ? ". The place is held; they have not paid by card yet — you will get a payment-received message when they do." : "."}
         </p>
 
+        ${a.extraHtml ?? ""}
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:14px">
           ${detailRow("Booker", escapeHtml(a.bookerName))}
           ${a.pass ? detailRow("Listing", `${escapeHtml(a.listingName)}<br><span style="color:#8a86a3;font-size:13px">${escapeHtml(a.pass)}</span>`) : detailRow("Listing", escapeHtml(a.listingName))}

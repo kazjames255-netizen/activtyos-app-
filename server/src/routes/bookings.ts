@@ -21,7 +21,7 @@ import { registerRows } from "../lib/registerRows";
 import { money, realPhone, refundableSoFar, receivedOf } from "../../../features/bookings/helpers";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
-import { canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled } from "../lib/bookingGuards";
+import { canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval } from "../lib/bookingGuards";
 import {
   blockCountDelta,
   applyPlacesDelta,
@@ -783,7 +783,7 @@ bookings.post("/:ref/actions", async (req, res) => {
 
     // Manual-approval card hold: approving TAKES the held payment (and WAITS for it - a hold that has lapsed puts the request back);
     // declining or cancelling lets the family's card go.
-    const heldApproval = action.type === "approve" && updated.cardHold?.state === "held";
+    const heldApproval = isFirstHeldApproval(action.type, statusBefore, updated);
     if (heldApproval) {
       const cap = await captureHolds([updated]);
       if (!cap.ok) {
@@ -864,7 +864,22 @@ bookings.post("/:ref/actions", async (req, res) => {
       if (action.type === "approve" || action.type === "promote") {
         // "Booking confirmed" goes out ONCE per confirmation: approving / promoting a booking that was already Confirmed (a double click, or
         // an approve after the family accepted an offered place) changes nothing and must not mail the family a second time.
-        if (shouldEmailConfirmed(action.type, statusBefore) && !(action.type === "approve" && heldApproval)) emailBookingConfirmed(updated, await tenantName());
+        const askToPay = shouldAskToPayAfterApproval(action.type, updated);
+        if (askToPay && shouldEmailConfirmed(action.type, statusBefore)) {
+          // Approved, but nothing has been taken (its card hold went when the other child on the card was approved): ask them to pay, don't say "booked in".
+          emailPaymentLink(updated, await tenantName(), true);
+          void notify({
+            tenantId: scope.tenantId!,
+            to: { kind: "parent", email: updated.email },
+            category: "billing",
+            title: `Approved — please pay · ${updated.ref}`,
+            body: `${updated.listing}${updated.child ? ` · ${updated.child}` : ""} — your booking is approved. Pay £${(updated.amount ?? 0).toFixed(2)} to complete it.`,
+            href: `/custdash/bookings?pay=${encodeURIComponent(updated.ref)}`,
+            ref: updated.ref,
+            bellOnly: true,
+          });
+        }
+        else if (shouldEmailConfirmed(action.type, statusBefore) && !(action.type === "approve" && heldApproval)) emailBookingConfirmed(updated, await tenantName());
       }
       else if (action.type === "offer") {
         emailPlaceOffered(updated, await tenantName());
@@ -1079,6 +1094,9 @@ bookings.post("/:ref/record-payment", async (req, res) => {
           && Number.isFinite(t0) && Math.abs(Date.parse(String(p.createdAt ?? "")) - t0) <= DUP_WINDOW_MS);
         if (dup) throw new Duplicate({ amount: Number(dup.amount), reference: (dup.reference as string | null) ?? null, createdAt: String(dup.createdAt ?? ""), recordedBy: dup.recordedBy as string | undefined });
       }
+      // A card that is only HELD is settled by approving (the payment is taken then): recording money against it would count it twice,
+      // and on a decline it would leave a "Paid" booking nobody paid for.
+      if (cardHeldBlocksPayment(b)) throw new Conflict(CARD_HELD_MESSAGE);
       const paid = Math.round(((b.amountPaid ?? 0) + parsed.data.amount) * 100) / 100;
       // A booking still awaiting/part-paid can't be recorded past its own total
       // — that's almost always a typo (an extra digit) rather than a genuine
@@ -1115,6 +1133,7 @@ bookings.post("/:ref/record-payment", async (req, res) => {
     res.json({ ...updated, ...(overpaid > 0 ? { overpaid } : {}) });
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else if (e instanceof Conflict) res.status(409).json({ error: e.message });
     else if (e instanceof Overpay) {
       const outstanding = Math.round(Math.max(0, e.bookingAmount - e.alreadyPaid) * 100) / 100;
       res.status(400).json({
@@ -1162,6 +1181,7 @@ bookings.post("/:ref/reconcile", async (req, res) => {
       const snap = await tx.get(ref);
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
+      if (!undo && cardHeldBlocksPayment(b)) throw new Conflict(CARD_HELD_MESSAGE);
       receivedBefore = receivedOf(b);
       if (undo) {
         b.amountPaid = 0;
@@ -1199,6 +1219,7 @@ bookings.post("/:ref/reconcile", async (req, res) => {
     res.json(updated);
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else if (e instanceof Conflict) res.status(409).json({ error: e.message });
     else throw e;
   }
 });

@@ -115,23 +115,11 @@ async function announceHeld(tenantId: string, held: Booking[], expiresAt: string
   const tenantDoc = await db.collection("tenants").doc(tenantId).get();
   const providerName = (tenantDoc.get("name") as string) || "your provider";
   if (b0.email?.includes("@")) emailBookingRequestReceived(b0, providerName, held.map((h) => h.ref));
-  const total = round2(held.reduce((s, h) => s + (h.cardHold?.amount ?? h.amount ?? 0), 0));
-  const kids = [...new Set(held.flatMap((h) => (h.kids?.length ? h.kids.map((k) => k.name) : [h.child])).filter(Boolean))].join(", ");
-  const by = deadlineLabel(expiresAt);
-  await notify({
-    tenantId,
-    to: { kind: "tenant" },
-    category: "booking",
-    key: "booking-new",
-    title: `Booking request · ${b0.ref} · ${b0.booker} — approve by ${by}`,
-    body: `${b0.listing} · ${kids} · £${total.toFixed(2)} held on their card. Approve or decline by ${by} or Stripe cancels the hold and the booking.`,
-    subject: `Approve or decline by ${by} — ${b0.listing} from ${b0.booker} (${b0.ref})`,
-    href: `/company/bookings?ref=${encodeURIComponent(b0.ref)}`,
-    ref: b0.ref,
-    emailHtml: `<p><b>${esc(b0.booker)}</b> has requested a place on <b>${esc(b0.listing)}</b> for ${esc(kids)} (${held.map((h) => esc(h.ref)).join(", ")}).</p>
-      <p>Their card has been authorised for <b>£${total.toFixed(2)}</b> — held, <b>not charged yet</b>. Approving the booking takes the payment; declining releases the hold.</p>
-      ${deadlineWarningHtml(expiresAt)}`,
-  });
+  // The provider gets the SAME rich notice as any new booking (date, children's health notes, address + access note, money) plus the deadline.
+  const listingSnap = b0.listingId ? await db.collection("listings").doc(b0.listingId).get() : null;
+  const listing = { tenantId, tenantName: providerName, name: b0.listing, ...((listingSnap?.exists ? listingSnap.data() : {}) as Record<string, unknown>) } as { tenantId: string; tenantName?: string; name: string };
+  const { notifyProviderNewBooking } = await import("../routes/my");
+  notifyProviderNewBooking({ listing: { ...listing, tenantId, tenantName: (listing.tenantName as string | undefined) ?? providerName, name: (listing.name as string | undefined) ?? b0.listing }, bookings: held, method: "card", listingId: b0.listingId ?? "", bookerName: b0.booker, heldUntil: expiresAt });
 }
 
 async function cancelIntent(intentId: string, stripeAccount: string | null | undefined): Promise<void> {
@@ -185,9 +173,20 @@ export async function captureHolds(rows: Booking[]): Promise<CaptureResult> {
       b.cardHold = { ...b.cardHold, state: "released" };
       batch.set(ref, toDoc(b));
     }
-    if (group[0].cardHold?.paymentId) batch.update(db.collection("payments").doc(group[0].cardHold.paymentId), { status: "succeeded", paidAt: at, settledAuto: true, capturedAmount: amount });
     await batch.commit();
-    await notifyPaymentReceived(tenantId, settled[0], "card", settled, true).catch((e) => console.error("[cardHold] payment-received notice:", (e as Error).message));
+    // Claim the payment record: a double-click on Approve (or a retry) captures idempotently but must tell the family only ONCE.
+    let first = true;
+    const payId = group[0].cardHold?.paymentId;
+    if (payId) {
+      const payRef = db.collection("payments").doc(payId);
+      first = await db.runTransaction(async (tx) => {
+        const ps = await tx.get(payRef);
+        if (ps.exists && (ps.data() as { status?: string }).status === "succeeded" && (ps.data() as { capturedAmount?: number }).capturedAmount === amount) return false;
+        tx.update(payRef, { status: "succeeded", paidAt: at, settledAuto: true, capturedAmount: amount });
+        return true;
+      });
+    }
+    if (first) await notifyPaymentReceived(tenantId, settled[0], "card", settled, true).catch((e) => console.error("[cardHold] payment-received notice:", (e as Error).message));
   }
   return { ok: true };
 }

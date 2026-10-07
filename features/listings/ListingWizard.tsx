@@ -4310,7 +4310,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
           <div className="mt-3 flex flex-wrap items-center gap-1.5 px-2 text-[12px]">
             <span className="font-extrabold uppercase tracking-[0.08em] text-[#7a8194]">{tr("p7pg.waysToPay")}</span>
             <span className="rounded-full border px-2.5 py-1 font-bold" style={{ borderColor: "#cdddf7", background: "#eef4ff", color: "#1d3a8f" }}>{tr("p7pg.cardWord")}</span>
-            {d.payMethods.map((m) => (
+            {d.payMethods.filter((m) => !/^card$/i.test(String(m).trim())).map((m) => (
               <span key={m} className="rounded-full border px-2.5 py-1 font-bold" style={{ borderColor: "#b6e6c8", background: "#e4f8ee", color: "#0b6b3a" }}>{m}</span>
             ))}
           </div>
