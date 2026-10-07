@@ -594,6 +594,8 @@ bookings.post("/:ref/actions", async (req, res) => {
       const heldBefore = structuredClone({ status: b.status, seats: b.seats, days: b.days, kids: b.kids });
       receivedBefore = receivedOf(b);
 
+      // A card that is only HELD is settled by approving (the payment is taken then): "Mark paid" would count the money twice.
+      if (action.type === "paid" && (b.cardHold?.state === "held" || b.cardHold?.state === "awaiting")) throw new Conflict("This booking's card is only held, not charged. Approving the booking takes the payment.");
       // A manual-approval booking paid by card can only be approved once the family's card is actually held.
       if (action.type === "approve" && b.cardHold?.state === "awaiting") throw new Conflict("The family hasn't entered their card yet, so this can't be approved. It will be cancelled automatically if they don't.");
       // An offer must be backed by a real free place (§E: "reject if the

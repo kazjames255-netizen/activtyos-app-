@@ -656,7 +656,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {(b.pay === "Invoice sent" || b.pay === "Unpaid") && <> {t("p7bd.cancelledNoPayment")}</>}
         </div>
       )}
-      {(b.pay === "Invoice sent" || b.pay === "Unpaid") && b.status !== "Cancelled" && b.status !== "Declined" && !waitingForPlace(b.status) && (
+      {(b.pay === "Invoice sent" || b.pay === "Unpaid") && b.status !== "Cancelled" && b.status !== "Declined" && !waitingForPlace(b.status) && !(b.status === "Approval needed" && (b.cardHold?.state === "held" || b.cardHold?.state === "awaiting")) && (
         <>
           <Button variant="primary" className="!bg-[#15b364] !text-white !border-[#15b364] shadow-[0_6px_16px_-6px_rgba(21,179,100,.7)] ring-2 ring-[#15b364]/30" onClick={() => askConfirm(b.ref, { kind: "paid" })}>{"\u2713 "}{t("p7bd.markPaid")}</Button>
           <Button onClick={() => act(b.ref, "resend")}>{t("p7bd.resendInvoice")}</Button>
@@ -767,7 +767,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {/* Once cancelled/declined the payment state is moot — a cancelled
               booking isn't "awaiting" anything. */}
           {b.status !== "Cancelled" && b.status !== "Declined" && (
-            <Badge tone={payTone(b.pay, b.status)}>{w(payLabelFor(b))}</Badge>
+            <Badge tone={payTone(b.pay, b.status)}>{b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : w(payLabelFor(b))}</Badge>
           )}
           {b.status === "Waitlisted" && b.waitlist && b.waitlist.length > 0 && (
             <Badge tone={{ bg: "#fff1d6", fg: "#9a5a00" }}>{b.waitlist.map((x) => `${t("p9tx.wlPlace", { n: x.position })} · ${new Date(`${x.date}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" })}`).join("  ")}</Badge>
