@@ -689,3 +689,12 @@ export function addonLinesFor(b: { addons?: string[]; addonLines?: { child: stri
   if (!lines.length || !many) return b.addons ?? [];
   return lines.map((l) => `${l.label} — £${l.price.toFixed(2)} · for ${l.child}`);
 }
+
+
+/** "12 High St, MK10 9NR · Kents Hill" - the home-visit address a provider reads: the street line if given, the postcode, and the area the app recognised. */
+export function visitAddressLabel(sa?: { address?: string; postcode?: string; area?: string } | null): string {
+  if (!sa) return "";
+  const line = [sa.address, sa.postcode].map((x) => (x ?? "").trim()).filter(Boolean).join(", ");
+  const area = (sa.area ?? "").trim();
+  return area ? `${line} · ${area}` : line;
+}

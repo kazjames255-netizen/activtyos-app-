@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import { randomBytes } from "node:crypto";
 import type { Booking } from "../../../features/bookings/types";
+import { visitAddressLabel } from "../../../features/bookings/helpers";
 import { db } from "../firebase";
 import { autoEmailOn, type AutoEmailPrefs } from "./autoEmails";
 import { sendMail, type MailAttachment } from "./mailer";
@@ -247,7 +248,7 @@ async function listingContext(
   // Home-visit booking: "location" is the family's own service address, not a
   // venue — no venue lookup, no map of their own house.
   if (b.serviceAddress?.address || b.serviceAddress?.postcode) {
-    const location = [b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ") || undefined;
+    const location = visitAddressLabel(b.serviceAddress) || undefined;
     return { location, homeVisit: true, attachments };
   }
   try {

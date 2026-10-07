@@ -26,6 +26,7 @@ import {
   type BlockAvail,
   refundButtonKind,
   refundableSoFar,
+  visitAddressLabel,
 } from "./helpers";
 import { Badge, Button, Card, DefRow, Input, SectionHead, Select } from "@/components/ui";
 import { useTenantSettings, reasonsFor } from "@/lib/settings";
@@ -862,7 +863,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         <SectionHead>{t("p7bd.secActivity")}</SectionHead>
         <DefRow label={t("p7bd.lblListing")} value={b.listing} />
         <DefRow label={t("p7bd.lblPass")} value={b.pass} />
-        {b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) && <DefRow label={"🚗 " + t("p9tx.hvVisitAt")} value={[b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ")} />}
+        {b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) && <DefRow label={"🚗 " + t("p9tx.hvVisitAt")} value={visitAddressLabel(b.serviceAddress)} />}
         <DefRow label={t("p7bd.lblTicket")} value={b.ticket} />
         {b.addons && b.addons.length > 0 && <DefRow label={t("p7bd.lblAddons")} value={addonLinesFor(b).join(", ")} />}
 

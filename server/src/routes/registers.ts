@@ -9,7 +9,7 @@ import { franchiseListingIds } from "../lib/franchiseScope";
 import { staffSiteScope } from "../lib/siteScope";
 import { bookingExpectedOn, bookingRefOfKey, entryFor, registerRows } from "../lib/registerRows";
 import { ukToday, ukTodayPlus } from "../lib/ukDate";
-import { realPhone } from "../../../features/bookings/helpers";
+import { realPhone, visitAddressLabel } from "../../../features/bookings/helpers";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Registers — the staff portal's core tool ("run the day on the ground").
@@ -239,7 +239,7 @@ registers.get("/", async (req, res) => {
         email: b.email ?? "",
         phone: realPhone(b.phone) || phoneByEmail.get(b.email ?? "") || "",
         // A home-visit booking: where the staff member has to go (the family's own address for that session).
-        ...(b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) ? { serviceAddress: [b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ") } : {}),
+        ...(b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) ? { serviceAddress: visitAddressLabel(b.serviceAddress) } : {}),
         note: b.note ?? "",
         // This child's extras for THIS day only: a sibling's T-shirt, or a lunch bought for other days, must not show here.
         addons: childExtrasForDay(b.addonLines, b.addons, r.name, date),

@@ -23,7 +23,7 @@ import { refPrefixFor } from "../lib/bookingRef";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/mealCutoff";
 import { cancellationRequestNotice, shortWhen, firstWord } from "../lib/emailTemplates";
-import { money, paidSoFar as totalPaid, realPhone, refundableSoFar, sessionIsoDates } from "../../../features/bookings/helpers";
+import { money, paidSoFar as totalPaid, realPhone, refundableSoFar, sessionIsoDates, visitAddressLabel } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, applyPartialCancel, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
@@ -84,6 +84,7 @@ import { bookingCutoffLabel, cutoffHours, pastCutoff } from "../lib/bookingCutof
 import { customerAreaOn } from "../lib/customerArea";
 import { NOT_TAKING_BOOKINGS, takesNewBookings } from "../middleware/subscription";
 import { checkCoverage, type CoverageArea } from "../lib/coverageArea";
+import { lookupPostcode } from "../lib/postcodeLookup";
 import { TFC_SCHEME, canonicalMethod, isTfcMethod, methodAllowed, methodKey, splitTfc } from "../lib/payMethods";
 import { attachChildcareRefs, childcareOf, childcareRoute, type ChildcareBooking } from "../lib/childcare";
 import { autoEnrolFromBooking } from "../lib/hubAutoEnrol";
@@ -902,7 +903,7 @@ my.post("/bookings", async (req, res) => {
   // happens: what checkout sent, else the family's saved account address —
   // then validate the postcode against the provider's coverage area. A booking
   // that fails this never gets created.
-  let serviceAddress: { address: string; postcode: string } | undefined = input.serviceAddress;
+  let serviceAddress: { address: string; postcode: string; area?: string } | undefined = input.serviceAddress;
   if (listing.deliveryMode === "home-visit" || listing.deliveryMode === "both") {
     if (!serviceAddress?.postcode?.trim() && familyUserDoc?.postcode?.trim()) {
       serviceAddress = { address: familyUserDoc.address ?? "", postcode: familyUserDoc.postcode };
@@ -911,11 +912,19 @@ my.post("/bookings", async (req, res) => {
       res.status(400).json({ error: "This provider comes to you — add the address the session should run at" });
       return;
     }
+    // The postcode must be a real, recognised UK postcode: re-resolved HERE (never trusted from the browser) and the town / area it is in is
+    // stored on the booking, so the provider can see the app picked up the family's location.
+    const looked = await lookupPostcode(serviceAddress.postcode);
+    if (!looked.ok && looked.code === "format") {
+      res.status(400).json({ error: "That doesn't look like a UK postcode — check it and try again" });
+      return;
+    }
     const coverage = await checkCoverage(listing.coverageArea, serviceAddress.postcode);
     if (!coverage.ok) {
       res.status(409).json({ error: coverage.reason });
       return;
     }
+    serviceAddress = { address: serviceAddress.address ?? "", postcode: looked.postcode, ...(looked.ok && looked.area ? { area: looked.area } : {}) };
   } else {
     serviceAddress = undefined; // a venue booking never carries one
   }
@@ -2136,7 +2145,7 @@ my.post("/bookings", async (req, res) => {
         }
         // A home visit: the provider needs to know WHERE to go, which is the address the family gave at checkout (never a venue).
         const visit = bookings.find((b) => b.serviceAddress?.postcode || b.serviceAddress?.address)?.serviceAddress;
-        if (visit) location = `Home visit at ${[visit.address, visit.postcode].filter(Boolean).join(", ")}`;
+        if (visit) location = `Home visit at ${visitAddressLabel(visit)}`;
         // Hero image — embed inline (cid) so it renders even from a localhost/
         // dev URL a mail client's image proxy can't reach (same as the logo).
         // The bytes live in the `images` collection (see routes/uploads.ts).
@@ -3059,6 +3068,29 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
 // family sees exactly the trips their children are on — nothing else.
 
 const tripsCol = db.collection("trips");
+
+// GET /api/my/postcode-check?listingId=&postcode= — the checkout's postcode step: is it a recognised UK postcode (and which area is it in), and does
+// this home-visit provider travel there? Answers in/out only: the provider's base postcode (or how far away it is) is never revealed.
+my.get("/postcode-check", async (req, res) => {
+  const listingId = typeof req.query.listingId === "string" ? req.query.listingId : "";
+  const raw = typeof req.query.postcode === "string" ? req.query.postcode : "";
+  const looked = await lookupPostcode(raw);
+  if (!looked.ok) {
+    res.json({ ok: false, code: looked.code === "format" ? "format" : "notfound", postcode: looked.postcode, reason: looked.code === "format" ? "That doesn't look like a UK postcode" : "We couldn't find that postcode — check it" });
+    return;
+  }
+  let covered = true;
+  if (listingId) {
+    const snap = await db.collection("listings").doc(listingId).get();
+    const l = snap.exists ? (snap.data() as { deliveryMode?: string; coverageArea?: CoverageArea | null }) : null;
+    if (l && (l.deliveryMode === "home-visit" || l.deliveryMode === "both")) covered = (await checkCoverage(l.coverageArea, looked.postcode)).ok;
+  }
+  if (!covered) {
+    res.json({ ok: false, code: "outside", postcode: looked.postcode, area: looked.area, reason: `Sorry — this provider doesn't travel to ${looked.postcode}${looked.area ? ` (${looked.area})` : ""}. It's outside the area they cover.` });
+    return;
+  }
+  res.json({ ok: true, postcode: looked.postcode, area: looked.area });
+});
 
 my.get("/trips", async (req, res) => {
   const kids = await childrenCol.where("parentUid", "==", req.user!.uid).get();

@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { GoLiveModal, fetchGoLive, goLiveReady } from "@/features/billing/GoLiveModal";
 import { api, get as apiGet, post as apiPost, isDemoMode, ApiError } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
-import { money } from "@/features/bookings/helpers";
+import { money, visitAddressLabel } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import type { AddonQuestion, AddonTemplate, LocalState, StaffMember, Venue } from "./FreelancerListingsApp";
 import { VenueMap } from "./VenueMap";
@@ -871,7 +871,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         voucherScheme,
         voucherDetails,
         bank: bankPay,
-        ...(serviceAddress?.postcode?.trim() ? { visitAt: [serviceAddress.address, serviceAddress.postcode].map((x) => (x ?? "").trim()).filter(Boolean).join(", ") } : {}),
+        ...(serviceAddress?.postcode?.trim() ? { visitAt: visitAddressLabel(serviceAddress) } : {}),
         needsApproval: heldForApproval,
         ...(holdCard ? { holdCard: true } : {}),
         waitlisted: !seated,

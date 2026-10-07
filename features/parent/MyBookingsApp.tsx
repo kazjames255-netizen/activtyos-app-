@@ -11,7 +11,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useI18n, useT, useWord, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
-import { addonLinesFor, bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, refundableSoFar } from "@/features/bookings/helpers";
+import { visitAddressLabel, addonLinesFor, bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, refundableSoFar } from "@/features/bookings/helpers";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
@@ -1023,7 +1023,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           <PCol label={t("parent.listingCol")} w="w-full min-w-[120px] sm:w-auto sm:flex-1">
             <span className="block text-[15px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere] sm:text-[12.5px]" title={b.listing}>{b.listing || "—"}</span>
             {b.serviceAddress?.address || b.serviceAddress?.postcode ? (
-              <span className="block text-[11px] font-semibold text-[var(--ink-2)]">{t("p8par.mbComeToYou", { addr: [b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ") })}</span>
+              <span className="block text-[11px] font-semibold text-[var(--ink-2)]">{t("p8par.mbComeToYou", { addr: visitAddressLabel(b.serviceAddress) })}</span>
             ) : (<>
               {loc.location && <span className="block text-[11px] font-semibold text-[var(--ink-2)]">📍 {loc.location}</span>}
               {(loc.address || loc.city) && <span className="block text-[10.5px] text-[var(--ink-3)]">{[loc.address, loc.city].filter(Boolean).join(", ")}</span>}
@@ -1175,7 +1175,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
             <>
               <SectionHead>{t("parent.whereWhen")}</SectionHead>
               {b.serviceAddress?.address || b.serviceAddress?.postcode ? (
-                <div className="py-[4px] text-[12.5px] font-semibold">{t("p8par.mbComeToYou", { addr: [b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ") })}</div>
+                <div className="py-[4px] text-[12.5px] font-semibold">{t("p8par.mbComeToYou", { addr: visitAddressLabel(b.serviceAddress) })}</div>
               ) : (<>
                 {loc.location && <div className="py-[4px] text-[12.5px] font-semibold">{venue?.online ? "💻" : "📍"} {loc.location}</div>}
                 {venue?.online && (

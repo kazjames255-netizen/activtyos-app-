@@ -26,6 +26,7 @@ import {
   runsOn,
   sessionCount,
   bookingDateSummary,
+  visitAddressLabel,
 } from "./helpers";
 import { Button, Card } from "@/components/ui";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
@@ -511,7 +512,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   )}
 
                   {b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) && (
-                    <span className="basis-full text-[12.5px] font-bold text-[#0b5a3f]">🚗 {t("p9tx.hvVisitAt")} {[b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ")}</span>
+                    <span className="basis-full text-[12.5px] font-bold text-[#0b5a3f]">🚗 {t("p9tx.hvVisitAt")} {visitAddressLabel(b.serviceAddress)}</span>
                   )}
                   {/* Contextual actions, pushed to the right */}
                   <span className="ms-auto flex flex-wrap items-center justify-end gap-1.5">

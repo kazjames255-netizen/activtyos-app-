@@ -1006,6 +1006,34 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const homeVisit = d.deliveryMode === "home-visit" || d.deliveryMode === "both";
   const [serviceAddress, setServiceAddress] = useState({ address: "", postcode: "" });
   const [addressPrefilled, setAddressPrefilled] = useState(false);
+  // The postcode step: recognised by the SERVER (real UK postcode + the town it is in + inside this provider's area), shown as the family types.
+  type PcState = { status: "idle" | "checking" | "ok" | "bad" | "unsure"; msg?: string; pc?: string; area?: string };
+  const [pcState, setPcState] = useState<PcState>({ status: "idle" });
+  useEffect(() => {
+    if (!homeVisit) return;
+    const raw = serviceAddress.postcode.trim();
+    if (!raw) { setPcState({ status: "idle" }); return; }
+    if (!/^[A-Za-z]{1,2}\d[A-Za-z\d]?\s?\d[A-Za-z]{2}$/.test(raw)) {
+      // not shaped like a postcode (yet): only complain once there is enough typed to be a full one
+      setPcState(raw.replace(/\s/g, "").length >= 6 ? { status: "bad", msg: tr("p7ck.pcFormat") } : { status: "idle" });
+      return;
+    }
+    setPcState({ status: "checking" });
+    let alive = true;
+    const id = setTimeout(() => {
+      apiGet<{ ok: boolean; code?: string; postcode?: string; area?: string }>(`/api/my/postcode-check?postcode=${encodeURIComponent(raw)}${d.id ? `&listingId=${encodeURIComponent(d.id)}` : ""}`)
+        .then((r) => {
+          if (!alive) return;
+          if (r.ok) setPcState({ status: "ok", pc: r.postcode, area: r.area });
+          else if (r.code === "outside") setPcState({ status: "bad", msg: tr("p7ck.pcOutside", { pc: r.postcode ?? raw, area: r.area ? ` (${r.area})` : "" }) });
+          else setPcState({ status: "bad", msg: tr(r.code === "format" ? "p7ck.pcFormat" : "p7ck.pcNotFound") });
+        })
+        // the check itself failed (network): don't block the family - the server enforces it again when they book
+        .catch(() => alive && setPcState({ status: "unsure" }));
+    }, 450);
+    return () => { alive = false; clearTimeout(id); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeVisit, serviceAddress.postcode, d.id]);
   useEffect(() => {
     if (!parentMode || !homeVisit) return;
     apiGet<{ address?: string; postcode?: string }>("/api/account")
@@ -2751,23 +2779,28 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       {ckStage === "pay" && homeVisit && (
         <div className="mt-3">
           <label className="mb-1 block text-[11px] font-bold" style={{ color: tk.muted }}>{tr("p7ck.weCome")}</label>
-          <input value={serviceAddress.address} onChange={(e) => setServiceAddress((s) => ({ ...s, address: e.target.value }))} placeholder={tr("p7ck.phHouse")}
-            className={`mb-1.5 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
+          <label className="mb-0.5 block text-[10.5px] font-extrabold uppercase tracking-wide" style={{ color: tk.muted }}>{tr("p7ck.pcLabel")}</label>
+          <input value={serviceAddress.postcode} onChange={(e) => setServiceAddress((s) => ({ ...s, postcode: e.target.value.toUpperCase() }))} placeholder="e.g. MK10 9NR" autoComplete="postal-code"
+            className={`w-full border px-3 py-2 text-[14px] font-bold outline-none ${tk.round}`}
+            style={{ background: tk.inputBg, borderColor: pcState.status === "ok" ? "#15b364" : pcState.status === "bad" ? "#dc2626" : serviceAddress.postcode.trim() ? tk.line : tk.accent, color: tk.ink }} />
+          <div className="mt-1 text-[12px] font-bold" aria-live="polite">
+            {pcState.status === "checking" && <span style={{ color: tk.muted }}>{tr("p7ck.pcChecking")}</span>}
+            {pcState.status === "ok" && <span style={{ color: "#0f7a43" }}>{pcState.area ? tr("p7ck.pcOk", { pc: pcState.pc ?? "", area: pcState.area }) : tr("p7ck.pcOkNoArea", { pc: pcState.pc ?? "" })}</span>}
+            {pcState.status === "bad" && <span style={{ color: "#dc2626" }}>{pcState.msg}</span>}
+            {(pcState.status === "idle") && <span style={{ color: tk.muted }}>{serviceAddress.postcode.trim() ? (addressPrefilled ? tr("p7ck.addrPrefilled") : tr("p7ck.addrWhere")) : tr("p7ck.addrNeed")}</span>}
+          </div>
+          <input value={serviceAddress.address} onChange={(e) => setServiceAddress((s) => ({ ...s, address: e.target.value }))} placeholder={tr("p7ck.pcStreet")}
+            className={`mt-2 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
             style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
-          <input value={serviceAddress.postcode} onChange={(e) => setServiceAddress((s) => ({ ...s, postcode: e.target.value.toUpperCase() }))} placeholder={tr("p7ck.postcodeLbl")}
-            className={`w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
-            style={{ background: tk.inputBg, borderColor: serviceAddress.postcode.trim() ? tk.line : tk.accent, color: tk.ink }} />
           <div className="mt-1 text-[11px]" style={{ color: tk.muted }}>
-            {serviceAddress.postcode.trim()
-              ? (addressPrefilled ? tr("p7ck.addrPrefilled") : tr("p7ck.addrWhere"))
-              : tr("p7ck.addrNeed")}
+            {tr("p7ck.pcWhy")}
             <div className="mt-0.5 font-bold">🔒 {tr("p9tx.hvParentAddr")}</div>
           </div>
         </div>
       )}
 
       {ckStage === "pay" && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || (parentMode && !phoneOk) || (homeVisit && !serviceAddress.postcode.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || existingClashes.length > 0 || ticketAgeBlocks || !!booking?.busy || (method === "voucher" && !!chosenVoucher && refKids.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
+        disabled={(!parentMode && !b.parent) || (parentMode && !phoneOk) || (homeVisit && (!serviceAddress.postcode.trim() || pcState.status === "bad" || pcState.status === "checking")) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || existingClashes.length > 0 || ticketAgeBlocks || !!booking?.busy || (method === "voucher" && !!chosenVoucher && refKids.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // With an onBook handler the confirm actually books — the parent
@@ -2822,7 +2855,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         {booking?.busy ? tr("p7ck.ctaBooking")
           : !parentMode && !b.parent ? tr("p7ck.findParentFirst")
           : parentMode && !phoneOk ? tr("p7ck.ctaAddPhone")
-          : homeVisit && !serviceAddress.postcode.trim() ? tr("p7ck.ctaVisitAddr")
+          : homeVisit && (!serviceAddress.postcode.trim() || pcState.status === "bad") ? tr("p7ck.ctaVisitAddr")
           : roster.length === 0 ? tr("p7ck.ctaAddChildFirst")
           : ticketAgeBlocks ? ticketAgeText(ticketAgeIssues[0])
           : unassigned > 0 ? pickPlural(tr, locale, "p7ck.ctaNobody", unassigned)
