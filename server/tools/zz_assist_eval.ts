@@ -16,6 +16,8 @@ const out = process.argv[3];
 const ONLY = process.env.ONLY ? process.env.ONLY.split("|") : null;
 
 export const QUESTIONS: string[] = [
+  "why are my refunded bookings not showing in the all income list",
+  "how do I hide refunded bookings in money in",
   "how do I get paid",
   "do I need a bank account",
   "why can't parents pay by card",

@@ -1,0 +1,32 @@
+{
+  "allLine": "Entries shown: 6 of 6\nshowing £3.40 net · received £4.30 · refunded £0.90",
+  "hasShowFilter": true,
+  "rowsAll": 5,
+  "refunded": {
+    "url": "http://localhost:3028/freelancer/invoices?show=refunded",
+    "line": "Entries shown: 3 of 6\nshowing £0.30 net · received £1.20 · refunded £0.90",
+    "rows": 3
+  },
+  "awaiting": {
+    "url": "http://localhost:3028/freelancer/invoices?show=awaiting",
+    "line": "Entries shown: 2 of 6\nshowing £0.30 net · received £0.60 · refunded £0.30",
+    "rows": 2
+  },
+  "received": {
+    "url": "http://localhost:3028/freelancer/invoices?show=received",
+    "line": "Entries shown: 4 of 6\nshowing £3.40 net · received £3.70 · refunded £0.30",
+    "rows": 3
+  },
+  "urlAfterAll": "http://localhost:3028/freelancer/invoices",
+  "reloadRefunded": {
+    "url": "http://localhost:3028/freelancer/invoices?show=refunded",
+    "pressed": "true",
+    "rows": 3
+  },
+  "csv": [
+    "Date,Category,Received,Refunded,Net,Status,Refunded on,Source,Payment type,Notes,Source type",
+    "2026-10-07,Bookings,0.3,0.3,0,Refund awaiting transfer,2026-10-07,Familyak QA,Bank transfer,HVQA AK Camp muybd0px · HVQ-10313,booking",
+    "2026-10-07,Bookings,0.3,0,0.3,Refund owed,,Familyak QA,Bank transfer,HVQA AK Camp muybd0px · HVQ-10317,booking"
+  ],
+  "noSideScroll": true
+}

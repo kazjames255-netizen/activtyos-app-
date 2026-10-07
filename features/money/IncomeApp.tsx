@@ -8,6 +8,7 @@ import { withHoNet } from "@/lib/ho-net";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { bookingNetIn, bookingRefundOwed, isStandaloneInvoiceIn, ukDay } from "@/features/money/bookingIncome";
+import { bookingMoney, matchesShow, sumRows, REFUND_STATE_CSV, SHOW_FILTERS, type BookingMoney, type ShowFilter } from "@/features/money/incomeRows";
 import type { Booking as FullBooking } from "@/features/bookings/types";
 import { Card } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
@@ -23,7 +24,7 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 
 type Repeat = "weekly" | "fortnightly" | "monthly";
-interface Income { id: string; date: string; category: string; amount: number; source?: string; notes?: string; method?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; virtual?: boolean; listingId?: string }
+interface Income { id: string; date: string; category: string; amount: number; source?: string; notes?: string; method?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; virtual?: boolean; listingId?: string; money?: BookingMoney }
 interface Payload { items: Income[]; summary: { total: number; count: number; byCategory: Record<string, number> } }
 interface Invoice { id: string; customerName: string; reference?: string; amount: number; date: string; dueDate?: string; status: string; paidAt?: string; paidVia?: "link" | "manual"; overdue?: boolean; bookingSettledAt?: string }
 interface InvPayload { items: Invoice[] }
@@ -128,6 +129,18 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [sort, setSort] = useState<Sort>("date");
+  // Show: All / Received / Refunded / Awaiting transfer. Kept in the page address (?show=) like a link you can share.
+  const [show, setShow] = useState<ShowFilter>(() => {
+    if (typeof window === "undefined") return "all";
+    const v = new URLSearchParams(window.location.search).get("show");
+    return (SHOW_FILTERS as string[]).includes(v ?? "") ? (v as ShowFilter) : "all";
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const u = new URL(window.location.href);
+    if (show === "all") u.searchParams.delete("show"); else u.searchParams.set("show", show);
+    if (u.href !== window.location.href) window.history.replaceState(null, "", u.href);
+  }, [show]);
 
   const hoScope = useHoScope(); // head office: read only this network's own money
   const refresh = useCallback(() => {
@@ -164,15 +177,14 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   // Money in from bookings taken through the platform — read-only rows, tagged
   // with the payment method so the by-type breakdown works. Dated by when the
   // booking was taken; amountPaid wins over the headline amount.
-  const bookingRows = useMemo<Income[]>(() => bookings
-    .map((b) => {
-      // Same rule as the Dashboard's "Income collected" (collectedNet): received
-      // minus refunded — a refunded booking isn't money in (acceptance d18s4).
-      const { net, back } = bookingNetIn(b as unknown as FullBooking);
-      return { b, paid: net, back, owed: bookingRefundOwed(b as unknown as FullBooking) };
-    })
-    .filter(({ paid }) => paid > 0)
-    .map(({ b, paid, back, owed }) => ({ id: `bk-${b.ref}`, date: ukDay(b.createdAt || ""), category: BOOKINGS_CAT, amount: paid, source: b.booker || b.listing, notes: [b.listing, b.ref, back > 0 ? t("p8fin.inRefunded", { amount: `£${back.toFixed(2)}` }) : "", owed > 0 ? t("p8fin.inRefundOwed", { amount: `£${owed.toFixed(2)}` }) : ""].filter(Boolean).join(" · "), method: normaliseMethod(b.method), virtual: true, listingId: b.listingId })), [bookings, t]);
+  // Every booking that RECEIVED money is a row. The ones still holding money (net > 0) feed the tiles and analytics; the ones refunded back to £0
+  // are listed too (net £0, struck-through received amount) so the list explains the Refunded figure instead of silently dropping them.
+  const bookingRowsAll = useMemo<Income[]>(() => bookings
+    .map((b) => ({ b, m: bookingMoney(b as unknown as FullBooking) }))
+    .filter((x): x is { b: (typeof bookings)[number]; m: BookingMoney } => !!x.m)
+    .map(({ b, m }) => ({ id: `bk-${b.ref}`, date: ukDay(b.createdAt || ""), category: BOOKINGS_CAT, amount: m.net, source: b.booker || b.listing, notes: [b.listing, b.ref].filter(Boolean).join(" · "), method: normaliseMethod(b.method), virtual: true, listingId: b.listingId, money: m })), [bookings]);
+  const bookingRows = useMemo<Income[]>(() => bookingRowsAll.filter((x) => x.amount > 0), [bookingRowsAll]);
+  const refundedZeroRows = useMemo<Income[]>(() => bookingRowsAll.filter((x) => x.amount <= 0), [bookingRowsAll]);
 
   // Paid invoices ARE money in — folded in as read-only rows so Income shows the
   // whole picture without you re-keying them. Dated by when they were paid.
@@ -183,6 +195,8 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     .map((v) => ({ id: `inv-${v.id}`, date: ukDay(v.paidAt || v.date || ""), category: INVOICE_CAT, amount: v.amount, source: v.customerName, notes: v.reference ? t("p8fin.inInvoiceRef", { ref: v.reference }) : t("p8fin.mthInvoice"), method: "Invoice", virtual: true })), [invoices, t]);
 
   const allItems = useMemo(() => [...bookingRows, ...invoiceRows, ...logged], [bookingRows, invoiceRows, logged]);
+  // The All income list = the rows above PLUS the bookings refunded back to £0 (net £0, so no tile or total moves).
+  const ledgerItems = useMemo(() => [...allItems, ...refundedZeroRows], [allItems, refundedZeroRows]);
 
   // ── Analytics ──
   // Trend chart — daily buckets for the short windows, monthly for the long ones.
@@ -274,8 +288,9 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    const rows = allItems.filter((x) => {
+    const rows = ledgerItems.filter((x) => {
       const d = x.date || "";
+      if (!matchesShow({ money: x.money, amount: x.amount }, show)) return false;
       if (catFilter !== "all" && (x.category || "Other") !== catFilter) return false;
       if (range === "month" && d.slice(0, 7) !== thisMonthKey) return false;
       if (range === "lastmonth" && d.slice(0, 7) !== lastMonthKey) return false;
@@ -290,10 +305,12 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
       amount: (a, b) => b.amount - a.amount, amountAsc: (a, b) => a.amount - b.amount,
     };
     return [...rows].sort(cmp[sort]);
-  }, [allItems, q, catFilter, range, from, to, sort, thisMonthKey, lastMonthKey, thisYear]);
+  }, [ledgerItems, show, q, catFilter, range, from, to, sort, thisMonthKey, lastMonthKey, thisYear]);
   const filteredTotal = filtered.reduce((s, x) => s + x.amount, 0);
-  const activeFilters = (catFilter !== "all" ? 1 : 0) + (range !== "all" ? 1 : 0) + (from ? 1 : 0) + (to ? 1 : 0) + (q.trim() ? 1 : 0);
-  const clearFilters = () => { setQ(""); setCatFilter("all"); setRange("all"); setFrom(""); setTo(""); };
+  // Received / refunded / net of exactly the rows on screen (net is what every tile calls "after refunds").
+  const shownSum = useMemo(() => sumRows(filtered.map((x) => ({ amount: x.amount, received: x.money ? x.money.got : x.amount, refunded: x.money ? x.money.back : 0 }))), [filtered]);
+  const activeFilters = (show !== "all" ? 1 : 0) + (catFilter !== "all" ? 1 : 0) + (range !== "all" ? 1 : 0) + (from ? 1 : 0) + (to ? 1 : 0) + (q.trim() ? 1 : 0);
+  const clearFilters = () => { setShow("all"); setQ(""); setCatFilter("all"); setRange("all"); setFrom(""); setTo(""); };
 
   const recent = useMemo(() => [...allItems].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 5), [allItems]);
   const catOptions = useMemo(() => Array.from(new Set([...CATEGORIES, ...logged.map((x) => x.category)])), [logged]);
@@ -330,8 +347,8 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     try { await del(`/api/income/series/${encodeURIComponent(editor.seriesId)}`); setEditor(null); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("p8fin.gFailed")); }
   }
   function exportCsv() {
-    const header = ["Date", "Category", "Amount", "Source", "Payment type", "Notes", "Source type"];
-    const rows = filtered.map((x) => [x.date, x.category, x.amount, x.source ?? "", x.method ?? "", x.notes ?? "", x.category === BOOKINGS_CAT ? "booking" : x.virtual ? "paid invoice" : "logged"]);
+    const header = ["Date", "Category", "Received", "Refunded", "Net", "Status", "Refunded on", "Source", "Payment type", "Notes", "Source type"];
+    const rows = filtered.map((x) => [x.date, x.category, x.money ? x.money.got : x.amount, x.money ? x.money.back : 0, x.amount, x.money ? REFUND_STATE_CSV[x.money.state] : "Paid", x.money?.refundedOn ?? "", x.source ?? "", x.method ?? "", x.notes ?? "", x.category === BOOKINGS_CAT ? "booking" : x.virtual ? "paid invoice" : "logged"]);
     const csv = csvText([header, ...rows]); // formula-safe: Source is the parent-typed booker name
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `income-${range}-${todayIso()}.csv`; a.click(); URL.revokeObjectURL(url);
@@ -612,6 +629,14 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{t("p8fin.inShowLbl")}</span>
+              <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold" role="group" aria-label={t("p8fin.inShowLbl")}>
+                {([["all", t("p8fin.inShowAll")], ["received", t("p8fin.inShowReceived")], ["refunded", t("p8fin.inShowRefunded")], ["awaiting", t("p8fin.inShowAwaiting")]] as const).map(([k, label]) => (
+                  <button key={k} type="button" aria-pressed={show === k} onClick={() => setShow(k)} className="px-3 py-1.5 transition-colors" style={show === k ? { background: ACCENT, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
                 {([["all", t("p8fin.exRangeAll")], ["month", t("p8fin.exRangeMonth")], ["lastmonth", t("p8fin.exRangeLast")], ["year", t("p8fin.exRangeYear")]] as const).map(([k, label]) => (
                   <button key={k} onClick={() => setRange(k)} className="px-3 py-1.5 transition-colors" style={range === k ? { background: ACCENT, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
@@ -629,19 +654,31 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
           </Card>
 
           <div className="flex items-baseline justify-between px-1 text-[12px] text-[var(--ink-3)]">
-            <span>{rich(t("p8fin.inEntriesOf", { n: filtered.length, count }))}</span>
-            <span>{rich(t("p8fin.exShowingTotal", { amount: money(filteredTotal) }))}</span>
+            <span>{rich(t("p8fin.inEntriesOf", { n: filtered.length, count: ledgerItems.length }))}</span>
+            <span>{rich(t("p8fin.inShowingNet", { net: money(shownSum.net), got: money(shownSum.received), back: money(shownSum.refunded) }))}</span>
           </div>
 
           {filtered.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8fin.exNoMatch")}</Card> : (
             <div className="flex flex-col gap-1.5">
               {filtered.map((x) => (
-                <Card key={x.id} className={`flex flex-wrap items-center gap-2.5 p-2.5 ${x.virtual ? "bg-[var(--panel)]" : ""}`}>
+                <Card key={x.id} className={`flex flex-wrap items-center gap-2.5 p-2.5 ${x.virtual ? "bg-[var(--panel)]" : ""} ${x.money && x.money.net <= 0.004 ? "opacity-75" : ""}`}>
                   <span className="w-[104px] flex-none text-[11.5px] text-[var(--ink-3)]">{fmtDay(x.date)}</span>
                   <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{icon(x.category)} {catLabel(t, x.category)}</span>
                   {x.category === BOOKINGS_CAT ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#16306e]">🎟️ {x.method ? methodLabel(t, x.method) : t("p8fin.inBookingWord")}</span> : x.virtual ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#16306e]">{t("p8fin.inInvoiceBadge")}</span> : x.seriesId ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#16306e]" title={x.repeatUntil ? repeatUntilTip(x.repeat, fmtDay(x.repeatUntil)) : t("p8fin.exRepeating")}>🔁 {repeatWord(x.repeat)}</span> : null}
                   <span className="min-w-0 flex-1 truncate text-[12.5px]">{x.source || <span className="text-[var(--ink-3)]">—</span>}{x.notes ? <span className="text-[var(--ink-3)]"> · {x.notes}</span> : ""}</span>
-                  <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(x.amount)}</span>
+                  {x.money ? (
+                    <span className="flex flex-none flex-wrap items-center justify-end gap-x-2 gap-y-0.5 text-end">
+                      {x.money.state === "none" && <span className="rounded-md bg-[#e7f8ee] px-1.5 py-0.5 text-[10.5px] font-bold text-[#0f6b34]">{t("p8fin.inStPaid")}</span>}
+                      {x.money.state === "part" && <span className="rounded-md bg-[#fdf3d8] px-1.5 py-0.5 text-[10.5px] font-bold text-[#8a5300]">{t("p8fin.inStPart", { amount: money(x.money.back) })}</span>}
+                      {x.money.state === "full" && <span className="rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">{t("p8fin.inStFull")}</span>}
+                      {x.money.state === "awaiting" && <span className="rounded-md bg-[#fdf3d8] px-1.5 py-0.5 text-[10.5px] font-bold text-[#8a5300]">{t("p8fin.inStAwaiting")}</span>}
+                      {x.money.state === "owed" && <span className="rounded-md bg-[#fdf3d8] px-1.5 py-0.5 text-[10.5px] font-bold text-[#8a5300]">{t("p8fin.inRefundOwed", { amount: money(x.money.owed) })}</span>}
+                      {x.money.back > 0.004 && <span className="text-[11px] tabular-nums text-[var(--ink-3)] line-through">{money(x.money.got)}</span>}
+                      {x.money.back > 0.004 && <span className="text-[12px] font-bold tabular-nums text-[#c02636]">-{money(x.money.back)}</span>}
+                      {x.money.refundedOn && <span className="text-[10.5px] text-[var(--ink-3)]">{t("p8fin.inRefundedOn", { date: fmtDay(x.money.refundedOn) })}</span>}
+                      <span className="w-[64px] text-[13px] font-extrabold tabular-nums">{money(x.amount)}</span>
+                    </span>
+                  ) : <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(x.amount)}</span>}
                   {x.virtual ? <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{t("p8fin.exAuto")}</span> : (
                     <>
                       <button type="button" onClick={() => openEdit(x)} className="flex-none text-[var(--ink-3)] hover:text-[#16306e]" aria-label={t("p8fin.gEdit")}>✎</button>
