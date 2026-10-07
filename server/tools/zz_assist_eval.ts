@@ -97,6 +97,12 @@ export const QUESTIONS: string[] = [
   "can parents move their own dates without me approving, and how do I turn that off",
   "the first card payment says nothing was charged, is something broken, and when does the money reach me",
   "how many reminder emails does a parent get for a 30 day camp, and where do their replies go",
+  "a parent booked a manual approval activity and paid by card, is their money taken straight away",
+  "I have not approved a card booking request for a week, what happens",
+  "I declined a booking, what does the parent see, and will it show on their bank statement",
+  "why is there no Mark paid button on a booking that needs approval",
+  "a parent booked two children on one card and I approved just one, what happens to the other",
+  "what emails and notifications do I and the parent get when a manual approval card booking comes in and I approve it",
 ];
 
 async function token(email: string, password: string) {
