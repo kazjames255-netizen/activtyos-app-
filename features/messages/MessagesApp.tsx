@@ -884,7 +884,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
               {/* Legend — blue is you, pink is the other side, at a glance. */}
               <div className="flex items-center gap-3 border-b border-[var(--line)] px-3.5 py-1.5 text-[10px] font-bold text-[var(--ink-3)]">
                 <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "var(--brand)" }} /> {tr("comms.you")}</span>
-                <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#ee1f63" }} /> {mine === "operator" ? tr("comms.customer") : tr("comms.provider")}</span>
+                <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "var(--msg-theirs)" }} /> {mine === "operator" ? tr("comms.customer") : tr("comms.provider")}</span>
               </div>
               <div className="flex-1 overflow-y-auto p-3.5">
                 <div className="flex flex-col gap-2">
@@ -892,7 +892,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                     const isMine = m.from === mine;
                     const label = isMine ? tr("comms.you") : (m.senderName || (mine === "operator" ? tr("comms.customer") : tr("comms.provider")));
                     return (
-                      <div key={m.id} className={`max-w-[80%] rounded-2xl px-3 py-1.5 text-[13px] text-white ${isMine ? "self-end" : "self-start"}`} style={{ background: isMine ? "var(--brand)" : "#ee1f63" }}>
+                      <div key={m.id} className={`max-w-[80%] rounded-2xl px-3 py-1.5 text-[13px] text-white ${isMine ? "self-end" : "self-start"}`} style={{ background: isMine ? "var(--brand)" : "var(--msg-theirs)" }}>
                         <div className="whitespace-pre-wrap [overflow-wrap:anywhere]">{m.body}</div>
                         {m.coupon && <CouponChip coupon={m.coupon} />}
                         <div className="mt-0.5 text-[10px] text-white/75">{label} · {when(m.createdAt, dateLoc)}</div>
