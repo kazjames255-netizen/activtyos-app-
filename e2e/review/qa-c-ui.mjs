@@ -1,0 +1,33 @@
+import { chromium } from "@playwright/test";
+const b = await chromium.launch();
+const mk = (role, w = 1440) => b.newContext({ storageState: `e2e/.auth/${role}.json`, viewport: { width: w, height: 900 }, baseURL: "http://localhost:3013" });
+const co = await (await mk("company")).newPage();
+await co.goto("/company/messages", { waitUntil: "load" });
+await co.waitForTimeout(4000);
+const badge = async (p) => (await p.locator("aside, nav").first().innerText()).match(/Messages\s*(\d+)?/)?.[0];
+console.log("sidebar before:", await badge(co));
+await co.getByText(/QA subject/).first().click();
+await co.waitForTimeout(3000);
+console.log("sidebar after open:", await badge(co));
+await co.screenshot({ path: "e2e/review/qa-c-shots/co-thread-open.png" });
+// live: parent sends, operator sees without reload
+const pa = await (await mk("parent")).newPage();
+await pa.goto("/custdash/messages", { waitUntil: "load" });
+await pa.waitForTimeout(4000);
+await pa.screenshot({ path: "e2e/review/qa-c-shots/pa-thread-list.png" });
+const live = `live-${Date.now()}`;
+await pa.getByText(/QA subject|Parent question/).first().click();
+await pa.waitForTimeout(2000);
+await pa.getByPlaceholder(/Write|Type|message/i).last().fill(live);
+await pa.getByRole("button", { name: /^Send/ }).last().click();
+await co.waitForTimeout(6000);
+console.log("operator sees live parent msg:", await co.getByText(live).count());
+console.log("sidebar after live:", await badge(co));
+await co.screenshot({ path: "e2e/review/qa-c-shots/co-live.png" });
+// trips: planner + operator view updates when parent consents (already done by api). Open planner at 390
+const m = await (await mk("company", 390)).newPage();
+await m.goto("/company/trips", { waitUntil: "load" }); await m.waitForTimeout(4000);
+await m.getByRole("button", { name: /Open planner/ }).first().click(); await m.waitForTimeout(3000);
+await m.screenshot({ path: "e2e/review/qa-c-shots/co-planner-390.png" });
+console.log("planner overflow:", await m.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2));
+await b.close();
