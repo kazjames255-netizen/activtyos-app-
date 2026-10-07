@@ -16,7 +16,6 @@ import { bellBody, bellMoney, bellTitle, paymentType } from "./bellText";
 import { bookingRefOfKey, entryFor, registerRows } from "./registerRows";
 import type { Booking } from "../../../features/bookings/types";
 import { kitNamesSentence, kitReminderKey, kitUnticked, type KitBooking } from "../../../features/bookings/addons";
-import { bellBody, bellTitle } from "./bellText";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Every time-based behaviour in the platform, as scheduler sweeps (see
