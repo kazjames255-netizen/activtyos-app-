@@ -258,7 +258,7 @@ export interface Booking {
    *  to the parent's saved account address at checkout but is editable there
    *  (e.g. a grandparent's house) — validated against the listing's coverage
    *  area before the booking is allowed to complete. Absent on venue bookings. */
-  serviceAddress?: { address: string; postcode: string; /** Town / area the server recognised the postcode as (set server-side, never from the browser). */ area?: string };
+  serviceAddress?: { address: string; postcode: string; /** Town / area the server recognised the postcode as (set server-side, never from the browser). */ area?: string; /** The family's note on how to find them (parking, gate codes...). Provider-facing only. */ notes?: string };
 
   /** The booking family's own postcode, copied from their account at checkout
    *  (GET /api/me / account settings) — NOT the home-visit service address

@@ -84,6 +84,7 @@ import { bookingCutoffLabel, cutoffHours, pastCutoff } from "../lib/bookingCutof
 import { customerAreaOn } from "../lib/customerArea";
 import { NOT_TAKING_BOOKINGS, takesNewBookings } from "../middleware/subscription";
 import { checkCoverage, type CoverageArea } from "../lib/coverageArea";
+import { cleanVisitNotes } from "../lib/visitNotes";
 import { lookupPostcode } from "../lib/postcodeLookup";
 import { TFC_SCHEME, canonicalMethod, isTfcMethod, methodAllowed, methodKey, splitTfc } from "../lib/payMethods";
 import { attachChildcareRefs, childcareOf, childcareRoute, type ChildcareBooking } from "../lib/childcare";
@@ -195,7 +196,7 @@ const basketSchema = z.object({
   // against the listing's coverageArea server-side before the booking is
   // allowed to complete — see checkServiceAddress below.
   serviceAddress: z
-    .object({ address: z.string().trim().max(300), postcode: z.string().trim().max(16) })
+    .object({ address: z.string().trim().max(300), postcode: z.string().trim().max(16), notes: z.string().max(2000).optional() })
     .optional(),
 });
 const legacySchema = z.object({
@@ -206,7 +207,7 @@ const legacySchema = z.object({
   age: z.number().int().nonnegative(),
   method: z.string().min(1),
   serviceAddress: z
-    .object({ address: z.string().trim().max(300), postcode: z.string().trim().max(16) })
+    .object({ address: z.string().trim().max(300), postcode: z.string().trim().max(16), notes: z.string().max(2000).optional() })
     .optional(),
 });
 
@@ -903,7 +904,7 @@ my.post("/bookings", async (req, res) => {
   // happens: what checkout sent, else the family's saved account address —
   // then validate the postcode against the provider's coverage area. A booking
   // that fails this never gets created.
-  let serviceAddress: { address: string; postcode: string; area?: string } | undefined = input.serviceAddress;
+  let serviceAddress: { address: string; postcode: string; area?: string; notes?: string } | undefined = input.serviceAddress;
   if (listing.deliveryMode === "home-visit" || listing.deliveryMode === "both") {
     if (!serviceAddress?.postcode?.trim() && familyUserDoc?.postcode?.trim()) {
       serviceAddress = { address: familyUserDoc.address ?? "", postcode: familyUserDoc.postcode };
@@ -924,7 +925,8 @@ my.post("/bookings", async (req, res) => {
       res.status(409).json({ error: coverage.reason });
       return;
     }
-    serviceAddress = { address: serviceAddress.address ?? "", postcode: looked.postcode, ...(looked.ok && looked.area ? { area: looked.area } : {}) };
+    const accessNotes = cleanVisitNotes(serviceAddress.notes);
+    serviceAddress = { address: serviceAddress.address ?? "", postcode: looked.postcode, ...(looked.ok && looked.area ? { area: looked.area } : {}), ...(accessNotes ? { notes: accessNotes } : {}) };
   } else {
     serviceAddress = undefined; // a venue booking never carries one
   }
@@ -2173,6 +2175,7 @@ my.post("/bookings", async (req, res) => {
           sessions,
           attendees,
           location,
+          accessNotes: visit?.notes,
           cardAmount,
           childcareAmount,
           childcareLabel,

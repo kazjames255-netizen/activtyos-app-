@@ -239,7 +239,7 @@ registers.get("/", async (req, res) => {
         email: b.email ?? "",
         phone: realPhone(b.phone) || phoneByEmail.get(b.email ?? "") || "",
         // A home-visit booking: where the staff member has to go (the family's own address for that session).
-        ...(b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) ? { serviceAddress: visitAddressLabel(b.serviceAddress) } : {}),
+        ...(b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) ? { serviceAddress: visitAddressLabel(b.serviceAddress) + (b.serviceAddress.notes ? ` — Access: ${b.serviceAddress.notes.replace(/\s+/g, " ")}` : "") } : {}),
         note: b.note ?? "",
         // This child's extras for THIS day only: a sibling's T-shirt, or a lunch bought for other days, must not show here.
         addons: childExtrasForDay(b.addonLines, b.addons, r.name, date),

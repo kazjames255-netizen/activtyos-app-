@@ -512,7 +512,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   )}
 
                   {b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) && (
-                    <span className="basis-full text-[12.5px] font-bold text-[#0b5a3f]">🚗 {t("p9tx.hvVisitAt")} {visitAddressLabel(b.serviceAddress)}</span>
+                    <span className="basis-full text-[12.5px] font-bold text-[#0b5a3f]">🚗 {t("p9tx.hvVisitAt")} {visitAddressLabel(b.serviceAddress)}{b.serviceAddress.notes ? <span className="font-semibold text-[var(--ink-2)]"> · 📝 {b.serviceAddress.notes.replace(/\s+/g, " ").slice(0, 70)}{b.serviceAddress.notes.length > 70 ? "…" : ""}</span> : null}</span>
                   )}
                   {/* Contextual actions, pushed to the right */}
                   <span className="ms-auto flex flex-wrap items-center justify-end gap-1.5">

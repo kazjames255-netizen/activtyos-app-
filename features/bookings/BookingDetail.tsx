@@ -864,6 +864,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         <DefRow label={t("p7bd.lblListing")} value={b.listing} />
         <DefRow label={t("p7bd.lblPass")} value={b.pass} />
         {b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) && <DefRow label={"🚗 " + t("p9tx.hvVisitAt")} value={visitAddressLabel(b.serviceAddress)} />}
+        {b.serviceAddress?.notes && <DefRow label={"📝 " + t("p7ck.notesLabel").replace(/\s*\(.*\)\s*$/, "")} value={b.serviceAddress.notes} />}
         <DefRow label={t("p7bd.lblTicket")} value={b.ticket} />
         {b.addons && b.addons.length > 0 && <DefRow label={t("p7bd.lblAddons")} value={addonLinesFor(b).join(", ")} />}
 

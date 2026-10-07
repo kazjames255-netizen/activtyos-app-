@@ -1075,6 +1075,8 @@ export interface NewBookingEmailArgs {
   attendees: NewBookingAttendee[];
   /** Venue name + address, if resolvable. */
   location?: string;
+  /** Home visit: the family's own "how to find us" note (parking, gate codes...). Provider email only. */
+  accessNotes?: string;
   cardAmount: number;
   childcareAmount: number;
   childcareLabel?: string; // e.g. "Tax-Free Childcare" / "Childcare vouchers"
@@ -1186,6 +1188,7 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
           ${a.pass ? detailRow("Listing", `${escapeHtml(a.listingName)}<br><span style="color:#8a86a3;font-size:13px">${escapeHtml(a.pass)}</span>`) : detailRow("Listing", escapeHtml(a.listingName))}
           ${detailRow("Dates & times", sessionsHtml)}
           ${a.location ? detailRow("Location", escapeHtml(a.location)) : ""}
+          ${a.accessNotes ? detailRow("How to find the family (their note)", escapeHtml(a.accessNotes).replace(/\n/g, "<br>")) : ""}
         </table>
 
         <div style="font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#8a86a3;margin:20px 0 10px">Attendees &amp; profile notes</div>
