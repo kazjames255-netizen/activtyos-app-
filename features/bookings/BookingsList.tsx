@@ -503,7 +503,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   <span className="text-[var(--ink-3)]">·</span>
                   <span className="text-[12.5px] font-semibold text-[var(--ink-2)]"><span className="num font-extrabold text-[var(--ink)]">{bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))}</span> <span className="text-[var(--ink-3)]">· {pickPlural(t, locale, "p7bk.sessN", sessionCount(b))} · {pickPlural(t, locale, "p7bk.kidN", att)}</span></span>
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay, b.status).bg, color: payTone(b.pay, b.status).fg }}>{w(payLabelFor(b))}</span>
+                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay, b.status).bg, color: payTone(b.pay, b.status).fg }}>{b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : b.status === "Approval needed" && b.cardHold?.state === "awaiting" ? t("p8lst.holdWaitBadge") : w(payLabelFor(b))}</span>
                     <span className="text-[11px] font-semibold text-[var(--ink-3)]">{w(payMethodLabel(b))}</span>
                   </span>
                   {b.status === "Waitlisted" && b.waitlist && b.waitlist.length > 0 && (
@@ -519,7 +519,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                       <button onClick={(e) => { e.stopPropagation(); askConfirm(b.ref, { kind: "paid" }); }} title={t("p7bkl.confirmVoucherTip")}
                         className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{pendingPayActionT(t, w, b)}</button>
                     )}
-                    {(b.pay === "Unpaid" || b.pay === "Invoice sent") && !off && b.status !== "Cancelled" && b.status !== "Declined" && !waitingForPlace(b.status) && (
+                    {(b.pay === "Unpaid" || b.pay === "Invoice sent") && !off && b.status !== "Cancelled" && b.status !== "Declined" && !waitingForPlace(b.status) && !(b.status === "Approval needed" && (b.cardHold?.state === "held" || b.cardHold?.state === "awaiting")) && (
                       <button onClick={(e) => { e.stopPropagation(); askConfirm(b.ref, { kind: "paid" }); }}
                         className="flex-none whitespace-nowrap rounded-full bg-[#15b364] px-4 py-[6px] text-[12px] font-extrabold text-white shadow-[0_6px_16px_-6px_rgba(21,179,100,.7)] ring-2 ring-[#15b364]/30 hover:brightness-110">{"\u2713 "}{t("p7bd.markPaid")}</button>
                     )}
