@@ -203,6 +203,37 @@ export function rangeDays(key: "today" | "yesterday" | "week"): { from: string; 
   return { from: iso(w), to: today };
 }
 
+/** The EVENT-date quick ranges (when the child is actually in, not when the booking was taken): today, tomorrow, this week (Mon-Sun),
+ *  next 7 days, next 30 days. Local calendar days, as ISO. */
+export type EventRangeKey = "today" | "tomorrow" | "week" | "next7" | "next30";
+export function eventRange(key: EventRangeKey, now: Date = new Date()): { from: string; to: string } {
+  const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  const add = (n: number) => { const x = new Date(now.getFullYear(), now.getMonth(), now.getDate() + n); return iso(x); };
+  if (key === "today") return { from: add(0), to: add(0) };
+  if (key === "tomorrow") return { from: add(1), to: add(1) };
+  if (key === "next7") return { from: add(0), to: add(6) };
+  if (key === "next30") return { from: add(0), to: add(29) };
+  const dow = (now.getDay() + 6) % 7; // Monday = 0
+  return { from: add(-dow), to: add(6 - dow) };
+}
+
+/** A typed event date is only used once its year is sane (2020 .. 3 years ahead), so a half-typed year never filters or flickers. */
+export function sensibleEventDate(iso: string, now: Date = new Date()): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return false;
+  const y = Number(m[1]);
+  return y >= 2020 && y <= now.getFullYear() + 3 && !Number.isNaN(new Date(`${iso}T00:00:00Z`).getTime());
+}
+
+/** The active event-date window from the quick range / the "Between" boxes, or null when no event filter is set. */
+export function eventWindow(key: EventRangeKey | "", from: string, to: string, now: Date = new Date()): { from: string; to: string } | null {
+  if (key) return eventRange(key, now);
+  const f = sensibleEventDate(from, now) ? from : "";
+  const t = sensibleEventDate(to, now) ? to : "";
+  if (!f && !t) return null;
+  return { from: f, to: t };
+}
+
 /** Does any day of this booking fall inside the range? Blank ends are open. */
 export function inDateRange(b: Booking, from: string, to: string): boolean {
   if (!from && !to) return true;

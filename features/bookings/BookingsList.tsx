@@ -1,5 +1,6 @@
 "use client";
 
+import { fixYear } from "@/features/listings/wizardRules";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n, useT, useWord, tNow } from "@/lib/i18n/provider";
@@ -24,6 +25,10 @@ import {
   byNewest,
   rangeDays,
   runsOn,
+  inDateRange,
+  eventWindow,
+  sensibleEventDate,
+  type EventRangeKey,
   sessionCount,
   bookingDateSummary,
   visitAddressLabel,
@@ -130,6 +135,11 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   const setSeason = useBookingsStore((s) => s.setSeasonFilter);
   const [exporting, setExporting] = useState(false);
   // Sub-filter by how they are paying, under the "Unpaid / invoiced" and "Unreconciled" tabs.
+  // EVENT date (when the child is in), separate from BOOKED (when the booking was taken). Quick ranges + a "between" pair; "On this day" (store) stays.
+  const [evKey, setEvKey] = useState<EventRangeKey | "">("");
+  const [evFrom, setEvFrom] = useState("");
+  const [evTo, setEvTo] = useState("");
+  const evWin = useMemo(() => eventWindow(evKey, evFrom, evTo), [evKey, evFrom, evTo]);
   const [payCat, setPayCat] = useState("");
   useEffect(() => { setPayCat(""); }, [filter]);
 
@@ -154,13 +164,14 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
         // A booking is "in" a season when its listing's seasonId matches.
         (!seasonObj || (!!b.listingId && listingSeason[b.listingId] === seasonObj.id)) &&
         (!bounds || (bookedOn(b) >= bounds.from && bookedOn(b) <= bounds.to)) &&
-        runsOn(b, day),
+        runsOn(b, day) &&
+        (!evWin || inDateRange(b, evWin.from, evWin.to)),
     )
     // Newest first, always — the one that just came in is the one you haven't
     // seen. Sorted here rather than relying on whatever order the API returns.
     .sort(byNewest),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [bookings, filter, query, payCat, listing, seasonObj, listingSeason, bounds, day]);
+  [bookings, filter, query, payCat, listing, seasonObj, listingSeason, bounds, day, evWin]);
 
   // Counts come from what the status tab and search already left, so a
   // listing showing "(3)" means three you can actually get to.
@@ -327,6 +338,32 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
             </button>
           ))}
 
+          {/* EVENT DATE: when the child is actually in (the BOOKED buttons above are when the booking came in). */}
+          <span className="ms-2 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--ink-3)]">{t("p7bkl.eventLbl")}</span>
+          {(
+            [
+              ["today", t("p7bkl.today")],
+              ["tomorrow", t("p7bkl.tomorrow")],
+              ["week", t("p7bkl.thisWeek")],
+              ["next7", t("p7bkl.next7")],
+              ["next30", t("p7bkl.next30")],
+            ] as [EventRangeKey, string][]
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => { setEvKey(evKey === k ? "" : k); setEvFrom(""); setEvTo(""); }}
+              className="h-8 rounded-full border px-3 text-[12.5px] font-semibold transition-colors"
+              style={
+                evKey === k
+                  ? { background: "var(--brand)", borderColor: "var(--brand)", color: "#fff" }
+                  : { background: "var(--surface)", borderColor: "var(--line)", color: "var(--ink)" }
+              }
+            >
+              {label}
+            </button>
+          ))}
+
           <Pill active={!!day} onClear={() => setDay("")}>
             <span
               className="whitespace-nowrap text-[12.5px] font-semibold"
@@ -343,7 +380,33 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
             />
           </Pill>
 
-          {(listing || day || range || season) && (
+          <Pill active={!!(evFrom || evTo)} onClear={() => { setEvFrom(""); setEvTo(""); }}>
+            <span className="whitespace-nowrap text-[12.5px] font-semibold" style={{ color: evFrom || evTo ? "#fff" : "var(--ink)" }}>{t("p7bkl.between")}</span>
+            <input
+              type="date"
+              min="2020-01-01"
+              value={evFrom}
+              onChange={(e) => { setEvFrom(e.target.value); setEvKey(""); }}
+              onBlur={(e) => setEvFrom(fixYear(e.target.value))}
+              className="h-full w-[112px] border-0 bg-transparent text-[12.5px] font-semibold outline-none"
+              style={{ color: evFrom || evTo ? "#fff" : "var(--ink)", colorScheme: evFrom || evTo ? "dark" : "light" }}
+            />
+            <span className="whitespace-nowrap text-[12.5px] font-semibold" style={{ color: evFrom || evTo ? "#fff" : "var(--ink)" }}>{t("p7bkl.betweenTo")}</span>
+            <input
+              type="date"
+              min="2020-01-01"
+              value={evTo}
+              onChange={(e) => { setEvTo(e.target.value); setEvKey(""); }}
+              onBlur={(e) => setEvTo(fixYear(e.target.value))}
+              className="h-full w-[112px] border-0 bg-transparent text-[12.5px] font-semibold outline-none"
+              style={{ color: evFrom || evTo ? "#fff" : "var(--ink)", colorScheme: evFrom || evTo ? "dark" : "light" }}
+            />
+          </Pill>
+          {((evFrom && !sensibleEventDate(evFrom)) || (evTo && !sensibleEventDate(evTo))) && (
+            <span className="text-[11.5px] font-bold text-[#c02636]">{t("p7bkl.badYear")}</span>
+          )}
+
+          {(listing || day || range || season || evWin) && (
             <>
               <span className="text-[11.5px] text-[var(--ink-3)]">
                 {t("p7bkl.ofN", { a: list.length, b: inScope.length })}
@@ -360,6 +423,9 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   setDay("");
                   setRange("");
                   setSeason("");
+                  setEvKey("");
+                  setEvFrom("");
+                  setEvTo("");
                 }}
                 className="h-8 px-1 text-[11.5px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline"
               >
