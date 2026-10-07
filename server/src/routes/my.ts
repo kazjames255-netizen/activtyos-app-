@@ -32,6 +32,7 @@ import { earlyBirdScopeOf, earlyFixedUsed, claimEarlyBird } from "../lib/earlyBi
 import { mergeBookings } from "../lib/mergeBookings";
 import { ageRangeFor, isOutOfRange, passHidden, addonRefusal, isQueuedOn, cardUnpaid } from "../lib/bookingRules";
 import { wantsCardHold, releaseHolds, deadlineLabel, deadlineWarningHtml } from "../lib/cardHold";
+import { addonCount, addonShort, bookingAddonLines } from "../../../features/bookings/addons";
 import {
   resolveBundlePricing,
   type BundleDoc,
@@ -1819,7 +1820,7 @@ my.post("/bookings", async (req, res) => {
             addons: segAddons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
             // Who each extra is for, and on which days (the strings above say neither). Registers, kitchen and booking views read this so
             // one child's T-shirt size or lunch never shows against a sibling.
-            addonLines: segAddons.map((a) => ({ child: rc.name, label: a.label, price: a.price, days: a.onDays, perDay: a.perDay, ...(a.meal ? { meal: true } : {}) })),
+            addonLines: segAddons.map((a) => ({ child: rc.name, label: a.label, price: a.price, days: a.onDays, perDay: a.perDay, ...(a.meal ? { meal: true } : {}), name: a.name, ...((a as { answers?: unknown[] }).answers?.length ? { answers: (a as { answers: { label: string; value: string }[] }).answers } : {}), qty: a.perDay && !a.meal ? a.onDays.length : 1 })),
             // The ISO dates a meal was bought for on this segment — a clean
             // signal for the customer "what's being served" gate + read-out,
             // separate from the human-readable add-on strings.
@@ -3287,6 +3288,9 @@ export function notifyProviderNewBooking(ctx: ProviderNoticeCtx): void {
           // An EHCP is special-category data — never attached. The email links
           // straight to the secure /plan viewer, which re-checks access.
           ehcpFileId: str("sendPlanId"),
+          extras: bookingAddonLines({ addonLines: bookings.flatMap((b) => b.addonLines ?? []), addons: bookings.flatMap((b) => b.addons ?? []), child: bookings[0]?.child, kids: bookings.length === 1 ? bookings[0]?.kids : undefined })
+            .filter((l) => !l.child || l.child.trim().toLowerCase() === (s.name ?? "").trim().toLowerCase() || seeds.length === 1)
+            .map((l) => addonShort(l)),
         });
       }
       // Card vs childcare split — by the method chosen at checkout.
@@ -3377,7 +3381,7 @@ export function notifyProviderNewBooking(ctx: ProviderNoticeCtx): void {
         title: waitlisted ? `${firstWord(kids || bookerName)} joined the waiting list` : ctx.heldUntil ? `${kind} · ${primary.ref} · ${bookerName} — approve by ${deadlineLabel(ctx.heldUntil)}` : `${kind} · ${primary.ref} · ${bookerName}`,
         body: waitlisted
           ? `${shortWhen(primary)} · ${listing.name}`
-          : `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${bookings.find((x) => x.serviceAddress?.notes)?.serviceAddress?.notes ? ` Note: ${String(bookings.find((x) => x.serviceAddress?.notes)?.serviceAddress?.notes).replace(/\s+/g, " ").slice(0, 80)}` : ""}${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(ctx.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
+          : `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${(() => { const n = bookings.reduce((acc, x) => acc + addonCount(x), 0); return n ? ` +${n} extra${n === 1 ? "" : "s"}.` : ""; })()}${bookings.find((x) => x.serviceAddress?.notes)?.serviceAddress?.notes ? ` Note: ${String(bookings.find((x) => x.serviceAddress?.notes)?.serviceAddress?.notes).replace(/\s+/g, " ").slice(0, 80)}` : ""}${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(ctx.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
         subject: ctx.heldUntil ? `${BRAND}: approve or decline by ${deadlineLabel(ctx.heldUntil)} — ${listing.name} from ${bookerName} (${primary.ref})` : `${BRAND}: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
         href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
         ref: primary.ref,

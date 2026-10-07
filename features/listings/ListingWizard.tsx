@@ -3,6 +3,7 @@
 import { deliveryLabel } from "./delivery";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { addonLinesFor } from "@/features/bookings/helpers";
+import { addonSentences } from "@/features/bookings/addons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GoLiveModal, fetchGoLive, goLiveReady } from "@/features/billing/GoLiveModal";
 import { isPlaceholderName } from "@/lib/ownerName";
@@ -873,7 +874,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         if ((res.bookings as { cardHold?: { state?: string } }[]).some((x) => x.cardHold?.state === "awaiting")) holdCard = true;
         if (res.bookings.some((x) => x.status !== "Waitlisted")) seated = true;
         total += res.total;
-        for (const x of res.bookings as { status?: string; amount?: number; listPrice?: number; discountOff?: number; discountNames?: string[]; addons?: string[]; addonLines?: { child: string; label: string; price: number }[]; kids?: unknown[] }[]) { addonLinesFor(x).forEach((l) => extraLines.push(l)); if (x.status === "Waitlisted") waitOffer += x.amount ?? 0; listSum += x.listPrice ?? x.amount ?? 0; offSum += x.discountOff ?? 0; (x.discountNames ?? []).forEach((n) => offNames.add(n)); }
+        for (const x of res.bookings as { status?: string; amount?: number; listPrice?: number; discountOff?: number; discountNames?: string[]; addons?: string[]; addonLines?: { child: string; label: string; price: number }[]; kids?: unknown[] }[]) { addonSentences(x as never).forEach((l) => extraLines.push(l)); if (x.status === "Waitlisted") waitOffer += x.amount ?? 0; listSum += x.listPrice ?? x.amount ?? 0; offSum += x.discountOff ?? 0; (x.discountNames ?? []).forEach((n) => offNames.add(n)); }
         if (res.voucher?.details?.length) voucherDetails = res.voucher.details;
         if (res.bank) bankPay = res.bank;
       }

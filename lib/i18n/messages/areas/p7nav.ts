@@ -12,6 +12,7 @@ export default fromRows({
   blocks: ["Blocks", "Bloki", "Blocuri", "بلاکس", "ਬਲਾਕ", "ব্লক", "الكتل", "Blocos", "Bloques", "Blocs", "Blociau"],
   bookings: ["Bookings", "Rezerwacje", "Rezervări", "بکنگز", "ਬੁਕਿੰਗਾਂ", "বুকিং", "الحجوزات", "Reservas", "Reservas", "Réservations", "Archebion"],
   families: ["Families", "Rodziny", "Familii", "خاندان", "ਪਰਿਵਾਰ", "পরিবার", "العائلات", "Famílias", "Familias", "Familles", "Teuluoedd"],
+  kit_to_prepare: ["Kit to prepare", "Do przygotowania", "De pregătit", "تیاری کا سامان", "ਤਿਆਰੀ ਲਈ ਸਮਾਨ", "প্রস্তুত করার সামগ্রী", "التجهيزات للتحضير", "Material a preparar", "Material a preparar", "Matériel à préparer", "Cit i'w baratoi"],
   registers: ["Registers", "Rejestry", "Registre", "رجسٹر", "ਹਾਜ਼ਰੀ ਰਜਿਸਟਰ", "রেজিস্টার", "سجلات الحضور", "Registos", "Registros", "Registres", "Cofrestrau"],
   meals: ["Meals", "Posiłki", "Mese", "کھانے", "ਭੋਜਨ", "খাবার", "الوجبات", "Refeições", "Comidas", "Repas", "Prydau bwyd"],
   ratios_groups: ["Ratios & groups", "Proporcje i grupy", "Raporturi și grupe", "تناسب اور گروپس", "ਅਨੁਪਾਤ ਅਤੇ ਗਰੁੱਪ", "অনুপাত ও গ্রুপ", "النِّسب والمجموعات", "Rácios e grupos", "Ratios y grupos", "Ratios et groupes", "Cymarebau a grwpiau"],

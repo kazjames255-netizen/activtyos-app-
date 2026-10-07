@@ -12,7 +12,6 @@ import {
   bookingKids,
   kidActiveDays,
   money,
-  addonLinesFor,
   payLabelFor,
   pendingPayActionT,
   payTone,
@@ -30,6 +29,7 @@ import {
 } from "./helpers";
 import { Badge, Button, Card, DefRow, Input, SectionHead, Select } from "@/components/ui";
 import { SessionTiles } from "./SessionTiles";
+import { AddonBlock } from "./AddonBlock";
 import { EventDateBanner, FamilyNoteCallout } from "./EventDateBanner";
 import { useTenantSettings, reasonsFor } from "@/lib/settings";
 import { refundFor, effectiveRefundDate, policyById, adviceReasonT } from "@/lib/cancellation";
@@ -871,7 +871,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         {b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) && <DefRow label={"🚗 " + t("p9tx.hvVisitAt")} value={visitAddressLabel(b.serviceAddress)} />}
         {b.serviceAddress?.notes && <DefRow label={"📝 " + t("p7ck.notesLabel").replace(/\s*\(.*\)\s*$/, "")} value={b.serviceAddress.notes} />}
         <DefRow label={t("p7bd.lblTicket")} value={b.ticket} />
-        {b.addons && b.addons.length > 0 && <DefRow label={t("p7bd.lblAddons")} value={addonLinesFor(b).join(", ")} />}
+        {b.addons && b.addons.length > 0 && <AddonBlock booking={b} />}
 
         {/* Contact */}
         <SectionHead>{t("p7bd.secContact")}</SectionHead>

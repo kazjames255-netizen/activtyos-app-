@@ -1058,6 +1058,8 @@ export interface NewBookingAttendee {
    *  STRAIGHT to the secure viewer (/plan/:id) — the plan is never attached
    *  (special-category data); the viewer re-checks access server-side. */
   ehcpFileId?: string;
+  /** This child's extras (T-shirt, bottle, lunch...), short form: ['T-shirt (M)', 'Water bottle (red)']. */
+  extras?: string[];
 }
 
 export interface NewBookingEmailArgs {
@@ -1112,6 +1114,7 @@ function attendeeCard(a: NewBookingAttendee): string {
   <div style="border:1px solid #eef0f5;border-radius:14px;padding:14px 16px;margin:0 0 12px;background:#fbfcfe">
     <div style="font-size:15px;font-weight:800;color:#171534">${escapeHtml(a.name)}${a.age != null ? `<span style="color:#8a86a3;font-weight:600"> · age ${a.age}</span>` : ""}${a.ticket ? `<span style="color:#8a86a3;font-weight:600"> · ${escapeHtml(a.ticket)}</span>` : ""}</div>
     ${line("🩺 Health &amp; allergies", health || "<span style='color:#a7a3bd'>None recorded</span>", "#1d3a8f")}
+    ${a.extras?.length ? line("🎁 Extras to prepare", a.extras.map((x) => escapeHtml(x)).join(", "), "#0f6b34") : ""}
     ${line("🧩 SEND &amp; additional needs", a.send ? escapeHtml(a.send) : "<span style='color:#a7a3bd'>None recorded — worth asking the family</span>", "#8a3ffb")}
     ${a.ehcpFileId ? `<a href="${webUrl}/plan/${encodeURIComponent(a.ehcpFileId)}" style="margin-top:9px;display:inline-block;background:#eef3ff;color:#1d3a8f;font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;text-decoration:none">📎 Open ${escapeHtml(a.name)}'s EHCP plan →</a>` : ""}
   </div>`;

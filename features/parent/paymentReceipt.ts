@@ -7,7 +7,8 @@ import { tNow } from "@/lib/i18n/provider";
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { BRAND } from "@/lib/i18n/config";
 import type { Booking } from "@/features/bookings/types";
-import { addonLinesFor, bookingDateSummary, money, payLabelFor, refundedTotal } from "@/features/bookings/helpers";
+import { addonSentences } from "@/features/bookings/addons";
+import { bookingDateSummary, money, payLabelFor, refundedTotal } from "@/features/bookings/helpers";
 
 export interface ReceiptCtx {
   /** The operator's business/display name — headers each receipt. */
@@ -128,7 +129,7 @@ function drawReceipt(doc: Doc, b: Booking, ctx: ReceiptCtx, logo: { dataUrl: str
   ];
   if (b.sessions && b.sessions.length) rows.push(["Sessions / times", b.sessions.join("   ·   ")]);
   if (loc) rows.push(["Location", loc]);
-  if (b.addons && b.addons.length) rows.push(["Add-ons", addonLinesFor(b).join(", ")]);
+  if (b.addons && b.addons.length) rows.push(["🎁 Extras", addonSentences(b).join("   ·   ")]);
   rows.push(["Payment status", payLabelFor(b)]);
   rows.push(["Payment method", b.method && b.method !== "—" ? b.method : "Card"]);
   if (refunded > 0) rows.push(["Refunded", `-${money(refunded)}  (of ${money(b.amount)})`]);

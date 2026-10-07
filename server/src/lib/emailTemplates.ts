@@ -4,6 +4,7 @@
 // (which is also what lets tests/emails.test.mts check the content).
 import type { Booking } from "../../../features/bookings/types";
 import { BRAND } from "./brand";
+import { addonSentences } from "../../../features/bookings/addons";
 
 export const gbp = (n: number) => `£${(Math.round(n * 100) / 100).toFixed(2)}`;
 
@@ -70,7 +71,7 @@ export function layout(
           ${ctx.location ? row(ctx.homeVisit ? "At your home" : ctx.online ? "Online" : "Location", escapeHtml(ctx.online ? "The joining details are below" : ctx.location)) : ""}
           ${row("Child", escapeHtml(kids || "—"))}
           ${b.listPrice != null && (b.discountOff ?? 0) > 0 ? `${row("Price before discount", gbp(b.listPrice))}${row(`Discount${b.discountNames?.length ? ` (${b.discountNames.join(", ")})` : ""}`, `− ${gbp(b.discountOff ?? 0)}`)}` : ""}
-          ${(b.addons ?? []).length ? row("Extras", (b.addonLines?.length && new Set(b.addonLines.map((l) => l.child)).size > 1 ? b.addonLines.map((l) => `${escapeHtml(l.label)} — ${gbp(l.price)} <span style="color:#8a86a3">(${escapeHtml(l.child)})</span>`) : (b.addons ?? []).map((a) => escapeHtml(a))).join("<br>")) : ""}
+          ${(b.addons ?? []).length ? row("🎁 Extras", addonSentences(b).map((x) => escapeHtml(x)).join("<br>")) : ""}
           ${row("Total", `<b>${gbp(b.amount)}</b>`)}
         </div>
         ${label("Dates &amp; times")}

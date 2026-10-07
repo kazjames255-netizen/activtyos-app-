@@ -1,0 +1,251 @@
+{
+  "ts": "muy7xy1x",
+  "password": "E2etest!123",
+  "parents": {
+    "one": {
+      "email": "hvqa-ac1-muy7xy1x-one@activityos-test.com",
+      "uid": "TDSjVlRGv7aVJMBAjYIKsArQWjz1"
+    },
+    "two": {
+      "email": "hvqa-ac1-muy7xy1x-two@activityos-test.com",
+      "uid": "NIxpnxC03CWkX0nc4QugJAyze9L2"
+    }
+  },
+  "bookings": {
+    "one": {
+      "status": 201,
+      "j": {
+        "bookings": [
+          {
+            "createdAt": "2026-10-07T14:44:51.900Z",
+            "ref": "HVQ-10312",
+            "bid": "0307310312",
+            "booker": "Familyone QA",
+            "email": "hvqa-ac1-muy7xy1x-one@activityos-test.com",
+            "phone": "",
+            "child": "sally james, paul james",
+            "age": 7,
+            "dob": "—",
+            "listing": "HVQA AC1 Camp muy7xy1x",
+            "pass": "Day pass",
+            "ticket": "Day pass · Week 1 · 12 – 16 Oct 2026",
+            "dates": "Week 1 · 12 – 16 Oct 2026",
+            "sessions": [
+              "Mon 12 Oct 2026 · 09:00 – 15:30"
+            ],
+            "status": "Confirmed",
+            "pay": "Unpaid",
+            "method": "cash",
+            "amount": 32.6,
+            "addons": [
+              "T-shirt (size: M) — £10.00",
+              "Water bottle (colour: red) — £5.00",
+              "Snack pack × 1 — £2.00",
+              "T-shirt (size: L) — £10.00",
+              "Water bottle (colour: blue) — £5.00"
+            ],
+            "answers": [],
+            "note": "",
+            "recon": null,
+            "evid": null,
+            "cancel": null,
+            "childId": "AvoTZGjoFo7nxd604Muc",
+            "postcode": "MK10 9NR",
+            "tenantId": "rid2FlvRnaUPneSafJRO",
+            "listingId": "x72qj5WHeCcjQTAW2ImH",
+            "blockId": "mm0EAdty07k70MC0oCPV",
+            "seats": 2,
+            "days": [
+              "2026-10-12"
+            ],
+            "addonLines": [
+              {
+                "child": "sally james",
+                "label": "T-shirt (size: M)",
+                "price": 10,
+                "days": [
+                  "2026-10-12"
+                ],
+                "perDay": false,
+                "name": "T-shirt",
+                "answers": [
+                  {
+                    "label": "size",
+                    "value": "M"
+                  }
+                ],
+                "qty": 1
+              },
+              {
+                "child": "sally james",
+                "label": "Water bottle (colour: red)",
+                "price": 5,
+                "days": [
+                  "2026-10-12"
+                ],
+                "perDay": false,
+                "name": "Water bottle",
+                "answers": [
+                  {
+                    "label": "colour",
+                    "value": "red"
+                  }
+                ],
+                "qty": 1
+              },
+              {
+                "child": "sally james",
+                "label": "Snack pack × 1",
+                "price": 2,
+                "days": [
+                  "2026-10-12"
+                ],
+                "perDay": true,
+                "name": "Snack pack",
+                "qty": 1
+              },
+              {
+                "child": "paul james",
+                "label": "T-shirt (size: L)",
+                "price": 10,
+                "days": [
+                  "2026-10-12"
+                ],
+                "perDay": false,
+                "name": "T-shirt",
+                "answers": [
+                  {
+                    "label": "size",
+                    "value": "L"
+                  }
+                ],
+                "qty": 1
+              },
+              {
+                "child": "paul james",
+                "label": "Water bottle (colour: blue)",
+                "price": 5,
+                "days": [
+                  "2026-10-12"
+                ],
+                "perDay": false,
+                "name": "Water bottle",
+                "answers": [
+                  {
+                    "label": "colour",
+                    "value": "blue"
+                  }
+                ],
+                "qty": 1
+              }
+            ],
+            "kids": [
+              {
+                "name": "sally james",
+                "childId": "AvoTZGjoFo7nxd604Muc",
+                "age": 7,
+                "days": [
+                  "2026-10-12"
+                ],
+                "dates": [
+                  "2026-10-12"
+                ]
+              },
+              {
+                "name": "paul james",
+                "childId": "t5BkMKLtPCn4qv2jPoYT",
+                "age": 9,
+                "days": [
+                  "2026-10-12"
+                ],
+                "dates": [
+                  "2026-10-12"
+                ]
+              }
+            ],
+            "amountPaid": 0
+          }
+        ],
+        "total": 32.6
+      }
+    },
+    "two": {
+      "status": 201,
+      "j": {
+        "bookings": [
+          {
+            "createdAt": "2026-10-07T14:44:54.672Z",
+            "ref": "HVQ-10314",
+            "bid": "0307310314",
+            "booker": "Familytwo QA",
+            "email": "hvqa-ac1-muy7xy1x-two@activityos-test.com",
+            "phone": "",
+            "child": "marnie kelson",
+            "age": 8,
+            "dob": "—",
+            "listing": "HVQA AC1 Camp muy7xy1x",
+            "pass": "Day pass",
+            "ticket": "Day pass · Week 1 · 12 – 16 Oct 2026",
+            "dates": "Week 1 · 12 – 16 Oct 2026",
+            "sessions": [
+              "Mon 12 Oct 2026 · 09:00 – 15:30"
+            ],
+            "status": "Confirmed",
+            "pay": "Unpaid",
+            "method": "cash",
+            "amount": 10.3,
+            "addons": [
+              "T-shirt (size: M) — £10.00"
+            ],
+            "answers": [],
+            "note": "",
+            "recon": null,
+            "evid": null,
+            "cancel": null,
+            "childId": "4ENpCGuZ518S9e5ied9p",
+            "postcode": "MK10 9NR",
+            "tenantId": "rid2FlvRnaUPneSafJRO",
+            "listingId": "x72qj5WHeCcjQTAW2ImH",
+            "blockId": "mm0EAdty07k70MC0oCPV",
+            "seats": 1,
+            "days": [
+              "2026-10-12"
+            ],
+            "addonLines": [
+              {
+                "child": "marnie kelson",
+                "label": "T-shirt (size: M)",
+                "price": 10,
+                "days": [
+                  "2026-10-12"
+                ],
+                "perDay": false,
+                "name": "T-shirt",
+                "answers": [
+                  {
+                    "label": "size",
+                    "value": "M"
+                  }
+                ],
+                "qty": 1
+              }
+            ]
+          }
+        ],
+        "total": 10.3
+      }
+    }
+  },
+  "provider": {
+    "email": "hvqa-ac1-muy7xy1x-prov@activityos-test.com",
+    "uid": "TaCEU9B3XadM6S1VeEGgEL7t8B73",
+    "tenantId": "rid2FlvRnaUPneSafJRO",
+    "name": "HVQA-AC1 Provider muy7xy1x"
+  },
+  "listing": {
+    "id": "x72qj5WHeCcjQTAW2ImH",
+    "title": "HVQA AC1 Camp muy7xy1x"
+  },
+  "day": "2026-10-12",
+  "day2": "2026-10-13"
+}

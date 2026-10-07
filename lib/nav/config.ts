@@ -85,6 +85,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "customers", legacyView: "admin-customers", label: "Families", hidden: true, icon: { type: "glyph", value: "◉" }, badge: null },
         { view: "admin-registers", legacyView: "admin-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
+        { view: "kit", legacyView: "admin-kit", label: "Kit to prepare", icon: { type: "glyph", value: "🎁" }, badge: null },
         { view: "meals", legacyView: "admin-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
         { view: "ratios", legacyView: "admin-ratios", label: "Ratios & groups", icon: { type: "glyph", value: "⚖" }, badge: null },
         { view: "trips", legacyView: "admin-trips", label: "Trips & visits", icon: { type: "glyph", value: "🚌" }, badge: null },
@@ -272,6 +273,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "registers", legacyView: "franchise-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
+        { view: "kit", legacyView: "franchise-kit", label: "Kit to prepare", icon: { type: "glyph", value: "🎁" }, badge: null },
         { view: "incidents", legacyView: "franchise-incidents", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
         { view: "medication", legacyView: "franchise-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
         { view: "accidents", legacyView: "franchise-accidents", label: "First aid", icon: { type: "glyph", value: "⛑" }, badge: null },
@@ -338,6 +340,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "customers", legacyView: "freelancer-customers", label: "Families", hidden: true, icon: { type: "glyph", value: "◉" }, badge: null },
         { view: "registers", legacyView: "freelancer-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
+        { view: "kit", legacyView: "freelancer-kit", label: "Kit to prepare", icon: { type: "glyph", value: "🎁" }, badge: null },
         { view: "meals", legacyView: "freelancer-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
         { view: "ratios", legacyView: "freelancer-ratios", label: "Ratios & groups", icon: { type: "glyph", value: "⚖" }, badge: null },
         { view: "trips", legacyView: "freelancer-trips", label: "Trips & visits", icon: { type: "glyph", value: "🚌" }, badge: null },
@@ -448,6 +451,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "registers", legacyView: "staff-registers", label: "Register", icon: { type: "glyph", value: "✓" }, badge: null },
+        { view: "kit", legacyView: "staff-kit", label: "Kit to prepare", icon: { type: "glyph", value: "🎁" }, badge: null },
         { view: "ratios", legacyView: "staff-ratios", label: "Ratios & groups", icon: { type: "glyph", value: "⚖" }, badge: null },
         { view: "timetable", legacyView: "staff-timetable", label: "Activity timetable", icon: { type: "glyph", value: "▦" }, badge: null },
         { view: "meals", legacyView: "staff-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },

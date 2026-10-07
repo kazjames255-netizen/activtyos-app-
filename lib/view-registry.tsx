@@ -74,6 +74,7 @@ const CalendarApp = dynamic(() => import("@/features/calendar/CalendarApp").then
 const InventoryApp = dynamic(() => import("@/features/inventory/InventoryApp").then((m) => m.InventoryApp));
 const LocationsApp = dynamic(() => import("@/features/locations/LocationsApp").then((m) => m.LocationsApp));
 const RegistersApp = dynamic(() => import("@/features/registers/RegistersApp").then((m) => m.RegistersApp));
+const KitApp = dynamic(() => import("@/features/kit/KitApp").then((m) => m.KitApp));
 const SetupApp = dynamic(() => import("@/features/setup/SetupApp").then((m) => m.SetupApp));
 const SupportApp = dynamic(() => import("@/features/support/SupportApp").then((m) => m.SupportApp));
 const TemplatesApp = dynamic(() => import("@/features/templates/TemplatesApp").then((m) => m.TemplatesApp));
@@ -191,6 +192,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     // Routable aliases so old links don't 404 — the sidebar shows only the
     // canonical item, but the slug still resolves to the real view.
     registers: RegistersApp,
+    kit: KitApp,
     children: CustomersApp,
     "company-setup": SetupApp,
     moments2: MomentsApp,
@@ -208,6 +210,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     staff: TeamApp,
     milestones: () => <MilestonesApp mode="franchise" />,
     registers: RegistersApp,
+    kit: KitApp,
     ratios: RatiosApp,
     incidents: () => <LogConcernApp />,
     accidents: () => <IncidentsApp kind="accident" />,
@@ -258,6 +261,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     blocks: BlocksApp,
     timetable: TimetableApp,
     registers: RegistersApp,
+    kit: KitApp,
     ratios: RatiosApp,
     incidents: () => <LogConcernApp />,
     accidents: () => <IncidentsApp kind="accident" />,
@@ -303,6 +307,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     payslips: StaffPayslipsApp,
     timetable: StaffTimetableApp,
     registers: RegistersApp,
+    kit: KitApp,
     ratios: RatiosApp,
     // Staff nav uses the singular slug — keyed to match, or the real
     // component is unreachable and the legacy iframe shows instead.

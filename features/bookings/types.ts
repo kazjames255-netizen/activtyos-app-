@@ -208,7 +208,7 @@ export interface Booking {
   discountCode?: string;
   addons: string[];
   /** The same extras, structured: who each is for and on which days. Older bookings only have `addons` strings. */
-  addonLines?: { child: string; label: string; price: number; days: string[]; perDay: boolean; meal?: boolean }[];
+  addonLines?: { child: string; label: string; price: number; days: string[]; perDay: boolean; meal?: boolean; name?: string; answers?: { label: string; value: string }[]; qty?: number }[];
   /** ISO dates a meal was bought for at checkout (meals ride the add-on lines;
    *  this is the clean structured signal the meals area reads). */
   mealDates?: string[];

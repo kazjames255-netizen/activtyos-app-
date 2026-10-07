@@ -7,6 +7,7 @@ import { useI18n, useT, useWord, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { get as apiGet } from "@/lib/api";
 import { useBookingsStore } from "./store";
+import { ADDON_ICON, addonCount, addonShort, bookingAddonLines } from "./addons";
 import {
   FILTER_TABS,
   attendeeCount,
@@ -313,6 +314,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
           {/* When the booking was TAKEN, not when the child is in — that's
               what "anything come in yesterday?" means. Attendance by date is
               the "On this day" picker beside it, and the register. */}
+          <a href={typeof window !== "undefined" ? window.location.pathname.replace(/\/bookings\/?$/, "/kit") : "#"} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[var(--brand-ink,#1d3a8f)] hover:underline" data-testid="kit-link">{ADDON_ICON} {t("p8lst.extrasKitLink")}</a>
           <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--ink-3)]">
             {t("p7bkl.bookedLbl")}
           </span>
@@ -569,6 +571,9 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   )}
                   <span className="text-[var(--ink-3)]">·</span>
                   <span className="text-[12.5px] font-semibold text-[var(--ink-2)]"><span className="num rounded-md px-2 py-[1px] text-[13px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#1d3a8f,#2f6bd8)" }}>{bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))}</span> <span className="text-[var(--ink-3)]">· {pickPlural(t, locale, "p7bk.sessN", sessionCount(b))} · {pickPlural(t, locale, "p7bk.kidN", att)}</span></span>
+                  {addonCount(b) > 0 && (
+                    <span className="inline-flex whitespace-nowrap rounded-full bg-[#eef3ff] px-2.5 py-[3px] text-[11px] font-extrabold text-[#1d3a8f]" data-testid="addon-chip" title={bookingAddonLines(b).map((l) => `${l.child ? l.child + ": " : ""}${addonShort(l)}`).join("\n")}>{ADDON_ICON} {t("p8lst.extrasChip", { n: String(addonCount(b)) })}</span>
+                  )}
                   <span className="inline-flex items-center gap-1.5">
                     <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay, b.status).bg, color: payTone(b.pay, b.status).fg }}>{b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : b.status === "Approval needed" && b.cardHold?.state === "awaiting" ? t("p8lst.holdWaitBadge") : w(payLabelFor(b))}</span>
                     <span className="text-[11px] font-semibold text-[var(--ink-3)]">{w(payMethodLabel(b))}</span>
