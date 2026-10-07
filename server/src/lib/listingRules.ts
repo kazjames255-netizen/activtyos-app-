@@ -1,4 +1,5 @@
 // Pure listing rules (zod schemas + publish requirements), moved verbatim out of routes/listings.ts so they can be unit-tested.
+import { addDaysIso } from "./listingChecks";
 import { z } from "zod";
 import { desiredRuns } from "./listingRunsPure";
 
@@ -236,7 +237,7 @@ export function runRecipeOf(doc: Record<string, unknown>) {
 // mirrored here so `status: "live"` can't arrive by API with none of them
 // (the client-side lock is a courtesy, this is the control). Only checked
 // when the WRITE itself publishes; existing live docs aren't re-judged.
-export function publishProblems(merged: Record<string, unknown>): string[] {
+export function publishProblems(merged: Record<string, unknown>, opts?: { today?: string }): string[] {
   const problems: string[] = [];
   if (!((merged.title as string) ?? (merged.name as string))?.trim()) problems.push("a name");
   const deliveryMode = (merged.deliveryMode as string | undefined) ?? "venue";
@@ -250,6 +251,11 @@ export function publishProblems(merged: Record<string, unknown>): string[] {
   const recipe = runRecipeOf(merged);
   const runs = desiredRuns(recipe, { start: "09:00", end: "15:30" });
   if (!runs.length) problems.push("dates with at least one running day");
+  // Every date already gone (a mistyped year such as 2006): nothing left to book. Only judged when the caller supplies today's date.
+  else if (opts?.today) {
+    const last = runs.flatMap((r) => r.sessions.map((s) => s.date)).sort().pop();
+    if (last && last < addDaysIso(opts.today, -1)) problems.push("dates in the future (every date has already passed)");
+  }
   // blockId too, not just snapshotted passes: without the bundle the customer
   // page has no timings and the booking widget is dead ("Pick a block in
   // Tickets & pricing…") — the wizard blocks this client-side, this is the

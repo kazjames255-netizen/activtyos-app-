@@ -1,3 +1,5 @@
+import { enforceListingChecks, allDatesPassed } from "../lib/listingChecks";
+import { ukToday } from "../lib/ukDate";
 import { Router, type Request } from "express";
 import { isRealDay, isRealTime } from "../lib/ukDate";
 import { z } from "zod";
@@ -115,6 +117,12 @@ blocks.post("/", async (req, res) => {
   if (!listing.exists || listing.data()!.tenantId !== auth.tenantId || (isFranchise(auth) && ((listing.data() as { franchiseId?: string | null }).franchiseId ?? null) !== auth.franchiseId)) {
     res.status(400).json({ error: "Unknown listing (must belong to your tenant)" });
     return;
+  }
+  // A block whose last day has already gone (a mistyped year) has nothing to book: refused outside tests, except for platform admins.
+  if (enforceListingChecks()) {
+    const sessions = resolveSessions(parsed.data);
+    const last = [...sessions.map((s) => s.date), parsed.data.endDate].filter(Boolean).sort().pop();
+    if (allDatesPassed(last as string | undefined, ukToday())) { res.status(400).json({ error: "These dates are in the past — check the year." }); return; }
   }
   const doc: BlockDoc = {
     tenantId: auth.tenantId,

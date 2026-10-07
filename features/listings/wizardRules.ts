@@ -37,3 +37,24 @@ export function deliveryPatch(mode: "venue" | "home-visit" | "both", venues: { i
     ...(mode === "home-visit" && !hasCoverage ? { coverageArea: { mode: "postcodePrefixes" as const, postcodePrefixes: [] as string[] } } : {}),
   };
 }
+
+/** Today's date as a local YYYY-MM-DD (what a date box compares against). */
+export function todayIso(now: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+}
+
+/** The latest date a listing may run to: three years from today. */
+export const maxRunIso = (today: string = todayIso()): string => `${Number(today.slice(0, 4)) + 3}${today.slice(4)}`;
+
+/** Is a typed date wrong for a listing? "past" = before today (less `graceDays`), "far" = beyond three years. A year still being typed
+ *  (fewer than four digits) is never judged, so typing 2-0-2-6 into the year box is left alone. */
+export function dateProblem(iso: string | undefined, today: string = todayIso(), graceDays = 0): "past" | "far" | null {
+  const m = iso ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso) : null;
+  if (!m || Number(m[1]) < 1000) return null;
+  const limit = new Date(`${today}T00:00:00Z`);
+  limit.setUTCDate(limit.getUTCDate() - graceDays);
+  if (iso! < limit.toISOString().slice(0, 10)) return "past";
+  if (iso! > maxRunIso(today)) return "far";
+  return null;
+}

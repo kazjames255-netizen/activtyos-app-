@@ -56,6 +56,7 @@ async function subscriptionRefusal(req: Request): Promise<string | null> {
 // here so a listing document can never blow Firestore's 1MB limit.
 
 import { baseListingSchema, createSchema, publishProblems, RUN_FIELDS, runRecipeOf, type ListingInput } from "../lib/listingRules";
+import { enforceListingChecks, homeVisitPostcodeProblem, cleanCoverage } from "../lib/listingChecks";
 import { BRAND } from "../lib/brand";
 
 // Join each listing's real blocks (availability included) onto the response.
@@ -511,14 +512,16 @@ listings.post("/", async (req, res) => {
   }
   const tenant = await db.collection("tenants").doc(auth.tenantId).get();
   const data = parsed.data;
+  if (data.coverageArea) data.coverageArea = cleanCoverage(data.coverageArea) as typeof data.coverageArea; // only the chosen mode's data is kept
   { const bad = personRuleProblem(data.discounts, undefined); if (bad) { res.status(400).json({ error: bad }); return; } }
   { const bad = await foreignRefProblem(auth, auth.tenantId, data); if (bad) { res.status(400).json({ error: bad }); return; } }
   if (data.status === "live") {
-    const problems = publishProblems(data as Record<string, unknown>);
+    const problems = publishProblems(data as Record<string, unknown>, enforceListingChecks() ? { today: ukToday() } : undefined);
     if (problems.length) {
       res.status(400).json({ error: `Can't publish yet — this listing needs ${problems.join(", ")}.` });
       return;
     }
+    if (enforceListingChecks()) { const why = await homeVisitPostcodeProblem(data as Record<string, unknown>); if (why) { res.status(400).json({ error: `Can't publish yet — ${why}.` }); return; } }
     { const why = await goLiveRefusal(auth.tenantId); if (why) { res.status(402).json({ error: why, code: "go_live_requirements" }); return; } }
   }
   const name = (data.title ?? data.name)!;
@@ -596,6 +599,7 @@ listings.put("/:id", async (req, res) => {
     return;
   }
   const data: ListingInput = parsed.data;
+  if (data.coverageArea) data.coverageArea = cleanCoverage(data.coverageArea) as typeof data.coverageArea; // only the chosen mode's data is kept
   { // Only ids CHANGED vs the stored listing are checked — inherited head-office bundle/menu ids must not block an unrelated edit.
     const stored = own.snap.data() as { blockId?: string | null; mealPlan?: Record<string, unknown> };
     const menuOf = (v: unknown) => (typeof v === "string" ? v : (v as { menuId?: string } | null)?.menuId);
@@ -603,11 +607,12 @@ listings.put("/:id", async (req, res) => {
     const mealPlan = data.mealPlan ? Object.fromEntries(Object.entries(data.mealPlan).filter(([, v]) => !oldMenus.has(menuOf(v)))) : undefined;
     const bad = await foreignRefProblem(req.auth!, req.auth!.tenantId!, { blockId: data.blockId && data.blockId !== stored.blockId ? data.blockId : null, mealPlan }); if (bad) { res.status(400).json({ error: bad }); return; } }
   if (data.status === "live") {
-    const problems = publishProblems({ ...own.snap.data()!, ...data });
+    const problems = publishProblems({ ...own.snap.data()!, ...data }, enforceListingChecks() ? { today: ukToday() } : undefined);
     if (problems.length) {
       res.status(400).json({ error: `Can't publish yet — this listing needs ${problems.join(", ")}.` });
       return;
     }
+    if (enforceListingChecks()) { const why = await homeVisitPostcodeProblem({ ...own.snap.data()!, ...data }); if (why) { res.status(400).json({ error: `Can't publish yet — ${why}.` }); return; } }
     // Only the moment a listing GOES live is gated — editing one that is already live must never be refused.
     if (gateAppliesOnPublish(own.snap.data()!.status as string | undefined, true)) { const why = await goLiveRefusal(req.auth!.tenantId!); if (why) { res.status(402).json({ error: why, code: "go_live_requirements" }); return; } }
   }

@@ -231,7 +231,7 @@ function slotsOf(lines: { pass: string; dates: string[]; timing?: string }[]): {
 }
 
 export { isOnlineVenue } from "./wizardRules";
-import { isOnlineVenue, fixYear, runLooksWrong, saveStatusFor, onlineVenueChoice, deliveryPatch } from "./wizardRules";
+import { isOnlineVenue, fixYear, runLooksWrong, saveStatusFor, onlineVenueChoice, deliveryPatch, dateProblem, todayIso, maxRunIso } from "./wizardRules";
 
 /** The dated run covering a date, when the server has told us about them. */
 
@@ -464,6 +464,16 @@ export function headingOf(d: WizardDraft, key: string, field: "eyebrow" | "title
   return tv !== k ? tv : def[field];
 }
 
+/** Postcodes the server said it cannot find (filled by the "Recognised" lines under the coverage area as the provider types). A listing
+ *  with one of these in its home-visit area cannot be published: it would otherwise show to every parent whatever their distance. */
+const badPostcodes = new Set<string>();
+const pcKey = (s: string) => s.trim().toUpperCase().replace(/\s+/g, "");
+export function coverageHasBadPostcode(c: WizardDraft["coverageArea"] | undefined): boolean {
+  if (!c) return false;
+  const list = c.mode === "radius" ? (c.basePostcode ? [c.basePostcode] : []) : (c.postcodePrefixes ?? []);
+  return list.some((p) => badPostcodes.has(pcKey(p)));
+}
+
 /**
  * What has to be true before a listing can be published. Each blocker names the
  * step that fixes it — "something's missing" without saying what is worse than
@@ -485,10 +495,12 @@ export function publishBlockers(d: WizardDraft, ticketCount: number, visibleTick
     out.push({ step: at("details"), what: tNow("p8lst.waBlkRadius") });
   if (!d.runFrom || !d.runTo) out.push({ step: at("run"), what: tNow("p8lst.waBlkDates") });
   else if (d.runTo < d.runFrom) out.push({ step: at("run"), what: tNow("p8lst.waBlkEndBefore") });
+  else if (dateProblem(d.runTo) === "past" || dateProblem(d.runTo) === "far" || dateProblem(d.runFrom, todayIso(), 365) === "past") out.push({ step: at("run"), what: tNow("p8lst.waBlkPast") });
   else if (!genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x)).length) {
     // The trap: a range that only covers days the operator has unticked.
     out.push({ step: at("run"), what: tNow("p8lst.waBlkNoDays") });
   }
+  if (homeVisit && coverageHasBadPostcode(d.coverageArea)) out.push({ step: at("details"), what: tNow("p8lst.waBlkPcBad") });
   if (!d.blockId) out.push({ step: at("tickets"), what: tNow("p8lst.waBlkPickBlock") });
   else if (ticketCount === 0) out.push({ step: at("tickets"), what: tNow("p8lst.waBlkNoPasses") });
   else if (visibleTicketCount === 0) out.push({ step: at("tickets"), what: tNow("p8lst.waBlkAllHidden") });
@@ -1411,11 +1423,15 @@ export function ListingWizard({
   const saveDraftAction = async () => { if (await syncApi(saveStatusFor(d.status))) { setSaveState("saved"); onSaved(); } };
   const blockers = publishBlockers(d, tickets.length, tickets.filter((t) => d.ticketOverrides[t.name]?.hidden !== true).length);
   const [goLiveOpen, setGoLiveOpen] = useState(false);
+  const [, bumpPc] = useState(0);
+  useEffect(() => { const f = () => bumpPc((n) => n + 1); window.addEventListener("hv-pc-verdict", f); return () => window.removeEventListener("hv-pc-verdict", f); }, []);
   const publishAction = async () => {
     if (blockers.length) {
       // Send them to the first thing that's missing rather than making them hunt.
       setStep(blockers[0].step);
-      setMsg(pickPlural(tr, loc, "p8lst.waThingsToFinish", blockers.length));
+      // Keep what they typed (a draft; a LIVE listing stays live) and say plainly that it is NOT live and what is missing.
+      void syncApi(saveStatusFor(d.status));
+      setMsg(tr("p8lst.waDraftNotLive", { what: blockers.map((b) => b.what).join("; ") }));
       return;
     }
     // A new provider must have started their plan and chosen how parents pay before the first listing goes live.
@@ -2023,7 +2039,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
             {([["postcodePrefixes", tr("p8lst.waCov_postcodePrefixes")], ["radius", tr("p8lst.waCov_radius")]] as [NonNullable<WizardDraft["coverageArea"]>["mode"], string][]).map(([mode, label]) => {
               const on = (d.coverageArea?.mode ?? "postcodePrefixes") === mode;
               return (
-                <button key={mode} type="button" onClick={() => upd({ coverageArea: { ...d.coverageArea, mode } })} className="rounded-full border px-3 py-1 text-[11.5px] font-bold"
+                <button key={mode} type="button" onClick={() => upd({ coverageArea: mode === "radius" ? { mode, basePostcode: d.coverageArea?.basePostcode, radiusMiles: d.coverageArea?.radiusMiles } : { mode, postcodePrefixes: d.coverageArea?.postcodePrefixes } })} className="rounded-full border px-3 py-1 text-[11.5px] font-bold"
                   style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
                   {on ? "✓ " : ""}{label}
                 </button>
@@ -2463,8 +2479,8 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
       <div className="grid items-start gap-4 md:grid-cols-2">
         <RichCard icon="🗓️" title={tr("p8lst.wbRunDatesTitle")} subtitle={tr("p8lst.wbRunDatesSub")}>
           <div className="mb-3 flex gap-3">
-            <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">{tr("p8lst.wbRunsFrom")}</FieldLabel><Input id="wiz-run-from" type="date" value={d.runFrom} onChange={(e) => upd({ runFrom: fixYear(e.target.value) })} className="w-full" /></div>
-            <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">{tr("p8lst.wbRunsTo")}</FieldLabel><Input id="wiz-run-to" type="date" value={d.runTo} onChange={(e) => upd({ runTo: fixYear(e.target.value) })} className="w-full" /></div>
+            <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">{tr("p8lst.wbRunsFrom")}</FieldLabel><Input id="wiz-run-from" type="date" min={todayIso()} max={maxRunIso()} value={d.runFrom} onChange={(e) => upd({ runFrom: e.target.value })} onBlur={(e) => upd({ runFrom: fixYear(e.target.value) })} className="w-full" />{dateProblem(d.runFrom, todayIso(), 365) && <div className="mt-1 text-[11.5px] font-bold text-[#c02636]">{dateProblem(d.runFrom, todayIso(), 365) === "past" ? tr("p8lst.dateInPast") : tr("p8lst.dateTooFar")}</div>}</div>
+            <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">{tr("p8lst.wbRunsTo")}</FieldLabel><Input id="wiz-run-to" type="date" min={todayIso()} max={maxRunIso()} value={d.runTo} onChange={(e) => upd({ runTo: e.target.value })} onBlur={(e) => upd({ runTo: fixYear(e.target.value) })} className="w-full" />{dateProblem(d.runTo) && <div className="mt-1 text-[11.5px] font-bold text-[#c02636]">{dateProblem(d.runTo) === "past" ? tr("p8lst.dateInPast") : tr("p8lst.dateTooFar")}</div>}</div>
           </div>
           <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">{tr("p8lst.wbBlockSize")}</span>
           <div className="mb-3 flex flex-wrap gap-1.5">
@@ -4828,7 +4844,7 @@ function PostcodeRecognised({ value }: { value: string }) {
     let alive = true;
     const id = setTimeout(() => {
       apiGet<{ ok: boolean; postcode: string; place?: string }>(`/api/geo/recognise?q=${encodeURIComponent(q)}`)
-        .then((r) => alive && setState({ q, ok: r.ok, place: [r.postcode, r.place].filter(Boolean).join(" · ") }))
+        .then((r) => { if (r.ok) badPostcodes.delete(pcKey(q)); else badPostcodes.add(pcKey(q)); if (typeof window !== "undefined") window.dispatchEvent(new Event("hv-pc-verdict")); if (alive) setState({ q, ok: r.ok, place: [r.postcode, r.place].filter(Boolean).join(" · ") }); })
         .catch(() => alive && setState(null));
     }, 500);
     return () => { alive = false; clearTimeout(id); };
