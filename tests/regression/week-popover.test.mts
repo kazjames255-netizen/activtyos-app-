@@ -26,3 +26,11 @@ test("popover flips above the tile when there is no room below", () => {
   assert.equal(p.above, true);
   assert.equal(p.bottom, 800 - 700 + 8);
 });
+
+test("it flips above when the real height does not fit below, and caps its height to the room", () => {
+  const p = popoverPlacement({ left: 150, right: 210, top: 560, bottom: 680 }, 390, 844, 2, 264, 246);
+  assert.equal(p.above, true);
+  assert.ok(p.maxHeight >= 246); // room above is 544
+  const tiny = popoverPlacement({ left: 150, right: 210, top: 100, bottom: 160 }, 390, 400, 6, 264, 900); // neither side fits
+  assert.ok(tiny.maxHeight >= 120 && tiny.maxHeight < 900);
+});

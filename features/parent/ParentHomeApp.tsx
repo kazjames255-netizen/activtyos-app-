@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { isFullAddress } from "@/lib/addressComplete";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useT } from "@/lib/i18n/provider";
@@ -96,6 +96,8 @@ function WeekDayTile({ d, k, here, isToday, loc, tone, detail }: {
   const wrap = useRef<HTMLDivElement>(null);
   const pop = useRef<HTMLDivElement>(null);
   const pointer = useRef<string>("mouse");
+  const openAtDown = useRef(false); // was the popover already open when this tap/click STARTED (a first tap on touch must only open it)
+  const openedAt = useRef(0);
   const timer = useRef<number | undefined>(undefined);
   const [pos, setPos] = useState<PopPos | null>(null);
   const first = here[0];
@@ -104,14 +106,23 @@ function WeekDayTile({ d, k, here, isToday, loc, tone, detail }: {
   const show = () => {
     window.clearTimeout(timer.current);
     if (!here.length || !wrap.current) return;
+    openedAt.current = Date.now();
     setPos(popoverPlacement(wrap.current.getBoundingClientRect(), window.innerWidth, window.innerHeight, here.length));
   };
-  const hideSoon = () => { window.clearTimeout(timer.current); timer.current = window.setTimeout(() => setPos(null), 140); };
+  // On a touch screen the browser sends compatibility mouse events (mouseleave / blur) as the popover appears: those must NOT close it - an outside tap, Escape or scrolling does.
+  const hideSoon = () => { if (pointer.current === "touch") return; window.clearTimeout(timer.current); timer.current = window.setTimeout(() => setPos(null), 140); };
+  // Once the popover is drawn, place it again with its REAL height so it never runs off the bottom (or top) of the screen.
+  useLayoutEffect(() => {
+    if (!open || !pop.current || !wrap.current) return;
+    const next = popoverPlacement(wrap.current.getBoundingClientRect(), window.innerWidth, window.innerHeight, here.length, 264, pop.current.scrollHeight);
+    setPos((cur) => (cur && cur.above === next.above && cur.top === next.top && cur.bottom === next.bottom && cur.maxHeight === next.maxHeight && cur.left === next.left ? cur : next));
+  }, [open, here.length]);
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => { const n = e.target as Node; if (!wrap.current?.contains(n) && !pop.current?.contains(n)) setPos(null); };
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPos(null); };
-    const onMove = () => setPos(null); // scrolling / resizing moves the tile: just close
+    // scrolling / resizing moves the tile: close - but not for the first moments after opening (a phone's address bar collapsing fires a resize/scroll as the tap lands)
+    const onMove = () => { if (Date.now() - openedAt.current > 500) setPos(null); };
     document.addEventListener("pointerdown", onDown);
     document.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onMove, true);
@@ -140,11 +151,12 @@ function WeekDayTile({ d, k, here, isToday, loc, tone, detail }: {
   );
   const dayName = d.toLocaleDateString(loc, { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
   return (
-    <div ref={wrap} onMouseEnter={() => { if (pointer.current !== "touch") show(); }} onMouseLeave={hideSoon} onFocus={show} onBlur={(e) => { if (!pop.current?.contains(e.relatedTarget as Node)) hideSoon(); }}>
+    <div ref={wrap} onMouseEnter={() => { if (pointer.current !== "touch") show(); }} onMouseLeave={hideSoon} onFocus={(e) => { // keyboard focus opens it; a TAP also focuses the link first and must not (that made the same tap navigate away)
+      if (pointer.current === "touch") return; const el = e.target as HTMLElement; if (typeof el.matches === "function" && !el.matches(":focus-visible")) return; show(); }} onBlur={(e) => { if (!pop.current?.contains(e.relatedTarget as Node)) hideSoon(); }}>
       {first ? (
         <Link href={`/custdash/bookings?open=${encodeURIComponent(first.b.ref)}`} className={tileCls} style={tileStyle} aria-haspopup="true" aria-expanded={open}
-          onPointerDown={(e) => { pointer.current = e.pointerType || "mouse"; }}
-          onClick={(e) => { if (pointer.current === "touch" && !open) { e.preventDefault(); show(); } }}>
+          onPointerDown={(e) => { pointer.current = e.pointerType || "mouse"; openAtDown.current = open; }}
+          onClick={(e) => { if (pointer.current === "touch" && !openAtDown.current) { e.preventDefault(); show(); } }}>
           {inner}
         </Link>
       ) : (
@@ -152,8 +164,8 @@ function WeekDayTile({ d, k, here, isToday, loc, tone, detail }: {
       )}
       {open && pos && typeof document !== "undefined" && createPortal(
         <div ref={pop} role="group" aria-label={t("p7shell.weekPopLabel", { day: dayName })} onMouseEnter={() => window.clearTimeout(timer.current)} onMouseLeave={hideSoon}
-          className="fixed z-[200] w-[264px] max-w-[calc(100vw-16px)] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-start text-[12.5px] font-semibold leading-[1.45] text-[var(--ink)] shadow-xl"
-          style={{ left: pos.left, top: pos.top, bottom: pos.bottom }}>
+          className="aos-light fixed z-[200] w-[264px] max-w-[calc(100vw-16px)] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-start text-[12.5px] font-semibold leading-[1.45] text-[var(--ink)] shadow-xl"
+          style={{ left: pos.left, top: pos.top, bottom: pos.bottom, maxHeight: pos.maxHeight, overflowY: "auto" }}>
           {rows.map(({ b }) => { const dd = detail(b); return (
             <Link key={b.ref} href={`/custdash/bookings?open=${encodeURIComponent(b.ref)}`} className="mb-2 block rounded-lg px-1 py-0.5 text-[var(--ink)] no-underline last:mb-0 hover:bg-[var(--brand-soft,#eaf0fc)]" title={t("p7shell.weekPopOpen")}>
               <span className="block text-[13px] font-extrabold">{b.child} <span className="font-semibold" style={{ color: tone[b.status] }}>· {t("p7shell.week_" + b.status)}</span></span>
