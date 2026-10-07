@@ -3,6 +3,7 @@
 // listing's venue and the pay URL, then hands the results to these functions
 // (which is also what lets tests/emails.test.mts check the content).
 import type { AddonRequest, Booking } from "../../../features/bookings/types";
+import { bellTitle, bellBody, paymentType } from "./bellText";
 import { BRAND } from "./brand";
 import { addonSentences } from "../../../features/bookings/addons";
 
@@ -436,8 +437,8 @@ export function cancellationRequestNotice(
   const bellMoney = updated.cancel?.refund === "none" || amt <= 0 ? "no refund" : fmtMoney(amt);
   return {
     // The bell names the booking (ref), the listing and the child: 'QA wants to cancel · Thu 29 Oct · £0.30' did not say WHICH booking (QA-C D4).
-    title: `${firstWord(updated.booker)} wants to cancel · ${updated.ref}`,
-    body: `${updated.listing} · ${kids} · ${shortWhen(updated)} — ${bellMoney === "no refund" ? "no refund requested" : `${bellMoney} refund requested`}`,
+    title: bellTitle("cancel-request", updated.ref),
+    body: bellBody([paymentType(updated), bellMoney === "no refund" ? "No refund" : `${bellMoney} refund`]),
     detail: `${kids} · ${shortWhen(updated)} · ${refundTxt}${reasonTxt}`,
     subject: `${updated.booker} — cancellation request`,
   };

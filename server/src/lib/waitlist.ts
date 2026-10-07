@@ -1,4 +1,5 @@
 import { db } from "../firebase";
+import { bellTitle, bellBody } from "./bellText";
 import { capsViolation } from "./capRules";
 import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
@@ -162,8 +163,9 @@ export async function triggerWaitlist(blockId: string): Promise<void> {
             to: { kind: "tenant" },
             category: "booking",
             key: "waitlist-place-free",
-            title: `A place has opened up · ${first.listing}`,
-            body: `${fitting.length === 1 ? "1 family is" : `${fitting.length} families are`} waiting and a place is now free (first in line: ${first.child || first.booker}, booking ${first.ref}). Open it and press Offer place.`,
+            title: bellTitle("place-free", first.ref),
+            body: bellBody(["Waiting list", `${fitting.length} waiting`]),
+            emailHtml: `<p>${(first.listing ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")}: ${fitting.length === 1 ? "1 family is" : `${fitting.length} families are`} waiting and a place is now free (first in line: ${(first.child || first.booker || "").replace(/&/g, "&amp;").replace(/</g, "&lt;")}, booking ${first.ref}). Open it and press Offer place.</p>`,
             subject: `A place has opened up for ${first.listing}`,
             href: `/company/bookings?ref=${encodeURIComponent(first.ref)}`,
             ref: first.ref,

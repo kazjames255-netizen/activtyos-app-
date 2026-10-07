@@ -145,6 +145,8 @@ export const QUESTIONS: string[] = [
   "what emails and notifications do I and the parent get when a manual approval card booking comes in and I approve it",
   "does a family who has an invoice or a voucher still to be paid get the join link for my online session",
   "my listing page shows support instead of my business name, how do I change it",
+  "what does the bell say when a new booking comes in, it used to be cut off halfway through a sentence",
+  "why are the bell notifications so short now and where do I see the full details of a booking",
 ];
 
 async function token(email: string, password: string) {

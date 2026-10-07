@@ -35,6 +35,7 @@ import { earlyBirdScopeOf, earlyFixedUsed, claimEarlyBird } from "../lib/earlyBi
 import { mergeBookings } from "../lib/mergeBookings";
 import { ageRangeFor, isOutOfRange, passHidden, addonRefusal, isQueuedOn, cardUnpaid } from "../lib/bookingRules";
 import { wantsCardHold, releaseHolds, deadlineLabel, deadlineWarningHtml } from "../lib/cardHold";
+import { bellTitle, bellBody, bellMoney, bellDay, paymentType, plainParagraph } from "../lib/bellText";
 import { addonCount, addonShort, bookingAddonLines } from "../../../features/bookings/addons";
 import {
   resolveBundlePricing,
@@ -2338,8 +2339,8 @@ my.post("/bookings/:ref/amend", async (req, res) => {
             to: { kind: "tenant" },
             category: "booking",
             key: "booking-change",
-            title: `${booking.booker} moved their dates`,
-            body: `Booking ${booking.ref} · ${booking.listing} · ${booking.child}. ${moves.map((mv) => `${prettyDay(mv.from)} → ${prettyDay(mv.to)}`).join("; ")}.${applied.dateChangeRequest?.feeCharged ? ` Admin fee £${applied.dateChangeRequest.feeCharged.toFixed(2)} added to the booking.` : ""}`,
+            title: bellTitle("dates-moved", booking.ref),
+            body: bellBody([`${moves.length} day${moves.length === 1 ? "" : "s"}`, applied.dateChangeRequest?.feeCharged ? `${bellMoney(applied.dateChangeRequest.feeCharged)} fee` : ""]),
             subject: `${booking.booker} — dates changed`,
             href: `/company/bookings?ref=${encodeURIComponent(booking.ref)}`,
             ref: booking.ref,
@@ -2384,9 +2385,10 @@ my.post("/bookings/:ref/amend", async (req, res) => {
       to: { kind: "tenant" },
       category: "booking",
       key: "booking-change",
-      title: `${booking.booker} requested a ${changeLabel}`,
-      // Ref lives in the body, not the subject.
-      body: `Booking ${booking.ref} · ${booking.listing} · ${booking.child}${scope}. ${detail}. Review it to approve or decline.`,
+      title: bellTitle("change-request", booking.ref),
+      body: bellBody([changeLabel.charAt(0).toUpperCase() + changeLabel.slice(1)]),
+      // The long wording stays in the email.
+      emailHtml: plainParagraph(`${booking.booker} requested a ${changeLabel}. Booking ${booking.ref} · ${booking.listing} · ${booking.child}${scope}. ${detail}. Review it to approve or decline.`),
       subject: `${booking.booker} — ${changeLabel} requested`,
       // Deep-link straight to this booking so it opens with the request showing.
       href: `/company/bookings?ref=${encodeURIComponent(booking.ref)}`,
@@ -2701,11 +2703,12 @@ async function partialCancel(
       to: { kind: "tenant" },
       category: "booking",
       key: "booking-release",
-      title: `${existing.booker} released ${who} on ${existing.ref}`,
-      body:
+      title: bellTitle("day-released", existing.ref),
+      body: bellBody([resolution === "wallet" ? "Wallet credit" : "Refund to approve", bellMoney(value), who]),
+      emailHtml: plainParagraph(`${existing.booker} released ${who} on ${existing.ref}. ${
         resolution === "wallet"
           ? `${money(value)} credited to their wallet. Places are back on ${releasedDays.map(prettyDay).join(", ")}.`
-          : `${money(value)} refund requested — needs your approval. Places are back on ${releasedDays.map(prettyDay).join(", ")}.`,
+          : `${money(value)} refund requested — needs your approval. Places are back on ${releasedDays.map(prettyDay).join(", ")}.`}`),
       subject: `${existing.ref}: ${who} released by ${existing.booker}`,
       href: `/company/bookings?ref=${encodeURIComponent(existing.ref)}`,
       ref: existing.ref,
@@ -2896,8 +2899,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       const heldCancel = existing.cardHold && (existing.cardHold.state === "held" || existing.cardHold.state === "awaiting");
       const notice = heldCancel
         ? {
-            title: `Request withdrawn · ${updated.ref} · ${updated.booker}`,
-            body: `${updated.listing}${updated.child ? ` · ${updated.child}` : ""} — the family withdrew their request. Their card hold was released: nothing was taken.`,
+            title: bellTitle("request-withdrawn", updated.ref),
+            body: bellBody(["Card held", bellMoney(updated.amount ?? 0), "Nothing taken"]),
             detail: `${updated.booker} withdrew their request for ${updated.listing} (${updated.ref}). Their card hold has been released and nothing was taken, so there is nothing to refund.`,
             subject: `Request withdrawn — ${updated.listing} (${updated.ref})`,
           }
@@ -2997,8 +3000,8 @@ my.post("/bookings/:ref/addon-requests", async (req, res) => {
         to: { kind: "tenant" },
         category: "booking",
         key: "addon-request",
-        title: `Extra request · ${b.ref} · ${r.child}`,
-        body: `${what} — ${b.listing}. Approve or decline in Bookings → Requests.`,
+        title: bellTitle("addon-request", b.ref),
+        body: bellBody([r.kind === "cancel" ? "Cancel extra" : "Change extra", bellMoney(r.price ?? 0)]),
         subject: `${what} (${b.ref})`,
         href: `/company/bookings?ref=${encodeURIComponent(b.ref)}`,
         ref: b.ref,
@@ -3474,8 +3477,8 @@ export function notifyProviderNewBooking(ctx: ProviderNoticeCtx): void {
               to: { kind: "tenant" },
               category: "booking",
               key: "waitlist-started",
-              title: `New waiting list · ${listing.name}`,
-              body: `${shortWhen(primary)} · first on the list`,
+              title: bellTitle("waiting-list-started", primary.ref),
+              body: bellBody(["First in line", bellMoney(total)]),
               emailHtml: `<p>${(kids || bookerName).replace(/&/g, "&amp;").replace(/</g, "&lt;")} is the first family on the waiting list for ${listing.name.replace(/&/g, "&amp;").replace(/</g, "&lt;")} (${shortWhen(primary)}). There is no free place right now, so there is nothing to do yet. You will be told the moment one opens. You will not get another email when more families join.</p>`,
               subject: `You now have a waiting list for ${listing.name}`,
               href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
@@ -3490,10 +3493,15 @@ export function notifyProviderNewBooking(ctx: ProviderNoticeCtx): void {
         category: "booking",
         key: "booking-new",
         ...(waitlisted && !wlPrefs?.waitlistJoinAlert ? { bellOnly: true } : {}),
-        title: waitlisted ? `${firstWord(kids || bookerName)} joined the waiting list` : ctx.heldUntil ? `${kind} · ${primary.ref} · ${bookerName} — approve by ${deadlineLabel(ctx.heldUntil)}` : `${kind} · ${primary.ref} · ${bookerName}`,
-        body: waitlisted
-          ? `${shortWhen(primary)} · ${listing.name}`
-          : `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${(() => { const n = bookings.reduce((acc, x) => acc + addonCount(x), 0); return n ? ` +${n} extra${n === 1 ? "" : "s"}.` : ""; })()}${bookings.find((x) => x.serviceAddress?.notes)?.serviceAddress?.notes ? ` Note: ${String(bookings.find((x) => x.serviceAddress?.notes)?.serviceAddress?.notes).replace(/\s+/g, " ").slice(0, 80)}` : ""}${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${isBankMethod(ctx.method) && total > 0 && !waitlisted ? ` Paying by bank transfer — look for the reference ${refs.join(", ")} in your bank, then press Mark paid.` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
+        // The bell is NEVER a sentence (it is cut after ~32 / ~48 characters): label + ref, then TYPE · COST · one short tag. The detail is in the email.
+        title: bellTitle(waitlisted ? "waiting-list" : needsApproval ? "booking-request" : "new-booking", [primary.ref, ...refs.filter((r) => r !== primary.ref)]),
+        body: bellBody([
+          ctx.heldUntil ? "Card held" : paymentType(primary),
+          bellMoney(total),
+          ctx.heldUntil
+            ? `by ${bellDay(ctx.heldUntil)}`
+            : (() => { const n = bookings.reduce((acc, x) => acc + addonCount(x), 0); return n ? `${n} extra${n === 1 ? "" : "s"}` : /^Online/i.test(location ?? "") ? "Online" : /^Home visit/i.test(location ?? "") ? "Home visit" : ""; })(),
+        ]),
         subject: ctx.heldUntil ? `${BRAND}: approve or decline by ${deadlineLabel(ctx.heldUntil)} — ${listing.name} from ${bookerName} (${primary.ref})` : `${BRAND}: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
         href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
         ref: primary.ref,

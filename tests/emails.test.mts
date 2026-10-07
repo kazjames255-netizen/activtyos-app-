@@ -282,8 +282,8 @@ test("ME-003 approved: the approval email is the booking-confirmed email (provid
 test("ME-005 cancellation request: card refund, amount, kids, ref, reason and approve/decline prompt", () => {
   const b = booking({ cancel: { refundTo: "card", amount: 52.5, refund: "partial", reason: "Illness" } });
   const n = cancellationRequestNotice(b, money);
-  assert.match(n.title, /^Priya wants to cancel · /);
-  assert.match(n.body, /£52\.50 refund requested/);
+  assert.match(n.title, /^Cancel request · /);
+  assert.match(n.body, /£52\.50 refund$/);
   assert.equal(n.subject, "Priya Patel — cancellation request");
   assert.match(n.detail, /Asha, Ravi/);
   assert.match(n.detail, /Mon 20 Jul/);
@@ -336,11 +336,12 @@ test("ME-005 cancellation request: duplicate kid names are listed once", () => {
 
 test("ME-005 bell names the booking: ref, activity, child, day and the refund requested (QA-C D4)", () => {
   const n = cancellationRequestNotice(booking({ days: ["2026-10-26"], cancel: { amount: 0.3, refund: "full" } }), money);
-  assert.match(n.title, /^Priya wants to cancel · [A-Z]+-\d+$/);
-  assert.match(n.body, /Football Camp/);
-  assert.match(n.body, /Mon 26 Oct — £0\.30 refund requested$/);
+  // Kaz: a bell is NEVER a sentence: label + ref, then payment type · refund amount. The activity, child and day live in the email.
+  assert.match(n.title, /^Cancel request · [A-Z]+-\d+$/);
+  assert.match(n.body, /^[A-Za-z -]+ · £0\.30 refund$/);
+  assert.doesNotMatch(n.body, /—|\(/);
   const none = cancellationRequestNotice(booking({ days: ["2026-10-26"], cancel: { amount: 0, refund: "none" } }), money);
-  assert.match(none.body, /Mon 26 Oct — no refund requested$/);
+  assert.match(none.body, /^[A-Za-z -]+ · No refund$/);
 });
 
 // ───────────────────────── ME-006 refund approved ─────────────────────────

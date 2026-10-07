@@ -7,9 +7,11 @@ import { cancelBell } from "../../server/src/lib/emailTemplates";
 test("provider paid bell: ref, booker, amount, and 'booking confirmed' for an instant-confirm booking", () => {
   const b = { ref: "APF-10330", listing: "HOME VISIT FITNESS LESSON", booker: "Kaz", amount: 0.3, child: "sally james", kids: undefined };
   const m = providerPaidBell([b], true);
-  assert.equal(m.title, "Paid ✓ · APF-10330 · Kaz");
-  assert.equal(m.body, "HOME VISIT FITNESS LESSON · sally james — £0.30 received by card, booking confirmed.");
-  assert.doesNotMatch(providerPaidBell([b], false).body, /booking confirmed/);
+  // The bell is short: label + ref, then TYPE · COST (· Confirmed). The long wording is the email's `detail`.
+  assert.equal(m.title, "Paid ✓ · APF-10330");
+  assert.equal(m.body, "Card · £0.30 · Confirmed");
+  assert.equal(providerPaidBell([b], false).body, "Card · £0.30");
+  assert.match(m.detail, /APF-10330 · Kaz · HOME VISIT FITNESS LESSON · sally james — £0\.30 received by card, booking confirmed\./);
 });
 
 test("provider paid bell: a basket of two children names both and sums the money", () => {
@@ -18,8 +20,9 @@ test("provider paid bell: a basket of two children names both and sums the money
     { ref: "APF-2", listing: "Camp", booker: "Kaz", amount: 0.3, child: "B", kids: undefined },
   ];
   const m = providerPaidBell(rows, false);
-  assert.equal(m.title, "Paid ✓ · APF-1, APF-2 · Kaz");
-  assert.match(m.body, /A, B — £0\.60 received by card/);
+  assert.equal(m.title, "Paid ✓ · APF-1 +1");
+  assert.equal(m.body, "Card · £0.60");
+  assert.match(m.detail, /A, B — £0\.60 received by card/);
 });
 
 test("parent cancel bell: explicit title with the ref, who cancelled and the money", () => {

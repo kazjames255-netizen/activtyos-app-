@@ -2,6 +2,7 @@ import { db } from "../firebase";
 import { stripe, toPence } from "./stripe";
 import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
 import { notify } from "./notify";
+import { bellTitle, bellBody, bellMoney, bellDay } from "./bellText";
 import { emailBookingRequestReceived } from "./emails";
 import { notifyPaymentReceived, bookingDocId } from "../routes/bookings";
 import { blockCountDelta, bookingSeats, heldPlaces, placesDelta, placesDeltaIsZero, applyPlacesDelta, type BlockDoc } from "./blockDomain";
@@ -276,7 +277,7 @@ export async function cardHoldSweep(): Promise<void> {
       if (now >= exp) {
         await releaseHolds([b]);
         await systemDecline(b, "The provider didn't approve in time, so the card hold was released and no payment was taken.", "expired");
-        void notify({ tenantId: b.tenantId, to: { kind: "tenant" }, category: "booking", bellOnly: true, title: `Request expired · ${b.ref}`, body: `${b.listing} · ${b.booker} — not answered in time, so the card hold was released and the booking cancelled.`, href: `/company/bookings?ref=${encodeURIComponent(b.ref)}`, ref: b.ref });
+        void notify({ tenantId: b.tenantId, to: { kind: "tenant" }, category: "booking", bellOnly: true, title: bellTitle("request-expired", b.ref), body: bellBody(["Card held", bellMoney(b.cardHold?.amount ?? b.amount ?? 0), "Released"]), href: `/company/bookings?ref=${encodeURIComponent(b.ref)}`, ref: b.ref });
       } else if (exp - now <= REMIND_HOURS * 3_600_000) {
         const { fireOnce } = await import("./scheduler");
         await fireOnce(`holdremind_${b.tenantId}_${b.ref}`, { tenantId: b.tenantId }, () =>
@@ -284,8 +285,8 @@ export async function cardHoldSweep(): Promise<void> {
             tenantId: b.tenantId!,
             to: { kind: "tenant" },
             category: "booking",
-            title: `Last chance to answer · ${b.ref} · ${b.booker}`,
-            body: `${b.listing} — approve or decline by ${deadlineLabel(b.cardHold!.expiresAt!)} or the card hold is released and the booking is cancelled.`,
+            title: bellTitle("answer-by", b.ref),
+            body: bellBody(["Card held", bellMoney(b.cardHold?.amount ?? b.amount ?? 0), bellDay(b.cardHold!.expiresAt!)]),
             subject: `Reminder: answer ${b.booker}'s request by ${deadlineLabel(b.cardHold!.expiresAt!)} (${b.ref})`,
             href: `/company/bookings?ref=${encodeURIComponent(b.ref)}`,
             ref: b.ref,

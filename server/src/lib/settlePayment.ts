@@ -141,8 +141,8 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
       key: "booking-new",
       title: pb.title,
       body: pb.body,
-      subject: pb.title,
-      emailHtml: `<p>${pb.body.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p><p style="font-size:13px;color:#6a6785">The card payment has landed, so there is nothing left to chase on this booking.</p>`,
+      subject: `${pb.title} · ${grp[0].booker}`,
+      emailHtml: `<p>${pb.detail.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p><p style="font-size:13px;color:#6a6785">The card payment has landed, so there is nothing left to chase on this booking.</p>`,
       href: `/company/bookings?ref=${encodeURIComponent(grp[0].ref)}`,
       ref: grp[0].ref,
     });
