@@ -23,7 +23,6 @@ import { rich } from "./rich";
 import { methodLabel } from "./finI18n";
 import { financeFigures, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, payoutRows, type PaymentRecord } from "./financeFigures";
 import { genderSplit, type KidSex } from "./genderSplit";
-import { financeFigures, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, type PaymentRecord } from "./financeFigures";
 
 // ── Types for the extra ledgers we fold in (subset of each route's shape) ──
 interface Invoice { id: string; customerName: string; amount: number; date: string; dueDate?: string; status: string; overdue?: boolean }
