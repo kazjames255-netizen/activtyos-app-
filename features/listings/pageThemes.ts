@@ -185,3 +185,101 @@ export const ART_TEXT_PAIRS: Partial<Record<NewThemeKey, [string, string, string
   poster: [["filled line", "#FFFFFF", "#000000"], ["date line", "#FFFFFF", "#000000"]],
   plum: [["title on plum", "#E9F056", "#351E28"]],
 };
+
+// ── brand-colour matching ("Matched to your brand") ────────────────────────
+// Pure + deterministic: the provider's three brand colours are compared with the
+// key colours of every theme (header band, accent, main button, page ground) in
+// OKLab, a perceptually even space, so "close" means "looks close".
+
+/** Every theme the picker offers, in picker order (the legacy ten, then the fifteen newer ones). */
+export const ALL_THEME_KEYS = [...LEGACY_THEME_KEYS, ...NEW_THEME_KEYS] as const;
+export type AnyThemeKey = (typeof ALL_THEME_KEYS)[number];
+
+/** Key colours of the original ten themes (mirrors THEMES in ListingWizard.tsx): [band, accent, button, ground]. */
+const LEGACY_COLOURS: Record<(typeof LEGACY_THEME_KEYS)[number], [string, string, string, string]> = {
+  playful: ["#2f6bd8", "#2f6bd8", "#2f6bd8", "#ffffff"],
+  sport: ["#0047ff", "#c6ff00", "#0047ff", "#0b0d12"],
+  emerald: ["#0a3d2d", "#f5c451", "#10b981", "#052a20"],
+  teal: ["#073c47", "#ff9d5c", "#22d3ee", "#04262e"],
+  royal: ["#16204d", "#f5b81f", "#6366f1", "#0d1533"],
+  aubergine: ["#271847", "#fbbf24", "#a855f7", "#1a1030"],
+  burgundy: ["#3a1020", "#f6c453", "#e11d48", "#260a14"],
+  terracotta: ["#3c1e12", "#fbbf24", "#f97316", "#2a140c"],
+  slate: ["#1c222b", "#f59e0b", "#38bdf8", "#14181d"],
+  crimson: ["#3d1212", "#fbbf24", "#ef4444", "#2a0a0a"],
+};
+
+/** The four colours that identify a theme: [band, accent, button, ground]. */
+export function themeKeyColours(key: string): [string, string, string, string] | null {
+  if ((LEGACY_THEME_KEYS as readonly string[]).includes(key)) return LEGACY_COLOURS[key as (typeof LEGACY_THEME_KEYS)[number]];
+  if (isNewTheme(key)) { const t = THEME_TOKENS[key].t; return [t.band, t.acc, t.cta, t.bg]; }
+  return null;
+}
+
+/** Whether a stored value is an allowed theme key (the server list also accepts the legacy alias "navy"). */
+export const isThemeKey = (k: unknown): k is AnyThemeKey => typeof k === "string" && (ALL_THEME_KEYS as readonly string[]).includes(k);
+
+const HEX6 = /^#[0-9a-f]{6}$/i;
+/** Normalises "#abc" / "#AABBCC" to lower-case "#rrggbb"; anything else is null. */
+export function normaliseHex(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim().toLowerCase();
+  if (/^#[0-9a-f]{3}$/.test(s)) return `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`;
+  return HEX6.test(s) ? s : null;
+}
+
+/** #rrggbb to OKLab [L, a, b] (Björn Ottosson). */
+export function toOklab(h: string): [number, number, number] {
+  const [r, g, b] = hex(h).map((v) => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+}
+/** Perceptual distance between two #rrggbb colours (OKLab Euclidean x100; ~2 is barely noticeable, ~40+ is a different colour). */
+export function colourDistance(a: string, b: string): number {
+  const x = toOklab(a), y = toOklab(b);
+  return 100 * Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+}
+
+export interface BrandColours { c1?: string | null; c2?: string | null; c3?: string | null }
+export type MatchSlot = "main" | "second" | "third";
+export interface ThemeMatch { key: AnyThemeKey; score: number; slot: MatchSlot }
+
+/** Brand colour weights: main 3 : second 2 : third 1. */
+export const BRAND_WEIGHTS = { c1: 3, c2: 2, c3: 1 } as const;
+/** How much a theme colour counts when a brand colour looks for its closest partner (>1 = harder to match). Band/accent identify a theme; the page ground matters least. */
+const ROLE_PENALTY = [1, 1, 1.1, 1.6] as const;
+/** A brand colour counts as "echoed" by a theme when their (role-weighted) distance is at most this. */
+const CLOSE_ENOUGH = 14;
+
+/**
+ * The `n` themes (of all 25) whose key colours are closest to the brand colours. Lower score = closer.
+ * Each brand colour finds its closest theme colour; the distances are averaged with the 3:2:1 weights
+ * (only over the colours actually given). Ties break by picker order, so the result is deterministic.
+ * No usable brand colour = an empty list (the caller shows only the plain picker).
+ */
+export function matchThemes(brand: BrandColours, n = 3): ThemeMatch[] {
+  const cols: { hex: string; w: number; slot: MatchSlot }[] = [];
+  for (const [k, slot] of [["c1", "main"], ["c2", "second"], ["c3", "third"]] as const) {
+    const h = normaliseHex(brand?.[k]);
+    if (h) cols.push({ hex: h, w: BRAND_WEIGHTS[k], slot });
+  }
+  if (!cols.length) return [];
+  const totalW = cols.reduce((s, c) => s + c.w, 0);
+  const scored = ALL_THEME_KEYS.map((key, idx) => {
+    const tc = themeKeyColours(key)!;
+    let sum = 0, closest: { d: number; slot: MatchSlot } | null = null, firstClose: MatchSlot | null = null;
+    for (const c of cols) {
+      const d = Math.min(...tc.map((t, i) => colourDistance(c.hex, t) * ROLE_PENALTY[i]));
+      sum += d * c.w;
+      if (!closest || d < closest.d - 1e-9) closest = { d, slot: c.slot };
+      // cols is in weight order, so this is the heaviest brand colour the theme genuinely echoes.
+      if (firstClose === null && d <= CLOSE_ENOUGH) firstClose = c.slot;
+    }
+    // The reason shown: the most important brand colour the theme is close to; if none is that close, the one it is closest to.
+    return { key, idx, score: Math.round((sum / totalW) * 1000) / 1000, slot: firstClose ?? closest!.slot };
+  });
+  scored.sort((a, b) => a.score - b.score || a.idx - b.idx);
+  return scored.slice(0, Math.max(0, n)).map(({ key, score, slot }) => ({ key, score, slot }));
+}

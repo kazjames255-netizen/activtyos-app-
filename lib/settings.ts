@@ -745,6 +745,12 @@ export interface TenantSettings {
    *  live in `billing` / `providerName` (single source of truth); this just tints
    *  customer pages. */
   brandColor?: string;
+  /** Second + third brand colours (optional, #rrggbb). brandColor stays the MAIN colour. They drive the
+   *  listing wizard's "Matched to your brand" page-theme suggestions. */
+  brandColor2?: string;
+  brandColor3?: string;
+  /** Page colour theme every NEW listing starts with (a PAGE_STYLES key); set when the provider approves a theme in the listing wizard. */
+  defaultListingTheme?: string;
 
   /** Staff & workforce policy. Front-end preferences; the actual enforcement
    *  (blocking an out-of-date DBS, gating who assigns staff) is backend — see

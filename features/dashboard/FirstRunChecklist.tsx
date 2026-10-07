@@ -9,6 +9,7 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 import { useT } from "@/lib/i18n/provider";
+import { BrandOnboardingCard } from "@/features/setup/BrandColours";
 import { useFirstRunSteps, type StepId } from "@/features/dashboard/useFirstRunSteps";
 
 export function FirstRunChecklist({ variant = "dashboard" }: { variant?: "dashboard" | "bookings" }) {
@@ -65,6 +66,7 @@ export function FirstRunChecklist({ variant = "dashboard" }: { variant?: "dashbo
           </li>
         ))}
       </ol>
+      {variant === "dashboard" && !allDone && <BrandOnboardingCard />}
     </section>
   );
 }

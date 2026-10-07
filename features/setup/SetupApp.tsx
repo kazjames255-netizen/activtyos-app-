@@ -62,6 +62,7 @@ import { YearGroupsEditor } from "@/features/learninghub/quiz/YearGroupsEditor";
 import { SubjectColoursEditor } from "@/features/learninghub/SubjectColourPicker";
 import { ParentEmailSettings } from "@/features/learninghub/digest/ParentEmailSettings";
 import type { Student } from "@/features/learninghub/types";
+import { BrandSwatches, BRAND_KEYS, brandLabelKey } from "./BrandColours";
 
 // A logo can be a big PNG; /api/uploads caps at ~900KB, so downscale it first
 // (keeps transparency via PNG when it fits, else falls back to JPEG).
@@ -1593,20 +1594,11 @@ export function SetupApp() {
             <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("setup.logoFormatsNote")}</div>
             </div>
           </Row>
-          <Row label={t("setup.accentColour")} hint={t("setup.accentColourHint")}>
-            <div className="flex max-w-[420px] flex-wrap items-center gap-2">
-              {[
-                "#2f6bd8", "#1d4ed8", "#4f46e5", "#6d28d9", "#7c3aed", "#9333ea",
-                "#0ea5e9", "#0891b2", "#0d9488", "#0f766e", "#059669", "#16a34a",
-                "#65a30d", "#ca8a04", "#d97706", "#ea580c", "#dc2626", "#e11d48",
-                "#db2777", "#be123c", "#475569", "#1e293b",
-              ].map((c) => <button key={c} type="button" onClick={() => set("brandColor", c)} title={c} className="h-6 w-6 rounded-full transition-transform hover:scale-110" style={{ background: c, boxShadow: (settings.brandColor ?? "#2f6bd8").toLowerCase() === c ? "0 0 0 2px #fff, 0 0 0 4px #111" : "inset 0 0 0 1px rgba(0,0,0,.08)" }} />)}
-              <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--ink-3)]">
-                <input type="color" value={settings.brandColor ?? "#2f6bd8"} onChange={(e) => set("brandColor", e.target.value)} className="h-5 w-6 cursor-pointer rounded border-0 bg-transparent p-0" title={t("setup.customColour")} />
-                {t("setup.customColour")}
-              </label>
-            </div>
-          </Row>
+          {BRAND_KEYS.map((k, i) => (
+            <Row key={k} label={t(brandLabelKey(k))} hint={i === 0 ? t("setup.accentColourHint") : i === 1 ? t("p8lst.brandHint") : undefined}>
+              <BrandSwatches testId={"brand-colour-" + (i + 1)} value={settings[k] ?? (i === 0 ? "#2f6bd8" : undefined)} onPick={(c) => set(k, c)} onClear={i === 0 ? undefined : () => set(k, undefined)} />
+            </Row>
+          ))}
         </Section>
       )}
 

@@ -9,6 +9,18 @@ export const PAGE_STYLES = [
 ] as const;
 
 
+/** Setup → Branding checks (pure). The three brand colours must be #rrggbb hex (empty clears one) and the default listing theme one of PAGE_STYLES; returns an error message or null. */
+export function brandSettingsError(s: Record<string, unknown>): string | null {
+  for (const k of ["brandColor", "brandColor2", "brandColor3"]) {
+    const v = s[k];
+    if (v === undefined || v === null || v === "") continue;
+    if (typeof v !== "string" || !/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v)) return `${k} must be a hex colour like #2f6bd8`;
+  }
+  const t = s.defaultListingTheme;
+  if (t !== undefined && t !== null && t !== "" && !(typeof t === "string" && (PAGE_STYLES as readonly string[]).includes(t))) return "defaultListingTheme is not a known page theme";
+  return null;
+}
+
 export const imageSchema = z.object({
   src: z
     .string()

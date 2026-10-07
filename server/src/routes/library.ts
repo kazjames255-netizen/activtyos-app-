@@ -7,6 +7,7 @@ import { geocodeAddress } from "./geo";
 import { normaliseChildcareSettings } from "../lib/childcare";
 import { publicLibrarySettings } from "../lib/publicLibrary";
 import { cardReady } from "../lib/cardReady";
+import { brandSettingsError } from "../lib/listingRules";
 import { librarySnap } from "../lib/tenantLibrary";
 
 type Venue = { id: string; name?: string; address?: string; city?: string; kind?: string; lat?: number; lng?: number };
@@ -140,6 +141,8 @@ library.put("/", async (req, res) => {
   // Everything else in `settings` remains operator content with no behaviour.
   if ("settings" in body) {
     const s = (doc.settings ?? {}) as Record<string, unknown>;
+    const brandErr = brandSettingsError(s);
+    if (brandErr) { res.status(400).json({ error: brandErr }); return; }
     if ("childcare" in s) {
       try {
         const cc = normaliseChildcareSettings(s.childcare);

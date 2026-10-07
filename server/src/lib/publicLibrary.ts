@@ -75,6 +75,9 @@ export const PUBLIC_SETTINGS_KEYS = [
   // family's portal. (The logo is exposed separately below: it lives inside
   // `billing`, which also holds bank details, so billing itself never goes out.)
   "brandColor",
+  // Second + third brand colours (Setup → Branding); the default booking-page theme stays private.
+  "brandColor2",
+  "brandColor3",
 ] as const;
 
 /** What a signed-out visitor may see of a tenant's library settings: an allow-list of keys, the logo URL lifted out of `billing`,

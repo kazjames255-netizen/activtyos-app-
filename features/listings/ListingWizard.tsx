@@ -16,7 +16,9 @@ import type { SavedMenu } from "@/features/meals/SavedMenus";
 import { mealDayPlan, dishesForDay, type MealPlanValue } from "@/features/meals/plan";
 import { useBooking, useOpensAt, type BasketItem } from "./booking";
 import { LOW_LEFT, blockOn, capacityNote } from "./capacity";
-import { useTenantSettings, useSettings, detailsForListing } from "@/lib/settings";
+import { useTenantSettings, useSettings, detailsForListing, DEFAULT_SETTINGS } from "@/lib/settings";
+import { MatchedThemes } from "./MatchedThemes";
+import { brandFromSettings } from "@/features/setup/BrandColours";
 import { policyWording, type NamedPolicy } from "@/lib/cancellation";
 import { CheckoutPanel } from "./checkout";
 import { ThemeHero, useThemeFont } from "./ThemeHero";
@@ -505,6 +507,8 @@ export function emptyDraft(defaults?: {
   defaultRunningDays: number[];
   showSpaces: boolean;
   cancellationPolicies?: NamedPolicy[];
+  /** The provider's saved default page theme (settings.defaultListingTheme): a NEW listing starts on it. */
+  defaultListingTheme?: string;
 }): WizardDraft {
   const firstLive = (defaults?.cancellationPolicies ?? [])[0];
   return {
@@ -520,7 +524,7 @@ export function emptyDraft(defaults?: {
     // The first policy still in use — a new listing must never start on one
     // the provider has switched off.
     cancellation: firstLive ? policyWording({ ...firstLive, wording: undefined }) : CANCELLATION_POLICIES[3],
-    cancellationPolicyId: firstLive?.id, discounts: [], status: "draft", pageStyle: "sport",
+    cancellationPolicyId: firstLive?.id, discounts: [], status: "draft", pageStyle: defaults?.defaultListingTheme ? resolveTheme(defaults.defaultListingTheme) : "sport",
   };
 }
 
@@ -1204,6 +1208,25 @@ export function ListingWizard({
   const [saveState, setSaveState] = useState<"idle" | "dirty" | "saving" | "saved" | "error">("idle");
   const blocks = useBlocks();
   const upd = (patch: Partial<WizardDraft>) => setD((p) => ({ ...p, ...patch }));
+  // Brand colours (Setup → Branding / first-run) drive the "Matched to your brand" themes on the Preview step; the theme the
+  // provider approves is also saved as their default (settings.defaultListingTheme) so every NEW listing starts on it.
+  const { settings: brandSettings, loading: brandLoading, save: saveBrandSettings } = useSettings();
+  const brandColours = brandLoading ? null : brandFromSettings(brandSettings, DEFAULT_SETTINGS.brandColor);
+  const [themeSaved, setThemeSaved] = useState(false);
+  // The wizard can open before Setup has loaded (emptyDraft then used the stock theme): a still-untouched NEW listing picks up the default once it arrives.
+  const defaultApplied = useRef(false);
+  useEffect(() => {
+    if (brandLoading || defaultApplied.current) return;
+    defaultApplied.current = true;
+    const def = brandSettings.defaultListingTheme;
+    if (def && !initial.id && initial.pageStyle === "sport") setD((p) => (p.pageStyle === "sport" ? { ...p, pageStyle: resolveTheme(def) } : p));
+  }, [brandLoading, brandSettings.defaultListingTheme, initial.id, initial.pageStyle]);
+  const pickTheme = (t: PageTheme) => {
+    upd({ pageStyle: t });
+    if (brandLoading || brandSettings.defaultListingTheme === t) { setThemeSaved(!brandLoading); return; }
+    setThemeSaved(false);
+    void saveBrandSettings({ settings: { ...brandSettings, defaultListingTheme: t } }).then(() => setThemeSaved(true)).catch(() => { /* the listing keeps its own theme either way */ });
+  };
   const tickets = useMemo(() => blockTickets(blocks, d.blockId), [blocks, d.blockId]);
   const booking = useMemo(() => withoutHiddenPasses(blockBooking(blocks, d.blockId), d.ticketOverrides), [blocks, d.blockId, d.ticketOverrides]);
   const venue = local.venues.find((v) => v.id === d.venueId) || null;
@@ -1441,11 +1464,13 @@ export function ListingWizard({
             {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} onCreateBlock={openBlocks} />}
             {stepKey === "discounts" && <DiscountsStep d={d} upd={upd} tickets={tickets} />}
             {stepKey === "preview" && <div><StepHead n={10} kicker={tr("p8lst.waKickPreview")} title={tr("p8lst.waStep_preview")} lede={tr("p8lst.waPreviewLede")} /><HeadingsEditor d={d} upd={upd} />
-              <div className="sticky top-0 z-10 mx-3 mb-3 rounded-2xl border-2 bg-white p-3.5 sm:mx-5" style={{ borderColor: "#e9a915", boxShadow: "0 12px 30px -16px rgba(233,169,21,.8)" }}>
+              {brandColours && <MatchedThemes brand={brandColours} value={resolveTheme(d.pageStyle)} onPick={(k) => pickTheme(k as PageTheme)} label={(k) => tr("p8lst.wbTheme_" + k)} saved={themeSaved}
+                allThemes={<ThemePicker value={resolveTheme(d.pageStyle)} onChange={pickTheme} />} />}
+              {!brandColours && <div className="sticky top-0 z-10 mx-3 mb-3 rounded-2xl border-2 bg-white p-3.5 sm:mx-5" style={{ borderColor: "#e9a915", boxShadow: "0 12px 30px -16px rgba(233,169,21,.8)" }}>
                 <FieldLabel>{tr("p8lst.waThemeLbl")} <span className="font-normal text-[var(--ink-3)]">{tr("p8lst.waThemeNote")}</span></FieldLabel>
-                <div className="mt-1"><ThemePicker value={resolveTheme(d.pageStyle)} onChange={(t) => upd({ pageStyle: t })} /></div>
+                <div className="mt-1"><ThemePicker value={resolveTheme(d.pageStyle)} onChange={pickTheme} /></div>
                 <div className="mt-1.5 text-[11.5px] font-semibold text-[#7a4b00]">{tr("p9tx.wpThemeLive")}</div>
-              </div><ParentPreview {...previewProps} full /></div>}
+              </div>}<ParentPreview {...previewProps} full /></div>}
             {stepKey === "addons" && <AddonsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "staff" && <StaffStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "policy" && (
