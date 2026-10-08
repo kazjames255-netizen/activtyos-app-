@@ -25,6 +25,7 @@ import {
   type BlockAvail,
   refundButtonKind,
   refundAwaitingTransfer,
+  cancelledBannerKey,
   refundTransferAmount,
   refundableSoFar,
   paidSoFar,
@@ -673,9 +674,9 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         </div>
       )}
       {/* A cancelled booking with no refund waiting has nothing left to action: say so, and don't offer to chase a payment for it. */}
-      {b.status === "Cancelled" && !refundAwaitingTransfer(b) && !(b.cancel?.refund === "full" || b.cancel?.refund === "partial" || b.cancel?.refund === "pending") && (
+      {cancelledBannerKey(b) && (
         <div className="w-full rounded-lg border border-[#e0e3ee] bg-[#f6f7fb] px-3 py-2 text-[12px] font-semibold leading-[1.5] text-[#4a4763]">
-          {t("p7bd.cancelledNothingToDo")}
+          {t(cancelledBannerKey(b)!)}
           {(b.pay === "Invoice sent" || b.pay === "Unpaid") && <> {t("p7bd.cancelledNoPayment")}</>}
         </div>
       )}

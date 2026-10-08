@@ -1,6 +1,7 @@
 "use client";
 
 import { useT } from "@/lib/i18n/provider";
+import { formatDay } from "@/lib/i18n/format";
 import { useReadOnlyPortal } from "@/lib/portal-href";
 import { addonsByChild, ADDON_ICON, type BookingAddonSource } from "./addons";
 import { money } from "./helpers";
@@ -24,7 +25,7 @@ export function AddonBlock({ booking, prices: showPrices = true, meals = true }:
               <tr key={i} className="align-top">
                 <td className="py-0.5 pe-3 font-semibold">{l.meal ? "🍽 " : ""}{l.name}</td>
                 <td className="py-0.5 pe-3 text-[var(--ink-2)]">{l.choice}</td>
-                <td className="py-0.5 pe-3 text-[var(--ink-3)]">{l.perDay || l.meal ? (l.days.length ? l.days.map((d) => new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, { day: "numeric", month: "short", timeZone: "UTC" })).join(", ") : "") : (l.qty > 1 ? `× ${l.qty}` : "")}</td>
+                <td className="py-0.5 pe-3 text-[var(--ink-3)]">{l.perDay || l.meal ? (l.days.length ? l.days.map((d) => formatDay(d, { day: "numeric", month: "short" })).join(", ") : "") : (l.qty > 1 ? `× ${l.qty}` : "")}</td>
                 {prices && <td className="py-0.5 text-end font-bold">{money(l.price)}</td>}
               </tr>
             ))}

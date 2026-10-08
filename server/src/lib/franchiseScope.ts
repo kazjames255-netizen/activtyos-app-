@@ -66,21 +66,14 @@ export async function franchiseFamilyEmails(tenantId: string, franchiseId: strin
   return out;
 }
 
-/** Narrow already-tenant-scoped records to a HEAD OFFICE's chosen network via a
- *  ?franchiseId= query. Only a company (HO) narrows: "__ho__" = head-office own
- *  (records with no franchiseId), a franchiseId = that franchise, absent/empty =
- *  the whole tenant (all franchises). Franchise/freelancer callers already scope
- *  their own rows, so this is a no-op for them. */
-export function applyHoNetFilter<T extends { franchiseId?: string | null }>(
-  rows: T[],
-  role: string,
-  franchiseIdQuery: unknown,
-): T[] {
-  if (role !== "company") return rows;
-  const q = typeof franchiseIdQuery === "string" ? franchiseIdQuery.trim() : "";
-  if (!q) return rows;
-  if (q === "__ho__") return rows.filter((r) => !r.franchiseId);
-  return rows.filter((r) => (r.franchiseId ?? null) === q);
+// The head-office network scope helpers are pure and live in ./hoNet (no Firebase import, so tests can load them).
+import { applyHoNetFilter, blocksInHoNet } from "./hoNet";
+export { applyHoNetFilter, blocksInHoNet };
+
+/** listingId → franchiseId (null = head office's own) for every listing of a tenant. */
+export async function listingOwners(tenantId: string): Promise<Map<string, string | null>> {
+  const snap = await db.collection("listings").where("tenantId", "==", tenantId).get();
+  return new Map(snap.docs.map((d) => [d.id, ((d.data() as { franchiseId?: string | null }).franchiseId ?? null)] as [string, string | null]));
 }
 
 /** email (lower-cased) → the franchiseId whose listings that family has booked.

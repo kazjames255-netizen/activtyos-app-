@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, api } from "@/lib/api";
 import { useT } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { formatDay, type DayFormat } from "@/lib/i18n/format";
+import { withHoNet } from "@/lib/ho-net";
+import { useHoScope } from "@/components/franchise/HoScope";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card } from "@/components/ui";
 import { usePortalHref, useReadOnlyPortal } from "@/lib/portal-href";
@@ -29,7 +31,7 @@ const shift = (iso: string, n: number) => {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 };
-const fmt = (iso: string, o: Intl.DateTimeFormatOptions) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dateLocale(), { ...o, timeZone: "UTC" });
+const fmt = (iso: string, o: DayFormat) => formatDay(iso, o);
 const longDay = (iso: string) => fmt(iso, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 const shortDay = (iso: string) => fmt(iso, { weekday: "short", day: "numeric", month: "short" });
 
@@ -64,7 +66,8 @@ export function KitApp() {
   // Staff cannot change the "Remind me the day before" switch (owners only), so they are not shown it at all.
   const useStaffView = useReadOnlyPortal().staff;
 
-  const nameQ = `${name ? `&name=${encodeURIComponent(name)}` : ""}${listingId ? `&listingId=${encodeURIComponent(listingId)}` : ""}`;
+  const hoScope = useHoScope(); // head office: Add-on orders follow the network scope selector (own / a franchise / all)
+  const nameQ =`${name ? `&name=${encodeURIComponent(name)}` : ""}${listingId ? `&listingId=${encodeURIComponent(listingId)}` : ""}`;
   // The strip covers a week back to about two months ahead of the chosen day (one request, at most 93 days on the server).
   const range = useMemo(() => ({ from: shift(date, -7), to: shift(date, 60) }), [date]);
   const [loaded, setLoaded] = useState<{ from: string; to: string } | null>(null);
@@ -74,18 +77,18 @@ export function KitApp() {
   };
 
   const loadDay = useCallback(() => {
-    apiGet<KitDay>(`/api/kit?date=${date}${nameQ}`).then((d) => { setData(d); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Couldn't load"));
-  }, [date, nameQ]);
+    apiGet<KitDay>(withHoNet(`/api/kit?date=${date}${nameQ}`)).then((d) => { setData(d); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Couldn't load"));
+  }, [date, nameQ, hoScope]);
   const loadStrip = useCallback(() => {
     // Re-use the loaded range while the chosen day is still inside it (the arrows and chips move within it without a new request).
     const r = loaded && date >= loaded.from && date <= shift(loaded.to, -7) ? loaded : range;
-    apiGet<DaysResp>(`/api/kit/days?from=${r.from}&to=${r.to}${nameQ}`).then((d) => { setStrip(d); rememberListings(d.listings); setLoaded({ from: d.from, to: d.to }); setReminder((x) => (x === null ? d.reminder : x)); }).catch(() => {});
+    apiGet<DaysResp>(withHoNet(`/api/kit/days?from=${r.from}&to=${r.to}${nameQ}`)).then((d) => { setStrip(d); rememberListings(d.listings); setLoaded({ from: d.from, to: d.to }); setReminder((x) => (x === null ? d.reminder : x)); }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, range, nameQ]);
+  }, [date, range, nameQ, hoScope]);
   const loadMonth = useCallback(() => {
     const r = monthRange(month.y, month.m);
-    apiGet<DaysResp>(`/api/kit/days?from=${r.from}&to=${r.to}${nameQ}`).then((d) => { setMonthData(d); rememberListings(d.listings); }).catch(() => {});
-  }, [month, nameQ]);
+    apiGet<DaysResp>(withHoNet(`/api/kit/days?from=${r.from}&to=${r.to}${nameQ}`)).then((d) => { setMonthData(d); rememberListings(d.listings); }).catch(() => {});
+  }, [month, nameQ, hoScope]);
 
   useEffect(() => { setData(null); loadDay(); }, [loadDay]);
   useEffect(() => { loadStrip(); }, [loadStrip]);

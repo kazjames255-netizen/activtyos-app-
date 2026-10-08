@@ -31,7 +31,7 @@ test("relativeFrom: 'in N days' / 'tomorrow' per language", () => {
   assert.equal(relativeFrom(0, "day", "cy"), "heddiw");
   assert.equal(relativeFrom(3, "week", "cy"), "ymhen 3 wythnos");
   assert.equal(relativeFrom(3, "month", "cy"), "ymhen 3 mis");
-  assert.match(relativeFrom(2, "day", "pl"), /^za 2 dni$/);
+  assert.match(relativeFrom(5, "day", "pl"), /^za 5 dni$/);
   assert.equal(relativeFrom(1, "day", "pl"), "jutro");
   assert.match(relativeFrom(2, "day", "ar"), /[؀-ۿ]/);
 });

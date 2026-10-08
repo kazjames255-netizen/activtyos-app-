@@ -2,7 +2,7 @@
 
 import { kidInitials } from "@/lib/uiRules";
 import { OnlineSessionsPanel } from "@/features/onlinesessions/OnlineSessionsPanel";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, formatDay } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -530,10 +530,7 @@ const AMEND_FALLBACK: AmendPolicy = { allowDateChanges: true, amendSelfService: 
 // booking so the operator sees it and can approve (applies the swap) or deny.
 const DATE_CHANGES_LIVE = true;
 
-const fmtIso = (iso: string) => {
-  const d = new Date(`${iso}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" });
-};
+const fmtIso = (iso: string) => formatDay(iso, { weekday: "short", day: "numeric", month: "short" });
 // Recover an ISO date from a session display string like
 // "Mon 27 Jul 2026 · 09:00 – 15:30" → "2026-07-27". Some bookings only carry
 // these strings (no ISO `days`), so the amend flow parses them as a fallback.
@@ -1218,7 +1215,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
                 <div key={i} className="flex items-baseline justify-between gap-2 border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">
                   <span>
                     <span className="me-1">🍽</span><b>{m.name}</b>
-                    <span className="text-[var(--ink-3)]"> · {new Date(`${m.date}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}{m.child ? ` · ${m.child}` : ""}</span>
+                    <span className="text-[var(--ink-3)]"> · {formatDay(m.date, { weekday: "short", day: "numeric", month: "short" })}{m.child ? ` · ${m.child}` : ""}</span>
                     {m.later && <span className="ms-1 rounded bg-[#eef4fd] px-1 py-[0.5px] text-[9.5px] font-bold uppercase tracking-[0.03em] text-[var(--brand-2)]">{t("parent.addedLater")}</span>}
                   </span>
                   {m.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(m.price)}</span>}

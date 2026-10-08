@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyHoNetFilter, blocksInHoNet } from "../../server/src/lib/franchiseScope";
+import { applyHoNetFilter, blocksInHoNet } from "../../server/src/lib/hoNet";
 import { owedNow } from "../../features/bookings/helpers";
 import { kitTally, type KitBooking } from "../../features/bookings/addons";
 

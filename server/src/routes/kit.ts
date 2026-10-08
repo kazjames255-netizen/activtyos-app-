@@ -4,7 +4,7 @@ import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import type { BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
-import { franchiseListingIds } from "../lib/franchiseScope";
+import { blocksInHoNet, franchiseListingIds, listingOwners } from "../lib/franchiseScope";
 import { staffSiteScope } from "../lib/siteScope";
 import { ukToday } from "../lib/ukDate";
 import { hasLiveAddonOrders, kitForDay, kitTally, type KitBooking } from "../../../features/bookings/addons";
@@ -46,16 +46,20 @@ async function tenantOf(req: import("express").Request, res: import("express").R
 }
 
 /** The blocks this account may see that have a session in [from, to] (franchise and site scoped, like the registers). */
-async function scopedBlocks(auth: NonNullable<import("express").Request["auth"]>, tenantId: string, from: string, to: string) {
+async function scopedBlocks(auth: NonNullable<import("express").Request["auth"]>, tenantId: string, from: string, to: string, hoNet?: unknown) {
   let franchiseListings: Set<string> | null = null;
   if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) franchiseListings = await franchiseListingIds(tenantId, auth.franchiseId);
   const site = await staffSiteScope(auth);
   const blocksSnap = await db.collection("blocks").where("tenantId", "==", tenantId).get();
-  return blocksSnap.docs
+  const inRange = blocksSnap.docs
     .map((d) => ({ id: d.id, block: d.data() as BlockDoc }))
     .filter(({ block }) => !franchiseListings || franchiseListings.has(block.listingId))
     .filter(({ block }) => !site || site.listings.has(block.listingId))
     .filter(({ block }) => block.sessions.some((s) => s.date >= from && s.date <= to));
+  // Head office's network scope selector (?franchiseId=): "__ho__" = own locations, an id = that franchise, none = everything.
+  if (auth.role !== "company" || typeof hoNet !== "string" || !hoNet.trim()) return inRange;
+  const scoped = blocksInHoNet(inRange.map((x) => ({ ...x, listingId: x.block.listingId })), await listingOwners(tenantId), auth.role, hoNet);
+  return scoped.map(({ id, block }) => ({ id, block }));
 }
 
 /** The optional ?listingId= filter. Applied INSIDE the role scoping above: an id the caller may not see simply matches no block,
@@ -90,7 +94,7 @@ async function cached<T>(key: string, ttlMs: number, make: () => Promise<T>): Pr
   if (memo.size > 500) for (const k of memo.keys()) { memo.delete(k); if (memo.size < 400) break; }
   return v;
 }
-const scopeKey = (req: import("express").Request, tenantId: string) => `${tenantId}|${req.auth!.role}|${req.auth!.franchiseId ?? ""}|${req.user?.uid ?? ""}`;
+const scopeKey = (req: import("express").Request, tenantId: string) => `${tenantId}|${req.auth!.role}|${req.auth!.franchiseId ?? ""}|${req.user?.uid ?? ""}|${typeof req.query.franchiseId === "string" ? req.query.franchiseId : ""}`;
 
 /** Only roles that may message families see a booker's email (the same people who can tick). */
 const stripPrivate = (groups: ReturnType<typeof kitForDay>, allowed: boolean) =>
@@ -110,7 +114,7 @@ kit.get("/", async (req, res) => {
   const date = typeof req.query.date === "string" && DAY.test(req.query.date) ? req.query.date : ukToday();
   const name = typeof req.query.name === "string" ? req.query.name.slice(0, 80) : "";
   const listingId = listingParam(req);
-  const todays = (await scopedBlocks(auth, tenantId, date, date)).filter(({ block }) => !listingId || block.listingId === listingId);
+  const todays = (await scopedBlocks(auth, tenantId, date, date, req.query.franchiseId)).filter(({ block }) => !listingId || block.listingId === listingId);
   if (!todays.length) { res.json({ date, canTick: canTick(auth.role), groups: [], ticked: 0, total: 0 }); return; }
   const bookings = await bookingsOfBlocks(tenantId, todays);
   const groups = stripPrivate(kitForDay(bookings, date, { name }), canTick(auth.role));
@@ -147,7 +151,7 @@ kit.get("/days", async (req, res) => {
   const name = typeof req.query.name === "string" ? req.query.name.slice(0, 80) : "";
   const listingId = listingParam(req);
   const out = await cached(`days|${scopeKey(req, tenantId)}|${from}|${to}|${name.toLowerCase()}|${listingId}`, 20_000, async () => {
-    const blocks = await scopedBlocks(auth, tenantId, from, to);
+    const blocks = await scopedBlocks(auth, tenantId, from, to, req.query.franchiseId);
     // Bookings per listing (a block belongs to one listing), so the dropdown and the filter come from the same scoped data.
     const byListing = new Map<string, KitBooking[]>();
     await Promise.all(blocks.map(async (b) => {
@@ -180,7 +184,7 @@ kit.get("/live", async (req, res) => {
   const auth = req.auth!;
   const today = ukToday();
   const live = await cached(`live|${scopeKey(req, tenantId)}|${today}`, 60_000, async () => {
-    const blocks = await scopedBlocks(auth, tenantId, today, "9999-12-31");
+    const blocks = await scopedBlocks(auth, tenantId, today, "9999-12-31", req.query.franchiseId);
     if (!blocks.length) return false;
     return hasLiveAddonOrders(await bookingsOfBlocks(tenantId, blocks), today);
   });

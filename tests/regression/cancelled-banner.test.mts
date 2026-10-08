@@ -22,7 +22,8 @@ test("banner: only for cancelled bookings", () => {
   assert.equal(cancelledBannerKey({ status: "Confirmed", cancel: { by: "Provider", refund: "declined" } }), null);
 });
 test("the new wording exists in all 11 languages", () => {
-  const cat = messages as unknown as Record<string, Record<string, string>>;
+  const m0 = messages as unknown as { default?: unknown };
+  const cat = (m0.default ?? messages) as Record<string, Record<string, string>>;
   assert.equal(Object.keys(cat).length, 11);
   for (const [lang, m] of Object.entries(cat)) assert.ok(m.cancelledByProviderNothingToDo && m.cancelledByProviderNothingToDo.length > 5, lang);
 });

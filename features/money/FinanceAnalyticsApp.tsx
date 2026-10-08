@@ -5,6 +5,8 @@ import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
+import { withHoNet } from "@/lib/ho-net";
+import { useHoScope } from "@/components/franchise/HoScope";
 import { useRealtime } from "@/lib/realtime";
 import { WalletOwedCard } from "@/features/money/WalletOwedCard";
 import { collectedNet, owedNow } from "@/features/bookings/helpers";
@@ -45,6 +47,7 @@ export function FinanceAnalyticsApp() {
   // A franchise shares head office's payout (Stripe) account: it can't connect or open it (the API says so), so its
   // Payouts tab explains that instead of offering buttons that only ever fail.
   const isFranchisePortal = portalOf(usePathname()) === "franchise";
+  const hoScope = useHoScope(); // head office: Finance follows the network scope selector (own / a franchise / all)
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [invoices, setInvoices] = useState<InvPayload | null>(null);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -83,7 +86,7 @@ export function FinanceAnalyticsApp() {
   }, [status, tabTouched]);
 
   const load = useCallback(() => {
-    apiGet<Booking[]>("/api/bookings").then((b) => {
+    apiGet<Booking[]>(withHoNet("/api/bookings")).then((b) => {
       const next = Array.isArray(b) ? b : [];
       // useRealtime refetches on every bookings/payments/invoices change, which can fire
       // often — bail out of the state update (keep the old array reference) when the payload
@@ -95,7 +98,7 @@ export function FinanceAnalyticsApp() {
       });
       setError(null);
     }).catch((e) => setError(e instanceof Error ? e.message : t("p8fin.gLoadFailed")));
-    apiGet<InvPayload>("/api/invoices").then((p) => setInvoices(p)).catch(() => setInvoices({ items: [], summary: { count: 0, outstanding: 0, collected: 0, overdue: 0 } }));
+    apiGet<InvPayload>(withHoNet("/api/invoices")).then((p) => setInvoices(p)).catch(() => setInvoices({ items: [], summary: { count: 0, outstanding: 0, collected: 0, overdue: 0 } }));
     apiGet<PaymentRecord[]>("/api/payments").then((p) => setPayments(Array.isArray(p) ? p : [])).catch(() => {});
     apiGet<PayStatus>("/api/payments/status").then(setStatus).catch(() => {});
     // Each listing's season + venue, for the Season/Location filters and the
@@ -118,7 +121,7 @@ export function FinanceAnalyticsApp() {
     apiGet<{ children?: KidSex[] }[]>("/api/customers")
       .then((cs) => setChildKids((cs ?? []).flatMap((c) => c.children ?? [])))
       .catch(() => {});
-  }, [t]);
+  }, [t, hoScope]);
   useEffect(load, [load]);
   useRealtime(["bookings", "payments", "invoices"], load);
 

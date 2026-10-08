@@ -7,7 +7,7 @@ import { Button } from "@/components/ui";
 import { useBookingsStore } from "./store";
 import { money, refundableSoFar } from "./helpers";
 import { pendingAddonRequests, requestTargets } from "./addonRequests";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { formatDay } from "@/lib/i18n/format";
 import type { AddonRequest, Booking } from "./types";
 
 // The provider's side of a family's REQUEST to change or cancel one extra (size, colour, a meal...). Never automatic and separate from cancelling
@@ -27,7 +27,7 @@ function RequestCard({ booking, r }: { booking: Booking; r: AddonRequest }) {
   const amt = cancel ? r.price : Math.abs(diff);
   const targets = cancel ? requestTargets(r) : [];
   const bulk = targets.length > 1;
-  const dayText = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  const dayText = (d: string) => formatDay(d, { weekday: "short", day: "numeric", month: "short" });
   const [declining, setDeclining] = useState(false);
   const [reason, setReason] = useState("");
   const opts: [string, string][] = cancel

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useT } from "@/lib/i18n/provider";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { formatDay } from "@/lib/i18n/format";
 import { money } from "@/features/bookings/helpers";
 import { requestTargets } from "@/features/bookings/addonRequests";
 import type { AddonRequest, Booking } from "@/features/bookings/types";
@@ -44,7 +44,7 @@ export function AddonRequests({ booking, providerName, onChanged }: { booking: B
   const provider = providerName || t("p9tx.osYourProvider");
   const tenantQ = booking.tenantId ? `?tenantId=${encodeURIComponent(booking.tenantId)}` : "";
   const base = `/api/my/bookings/${encodeURIComponent(booking.ref)}`;
-  const dayText = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  const dayText = (d: string) => formatDay(d, { weekday: "short", day: "numeric", month: "short" });
 
   const load = () => apiGet<Options>(`${base}/addon-options${tenantQ}`).then(setData).catch((e) => setError(e instanceof Error ? e.message : String(e)));
   useEffect(() => { if (open) void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open, booking.ref, (booking.addonRequests ?? []).length]);

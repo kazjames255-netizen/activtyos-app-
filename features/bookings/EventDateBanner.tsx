@@ -1,7 +1,7 @@
 "use client";
 
 import { useT } from "@/lib/i18n/provider";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { formatDay, relativeFrom } from "@/lib/i18n/format";
 import type { Booking } from "./types";
 import { sessionIsoDates } from "./helpers";
 
@@ -9,16 +9,15 @@ import { sessionIsoDates } from "./helpers";
 // Plus the family's own note ("we have pets", parking, gate codes) as a callout straight under it so it cannot be missed.
 
 const fmtDay = (iso: string, withYear: boolean, long = false) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: long ? "long" : "short", day: "numeric", month: long ? "long" : "short", ...(withYear ? { year: "numeric" as const } : {}), timeZone: "UTC" });
+  formatDay(iso, { weekday: long ? "long" : "short", day: "numeric", month: long ? "long" : "short", ...(withYear ? { year: "numeric" as const } : {}) });
 
 /** "tomorrow", "in 3 weeks", "in 11 months" (or null when it is already past). */
 function relativeHint(iso: string): string | null {
   const days = Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(new Date().toISOString().slice(0, 10) + "T00:00:00Z")) / 86_400_000);
   if (days < 0) return null;
-  const rtf = new Intl.RelativeTimeFormat(dl(), { numeric: "auto" });
-  if (days < 14) return rtf.format(days, "day");
-  if (days < 60) return rtf.format(Math.round(days / 7), "week");
-  return rtf.format(Math.round(days / 30), "month");
+  if (days < 14) return relativeFrom(days, "day");
+  if (days < 60) return relativeFrom(Math.round(days / 7), "week");
+  return relativeFrom(Math.round(days / 30), "month");
 }
 
 /** The time of day from a session string like "Mon 06 Sept 2027 · 09:00 – 15:30". */

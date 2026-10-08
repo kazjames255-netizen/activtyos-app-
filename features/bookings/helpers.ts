@@ -748,6 +748,15 @@ export function refundAwaitingTransfer(b: RefundCarrier): boolean {
   return unsentRefunds(b).length > 0;
 }
 
+/** The grey 'nothing left to do' note on a CANCELLED booking page: which catalogue key to show, or null while something is still waiting on the
+ *  provider (a refund to approve, or an approved offline refund to send). It names who cancelled: the family (cancel.by "Booker") or the provider. */
+export function cancelledBannerKey(b: RefundCarrier & { status?: string; cancel?: (RefundCarrier["cancel"] & { by?: string; refundOnly?: boolean }) | null }): string | null {
+  if (b.status !== "Cancelled") return null;
+  const r = b.cancel?.refund;
+  if (refundAwaitingTransfer(b) || r === "full" || r === "partial" || r === "pending") return null;
+  return b.cancel?.by === "Provider" ? "p7bd.cancelledByProviderNothingToDo" : "p7bd.cancelledNothingToDo";
+}
+
 /** The money the provider still has to send back: the cash part of every recorded refund not yet marked sent. When nothing is waiting (it was just
  *  sent) this is what the last confirmation sent, so the "has been sent" wording names the right amount. */
 export function refundTransferAmount(b: RefundCarrier): number {
