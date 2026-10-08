@@ -20,7 +20,7 @@ import { ADDON_ICON, daysWithOrders, monthGrid, monthRange, nextDayWith, type Ki
 interface KitChild { key: string; ref: string; child: string; qty: number; done: boolean; by?: string; pending?: "change" | "cancel"; booker?: string; email?: string }
 interface KitGroup { id: string; name: string; choiceValue: string; choice: string; meal: boolean; total: number; children: KitChild[] }
 interface KitDay { date: string; canTick: boolean; groups: KitGroup[]; ticked: number; total: number }
-interface DaysResp { from: string; to: string; days: { date: string; items: number; byName: Record<string, number> }[]; names: string[]; total: number; totals: Record<string, number>; canTick: boolean; canRemind: boolean; reminder: boolean }
+interface DaysResp { from: string; to: string; days: { date: string; items: number; byName: Record<string, number> }[]; names: string[]; listings: { id: string; name: string }[]; total: number; totals: Record<string, number>; canTick: boolean; canRemind: boolean; reminder: boolean }
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const ukToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
@@ -50,6 +50,9 @@ export function KitApp() {
   const [view, setView] = useState<"day" | "month">(sp.get("view") === "month" ? "month" : "day");
   const [date, setDate] = useState(() => (ISO.test(sp.get("date") ?? "") ? (sp.get("date") as string) : today));
   const [name, setName] = useState(sp.get("name") ?? "");
+  const [listingId, setListingId] = useState(sp.get("listing") ?? "");
+  // Listings seen so far (id -> name), so the picked one keeps its name when a different range does not list it.
+  const [knownListings, setKnownListings] = useState<Record<string, string>>({});
   const [onlyDays, setOnlyDays] = useState(true);
   const [month, setMonth] = useState(() => { const d = ISO.test(sp.get("date") ?? "") ? (sp.get("date") as string) : today; return { y: Number(d.slice(0, 4)), m: Number(d.slice(5, 7)) - 1 }; });
   const [data, setData] = useState<KitDay | null>(null);
@@ -59,10 +62,14 @@ export function KitApp() {
   const [remindBusy, setRemindBusy] = useState(false);
   const [reminder, setReminder] = useState<boolean | null>(null);
 
-  const nameQ = name ? `&name=${encodeURIComponent(name)}` : "";
+  const nameQ = `${name ? `&name=${encodeURIComponent(name)}` : ""}${listingId ? `&listingId=${encodeURIComponent(listingId)}` : ""}`;
   // The strip covers a week back to about two months ahead of the chosen day (one request, at most 93 days on the server).
   const range = useMemo(() => ({ from: shift(date, -7), to: shift(date, 60) }), [date]);
   const [loaded, setLoaded] = useState<{ from: string; to: string } | null>(null);
+
+  const rememberListings = (ls: { id: string; name: string }[] | undefined) => {
+    if (ls?.length) setKnownListings((k) => (ls.every((l) => k[l.id] === l.name) ? k : { ...k, ...Object.fromEntries(ls.map((l) => [l.id, l.name])) }));
+  };
 
   const loadDay = useCallback(() => {
     apiGet<KitDay>(`/api/kit?date=${date}${nameQ}`).then((d) => { setData(d); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Couldn't load"));
@@ -70,19 +77,19 @@ export function KitApp() {
   const loadStrip = useCallback(() => {
     // Re-use the loaded range while the chosen day is still inside it (the arrows and chips move within it without a new request).
     const r = loaded && date >= loaded.from && date <= shift(loaded.to, -7) ? loaded : range;
-    apiGet<DaysResp>(`/api/kit/days?from=${r.from}&to=${r.to}${nameQ}`).then((d) => { setStrip(d); setLoaded({ from: d.from, to: d.to }); setReminder((x) => (x === null ? d.reminder : x)); }).catch(() => {});
+    apiGet<DaysResp>(`/api/kit/days?from=${r.from}&to=${r.to}${nameQ}`).then((d) => { setStrip(d); rememberListings(d.listings); setLoaded({ from: d.from, to: d.to }); setReminder((x) => (x === null ? d.reminder : x)); }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, range, nameQ]);
   const loadMonth = useCallback(() => {
     const r = monthRange(month.y, month.m);
-    apiGet<DaysResp>(`/api/kit/days?from=${r.from}&to=${r.to}${nameQ}`).then(setMonthData).catch(() => {});
+    apiGet<DaysResp>(`/api/kit/days?from=${r.from}&to=${r.to}${nameQ}`).then((d) => { setMonthData(d); rememberListings(d.listings); }).catch(() => {});
   }, [month, nameQ]);
 
   useEffect(() => { setData(null); loadDay(); }, [loadDay]);
   useEffect(() => { loadStrip(); }, [loadStrip]);
   useEffect(() => { if (view === "month") loadMonth(); }, [view, loadMonth]);
   useRealtime(["bookings"], () => { loadDay(); loadStrip(); if (view === "month") loadMonth(); });
-  useEffect(() => { setQuery({ date: date === today ? null : date, name: name || null, view: view === "month" ? "month" : null }); }, [date, name, view, today]);
+  useEffect(() => { setQuery({ date: date === today ? null : date, name: name || null, listing: listingId || null, view: view === "month" ? "month" : null }); }, [date, name, listingId, view, today]);
 
   const withOrders = useMemo(() => daysWithOrders({ days: Object.fromEntries((strip?.days ?? []).map((d) => [d.date, { items: d.items, byName: d.byName } as KitDayTally])), names: [] }), [strip]);
   const dayDates = withOrders.map((d) => d.date);
@@ -91,8 +98,16 @@ export function KitApp() {
   const canPrev = !onlyDays || nextDayWith(dayDates, date, -1) !== null;
   const canNext = !onlyDays || nextDayWith(dayDates, date, 1) !== null;
   const names = strip?.names ?? monthData?.names ?? [];
+  // The dropdown shows what the server lists for the range on screen (only listings this account may see), plus any listing already picked.
+  const listingOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const l of [...(strip?.listings ?? []), ...(monthData?.listings ?? [])]) m.set(l.id, l.name);
+    if (listingId && !m.has(listingId)) m.set(listingId, knownListings[listingId] ?? t("p8lst.kitUnknownListing"));
+    return [...m].map(([id, nm]) => ({ id, name: nm })).sort((a, c) => a.name.localeCompare(c.name));
+  }, [strip, monthData, listingId, knownListings, t]);
+  const listingName = listingId ? listingOptions.find((l) => l.id === listingId)?.name ?? "" : "";
   const canTick = data?.canTick ?? strip?.canTick ?? false;
-  const nothingAtAll = strip !== null && strip.total === 0 && strip.names.length === 0 && !name && (data?.total ?? 0) === 0;
+  const nothingAtAll = strip !== null && strip.total === 0 && strip.names.length === 0 && !name && !listingId && (data?.total ?? 0) === 0;
 
   async function tick(g: KitGroup, c: KitChild) {
     if (!data?.canTick) return;
@@ -156,11 +171,18 @@ export function KitApp() {
           ))}
         </div>
         <select value={name} onChange={(e) => setName(e.target.value)} aria-label={t("p8lst.kitAllAddons")} data-testid="kit-name-filter"
-          className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold">
+          className="min-w-0 max-w-full rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold">
           <option value="">{ADDON_ICON} {t("p8lst.kitAllAddons")}</option>
           {names.map((n) => <option key={n} value={n}>{n}</option>)}
           {name && !names.includes(name) && <option value={name}>{name}</option>}
         </select>
+        {(listingOptions.length > 0 || listingId) && (
+          <select value={listingId} onChange={(e) => setListingId(e.target.value)} aria-label={t("p8lst.kitFilterListing")} data-testid="kit-listing-filter"
+            className="min-w-0 max-w-full rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold">
+            <option value="">{t("p8lst.kitAllListings")}</option>
+            {listingOptions.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+        )}
         <span className="ms-auto" />
         <Button variant="primary" onClick={() => window.print()}>🖨 {t("p8lst.kitPrint")}</Button>
       </div>
@@ -199,11 +221,11 @@ export function KitApp() {
           </div>
 
           <div id="kit-print">
-            <div className="mb-1 text-[16px] font-extrabold">{longDay(date)}{name ? ` · ${name}` : ""}</div>
+            <div className="mb-1 text-[16px] font-extrabold">{longDay(date)}{name ? ` · ${name}` : ""}{listingName ? ` · ${listingName}` : ""}</div>
             <p className="kit-noprint mb-3 text-[13px] text-[var(--ink-3)]">{t("p8lst.kitSub")}</p>
             {data && data.total > 0 && <div className="mb-3 text-[13px] font-extrabold text-[var(--brand-ink,#1d3a8f)]" data-testid="kit-progress">{t("p8lst.kitProgress", { n: String(data.ticked), m: String(data.total) })}</div>}
             {data && !data.canTick && data.total > 0 && <div className="kit-noprint mb-3 text-[12px] text-[var(--ink-3)]">{t("p8lst.kitReadOnly")}</div>}
-            {data && data.groups.length === 0 && !nothingAtAll && <Card className="p-6 text-center text-[14px] text-[var(--ink-3)]">{t("p8lst.kitNone")}</Card>}
+            {data && data.groups.length === 0 && !nothingAtAll && <Card className="p-6 text-center text-[14px] text-[var(--ink-3)]" data-testid="kit-none">{listingId && strip && strip.total === 0 ? t("p8lst.kitNoneListing") : t("p8lst.kitNone")}</Card>}
             <div className="grid gap-3">
               {(data?.groups ?? []).map((g) => {
                 const all = msgAllHref(g);
@@ -247,7 +269,7 @@ export function KitApp() {
             <Button onClick={() => shiftMonth(1)} aria-label={t("p8lst.kitNextMonth")} title={t("p8lst.kitNextMonth")}>›</Button>
             <Button onClick={() => setMonth({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 })}>{t("p8lst.kitToday")}</Button>
           </div>
-          <div className="hidden text-[16px] font-extrabold print:block">{monthLabel}{name ? ` · ${name}` : ""}</div>
+          <div className="hidden text-[16px] font-extrabold print:block">{monthLabel}{name ? ` · ${name}` : ""}{listingName ? ` · ${listingName}` : ""}</div>
           <div className="grid grid-cols-7 gap-1.5 text-center text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">
             {weekdays.map((w, i) => <div key={i}>{w}</div>)}
           </div>
@@ -275,6 +297,7 @@ export function KitApp() {
               </div>
             ))}
           </div>
+          {monthData && listingId && monthData.total === 0 && <Card className="kit-noprint mt-3 p-4 text-center text-[13.5px] text-[var(--ink-3)]" data-testid="kit-none">{t("p8lst.kitNoneListing")}</Card>}
           {monthData && (
             <div className="mt-4" data-testid="kit-month-totals">
               <div className="mb-1 text-[14px] font-extrabold">{t("p8lst.kitMonthTotal", { n: monthData.total })}</div>
