@@ -648,7 +648,11 @@ incidents.get("/:id/dossier", async (req, res) => {
         const u = (us.data() ?? {}) as Record<string, string>;
         parent = { name: u.name, phone: u.phone, address: u.address, postcode: u.postcode, email: u.email };
         const sib = await db.collection("children").where("parentUid", "==", parentUid).get();
-        siblings = sib.docs.filter((d) => d.id !== childId).map((d) => { const s = d.data(); return { name: s.name as string, dob: s.dob as string, age: s.age as number }; });
+        // A parent's account holds children of EVERY provider, franchise and site: show only siblings this caller may see (same test as the child).
+        const who = { ...req.auth!, tenantId: scope.tenantId };
+        const others = sib.docs.filter((d) => d.id !== childId);
+        const ok = await Promise.all(others.map((d) => childVisibleTo(who, d.id)));
+        siblings = others.filter((_, i) => ok[i]).map((d) => { const s = d.data(); return { name: s.name as string, dob: s.dob as string, age: s.age as number }; });
       }
     }
   }
