@@ -158,6 +158,7 @@ export function FinanceAnalyticsApp() {
 
     const byPass = new Map<string, { count: number; revenue: number }>();
     const winBks: Booking[] = [];
+    const addonBks: Booking[] = [];
     const dow = [0, 0, 0, 0, 0, 0, 0];
     const amounts: number[] = [];
     const seenLearner = new Set<string>();
@@ -165,6 +166,7 @@ export function FinanceAnalyticsApp() {
 
     for (const b of all) {
       const m = monthOf(b);
+      if (m && inWindow.has(m)) addonBks.push(b); // cancelled ones too: an add-on KEPT on a cancelled booking is still sold (addonFigures decides)
       if (!m || !inWindow.has(m) || isCancelled(b)) continue;
       winBookings++;
       winBks.push(b);
@@ -173,7 +175,7 @@ export function FinanceAnalyticsApp() {
       for (const d of b.days ?? []) { const wd = new Date(`${d}T00:00:00Z`).getUTCDay(); if (wd >= 0 && wd <= 6) dow[wd]++; }
     }
 
-    const { bookingsWithAddon, addonUnits, addonRevenue, byName: addonAgg } = addonFigures(winBks);
+    const { bookingsWithAddon, addonUnits, addonRevenue, byName: addonAgg } = addonFigures(addonBks);
     const valueBands = VALUE_BANDS.map(([label, lo, hi], i) => { const n = amounts.filter((v) => v >= lo && v < hi).length; return { label, value: n, sub: String(n), color: ACT_C[i % ACT_C.length] }; });
     const topAddons = [...addonAgg.entries()].map(([label, v]) => ({ label, count: v.count, rev: Math.round(v.rev * 100) / 100 })).sort((x, y) => y.rev - x.rev || y.count - x.count).slice(0, 8)
       .map((r, i) => ({ label: r.label, value: r.rev, sub: t("p8fin.faAddonSold", { amount: money(r.rev), n: r.count }), color: ACT_C[i % ACT_C.length] }));

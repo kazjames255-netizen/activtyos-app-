@@ -493,7 +493,8 @@ describe("Register: a per-day add-on shows the day's own quantity", () => {
 describe("X07r: Finance add-on figures leave out Offered, Declined, Waitlisted and Cancelled bookings", () => {
   it("only the confirmed booking counts", () => {
     const line = [{ child: "x", label: "T-shirt (Size: M)", price: 8, perDay: false, qty: 1 }];
-    const mk = (status: string) => ({ status, addons: ["T-shirt (Size: M) — £8.00"], addonLines: line });
+    // a Cancelled booking counts only when its extra was KEPT; this one was cancelled with a full refund, so it went back
+    const mk = (status: string) => ({ status, amount: 8, addons: ["T-shirt (Size: M) — £8.00"], addonLines: line, ...(status === "Cancelled" ? { cancel: { refund: "full", amount: 8 } } : {}) });
     const f = addonFigures([mk("Confirmed"), mk("Offered"), mk("Declined"), mk("Waitlisted"), mk("Cancelled")] as never);
     assert.equal(f.addonUnits, 1);
     assert.equal(f.addonRevenue, 8);
@@ -723,7 +724,8 @@ async function paidSplit(c: string, kids: string[] = [c]) {
   assert.ok(r.status < 300, `book ${r.status}`);
   const list: any[] = Array.isArray(r.json) ? r.json : r.json?.bookings ?? [r.json];
   const sorted = (await Promise.all(list.map(async (b: any) => ({ r: b.ref as string, d: (await docOf(b.ref)).days[0], amt: (await docOf(b.ref)).amount })))).sort((x, y) => x.d.localeCompare(y.d));
-  assert.ok((await as("P", "POST", `/api/bookings/${encodeURIComponent(sorted[0].r)}/record-payment`, { amount: sorted[0].amt, method: "Bank transfer", reference: `R7-${uniq()}` })).status < 300);
+  const pay = sorted[0].amt <= 0 ? { status: 200, json: "funded by store credit" } : await as("P", "POST", `/api/bookings/${encodeURIComponent(sorted[0].r)}/record-payment`, { amount: sorted[0].amt, method: "Bank transfer", reference: `R7-${uniq()}` });
+  assert.ok(pay.status < 300, `record-payment ${pay.status} ${JSON.stringify(pay.json).slice(0, 200)} amt=${sorted[0].amt}`);
   return { first: sorted[0].r, second: sorted[1].r };
 }
 describe("R7: the add-on refund state is stored at cancel time and read by every display", () => {

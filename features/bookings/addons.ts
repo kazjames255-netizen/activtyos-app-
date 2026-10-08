@@ -14,6 +14,9 @@ export interface AddonLineIn {
   name?: string;
   answers?: { label: string; value: string }[];
   qty?: number;
+  /** Stored at cancel time (addonRefund.ts): the extra went back with a refund / was kept; for per-day extras the refunded days. */
+  refunded?: boolean;
+  refundedDays?: string[];
 }
 
 export interface BookingAddonSource {
@@ -42,6 +45,8 @@ export interface AddonLine {
   meal: boolean;
   /** The text the booking stored ("T-shirt × 1 (size: M)"). */
   label: string;
+  refunded?: boolean;
+  refundedDays?: string[];
 }
 
 const priceOfString = (s: string): number => {
@@ -98,6 +103,8 @@ export function bookingAddonLines(b: BookingAddonSource): AddonLine[] {
         perDay: !!l.perDay,
         meal: l.meal ?? p.meal,
         label: l.label,
+        ...(l.refunded !== undefined ? { refunded: l.refunded } : {}),
+        ...(l.refundedDays?.length ? { refundedDays: l.refundedDays } : {}),
       };
     });
   }
@@ -257,8 +264,9 @@ export function addonWithDays(l: AddonLine, bookingDays?: string[], kid?: KidSta
 /** How many units of an extra were bought: a per-day extra counts its days, anything else its quantity. Used by Finance Insights. */
 export function addonUnits(l: AddonLine, bookingDays?: string[]): number {
   if (l.perDay && !l.meal) {
+    const gone = new Set(l.refundedDays ?? []);
     const held = bookingDays?.length ? l.days.filter((d) => bookingDays.includes(d)) : l.days;
-    return (held.length ? held : l.days).length || l.qty;
+    return (held.length ? held : l.days).filter((d) => !gone.has(d)).length || (l.refundedDays?.length ? 0 : l.qty);
   }
   return l.qty;
 }
@@ -310,7 +318,9 @@ export function dayToIso(d: string): string {
  *  YES/NO recorded with the refund (`cancel.refundsAddons`) - never worked out from amounts. Until the cancel screens ask the question the default is:
  *  a refund of the whole booking ("full", or a pending / approved / awaiting-transfer refund covering the booking's amount) => yes; a partial refund,
  *  a day-only refund or no refund => no. A refund that moved no money ("none", declined) never counts, whatever the answer. */
-export function addonRefunded(h: { amount?: number; cancel?: { refund?: string; amount?: number; refundOnly?: boolean; refundsAddons?: boolean } | null }): boolean {
+export function addonRefunded(h: { amount?: number; cancel?: { refund?: string; amount?: number; refundOnly?: boolean; refundsAddons?: boolean } | null }, line?: { refunded?: boolean }): boolean {
+  // The stored fact wins (written at cancel time, see addonRefund.ts). Bookings from before that have none: they fall back to the inference below.
+  if (typeof line?.refunded === "boolean") return line.refunded;
   const c = h.cancel;
   if (!c || !c.refund || c.refund === "none" || c.refund === "declined") return false;
   if (typeof c.refundsAddons === "boolean") return c.refundsAddons;
@@ -374,7 +384,7 @@ export function inheritSplitOneOffs(all: SplitBooking[]): Map<string, AddonLineI
       if (l.perDay || l.meal) continue;
       const owner = g.map((x) => ({ x, r: remainingDays(x, l.child) })).filter((o) => o.r.length).sort((a, c) => a.r[0].localeCompare(c.r[0]))[0];
       if (!owner || owner.x === h) continue;
-      if (addonRefunded(h)) continue; // already refunded with its holder: it does not follow anyone
+      if (addonRefunded(h, l)) continue; // already refunded with its holder: it does not follow anyone
       dropped.set(h.ref, (dropped.get(h.ref) ?? new Set()).add(l));
       gained.set(owner.x.ref, [...(gained.get(owner.x.ref) ?? []), { ...l, days: owner.r }]);
     }
@@ -403,7 +413,8 @@ const FAR = "9999-12-31";
  *  every day of a week/multi-day booking) is needed on EVERY one of its days; a ONE-OFF extra (a T-shirt) once, on the first day it is for. */
 export function addonDaysIn(l: AddonLine, bookingDays: string[] | undefined, from: string, to: string, kid?: KidState): string[] {
   if (kid?.cancelled) return [];
-  const gone = new Set(kid?.cancelledDays ?? []);
+  if (l.refunded === true) return []; // went back with a refund: nothing to prepare
+  const gone = new Set([...(kid?.cancelledDays ?? []), ...(l.refundedDays ?? [])]);
   // A cancelled day drops out first, so a one-off extra moves to the child's first day they STILL attend.
   // A line can carry more days than its booking holds (a weekly checkout used to stamp the whole run on EACH of the two references): only the days
   // the booking really holds count. If none of them is held (an old or odd record) the line's own days stand.

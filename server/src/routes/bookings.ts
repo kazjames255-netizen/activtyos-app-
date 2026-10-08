@@ -60,6 +60,7 @@ import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Booking } from "../../../features/bookings/types";
 import { applyMoveApprove } from "../lib/dateChange";
 import { moveAddonDays } from "../../../features/bookings/addons";
+import { stampAddonRefund } from "../../../features/bookings/addonRefund";
 import {
   applyBulkAction,
   applyCancel,
@@ -850,10 +851,18 @@ bookings.post("/:ref/actions", async (req, res) => {
       }
 
       // Keep the block's place counts — total AND per day — in step with
-      // The provider's YES/NO on "did the add-ons go back with this refund?" is kept on the cancel record.
-      if ((action.type === "cancel" || action.type === "cancel-child" || action.type === "cancel-day") && action.refundsAddons !== undefined && b.cancel) b.cancel.refundsAddons = action.refundsAddons;
       // the status transition (promote may intentionally exceed capacity —
       // operator's overbook). Firestore requires all reads before writes.
+      // Did the add-ons go back with this refund? The provider's YES/NO (kept on the cancel record when there is one) or, when not asked, the default:
+      // a whole-booking "full" refund, or a child's whole place refunded in full => yes; partial / day-only / none => no. The answer is STORED on the
+      // lines (addonRefund.ts) whether or not a cancel record exists (a wallet credit has none), and is never un-done by a later cancel.
+      if (action.type === "cancel" || action.type === "cancel-child" || action.type === "cancel-day") {
+        if (action.refundsAddons !== undefined && b.cancel) b.cancel.refundsAddons = action.refundsAddons;
+        const moved = action.type === "cancel" ? action.refund !== "none" : !!release && release.resolution !== "none" && release.amount > 0;
+        const refunded = moved && (action.refundsAddons ?? (action.type === "cancel" ? action.refund === "full" : action.type === "cancel-child" && action.amount === undefined));
+        const kidName = action.type === "cancel" ? "" : (b.kids?.[action.ki]?.name ?? b.child ?? "");
+        stampAddonRefund(b, action.type === "cancel" ? { scope: "whole" } : action.type === "cancel-child" ? { scope: "child", child: kidName } : { scope: "day", child: kidName, date: action.date }, refunded);
+      }
       const perChild = action.type === "cancel-child" || action.type === "cancel-day";
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;
       let blockUpdate: {
