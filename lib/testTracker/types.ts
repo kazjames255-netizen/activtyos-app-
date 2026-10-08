@@ -18,7 +18,8 @@ export type Area =
   | "children-families"    // child profiles, questions, SEND/EHCP, consents, families list
   | "registers-day"        // registers, attendance, collection, ratios on the day
   | "messages-emails"      // notifications, bells and emails around bookings
-  | "finance-dashboard";   // Money in, reconciliation, invoices, dashboard figures vs bookings
+  | "finance-dashboard"    // Money in, reconciliation, invoices, dashboard figures vs bookings
+  | "add-ons";             // extras: T-shirts, lunches, kit orders, change and cancel requests
 
 export type Status = "todo" | "pass" | "fail" | "blocked" | "fixed" | "na";
 

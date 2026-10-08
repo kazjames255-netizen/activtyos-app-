@@ -10,7 +10,7 @@ const STF: AccountKind[] = ["staff"];
 const PRE: Record<string, Area> = {
   LT: "listing-types", PP: "passes-pricing", DI: "discounts", PY: "payments", BM: "booking-main", BQ: "booking-quick",
   BE: "booking-embed", AW: "approval-waitlist", CN: "cancellations", AM: "amendments", CF: "children-families",
-  RD: "registers-day", ME: "messages-emails", FD: "finance-dashboard",
+  RD: "registers-day", ME: "messages-emails", FD: "finance-dashboard", AO: "add-ons",
 };
 
 function k(id: string, title: string, accounts: AccountKind[], setup: string, steps: string[], expected: string[], moneyCheck: string, claudeCheck: string, priority: 1 | 2 | 3): TestCheck {
@@ -25,6 +25,8 @@ const WALLET_RULE = "Wallet rule (server/src/routes/my.ts): credit is spent auto
 const REFUND_RULE = "Refund rule (lib/cancellation.ts + features/bookings/helpers.ts): refund = amount paid so far (card/cash received plus wallet used, minus refunds already given) x the percentage of the first band whose notice is met. Standard policy: 168 hours or more = 100%, 48 hours or more = 50%, less = 0%. Flexible: 24 hours = 100%, else 0%. Strict: 336 hours = 100%, 168 hours = 50%, else 0%. No refunds: always 0%. Notice is counted from midnight at the start of the FIRST session date. If the provider cancels (We cancelled it) the refund is 100% whatever the policy says.";
 const PLACES_RULE = "Places rule: each child on a pass takes ONE place however many days the pass has. With capacity 'Whole listing' places left = capacity minus children booked (Confirmed, Approval needed, Offered); with 'Per day' it is counted per date.";
 const NOMONEY = "No money should move. Booking total, Money in, wallet balance and dashboard income stay unchanged.";
+
+const AO_SETUP = "A listing with a one-off add-on 'T-shirt' (sizes, colours) and a per-day add-on 'Lunch'. Use made-up families only.";
 
 export const CATALOGUE: TestCheck[] = [
 // ======================= LT: listing types =======================
@@ -1465,4 +1467,51 @@ k("FD-031", "A provider-cancelled booking reads 'Refund pending' until the refun
   ["Cancel the booking as 'We cancelled it' and read its payment status.", "Pay the refund and read the status again."],
   ["Until the refund is paid it reads 'Refund pending'.", "After the refund is paid it reads Refunded."],
   "Refund = 100% of amount paid. Money in drops only once the refund is paid. " + REFUND_RULE, "payment status refund_pending then refunded; refund record created on payment.", 1),
+
+// ======================= AO: add-ons (extras) =======================
+k("AO-001", "Provider adds a one-off add-on (T-shirt with size)", OP, "A published listing.",
+  ["Open the listing, go to its add-ons and add 'T-shirt' at £8 as a one-off with sizes S, M, L.", "Save and publish."],
+  ["The T-shirt shows on the listing with its sizes and price."], "No money moves.", "add-on stored on the listing with options.", 1),
+k("AO-002", "Provider adds a per-day add-on (Lunch)", OP, "A published multi-day listing.",
+  ["Add 'Lunch' at £4 as a per-day add-on and save."],
+  ["Lunch shows as a per-day extra with its price."], "No money moves.", "add-on stored as per-day.", 1),
+k("AO-003", "Parent adds a T-shirt per child, with size and colour", PAR, AO_SETUP,
+  ["Book two children and pick a different T-shirt size and colour for each.", "Check the total before paying."],
+  ["Each child has their own size and colour.", "The total includes one T-shirt per child."], "Total = passes + T-shirts (after discounts, as the add-on rule says).", "booking lines carry add-on, size, colour per child.", 1),
+k("AO-004", "Parent adds Lunch for some days only", PAR, AO_SETUP,
+  ["Book a 5-day pass and tick Lunch for 3 of the days."],
+  ["Lunch is charged for exactly 3 days."], "Lunch total = £4 x 3 days x children.", "per-day add-on dates stored.", 2),
+k("AO-005", "Family sees the extras in the confirmation email and My bookings", PAR, "A paid booking with a T-shirt and Lunch.",
+  ["Open the confirmation email, then My bookings and the booking."],
+  ["Both list the T-shirt (size, colour) and the Lunch days with prices."], NOMONEY, "email body and booking view both read the same add-on lines.", 1),
+k("AO-006", "Provider sees Extras on the booking page", OP, "A booking with extras.",
+  ["Open the booking in Bookings."],
+  ["An Extras section lists each add-on, child, size, colour, days and paid state."], NOMONEY, "booking detail returns add-ons.", 1),
+k("AO-007", "Add-on orders list for a day (listing filter, tick prepared)", OP, "Bookings with extras on one day for two listings.",
+  ["Open Add-on orders and pick the day.", "Filter by one listing.", "Tick one order as prepared."],
+  ["Only that listing's orders show.", "The ticked order shows as prepared and stays after a refresh."], NOMONEY, "prepared flag saved on the order.", 1),
+k("AO-008", "Staff see add-ons with no prices", STF, "A booking with extras, staff signed in.",
+  ["Open the Add-on orders list and a booking as staff."],
+  ["Staff see what to prepare (item, size, child) but no prices or totals anywhere."], NOMONEY, "staff API responses carry no add-on price fields.", 1),
+k("AO-009", "Parent asks to change an extra (size or colour); provider approves", PAR, "A paid booking with a T-shirt, and the provider signed in on another browser.",
+  ["As the parent request a different size.", "As the provider open the request and approve it."],
+  ["The request shows as waiting, then approved.", "The booking and prep list now show the new size.", "The parent is told."], "No money change for a same-price swap.", "change request stored, then applied on approval (routes GET /bookings/:ref/addon-options, POST /bookings/:ref/addon-requests, POST /bookings/:ref/addon-requests/:id/withdraw; booking actions addon-approve, addon-decline).", 1),
+k("AO-010", "Parent cancels one day of Lunch; provider approves with a refund", PAR, "A paid booking with Lunch on several days.",
+  ["As the parent ask to cancel one day of Lunch.", "As the provider approve and refund it."],
+  ["Only that day is removed.", "The refund equals one day of Lunch.", "The parent is told."], "Refund = £4 for one day. Money in drops by that once the refund is paid.", "request applied, refund recorded.", 1),
+k("AO-011", "Bulk cancel an extra across two children", PAR, "A booking with two children, both with Lunch.",
+  ["Ask to cancel Lunch for the same day for both children in one go.", "Provider approves."],
+  ["Both children's Lunch is removed for that day and both amounts are refunded."], "Refund = 2 x one day of Lunch.", "one request covers both lines.", 2),
+k("AO-012", "Cancelling a whole booking asks nothing about extras yet (not built)", OP, "NOT BUILT YET: the 'also cancel the extras?' prompt is a later build. Mark this Blocked; it is a reminder, not a failure.",
+  ["Cancel a booking that has extras."],
+  ["Today it just cancels; the extras prompt is a later build."], "Follow the normal refund rule only.", "nothing to verify until the prompt is built.", 3),
+k("AO-013", "Unpaid extras show 'not paid yet'", PAR, "A bank-transfer booking with extras, not yet marked paid.",
+  ["Open the booking as the provider and as the parent."],
+  ["Extras show 'not paid yet' for both until payment is recorded."], "No money recorded until marked paid.", "add-on paid state follows the booking payment.", 2),
+k("AO-014", "A refunded T-shirt disappears from the prep list", OP, "A paid booking with a T-shirt on the Add-on orders list.",
+  ["Refund the T-shirt (approve a cancel request).", "Reload Add-on orders for that day."],
+  ["The T-shirt is no longer listed to prepare."], "Refund = the T-shirt price.", "list excludes refunded or cancelled add-ons.", 1),
+k("AO-015", "Welsh and Polish: add-on screens read properly", PAR, "A booking with extras; set the language to Welsh, then Polish.",
+  ["Open the booking page with extras and the change/cancel request screen in each language."],
+  ["No English leftovers and no cut-off text on a phone."], NOMONEY, "all add-on strings have cy and pl entries.", 3),
 ];
