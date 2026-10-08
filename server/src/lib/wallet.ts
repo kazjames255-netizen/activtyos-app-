@@ -114,6 +114,32 @@ export function spendWalletInTx(
     } satisfies WalletEntryDoc);
 }
 
+/** The ledger entry for a credit that carries an idempotency key (one entry per key, ever). */
+export const walletEntryRef = (key: string) => entries().doc(key);
+
+/** Credit inside someone else's transaction, ONCE per `key` (e.g. booking + child + day + action). `balance` must come from a
+ *  `tx.get(walletRef(...))` and `entrySeen` from a `tx.get(walletEntryRef(key))`, both made before any write in that transaction.
+ *  Returns false (and writes nothing) when this key has already been credited, so a retried or raced request cannot credit twice. */
+export function creditWalletOnceInTx(
+  tx: FirebaseFirestore.Transaction,
+  tenantId: string,
+  email: string,
+  balance: number,
+  entrySeen: boolean,
+  key: string,
+  amount: number,
+  reason: string,
+  ref?: string,
+): boolean {
+  const em = email.trim().toLowerCase();
+  const add = round2(Math.abs(amount));
+  if (entrySeen || !add || !em || !tenantId) return false;
+  const at = new Date().toISOString();
+  tx.set(walletRef(tenantId, em), { tenantId, email: em, balance: round2(balance + add), updatedAt: at } satisfies WalletDoc, { merge: true });
+  tx.set(walletEntryRef(key), { tenantId, email: em, delta: add, reason, ...(ref ? { ref } : {}), at } satisfies WalletEntryDoc);
+  return true;
+}
+
 /** Add credit. Returns the amount credited. */
 export const creditWallet = (tenantId: string, email: string, amount: number, reason: string, ref?: string) =>
   moveWallet(tenantId, email, Math.abs(amount), reason, ref);
