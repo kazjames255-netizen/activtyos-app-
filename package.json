@@ -37,7 +37,6 @@
     "test:regression": "server/node_modules/.bin/tsx --test --test-reporter=tap tests/regression/*.test.mts",
     "test:emu": "node scripts/emu/test-emu.mjs",
     "test:all": "server/node_modules/.bin/tsx --test --test-reporter=tap tests/*.test.mts tests/regression/*.test.mts",
-    "test:emu": "server/node_modules/.bin/tsx --test --test-concurrency=1 tests/emulator/*.test.mts",
     "assure": "npm run test:all && npx tsc --noEmit"
   },
   "dependencies": {
