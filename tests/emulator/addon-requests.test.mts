@@ -262,7 +262,7 @@ describe("AD16 / AM03 money: one cancelled day of a daily extra follows the day"
     const c = await operatorAction(ref, "cancel-day", { ki: 0, date: day(3), resolution: "refund" });
     assert.equal(c.status, 200, JSON.stringify(c.json).slice(0, 200));
     const b = await doc(ref);
-    assert.equal(b.amount, 158, "owed drops by the day's bottle share");
+    assert.equal(b.amount, 138, "owed drops by the day (20 pass share + 3 bottle)");
     const l = await line(ref, "Water bottle");
     assert.equal(l.days.length, 6); assert.equal(l.price, 18); assert.match(l.label, /× 6/);
     assert.ok(!l.days.includes(day(3)));
@@ -291,7 +291,7 @@ describe("AD16 / AM03 money: one cancelled day of a daily extra follows the day"
     const { ref } = await mk("am03u", [BOTTLE()]);
     for (const n of [1, 2, 3]) assert.equal((await operatorAction(ref, "cancel-day", { ki: 0, date: day(n), resolution: "refund" })).status, 200);
     const b = await doc(ref);
-    assert.equal(b.amount, 152);
+    assert.equal(b.amount, 92);
     const l = await line(ref, "Water bottle");
     assert.equal(l.days.length, 4); assert.equal(l.price, 12);
   });
