@@ -23,7 +23,8 @@ import { rich } from "./rich";
 import { methodLabel } from "./finI18n";
 import { RefundsToSend } from "./RefundsToSend";
 import { financeFigures, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, payoutRows, type PaymentRecord } from "./financeFigures";
-import { genderSplit, type KidSex } from "./genderSplit";
+import { addonFigures } from "./addonFigures";
+import { genderSplit,type KidSex } from "./genderSplit";
 
 // ── Types for the extra ledgers we fold in (subset of each route's shape) ──
 interface Invoice { id: string; customerName: string; amount: number; date: string; dueDate?: string; status: string; overdue?: boolean }
@@ -155,13 +156,12 @@ export function FinanceAnalyticsApp() {
     const inWindow = new Set<string>();
     for (let i = months - 1; i >= 0; i--) inWindow.add(mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))));
 
-    const addonAgg = new Map<string, { count: number; rev: number }>();
     const byPass = new Map<string, { count: number; revenue: number }>();
     const winBks: Booking[] = [];
     const dow = [0, 0, 0, 0, 0, 0, 0];
     const amounts: number[] = [];
     const seenLearner = new Set<string>();
-    let winBookings = 0, bookingsWithAddon = 0, addonUnits = 0, addonRevenue = 0;
+    let winBookings = 0;
 
     for (const b of all) {
       const m = monthOf(b);
@@ -170,20 +170,10 @@ export function FinanceAnalyticsApp() {
       winBks.push(b);
       amounts.push(b.amount);
       if (b.pass) { const p = byPass.get(b.pass) ?? { count: 0, revenue: 0 }; p.count++; p.revenue += collectedNet(b); byPass.set(b.pass, p); }
-      const ad = b.addons ?? [];
-      if (ad.length) bookingsWithAddon++;
-      // Each booking carries its extras as text ("Hot lunch × 5 — £25.00"): read the name and the amount actually charged from it.
-      for (const line of ad) {
-        const m = /^(.*?)\s+—\s+£([\d,]+(?:\.\d+)?)$/.exec(line.trim());
-        const nm = (m ? m[1] : line).replace(/\s+×\s+\d+.*$/, "").replace(/\s+\(.*\)$/, "").replace(/^🍽\s*/, "").trim() || line;
-        const amt = m ? parseFloat(m[2].replace(/,/g, "")) : 0;
-        const cur = addonAgg.get(nm) ?? { count: 0, rev: 0 };
-        cur.count++; cur.rev += amt; addonAgg.set(nm, cur);
-        addonUnits++; addonRevenue += amt;
-      }
       for (const d of b.days ?? []) { const wd = new Date(`${d}T00:00:00Z`).getUTCDay(); if (wd >= 0 && wd <= 6) dow[wd]++; }
     }
 
+    const { bookingsWithAddon, addonUnits, addonRevenue, byName: addonAgg } = addonFigures(winBks);
     const valueBands = VALUE_BANDS.map(([label, lo, hi], i) => { const n = amounts.filter((v) => v >= lo && v < hi).length; return { label, value: n, sub: String(n), color: ACT_C[i % ACT_C.length] }; });
     const topAddons = [...addonAgg.entries()].map(([label, v]) => ({ label, count: v.count, rev: Math.round(v.rev * 100) / 100 })).sort((x, y) => y.rev - x.rev || y.count - x.count).slice(0, 8)
       .map((r, i) => ({ label: r.label, value: r.rev, sub: t("p8fin.faAddonSold", { amount: money(r.rev), n: r.count }), color: ACT_C[i % ACT_C.length] }));
