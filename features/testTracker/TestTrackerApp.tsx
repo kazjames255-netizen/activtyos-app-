@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { get, put } from "@/lib/api";
 import { CATALOGUE } from "@/lib/testTracker/catalogue";
+import { AgentStatusPanel } from "./AgentStatusPanel";
 import type { AccountKind, Area, CheckResult, Status, TestCheck } from "@/lib/testTracker/types";
 
 const AREAS: { key: Area; label: string; blurb: string }[] = [
@@ -24,6 +25,7 @@ const AREAS: { key: Area; label: string; blurb: string }[] = [
   { key: "registers-day", label: "On the day", blurb: "Registers, check-in, collection and ratios" },
   { key: "messages-emails", label: "Messages & emails", blurb: "Notifications around every booking" },
   { key: "finance-dashboard", label: "Money & dashboard", blurb: "Do the figures match the bookings?" },
+  { key: "add-ons", label: "Add-ons (extras)", blurb: "T-shirts, lunches and other extras: ordering, changing, cancelling, prep list" },
 ];
 
 const ACCOUNT_LABEL: Record<AccountKind, string> = {
@@ -149,6 +151,9 @@ export function TestTrackerApp() {
   return (
     <div className="mx-auto max-w-[1180px] p-4 md:p-6" style={{ color: "var(--ink,#171534)" }}>
       <h1 className="text-[26px] font-extrabold tracking-[-0.01em]">Test tracker</h1>
+      <p className="mt-1 text-[14px] font-bold">One tracker: agent testing first, your hand checks below.</p>
+      <AgentStatusPanel />
+      <h2 className="mt-8 text-[20px] font-extrabold">Your hand checks</h2>
       <p className="mt-1 max-w-[760px] text-[14px]" style={{ color: "var(--ink-2,#4a4763)" }}>
         Every listing and booking scenario in one list. Open a check, follow the steps on each account type shown, then tap <b>Pass</b>, <b>Fail</b> or <b>Blocked</b>.
         Add a note if something looks wrong. We record the bug and the fix here, and mark it <b>Fixed, please retest</b>.

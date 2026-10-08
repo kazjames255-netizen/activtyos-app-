@@ -12,9 +12,9 @@ import type { AccountKind, Area, TestCheck } from "../../lib/testTracker/types";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (p: string) => readFileSync(resolve(ROOT, p), "utf8");
-const AREAS: Area[] = ["listing-types", "passes-pricing", "discounts", "payments", "booking-main", "booking-quick", "booking-embed", "approval-waitlist", "cancellations", "amendments", "children-families", "registers-day", "messages-emails", "finance-dashboard"];
+const AREAS: Area[] = ["listing-types", "passes-pricing", "discounts", "payments", "booking-main", "booking-quick", "booking-embed", "approval-waitlist", "cancellations", "amendments", "children-families", "registers-day", "messages-emails", "finance-dashboard", "add-ons"];
 const KINDS: AccountKind[] = ["company", "freelancer", "franchise", "head-office", "staff", "parent", "platform"];
-const PREFIX: Record<Area, string> = { "listing-types": "LT", "passes-pricing": "PP", discounts: "DI", payments: "PY", "booking-main": "BM", "booking-quick": "BQ", "booking-embed": "BE", "approval-waitlist": "AW", cancellations: "CN", amendments: "AM", "children-families": "CF", "registers-day": "RD", "messages-emails": "ME", "finance-dashboard": "FD" };
+const PREFIX: Record<Area, string> = { "listing-types": "LT", "passes-pricing": "PP", discounts: "DI", payments: "PY", "booking-main": "BM", "booking-quick": "BQ", "booking-embed": "BE", "approval-waitlist": "AW", cancellations: "CN", amendments: "AM", "children-families": "CF", "registers-day": "RD", "messages-emails": "ME", "finance-dashboard": "FD", "add-ons": "AO" };
 
 // ---------------------------------------------------------------- structure
 function structure(list: TestCheck[]): string[] {
