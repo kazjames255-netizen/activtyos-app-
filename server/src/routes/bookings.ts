@@ -1741,7 +1741,7 @@ async function refundStripePayment(b: Booking, amount: number, nonce: string): P
   };
   try {
     const refund = await stripe.refunds.create(
-      { payment_intent: b.paymentIntentId, amount: toPence(amount) },
+      { payment_intent: b.paymentIntentId, amount: toPence(amount), metadata: { activityosOrigin: "app", tenantId: b.tenantId ?? "", ref: b.ref } },
       // Keyed on the refund so far + the attempt: two equal part-refunds don't
       // collide, a double-submit of one approval does, and a retry after a
       // failure isn't handed Stripe's cached error for 24h.

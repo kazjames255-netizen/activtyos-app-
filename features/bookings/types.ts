@@ -86,6 +86,8 @@ export interface RefundLogEntry {
   on: string;
   by: string;
   source?: string;
+  /** Stripe refund id, on a line written for a refund made OUTSIDE the app (Stripe dashboard): what keeps it from being recorded twice. */
+  refundId?: string;
 }
 
 export interface Booking {

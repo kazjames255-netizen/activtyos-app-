@@ -7,6 +7,7 @@ import { markCardFailed, paymentForIntent, settleInvoicePayment, settlePaymentRe
 import { clearSubscriptionCache } from "../middleware/subscription";
 import { BRAND } from "../lib/brand";
 import { markHeld, holdCanceledByStripe } from "../lib/cardHold";
+import { applyStripeRefund, applyRefundsOfCharge } from "../lib/stripeRefundSync";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Stripe webhook — two jobs.
@@ -25,6 +26,11 @@ import { markHeld, holdCanceledByStripe } from "../lib/cardHold";
 //    Without this, a payment was only recorded if the payer's browser came
 //    back from the card confirmation (backlog b7): close the tab at the wrong
 //    moment and the money was taken with nothing marked paid.
+//
+// Events this endpoint must be subscribed to (platform endpoint AND the Connect endpoint "listen to events on connected accounts"):
+//   payment_intent.succeeded, payment_intent.payment_failed, payment_intent.canceled, payment_intent.amount_capturable_updated,
+//   charge.refunded, refund.created, refund.updated, refund.failed (and charge.refund.updated if offered)
+// plus the customer.subscription.* / invoice.* billing events on the platform endpoint.
 //
 // Mounted BEFORE express.json (signature verification needs the raw body).
 // The subscription-sync sweep backstops billing for dev (no public URL) and
@@ -181,6 +187,19 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
         // The `cardFailed` banner had nothing to set it: a failure the payer's
         // browser never reported was invisible to the provider.
         await markCardFailed(event.data.object.id, true);
+        break;
+      }
+      // A refund made OUTSIDE the app (Stripe dashboard, the connected account's own dashboard) reaches our books here.
+      // Refunds the app made are recognised and left alone; every path is idempotent per Stripe refund id (lib/stripeRefundSync.ts).
+      case "charge.refunded": {
+        await applyRefundsOfCharge(event.data.object.id, event.account ?? null);
+        break;
+      }
+      case "refund.created":
+      case "refund.updated":
+      case "refund.failed":
+      case "charge.refund.updated": {
+        await applyStripeRefund(event.data.object as Stripe.Refund, event.account ?? null, "webhook");
         break;
       }
       default:
