@@ -97,6 +97,9 @@ export interface RefundLogEntry {
   source?: string;
   /** Stripe refund id, on a line written for a refund made OUTSIDE the app (Stripe dashboard): what keeps it from being recorded twice. */
   refundId?: string;
+  /** What the line is, with its data, so it shows in the viewer's language (refundLogLabel). Older lines have only the English `label`. */
+  kind?: string;
+  vars?: Record<string, string | number>;
 }
 
 export interface Booking {

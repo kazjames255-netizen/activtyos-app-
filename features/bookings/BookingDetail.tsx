@@ -25,6 +25,9 @@ import {
   type BlockAvail,
   refundButtonKind,
   refundAwaitingTransfer,
+  refundLogLabel,
+  cancelMsgText,
+  cancelBlockKey,
   cancelledBannerKey,
   refundTransferAmount,
   refundableSoFar,
@@ -649,7 +652,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
               {kind === "wallet"
                 ? t("p7bd.acceptWallet")
                 : kind === "reimbursed" || kind === "cash"
-                  ? t("p7bd.markReimbursed")
+                  ? t("p7bd.approveRefundBtn")
                   : kind === "stripe"
                     ? t("p7bd.approveRefundBtn") + " " + t("p7bd.viaStripe")
                     : kind === "bank" ? t("p7bd.acceptBank") : t("p7bd.approveRefundBtn")}
@@ -1005,9 +1008,9 @@ export function BookingDetail({ booking }: { booking: Booking }) {
                   className="flex justify-between gap-2.5 border-b border-dashed border-[#FAD4D0] py-1"
                 >
                   <span className="text-[var(--ink-2)]">
-                    {x.label}{" "}
+                    {refundLogLabel(x, t)}{" "}
                     <span className="text-[10.5px] text-[var(--ink-3)]">
-                      · {x.source || x.by} · {x.on}
+                      · {w(x.source || x.by)} · {x.on}
                     </span>
                   </span>
                   <b className="whitespace-nowrap text-[var(--red)]">{money(x.amount)}</b>
@@ -1130,15 +1133,16 @@ function RefundSummary({ booking }: { booking: Booking }) {
         </div>
         {/* How much and why — the amount, its share of the total, and the
             policy working the family was shown. */}
-        {c.refund !== "none" && c.amount != null && c.amount > 0 && b.amount > 0 && (
+        {c.refund !== "none" && c.refund !== "declined" && c.amount != null && c.amount > 0 && b.amount > 0 && (
           <div className="mt-1.5 text-[11.5px] text-[var(--ink-2)]">
             <Rich text={t("p7bd.refundShare", { amt: money(c.amount), pct: Math.round((c.amount / b.amount) * 100), total: money(b.amount) })} />
           </div>
         )}
-        {c.msg && <div className="mt-1 text-[11px] italic text-[var(--ink-3)]">“{c.msg}”</div>}
+        {c.refund === "declined" && <div className="mt-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]">{t("p7bd.refundDeclinedNothing")}</div>}
+        {c.msg && <div className="mt-1 text-[11px] italic text-[var(--ink-3)]">“{cancelMsgText(c.msg, t)}”</div>}
         <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">
           {c.refund === "pending" || c.refund === "full" || c.refund === "partial"
-            ? t("p7bd.parentAsked")
+            ? t(cancelBlockKey(c))
             : b.paymentIntentId
               ? t("p7bd.stripeAuto")
               : t("p7bd.notCardPaid")}

@@ -22,6 +22,8 @@ interface Notification {
   category: string;
   title: string;
   body: string;
+  /** A key + data written by the server: shown in the viewer's language; the stored English is the fallback (older bells). */
+  i18n?: { tk: string; tv: Record<string, string>; bk?: string; bv?: Record<string, string> };
   href?: string;
   readAt: string | null;
   at: string;
@@ -131,11 +133,11 @@ export function Bell({ portal }: { portal: PortalKey }) {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="truncate text-[12.5px] font-bold text-[var(--ink)]">{n.title}</span>
+                    <span className="truncate text-[12.5px] font-bold text-[var(--ink)]">{n.i18n?.tk ? t(n.i18n.tk, n.i18n.tv) : n.title}</span>
                     <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{agoLabel(t, n.at)}</span>
                   </span>
                   <span className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-[var(--ink-2)]">
-                    {n.body}
+                    {n.i18n?.bk ? t(n.i18n.bk, n.i18n.bv) : n.body}
                   </span>
                 </span>
                 {!n.readAt && (

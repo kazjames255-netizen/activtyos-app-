@@ -4,8 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import * as H from "../../features/bookings/helpers";
 import { DEFAULT_POLICY } from "../../lib/cancellation";
-import { CATALOGS } from "../../lib/i18n/messages";
-import { translate } from "../../lib/i18n/translate";
+import { CATALOGS } from "../../lib/i18n/messages/index";
 import { computeRelease, releaseRecord } from "../../server/src/lib/releaseMoney";
 import { parentBell, PARENT_BELL_KINDS } from "../../server/src/lib/parentBells";
 import type { Booking } from "../../features/bookings/types";
@@ -15,6 +14,8 @@ import type { Booking } from "../../features/bookings/types";
 const root = path.resolve(import.meta.dirname, "../..");
 const LANGS = ["en", "pl", "ro", "ur", "pa", "bn", "ar", "pt", "es", "fr", "cy"] as const;
 const has = (lang: string, key: string) => { const o = key.split(".").reduce<unknown>((a, k) => (a && typeof a === "object" ? (a as Record<string, unknown>)[k] : undefined), (CATALOGS as Record<string, unknown>)[lang]); return typeof o === "string" ? o : undefined; };
+// (translate() itself imports a directory, which the purity guard cannot follow: resolve keys here)
+const translate = (l: string, k: string, v?: Record<string, string | number>) => Object.entries(v ?? {}).reduce((t, [a, b]) => t.split(`{${a}}`).join(String(b)), has(l, k) ?? has("en", k) ?? k);
 const days = ["2099-10-18", "2099-10-19", "2099-10-20", "2099-10-21"];
 const mk = (o: Partial<Booking>): Booking => ({ ref: "R", booker: "B", email: "e@x.com", phone: "", child: "K", listing: "L", pass: "4", ticket: "", dates: "", sessions: [], status: "Confirmed",
   pay: "Partially paid", method: "Bank transfer", amount: 104, amountPaid: 40, addons: [], days: [...days], kids: [{ name: "K", dates: [...days] }], ...o }) as unknown as Booking;

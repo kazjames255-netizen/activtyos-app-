@@ -8,6 +8,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { mergeBookings } from "../lib/mergeBookings";
 import { db } from "../firebase";
 import { ukToday } from "../lib/ukDate";
+import { parentBell } from "../lib/parentBells";
 import { staffSafeNote, stripAddonMoney, withoutMoneyKeys } from "../lib/rosterRules";
 import { canWrite, operatorScope, managerScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
@@ -242,7 +243,7 @@ export async function notifyPaymentReceived(tenantId: string, b: Booking, label:
     tenantId,
     to: { kind: "parent", email },
     category: "billing",
-    title: approved ? `Booking approved and payment received · ${refs.join(", ")}` : confirmedNow ? `You're booked in and paid · ${refs.join(", ")}` : `Payment received · ${refs.join(", ")}`,
+    ...(({ title, i18n }) => ({ title, i18n }))(parentBell(approved ? "approved-paid" : confirmedNow ? "booked-paid" : "payment-received", { ref: refs.join(", ") })),
     body: confirmedNow
       ? `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — your booking is confirmed and £${(merged.amount ?? 0).toFixed(2)} has been received${dateLabel ? ` · ${dateLabel}` : ""}. ${seeYou}`
       : approved
@@ -991,6 +992,7 @@ bookings.post("/:ref/actions", async (req, res) => {
       if (lastSent) updated.lastRefundSent = lastSent;
       const logEntry = {
         label: refundLabel,
+        kind: moved.partial ? "approvedPartial" : "approved",
         amount: moved.owed,
         on: ukToday(),
         by: "Provider",
@@ -1082,8 +1084,7 @@ bookings.post("/:ref/actions", async (req, res) => {
           to: { kind: "parent", email: updated.email },
           category: "billing",
           bellOnly: true,
-          title: `Refund declined · ${updated.ref}`,
-          body: `Your provider couldn't approve the${amt > 0 ? ` £${amt.toFixed(2)}` : ""} refund for ${updated.listing}. Your cancellation still stands — message them if you'd like to talk it through.`,
+          ...(() => { const b = parentBell("refund-declined", { ref: updated.ref, listing: updated.listing, ...(amt > 0 ? { amt: `£${amt.toFixed(2)}` } : {}) }); return { title: b.title, body: b.body!, i18n: b.i18n }; })(),
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
@@ -1098,7 +1099,7 @@ bookings.post("/:ref/actions", async (req, res) => {
           to: { kind: "parent", email: updated.email },
           category: "billing",
           bellOnly: true,
-          title: `Refund sent · ${updated.ref}`,
+          title: parentBell("refund-sent", { ref: updated.ref }).title, i18n: { tk: parentBell("refund-sent", { ref: updated.ref }).i18n.tk, tv: { ref: updated.ref } },
           body: `£${sentAmt.toFixed(2)} for ${updated.listing} has been sent${updated.voucherScheme ? ` through ${updated.voucherScheme}` : " by bank transfer"}${updated.cancel?.refundSentAt ? ` on ${ukDateLabel(updated.cancel.refundSentAt)}` : ""}.`,
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
@@ -1115,12 +1116,14 @@ bookings.post("/:ref/actions", async (req, res) => {
           to: { kind: "parent", email: updated.email },
           category: "billing",
           bellOnly: true,
-          title: toWallet ? `Wallet credit added · ${updated.ref}` : `Refund approved · ${updated.ref}`,
-          body: toWallet
-            ? `£${amt.toFixed(2)} added to your wallet for ${updated.listing} — it's there now, ready to spend on your next booking.`
-            : updated.cancel?.refundVia === "offline"
-              ? `£${amt.toFixed(2)} refund approved for ${updated.listing} — ${updated.voucherScheme ? `returned through ${updated.voucherScheme}` : /bank|transfer|bacs/i.test(updated.method ?? "") ? "your provider will send it by bank transfer (we'll tell you when it's sent)" : "your provider will return it the way you paid"}.`
-              : `£${amt.toFixed(2)} refund approved for ${updated.listing} — on its way back to your card.`,
+          ...(() => {
+            const kind = toWallet ? "wallet-added" as const
+              : updated.cancel?.refundVia === "offline"
+                ? (updated.voucherScheme ? "refund-approved-scheme" as const : /bank|transfer|bacs/i.test(updated.method ?? "") ? "refund-approved-bank" as const : "refund-approved-plain" as const)
+                : "refund-approved-card" as const;
+            const b = parentBell(kind, { ref: updated.ref, amt: `£${amt.toFixed(2)}`, listing: updated.listing, scheme: updated.voucherScheme ?? "" });
+            return { title: b.title, body: b.body!, i18n: b.i18n };
+          })(),
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
@@ -1138,7 +1141,7 @@ bookings.post("/:ref/actions", async (req, res) => {
           to: { kind: "parent", email: updated.email },
           category: "booking",
           bellOnly: true,
-          title: `${r.status === "approved" ? "Extra request approved" : "Extra request declined"} · ${updated.ref}`,
+          ...(() => { const b = parentBell(r.status === "approved" ? "extra-approved" : "extra-declined", { ref: updated.ref }); return { title: b.title, i18n: b.i18n }; })(),
           body: `${updated.listing} — ${requestWhat(r)}.${r.status === "approved" && r.money && r.money.amount > 0 ? ` £${r.money.amount.toFixed(2)} ${r.money.resolution === "charge" ? "to pay" : r.money.resolution === "wallet" ? "added to your wallet" : "to be refunded"}.` : ""}${r.status === "declined" && r.declineReason ? ` ${r.declineReason}` : ""}`,
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,

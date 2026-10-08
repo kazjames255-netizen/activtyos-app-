@@ -814,6 +814,49 @@ export function refundAwaitingTransfer(b: RefundCarrier): boolean {
   return unsentRefunds(b).length > 0;
 }
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
+/** Which sentence the Cancellation block shows under a refund that waits for the provider: the family asked, or the provider cancelled it themselves. */
+export function cancelBlockKey(c: { by?: string }): string {
+  return c.by === "Provider" ? "p7bd.providerCancelledRefund" : "p7bd.parentAsked";
+}
+
+/** One line of the refund log in the viewer's language. New lines carry `kind` + `vars`; older lines are stored English and are recognised by their
+ *  shape. Anything else (a line a person wrote) is shown as written. The stored `label` itself never changes: other code reads it. */
+export function refundLogLabel(x: { label: string; kind?: string; vars?: Record<string, string | number> }, t: TFn): string {
+  const k = x.kind, v = x.vars ?? {};
+  if (k === "approved") return t("p7bd.logApproved");
+  if (k === "approvedPartial") return t("p7bd.logApprovedPartial");
+  if (k === "releasedWallet") return Number(v.n) === 1 ? t("p7bd.logWallet1") : t("p7bd.logWalletN", { n: Number(v.n) });
+  if (k === "reduced") return Number(v.n) === 1 ? t("p7bd.logReduced1", { amt: String(v.amt) }) : t("p7bd.logReducedN", { n: Number(v.n), amt: String(v.amt) });
+  if (k === "namedWallet") return t("p7bd.logNamedWallet", { what: String(v.what) });
+  const l = x.label ?? "";
+  if (/^refund approved$/i.test(l)) return t("p7bd.logApproved");
+  if (/^refund approved \(partial\)$/i.test(l)) return t("p7bd.logApprovedPartial");
+  const w = /^(\d+) days? released — wallet credit$/.exec(l);
+  if (w) return Number(w[1]) === 1 ? t("p7bd.logWallet1") : t("p7bd.logWalletN", { n: Number(w[1]) });
+  const nw = /^(.+) — wallet credit$/.exec(l);
+  if (nw) return t("p7bd.logNamedWallet", { what: nw[1] });
+  return l;
+}
+
+/** The sentence the system wrote as the "reason" of a cancellation, in the viewer's language; a reason a person typed is shown as typed. */
+export function cancelMsgText(m: string, t: TFn): string {
+  if (m === "Cancelled by provider.") return t("p7bd.msgProvider");
+  if (m === "Refund issued by provider.") return t("p7bd.msgProviderRefund");
+  if (m === "Cancelled by the parent.") return t("p7bd.msgParent");
+  const rel = /^(\d+) days? released by the parent\.$/.exec(m);
+  if (rel) return Number(rel[1]) === 1 ? t("p7bd.msgReleased1") : t("p7bd.msgReleasedN", { n: Number(rel[1]) });
+  const ch = /^(.+) cancelled by the provider\.$/.exec(m);
+  if (ch) return t("p7bd.msgChildCancelled", { what: ch[1] });
+  return m;
+}
+
+/** Cash already paid on a booking that is only PART paid (it is not in the "paid" bookings' totals): a £40 part-payment must count in "paid to date". */
+export function partPaidCash(b: Pick<Booking, "pay" | "status" | "amountPaid">): number {
+  return b.pay === "Partially paid" && b.status !== "Cancelled" && b.status !== "Declined" ? Math.max(0, b.amountPaid ?? 0) : 0;
+}
+
 /** The grey 'nothing left to do' note on a CANCELLED booking page: which catalogue key to show, or null while something is still waiting on the
  *  provider (a refund to approve, or an approved offline refund to send). It names who cancelled: the family (cancel.by "Booker") or the provider. */
 export function cancelledBannerKey(b: RefundCarrier & { status?: string; cancel?: (RefundCarrier["cancel"] & { by?: string; refundOnly?: boolean }) | null }): string | null {

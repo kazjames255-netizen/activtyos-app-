@@ -179,7 +179,7 @@ function settleRelease(b: Booking, label: string, value: number, opts?: ReleaseO
   const asked = opts?.amount != null && Number.isFinite(opts.amount) ? Math.max(0, opts.amount) : value;
   const amt = resolution === "none" ? 0 : Math.round(Math.min(asked, room) * 100) / 100;
   if (amt > 0 && resolution === "wallet") {
-    (b.refundLog = b.refundLog || []).push({ label: `${label} — wallet credit`, amount: amt, on: nowStr(), by: "Provider", source: "Wallet" });
+    (b.refundLog = b.refundLog || []).push({ label: `${label} — wallet credit`, kind: "namedWallet", vars: { what: label }, amount: amt, on: nowStr(), by: "Provider", source: "Wallet" });
   } else if (amt > 0) {
     archiveAwaitingRefund(b);
     b.cancel = {

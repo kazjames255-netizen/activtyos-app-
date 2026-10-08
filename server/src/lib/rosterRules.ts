@@ -31,7 +31,7 @@ export const withoutPriceText = (s: string): string => s.replace(/\s+[—-]\s+£
 export function staffSafeNote(note: string | undefined | null): string {
   if (!note) return "";
   const kept = note.split(" · ").filter((seg) => !/^Price set by provider:/i.test(seg.trim()));
-  return kept.join(" · ").replace(/\s*[—–-]\s*£\s?[\d.,]+\s+refund requested/gi, "").trim();
+  return kept.join(" · ").replace(/\s*[—–-]\s*£\s?[\d.,]+\s+refund requested/gi, "").replace(/booking reduced by £\s?[\d.,]+/gi, "booking reduced").trim();
 }
 
 /** Team-bell alerts a STAFF member may read: alerts aimed at them by name always show; the billing alerts (refund asked / declined / sent, expense claims,
