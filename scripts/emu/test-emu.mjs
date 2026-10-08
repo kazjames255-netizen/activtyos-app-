@@ -27,7 +27,7 @@ if (process.argv[2] === "--inner") {
     FIREBASE_SERVICE_ACCOUNT: "", GOOGLE_APPLICATION_CREDENTIALS: "", RESEND_API_KEY: "", STRIPE_SECRET_KEY: env.STRIPE_SECRET_KEY || "",
     EMU_API: `http://localhost:${P.api}`, E2E_PASSWORD: env.E2E_PASSWORD || `Emu-${Math.random().toString(36).slice(2)}-Aa1!`,
     // Pay tests: dev platform-account mode (the connected-account path is NOT exercised) and a local-only webhook secret the tests sign with.
-    STRIPE_PLATFORM_FALLBACK: "1", STRIPE_WEBHOOK_SECRET: env.STRIPE_WEBHOOK_SECRET || `whsec_emu_${Math.random().toString(36).slice(2)}`,
+    STRIPE_PLATFORM_FALLBACK: "1", SYNC_REFUNDS_COOLDOWN_MS: "3000", STRIPE_WEBHOOK_SECRET: env.STRIPE_WEBHOOK_SECRET || `whsec_emu_${Math.random().toString(36).slice(2)}`,
   };
   // A Stripe TEST key is optional: without one the card-payment tests are skipped (the API guard refuses anything but sk_test).
   const hasKey = (e.STRIPE_SECRET_KEY || "").startsWith("sk_test");

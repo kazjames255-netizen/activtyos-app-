@@ -244,6 +244,7 @@ describe("Reconcile pulls refunds made before the fix", () => {
     const b = await bookingDoc(P, refs[0]);
     assert.equal(b.pay, "Partially refunded");
     assert.equal(logOf(b)[0].refundId, re.id);
+    await sleep(3200); // the cooldown between runs (SYNC_REFUNDS_COOLDOWN_MS, 3s in the test stack)
     const second = await call("POST", "/api/payments/sync-refunds", P.token, {});
     assert.equal(second.status, 200);
     assert.equal(second.json.recorded, 0, JSON.stringify(second.json));
