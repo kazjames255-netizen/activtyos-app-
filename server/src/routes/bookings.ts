@@ -142,6 +142,8 @@ const actionSchema = z.discriminatedUnion("type", [
     refund: z.enum(["full", "partial", "none"]),
     amount: z.number().nonnegative().max(1_000_000).optional(),
     reason: z.string().max(120).optional(),
+    // Did the add-ons go back with the refund? Recorded on the cancel record; absent = the default (see addonRefunded).
+    refundsAddons: z.boolean().optional(),
   }),
   // What happens to the money when ONE child / day is cancelled. Default
   // "refund" = a PENDING refund (the provider sends it and presses "Mark refund
@@ -151,6 +153,7 @@ const actionSchema = z.discriminatedUnion("type", [
     ki: z.number().int().nonnegative(),
     resolution: z.enum(["refund", "wallet", "none"]).optional(),
     amount: z.number().nonnegative().max(1_000_000).optional(),
+    refundsAddons: z.boolean().optional(),
   }),
   z.object({
     type: z.literal("cancel-day"),
@@ -158,6 +161,7 @@ const actionSchema = z.discriminatedUnion("type", [
     date: z.string().min(1),
     resolution: z.enum(["refund", "wallet", "none"]).optional(),
     amount: z.number().nonnegative().max(1_000_000).optional(),
+    refundsAddons: z.boolean().optional(),
   }),
   z.object({
     type: z.literal("change-day"),
@@ -846,6 +850,8 @@ bookings.post("/:ref/actions", async (req, res) => {
       }
 
       // Keep the block's place counts — total AND per day — in step with
+      // The provider's YES/NO on "did the add-ons go back with this refund?" is kept on the cancel record.
+      if ((action.type === "cancel" || action.type === "cancel-child" || action.type === "cancel-day") && action.refundsAddons !== undefined && b.cancel) b.cancel.refundsAddons = action.refundsAddons;
       // the status transition (promote may intentionally exceed capacity —
       // operator's overbook). Firestore requires all reads before writes.
       const perChild = action.type === "cancel-child" || action.type === "cancel-day";

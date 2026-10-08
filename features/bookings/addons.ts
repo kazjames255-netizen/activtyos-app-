@@ -294,7 +294,7 @@ export function addonLineOnDay(raw: AddonLineIn, bookingDays: string[] | undefin
 export interface SplitBooking extends KitBooking {
   createdAt?: string; listingId?: string; checkoutId?: string;
   /** The refund record, read by addonRefunded. */
-  amount?: number; refundedApproved?: number; cancel?: { refund?: string; amount?: number } | null;
+  amount?: number; cancel?: { refund?: string; amount?: number; refundOnly?: boolean; refundsAddons?: boolean } | null;
 }
 
 const MONTH = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
@@ -306,14 +306,17 @@ export function dayToIso(d: string): string {
   return m && mi >= 0 ? `${m[3]}-${String(mi + 1).padStart(2, "0")}-${m[1].padStart(2, "0")}` : "";
 }
 
-/** Is this one-off extra already refunded on the booking that holds it? Read from the REFUND RECORD, never from status text: a full refund; or money
- *  refunded (pending, approved and awaiting transfer all count the same as completed) that reaches the extra's price. A refund that was declined,
- *  or "none", moved no money. */
-export function addonRefunded(h: { cancel?: { refund?: string; amount?: number } | null; refundedApproved?: number }, price: number): boolean {
-  const kind = h.cancel?.refund;
-  if (kind === "full") return true;
-  const R = Math.max(kind && kind !== "none" && kind !== "declined" ? Number(h.cancel?.amount) || 0 : 0, Number(h.refundedApproved) || 0);
-  return price > 0 && R >= price - 0.004;
+/** Is this one-off extra already refunded on the booking that holds it? A refund is of the BOOKING; whether the add-on went back with it is an explicit
+ *  YES/NO recorded with the refund (`cancel.refundsAddons`) - never worked out from amounts. Until the cancel screens ask the question the default is:
+ *  a refund of the whole booking ("full", or a pending / approved / awaiting-transfer refund covering the booking's amount) => yes; a partial refund,
+ *  a day-only refund or no refund => no. A refund that moved no money ("none", declined) never counts, whatever the answer. */
+export function addonRefunded(h: { amount?: number; cancel?: { refund?: string; amount?: number; refundOnly?: boolean; refundsAddons?: boolean } | null }): boolean {
+  const c = h.cancel;
+  if (!c || !c.refund || c.refund === "none" || c.refund === "declined") return false;
+  if (typeof c.refundsAddons === "boolean") return c.refundsAddons;
+  if (c.refund === "full") return true;
+  const whole = !c.refundOnly && (Number(h.amount) || 0) > 0 && (Number(c.amount) || 0) >= (Number(h.amount) || 0) - 0.004;
+  return (c.refund === "pending" || c.refund === "approved") && whole;
 }
 
 export const SIBLING_MS = 3;
@@ -371,7 +374,7 @@ export function inheritSplitOneOffs(all: SplitBooking[]): Map<string, AddonLineI
       if (l.perDay || l.meal) continue;
       const owner = g.map((x) => ({ x, r: remainingDays(x, l.child) })).filter((o) => o.r.length).sort((a, c) => a.r[0].localeCompare(c.r[0]))[0];
       if (!owner || owner.x === h) continue;
-      if (addonRefunded(h, l.price)) continue; // already refunded with its holder: it does not follow anyone
+      if (addonRefunded(h)) continue; // already refunded with its holder: it does not follow anyone
       dropped.set(h.ref, (dropped.get(h.ref) ?? new Set()).add(l));
       gained.set(owner.x.ref, [...(gained.get(owner.x.ref) ?? []), { ...l, days: owner.r }]);
     }

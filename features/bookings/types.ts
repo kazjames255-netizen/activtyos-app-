@@ -52,6 +52,8 @@ export interface CancelInfo {
   refund?: RefundKind;
   amount?: number;
   refundOnly?: boolean;
+  /** Explicit YES/NO chosen with the refund: did the add-ons go back with it? Absent = the default (whole-booking refund => yes, partial / none => no). */
+  refundsAddons?: boolean;
   /** Where the family asked for the money to go. "wallet" keeps it in-house as
    *  store credit with this provider; "card" (the default) refunds the payment
    *  method. Honoured when the operator approves the refund. */
