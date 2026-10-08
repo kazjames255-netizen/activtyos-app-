@@ -655,12 +655,14 @@ describe("C05: no family-callable GET ever returns a checkoutId", () => {
   });
 });
 
-describe("Q13: after the T-shirt's holder is cancelled with a refund, the T-shirt only follows while it is still paid for", () => {
-  const cases: [string, { refund: "full" | "partial" | "none"; amount?: number }, boolean][] = [
-    ["full refund: drops off", { refund: "full" }, false],
+describe("Q13: after the T-shirt's holder is cancelled with a refund, the T-shirt follows unless the refund recorded YES for add-ons", () => {
+  const cases: [string, Record<string, unknown>, boolean][] = [
+    ["full refund (default: add-on refunded): drops off", { refund: "full" }, false],
+    ["full refund with refundsAddons false: follows", { refund: "full", refundsAddons: false }, true],
     ["cancelled without refund: follows", { refund: "none" }, true],
-    ["part refund that kept the add-on (£5 of £28): follows", { refund: "partial", amount: 5 }, true],
-    ["part refund covering the add-on (£10 of £28): drops off", { refund: "partial", amount: 10 }, false],
+    ["partial refund of £5: follows", { refund: "partial", amount: 5 }, true],
+    ["partial refund of £10 (more than the add-on price): still follows, amounts are not linked to add-ons", { refund: "partial", amount: 10 }, true],
+    ["partial refund with refundsAddons true: drops off", { refund: "partial", amount: 10, refundsAddons: true }, false],
   ];
   for (const [name, action, follows] of cases) {
     it(name, async () => {
@@ -670,6 +672,7 @@ describe("Q13: after the T-shirt's holder is cancelled with a refund, the T-shir
       const pr = await as("P", "POST", `/api/bookings/${encodeURIComponent(sorted[0].r)}/record-payment`, { amount: sorted[0].amt, method: "Bank transfer", reference: `Q13-${uniq()}` });
       assert.ok(pr.status < 300, `pay ${pr.status}`);
       assert.ok((await operatorAction(sorted[0].r, "cancel", action)).status < 300);
+      if (action.refundsAddons !== undefined) assert.equal((await docOf(sorted[0].r)).cancel?.refundsAddons, action.refundsAddons, "the choice is recorded on the cancel record");
       const t = await teeDays(LW, c);
       assert.deepEqual(t.kit, follows ? [LW.dates[1]] : [], "Add-on orders");
       assert.deepEqual(t.reg, follows ? [LW.dates[1]] : [], "register");

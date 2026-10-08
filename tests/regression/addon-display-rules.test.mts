@@ -85,22 +85,26 @@ test("F04: Finance headline figures leave out an Offered (waiting-list, not acce
   assert.equal(financeFigures({ ...base, bookings: [mkb("Offered")] }).booked, 0);
 });
 
-// Q13 (owner: a bug). The one-off only follows to a sibling reference while it is still paid for / owed. A refund that covers it (full, or at least its price)
-// takes it off the preparation lists; refund pending / approved / awaiting transfer count the same as completed.
-test("Q13: a one-off follows its emptied holder only while the holder's refund record does not cover it", () => {
+// Q13 (owner decision): whether a one-off is refunded is an explicit YES/NO recorded with the refund (cancel.refundsAddons), never worked out from amounts.
+// Until the cancel screens ask: refund "full" => yes; partial / none => no. Pending / approved / awaiting-transfer refunds count as completed.
+test("Q13: a one-off follows its emptied holder unless the refund record says the add-on was refunded", () => {
   const days2 = ["2026-10-19", "2026-10-20"];
   const line = { child: "K", label: "T-shirt (Size: M)", price: 8, days: ["2026-10-18", ...days2], perDay: false, name: "T-shirt", qty: 1 };
-  const run = (cancel: Record<string, unknown> | null, extra: Record<string, unknown> = {}) => inheritSplitOneOffs([
+  const follows = (cancel: Record<string, unknown> | null, extra: Record<string, unknown> = {}) => inheritSplitOneOffs([
     { ref: "A", status: "Cancelled", email: "e", listingId: "l", createdAt: "x", checkoutId: "c1", days: [] as string[], amount: 28, cancel, ...extra, kids: [{ name: "K", dates: ["Sun 18 Oct 2026"], cancelled: true, cancelledDays: ["2026-10-18"] }], addonLines: [line] },
     { ref: "B", status: "Confirmed", email: "e", listingId: "l", createdAt: "x", checkoutId: "c1", days: days2, kids: [{ name: "K", dates: days2 }], addonLines: [] },
   ] as never).has("B");
-  assert.equal(run({ refund: "full", amount: 28 }), false, "full refund: drops off");
-  assert.equal(run({ refund: "pending", amount: 28 }), false, "refund pending: drops off");
-  assert.equal(run({ refund: "approved", amount: 28 }), false, "refund approved / awaiting transfer: drops off");
-  assert.equal(run({ refund: "none" }), true, "cancelled without refund: follows");
-  assert.equal(run(null), true, "cancelled, no record: follows");
-  assert.equal(run({ refund: "partial", amount: 5 }), true, "part refund that kept the add-on: follows");
-  assert.equal(run({ refund: "partial", amount: 8 }), false, "part refund covering the add-on: drops off");
-  assert.equal(run({ refund: "declined", amount: 28 }), true, "a declined refund moved no money: follows");
-  assert.equal(run({ refund: "none" }, { refundedApproved: 20 }), false, "money already refunded earlier covers it");
+  assert.equal(follows({ refund: "full", amount: 28 }), false, "full refund: the add-on is refunded by default");
+  assert.equal(follows({ refund: "full", amount: 28, refundsAddons: false }), true, "full refund but the provider said NO to the add-on");
+  assert.equal(follows({ refund: "pending", amount: 28 }), false, "refund pending for the whole booking counts as completed");
+  assert.equal(follows({ refund: "approved", amount: 28 }), false, "refund approved / awaiting transfer for the whole booking");
+  assert.equal(follows({ refund: "none" }), true, "cancelled without refund: follows");
+  assert.equal(follows(null), true, "no record: follows");
+  assert.equal(follows({ refund: "partial", amount: 5 }), true, "partial refund: follows");
+  assert.equal(follows({ refund: "partial", amount: 27 }), true, "partial refund follows whatever the amount");
+  assert.equal(follows({ refund: "partial", amount: 5, refundsAddons: true }), false, "partial refund with YES recorded: drops off");
+  assert.equal(follows({ refund: "pending", amount: 5, refundOnly: true }), true, "a day-only refund is not a whole-booking refund");
+  assert.equal(follows({ refund: "none", refundsAddons: true }), true, "no money moved: the answer means nothing");
+  assert.equal(follows({ refund: "declined", amount: 28, refundsAddons: true }), true, "a declined refund moved no money");
+  assert.equal(follows({ refund: "none" }, { refundedApproved: 20 }), true, "amounts earlier refunded do not link to the add-on");
 });
