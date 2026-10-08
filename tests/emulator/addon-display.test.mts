@@ -608,3 +608,71 @@ describe("R3: V05 through the checkoutId", () => {
     assert.deepEqual((await teeDays(LW, c2)).kit, [LW.dates[0]], "the other checkout is untouched");
   });
 });
+
+// ══════════════════════════════ ROUND 4 ══════════════════════════════
+describe("Q08: holder emptied AND a cancel-day on the surviving reference - the T-shirt still shows, once, on the first remaining day", () => {
+  for (const which of ["LW", "LE"] as const) {
+    it(`${which}: cancel the first reference, then cancel-day the survivor's first day`, async () => {
+      const l = which === "LW" ? LW : LE;
+      const c = `Q08 ${which} ${uniq()}`;
+      const b = await bookMany(l, c, { tshirt: true });
+      const sorted = (await Promise.all(b.refs.map(async (r) => ({ r, d: (await docOf(r)).days[0] })))).sort((x, y) => x.d.localeCompare(y.d));
+      assert.ok((await operatorAction(sorted[0].r, "cancel", { refund: "none" })).status < 300);
+      assert.ok((await operatorAction(sorted[1].r, "cancel-day", { ki: 0, date: l.dates[1], resolution: "none" })).status < 300);
+      const t = await teeDays(l, c);
+      assert.deepEqual(t.kit, [l.dates[2]], "Add-on orders");
+      assert.deepEqual(t.reg, [l.dates[2]], "register");
+    });
+  }
+});
+
+describe("C05: no family-callable GET ever returns a checkoutId", () => {
+  it("scans every parameterless GET route a parent can reach, and the privacy export", async () => {
+    const { readFileSync, readdirSync } = await import("node:fs");
+    const { dirname, resolve } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const dir = resolve(dirname(fileURLToPath(import.meta.url)), "../../server/src/routes");
+    const prefix: Record<string, string> = { account: "/api/account", children: "/api/children", customers: "/api/customers", payments: "/api/payments", events: "/api/events", feedback: "/api/my/feedback", growth: "/api/growth", posts: "/api/posts", referral: "/api/my/referral", trips: "/api/trips", listings: "/api/listings", privacy: "/api/privacy", memberships: "/api/my/memberships", moments: "/api/moments", messages: "/api/messages", invoices: "/api/invoices", notifications: "/api/notifications", tfc: "/api/my/tfc", mealsShop: "/api/meals-shop", meals: "/api/meals", timetables: "/api/timetables", onlineSessions: "/api/online-sessions", my: "/api/my" };
+    const b = await bookMany(LW, `C05 ${uniq()}`);
+    assert.ok((await docOf(b.refs[0])).checkoutId, "setup: a stamped booking exists");
+    const db = await adminDb();
+    const stored = [...new Set((await db.collection("bookings").get()).docs.map((d) => d.get("checkoutId")).filter(Boolean))] as string[];
+    const tok = (await login("parent-a@emu.test")).token;
+    const leaks: string[] = []; let n = 0;
+    const paths = new Set<string>(["/api/privacy/export", "/api/my/bookings"]);
+    for (const f of readdirSync(dir)) {
+      const name = f.replace(/\.ts$/, "");
+      if (!prefix[name]) continue;
+      for (const m of readFileSync(resolve(dir, f), "utf8").matchAll(/\b\w+\.get\("(\/[^":]*)"/g)) paths.add(prefix[name] + (m[1] === "/" ? "" : m[1]));
+    }
+    for (const p of paths) {
+      const g = await call("GET", p, tok); n++;
+      const t = typeof g.json === "string" ? g.json : JSON.stringify(g.json);
+      if (/checkoutId/i.test(t) || stored.some((c) => t.includes(c))) leaks.push(p);
+    }
+    assert.ok(n > 20, `scanned ${n} routes`);
+    assert.deepEqual(leaks, [], "routes that leak a checkoutId");
+  });
+});
+
+describe("Q13: after the T-shirt's holder is cancelled with a refund, the T-shirt only follows while it is still paid for", () => {
+  const cases: [string, { refund: "full" | "partial" | "none"; amount?: number }, boolean][] = [
+    ["full refund: drops off", { refund: "full" }, false],
+    ["cancelled without refund: follows", { refund: "none" }, true],
+    ["part refund that kept the add-on (£5 of £28): follows", { refund: "partial", amount: 5 }, true],
+    ["part refund covering the add-on (£10 of £28): drops off", { refund: "partial", amount: 10 }, false],
+  ];
+  for (const [name, action, follows] of cases) {
+    it(name, async () => {
+      const c = `Q13 ${uniq()}`;
+      const b = await bookMany(LW, c, { tshirt: true });
+      const sorted = (await Promise.all(b.refs.map(async (r) => ({ r, d: (await docOf(r)).days[0], amt: (await docOf(r)).amount })))).sort((x, y) => x.d.localeCompare(y.d));
+      const pr = await as("P", "POST", `/api/bookings/${encodeURIComponent(sorted[0].r)}/record-payment`, { amount: sorted[0].amt, method: "Bank transfer", reference: `Q13-${uniq()}` });
+      assert.ok(pr.status < 300, `pay ${pr.status}`);
+      assert.ok((await operatorAction(sorted[0].r, "cancel", action)).status < 300);
+      const t = await teeDays(LW, c);
+      assert.deepEqual(t.kit, follows ? [LW.dates[1]] : [], "Add-on orders");
+      assert.deepEqual(t.reg, follows ? [LW.dates[1]] : [], "register");
+    });
+  }
+});

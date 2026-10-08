@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addonSentences, addonUnits, addonWithDays, addonFlag, bookingAddonLines, daysPhrase, kitForDay, kitTally, mergeAddonLines, moveAddonDays, type KitBooking } from "../../features/bookings/addons";
+import { addonSentences, addonUnits, addonWithDays, addonFlag, bookingAddonLines, daysPhrase, inheritSplitOneOffs, kitForDay, kitTally, mergeAddonLines, moveAddonDays, type KitBooking } from "../../features/bookings/addons";
 import { addonFigures } from "../../features/money/addonFigures";
+import { financeFigures, payIndex } from "../../features/money/financeFigures";
 
 // How add-ons are SHOWN (pure rules; the real-API behaviour tests are tests/emulator/addon-display.test.mts).
 const WEEK = ["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30"];
@@ -59,4 +60,47 @@ test("Finance add-on figures count units: 7 + 3 bottle days = 10 units, £30, on
   assert.equal(f.addonRevenue, 30);
   assert.equal(f.bookingsWithAddon, 1);
   assert.equal(f.byName.get("Lunch")?.count, 8);
+});
+
+// Q08: after cancel-day a single child's kids[] carries LABEL dates ("Mon 19 Oct 2026") beside ISO cancelledDays. The remaining days must still be read in ISO.
+test("Q08: a split T-shirt whose holder is emptied still lands on the first remaining ISO day of the survivor, even after a cancel-day there", () => {
+  const days2 = ["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24"];
+  const lbl = ["Mon 19 Oct 2026", "Tue 20 Oct 2026", "Wed 21 Oct 2026", "Thu 22 Oct 2026", "Fri 23 Oct 2026", "Sat 24 Oct 2026"];
+  const line = { child: "K", label: "T-shirt (Size: M)", price: 8, days: ["2026-10-18", ...days2], perDay: false, name: "T-shirt", qty: 1 };
+  const mk = (cancel1: string[], cancel2: string[]) => [
+    { ref: "A", status: "Confirmed", email: "e", listingId: "l", createdAt: "x", checkoutId: "c1", days: [] as string[], kids: [{ name: "K", dates: ["Sun 18 Oct 2026"], cancelledDays: cancel1, cancelled: true }], addonLines: [line] },
+    { ref: "B", status: "Confirmed", email: "e", listingId: "l", createdAt: "x", checkoutId: "c1", days: days2.filter((d) => !cancel2.includes(d)), kids: [{ name: "K", dates: lbl, cancelledDays: cancel2 }], addonLines: [] },
+  ];
+  const moved = (cancel1: string[], cancel2: string[]) => inheritSplitOneOffs(mk(cancel1, cancel2) as never).get("B")?.[0]?.days;
+  assert.equal(moved(["2026-10-18"], [])?.[0], "2026-10-19", "holder emptied");
+  assert.equal(moved(["2026-10-18"], ["2026-10-19"])?.[0], "2026-10-20", "holder emptied AND the survivor's first day cancelled");
+  assert.equal(moved(["2026-10-18"], ["2026-10-19", "2026-10-20"])?.[0], "2026-10-21");
+});
+
+test("F04: Finance headline figures leave out an Offered (waiting-list, not accepted) place, like Declined and Waitlisted", () => {
+  const base = { payIdx: payIndex([], []), months: 1, nowMs: Date.parse("2026-10-08T12:00:00Z"), season: "", venue: "", listingSeason: {}, listingVenue: {}, listingVenueId: {} };
+  const mkb = (status: string) => ({ ref: status, bid: "", addons: [], answers: [], note: "", recon: null, evid: null, cancel: null, status, pay: "Unpaid", amount: 69, createdAt: "2026-10-05" }) as never;
+  assert.equal(financeFigures({ ...base, bookings: [mkb("Confirmed")] }).booked, 69);
+  assert.equal(financeFigures({ ...base, bookings: [mkb("Confirmed"), mkb("Offered")] }).booked, 69, "Offered is not booked");
+  assert.equal(financeFigures({ ...base, bookings: [mkb("Offered")] }).booked, 0);
+});
+
+// Q13 (owner: a bug). The one-off only follows to a sibling reference while it is still paid for / owed. A refund that covers it (full, or at least its price)
+// takes it off the preparation lists; refund pending / approved / awaiting transfer count the same as completed.
+test("Q13: a one-off follows its emptied holder only while the holder's refund record does not cover it", () => {
+  const days2 = ["2026-10-19", "2026-10-20"];
+  const line = { child: "K", label: "T-shirt (Size: M)", price: 8, days: ["2026-10-18", ...days2], perDay: false, name: "T-shirt", qty: 1 };
+  const run = (cancel: Record<string, unknown> | null, extra: Record<string, unknown> = {}) => inheritSplitOneOffs([
+    { ref: "A", status: "Cancelled", email: "e", listingId: "l", createdAt: "x", checkoutId: "c1", days: [] as string[], amount: 28, cancel, ...extra, kids: [{ name: "K", dates: ["Sun 18 Oct 2026"], cancelled: true, cancelledDays: ["2026-10-18"] }], addonLines: [line] },
+    { ref: "B", status: "Confirmed", email: "e", listingId: "l", createdAt: "x", checkoutId: "c1", days: days2, kids: [{ name: "K", dates: days2 }], addonLines: [] },
+  ] as never).has("B");
+  assert.equal(run({ refund: "full", amount: 28 }), false, "full refund: drops off");
+  assert.equal(run({ refund: "pending", amount: 28 }), false, "refund pending: drops off");
+  assert.equal(run({ refund: "approved", amount: 28 }), false, "refund approved / awaiting transfer: drops off");
+  assert.equal(run({ refund: "none" }), true, "cancelled without refund: follows");
+  assert.equal(run(null), true, "cancelled, no record: follows");
+  assert.equal(run({ refund: "partial", amount: 5 }), true, "part refund that kept the add-on: follows");
+  assert.equal(run({ refund: "partial", amount: 8 }), false, "part refund covering the add-on: drops off");
+  assert.equal(run({ refund: "declined", amount: 28 }), true, "a declined refund moved no money: follows");
+  assert.equal(run({ refund: "none" }, { refundedApproved: 20 }), false, "money already refunded earlier covers it");
 });
