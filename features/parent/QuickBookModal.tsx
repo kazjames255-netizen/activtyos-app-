@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { apiPublic } from "@/lib/api";
 import { CustomerPage, type ServerListing } from "@/features/listings/ListingWizard";
 import { useT, tNow } from "@/lib/i18n/provider";
+import { ViewErrorBoundary } from "@/components/ViewErrorBoundary";
 
 export function QuickBookModal({ id, onClose }: { id: string; onClose: () => void }) {
   const t = useT();
@@ -48,7 +49,7 @@ export function QuickBookModal({ id, onClose }: { id: string; onClose: () => voi
           ) : !listing ? (
             <div className="p-10 text-center text-[13px] text-[#8a86a3]">{t("parent.loading")}</div>
           ) : (
-            <CustomerPage listing={listing} bookingOnly />
+            <ViewErrorBoundary name="Quick book"><CustomerPage listing={listing} bookingOnly /></ViewErrorBoundary>
           )}
         </div>
       </div>

@@ -2,6 +2,7 @@
 // Firebase ID token and surfaces JSON error bodies as thrown Errors.
 import { firebaseAuth } from "./firebase/client";
 import { translateApiMessage } from "./i18n/apiErrors";
+import { cloneJson } from "./cloneJson";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -127,13 +128,13 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const key = `${getActAs()?.uid ?? ""}|${path}`;
   if (priming && (priming.any ? path.startsWith("/api/learning-hub/") && !path.startsWith("/api/learning-hub/bootstrap") : priming.paths.has(key))) await priming.done; // its answer is already on the wire inside the bootstrap: wait for it, don't ask twice
   const hit = primed.get(key);
-  if (hit && hit.exp > Date.now()) return (hit.v !== null && typeof hit.v === "object" ? structuredClone(hit.v) : hit.v) as T;
+  if (hit && hit.exp > Date.now()) return cloneJson(hit.v) as T;
   let p = inflightReads.get(key) as Promise<T> | undefined;
   if (!p) {
     p = background(path, () => send<T>(path, init)).finally(() => { if (inflightReads.get(key) === p) inflightReads.delete(key); });
     inflightReads.set(key, p);
   }
-  return p.then((v) => (v !== null && typeof v === "object" ? structuredClone(v) : v));
+  return p.then((v) => cloneJson(v));
 }
 
 const inflightReads = new Map<string, Promise<unknown>>();
