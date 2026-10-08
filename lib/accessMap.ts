@@ -222,8 +222,12 @@ export const FAMILY_READ_API: { re: RegExp; area: string; allMethods?: boolean }
   { re: /^\/api\/medications(\/.*)?$/, area: "medication", allMethods: true },
   { re: /^\/api\/trips\/?$/, area: "trips" },
   { re: /^\/api\/ratios\/board(\/.*)?$/, area: "ratios" },
+  // The day boards name every child and flag allergies / SEND (GET /api/ratios?date=, GET /api/meals?date=).
+  { re: /^\/api\/ratios\/?$/, area: "ratios" },
+  { re: /^\/api\/meals\/?$/, area: "meals" },
 ];
-export function familyReadAreaForApi(path: string, method: string): string | null {
+export function familyReadAreaForApi(rawPath: string, method: string): string | null {
+  const path = rawPath.toLowerCase(); // Express routes case-insensitively: the table is lower-case
   const m = method.toUpperCase();
   const read = m === "GET" || m === "HEAD";
   return FAMILY_READ_API.find((f) => f.re.test(path) && (read || f.allMethods))?.area ?? null;

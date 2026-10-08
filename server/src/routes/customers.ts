@@ -119,23 +119,47 @@ const customerSchema = z.object({
 // field really does stay omitted rather than being reset to "" / [].
 const customerPatchSchema = customerSchema.partial();
 
-/** Lower-cased names of the children a caller may see on a family record: those booked at the staff member's site(s) and/or in the
- *  franchise's scope. null = unrestricted. A family record accumulates children from EVERY site and franchise of the tenant. */
-async function visibleKidNames(tenantId: string, opts: { franchiseId?: string | null; site?: SiteScope | null }): Promise<Set<string> | null> {
+/** The children a caller may see on a family record: those booked at the staff member's site(s) and/or in the franchise's scope.
+ *  A family record accumulates children from EVERY site and franchise of the tenant, so each entry is matched by CHILD ID (the id
+ *  every booking carries). Names are only a fallback for an entry (or a booking) without an id, and then only within the SAME family
+ *  (booker email) - a same-named child of another family must never make this family's child at a hidden site visible. */
+interface KidScope { ids: Set<string>; namesByEmail: Map<string, Set<string>>; idlessNamesByEmail: Map<string, Set<string>> }
+const nameKey = (n: unknown) => String(n ?? "").trim().toLowerCase();
+function kidScopeOf(bookings: Iterable<FirebaseFirestore.DocumentData>, include: (b: any) => boolean): KidScope {
+  const sc: KidScope = { ids: new Set(), namesByEmail: new Map(), idlessNamesByEmail: new Map() };
+  const add = (m: Map<string, Set<string>>, email: string, n: string) => { let set = m.get(email); if (!set) m.set(email, (set = new Set())); set.add(n); };
+  for (const b of bookings as Iterable<{ email?: string; child?: string; childId?: string; kids?: { name?: string; childId?: string }[] }>) {
+    if (!include(b)) continue;
+    const email = nameKey(b.email);
+    const kids = Array.isArray(b.kids) && b.kids.length ? b.kids : null;
+    if (b.childId) sc.ids.add(b.childId);
+    for (const k of kids ?? []) {
+      if (k.childId) sc.ids.add(k.childId);
+      if (k.name) { add(sc.namesByEmail, email, nameKey(k.name)); if (!k.childId) add(sc.idlessNamesByEmail, email, nameKey(k.name)); }
+    }
+    for (const n of splitChildNames(b.child)) { add(sc.namesByEmail, email, nameKey(n)); if (!b.childId && !kids) add(sc.idlessNamesByEmail, email, nameKey(n)); }
+  }
+  return sc;
+}
+async function visibleKids(tenantId: string, opts: { franchiseId?: string | null; site?: SiteScope | null }): Promise<KidScope | null> {
   if (!opts.franchiseId && !opts.site) return null;
   const snap = await db.collection("bookings").where("tenantId", "==", tenantId).get();
-  const names = new Set<string>();
-  for (const d of snap.docs) {
-    const b = d.data() as { child?: string; kids?: { name?: string }[]; franchiseId?: string | null; listingId?: string | null; blockId?: string | null };
-    if (opts.franchiseId && (b.franchiseId ?? null) !== opts.franchiseId) continue;
-    if (opts.site && !bookingInSite(b, opts.site)) continue;
-    for (const n of splitChildNames(b.child)) names.add(n.trim().toLowerCase());
-    for (const k of b.kids ?? []) if (k.name) names.add(k.name.trim().toLowerCase());
-  }
-  return names;
+  return kidScopeOf(snap.docs.map((d) => d.data()), (b) => {
+    if (opts.franchiseId && (b.franchiseId ?? null) !== opts.franchiseId) return false;
+    if (opts.site && !bookingInSite(b, opts.site)) return false;
+    return true;
+  });
 }
-const narrowKids = <T extends { children?: Array<{ name?: string }> }>(c: T, names: Set<string> | null): T =>
-  names && Array.isArray(c.children) ? { ...c, children: c.children.filter((k) => names.has(String(k.name ?? "").trim().toLowerCase())) } : c;
+type KidEntryLike = { name?: string; childId?: string | null; id?: string | null };
+const entryId = (k: KidEntryLike) => String(k.childId ?? k.id ?? "").trim();
+/** Is this entry of the family `email`'s children[] one the scope covers? */
+function kidVisible(k: KidEntryLike, email: unknown, sc: KidScope): boolean {
+  const e = nameKey(email), id = entryId(k), n = nameKey(k.name);
+  if (id) return sc.ids.has(id) || !!sc.idlessNamesByEmail.get(e)?.has(n);
+  return !!sc.namesByEmail.get(e)?.has(n);
+}
+const narrowKids = <T extends { email?: unknown; children?: Array<KidEntryLike> }>(c: T, sc: KidScope | null): T =>
+  sc && Array.isArray(c.children) ? { ...c, children: c.children.filter((k) => kidVisible(k, c.email, sc)) } : c;
 
 // GET /api/customers — the caller's tenant's customers (staff may read;
 // platform may filter with ?tenantId= or see all).
@@ -202,14 +226,8 @@ customers.get("/", async (req, res) => {
     // One family record is shared by every franchise the family books with (customers are tenant-level), and its
     // `children` list accumulates from ALL of those bookings. In a franchise's (or a drilled-in head-office) view keep
     // only the children that franchise actually looks after — never a sibling franchise's child.
-    const scopeKids = new Set<string>();
-    for (const d of bkSnap.docs) {
-      const b = d.data() as { child?: string; kids?: { name?: string }[]; franchiseId?: string | null };
-      if (scopeFid === "__ho__" ? b.franchiseId : (b.franchiseId ?? null) !== scopeFid) continue;
-      if (b.child) scopeKids.add(b.child.trim().toLowerCase());
-      for (const k of b.kids ?? []) if (k.name) scopeKids.add(k.name.trim().toLowerCase());
-    }
-    list = list.map((c) => ((c as { franchiseId?: string | null }).franchiseId === scopeFid ? c : { ...c, children: (c.children ?? []).filter((k) => scopeKids.has(String(k.name ?? "").trim().toLowerCase())) }));
+    const scopeKids = kidScopeOf(bkSnap.docs.map((d) => d.data()), (b) => (scopeFid === "__ho__" ? !b.franchiseId : (b.franchiseId ?? null) === scopeFid));
+    list = list.map((c) => ((c as { franchiseId?: string | null }).franchiseId === scopeFid ? c : narrowKids(c, scopeKids)));
     const have = new Set(list.map((c) => (c.email ?? "").toLowerCase()).filter(Boolean));
     const derived = new Map<string, { name: string; children: Set<string>; createdAt?: string }>();
     for (const d of bkSnap.docs) {
@@ -279,8 +297,8 @@ customers.get("/", async (req, res) => {
   if (scope.role === "staff" && scope.tenantId) {
     const site = await staffSiteScope(req.auth!);
     if (site) {
-      const names = await visibleKidNames(scope.tenantId, { site, franchiseId: scope.franchiseId });
-      list = list.map((c) => narrowKids(c, names));
+      const vis = await visibleKids(scope.tenantId, { site, franchiseId: scope.franchiseId });
+      list = list.map((c) => narrowKids(c, vis));
     }
   }
 
@@ -371,12 +389,28 @@ customers.put("/:id", async (req, res) => {
   }
   const patch = withConsentStamp(parsed.data, own.snap.data());
   if (Array.isArray(patch.children)) patch.children = tidyChildren(patch.children);
+  // A franchise is shown (GET) only the children it looks after, unless the family is its own addition, so what it sends back is only
+  // that slice: MERGE it into the stored list instead of replacing it, or one save wipes the children at head office and other franchises.
+  const prev = own.snap.data() as { email?: string; children?: Array<KidEntryLike & Record<string, unknown>>; franchiseId?: string | null };
+  const fr = isFranchise(req.auth as Parameters<typeof isFranchise>[0]) ? req.auth!.franchiseId! : null;
+  const vis = fr && (prev.franchiseId ?? null) !== fr ? await visibleKids(req.auth!.tenantId!, { franchiseId: fr }) : null;
+  if (vis && Array.isArray(patch.children)) {
+    const stored = tidyChildren(prev.children ?? []);
+    const hidden = stored.filter((k) => !kidVisible(k, prev.email, vis));
+    const shown = stored.filter((k) => kidVisible(k, prev.email, vis));
+    // The PUT body carries no child ids (the schema drops them): give an edited entry back the id of the stored child it is.
+    const incoming = (patch.children as Array<KidEntryLike & Record<string, unknown>>).map((k) => {
+      if (entryId(k)) return k;
+      const was = shown.find((o) => nameKey(o.name) === nameKey(k.name) && entryId(o));
+      return was ? { ...k, ...(was.childId ? { childId: was.childId } : {}), ...(!was.childId && was.id ? { id: was.id } : {}) } : k;
+    });
+    patch.children = tidyChildren([...incoming, ...hidden]);
+  }
   await own.snap.ref.set(patch, { merge: true });
   const after = await own.snap.ref.get();
-  // A franchise gets back only the children it looks after (the same narrowing GET applies) unless the family is its own addition.
-  const rec = { id: after.id, ...(after.data() as { children?: Array<{ name?: string }>; franchiseId?: string | null }) };
-  const fr = isFranchise(req.auth as Parameters<typeof isFranchise>[0]) ? req.auth!.franchiseId! : null;
-  res.json(fr && rec.franchiseId !== fr ? narrowKids(rec, await visibleKidNames(req.auth!.tenantId!, { franchiseId: fr })) : rec);
+  // The response narrows the same way GET does.
+  const rec = { id: after.id, ...(after.data() as { email?: string; children?: Array<{ name?: string }>; franchiseId?: string | null }) };
+  res.json(vis ? narrowKids(rec, vis) : rec);
 });
 
 customers.delete("/:id", async (req, res) => {
