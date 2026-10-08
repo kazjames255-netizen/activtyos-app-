@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 import { isNotYetSold } from "../bookings/sold";
 import { isOwed, round2, ukMonth } from "./bookingIncome";
-import { cashReceivedOf, collectedNet, isMoneyIn, owedNow, receivedOf, refundAwaitingTransfer, refundTransferAmount } from "../bookings/helpers";
+import { cashReceivedOf, collectedNet, isMoneyIn, owedNow, receivedOf, refundAwaitingTransfer, refundTransferAmount, unsentRefunds } from "../bookings/helpers";
 import type { Booking } from "../bookings/types";
 import { ACT_C, money, colorFor } from "./finance-kit";
 
@@ -223,7 +223,7 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
       const owedBack = round2(refundTransferAmount(b));
       if (owedBack > 0.004) {
         refundsAwaiting += Math.min(owedBack, refundInWin);
-        refundsToSend.push({ ref: b.ref, name: b.booker || b.email || "—", listing: b.listing || "", amount: owedBack, since: b.cancel?.refundRecordedAt || b.cancel?.refundedAt || b.cancel?.on || "", method: b.voucherScheme || b.method || "" });
+        refundsToSend.push({ ref: b.ref, name: b.booker || b.email || "—", listing: b.listing || "", amount: owedBack, since: unsentRefunds(b).map((e) => e.since).filter(Boolean).sort()[0] || b.cancel?.refundRecordedAt || b.cancel?.refundedAt || b.cancel?.on || "", method: b.voucherScheme || b.method || "" });
       }
     }
     // Owed NOW — the one rule the Dashboard uses too (owedNow, d19s7).

@@ -4,7 +4,7 @@
 // drift. No React/zustand/Firebase imports allowed here.
 
 import type { Booking } from "./types";
-import { bookingKids, dayIso, kidActiveDays, nowStr, paidSoFar, refundAwaitingTransfer, refundableSoFar, refundedTotal, releaseValue, sessionDayLabel } from "./helpers";
+import { bookingKids, dayIso, kidActiveDays, nowStr, paidSoFar, refundAwaitingTransfer, refundTransferAmount, unsentRefunds, refundableSoFar, refundedTotal, releaseValue, sessionDayLabel } from "./helpers";
 import { followCancelledDays } from "./addonDays";
 import { accumulatePendingRelease } from "../../lib/cancellation";
 
@@ -78,7 +78,13 @@ export function applyRowAction(b: Booking, action: RowAction): void {
     // Only a refund that actually returns money makes the booking "Refunded" (a no-refund cancellation approved by mistake must not).
     if (b.cancel && b.cancel.refund !== "none" && (b.cancel.amount ?? 1) > 0.004) { b.cancel.refund = "approved"; b.pay = "Refunded"; }
   } else if (action === "refund-sent") {
-    if (refundAwaitingTransfer(b) && b.cancel) { b.cancel.refundTransfer = "sent"; b.cancel.refundSentAt = nowIso(); }
+    if (refundAwaitingTransfer(b)) {
+      // Every recorded offline refund still waiting is confirmed together: the provider sent what the screen showed (the sum of them all).
+      const amount = refundTransferAmount(b), at = nowIso();
+      for (const e of b.refundEntries ?? []) if (e.via === "offline" && e.status === "approved") { e.status = "sent"; e.sentAt = at; }
+      if (b.cancel && b.cancel.refund === "approved" && b.cancel.refundVia === "offline") { b.cancel.refundTransfer = "sent"; b.cancel.refundSentAt = at; }
+      b.lastRefundSent = { amount, at };
+    }
   } else if (action === "refund-decline") {
     if (b.cancel) b.cancel.refund = "declined";
     if (b.pay === "Refund pending") b.pay = "Paid";
@@ -117,6 +123,15 @@ export function applyBulkAction(b: Booking, action: BulkAction): void {
   else if (action === "cancel") b.status = "Cancelled";
 }
 
+/** The single `cancel` record is overwritten by the next refund. An older booking whose approved bank / cash / voucher refund is still unsent has no
+ *  entry for it yet: keep it as one BEFORE the record is replaced, so the money still owed to the family is never forgotten. */
+export function archiveAwaitingRefund(b: Booking): void {
+  if ((b.refundEntries ?? []).length) return;
+  const open = unsentRefunds(b);
+  if (!open.length) return;
+  b.refundEntries = [{ id: `legacy-${open[0].since || "x"}`, amount: b.cancel?.amount ?? open[0].cash, cash: open[0].cash, via: "offline", status: "approved", approvedAt: open[0].since || nowIso(), note: "recorded before refunds were kept as entries" }];
+}
+
 export function applyCancel(b: Booking, refund: RefundType, partialAmount?: number, reason?: string): void {
   // "Full" gives back what was actually paid (incl. wallet credit), and a
   // partial refund can't exceed it — it used to refund `amount` whatever had
@@ -125,6 +140,7 @@ export function applyCancel(b: Booking, refund: RefundType, partialAmount?: numb
   let amt = refund === "full" ? paid : 0;
   if (refund === "partial") amt = Math.min(Math.max(0, partialAmount || 0), paid);
   if (b.past !== true) b.status = "Cancelled";
+  archiveAwaitingRefund(b);
   b.cancel = {
     on: nowStr(),
     by: "Provider",
@@ -162,6 +178,7 @@ function settleRelease(b: Booking, label: string, value: number, opts?: ReleaseO
   if (amt > 0 && resolution === "wallet") {
     (b.refundLog = b.refundLog || []).push({ label: `${label} — wallet credit`, amount: amt, on: nowStr(), by: "Provider", source: "Wallet" });
   } else if (amt > 0) {
+    archiveAwaitingRefund(b);
     b.cancel = {
       on: nowStr(),
       by: "Provider",
@@ -271,6 +288,7 @@ export function applyNote(b: Booking, text: string): void {
 // (applyRowAction above) — matching the legacy "cancelled by Booker" records.
 export function applyParentCancel(b: Booking, msg?: string, reason?: string): void {
   b.status = "Cancelled";
+  archiveAwaitingRefund(b);
   b.cancel = {
     on: nowStr(),
     by: "Booker",

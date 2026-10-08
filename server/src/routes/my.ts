@@ -32,7 +32,7 @@ import { AddonRequestError, addAddonRequest, addonCutoffDays, buildAddonRequest,
 import { addonLineKey, parseAddonLabel } from "../../../features/bookings/addons";
 import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, lineDayStates, pendingForLine, requestDeadline, requestKeys, requestTargets, splittableLine, lineRequestBlock } from "../../../features/bookings/addonRequests";
 import { stampAddonRefund } from "../../../features/bookings/addonRefund";
-import { applyParentCancel, applyPartialCancel, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
+import { applyParentCancel, applyPartialCancel, archiveAwaitingRefund, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
 import { applyDiscounts, DISCOUNT_KIND_LABEL, type DiscountRule } from "../../../features/listings/discounts";
 import { earlyBirdScopeOf, earlyFixedUsed, claimEarlyBird } from "../lib/earlyBird";
@@ -2697,6 +2697,7 @@ async function partialCancel(
       // A request: the money only moves when the provider approves it, exactly like a whole-booking cancel.
       // A second release while the first is still awaiting approval ADDS to it (CN-022) — overwriting lost the earlier day's pending refund.
       const total = accumulatePendingRelease(b.cancel, value, refundableSoFar(b));
+      archiveAwaitingRefund(b);
       b.cancel = {
         on: ukToday(),
         by: "Booker",

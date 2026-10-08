@@ -26,7 +26,7 @@ import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
 import { registerRows } from "../lib/registerRows";
-import { money, realPhone, refundableSoFar, receivedOf, cashReceivedOf, refundTransferAmount } from "../../../features/bookings/helpers";
+import { money, realPhone, refundableSoFar, receivedOf, cashReceivedOf, refundTransferAmount, refundAwaitingTransfer } from "../../../features/bookings/helpers";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
 import { approveBlockedMessage, declineBlockedMessage, nudgeBlockedMessage, canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval, shouldReleaseDiscountCodes } from "../lib/bookingGuards";
@@ -778,9 +778,11 @@ bookings.post("/:ref/actions", async (req, res) => {
 
       // The provider confirms they SENT an offline refund that was only recorded at approval.
       if (action.type === "refund-sent") {
-        if (!b.cancel || b.cancel.refund !== "approved" || b.cancel.refundVia !== "offline")
+        // Any recorded offline refund still waiting counts, even if a newer refund has since replaced the booking's single cancel record.
+        if (!refundAwaitingTransfer(b)) {
+          if (b.cancel?.refund === "approved" && b.cancel.refundVia === "offline" && b.cancel.refundTransfer === "sent") throw new Conflict("This refund is already marked as sent");
           throw new Conflict("There is no recorded bank / cash / voucher refund waiting to be sent on this booking");
-        if (b.cancel.refundTransfer === "sent") throw new Conflict("This refund is already marked as sent");
+        }
       }
 
       // Marking a booking paid only makes sense for one that is live: on a cancelled / declined / waiting-list booking it used to
@@ -957,6 +959,14 @@ bookings.post("/:ref/actions", async (req, res) => {
       // but no refundLog entry, so it never showed there (only per-day
       // releases, my.ts partialCancel, did). Add one here too.
       const refundLabel = moved.partial ? "Refund approved (partial)" : "Refund approved";
+      // One entry per approved refund: what the provider still has to send is the sum of the offline ones not yet sent (see unsentRefunds()).
+      const cashPart = Math.round(Math.max(0, moved.owed - moved.walletPart) * 100) / 100;
+      const sentNow = moved.via !== "offline" || alreadySent;
+      const nowIso = new Date().toISOString();
+      const newEntry = { id: randomUUID(), amount: moved.owed, cash: cashPart, via: moved.via, status: sentNow ? "sent" : "approved", approvedAt: nowIso, ...(sentNow ? { sentAt: nowIso } : {}) } as NonNullable<typeof updated.refundEntries>[number];
+      (updated.refundEntries = updated.refundEntries ?? []).push(newEntry);
+      const lastSent = moved.via === "offline" && alreadySent ? { amount: cashPart, at: nowIso } : null;
+      if (lastSent) updated.lastRefundSent = lastSent;
       const logEntry = {
         label: refundLabel,
         amount: moved.owed,
@@ -975,6 +985,10 @@ bookings.post("/:ref/actions", async (req, res) => {
         cur.refundedApproved = Math.round(((cur.refundedApproved ?? 0) + moved.owed) * 100) / 100;
         cur.walletRefunded = Math.round(((cur.walletRefunded ?? 0) + moved.walletPart) * 100) / 100;
         cur.refundLog = [...(cur.refundLog ?? []), logEntry];
+        // Entries: the stored ones win (a concurrent 'sent' mark stays), plus any this request archived or created.
+        const have = new Set((cur.refundEntries ?? []).map((e) => e.id));
+        cur.refundEntries = [...(cur.refundEntries ?? []), ...(updated.refundEntries ?? []).filter((e) => !have.has(e.id))];
+        if (lastSent) cur.lastRefundSent = lastSent;
         cur.pay = refundableSoFar(cur) <= 0.005 ? "Refunded" : moved.partial ? "Partially refunded" : updated.pay;
         tx.set(ref, toDoc(cur));
       });

@@ -228,6 +228,11 @@ export interface Booking {
   refundedApproved?: number;
   /** How much of `walletApplied` has already been returned to the wallet. */
   walletRefunded?: number;
+  /** EVERY approved refund, one entry each (the single `cancel` record is overwritten by the next refund, so what is still owed to the family must
+   *  not live only there). The money still to send is the sum of the offline entries not yet sent. Older bookings have none: see unsentRefunds(). */
+  refundEntries?: RefundEntry[];
+  /** The last time the provider confirmed sending refund(s): the amount and when (for the "has been sent" wording). */
+  lastRefundSent?: { amount: number; at: string };
   /** Marketing discount code redeemed on this booking, if any. */
   discountCode?: string;
   addons: string[];
@@ -317,6 +322,18 @@ export type BookingFilter =
   | "requests"
   | "refunds";
 
+export interface RefundEntry {
+  id: string;
+  /** What was approved (cash + wallet part), and the cash part the provider must send. */
+  amount: number;
+  cash: number;
+  via: "wallet" | "card" | "offline";
+  /** approved = recorded, still to send (offline only); sent = money has moved / the provider confirmed. */
+  status: "approved" | "sent";
+  approvedAt: string;
+  sentAt?: string;
+  note?: string;
+}
 export type AddonRequestKind = "change" | "cancel";
 export type AddonRequestStatus = "pending" | "approved" | "declined" | "withdrawn";
 /** One extra a request covers: the line (see addonLineKey) and, for a daily extra, the specific days (always listed on a new request; absent on

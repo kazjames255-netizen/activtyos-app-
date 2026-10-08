@@ -726,17 +726,37 @@ export function refundButtonKind(b: { voucherScheme?: string; method?: string; p
   return dest === "card" ? "bank" : "plain";
 }
 
-/** An approved OFFLINE refund (bank transfer / cash / voucher) the provider has RECORDED but not yet confirmed as sent. Card and wallet refunds are never "awaiting":
- *  Stripe sends the card refund at once and wallet credit is instant. An older offline refund with no `refundTransfer` counts as awaiting (its ledger row is "to-reimburse"). */
-export function refundAwaitingTransfer(b: { cancel?: { refund?: string; refundVia?: string; refundTransfer?: string } | null }): boolean {
+type RefundCarrier = {
+  cancel?: { refund?: string; refundVia?: string; refundTransfer?: string; amount?: number; refundCash?: number; refundRecordedAt?: string; refundedAt?: string } | null;
+  refundEntries?: { id?: string; cash: number; via: string; status: string; approvedAt?: string }[];
+  walletRefunded?: number; refundedApproved?: number; lastRefundSent?: { amount: number; at: string };
+};
+
+/** The offline refunds (bank transfer / cash / voucher) the provider has RECORDED but not confirmed as sent: one per approved refund, so a second
+ *  refund can never hide the first. Older bookings kept only the single cancel record: that one counts while it is approved, offline and not sent. */
+export function unsentRefunds(b: RefundCarrier): { cash: number; since: string }[] {
+  if ((b.refundEntries ?? []).length) return (b.refundEntries ?? []).filter((e) => e.via === "offline" && e.status === "approved").map((e) => ({ cash: e.cash, since: e.approvedAt ?? "" }));
   const c = b.cancel;
-  return !!c && c.refund === "approved" && c.refundVia === "offline" && c.refundTransfer !== "sent";
+  if (!c || c.refund !== "approved" || c.refundVia !== "offline" || c.refundTransfer === "sent") return [];
+  const asked = c.refundCash != null ? c.refundCash : (b.refundedApproved && b.refundedApproved > 0 ? b.refundedApproved : (c.amount ?? 0)) - (b.walletRefunded ?? 0);
+  return [{ cash: Math.max(0, asked), since: c.refundRecordedAt || c.refundedAt || "" }];
 }
 
-/** The money the provider still has to send back for an awaiting offline refund (what was approved, less any wallet credit already returned). */
-export function refundTransferAmount(b: { cancel?: { amount?: number; refundCash?: number } | null; walletRefunded?: number; refundedApproved?: number }): number {
-  if (b.cancel?.refundCash != null) return Math.round(Math.max(0, b.cancel.refundCash) * 100) / 100; // this refund only (set when it was approved)
-  const asked = b.refundedApproved && b.refundedApproved > 0 ? b.refundedApproved : (b.cancel?.amount ?? 0);
+/** Is any recorded offline refund still waiting for the provider's transfer? Card and wallet refunds are never "awaiting" (Stripe sends the card refund at
+ *  once, wallet credit is instant). An older offline refund with no `refundTransfer` counts as awaiting (its ledger row is "to-reimburse"). */
+export function refundAwaitingTransfer(b: RefundCarrier): boolean {
+  return unsentRefunds(b).length > 0;
+}
+
+/** The money the provider still has to send back: the cash part of every recorded refund not yet marked sent. When nothing is waiting (it was just
+ *  sent) this is what the last confirmation sent, so the "has been sent" wording names the right amount. */
+export function refundTransferAmount(b: RefundCarrier): number {
+  const open = unsentRefunds(b);
+  if (open.length) return Math.round(open.reduce((t, e) => t + Math.max(0, e.cash), 0) * 100) / 100;
+  if (b.lastRefundSent) return Math.round(Math.max(0, b.lastRefundSent.amount) * 100) / 100;
+  const c = b.cancel;
+  if (c?.refundCash != null) return Math.round(Math.max(0, c.refundCash) * 100) / 100;
+  const asked = b.refundedApproved && b.refundedApproved > 0 ? b.refundedApproved : (c?.amount ?? 0);
   return Math.round(Math.max(0, asked - (b.walletRefunded ?? 0)) * 100) / 100;
 }
 
