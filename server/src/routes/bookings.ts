@@ -21,6 +21,7 @@ import { creditWallet } from "../lib/wallet";
 import { captureHolds, releaseHolds } from "../lib/cardHold";
 import { RESEND_COOLDOWN_MS, remindersPatch, reminderDateLabel, resendWaitSeconds } from "../lib/invoiceResend";
 import { AddonRequestError, approveAddonRequest, declineAddonRequest } from "../lib/addonRequests";
+import { requestWhat } from "../../../features/bookings/addonRequests";
 import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
@@ -1101,7 +1102,7 @@ bookings.post("/:ref/actions", async (req, res) => {
           category: "booking",
           bellOnly: true,
           title: `${r.status === "approved" ? "Extra request approved" : "Extra request declined"} · ${updated.ref}`,
-          body: `${updated.listing} — ${r.kind === "cancel" ? `cancel ${r.label}` : `change ${r.label} to ${r.toLabel ?? ""}`}.${r.status === "approved" && r.money && r.money.amount > 0 ? ` £${r.money.amount.toFixed(2)} ${r.money.resolution === "charge" ? "to pay" : r.money.resolution === "wallet" ? "added to your wallet" : "to be refunded"}.` : ""}${r.status === "declined" && r.declineReason ? ` ${r.declineReason}` : ""}`,
+          body: `${updated.listing} — ${requestWhat(r)}.${r.status === "approved" && r.money && r.money.amount > 0 ? ` £${r.money.amount.toFixed(2)} ${r.money.resolution === "charge" ? "to pay" : r.money.resolution === "wallet" ? "added to your wallet" : "to be refunded"}.` : ""}${r.status === "declined" && r.declineReason ? ` ${r.declineReason}` : ""}`,
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
@@ -1200,6 +1201,7 @@ bookings.post("/:ref/actions", async (req, res) => {
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
     else if (e instanceof Conflict) res.status(409).json({ error: e.message });
+    // A refused extra request (addon-approve with no choice about a price difference...) is the provider's to fix, not a server fault.
     else if (e instanceof BadRequest) res.status(400).json({ error: e.message });
     else throw e;
   }

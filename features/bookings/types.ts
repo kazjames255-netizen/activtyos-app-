@@ -314,6 +314,16 @@ export type BookingFilter =
 
 export type AddonRequestKind = "change" | "cancel";
 export type AddonRequestStatus = "pending" | "approved" | "declined" | "withdrawn";
+/** One extra a request covers: the line (see addonLineKey) and, for a daily extra, the specific days (always listed on a new request; absent on
+ *  a request made before bulk requests existed, which means the whole extra). `price` is the money for exactly these days at the time of asking. */
+export interface AddonRequestTarget {
+  key: string;
+  child: string;
+  label: string;
+  name?: string;
+  days?: string[];
+  price: number;
+}
 export interface AddonRequest {
   id: string;
   /** Which extra line (see addonLineKey): child + label at the time of the request. */
@@ -326,7 +336,11 @@ export interface AddonRequest {
   to?: Record<string, string>;
   toLabel?: string;
   note?: string;
-  /** What the extra costs now, and the price difference a change would make (0 for a plain size/colour change). */
+  /** CANCEL only: every extra (and the days of it) this ONE request covers. Absent on requests made before bulk requests: then `key` is the
+   *  one whole extra. See requestTargets() in features/bookings/addonRequests.ts. */
+  targets?: AddonRequestTarget[];
+  /** What the extra costs now (for a bulk request: the total of all targets), and the price difference a change would make (always 0 for a
+   *  size/colour change: the price stays as booked; older requests may still carry one). */
   price: number;
   priceDiff?: number;
   status: AddonRequestStatus;

@@ -30,7 +30,7 @@ import { money, paidSoFar as totalPaid, realPhone, refundableSoFar, sessionIsoDa
 import type { Booking, AddonRequest } from "../../../features/bookings/types";
 import { AddonRequestError, addAddonRequest, buildAddonRequest, currentAnswers, defForLine, withdrawAddonRequest } from "../lib/addonRequests";
 import { addonLineKey, parseAddonLabel } from "../../../features/bookings/addons";
-import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, requestDeadline } from "../../../features/bookings/addonRequests";
+import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, lineDayStates, pendingForLine, requestDeadline, requestKeys, requestTargets, splittableLine } from "../../../features/bookings/addonRequests";
 import { stampAddonRefund } from "../../../features/bookings/addonRefund";
 import { applyParentCancel, applyPartialCancel, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
@@ -2971,11 +2971,14 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
 // ——— Add-on requests: a family asks to CHANGE (size, colour...) or CANCEL one extra. Never automatic, never the same as cancelling the booking:
 // it waits for the provider to approve or decline (routes/bookings.ts addon-approve / addon-decline).
 const addonReqSchema = z.object({
-  key: z.string().min(1).max(300),
+  // One extra (a change always; a cancel may use it instead of targets) ...
+  key: z.string().min(1).max(300).optional(),
   kind: z.enum(["change", "cancel"]),
   answers: z.record(z.string().max(200)).optional(),
   note: z.string().max(300).optional(),
-});
+  // ... or, for a cancel, several extras and the specific days of a daily extra in ONE request.
+  targets: z.array(z.object({ key: z.string().min(1).max(300), days: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).max(62).optional() })).min(1).max(30).optional(),
+}).refine((v) => !!v.key || !!v.targets?.length, { message: "Pick what you would like to ask about." });
 
 async function addonCutoffDays(b: Booking): Promise<number> {
   if (!b.tenantId) return DEFAULT_ADDON_REQUEST_DAYS;
@@ -2996,15 +2999,20 @@ my.get("/bookings/:ref/addon-options", async (req, res) => {
   for (const line of b.addonLines ?? []) {
     // (an older booking that only has the text lines has no addonLines: the family messages the provider instead)
     const l = { key: addonLineKey(line.child, line.label), name: line.name ?? parseAddonLabel(line.label).name };
-    const block = addonRequestBlock(b, { key: l.key, days: line.days }, today, cutoffDays);
+    const changeBlock = addonRequestBlock(b, { key: l.key, days: line.days }, today, cutoffDays);
     const def = line.meal ? null : await defForLine(b, line);
     const questions = (def?.questions ?? []).filter((q) => q.type === "choice" && (q.options ?? []).length).map((q) => ({ id: q.id, label: q.label, options: q.options ?? [], required: !!q.required }));
     const first = firstDayOf({ days: line.days }, b.days);
+    // A daily extra can be cancelled a day at a time: each day carries its own cut-off state. Otherwise the whole extra is judged on its first day.
+    const splittable = splittableLine(line);
+    const days = splittable ? lineDayStates(line.days, today, cutoffDays) : [];
+    const open = days.filter((d) => d.state === "none").length;
+    const pending = pendingForLine(b, l.key) ?? null;
+    const block = changeBlock === "cancelled" || changeBlock === "pending" ? changeBlock : splittable ? (open ? "none" : days.every((d) => d.state === "past") ? "past" : "cutoff") : changeBlock;
     lines.push({
-      key: l.key, child: line.child, label: line.label, name: l.name, meal: !!line.meal, price: line.price, block,
-      canCancel: block === "none", canChange: block === "none" && !line.meal && questions.length > 0,
-      questions, current: currentAnswers(line),
-      pending: (b.addonRequests ?? []).find((r) => r.status === "pending" && r.key === l.key) ?? null,
+      key: l.key, child: line.child, label: line.label, name: l.name, meal: !!line.meal, price: line.price, block, splittable, days,
+      canCancel: block === "none", canChange: changeBlock === "none" && !line.meal && questions.length > 0,
+      questions, current: currentAnswers(line), pending,
       ...(block === "cutoff" && first ? { until: requestDeadline(first, cutoffDays) } : {}),
     });
   }
@@ -3041,11 +3049,11 @@ my.post("/bookings/:ref/addon-requests", async (req, res) => {
         category: "booking",
         key: "addon-request",
         title: bellTitle("addon-request", b.ref),
-        body: bellBody([r.kind === "cancel" ? "Cancel extra" : "Change extra", bellMoney(r.price ?? 0)]),
+        body: bellBody([r.kind === "cancel" ? (requestKeys(r).length > 1 ? "Cancel extras" : "Cancel extra") : "Change extra", bellMoney(r.price ?? 0)]),
         subject: `${what} (${b.ref})`,
         href: `/company/bookings?ref=${encodeURIComponent(b.ref)}`,
         ref: b.ref,
-        emailHtml: `<p>${what.replace(/&/g, "&amp;").replace(/</g, "&lt;")}.</p><p>${(b.listing ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")} · booking ${b.ref}${r.note ? ` · note: ${r.note.replace(/&/g, "&amp;").replace(/</g, "&lt;")}` : ""}</p><p>Nothing changes until you approve or decline it. It is separate from cancelling the booking.</p>`,
+        emailHtml: `<p>${what.replace(/&/g, "&amp;").replace(/</g, "&lt;")}.</p>${requestTargets(r).length > 1 || requestTargets(r)[0].days?.length ? `<ul>${requestTargets(r).map((t) => `<li>${t.label.replace(/&/g, "&amp;").replace(/</g, "&lt;")}${t.days?.length ? ` · ${t.days.length} day${t.days.length === 1 ? "" : "s"} (${t.days.join(", ")})` : ""} · ${money(t.price)}</li>`).join("")}</ul>` : ""}<p>${(b.listing ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")} · booking ${b.ref}${r.note ? ` · note: ${r.note.replace(/&/g, "&amp;").replace(/</g, "&lt;")}` : ""}</p><p>Nothing changes until you approve or decline it. It is separate from cancelling the booking.</p>`,
       });
     }
     res.status(201).json(r);

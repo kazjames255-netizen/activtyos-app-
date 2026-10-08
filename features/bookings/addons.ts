@@ -169,7 +169,7 @@ export interface KitBooking extends BookingAddonSource {
   email?: string;
   days?: string[];
   /** A family's requests to change / cancel an extra (features/bookings/addonRequests.ts): a PENDING one shows a small marker on that child's item. */
-  addonRequests?: { key: string; kind: "change" | "cancel"; status: string }[];
+  addonRequests?: { key: string; kind: "change" | "cancel"; status: string; targets?: { key: string }[] }[];
 }
 
 export interface KitChild { key: string; ref: string; child: string; qty: number; booker?: string; email?: string; /** A request to change / cancel this item is waiting for the provider. */ pending?: "change" | "cancel"; /** The booking is not paid yet / still waits for the provider's approval: the screens label it. */ flag?: AddonFlag }
@@ -202,7 +202,8 @@ export function kitForDay(bookings: KitBooking[], date: string, opts: { name?: s
       // A per-day extra is one item on each of its days (its stored qty is the number of days); a one-off extra is its own quantity.
       const qty = l.perDay || l.meal ? 1 : l.qty;
       g.total += qty;
-      const req = (b.addonRequests ?? []).find((r) => r.status === "pending" && r.key === addonLineKey(l.child, l.label));
+      const lineKey = addonLineKey(l.child, l.label);
+      const req = (b.addonRequests ?? []).find((r) => r.status === "pending" && (r.key === lineKey || (r.targets ?? []).some((t) => t.key === lineKey)));
       g.children.push({ key: kitKey(b.ref, l.child, l.name, l.choiceValue, date), ref: b.ref, child: l.child, qty, ...(b.booker ? { booker: b.booker } : {}), ...(b.email ? { email: b.email } : {}), ...(req ? { pending: req.kind } : {}), ...(flag ? { flag } : {}) });
       groups.set(id, g);
     }

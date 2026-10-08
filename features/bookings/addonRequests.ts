@@ -1,4 +1,4 @@
-import type { AddonRequest, Booking } from "./types";
+import type { AddonRequest, AddonRequestTarget, Booking } from "./types";
 
 // Pure rules for a family's REQUESTS to change or cancel an extra (add-on). Shared by the server (validation, applying a decision) and the
 // screens (what a family / provider sees). Nothing here is ever automatic: a request waits for the provider.
@@ -10,7 +10,15 @@ const ymd = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).pa
 /** Requests still waiting for the provider. */
 export const pendingAddonRequests = (b: Pick<Booking, "addonRequests">): AddonRequest[] => (b.addonRequests ?? []).filter((r) => r.status === "pending");
 export const hasPendingAddonRequest = (b: Pick<Booking, "addonRequests">): boolean => pendingAddonRequests(b).length > 0;
-export const pendingForLine = (b: Pick<Booking, "addonRequests">, key: string): AddonRequest | undefined => pendingAddonRequests(b).find((r) => r.key === key);
+/** The extras a request covers. A request made before bulk requests has no `targets`: it is the one whole extra named by `key`. */
+export function requestTargets(r: Pick<AddonRequest, "key" | "child" | "label" | "price" | "targets">): AddonRequestTarget[] {
+  return r.targets?.length ? r.targets : [{ key: r.key, child: r.child, label: r.label, price: r.price }];
+}
+export const requestKeys = (r: Pick<AddonRequest, "key" | "child" | "label" | "price" | "targets">): string[] => requestTargets(r).map((t) => t.key);
+export const pendingForLine = (b: Pick<Booking, "addonRequests">, key: string): AddonRequest | undefined => pendingAddonRequests(b).find((r) => requestKeys(r).includes(key));
+
+/** Can this extra be cancelled a day at a time? Only a daily extra that knows its days (a one-off and a meal are asked about whole). */
+export const splittableLine = (l: { perDay?: boolean; meal?: boolean; days?: string[] }): boolean => !!l.perDay && !l.meal && (l.days?.length ?? 0) > 0;
 
 /** The first day an extra is for (its own days, else the booking's days). */
 export function firstDayOf(line: { days?: string[] }, bookingDays: string[] | undefined): string | undefined {
@@ -24,6 +32,19 @@ export function daysUntil(today: string, day: string): number {
 }
 
 export type RequestBlock = "past" | "cutoff" | "pending" | "cancelled" | "none";
+
+/** The cut-off for ONE day: has it passed, is it too close, or can the family still ask about it. Measured per day, not from the first day. */
+export function dayBlock(today: string, day: string, cutoffDays: number = DEFAULT_ADDON_REQUEST_DAYS): "past" | "cutoff" | "none" {
+  const until = daysUntil(today, day);
+  if (until < 0) return "past";
+  if (until < Math.max(0, Math.floor(cutoffDays))) return "cutoff";
+  return "none";
+}
+
+/** Each day of a daily extra with whether a request may still include it. */
+export function lineDayStates(days: string[] | undefined, today: string, cutoffDays: number = DEFAULT_ADDON_REQUEST_DAYS): { date: string; state: "none" | "past" | "cutoff" }[] {
+  return [...(days ?? [])].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().map((date) => ({ date, state: dayBlock(today, date, cutoffDays) }));
+}
 
 /**
  * Can a family still ask about this extra? `cutoffDays` is the provider's Setup option "allow add-on requests until N days before the session"
@@ -76,9 +97,17 @@ export function changeProblem(
   return differs ? null : "That's what you already have.";
 }
 
-/** A short sentence for bells and emails. */
-export function describeRequest(r: Pick<AddonRequest, "kind" | "child" | "label" | "toLabel">): string {
-  const who = r.child.trim().split(/\s+/)[0] || "Child";
-  return r.kind === "cancel" ? `${who} asks to cancel ${r.label}` : `${who} asks to change ${r.label} to ${r.toLabel ?? "something else"}`;
+/** What a request asks for, as a phrase for sentences: "cancel Water bottle × 7 (Colour: Blue) for 3 days", "cancel 2 extras", "change X to Y". */
+export function requestWhat(r: Pick<AddonRequest, "kind" | "key" | "child" | "label" | "price" | "toLabel" | "targets">): string {
+  if (r.kind !== "cancel") return `change ${r.label} to ${r.toLabel ?? "something else"}`;
+  const ts = requestTargets(r);
+  if (ts.length > 1) return `cancel ${ts.length} extras`;
+  const t = ts[0];
+  return t.days?.length ? `cancel ${t.label} for ${t.days.length} day${t.days.length === 1 ? "" : "s"}` : `cancel ${t.label}`;
 }
 
+/** A short sentence for bells and emails. */
+export function describeRequest(r: Pick<AddonRequest, "kind" | "key" | "child" | "label" | "price" | "toLabel" | "targets">): string {
+  const who = r.child.trim().split(/\s+/)[0] || "Child";
+  return `${who} asks to ${requestWhat(r)}`;
+}

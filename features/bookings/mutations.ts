@@ -4,7 +4,8 @@
 // drift. No React/zustand/Firebase imports allowed here.
 
 import type { Booking } from "./types";
-import { bookingKids, kidActiveDays, nowStr, refundAwaitingTransfer, refundableSoFar, refundedTotal, releaseValue, sessionDayLabel } from "./helpers";
+import { bookingKids, dayIso, kidActiveDays, nowStr, paidSoFar, refundAwaitingTransfer, refundableSoFar, refundedTotal, releaseValue, sessionDayLabel } from "./helpers";
+import { followCancelledDays } from "./addonDays";
 import { accumulatePendingRelease } from "../../lib/cancellation";
 
 export type RowAction =
@@ -201,11 +202,20 @@ export function applyCancelDay(b: Booking, ki: number, dt: string, opts?: Releas
   k.cancelledDays = k.cancelledDays || [];
   if (k.cancelledDays.indexOf(dt) > -1) return null;
   k.cancelledDays.push(dt);
+  const unpaid = paidSoFar(b) <= 0.004;
   const res = settleRelease(b, `${k.name || "Child"} — ${dt}`, releaseValue(b, ki, [dt]), opts);
+  followCancelledDaysOnBooking(b, k.name, [dt], unpaid);
   if (kidActiveDays(k).length === 0) k.cancelled = true;
   if (!b.kids) b.kids = kids;
   applyCancelState(b);
   return res;
+}
+
+/** The child's daily extras follow a cancelled day: the line loses the day (and its share of the price), and when nothing has been paid the
+ *  amount owed drops by that share. A booking that was paid keeps its amount: the share is refunded through the cancel's money choice. */
+function followCancelledDaysOnBooking(b: Booking, child: string, days: string[], unpaid: boolean): void {
+  const gone = followCancelledDays(b, child, days.map((d) => dayIso(d) ?? d));
+  if (gone > 0 && unpaid) b.amount = Math.round(Math.max(0, (b.amount ?? 0) - gone) * 100) / 100;
 }
 
 export function applyChangeDayMutation(b: Booking, ki: number, oldDt: string, newDt: string): void {
@@ -276,6 +286,11 @@ export function applyPartialCancel(b: Booking, releases: { childKey: string; day
     if (kidActiveDays(k).length === 0) k.cancelled = true;
   }
   b.kids = kids;
+  const unpaid = paidSoFar(b) <= 0.004;
+  for (const r of releases) {
+    const k = kids.find((x) => (x.childId ?? x.name) === r.childKey);
+    if (k) followCancelledDaysOnBooking(b, k.name, r.days, unpaid);
+  }
   // A day only leaves the booking once NO child is still on it.
   const stillOn = new Set(kids.flatMap((k) => (k.cancelled ? [] : kidActiveDays(k))));
   const gone = [...released].filter((d) => !stillOn.has(d));
