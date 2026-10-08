@@ -6,6 +6,7 @@ import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { money } from "@/features/bookings/helpers";
 import { tNow, useT } from "@/lib/i18n/provider";
+import { payErrorMessage, RAW, type PayState, type StripeErrorLike } from "@/lib/payErrors";
 
 interface PayOptions { methods: string[]; bank: { reference: string } | null; cash: boolean; vouchers: boolean; contact: { email?: string; phone?: string } | null }
 interface PublicInvoice { provider: string; amount: number; description: string | null; reference: string | null; status: string; dueDate: string | null; customerName: string | null; payMethods: string[]; payOptions?: PayOptions; cardEnabled: boolean; closed?: boolean; paidAt?: string | null }
@@ -25,18 +26,34 @@ async function publicPost<T>(path: string): Promise<T> {
 }
 
 /** Stripe's Payment Element + the confirm round-trip, inside <Elements>. */
-function CardForm({ token, base, info, onPaid, onError }: { token: string; base: string; info: CheckoutInfo; onPaid: () => void; onError: (m: string) => void }) {
+function CardForm({ token, base, info, onPaid, onError }: { token: string; base: string; info: CheckoutInfo; onPaid: () => void; onError: (m: string | null, final?: boolean) => void }) {
   const t = useT();
   const stripeJs = useStripe();
   const elements = useElements();
   const [busy, setBusy] = useState(false);
 
+  // After ANY failure, re-read the link's real state (the provider may have cancelled the booking, or it was paid) and say THAT instead of
+  // Stripe's "A processing error occurred". Stripe's own words stay only for card-entry mistakes and real declines.
+  async function explain(err: StripeErrorLike | null) {
+    const st: PayState | null = await fetch(`${API}/api/public/${base}/${encodeURIComponent(token)}`)
+      .then(async (r) => {
+        if (r.status === 410) { const b = await r.json().catch(() => ({})) as { status?: string }; return b.status === "paid" ? "paid" as const : "cancelled" as const; }
+        if (!r.ok) return null;
+        const b = await r.json() as { status?: string };
+        return b.status === "paid" ? "paid" as const : b.status === "cancelled" ? "cancelled" as const : "open" as const;
+      })
+      .catch(() => null);
+    const m = payErrorMessage(err, st);
+    onError(`${m.key === RAW ? (m.params?.text ?? "") : t(m.key, m.params)}${m.retryNote ? ` ${t("p7ck.declineRetry")}` : ""}`, !!m.final);
+  }
+
   async function pay() {
     if (!stripeJs || !elements) return;
     setBusy(true);
+    onError(null);
     const { error } = await stripeJs.confirmPayment({ elements, redirect: "if_required" });
     if (error) {
-      onError(`${error.message ?? t("p7pub.payFailed")}${error.type === "card_error" ? ` ${t("p7ck.declineRetry")}` : ""}`);
+      await explain(error);
       setBusy(false);
       return;
     }
@@ -47,9 +64,10 @@ function CardForm({ token, base, info, onPaid, onError }: { token: string; base:
       if (res.paid) onPaid();
       else if (res.refunded) onError(t("p8lst.pmRefunded"));
       else if (res.refunding) onError(t("p8lst.pmRefunding"));
+      else if (res.status === "canceled" || res.status === "requires_payment_method") await explain(null);
       else onError(t("p7pub.payStatus", { status: res.status }));
-    } catch (e) {
-      onError(e instanceof Error ? e.message : t("p7pub.errVerify"));
+    } catch {
+      await explain(null);
     }
     setBusy(false);
   }
@@ -103,6 +121,8 @@ export function PayPage({ token, base = "invoice" }: { token: string; base?: "in
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [starting, setStarting] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  // The link can no longer be paid (cancelled / already paid): hide the card form so there is no Pay button to press.
+  const [payFinal, setPayFinal] = useState(false);
   const [justPaid, setJustPaid] = useState(false);
 
   useEffect(() => {
@@ -181,10 +201,10 @@ export function PayPage({ token, base = "invoice" }: { token: string; base?: "in
                   <div className="mt-1 text-[12px] text-[#8a86a3]">{inv.reference ? t("p7pub.bookingRefLine", { ref: inv.reference }) : ""}{inv.dueDate ? `${inv.reference ? " · " : ""}${t("p7pub.dueLine", { date: fmtDay(inv.dueDate) })}` : ""}</div>
 
                   {inv.cardEnabled && PK ? (
-                    info && stripePromise ? (
+                    payFinal ? null : info && stripePromise ? (
                       <div className="mt-4">
                         <Elements stripe={stripePromise} options={{ clientSecret: info.clientSecret }}>
-                          <CardForm token={token} base={base} info={info} onPaid={() => setJustPaid(true)} onError={setPayError} />
+                          <CardForm token={token} base={base} info={info} onPaid={() => setJustPaid(true)} onError={(m, f) => { setPayError(m); setPayFinal(!!f); }} />
                         </Elements>
                       </div>
                     ) : (

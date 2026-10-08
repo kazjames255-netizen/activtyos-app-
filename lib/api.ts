@@ -3,6 +3,7 @@
 import { firebaseAuth } from "./firebase/client";
 import { translateApiMessage } from "./i18n/apiErrors";
 import { cloneJson } from "./cloneJson";
+import { isSessionExpiredFailure, SESSION_EXPIRED_TEXT } from "./authExpiry";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -48,8 +49,21 @@ export class ApiError extends Error {
     /** The message exactly as the server sent it (English). `message` is that text in the active language; compare against rawMessage, never message. */
     public rawMessage: string = message,
   ) {
-    super(translateApiMessage(message));
+    // A lapsed sign-in must never reach a parent as "Invalid or expired token": one plain sentence, in their language, whichever view shows it.
+    super(translateApiMessage(isSessionExpiredFailure(status, message) ? SESSION_EXPIRED_TEXT : message));
+    this.sessionExpired = isSessionExpiredFailure(status, message);
   }
+  /** The sign-in session ran out (the server said so, and a silent token refresh did not fix it): show "sign in again". */
+  sessionExpired: boolean;
+}
+
+/** True for an error that means "your session has expired" - views can offer a Sign in button instead of a dead-end message. */
+export const isSessionExpired = (e: unknown): boolean => e instanceof ApiError && e.sessionExpired;
+
+/** Fired on `window` when a request failed for an expired session even after one silent token refresh. A banner (components/auth/SessionExpiredNotice) listens. */
+export const SESSION_EXPIRED_EVENT = "aos:session-expired";
+function announceExpiry(e: unknown): void {
+  if (typeof window !== "undefined" && isSessionExpired(e)) window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
 }
 
 // Nothing here may hang forever: a stalled auth or token refresh used to leave
@@ -187,7 +201,20 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
   const user = await signedInUser();
   if (!user) throw new ApiError(401, "Not signed in");
   const token = await withTimeout(user.getIdToken(), "Getting your sign-in token");
-  return request<T>(path, token, init);
+  return withTokenRetry(user, token, (tk) => request<T>(path, tk, init));
+}
+
+/** Run a request; if the server says the token expired (an hour-old tab, a clock change), fetch a fresh token ONCE and retry ONCE. The API
+ *  rejects a bad token before doing any work, so repeating even a POST cannot double-apply it. Still failing = the session really is gone. */
+async function withTokenRetry<T>(user: { getIdToken: (force?: boolean) => Promise<string> }, token: string, run: (token: string) => Promise<T>): Promise<T> {
+  try {
+    return await run(token);
+  } catch (e) {
+    if (!isSessionExpired(e)) throw e;
+    const fresh = await withTimeout(user.getIdToken(true), "Refreshing your sign-in").catch(() => null);
+    if (!fresh) { announceExpiry(e); throw e; }
+    try { return await run(fresh); } catch (e2) { announceExpiry(e2); throw e2; }
+  }
 }
 
 // Public storefront reads (/api/listings, /book/{id}): attach the token when
@@ -202,6 +229,7 @@ export async function apiPublic<T>(path: string, init?: RequestInit): Promise<T>
     new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
   ]);
   const token = user ? await withTimeout(user.getIdToken(), "Getting your sign-in token").catch(() => null) : null;
+  if (user && token) return withTokenRetry(user, token, (tk) => request<T>(path, tk, init));
   return request<T>(path, token, init);
 }
 
