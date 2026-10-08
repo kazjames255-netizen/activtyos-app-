@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { loadSettings } from "../lib/tenantLibrary";
-import { capForApi, capLevel, featureForApi, firstOff, normalizeApiPath, resolveCaps } from "../../../lib/accessMap";
+import { capForApi, capLevel, familyReadAreaForApi, featureForApi, firstOff, normalizeApiPath, resolveCaps } from "../../../lib/accessMap";
 import { isSafeguardingLead } from "../lib/dslAlert";
 
 // Setup → Features and Setup → Roles & permissions, ENFORCED. Both used to be
@@ -75,7 +75,8 @@ export async function enforceAccess(req: Request, res: Response, next: NextFunct
   const path = normalizeApiPath(req.baseUrl + req.path);
   const feature = featureForApi(path, req.method);
   const cap = auth.role === "staff" ? capForApi(path, req.method) : null;
-  if (!feature && !cap) { next(); return; }
+  const familyArea = auth.role === "staff" ? familyReadAreaForApi(path, req.method) : null;
+  if (!feature && !cap && !familyArea) { next(); return; }
   try {
     if (feature) {
       const features = (await effectiveSettings(auth.tenantId, auth.franchiseId)).features as Record<string, unknown> | undefined;
@@ -106,6 +107,11 @@ export async function enforceAccess(req: Request, res: Response, next: NextFunct
         res.status(403).json({ error: `Your role can view ${what} but not change it. A manager can change this in Setup → Roles & permissions.`, code: "view_only", area: cap.area });
         return;
       }
+    }
+    // Children / parent contact / medical reads: Bookings or Registers, or the area named explicitly (see FAMILY_READ_API).
+    if (familyArea && !(await staffMayReadFamilies(req, familyArea))) {
+      res.status(403).json({ error: "Your role doesn't have access to Bookings or Registers, so it can't open children's or families' details. A manager can change this in Setup → Roles & permissions.", code: "no_access", area: familyArea });
+      return;
     }
   } catch (e) {
     // Settings unreadable: don't lock the whole team out over it — every

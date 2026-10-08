@@ -210,6 +210,20 @@ export function normalizeApiPath(raw: string): string {
 
 const under = (path: string, prefix: string) => path === prefix || path.startsWith(prefix + "/");
 
+/** Reads that hand staff a FAMILY'S data (child record incl. the medical note, parent name / email / phone / postcode). These sit
+ *  under areas that "silent = edit" leaves open (medical, moments), so a role with Bookings: none AND Registers: none could read
+ *  them. A staff account may read them only if its role has Bookings or Registers (view or edit), or NAMES `area` itself
+ *  (view/edit). Enforced once, in middleware/access.ts (staffMayReadFamilies). GET only; everything else is the area's own rule. */
+export const FAMILY_READ_API: { re: RegExp; area: string }[] = [
+  { re: /^\/api\/children(\/.*)?$/, area: "medical" },
+  { re: /^\/api\/moments\/taggable\/?$/, area: "moments" },
+];
+export function familyReadAreaForApi(path: string, method: string): string | null {
+  const m = method.toUpperCase();
+  if (m !== "GET" && m !== "HEAD") return null;
+  return FAMILY_READ_API.find((f) => f.re.test(path))?.area ?? null;
+}
+
 /** The feature entry an API call falls under, or null. A read of a
  *  FEATURE_WRITE_API module isn't gated. */
 export function featureForApi(rawPath: string, method = "GET"): { keys: string[]; label: string } | null {
