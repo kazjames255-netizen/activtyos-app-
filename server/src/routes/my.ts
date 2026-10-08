@@ -11,6 +11,7 @@ import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../l
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelledFor } from "../lib/familyCancelNotice";
 import { shouldNotifyCancelled, shouldReleaseDiscountCodes } from "../lib/bookingGuards";
+import { bankTransferAsk } from "../lib/bankTransferAsk";
 import { autoEmailPrefs } from "../lib/autoEmails";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { friendPaidAmount } from "../lib/referralSpend";
@@ -2070,7 +2071,10 @@ my.post("/bookings", async (req, res) => {
         // a successful payment is the single confirmation. Cash, funded (GBP 0), bank transfer and voucher bookings confirm straight away.
         const cardIsUnpaid = cardUnpaid(input.method, merged.amount, onBehalf);
         if (b0.status === "Confirmed" && cardIsUnpaid) { /* confirmed by the payment-received email once the card succeeds */ }
-        else if (b0.status === "Confirmed") emailBookingConfirmed(merged, provider, isBankMethod(input.method) ? await bankPayDetails(listing.tenantId, refs.join(", "), merged.amount) : null, refs);
+        else if (b0.status === "Confirmed") {
+          const ask = isBankMethod(input.method) ? bankTransferAsk(bookings) : null; // null for a bank booking with nothing to pay (100% code)
+          emailBookingConfirmed(merged, provider, ask ? await bankPayDetails(listing.tenantId, ask.reference, ask.amount) : null, refs);
+        }
         // A waiting-list place is NOT "a request pending approval" - it gets its own message.
         else if (b0.status === "Waitlisted") emailWaitlistJoined(merged, provider, refs);
         // A card-HOLD request is announced (to the family and the provider) once the card is actually held - see lib/cardHold.ts.
