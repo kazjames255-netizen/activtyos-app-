@@ -32,7 +32,7 @@ const hhmm = (d: Date) => { const p: any = ukParts(d); return `${p.hour === "24"
 const ymd = (d: Date) => { const p: any = ukParts(d); return `${p.year}-${p.month}-${p.day}`; };
 const stamp = fs.existsSync(STATE) ? JSON.parse(fs.readFileSync(STATE, "utf8")).stamp : `${Date.now().toString(36)}`;
 const em = (n: string) => `hvqa-e1-${n}-${stamp}@${TEST_EMAIL_DOMAIN}`;
-const PW = "E2etest!123";
+const PW = process.env.E2E_PASSWORD ?? "";
 const signIn = async (email: string) => { const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY || fs.readFileSync(path.join(ROOT, ".env.local"), "utf8").match(/NEXT_PUBLIC_FIREBASE_API_KEY=(\S+)/)![1].replace(/["']/g, "")}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: PW, returnSecureToken: true }) }); const j: any = await r.json(); return j.idToken as string; };
 const stripeKey = (fs.readFileSync(path.join(ROOT, "server/.env"), "utf8").match(/^STRIPE_SECRET_KEY=(\S+)/m) || [])[1]?.replace(/["']/g, "");
 

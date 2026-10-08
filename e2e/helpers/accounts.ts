@@ -6,7 +6,17 @@ import { API_URL, FIREBASE_API_KEY } from "./env";
 // e2e creates lives on @activityos-test.com and is fully deleted afterwards
 // by `npm run e2e:cleanup` (server/src/e2eCleanup.ts).
 export const TEST_EMAIL_DOMAIN = "activityos-test.com";
-export const TEST_PASSWORD = "E2etest!123";
+// The shared test password is NOT in the repository. Set E2E_PASSWORD, or put it in the gitignored file
+// e2e/.auth/e2e-password. Test accounts must live in a Firebase project separate from production.
+function readTestPassword(): string {
+  if (process.env.E2E_PASSWORD) return process.env.E2E_PASSWORD;
+  try {
+    const p = readFileSync(join(__dirname, "../.auth/e2e-password"), "utf8").trim();
+    if (p) return p;
+  } catch { /* fall through */ }
+  throw new Error("E2E password not set: export E2E_PASSWORD or create e2e/.auth/e2e-password (gitignored). It is deliberately not in the repo.");
+}
+export const TEST_PASSWORD = readTestPassword();
 
 const IDENTITY = "https://identitytoolkit.googleapis.com/v1";
 

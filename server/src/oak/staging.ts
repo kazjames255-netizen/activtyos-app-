@@ -18,7 +18,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, "../../..");
 const STATE = path.join(ROOT, "scratch/oak-staging.json");
 const API = process.env.OAK_API || "http://localhost:4000";
-const PW = "E2etest!123";
+const PW = process.env.E2E_PASSWORD ?? "";
 
 function apiKey(): string {
   if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) return process.env.NEXT_PUBLIC_FIREBASE_API_KEY;

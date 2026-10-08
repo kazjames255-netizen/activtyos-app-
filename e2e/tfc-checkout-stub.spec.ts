@@ -354,7 +354,7 @@ test.describe("Part 2: the parent checkout screen with the HMRC link switched on
     // Sign in on the second web origin (Firebase sessions are per origin).
     await page.goto(`${webUrl}/login`, { timeout: 120_000 });
     await page.getByPlaceholder("you@example.com").fill(parent().email);
-    await page.locator('input[type="password"]').fill("E2etest!123");
+    await page.locator('input[type="password"]').fill(process.env.E2E_PASSWORD ?? "");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await page.waitForURL("**/custdash/home", { timeout: 120_000 });
 

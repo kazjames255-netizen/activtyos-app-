@@ -6,7 +6,7 @@ const b = await chromium.launch();
 const page = await (await b.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
 await page.goto("http://localhost:3000/login");
 await page.getByPlaceholder("you@example.com").fill("slideqa-t1-muilloxt@activityos-test.com");
-await page.locator('input[type="password"]').fill("E2etest!123");
+await page.locator('input[type="password"]').fill(process.env.E2E_PASSWORD ?? "");
 await page.getByRole("button", { name: "Sign in", exact: true }).click();
 await page.waitForURL(/freelancer/, { timeout: 60000 });
 await page.goto("http://localhost:3000/freelancer/learninghub");

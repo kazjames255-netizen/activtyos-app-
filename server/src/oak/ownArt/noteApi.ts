@@ -17,7 +17,7 @@ function apiKey(): string {
   throw new Error("NEXT_PUBLIC_FIREBASE_API_KEY not found");
 }
 export async function token(): Promise<string> {
-  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey()}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: LOGIN, password: process.env.OAK_PW || "E2etest!123", returnSecureToken: true }) });
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey()}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: LOGIN, password: process.env.OAK_PW || process.env.E2E_PASSWORD || "", returnSecureToken: true }) });
   const j = (await r.json()) as { idToken?: string };
   if (!j.idToken) throw new Error("login failed");
   return j.idToken;

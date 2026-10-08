@@ -23,7 +23,7 @@ const ROOT = path.resolve(here, "../..");
 const DIR = process.env.HUBLOAD_DIR || os.tmpdir();
 const STATE = path.join(DIR, "hubload-state.json");
 const API = process.env.HUBLOAD_API || "http://localhost:4000";
-const PW = "E2etest!123";
+const PW = process.env.E2E_PASSWORD ?? "";
 const P = "hubload-";
 
 interface State { runId: string; tutor: { email: string; uid: string }; parent: { email: string; uid: string }; tenantId: string; childId: string; seeded?: Record<string, number>; subjects?: string[]; sampleTopicId?: string; sampleSubtopicId?: string }

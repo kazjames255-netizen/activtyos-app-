@@ -5,7 +5,7 @@
 // download (deckDownload.ts, cached) → convert (deckConvert.ts) → pictures resized to WebP and stored in Firebase Storage
 // (slideImages.ts → lib/slideStorage.ts) → PATCH /api/learning-hub/notes/:id {lesson:{deckSlides}} as that tenant's tutor, so the
 // API's own validation (oak/canvasSchema.ts) is what accepts it. `lesson.slides` (our summary slides) and `lesson.oakDeck`
-// (the iframe fallback) are left exactly as they are. Password for --login: E2etest!123 (the oakstaging-* accounts).
+// (the iframe fallback) are left exactly as they are. Password for --login: set OAK_PW or E2E_PASSWORD (the oakstaging-* accounts).
 // SAFETY: refuses the two real tenants; only ever intended for the staging tenant.
 import { sanitiseForImport } from "./noOak";
 import fs from "node:fs";
@@ -49,7 +49,7 @@ async function main() {
   if (dry) return;
 
   const key = apiKey();
-  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${key}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: login, password: process.env.OAK_PW || "E2etest!123", returnSecureToken: true }) });
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${key}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: login, password: process.env.OAK_PW || process.env.E2E_PASSWORD || "", returnSecureToken: true }) });
   const j = (await r.json()) as { idToken?: string };
   if (!j.idToken) throw new Error("login failed");
   const res = await fetch(`${API}/api/learning-hub/notes/${note}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${j.idToken}` }, body: JSON.stringify({ lesson: { deckSlides: sanitiseForImport(slides, `deck ${note}`) } }) });

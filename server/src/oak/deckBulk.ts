@@ -54,7 +54,7 @@ async function token(tenant: string, force = false): Promise<string> {
     body = { token: await auth.createCustomToken(uid), returnSecureToken: true };
   } else {
     url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey()}`;
-    body = { email: STAGING_LOGIN, password: process.env.OAK_PW || "E2etest!123", returnSecureToken: true };
+    body = { email: STAGING_LOGIN, password: process.env.OAK_PW || process.env.E2E_PASSWORD || "", returnSecureToken: true };
   }
   const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const j = (await r.json()) as { idToken?: string };

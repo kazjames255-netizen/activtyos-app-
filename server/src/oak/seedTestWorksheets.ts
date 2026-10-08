@@ -10,7 +10,7 @@ import { auth, db } from "../firebase";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const [TID, OWNER] = process.argv.slice(2);
 if (!TID || !OWNER?.endsWith("@activityos-test.com")) { console.error("usage: seedTestWorksheets <tenantId> <owner@activityos-test.com>"); process.exit(2); }
-const API = "http://localhost:4000", H = "/api/learning-hub", PW = "E2etest!123";
+const API = "http://localhost:4000", H = "/api/learning-hub", PW = process.env.E2E_PASSWORD ?? "";
 const key = () => { for (const l of fs.readFileSync(path.join(ROOT, ".env.local"), "utf8").split("\n")) { const m = l.match(/^\s*NEXT_PUBLIC_FIREBASE_API_KEY\s*=\s*(.*)\s*$/); if (m) return m[1]!.replace(/^["']|["']$/g, ""); } throw new Error("no key"); };
 async function signIn(email: string) {
   const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${key()}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: PW, returnSecureToken: true }) });
