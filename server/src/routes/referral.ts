@@ -157,7 +157,8 @@ export async function rewardReferrer(tenantId: string, referrerEmail: string, fr
   const rel = referrerEmail.trim().toLowerCase();
   const fel = friendEmail.trim().toLowerCase();
   if (!rel || rel === fel) return;
-  const dupe = await db.collection("referrals").where("referrerEmail", "==", rel).where("friendEmail", "==", fel).limit(1).get();
+  // Per PROVIDER: the same two families referring each other at a second provider is a new referral there.
+  const dupe = await db.collection("referrals").where("tenantId", "==", tenantId).where("referrerEmail", "==", rel).where("friendEmail", "==", fel).limit(1).get();
   if (!dupe.empty) return; // already rewarded for this friend
 
   const lib = (await loadLibrary(tenantId, opts.franchiseId ?? (await franchiseOfFamily(tenantId, fel)))) as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number; capToFriendSpend?: boolean } } } | undefined;
