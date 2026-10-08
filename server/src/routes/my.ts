@@ -10,7 +10,7 @@ import { redeemCodesInTx, releaseDiscountCodes, type CodeToRedeem } from "../lib
 import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../lib/wallet";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelledFor } from "../lib/familyCancelNotice";
-import { shouldNotifyCancelled } from "../lib/bookingGuards";
+import { shouldNotifyCancelled, shouldReleaseDiscountCodes } from "../lib/bookingGuards";
 import { autoEmailPrefs } from "../lib/autoEmails";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { friendPaidAmount } from "../lib/referralSpend";
@@ -2499,6 +2499,8 @@ my.post("/bookings/:ref/decline-offer", async (req, res) => {
     });
     // The freed place passes down the queue (auto mode).
     if (updated.blockId) void triggerWaitlist(updated.blockId);
+    // The family gave the place up: the discount code it was booked with comes back.
+    if (updated.tenantId && shouldReleaseDiscountCodes(updated)) void releaseDiscountCodes(updated.tenantId, updated.ref);
     res.json(updated);
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
@@ -2890,8 +2892,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     if (updated.cardHold?.state === "held" || updated.cardHold?.state === "awaiting") await releaseHolds([updated]).catch((e) => console.error("[cardHold] release on cancel failed:", (e as Error).message));
     // A cancellation frees seats — the queue gets first refusal (auto mode).
     if (updated.blockId) void triggerWaitlist(updated.blockId);
-    // …and frees the discount code it was booked with.
-    if (updated.tenantId) void releaseDiscountCodes(updated.tenantId, updated.ref);
+    // …and frees the discount code it was booked with (unless money was kept: shouldReleaseDiscountCodes).
+    if (updated.tenantId && shouldReleaseDiscountCodes(updated)) void releaseDiscountCodes(updated.tenantId, updated.ref);
     // …and the meals / trip places that hung off it (lib/cancelCleanup.ts).
     if (updated.tenantId) void cleanupAfterCancel(updated.tenantId, updated);
     // Tell the provider a cancellation came in and a refund is waiting on their
