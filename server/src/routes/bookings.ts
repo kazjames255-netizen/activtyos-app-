@@ -772,6 +772,8 @@ bookings.post("/:ref/actions", async (req, res) => {
         if (b.cancel.refund === "approved") throw new Conflict("This refund has already been approved or refunded");
         if (b.cancel.refund === "declined") throw new Conflict("This refund was already declined");
         if (refundableSoFar(b) <= 0.005) throw new Conflict("Everything paid on this booking has already been refunded (for example in Stripe), so there is nothing to decline.");
+        // And only while it is still waiting (pending / full / partial): once recorded, sent, credited or card-refunded it is final.
+        { const st = b.cancel.refund; if (!(st === "pending" || st === "full" || st === "partial")) throw new Conflict(st === "none" ? "There is no refund waiting on this booking to decline" : "This refund has already been approved, so it can't be declined"); }
       }
 
       // The provider confirms they SENT an offline refund that was only recorded at approval.
@@ -940,7 +942,7 @@ bookings.post("/:ref/actions", async (req, res) => {
       }
       // refundedAt: when the money actually moved (cancel.on is when it was
       // asked for) — Reconciliation's "refunded today" keys off this (d9s7).
-      updated.cancel = { ...(updated.cancel ?? { on: "", by: "" }), refundVia: moved.via, refundedAt: new Date().toISOString(), refundError: undefined };
+      updated.cancel = { ...(updated.cancel ?? { on: "", by: "" }), refundVia: moved.via, refundedAt: new Date().toISOString(), refundError: undefined, refundCash: Math.round(Math.max(0, moved.owed - moved.walletPart) * 100) / 100 };
       // An OFFLINE refund (bank transfer / cash / voucher) is only RECORDED: the app cannot send it. It stays "awaiting your transfer" until the
       // provider confirms they sent it (action "refund-sent"), unless they say they already did.
       const alreadySent = "alreadySent" in action && action.alreadySent === true;

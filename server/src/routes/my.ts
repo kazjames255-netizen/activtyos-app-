@@ -2656,7 +2656,8 @@ async function partialCancel(
     // Wallet takes the full pro-rata value — that's the trade for keeping it in the business.
     releasedDays = wanted.flatMap((w) => w.days);
     // Never more than is still refundable (earlier releases/refunds taken off).
-    value = Math.min(refundableSoFar(b),
+    const pendingPrior = b.cancel?.refundOnly && b.cancel.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0; // already promised, not yet sent
+    value = Math.min(Math.max(0, refundableSoFar(b) - pendingPrior),
       resolution === "wallet"
         ? round2(releasedCount * perSlotPaid)
         : round2(releasedDays.reduce((sum, d) => sum + (refundFor(policy, effectiveRefundDate(b.dayOrigin?.[d], d), perSlotPaid, now, "parent")?.amount ?? 0), 0)));

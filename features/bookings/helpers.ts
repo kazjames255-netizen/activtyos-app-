@@ -734,7 +734,8 @@ export function refundAwaitingTransfer(b: { cancel?: { refund?: string; refundVi
 }
 
 /** The money the provider still has to send back for an awaiting offline refund (what was approved, less any wallet credit already returned). */
-export function refundTransferAmount(b: { cancel?: { amount?: number } | null; walletRefunded?: number; refundedApproved?: number }): number {
+export function refundTransferAmount(b: { cancel?: { amount?: number; refundCash?: number } | null; walletRefunded?: number; refundedApproved?: number }): number {
+  if (b.cancel?.refundCash != null) return Math.round(Math.max(0, b.cancel.refundCash) * 100) / 100; // this refund only (set when it was approved)
   const asked = b.refundedApproved && b.refundedApproved > 0 ? b.refundedApproved : (b.cancel?.amount ?? 0);
   return Math.round(Math.max(0, asked - (b.walletRefunded ?? 0)) * 100) / 100;
 }

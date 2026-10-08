@@ -73,6 +73,8 @@ export interface CancelInfo {
    *  "awaiting" = recorded, the provider still has to send it ("Refund recorded - awaiting your transfer"); "sent" = the provider confirmed
    *  they sent it. Absent on an older offline refund = awaiting (the ledger row is still "to-reimburse"). Card and wallet refunds never set it. */
   refundTransfer?: "awaiting" | "sent";
+  /** The cash (not wallet) part of THIS approved refund: what the provider has to send. Each refund carries its own, so an earlier one already sent is not counted again. */
+  refundCash?: number;
   /** When the offline refund was recorded / confirmed sent (ISO), and who confirmed it. */
   refundRecordedAt?: string;
   refundSentAt?: string;
