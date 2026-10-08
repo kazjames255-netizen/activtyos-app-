@@ -13,8 +13,8 @@ import { greeting } from "@/lib/greeting";
 import { useSettings } from "@/lib/settings";
 import { fetchAnnouncements, markAnnouncementRead, type Announcement } from "@/features/staff/announcements";
 import { useT, tNow } from "@/lib/i18n/provider";
-import { peekMe } from "@/components/auth/PortalGuard";
-import { capLevel } from "@/lib/accessMap";
+import { getMe, peekMe } from "@/components/auth/PortalGuard";
+import { staffHomeCalls } from "@/lib/accessMap";
 
 // ─────────────────────────────────────────────────────────────────────────
 // staff/dash — the staff member's colourful landing page. Live tenant data:
@@ -171,22 +171,25 @@ export function StaffDashApp() {
   const isToday = date === today;
 
   const refresh = useCallback(() => {
-    // A role set to None on an area (Setup → Roles & permissions) is refused that area's API: don't ask for it (403s on every dashboard load and a raw
-    // "Your role doesn't have access…" line), just leave its cards empty.
-    const caps = peekMe()?.caps;
-    const allowed = (area: string) => capLevel(caps, area) !== "none";
-    if (allowed("ratios")) apiGet<{ sessions: RatioSession[] }>(`/api/ratios?date=${date}`).then((d) => setSessions(d?.sessions ?? [])).catch((e) => setError(e instanceof Error ? e.message : t("dashboard.couldntLoadDay")));
-    else setSessions([]);
-    // A failed load stays "not loaded" (and says so) — not an all-clear built
-    // from nothing: "0 children in", "no flagged children" (acceptance d27s1).
-    if (allowed("registers")) apiGet<RegSession[]>(`/api/registers?date=${date}`).then((r) => { setRegs(r ?? []); setLoadFailed(false); }).catch(() => { setRegs(null); setLoadFailed(true); });
-    else { setRegs([]); setLoadFailed(false); }
-    if (allowed("tasks")) apiGet<Task[]>("/api/tasks").then((t) => setTasks(t ?? [])).catch(() => {});
-    else setTasks([]);
-    if (allowed("incidents")) apiGet<Accident[]>("/api/incidents?kind=accident").then((l) => setAccidents(l ?? [])).catch(() => setLoadFailed(true));
-    else setAccidents([]);
-    if (allowed("timetable")) apiGet<PublishedLite[]>("/api/timetables/published").then((w) => setTimetableToday((w ?? []).some((x) => x.dayList.some((d) => d.iso === date)))).catch(() => {});
-    apiGet<{ venues?: { name: string; address?: string; city?: string }[] }>("/api/library").then((l) => setVenues(l.venues ?? [])).catch(() => {});
+    // Only ask for what this role may use: an area set to None, and the day boards for a role with neither Bookings nor Registers (the
+    // family-read rule), are refused by the API - asking would put a raw "Your role doesn't have access…" line on every load. The decision
+    // is staffHomeCalls() over the caps /api/me returns, so the page holds no rule of its own. Wait for /api/me when it isn't cached yet.
+    void (async () => {
+      const caps = (peekMe() ?? await getMe().catch(() => null))?.caps;
+      const call = staffHomeCalls(caps);
+      if (call.ratios) apiGet<{ sessions: RatioSession[] }>(`/api/ratios?date=${date}`).then((d) => setSessions(d?.sessions ?? [])).catch((e) => setError(e instanceof Error ? e.message : t("dashboard.couldntLoadDay")));
+      else setSessions([]);
+      // A failed load stays "not loaded" (and says so) — not an all-clear built
+      // from nothing: "0 children in", "no flagged children" (acceptance d27s1).
+      if (call.registers) apiGet<RegSession[]>(`/api/registers?date=${date}`).then((r) => { setRegs(r ?? []); setLoadFailed(false); }).catch(() => { setRegs(null); setLoadFailed(true); });
+      else { setRegs([]); setLoadFailed(false); }
+      if (call.tasks) apiGet<Task[]>("/api/tasks").then((t) => setTasks(t ?? [])).catch(() => {});
+      else setTasks([]);
+      if (call.incidents) apiGet<Accident[]>("/api/incidents?kind=accident").then((l) => setAccidents(l ?? [])).catch(() => setLoadFailed(true));
+      else setAccidents([]);
+      if (call.timetable) apiGet<PublishedLite[]>("/api/timetables/published").then((w) => setTimetableToday((w ?? []).some((x) => x.dayList.some((d) => d.iso === date)))).catch(() => {});
+      apiGet<{ venues?: { name: string; address?: string; city?: string }[] }>("/api/library").then((l) => setVenues(l.venues ?? [])).catch(() => {});
+    })();
   }, [date, t]);
   useEffect(() => { apiGet<Me>("/api/me").then(setMe).catch(() => {}); setClock(loadClock()); fetchAnnouncements().then((l) => { setAnnouncements(l); setAnnRead(l.filter((a) => a.read).map((a) => a.id)); }).catch(() => {}); }, []);
   useEffect(() => {

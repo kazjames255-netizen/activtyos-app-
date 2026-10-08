@@ -395,16 +395,19 @@ customers.put("/:id", async (req, res) => {
   const fr = isFranchise(req.auth as Parameters<typeof isFranchise>[0]) ? req.auth!.franchiseId! : null;
   const vis = fr && (prev.franchiseId ?? null) !== fr ? await visibleKids(req.auth!.tenantId!, { franchiseId: fr }) : null;
   if (vis && Array.isArray(patch.children)) {
-    const stored = tidyChildren(prev.children ?? []);
-    const hidden = stored.filter((k) => !kidVisible(k, prev.email, vis));
-    const shown = stored.filter((k) => kidVisible(k, prev.email, vis));
+    // Hidden children are kept EXACTLY as stored (never run through tidyChildren, which would fill / replace their fields from an entry
+    // that merely shares their name): the caller can only change the children it can see.
+    const raw = prev.children ?? [];
+    const hidden = raw.filter((k) => !kidVisible(k, prev.email, vis));
+    const shown = tidyChildren(raw.filter((k) => kidVisible(k, prev.email, vis)));
     // The PUT body carries no child ids (the schema drops them): give an edited entry back the id of the stored child it is.
     const incoming = (patch.children as Array<KidEntryLike & Record<string, unknown>>).map((k) => {
       if (entryId(k)) return k;
       const was = shown.find((o) => nameKey(o.name) === nameKey(k.name) && entryId(o));
       return was ? { ...k, ...(was.childId ? { childId: was.childId } : {}), ...(!was.childId && was.id ? { id: was.id } : {}) } : k;
     });
-    patch.children = tidyChildren([...incoming, ...hidden]);
+    // An entry matching a hidden child only by name is NOT that child: it is added as a new, id-less entry beside it.
+    patch.children = [...tidyChildren(incoming), ...hidden];
   }
   await own.snap.ref.set(patch, { merge: true });
   const after = await own.snap.ref.get();

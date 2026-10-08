@@ -2,8 +2,8 @@
 //  P7. A franchise PUT /api/customers/:id on a family it does not own must never touch a child it cannot see - not even by sending an entry
 //      with the same NAME (tidyChildren used to merge it into the hidden child, replacing age / dob / SEND plan). Hidden children are kept
 //      byte-for-byte (the entry may only differ by NOT carrying a dob, or carrying the same one - tidyChildren merged those); an entry that only matches a hidden child by name is added as a new id-less entry.
-//  B3w. The family-read rule covered READS only: none/none staff could still WRITE the ratio board, trips, meals and moments, and read
-//      meal orders (child names). Same rule for every method on those areas (incidents stay open for logging).
+//  B3w. The family-read rule covered READS only: none/none staff could still WRITE the ratio board, trips, meals and moments.
+//      Same rule for every method on those areas (incidents stay open for logging).
 // Real API + Firestore emulator. Synthetic data only.
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
@@ -78,7 +78,7 @@ describe("P7. a franchise save never touches a hidden child, even by name", () =
   });
 });
 
-describe("B3w. none/none staff are refused WRITES (and meal orders) on the family-read areas too", () => {
+describe("B3w. none/none staff are refused WRITES on the family-read areas too", () => {
   const D = () => ids().d1;
   const writes: [string, string, () => string][] = [
     ["PUT", "ratio board", () => `/api/ratios/board/${D()}`],
@@ -103,11 +103,6 @@ describe("B3w. none/none staff are refused WRITES (and meal orders) on the famil
       assert.notEqual(regs.json?.code, "no_access", `${method} ${path()} registers role: ${regs.status}`);
     });
   }
-  it("meal orders (child + parent names) need Bookings/Registers or meals named", async () => {
-    assert.equal((await as(NN, "GET", "/api/meal-orders")).status, 403);
-    assert.notEqual((await as(NAMED, "GET", "/api/meal-orders")).status, 403);
-    assert.notEqual((await as(REGS, "GET", "/api/meal-orders")).status, 403);
-  });
   it("logging an incident or accident stays open to none/none staff", async () => {
     const r = await as(NN, "POST", "/api/incidents", { kind: "accident", date: ids().generatedOn, childName: "Open Log", description: "still allowed" });
     assert.notEqual(r.status, 403, JSON.stringify(r.json).slice(0, 150));

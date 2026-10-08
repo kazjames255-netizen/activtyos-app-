@@ -216,18 +216,40 @@ const under = (path: string, prefix: string) => path === prefix || path.startsWi
  *  (view/edit). Enforced once, in middleware/access.ts (staffMayReadFamilies). GET only; everything else is the area's own rule. */
 export const FAMILY_READ_API: { re: RegExp; area: string; allMethods?: boolean }[] = [
   { re: /^\/api\/children(\/.*)?$/, area: "medical" },
-  { re: /^\/api\/moments\/?$/, area: "moments" },
-  { re: /^\/api\/moments\/taggable\/?$/, area: "moments" },
+  { re: /^\/api\/moments(\/.*)?$/, area: "moments", allMethods: true },
   { re: /^\/api\/incidents(\/.*)?$/, area: "incidents" }, // reads only: LOGGING a concern/accident stays open to all staff (NEVER_REFUSED)
   { re: /^\/api\/medications(\/.*)?$/, area: "medication", allMethods: true },
-  { re: /^\/api\/trips\/?$/, area: "trips" },
-  { re: /^\/api\/ratios\/board(\/.*)?$/, area: "ratios" },
+  { re: /^\/api\/trips(\/.*)?$/, area: "trips", allMethods: true },
   // The day boards name every child and flag allergies / SEND (GET /api/ratios?date=, GET /api/meals?date=).
-  { re: /^\/api\/ratios\/?$/, area: "ratios" },
-  { re: /^\/api\/meals\/?$/, area: "meals" },
+  // (and, for the three below, WRITES too: a role that can't read the children can't change the ratio board, trips, meals or moments.
+  //  GET /api/meal-orders is operator-only in its route, so staff never reach it.)
+  { re: /^\/api\/ratios(\/.*)?$/, area: "ratios", allMethods: true },
+  { re: /^\/api\/meals(\/.*)?$/, area: "meals", allMethods: true },
 ];
+
+/** The one family-read rule (server: middleware/access.ts staffMayReadFamilies; the staff home reads it via staffHomeCalls): a staff account
+ *  may read children's / families' details only if its role has Bookings or Registers (view or edit) or NAMES `area` itself (view/edit).
+ *  caps null = no matrix in force = unrestricted. */
+export function mayReadFamilyData(caps: Record<string, CapLevel> | null | undefined, area?: string): boolean {
+  if (capLevel(caps, "bookings") !== "none" || capLevel(caps, "registers") !== "none") return true;
+  const named = area ? caps?.[area] : undefined;
+  return named === "view" || named === "edit";
+}
+
+/** Which of the staff home page's data calls this role may make (features/dashboard/StaffDashApp.tsx). An area set to None is refused by the
+ *  API, and the day boards (ratios, accidents) also follow the family-read rule - so the page must not ask for what it will be refused. */
+export function staffHomeCalls(caps: Record<string, CapLevel> | null | undefined) {
+  const ok = (area: string) => capLevel(caps, area) !== "none";
+  return {
+    ratios: ok("ratios") && mayReadFamilyData(caps, "ratios"),
+    registers: ok("registers"),
+    tasks: ok("tasks"),
+    incidents: ok("incidents") && mayReadFamilyData(caps, "incidents"),
+    timetable: ok("timetable"),
+  };
+}
 export function familyReadAreaForApi(rawPath: string, method: string): string | null {
-  const path = rawPath.toLowerCase(); // Express routes case-insensitively: the table is lower-case
+  const path = normalizeApiPath(rawPath); // Express routes case-insensitively: the table is lower-case
   const m = method.toUpperCase();
   const read = m === "GET" || m === "HEAD";
   return FAMILY_READ_API.find((f) => f.re.test(path) && (read || f.allMethods))?.area ?? null;

@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { loadSettings } from "../lib/tenantLibrary";
-import { capForApi, capLevel, familyReadAreaForApi, featureForApi, firstOff, normalizeApiPath, resolveCaps } from "../../../lib/accessMap";
+import { capForApi, capLevel, familyReadAreaForApi, featureForApi, firstOff, mayReadFamilyData, normalizeApiPath, resolveCaps } from "../../../lib/accessMap";
 import { isSafeguardingLead } from "../lib/dslAlert";
 
 // Setup → Features and Setup → Roles & permissions, ENFORCED. Both used to be
@@ -50,10 +50,7 @@ export async function capsFor(req: Request): Promise<Record<string, "none" | "vi
  *  itself (e.g. "customers") also opens the door. */
 export async function staffMayReadFamilies(req: Request, explicitArea?: string): Promise<boolean> {
   if (req.auth?.role !== "staff") return true;
-  const caps = await capsFor(req);
-  if (capLevel(caps, "bookings") !== "none" || capLevel(caps, "registers") !== "none") return true;
-  const named = explicitArea ? caps?.[explicitArea] : undefined;
-  return named === "view" || named === "edit";
+  return mayReadFamilyData(await capsFor(req), explicitArea);
 }
 
 const GATED = new Set(["company", "freelancer", "franchise", "staff"]);
