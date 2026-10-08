@@ -51,7 +51,7 @@ export async function createOrReuseIntent(s: Stripe, req: IntentRequest): Promis
   let intent: Stripe.PaymentIntent | null = null;
   for (let attempt = 0; attempt < 8 && !intent; attempt++) {
     try {
-      intent = await s.paymentIntents.create(req.params, { ...(opts ?? {}), idempotencyKey: `chk-${key}-${req.tag}-${generation}` });
+      intent = await s.paymentIntents.create(req.params, { ...(opts ?? {}), idempotencyKey: `chk-${key}-${generation}` });
     } catch (e) {
       // The other simultaneous call is still creating it: Stripe answers 409 until it finishes, then replays the same intent.
       const code = (e as { code?: string }).code;
@@ -66,5 +66,39 @@ export async function createOrReuseIntent(s: Stripe, req: IntentRequest): Promis
     // Already written by the call that raced us: fine, same record.
     if ((e as { code?: number }).code !== 6 && !/already exists/i.test((e as Error).message)) throw e;
   }
+  // A new intent for this basket supersedes older open ones that cover any of the same bookings (a changed basket or amount).
+  const covers = (req.record.refs as string[] | undefined) ?? [];
+  if (covers.length) await cancelOpenIntents(req.tenantId, covers, intent!.id).catch(() => {});
   return { intent: intent!, paymentId: ref.id, reused: false };
+}
+
+/**
+ * Cancel every still-open card PaymentIntent we created for any of these bookings (except `exceptPi`), so a stale
+ * browser tab can no longer pay an amount that is out of date. Best effort and idempotent: a PaymentIntent already
+ * finished or cancelled is skipped; card HOLDs are left alone; failures are swallowed because the excess-refund in
+ * settlePayment.ts is the backstop. Called when a new intent supersedes older ones, when a payment settles, and when
+ * an operator records cash against the booking.
+ */
+export async function cancelOpenIntents(tenantId: string, refs: string[], exceptPi?: string): Promise<void> {
+  const { stripe } = await import("./stripe");
+  if (!stripe) return;
+  const seen = new Set<string>();
+  for (const ref of refs) {
+    const snap = await db.collection("payments").where("refs", "array-contains", ref).get();
+    for (const d of snap.docs) {
+      const r = d.data() as { tenantId?: string; status?: string; hold?: boolean; paymentIntentId?: string; stripeAccount?: string | null; offline?: boolean };
+      if (seen.has(d.id) || r.tenantId !== tenantId || r.status !== "created" || r.hold || r.offline || !r.paymentIntentId || r.paymentIntentId === exceptPi) continue;
+      seen.add(d.id);
+      const opts = r.stripeAccount ? { stripeAccount: r.stripeAccount } : undefined;
+      try {
+        const pi = await stripe.paymentIntents.retrieve(r.paymentIntentId, {}, opts);
+        if (OPEN.has(pi.status)) {
+          await stripe.paymentIntents.cancel(r.paymentIntentId, { cancellation_reason: "abandoned" }, opts);
+          await d.ref.update({ status: "superseded", supersededAt: new Date().toISOString() });
+        }
+      } catch (e) {
+        console.error(`[checkout] could not cancel superseded intent ${r.paymentIntentId}:`, (e as Error).message);
+      }
+    }
+  }
 }

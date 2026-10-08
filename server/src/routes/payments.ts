@@ -578,7 +578,7 @@ bookingPayPublic.post("/:token/checkout", async (req, res) => {
         currency: "gbp",
         automatic_payment_methods: { enabled: true },
         description: `${tenant.data()?.name ?? `${BRAND}`} — booking ${b.ref}`,
-        metadata: { tenantId, refs: b.ref, email: b.email, via: "pay-link" },
+        metadata: { tenantId, refs: b.ref, email: b.email }, // identical to the parent route on purpose: both routes share one intent per booking (the pay-link origin lives on the payments record)
         // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).
       },
       record: {

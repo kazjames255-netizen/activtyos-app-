@@ -4,6 +4,7 @@ import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
 import { bookingDocId, notifyPaymentReceived } from "../routes/bookings";
 import { notify } from "./notify";
 import { stripe } from "./stripe";
+import { cancelOpenIntents } from "./checkoutIntent";
 import { providerPaidBell } from "./providerPaidBell";
 import { paidSoFar, cashReceivedOf } from "../../../features/bookings/helpers";
 import { balanceOf } from "./payGate";
@@ -63,28 +64,26 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
   const payRef = db.collection("payments").doc(paymentId);
   const at = new Date().toISOString();
 
-  // Claim the payment first, in a transaction, so two callers racing (browser
-  // callback and webhook) can't both write the money.
-  // A duplicate whose refund did not complete (crash / Stripe error) is retried by the next webhook delivery or confirm.
   const before = await payRef.get();
-  if (before.exists && ["duplicate", "duplicate-needs-refund"].includes((before.data() as PaymentRec).status)) {
-    await refundDuplicate(payRef);
+  if (!before.exists) return "unknown";
+  const pre = before.data() as PaymentRec & { hold?: boolean; amount?: number; excess?: Excess };
+  // Money still to be handed back from an earlier settlement whose refund did not complete (crash / Stripe error): retry it.
+  if (pre.excess && pre.excess.state !== "refunded") {
+    await refundExcess(payRef);
     return "already";
   }
-  const claimed = await db.runTransaction(async (tx) => {
-    const snap = await tx.get(payRef);
-    if (!snap.exists) return null;
-    const rec = snap.data() as PaymentRec;
-    if (rec.status === "succeeded") return null;
-    if (rec.status.startsWith("duplicate")) return null;
-    // A card HOLD is captured booking-by-booking when the provider approves (lib/cardHold.ts), never settled as a whole here.
-    if ((rec as PaymentRec & { hold?: boolean }).hold) return null;
-    tx.update(payRef, { status: "succeeded", paidAt: at, settledAuto: by.auto });
-    return rec;
-  });
-  if (!claimed) return (await payRef.get()).exists ? "already" : "unknown";
 
-  if (claimed.mealOrderIds?.length) {
+  // Meal orders (and card HOLDs, which are captured booking-by-booking on approval, never settled as a whole here).
+  if (pre.mealOrderIds?.length || pre.hold) {
+    const claimed = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(payRef);
+      if (!snap.exists) return null;
+      const rec = snap.data() as PaymentRec & { hold?: boolean };
+      if (rec.status === "succeeded" || rec.status.startsWith("duplicate") || rec.hold) return null;
+      tx.update(payRef, { status: "succeeded", paidAt: at, settledAuto: by.auto });
+      return rec;
+    });
+    if (!claimed?.mealOrderIds?.length) return "already";
     const batch = db.batch();
     for (const id of claimed.mealOrderIds) {
       const oSnap = await db.collection("mealOrders").doc(id).get();
@@ -95,49 +94,76 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
     return "settled";
   }
 
-  // Defence in depth: if EVERY booking this payment covers is already fully paid (by another card payment, or by cash/bank), this
-  // money is a second payment for the same thing. It is never recorded; it is refunded in full automatically (idempotent, below).
-  const covered = (await Promise.all((claimed.refs ?? []).map((r) => db.collection("bookings").doc(bookingDocId(claimed.tenantId, r)).get())))
-    .filter((x) => x.exists).map((x) => fromDoc(x.data() as BookingDoc));
-  if (covered.length && covered.length === (claimed.refs ?? []).length && covered.every((b) => b.pay === "Paid" && balanceOf(b) <= 0)) {
-    await payRef.update({ status: "duplicate", paidAt: FieldValue.delete(), duplicateDetectedAt: at });
-    await refundDuplicate(payRef);
-    return "already";
-  }
-
-  const batch = db.batch();
+  // Booking payments: claim the payment AND settle the bookings in ONE transaction. The check "is this money still owed?" is made
+  // against the bookings as read inside that same transaction, so two settlements arriving together (browser confirm + webhook,
+  // two intents for one booking) are serialised by Firestore: the second one re-reads the bookings the first one paid.
+  // Whatever the payment exceeds what is still owed (a whole second payment, or the part left over after cash/another card
+  // payment arrived meanwhile) is never recorded: it is marked as excess and refunded below.
   const settled: Booking[] = [];
   const confirmedNow = new Set<string>();
-  for (const bookingRef of claimed.refs ?? []) {
-    const bSnap = await db.collection("bookings").doc(bookingDocId(claimed.tenantId, bookingRef)).get();
-    if (!bSnap.exists) continue;
-    const b = fromDoc(bSnap.data() as BookingDoc);
-    // Part-paid Tax-Free Childcare: the card took only the remainder. The HMRC
-    // portion is still awaited, so the booking stays "Awaiting voucher payment"
-    // (operator: Mark Tax-Free Childcare received) with the split recorded.
-    const tfcSplit = (b.tfcAmount ?? 0) > 0 && (b.amount ?? 0) > (b.tfcAmount ?? 0);
-    // A parent's own card booking (pay 'Unpaid', place Confirmed) had its 'booked in' email held back until the card went through: the
-    // payment email is then the ONE confirmation. (An operator's invoice, or a part-paid voucher, was confirmed earlier.)
-    if (b.status === "Confirmed" && b.pay === "Unpaid" && !tfcSplit && !b.cardHold) confirmedNow.add(b.ref);
-    if (tfcSplit) {
-      const taken = balanceOf(b);
-      b.cardPaid = Math.round(((b.cardPaid ?? 0) + taken) * 100) / 100;
-      b.amountPaid = Math.round((cashReceivedOf(b) + taken) * 100) / 100;
-      b.pay = b.amountPaid >= (b.amount ?? 0) - 0.005 ? "Paid" : "Awaiting voucher payment";
-    } else {
-    b.pay = "Paid";
-    // What was actually taken, so a later part-refund or cancel works from
-    // real money rather than inferring it from the status word.
-    b.amountPaid = b.amount;
+  const outcome = await db.runTransaction(async (tx) => {
+    settled.length = 0;
+    confirmedNow.clear();
+    const snap = await tx.get(payRef);
+    if (!snap.exists) return null;
+    const rec = snap.data() as PaymentRec & { amount?: number };
+    if (rec.status === "succeeded" || rec.status.startsWith("duplicate")) return null;
+    const bSnaps = await Promise.all((rec.refs ?? []).map((r) => tx.get(db.collection("bookings").doc(bookingDocId(rec.tenantId, r)))));
+    let owed = 0;
+    const todo: { ref: FirebaseFirestore.DocumentReference; b: Booking }[] = [];
+    for (const bSnap of bSnaps) {
+      if (!bSnap.exists) continue;
+      const b = fromDoc(bSnap.data() as BookingDoc);
+      const bal = balanceOf(b);
+      if (b.pay === "Paid" || bal <= 0.005) continue; // already paid by something else: this payment does not touch it
+      owed += bal;
+      todo.push({ ref: bSnap.ref, b });
     }
-    b.paymentIntentId = claimed.paymentIntentId;
-    b.stripeAccount = claimed.stripeAccount;
-    b.cardFailed = false;
-    if (by.auto) b.reconciledBy = { at, by: by.by, auto: true };
-    batch.set(bSnap.ref, toDoc(b));
-    settled.push(b);
+    const paidPence = typeof rec.amount === "number" ? Math.round(rec.amount * 100) : Math.round(owed * 100);
+    const excessPence = Math.max(0, paidPence - Math.round(owed * 100));
+    if (!todo.length) {
+      tx.update(payRef, { status: "duplicate", duplicateDetectedAt: at, excess: { pence: paidPence, state: "pending" } });
+      return { kind: "duplicate" as const, rec };
+    }
+    for (const { ref, b } of todo) {
+      // Part-paid Tax-Free Childcare: the card took only the remainder. The HMRC
+      // portion is still awaited, so the booking stays "Awaiting voucher payment"
+      // (operator: Mark Tax-Free Childcare received) with the split recorded.
+      const tfcSplit = (b.tfcAmount ?? 0) > 0 && (b.amount ?? 0) > (b.tfcAmount ?? 0);
+      // A parent's own card booking (pay 'Unpaid', place Confirmed) had its 'booked in' email held back until the card went through: the
+      // payment email is then the ONE confirmation. (An operator's invoice, or a part-paid voucher, was confirmed earlier.)
+      if (b.status === "Confirmed" && b.pay === "Unpaid" && !tfcSplit && !b.cardHold) confirmedNow.add(b.ref);
+      if (tfcSplit) {
+        const taken = balanceOf(b);
+        b.cardPaid = Math.round(((b.cardPaid ?? 0) + taken) * 100) / 100;
+        b.amountPaid = Math.round((cashReceivedOf(b) + taken) * 100) / 100;
+        b.pay = b.amountPaid >= (b.amount ?? 0) - 0.005 ? "Paid" : "Awaiting voucher payment";
+      } else {
+        b.pay = "Paid";
+        // What was actually taken, so a later part-refund or cancel works from
+        // real money rather than inferring it from the status word.
+        b.amountPaid = b.amount;
+      }
+      b.paymentIntentId = rec.paymentIntentId;
+      b.stripeAccount = rec.stripeAccount;
+      b.cardFailed = false;
+      if (by.auto) b.reconciledBy = { at, by: by.by, auto: true };
+      tx.set(ref, toDoc(b));
+      settled.push(b);
+    }
+    tx.update(payRef, { status: "succeeded", paidAt: at, settledAuto: by.auto, ...(excessPence > 0 ? { excess: { pence: excessPence, state: "pending" } } : {}) });
+    return { kind: "settled" as const, rec };
+  });
+  if (!outcome) return (await payRef.get()).exists ? "already" : "unknown";
+  const claimed = outcome.rec;
+  if (outcome.kind === "duplicate") {
+    await refundExcess(payRef);
+    return "already";
   }
-  await batch.commit();
+  // This payment is the one that counts: any other card payment still open for these bookings can no longer be needed.
+  await cancelOpenIntents(claimed.tenantId, claimed.refs ?? [], claimed.paymentIntentId).catch(() => {});
+  // Anything beyond what was owed goes straight back.
+  await refundExcess(payRef).catch((e) => console.error("[settle] excess refund:", (e as Error).message));
   // Tell the family their card payment landed — the same email + bell an
   // operator's manual "record payment" sends. Runs after the commit and only on
   // the claiming caller, so a webhook retry or a late browser confirm can't
@@ -168,44 +194,53 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
   return "settled";
 }
 
+/** Money a card payment took beyond what was owed: pending until Stripe has refunded it. */
+export interface Excess { pence: number; state: "pending" | "refunded" | "failed"; refundId?: string }
+
 /**
- * Refund (in full) a card payment that turned out to be a second payment for something already paid, and record it.
- * Idempotent: the Stripe refund carries a key derived from the PaymentIntent, and a payment already marked refunded is left
- * alone, so webhook retries, a repeated event and the browser confirm can never refund twice. If Stripe refuses, the record
- * says "duplicate-needs-refund" and the provider is told to refund it by hand; the next delivery tries again.
+ * Hand back the part of a card payment that was not owed: all of it when the bookings were already paid (a duplicate payment,
+ * recorded as status duplicate*), or just the excess when something else (cash, another card payment) had paid part of it
+ * meanwhile. Idempotent: the Stripe refund carries a key derived from the PaymentIntent and the amount, and a refunded
+ * record is left alone, so webhook retries, a repeated event and the browser confirm can never refund twice. If Stripe
+ * refuses, the record says so (duplicate-needs-refund / excess.state failed), the provider is asked to refund by hand, and the
+ * next delivery tries again.
  */
-export async function refundDuplicate(payRef: FirebaseFirestore.DocumentReference): Promise<void> {
+export async function refundExcess(payRef: FirebaseFirestore.DocumentReference): Promise<void> {
   const snap = await payRef.get();
-  const rec = snap.data() as (PaymentRec & { refundId?: string; amount?: number }) | undefined;
-  if (!rec || rec.status === "duplicate-refunded") return;
-  const first = rec.status === "duplicate";
+  const rec = snap.data() as (PaymentRec & { amount?: number; excess?: Excess }) | undefined;
+  if (!rec?.excess || rec.excess.state === "refunded") return;
+  const full = rec.status.startsWith("duplicate");
+  const wasPending = rec.excess.state === "pending";
+  const pence = rec.excess.pence;
   const where = (rec.refs ?? []).join(", ");
   let refundId: string | null = null;
   let failure = "";
   try {
     if (!stripe) throw new Error("Stripe is not configured");
     const r = await stripe.refunds.create(
-      { payment_intent: rec.paymentIntentId, reason: "duplicate", metadata: { duplicateOf: where, tenantId: rec.tenantId } },
-      { idempotencyKey: `dup-refund-${rec.paymentIntentId}`, ...(rec.stripeAccount ? { stripeAccount: rec.stripeAccount } : {}) },
+      { payment_intent: rec.paymentIntentId, amount: pence, reason: "duplicate", metadata: { duplicateOf: where, tenantId: rec.tenantId } },
+      { idempotencyKey: `excess-refund-${rec.paymentIntentId}-${pence}`, ...(rec.stripeAccount ? { stripeAccount: rec.stripeAccount } : {}) },
     );
     refundId = r.id;
   } catch (e) {
     failure = (e as Error).message;
-    console.error(`[settle] automatic refund of duplicate payment ${snap.id} (${rec.paymentIntentId}) failed:`, failure);
+    console.error(`[settle] automatic refund of ${pence}p excess on payment ${snap.id} (${rec.paymentIntentId}) failed:`, failure);
   }
   const at = new Date().toISOString();
-  if (refundId) await payRef.update({ status: "duplicate-refunded", refundId, refundedAt: at, refundFailure: FieldValue.delete() });
-  else await payRef.update({ status: "duplicate-needs-refund", refundFailure: failure.slice(0, 300) });
-  // Tell the provider once (the first detection); a retry that succeeds says it is now sorted.
-  if (first || refundId) {
-    const money = `£${Number(rec.amount ?? 0).toFixed(2)}`;
-    const body = refundId
-      ? `A second card payment of ${money} arrived for ${where}, which was already paid. It was refunded in full automatically and not recorded.`
-      : `A second card payment of ${money} arrived for ${where}, which was already paid. It was NOT recorded and the automatic refund failed: please refund it in Stripe (payment ${rec.paymentIntentId}).`;
+  if (refundId) {
+    await payRef.update({ "excess.state": "refunded", "excess.refundId": refundId, "excess.refundedAt": at, ...(full ? { status: "duplicate-refunded", refundId, refundedAt: at } : {}) });
+  } else {
+    await payRef.update({ "excess.state": "failed", "excess.failure": failure.slice(0, 300), ...(full ? { status: "duplicate-needs-refund", refundFailure: failure.slice(0, 300) } : {}) });
+  }
+  // Tell the provider once (first detection); a retry that succeeds says it is now sorted.
+  if (wasPending || refundId) {
+    const money = `£${(pence / 100).toFixed(2)}`;
+    const what = full ? `A second card payment of ${money} arrived for ${where}, which was already paid.` : `A card payment arrived for ${where} that was ${money} more than was still owed (other money had been received meanwhile).`;
+    const body = refundId ? `${what} The extra ${money} was refunded automatically and not recorded.` : `${what} The extra ${money} was NOT recorded and the automatic refund failed: please refund it in Stripe (payment ${rec.paymentIntentId}).`;
+    const title = refundId ? "Extra card payment refunded" : "Extra card payment needs refunding";
     void notify({
       tenantId: rec.tenantId, to: { kind: "tenant" }, category: "billing", key: "payment-duplicate",
-      title: refundId ? "Duplicate card payment refunded" : "Duplicate card payment needs refunding",
-      body, subject: refundId ? "Duplicate card payment refunded" : "Duplicate card payment needs refunding",
+      title, body, subject: title,
       emailHtml: `<p>${body.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`,
       href: `/company/bookings?ref=${encodeURIComponent((rec.refs ?? [])[0] ?? "")}`, ref: (rec.refs ?? [])[0],
     });

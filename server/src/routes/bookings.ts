@@ -1240,6 +1240,8 @@ bookings.post("/:ref/record-payment", async (req, res) => {
       });
       return b;
     });
+    // Money has arrived another way: any card payment still open for this booking was sized for a balance that no longer exists.
+    await (await import("../lib/checkoutIntent")).cancelOpenIntents(tenantId, [updated.ref]).catch(() => {});
     const overpaid = Math.round(Math.max(0, (updated.amountPaid ?? 0) - (updated.amount ?? 0)) * 100) / 100;
     res.json({ ...updated, ...(overpaid > 0 ? { overpaid } : {}) });
   } catch (e) {
