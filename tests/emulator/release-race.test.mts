@@ -182,4 +182,44 @@ describe("parallel releases never pay out more than the days removed are worth",
       assert.ok(credit <= DAY + 0.005 && Number(d.refundedApproved ?? 0) <= DAY + 0.005, `credit ${credit} approved ${d.refundedApproved} (statuses ${res.map((r) => r.status)})`);
     });
   });
+  it("provider cancel-day (wallet) x15 on the same day, and cancel-child (wallet) x15: credited once", async () => {
+    await loop("provider-only", async () => {
+      const a = await paidBooking();
+      await times(PAR, () => operatorAction(P, a, { type: "cancel-day", ki: 0, date: dates[2], resolution: "wallet" }));
+      assert.equal(await walletCredit(a), DAY, "cancel-day credited once");
+      const b = await paidBooking();
+      await times(PAR, () => operatorAction(P, b, { type: "cancel-child", ki: 0, resolution: "wallet" }));
+      assert.equal(await walletCredit(b), 100, "cancel-child credited once");
+    });
+  });
+
+  it("parent whole cancel racing wallet releases: the pending refund plus the wallet credit never exceed what was paid", async () => {
+    await loop("cancel-vs-wallet-release", async () => {
+      const ref = await paidBooking();
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const reqs: Promise<{ status: number; json: any }>[] = [];
+      reqs.push(call("POST", `/api/my/bookings/${encodeURIComponent(ref)}/cancel`, owners.get(ref)!.token, { msg: "all" }));
+      for (let i = 0; i < 4; i++) reqs.push(wait(Math.floor(Math.random() * 25)).then(() => release(ref, [dates[i]], "wallet")));
+      await Promise.all(reqs);
+      const d = await doc(ref);
+      const w = await walletCredit(ref);
+      assert.ok(round2(w + pending(d)) <= 100.005, `wallet ${w} + pending ${pending(d)} > paid 100`);
+    });
+  });
+
+  it("refund-approve racing wallet releases: no refund-log line is lost, and approved + credited never exceed paid", async () => {
+    await loop("approve-vs-release", async () => {
+      const ref = await paidBooking();
+      assert.equal((await release(ref, [dates[0]], "refund")).status, 200);
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const reqs: Promise<{ status: number; json: any }>[] = [operatorAction(P, ref, { type: "refund-approve" })];
+      for (let i = 1; i < 4; i++) reqs.push(wait(Math.floor(Math.random() * 40)).then(() => release(ref, [dates[i]], "wallet")));
+      await Promise.all(reqs);
+      const d = await doc(ref);
+      const w = await walletCredit(ref);
+      const logged = (d.refundLog ?? []).filter((x: any) => x.source === "Wallet" && /wallet credit/i.test(x.label)).reduce((n: number, x: any) => n + x.amount, 0);
+      assert.equal(round2(logged), w, `refund log shows ${logged} of wallet credit but the ledger holds ${w}`);
+      assert.ok(round2(w + Number(d.refundedApproved ?? 0)) <= 100.005, `credited ${w} + approved ${d.refundedApproved} > paid 100`);
+    });
+  });
 });
