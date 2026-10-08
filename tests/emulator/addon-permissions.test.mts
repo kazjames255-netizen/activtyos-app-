@@ -132,7 +132,7 @@ describe("AP10 a tick must be inside the caller's scope and match the booking", 
     assert.equal((await tick("P", "anything-goes", lkRef, day(1))).status, 400, "arbitrary key");
     assert.equal((await tick("P", lkKey, flRef, day(1))).status, 400, "key of another booking");
     assert.equal((await tick("P", lkKey, lkRef, day(2))).status, 400, "key for a different date");
-    assert.equal((await tick("P", lkKey.replace("blue", "red"), lkRef, day(1))).status, 400, "an item the booking does not have");
+    assert.equal((await tick("P", lkKey.split("__").map((x, i) => (i === 2 ? "hoodie" : x)).join("__"), lkRef, day(1))).status, 400, "an item the booking does not have");
     assert.equal((await (await adminDb()).collection("kitTicks").where("ref", "==", lkRef).get()).size, 0);
   });
   it("owner, staff on the site and franchise inside their own scope can still tick (and untick)", async () => {
