@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { apiPublic } from "@/lib/api";
 import { CustomerPage, type ServerListing } from "@/features/listings/ListingWizard";
 import { useT, tNow } from "@/lib/i18n/provider";
+import { ViewErrorBoundary } from "@/components/ViewErrorBoundary";
 
 export function QuickBookModal({ id, onClose }: { id: string; onClose: () => void }) {
   const t = useT();
@@ -30,10 +31,11 @@ export function QuickBookModal({ id, onClose }: { id: string; onClose: () => voi
   }, [onClose]);
 
   return (
-    // Absolutely fills the grid wrapper — exactly the size of the cards, on top.
-    <div className="absolute inset-0 z-30">
+    // Fixed to the viewport: it used to be `absolute inset-0` in a non-positioned wrapper, so it stretched over the whole page and a phone
+    // user who had scrolled to a card saw only an empty white panel (the header sat at the top of the page, off-screen).
+    <div className="fixed inset-0 z-[9999] bg-black/40 p-2 sm:p-4">
       <div
-        className={`flex h-full w-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)] ring-1 ring-[#e3e9f5] transition-all duration-300 ease-out ${shown ? "translate-y-0 scale-100 opacity-100" : "translate-y-6 scale-[.97] opacity-0"}`}
+        className={`mx-auto flex h-full max-w-[1100px] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)] ring-1 ring-[#e3e9f5] transition-all duration-300 ease-out ${shown ? "translate-y-0 scale-100 opacity-100" : "translate-y-6 scale-[.97] opacity-0"}`}
       >
         <div className="flex flex-none items-center justify-between px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,var(--brand-strong) 0%,var(--brand-2) 100%)" }}>
           <div className="min-w-0">
@@ -48,7 +50,7 @@ export function QuickBookModal({ id, onClose }: { id: string; onClose: () => voi
           ) : !listing ? (
             <div className="p-10 text-center text-[13px] text-[#8a86a3]">{t("parent.loading")}</div>
           ) : (
-            <CustomerPage listing={listing} bookingOnly />
+            <ViewErrorBoundary name="Quick book"><CustomerPage listing={listing} bookingOnly /></ViewErrorBoundary>
           )}
         </div>
       </div>

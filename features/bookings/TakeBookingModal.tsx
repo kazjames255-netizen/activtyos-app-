@@ -8,6 +8,7 @@ import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { blockOn } from "@/features/listings/capacity";
 import { money } from "./helpers";
 import { useT } from "@/lib/i18n/provider";
+import { ViewErrorBoundary } from "@/components/ViewErrorBoundary";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Take a booking — the same booking flow a parent gets, run by an operator.
@@ -228,7 +229,7 @@ export function TakeBookingModal() {
         } as React.CSSProperties
       }
     >
-      <div className="flex max-h-[calc(100vh-1.5rem)] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
+      <div className="flex max-h-[calc(100vh-1.5rem)] supports-[height:100dvh]:max-h-[calc(100dvh-1.5rem)] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
         {/* Fixed header — the body below scrolls, so the page never does. */}
         <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-[22px] py-3">
           <h3 className="m-0 font-[var(--ff-display)] text-[18px] font-extrabold">{t("p8lst.btTitle")}</h3>
@@ -313,7 +314,7 @@ export function TakeBookingModal() {
         ) : (
           full?.id === activeId && (
             <div className="mt-3">
-              <BookingOnly key={full.id} listing={full} onBook={(p) => void takeBooking(p)} bookState={bookState} />
+              <ViewErrorBoundary key={full.id} name="Take booking"><BookingOnly listing={full} onBook={(p) => void takeBooking(p)} bookState={bookState} /></ViewErrorBoundary>
             </div>
           )
         )}

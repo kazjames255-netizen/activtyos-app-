@@ -11,6 +11,7 @@ import { confirmLeavingBasket, keepBasketForAuth } from "@/features/listings/boo
 import { DEFAULT_SETTINGS, useTenantSettings } from "@/lib/settings";
 import { startEmbedHeightReports } from "@/lib/embedHeight";
 import { brandAccent, brandLogo, brandVars } from "@/lib/brand-theme";
+import { ViewErrorBoundary } from "@/components/ViewErrorBoundary";
 import { listingLinkKindOf, listingLinkPath } from "@/lib/listingLinks";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -204,7 +205,7 @@ export function BookPage({ id }: { id: string }) {
             <span className="flex-none text-[12px] [&_a]:text-white">{topRight}</span>
           </div>
           <div className="rounded-b-2xl bg-[#f4f7ff] p-4 ring-1 ring-[#e3e9f5]">
-            <CustomerPage listing={listing} bookingOnly logo={brandLogo(settings)} />
+            <ViewErrorBoundary name="Quick book"><CustomerPage listing={listing} bookingOnly logo={brandLogo(settings)} /></ViewErrorBoundary>
           </div>
         </div>
       ) : (
