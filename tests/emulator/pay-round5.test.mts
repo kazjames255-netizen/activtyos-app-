@@ -81,6 +81,25 @@ describe("one refunded payment is announced once", () => {
   });
 });
 
+describe("a refund that is still in progress when the next delivery arrives", () => {
+  it("many simultaneous refund attempts on one pending record, plus confirms and webhooks: still one of each", async () => {
+    const { refundExcess } = await import("../../server/src/lib/settlePayment");
+    const ref = await endedBooking();
+    const late = await latePayment(ref, 13);
+    const payRef = db.collection("payments").doc(late.payId);
+    // The state settlement leaves behind just before the refund is made.
+    await payRef.update({ status: "duplicate", duplicateDetectedAt: new Date().toISOString(), excess: { pence: 1300, state: "pending", reason: "not-payable" } });
+    await Promise.all([
+      ...Array.from({ length: 6 }, () => refundExcess(payRef)),
+      burst(late, `r5f${uniq()}`),
+    ]);
+    await Promise.all(Array.from({ length: 4 }, () => refundExcess(payRef)));
+    const c = await counts(late.money);
+    assert.deepEqual(c, { familyBells: 1, providerBells: 1, famMail: 1, provMail: 1 }, JSON.stringify(c));
+    assert.equal((await stripe.refunds.list({ payment_intent: late.pi.id })).data.length, 1);
+  });
+});
+
 describe("the browser confirm answers truthfully", () => {
   it("a refunded not-payable payment is NOT paid:true; it says refunded", async () => {
     const ref = await endedBooking();
