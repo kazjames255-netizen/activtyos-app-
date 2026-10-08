@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { stripe } from "./stripe";
 import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
 import { notify } from "./notify";
+import { withBusyRetry } from "./busyRetry";
 import { ukToday } from "./ukDate";
 import { bookingDocId } from "../routes/bookings";
 import { cashReceivedOf, refundableSoFar } from "../../../features/bookings/helpers";
@@ -92,6 +93,33 @@ async function intentOf(refund: Stripe.Refund, account: string | null): Promise<
   return c.payment_intent ? (typeof c.payment_intent === "string" ? c.payment_intent : c.payment_intent.id) : null;
 }
 
+/** The refund as Stripe holds it NOW. An event is a snapshot and events can arrive out of order (a stale "failed" after the
+ *  refund succeeded), so the status that counts is the one Stripe reports today. If Stripe cannot show it to us (a 4xx: not found,
+ *  not our account) the event's own copy is used; a 5xx / network error throws so the delivery is retried. */
+async function freshRefund(r: Stripe.Refund, account: string | null): Promise<Stripe.Refund> {
+  if (!stripe) return r;
+  try {
+    return await stripe.refunds.retrieve(r.id, {}, account ? { stripeAccount: account } : undefined);
+  } catch (e) {
+    const sc = (e as { statusCode?: number }).statusCode;
+    if (typeof sc === "number" && sc >= 400 && sc < 500 && sc !== 429) return r;
+    throw e;
+  }
+}
+
+/** Every refund for a payment / charge, following Stripe's pages (bounded). */
+async function listAllRefunds(params: { payment_intent?: string; charge?: string }, account: string | null): Promise<Stripe.Refund[]> {
+  const out: Stripe.Refund[] = [];
+  let after: string | undefined;
+  for (let page = 0; page < 10; page++) {
+    const res = await stripe!.refunds.list({ ...params, limit: 100, ...(after ? { starting_after: after } : {}) }, account ? { stripeAccount: account } : undefined);
+    out.push(...res.data);
+    if (!res.has_more || !res.data.length) break;
+    after = res.data[res.data.length - 1].id;
+  }
+  return out;
+}
+
 const isOurs = (r: Stripe.Refund) => {
   const m = r.metadata ?? {};
   return m.activityosOrigin === "app" || !!m.excessFor || !!m.duplicateOf;
@@ -101,7 +129,10 @@ const isOurs = (r: Stripe.Refund) => {
  * Record one Stripe refund in the books (see the rules above). `account` is the connected account the event came from
  * (event.account) or, for the reconcile path, the payment's own account; null for the platform account.
  */
-export async function applyStripeRefund(refund: Stripe.Refund, account: string | null, source: "webhook" | "reconcile" = "webhook"): Promise<SyncResult> {
+export async function applyStripeRefund(refundIn: Stripe.Refund, account: string | null, source: "webhook" | "reconcile" = "webhook", alreadyFresh = false): Promise<SyncResult> {
+  if (!refundIn?.id || typeof refundIn.id !== "string") { console.error("[stripe-refund] an event with a refund that has no id — ignored"); return "ignored"; }
+  // Webhook events are snapshots: re-read the refund. (The reconcile path just listed it from Stripe.)
+  const refund = source === "webhook" && !alreadyFresh ? await freshRefund(refundIn, account) : refundIn;
   const failedNow = refund.status === "failed" || refund.status === "canceled";
   if (isOurs(refund)) return "own";
   const intentId = await intentOf(refund, account);
@@ -128,7 +159,7 @@ export async function applyStripeRefund(refund: Stripe.Refund, account: string |
   const refs = rec.refs ?? [];
   const refundPence = Math.max(0, Math.round(refund.amount ?? 0));
 
-  const outcome = await db.runTransaction(async (tx) => {
+  const outcome = await withBusyRetry(() => db.runTransaction(async (tx) => {
     const rowSnap = await tx.get(rowRef);
     // ── already recorded: only a later FAILURE changes anything ──
     if (rowSnap.exists) {
@@ -149,7 +180,7 @@ export async function applyStripeRefund(refund: Stripe.Refund, account: string |
       }
       const stillRefunded = priorRows.docs.filter((d) => d.id !== rowRef.id && d.get("type") === "refund" && ["succeeded", "pending"].includes(d.get("status")) && d.get("via") === "stripe").reduce((s, d) => s + (Number(d.get("amount")) || 0), 0);
       tx.update(rowRef, { status: "reversed", reversedAt: at, note: "The refund failed or was cancelled in Stripe" });
-      tx.update(payRef, { externalRefunded: round2(stillRefunded), ...(stillRefunded <= 0.005 ? { refundState: null } : {}) });
+      tx.update(payRef, { refundState: stillRefunded <= 0.005 ? null : stillRefunded >= (rec.amount ?? 0) - 0.005 ? "full" : "partial" });
       return { kind: "reversed" as const };
     }
     if (failedNow) return { kind: "unchanged" as const };
@@ -167,12 +198,24 @@ export async function applyStripeRefund(refund: Stripe.Refund, account: string |
     const bookings = bSnaps.filter((s) => s.exists).map((s) => ({ ref: s.ref, b: fromDoc(s.data() as BookingDoc) }));
     // Meal-order and invoice payments have no booking to adjust: the refund row alone records them.
     const alloc = (rec.mealOrderIds?.length || rec.invoiceId) ? [] : allocateRefund(takePence, bookings.map(({ b }) => ({ ref: b.ref, weight: Math.round(cashReceivedOf(b) * 100), headroom: Math.round(refundableSoFar(b) * 100) })));
-    const todayUk = ukToday();
+    // Nothing to record (no amount, or the payment has no room left): no row and no "£0.00" bell.
+    if (takePence <= 0 || (!(rec.mealOrderIds?.length || rec.invoiceId) && bookings.length > 0 && !alloc.length)) return { kind: "nothing" as const };
+    const onDay = ukToday(new Date(refund.created ? refund.created * 1000 : Date.now())); // when the refund happened, not when we heard
     for (const a of alloc) {
       const hit = bookings.find((x) => x.b.ref === a.ref)!;
       const b = hit.b;
-      b.refundLog = [...(b.refundLog ?? []), { label: "Refunded in Stripe", amount: a.pence / 100, on: todayUk, by: "Stripe", source: "Card", refundId: refund.id }];
-      if (b.pay === "Paid" || b.pay === "Partially refunded" || b.pay === "Refunded") b.pay = refundableSoFar(b) <= 0.005 ? "Refunded" : "Partially refunded";
+      b.refundLog = [...(b.refundLog ?? []), { label: "Refunded in Stripe", amount: a.pence / 100, on: onDay, by: "Stripe", source: "Card", refundId: refund.id }];
+      const left = round2(refundableSoFar(b));
+      if (b.pay === "Paid" || b.pay === "Partially refunded" || b.pay === "Refunded") b.pay = left <= 0.005 ? "Refunded" : "Partially refunded";
+      // A cancellation whose refund is still waiting for Approve: Stripe already paid (some of) it back, so that pending refund
+      // shrinks to what is left, or is resolved when nothing is. Otherwise Approve would count the same money twice.
+      const c = b.cancel;
+      if (c && (c.refund === "full" || c.refund === "partial" || c.refund === "pending")) {
+        if (left <= 0.005) {
+          c.refund = "approved"; c.amount = 0; c.refundVia = "card"; c.refundedAt = createdAt;
+          if (b.pay === "Refund pending") b.pay = "Refunded";
+        } else if ((c.amount ?? 0) > left) c.amount = left;
+      }
       tx.set(hit.ref, toDoc(b));
     }
     const recordedPence = takePence;
@@ -184,13 +227,14 @@ export async function applyStripeRefund(refund: Stripe.Refund, account: string |
       allocations: alloc, createdAt, paidAt: createdAt, recordedAt: at,
       ...(recordedPence < refundPence ? { clampedFromPence: refundPence } : {}),
     });
-    tx.update(payRef, { externalRefunded: round2(((rec as { externalRefunded?: number }).externalRefunded ?? 0) + recordedPence / 100), refundState: totalNow >= paidPence ? "full" : "partial" });
+    tx.update(payRef, { refundState: totalNow >= paidPence ? "full" : "partial" });
     return { kind: "recorded" as const, pence: recordedPence, refsNamed: alloc.length ? alloc.map((a) => a.ref) : refs };
-  });
+  }), 6, 200);
 
   if (outcome.kind === "own") return "own";
   if (outcome.kind === "reversed") return "reversed";
   if (outcome.kind === "unchanged") return "unchanged";
+  if (outcome.kind === "nothing") return "ignored";
   // ONE bell (and email, per the provider's settings) per refund: only the transaction that created the record gets here.
   const named = outcome.refsNamed.join(", ");
   const text = `A refund of ${money(outcome.pence)} was made in Stripe for booking${outcome.refsNamed.length > 1 ? "s" : ""} ${named}.`;
@@ -208,9 +252,16 @@ export async function applyStripeRefund(refund: Stripe.Refund, account: string |
 /** Every refund Stripe holds for a charge (a `charge.refunded` event carries the charge, whose refunds list is not sent in full). */
 export async function applyRefundsOfCharge(chargeId: string, account: string | null): Promise<SyncResult[]> {
   if (!stripe) return [];
-  const list = await stripe.refunds.list({ charge: chargeId, limit: 100 }, account ? { stripeAccount: account } : undefined);
+  let list: Stripe.Refund[];
+  try {
+    list = await listAllRefunds({ charge: chargeId }, account);
+  } catch (e) {
+    const sc = (e as { statusCode?: number }).statusCode;
+    if (typeof sc === "number" && sc >= 400 && sc < 500 && sc !== 429) { console.error(`[stripe-refund] cannot read refunds of ${chargeId} on ${account ?? "platform"}: ${(e as Error).message} — ignored`); return []; }
+    throw e;
+  }
   const out: SyncResult[] = [];
-  for (const r of list.data) out.push(await applyStripeRefund(r, account, "webhook"));
+  for (const r of list) out.push(await applyStripeRefund(r, account, "webhook", true)); // just listed from Stripe: already fresh
   return out;
 }
 
@@ -235,8 +286,8 @@ export async function syncRefundsForTenant(tenantId: string, opts: { from?: stri
     await Promise.all(batch.slice(i, i + 5).map(async (d) => {
       const acct = (d.get("stripeAccount") as string | null) ?? null;
       try {
-        const list = await stripe!.refunds.list({ payment_intent: d.get("paymentIntentId") as string, limit: 100 }, acct ? { stripeAccount: acct } : undefined);
-        for (const r of list.data) {
+        const list = await listAllRefunds({ payment_intent: d.get("paymentIntentId") as string }, acct);
+        for (const r of list) {
           out.refundsSeen++;
           if ((await applyStripeRefund(r, acct, "reconcile")) === "recorded") out.recorded++;
         }

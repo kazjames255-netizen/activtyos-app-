@@ -745,6 +745,8 @@ bookings.post("/:ref/actions", async (req, res) => {
           throw new Conflict("No refund is due on this cancellation, so there is nothing to approve. To give money back, issue a refund with an amount.");
         // Snapshot BEFORE the action flips pay to "Refunded" — what's still
         // refundable is worked out from this, not from the flipped booking.
+        if (refundableSoFar(b) <= 0.005)
+          throw new Conflict("Everything paid on this booking has already been refunded (for example in Stripe), so there is nothing left to approve.");
         refundBefore = { refund: b.cancel.refund, pay: b.pay, refundable: refundableSoFar(b), attempts: (b.cancel as { refundAttempts?: number }).refundAttempts ?? 0 };
       }
 
