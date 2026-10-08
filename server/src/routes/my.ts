@@ -3521,7 +3521,7 @@ export function notifyProviderNewBooking(ctx: ProviderNoticeCtx): void {
           bellMoney(total),
           ctx.heldUntil
             ? `by ${bellDay(ctx.heldUntil)}`
-            : (() => { const n = bookings.reduce((acc, x) => acc + addonCount(x), 0); return n ? `${n} extra${n === 1 ? "" : "s"}` : /^Online/i.test(location ?? "") ? "Online" : /^Home visit/i.test(location ?? "") ? "Home visit" : ""; })(),
+            : (() => { const n = mergeAddonLines(bookingAddonLines({ addonLines: bookings.flatMap((x) => x.addonLines ?? []), addons: bookings.flatMap((x) => x.addons ?? []), child: bookings[0]?.child, kids: bookings.length === 1 ? bookings[0]?.kids : undefined })).length; return n ? `${n} extra${n === 1 ? "" : "s"}` : /^Online/i.test(location ?? "") ? "Online" : /^Home visit/i.test(location ?? "") ? "Home visit" : ""; })(),
         ]),
         subject: ctx.heldUntil ? `${BRAND}: approve or decline by ${deadlineLabel(ctx.heldUntil)} — ${listing.name} from ${bookerName} (${primary.ref})` : `${BRAND}: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
         href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,

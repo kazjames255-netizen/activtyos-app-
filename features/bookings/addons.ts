@@ -21,7 +21,7 @@ export interface BookingAddonSource {
   addonLines?: AddonLineIn[];
   child?: string;
   /** The children; a cancelled child / cancelled day removes that child's extras from the day (see kidOf). */
-  kids?: { name: string; cancelled?: boolean; cancelledDays?: string[] }[];
+  kids?: { name: string; cancelled?: boolean; cancelledDays?: string[]; dates?: string[]; days?: string[] }[];
   days?: string[];
 }
 
@@ -278,6 +278,78 @@ export function moveAddonDays(lines: { child: string; days?: string[] }[] | unde
 export function addonLineOnDay(raw: AddonLineIn, bookingDays: string[] | undefined, date: string, kid?: KidState): boolean {
   if (!raw.days?.length && !bookingDays?.length) return true;
   return addonOnDay(bookingAddonLines({ addonLines: [raw] })[0], date, bookingDays, kid);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// SPLIT CHECKOUTS. A weekly-mode listing turns one family checkout into several bookings (a 7-day run over a Monday = a 1-day and a 6-day reference).
+// A ONE-OFF extra (a T-shirt) is stored on the FIRST reference only. If that reference is cancelled or emptied while the child still attends another
+// reference of the same checkout, the extra must show on the first day of the earliest REMAINING part. Display only: the line (and its price) stays
+// where it was bought, so money is counted once.
+//
+// SIBLING RULE (no checkout id is stamped on bookings yet): two bookings are parts of one checkout when they have the same booker email, the same
+// listing AND were created within SIBLING_MS (3 ms) of each other (one checkout request builds all its references in one synchronous loop, so their
+// createdAt stamps are the same or a millisecond apart). The same child is then checked per line. A later build should stamp a real checkout id.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface SplitBooking extends KitBooking { createdAt?: string; listingId?: string }
+
+export const SIBLING_MS = 3;
+/** Can this booking be placed in a checkout at all? */
+export const checkoutKey = (b: { email?: string; listingId?: string; createdAt?: string }): string =>
+  b.createdAt && b.email && Number.isFinite(Date.parse(b.createdAt)) ? [b.email.trim().toLowerCase(), b.listingId ?? ""].join("|") : "";
+/** Group bookings into checkouts: same email + listing, createdAt within SIBLING_MS of the previous one. */
+export function groupCheckouts<B extends { email?: string; listingId?: string; createdAt?: string }>(all: B[]): B[][] {
+  const byFamily = new Map<string, B[]>();
+  for (const b of all) { const k = checkoutKey(b); if (k) byFamily.set(k, [...(byFamily.get(k) ?? []), b]); }
+  const out: B[][] = [];
+  for (const list of byFamily.values()) {
+    list.sort((a, c) => Date.parse(a.createdAt!) - Date.parse(c.createdAt!));
+    let cur: B[] = [];
+    for (const b of list) {
+      if (cur.length && Date.parse(b.createdAt!) - Date.parse(cur[cur.length - 1].createdAt!) > SIBLING_MS) { out.push(cur); cur = []; }
+      cur.push(b);
+    }
+    if (cur.length) out.push(cur);
+  }
+  return out;
+}
+
+/** The days this child still attends on this booking (none when the booking does not show, the child is not on it, or their days are all cancelled). */
+function remainingDays(b: SplitBooking, child: string): string[] {
+  if (!addonBookingShows(b)) return [];
+  const want = (child ?? "").trim().toLowerCase();
+  const kids = b.kids ?? [];
+  const k = kids.find((x) => x.name.trim().toLowerCase() === want);
+  if (kids.length > 1 && !k) return [];
+  if (!k && kids.length === 1 && want && kids[0].name.trim().toLowerCase() !== want) return [];
+  if (k?.cancelled) return [];
+  const own = (k?.dates?.length ? k.dates : k?.days?.length ? k.days : b.days) ?? [];
+  const gone = new Set(k?.cancelledDays ?? []);
+  return own.filter((d) => !gone.has(d)).sort();
+}
+
+/** For the bookings of one or more checkouts (INCLUDING cancelled ones): the new addonLines of every booking whose one-off extras moved to a sibling
+ *  (keyed by ref). A booking not in the map is unchanged. */
+export function inheritSplitOneOffs(all: SplitBooking[]): Map<string, AddonLineIn[]> {
+  const groups = groupCheckouts(all);
+  const dropped = new Map<string, Set<AddonLineIn>>();
+  const gained = new Map<string, AddonLineIn[]>();
+  for (const g of groups) {
+    if (g.length < 2) continue;
+    for (const h of g) for (const l of h.addonLines ?? []) {
+      if (l.perDay || l.meal) continue;
+      const owner = g.map((x) => ({ x, r: remainingDays(x, l.child) })).filter((o) => o.r.length).sort((a, c) => a.r[0].localeCompare(c.r[0]))[0];
+      if (!owner || owner.x === h) continue;
+      dropped.set(h.ref, (dropped.get(h.ref) ?? new Set()).add(l));
+      gained.set(owner.x.ref, [...(gained.get(owner.x.ref) ?? []), { ...l, days: owner.r }]);
+    }
+  }
+  const out = new Map<string, AddonLineIn[]>();
+  for (const b of all) {
+    if (!dropped.has(b.ref) && !gained.has(b.ref)) continue;
+    out.set(b.ref, [...(b.addonLines ?? []).filter((l) => !dropped.get(b.ref)?.has(l)), ...(gained.get(b.ref) ?? [])]);
+  }
+  return out;
 }
 
 /** Stable key for one extra on one booking: the child and the label as stored. A family buys each extra once per child, so it is unique. Used by

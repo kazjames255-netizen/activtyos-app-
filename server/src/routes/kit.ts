@@ -10,6 +10,7 @@ import { ukToday } from "../lib/ukDate";
 import { hasLiveAddonOrders, kitForDay, kitTally, type KitBooking } from "../../../features/bookings/addons";
 import { staffMayReadFamilies } from "../middleware/access";
 import { kitKey } from "../../../features/bookings/addons";
+import { withSplitOneOffs } from "../lib/splitSiblings";
 import { libraryDocId } from "../lib/tenantLibrary";
 import { loadSettings } from "../lib/tenantLibrary";
 
@@ -71,9 +72,11 @@ const listingParam = (req: import("express").Request): string => {
 };
 
 /** The bookings of those blocks (every booking; the pure functions keep only the Confirmed ones). */
-async function bookingsOfBlocks(blocks: { id: string }[]): Promise<KitBooking[]> {
+async function bookingsOfBlocks(tenantId: string, blocks: { id: string }[]): Promise<KitBooking[]> {
   const snaps = await Promise.all(blocks.map(({ id }) => db.collection("bookings").where("blockId", "==", id).get()));
-  return snaps.flatMap((s) => s.docs.map((d) => fromDoc(d.data() as BookingDoc) as KitBooking));
+  const list = snaps.flatMap((s) => s.docs.map((d) => fromDoc(d.data() as BookingDoc) as KitBooking));
+  // A one-off extra bought on the first reference of a split checkout follows the earliest remaining reference if that one is cancelled / emptied.
+  return withSplitOneOffs(tenantId, list);
 }
 
 // A minute of caching for the cheap summaries (sidebar, dashboard card, strip, month): they are read on every page load, and an order shows
@@ -109,7 +112,7 @@ kit.get("/", async (req, res) => {
   const listingId = listingParam(req);
   const todays = (await scopedBlocks(auth, tenantId, date, date)).filter(({ block }) => !listingId || block.listingId === listingId);
   if (!todays.length) { res.json({ date, canTick: canTick(auth.role), groups: [], ticked: 0, total: 0 }); return; }
-  const bookings = await bookingsOfBlocks(todays);
+  const bookings = await bookingsOfBlocks(tenantId, todays);
   const groups = stripPrivate(kitForDay(bookings, date, { name }), canTick(auth.role));
   const tickSnap = groups.length ? await ticksCol.where("tenantId", "==", tenantId).where("date", "==", date).get() : null;
   const ticks = new Map<string, { by?: string; at?: string }>();
@@ -150,7 +153,7 @@ kit.get("/days", async (req, res) => {
     await Promise.all(blocks.map(async (b) => {
       const list = byListing.get(b.block.listingId) ?? [];
       byListing.set(b.block.listingId, list);
-      list.push(...(await bookingsOfBlocks([b])));
+      list.push(...(await bookingsOfBlocks(tenantId, [b])));
     }));
     const withOrders = [...byListing].filter(([, bs]) => Object.keys(kitTally(bs, from, to).days).length > 0).map(([id]) => id);
     const titles = await Promise.all(withOrders.map((id) => db.collection("listings").doc(id).get()));
@@ -179,7 +182,7 @@ kit.get("/live", async (req, res) => {
   const live = await cached(`live|${scopeKey(req, tenantId)}|${today}`, 60_000, async () => {
     const blocks = await scopedBlocks(auth, tenantId, today, "9999-12-31");
     if (!blocks.length) return false;
-    return hasLiveAddonOrders(await bookingsOfBlocks(blocks), today);
+    return hasLiveAddonOrders(await bookingsOfBlocks(tenantId, blocks), today);
   });
   res.json({ live });
 });

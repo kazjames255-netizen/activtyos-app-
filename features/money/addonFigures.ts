@@ -13,6 +13,8 @@ export function addonFigures(bookings: Booking[]): AddonFigures {
   const byName = new Map<string, AddonAgg>();
   let bookingsWithAddon = 0, units = 0, revenue = 0;
   for (const b of bookings) {
+    // Not sales: a place only OFFERED off the waiting list (not accepted yet), a waitlisted, declined or cancelled booking.
+    if (b.status === "Offered" || b.status === "Waitlisted" || b.status === "Declined" || b.status === "Cancelled") continue;
     const lines = bookingAddonLines(b);
     if (lines.length) bookingsWithAddon++;
     for (const l of lines) {

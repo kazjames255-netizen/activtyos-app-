@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { childExtrasForDay } from "../lib/rosterRules";
-import { addonFlag, kidOf } from "../../../features/bookings/addons";
+import { splitOneOffLines } from "../lib/splitSiblings";
+import { addonFlag, kidOf, type SplitBooking } from "../../../features/bookings/addons";
 import { z } from "zod";
 import { db } from "../firebase";
 import { isPlainStaff, type Role } from "../middleware/role";
@@ -216,6 +217,8 @@ registers.get("/", async (req, res) => {
     for (const cd of cs.docs) { const ph = realPhone(cd.get("phone") as string | undefined); if (ph) phoneByEmail.set(String(cd.get("email") ?? ""), ph); }
   }
 
+  // A one-off extra (T-shirt) bought on the first reference of a split checkout follows the earliest remaining reference if that one is cancelled / emptied.
+  const shownLines = await splitOneOffLines(tenantId, bookingSnaps.flatMap((s) => s.docs.map((d) => fromDoc(d.data() as BookingDoc) as never as SplitBooking)));
   const out = todays.map(({ id, block, session }, i) => {
     const reg = regSnaps[i].exists ? (regSnaps[i].data() as RegisterDoc) : null;
     const entries = reg?.entries ?? {};
@@ -244,7 +247,7 @@ registers.get("/", async (req, res) => {
         ...(b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) ? { serviceAddress: visitAddressLabel(b.serviceAddress) + (b.serviceAddress.notes ? ` — Access: ${b.serviceAddress.notes.replace(/\s+/g, " ")}` : "") } : {}),
         note: b.note ?? "",
         // This child's extras for THIS day only: a sibling's T-shirt, or a lunch bought for other days, must not show here.
-        addons: childExtrasForDay(b.addonLines, b.addons, r.name, date, { bookingDays: b.days, kid: kidOf(b, r.name) }, auth.role !== "staff"),
+        addons: childExtrasForDay(shownLines.get(b.ref) ?? b.addonLines, b.addons, r.name, date, { bookingDays: b.days, kid: kidOf(b, r.name) }, auth.role !== "staff"),
         // A booking that is not paid yet, or still waits for approval, still shows its extras: the register labels it ("Not paid yet" / "Awaiting approval").
         ...(addonFlag(b) ? { addonFlag: addonFlag(b) } : {}),
         bookingStatus: b.status,

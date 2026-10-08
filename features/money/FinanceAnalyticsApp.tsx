@@ -149,7 +149,7 @@ export function FinanceAnalyticsApp() {
   // filters/window as `a`, kept separate to keep each concern legible.
   const mix = useMemo(() => {
     const all = (bookings ?? []).filter((b) =>
-      b.status !== "Declined" && b.status !== "Waitlisted"
+      b.status !== "Declined" && b.status !== "Waitlisted" && b.status !== "Offered"
       && (!season || listingSeason[b.listingId ?? ""] === season)
       && (!venue || listingVenueId[b.listingId ?? ""] === venue));
     const now = new Date(nowMs);

@@ -15,7 +15,12 @@ export function childExtrasForDay(lines: AddonLineLite[] | undefined, fallback: 
   if (!lines) return withPrice ? fallback ?? [] : (fallback ?? []).map(withoutPriceText);
   return lines
     .filter((l) => l.child.trim() === childName.trim() && addonLineOnDay(l, ctx.bookingDays, date, ctx.kid))
-    .map((l) => (withPrice ? `${l.label} — £${l.price.toFixed(2)}` : l.label));
+    .map((l) => {
+      // A per-day extra is shown with THAT DAY's own quantity and share of the price ("Water bottle × 1 — £3.00"), not the whole booking's ("× 7 — £21.00").
+      const n = l.perDay && l.days && l.days.length > 1 ? (ctx.bookingDays?.length ? l.days.filter((d) => ctx.bookingDays!.includes(d)) : l.days).length : 0;
+      if (n > 1) return withPrice ? `${l.label.replace(/\s×\s*\d+/, " × 1")} — £${(Math.round((l.price / n) * 100) / 100).toFixed(2)}` : l.label.replace(/\s×\s*\d+/, " × 1");
+      return withPrice ? `${l.label} — £${l.price.toFixed(2)}` : l.label;
+    });
 }
 
 /** "Water bottle × 7 (Colour: Blue) — £21.00" -> "Water bottle × 7 (Colour: Blue)". */
