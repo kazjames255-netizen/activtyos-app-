@@ -28,7 +28,7 @@ const codeBase = z.object({
   exclusive: z.boolean().optional(), // can't be combined with any other code
   // Reserve a code for one family (by email) — only they can redeem it, and
   // creating it messages + emails them.
-  assignedTo: z.string().trim().email().max(160).optional(),
+  assignedTo: z.string().trim().email().max(160).transform((e) => e.toLowerCase()).optional(),
   assignedName: z.string().trim().max(120).optional(),
   // Reserve for a whole GROUP of families (e.g. "NHS parents"). The server
   // resolves the group's members into assignedEmails + assignedGroupName and

@@ -43,7 +43,8 @@ const surnameOf = (name: string) => (name.trim().split(/\s+/).pop() || "FAM").re
 // A friendly code from a family's surname + this year, e.g. "KHAN2026".
 const codeFromFamily = (name: string) => `${surnameOf(name)}${new Date().getFullYear()}`;
 const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
-const todayIso = () => new Date().toISOString().slice(0, 10);
+// The UK calendar day (what the server judges expiry by), not UTC: between midnight and 1am BST they differ.
+const todayIso = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
 const isExpired = (c: Code) => !!c.expiry && c.expiry < todayIso();
 const isSpent = (c: Code) => c.usageLimit != null && (c.usedCount ?? 0) >= c.usageLimit;
 
