@@ -108,3 +108,34 @@ test("Q13: a one-off follows its emptied holder unless the refund record says th
   assert.equal(follows({ refund: "declined", amount: 28, refundsAddons: true }), true, "a declined refund moved no money");
   assert.equal(follows({ refund: "none" }, { refundedApproved: 20 }), true, "amounts earlier refunded do not link to the add-on");
 });
+
+// E01: Finance, its CSV export and the Dashboard agree on which bookings are SOLD: an Offered (waiting-list, not accepted) or Waitlisted place is not.
+test("E01: Finance, the CSV and the Dashboard leave out the same not-yet-sold bookings (Offered, Waitlisted, Declined)", async () => {
+  const { inFinance, financeFigures: ff, payIndex: pi } = await import("../../features/money/financeFigures");
+  const { countsTowardBooked } = await import("../../features/bookings/sold");
+  const base = { payIdx: pi([], []), months: 1, nowMs: Date.parse("2026-10-08T12:00:00Z"), season: "", venue: "", listingSeason: {}, listingVenue: {}, listingVenueId: {} };
+  for (const status of ["Confirmed", "Approval needed", "Offered", "Waitlisted", "Declined"]) {
+    const b = { ref: status, bid: "", addons: [], answers: [], note: "", recon: null, evid: null, cancel: null, status, pay: "Unpaid", amount: 69, createdAt: "2026-10-05" } as never;
+    const sold = status === "Confirmed" || status === "Approval needed";
+    assert.equal(inFinance(b), sold, `Finance / CSV: ${status}`);
+    assert.equal(countsTowardBooked(b), sold, `Dashboard: ${status}`);
+    assert.equal(ff({ ...base, bookings: [b] }).booked, sold ? 69 : 0, `booked: ${status}`);
+  }
+});
+
+// Q13k: a one-day refund of £20 on the holder's only day must NOT hide the paid, unrefunded £8 T-shirt (refund amounts are not linked to add-ons).
+test("Q13k: day-only refunds, wallet credit and a £28 partial follow the T-shirt unless refundsAddons true", () => {
+  const days2 = ["2026-10-19", "2026-10-20"];
+  const line = { child: "K", label: "T-shirt (Size: M)", price: 8, days: ["2026-10-18", ...days2], perDay: false, name: "T-shirt", qty: 1 };
+  const follows = (cancel: Record<string, unknown> | null) => inheritSplitOneOffs([
+    { ref: "A", status: "Confirmed", pay: "Paid", email: "e", listingId: "l", createdAt: "x", checkoutId: "c1", days: [] as string[], amount: 28, cancel, kids: [{ name: "K", dates: ["Sun 18 Oct 2026"], cancelled: true, cancelledDays: ["2026-10-18"] }], addonLines: [line] },
+    { ref: "B", status: "Confirmed", email: "e", listingId: "l", createdAt: "x", checkoutId: "c1", days: days2, kids: [{ name: "K", dates: days2 }], addonLines: [] },
+  ] as never).has("B");
+  assert.equal(follows({ refund: "pending", amount: 20, refundOnly: true }), true, "cancel-day, one-day refund £20 (the Q13k scenario)");
+  assert.equal(follows({ refund: "pending", amount: 28, refundOnly: true }), true, "day-only refund of £28 is still not a whole-booking refund");
+  assert.equal(follows({ refund: "partial", amount: 28 }), true, "partial refund of £28 follows");
+  assert.equal(follows({ refund: "pending", amount: 20, refundOnly: true, refundsAddons: true }), false, "day-only refund with YES recorded drops it");
+  // WALLET CREDIT: a cancel-day / cancel-child credit to the wallet leaves no cancel record (only a refundLog line), so it never hides a one-off; a wallet credit
+  // for the WHOLE booking is a cancel with refund "full"/pending and follows the same rule as money.
+  assert.equal(follows(null), true, "wallet credit on a day: no cancel record, the T-shirt follows");
+});

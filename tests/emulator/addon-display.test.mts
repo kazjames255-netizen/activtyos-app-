@@ -679,3 +679,38 @@ describe("Q13: after the T-shirt's holder is cancelled with a refund, the T-shir
     });
   }
 });
+
+describe("Q13k (real API): a one-day refund of £20 from cancel-day on the holder's only day keeps the paid £8 T-shirt, in Add-on orders, the register and Finance", () => {
+  it("cancel-day with a pending refund: T-shirt follows; Finance still counts it once", async () => {
+    const c = `Q13k ${uniq()}`;
+    const b = await bookMany(LW, c, { tshirt: true });
+    const sorted = (await Promise.all(b.refs.map(async (r) => ({ r, d: (await docOf(r)).days[0], amt: (await docOf(r)).amount })))).sort((x, y) => x.d.localeCompare(y.d));
+    assert.ok((await as("P", "POST", `/api/bookings/${encodeURIComponent(sorted[0].r)}/record-payment`, { amount: sorted[0].amt, method: "Bank transfer", reference: `Q13k-${uniq()}` })).status < 300);
+    assert.ok((await operatorAction(sorted[0].r, "cancel-day", { ki: 0, date: LW.dates[0], resolution: "refund" })).status < 300);
+    const t = await teeDays(LW, c);
+    assert.deepEqual(t.kit, [LW.dates[1]], "Add-on orders");
+    assert.deepEqual(t.reg, [LW.dates[1]], "register");
+    const all: any[] = (await as("P", "GET", "/api/bookings")).json;
+    assert.equal(addonFigures(all.filter((x) => b.refs.includes(x.ref))).addonUnits, 1, "Finance counts the T-shirt once");
+  });
+  it("cancel-day with a refund AND refundsAddons true: the T-shirt drops off", async () => {
+    const c = `Q13kt ${uniq()}`;
+    const b = await bookMany(LW, c, { tshirt: true });
+    const sorted = (await Promise.all(b.refs.map(async (r) => ({ r, d: (await docOf(r)).days[0], amt: (await docOf(r)).amount })))).sort((x, y) => x.d.localeCompare(y.d));
+    assert.ok((await as("P", "POST", `/api/bookings/${encodeURIComponent(sorted[0].r)}/record-payment`, { amount: sorted[0].amt, method: "Bank transfer", reference: `Q13kt-${uniq()}` })).status < 300);
+    assert.ok((await operatorAction(sorted[0].r, "cancel-day", { ki: 0, date: LW.dates[0], resolution: "refund", refundsAddons: true })).status < 300);
+    const t = await teeDays(LW, c);
+    assert.deepEqual(t.kit, []);
+    assert.deepEqual(t.reg, []);
+  });
+  it("cancel-day settled as wallet credit: the T-shirt follows", async () => {
+    const c = `Q13kw ${uniq()}`;
+    const b = await bookMany(LW, c, { tshirt: true });
+    const sorted = (await Promise.all(b.refs.map(async (r) => ({ r, d: (await docOf(r)).days[0], amt: (await docOf(r)).amount })))).sort((x, y) => x.d.localeCompare(y.d));
+    assert.ok((await as("P", "POST", `/api/bookings/${encodeURIComponent(sorted[0].r)}/record-payment`, { amount: sorted[0].amt, method: "Bank transfer", reference: `Q13kw-${uniq()}` })).status < 300);
+    assert.ok((await operatorAction(sorted[0].r, "cancel-day", { ki: 0, date: LW.dates[0], resolution: "wallet" })).status < 300);
+    const t = await teeDays(LW, c);
+    assert.deepEqual(t.kit, [LW.dates[1]]);
+    assert.deepEqual(t.reg, [LW.dates[1]]);
+  });
+});
