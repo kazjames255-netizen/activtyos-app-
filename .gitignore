@@ -80,3 +80,4 @@ server/serviceAccountKey.json
 /.emu/
 /.next-emu*/
 *-debug.log
+e2e/review/.local/
