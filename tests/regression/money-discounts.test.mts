@@ -122,7 +122,12 @@ test("register shows only that child's extras for that day", () => {
     { child: "Ben", label: "Lunch", price: 4, perDay: true, days: ["2026-10-13"] },
   ];
   assert.deepEqual(childExtrasForDay(lines, ["x"], "Ann", "2026-10-12"), ["T-shirt — £8.00", "Lunch — £4.00"]);
+  // No days on the T-shirt line and none on the booking: nothing to judge it by, so it shows (old records).
   assert.deepEqual(childExtrasForDay(lines, ["x"], "Ann", "2026-10-13"), ["T-shirt — £8.00"]);
+  // With the booking's days known, the one-off T-shirt shows ONCE, on the first day; the lunch only on its own day.
+  const days = ["2026-10-12", "2026-10-13"];
+  assert.deepEqual(childExtrasForDay(lines, ["x"], "Ann", "2026-10-12", { bookingDays: days }), ["T-shirt — £8.00", "Lunch — £4.00"]);
+  assert.deepEqual(childExtrasForDay(lines, ["x"], "Ann", "2026-10-13", { bookingDays: days }), []);
   assert.deepEqual(childExtrasForDay(lines, [], "Ben", "2026-10-12"), []);
   assert.deepEqual(childExtrasForDay(undefined, ["Old extra"], "Ann", "2026-10-12"), ["Old extra"]);
 });

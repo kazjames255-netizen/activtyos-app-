@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { childExtrasForDay } from "../lib/rosterRules";
+import { addonFlag, kidOf } from "../../../features/bookings/addons";
 import { z } from "zod";
 import { db } from "../firebase";
 import { isPlainStaff, type Role } from "../middleware/role";
@@ -243,7 +244,9 @@ registers.get("/", async (req, res) => {
         ...(b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) ? { serviceAddress: visitAddressLabel(b.serviceAddress) + (b.serviceAddress.notes ? ` — Access: ${b.serviceAddress.notes.replace(/\s+/g, " ")}` : "") } : {}),
         note: b.note ?? "",
         // This child's extras for THIS day only: a sibling's T-shirt, or a lunch bought for other days, must not show here.
-        addons: childExtrasForDay(b.addonLines, b.addons, r.name, date, auth.role !== "staff"),
+        addons: childExtrasForDay(b.addonLines, b.addons, r.name, date, { bookingDays: b.days, kid: kidOf(b, r.name) }, auth.role !== "staff"),
+        // A booking that is not paid yet, or still waits for approval, still shows its extras: the register labels it ("Not paid yet" / "Awaiting approval").
+        ...(addonFlag(b) ? { addonFlag: addonFlag(b) } : {}),
         bookingStatus: b.status,
         seats: 1,
         children: [{ name: r.name, age: r.age }],

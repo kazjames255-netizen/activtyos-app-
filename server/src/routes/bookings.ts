@@ -58,6 +58,7 @@ import {
 import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Booking } from "../../../features/bookings/types";
 import { applyMoveApprove } from "../lib/dateChange";
+import { moveAddonDays } from "../../../features/bookings/addons";
 import {
   applyBulkAction,
   applyCancel,
@@ -716,6 +717,8 @@ bookings.post("/:ref/actions", async (req, res) => {
           const ix = k?.dates ? k.dates.findIndex((d) => d === action.oldDate || toIso(d) === oldIso) : -1;
           if (k?.dates && ix > -1) k.dates[ix] = isIso(k.dates[ix]) ? newSess.date : labelOf(newSess);
         }
+        // The child's extras move with the day (a daily one follows its day, a one-off follows the new first day): the same rule as an approved date change.
+        moveAddonDays(b.addonLines, b.kids?.length ? b.kids[action.ki]?.name : undefined, oldIso, newSess.date);
       }
 
       // Approving a date change moves seats between days: keep the block's per-day counts in step (the old day frees a

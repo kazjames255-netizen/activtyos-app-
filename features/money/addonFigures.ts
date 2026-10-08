@@ -1,24 +1,26 @@
 // Finance Insights > Add-ons: what was sold, from the bookings in the window. One plain function so the screen and the tests read the same maths.
-import type { Booking } from "@/features/bookings/types";
+import type { Booking } from "../bookings/types"; // relative: the tests (and the API) load this file without the "@/" alias
+import { addonUnits, bookingAddonLines } from "../bookings/addons";
 
 export interface AddonAgg { count: number; rev: number }
 export interface AddonFigures { bookingsWithAddon: number; addonUnits: number; addonRevenue: number; byName: Map<string, AddonAgg> }
 
-/** Each booking carries its extras as text ("Hot lunch × 5 — £25.00"): read the name and the amount actually charged from it. */
+/**
+ * Counted by UNITS, not by lines: a daily add-on counts each of its days (a water bottle for 7 days is 7 units), a one-off counts its quantity.
+ * Revenue is the amount actually charged on the line. Several references of one checkout (a week over a Monday) add up to the same figures as one booking.
+ */
 export function addonFigures(bookings: Booking[]): AddonFigures {
   const byName = new Map<string, AddonAgg>();
-  let bookingsWithAddon = 0, addonUnits = 0, addonRevenue = 0;
+  let bookingsWithAddon = 0, units = 0, revenue = 0;
   for (const b of bookings) {
-    const ad = b.addons ?? [];
-    if (ad.length) bookingsWithAddon++;
-    for (const line of ad) {
-      const m = /^(.*?)\s+—\s+£([\d,]+(?:\.\d+)?)$/.exec(line.trim());
-      const nm = (m ? m[1] : line).replace(/\s+×\s+\d+.*$/, "").replace(/\s+\(.*\)$/, "").replace(/^🍽\s*/, "").trim() || line;
-      const amt = m ? parseFloat(m[2].replace(/,/g, "")) : 0;
-      const cur = byName.get(nm) ?? { count: 0, rev: 0 };
-      cur.count++; cur.rev += amt; byName.set(nm, cur);
-      addonUnits++; addonRevenue += amt;
+    const lines = bookingAddonLines(b);
+    if (lines.length) bookingsWithAddon++;
+    for (const l of lines) {
+      const n = addonUnits(l, b.days);
+      const cur = byName.get(l.name) ?? { count: 0, rev: 0 };
+      cur.count += n; cur.rev += l.price; byName.set(l.name, cur);
+      units += n; revenue += l.price;
     }
   }
-  return { bookingsWithAddon, addonUnits, addonRevenue, byName };
+  return { bookingsWithAddon, addonUnits: units, addonRevenue: Math.round(revenue * 100) / 100, byName };
 }

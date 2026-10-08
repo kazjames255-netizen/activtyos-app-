@@ -140,9 +140,23 @@ export function kitKey(ref: string, child: string, name: string, choiceValue: st
   return [k(ref), k(child) || "child", k(name), k(choiceValue) || "none", date].join("__");
 }
 
+/** Which bookings show in Add-on orders and on the register: ones that hold (or are waiting for) a place. Cancelled, declined, waitlisted and offered never do. */
+export const addonBookingShows = (b: { status: string }): boolean => b.status === "Confirmed" || b.status === "Approval needed";
+
+export type AddonFlag = "not-paid" | "awaiting-approval";
+const NOT_PAID = new Set(["Unpaid", "Invoice sent", "Awaiting voucher payment"]);
+/** The label a shown booking carries: waiting for the provider's approval, or confirmed but not paid yet. Paid / funded ones carry none. */
+export function addonFlag(b: { status: string; pay?: string }): AddonFlag | undefined {
+  if (b.status === "Approval needed") return "awaiting-approval";
+  if (b.status === "Confirmed" && NOT_PAID.has(b.pay ?? "")) return "not-paid";
+  return undefined;
+}
+
 export interface KitBooking extends BookingAddonSource {
   ref: string;
   status: string;
+  /** Payment state ("Unpaid", "Paid"...): an unpaid booking still shows in Add-on orders, labelled "Not paid yet". */
+  pay?: string;
   /** Who booked (for the 'Message' buttons; the server only sends email to roles that may message families). */
   booker?: string;
   email?: string;
@@ -151,7 +165,7 @@ export interface KitBooking extends BookingAddonSource {
   addonRequests?: { key: string; kind: "change" | "cancel"; status: string }[];
 }
 
-export interface KitChild { key: string; ref: string; child: string; qty: number; booker?: string; email?: string; /** A request to change / cancel this item is waiting for the provider. */ pending?: "change" | "cancel" }
+export interface KitChild { key: string; ref: string; child: string; qty: number; booker?: string; email?: string; /** A request to change / cancel this item is waiting for the provider. */ pending?: "change" | "cancel"; /** The booking is not paid yet / still waits for the provider's approval: the screens label it. */ flag?: AddonFlag }
 export interface KitGroup { id: string; name: string; choiceValue: string; choice: string; meal: boolean; total: number; children: KitChild[] }
 
 /** Does this extra need preparing on `date`? A per-day extra (a lunch, a daily snack) on each of its days; a one-off extra (a T-shirt) on the FIRST day it is for. */
@@ -171,7 +185,8 @@ export function kitForDay(bookings: KitBooking[], date: string, opts: { name?: s
   const groups = new Map<string, KitGroup>();
   const only = (opts.name ?? "").trim().toLowerCase();
   for (const b of bookings) {
-    if (b.status !== "Confirmed") continue;
+    if (!addonBookingShows(b)) continue;
+    const flag = addonFlag(b);
     for (const l of bookingAddonLines(b)) {
       if (!addonOnDay(l, date, b.days, kidOf(b, l.child))) continue;
       if (only && l.name.trim().toLowerCase() !== only) continue;
@@ -181,7 +196,7 @@ export function kitForDay(bookings: KitBooking[], date: string, opts: { name?: s
       const qty = l.perDay || l.meal ? 1 : l.qty;
       g.total += qty;
       const req = (b.addonRequests ?? []).find((r) => r.status === "pending" && r.key === addonLineKey(l.child, l.label));
-      g.children.push({ key: kitKey(b.ref, l.child, l.name, l.choiceValue, date), ref: b.ref, child: l.child, qty, ...(b.booker ? { booker: b.booker } : {}), ...(b.email ? { email: b.email } : {}), ...(req ? { pending: req.kind } : {}) });
+      g.children.push({ key: kitKey(b.ref, l.child, l.name, l.choiceValue, date), ref: b.ref, child: l.child, qty, ...(b.booker ? { booker: b.booker } : {}), ...(b.email ? { email: b.email } : {}), ...(req ? { pending: req.kind } : {}), ...(flag ? { flag } : {}) });
       groups.set(id, g);
     }
   }
@@ -192,11 +207,77 @@ export function kitForDay(bookings: KitBooking[], date: string, opts: { name?: s
 
 /** One readable sentence per extra for a family-facing list or a receipt: "sally james: T-shirt (M) — £10.00" (no name when the booking has one child and no name was stored). */
 export function addonSentences(b: BookingAddonSource, withPrice = true): string[] {
-  return bookingAddonLines(b).map((l) => {
+  // One sentence per child and extra even when the family's checkout was split over several references (a week that crosses a Monday).
+  return mergeAddonLines(bookingAddonLines(b)).map((l) => {
     const who = l.child ? `${l.child}: ` : "";
     const days = (l.perDay || l.meal) && l.days.length > 1 ? ` × ${l.days.length} days` : "";
     return `${who}${addonShort(l)}${days}${withPrice ? ` — £${l.price.toFixed(2)}` : ""}`;
   });
+}
+
+/** The same child's same extra, found on SEVERAL references of one checkout (a 7-day water bottle over a Monday is 1 + 6 days on two bookings): one line,
+ *  the days joined, the price summed. Everything else is left exactly as it is. */
+export function mergeAddonLines(lines: AddonLine[]): AddonLine[] {
+  const out: AddonLine[] = [];
+  const at = new Map<string, number>();
+  for (const l of lines) {
+    if (!l.perDay || l.meal) { out.push(l); continue; }
+    const k = [l.child.trim().toLowerCase(), l.name.toLowerCase(), l.choiceValue.toLowerCase()].join("|");
+    const i = at.get(k);
+    if (i === undefined) { at.set(k, out.length); out.push({ ...l, days: [...l.days] }); continue; }
+    const m = out[i];
+    m.days = [...new Set([...m.days, ...l.days])].sort();
+    m.price = Math.round((m.price + l.price) * 100) / 100;
+    m.qty = m.days.length || m.qty + l.qty;
+    m.label = `${m.name} × ${m.qty}`;
+  }
+  return out;
+}
+
+const dayName = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const nextIso = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
+/** "Sun 18 Oct" for one day; "Sun 18 Oct – Sat 24 Oct" for an unbroken run; otherwise the days listed. */
+export function daysPhrase(days: string[]): string {
+  const d = [...new Set(days)].sort();
+  if (!d.length) return "";
+  if (d.length === 1) return dayName(d[0]);
+  return d.every((x, i) => i === 0 || x === nextIso(d[i - 1])) ? `${dayName(d[0])} – ${dayName(d[d.length - 1])}` : d.map(dayName).join(", ");
+}
+
+/** An extra WITH its days, for the provider's new-booking email: "Water bottle (Blue) × 7 days (Sun 18 Oct – Sat 24 Oct)", "T-shirt (M) on Sun 18 Oct". */
+export function addonWithDays(l: AddonLine, bookingDays?: string[], kid?: KidState): string {
+  if (l.meal) return addonShort(l);
+  const days = addonDaysIn(l, bookingDays, "0000-01-01", FAR, kid);
+  if (!days.length) return addonShort(l);
+  const base = addonShort({ ...l, perDay: true }); // the name and choice only; the days follow
+  if (l.perDay) return days.length === 1 ? `${base} on ${dayName(days[0])}` : `${base} × ${days.length} days (${daysPhrase(days)})`;
+  return `${addonShort(l)} on ${dayName(days[0])}`;
+}
+
+/** How many units of an extra were bought: a per-day extra counts its days, anything else its quantity. Used by Finance Insights. */
+export function addonUnits(l: AddonLine, bookingDays?: string[]): number {
+  if (l.perDay && !l.meal) {
+    const held = bookingDays?.length ? l.days.filter((d) => bookingDays.includes(d)) : l.days;
+    return (held.length ? held : l.days).length || l.qty;
+  }
+  return l.qty;
+}
+
+/** Move a day on the extras of one child (or every child when `child` is omitted): the date-change rewrite for BOTH kinds of extra. A per-day extra
+ *  follows its day; a one-off extra keeps its list of days too, because its first day is the earliest of them (see addonDaysIn). */
+export function moveAddonDays(lines: { child: string; days?: string[] }[] | undefined, child: string | undefined, from: string, to: string): void {
+  for (const l of lines ?? []) {
+    if (child !== undefined && l.child.trim() !== child.trim()) continue;
+    if (!l.days?.includes(from)) continue;
+    l.days = [...new Set(l.days.map((d) => (d === from ? to : d)))].sort();
+  }
+}
+
+/** Is one STORED line (as the booking holds it) due on `date`? The register's rule: the same one Add-on orders uses. A line that says nothing about days
+ *  (an old booking) is shown, because there is nothing to judge it by. */
+export function addonLineOnDay(raw: AddonLineIn, bookingDays: string[] | undefined, date: string, kid?: KidState): boolean {
+  if (!raw.days?.length && !bookingDays?.length) return true;
+  return addonOnDay(bookingAddonLines({ addonLines: [raw] })[0], date, bookingDays, kid);
 }
 
 /** Stable key for one extra on one booking: the child and the label as stored. A family buys each extra once per child, so it is unique. Used by
@@ -217,7 +298,10 @@ export function addonDaysIn(l: AddonLine, bookingDays: string[] | undefined, fro
   if (kid?.cancelled) return [];
   const gone = new Set(kid?.cancelledDays ?? []);
   // A cancelled day drops out first, so a one-off extra moves to the child's first day they STILL attend.
-  const days = (l.days.length ? l.days : bookingDays ?? []).filter((d) => !gone.has(d)).sort();
+  // A line can carry more days than its booking holds (a weekly checkout used to stamp the whole run on EACH of the two references): only the days
+  // the booking really holds count. If none of them is held (an old or odd record) the line's own days stand.
+  const held = bookingDays?.length && l.days.length ? l.days.filter((d) => bookingDays.includes(d)) : [];
+  const days = (held.length ? held : l.days.length ? l.days : bookingDays ?? []).filter((d) => !gone.has(d)).sort();
   if (!days.length) return [];
   const on = l.perDay || l.meal ? days : [days[0]];
   return [...new Set(on)].filter((d) => d >= from && d <= to);
@@ -232,7 +316,7 @@ export function kitTally(bookings: KitBooking[], from: string, to: string, opts:
   const names = new Map<string, string>();
   const only = (opts.name ?? "").trim().toLowerCase();
   for (const b of bookings) {
-    if (b.status !== "Confirmed") continue;
+    if (!addonBookingShows(b)) continue;
     for (const l of bookingAddonLines(b)) {
       const k = l.name.trim().toLowerCase();
       const shown = names.get(k) ?? l.name;
@@ -301,7 +385,7 @@ export function monthRange(year: number, month0: number): { from: string; to: st
  *  that still has a day to prepare today or later. */
 export function hasLiveAddonOrders(bookings: KitBooking[], today: string): boolean {
   for (const b of bookings) {
-    if (b.status !== "Confirmed") continue;
+    if (!addonBookingShows(b)) continue;
     for (const l of bookingAddonLines(b)) if (addonDaysIn(l, b.days, today, FAR, kidOf(b, l.child)).length) return true;
   }
   return false;

@@ -38,7 +38,7 @@ import { mergeBookings } from "../lib/mergeBookings";
 import { ageRangeFor, isOutOfRange, passHidden, addonRefusal, isQueuedOn, cardUnpaid } from "../lib/bookingRules";
 import { wantsCardHold, releaseHolds, deadlineLabel, deadlineWarningHtml } from "../lib/cardHold";
 import { bellTitle, bellBody, bellMoney, bellDay, paymentType, plainParagraph } from "../lib/bellText";
-import { addonCount, addonShort, bookingAddonLines } from "../../../features/bookings/addons";
+import { addonCount, addonWithDays, bookingAddonLines, mergeAddonLines } from "../../../features/bookings/addons";
 import {
   resolveBundlePricing,
   type BundleDoc,
@@ -1745,7 +1745,8 @@ my.post("/bookings", async (req, res) => {
               // A meal keeps its own date-stamped label; a normal per-day
               // add-on shows the "× n days" count.
               const label = a.meal ? `🍽 ${a.name} · ${on.map((d) => prettyDay(d)).join(", ")}` : `${a.name} × ${on.length}${a.suffix}`;
-              return [{ ...a, price: round2(a.unit * on.length), label }];
+              // onDays: only the days THIS reference holds, so its line (days, quantity) never claims the other reference's days.
+              return [{ ...a, price: round2(a.unit * on.length), label, onDays: on }];
             }
             const home = p.segments.find((s2) => s2.days.includes(a.onDays[0]))?.blockId ?? p.segments[0].blockId;
             return home === seg.blockId ? [a] : [];
@@ -3422,9 +3423,10 @@ export function notifyProviderNewBooking(ctx: ProviderNoticeCtx): void {
           // An EHCP is special-category data — never attached. The email links
           // straight to the secure /plan viewer, which re-checks access.
           ehcpFileId: str("sendPlanId"),
-          extras: bookingAddonLines({ addonLines: bookings.flatMap((b) => b.addonLines ?? []), addons: bookings.flatMap((b) => b.addons ?? []), child: bookings[0]?.child, kids: bookings.length === 1 ? bookings[0]?.kids : undefined })
+          // Each extra WITH its days (the provider has to know which days to prepare it for); one entry per extra even when the checkout made several references.
+          extras: mergeAddonLines(bookingAddonLines({ addonLines: bookings.flatMap((b) => b.addonLines ?? []), addons: bookings.flatMap((b) => b.addons ?? []), child: bookings[0]?.child, kids: bookings.length === 1 ? bookings[0]?.kids : undefined }))
             .filter((l) => !l.child || l.child.trim().toLowerCase() === (s.name ?? "").trim().toLowerCase() || seeds.length === 1)
-            .map((l) => addonShort(l)),
+            .map((l) => addonWithDays(l, [...new Set(bookings.flatMap((b) => b.days ?? []))].sort())),
         });
       }
       // Card vs childcare split — by the method chosen at checkout.

@@ -1,3 +1,5 @@
+import { addonLineOnDay, type KidState } from "../../../features/bookings/addons";
+
 // PURE roster / register / occupancy rules (extracted from routes, behaviour unchanged). Each one exists because of a real bug: see tests/regression/.
 
 /** Team members who left (account switched off) must not count as ratio cover or be listed to parents. */
@@ -5,12 +7,14 @@ export const withoutLeavers = (staffIds: string[], leavers: Set<string>): string
 
 export interface AddonLineLite { child: string; label: string; price: number; perDay?: boolean; days?: string[] }
 
-/** This child's extras for THIS day only: a sibling's T-shirt, or a lunch bought for other days, must not show against them.
- *  Older bookings carry no per-child lines: they fall back to the plain list. */
-export function childExtrasForDay(lines: AddonLineLite[] | undefined, fallback: string[] | undefined, childName: string, date: string, withPrice = true): string[] {
+/** This child's extras for THIS day only: a sibling's T-shirt, or a lunch bought for other days, must not show against them. A per-day extra shows on
+ *  each of its days; a ONE-OFF extra (a T-shirt) shows once, on the child's first day (the same rule as Add-on orders: addonLineOnDay).
+ *  Older bookings carry no per-child lines: they fall back to the plain list. `ctx` carries what the booking says about its own days and the child.
+ *  `withPrice` false (staff) leaves the price off every line. */
+export function childExtrasForDay(lines: AddonLineLite[] | undefined, fallback: string[] | undefined, childName: string, date: string, ctx: { bookingDays?: string[]; kid?: KidState } = {}, withPrice = true): string[] {
   if (!lines) return withPrice ? fallback ?? [] : (fallback ?? []).map(withoutPriceText);
   return lines
-    .filter((l) => l.child.trim() === childName.trim() && (!l.perDay || !l.days?.length || l.days.includes(date)))
+    .filter((l) => l.child.trim() === childName.trim() && addonLineOnDay(l, ctx.bookingDays, date, ctx.kid))
     .map((l) => (withPrice ? `${l.label} — £${l.price.toFixed(2)}` : l.label));
 }
 

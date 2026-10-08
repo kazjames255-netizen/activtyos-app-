@@ -17,7 +17,7 @@ import { ADDON_ICON, daysWithOrders, monthGrid, monthRange, nextDayWith, type Ki
 // The server (routes/kit.ts) decides what is due; this screen draws it and records the ticks.
 // ─────────────────────────────────────────────────────────────────────────
 
-interface KitChild { key: string; ref: string; child: string; qty: number; done: boolean; by?: string; pending?: "change" | "cancel"; booker?: string; email?: string }
+interface KitChild { key: string; ref: string; child: string; qty: number; done: boolean; by?: string; pending?: "change" | "cancel"; flag?: "not-paid" | "awaiting-approval"; booker?: string; email?: string }
 interface KitGroup { id: string; name: string; choiceValue: string; choice: string; meal: boolean; total: number; children: KitChild[] }
 interface KitDay { date: string; canTick: boolean; groups: KitGroup[]; ticked: number; total: number }
 interface DaysResp { from: string; to: string; days: { date: string; items: number; byName: Record<string, number> }[]; names: string[]; listings: { id: string; name: string }[]; total: number; totals: Record<string, number>; canTick: boolean; canRemind: boolean; reminder: boolean }
@@ -247,6 +247,7 @@ export function KitApp() {
                             <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
                               <input type="checkbox" checked={c.done} disabled={!data?.canTick} onChange={() => void tick(g, c)} className="h-5 w-5 flex-none accent-[#15b364]" data-testid="kit-tick" />
                               <span className="font-bold" style={c.done ? { textDecoration: "line-through", opacity: 0.6 } : undefined}>{c.child}</span>
+                              {c.flag && <span className="rounded-full bg-[var(--amber-soft)] px-2 py-[1px] text-[11px] font-extrabold text-[var(--ink)] ring-1 ring-[var(--amber-line)]" data-testid="kit-flag" data-flag={c.flag}>{c.flag === "not-paid" ? t("p8lst.kitFlagNotPaid") : t("p8lst.kitFlagAwaiting")}</span>}
                               {c.pending && <span className="rounded-full bg-[#faf6ff] px-2 py-[1px] text-[11px] font-extrabold text-[#6b3fb3] ring-1 ring-[#d9c7f2]" data-testid="kit-pending">{c.pending === "cancel" ? t("p8lst.kitPendingCancel") : t("p8lst.kitPendingChange")}</span>}
                             </label>
                             {c.email && <a href={msgHref(g, c)} className="kit-noprint flex-none rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11.5px] font-extrabold text-[var(--brand-ink,#1d3a8f)] no-underline" data-testid="kit-msg">✉ {t("p8lst.kitMessage")}</a>}

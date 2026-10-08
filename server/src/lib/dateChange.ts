@@ -4,6 +4,7 @@
 // without Firestore. Behaviour-preserving.
 import type { Booking } from "../../../features/bookings/types";
 import { cashReceivedOf } from "../../../features/bookings/helpers";
+import { moveAddonDays } from "../../../features/bookings/addons";
 
 export const prettyDay = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -75,12 +76,9 @@ export function applyMoveApprove(b: Booking, approveIndexes?: number[], reason?:
         const moved = kidDays.map((d) => (d === m.from ? m.to! : d));
         kid.dates = moved; kid.days = moved;
       } else if (b.days?.length) b.days = b.days.map((d) => (d === m.from ? m.to! : d));
-      // A per-day extra (the lunch for that day) moves with its day, or the register would show it on a day the child no longer attends.
-      for (const l of b.addonLines ?? []) {
-        if (!l.perDay || !l.days?.includes(m.from)) continue;
-        if (kid && l.child.trim() !== kid.name.trim()) continue;
-        l.days = l.days.map((d) => (d === m.from ? m.to! : d));
-      }
+      // The child's extras move with the day: a per-day extra (the lunch for that day) AND a one-off extra, whose first day is the earliest of its days
+      // (so a T-shirt follows the child's new first day). One rule, shared with the operator's change-day route.
+      moveAddonDays(b.addonLines, kid?.name, m.from, m.to);
       // Bookings whose dates live only in `sessions` strings — move the
       // matching label, keeping its time suffix, so the change shows.
       if (b.sessions?.length) {
