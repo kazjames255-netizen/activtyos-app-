@@ -235,7 +235,7 @@ export function FinanceAnalyticsApp() {
   function exportCSV() {
     const cell = csvCell; // formula-safe: Family is the parent-typed booker name
     const rows = (bookings ?? []).filter((b) =>
-      b.status !== "Declined" && b.status !== "Waitlisted"
+      b.status !== "Declined" && b.status !== "Waitlisted" && b.status !== "Offered"
       && (!season || listingSeason[b.listingId ?? ""] === season)
       && (!venue || listingVenueId[b.listingId ?? ""] === venue)
       && (() => { const m = monthOf(b); return m != null && a.keys.includes(m); })());

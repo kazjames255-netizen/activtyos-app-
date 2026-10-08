@@ -16,7 +16,8 @@ import { refundReminderPeriod, REFUND_REMIND_MAX_PER_RUN } from "./refundReminde
 import { bellBody, bellMoney, bellTitle, paymentType } from "./bellText";
 import { bookingRefOfKey, entryFor, registerRows } from "./registerRows";
 import type { Booking } from "../../../features/bookings/types";
-import { kitNamesSentence, kitReminderKey, kitUnticked, type KitBooking } from "../../../features/bookings/addons";
+import { kitNamesSentence, kitReminderKey, kitUnticked, type KitBooking, type SplitBooking } from "../../../features/bookings/addons";
+import { withSplitOneOffs } from "./splitSiblings";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Every time-based behaviour in the platform, as scheduler sweeps (see
@@ -449,7 +450,8 @@ async function addonOrdersDayBefore(): Promise<void> {
   for (const g of byOwner.values()) {
     try {
       const ticks = await db.collection("kitTicks").where("tenantId", "==", g.tenantId).where("date", "==", tomorrow).get();
-      const left = kitUnticked(g.bookings, tomorrow, new Set(ticks.docs.map((d) => String(d.get("key")))));
+      const shown = await withSplitOneOffs(g.tenantId, g.bookings as never as SplitBooking[]);
+      const left = kitUnticked(shown, tomorrow, new Set(ticks.docs.map((d) => String(d.get("key")))));
       if (left.items <= 0) continue;
       const sentence = kitNamesSentence(left.byName);
       const when = niceDate(tomorrow);

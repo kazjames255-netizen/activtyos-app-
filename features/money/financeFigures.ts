@@ -126,7 +126,7 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
   // revenue nor an attendee — exclude them (alongside Declined). Cancelled
   // stays IN so its retained/refunded money still nets out below.
   const all = bookings.filter((b) =>
-    b.status !== "Declined" && b.status !== "Waitlisted"
+    b.status !== "Declined" && b.status !== "Waitlisted" && b.status !== "Offered" // an Offered place is not accepted yet: no seat sold, no money owed (the Dashboard leaves it out too)
     && (!season || listingSeason[b.listingId ?? ""] === season)
     && (!venue || listingVenueId[b.listingId ?? ""] === venue));
   const now = new Date(nowMs);

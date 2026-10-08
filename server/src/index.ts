@@ -21,7 +21,7 @@ import { referencePublic, references } from "./routes/references";
 import { library, libraryPublic } from "./routes/library";
 import { listings } from "./routes/listings";
 import { my } from "./routes/my";
-import { stripCheckoutId } from "./lib/stripCheckoutId";
+import { stripCheckoutId, stripCheckoutIdForFamilies } from "./lib/stripCheckoutId";
 import { onlineSessions } from "./routes/onlineSessions";
 import { rateLimit } from "./lib/rateLimit";
 import { gzipResponses } from "./lib/gzip";
@@ -171,6 +171,8 @@ app.use("/api/emails/inbound/resend", emailsResendInbound);
 // Firestore caps a document at 1MB, so anything past this can't be stored
 // anyway and gets a clear error rather than a size failure.
 app.use(express.json({ limit: "2mb" }));
+// Families (and anyone signed out) never receive a booking's checkoutId, on any route: decided per response, once the caller's role is known.
+app.use(stripCheckoutIdForFamilies);
 // gzip every JSON / text response ≥ 1 KB (res.send / res.json only — the SSE stream and images are left alone).
 app.use(gzipResponses);
 

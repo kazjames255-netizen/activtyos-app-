@@ -17,3 +17,15 @@ export const stripCheckoutId: RequestHandler = (_req, res, next) => {
   res.json = ((body: unknown) => json(withoutCheckoutId(body))) as typeof res.json;
   next();
 };
+
+/** Mounted ONCE, early, for the whole API: the decision is taken when the response is sent, by then the caller's role is known. Only providers' own
+ *  accounts (company, freelancer, franchise, staff, platform) receive a checkoutId; a parent, or anybody not signed in, never does - whatever route
+ *  they hit (privacy export, wallet, invoices, calendar feeds, public pages...). */
+export const stripCheckoutIdForFamilies: RequestHandler = (req, res, next) => {
+  const json = res.json.bind(res);
+  res.json = ((body: unknown) => {
+    const role = (req as { auth?: { role?: string } }).auth?.role;
+    return json(role && role !== "parent" ? body : withoutCheckoutId(body));
+  }) as typeof res.json;
+  next();
+};

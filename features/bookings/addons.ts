@@ -291,7 +291,30 @@ export function addonLineOnDay(raw: AddonLineIn, bookingDays: string[] | undefin
 // (one checkout builds all its references in one synchronous loop). A stamped booking never matches an unstamped one.
 // ─────────────────────────────────────────────────────────────────────────
 
-export interface SplitBooking extends KitBooking { createdAt?: string; listingId?: string; checkoutId?: string }
+export interface SplitBooking extends KitBooking {
+  createdAt?: string; listingId?: string; checkoutId?: string;
+  /** The refund record, read by addonRefunded. */
+  amount?: number; refundedApproved?: number; cancel?: { refund?: string; amount?: number } | null;
+}
+
+const MONTH = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+/** Any stored day as ISO: "2026-10-19" stays, "Mon 19 Oct 2026" (the label form a synthesised kids[] carries after a cancel-day) is read. Unreadable -> "". */
+export function dayToIso(d: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  const m = /(\d{1,2})\s+([A-Za-z]{3})[A-Za-z]*\.?\s+(\d{4})/.exec(d ?? "");
+  const mi = m ? MONTH.indexOf(m[2].toLowerCase()) : -1;
+  return m && mi >= 0 ? `${m[3]}-${String(mi + 1).padStart(2, "0")}-${m[1].padStart(2, "0")}` : "";
+}
+
+/** Is this one-off extra already refunded on the booking that holds it? Read from the REFUND RECORD, never from status text: a full refund; or money
+ *  refunded (pending, approved and awaiting transfer all count the same as completed) that reaches the extra's price. A refund that was declined,
+ *  or "none", moved no money. */
+export function addonRefunded(h: { cancel?: { refund?: string; amount?: number } | null; refundedApproved?: number }, price: number): boolean {
+  const kind = h.cancel?.refund;
+  if (kind === "full") return true;
+  const R = Math.max(kind && kind !== "none" && kind !== "declined" ? Number(h.cancel?.amount) || 0 : 0, Number(h.refundedApproved) || 0);
+  return price > 0 && R >= price - 0.004;
+}
 
 export const SIBLING_MS = 3;
 /** Can this booking be placed in a checkout at all? */
@@ -328,9 +351,12 @@ function remainingDays(b: SplitBooking, child: string): string[] {
   if (kids.length > 1 && !k) return [];
   if (!k && kids.length === 1 && want && kids[0].name.trim().toLowerCase() !== want) return [];
   if (k?.cancelled) return [];
-  const own = (k?.dates?.length ? k.dates : k?.days?.length ? k.days : b.days) ?? [];
-  const gone = new Set(k?.cancelledDays ?? []);
-  return own.filter((d) => !gone.has(d)).sort();
+  // Stored days come in two forms (ISO, and labels like "Mon 19 Oct 2026" after a cancel-day on a single child): read them all as ISO, and never count a day
+  // the booking itself no longer holds (b.days shrinks when a day is cancelled).
+  const own = ((k?.dates?.length ? k.dates : k?.days?.length ? k.days : b.days) ?? []).map(dayToIso).filter(Boolean);
+  const gone = new Set((k?.cancelledDays ?? []).map(dayToIso));
+  const held = b.days?.length ? new Set(b.days.map(dayToIso)) : null;
+  return own.filter((d) => !gone.has(d) && (!held || held.has(d))).sort();
 }
 
 /** For the bookings of one or more checkouts (INCLUDING cancelled ones): the new addonLines of every booking whose one-off extras moved to a sibling
@@ -345,6 +371,7 @@ export function inheritSplitOneOffs(all: SplitBooking[]): Map<string, AddonLineI
       if (l.perDay || l.meal) continue;
       const owner = g.map((x) => ({ x, r: remainingDays(x, l.child) })).filter((o) => o.r.length).sort((a, c) => a.r[0].localeCompare(c.r[0]))[0];
       if (!owner || owner.x === h) continue;
+      if (addonRefunded(h, l.price)) continue; // already refunded with its holder: it does not follow anyone
       dropped.set(h.ref, (dropped.get(h.ref) ?? new Set()).add(l));
       gained.set(owner.x.ref, [...(gained.get(owner.x.ref) ?? []), { ...l, days: owner.r }]);
     }
