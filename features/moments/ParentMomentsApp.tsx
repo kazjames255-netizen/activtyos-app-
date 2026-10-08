@@ -32,6 +32,7 @@ export function ParentMomentsApp() {
   const refresh = useCallback(() => { apiGet<Moment[]>("/api/moments").then((m) => { setMoments(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "")); }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["moments", "children"], refresh);
+  useEffect(() => { if (!lightbox) return; const k = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(null); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [lightbox]);
 
   async function reply(m: Moment) { const text = (replyVals[m.id] ?? "").trim(); if (!text) return; try { await apiPost(`/api/moments/${encodeURIComponent(m.id)}/comment`, { text }); setReplyVals((v) => ({ ...v, [m.id]: "" })); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("feed.sendFailed")); } }
 
@@ -60,11 +61,12 @@ export function ParentMomentsApp() {
                 {m.photoUrl && (
                   <button type="button" onClick={() => setLightbox(m.photoUrl!)} className="relative block aspect-square w-full bg-black">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={m.photoUrl} alt={m.caption ?? ""} className="h-full w-full object-cover" />
+                    <img src={m.photoUrl} alt={m.caption ?? ""} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                     {m.photoType === "work" && <span className="absolute bottom-2.5 start-2.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-white" style={{ background: GREEN }}>{t("feed.workBadge")}</span>}
                   </button>
                 )}
                 <div className="p-3">
+                  {(m.childNames ?? []).filter(Boolean).length > 0 && <div className="mb-0.5 text-[12px] font-extrabold" style={{ color: BLUE }}>{(m.childNames ?? []).filter(Boolean).join(", ")}</div>}
                   {m.caption && <div className="text-[13px] leading-[1.5]">{m.caption}</div>}
                   <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{m.postedByName} · {when(m.createdAt, dateLoc)}</div>
                   {(m.comments?.length ?? 0) > 0 && (
@@ -75,7 +77,7 @@ export function ParentMomentsApp() {
                     </div>
                   )}
                   <div className="mt-2 flex gap-1.5">
-                    <input value={replyVals[m.id] ?? ""} onChange={(e) => setReplyVals((v) => ({ ...v, [m.id]: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") reply(m); }} placeholder={t("feed.replyPh")} className="flex-1 rounded-md border border-[var(--line)] px-2 py-1 text-[11.5px] outline-none focus:border-[#1d3a8f]" />
+                    <input value={replyVals[m.id] ?? ""} onChange={(e) => setReplyVals((v) => ({ ...v, [m.id]: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") reply(m); }} placeholder={t("feed.replyPh")} className="flex-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
                     <button type="button" onClick={() => reply(m)} className="rounded-md px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: BLUE }}>{t("feed.send")}</button>
                   </div>
                 </div>
@@ -88,6 +90,7 @@ export function ParentMomentsApp() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6" onClick={() => setLightbox(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={lightbox} alt="" className="max-h-[90vh] max-w-[92vw] rounded-xl object-contain" />
+          <button type="button" aria-label={t("feed.close")} onClick={() => setLightbox(null)} className="absolute end-4 top-4 rounded-full bg-white/15 px-3 py-1.5 text-[16px] font-extrabold text-white">✕</button>
         </div>
       )}
     </div>

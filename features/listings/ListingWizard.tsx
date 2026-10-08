@@ -236,7 +236,7 @@ function slotsOf(lines: { pass: string; dates: string[]; timing?: string }[]): {
 }
 
 export { isOnlineVenue } from "./wizardRules";
-import { isOnlineVenue, fixYear, runLooksWrong, saveStatusFor, onlineVenueChoice, deliveryPatch, dateProblem, todayIso, maxRunIso, periodDates, periodSpan, periodsProblem, setWeekOff } from "./wizardRules";
+import { isOnlineVenue, fixYear, runLooksWrong, saveStatusFor, onlineVenueChoice, deliveryPatch, dateProblem, todayIso, maxRunIso, periodDates, periodSpan, periodsProblem, setWeekOff, mergeSaved } from "./wizardRules";
 
 /** The dated run covering a date, when the server has told us about them. */
 
@@ -627,7 +627,7 @@ export function listingRowInfo(draft: WizardDraft): { cover: ListingImage | null
   const yearOf = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCFullYear();
   const showYear = !!draft.runFrom && !!draft.runTo && (yearOf(draft.runFrom) !== thisYear || yearOf(draft.runTo) !== thisYear || yearOf(draft.runFrom) !== yearOf(draft.runTo));
   const withYear = (iso: string) => (showYear ? `${fmtDate(iso)} ${yearOf(iso)}` : fmtDate(iso));
-  const dateLabel = draft.runFrom && draft.runTo ? `${withYear(draft.runFrom)} – ${withYear(draft.runTo)}` : null;
+  const dateLabel = draft.runFrom && draft.runTo ? (draft.runFrom === draft.runTo ? withYear(draft.runFrom) : `${withYear(draft.runFrom)} – ${withYear(draft.runTo)}`) : null;
   const capacity = parseInt(draft.maxAttendees, 10) || null;
   return { cover: imgs[0] || null, dateLabel, from: draft.runFrom, to: draft.runTo, totalDays: dates.length, capacity, capacityScope: draft.capacityScope, showSpaces: draft.showSpaces, live: listingIsLive(draft), opensAt: draft.opensAt ?? "" };
 }
@@ -1318,6 +1318,8 @@ export function ListingWizard({
   const [saveState, setSaveState] = useState<"idle" | "dirty" | "saving" | "saved" | "error">("idle");
   const blocks = useBlocks();
   const upd = (patch: Partial<WizardDraft>) => setD((p) => ({ ...p, ...patch }));
+  const latestD = useRef(d); // the newest draft, for async saves to merge into
+  latestD.current = d;
   // Brand colours (Setup → Branding / first-run) drive the "Matched to your brand" themes on the Preview step; the theme the
   // provider approves is also saved as their default (settings.defaultListingTheme) so every NEW listing starts on it.
   const { settings: brandSettings, loading: brandLoading, save: saveBrandSettings } = useSettings();
@@ -1397,9 +1399,13 @@ export function ListingWizard({
       else { const created = await apiPost<{ id: string; updatedAt?: number }>("/api/listings", body); id = created.id; saved = created; }
       if (typeof saved.updatedAt === "number") updatedAtRef.current = saved.updatedAt;
       savedIdRef.current = id ?? null;
-      const next = { ...d, images, gallery, id, status };
-      selfUpdate.current = true; // this setD is our own save result — don't let it re-trigger autosave
-      setD(next);
+      // Merge into the CURRENT draft (not the snapshot this save started from) so keystrokes typed during the request survive.
+      const sentDraft = d;
+      const edited = latestD.current !== sentDraft; // typed while saving: let the next autosave pick it up
+      if (!edited) selfUpdate.current = true; // this setD is our own save result — don't let it re-trigger autosave
+      const next = mergeSaved(latestD.current, sentDraft, { id, status, images, gallery });
+      latestD.current = next;
+      setD((p) => mergeSaved(p, sentDraft, { id, status, images, gallery }));
       saveDraft(id!, next);
       if (!quiet) setBusy(false);
       return true;
@@ -1524,7 +1530,7 @@ export function ListingWizard({
     <div className="fixed inset-0 z-[9999] flex flex-col bg-[#eef2f9] text-[var(--ink)]"
       style={{ ["--bg" as string]: "#f5f8fd", ["--surface" as string]: "#fff", ["--panel" as string]: "#fbf8fc", ["--ink" as string]: "#171534", ["--ink-2" as string]: "#4a4763", ["--ink-3" as string]: "#8a86a3", ["--line" as string]: "#ece6f1" } as React.CSSProperties}>
 
-      {goLiveOpen && <GoLiveModal onClose={() => setGoLiveOpen(false)} onGoLive={() => void publishAction()} busy={busy} />}
+      {goLiveOpen && <GoLiveModal onClose={() => { setGoLiveOpen(false); void syncApi(saveStatusFor(d.status), true); setMsg(tr("p8lst.wbNotLiveYet")); }} onGoLive={() => void publishAction()} busy={busy} />}
       {/* Fancy blue header + segmented progress — the campaign-wizard slideshow look. */}
       <div className="flex-none px-5 py-4 text-white sm:px-6" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
         <div className="mx-auto flex max-w-[1160px] flex-wrap items-center justify-between gap-2">
@@ -2767,7 +2773,7 @@ function TicketsStep({ d, upd, blocks, tickets, onCreateBlock }: { d: WizardDraf
           <p className="mb-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
             <Rich text={tr("p8lst.wbCapPerDay")} />
           </p>
-          {tickets.some((x) => x.days > 1) && (
+          {tickets.some((x) => x.days > 1 && x.days <= totalRun) && (
             <div className="aos-rule-flash mb-3 flex items-start gap-3 rounded-2xl border-2 border-[#e9a915] px-4 py-3 text-[#5a3500]" style={{ background: "linear-gradient(120deg,#fff3cf,#ffe3a3)" }} role="note">
               <span className="text-[26px] leading-none" aria-hidden>👇</span>
               <div>
@@ -3520,7 +3526,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
         ))}
       </Select>
       <div className="mt-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
-        {d.cancellation || tr("p8lst.wbPickPolicy")}
+        {d.cancellation ? d.cancellation.charAt(0).toLocaleUpperCase() + d.cancellation.slice(1) : tr("p8lst.wbPickPolicy")}
       </div>
       <div className="mt-1 text-[11px] text-[var(--ink-3)]">
         <Rich text={tr("p8lst.wbPolicyFrom")} />
@@ -4181,7 +4187,7 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   const cats = local.categories.filter((c) => d.categoryIds.includes(c.id));
   const imgs = d.images;
   const town = venue?.address?.split(",").slice(-1)[0]?.trim() || venue?.address || "";
-  const runLabel = d.runFrom && d.runTo ? `${fmtDate(d.runFrom)} – ${fmtDate(d.runTo)}` : tr("p7pg.datesTbc");
+  const runLabel = d.runFrom && d.runTo ? (d.runFrom === d.runTo ? fmtDate(d.runFrom) : `${fmtDate(d.runFrom)} – ${fmtDate(d.runTo)}`) : tr("p7pg.datesTbc");
   const dates = periodDates(d, genDates);
   const weeks = groupWeeks(dates);
   // Blank capacity means "not set", not zero — `|| 0` was showing "Sold out"

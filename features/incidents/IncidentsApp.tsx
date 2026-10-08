@@ -48,7 +48,7 @@ interface Log {
   location?: string; description: string; injury?: string; treatment?: string; firstAider?: string;
   incidentType?: string; actionTaken?: string; witnesses?: string; severity: "minor" | "moderate" | "serious";
   parentNotified: boolean; parentNotifiedAt?: string; parentNotifiedHow?: string; followUp?: string; shareWithParent?: boolean;
-  recordedByName?: string; createdAt?: string; updatedAt?: string; acknowledgedAt?: string; acknowledgedBy?: string;
+  recordedBy?: string; recordedByName?: string; createdAt?: string; updatedAt?: string; acknowledgedAt?: string; acknowledgedBy?: string;
   notes?: Note[]; notifyParentOfEdit?: boolean; attachments?: string[];
   /** Staff's own report about a colleague: the server sends its status only. */
   restricted?: boolean; statusLabel?: string;
@@ -107,6 +107,7 @@ function LogForm({ kind, notifies, existing, initialChild, onSaved, onCancel }: 
 
   async function save() {
     if (!d.childName.trim() || !d.description.trim()) { setError(t("p7inc.errAddChild")); return; }
+    if (d.date > todayIso()) { setError(t("p7inc.errFuture")); return; }
     setBusy(true); setError(null);
     const treatment = kind === "accident" ? ([...treatSel, treatOther.trim()].filter(Boolean).join("; ") || undefined) : d.treatment;
     const actionTaken = kind === "incident" ? ([...actSel, actOther.trim()].filter(Boolean).join("; ") || undefined) : d.actionTaken;
@@ -279,7 +280,7 @@ function LogForm({ kind, notifies, existing, initialChild, onSaved, onCancel }: 
           <div className="mt-1 flex flex-wrap gap-1.5">
             {(["minor", "moderate", "serious"] as const).map((s) => (
               <button key={s} type="button" onClick={() => set({ severity: s })} className="rounded-xl border-2 px-4 py-2.5 text-[13px] font-extrabold transition-colors"
-                style={d.severity === s ? { borderColor: SEV[s].fg, background: SEV[s].fg, color: "#fff" } : { borderColor: SEV[s].bg, background: SEV[s].bg, color: SEV[s].fg }}>{SEV[s].label}</button>
+                style={d.severity === s ? { borderColor: SEV[s].fg, background: SEV[s].fg, color: "#fff" } : { borderColor: SEV[s].bg, background: SEV[s].bg, color: SEV[s].fg }}>{t(SEV[s].label)}</button>
             ))}
           </div>
           <label className="mt-3 flex items-center gap-2 text-[12.5px] font-bold"><input type="checkbox" checked={!!d.parentNotified} onChange={(e) => set({ parentNotified: e.target.checked })} />{t("p7inc.toldParent")}</label>
@@ -359,6 +360,8 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
   const [editing, setEditing] = useState<Log | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
+  const [myEmail, setMyEmail] = useState<string | null>(null);
+  const [isLead, setIsLead] = useState(false);
   const [q, setQ] = useState("");
   const [sevFilter, setSevFilter] = useState("");
   const [injuryFilter, setInjuryFilter] = useState("");
@@ -374,7 +377,7 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
     });
   }, [kind]);
   useEffect(() => { refresh(); }, [refresh]);
-  useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ role: string; email?: string | null; lead?: boolean }>("/api/me").then((me) => { setCanManage(["company", "freelancer", "franchise"].includes(me.role)); setMyEmail(me.email ?? null); setIsLead(me.lead === true); }).catch(() => {}); }, []);
   useRealtime(["incidents"], refresh);
 
   async function remove(l: Log) {
@@ -532,7 +535,8 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
                   ) : (<>
                   <div className="mt-2 flex flex-wrap gap-2 border-t border-[var(--line)] pt-2">
                     {(() => { const pr = (l.notes ?? []).filter((n) => n.role === "parent").length; return <Button sm variant={pr > 0 && openId !== l.id ? "solid" : undefined} onClick={() => setOpenId(openId === l.id ? null : l.id)}>{openId === l.id ? t("p7inc.hideWord") : ((l.notes?.length ?? 0) ? t("p7inc.detailsMsgs", { n: l.notes!.length }) : t("p7inc.detailsOnly"))}</Button>; })()}
-                    <Button sm variant="solid" onClick={() => { setEditing(l); setAdding(false); setOpenId(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>{t("p7inc.editWord")}</Button>
+                    {/* The server lets only the provider (or whoever logged the record, or the safeguarding lead) edit — hide the button for everyone else instead of letting them fill the form in and be refused at the end. */}
+                    {(canManage || isLead || !myEmail || l.recordedBy === myEmail) && <Button sm variant="solid" onClick={() => { setEditing(l); setAdding(false); setOpenId(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>{t("p7inc.editWord")}</Button>}
                     {canManage && <Button sm variant="danger" onClick={() => remove(l)}>{t("p7inc.deleteWord")}</Button>}
                   </div>
                   {openId === l.id && (

@@ -11,6 +11,7 @@ import { childVisibleTo } from "../lib/childAccess";
 import { siteRecordFilter } from "../lib/siteScope";
 import { isPlainStaff, type Role } from "../middleware/role";
 import { whereInChunks } from "../lib/firestoreIn";
+import { actorName } from "../lib/actorName";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Medication (Pupils) — two records, because real practice is two things:
@@ -188,7 +189,7 @@ medications.post("/", async (req, res) => {
     tenantId: auth.tenantId,
     franchiseId: auth.franchiseId ?? null,
     recordedBy: req.user?.email ?? req.user?.uid ?? "unknown",
-    recordedByName: req.user?.name ?? req.user?.email ?? "Staff",
+    recordedByName: await actorName(req),
     createdAt: new Date().toISOString(),
     // A consent entered by the provider (a paper form, a phone call) is legit,
     // but the record has to say WHO on the team entered it — `consentBy` is
@@ -417,7 +418,7 @@ medications.post("/:id/administer", async (req, res) => {
     childId: childId ?? null,
     childName: med.childName,
     administeredBy: req.user?.email ?? req.user?.uid ?? "unknown",
-    administeredByName: req.user?.name ?? req.user?.email ?? "Staff",
+    administeredByName: await actorName(req),
     createdAt: new Date().toISOString(),
   };
   const ref = await adminCol.add(doc);

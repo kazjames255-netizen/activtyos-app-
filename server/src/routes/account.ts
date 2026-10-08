@@ -6,6 +6,7 @@ import { auth as authAdmin, db } from "../firebase";
 import { forgetRevocation } from "../middleware/auth";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { syncAccountEmail } from "../lib/emailSync";
+import { forgetActorName } from "../lib/actorName";
 
 // Account (shared, every portal) — the signed-in user's own profile. Email and
 // the base identity come from the verified Firebase token; the editable extras
@@ -160,6 +161,7 @@ account.put("/", async (req, res) => {
     }
   }
   await db.collection("users").doc(uid).set({ ...data, profileUpdatedAt: new Date().toISOString() }, { merge: true });
+  forgetActorName(uid, auth.tenantId); // the register / incident stamp picks the new name up at once
   const doc = await db.collection("users").doc(uid).get();
   const u = doc.data()! as UserProfile;
   res.json({ name: u.name ?? "", phone: u.phone ?? "", address: u.address ?? "", postcode: u.postcode ?? "", marketingConsent: u.marketingConsent ?? false, ...(nameLocked ? { nameLocked: true } : {}) });

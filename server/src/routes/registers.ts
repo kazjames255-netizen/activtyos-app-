@@ -7,6 +7,7 @@ import type { BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { franchiseListingIds } from "../lib/franchiseScope";
 import { staffSiteScope } from "../lib/siteScope";
+import { actorName, canTakeRegister } from "../lib/actorName";
 import { bookingExpectedOn, bookingRefOfKey, entryFor, registerRows } from "../lib/registerRows";
 import { ukToday, ukTodayPlus } from "../lib/ukDate";
 import { realPhone, visitAddressLabel } from "../../../features/bookings/helpers";
@@ -31,8 +32,8 @@ export const registers = Router();
 
 const regsCol = db.collection("registers");
 
-const canMark = (role: Role) =>
-  role === "staff" || role === "company" || role === "freelancer" || role === "franchise";
+// Owners (freelancer / company) take registers with no staff record, assignment or rota entry: see lib/actorName.ts canTakeRegister.
+const canMark = (role: Role) => canTakeRegister(role, true);
 
 const regId = (blockId: string, date: string) => `${blockId}_${date}`;
 
@@ -402,7 +403,7 @@ registers.post("/:blockId/:date/mark", async (req, res) => {
   }
 
   const by = req.user?.email ?? req.user?.uid ?? "unknown";
-  const takenByName = req.user?.name ?? req.user?.email ?? "Staff";
+  const takenByName = await actorName(req);
   const now = new Date().toISOString();
   const { action, collectedBy, reason, ref: bref, from } = parsed.data;
   const ref = regsCol.doc(regId(blockId, date));
@@ -531,7 +532,7 @@ registers.post("/:blockId/:date/note", async (req, res) => {
   const { blockId, date } = req.params;
   const { ref: key, op, text, shareParent } = parsed.data;
   if (op === "delete" && auth.role === "staff") { res.status(403).json({ error: "Staff can archive a note; deleting it for good is for a manager" }); return; }
-  const by = req.user?.name ?? req.user?.email ?? "Staff";
+  const by = await actorName(req);
   const now = new Date().toISOString();
   const ref = regsCol.doc(regId(blockId, date));
   const note = await db.runTransaction(async (tx) => {
@@ -561,7 +562,7 @@ registers.post("/:blockId/:date/nappy", async (req, res) => {
   if (!block) return;
   const auth = req.auth!;
   const { blockId, date } = req.params;
-  const entry: NappyChange = { at: parsed.data.at ?? new Date().toISOString(), by: req.user?.name ?? req.user?.email ?? "Staff" };
+  const entry: NappyChange = { at: parsed.data.at ?? new Date().toISOString(), by: await actorName(req) };
   const ref = regsCol.doc(regId(blockId, date));
   const log = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
@@ -616,7 +617,7 @@ registers.post("/:blockId/:date/headcount", async (req, res) => {
     .reduce((n, d) => n + registerRows(fromDoc(d.data() as BookingDoc), date).length, 0);
   if (parsed.data.n > roster + 10) { res.status(400).json({ error: `That's more children than are on this register (${roster}). Check the count and try again.`, code: "headcount_too_high" }); return; }
   const ref = regsCol.doc(regId(blockId, date));
-  const by = req.user?.name ?? req.user?.email ?? "Staff";
+  const by = await actorName(req);
   const now = new Date().toISOString();
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);

@@ -7,6 +7,7 @@ import { getPlans, limitsFor } from "./subscription";
 import { churnByMonth } from "../lib/subscriptionEvents";
 import { cachedCollection, invalidateCollection } from "../lib/platformReads";
 import { ttlCache } from "../lib/ttlCache";
+import { classifyRisk, stateReason, isWatchedStatus, mapLimit, type RiskInput } from "../lib/atRisk";
 
 export const platform = Router();
 
@@ -299,44 +300,70 @@ platform.get("/page-engagement", async (req, res) => {
 
 // Churn-risk model shared by the dedicated At-risk page.
 const RISK_RANK: Record<string, number> = { payment_failed: 0, cancelling: 1, trial_ending: 2, never_launched: 3, quiet: 4 };
-const atRiskCache = ttlCache<Awaited<ReturnType<typeof computeAtRisk>>>(30_000);
+const atRiskCache = ttlCache<Awaited<ReturnType<typeof computeAtRisk>>>(120_000);
+// Newest booking time per tenant id (undefined = never booked). Preferred path: ONE query per tenant on the
+// (tenantId, createdAt) composite index = 1 read each. If that index isn't deployed yet (FAILED_PRECONDITION) fall back,
+// index-free, to: bookings from the last 46 days (46d > the 45d "quiet" line + rounding, so none is misjudged) plus a
+// per-tenant history read only for tenants with nothing in that window. Both give exactly the same answer.
+let newestIndexMissing = false;
+async function newestBookingByTenant(ids: string[], now: number): Promise<Record<string, number | undefined>> {
+  const out: Record<string, number | undefined> = {};
+  if (!newestIndexMissing) {
+    try {
+      const got = await mapLimit(ids, 10, async (id) => {
+        const q = await db.collection("bookings").where("tenantId", "==", id).orderBy("createdAt").limitToLast(1).get();
+        const c = q.docs[0]?.data()?.createdAt;
+        return c ? Date.parse(c as string) : undefined;
+      });
+      ids.forEach((id, i) => { out[id] = got[i]; });
+      return out;
+    } catch (e) {
+      if ((e as { code?: number }).code !== 9) throw e;
+      newestIndexMissing = true;
+      console.warn("[at-risk] bookings (tenantId, createdAt) index missing; using the slower index-free path. Deploy firestore.indexes.json.");
+    }
+  }
+  const recent = await db.collection("bookings").where("createdAt", ">=", new Date(now - 46 * 86_400_000).toISOString()).get();
+  const seen: Record<string, number> = {};
+  for (const dd of recent.docs) { const b = dd.data() as { tenantId?: string; createdAt?: string }; if (b.tenantId && b.createdAt) { const t = Date.parse(b.createdAt); if (!seen[b.tenantId] || t > seen[b.tenantId]) seen[b.tenantId] = t; } }
+  const older = ids.filter((id) => seen[id] === undefined);
+  const olderNewest = await mapLimit(older, 10, async (id) => {
+    const q = await db.collection("bookings").where("tenantId", "==", id).select("createdAt").get();
+    let m: number | undefined;
+    for (const dd of q.docs) { const c = dd.data().createdAt; if (c) { const t = Date.parse(c as string); if (m === undefined || t > m) m = t; } }
+    return m;
+  });
+  for (const id of ids) out[id] = seen[id];
+  older.forEach((id, i) => { out[id] = olderNewest[i]; });
+  return out;
+}
 async function computeAtRisk() {
-  const now = Date.now(), DAY = 86_400_000;
-  const [tenantsSnap, bookingsSnap, libsSnap] = await Promise.all([
-    cachedCollection("tenants"),
-    cachedCollection("bookings"),
-    cachedCollection("libraries"),
-  ]);
-  const settingsById: Record<string, Record<string, unknown>> = {};
-  for (const ld of libsSnap.docs) settingsById[ld.id] = (ld.data()?.settings as Record<string, unknown>) ?? {};
-  const lastBooking: Record<string, number> = {};
-  for (const dd of bookingsSnap.docs) { const b = dd.data() as { tenantId?: string; createdAt?: string }; if (b.tenantId && b.createdAt) { const t = Date.parse(b.createdAt); if (!lastBooking[b.tenantId] || t > lastBooking[b.tenantId]) lastBooking[b.tenantId] = t; } }
-  const QUIET_DAYS = 45, LAUNCH_GRACE = 14, TRIAL_SOON = 3;
+  const now = Date.now();
+  // Reads: tenants (shared 45s copy), then ONE newest-booking query per tenant that needs it (was: every booking
+  // and every library doc in the database), then library docs only for the flagged rows. Same numbers as before.
+  const tenantsSnap = await cachedCollection("tenants");
   type RiskRow = { id: string; name: string; type: string; fee: number; contactEmail: string | null; phone: string | null; reason: string; detail: string; contactedAt: string | null };
+  type T = Record<string, unknown> & { name?: string; type?: string; createdAt?: string; ownerUid?: string; subscription?: Record<string, unknown>; retentionContactedAt?: string };
+  const watched = tenantsSnap.docs.map((d) => {
+    const t = d.data() as T;
+    const sub = t.subscription ?? {};
+    return { id: d.id, t, sub, input: { status: (sub.status as string) ?? "active", createdAt: t.createdAt, trialEndsAt: sub.trialEndsAt as string | undefined, cancelAt: sub.cancelAt as string | undefined } as RiskInput };
+  }).filter((x) => isWatchedStatus(x.input.status));
+  const needBookings = watched.filter((x) => !stateReason(x.input, now));
+  const newest = await newestBookingByTenant(needBookings.map((x) => x.id), now);
+  needBookings.forEach((x) => { x.input.lastBooking = newest[x.id]; });
+  const flagged = watched.map((x) => ({ x, r: classifyRisk(x.input, now) })).filter((y) => y.r);
+  const libs = flagged.length ? await db.getAll(...flagged.map((y) => db.collection("libraries").doc(y.x.id))) : [];
+  const settingsById: Record<string, Record<string, unknown>> = {};
+  for (const ld of libs) settingsById[ld.id] = (ld.data()?.settings as Record<string, unknown>) ?? {};
   const rows: RiskRow[] = [];
   const needOwner: { row: RiskRow; uid: string }[] = [];
-  for (const d of tenantsSnap.docs) {
-    const t = d.data() as Record<string, unknown> & { name?: string; type?: string; createdAt?: string; ownerUid?: string; subscription?: Record<string, unknown>; retentionContactedAt?: string };
-    const sub = t.subscription ?? {};
-    const status = (sub.status as string) ?? "active";
-    if (!["active", "trialing", "canceling", "past_due"].includes(status)) continue;
-    const price = Number(sub.price) || 0;
-    const lb = lastBooking[d.id];
-    const daysSince = lb ? Math.round((now - lb) / DAY) : null;
-    const ageDays = t.createdAt ? (now - Date.parse(t.createdAt)) / DAY : 0;
-    const trialLeft = sub.trialEndsAt ? (Date.parse(sub.trialEndsAt as string) - now) / DAY : Infinity;
-    let reason: string | null = null, detail = "";
-    if (status === "past_due") { reason = "payment_failed"; detail = "Card payment failed"; }
-    else if (status === "canceling") { reason = "cancelling"; detail = `Cancels ${sub.cancelAt ? new Date(sub.cancelAt as string).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "soon"}`; }
-    else if (status === "trialing" && trialLeft <= TRIAL_SOON) { reason = "trial_ending"; detail = `Trial ends in ${Math.max(0, Math.round(trialLeft))}d`; }
-    else if (lb === undefined && ageDays > LAUNCH_GRACE) { reason = "never_launched"; detail = "No bookings taken yet"; }
-    else if (daysSince != null && daysSince > QUIET_DAYS) { reason = "quiet"; detail = `No bookings in ${daysSince}d`; }
-    if (!reason) continue;
-    const billing = (settingsById[d.id]?.billing as Record<string, unknown> | undefined) ?? {};
+  for (const { x, r } of flagged) {
+    const billing = (settingsById[x.id]?.billing as Record<string, unknown> | undefined) ?? {};
     const contactEmail: string | null = (billing.email as string) || null;
-    const row: RiskRow = { id: d.id, name: t.name ?? d.id, type: t.type ?? "freelancer", fee: price, contactEmail, phone: (billing.phone as string) ?? null, reason, detail, contactedAt: t.retentionContactedAt ?? null };
+    const row: RiskRow = { id: x.id, name: x.t.name ?? x.id, type: x.t.type ?? "freelancer", fee: Number(x.sub.price) || 0, contactEmail, phone: (billing.phone as string) ?? null, reason: r!.reason, detail: r!.detail, contactedAt: x.t.retentionContactedAt ?? null };
     rows.push(row);
-    if (!contactEmail && t.ownerUid) needOwner.push({ row, uid: t.ownerUid });
+    if (!contactEmail && x.t.ownerUid) needOwner.push({ row, uid: x.t.ownerUid });
   }
   // Owner-email fallbacks were one awaited Auth call per row, in series; run them together.
   await Promise.all(needOwner.map(async ({ row, uid }) => { try { row.contactEmail = (await auth.getUser(uid)).email ?? null; } catch { /* owner gone */ } }));
@@ -347,7 +374,7 @@ async function computeAtRisk() {
 // GET /api/platform/at-risk — full churn-risk list (with contacted state).
 platform.get("/at-risk", async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
-  res.json({ rows: await atRiskCache.wrap("all", computeAtRisk) }); // same list for every platform admin: share for 30s
+  res.json({ rows: await atRiskCache.wrap("all", computeAtRisk) }); // same list for every platform admin: share for 2 min
 });
 
 // POST /api/platform/at-risk/:id/contacted — mark (or un-mark) as contacted.
@@ -389,7 +416,7 @@ platform.get("/analytics", async (req, res) => {
     res.status(403).json({ error: "Requires the platform role" });
     return;
   }
-  res.json(await analyticsCache.wrap("all", computeAnalytics)); // identical for every platform admin: share for 30s
+  res.json(await analyticsCache.wrap("all", computeAnalytics)); // identical for every platform admin: share for 2 min
 });
 async function computeAnalytics() {
   const [tenantsSnap, bookingsSnap, libsSnap] = await Promise.all([

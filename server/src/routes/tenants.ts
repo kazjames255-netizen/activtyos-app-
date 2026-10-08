@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../firebase";
 import { syncAccountEmail } from "../lib/emailSync";
 import { capsFor } from "../middleware/access";
+import { ownerNeedsRealName } from "../lib/actorName";
 
 export const tenants = Router();
 
@@ -81,6 +82,10 @@ me.get("/", async (req, res) => {
   res.json({
     email: req.user!.email ?? null,
     name,
+    // A provider working alone (freelancer / company owner) with no real personal name on the account: the registers, incident and medicine
+    // records would otherwise be stamped with a mailbox word. The register screen asks them once for a real name (see lib/actorName.ts).
+    nameIsPlaceholder: ownerNeedsRealName({ role: auth.role, tokenName: req.user!.name, userDocName: (userSnap.data()?.name as string | undefined) ?? null, email: req.user!.email ?? null }),
+    emailLocal: (req.user!.email ?? "").split("@")[0] ?? "",
     role: auth.role,
     tenantId: auth.tenantId,
     tenantName,
