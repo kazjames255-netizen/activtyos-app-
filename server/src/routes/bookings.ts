@@ -8,7 +8,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { mergeBookings } from "../lib/mergeBookings";
 import { db } from "../firebase";
 import { ukToday } from "../lib/ukDate";
-import { stripAddonMoney, withoutMoneyKeys } from "../lib/rosterRules";
+import { staffSafeNote, stripAddonMoney, withoutMoneyKeys } from "../lib/rosterRules";
 import { canWrite, operatorScope, managerScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
@@ -26,7 +26,7 @@ import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
 import { registerRows } from "../lib/registerRows";
-import { money, realPhone, refundableSoFar, receivedOf, cashReceivedOf, refundTransferAmount, refundAwaitingTransfer } from "../../../features/bookings/helpers";
+import { bookingKids, kidActiveDays, money, realPhone, refundableSoFar, receivedOf, cashReceivedOf, refundTransferAmount, refundAwaitingTransfer } from "../../../features/bookings/helpers";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
 import { approveBlockedMessage, declineBlockedMessage, nudgeBlockedMessage, canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval, shouldReleaseDiscountCodes } from "../lib/bookingGuards";
@@ -61,7 +61,7 @@ import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Booking } from "../../../features/bookings/types";
 import { applyMoveApprove } from "../lib/dateChange";
 import { moveAddonDays } from "../../../features/bookings/addons";
-import { stampAddonRefund } from "../../../features/bookings/addonRefund";
+import { addonsGoBack, stampAddonRefund } from "../../../features/bookings/addonRefund";
 import {
   applyBulkAction,
   applyCancel,
@@ -349,6 +349,7 @@ const MONEY_KEYS = [
 function staffView<T extends Record<string, unknown>>(b: T): T {
   const out: Record<string, unknown> = { ...b };
   for (const k of MONEY_KEYS) delete out[k];
+  if (typeof out.note === "string") out.note = staffSafeNote(out.note); // system notes can carry an amount ("1 day released — £26.00 refund requested.")
   const noAddonMoney = stripAddonMoney(out);
   for (const k of ["addons", "addonLines", "addonRequests"]) if (k in noAddonMoney) out[k] = noAddonMoney[k];
   if (out.cancel && typeof out.cancel === "object") {
@@ -792,6 +793,8 @@ bookings.post("/:ref/actions", async (req, res) => {
       if (action.type === "paid" && !canMarkPaid(b.status))
         throw new Conflict(paidBlockedMessage(b.status));
 
+      // The booking's whole price (cash + wallet spent) before this action takes its share off: the whole-amount rule for add-on refunds compares with it.
+      const grossBefore = (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
       switch (action.type) {
         case "cancel":
           // Cancelling an already-cancelled booking used to be accepted
@@ -867,10 +870,12 @@ bookings.post("/:ref/actions", async (req, res) => {
       if (action.type === "cancel" || action.type === "cancel-child" || action.type === "cancel-day") {
         if (action.refundsAddons !== undefined && b.cancel) b.cancel.refundsAddons = action.refundsAddons;
         const moved = action.type === "cancel" ? action.refund !== "none" : !!release && release.resolution !== "none" && release.amount > 0;
-        // A "partial" refund as big as the WHOLE booking (its cash price plus the wallet credit spent on it) is a full refund in all but name.
-        const wholeBooking = action.type === "cancel" && action.refund === "partial" && (b.cancel?.amount ?? 0) > 0.004
-          && (b.cancel?.amount ?? 0) >= (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0)) - 0.004;
-        const refunded = moved && (action.refundsAddons ?? (action.type === "cancel" ? action.refund === "full" || wholeBooking : action.type === "cancel-child" && action.amount === undefined));
+        // ONE rule (addonRefund.ts addonsGoBack): the provider's YES/NO, else a full refund, or any refund as big as the WHOLE booking (a "partial" of that size,
+        // a cancel-child with an explicit amount that covers the whole booking, a cancel-day that removes the last remaining day).
+        const refundedAmount = action.type === "cancel" ? (b.cancel?.amount ?? 0) : release?.amount ?? 0;
+        const lastDay = bookingKids(b).every((k) => k.cancelled || kidActiveDays(k).length === 0);
+        const refunded = addonsGoBack({ kind: action.type, moved, grossBefore, refundedAmount, refund: action.type === "cancel" ? action.refund : undefined,
+          explicitAmount: action.type === "cancel-child" ? action.amount : undefined, refundsAddons: action.refundsAddons, lastDay });
         const kidName = action.type === "cancel" ? "" : (b.kids?.[action.ki]?.name ?? b.child ?? "");
         // The refund this mark belongs to is still waiting for the provider (a wallet credit is final): declining it takes the mark back.
         const waiting = refunded && b.cancel && b.cancel.refund !== "none" && b.cancel.refund !== "declined" && (action.type === "cancel" || release?.resolution === "refund") ? b.cancel : null;

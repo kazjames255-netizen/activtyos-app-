@@ -40,6 +40,9 @@ export interface Kid {
    *  days. Kept in sync with `dates` wherever both are written. */
   days?: string[];
   cancelledDays?: string[];
+  /** Days (ISO) whose price a provider cancel-day already took OFF `amount`. A day released by the family leaves `amount` alone, so only these
+   *  days stop counting in the price of each standing day (releaseCap). */
+  amountDaysRemoved?: string[];
   cancelled?: boolean;
 }
 

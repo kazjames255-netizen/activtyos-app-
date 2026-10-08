@@ -720,7 +720,11 @@ export function releaseCap(b: Booking, releases: { kid: Kid; days: string[] }[])
   const booked = kids.reduce((n, x) => n + Math.max(1, (x.dates || []).length), 0) || 1;
   if (standingBefore <= 0) return held;
   const gross = (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
-  const passPerDay = Math.min(Math.max(0, held - extrasHeld) / standingBefore, Math.max(0, gross - extrasHeld) / booked);
+  // Days a provider cancel-day already took off the amount no longer count in what each standing day costs (the amount dropped by their price);
+  // days the family released or a policy kept the money for did not lower it, so they still do.
+  const removedFromAmount = kids.reduce((t, k) => t + (k.amountDaysRemoved ?? []).filter((d) => (k.cancelledDays ?? []).some((c) => (dayIso(c) ?? c) === d)).length, 0);
+  const amountDays = Math.max(standingBefore, booked - removedFromAmount);
+  const passPerDay = Math.min(Math.max(0, held - extrasHeld) / standingBefore, Math.max(0, gross - extrasHeld) / amountDays);
 
   const gone = new Map<Kid, Set<string>>();
   for (const r of releases) {

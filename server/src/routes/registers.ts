@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { childExtrasForDay } from "../lib/rosterRules";
+import { childExtrasForDay, staffSafeNote } from "../lib/rosterRules";
 import { splitOneOffLines } from "../lib/splitSiblings";
 import { addonFlag, kidOf, type SplitBooking } from "../../../features/bookings/addons";
 import { z } from "zod";
@@ -245,7 +245,7 @@ registers.get("/", async (req, res) => {
         phone: realPhone(b.phone) || phoneByEmail.get(b.email ?? "") || "",
         // A home-visit booking: where the staff member has to go (the family's own address for that session).
         ...(b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) ? { serviceAddress: visitAddressLabel(b.serviceAddress) + (b.serviceAddress.notes ? ` — Access: ${b.serviceAddress.notes.replace(/\s+/g, " ")}` : "") } : {}),
-        note: b.note ?? "",
+        note: auth.role === "staff" ? staffSafeNote(b.note) : b.note ?? "",
         // This child's extras for THIS day only: a sibling's T-shirt, or a lunch bought for other days, must not show here.
         addons: childExtrasForDay(shownLines.get(b.ref) ?? b.addonLines, b.addons, r.name, date, { bookingDays: b.days, kid: kidOf(b, r.name) }, auth.role !== "staff"),
         // A booking that is not paid yet, or still waits for approval, still shows its extras: the register labels it ("Not paid yet" / "Awaiting approval").

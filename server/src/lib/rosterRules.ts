@@ -26,6 +26,20 @@ export function childExtrasForDay(lines: AddonLineLite[] | undefined, fallback: 
 /** "Water bottle × 7 (Colour: Blue) — £21.00" -> "Water bottle × 7 (Colour: Blue)". */
 export const withoutPriceText = (s: string): string => s.replace(/\s+[—-]\s+£\s?[\d.,]+\s*$/, "");
 
+/** The booking note a STAFF token receives. Notes the system writes can carry money ("1 day released — £26.00 refund requested.", "Price set by provider:
+ *  £69.00 (was £80.00)"): those are rewritten (the amount goes, the fact stays) or dropped. A note a person typed is returned untouched. */
+export function staffSafeNote(note: string | undefined | null): string {
+  if (!note) return "";
+  const kept = note.split(" · ").filter((seg) => !/^Price set by provider:/i.test(seg.trim()));
+  return kept.join(" · ").replace(/\s*[—–-]\s*£\s?[\d.,]+\s+refund requested/gi, "").trim();
+}
+
+/** Team-bell alerts a STAFF member may read: alerts aimed at them by name always show; the billing alerts (refund asked / declined / sent, expense claims,
+ *  payment received...) and anything else that quotes a pound amount are the owner's money, not theirs. */
+export function bellsForStaff<T extends { category?: string; title?: string; body?: string; toEmail?: string }>(items: T[]): T[] {
+  return items.filter((n) => n.toEmail || (n.category !== "billing" && !/£\s?\d/.test(`${n.title ?? ""} ${n.body ?? ""}`)));
+}
+
 /** The add-on catalogue as staff may read it: names, options and questions, no price anywhere inside an add-on. */
 export function stripAddonCatalogPrices<T extends { addons?: unknown }>(lib: T): T {
   const clean = (v: unknown): unknown => Array.isArray(v) ? v.map(clean)

@@ -31,7 +31,7 @@ import type { Booking, AddonRequest } from "../../../features/bookings/types";
 import { AddonRequestError, addAddonRequest, addonCutoffDays, buildAddonRequest, currentAnswers, defForLine, withdrawAddonRequest } from "../lib/addonRequests";
 import { addonLineKey, parseAddonLabel } from "../../../features/bookings/addons";
 import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, lineDayStates, pendingForLine, requestDeadline, requestKeys, requestTargets, splittableLine, lineRequestBlock } from "../../../features/bookings/addonRequests";
-import { stampAddonRefund } from "../../../features/bookings/addonRefund";
+import { stampAddonRefund, addonsGoBack, refundCoversWhole } from "../../../features/bookings/addonRefund";
 import { familyBooking } from "../lib/familyView";
 import { applyParentCancel, applyPartialCancel, archiveAwaitingRefund, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
@@ -2721,7 +2721,7 @@ async function partialCancel(
     // Add-on refund state (addonRefund.ts): a child's WHOLE place released with a full-value refund takes that child's add-ons back; day-only or partial
     // releases keep them (a released day's own per-day add-on simply drops with the day).
     {
-      const allBack = value > 0.004 && value >= round2(releasedCount * perSlotPaid) - 0.004; // (perSlotPaid is already held to the cap)
+      const allBack = value > 0.004 && (value >= round2(releasedCount * perSlotPaid) - 0.004 || refundCoversWhole(value, existing)); // (perSlotPaid is already held to the cap)
       for (const w of wanted) {
         const kid = (b.kids ?? []).find((k) => (k.childId ?? k.name) === w.childKey);
         if (!kid) continue;
@@ -2906,7 +2906,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       markRefundPending(b);
       // The add-ons go back only with a FULL refund that really moves money (policy full, or a credit note); a partial / nil refund keeps them.
       // Stored on the lines now (addonRefund.ts), sticky, so no later change of the cancel record can flip it.
-      const goesBack = b.cancel?.refund === "full" && (b.cancel.amount ?? 0) > 0.004;
+      const goesBack = addonsGoBack({ kind: "parent-cancel", moved: !!b.cancel && b.cancel.refund !== "none" && (b.cancel.amount ?? 0) > 0.004, refund: b.cancel?.refund as "full" | "partial" | "none" | undefined,
+        grossBefore: (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0)), refundedAmount: b.cancel?.amount ?? 0 });
       stampAddonRefund(b, { scope: "whole" }, goesBack, goesBack ? b.cancel : null); // declined by the provider: the mark comes off again
       // Free the block places the booking held — total AND its days
       // (all reads before writes).

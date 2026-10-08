@@ -46,3 +46,25 @@ export function undoAddonStamps(b: Pick<Booking, "addonLines" | "cancel">): void
   }
   if (b.cancel) delete b.cancel.addonUndo;
 }
+
+/** A refund as big as the WHOLE booking: its cash price plus the wallet credit spent on it (a "partial" refund of that size is a full refund in all but name). */
+export function refundCoversWhole(amount: number, b: Pick<Booking, "amount" | "walletApplied" | "walletRelieved">): boolean {
+  const gross = (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
+  return amount > 0.004 && gross > 0.004 && amount >= gross - 0.004;
+}
+
+/** THE rule for whether the add-ons go back with a cancellation refund, shared by the operator cancel / cancel-child / cancel-day and the parent routes.
+ *  `grossBefore` is the booking's cash price plus wallet spent on it BEFORE the action took its share off; `refundedAmount` the money that moves.
+ *  The provider's own YES / NO (`refundsAddons`) always wins; nothing moving means nothing goes back. */
+export function addonsGoBack(p: {
+  kind: "cancel" | "cancel-child" | "cancel-day" | "parent-cancel";
+  moved: boolean; grossBefore: number; refundedAmount: number;
+  refund?: "full" | "partial" | "none" | "pending"; explicitAmount?: number; refundsAddons?: boolean; lastDay?: boolean;
+}): boolean {
+  if (!p.moved) return false;
+  if (p.refundsAddons !== undefined) return p.refundsAddons;
+  const covers = refundCoversWhole(p.refundedAmount, { amount: p.grossBefore });
+  if (p.kind === "cancel" || p.kind === "parent-cancel") return p.refund === "full" || (p.refund === "partial" && covers);
+  if (p.kind === "cancel-child") return p.explicitAmount === undefined || covers;
+  return !!p.lastDay && covers; // cancel-day
+}

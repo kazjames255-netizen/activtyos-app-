@@ -259,6 +259,7 @@ export function applyCancelDay(b: Booking, ki: number, dt: string, opts?: Releas
   const share = removedShare(b, kids, k.name, [dt]);
   k.cancelledDays.push(dt);
   const res = settleShareRemoval(b, `${k.name || "Child"} — ${dt}`, share, opts);
+  k.amountDaysRemoved = [...(k.amountDaysRemoved ?? []), dayIso(dt) ?? dt]; // the amount no longer includes this day
   if (kidActiveDays(k).length === 0) k.cancelled = true;
   if (!b.kids) b.kids = kids;
   applyCancelState(b);
