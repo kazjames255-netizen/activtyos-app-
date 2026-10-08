@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { post as apiPost } from "@/lib/api";
+import { get as apiGet, isSessionExpired, post as apiPost } from "@/lib/api";
+import { payErrorMessage, RAW, type PayState, type StripeErrorLike } from "@/lib/payErrors";
+import { SignInAgainButton } from "@/components/auth/SessionExpiredNotice";
 import { money } from "@/features/bookings/helpers";
 import { Button } from "@/components/ui";
 import { useT, useWord, tNow, useI18n } from "@/lib/i18n/provider";
@@ -28,7 +30,9 @@ interface CheckoutInfo {
   hold?: boolean;
 }
 
-function PayForm({ info, onPaid, onHeld, onRefunded, onError }: { info: CheckoutInfo; onPaid: () => void; onHeld: () => void; onRefunded: (pending: boolean) => void; onError: (m: string) => void }) {
+interface PayFailure { text: string; /** the booking can no longer be paid: no form, no Pay button */ final: boolean; signIn?: boolean }
+
+function PayForm({ info, onPaid, onHeld, onRefunded, onError }: { info: CheckoutInfo; onPaid: () => void; onHeld: () => void; onRefunded: (pending: boolean) => void; onError: (f: PayFailure | null) => void }) {
   const t = useT();
   const w = useWord();
   const stripeJs = useStripe();
@@ -39,13 +43,23 @@ function PayForm({ info, onPaid, onHeld, onRefunded, onError }: { info: Checkout
   // same PaymentIntent twice must never happen. (The server also hands back one intent per booking, so this is belt and braces.)
   const inFlight = useRef(false);
 
+  // After ANY failure, ask the server what became of the booking (cancelled while the card form was open, already paid...) and say THAT,
+  // rather than Stripe's "A processing error occurred". Stripe's own words are kept only for card-entry mistakes and real declines.
+  async function explain(err: StripeErrorLike | null) {
+    const st = await apiGet<{ state: PayState }>(`/api/payments/checkout/${info.paymentId}/state`).then((r) => r.state, () => null);
+    const m = payErrorMessage(err, st);
+    const body = m.key === RAW ? (m.params?.text ?? "") : t(m.key, m.params);
+    onError({ text: `${body}${m.retryNote ? ` ${t("p7ck.declineRetry")}` : ""}`, final: !!m.final });
+  }
+
   async function pay() {
     if (!stripeJs || !elements || inFlight.current) return;
     inFlight.current = true;
     setBusy(true);
+    onError(null);
     const { error } = await stripeJs.confirmPayment({ elements, redirect: "if_required" });
     if (error) {
-      onError(`${error.message ?? t("p8lst.pmPayFailed")}${error.type === "card_error" ? ` ${t("p7ck.declineRetry")}` : ""}`);
+      await explain(error);
       inFlight.current = false;
       setBusy(false);
       return;
@@ -58,9 +72,11 @@ function PayForm({ info, onPaid, onHeld, onRefunded, onError }: { info: Checkout
       if (res.paid) onPaid();
       else if (res.refunded || res.refunding) onRefunded(!res.refunded); // the booking could no longer take it: say so, never "paid"
       else if (res.held) onHeld();
-      else onError(t("p8lst.pmNotCompleted", { status: res.status === "succeeded" ? t("p8lst.pmSucceeded") : res.status === "failed" ? t("p8lst.pmFailed") : w(res.status) }));
+      else if (res.status === "canceled" || res.status === "requires_payment_method") await explain(null); // the intent was cancelled under the form
+      else onError({ text: t("p8lst.pmNotCompleted", { status: res.status === "succeeded" ? t("p8lst.pmSucceeded") : res.status === "failed" ? t("p8lst.pmFailed") : w(res.status) }), final: false });
     } catch (e) {
-      onError(e instanceof Error ? e.message : t("p8lst.pmVerifyFail"));
+      if (isSessionExpired(e)) onError({ text: (e as Error).message, final: true, signIn: true });
+      else await explain(null);
     }
     inFlight.current = false;
     setBusy(false);
@@ -82,6 +98,7 @@ export function PayModal({ refs = [], tenantId, tenantName, mealOrderIds, onClos
   const [info, setInfo] = useState<CheckoutInfo | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<PayFailure | null>(null);
   const [paid, setPaid] = useState(false);
   const [held, setHeld] = useState(false);
   // The booking could not take the payment and it went (or is going) back: null = not the case, true = refund still in progress.
@@ -94,6 +111,13 @@ export function PayModal({ refs = [], tenantId, tenantName, mealOrderIds, onClos
     const id = setTimeout(() => window.location.assign("/custdash/home"), 3500);
     return () => clearTimeout(id);
   }, [paid, toHome]);
+  // This screen shows its own Sign in button when the session has expired: keep the app-wide banner from stacking on top of it.
+  const inlineSignIn = !!failure?.signIn;
+  useEffect(() => {
+    if (!inlineSignIn) return;
+    document.body.setAttribute("data-aos-inline-signin", "1");
+    return () => document.body.removeAttribute("data-aos-inline-signin");
+  }, [inlineSignIn]);
   const nCount = meals ? (mealOrderIds?.length ?? 0) : refs.length;
 
   useEffect(() => {
@@ -106,7 +130,7 @@ export function PayModal({ refs = [], tenantId, tenantName, mealOrderIds, onClos
         // connected account or the client secret won't match.
         setStripePromise(loadStripe(PK, i.stripeAccount ? { stripeAccount: i.stripeAccount } : undefined));
       })
-      .catch((e) => alive && setError(e instanceof Error ? e.message : tNow("p8lst.pmStartFail")));
+      .catch((e) => { if (!alive) return; setError(e instanceof Error ? e.message : tNow("p8lst.pmStartFail")); if (isSessionExpired(e)) setFailure({ text: "", final: true, signIn: true }); });
     return () => {
       alive = false;
     };
@@ -145,15 +169,24 @@ export function PayModal({ refs = [], tenantId, tenantName, mealOrderIds, onClos
         ) : !PK ? (
           <div className="text-[13px] text-[#e21d27]">{t("p8lst.pmNoKey")}</div>
         ) : error ? (
-          <div className="text-[13px] font-bold text-[#e21d27]">{error}</div>
+          <div>
+            <div className="text-[13px] font-bold text-[#e21d27]">{error}</div>
+            {failure?.signIn && <SignInAgainButton className="mt-3" />}
+          </div>
+        ) : failure?.final ? (
+          <div data-testid="pay-final" className="py-2 text-center">
+            <p className="text-[13.5px] font-bold text-[#e21d27]">{failure.text}</p>
+            {failure.signIn ? <SignInAgainButton className="mt-3" /> : <Button variant="primary" onClick={onClose} className="mt-3">{t("p8lst.pmDone")}</Button>}
+          </div>
         ) : !info || !stripePromise ? (
           <div className="py-6 text-center text-[13px] text-[#8a86a3]">{t("p8lst.pmPreparing")}</div>
         ) : (
           <Elements stripe={stripePromise} options={{ clientSecret: info.clientSecret }}>
             {info.hold && <p className="mb-3 rounded-lg bg-[#fff7e0] px-3 py-2 text-[12.5px] font-semibold text-[#7a4b00]">{t("p8lst.holdNote", { provider: tenantName || t("p7cl.theProvider") })}</p>}
+            {failure && !failure.final && <div role="alert" className="mb-3 text-[13px] font-bold text-[#e21d27]">{failure.text}</div>}
             <PayForm
               info={info}
-              onError={setError}
+              onError={setFailure}
               onRefunded={(pending) => setRefunded(pending)}
               onHeld={() => {
                 setHeld(true);

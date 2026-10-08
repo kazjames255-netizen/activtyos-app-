@@ -14,6 +14,7 @@ import { createOrReuseIntent } from "../lib/checkoutIntent";
 import { markHeld } from "../lib/cardHold";
 import { bookingForToken } from "../lib/bookingPayToken";
 import { payable, balanceOf } from "../lib/payGate";
+import { payStateOf } from "../lib/payState";
 import { buildPayOptions } from "../lib/publicPayOptions";
 import { BRAND } from "../lib/brand";
 
@@ -396,7 +397,9 @@ payments.post("/checkout", async (req, res) => {
       error:
         notPayable.pay === "Paid"
           ? `Booking ${notPayable.ref} is already paid`
-          : `Booking ${notPayable.ref} isn't ready to pay (${notPayable.status} / ${notPayable.pay})`,
+          : notPayable.status === "Cancelled" || notPayable.status === "Declined"
+            ? "This booking was cancelled, so it can't be paid."
+            : `Booking ${notPayable.ref} isn't ready to pay (${notPayable.status} / ${notPayable.pay})`,
     });
     return;
   }
@@ -519,6 +522,25 @@ payments.post("/checkout/:id/confirm", async (req, res) => {
   res.json({ status: "succeeded", paid: true, refs: rec.refs ?? [] });
 });
 
+// GET /api/payments/checkout/{id}/state — what the Pay screen reads after a card error, so it can say the TRUE reason (the booking was
+// cancelled, is already paid, was released/refunded) instead of Stripe's "A processing error occurred" (the cancel path cancels the open
+// PaymentIntent, so Stripe then refuses the confirm). Read-only; only the paying family can ask.
+payments.get("/checkout/:id/state", async (req, res) => {
+  const email = req.user?.email;
+  const snap = await paymentsCol.doc(req.params.id).get();
+  if (!snap.exists || !email || String(snap.data()!.email ?? "").toLowerCase() !== email.toLowerCase()) {
+    res.status(404).json({ error: "Payment not found" });
+    return;
+  }
+  const rec = snap.data() as { tenantId: string; refs?: string[]; mealOrderIds?: string[]; status?: string; excess?: { reason?: string } };
+  const refsToRead = rec.mealOrderIds?.length
+    ? rec.mealOrderIds.map((id) => db.collection("mealOrders").doc(id))
+    : (rec.refs ?? []).map((r) => db.collection("bookings").doc(bookingDocId(rec.tenantId, r)));
+  const docs = refsToRead.length ? await db.getAll(...refsToRead) : [];
+  const items = docs.filter((d) => d.exists).map((d) => d.data() as { status?: string; pay?: string });
+  res.json({ state: payStateOf(rec, items) });
+});
+
 
 // ─────────────────────────────────────────────────────────────────────────
 // PUBLIC booking pay link — no sign-in. /pay/b/{token} in the web app. The unguessable token (bookingPayTokens) IS
@@ -564,7 +586,7 @@ bookingPayPublic.post("/:token/checkout", async (req, res) => {
   if (!s) return;
   const b = await bookingByToken(req.params.token);
   if (!b) { res.status(404).json({ error: "This payment link isn’t valid." }); return; }
-  if (b.status === "Cancelled" || b.status === "Declined") { res.status(409).json({ error: "This booking was cancelled" }); return; }
+  if (b.status === "Cancelled" || b.status === "Declined") { res.status(409).json({ error: "This booking was cancelled, so it can't be paid." }); return; }
   if (b.pay === "Paid") { res.status(409).json({ error: "This booking is already paid" }); return; }
   if (!payable(b)) { res.status(409).json({ error: `This booking isn't ready to pay (${b.status} / ${b.pay})` }); return; }
   const amount = balanceOf(b);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Hanken_Grotesk, Noto_Naskh_Arabic, Noto_Nastaliq_Urdu, Noto_Sans_Bengali, Noto_Sans_Gurmukhi } from "next/font/google";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { LanguageProvider } from "@/lib/i18n/provider";
+import { SessionExpiredNotice } from "@/components/auth/SessionExpiredNotice";
 import { PublicLanguagePicker } from "@/components/i18n/PublicLanguagePicker";
 import { dirFor, requestLocale, serverT } from "@/lib/i18n/server";
 import { BRAND } from "@/lib/i18n/config";
@@ -60,7 +61,7 @@ export default async function RootLayout({
         {[...new Set(["en", locale])].map((l) => <link key={l} rel="preload" as="fetch" href={`/i18n/hub/${l}${process.env.NEXT_PUBLIC_BUILD_ID ? `?v=${process.env.NEXT_PUBLIC_BUILD_ID}` : ""}`} crossOrigin="anonymous" />)}
       </head>
       <body>
-        <AuthProvider><LanguageProvider initialLocale={locale}>{children}<PublicLanguagePicker /></LanguageProvider></AuthProvider>
+        <AuthProvider><LanguageProvider initialLocale={locale}>{children}<PublicLanguagePicker /><SessionExpiredNotice /></LanguageProvider></AuthProvider>
       </body>
     </html>
   );
