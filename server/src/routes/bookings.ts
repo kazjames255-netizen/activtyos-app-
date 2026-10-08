@@ -17,7 +17,7 @@ import { capsProblem, queuePositions, triggerWaitlist, waitingCount } from "../l
 import { positionsFrom, sortQueue } from "../lib/waitlistQueue";
 import { releaseDiscountCodes } from "../lib/discountRedemptions";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
-import { creditWallet } from "../lib/wallet";
+import { creditWallet, creditWalletOnceInTx, walletEntryRef, walletRef } from "../lib/wallet";
 import { captureHolds, releaseHolds } from "../lib/cardHold";
 import { RESEND_COOLDOWN_MS, remindersPatch, reminderDateLabel, resendWaitSeconds } from "../lib/invoiceResend";
 import { AddonRequestError, addonCutoffDays, approveAddonRequest, declineAddonRequest } from "../lib/addonRequests";
@@ -646,7 +646,10 @@ bookings.post("/:ref/actions", async (req, res) => {
     // Set by cancel-child / cancel-day: wallet credit is the one resolution that
     // moves money straight away (after the transaction commits).
     let release: ReturnType<typeof applyCancelDay> = null;
+    let creditedInTx = false;
     const updated = await db.runTransaction(async (tx) => {
+      creditedInTx = false;
+      release = null; // (a retried transaction starts clean)
       const snap = await tx.get(ref);
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
@@ -899,9 +902,16 @@ bookings.post("/:ref/actions", async (req, res) => {
         }
       }
 
+      // A cancelled child/day/extra given back as WALLET CREDIT is instant: it is credited in THIS transaction (all reads before the writes),
+      // once per (booking, action, child, day), so the booking and the money cannot disagree and a replay cannot credit twice.
+      const rel0 = release as ReturnType<typeof applyCancelDay>;
+      const creditKey = `rel_${ref.id}_prov_${action.type}_${"ki" in action ? action.ki : ""}_${"date" in action ? action.date : ""}_${"requestId" in action ? action.requestId : ""}`.replace(/\//g, "_").slice(0, 1400);
+      const credit = !!rel0 && rel0.resolution === "wallet" && rel0.amount > 0 && !!b.tenantId;
+      const [walletSnap, entrySnap] = credit ? await Promise.all([tx.get(walletRef(b.tenantId!, b.email)), tx.get(walletEntryRef(creditKey))]) : [null, null];
       tx.set(ref, toDoc(b));
       if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
       if (moveUpdate) tx.update(moveUpdate.ref, { ...moveUpdate.counts });
+      creditedInTx = credit && creditWalletOnceInTx(tx, b.tenantId!, b.email, walletSnap!.exists ? Number(walletSnap!.get("balance") ?? 0) : 0, entrySnap!.exists, creditKey, rel0!.amount, `Credit from ${b.listing}`, b.ref);
       return b;
     });
 
@@ -1018,8 +1028,7 @@ bookings.post("/:ref/actions", async (req, res) => {
     // A cancelled child/day given back as WALLET CREDIT is instant by design: credit the wallet and put it
     // on the payments ledger (like a wallet refund-approve) so reconciliation matches the booking.
     const rel = release as ReturnType<typeof applyCancelDay>; // (assigned inside the transaction callback — TS can't see that)
-    if (rel && rel.resolution === "wallet" && rel.amount > 0 && updated.tenantId) {
-      await creditWallet(updated.tenantId, updated.email, rel.amount, `Credit from ${updated.listing}`, updated.ref);
+    if (rel && rel.resolution === "wallet" && rel.amount > 0 && updated.tenantId && creditedInTx) {
       await db.collection("payments").add({
         tenantId: updated.tenantId, refs: [updated.ref], email: updated.email, type: "refund", amount: rel.amount, currency: "gbp",
         method: "wallet", via: "wallet", status: "credited", createdAt: new Date().toISOString(),
