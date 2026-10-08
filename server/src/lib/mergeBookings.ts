@@ -18,6 +18,7 @@ export function mergeBookings(all: Booking[]): { merged: Booking; refs: string[]
     ...(all.some((x) => x.listPrice != null) ? { listPrice: round2(all.reduce((s, x) => s + (x.listPrice ?? x.amount ?? 0), 0)) } : {}),
     discountOff: round2(all.reduce((s, x) => s + (x.discountOff ?? 0), 0)),
     discountNames: uniq(all.flatMap((x) => x.discountNames ?? [])),
+    ...(all.some((x) => x.walletApplied) ? { walletApplied: round2(all.reduce((s, x) => s + (x.walletApplied ?? 0), 0)) } : {}),
     addons: all.flatMap((x) => x.addons ?? []),
     addonLines: all.flatMap((x) => x.addonLines ?? []),
   };

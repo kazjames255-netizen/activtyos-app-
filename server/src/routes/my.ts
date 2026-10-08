@@ -10,7 +10,8 @@ import { redeemCodesInTx, releaseDiscountCodes, type CodeToRedeem } from "../lib
 import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../lib/wallet";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelledFor } from "../lib/familyCancelNotice";
-import { shouldNotifyCancelled } from "../lib/bookingGuards";
+import { shouldNotifyCancelled, shouldReleaseDiscountCodes, voucherEmailAnnouncesBasket } from "../lib/bookingGuards";
+import { bankTransferAsk } from "../lib/bankTransferAsk";
 import { autoEmailPrefs } from "../lib/autoEmails";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { friendPaidAmount } from "../lib/referralSpend";
@@ -2057,8 +2058,8 @@ my.post("/bookings", async (req, res) => {
       const provider = listing.tenantName ?? listing.name;
       // A voucher booking gets ONE combined email (confirmation + how to pay),
       // sent below via emailVoucherInstructions — so don't ALSO send the generic
-      // confirmed/request email, or the family gets two.
-      if (voucher) { /* handled by the voucher email below */ }
+      // confirmed/request email, or the family gets two. (Not when nothing is left awaiting the scheme - a 100% code - then there is no voucher email.)
+      if (voucherEmailAnnouncesBasket(!!voucher, bookings)) { /* handled by the voucher email below */ }
       else {
         // A checkout spanning weeks made one booking per week: ONE email describes the whole thing (total, every date,
         // every ref). That includes bank transfer: it used to keep only the FIRST week's figures, so a 6-week GBP 84 term told
@@ -2070,7 +2071,10 @@ my.post("/bookings", async (req, res) => {
         // a successful payment is the single confirmation. Cash, funded (GBP 0), bank transfer and voucher bookings confirm straight away.
         const cardIsUnpaid = cardUnpaid(input.method, merged.amount, onBehalf);
         if (b0.status === "Confirmed" && cardIsUnpaid) { /* confirmed by the payment-received email once the card succeeds */ }
-        else if (b0.status === "Confirmed") emailBookingConfirmed(merged, provider, isBankMethod(input.method) ? await bankPayDetails(listing.tenantId, refs.join(", "), merged.amount) : null, refs);
+        else if (b0.status === "Confirmed") {
+          const ask = isBankMethod(input.method) ? bankTransferAsk(bookings) : null; // null for a bank booking with nothing to pay (100% code)
+          emailBookingConfirmed(merged, provider, ask ? await bankPayDetails(listing.tenantId, ask.reference, ask.amount) : null, refs);
+        }
         // A waiting-list place is NOT "a request pending approval" - it gets its own message.
         else if (b0.status === "Waitlisted") emailWaitlistJoined(merged, provider, refs);
         // A card-HOLD request is announced (to the family and the provider) once the card is actually held - see lib/cardHold.ts.
@@ -2499,6 +2503,8 @@ my.post("/bookings/:ref/decline-offer", async (req, res) => {
     });
     // The freed place passes down the queue (auto mode).
     if (updated.blockId) void triggerWaitlist(updated.blockId);
+    // The family gave the place up: the discount code it was booked with comes back.
+    if (updated.tenantId && shouldReleaseDiscountCodes(updated)) void releaseDiscountCodes(updated.tenantId, updated.ref);
     res.json(updated);
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
@@ -2890,8 +2896,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     if (updated.cardHold?.state === "held" || updated.cardHold?.state === "awaiting") await releaseHolds([updated]).catch((e) => console.error("[cardHold] release on cancel failed:", (e as Error).message));
     // A cancellation frees seats — the queue gets first refusal (auto mode).
     if (updated.blockId) void triggerWaitlist(updated.blockId);
-    // …and frees the discount code it was booked with.
-    if (updated.tenantId) void releaseDiscountCodes(updated.tenantId, updated.ref);
+    // …and frees the discount code it was booked with (unless money was kept: shouldReleaseDiscountCodes).
+    if (updated.tenantId && shouldReleaseDiscountCodes(updated)) void releaseDiscountCodes(updated.tenantId, updated.ref);
     // …and the meals / trip places that hung off it (lib/cancelCleanup.ts).
     if (updated.tenantId) void cleanupAfterCancel(updated.tenantId, updated);
     // Tell the provider a cancellation came in and a refund is waiting on their

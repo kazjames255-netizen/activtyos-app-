@@ -73,6 +73,7 @@ export function layout(
           ${row("Child", escapeHtml(kids || "—"))}
           ${b.listPrice != null && (b.discountOff ?? 0) > 0 ? `${row("Price before discount", gbp(b.listPrice))}${row(`Discount${b.discountNames?.length ? ` (${b.discountNames.join(", ")})` : ""}`, `− ${gbp(b.discountOff ?? 0)}`)}` : ""}
           ${(b.addons ?? []).length ? row("🎁 Extras", addonSentences(b).map((x) => escapeHtml(x)).join("<br>")) : ""}
+          ${(b.walletApplied ?? 0) > 0 ? row("Paid from store credit", `− ${gbp(b.walletApplied ?? 0)}`) : ""}
           ${row("Total", `<b>${gbp(b.amount)}</b>`)}
         </div>
         ${label("Dates &amp; times")}

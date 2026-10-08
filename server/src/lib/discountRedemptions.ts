@@ -6,12 +6,15 @@
 // cancelled, the family never got the activity, so the usage is handed back —
 // `usedCount` comes down and a one-per-customer code becomes usable again.
 //
-// Both cancel paths (parent `/api/my/bookings/:ref/cancel` and the operator
-// action in `routes/bookings.ts`) call `releaseDiscountCodes`.
+// Every path that ends a booking (operator cancel / decline, bulk decline / cancel,
+// the card-hold sweep, the parent's cancel, a turned-down waiting-list offer) asks
+// `shouldReleaseDiscountCodes` (lib/bookingGuards) and calls `releaseDiscountCodes`.
 
 import { createHash } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
+import { fromDoc, type BookingDoc } from "./bookingDoc";
+import { shouldReleaseDiscountCodes } from "./bookingGuards";
 
 const redemptions = () => db.collection("discountRedemptions");
 
@@ -84,40 +87,36 @@ export async function redeemCodesInTx(
   };
 }
 
-/** True when a ref no longer holds its place — cancelled, or gone entirely. */
-async function isSpent(tenantId: string, ref: string): Promise<boolean> {
-  const snap = await db
-    .collection("bookings")
-    .where("tenantId", "==", tenantId)
-    .where("ref", "==", ref)
-    .limit(1)
-    .get();
-  return snap.empty || snap.docs[0].get("status") === "Cancelled";
-}
-
-/** Hand a cancelled booking's codes back. Only releases once EVERY booking the
- *  redemption paid for is cancelled — one child of a sibling basket dropping
- *  out doesn't free a code the rest of the basket is still using.
+/** Hand a booking's codes back. A redemption record means "this code is currently spent for these bookings"; a release applies only while
+ *  that record exists, and removes it in the SAME transaction that lowers usedCount - so however many times, and however
+ *  concurrently, this is called for one booking, the count comes down once and never below 0.
  *
- *  Call AFTER the cancelling write has committed. Fire-and-forget. */
+ *  Only releases once EVERY booking the redemption paid for has ended (shouldReleaseDiscountCodes: cancelled or declined, with no
+ *  money kept) - one child of a sibling basket dropping out doesn't free a code the rest of the basket is still using.
+ *
+ *  Call AFTER the ending write has committed. Callers may fire and forget; errors are logged, never thrown. */
 export async function releaseDiscountCodes(tenantId: string, ref: string): Promise<void> {
   try {
-    const snap = await redemptions().where("tenantId", "==", tenantId).where("refs", "array-contains", ref).get();
-    for (const doc of snap.docs) {
-      const data = doc.data() as RedemptionDoc;
-      const siblings = (data.refs ?? []).filter((r) => r !== ref);
-      const spent = await Promise.all(siblings.map((r) => isSpent(tenantId, r)));
-      if (spent.some((s) => !s)) continue; // the basket still holds the code
-      const codeRef = db.collection("discountCodes").doc(data.codeId);
-      await db
-        .runTransaction(async (tx) => {
-          const code = await tx.get(codeRef);
-          if (!code.exists) return; // code deleted since — the redemption still goes
-          const used = Number(code.get("usedCount") ?? 0);
-          tx.update(codeRef, { usedCount: Math.max(0, used - 1) });
-        })
-        .catch(() => {});
-      await doc.ref.delete();
+    const found = await redemptions().where("tenantId", "==", tenantId).where("refs", "array-contains", ref).get();
+    for (const hit of found.docs) {
+      await db.runTransaction(async (tx) => {
+        const red = await tx.get(hit.ref);
+        if (!red.exists) return; // already released (or never redeemed): nothing to do
+        const data = red.data() as RedemptionDoc;
+        const refs = data.refs ?? [];
+        // Every booking of the basket, read inside the transaction. A ref with no booking left counts as ended.
+        const states = await Promise.all(
+          refs.map(async (r) => {
+            const q = await tx.get(db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "==", r).limit(1));
+            return q.empty ? true : shouldReleaseDiscountCodes(fromDoc(q.docs[0].data() as BookingDoc));
+          }),
+        );
+        if (!states.every(Boolean)) return; // the basket still holds the code
+        const codeRef = db.collection("discountCodes").doc(data.codeId);
+        const code = await tx.get(codeRef);
+        if (code.exists) tx.update(codeRef, { usedCount: Math.max(0, Number(code.get("usedCount") ?? 0) - 1) });
+        tx.delete(hit.ref); // the code may have been deleted since: the redemption still goes
+      });
     }
   } catch (e) {
     console.error("releaseDiscountCodes", e);

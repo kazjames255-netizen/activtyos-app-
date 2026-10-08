@@ -24,7 +24,7 @@ import { registerRows } from "../lib/registerRows";
 import { money, realPhone, refundableSoFar, receivedOf, cashReceivedOf, refundTransferAmount } from "../../../features/bookings/helpers";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
-import { approveBlockedMessage, declineBlockedMessage, nudgeBlockedMessage, canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval } from "../lib/bookingGuards";
+import { approveBlockedMessage, declineBlockedMessage, nudgeBlockedMessage, canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval, shouldReleaseDiscountCodes } from "../lib/bookingGuards";
 import {
   blockCountDelta,
   applyPlacesDelta,
@@ -1078,10 +1078,9 @@ bookings.post("/:ref/actions", async (req, res) => {
     // still waiting so the UI can warn about overbooking.
     if (updated.blockId && (action.type === "decline" || action.type === "cancel" || action.type === "cancel-child" || action.type === "cancel-day"))
       void triggerWaitlist(updated.blockId);
-    // A cancelled booking gives its discount code back (single-use codes
-    // become usable again once nothing in the basket is standing). Safe to
-    // repeat — the redemption record is gone after the first release.
-    if (updated.status === "Cancelled") void releaseDiscountCodes(scope.tenantId!, updated.ref);
+    // A booking that ended without the place (declined, or cancelled with no money kept) gives its discount code back
+    // (single-use codes become usable again once nothing in the basket is standing). Safe to repeat: the release is idempotent.
+    if (shouldReleaseDiscountCodes(updated)) void releaseDiscountCodes(scope.tenantId!, updated.ref);
     // Meals ordered for the released days, and trips on them (lib/cancelCleanup).
     // Only on the action that cancelled it — a note or "paid" on a booking that
     // was cancelled weeks ago mustn't sweep meals/trips again.
@@ -1601,6 +1600,8 @@ bookings.post("/bulk", async (req, res) => {
   } else if (action === "decline" || action === "cancel") {
     await releaseHolds(updated.filter((b) => b.cardHold?.state === "held" || b.cardHold?.state === "awaiting")).catch((e) => console.error("[cardHold] bulk release failed:", (e as Error).message));
   }
+  // A bulk decline / cancel gives each booking's discount code back, exactly like the single action does.
+  if (action === "decline" || action === "cancel") for (const b of updated) if (shouldReleaseDiscountCodes(b)) void releaseDiscountCodes(scope.tenantId!, b.ref);
   // Bulk declines/cancellations free seats — let the queues know.
   if (action === "decline" || action === "cancel" || action === "waitlist") {
     for (const blockId of new Set(updated.map((b) => b.blockId).filter(Boolean) as string[]))

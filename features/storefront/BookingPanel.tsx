@@ -5,6 +5,7 @@ import { useT, useWord, useI18n } from "@/lib/i18n/provider";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, get as apiGet } from "@/lib/api";
+import { translateApiMessage } from "@/lib/i18n/apiErrors";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { applyDiscounts, type DiscountRule } from "@/features/listings/discounts";
@@ -115,7 +116,8 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
       { tr: t, locale },
       { earlyFixedUsed: (listing as { earlyFixedUsed?: boolean }).earlyFixedUsed },
     );
-    return { lines, total: Math.round((total + addonsPerChild * validKids.length) * 100) / 100 };
+    // passTotal = the pass price after automatic discounts, WITHOUT add-ons: the server prices a code against that figure only.
+    return { lines, passTotal: Math.round(total * 100) / 100, total: Math.round((total + addonsPerChild * validKids.length) * 100) / 100 };
   })();
 
   const finalTotal = preview ? Math.max(0, Math.round((preview.total - (appliedCode?.off ?? 0)) * 100) / 100) : 0;
@@ -130,10 +132,10 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
     try {
       const r = await api<{ valid: boolean; reason?: string; code?: string; off?: number }>("/api/discounts/validate", {
         method: "POST",
-        body: JSON.stringify({ tenantId: listing.tenantId, code, subtotal: preview.total, listingId: listing.id, attendees: validKids.length }),
+        body: JSON.stringify({ tenantId: listing.tenantId, code, subtotal: preview.passTotal, listingId: listing.id, attendees: validKids.length }),
       });
       if (r.valid && r.off != null) { setAppliedCode({ code: r.code ?? code.toUpperCase(), off: r.off }); setCodeInput(""); }
-      else { setAppliedCode(null); setCodeErr(r.reason ?? t("p8lst.bpCodeInvalid")); }
+      else { setAppliedCode(null); setCodeErr(r.reason ? translateApiMessage(r.reason) : t("p8lst.bpCodeInvalid")); }
     } catch (e) { setCodeErr(e instanceof Error ? e.message : t("p8lst.bpCodeCheckFail")); }
     setCodeChecking(false);
   }

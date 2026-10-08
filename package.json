@@ -35,6 +35,7 @@
     "e2e:ui": "playwright test --ui",
     "e2e:cleanup": "npm --prefix server run e2e-cleanup",
     "test:regression": "server/node_modules/.bin/tsx --test --test-reporter=tap tests/regression/*.test.mts",
+    "test:emu": "node scripts/emu/test-emu.mjs",
     "test:all": "server/node_modules/.bin/tsx --test --test-reporter=tap tests/*.test.mts tests/regression/*.test.mts",
     "assure": "npm run test:all && npx tsc --noEmit"
   },

@@ -2,6 +2,7 @@ import { db } from "../firebase";
 import { stripe, toPence } from "./stripe";
 import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
 import { notify } from "./notify";
+import { shouldReleaseDiscountCodes } from "./bookingGuards";
 import { bellTitle, bellBody, bellMoney, bellDay } from "./bellText";
 import { emailBookingRequestReceived } from "./emails";
 import { notifyPaymentReceived, bookingDocId } from "../routes/bookings";
@@ -245,6 +246,8 @@ export async function systemDecline(b: Booking, reason: string, state: "expired"
     return cur;
   });
   if (!updated) return;
+  // The request lapsed (or the card never came), so the family never got the place: any discount code it used goes back.
+  if (shouldReleaseDiscountCodes(updated)) void import("./discountRedemptions").then((m) => m.releaseDiscountCodes(tenantId, updated.ref)).catch(() => {});
   if (updated.blockId) void import("./waitlist").then((m) => m.triggerWaitlist(updated.blockId!)).catch(() => {});
   if (updated.email?.includes("@")) {
     const { emailBookingDeclined } = await import("./emails");

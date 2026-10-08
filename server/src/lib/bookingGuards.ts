@@ -1,4 +1,6 @@
 // Pure booking-action guards (no database), so regression tests can import them.
+import { receivedOf, refundedGross } from "../../../features/bookings/helpers";
+import type { Booking } from "../../../features/bookings/types";
 
 /** Statuses on which "Mark paid" makes no sense: there is no live place to pay for. */
 export const NOT_PAYABLE_STATUSES = ["Cancelled", "Declined", "Waitlisted", "Offered"] as const;
@@ -22,6 +24,28 @@ export function shouldEmailConfirmed(action: string, statusBefore: string | unde
  *  (not when someone leaves a waiting list or turns down an offered place, and not on a repeat call). */
 export function shouldNotifyCancelled(oldStatus: string | undefined, newStatus: string | undefined): boolean {
   return newStatus === "Cancelled" && !!oldStatus && !["Cancelled", "Declined", "Waitlisted", "Offered"].includes(oldStatus);
+}
+
+/** THE one rule for handing a discount code back. A booking that ended (Declined by the provider or the card-hold sweep, or Cancelled by
+ *  anyone, including a family turning down an offered waiting-list place) never gave the family the activity, so its code goes back
+ *  (usedCount down, a one-per-family code usable again) - UNLESS money was taken and the provider kept some of it: a paid booking
+ *  cancelled with a partial or no refund keeps its code used. Every route that ends a booking asks this, then calls
+ *  releaseDiscountCodes, which is idempotent, so asking after any action (a note, a refund approval) is safe.
+ *  Cash refunded later (a pending full refund the provider approves) is picked up the same way: the question is asked again. */
+export function shouldReleaseDiscountCodes(b: Pick<Booking, "status" | "amount" | "amountPaid" | "pay" | "walletApplied" | "cancel" | "refundLog">): boolean {
+  if (b.status === "Declined") return true;
+  if (b.status !== "Cancelled") return false;
+  const received = receivedOf(b as Booking);
+  if (received <= 0.004) return true; // nothing was paid: nothing to keep
+  if (b.cancel?.refund === "full") return true; // everything goes back (the refund may still be awaiting the provider's approval)
+  return received - refundedGross(b as Booking) <= 0.004; // or the refunds already cover everything that was paid
+}
+
+/** A voucher / Tax-Free Childcare checkout is announced by the voucher-instructions email, which only covers bookings still awaiting the scheme's
+ *  money. A basket a 100% discount code left at GBP 0 (or a waitlisted one) has none, so the ordinary confirmation / waiting-list email must go
+ *  instead - otherwise the family gets no email at all. */
+export function voucherEmailAnnouncesBasket(isVoucher: boolean, bookings: { pay?: string }[]): boolean {
+  return isVoucher && bookings.some((b) => b.pay === "Awaiting voucher payment");
 }
 
 // ── Card HOLD (manual approval paid by card) ──────────────────────────────────────────────────────────────────────────────────────────
