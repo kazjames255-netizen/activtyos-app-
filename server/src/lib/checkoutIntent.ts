@@ -41,22 +41,39 @@ const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
 export async function createOrReuseIntent(s: Stripe, req: IntentRequest): Promise<{ intent: Stripe.PaymentIntent; paymentId: string; reused: boolean }> {
   const key = checkoutKey(req);
   const opts = req.stripeAccount ? { stripeAccount: req.stripeAccount } : undefined;
-  const prior = await db.collection("payments").where("idemKey", "==", key).get();
-  const tries = prior.docs.filter((d) => d.get("status") === "created");
-  for (const d of tries) {
-    const pi = await s.paymentIntents.retrieve(d.get("paymentIntentId") as string, {}, opts).catch(() => null);
-    if (pi && OPEN.has(pi.status) && pi.client_secret) return { intent: pi, paymentId: d.id, reused: true };
-  }
-  const generation = prior.size;
+  const failRef = db.collection("checkoutFailures").doc(key);
+  /** An open intent we already made for this key, if any. */
+  const findOpen = async () => {
+    const prior = await db.collection("payments").where("idemKey", "==", key).get();
+    for (const d of prior.docs.filter((x) => x.get("status") === "created")) {
+      const pi = await s.paymentIntents.retrieve(d.get("paymentIntentId") as string, {}, opts).catch(() => null);
+      if (pi && OPEN.has(pi.status) && pi.client_secret) return { found: true as const, intent: pi, paymentId: d.id, reused: true };
+    }
+    return { found: false as const, prior };
+  };
+  const first = await findOpen();
+  if (first.found) return { intent: first.intent, paymentId: first.paymentId, reused: true };
+  const generation = first.prior.size;
+  // Stripe replays a FAILED create under the same key for 24 hours, so a failure bumps a counter that is part of the next key.
+  const failures = ((await failRef.get()).data()?.count as number | undefined) ?? 0;
   let intent: Stripe.PaymentIntent | null = null;
   for (let attempt = 0; attempt < 8 && !intent; attempt++) {
     try {
-      intent = await s.paymentIntents.create(req.params, { ...(opts ?? {}), idempotencyKey: `chk-${key}-${generation}` });
+      intent = await s.paymentIntents.create(req.params, { ...(opts ?? {}), idempotencyKey: `chk-${key}-${generation}-f${failures}` });
     } catch (e) {
+      const err = e as { code?: string; type?: string; statusCode?: number };
       // The other simultaneous call is still creating it: Stripe answers 409 until it finishes, then replays the same intent.
-      const code = (e as { code?: string }).code;
-      if (code !== "idempotency_key_in_use" || attempt === 7) throw e;
-      await wait(250);
+      if (err.code === "idempotency_key_in_use" && attempt < 7) { await wait(250); continue; }
+      // Same key, different parameters (a racing call from another route): reuse what that call made rather than failing the parent.
+      if (err.type === "StripeIdempotencyError" || err.code === "idempotency_error") {
+        for (let i = 0; i < 6; i++) {
+          const again = await findOpen();
+          if (again.found) return { intent: again.intent, paymentId: again.paymentId, reused: true };
+          await wait(250);
+        }
+      }
+      if (typeof err.statusCode === "number") await failRef.set({ count: failures + 1, at: new Date().toISOString() }, { merge: true }).catch(() => {});
+      throw e;
     }
   }
   const ref = db.collection("payments").doc(intent!.id);

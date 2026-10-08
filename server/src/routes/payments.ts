@@ -345,8 +345,8 @@ payments.post("/checkout", async (req, res) => {
         params: {
           amount: toPence(amount), currency: "gbp", automatic_payment_methods: { enabled: true },
           description: `${tenant.data()?.name ?? `${BRAND}`} — meal${orders.length > 1 ? "s" : ""}`,
-          metadata: { tenantId, mealOrders: orders.map((o) => o.id).join(","), email },
-          ...((await autoEmailOn(tenantId, "payments")) ? { receipt_email: email } : {}), // meal orders have no email of our own, so Stripe's receipt stays
+          metadata: { tenantId, mealOrders: orders.map((o) => o.id).join(","), email: email.toLowerCase() },
+          ...((await autoEmailOn(tenantId, "payments")) ? { receipt_email: email.toLowerCase() } : {}), // meal orders have no email of our own, so Stripe's receipt stays
         },
         record: { tenantId, mealOrderIds: orders.map((o) => o.id), email, amount, currency: "gbp", stripeAccount, platformFallback: !stripeAccount, status: "created", createdAt: new Date().toISOString() },
       });
@@ -441,7 +441,7 @@ payments.post("/checkout", async (req, res) => {
         // A card HOLD is a card authorisation: only methods that can be held (card, incl. Apple/Google Pay), not Revolut/Amazon Pay etc.
         ...(holdPay ? { payment_method_types: ["card"], capture_method: "manual" as const } : { automatic_payment_methods: { enabled: true } }),
         description: `${tenant.data()?.name ?? `${BRAND}`} — booking${bookings.length > 1 ? "s" : ""} ${bookings.map((b) => b.ref).join(", ")}`,
-        metadata: { tenantId, refs: bookings.map((b) => b.ref).join(","), email, ...(holdPay ? { hold: "1" } : {}) },
+        metadata: { tenantId, refs: bookings.map((b) => b.ref).join(","), email: email.toLowerCase(), ...(holdPay ? { hold: "1" } : {}) },
         // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).
       },
       record: {
@@ -578,7 +578,7 @@ bookingPayPublic.post("/:token/checkout", async (req, res) => {
         currency: "gbp",
         automatic_payment_methods: { enabled: true },
         description: `${tenant.data()?.name ?? `${BRAND}`} — booking ${b.ref}`,
-        metadata: { tenantId, refs: b.ref, email: b.email }, // identical to the parent route on purpose: both routes share one intent per booking (the pay-link origin lives on the payments record)
+        metadata: { tenantId, refs: b.ref, email: (b.email ?? "").toLowerCase() }, // identical to the parent route on purpose: both routes share one intent per booking (the pay-link origin lives on the payments record)
         // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).
       },
       record: {

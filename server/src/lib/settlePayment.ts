@@ -110,19 +110,20 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
     if (rec.status === "succeeded" || rec.status.startsWith("duplicate")) return null;
     const bSnaps = await Promise.all((rec.refs ?? []).map((r) => tx.get(db.collection("bookings").doc(bookingDocId(rec.tenantId, r)))));
     let owed = 0;
+    let notPayable = false;
     const todo: { ref: FirebaseFirestore.DocumentReference; b: Booking }[] = [];
     for (const bSnap of bSnaps) {
       if (!bSnap.exists) continue;
       const b = fromDoc(bSnap.data() as BookingDoc);
       const bal = balanceOf(b);
-      if (b.pay === "Paid" || bal <= 0.005) continue; // already paid by something else: this payment does not touch it
+      if (b.pay === "Paid" || bal <= 0.005) { if (b.pay !== "Paid" && (b.status === "Cancelled" || b.status === "Declined" || b.status === "Waitlisted")) notPayable = true; continue; } // already paid by something else (or no longer payable): this payment does not touch it
       owed += bal;
       todo.push({ ref: bSnap.ref, b });
     }
     const paidPence = typeof rec.amount === "number" ? Math.round(rec.amount * 100) : Math.round(owed * 100);
     const excessPence = Math.max(0, paidPence - Math.round(owed * 100));
     if (!todo.length) {
-      tx.update(payRef, { status: "duplicate", duplicateDetectedAt: at, excess: { pence: paidPence, state: "pending" } });
+      tx.update(payRef, { status: "duplicate", duplicateDetectedAt: at, excess: { pence: paidPence, state: "pending", reason: notPayable ? "not-payable" : "paid" } });
       return { kind: "duplicate" as const, rec };
     }
     for (const { ref, b } of todo) {
@@ -151,7 +152,7 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
       tx.set(ref, toDoc(b));
       settled.push(b);
     }
-    tx.update(payRef, { status: "succeeded", paidAt: at, settledAuto: by.auto, ...(excessPence > 0 ? { excess: { pence: excessPence, state: "pending" } } : {}) });
+    tx.update(payRef, { status: "succeeded", paidAt: at, settledAuto: by.auto, ...(excessPence > 0 ? { excess: { pence: excessPence, state: "pending", reason: notPayable ? "not-payable" : "partly-paid" } } : {}) });
     return { kind: "settled" as const, rec };
   });
   if (!outcome) return (await payRef.get()).exists ? "already" : "unknown";
@@ -195,53 +196,84 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
 }
 
 /** Money a card payment took beyond what was owed: pending until Stripe has refunded it. */
-export interface Excess { pence: number; state: "pending" | "refunded" | "failed"; refundId?: string }
+export interface Excess { pence: number; state: "pending" | "refunded" | "failed"; refundId?: string; failures?: number; reason?: ExcessReason }
+/** Why part or all of a payment was not owed: the booking was already paid, other money covered part of it, or the booking could no longer take a payment. */
+export type ExcessReason = "paid" | "partly-paid" | "not-payable";
+
+/** The provider's alert for an automatic refund (pure, so the wording is tested). */
+export function excessMessage(a: { reason?: ExcessReason; full: boolean; pence: number; where: string; refunded: boolean; pi: string }): { title: string; body: string } {
+  const money = `£${(a.pence / 100).toFixed(2)}`;
+  const what = a.reason === "not-payable"
+    ? `A card payment of ${money} arrived for ${a.where}, but the booking was no longer payable (it was cancelled, declined or on the waiting list), so nothing was recorded against it.`
+    : a.full
+      ? `A second card payment of ${money} arrived for ${a.where}, which was already paid.`
+      : `A card payment arrived for ${a.where} that was ${money} more than was still owed (other money had been received meanwhile).`;
+  const body = a.refunded
+    ? `${what} The ${a.full ? "payment" : "extra"} ${money} was refunded automatically and not recorded.`
+    : `${what} The ${a.full ? "payment" : "extra"} ${money} was NOT recorded and the automatic refund failed: please refund it in Stripe (payment ${a.pi}).`;
+  return { title: a.refunded ? "Card payment refunded automatically" : "Card payment needs refunding", body };
+}
 
 /**
  * Hand back the part of a card payment that was not owed: all of it when the bookings were already paid (a duplicate payment,
  * recorded as status duplicate*), or just the excess when something else (cash, another card payment) had paid part of it
- * meanwhile. Idempotent: the Stripe refund carries a key derived from the PaymentIntent and the amount, and a refunded
- * record is left alone, so webhook retries, a repeated event and the browser confirm can never refund twice. If Stripe
- * refuses, the record says so (duplicate-needs-refund / excess.state failed), the provider is asked to refund by hand, and the
- * next delivery tries again.
+ * meanwhile. Idempotent: the Stripe refund is keyed on the PaymentIntent, the amount and the number of definite failures so
+ * far (a failed refund is replayed by Stripe for 24h under the same key, so a retry needs a fresh one), and a refunded record
+ * is left alone, so webhook retries, a repeated event and the browser confirm can never refund twice. A refund Stripe already
+ * made for this record (found by metadata) is adopted instead of repeated. If Stripe refuses, the record says so
+ * (duplicate-needs-refund / excess.state failed), the provider is asked to refund by hand, and the next delivery tries again.
+ * A partial excess also writes a refund row so Money in, reconciliation and the refundable amount stay net.
  */
-export async function refundExcess(payRef: FirebaseFirestore.DocumentReference): Promise<void> {
+export async function refundExcess(payRef: FirebaseFirestore.DocumentReference, client: any = stripe): Promise<void> {
   const snap = await payRef.get();
   const rec = snap.data() as (PaymentRec & { amount?: number; excess?: Excess }) | undefined;
   if (!rec?.excess || rec.excess.state === "refunded") return;
   const full = rec.status.startsWith("duplicate");
   const wasPending = rec.excess.state === "pending";
   const pence = rec.excess.pence;
+  const failures = rec.excess.failures ?? 0;
   const where = (rec.refs ?? []).join(", ");
   let refundId: string | null = null;
   let failure = "";
+  let definite = false;
   try {
-    if (!stripe) throw new Error("Stripe is not configured");
-    const r = await stripe.refunds.create(
-      { payment_intent: rec.paymentIntentId, amount: pence, reason: "duplicate", metadata: { duplicateOf: where, tenantId: rec.tenantId } },
-      { idempotencyKey: `excess-refund-${rec.paymentIntentId}-${pence}`, ...(rec.stripeAccount ? { stripeAccount: rec.stripeAccount } : {}) },
-    );
-    refundId = r.id;
+    if (!client) throw new Error("Stripe is not configured");
+    const opts = rec.stripeAccount ? { stripeAccount: rec.stripeAccount } : undefined;
+    // A refund an earlier attempt got through (we may have crashed before writing it down): adopt it.
+    const made = client.refunds.list ? (await client.refunds.list({ payment_intent: rec.paymentIntentId, limit: 100 }, opts)).data.find((x: any) => x.metadata?.excessFor === snap.id && x.status !== "failed" && x.status !== "canceled") : null;
+    if (made) refundId = made.id;
+    else {
+      const r = await client.refunds.create(
+        { payment_intent: rec.paymentIntentId, amount: pence, reason: "duplicate", metadata: { duplicateOf: where, tenantId: rec.tenantId, excessFor: snap.id } },
+        { idempotencyKey: `excess-refund-${rec.paymentIntentId}-${pence}-f${failures}`, ...(opts ?? {}) },
+      );
+      refundId = r.id;
+    }
   } catch (e) {
     failure = (e as Error).message;
+    definite = typeof (e as { statusCode?: number }).statusCode === "number"; // Stripe answered: a retry needs a new key. A timeout keeps the key (a replay is safe).
     console.error(`[settle] automatic refund of ${pence}p excess on payment ${snap.id} (${rec.paymentIntentId}) failed:`, failure);
   }
   const at = new Date().toISOString();
   if (refundId) {
     await payRef.update({ "excess.state": "refunded", "excess.refundId": refundId, "excess.refundedAt": at, ...(full ? { status: "duplicate-refunded", refundId, refundedAt: at } : {}) });
+    // A full duplicate was never counted as money in (its status is not succeeded), so only a PART refund of a counted payment needs a row.
+    if (!full) {
+      await db.collection("payments").doc(`excess-${snap.id}`).set({
+        tenantId: rec.tenantId, refs: rec.refs ?? [], type: "refund", amount: pence / 100, currency: "gbp", paymentIntentId: rec.paymentIntentId,
+        stripeAccount: rec.stripeAccount ?? null, status: "succeeded", refundId, reason: "excess", createdAt: at, paidAt: at,
+      });
+    }
   } else {
-    await payRef.update({ "excess.state": "failed", "excess.failure": failure.slice(0, 300), ...(full ? { status: "duplicate-needs-refund", refundFailure: failure.slice(0, 300) } : {}) });
+    await payRef.update({ "excess.state": "failed", "excess.failure": failure.slice(0, 300), "excess.failures": failures + (definite ? 1 : 0), ...(full ? { status: "duplicate-needs-refund", refundFailure: failure.slice(0, 300) } : {}) });
   }
   // Tell the provider once (first detection); a retry that succeeds says it is now sorted.
   if (wasPending || refundId) {
-    const money = `£${(pence / 100).toFixed(2)}`;
-    const what = full ? `A second card payment of ${money} arrived for ${where}, which was already paid.` : `A card payment arrived for ${where} that was ${money} more than was still owed (other money had been received meanwhile).`;
-    const body = refundId ? `${what} The extra ${money} was refunded automatically and not recorded.` : `${what} The extra ${money} was NOT recorded and the automatic refund failed: please refund it in Stripe (payment ${rec.paymentIntentId}).`;
-    const title = refundId ? "Extra card payment refunded" : "Extra card payment needs refunding";
+    const m = excessMessage({ reason: rec.excess.reason, full, pence, where, refunded: !!refundId, pi: rec.paymentIntentId });
     void notify({
       tenantId: rec.tenantId, to: { kind: "tenant" }, category: "billing", key: "payment-duplicate",
-      title, body, subject: title,
-      emailHtml: `<p>${body.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`,
+      title: m.title, body: m.body, subject: m.title,
+      emailHtml: `<p>${m.body.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`,
       href: `/company/bookings?ref=${encodeURIComponent((rec.refs ?? [])[0] ?? "")}`, ref: (rec.refs ?? [])[0],
     });
   }
