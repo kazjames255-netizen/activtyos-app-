@@ -8,7 +8,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { mergeBookings } from "../lib/mergeBookings";
 import { db } from "../firebase";
 import { ukToday } from "../lib/ukDate";
-import { stripAddonMoney } from "../lib/rosterRules";
+import { stripAddonMoney, withoutMoneyKeys } from "../lib/rosterRules";
 import { canWrite, operatorScope, managerScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
@@ -349,8 +349,7 @@ function staffView<T extends Record<string, unknown>>(b: T): T {
   const noAddonMoney = stripAddonMoney(out);
   for (const k of ["addons", "addonLines", "addonRequests"]) if (k in noAddonMoney) out[k] = noAddonMoney[k];
   if (out.cancel && typeof out.cancel === "object") {
-    const { amount: _a, refund: _r, refundTo: _t, ...rest } = out.cancel as Record<string, unknown>;
-    out.cancel = rest;
+    out.cancel = withoutMoneyKeys(out.cancel);
   }
   return out as T;
 }

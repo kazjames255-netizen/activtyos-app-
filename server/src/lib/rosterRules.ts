@@ -33,19 +33,21 @@ export function stripAddonCatalogPrices<T extends { addons?: unknown }>(lib: T):
   return Array.isArray(lib.addons) ? { ...lib, addons: clean(lib.addons) } : lib;
 }
 
+/** Any key that names money or a refund state, at any depth (request targets carry their own price; add-on lines carry the stored refund state). */
+const MONEY_KEY = /price|amount|money|paid|refund|cost|fee|diff|wallet/i;
+export function withoutMoneyKeys(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(withoutMoneyKeys);
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).filter(([k]) => !MONEY_KEY.test(k)).map(([k, x]) => [k, withoutMoneyKeys(x)]));
+  return v;
+}
+
 /** What a STAFF token gets of a booking's add-ons: the choices, quantities and answers, never a price. The one place that removes add-on money
  *  for staff: the booking, the booking list and the register all use it. Owner / franchise / freelancer views do not call it. */
 export function stripAddonMoney<T extends Record<string, unknown>>(b: T): T {
   const out: Record<string, unknown> = { ...b };
   if (Array.isArray(out.addons)) out.addons = (out.addons as unknown[]).map((x) => (typeof x === "string" ? withoutPriceText(x) : x));
-  if (Array.isArray(out.addonLines)) out.addonLines = (out.addonLines as Record<string, unknown>[]).map(({ price: _p, ...rest }) => rest);
-  if (Array.isArray(out.addonRequests)) {
-    out.addonRequests = (out.addonRequests as Record<string, unknown>[]).map((r) => {
-      const keep: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(r)) if (!/price|amount|money|diff|refund|wallet/i.test(k)) keep[k] = v;
-      return keep;
-    });
-  }
+  if (Array.isArray(out.addonLines)) out.addonLines = (out.addonLines as unknown[]).map(withoutMoneyKeys);
+  if (Array.isArray(out.addonRequests)) out.addonRequests = (out.addonRequests as unknown[]).map(withoutMoneyKeys);
   return out as T;
 }
 
