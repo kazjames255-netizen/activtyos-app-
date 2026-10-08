@@ -52,6 +52,49 @@ Expected = what HMRC documents. Parent message = the title shown by our checkout
 
 "Unit test PASS" means the code-to-screen mapping and the 11-language wording are tested without network. The **live sandbox run for each row is still to be attached** (see above).
 
+<!-- hm-run:results:start -->
+## Automated sandbox run results
+
+Last run: 2026-10-08T15:46:49.528Z by `server/node_modules/.bin/tsx e2e/review/hm-run.mts` against test-api.service.hmrc.gov.uk. References are masked (last 3 characters shown). Scenario ids S01-S16 follow the tables above in order.
+
+Overall: 32 of 32 requests passed.
+
+| Id | Scenario | Request | Ref | HTTP | HMRC code | Parent screen | Expected screen | Mapped | Result | Timestamp (UTC) | Note |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| S01 | Success: Peter Pan (ACTIVE) | link | *********TFC | 200 | - | (success) | (success) | n/a | PASS | 2026-10-08T15:45:53.061Z |  |
+| S01 | Success: Peter Pan (ACTIVE) | balance | *********TFC | 200 | - | (success) | (success) | n/a | PASS | 2026-10-08T15:45:54.946Z |  |
+| S01 | Success: Peter Pan (ACTIVE) | payment | *********TFC | 200 | - | (success) | (success) | n/a | PASS | 2026-10-08T15:45:56.779Z |  |
+| S02 | Success: Benjamin Button (INACTIVE) | link | *********TFC | 200 | - | (success) | (success) | n/a | PASS | 2026-10-08T15:45:58.541Z |  |
+| S02 | Success: Benjamin Button (INACTIVE) | balance | *********TFC | 200 | - | (success) | (success) | n/a | PASS | 2026-10-08T15:46:00.425Z |  |
+| S02 | Success: Benjamin Button (INACTIVE) | payment | *********TFC | 200 | - | (success) | (success) | n/a | PASS | 2026-10-08T15:46:02.147Z |  |
+| S03 | Success: Christopher Columbus (ACTIVE) | link | *********TFC | 200 | - | (success) | (success) | n/a | PASS | 2026-10-08T15:46:03.988Z |  |
+| S03 | Success: Christopher Columbus (ACTIVE) | balance | *********TFC | 200 | - | (success) | (success) | n/a | PASS | 2026-10-08T15:46:05.731Z |  |
+| S03 | Success: Christopher Columbus (ACTIVE) | payment | *********TFC | 200 | - | (success) | (success) | n/a | PASS | 2026-10-08T15:46:07.442Z |  |
+| S04 | Success: Donald Duck (ACTIVE) | link | *********TFC | 200 | - | (success) | (success) | n/a | PASS | 2026-10-08T15:46:09.195Z |  |
+| S04 | Success: Donald Duck (ACTIVE) | balance | *********TFC | 200 | - | (success) | (success) | n/a | PASS | 2026-10-08T15:46:10.883Z |  |
+| S04 | Success: Donald Duck (ACTIVE) | payment | *********TFC | 200 | - | (success) | (success) | n/a | PASS | 2026-10-08T15:46:12.677Z |  |
+| S05 | E0026 reference does not match NI number | link | *********TFC | 400 | E0026 | reference-mismatch | reference-mismatch | yes | PASS | 2026-10-08T15:46:14.527Z |  |
+| S05 | E0026 reference does not match NI number | balance | *********TFC | 400 | E0026 | reference-mismatch | reference-mismatch | yes | PASS | 2026-10-08T15:46:16.301Z |  |
+| S05 | E0026 reference does not match NI number | payment | *********TFC | 400 | E0026 | reference-mismatch | reference-mismatch | yes | PASS | 2026-10-08T15:46:18.087Z |  |
+| S06 | E0030 our EPP record inactive | link | *********TFC | 400 | E0030 | not-connected | not-connected | yes | PASS | 2026-10-08T15:46:19.798Z |  |
+| S06 | E0030 our EPP record inactive | balance | *********TFC | 400 | E0030 | not-connected | not-connected | yes | PASS | 2026-10-08T15:46:21.564Z |  |
+| S06 | E0030 our EPP record inactive | payment | *********TFC | 400 | E0030 | not-connected | not-connected | yes | PASS | 2026-10-08T15:46:23.315Z |  |
+| S07 | E0043 parent has no TFC account | link | *********TFC | 400 | E0043 | no-tfc-account | no-tfc-account | yes | PASS | 2026-10-08T15:46:25.027Z |  |
+| S07 | E0043 parent has no TFC account | balance | *********TFC | 400 | E0043 | no-tfc-account | no-tfc-account | yes | PASS | 2026-10-08T15:46:26.789Z |  |
+| S07 | E0043 parent has no TFC account | payment | *********TFC | 400 | E0043 | no-tfc-account | no-tfc-account | yes | PASS | 2026-10-08T15:46:28.568Z |  |
+| S08 | E0024 EPP identifiers mismatch | link | *********TFC | 400 | E0024 | not-connected | not-connected | yes | PASS | 2026-10-08T15:46:30.317Z |  |
+| S08 | E0024 EPP identifiers mismatch | payment | *********TFC | 400 | E0024 | not-connected | not-connected | yes | PASS | 2026-10-08T15:46:32.032Z |  |
+| S09 | E0025 date of birth / reference mismatch | link | *********TFC | 400 | E0025 | reference-mismatch | reference-mismatch | yes | PASS | 2026-10-08T15:46:33.814Z |  |
+| S10 | E0032 EPP not associated with reference | balance | *********TFC | 400 | E0032 | reference-mismatch | reference-mismatch | yes | PASS | 2026-10-08T15:46:35.519Z |  |
+| S10 | E0032 EPP not associated with reference | payment | *********TFC | 400 | E0032 | reference-mismatch | reference-mismatch | yes | PASS | 2026-10-08T15:46:37.276Z |  |
+| S11 | E0027 provider not linked | payment | *********TFC | 400 | E0027 | provider-not-added | provider-not-added | yes | PASS | 2026-10-08T15:46:39.039Z |  |
+| S12 | E0031 provider inactive | payment | *********TFC | 400 | E0031 | provider-unavailable | provider-unavailable | yes | PASS | 2026-10-08T15:46:40.743Z |  |
+| S13 | E0035 payments blocked | payment | *********TFC | 400 | E0035 | account-blocked | account-blocked | yes | PASS | 2026-10-08T15:46:42.517Z |  |
+| S14 | E0036 payee bank details incorrect | payment | *********TFC | 400 | E0036 | provider-unavailable | provider-unavailable | yes | PASS | 2026-10-08T15:46:44.294Z |  |
+| S15 | E0042 ccp reference/postcode | payment | *********TFC | 400 | E0042 | provider-unavailable | provider-unavailable | yes | PASS | 2026-10-08T15:46:46.070Z |  |
+| S16 | E0033 insufficient funds | payment | *********TFC | 400 | E0033 | insufficient-funds | insufficient-funds | yes | PASS | 2026-10-08T15:46:47.769Z |  |
+<!-- hm-run:results:end -->
+
 ## Safety properties (code review, same session)
 
 - A documented failure never throws: the checkout always gets a designed screen, never a blank error (`server/src/lib/tfc.ts`, rule 1).
