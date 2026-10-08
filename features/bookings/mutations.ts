@@ -194,6 +194,28 @@ function settleRelease(b: Booking, label: string, value: number, opts?: ReleaseO
   return { resolution, amount: amt };
 }
 
+/** Take a removed share off what the booking costs: it leaves the cash due first, then the wallet part (walletRelieved). Returns the new GROSS price
+ *  (cash due + wallet still counted). `amount` is the CASH due, net of the wallet credit spent at checkout, while "paid" adds that credit back. */
+function takeShareOffAmount(b: Booking, share: number): number {
+  const take = Math.max(0, share);
+  const cash = b.amount ?? 0;
+  const wallet = Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
+  const fromWallet = Math.min(wallet, Math.max(0, take - cash));
+  b.amount = Math.round(Math.max(0, cash - take) * 100) / 100;
+  if (fromWallet > 0) b.walletRelieved = Math.round(((b.walletRelieved ?? 0) + fromWallet) * 100) / 100;
+  return Math.round((b.amount + wallet - fromWallet) * 100) / 100;
+}
+
+/** A booking with money on it that is NOT paid in full: some paid (wallet credit, recorded cash / bank / voucher / TFC, a part card payment), the rest owed. */
+export function isPartPaid(b: Booking): boolean {
+  const paid = paidSoFar(b);
+  if (b.priceFollowsRelease === true && b.pay !== "Refunded") return paid > 0.004;
+  const settled = b.pay === "Paid" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded";
+  if (settled) return false;
+  const gross = (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
+  return paid > 0.004 && paid + 0.004 < gross;
+}
+
 /** ONE money rule for anything that removes a share from a booking (a cancelled day, an approved request to cancel extras):
  *    new amount = old amount - removed share;  refund = max(0, paid - new amount)  (never more than is still refundable).
  *  A part-paid booking whose new amount is still above what was paid refunds nothing (it simply owes less); a booking paid in full refunds the share;
@@ -205,13 +227,7 @@ export function settleShareRemoval(b: Booking, label: string, share: number, opt
   const prior = b.cancel && b.cancel.refundOnly && b.cancel.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
   // WALLET: `amount` is the CASH due, net of the wallet credit spent at checkout, while "paid" adds that credit back. So compare on the GROSS price
   // (cash due + wallet spent, less any share already taken off the wallet part): the share leaves the cash due first, then the wallet part.
-  const take = Math.max(0, share);
-  const cash = b.amount ?? 0;
-  const wallet = Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
-  const fromWallet = Math.min(wallet, Math.max(0, take - cash));
-  b.amount = Math.round(Math.max(0, cash - take) * 100) / 100;
-  if (fromWallet > 0) b.walletRelieved = Math.round(((b.walletRelieved ?? 0) + fromWallet) * 100) / 100;
-  const newGross = Math.round((b.amount + wallet - fromWallet) * 100) / 100;
+  const newGross = takeShareOffAmount(b, share);
   const overpaid = Math.round(Math.max(0, refundableSoFar(b) - prior - newGross) * 100) / 100;
   // The provider's own figure replaces the default (capped, as always, at what is still refundable).
   return settleRelease(b, label, overpaid, { resolution: opts?.resolution, amount: opts?.amount });
@@ -327,8 +343,10 @@ export function markRefundPending(b: Booking): void {
  *  `amount` is left alone for the same reason: it is the price of what was
  *  booked, and any money going back is tracked separately.
  */
-export function applyPartialCancel(b: Booking, releases: { childKey: string; days: string[] }[]): void {
+export function applyPartialCancel(b: Booking, releases: { childKey: string; days: string[] }[]): { partPaid: boolean; overpaid: number } {
   const kids = bookingKids(b);
+  const partPaid = isPartPaid(b); // (decided BEFORE the amount moves)
+  const pendingPrior = b.cancel && b.cancel.refundOnly && b.cancel.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
   const released = new Set<string>();
   let removed = 0;
   for (const r of releases) {
@@ -349,6 +367,14 @@ export function applyPartialCancel(b: Booking, releases: { childKey: string; day
   // Nothing paid yet: the released days (their pass share and their daily extras) leave what is owed. A booking with money on it keeps its amount
   // here: the family's refund for released days is worked out by the cancellation policy (and the parent's preview divides this amount).
   if (removed > 0 && paidSoFar(b) <= 0.004) b.amount = Math.round(Math.max(0, (b.amount ?? 0) - removed) * 100) / 100;
+  // Part-paid: the same, exactly as for an unpaid booking - the removed days (pass share + daily extras) leave what is owed - and only money paid
+  // BEYOND the new price comes back: refund = max(0, paid - new price - pending). A booking that is paid in full keeps its amount (the policy decides).
+  let overpaid = 0;
+  if (partPaid && removed > 0) {
+    b.priceFollowsRelease = true;
+    const newGross = takeShareOffAmount(b, removed);
+    overpaid = Math.round(Math.max(0, refundableSoFar(b) - pendingPrior - newGross) * 100) / 100;
+  }
   // A day only leaves the booking once NO child is still on it.
   const stillOn = new Set(kids.flatMap((k) => (k.cancelled ? [] : kidActiveDays(k))));
   const gone = [...released].filter((d) => !stillOn.has(d));
@@ -359,6 +385,7 @@ export function applyPartialCancel(b: Booking, releases: { childKey: string; day
     if (b.sessions) b.sessions = b.sessions.filter((s) => !goneLabels.has(s.split(" · ")[0]));
   }
   if (kids.length > 0 && kids.every((k) => k.cancelled)) b.status = "Cancelled";
+  return { partPaid, overpaid };
 }
 
 export function buildBooking(input: CreateBookingInput, bid: number, refPrefix = "APF"): Booking {

@@ -2669,11 +2669,15 @@ async function partialCancel(
       resolution === "wallet"
         ? round2(releasedCount * perSlotPaid)
         : round2(releasedDays.reduce((sum, d) => sum + (refundFor(policy, effectiveRefundDate(b.dayOrigin?.[d], d), perSlotPaid, now, "parent")?.amount ?? 0), 0)));
+    let fullValue = round2(releasedCount * perSlotPaid);
 
     const heldBefore = structuredClone({ status: b.status, seats: b.seats, days: b.days, kids: b.kids });
-    applyPartialCancel(b, wanted);
-    // One place per child: a cancelled child frees their seat, and each day a child gives up frees that child's place on that day
-    // (CN-019). Derived from before/after state, so repeating a release can't free twice.
+    const settled = applyPartialCancel(b, wanted);
+    // A booking only PART paid: the released days leave what is owed (amount drops), and only money paid beyond the new price comes back -
+    // no policy cut, the same for a refund and for wallet credit. (A booking paid in full keeps its amount; the value above stands.)
+    if (settled.partPaid) { value = settled.overpaid; fullValue = settled.overpaid; }
+    // One place per child: a cancelled child frees their seat, and each day a child gives up frees that child's place on that day (CN-019).
+    // Derived from before/after state, so repeating a release can't free twice.
     let blockUpdate: { ref: FirebaseFirestore.DocumentReference; counts: ReturnType<typeof countsUpdate> } | null = null;
     if (b.blockId) {
       const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId));
@@ -2721,7 +2725,7 @@ async function partialCancel(
     // Add-on refund state (addonRefund.ts): a child's WHOLE place released with a full-value refund takes that child's add-ons back; day-only or partial
     // releases keep them (a released day's own per-day add-on simply drops with the day).
     {
-      const allBack = value > 0.004 && (value >= round2(releasedCount * perSlotPaid) - 0.004 || refundCoversWhole(value, existing)); // (perSlotPaid is already held to the cap)
+      const allBack = value > 0.004 && (value >= fullValue - 0.004 || refundCoversWhole(value, existing)); // (perSlotPaid is already held to the cap)
       for (const w of wanted) {
         const kid = (b.kids ?? []).find((k) => (k.childId ?? k.name) === w.childKey);
         if (!kid) continue;
