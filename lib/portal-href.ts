@@ -11,6 +11,13 @@ export function portalOf(pathname: string | null | undefined): string {
   return OPERATOR_PORTALS.has(p) ? p : "company";
 }
 
+/** Staff and platform (HQ) accounts can look at bookings but not change them, and staff never see prices (the server enforces both;
+ *  this only stops the screen offering buttons that would be refused, and prices that are no longer sent). */
+export function useReadOnlyPortal(): { readOnly: boolean; staff: boolean } {
+  const p = (usePathname() ?? "").split("/")[1] ?? "";
+  return { readOnly: p === "staff" || p === "platform", staff: p === "staff" };
+}
+
 /** `usePortalHref()("/listings")` → "/franchise/listings" when you're in the franchise portal. */
 export function usePortalHref(): (path: string) => string {
   const portal = portalOf(usePathname());

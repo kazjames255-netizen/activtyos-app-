@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useT } from "@/lib/i18n/provider";
+import { useReadOnlyPortal } from "@/lib/portal-href";
 import { Button } from "@/components/ui";
 import { useBookingsStore } from "./store";
 import { money, refundableSoFar } from "./helpers";
@@ -69,8 +70,25 @@ function RequestCard({ booking, r }: { booking: Booking; r: AddonRequest }) {
 
 export function AddonRequestsPanel({ booking }: { booking: Booking }) {
   const t = useT();
+  const { readOnly } = useReadOnlyPortal();
   const pending = pendingAddonRequests(booking);
   if (!pending.length) return null;
+  // Read-only accounts (staff, HQ) see WHAT was asked, but get no Approve / Decline (the server would refuse with 403) and, for staff, no money.
+  if (readOnly) {
+    return (
+      <div className="mb-3 space-y-2" data-testid="addon-requests">
+        <div className="text-[12px] font-extrabold uppercase tracking-wide text-[#6b3fb3]">🎁 {t("p8lst.arvTitle")} · {pending.length}</div>
+        {pending.map((r) => (
+          <div key={r.id} className="rounded-xl border border-[#d9c7f2] bg-[#faf6ff] px-3.5 py-3" data-testid="addon-request">
+            <div className="text-[13.5px] font-extrabold text-[#4c2a85]">
+              {r.kind === "cancel" ? t("p8lst.arvAsksCancel", { who: first(r.child), item: r.label }) : t("p8lst.arvAsksChange", { who: first(r.child), from: r.label, to: r.toLabel ?? "" })}
+            </div>
+            {r.note && <div className="mt-1 text-[12.5px] text-[var(--ink-2)]">{t("p8lst.arvNote", { note: r.note })}</div>}
+          </div>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="mb-3 space-y-2" data-testid="addon-requests">
       <div className="text-[12px] font-extrabold uppercase tracking-wide text-[#6b3fb3]">🎁 {t("p8lst.arvTitle")} · {pending.length}</div>

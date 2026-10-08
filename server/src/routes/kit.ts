@@ -8,6 +8,9 @@ import { franchiseListingIds } from "../lib/franchiseScope";
 import { staffSiteScope } from "../lib/siteScope";
 import { ukToday } from "../lib/ukDate";
 import { hasLiveAddonOrders, kitForDay, kitTally, type KitBooking } from "../../../features/bookings/addons";
+import { capsFor } from "../middleware/access";
+import { capLevel } from "../../../lib/accessMap";
+import { kitKey } from "../../../features/bookings/addons";
 import { libraryDocId } from "../lib/tenantLibrary";
 import { loadSettings } from "../lib/tenantLibrary";
 
@@ -34,6 +37,14 @@ async function tenantOf(req: import("express").Request, res: import("express").R
     if (!tenantId) { res.status(400).json({ error: "Platform accounts must pass ?tenantId=" }); return null; }
   }
   if (!tenantId) { res.status(403).json({ error: "Your account has no tenant" }); return null; }
+  // Staff follow their role matrix: the Add-on orders page is open to anyone who can view Bookings OR Registers (the add-on choices are on both).
+  if (auth.role === "staff") {
+    const caps = await capsFor(req);
+    if (capLevel(caps, "bookings") === "none" && capLevel(caps, "registers") === "none") {
+      res.status(403).json({ error: "Your role doesn't have access to Bookings or Registers, so it can't see add-on orders. A manager can change this in Setup → Roles & permissions.", code: "no_access", area: "bookings" });
+      return null;
+    }
+  }
   return tenantId;
 }
 
@@ -207,9 +218,17 @@ kit.post("/tick", async (req, res) => {
   const parsed = tickSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const { key, ref, date, done } = parsed.data;
-  // The key must belong to a booking of THIS tenant (never trust a ref from the client).
+  // The booking must be in THIS tenant and inside the caller's franchise / site (the same scope the page shows), never a bare ref from the client.
   const owned = await db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "==", ref).limit(1).get();
   if (owned.empty) { res.status(404).json({ error: "Booking not found" }); return; }
+  const booking = fromDoc(owned.docs[0].data() as BookingDoc) as KitBooking & { blockId?: string };
+  const mine = await scopedBlocks(req.auth!, tenantId, date, date);
+  if (!booking.blockId || !mine.some((b) => b.id === booking.blockId)) { res.status(403).json({ error: "That order isn't at one of your sites" }); return; }
+  // The key must be this booking's, for this date. Ticking ON needs a real item (a Confirmed booking's add-on that day); unticking only needs the key to belong to the booking and date.
+  const slug = kitKey(ref, "", "", "", "").split("__")[0];
+  const belongs = key.startsWith(`${slug}__`) && key.endsWith(`__${date}`);
+  const real = kitForDay([booking], date).some((g) => g.children.some((c) => c.key === key && c.ref === ref));
+  if (!belongs || (done && !real)) { res.status(400).json({ error: "That tick doesn't match this booking and day" }); return; }
   const id = `${tenantId}_${key}`.slice(0, 480);
   if (done) {
     const by = req.user?.name || req.user?.email || "staff";

@@ -243,7 +243,7 @@ registers.get("/", async (req, res) => {
         ...(b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) ? { serviceAddress: visitAddressLabel(b.serviceAddress) + (b.serviceAddress.notes ? ` — Access: ${b.serviceAddress.notes.replace(/\s+/g, " ")}` : "") } : {}),
         note: b.note ?? "",
         // This child's extras for THIS day only: a sibling's T-shirt, or a lunch bought for other days, must not show here.
-        addons: childExtrasForDay(b.addonLines, b.addons, r.name, date),
+        addons: childExtrasForDay(b.addonLines, b.addons, r.name, date, auth.role !== "staff"),
         bookingStatus: b.status,
         seats: 1,
         children: [{ name: r.name, age: r.age }],

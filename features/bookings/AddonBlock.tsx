@@ -1,13 +1,16 @@
 "use client";
 
 import { useT } from "@/lib/i18n/provider";
+import { useReadOnlyPortal } from "@/lib/portal-href";
 import { addonsByChild, ADDON_ICON, type BookingAddonSource } from "./addons";
 import { money } from "./helpers";
 
 /** The extras on a booking, PER CHILD: "sally james — T-shirt · size: M · £10.00". Replaces the old single grey line, so a two-child booking with
  *  different sizes reads as who gets what. Meals (🍽) sit in the same list. Used on the provider's booking page and the family's own booking. */
-export function AddonBlock({ booking, prices = true, meals = true }: { booking: BookingAddonSource; prices?: boolean; meals?: boolean }) {
+export function AddonBlock({ booking, prices: showPrices = true, meals = true }: { booking: BookingAddonSource; prices?: boolean; meals?: boolean }) {
   const t = useT();
+  // Staff never see prices (the server no longer sends them either).
+  const prices = showPrices && !useReadOnlyPortal().staff;
   const groups = addonsByChild(booking).map((g) => ({ ...g, lines: g.lines.filter((l) => meals || !l.meal) })).filter((g) => g.lines.length);
   if (!groups.length) return null;
   return (
