@@ -52,7 +52,16 @@ async function scopedBlocks(auth: NonNullable<import("express").Request["auth"]>
 
 /** The optional ?listingId= filter. Applied INSIDE the role scoping above: an id the caller may not see simply matches no block,
  *  exactly like an id that does not exist, so nothing reveals that the listing is real. */
-const listingParam = (req: import("express").Request): string => (typeof req.query.listingId === "string" ? req.query.listingId.trim().slice(0, 120) : "");
+const NO_SUCH_LISTING = "\u0000no-such-listing";
+const listingParam = (req: import("express").Request): string => {
+  // With the simple query parser "listingId[]=x" arrives as a key literally named "listingId[]": any such lookalike key counts as an odd value.
+  if (Object.keys(req.query).some((k) => k !== "listingId" && k.startsWith("listingId"))) return NO_SUCH_LISTING;
+  const v = req.query.listingId;
+  if (v === undefined) return "";
+  // Absent or "" = no filter (the dropdown's "All listings"). A repeated parameter, listingId[]= or listingId[a]= is not a plain string:
+  // it behaves exactly like a made-up id (matches nothing), never like "no filter".
+  return typeof v === "string" ? v.trim().slice(0, 120) : NO_SUCH_LISTING;
+};
 
 /** The bookings of those blocks (every booking; the pure functions keep only the Confirmed ones). */
 async function bookingsOfBlocks(blocks: { id: string }[]): Promise<KitBooking[]> {

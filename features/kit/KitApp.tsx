@@ -102,9 +102,9 @@ export function KitApp() {
   const listingOptions = useMemo(() => {
     const m = new Map<string, string>();
     for (const l of [...(strip?.listings ?? []), ...(monthData?.listings ?? [])]) m.set(l.id, l.name);
-    if (listingId && !m.has(listingId)) m.set(listingId, knownListings[listingId] ?? listingId);
+    if (listingId && !m.has(listingId)) m.set(listingId, knownListings[listingId] ?? t("p8lst.kitUnknownListing"));
     return [...m].map(([id, nm]) => ({ id, name: nm })).sort((a, c) => a.name.localeCompare(c.name));
-  }, [strip, monthData, listingId, knownListings]);
+  }, [strip, monthData, listingId, knownListings, t]);
   const listingName = listingId ? listingOptions.find((l) => l.id === listingId)?.name ?? "" : "";
   const canTick = data?.canTick ?? strip?.canTick ?? false;
   const nothingAtAll = strip !== null && strip.total === 0 && strip.names.length === 0 && !name && !listingId && (data?.total ?? 0) === 0;
