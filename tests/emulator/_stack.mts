@@ -70,7 +70,7 @@ let seq = 0;
 export async function newBooking(f: Fixture, amount = 36): Promise<string> {
   const child = `Idem ${Date.now().toString(36)}${seq++}`;
   const r = await call("POST", "/api/bookings", f.providerToken, {
-    booker: "Test Parent A", email: "parent-a@emu.test", child, age: 8, listing: "LA Day camp 20", pass: "Day pass", blockId: f.blockId, amount, method: "card",
+    booker: "Test Parent A", email: "parent-a@emu.test", child, age: 8, listing: "LA Day camp 20", pass: "Day pass", dates: "Idempotency test day", amount, method: "card",
   });
   if (r.status !== 201) throw new Error(`could not create booking: ${r.status} ${JSON.stringify(r.json)}`);
   return (r.json.ref ?? r.json.bookings?.[0]?.ref ?? r.json.booking?.ref) as string;
