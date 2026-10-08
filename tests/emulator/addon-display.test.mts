@@ -9,7 +9,7 @@
 //   - Finance Insights counts add-ons by quantity (a per-day add-on counts its days).
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
-import { adminDb, ADDON_DEFS, as, bookWithAddons, call, day, ids, kitDay, login, operatorAction, registerDay, seedAddons, ukDay } from "../../scripts/emu/addons-helpers.mts";
+import { adminDb, ADDON_DEFS, as, bookWithAddons, call, day, ids, kitDay, login, operatorAction, parentAddonRequest, registerDay, seedAddons, ukDay } from "../../scripts/emu/addons-helpers.mts";
 import { addonFigures } from "../../features/money/addonFigures.ts";
 
 const uniq = () => Math.random().toString(36).slice(2, 7);
@@ -53,9 +53,10 @@ const D = (n: number) => day(n);
 let LW: { id: string; blockId: string; dates: string[] };
 let LE: { id: string; blockId: string; dates: string[] }; // run Sun 31 Jan - Sat 6 Feb 2027: split at the month end (Monday 1 Feb)
 let L3: { id: string; blockId: string; dates: string[] }; // three weekly blocks
+let LH: { id: string; blockId: string; dates: string[] }; // weekly, half-refund cancellation policy
 let LM: { id: string; blockId: string; dates: string[] }; // manual approval (awaiting approval / decline)
 
-async function makeListing(title: string, o: { mode: "custom" | "weekly"; approval?: boolean; start: string; days: number }) {
+async function makeListing(title: string, o: { mode: "custom" | "weekly"; approval?: boolean; start: string; days: number; policyId?: string }) {
   const P = (await login("provider-p@emu.test")).token;
   const must = async (m: string, p: string, b?: unknown) => { const r = await call(m, p, P, b); assert.ok(r.ok, `${m} ${p} -> ${r.status} ${JSON.stringify(r.json).slice(0, 300)}`); return r.json; };
   const end = new Date(`${o.start}T00:00:00Z`); end.setUTCDate(end.getUTCDate() + o.days - 1);
@@ -67,7 +68,7 @@ async function makeListing(title: string, o: { mode: "custom" | "weekly"; approv
     title, venueId: "emu-venue", runFrom: o.start, runTo: end.toISOString().slice(0, 10), blockMode: o.mode, days: [0, 1, 2, 3, 4, 5, 6],
     maxAttendees: "500", capacityScope: "day", showSpaces: true, ageFrom: "5", ageTo: "12", blockId: bundle.id,
     passes: passes.map((p, i) => ({ name: p.name, price: 20 * (i + 1), days: i + 1 })),
-    ...(o.approval ? {} : { bookingType: "auto" }), addonIds: [ADDON_DEFS.AW.id, ADDON_DEFS.AT.id], status: "live", visibility: "public",
+    ...(o.approval ? {} : { bookingType: "auto" }), ...(o.policyId ? { cancellationPolicyId: o.policyId } : {}), addonIds: [ADDON_DEFS.AW.id, ADDON_DEFS.AT.id], status: "live", visibility: "public",
   });
   await must("PUT", `/api/block-bundles/${bundle.id}/listings`, { listingIds: [listing.id] });
   const db = await adminDb();
@@ -98,6 +99,11 @@ before(async () => {
   LE = await makeListing(`LE month-end ${uniq()}`, { mode: "weekly", start: "2027-01-31", days: 7 });
   { const d3 = new Date(`${ukDay(30)}T00:00:00Z`); while (d3.getUTCDay() !== 0) d3.setUTCDate(d3.getUTCDate() + 1);
     L3 = await makeListing(`L3 three weeks ${uniq()}`, { mode: "weekly", start: d3.toISOString().slice(0, 10), days: 15 }); }
+  { const P0 = (await login("provider-p@emu.test")).token;
+    const lib = (await call("GET", "/api/library", P0)).json;
+    await call("PUT", "/api/library", P0, { settings: { ...(lib.settings ?? {}), cancellationPolicies: [{ id: "half-r8", name: "Half back", bands: [{ hoursBefore: 0, refundPercent: 50 }] }] } });
+    const dh = new Date(`${ukDay(45)}T00:00:00Z`); while (dh.getUTCDay() !== 0) dh.setUTCDate(dh.getUTCDate() + 1);
+    LH = await makeListing(`LH half policy ${uniq()}`, { mode: "weekly", start: dh.toISOString().slice(0, 10), days: 7, policyId: "half-r8" }); }
   LM = await makeListing(`LM approval ${uniq()}`, { mode: "custom", approval: true, start: ids().listings.LK.dates[0], days: 3 });
 });
 
@@ -776,5 +782,87 @@ describe("R7: the add-on refund state is stored at cancel time and read by every
     assert.equal(fk.addonRevenue, 8);
     assert.equal(fg.addonUnits, 0, "refunded: none");
     assert.equal(fg.addonRevenue, 0);
+  });
+});
+
+// ══════════════════════════════ ROUND 8: every cancel path stamps the add-on refund ══════════════════════════════
+const BANK = { accountName: "Test Parent", sortCode: "12-34-56", accountNumber: "12345678" };
+async function r8split(l: { id: string; blockId: string; dates: string[] }, kids: string[], pay: boolean) {
+  const s = await login("parent-a@emu.test");
+  const items = kids.map((k) => ({ pass: `${l.dates.length}-day pass`, child: k, age: 8, dates: l.dates, addons: [{ id: ADDON_DEFS.AT.id, answers: { [qid().Size]: "M" } }] }));
+  const r = await call("POST", "/api/my/bookings", s.token, { listingId: l.id, blockId: l.blockId, method: "Bank transfer", items });
+  assert.ok(r.status < 300, `book ${r.status}`);
+  const list: any[] = Array.isArray(r.json) ? r.json : r.json?.bookings ?? [r.json];
+  const sorted = (await Promise.all(list.map(async (b: any) => ({ r: b.ref as string, d: (await docOf(b.ref)).days[0], amt: (await docOf(b.ref)).amount })))).sort((x, y) => x.d.localeCompare(y.d));
+  if (pay && sorted[0].amt > 0) assert.ok((await as("P", "POST", `/api/bookings/${encodeURIComponent(sorted[0].r)}/record-payment`, { amount: sorted[0].amt, method: "Bank transfer", reference: `R8-${uniq()}` })).status < 300);
+  return { first: sorted[0].r, second: sorted[1].r };
+}
+const parentCancel = (ref: string, body: Record<string, unknown> = {}) => as("A", "POST", `/api/my/bookings/${encodeURIComponent(ref)}/cancel`, { refundBank: BANK, ...body });
+const lineOf = async (ref: string, child: string) => (await docOf(ref)).addonLines.find((l: any) => l.child === child);
+
+describe("R8: parent-side cancels stamp the add-on refund", () => {
+  it("parent cancels a PAID booking inside the full-refund window: the T-shirt goes back", async () => {
+    const c = `R8a ${uniq()}`;
+    const b = await r8split(LW, [c], true);
+    const res = await parentCancel(b.first);
+    assert.ok(res.status < 300, `cancel ${res.status} ${JSON.stringify(res.json).slice(0, 200)}`);
+    assert.equal((await lineOf(b.first, c)).refunded, true);
+    const t = await teeDays(LW, c);
+    assert.deepEqual(t.kit, []); assert.deepEqual(t.reg, []);
+  });
+  it("parent cancels an UNPAID booking (no refund): the T-shirt is kept and follows to the sibling", async () => {
+    const c = `R8b ${uniq()}`;
+    const b = await r8split(LW, [c], false);
+    assert.ok((await parentCancel(b.first)).status < 300);
+    assert.equal((await lineOf(b.first, c)).refunded, false);
+    const t = await teeDays(LW, c);
+    assert.deepEqual(t.kit, [LW.dates[1]]); assert.deepEqual(t.reg, [LW.dates[1]]);
+  });
+  it("parent cancels a PAID booking under a 50% policy: partial refund, the T-shirt is kept and follows", async () => {
+    const c = `R8c ${uniq()}`;
+    const b = await r8split(LH, [c], true);
+    const res = await parentCancel(b.first);
+    assert.ok(res.status < 300, `cancel ${res.status} ${JSON.stringify(res.json).slice(0, 200)}`);
+    assert.equal((await docOf(b.first)).cancel?.refund, "partial", "setup: the policy gave a partial refund");
+    assert.equal((await lineOf(b.first, c)).refunded, false);
+    const t = await teeDays(LH, c);
+    assert.deepEqual(t.kit, [LH.dates[1]]);
+  });
+  it("parent releases one child's whole place inside the full-refund window: that child's T-shirt goes back, the other child's stays", async () => {
+    const a = `R8d1 ${uniq()}`, k = `R8d2 ${uniq()}`;
+    const b = await r8split(LW, [a, k], true);
+    const res = await parentCancel(b.first, { kids: [{ name: a, days: [LW.dates[0]] }], resolution: "refund" });
+    assert.ok(res.status < 300, `release ${res.status} ${JSON.stringify(res.json).slice(0, 200)}`);
+    assert.equal((await lineOf(b.first, a)).refunded, true, "the released child's T-shirt");
+    assert.notEqual((await lineOf(b.first, k)).refunded, true, "the other child's T-shirt");
+    assert.deepEqual((await teeDays(LW, a)).kit, []);
+    assert.deepEqual((await teeDays(LW, k)).kit, [LW.dates[0]]);
+  });
+});
+
+describe("R8: the bulk cancel and the add-on cancel request", () => {
+  it("bulk cancel of an unpaid booking keeps the T-shirt (nothing refunded): it follows", async () => {
+    const c = `R8e ${uniq()}`;
+    const b = await r8split(LW, [c], false);
+    const r = await call("POST", "/api/bookings/bulk", (await login("provider-p@emu.test")).token, { refs: [b.first], action: "cancel" });
+    assert.ok(r.status < 300, `bulk ${r.status} ${JSON.stringify(r.json).slice(0, 200)}`);
+    assert.equal((await lineOf(b.first, c)).refunded, false);
+    assert.deepEqual((await teeDays(LW, c)).kit, [LW.dates[1]]);
+  });
+  it("an approved add-on CANCEL request removes the T-shirt: it never follows to the sibling, even when the holder is cancelled later", async () => {
+    const c = `R8f ${uniq()}`;
+    const b = await r8split(LW, [c], true);
+    const opt = await parentAddonRequest(b.first, { as: "A", op: "options" });
+    assert.equal(opt.status, 200, JSON.stringify(opt.json).slice(0, 200));
+    const key = (opt.json.lines as any[]).find((l) => /T-shirt/.test(l.label ?? l.name ?? ""))?.key;
+    assert.ok(key, "setup: the T-shirt is offered for a request");
+    const rq = await parentAddonRequest(b.first, { as: "A", op: "request", key, kind: "cancel" });
+    assert.ok(rq.status < 300, `request ${rq.status} ${JSON.stringify(rq.json).slice(0, 200)}`);
+    const reqId = ((await docOf(b.first)).addonRequests ?? []).find((x: any) => x.status === "pending")?.id;
+    assert.ok(reqId);
+    assert.ok((await operatorAction(b.first, "addon-approve", { requestId: reqId, resolution: "refund" })).status < 300);
+    assert.deepEqual((await teeDays(LW, c)).kit, [], "gone everywhere");
+    assert.ok((await operatorAction(b.first, "cancel", { refund: "none" })).status < 300);
+    assert.deepEqual((await teeDays(LW, c)).kit, [], "does not reappear on the sibling");
   });
 });
