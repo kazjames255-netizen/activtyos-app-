@@ -714,3 +714,65 @@ describe("Q13k (real API): a one-day refund of £20 from cancel-day on the holde
     assert.deepEqual(t.reg, [LW.dates[1]]);
   });
 });
+
+// ══════════════════════════════ ROUND 7: the add-on refund is STORED on the booking at cancel time ══════════════════════════════
+async function paidSplit(c: string, kids: string[] = [c]) {
+  const s = await login("parent-a@emu.test");
+  const items = kids.map((k) => ({ pass: `${LW.dates.length}-day pass`, child: k, age: 8, dates: LW.dates, addons: [{ id: ADDON_DEFS.AT.id, answers: { [qid().Size]: "M" } }] }));
+  const r = await call("POST", "/api/my/bookings", s.token, { listingId: LW.id, blockId: LW.blockId, method: "Bank transfer", items });
+  assert.ok(r.status < 300, `book ${r.status}`);
+  const list: any[] = Array.isArray(r.json) ? r.json : r.json?.bookings ?? [r.json];
+  const sorted = (await Promise.all(list.map(async (b: any) => ({ r: b.ref as string, d: (await docOf(b.ref)).days[0], amt: (await docOf(b.ref)).amount })))).sort((x, y) => x.d.localeCompare(y.d));
+  assert.ok((await as("P", "POST", `/api/bookings/${encodeURIComponent(sorted[0].r)}/record-payment`, { amount: sorted[0].amt, method: "Bank transfer", reference: `R7-${uniq()}` })).status < 300);
+  return { first: sorted[0].r, second: sorted[1].r };
+}
+describe("R7: the add-on refund state is stored at cancel time and read by every display", () => {
+  it("FAIL1: cancel-child, whole-place refund, no refundsAddons given: the T-shirt goes back with it", async () => {
+    const c = `R7a ${uniq()}`;
+    const b = await paidSplit(c);
+    assert.ok((await operatorAction(b.first, "cancel-child", { ki: 0, resolution: "refund" })).status < 300);
+    assert.equal((await docOf(b.first)).addonLines[0].refunded, true, "stored on the line");
+    const t = await teeDays(LW, c);
+    assert.deepEqual(t.kit, []); assert.deepEqual(t.reg, []);
+  });
+  it("FAIL2: refundsAddons true with a WALLET credit is stored although no cancel record exists", async () => {
+    const c = `R7b ${uniq()}`;
+    const b = await paidSplit(c);
+    assert.ok((await operatorAction(b.first, "cancel-day", { ki: 0, date: LW.dates[0], resolution: "wallet", refundsAddons: true })).status < 300);
+    assert.equal((await docOf(b.first)).addonLines[0].refunded, true, "stored on the line");
+    const t = await teeDays(LW, c);
+    assert.deepEqual(t.kit, []); assert.deepEqual(t.reg, []);
+  });
+  it("FAIL3: a refunded T-shirt stays refunded after a later whole cancel with no refund", async () => {
+    const a = `R7c1 ${uniq()}`, k = `R7c2 ${uniq()}`;
+    const b = await paidSplit(a, [a, k]);
+    assert.ok((await operatorAction(b.first, "cancel-day", { ki: 0, date: LW.dates[0], resolution: "refund", amount: 20, refundsAddons: true })).status < 300);
+    assert.equal((await teeDays(LW, a)).kit.length, 0, "setup: gone after the first cancel");
+    assert.ok((await operatorAction(b.first, "cancel", { refund: "none" })).status < 300);
+    const t = await teeDays(LW, a);
+    assert.deepEqual(t.kit, [], "stays refunded: not back on Monday");
+    assert.deepEqual(t.reg, []);
+    const line = (await docOf(b.first)).addonLines.find((l: any) => l.child === a);
+    assert.equal(line.refunded, true);
+  });
+  it("a kept T-shirt (cancel with no refund) is stored as kept and follows", async () => {
+    const c = `R7d ${uniq()}`;
+    const b = await paidSplit(c);
+    assert.ok((await operatorAction(b.first, "cancel", { refund: "none" })).status < 300);
+    assert.equal((await docOf(b.first)).addonLines[0].refunded, false);
+    assert.deepEqual((await teeDays(LW, c)).kit, [LW.dates[1]]);
+  });
+  it("FAIL4: Finance add-on figures follow the kit: a kept T-shirt on a cancelled holder counts, a refunded one does not", async () => {
+    const kept = `R7e ${uniq()}`, gone = `R7f ${uniq()}`;
+    const bk = await paidSplit(kept), bg = await paidSplit(gone);
+    assert.ok((await operatorAction(bk.first, "cancel", { refund: "none" })).status < 300);
+    assert.ok((await operatorAction(bg.first, "cancel", { refund: "full" })).status < 300);
+    const all: any[] = (await as("P", "GET", "/api/bookings")).json;
+    const fk = addonFigures(all.filter((x) => x.ref === bk.first || x.ref === bk.second));
+    const fg = addonFigures(all.filter((x) => x.ref === bg.first || x.ref === bg.second));
+    assert.equal(fk.addonUnits, 1, "kept: one unit");
+    assert.equal(fk.addonRevenue, 8);
+    assert.equal(fg.addonUnits, 0, "refunded: none");
+    assert.equal(fg.addonRevenue, 0);
+  });
+});

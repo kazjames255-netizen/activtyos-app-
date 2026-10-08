@@ -139,3 +139,22 @@ test("Q13k: day-only refunds, wallet credit and a £28 partial follow the T-shir
   // for the WHOLE booking is a cancel with refund "full"/pending and follows the same rule as money.
   assert.equal(follows(null), true, "wallet credit on a day: no cancel record, the T-shirt follows");
 });
+
+test("R7: stampAddonRefund stores the answer once; refunded is sticky, a later none never un-refunds; per-day add-ons record refunded days", async () => {
+  const { stampAddonRefund } = await import("../../features/bookings/addonRefund");
+  const b = { kids: [{ name: "K" }, { name: "J" }], addonLines: [
+    { child: "K", label: "T-shirt", price: 8, days: ["2026-10-18", "2026-10-19"], perDay: false },
+    { child: "K", label: "Bottle × 2", price: 6, days: ["2026-10-18", "2026-10-19"], perDay: true },
+    { child: "J", label: "T-shirt", price: 8, days: ["2026-10-18"], perDay: false },
+  ] } as never as { addonLines: { refunded?: boolean; refundedDays?: string[] }[] };
+  stampAddonRefund(b as never, { scope: "day", child: "K", date: "2026-10-18" }, true);
+  assert.equal(b.addonLines[0].refunded, true);
+  assert.deepEqual(b.addonLines[1].refundedDays, ["2026-10-18"]);
+  assert.equal(b.addonLines[2].refunded, undefined, "another child untouched");
+  stampAddonRefund(b as never, { scope: "whole" }, false);
+  assert.equal(b.addonLines[0].refunded, true, "never un-refunded");
+  assert.deepEqual(b.addonLines[1].refundedDays, ["2026-10-18"]);
+  assert.equal(b.addonLines[2].refunded, false, "kept is recorded where nothing was stored");
+  stampAddonRefund(b as never, { scope: "whole" }, true);
+  assert.equal(b.addonLines[2].refunded, true, "a later refund upgrades kept to refunded");
+});
