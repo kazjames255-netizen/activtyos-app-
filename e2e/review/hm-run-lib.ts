@@ -73,6 +73,8 @@ export interface Row {
   id: string; scenario: string; request: Endpoint; maskedRef: string;
   status: number | null; code: string; screen: string; expectedScreen: string; mapped: boolean | null;
   pass: boolean; note: string; at: string;
+  /** HTTP 429 on every try: HMRC's sandbox rate limit, not a failure of our code */
+  limited?: boolean;
 }
 
 export interface Deps {
@@ -82,6 +84,31 @@ export interface Deps {
   lastStatus: () => number | null;
   ccp: { ref: string; postcode: string };
   now?: () => Date;
+  /** Retry-After header (seconds) of the most recent HMRC call, if any */
+  lastRetryAfter?: () => number | null;
+  /** wait between calls (ms, default 1500) and the sleep used (injectable for tests) */
+  paceMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+  maxTries?: number;
+}
+
+export const BACKOFF_MS = [3000, 6000, 12000, 24000];
+const realSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** One call, paced; a 429 is retried (Retry-After, else 3s/6s/12s/24s) up to maxTries (default 5). */
+async function callRetry(d: Deps, ep: Endpoint, ref: string): Promise<{ r: TfcResult<unknown>; limited: boolean; tries: number }> {
+  const sleep = d.sleep ?? realSleep;
+  const max = d.maxTries ?? 5;
+  let tries = 0;
+  for (;;) {
+    await sleep(d.paceMs ?? 1500);
+    tries++;
+    const r = await call(d, ep, ref);
+    if (d.lastStatus() !== 429) return { r, limited: false, tries };
+    if (tries >= max) return { r, limited: true, tries };
+    const ra = d.lastRetryAfter?.();
+    await sleep(ra && ra > 0 ? Math.min(ra * 1000, 60_000) : BACKOFF_MS[Math.min(tries - 1, BACKOFF_MS.length - 1)]);
+  }
 }
 
 const DOB = "2015-01-01";
@@ -99,9 +126,12 @@ export async function runScenario(d: Deps, sc: Scenario): Promise<Row[]> {
     const at = (d.now ?? (() => new Date()))().toISOString();
     const base = { id: sc.id, scenario: sc.name, request: ep, maskedRef: maskRef(sc.ref), at };
     try {
-      const r = await call(d, ep, sc.ref);
+      const { r, limited, tries } = await callRetry(d, ep, sc.ref);
       const status = d.lastStatus();
-      if (sc.kind === "success") {
+      if (limited) {
+        rows.push({ ...base, status, code: "", screen: r.ok ? "" : r.failure, expectedScreen: sc.screen ?? "(success)", mapped: null, pass: false, limited: true,
+          note: `RATE-LIMITED (not a failure of our code): HTTP 429 on all ${tries} tries` });
+      } else if (sc.kind === "success") {
         rows.push({ ...base, status, code: r.ok ? "" : r.code ?? "", screen: r.ok ? "(success)" : r.failure, expectedScreen: "(success)", mapped: null,
           pass: r.ok, note: r.ok ? "" : "expected success" });
       } else if (r.ok) {
@@ -128,11 +158,11 @@ export function renderResults(rows: Row[], when: string): string {
     "",
     `Last run: ${when} by \`server/node_modules/.bin/tsx e2e/review/hm-run.mts\` against ${SANDBOX_HOST}. References are masked (last 3 characters shown). Scenario ids S01-S16 follow the tables above in order.`,
     "",
-    `Overall: ${rows.filter((r) => r.pass).length} of ${rows.length} requests passed.`,
+    `Overall: ${rows.filter((r) => r.pass).length} of ${rows.length} requests passed${rows.some((r) => r.limited) ? `; ${rows.filter((r) => r.limited).length} RATE-LIMITED by the sandbox (HTTP 429, not a failure of our code; re-run to retry only those)` : ""}.`,
     "",
     "| Id | Scenario | Request | Ref | HTTP | HMRC code | Parent screen | Expected screen | Mapped | Result | Timestamp (UTC) | Note |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
-    ...rows.map((r) => `| ${r.id} | ${esc(r.scenario)} | ${r.request} | ${r.maskedRef} | ${r.status ?? "-"} | ${r.code || "-"} | ${r.screen || "-"} | ${r.expectedScreen} | ${r.mapped === null ? "n/a" : r.mapped ? "yes" : "NO"} | ${r.pass ? "PASS" : "FAIL"} | ${r.at} | ${esc(r.note)} |`),
+    ...rows.map((r) => `| ${r.id} | ${esc(r.scenario)} | ${r.request} | ${r.maskedRef} | ${r.status ?? "-"} | ${r.code || "-"} | ${r.screen || "-"} | ${r.expectedScreen} | ${r.mapped === null ? "n/a" : r.mapped ? "yes" : "NO"} | ${r.pass ? "PASS" : r.limited ? "RATE-LIMITED" : "FAIL"} | ${r.at} | ${esc(r.note)} |`),
     END,
   ];
   return lines.join("\n");
@@ -200,3 +230,26 @@ export async function createTestUser(
     return { ok: true, userId: j.userId, password: j.password };
   } catch (e) { return fail("create", null, (e as Error).message); }
 }
+
+// ── Resume support ───────────────────────────────────────────────────────
+export interface SavedState { token?: { accessToken: string; refreshToken: string; expiresAt: number }; rows: Row[] }
+
+/** Scenarios that still need running: any with a non-PASS row, or no rows at all. */
+export function scenariosToRun(prev: Row[] | undefined, all: Scenario[] = SCENARIOS): Scenario[] {
+  if (!prev || !prev.length) return all;
+  return all.filter((sc) => {
+    const mine = prev.filter((r) => r.id === sc.id);
+    return mine.length < sc.endpoints.length || mine.some((r) => !r.pass);
+  });
+}
+
+/** Keep earlier rows for scenarios that were not re-run; replace the rest. Ordered as SCENARIOS. */
+export function mergeRows(prev: Row[], fresh: Row[], all: Scenario[] = SCENARIOS): Row[] {
+  const rerun = new Set(fresh.map((r) => r.id));
+  const kept = prev.filter((r) => !rerun.has(r.id));
+  const order = (r: Row) => all.findIndex((s) => s.id === r.id);
+  return [...kept, ...fresh].sort((a, b) => order(a) - order(b));
+}
+
+/** A saved token is reusable only with at least 5 minutes left. */
+export const tokenUsable = (t: SavedState["token"] | undefined, now = Date.now()): boolean => !!t && !!t.accessToken && t.expiresAt - 300_000 > now;

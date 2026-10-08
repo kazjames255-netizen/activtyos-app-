@@ -6,7 +6,7 @@ import readline from "node:readline";
 import { createRequire } from "node:module";
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { createTestUser, assertSandbox, SCENARIOS, runScenario, renderResults, spliceResults, extractCode, scrub, type Row } from "./hm-run-lib";
+import { scenariosToRun, mergeRows, tokenUsable, type SavedState, createTestUser, assertSandbox, SCENARIOS, runScenario, renderResults, spliceResults, extractCode, scrub, type Row } from "./hm-run-lib";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -31,22 +31,40 @@ const secrets = [c.clientId, c.clientSecret, c.eppUniqueCustomerId, c.eppRegRefe
 
 // Record the HTTP status of the client's calls, and block any non-sandbox host as a second guard.
 let last: number | null = null;
+let lastRetryAfter: number | null = null;
 const realFetch = globalThis.fetch;
 globalThis.fetch = (async (input: any, init?: any) => {
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   assertSandbox(new URL(url).origin);
   const res = await realFetch(input, init);
   last = res.status;
+  const ra = Number(res.headers.get("retry-after"));
+  lastRetryAfter = Number.isFinite(ra) && ra > 0 ? ra : null;
   return res;
 }) as typeof fetch;
 
 // A user access token: either supplied, or obtained once through the real GOV.UK sandbox sign-in.
 let tokens: { accessToken: string; refreshToken: string; expiresAt: number };
 const supplied = (process.env.HMRC_TFC_SANDBOX_ACCESS_TOKEN ?? "").trim();
+const stateFile = path.join(root, "e2e/review/.local/hm-run-state.json");
+const fresh = process.argv.includes("--fresh");
+let saved: SavedState = { rows: [] };
+if (!fresh) { try { saved = JSON.parse(fs.readFileSync(stateFile, "utf8")); } catch { /* no earlier run */ } }
+const saveState = (rows: Row[], tok?: SavedState["token"]) => {
+  try {
+    fs.mkdirSync(path.dirname(stateFile), { recursive: true });
+    fs.writeFileSync(stateFile, JSON.stringify({ token: tok, rows }), { mode: 0o600 });
+  } catch { /* saving is optional */ }
+};
 if (supplied) {
   tokens = { accessToken: supplied, refreshToken: "", expiresAt: Date.now() + 3 * 3600_000 };
   secrets.push(supplied);
+} else if (tokenUsable(saved.token)) {
+  tokens = saved.token!;
+  secrets.push(tokens.accessToken, tokens.refreshToken);
+  console.log("Reusing your earlier HMRC sandbox sign-in (still valid), no need to sign in again.");
 } else {
+  if (saved.token) console.log("Your earlier HMRC sandbox sign-in has expired, so you need to sign in again.");
   console.log("Creating a FAKE sandbox test user at HMRC (sandbox only, no real person) ...");
   const services = (process.env.HMRC_TFC_SANDBOX_TEST_USER_SERVICES ?? "").split(",").map((x) => x.trim()).filter(Boolean);
   const tu = await createTestUser(c, services.length ? services : undefined);
@@ -82,24 +100,33 @@ if (supplied) {
   tokens = ex.data;
   secrets.push(tokens.accessToken, tokens.refreshToken);
 }
+saveState(saved.rows, tokens);
 
 const ccp = {
   ref: (process.env.HMRC_TFC_SANDBOX_CCP_REG_REFERENCE ?? "").trim() || "EY123456",
   postcode: (process.env.HMRC_TFC_SANDBOX_CCP_POSTCODE ?? "").trim() || "AB12 3CD",
 };
 
-const rows: Row[] = [];
-for (const sc of SCENARIOS) {
-  const r = await runScenario({ cfg: c, tokens, lastStatus: () => last, ccp }, sc);
-  rows.push(...r);
-  for (const x of r) console.log(scrub(`${x.pass ? "PASS" : "FAIL"}  ${x.id}  ${x.request.padEnd(7)} HTTP ${x.status ?? "-"}  ${x.code || "-"}  -> ${x.screen}`, secrets));
+const todo = scenariosToRun(fresh ? undefined : saved.rows);
+if (todo.length < SCENARIOS.length) console.log(`Resuming: re-running only ${todo.map((t) => t.id).join(", ")}; earlier passes are kept. (Use --fresh to run everything again.)`);
+const paceMs = Number(process.env.HMRC_TFC_SANDBOX_PACE_MS) > 0 ? Number(process.env.HMRC_TFC_SANDBOX_PACE_MS) : 1500;
+const newRows: Row[] = [];
+for (const sc of todo) {
+  const r = await runScenario({ cfg: c, tokens, lastStatus: () => last, lastRetryAfter: () => lastRetryAfter, paceMs, ccp }, sc);
+  newRows.push(...r);
+  for (const x of r) console.log(scrub(`${x.pass ? "PASS" : x.limited ? "RATE-LIMITED" : "FAIL"}  ${x.id}  ${x.request.padEnd(7)} HTTP ${x.status ?? "-"}  ${x.code || "-"}  -> ${x.screen}`, secrets));
+  saveState(mergeRows(fresh ? [] : saved.rows, newRows), tokens);
 }
+const rows = mergeRows(fresh ? [] : saved.rows, newRows);
+saveState(rows, tokens);
 
 const file = path.join(root, "docs/tfc/sandbox-test-evidence.md");
 const when = new Date().toISOString();
 fs.writeFileSync(file, spliceResults(fs.readFileSync(file, "utf8"), renderResults(rows, when)));
 const passed = rows.filter((r) => r.pass).length;
 console.log(`\n${passed}/${rows.length} requests passed. Evidence written to docs/tfc/sandbox-test-evidence.md`);
-const failed = [...new Set(rows.filter((r) => !r.pass).map((r) => r.id))];
+const failed = [...new Set(rows.filter((r) => !r.pass && !r.limited).map((r) => r.id))];
+const limited = [...new Set(rows.filter((r) => r.limited).map((r) => r.id))];
 if (failed.length) console.log(`Failed scenarios: ${failed.join(", ")}`);
-process.exit(failed.length ? 2 : 0);
+if (limited.length) console.log(`Rate-limited by the sandbox (not a failure of our code): ${limited.join(", ")}. Wait a few minutes and run the same command again; only these are re-run.`);
+process.exit(failed.length ? 2 : limited.length ? 3 : 0);

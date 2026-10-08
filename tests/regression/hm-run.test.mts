@@ -79,3 +79,54 @@ test("createTestUser: token then create, and clear failures with the manual step
   if (!bad.ok) { assert.equal(bad.status, 404); assert.ok(!bad.body.includes("tok-1234")); assert.match(bad.manual, /Create Test User/); }
   await assert.rejects(createTestUser({ ...cfg, baseUrl: "https://api.service.hmrc.gov.uk" }, undefined, good), /Refusing/);
 });
+
+import { scenariosToRun, mergeRows, tokenUsable } from "../../e2e/review/hm-run-lib";
+const dd = (over: Record<string, unknown> = {}) => ({
+  cfg: { baseUrl: "https://test-api.service.hmrc.gov.uk", clientId: "cid", clientSecret: "sec", redirectUri: "r", eppUniqueCustomerId: "12345678901", eppRegReference: "HMRC123456A" },
+  tokens: { accessToken: "tok", refreshToken: "ref", expiresAt: Date.now() + 1e6 }, ccp: { ref: "EY123456", postcode: "AB12 3CD" }, ...over });
+
+test("429 is paced, retried with Retry-After then backoff, and recorded as RATE-LIMITED only when retries run out", async () => {
+  const realFetch = globalThis.fetch;
+  let status = 0, n = 0, ra: number | null = null;
+  const waits: number[] = [];
+  const sleep = async (ms: number) => { waits.push(ms); };
+  const sc = SCENARIOS.find((s) => s.id === "S16")!; // payment only
+  try {
+    globalThis.fetch = (async () => {
+      n++;
+      if (n === 1) { status = 429; ra = 7; return new Response("{}", { status }); }
+      if (n === 2) { status = 429; ra = null; return new Response("{}", { status }); }
+      status = 400; ra = null; return new Response(JSON.stringify({ errorCode: "E0033" }), { status });
+    }) as unknown as typeof fetch;
+    const rows = await runScenario(dd({ lastStatus: () => status, lastRetryAfter: () => ra, sleep, paceMs: 1500 }) as never, sc);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].pass, true);
+    assert.ok(!rows[0].limited);
+    assert.deepEqual(waits, [1500, 7000, 1500, 6000, 1500]);
+    waits.length = 0;
+    globalThis.fetch = (async () => { status = 429; ra = null; return new Response("{}", { status }); }) as unknown as typeof fetch;
+    const lim = await runScenario(dd({ lastStatus: () => status, lastRetryAfter: () => ra, sleep, paceMs: 1 }) as never, sc);
+    assert.equal(lim[0].limited, true);
+    assert.equal(lim[0].pass, false);
+    assert.match(lim[0].note, /RATE-LIMITED/);
+    assert.deepEqual(waits.filter((w) => w > 1), [3000, 6000, 12000, 24000]);
+    assert.match(renderResults(lim, "now"), /RATE-LIMITED/);
+  } finally { globalThis.fetch = realFetch; }
+});
+
+test("resume re-runs only scenarios not yet PASS, keeps earlier passes, and reuses a valid token", () => {
+  const mk = (id: string, request: string, pass: boolean, limited = false) => ({ id, request, pass, limited }) as unknown as Row;
+  const prev: Row[] = [];
+  for (const sc of SCENARIOS) for (const ep of sc.endpoints) prev.push(mk(sc.id, ep, !(sc.id === "S05" && ep === "balance") && sc.id !== "S08", sc.id === "S08"));
+  assert.deepEqual(scenariosToRun(prev).map((s) => s.id), ["S05", "S08"]);
+  assert.equal(scenariosToRun(undefined).length, 16);
+  assert.equal(scenariosToRun(prev.filter((r) => r.id !== "S16")).some((s) => s.id === "S16"), true);
+  const fresh = ["link", "balance", "payment"].map((e) => mk("S05", e, true));
+  const merged = mergeRows(prev, fresh);
+  assert.equal(merged.filter((r) => r.id === "S05" && r.pass).length, 3);
+  assert.equal(merged.filter((r) => r.id === "S01").length, 3);
+  assert.equal(merged.length, prev.length);
+  assert.ok(tokenUsable({ accessToken: "a", refreshToken: "", expiresAt: Date.now() + 3_600_000 }));
+  assert.ok(!tokenUsable({ accessToken: "a", refreshToken: "", expiresAt: Date.now() + 60_000 }));
+  assert.ok(!tokenUsable(undefined));
+});
