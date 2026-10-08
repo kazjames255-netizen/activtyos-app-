@@ -61,7 +61,7 @@ if (mode === "emu") {
   ensureJava();
   const dir = join(root, ".emu"); mkdirSync(dir, { recursive: true });
   const cfg = join(dir, `firebase.${off}.json`);
-  writeFileSync(cfg, JSON.stringify({ emulators: { auth: { port: P.auth, host: "127.0.0.1" }, firestore: { port: P.fs, host: "127.0.0.1" }, ui: { enabled: false }, hub: { port: 14400 + off }, logging: { port: 14500 + off }, singleProjectMode: true } }, null, 2));
+  writeFileSync(cfg, JSON.stringify({ emulators: { auth: { port: P.auth, host: "127.0.0.1" }, firestore: { port: P.fs, host: "127.0.0.1" }, ui: { enabled: false }, hub: { port: 24400 + off }, logging: { port: 34500 + off }, singleProjectMode: true } }, null, 2));
   console.log(`[emu] Auth 127.0.0.1:${P.auth}  Firestore 127.0.0.1:${P.fs}  project ${project}  (data is in memory: gone on stop)`);
   kids.push(run("emu", "npx", ["--yes", "firebase-tools@latest", "emulators:start", "--only", "auth,firestore", "--project", project, "--config", cfg], env));
 } else if (mode === "api") {
