@@ -1863,7 +1863,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           <>
             {appliedCodes.map((a) => (
               <div key={a.code} className="mt-2 flex items-baseline justify-between text-[12px]">
-                <span style={{ color: tk.muted }}>{tr(a.exclusive ? "p8lst.ck8CodeLineExclusive" : "p8lst.ck8CodeLine", { code: a.code })}</span>
+                <span style={{ color: tk.muted }}>
+                  {tr(a.exclusive ? "p8lst.ck8CodeLineExclusive" : "p8lst.ck8CodeLine", { code: a.code })}
+                  {/* A typed-in code used to have no way off: only retyping it and pressing Apply removed it. */}
+                  <button type="button" data-ui="remove-code" onClick={() => removeCode(a.code)} className="ml-2 underline" style={{ color: tk.muted }}>{tr("p8lst.bpRemove")}</button>
+                </span>
                 <b style={{ color: tk.accent }}>−{money(Math.min(a.off, grandTotal))}</b>
               </div>
             ))}
