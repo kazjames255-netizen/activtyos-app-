@@ -75,3 +75,8 @@ server/serviceAccountKey.json
 
 # per-agent / per-port dev build folders (Tailwind must not scan them)
 /.next-*/
+
+# emulator test stack
+/.emu/
+/.next-emu*/
+*-debug.log

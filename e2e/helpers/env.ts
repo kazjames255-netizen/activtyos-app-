@@ -20,7 +20,7 @@ function parseEnvFile(p: string): Record<string, string> {
 export const FIREBASE_API_KEY =
   process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
   parseEnvFile(path.join(ROOT, ".env.local")).NEXT_PUBLIC_FIREBASE_API_KEY ||
-  "";
+  (process.env.FIREBASE_AUTH_EMULATOR_HOST ? "any" : ""); // the Auth emulator ignores the key
 if (!FIREBASE_API_KEY) {
   throw new Error("NEXT_PUBLIC_FIREBASE_API_KEY not found (checked env and .env.local)");
 }
