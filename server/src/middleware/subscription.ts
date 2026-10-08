@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { db } from "../firebase";
+import { normalizeApiPath } from "../../../lib/accessMap";
 import { BRAND } from "../lib/brand";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -67,7 +68,7 @@ const OPEN = ["/subscription", "/me", "/account", "/notifications", "/tenants", 
 const SAFETY = ["/registers", "/children", "/incidents", "/medications", "/my/files", "/uploads"];
 const SAFETY_READ = ["/bookings", "/customers", "/library", "/franchises"];
 
-const under = (path: string, list: string[]) => list.some((p) => path === p || path.startsWith(`${p}/`));
+const under = (path: string, list: string[]) => { const n = normalizeApiPath(path); return list.some((p) => n === p || n.startsWith(`${p}/`)); };
 const isRead = (method: string) => method === "GET" || method === "HEAD" || method === "OPTIONS";
 
 /** The tenant roles the wall applies to — everyone who works in the tenant. */
@@ -151,7 +152,7 @@ export async function enforceSubscription(req: Request, res: Response, next: Nex
   }
   // Creating an invite is new business, so it follows the mode; everything
   // else under /invites (list, revoke, switch a leaver off) stays open.
-  const creatingInvite = req.method === "POST" && req.path === "/invites";
+  const creatingInvite = req.method === "POST" && normalizeApiPath(req.path) === "/invites";
   if (under(req.path, OPEN) && !creatingInvite) {
     next();
     return;

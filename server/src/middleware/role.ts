@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { db } from "../firebase";
+import { normalizeApiPath } from "../../../lib/accessMap";
 
 // The six account types from the product spec, enforced server-side, now
 // with real tenancy:
@@ -105,7 +106,7 @@ export async function attachRole(req: Request, _res: Response, next: NextFunctio
     }
     // A parent who CLOSED their own account can reopen it — that one route
     // stays open; everything else is refused until they do.
-    if (d.deactivatedAt && normalizeRole(d.role) !== "platform" && !req.originalUrl.startsWith("/api/account/reactivate")) {
+    if (d.deactivatedAt && normalizeRole(d.role) !== "platform" && !normalizeApiPath(req.originalUrl).startsWith("/api/account/reactivate")) {
       _res.status(403).json({ error: "You closed this account. Reopen it to carry on — your bookings and history are still here.", code: "account_closed" });
       return;
     }

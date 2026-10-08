@@ -195,11 +195,25 @@ const NEVER_REFUSED: { method: string | null; re: RegExp }[] = [
   { method: null, re: /^\/api\/messages\/support(\/|$)/ },
 ];
 
+/** The ONE place a request path is normalised before any role / feature / plan matching. Express routes
+ *  case-insensitively and ignores a trailing slash, so /API/MEDICATIONS and /api/Medications/ reach the
+ *  same handler as /api/medications: every table in this file is lower-case, so match on the lower-cased
+ *  path with scheme://authority and the query dropped and repeated or trailing slashes collapsed. Only for MATCHING — never
+ *  rewrite req.url with it (record ids in the path are case-sensitive). */
+export function normalizeApiPath(raw: string): string {
+  // An absolute-form request target ("GET http://user@host/api/x") is routed on its pathname: drop scheme://authority first.
+  // No percent-decoding: Express matches the raw segments, so "%2f" is NOT a slash (it must not satisfy "/x/administer" allow-lists).
+  let p = raw.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/?#]*/i, "").split("?")[0].split("#")[0];
+  p = p.toLowerCase().replace(/\/{2,}/g, "/").replace(/\/+$/, "");
+  return p || "/";
+}
+
 const under = (path: string, prefix: string) => path === prefix || path.startsWith(prefix + "/");
 
 /** The feature entry an API call falls under, or null. A read of a
  *  FEATURE_WRITE_API module isn't gated. */
-export function featureForApi(path: string, method = "GET"): { keys: string[]; label: string } | null {
+export function featureForApi(rawPath: string, method = "GET"): { keys: string[]; label: string } | null {
+  const path = normalizeApiPath(rawPath);
   const hit = FEATURE_API.find((f) => under(path, f.prefix));
   if (hit) return hit;
   const m = method.toUpperCase();
@@ -208,7 +222,8 @@ export function featureForApi(path: string, method = "GET"): { keys: string[]; l
 }
 
 /** The matrix area + level an API call needs, or null when it isn't gated. */
-export function capForApi(path: string, method: string): { area: string; need: "view" | "edit" } | null {
+export function capForApi(rawPath: string, method: string): { area: string; need: "view" | "edit" } | null {
+  const path = normalizeApiPath(rawPath);
   const m = method.toUpperCase();
   if (NEVER_REFUSED.some((x) => (!x.method || x.method === m) && x.re.test(path))) return null;
   const hit = CAP_API.find((c) => under(path, c.prefix));
