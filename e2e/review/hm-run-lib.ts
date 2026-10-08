@@ -126,7 +126,7 @@ export function renderResults(rows: Row[], when: string): string {
     START,
     "## Automated sandbox run results",
     "",
-    `Last run: ${when} by \`npx tsx e2e/review/hm-run.mts\` against ${SANDBOX_HOST}. References are masked (last 3 characters shown). Scenario ids S01-S16 follow the tables above in order.`,
+    `Last run: ${when} by \`server/node_modules/.bin/tsx e2e/review/hm-run.mts\` against ${SANDBOX_HOST}. References are masked (last 3 characters shown). Scenario ids S01-S16 follow the tables above in order.`,
     "",
     `Overall: ${rows.filter((r) => r.pass).length} of ${rows.length} requests passed.`,
     "",
@@ -151,4 +151,52 @@ export function extractCode(pasted: string): string {
   const t = pasted.trim();
   const m = t.match(/[?&]code=([^&#\s]+)/);
   return decodeURIComponent(m ? m[1] : t);
+}
+
+// ── Sandbox test user (HMRC "Create Test User" API, application-restricted) ──
+export type TestUserResult =
+  | { ok: true; userId: string; password: string }
+  | { ok: false; step: "token" | "create"; status: number | null; body: string; manual: string };
+
+export const MANUAL_STEP =
+  "On the HMRC Developer Hub open Applications > Activityos > API subscriptions (or Add APIs to my application), find 'Create Test User' under Testing support APIs and subscribe the sandbox app to it, then run this again.";
+
+/** Create a fake sandbox individual via POST /create-test-user/individuals using an application-restricted client-credentials token. Never throws. */
+export async function createTestUser(
+  cfg: { baseUrl: string; clientId: string; clientSecret: string },
+  serviceNames: string[] = ["national-insurance"],
+  fetchFn: typeof fetch = fetch,
+): Promise<TestUserResult> {
+  assertSandbox(cfg.baseUrl);
+  const secrets = [cfg.clientId, cfg.clientSecret];
+  const fail = (step: "token" | "create", status: number | null, body: string): TestUserResult =>
+    ({ ok: false, step, status, body: scrub(body, secrets).slice(0, 600), manual: MANUAL_STEP });
+  let tok: string;
+  try {
+    const r = await fetchFn(`${cfg.baseUrl}/oauth/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+      body: new URLSearchParams({ grant_type: "client_credentials", client_id: cfg.clientId, client_secret: cfg.clientSecret }).toString(),
+      signal: AbortSignal.timeout(20_000),
+    });
+    const t = await r.text();
+    let j: { access_token?: string } = {};
+    try { j = JSON.parse(t); } catch { /* not json */ }
+    if (!r.ok || !j.access_token) return fail("token", r.status, t);
+    tok = j.access_token;
+    secrets.push(tok);
+  } catch (e) { return fail("token", null, (e as Error).message); }
+  try {
+    const r = await fetchFn(`${cfg.baseUrl}/create-test-user/individuals`, {
+      method: "POST",
+      headers: { Accept: "application/vnd.hmrc.1.0+json", "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+      body: JSON.stringify({ serviceNames }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    const t = await r.text();
+    let j: { userId?: string; password?: string } = {};
+    try { j = JSON.parse(t); } catch { /* not json */ }
+    if (!r.ok || !j.userId || !j.password) return fail("create", r.status, t);
+    return { ok: true, userId: j.userId, password: j.password };
+  } catch (e) { return fail("create", null, (e as Error).message); }
 }

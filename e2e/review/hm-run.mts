@@ -1,4 +1,4 @@
-// HMRC Tax-Free Childcare SANDBOX scenario runner. Owner runs it:  npx tsx e2e/review/hm-run.mts
+// HMRC Tax-Free Childcare SANDBOX scenario runner. Owner runs it:  server/node_modules/.bin/tsx e2e/review/hm-run.mts
 // Writes the results into docs/tfc/sandbox-test-evidence.md. Sandbox host only; no Stripe, no Firebase; no secrets/tokens/full references are printed.
 import fs from "node:fs";
 import path from "node:path";
@@ -6,7 +6,7 @@ import readline from "node:readline";
 import { createRequire } from "node:module";
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { assertSandbox, SCENARIOS, runScenario, renderResults, spliceResults, extractCode, scrub, type Row } from "./hm-run-lib";
+import { createTestUser, assertSandbox, SCENARIOS, runScenario, renderResults, spliceResults, extractCode, scrub, type Row } from "./hm-run-lib";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -47,8 +47,31 @@ if (supplied) {
   tokens = { accessToken: supplied, refreshToken: "", expiresAt: Date.now() + 3 * 3600_000 };
   secrets.push(supplied);
 } else {
+  console.log("Creating a FAKE sandbox test user at HMRC (sandbox only, no real person) ...");
+  const services = (process.env.HMRC_TFC_SANDBOX_TEST_USER_SERVICES ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const tu = await createTestUser(c, services.length ? services : undefined);
+  if (!tu.ok) {
+    console.error(`HMRC refused to create a test user (${tu.step} step, HTTP ${tu.status ?? "no response"}): ${tu.body}`);
+    console.error(`What to do: ${tu.manual}`);
+    process.exit(1);
+  }
+  console.log("\nFAKE sandbox test user (sandbox-only credentials, not a real person; safe to show):");
+  console.log(`  User ID:  ${tu.userId}`);
+  console.log(`  Password: ${tu.password}`);
+  try {
+    const dir = path.join(root, "e2e/review/.local");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "hmrc-sandbox-test-user.txt"), `userId=${tu.userId}\npassword=${tu.password}\n`);
+    console.log("  (also saved to e2e/review/.local/hmrc-sandbox-test-user.txt, which git ignores)");
+  } catch { /* saving is optional */ }
+  console.log("\nWhat happens next:");
+  console.log("  1. Your browser opens the HMRC / GOV.UK sandbox sign-in page.");
+  console.log("  2. Type the User ID and Password above into it and sign in.");
+  console.log("  3. Press the button to grant Activityos permission (Tax-Free Childcare).");
+  console.log("  4. The browser then goes to the redirect address and may show an error or blank page. That is fine.");
+  console.log("  5. Copy the full address from the browser address bar and paste it below, then press Enter.\n");
   const url = authorizeUrl(c, "hm-run");
-  console.log("Opening the HMRC sandbox sign-in in your browser. Sign in with an HMRC 'Create Test User' account and grant permission.");
+  console.log("Opening the HMRC sandbox sign-in in your browser.");
   console.log("(The link is not printed because it contains the client id.)");
   execFile("open", [url], () => {});
   console.log("When the browser lands on the redirect page, copy the full address (or just the code= value) and paste it here.");

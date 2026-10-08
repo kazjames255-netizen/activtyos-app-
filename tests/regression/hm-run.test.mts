@@ -56,3 +56,26 @@ test("all 16 scenarios run against a mocked HMRC and map to the expected parent 
     assert.ok(spliceResults("a\n## Safety properties\nb", md).includes("hm-run:results:end"));
   } finally { globalThis.fetch = realFetch; }
 });
+
+import { createTestUser } from "../../e2e/review/hm-run-lib";
+test("createTestUser: token then create, and clear failures with the manual step", async () => {
+  const cfg = { baseUrl: "https://test-api.service.hmrc.gov.uk", clientId: "cid-abcd", clientSecret: "sec-abcd" };
+  const calls: string[] = [];
+  const good = (async (u: string, init: { body: string; headers: Record<string, string> }) => {
+    calls.push(u);
+    if (u.endsWith("/oauth/token")) { assert.match(init.body, /client_credentials/); return new Response(JSON.stringify({ access_token: "tok-1234" }), { status: 200 }); }
+    assert.equal(init.headers.Authorization, "Bearer tok-1234");
+    assert.deepEqual(JSON.parse(init.body), { serviceNames: ["national-insurance"] });
+    return new Response(JSON.stringify({ userId: "123456789012", password: "pw" }), { status: 201 });
+  }) as unknown as typeof fetch;
+  const ok = await createTestUser(cfg, undefined, good);
+  assert.deepEqual(ok, { ok: true, userId: "123456789012", password: "pw" });
+  assert.ok(calls[1].endsWith("/create-test-user/individuals"));
+  const denied = (async (u: string) => u.endsWith("/oauth/token")
+    ? new Response(JSON.stringify({ access_token: "tok-1234" }), { status: 200 })
+    : new Response(JSON.stringify({ code: "MATCHING_RESOURCE_NOT_FOUND", secret: "tok-1234" }), { status: 404 })) as unknown as typeof fetch;
+  const bad = await createTestUser(cfg, undefined, denied);
+  assert.equal(bad.ok, false);
+  if (!bad.ok) { assert.equal(bad.status, 404); assert.ok(!bad.body.includes("tok-1234")); assert.match(bad.manual, /Create Test User/); }
+  await assert.rejects(createTestUser({ ...cfg, baseUrl: "https://api.service.hmrc.gov.uk" }, undefined, good), /Refusing/);
+});
