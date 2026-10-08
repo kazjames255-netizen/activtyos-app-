@@ -8,7 +8,7 @@ import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignUp, fbTrySignIn } from
 
 // Minimal setup for the Teaching Hub review: freelancer tutor, company (+ staff via invite) and a parent.
 // NEVER creates or signs in a platform (HQ) account, so no 2FA email is triggered. Writes its own manifest under E2E_AUTH_DIR.
-const HOME: Partial<Record<Role, string>> = { freelancer: "/freelancer/bookings", company: "/company/bookings", staff: "/staff/dash", parent: "/custdash/browse" };
+const HOME: Partial<Record<Role, string>> = { freelancer: "/freelancer/bookings", company: "/company/bookings", staff: "/staff/dash", parent: "/custdash/home" };
 setup.describe.configure({ timeout: 300_000 });
 
 async function uiLogin(browser: Browser, role: Role, email: string) {

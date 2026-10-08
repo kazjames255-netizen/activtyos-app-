@@ -1389,6 +1389,7 @@ function PricingCalculator({
   const [openAll] = useState(!block.priced);
   const [toggled, setToggled] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState(false);
+  const [savedAt, setSavedAt] = useState(0); // shows "Pricing saved" for a few seconds after a successful save
 
   const [masterPrice, setMasterPrice] = useState(
     block.masterPrice != null ? String(block.masterPrice) : "",
@@ -1468,7 +1469,7 @@ function PricingCalculator({
     // so it counts; an empty field does not.
     const priced = master !== null || Object.values(flat).some((v) => v > 0);
     setBusy(true);
-    await onSavePricing({
+    const ok = await onSavePricing({
       masterPrice: master,
       calcOn,
       passFlat: flat,
@@ -1477,6 +1478,7 @@ function PricingCalculator({
       priced,
     });
     setBusy(false);
+    if (ok) { setSavedAt(Date.now()); setTimeout(() => setSavedAt(0), 4000); }
   }
 
   // Display price for a pass row: master + flat overrides are what the operator
@@ -1667,6 +1669,7 @@ function PricingCalculator({
         <Button sm variant="primary" disabled={busy} onClick={save}>
           {busy ? t("p8lst.blkSaving") : t("p8lst.blkSavePricing")}
         </Button>
+        {savedAt > 0 && <span role="status" className="text-[12px] font-bold text-[#12805a]">✓ {t("p8lst.blkPricingSaved")}</span>}
         {calcOn && block.resolved.perDay > 0 && (
           <span className="text-[11px] text-[var(--ink-3)]">
             {t("p8lst.blkPerDay", { price: money(block.resolved.perDay) })}

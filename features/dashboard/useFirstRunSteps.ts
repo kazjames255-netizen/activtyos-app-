@@ -6,6 +6,7 @@
 // 60s TTL per tenant (one set of reads per minute per tab, not per navigation),
 // and an established provider (published listing + a booking) is remembered in
 // localStorage so those reads stop altogether.
+import { acceptsTfc, tfcReady, type TfcDetails } from "@/lib/tfcReady";
 import { payStepDone } from "@/lib/billingRules";
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -13,8 +14,8 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { peekMe, getMe } from "@/components/auth/PortalGuard";
 
-export type StepId = "venue" | "block" | "listing" | "pay" | "cancel" | "team";
-interface Facts { venues: number; blocks: number; listings: number; bookings: number; payChosen: boolean; cancelChosen: boolean; team: number }
+export type StepId = "venue" | "block" | "listing" | "pay" | "tfc" | "cancel" | "team";
+interface Facts { venues: number; blocks: number; listings: number; bookings: number; payChosen: boolean; cancelChosen: boolean; team: number; acceptsTfc: boolean; tfcReady: boolean }
 export interface FirstRunStored { hidden?: boolean; visited?: StepId[] }
 export interface FirstRunStep { id: StepId; done: boolean; href: string }
 
@@ -31,18 +32,19 @@ function readStore(tenant: string): FirstRunStored {
 }
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
 
-const cache = new Map<string, { at: number; facts: Facts | null; p?: Promise<void> }>();
+const cache = new Map<string, { at: number; facts: Facts | null; p?: Promise<void>; again?: boolean }>();
 const listeners = new Set<() => void>();
 const bump = () => listeners.forEach((f) => f());
 
 function fetchFacts(tenant: string, portal: string, force: boolean) {
   const c = cache.get(tenant) ?? { at: 0, facts: null };
   cache.set(tenant, c);
-  if (c.p) return;
+  // A change that lands while a read is already in flight must not be dropped (that read may predate it): run once more when it ends.
+  if (c.p) { if (force) c.again = true; return; }
   if (!force && c.facts && Date.now() - c.at < TTL) return;
   const safe = <T,>(p: Promise<T>, d: T) => p.catch(() => d);
   c.p = Promise.all([
-    safe(apiGet<{ venues?: unknown[]; settings?: { payMethods?: unknown[]; cancellationPolicies?: unknown[]; billing?: { bankAccount?: string; sortCode?: string; iban?: string } } } | null>("/api/library"), null),
+    safe(apiGet<{ venues?: unknown[]; settings?: { providerName?: string; childcare?: TfcDetails; payMethods?: unknown[]; cancellationPolicies?: unknown[]; billing?: { bankAccount?: string; sortCode?: string; iban?: string } } } | null>("/api/library"), null),
     safe(apiGet<unknown[]>("/api/block-bundles"), []),
     safe(apiGet<unknown[]>("/api/listings?mine=1"), []),
     safe(apiGet<unknown[]>("/api/bookings"), []),
@@ -57,11 +59,14 @@ function fetchFacts(tenant: string, portal: string, force: boolean) {
       // "Chosen" = saved something of their own, or Stripe is live.
       payChosen: payStepDone(lib?.settings?.billing as Parameters<typeof payStepDone>[0]),
       cancelChosen: !!lib?.settings?.cancellationPolicies?.length,
+      // A provider who lists Tax-Free Childcare as a way to pay needs their regulator registration number + postcode before HMRC can pay them.
+      acceptsTfc: acceptsTfc(lib?.settings?.payMethods),
+      tfcReady: tfcReady(lib?.settings?.childcare, lib?.settings?.providerName).ready,
       team: (invites ?? []).filter((i) => i.role === "staff").length,
     };
     c.at = Date.now();
     if (c.facts.listings > 0 && c.facts.bookings > 0) lsSet(doneKey(tenant), "1");
-  }).finally(() => { c.p = undefined; bump(); });
+  }).finally(() => { c.p = undefined; bump(); if (c.again) { c.again = false; fetchFacts(tenant, portal, true); } });
 }
 
 export function useFirstRunSteps() {
@@ -84,7 +89,7 @@ export function useFirstRunSteps() {
   useEffect(() => { if (enabled) fetchFacts(tenant, portal, false); }, [enabled, tenant, portal, pathname]);
   // Server-side changes refetch (shared listener), but only for a tenant still being set up.
   const onRt = useCallback(() => { if (enabled) fetchFacts(tenant, portal, true); }, [enabled, tenant, portal]);
-  useRealtime(["bookings", "blocks", "listings", "library", "tenants"], onRt); // library = venues, bank details, policies
+  useRealtime(["bookings", "blocks", "blockBundles", "listings", "library", "tenants"], onRt); // library = venues, bank details, policies; blockBundles = the blocks a provider builds
 
   const store = tenant && typeof window !== "undefined" ? readStore(tenant) : {};
   const facts = tenant ? cache.get(tenant)?.facts ?? null : null;
@@ -100,6 +105,7 @@ export function useFirstRunSteps() {
       { id: "block", done: facts.blocks > 0, href: `${base}/blocks` },
       { id: "listing", done: facts.listings > 0, href: `${base}/listings` },
       { id: "pay", done: facts.payChosen, href: `${base}/billing?tab=paid` },
+      ...(facts.acceptsTfc ? [{ id: "tfc" as StepId, done: facts.tfcReady, href: `${base}/setup?tab=vouchers` }] : []),
       { id: "cancel", done: facts.cancelChosen || visited.has("cancel"), href: `${base}/setup?tab=cancel&welcome=1` },
       ...(portal === "freelancer" ? [] : [{ id: "team" as StepId, done: facts.team > 0, href: `${base}/staff` }]),
     ];

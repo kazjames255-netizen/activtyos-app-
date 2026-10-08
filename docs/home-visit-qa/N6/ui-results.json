@@ -1,0 +1,15 @@
+{
+  "promptShown": true,
+  "refusedPlaceholder": true,
+  "promptGone": true,
+  "statusBefore": "",
+  "checkoutBefore": {
+    "opts": [],
+    "note": false
+  },
+  "statusAfter": "✓ Ready for Tax-Free Childcare",
+  "checkoutAfter": {
+    "opts": [],
+    "note": false
+  }
+}

@@ -13,6 +13,7 @@ import { notify, parentEmailForChild } from "../lib/notify";
 import { alertDsl, isSafeguardingLead, leadCovers, namesALead } from "../lib/dslAlert";
 import { whereInChunks } from "../lib/firestoreIn";
 import { auditIncidentDeletion } from "../lib/incidentDeletionAudit";
+import { actorName } from "../lib/actorName";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Incidents & Accidents (Pupils) — the safeguarding log every OFSTED-
@@ -107,6 +108,10 @@ const logSchema = z.object({
   photoUrl: z.string().max(500).optional(),
   followUp: z.string().trim().max(2_000).optional(),
 });
+/** Latest day an event may be dated: tomorrow in UTC, so a provider whose local day is
+ *  ahead of UTC (or a late-night entry) is never refused, but a typo year is. */
+const latestEventDay = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+const FUTURE_DATE_MSG = "That date is in the future. Pick today or an earlier day.";
 const KINDS = ["accident", "incident", "safeguarding"] as const;
 const isKind = (v: unknown): v is (typeof KINDS)[number] => typeof v === "string" && (KINDS as readonly string[]).includes(v);
 
@@ -127,6 +132,14 @@ async function safeguardingSettings(tenantId: string, childId?: string | null) {
 }
 
 const kindWord = (kind: string) => (kind === "accident" ? "accident" : kind === "safeguarding" ? "safeguarding concern" : "incident");
+// "An accident" / "An incident" / "A safeguarding concern" (it used to say "An safeguarding concern").
+const anWord = (word: string) => `${/^[aeiou]/i.test(word) ? "An" : "A"} ${word}`;
+/** The parent list's visibility rule as one test: a parent reaches (and may
+ *  reply to or acknowledge) a record only when it is an accident or staff chose
+ *  to share it. Internal behaviour notes, safeguarding concerns, confidential
+ *  records and concerns about staff stay off their side entirely. */
+const parentMaySee = (x: { kind?: unknown; shareWithParent?: unknown; confidential?: unknown; subject?: unknown }) =>
+  x.shareWithParent === true || (x.kind === "accident" && x.confidential !== true && x.subject !== "staff");
 // Whether a record should reach the parent: accidents always (per settings),
 // behaviour when the setting is on OR staff ticked share, safeguarding only
 // when staff explicitly chose to share (it's confidential by default).
@@ -290,6 +303,7 @@ incidents.post("/", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
+  if (parsed.data.date > latestEventDay()) { res.status(400).json({ error: FUTURE_DATE_MSG }); return; }
   // Only a child this provider actually has — else the record lands on another
   // provider's child (their parent is emailed; the dossier hands their family back).
   if (parsed.data.childId && !(await childVisibleTo({ ...req.auth!, tenantId: scope.tenantId }, parsed.data.childId))) {
@@ -309,7 +323,7 @@ incidents.post("/", async (req, res) => {
     // belongs to the franchise that logged it.
     franchiseId: req.auth!.franchiseId ?? null,
     recordedBy: req.user?.email ?? req.user?.uid ?? "unknown",
-    recordedByName: req.user?.name ?? req.user?.email ?? "Staff",
+    recordedByName: await actorName(req),
     createdAt: new Date().toISOString(),
   };
   const ref = await col.add(doc);
@@ -333,11 +347,11 @@ incidents.post("/", async (req, res) => {
       tenantId: scope.tenantId!,
       to: { kind: "parent", email },
       category: doc.kind === "accident" ? "accident" : "incident",
-      title: `An ${word} was recorded for ${doc.childName}`,
+      title: `${anWord(word)} was recorded for ${doc.childName}`,
       body: `${doc.description}${doc.treatment ? ` Treatment: ${doc.treatment}.` : ""}`,
       subject: `${doc.childName}: ${word} recorded on ${doc.date}`,
       emailHtml:
-        `<p>An ${word} involving <b>${esc(doc.childName)}</b> was recorded on <b>${when}</b>.</p>` +
+        `<p>${anWord(word)} involving <b>${esc(doc.childName)}</b> was recorded on <b>${when}</b>.</p>` +
         `<p>${esc(doc.description)}</p>` +
         (doc.injury ? `<p><b>Injury:</b> ${esc(doc.injury)}${doc.bodyPart ? ` (${esc(doc.bodyPart)})` : ""}</p>` : "") +
         (doc.treatment ? `<p><b>Treatment given:</b> ${esc(doc.treatment)}${doc.firstAider ? ` — by ${esc(doc.firstAider)}` : ""}</p>` : "") +
@@ -345,6 +359,12 @@ incidents.post("/", async (req, res) => {
       href: "/custdash/accidents",
       ref: ref.id,
     });
+    // The automatic email + bell IS the family being told: record it, so the log's
+    // "Parent informed" count and the record's detail line reflect it without staff
+    // also having to tick "I told them in person".
+    if (!doc.parentNotifiedAt) {
+      await ref.set({ parentNotified: true, parentNotifiedAt: new Date().toISOString(), parentNotifiedHow: doc.parentNotifiedHow || "app" }, { merge: true });
+    }
   })();
 });
 
@@ -393,6 +413,7 @@ incidents.put("/:id", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
+  if (parsed.data.date !== undefined && parsed.data.date !== own.snap.data()!.date && parsed.data.date > latestEventDay()) { res.status(400).json({ error: FUTURE_DATE_MSG }); return; }
   if (parsed.data.childId && parsed.data.childId !== own.snap.data()!.childId && !(await childVisibleTo(auth, parsed.data.childId))) {
     res.status(403).json({ error: "That child isn't booked with you", code: "child_not_yours" });
     return;
@@ -433,7 +454,7 @@ incidents.put("/:id", async (req, res) => {
       tenantId: String(rec.tenantId),
       to: { kind: "parent", email },
       category: kind === "accident" ? "accident" : "incident",
-      title: `An ${word} record for ${rec.childName} was updated`,
+      title: `${anWord(word)} record for ${rec.childName} was updated`,
       body: String(rec.description ?? ""),
       subject: `${rec.childName}: ${word} record updated`,
       emailHtml:
@@ -457,7 +478,7 @@ incidents.post("/:id/acknowledge", async (req, res) => {
   const childId = snap.data()!.childId as string | undefined;
   if (!childId) { res.status(404).json({ error: "Record not found" }); return; }
   const child = await db.collection("children").doc(childId).get();
-  if (!child.exists || child.data()!.parentUid !== req.user!.uid) { res.status(404).json({ error: "Record not found" }); return; }
+  if (!child.exists || child.data()!.parentUid !== req.user!.uid || !parentMaySee(snap.data()!)) { res.status(404).json({ error: "Record not found" }); return; }
   const firstAck = !snap.data()!.acknowledgedAt;
   const who = req.user?.name ?? req.user?.email ?? "Parent";
   await snap.ref.set({ acknowledgedAt: new Date().toISOString(), acknowledgedBy: who }, { merge: true });
@@ -499,7 +520,7 @@ incidents.post("/:id/note", async (req, res) => {
     const childId = data.childId as string | undefined;
     if (!childId) { res.status(404).json({ error: "Record not found" }); return; }
     const child = await db.collection("children").doc(childId).get();
-    if (!child.exists || child.data()!.parentUid !== req.user!.uid) { res.status(404).json({ error: "Record not found" }); return; }
+    if (!child.exists || child.data()!.parentUid !== req.user!.uid || !parentMaySee(data)) { res.status(404).json({ error: "Record not found" }); return; }
     role = "parent";
   } else if (canRecord(auth.role) && auth.tenantId) {
     // Same reach as editing: this tenant, this franchise, and — for staff — only
@@ -512,7 +533,7 @@ incidents.post("/:id/note", async (req, res) => {
     res.status(403).json({ error: "You can't add a note here" }); return;
   }
   const note = {
-    by: req.user?.name ?? req.user?.email ?? (role === "parent" ? "Parent" : "Staff"),
+    by: role === "parent" ? (req.user?.name ?? req.user?.email ?? "Parent") : await actorName(req),
     role, text: parsed.data.text, at: new Date().toISOString(),
   };
   const notes = Array.isArray(data.notes) ? data.notes : [];

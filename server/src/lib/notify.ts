@@ -43,6 +43,8 @@ export type NotifyCategory =
   | "calendar"
   | "message"
   | "moment"
+  /** A provider published a Newsfeed post the family can see. */
+  | "newsfeed"
   | "register"
   | "billing"
   | "task"

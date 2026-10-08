@@ -36,6 +36,7 @@ const CATEGORY_GLYPH: Record<string, string> = {
   calendar: "🗓️",
   message: "✉️",
   moment: "📸",
+  newsfeed: "📢",
   register: "📋",
   billing: "💳",
   task: "✅",

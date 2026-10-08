@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import { canWrite, operatorScope, type Role, managerScope } from "../middleware/role";
 import { platformFallback, stripe, toPence, webUrl } from "../lib/stripe";
 import { retrieveConnected } from "../lib/connectedAccount";
+import { stripeUserMessage } from "../lib/stripeText";
 import { autoEmailOn } from "../lib/autoEmails";
 import { ensurePayDomains } from "../lib/payDomains";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
@@ -51,7 +52,8 @@ function needStripe(res: Response) {
 function stripeFail(res: Response, e: unknown) {
   const msg = e instanceof Error ? e.message : "Stripe request failed";
   console.error("[payments]", msg);
-  res.status(502).json({ error: `Stripe: ${msg}` });
+  const shown = stripeUserMessage(e, "Stripe request failed");
+  res.status(502).json({ error: shown === msg ? `Stripe: ${msg}` : shown });
 }
 
 

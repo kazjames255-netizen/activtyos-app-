@@ -668,7 +668,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                       <div>
                         {fl(tr("p8ops.tpPreview"))}
                         <div className="mt-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-                          <div className="whitespace-pre-line text-[12.5px] leading-[1.6] text-[var(--ink-2)]">{resolveMsg(msg, t, providerName)}</div>
+                          <div className="whitespace-pre-line [overflow-wrap:anywhere] text-[12.5px] leading-[1.6] text-[var(--ink-2)]">{resolveMsg(msg, t, providerName)}</div>
                           <div className="mt-2.5 flex flex-wrap gap-2">
                             {t.askConsent !== false && <div className="inline-flex items-center gap-2 rounded-lg border-2 border-[#0f7a43]/30 bg-[#e7f6ee] px-3 py-1.5 text-[12px] font-extrabold" style={{ color: GREEN }}>{tr("p8ops.tpGivePermission", { dest: t.destination || tr("p8ops.tpTheTrip") })}</div>}
                             {t.askPay !== false && <div className="inline-flex items-center gap-2 rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[12px] font-extrabold" style={{ color: BLUE }}>{tr("p8ops.tpPayPreview", { cost: t.cost || "0.00" })}{t.payBy ? tr("p8ops.tpByDate", { date: fmtDate(t.payBy) }) : ""}</div>}

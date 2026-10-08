@@ -77,6 +77,7 @@
   --duo-warm: linear-gradient(135deg, #9a5a12, #f5b81f);
   --sig-blue: #2254b3;
   --sig-pink: #ee1f63;
+  --msg-theirs: #c4104f; /* other side of a chat: white text is 5.9:1 on it (--sig-pink is ~4.1:1) */
   --tb-accent: #e91e63;
   /* Matches the Money hero: navy → card-blue, white text, white active pill. */
   --side-bg: linear-gradient(165deg, #16306e 0%, #23479f 50%, #3f78d8 100%);

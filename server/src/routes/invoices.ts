@@ -7,6 +7,7 @@ import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import { retrieveConnected } from "../lib/connectedAccount";
+import { stripeUserMessage } from "../lib/stripeText";
 import { paidSoFar } from "../../../features/bookings/helpers";
 import { settleInvoiceBooking, settleInvoicePayment } from "../lib/settlePayment";
 import type { Booking } from "../../../features/bookings/types";
@@ -276,7 +277,7 @@ invoicePublic.post("/:token/checkout", async (req, res) => {
     });
     res.status(201).json({ paymentId: rec.id, clientSecret: intent.client_secret, stripeAccount, amount });
   } catch (e) {
-    res.status(502).json({ error: e instanceof Error ? e.message : "Stripe error" });
+    res.status(502).json({ error: stripeUserMessage(e) });
   }
 });
 

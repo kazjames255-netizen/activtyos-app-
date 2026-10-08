@@ -536,8 +536,8 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
 
       {/* Swap the card on file — plan and billing dates untouched. */}
       {updatingCard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setUpdatingCard(false)}>
-          <div className="w-full max-w-[420px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center" onClick={() => setUpdatingCard(false)}>
+          <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-[420px] overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <div className="text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("money.subUpdateYourCard")}</div>
               <button type="button" className="text-[12px] font-bold text-[var(--ink-3)]" onClick={() => setUpdatingCard(false)}>✕ {t("money.close")}</button>
@@ -554,8 +554,8 @@ function SubscriptionInner({ gate = false, onStarted }: { gate?: boolean; onStar
 
       {/* Card capture for a start/reactivation with no card on file. */}
       {payFor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPayFor(null)}>
-          <div className="w-full max-w-[420px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center" onClick={() => setPayFor(null)}>
+          <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-[420px] overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <div className="text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("money.subAddYourCard", { name: payFor.name })}</div>
               <button type="button" className="text-[12px] font-bold text-[var(--ink-3)]" onClick={() => setPayFor(null)}>✕ {t("money.close")}</button>

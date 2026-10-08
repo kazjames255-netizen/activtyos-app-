@@ -105,13 +105,17 @@ export function policyById(policies: NamedPolicy[], id: string | undefined): Nam
 export const sortBands = (bands: RefundBand[]): RefundBand[] =>
   [...bands].sort((a, b) => b.hoursBefore - a.hoursBefore);
 
+/** The parent-facing sentence starts with a capital ("Cancel at least 1 week before ..."). */
+const upFirst = (s: string): string => (s ? s.charAt(0).toLocaleUpperCase() + s.slice(1) : s);
+
 function noticeLabel(hours: number): string {
   if (hours <= 0) return "less than that";
   if (hours % HOURS.week === 0) {
     const w = hours / HOURS.week;
     return w === 1 ? "1 week" : `${w} weeks`;
   }
-  if (hours % 24 === 0) {
+  // 24 and 48 hours are how the Setup editor shows them, so the parent wording says the same (not "1 day" / "2 days").
+  if (hours % 24 === 0 && hours !== HOURS.day && hours !== HOURS.twoDays) {
     const d = hours / 24;
     return d === 1 ? "1 day" : `${d} days`;
   }
@@ -138,7 +142,7 @@ export function policyWording(policy: CancellationPolicy): string {
     return `cancel at least ${noticeLabel(b.hoursBefore)} before it starts for ${amount}`;
   });
   const tail = floor && floor.refundPercent > 0 ? `After that, ${floor.refundPercent}% is refunded.` : "After that, no refund is given.";
-  return `${parts.join("; ")}. ${tail}`;
+  return `${upFirst(parts.join("; "))}. ${tail}`;
 }
 
 export interface RefundAdvice {
@@ -263,7 +267,7 @@ type TFn = (key: string, vars?: Record<string, string | number>) => string;
 export function noticeLabelT(t: TFn, locale: string, hours: number): string {
   if (hours <= 0) return t("p7pol.lessThanThat");
   if (hours % HOURS.week === 0) return pickPlural(t, locale, "p7pol.wk", hours / HOURS.week);
-  if (hours % 24 === 0) return pickPlural(t, locale, "p7pol.dy", hours / 24);
+  if (hours % 24 === 0 && hours !== HOURS.day && hours !== HOURS.twoDays) return pickPlural(t, locale, "p7pol.dy", hours / 24);
   return pickPlural(t, locale, "p7pol.hr", hours);
 }
 
@@ -280,7 +284,7 @@ export function policyWordingT(t: TFn, locale: string, policy: CancellationPolic
     return b.refundPercent >= 100 ? t("p7pol.bandFull", { notice }) : b.refundPercent <= 0 ? t("p7pol.bandNone", { notice }) : t("p7pol.bandPct", { notice, pct: b.refundPercent, aPct: aPct(b.refundPercent) });
   });
   const tail = floor && floor.refundPercent > 0 ? t("p7pol.tailPct", { pct: floor.refundPercent }) : t("p7pol.tailNone");
-  return `${parts.join("; ")}. ${tail}`;
+  return `${upFirst(parts.join("; "))}. ${tail}`;
 }
 
 export function adviceReasonT(t: TFn, locale: string, a: RefundAdvice): string {

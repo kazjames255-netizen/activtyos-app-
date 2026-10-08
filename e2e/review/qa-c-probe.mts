@@ -1,0 +1,15 @@
+import { loadAccounts } from "../helpers/env";
+import { apiPost, fbSignIn } from "../helpers/accounts";
+import { bookViaApi, createParentChild, markParentWelcomed, provisionLiveListing } from "../helpers/tenantData";
+const a = loadAccounts().accounts;
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const stamp = Date.now().toString(36);
+const kid = `QA Kid ${stamp}`;
+await createParentChild(a.parent, { name: kid }); console.log("child");
+const listing = await provisionLiveListing(a.company, { title: `QA Camp ${stamp}`, price: 0, startToday: true }); console.log("listing");
+await bookViaApi(a.parent, listing, { child: kid, dates: [iso(new Date())] }); console.log("booked");
+await markParentWelcomed(a.parent);
+const op = await fbSignIn(a.company.email); const par = await fbSignIn(a.parent.email);
+const trip = await apiPost<{ id: string }>("/api/trips", op.idToken, { destination: `QA Farm Park ${stamp}`, date: iso(new Date(Date.now() + 7 * 86_400_000)), departTime: "09:30", returnTime: "15:00", transport: "Minibus", childNames: [kid], staff: ["QA Lead"], status: "planned", cost: "12.50" }); console.log("trip", trip.id);
+await apiPost("/api/messages", op.idToken, { parentEmail: a.parent.email, parentName: "QA Parent", subject: `QA subject ${stamp}`, body: "Hello from the operator " + "word ".repeat(60) }); console.log("msg1");
+await apiPost("/api/messages", par.idToken, { tenantId: a.company.tenantId, subject: `Parent question ${stamp}`, body: "Hi, what should my child bring? <b>bold?</b> https://example.com/averyveryveryveryveryveryverylongurlthatshouldwrapnicely/abcdefghijklmnopqrstuvwxyz" }); console.log("msg2");

@@ -94,3 +94,20 @@ export function setWeekOff(datesOff: string[], weekDays: string[], off: boolean)
   for (const d of weekDays) { if (off) set.add(d); else set.delete(d); }
   return [...set].sort();
 }
+
+/** After a save finishes, fold ONLY what the server decided (id, status, uploaded image URLs) into the draft as it is NOW. The save used to
+ *  `setD(<snapshot taken when it started>)`, so any letters typed while the request was in flight were wiped (typing "testing" left "esting"). */
+export function mergeSaved<T extends { images?: unknown; gallery?: unknown }>(
+  now: T,
+  sent: { images?: unknown; gallery?: unknown },
+  saved: { id?: string; status: string; images: unknown; gallery: unknown },
+): T & { id?: string; status: string } {
+  return {
+    ...now,
+    id: saved.id,
+    status: saved.status,
+    // Swap in uploaded URLs only if the photos are still the ones we sent; otherwise the person changed them mid-save.
+    ...(now.images === sent.images ? { images: saved.images } : {}),
+    ...(now.gallery === sent.gallery ? { gallery: saved.gallery } : {}),
+  };
+}

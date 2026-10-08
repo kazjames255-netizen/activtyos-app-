@@ -461,7 +461,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
               <div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--brand-strong,#1d3a8f)]">
                 {tr("comms.previewTitle", { who: previewCust ? tr("comms.previewAs", { name: previewCust.name ?? "" }) : tr("comms.previewExample") })}
               </div>
-              <div className="mt-0.5 whitespace-pre-wrap text-[12.5px] leading-[1.5] text-[var(--ink)]">{previewText}</div>
+              <div className="mt-0.5 whitespace-pre-wrap [overflow-wrap:anywhere] text-[12.5px] leading-[1.5] text-[var(--ink)]">{previewText}</div>
             </div>
           )}
         </>
@@ -661,7 +661,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                 <button type="button" onClick={() => setOpenBroadcast(null)} className="flex-none text-[11.5px] font-bold text-[var(--brand-2)]">{tr("comms.close")}</button>
               </div>
               <div className="flex-1 overflow-y-auto p-4">
-                <div className="mb-3 max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[13px] text-white" style={{ background: "var(--brand)" }}>{openBroadcast.body}</div>
+                <div className="mb-3 max-w-[80%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl px-3 py-2 text-[13px] text-white" style={{ background: "var(--brand)" }}>{openBroadcast.body}</div>
                 <div className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{tr("comms.sentTo")}</div>
                 <div className="flex flex-col gap-1">
                   {(openBroadcast.recipients ?? []).map((r) => (
@@ -884,7 +884,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
               {/* Legend — blue is you, pink is the other side, at a glance. */}
               <div className="flex items-center gap-3 border-b border-[var(--line)] px-3.5 py-1.5 text-[10px] font-bold text-[var(--ink-3)]">
                 <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "var(--brand)" }} /> {tr("comms.you")}</span>
-                <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#ee1f63" }} /> {mine === "operator" ? tr("comms.customer") : tr("comms.provider")}</span>
+                <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "var(--msg-theirs)" }} /> {mine === "operator" ? tr("comms.customer") : tr("comms.provider")}</span>
               </div>
               <div className="flex-1 overflow-y-auto p-3.5">
                 <div className="flex flex-col gap-2">
@@ -892,8 +892,8 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                     const isMine = m.from === mine;
                     const label = isMine ? tr("comms.you") : (m.senderName || (mine === "operator" ? tr("comms.customer") : tr("comms.provider")));
                     return (
-                      <div key={m.id} className={`max-w-[80%] rounded-2xl px-3 py-1.5 text-[13px] text-white ${isMine ? "self-end" : "self-start"}`} style={{ background: isMine ? "var(--brand)" : "#ee1f63" }}>
-                        <div className="whitespace-pre-wrap">{m.body}</div>
+                      <div key={m.id} className={`max-w-[80%] rounded-2xl px-3 py-1.5 text-[13px] text-white ${isMine ? "self-end" : "self-start"}`} style={{ background: isMine ? "var(--brand)" : "var(--msg-theirs)" }}>
+                        <div className="whitespace-pre-wrap [overflow-wrap:anywhere]">{m.body}</div>
                         {m.coupon && <CouponChip coupon={m.coupon} />}
                         <div className="mt-0.5 text-[10px] text-white/75">{label} · {when(m.createdAt, dateLoc)}</div>
                       </div>
