@@ -123,10 +123,10 @@ const customerPatchSchema = customerSchema.partial();
  *  A family record accumulates children from EVERY site and franchise of the tenant, so each entry is matched by CHILD ID (the id
  *  every booking carries). Names are only a fallback for an entry (or a booking) without an id, and then only within the SAME family
  *  (booker email) - a same-named child of another family must never make this family's child at a hidden site visible. */
-interface KidScope { ids: Set<string>; namesByEmail: Map<string, Set<string>>; idlessNamesByEmail: Map<string, Set<string>> }
+interface KidScope { franchiseId?: string | null; ids: Set<string>; namesByEmail: Map<string, Set<string>>; idlessNamesByEmail: Map<string, Set<string>> }
 const nameKey = (n: unknown) => String(n ?? "").trim().toLowerCase();
-function kidScopeOf(bookings: Iterable<FirebaseFirestore.DocumentData>, include: (b: any) => boolean): KidScope {
-  const sc: KidScope = { ids: new Set(), namesByEmail: new Map(), idlessNamesByEmail: new Map() };
+function kidScopeOf(bookings: Iterable<FirebaseFirestore.DocumentData>, include: (b: any) => boolean, franchiseId?: string | null): KidScope {
+  const sc: KidScope = { franchiseId, ids: new Set(), namesByEmail: new Map(), idlessNamesByEmail: new Map() };
   const add = (m: Map<string, Set<string>>, email: string, n: string) => { let set = m.get(email); if (!set) m.set(email, (set = new Set())); set.add(n); };
   for (const b of bookings as Iterable<{ email?: string; child?: string; childId?: string; kids?: { name?: string; childId?: string }[] }>) {
     if (!include(b)) continue;
@@ -148,13 +148,15 @@ async function visibleKids(tenantId: string, opts: { franchiseId?: string | null
     if (opts.franchiseId && (b.franchiseId ?? null) !== opts.franchiseId) return false;
     if (opts.site && !bookingInSite(b, opts.site)) return false;
     return true;
-  });
+  }, opts.franchiseId);
 }
-type KidEntryLike = { name?: string; childId?: string | null; id?: string | null };
+type KidEntryLike = { name?: string; childId?: string | null; id?: string | null; addedByFranchise?: string | null };
 const entryId = (k: KidEntryLike) => String(k.childId ?? k.id ?? "").trim();
 /** Is this entry of the family `email`'s children[] one the scope covers? */
 function kidVisible(k: KidEntryLike, email: unknown, sc: KidScope): boolean {
   const e = nameKey(email), id = entryId(k), n = nameKey(k.name);
+  // An id-less child a franchise typed in carries that franchise's id: it is ITS child to see, edit and replace (never another franchise's).
+  if (sc.franchiseId && k.addedByFranchise === sc.franchiseId) return true;
   if (id) return sc.ids.has(id) || !!sc.idlessNamesByEmail.get(e)?.has(n);
   return !!sc.namesByEmail.get(e)?.has(n);
 }
@@ -226,7 +228,7 @@ customers.get("/", async (req, res) => {
     // One family record is shared by every franchise the family books with (customers are tenant-level), and its
     // `children` list accumulates from ALL of those bookings. In a franchise's (or a drilled-in head-office) view keep
     // only the children that franchise actually looks after — never a sibling franchise's child.
-    const scopeKids = kidScopeOf(bkSnap.docs.map((d) => d.data()), (b) => (scopeFid === "__ho__" ? !b.franchiseId : (b.franchiseId ?? null) === scopeFid));
+    const scopeKids = kidScopeOf(bkSnap.docs.map((d) => d.data()), (b) => (scopeFid === "__ho__" ? !b.franchiseId : (b.franchiseId ?? null) === scopeFid), scopeFid === "__ho__" ? null : scopeFid);
     list = list.map((c) => ((c as { franchiseId?: string | null }).franchiseId === scopeFid ? c : narrowKids(c, scopeKids)));
     const have = new Set(list.map((c) => (c.email ?? "").toLowerCase()).filter(Boolean));
     const derived = new Map<string, { name: string; children: Set<string>; createdAt?: string }>();
@@ -404,7 +406,9 @@ customers.put("/:id", async (req, res) => {
     const incoming = (patch.children as Array<KidEntryLike & Record<string, unknown>>).map((k) => {
       if (entryId(k)) return k;
       const was = shown.find((o) => nameKey(o.name) === nameKey(k.name) && entryId(o));
-      return was ? { ...k, ...(was.childId ? { childId: was.childId } : {}), ...(!was.childId && was.id ? { id: was.id } : {}) } : k;
+      if (was) return { ...k, ...(was.childId ? { childId: was.childId } : {}), ...(!was.childId && was.id ? { id: was.id } : {}) };
+      // Still id-less: stamp who added it, so a re-save replaces THIS franchise's copy (idempotent) instead of stacking another one.
+      return { ...k, addedByFranchise: fr };
     });
     // An entry matching a hidden child only by name is NOT that child: it is added as a new, id-less entry beside it.
     patch.children = [...tidyChildren(incoming), ...hidden];
