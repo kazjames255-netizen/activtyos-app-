@@ -8,7 +8,7 @@ import { db } from "../firebase";
 import { librarySnap, loadSettings } from "../lib/tenantLibrary";
 import { checkCode, normaliseCode, reservedEmails, type DiscountCodeDoc } from "../lib/discountCodes";
 import { redeemCodesInTx, releaseDiscountCodes, type CodeToRedeem } from "../lib/discountRedemptions";
-import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../lib/wallet";
+import { creditWallet, creditWalletOnceInTx, spendWalletInTx, walletEntryRef, walletRef, walletsForFamily } from "../lib/wallet";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelledFor } from "../lib/familyCancelNotice";
 import { shouldNotifyCancelled, shouldReleaseDiscountCodes, voucherEmailAnnouncesBasket } from "../lib/bookingGuards";
@@ -2597,62 +2597,67 @@ async function partialCancel(
     ? input.kids.map((k) => ({ childKey: k.childId ?? k.name, days: k.days }))
     : [{ childKey: kids[0].childId ?? kids[0].name, days: input.days ?? [] }];
 
-  // Validate every released day BEFORE anything moves: on that child, still
-  // standing, and not already gone or in the past.
-  const today = ukToday();
-  let releasedCount = 0;
-  for (const w of wanted) {
-    const kid = kids.find((k) => (k.childId ?? k.name) === w.childKey);
-    if (!kid) throw new HttpError(400, `${w.childKey} isn't on this booking`);
-    if (kid.cancelled) throw new HttpError(400, `${kid.name}'s place is already cancelled`);
-    const booked = new Set(kid.dates ?? []);
-    const gone = new Set(kid.cancelledDays ?? []);
-    for (const d of w.days) {
-      if (!booked.has(d)) throw new HttpError(400, `${kid.name} isn't booked on ${prettyDay(d)}`);
-      if (gone.has(d)) throw new HttpError(400, `${kid.name}'s place on ${prettyDay(d)} is already cancelled`);
-      if (d < today) throw new HttpError(400, `${prettyDay(d)} has already passed`);
-      releasedCount += 1;
-    }
-  }
-  if (!releasedCount) throw new HttpError(400, "No days were selected");
-
-  // Releasing everything that's left is just a cancellation — say so rather
-  // than leaving a booking with no days on it.
-  const activeTotal = kids.reduce((n, k) => n + (k.cancelled ? 0 : (k.dates ?? []).filter((d) => !(k.cancelledDays ?? []).includes(d)).length), 0);
-  if (releasedCount >= activeTotal)
-    throw new HttpError(400, "That's every day left — cancel the whole booking instead");
-
-  // Pro-rata over every child-day BOOKED (the same denominator the parent's
-  // preview uses), against money actually received.
-  const bookedChildDays = kids.reduce((n, k) => n + (k.dates ?? []).length, 0) || 1;
-  // A joint booking that's been paid stores amountPaid 0, which valued every
-  // released day at £0 — use what was actually paid (incl. wallet credit).
-  const paid = totalPaid(existing);
-  const perSlotPaid = round2(paid / bookedChildDays);
-
-  // Refund runs each released day through the policy on ITS OWN date, so a day
-  // three weeks out can refund while tomorrow's can't. Wallet takes the full
-  // pro-rata value — that's the trade for keeping it in the business.
+  // Everything that decides the money happens INSIDE one transaction on a fresh read of the booking: which days are still standing,
+  // what they are worth, what has already been given back, and the write itself. Doing any of that before the transaction let N
+  // parallel requests for the same day each see it standing and each pay out (the wallet credit was also made after the commit).
   const now = new Date().toISOString();
-  const releasedDays = wanted.flatMap((w) => w.days);
-  // Never more than is still refundable (earlier releases/refunds taken off).
-  const value = Math.min(refundableSoFar(existing),
-    resolution === "wallet"
-      ? round2(releasedCount * perSlotPaid)
-      : round2(releasedDays.reduce((sum, d) => sum + (refundFor(policy, effectiveRefundDate(existing.dayOrigin?.[d], d), perSlotPaid, now, "parent")?.amount ?? 0), 0)));
-
+  let value = 0;
+  let releasedCount = 0;
+  let releasedDays: string[] = [];
   const updated = await db.runTransaction(async (tx) => {
+    value = 0;
+    releasedCount = 0;
     const snap = await tx.get(ref);
     if (!snap.exists) throw new HttpError(404, "Booking not found");
     const b = fromDoc(snap.data() as BookingDoc);
     if (b.email !== email) throw new HttpError(403, "Not your booking");
     if (b.status === "Cancelled") throw new HttpError(400, "This booking is already cancelled");
-    materialiseKids(b);
+    const kids = materialiseKids(b);
+
+    // Validate every released day BEFORE anything moves: on that child, still standing, and not already gone or in the past.
+    const today = ukToday();
+    const seen = new Set<string>();
+    for (const w of wanted) {
+      const kid = kids.find((k) => (k.childId ?? k.name) === w.childKey);
+      if (!kid) throw new HttpError(400, `${w.childKey} isn't on this booking`);
+      if (kid.cancelled) throw new HttpError(400, `${kid.name}'s place is already cancelled`);
+      const booked = new Set(kid.dates ?? []);
+      const gone = new Set(kid.cancelledDays ?? []);
+      for (const d of w.days) {
+        if (!booked.has(d)) throw new HttpError(400, `${kid.name} isn't booked on ${prettyDay(d)}`);
+        if (gone.has(d)) throw new HttpError(400, `${kid.name}'s place on ${prettyDay(d)} is already cancelled`);
+        if (d < today) throw new HttpError(400, `${prettyDay(d)} has already passed`);
+        const once = `${w.childKey}|${d}`;
+        if (seen.has(once)) throw new HttpError(400, `${prettyDay(d)} is listed twice`);
+        seen.add(once);
+        releasedCount += 1;
+      }
+    }
+    if (!releasedCount) throw new HttpError(400, "No days were selected");
+
+    // Releasing everything that's left is just a cancellation — say so rather than leaving a booking with no days on it.
+    const activeTotal = kids.reduce((n, k) => n + (k.cancelled ? 0 : (k.dates ?? []).filter((d) => !(k.cancelledDays ?? []).includes(d)).length), 0);
+    if (releasedCount >= activeTotal)
+      throw new HttpError(400, "That's every day left — cancel the whole booking instead");
+
+    // Pro-rata over every child-day BOOKED (the same denominator the parent's preview uses), against money actually received.
+    // A joint booking that's been paid stores amountPaid 0, which valued every released day at £0 — use what was actually paid
+    // (incl. wallet credit).
+    const bookedChildDays = kids.reduce((n, k) => n + (k.dates ?? []).length, 0) || 1;
+    const perSlotPaid = round2(totalPaid(b) / bookedChildDays);
+    // Refund runs each released day through the policy on ITS OWN date, so a day three weeks out can refund while tomorrow's can't.
+    // Wallet takes the full pro-rata value — that's the trade for keeping it in the business.
+    releasedDays = wanted.flatMap((w) => w.days);
+    // Never more than is still refundable (earlier releases/refunds taken off).
+    value = Math.min(refundableSoFar(b),
+      resolution === "wallet"
+        ? round2(releasedCount * perSlotPaid)
+        : round2(releasedDays.reduce((sum, d) => sum + (refundFor(policy, effectiveRefundDate(b.dayOrigin?.[d], d), perSlotPaid, now, "parent")?.amount ?? 0), 0)));
+
     const heldBefore = structuredClone({ status: b.status, seats: b.seats, days: b.days, kids: b.kids });
     applyPartialCancel(b, wanted);
-    // One place per child: a cancelled child frees their seat, and each day a
-    // child gives up frees that child's place on that day (CN-019). Derived
-    // from before/after state, so repeating a release can't free twice.
+    // One place per child: a cancelled child frees their seat, and each day a child gives up frees that child's place on that day
+    // (CN-019). Derived from before/after state, so repeating a release can't free twice.
     let blockUpdate: { ref: FirebaseFirestore.DocumentReference; counts: ReturnType<typeof countsUpdate> } | null = null;
     if (b.blockId) {
       const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId));
@@ -2662,6 +2667,11 @@ async function partialCancel(
         if (!placesDeltaIsZero(pd)) blockUpdate = { ref: blockSnap.ref, counts: applyPlacesDelta(blk, pd) };
       }
     }
+    // The wallet balance and the idempotency entry are read here (all reads before any write). The key is per (booking, child, day,
+    // action): a retried or raced request can never credit the same release twice.
+    const walletKey = `rel_${ref.id}_${resolution}_${wanted.flatMap((w) => w.days.map((d) => `${w.childKey}:${d}`)).sort().join(",")}`.replace(/\//g, "_").slice(0, 1400);
+    const creditNow = resolution === "wallet" && value > 0 && !!tenantId;
+    const [walletSnap, entrySnap] = creditNow ? await Promise.all([tx.get(walletRef(tenantId, email)), tx.get(walletEntryRef(walletKey))]) : [null, null];
 
     const label = releasedCount === 1 ? "1 day" : `${releasedCount} days`;
     if (resolution === "wallet") {
@@ -2676,10 +2686,8 @@ async function partialCancel(
       if (value > 0) b.pay = "Partially refunded";
       b.note = `${label} released to wallet credit.`;
     } else {
-      // A request: the money only moves when the provider approves it, exactly
-      // like a whole-booking cancel.
-      // A second release while the first is still awaiting approval ADDS to
-      // it (CN-022) — overwriting lost the earlier day's pending refund.
+      // A request: the money only moves when the provider approves it, exactly like a whole-booking cancel.
+      // A second release while the first is still awaiting approval ADDS to it (CN-022) — overwriting lost the earlier day's pending refund.
       const total = accumulatePendingRelease(b.cancel, value, refundableSoFar(b));
       b.cancel = {
         on: ukToday(),
@@ -2696,12 +2704,11 @@ async function partialCancel(
 
     tx.set(ref, toDoc(b));
     if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
+    // Wallet credit is instant and lands in THIS transaction, so the booking and the money can never disagree.
+    if (creditNow)
+      creditWalletOnceInTx(tx, tenantId, email, walletSnap!.exists ? Number(walletSnap!.get("balance") ?? 0) : 0, entrySnap!.exists, walletKey, value, `Days released from ${existing.listing}`, existing.ref);
     return b;
   });
-
-  // Wallet credit is instant, so it lands after the release has committed.
-  if (resolution === "wallet" && value > 0 && tenantId)
-    await creditWallet(tenantId, email, value, `Days released from ${existing.listing}`, existing.ref);
 
   // The provider needs to know places came back and what it cost them —
   // a refund resolution is also sitting there waiting for their approval.
