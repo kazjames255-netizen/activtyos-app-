@@ -23,6 +23,7 @@ import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
 import Link from "next/link";
 import { get as apiGet, put as apiPut, api } from "@/lib/api";
+import { translateApiMessage } from "@/lib/i18n/apiErrors";
 import { AddressFields } from "@/features/common/AddressFields";
 import { composeAddress, isFullAddress, splitAddress, visitLineHasHouse, type AddressParts } from "@/lib/addressComplete";
 import { money, PAY_METHODS } from "@/features/bookings/helpers";
@@ -1135,7 +1136,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         // was charged more than the screen said.
         body: JSON.stringify({ tenantId, code, subtotal: b.total, attendees, ...(d.id ? { listingId: d.id } : {}) }),
       });
-      if (!r.valid || !r.off || r.off <= 0) { setCodeErr(r.reason ?? tr("p7ck.codeNoUse")); return; }
+      if (!r.valid || !r.off || r.off <= 0) { setCodeErr(r.reason ? translateApiMessage(r.reason) : tr("p7ck.codeNoUse")); return; }
       // Exclusivity: an exclusive code can't join others, and can't be added when others are already on.
       if (appliedCodes.length && (r.exclusive || appliedCodes.some((a) => a.exclusive))) {
         setCodeErr(tr("p7ck.codeNoCombine", { code: r.exclusive ? (r.code ?? code) : appliedCodes.find((a) => a.exclusive)!.code }));
