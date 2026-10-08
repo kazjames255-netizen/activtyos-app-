@@ -21,7 +21,7 @@ async function latePayment(ref: string, pounds: number) {
     amount: Math.round(pounds * 100), currency: "gbp", payment_method: "pm_card_visa", confirm: true, automatic_payment_methods: { enabled: true, allow_redirects: "never" },
     metadata: { tenantId: P.tenantId, refs: ref, email: A.email },
   });
-  const doc = await db.collection("payments").add({ tenantId: P.tenantId, refs: [ref], email: A.email, amount: pounds, currency: "gbp", paymentIntentId: pi.id, stripeAccount: null, platformFallback: true, status: "created", createdAt: new Date().toISOString() });
+  const doc = await db.collection("payments").add({ tenantId: P.tenantId, refs: [ref], email: A.email.toLowerCase(), amount: pounds, currency: "gbp", paymentIntentId: pi.id, stripeAccount: null, platformFallback: true, status: "created", createdAt: new Date().toISOString() });
   return { pi, payId: doc.id, money: `£${pounds.toFixed(2)}` };
 }
 async function endedBooking() {
