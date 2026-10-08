@@ -230,7 +230,7 @@ function AttendeeCard({ booking, kid, ki, blockAvail }: { booking: Booking; kid:
               return (
                 <div key={dt}>
                   <div className="flex items-center gap-2 border-b border-dashed border-[var(--line)] py-[5px] text-[12px]">
-                    <span className="flex-1">{/^\d{4}-\d{2}-\d{2}$/.test(dt) ? sessionDayLabel(dt) : dt}</span>
+                    <span className="flex-1">{/^\d{4}-\d{2}-\d{2}$/.test(dt) ? sessionDayLabel(dt) : localizeDateLabels(dt)}</span>
                     {/* "Move" and not "Change": nothing is cancelled and no
                         money moves — they still come, on another day. */}
                     <button

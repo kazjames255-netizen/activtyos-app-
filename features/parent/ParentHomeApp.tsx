@@ -8,7 +8,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useT } from "@/lib/i18n/provider";
-import { dateLocale, uiTime, uiDate, localizeDateLabels } from "@/lib/i18n/format";
+import { dateLocale, uiTime, uiDate, localizeDateLabels, joinRange } from "@/lib/i18n/format";
 import { useCustomerArea } from "@/lib/use-customer-area";
 import { useCouponCount, useUnreadMessages } from "@/lib/use-unread";
 import { money } from "@/features/bookings/helpers";
@@ -55,7 +55,7 @@ function OfferCard({ b, time, onAccepted }: { b: Booking; time: string | null; o
   const clock = left <= 0 ? t("p7shell.offerExpired") : mins >= 60 ? t("p7shell.offerLeftHM", { h: Math.floor(mins / 60), m: mins % 60 }) : t("p7shell.offerLeftM", { m: Math.max(1, mins) });
   const until = end ? uiTime(new Date(end), { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) : "";
   const days = bookingDays(b).sort();
-  const when = days.length ? (days.length === 1 ? fmtDay(days[0]) : `${fmtDay(days[0])} \u2013 ${fmtDay(days[days.length - 1])}`) : localizeDateLabels(b.dates);
+  const when = days.length ? (days.length === 1 ? fmtDay(days[0]) : joinRange(fmtDay(days[0]), fmtDay(days[days.length - 1]))) : localizeDateLabels(b.dates);
   const accept = async () => {
     setBusy(true); setErr(null);
     try {
@@ -198,7 +198,7 @@ function WeekStrip({ live, today, detail }: { live: Booking[]; today: string; de
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   const loc = dateLocale();
   const tone: Record<string, string> = { Confirmed: "#16a34a", Waitlisted: "#f59e0b", Offered: "#2563eb" };
-  const range = `${uiDate(days[0], { day: "numeric", month: "short", timeZone: "UTC" }, loc)} to ${uiDate(days[6], { day: "numeric", month: "short", timeZone: "UTC" }, loc)}`;
+  const range = joinRange(uiDate(days[0], { day: "numeric", month: "short", timeZone: "UTC" }, loc), uiDate(days[6], { day: "numeric", month: "short", timeZone: "UTC" }, loc));
   return (
     <section aria-label={t("p7shell.weekTitle")}>
       <div className="mb-2 flex items-baseline justify-between gap-2">

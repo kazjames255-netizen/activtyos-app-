@@ -45,17 +45,19 @@ export function agoLabel(t: (key: string, vars?: Record<string, string | number>
 const CY_DAY_LONG = ["Dydd Sul", "Dydd Llun", "Dydd Mawrth", "Dydd Mercher", "Dydd Iau", "Dydd Gwener", "Dydd Sadwrn"];
 const CY_DAY_SHORT = ["Sul", "Llun", "Maw", "Mer", "Iau", "Gwe", "Sad"];
 const CY_MONTH_LONG = ["Ionawr", "Chwefror", "Mawrth", "Ebrill", "Mai", "Mehefin", "Gorffennaf", "Awst", "Medi", "Hydref", "Tachwedd", "Rhagfyr"];
+const CY_DAY_NARROW = ["S", "L", "M", "M", "I", "G", "S"];
+const CY_MONTH_NARROW = ["I", "C", "M", "E", "M", "M", "G", "A", "M", "H", "T", "R"];
 const CY_MONTH_SHORT = ["Ion", "Chwef", "Maw", "Ebr", "Mai", "Meh", "Gorff", "Awst", "Medi", "Hyd", "Tach", "Rhag"];
 
-export interface DayFormat { weekday?: "short" | "long"; day?: "numeric"; month?: "short" | "long"; year?: "numeric" }
+export interface DayFormat { weekday?: "short" | "long" | "narrow"; day?: "numeric"; month?: "short" | "long" | "narrow"; year?: "numeric" }
 
 /** A calendar day ("YYYY-MM-DD", no time zone shifts) as text in the app language, e.g. "Sun 18 Oct" / "Sul 18 Hyd". */
 export function formatDay(iso: string, f: DayFormat, code: LocaleCode = current): string {
   const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return iso;
   if (code === "cy") {
-    const w = f.weekday ? (f.weekday === "long" ? CY_DAY_LONG : CY_DAY_SHORT)[d.getUTCDay()] : "";
-    const m = f.month ? (f.month === "long" ? CY_MONTH_LONG : CY_MONTH_SHORT)[d.getUTCMonth()] : "";
+    const w = f.weekday ? (f.weekday === "long" ? CY_DAY_LONG : f.weekday === "narrow" ? CY_DAY_NARROW : CY_DAY_SHORT)[d.getUTCDay()] : "";
+    const m = f.month ? (f.month === "long" ? CY_MONTH_LONG : f.month === "narrow" ? CY_MONTH_NARROW : CY_MONTH_SHORT)[d.getUTCMonth()] : "";
     return [w, f.day ? String(d.getUTCDate()) : "", m, f.year ? String(d.getUTCFullYear()) : ""].filter(Boolean).join(" ");
   }
   const s = d.toLocaleDateString(TAG[code] ?? TAG[DEFAULT_LOCALE], { ...f, timeZone: "UTC" });
@@ -100,8 +102,8 @@ function welshParts(d: Date, o: Intl.DateTimeFormatOptions): string {
   const mo = EN_MONTH_LONG.indexOf(new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: tz }).format(d));
   return f.formatToParts(d).map((p, i, all) => {
     if (p.type === "literal" && all[i - 1]?.type === "weekday") return p.value.replace(/^,\s*/, " "); // "Dydd Iau 8 Hydref", like formatDay
-    if (p.type === "weekday" && wd >= 0) return o.weekday === "long" ? CY_DAY_LONG[wd] : CY_DAY_SHORT[wd];
-    if (p.type === "month" && mo >= 0 && (o.month === "long" || o.month === "short")) return o.month === "long" ? CY_MONTH_LONG[mo] : CY_MONTH_SHORT[mo];
+    if (p.type === "weekday" && wd >= 0) return o.weekday === "long" ? CY_DAY_LONG[wd] : o.weekday === "narrow" ? CY_DAY_NARROW[wd] : CY_DAY_SHORT[wd];
+    if (p.type === "month" && mo >= 0 && (o.month === "long" || o.month === "short" || o.month === "narrow")) return o.month === "long" ? CY_MONTH_LONG[mo] : o.month === "narrow" ? CY_MONTH_NARROW[mo] : CY_MONTH_SHORT[mo];
     if (p.type === "literal") return p.value.replace(/\bat\b/, "am");
     if (p.type === "dayPeriod") return p.value.toLowerCase() === "am" ? "yb" : "yh";
     return p.value;
@@ -115,6 +117,18 @@ function fmtLocal(kind: "date" | "time" | "both", d: DT, o: Intl.DateTimeFormatO
   const tag = (code ? (TAG as Record<string, string>)[code] ?? code : TAG[current]);
   if (/^cy(-|$)/i.test(tag)) return welshParts(date, withDefaults(kind, o));
   return kind === "date" ? date.toLocaleDateString(tag, o) : kind === "time" ? date.toLocaleTimeString(tag, o) : date.toLocaleString(tag, o);
+}
+
+/** A clock time as MACHINE text: 24-hour "09:05" in UK time, Latin digits, whatever the app language. For values that are stored, compared or parsed
+ *  (a clock-in stamp, lateness maths); show people `uiTime` instead. */
+export function machineHm(d: Date | string | number): string {
+  return new Date(d).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Europe/London" }); // raw-locale-ok: machine value
+}
+
+/** "12 Oct to 18 Oct" in English, "12 Hyd – 18 Hyd" in every other language (a word like "to" would stay English). */
+export function joinRange(a: string, b: string, code?: LocaleCode | string): string {
+  const c = (code ?? current) as string;
+  return c === "en" || /^en(-|$)/i.test(c) ? `${a} to ${b}` : `${a} \u2013 ${b}`;
 }
 
 /** Replaces `d.toLocaleDateString(locale, opts)`: a date in the app language. */

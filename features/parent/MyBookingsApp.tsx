@@ -2,7 +2,7 @@
 
 import { kidInitials } from "@/lib/uiRules";
 import { OnlineSessionsPanel } from "@/features/onlinesessions/OnlineSessionsPanel";
-import { dateLocale as dl, formatDay, uiDate, uiTime, localizeDateLabels } from "@/lib/i18n/format";
+import { dateLocale as dl, formatDay, uiDate, uiTime, localizeDateLabels, joinRange } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -1216,7 +1216,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
                 )}
               </>)}
               {(b.sessions ?? []).length > 0 && (
-                <div className="py-[2px] text-[12.5px] font-semibold">📅 {(b.sessions ?? []).length === 1 ? localizeDateLabels((b.sessions ?? [])[0].split(" · ")[0]) : `${localizeDateLabels((b.sessions ?? [])[0].split(" · ")[0])} – ${localizeDateLabels((b.sessions ?? [])[(b.sessions ?? []).length - 1].split(" · ")[0])}`}</div>
+                <div className="py-[2px] text-[12.5px] font-semibold">📅 {(b.sessions ?? []).length === 1 ? localizeDateLabels((b.sessions ?? [])[0].split(" · ")[0]) : joinRange(localizeDateLabels((b.sessions ?? [])[0].split(" · ")[0]), localizeDateLabels((b.sessions ?? [])[(b.sessions ?? []).length - 1].split(" · ")[0]))}</div>
               )}
               {times && <div className="py-[2px] text-[12.5px]">🕒 {times}</div>}
               {detail?.staff && detail.staff.length > 0 && (

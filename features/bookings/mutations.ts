@@ -4,7 +4,7 @@
 // drift. No React/zustand/Firebase imports allowed here.
 
 import type { Booking } from "./types";
-import { bookingKids, dayIso, kidActiveDays, nowStr, paidSoFar, refundAwaitingTransfer, refundTransferAmount, unsentRefunds, refundableSoFar, refundedTotal, releaseValue, sessionDayLabel } from "./helpers";
+import { bookingKids, dayIso, kidActiveDays, nowStr, paidSoFar, refundAwaitingTransfer, refundTransferAmount, unsentRefunds, refundableSoFar, refundedTotal, releaseValue, sessionDayKey } from "./helpers";
 import { followCancelledDays } from "./addonDays";
 import { undoAddonStamps } from "./addonRefund";
 import { accumulatePendingRelease } from "../../lib/cancellation";
@@ -381,7 +381,7 @@ export function applyPartialCancel(b: Booking, releases: { childKey: string; day
   if (gone.length) {
     if (b.days) b.days = b.days.filter((d) => !gone.includes(d));
     // `sessions` are display labels ("Mon 27 Jul 2026 · 09:00 – 15:00").
-    const goneLabels = new Set(gone.map(sessionDayLabel));
+    const goneLabels = new Set(gone.map(sessionDayKey)); // stored labels are English
     if (b.sessions) b.sessions = b.sessions.filter((s) => !goneLabels.has(s.split(" · ")[0]));
   }
   if (kids.length > 0 && kids.every((k) => k.cancelled)) b.status = "Cancelled";

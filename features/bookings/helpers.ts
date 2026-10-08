@@ -1,6 +1,6 @@
 import { dateLocale as dl, formatGBP } from "../../lib/i18n/format"; // relative: the API server imports this file too (no "@/" alias there)
 import type { Booking, BookingFilter, Kid } from "./types";
-import { uiDate, uiTime } from "../../lib/i18n/format";
+import { localizeDateLabels, uiDate, uiTime } from "../../lib/i18n/format";
 import { csvCell } from "../../lib/csv"; // relative: the API server imports this file too
 
 /** How an operator records a parent paying. One list, shared by the Take
@@ -262,14 +262,7 @@ export function runsOn(b: Booking, iso: string): boolean {
   if (!iso) return true;
   const d = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return true;
-  const label = uiDate(d, {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      timeZone: "UTC",
-    })
-    .replace(/,/g, "");
+  const label = sessionDayKey(iso); // stored session labels are English whatever the viewer's language
   return (b.sessions ?? []).some((s) => s.startsWith(label));
 }
 
@@ -623,11 +616,14 @@ export interface BlockAvail {
   sessions: { date: string; spotsLeft: number }[];
 }
 
-/** "2026-08-04" → "Tue 04 Aug 2026" — matches the server's session label
- * prefix, so it can be compared against legacy label-format kid dates. */
-export const sessionDayLabel = (iso: string) =>
-  uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })
+/** "2026-08-04" → "Tue 04 Aug 2026" — matches the server's session label prefix (always English), so it can be COMPARED against legacy label-format
+ * kid dates and session strings. Never shown to people: use sessionDayLabel for that. */
+export const sessionDayKey = (iso: string) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) // raw-locale-ok: compared with stored English labels
     .replace(/,/g, "");
+
+/** The same day for people, in their language ("Sul 04 Awst 2026"). Not for comparing: that is sessionDayKey. */
+export const sessionDayLabel = (iso: string) => localizeDateLabels(sessionDayKey(iso));
 
 /** Real alternate dates for moving a child's day: the block's OTHER sessions,
  * skipping full days when capacity is per-day. Kid dates may be ISO (modern)
@@ -636,7 +632,7 @@ export function altDates(k: Kid, block?: BlockAvail | null): { iso: string; labe
   if (!block) return [];
   const have = new Set([...(k.dates || []), ...(k.cancelledDays || [])]);
   return block.sessions
-    .filter((s) => !have.has(s.date) && !have.has(sessionDayLabel(s.date)))
+    .filter((s) => !have.has(s.date) && !have.has(sessionDayKey(s.date)))
     .filter((s) => (block.capacityScope ?? "listing") !== "day" || s.spotsLeft > 0)
     .map((s) => ({ iso: s.date, label: sessionDayLabel(s.date) }));
 }
