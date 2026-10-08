@@ -195,3 +195,35 @@ describe("a scoped account cannot reach another listing's orders by passing its 
     }
   });
 });
+
+describe("an odd listingId (repeated, array or object form) behaves exactly like a made-up id", () => {
+  const nothing = { perDay: {}, total: 0, totals: {} };
+  const odd = (id: string) => [
+    `listingId=${id}&listingId=${LB}`, `listingId=${LA}&listingId=${LB}`, `listingId[]=${id}`, `listingId[]=${LA}&listingId[]=${LB}`, `listingId[a]=${id}`, `listingId[${LA}]=${LA}`,
+  ];
+  const who = () => [["owner", P.token, LA], ["franchise", franchise.token, LA], ["staff", staffA.token, LA]] as const;
+  it("days route: empty 200 for every odd form, same as a made-up id", async () => {
+    for (const [label, tok, own] of who()) {
+      for (const q of odd(own)) {
+        const r = await call("GET", `/api/kit/days?${range()}&${q}`, tok);
+        assert.equal(r.status, 200, `${label} ${q}`);
+        assert.deepEqual(summary(r.json), nothing, `${label} ${q}`);
+      }
+    }
+  });
+  it("day route: empty 200 for every odd form", async () => {
+    for (const [label, tok, own] of who()) {
+      for (const q of odd(own)) {
+        const r = await call("GET", `/api/kit?date=${days[0]}&${q}`, tok);
+        assert.equal(r.status, 200, `${label} ${q}`);
+        assert.equal(r.json.total, 0, `${label} ${q}`);
+        assert.deepEqual(r.json.groups, [], `${label} ${q}`);
+      }
+    }
+  });
+  it("an empty listingId still means All listings, and a padded id is still trimmed", async () => {
+    assert.equal((await fetchDays(P.token, `&listingId=`)).total, 12);
+    assert.equal((await fetchDays(P.token, `&listingId=%20${LA}%20`)).total, 6);
+    assert.equal((await call("GET", `/api/kit?date=${days[0]}&listingId=`, P.token)).json.total, 6);
+  });
+});
