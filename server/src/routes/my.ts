@@ -30,7 +30,7 @@ import { money, paidSoFar as totalPaid, realPhone, refundableSoFar, sessionIsoDa
 import type { Booking, AddonRequest } from "../../../features/bookings/types";
 import { AddonRequestError, addAddonRequest, buildAddonRequest, currentAnswers, defForLine, withdrawAddonRequest } from "../lib/addonRequests";
 import { addonLineKey, parseAddonLabel } from "../../../features/bookings/addons";
-import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, lineDayStates, pendingForLine, requestDeadline, requestKeys, requestTargets, splittableLine } from "../../../features/bookings/addonRequests";
+import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, lineDayStates, pendingForLine, requestDeadline, requestKeys, requestTargets, splittableLine, lineRequestBlock } from "../../../features/bookings/addonRequests";
 import { stampAddonRefund } from "../../../features/bookings/addonRefund";
 import { applyParentCancel, applyPartialCancel, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
@@ -2999,7 +2999,7 @@ my.get("/bookings/:ref/addon-options", async (req, res) => {
   for (const line of b.addonLines ?? []) {
     // (an older booking that only has the text lines has no addonLines: the family messages the provider instead)
     const l = { key: addonLineKey(line.child, line.label), name: line.name ?? parseAddonLabel(line.label).name };
-    const changeBlock = addonRequestBlock(b, { key: l.key, days: line.days }, today, cutoffDays);
+    const changeBlock = lineRequestBlock(b, { key: l.key, days: line.days, perDay: line.perDay, meal: line.meal }, today, cutoffDays);
     const def = line.meal ? null : await defForLine(b, line);
     const questions = (def?.questions ?? []).filter((q) => q.type === "choice" && (q.options ?? []).length).map((q) => ({ id: q.id, label: q.label, options: q.options ?? [], required: !!q.required }));
     const first = firstDayOf({ days: line.days }, b.days);
@@ -3008,7 +3008,7 @@ my.get("/bookings/:ref/addon-options", async (req, res) => {
     const days = splittable ? lineDayStates(line.days, today, cutoffDays) : [];
     const open = days.filter((d) => d.state === "none").length;
     const pending = pendingForLine(b, l.key) ?? null;
-    const block = changeBlock === "cancelled" || changeBlock === "pending" ? changeBlock : splittable ? (open ? "none" : days.every((d) => d.state === "past") ? "past" : "cutoff") : changeBlock;
+    const block = changeBlock;
     lines.push({
       key: l.key, child: line.child, label: line.label, name: l.name, meal: !!line.meal, price: line.price, block, splittable, days,
       canCancel: block === "none", canChange: changeBlock === "none" && !line.meal && questions.length > 0,

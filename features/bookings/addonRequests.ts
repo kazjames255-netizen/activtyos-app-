@@ -66,6 +66,24 @@ export function addonRequestBlock(
   return "none";
 }
 
+/**
+ * Can a family still ask about this extra at all (a change OR a cancel)? A daily extra is judged day by day: while any of its days is still open
+ * (not past, not inside the cut-off) it can be asked about, even after day 1 has passed. A one-off extra and a meal are judged on their first day.
+ */
+export function lineRequestBlock(
+  b: Pick<Booking, "status" | "days" | "addonRequests">,
+  line: { key: string; days?: string[]; perDay?: boolean; meal?: boolean },
+  today: string,
+  cutoffDays: number = DEFAULT_ADDON_REQUEST_DAYS,
+): RequestBlock {
+  if (!splittableLine(line)) return addonRequestBlock(b, line, today, cutoffDays);
+  if (b.status === "Cancelled" || b.status === "Declined") return "cancelled";
+  if (pendingForLine(b, line.key)) return "pending";
+  const states = lineDayStates(line.days, today, cutoffDays);
+  if (!states.length || states.some((d) => d.state === "none")) return "none";
+  return states.every((d) => d.state === "past") ? "past" : "cutoff";
+}
+
 /** The date a family can ask until, for the message ("until 3 days before: Sat 24 Oct"). */
 export function requestDeadline(first: string, cutoffDays: number): string {
   const d = new Date(`${first}T00:00:00Z`);

@@ -38,7 +38,7 @@ test("approve a bulk cancel on a paid booking: days come off the daily extra, th
   assert.equal(b.addonLines.length, 1);
   assert.deepEqual(b.addonLines[0].days, DAYS.slice(0, 4)); assert.equal(b.addonLines[0].price, 12); assert.equal(b.addonLines[0].label, "Water bottle × 4 (Colour: Blue)");
   assert.deepEqual(b.addons, ["Water bottle × 4 (Colour: Blue) — £12.00"]);
-  assert.equal(b.amount, 169); assert.equal(b.status, "Confirmed");
+  assert.equal(b.amount, 152); assert.equal(b.status, "Confirmed");
 });
 
 test("approve a bulk cancel on an UNPAID booking: the total comes off what is owed; a repeat approve is refused and changes nothing", () => {
@@ -66,13 +66,13 @@ test("a day the provider cancelled meanwhile is skipped and the pending request 
   assert.equal(c.cancel, undefined); assert.equal(c.addonLines[0].days.length, 7);
 });
 
-test("a cancelled day takes its share off the line and, when nothing was paid, the amount owed; a paid booking keeps its amount", () => {
+test("a cancelled day takes its share off the line and, when nothing was paid, the amount owed; a paid booking refunds the same share (amount 161 -> 138)", () => {
   const u = mkDaily({ pay: "Unpaid", amountPaid: 0 });
   applyCancelDay(u, 0, DAYS[2], { resolution: "refund" });
-  assert.equal(u.amount, 158); assert.equal(u.addonLines[0].label, "Water bottle × 6 (Colour: Blue)"); assert.equal(u.addonLines[0].price, 18); assert.ok(!u.addonLines[0].days.includes(DAYS[2]));
+  assert.equal(u.amount, 138); assert.equal(u.addonLines[0].label, "Water bottle × 6 (Colour: Blue)"); assert.equal(u.addonLines[0].price, 18); assert.ok(!u.addonLines[0].days.includes(DAYS[2]));
   assert.deepEqual(u.addons, ["Water bottle × 6 (Colour: Blue) — £18.00"]);
   const p = mkDaily();
   const res = applyCancelDay(p, 0, DAYS[2], { resolution: "refund" });
-  assert.equal(p.amount, 161); assert.equal(res?.amount, 23); assert.equal(p.addonLines[0].price, 18);
+  assert.equal(p.amount, 138); assert.equal(res?.amount, 23); assert.equal(p.addonLines[0].price, 18);
   assert.equal(followCancelledDays(p, "someone else", [DAYS[0]]), 0); // another child's extras are untouched
 });

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { librarySnap } from "./tenantLibrary";
 import type { LibAddonDef } from "./addonPricing";
 import { parseAddonLabel } from "../../../features/bookings/addons";
-import { addonRequestBlock, changeProblem, dayBlock, labelWithAnswers, pendingForLine, splittableLine, DEFAULT_ADDON_REQUEST_DAYS } from "../../../features/bookings/addonRequests";
+import { addonRequestBlock, changeProblem, dayBlock, labelWithAnswers, lineRequestBlock, pendingForLine, splittableLine, DEFAULT_ADDON_REQUEST_DAYS } from "../../../features/bookings/addonRequests";
 import { dayShare } from "../../../features/bookings/addonDays";
 import type { AddonRequest, AddonRequestTarget, Booking } from "../../../features/bookings/types";
 import { AddonRequestError, currentAnswers, findLine } from "./addonRequestsCore";
@@ -50,7 +50,7 @@ export async function buildAddonRequest(b: Booking, input: NewRequestInput, toda
   const key = input.key ?? input.targets?.[0]?.key;
   const line = key ? findLine(b, key) : undefined;
   if (!key || !line) throw new AddonRequestError(404, "That extra isn't on this booking.");
-  const block = addonRequestBlock(b, { key, days: line.days }, today, cutoffDays);
+  const block = lineRequestBlock(b, { key, days: line.days, perDay: line.perDay, meal: line.meal }, today, cutoffDays);
   if (block === "pending") throw new AddonRequestError(409, "There is already a request waiting for your provider on this extra.");
   if (block === "past") throw new AddonRequestError(409, "That session has already happened.");
   if (block === "cutoff") throw new AddonRequestError(409, cutoffText(cutoffDays));
@@ -86,6 +86,7 @@ function buildCancelRequest(b: Booking, input: NewRequestInput, base: { id: stri
       // A daily extra goes a day at a time. Each day is checked against the cut-off on ITS OWN date; leaving the days out means every day still open.
       const have = [...line.days].sort();
       let days: string[];
+      if (t.days && !t.days.length) throw new AddonRequestError(400, "Pick at least one day, or leave the days out to cancel every day still open.");
       if (t.days?.length) {
         days = [...new Set(t.days)].sort();
         const stray = days.find((d) => !have.includes(d));

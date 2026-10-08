@@ -1,8 +1,8 @@
 import { addAmendFee } from "./dateChange";
-import { applyAddonRelease } from "../../../features/bookings/mutations";
+import { applyAddonRelease, settleShareRemoval } from "../../../features/bookings/mutations";
 import { cashReceivedOf, refundableSoFar } from "../../../features/bookings/helpers";
 import { addonLineKey, parseAddonLabel } from "../../../features/bookings/addons";
-import { pendingForLine, requestKeys, requestTargets, splittableLine } from "../../../features/bookings/addonRequests";
+import { labelWithAnswers, pendingForLine, requestKeys, requestTargets, splittableLine } from "../../../features/bookings/addonRequests";
 import { addonString, addonStringIndex, dayShare, removeLineDays } from "../../../features/bookings/addonDays";
 import type { AddonRequest, AddonRequestTarget, Booking } from "../../../features/bookings/types";
 
@@ -62,16 +62,11 @@ export function approveAddonRequest(b: Booking, id: string, opts: { resolution?:
     const total = round2(plan.reduce((n, p) => n + p.amount, 0));
     const label = plan.length > 1 ? `${plan.length} extras` : plan[0].label;
     const resolution = (opts.resolution === "refund" || opts.resolution === "wallet" || opts.resolution === "none" ? opts.resolution : "refund") as "refund" | "wallet" | "none";
-    if (refundableSoFar(b) > 0.004) {
-      const asked = opts.amount != null && Number.isFinite(opts.amount) ? Math.max(0, opts.amount) : total;
-      const res = applyAddonRelease(b, label, Math.min(asked, total), resolution);
-      release = { resolution: res.resolution, amount: res.amount };
-      r.money = { resolution: res.resolution, amount: res.amount };
-    } else {
-      // Nothing has been paid yet: the extras simply come off what is owed.
-      b.amount = round2(Math.max(0, (b.amount ?? 0) - total));
-      r.money = { resolution: "none", amount: 0 };
-    }
+    // ONE money rule (see settleShareRemoval): the removed share leaves the amount; only what is then overpaid can be refunded or credited.
+    const wasPaid = refundableSoFar(b) > 0.004;
+    const res = settleShareRemoval(b, `${label} (extra)`, total, { resolution, amount: opts.amount != null && Number.isFinite(opts.amount) ? Math.min(Math.max(0, opts.amount), total) : undefined });
+    release = wasPaid ? { resolution: res.resolution, amount: res.amount } : null;
+    r.money = wasPaid && res.amount > 0 ? { resolution: res.resolution, amount: res.amount } : { resolution: "none", amount: 0 };
     for (const p of plan) removeLineDays(b, p.line, p.days);
   } else {
     const line = findLineForTarget(b, requestTargets(r)[0]);
@@ -85,8 +80,10 @@ export function approveAddonRequest(b: Booking, id: string, opts: { resolution?:
     if (Math.abs(diff) > 0.004 && !opts.resolution) throw new AddonRequestError(400, "Choose what to do about the price difference (charge it, refund it or waive it).");
     const oldLabel = line.label;
     const oldAnswers = currentAnswers(line);
-    line.label = r.toLabel ?? line.label;
     line.answers = Object.entries({ ...oldAnswers, ...to }).map(([label, value]) => ({ label, value }));
+    // Reword from the line AS IT IS NOW (a day may have been cancelled since the request: x7 must not come back), not from the request's stored text.
+    const p = parseAddonLabel(oldLabel);
+    line.label = r.toLabel ? labelWithAnswers(p.name, line.perDay ? (line.days?.length || p.qty) : p.qty, !!line.perDay, line.answers) : oldLabel;
     if (Math.abs(diff) > 0.004) {
       const res = opts.resolution!;
       if (res === "charge" && diff > 0) {
