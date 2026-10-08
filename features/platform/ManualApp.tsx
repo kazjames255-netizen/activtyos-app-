@@ -871,6 +871,15 @@ function Page3() {
           </ol>
           <p className="m-0 mt-3 text-[13.5px] font-bold text-[var(--ink-2)]">Owner decision. No code change now.</p>
         </Card>
+        <Card className="mt-4 p-4">
+          <h3 className="m-0 mb-2 text-[18px] font-extrabold text-[var(--ink)]" style={display}>Privacy tidy-ups: a few weeks after launch</h3>
+          <ul className="m-0 grid gap-2 pl-5">
+            <li className={li}>The founder&apos;s old home address (12 Corris Court, Milton Keynes, MK10 9NR) is still used as sample data in the test scripts (e2e/review/*) and the address unit tests, and the repository is public. It was taken off the public privacy and terms pages when the registered office moved to a service address (8 Oct 2026). Decision for later: replace it with a made-up address in the test files. It stays in the old git history unless the history is rewritten or the repository is made private.</li>
+            <li className={li}>The privacy and terms pages show a personal Gmail address as the data-protection contact. Move it to an address on the company&apos;s own domain once the domain exists (for example privacy@).</li>
+            <li className={li}>Both pages still carry the draft banner and the placeholder product name. Have a data-protection adviser or solicitor review them, then remove the banner.</li>
+          </ul>
+          <p className="m-0 mt-3 text-[13.5px] font-bold text-[var(--ink-2)]">Owner decision. No code change now.</p>
+        </Card>
       </Section>
     </>
   );
