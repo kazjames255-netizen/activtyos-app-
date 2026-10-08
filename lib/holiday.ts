@@ -1,4 +1,4 @@
-import { dateLocale } from "./i18n/format";
+import { uiDate } from "./i18n/format";
 // Holiday & absence model + UK statutory entitlement engine (front-end demo).
 //
 // Legal basis (gov.uk/holiday-entitlement-rights, Working Time Regulations 1998
@@ -197,7 +197,7 @@ export const addDays = (iso: string, n: number) => { const d = parse(iso); d.set
 export const fmtRange = (start: string, end: string) => {
   const a = parse(start), b = parse(end);
   const opt: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short" };
-  return start === end ? a.toLocaleDateString(dateLocale(), opt) : `${a.toLocaleDateString(dateLocale(), opt)} – ${b.toLocaleDateString(dateLocale(), opt)}`;
+  return start === end ? uiDate(a, opt) : `${uiDate(a, opt)} – ${uiDate(b, opt)}`;
 };
 const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
 
@@ -236,7 +236,7 @@ export function leaveYear(policy: HolidayPolicy, ref: Date = new Date()): { star
   const end = new Date(startYear + 1, m, day); end.setDate(end.getDate() - 1);
   const label = policy.leaveYearStartMonth === 1 && policy.leaveYearStartDay === 1
     ? `${startYear}`
-    : `${start.toLocaleDateString(dateLocale(), { day: "numeric", month: "short", year: "numeric" })} – ${end.toLocaleDateString(dateLocale(), { day: "numeric", month: "short", year: "numeric" })}`;
+    : `${uiDate(start, { day: "numeric", month: "short", year: "numeric" })} – ${uiDate(end, { day: "numeric", month: "short", year: "numeric" })}`;
   return { start: isoDate(start), end: isoDate(end), label };
 }
 

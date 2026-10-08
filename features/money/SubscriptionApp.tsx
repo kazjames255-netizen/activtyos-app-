@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { portalOf } from "@/lib/portal-href";
@@ -53,7 +53,7 @@ interface Payload { current: Current; plans: Plan[]; billingConfigured: boolean;
 
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
 const gbp = (n: number) => `£${n.toLocaleString(dl())}`;
-const fmtDay = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "");
+const fmtDay = (iso?: string | null) => (iso ? uiDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" }) : "");
 const daysLeft = (iso?: string | null) => (iso ? Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000)) : 0);
 
 /** Stripe's PaymentElement + confirm + POST /start, inside <Elements>. The

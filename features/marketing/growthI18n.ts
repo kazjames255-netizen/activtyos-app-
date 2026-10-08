@@ -1,7 +1,7 @@
 // Display translations for the growth studio. The API (server/src/routes/growth.ts) returns English sentences with numbers
 // baked in; each one is rebuilt here from its id/key + the numbers parsed out of it. Anything that doesn't match the
 // expected shape falls back to the server's own text, so a wording change on the server can never blank the screen.
-import { dateLocale } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -12,7 +12,7 @@ const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frida
 export function weekdayName(english: string): string {
   const i = WEEKDAYS.indexOf(english);
   if (i < 0) return english;
-  try { return new Intl.DateTimeFormat(dateLocale(), { weekday: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2024, 0, 7 + i))); } catch { return english; }
+  try { return uiDate(new Date(Date.UTC(2024, 0, 7 + i)), { weekday: "long", timeZone: "UTC" }); } catch { return english; }
 }
 
 export function playView(t: T, p: PlayLike): { title: string; signal: string; insight: string; impact: string; action: string; secondary?: string } {

@@ -10,7 +10,7 @@
 // sync are the backend/integration piece (Amir). Pay details, adjustments and
 // every approved run live on the server (/api/payroll); the demo cast and the
 // browser stores are for the guided tour (demo mode) only.
-import { dateLocale as dl, currentLocaleCode } from "@/lib/i18n/format";
+import { dateLocale as dl, currentLocaleCode, uiDate } from "@/lib/i18n/format";
 import { isRTL } from "@/lib/i18n/config";
 import { tNow, useI18n } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
@@ -90,7 +90,7 @@ export function openPayslip(l: Line, period: string, paidOn: string, provider: s
   const statNote = lv && (lv.sickDays || lv.statutoryDays) ? ` <b>${escH(tr("p8wf.prStatNote", { list: [lv.sickDays ? `${tr("p8wf.prStatSick", { days: plural(lv.sickDays) })}${l.sickPay === "ssp" ? tr("p8wf.prStatSickSsp") : l.sickPay === "full" ? tr("p8wf.prStatSickFull") : ""}` : "", lv.statutoryDays ? tr("p8wf.prStatLeave", { days: plural(lv.statutoryDays) }) : ""].filter(Boolean).join(tr("p8wf.prAndJoin")) }))}</b>` : "";
   const deds = row(tr("p8wf.prPayeEst"), gbp(l.payeM)) + row(tr("p8wf.prEeNiEst"), gbp(l.eeNiM)) + row(tr("p8wf.prPensionAuto"), gbp(l.eePenM)) + (l.deductions || []).map((x) => row(adjLabel(x, tr("p8wf.prDeduction")), gbp(x.amount))).join("");
   const html = `<!doctype html><html lang="${loc}" dir="${isRTL(loc) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${escH(tr("p8wf.prSlipTitle", { name: l.name }))}</title><style>body{font-family:-apple-system,'Segoe UI',Arial,sans-serif;color:#1a1c2b;max-width:660px;margin:0 auto;padding:40px}h1{font-size:20px;margin:0}.tag{display:inline-block;background:#fdf3e0;color:#8a5a09;border-radius:99px;padding:2px 9px;font-size:10.5px;font-weight:800;margin-bottom:6px}.sub{color:#6b7086;font-size:12px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px;font-size:12px;color:#4a4763;margin:14px 0;border-top:1px solid #e5e7f0;padding-top:12px}.meta b{color:#1a1c2b}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:16px 0}h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#3557b7;border-bottom:1px solid #e5e7f0;padding-bottom:4px}table{width:100%;border-collapse:collapse;font-size:13px}td{padding:5px 0;border-top:1px solid #eef1f7}.net{background:#eef4fd;border-radius:10px;padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center}.net b{font-size:22px;color:#1d3a8f}.est{font-size:11px;color:#8a92a8;margin-top:14px}@media print{body{padding:0}}</style></head><body>
-    <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><span class="tag">${escH(tr("p8wf.prSlipTag"))}</span><h1>${escH(provider)}</h1><div class="sub">${escH(tr("p8wf.prSlipSub", { period, date: paid.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) }))}</div></div><div style="text-align:end"><div style="font-weight:800">${escH(l.name)}</div><div class="sub">${escH(l.role)} · ${escH(l.op)}</div></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><span class="tag">${escH(tr("p8wf.prSlipTag"))}</span><h1>${escH(provider)}</h1><div class="sub">${escH(tr("p8wf.prSlipSub", { period, date: uiDate(paid, { day: "numeric", month: "short", year: "numeric" }) }))}</div></div><div style="text-align:end"><div style="font-weight:800">${escH(l.name)}</div><div class="sub">${escH(l.role)} · ${escH(l.op)}</div></div></div>
     <div class="meta"><div>${escH(tr("p8wf.prTaxCode"))} · <b>${escH(l.taxCode)}</b></div><div>${escH(tr("p8wf.prNiCat"))} · <b>${escH(l.niCat)}</b></div><div>${escH(tr("p8wf.prTaxPeriod"))} · <b>${escH(taxPeriod)}</b></div><div>${escH(tr("p8wf.prFrequency"))} · <b>${escH(freqName(freqLabel))}</b></div>${leaveMeta}</div>
     <div class="grid"><div><h3>${escH(tr("p8wf.prPayments"))}</h3><table>${pays}${(l.additions || []).length || ((unpaidM > 0 || sickM > 0) && l.basis === "year") ? row(tr("p8wf.prGrossPay"), gbp(l.grossM), true) : ""}</table></div><div><h3>${escH(tr("p8wf.prDeductionsH"))}</h3><table>${deds}</table></div></div>
     <div class="net"><span>${escH(tr("p8wf.prNetBacs"))}</span><b>${gbp(l.netM)}</b></div>
@@ -192,11 +192,11 @@ function rotaHoursForRange(startISO: string, endISO: string, breakPaid = false):
 // LOCAL calendar date — toISOString() is UTC, which moved every window a day
 // early east of GMT (and in BST at midnight): September ran 31 Aug – 29 Sep.
 const isoD = isoDate;
-const fmtD = (d: Date) => d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" });
+const fmtD = (d: Date) => uiDate(d, { day: "numeric", month: "short", year: "numeric" });
 // The period LABEL is stored on the run and used as the key for per-run adjustments and duplicate-run detection, so it must not change
 // with the UI language: it is always built in UK English (en-GB). `display` is the same period in the active language, for the screen.
-const fmtDKey = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-const monthLabelKey = (d: Date) => d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+const fmtDKey = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); // raw-locale-ok: stored run key, always UK English
+const monthLabelKey = (d: Date) => d.toLocaleDateString("en-GB", { month: "long", year: "numeric" }); // raw-locale-ok: stored run key, always UK English
 function periodWindow(anchor: Date, freq: Freq): { start: string; end: string; label: string; display: string; paidOn: string } {
   if (freq === "monthly") {
     const s = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
@@ -218,7 +218,7 @@ function stepAnchor(anchor: Date, freq: Freq, dir: number): Date {
   return d;
 }
 
-const monthLabel = (d: Date) => d.toLocaleDateString(dl(), { month: "long", year: "numeric" });
+const monthLabel = (d: Date) => uiDate(d, { month: "long", year: "numeric" });
 const INTEGRATIONS = [
   { id: "quickbooks", name: "QuickBooks", icon: "🟢", blurb: "p8wf.prBlurbQb" },
   { id: "xero", name: "Xero", icon: "🔵", blurb: "p8wf.prBlurbXero" },
@@ -477,7 +477,7 @@ export function PayrollApp() {
         </div>
         </CollapsibleStats>
         <Card className="p-4">
-          <div className="flex flex-wrap items-center gap-2"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{t("p8wf.prNextPayDay")}</div><div className="text-[12px] text-[var(--ink-3)]">{nextPay.toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long" })} · {fq} · {periodD}</div></div><Button variant="primary" className="ms-auto" onClick={() => setTab("run")}>{t("p8wf.prRunPayrollBtn")}</Button></div>
+          <div className="flex flex-wrap items-center gap-2"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{t("p8wf.prNextPayDay")}</div><div className="text-[12px] text-[var(--ink-3)]">{uiDate(nextPay, { weekday: "long", day: "numeric", month: "long" })} · {fq} · {periodD}</div></div><Button variant="primary" className="ms-auto" onClick={() => setTab("run")}>{t("p8wf.prRunPayrollBtn")}</Button></div>
           {runs.length > 0 && <div className="mt-3 border-t border-[var(--line)] pt-3"><div className="mb-1.5 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("p8wf.prRecentRuns")}</div>{runs.slice(0, 3).map((r) => <div key={r.id} className="flex items-center gap-2 py-1 text-[12.5px]"><span className="font-bold text-[var(--ink)]">{r.period}</span><span className="text-[var(--ink-3)]">{t("p8wf.prRunSummary", { n: r.lines.length, net: gbp0(r.lines.reduce((a, l) => a + l.netM, 0)) })}</span><span className="ms-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">{r.publishedAt ? t("p8wf.prPublishedLc") : r.status === "approved" ? t("p8wf.prApprovedLc") : r.status === "draft" ? t("p8wf.prDraftLc") : r.status}</span></div>)}</div>}
         </Card>
       </>)}
@@ -516,7 +516,7 @@ export function PayrollApp() {
               <button type="button" onClick={() => setAnchor(stepAnchor(anchor, freq, 1))} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[13px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">{isRTL(locale) ? "‹" : "›"}</button>
               <button type="button" onClick={() => setAnchor(new Date())} className="ms-1 text-[11px] font-bold text-[#1d3a8f] hover:underline">{t("p7tc.todayLbl")}</button>
             </div>
-            <span className="text-[11px] text-[var(--ink-3)]">{t("p8wf.prPaidOn", { date: nextPay.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" }) })}</span>
+            <span className="text-[11px] text-[var(--ink-3)]">{t("p8wf.prPaidOn", { date: uiDate(nextPay, { weekday: "short", day: "numeric", month: "short" }) })}</span>
           </div>
 
           {/* Per-employee hours source — mix contracted (e.g. admin) and approved timesheets (clock in/out) */}
@@ -584,7 +584,7 @@ export function PayrollApp() {
           {runs.length === 0 ? <div className="p-6 text-center text-[13px] text-[var(--ink-3)]"><Rich text={t("p8wf.prNoRunsYet")} /></div> : (
             <div className="space-y-4">{runs.map((r) => (
               <div key={r.id} data-ui="card" data-testid="pay-run">
-                <div className="mb-1.5 flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{r.period}</span>{!demo && (r.status === "approved" ? chip(t("p8wf.prChipApproved"), "bg-[#e6f4ea] text-[#0f7a43]") : chip(t("p8wf.prChipDraft"), "bg-[#fdf3e0] text-[#8a5a09]"))}<span className="text-[11.5px] text-[var(--ink-3)]">{t("p8wf.prPaidNet", { date: new Date(`${r.paidOn}T12:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }), net: gbp0(r.lines.reduce((a, l) => a + l.netM, 0)) })}</span>
+                <div className="mb-1.5 flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{r.period}</span>{!demo && (r.status === "approved" ? chip(t("p8wf.prChipApproved"), "bg-[#e6f4ea] text-[#0f7a43]") : chip(t("p8wf.prChipDraft"), "bg-[#fdf3e0] text-[#8a5a09]"))}<span className="text-[11.5px] text-[var(--ink-3)]">{t("p8wf.prPaidNet", { date: uiDate(new Date(`${r.paidOn}T12:00:00`), { day: "numeric", month: "short", year: "numeric" }), net: gbp0(r.lines.reduce((a, l) => a + l.netM, 0)) })}</span>
                   {!demo && r.status === "approved" && acctBtn(r)}
                   {!demo && (r.status !== "approved"
                     ? <button type="button" onClick={() => approveRun(r)} className="ms-auto rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold text-[#b9770e] hover:border-[#b9770e]">{t("p8wf.prApproveRun")}</button>
@@ -746,7 +746,7 @@ function RunAdjust({ emp, period, freq, value, preview, ts, tsRows, hoursSource,
               <div className="max-h-44 overflow-y-auto rounded-lg border border-[var(--line)]">
                 {tsRows.map(({ rec, payH, workedH, overtimeUnpaidH }) => (
                   <div key={rec.day} className="flex flex-wrap items-center gap-1.5 border-t border-[var(--line-2,#eef2f8)] px-2.5 py-1.5 text-[11.5px] first:border-t-0">
-                    <span className="w-[74px] font-bold text-[var(--ink)]">{new Date(`${rec.day}T12:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" })}</span>
+                    <span className="w-[74px] font-bold text-[var(--ink)]">{uiDate(new Date(`${rec.day}T12:00:00`), { weekday: "short", day: "numeric", month: "short" })}</span>
                     <span className="text-[var(--ink-3)]">{hhmm(rec.clockInAt)}–{rec.clockOutAt ? hhmm(rec.clockOutAt) : "…"}{rec.breakMs ? t("p8wf.prBreakMin", { n: Math.round(rec.breakMs / 60000) }) : ""} · {t("p8wf.prWorkedH", { h: t("p8wf.hrsUnit", { n: workedH }) })}</span>
                     <span className="font-bold tabular-nums text-[var(--ink)]">{t("p8wf.prPayHrs", { h: t("p8wf.hrsUnit", { n: payH }) })}</span>
                     <span className="ms-auto flex items-center gap-1.5">

@@ -1,4 +1,4 @@
-import { dateLocale } from "./i18n/format";
+import { uiDate } from "./i18n/format";
 // Staff appraisals & performance — model + pure helpers (front-end demo).
 // Covers review cycles (probation / 3-month / 6-month / annual / supervision),
 // role-based templates of rated competencies, a two-sided review (self +
@@ -67,7 +67,7 @@ export const nineBoxCell = (t: { performance: number; potential: number }) => NI
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 export const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-export const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(dateLocale(), { day: "numeric", month: "short", year: "numeric" }) : "—");
+export const fmtDate = (iso?: string) => (iso ? uiDate(new Date(`${iso}T00:00:00`), { day: "numeric", month: "short", year: "numeric" }) : "—");
 export const daysUntil = (iso: string) => Math.round((new Date(`${iso}T00:00:00`).getTime() - Date.now()) / 86400000);
 export const isOverdue = (r: Review) => r.status !== "complete" && daysUntil(r.due) < 0;
 

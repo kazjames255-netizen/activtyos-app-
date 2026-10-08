@@ -13,7 +13,7 @@ import { SettingsLink } from "@/components/OperatorPage";
 import { useSurfaceTheme } from "@/lib/surfaceThemes";
 import { useHoScope, HO_OWN } from "@/components/franchise/HoScope";
 import { useI18n, useT } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDateTime, uiDate } from "@/lib/i18n/format";
 
 type Tr = ReturnType<typeof useT>;
 
@@ -61,7 +61,7 @@ interface Provider { tenantId: string; name: string }
 interface Customer { id: string; name?: string; email?: string; locationName?: string; children?: { name?: string }[] }
 
 // `loc` is a BCP-47 date locale (en-GB for English) so dates follow the chosen language.
-const when = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const when = (iso?: string, loc = "en-GB") => (iso ? uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }, loc) : "");
 // Tidy one-line subtitle for a family: who they parent, where, and their email.
 const familySub = (c: Customer, tr: Tr) => {
   const kids = tidyKids(c.children).map((k) => k.name).filter(Boolean);
@@ -69,7 +69,7 @@ const familySub = (c: Customer, tr: Tr) => {
     .filter(Boolean)
     .join("  ·  ");
 };
-const shortWhen = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleDateString(loc, { day: "numeric", month: "short" }) : "");
+const shortWhen = (iso?: string, loc = "en-GB") => (iso ? uiDate(new Date(iso), { day: "numeric", month: "short" }, loc) : "");
 
 // The discount-code details shown under a code message. No copy button — the
 // code is already waiting at checkout (tap-to-apply), so this just shows what it

@@ -10,6 +10,7 @@ import { askDoubt, listDoubts, replyDoubt, seenDoubt, sendDoubtMessage, type Dou
 import type { PanelMeta, PanelProps } from "./panelTypes";
 import { errMsg } from "./types";
 import { hubT, useHubI18n } from "./family/hubT";
+import { relativeFrom } from "@/lib/i18n/format";
 
 // "Ask my teacher" threads, both sides of the same collection (hub/doubtsApi.ts):
 //  - Tutor: "Student message centre" — one folder per student, sub-folders per lesson/topic, unread first. A
@@ -76,8 +77,7 @@ function ThreadSubtitle(d: Pick<Doubt, "noteId" | "lessonTitle" | "step" | "slid
 const relTime = (iso: string, locale: string) => {
   const ms = Date.now() - new Date(iso).getTime();
   const m = Math.round(ms / 60_000);
-  let rtf: Intl.RelativeTimeFormat;
-  try { rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" }); } catch { rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "short" }); }
+  const rtf = { format: (n: number, u: "second" | "minute" | "hour" | "day") => relativeFrom(n, u, locale, "short") };
   if (m < 1) return rtf.format(0, "second");
   if (m < 60) return rtf.format(-m, "minute");
   const h = Math.round(m / 60);

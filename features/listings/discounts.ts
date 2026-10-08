@@ -46,7 +46,7 @@ const newId = () =>
 export function friendlyIso(iso: string, locale = "en-GB"): string {
   const d = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return iso;
-  try { return d.toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: "UTC" }); } catch { return iso; }
+  try { return d.toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: "UTC" }); } catch { return iso; } // raw-locale-ok: server-side email text: the caller picks the locale
 }
 /** Replace any raw ISO date inside a (possibly stored) rule name with a friendly one. */
 export const DISCOUNT_KIND_LABEL: Record<DiscountKind, string> = { person: "Multi-person discount", session: "Multi-session discount", early: "Early bird discount" };

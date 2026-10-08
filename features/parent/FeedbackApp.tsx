@@ -3,7 +3,7 @@
 // Parent feedback / review — reached from the "How did we do?" prompt. Pick the
 // provider (pre-filled from the notification link), leave a star rating and a
 // note. Stored via /api/my/feedback so the family can see what they've sent.
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDateTime } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
@@ -19,7 +19,7 @@ const LIGHT_PALETTE = {
 
 interface Provider { tenantId: string; name: string }
 interface Feedback { id: string; tenantId: string; rating: number; comment?: string; listing?: string | null; createdAt: string }
-const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const fmt = (iso?: string) => (iso ? uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 const STARS = [1, 2, 3, 4, 5];
 const RATING_KEYS = ["", "p8par.rateBad", "p8par.rateMeh", "p8par.rateGood", "p8par.rateGreat", "p8par.rateTop"];
 

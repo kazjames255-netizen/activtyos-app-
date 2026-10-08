@@ -12,7 +12,7 @@
 // background so any palette stays legible.
 // ─────────────────────────────────────────────────────────────────────────
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDateTime } from "@/lib/i18n/format";
 import { useEffect, useRef, useState, type PointerEvent as RPE } from "react";
 import { post as apiPost, get as apiGet } from "@/lib/api";
 import { downscaleImage, type Company } from "@/features/newsfeed/newsletter";
@@ -227,7 +227,7 @@ function renderBlock(b: Block, t: Theme, c?: Partial<Company>, now = 0): string 
       const parts: [string, number][] = diff != null ? [["Days", Math.floor(diff / 86400000)], ["Hrs", Math.floor((diff % 86400000) / 3600000)], ["Mins", Math.floor((diff % 3600000) / 60000)], ["Secs", Math.floor((diff % 60000) / 1000)]] : [];
       const boxFg = readable(t.onA);
       const boxes = parts.map(([lab, v]) => `<td style="padding:0 6px"><div style="background:${t.onA};color:${boxFg};border-radius:16px;padding:16px 8px;min-width:82px"><div style="font-size:48px;font-weight:900;line-height:1;font-family:Arial,Helvetica,sans-serif">${String(v).padStart(2, "0")}</div><div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.72;margin-top:6px">${lab}</div></div></td>`).join("");
-      const dateStr = !isNaN(target) ? new Date(target).toLocaleString(dl(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+      const dateStr = !isNaN(target) ? uiDateTime(new Date(target), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
       return row(`<div style="background:${t.a};background-image:linear-gradient(160deg,${t.a},${t.aDark});border-radius:22px;box-shadow:0 22px 44px -26px ${t.aDeep};padding:30px 22px 34px;text-align:center"><div style="font-size:20px;font-weight:800;letter-spacing:.5px;color:${t.onA}">${esc(b.heading || tx("Hurry — offer ends soon"))}</div>${diff != null ? `<table role="presentation" align="center" style="margin:18px auto 4px;border-collapse:separate"><tr>${boxes}</tr></table>` : `<div style="margin-top:12px;font-size:13px;color:${t.onAMut}">${tx("Set the date & start time in the editor to show the countdown.")}</div>`}${dateStr ? `<div style="margin-top:10px;font-size:13px;font-weight:600;color:${t.onAMut}">Ends ${esc(dateStr)}</div>` : ""}${b.label ? `<div style="margin-top:18px">${btn(t.onA, readable(t.onA), b.label, b.url)}</div>` : ""}</div>`, "padding:14px 22px");
     }
     case "graph": {

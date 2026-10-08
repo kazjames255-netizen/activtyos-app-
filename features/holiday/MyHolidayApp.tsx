@@ -16,7 +16,7 @@ import { isDemoMode } from "@/lib/api";
 import { getMe, peekMe } from "@/components/auth/PortalGuard";
 import { loadClock, type ClockRecord, hhmm as clockHhmm } from "@/features/timeclock/data";
 import { useTenantSettings } from "@/lib/settings";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useI18n } from "@/lib/i18n/provider";
 
 type Tr = (key: string, vars?: Record<string, string | number>) => string;
@@ -30,7 +30,7 @@ const STATUS_KEY: Record<AbsenceStatus, string> = { pending: "staffp.holStPendin
 // Same as lib/holiday's fmtRange, but in the reader's language.
 const fmtRange = (start: string, end: string, locale = "en-GB") => {
   const opt: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short" };
-  const f = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(locale, opt);
+  const f = (iso: string) => uiDate(new Date(`${iso}T00:00:00`), opt, locale);
   return start === end ? f(start) : `${f(start)} – ${f(end)}`;
 };
 // Same as the time clock's sinceLabel, translated.
@@ -153,7 +153,7 @@ export function MyHolidayApp() {
           <div>
             <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("staffp.holRolledTitle")}</div>
             <p className="mt-1 max-w-xl text-[12.5px] leading-relaxed text-[var(--ink-2)]">{rich(t("staffp.holRolledBody"))}</p>
-            {nph && <div className="mt-2 inline-block rounded-lg bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[#1d3a8f]">{t("staffp.holNextPh", { name: nph.name, date: new Date(`${nph.date}T00:00:00`).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "long" }) })}</div>}
+            {nph && <div className="mt-2 inline-block rounded-lg bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[#1d3a8f]">{t("staffp.holNextPh", { name: nph.name, date: uiDate(new Date(`${nph.date}T00:00:00`), { weekday: "short", day: "numeric", month: "long" }, locale) })}</div>}
           </div>
         </div>
       </Card>
@@ -199,7 +199,7 @@ export function MyHolidayApp() {
           {seeTeamAbsence && (<>
           <div className="grid grid-cols-7 gap-1.5">{week.map((iso) => { const n = teamOff(iso); const isToday = iso === today; const d = new Date(`${iso}T00:00:00`); return (
             <div key={iso} className="text-center">
-              <div className={`text-[10.5px] font-bold ${isToday ? "text-[#1d3a8f]" : "text-[var(--ink-3)]"}`}>{d.toLocaleDateString(locale, { weekday: "short" })} {d.getDate()}</div>
+              <div className={`text-[10.5px] font-bold ${isToday ? "text-[#1d3a8f]" : "text-[var(--ink-3)]"}`}>{uiDate(d, { weekday: "short" }, locale)} {d.getDate()}</div>
               <div className={`mx-auto mt-1 grid h-11 w-11 place-items-center rounded-full text-[15px] font-extrabold tabular-nums ${isToday ? "bg-[#1d3a8f] text-white" : n > 0 ? "bg-[#eef4fd] text-[#1d3a8f] ring-1 ring-[#cfe0fb]" : "bg-[var(--panel)] text-[var(--ink-3)]"}`}>{n}</div>
             </div>
           ); })}</div>
@@ -245,7 +245,7 @@ export function MyHolidayApp() {
           </div>
           <div className="mt-4 border-t border-[var(--line)] pt-3">
             <div className="text-[11px] font-bold text-[var(--ink-3)]">{t("staffp.holNextUp")}</div>
-            <div className="text-[13px] font-extrabold text-[#1d3a8f]">{nph ? `${nph.name} · ${new Date(`${nph.date}T00:00:00`).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "long" })}` : "—"}</div>
+            <div className="text-[13px] font-extrabold text-[#1d3a8f]">{nph ? `${nph.name} · ${uiDate(new Date(`${nph.date}T00:00:00`), { weekday: "short", day: "numeric", month: "long" }, locale)}` : "—"}</div>
           </div>
           <div className="mt-3 flex gap-2">
             <span className="flex-1 rounded-lg border border-[#f3c0bb] px-2.5 py-2 text-center text-[11.5px] font-bold text-[#c0392b]">🕒 {myClock?.lateMin ? 1 : 0} {t("staffp.holLateness")}</span>

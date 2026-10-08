@@ -6,7 +6,7 @@
 // we already have — and anything the applicant already gave that also lives in
 // onboarding (references, address, etc.) auto-carries over so they never repeat
 // it. Front-end demo stores; real submissions + email are Amir's.
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
@@ -145,7 +145,7 @@ function seedApps(): Application[] {
   ];
 }
 
-const fmtDate = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }); };
+const fmtDate = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : uiDate(d, { day: "numeric", month: "short", year: "numeric" }); };
 const STATUS_TONE: Record<string, string> = { new: "bg-[#e6efff] text-[#1d54c4]", accepted: "bg-[#e6f4ea] text-[#0f7a43]", rejected: "bg-[#fdecec] text-[#c0392b]" };
 
 // carry an accepted application's answers into the applicant's onboarding record

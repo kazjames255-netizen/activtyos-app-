@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate, uiTime } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
@@ -48,7 +48,7 @@ const initials = (s: string) => (s.trim().split(/\s+/).filter((w) => /^\p{L}/u.t
 const grad = (s: string) => GRADS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
 const fmtWhen = (iso: string) => {
   const d = new Date(iso);
-  return d.toLocaleDateString(dl(), { day: "numeric", month: "short" }) + " · " + d.toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" });
+  return uiDate(d, { day: "numeric", month: "short" }) + " · " + uiTime(d, { hour: "2-digit", minute: "2-digit" });
 };
 
 // The API's thread shape — identical to ours except the unread flag carries

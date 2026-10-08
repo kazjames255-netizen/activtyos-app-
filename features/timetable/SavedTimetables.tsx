@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useState } from "react";
 import { useTimetableStore } from "./store";
 import { useSettings } from "@/lib/settings";
@@ -10,12 +10,12 @@ import { pickPlural } from "@/lib/i18n/plural";
 
 const fmt = (iso: string) => {
   const d = new Date(iso + "T00:00:00");
-  return isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { day: "numeric", month: "short" });
+  return isNaN(d.getTime()) ? iso : uiDate(d, { day: "numeric", month: "short" });
 };
 const fmtWhen = (iso?: string) => {
   if (!iso) return "";
   const d = new Date(iso);
-  return isNaN(d.getTime()) ? "" : d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" });
+  return isNaN(d.getTime()) ? "" : uiDate(d, { day: "numeric", month: "short", year: "numeric" });
 };
 
 /** The operator's folder of saved weeks — everything auto-saved from the

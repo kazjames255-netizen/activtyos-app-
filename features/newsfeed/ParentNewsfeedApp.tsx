@@ -7,7 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { Badge, Card } from "@/components/ui";
 import { NewsletterView, PostImage, type Newsletter } from "./newsletter";
 import { useI18n } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDateTime } from "@/lib/i18n/format";
 
 // The parent's newsfeed — updates from every provider they've booked with.
 // Events can be RSVP'd, urgent notices acknowledged, and posts reacted to. Since
@@ -33,7 +33,7 @@ const TPL: Record<Tpl, { label: string; color: string }> = {
   celebrate: { label: "feed.tplCelebrate", color: "#e22295" }, booking: { label: "feed.tplBooking", color: "#15b364" },
   newsletter: { label: "feed.tplNewsletter", color: "#1d3a8f" },
 };
-const when = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const when = (iso?: string, loc = "en-GB") => (iso ? uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }, loc) : "");
 const LS = "aos.news.mine.v1";
 const readMine = (): Record<string, Mine> => { try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch { return {}; } };
 

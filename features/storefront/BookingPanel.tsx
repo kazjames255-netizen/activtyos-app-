@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate, uiDateTime } from "@/lib/i18n/format";
 import { useT, useWord, useI18n } from "@/lib/i18n/provider";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -41,7 +41,7 @@ interface Kid {
 const METHODS = ["Card", "Tax-Free Childcare"];
 
 const fmtDay = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
 export function BookingPanel({ listing, signedIn }: { listing: ServerListing; signedIn: boolean }) {
   const t = useT();
@@ -399,7 +399,7 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
         </div>
         {opensLater ? (
           <span className="rounded-full bg-[#fff7ed] px-3 py-1.5 text-[12px] font-bold text-[#9a3412]">
-            {t("p8lst.bpOpensAt", { when: new Date(listing.opensAt!).toLocaleString(dl(), { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) })}
+            {t("p8lst.bpOpensAt", { when: uiDateTime(new Date(listing.opensAt!), { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) })}
           </span>
         ) : !signedIn ? (
           <Link href={`/login?next=/book/${encodeURIComponent(listing.id)}`} className={S.cta + " inline-block"}>

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Ico, type IcoName } from "./teachIcons";
 import { useEscapeLayer } from "./escapeLayer";
 import { useT } from "@/lib/i18n/provider";
+import { uiDate, uiTime, relativeFrom } from "@/lib/i18n/format";
 
 // Shared building blocks for the three teaching panels (Live lessons, Homework,
 // Flashcards). Kept in its own file so the shell/notes owners can reshape kit.tsx
@@ -49,12 +50,12 @@ export const uiLocale = (): string => {
   const l = typeof document !== "undefined" ? document.documentElement.lang : "";
   return !l || l === "en" ? "en-GB" : l;
 };
-export const fmtDay = (iso: string) => new Date(iso).toLocaleDateString(uiLocale(), { weekday: "short", day: "numeric", month: "short" });
-export const fmtClock = (iso: string) => new Date(iso).toLocaleTimeString(uiLocale(), { hour: "2-digit", minute: "2-digit" });
+export const fmtDay = (iso: string) => uiDate(new Date(iso), { weekday: "short", day: "numeric", month: "short" }, uiLocale());
+export const fmtClock = (iso: string) => uiTime(new Date(iso), { hour: "2-digit", minute: "2-digit" }, uiLocale());
 export const fmtDayTime = (iso: string) => `${fmtDay(iso)} · ${fmtClock(iso)}`;
 /** The viewer's local timezone label, e.g. "BST" or "GMT+1". */
 export const tzLabel = () => {
-  try { return new Date().toLocaleTimeString(uiLocale(), { timeZoneName: "short" }).split(" ").pop() ?? ""; } catch { return ""; }
+  try { return uiTime(new Date(), { timeZoneName: "short" }, uiLocale()).split(" ").pop() ?? ""; } catch { return ""; }
 };
 export const endOf = (startsAt: string, mins: number) => new Date(new Date(startsAt).getTime() + mins * MIN).toISOString();
 
@@ -88,7 +89,7 @@ export function relDay(iso: string, now = Date.now()): string {
   if (diff >= -1 && diff <= 1) {
     const loc = uiLocale();
     if (loc.startsWith("en")) return diff === 0 ? "Today" : diff === 1 ? "Tomorrow" : "Yesterday";
-    const w = new Intl.RelativeTimeFormat(loc, { numeric: "auto" }).format(diff, "day");
+    const w = relativeFrom(diff, "day", loc);
     return w.charAt(0).toLocaleUpperCase(loc) + w.slice(1);
   }
   return fmtDay(iso);

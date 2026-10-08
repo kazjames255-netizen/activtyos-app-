@@ -1,4 +1,4 @@
-import { dateLocale } from "./i18n/format";
+import { uiDate } from "./i18n/format";
 // Milestones — a phased operational timeline for franchises. Head office owns a
 // master template (phases → steps, each deep-linking into the app); every
 // franchise sees it as their live timeline with progress. The recurring phases
@@ -66,7 +66,7 @@ export function currentPhaseIndex(phases: MPhase[], prog: MProgress) {
 // Date helpers + a phase's overall date window (earliest start → latest end).
 export const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 export const dparse = (s?: string): Date | null => (s ? new Date(`${s}T00:00:00`) : null);
-export const fmtShort = (s?: string) => { const d = dparse(s); return d ? d.toLocaleDateString(dateLocale(), { day: "numeric", month: "short" }) : "—"; };
+export const fmtShort = (s?: string) => { const d = dparse(s); return d ? uiDate(d, { day: "numeric", month: "short" }) : "—"; };
 export function phaseWindow(p: MPhase, prog: MProgress): { start: Date; end: Date } | null {
   const starts: number[] = [], ends: number[] = [];
   p.steps.forEach((s) => { const st = prog.steps[s.id]; const a = dparse(st?.start), b = dparse(st?.end); if (a) starts.push(a.getTime()); if (b) ends.push(b.getTime()); });

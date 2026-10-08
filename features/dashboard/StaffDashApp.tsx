@@ -1,7 +1,7 @@
 "use client";
 
 import { DirGlyph } from "@/components/shell/DirGlyph";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { get as apiGet, put as apiPut, openFile, isDemoMode } from "@/lib/api";
@@ -72,7 +72,7 @@ const dueChip = (due: string, today: string) => {
   if (due === today) return tNow("p8ops.dbToday");
   if (due === addDaysIso(today, 1)) return tNow("p8ops.dbTomorrow");
   if (due < today) return tNow("p8ops.dbOverdue");
-  return new Date(`${due}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" });
+  return uiDate(new Date(`${due}T00:00:00`), { day: "numeric", month: "short" });
 };
 function myShiftToday(day: string, ME: string): MyShift | null {
   try {
@@ -250,7 +250,7 @@ export function StaffDashApp() {
   // `status`, not `done` — the schema has no `done` field, so the old body was
   // stripped and the tick never saved.
   const tickTask = (task: Task) => { setTasks((list) => (list ?? []).map((x) => (x.id === task.id ? { ...x, status: "done" as const } : x))); void apiPut(`/api/tasks/${task.id}`, { status: "done" }).catch(() => refresh()); };
-  const dayLabel = new Date(`${date}T00:00:00`).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long" });
+  const dayLabel = uiDate(new Date(`${date}T00:00:00`), { weekday: "long", day: "numeric", month: "long" });
   // Where I'm working today — match the shift's venue name to the library venue for its address.
   const myVenueName = shift?.site || shift?.listing || "";
   const myVenue = venues.find((v) => v.name === myVenueName);
@@ -296,7 +296,7 @@ export function StaffDashApp() {
     .filter((a) => a.date >= sinceIso && !annRead.includes(a.id))
     .sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || (Number(!!b.important) - Number(!!a.important)) || b.date.localeCompare(a.date));
   const curAnn = recentUnread[0] ?? null;
-  const annDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" });
+  const annDate = (d: string) => uiDate(new Date(`${d}T00:00:00`), { day: "numeric", month: "short" });
   const markAnnRead = (id: string) => { const next = Array.from(new Set([...annRead, id])); setAnnRead(next); void markAnnouncementRead(id).catch(() => {}); setAnnOpen(false); };
 
   return (
@@ -315,7 +315,7 @@ export function StaffDashApp() {
         <div className="inline-flex items-center gap-0.5 rounded-xl border border-[var(--line)] bg-white p-1 shadow-sm">
           <button type="button" onClick={() => setDate(addDaysIso(date, -1))} aria-label={t("dashboard.previousDay")} className="grid h-7 w-7 place-items-center rounded-lg text-[16px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">‹</button>
           <label className="relative flex cursor-pointer items-center gap-1.5 px-2 text-[12.5px] font-bold text-[var(--ink)]">
-            <span>📅 {new Date(`${date}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" })}{isToday ? ` · ${t("dashboard.today")}` : ""}</span>
+            <span>📅 {uiDate(new Date(`${date}T00:00:00`), { weekday: "short", day: "numeric", month: "short" })}{isToday ? ` · ${t("dashboard.today")}` : ""}</span>
             <input type="date" value={date} onChange={(e) => { if (e.target.value) setDate(e.target.value); }} className="absolute inset-0 cursor-pointer opacity-0" aria-label={t("dashboard.pickADate")} />
           </label>
           <button type="button" onClick={() => setDate(addDaysIso(date, 1))} aria-label={t("dashboard.nextDay")} className="grid h-7 w-7 place-items-center rounded-lg text-[16px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">›</button>

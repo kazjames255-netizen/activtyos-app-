@@ -10,7 +10,7 @@
 // this module can be pulled in from anywhere without a runtime cycle.
 // ─────────────────────────────────────────────────────────────────────────
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDateTime, uiDate } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { tNow, useI18n, useT } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
@@ -44,7 +44,7 @@ export function useOpensAt(opensAt?: string) {
     return dd > 0 ? tb("p7be.cdDays", { d: dd, h: hh, m: mm }) : `${p2(hh)}:${p2(mm)}:${p2(s2)}`;
   })();
   const opensLabel = at && !Number.isNaN(openMs)
-    ? new Date(openMs).toLocaleString(dl(), { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })
+    ? uiDateTime(new Date(openMs), { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })
     : "";
   return { locked, countdown, opensLabel };
 }
@@ -326,11 +326,11 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // repeated, and readable on the row itself rather than hidden in a tooltip.
   const datesPretty = (isos: string[]) => {
     // Other languages: each date printed by Intl with its own month (Polish needs "sierpnia", not "sierpień"), so no English ordinals.
-    if (loc !== "en") return [...isos].sort().map((iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "long", timeZone: "UTC" })).join(", ");
+    if (loc !== "en") return [...isos].sort().map((iso) => uiDate(new Date(`${iso}T00:00:00Z`), { day: "numeric", month: "long", timeZone: "UTC" })).join(", ");
     const byMonth = new Map<string, number[]>();
     for (const iso of [...isos].sort()) {
       const dt = new Date(`${iso}T00:00:00Z`);
-      const month = dt.toLocaleDateString(dl(), { month: "long", timeZone: "UTC" });
+      const month = uiDate(dt, { month: "long", timeZone: "UTC" });
       const list = byMonth.get(month) ?? [];
       list.push(dt.getUTCDate());
       byMonth.set(month, list);

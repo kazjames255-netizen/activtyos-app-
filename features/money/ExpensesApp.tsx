@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
 import { useHoScope } from "@/components/franchise/HoScope";
@@ -49,7 +49,7 @@ const HUES = [
 const hueFor = (label: string) => HUES[[...(label || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % HUES.length];
 const initials = (name: string) => (name.trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).join("").slice(0, 2) || "?").toUpperCase();
 
-const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmtDay = (iso: string) => (iso ? uiDate(new Date(`${iso}T00:00:00Z`), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
@@ -216,7 +216,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const monthly = useMemo(() => {
     const months = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      return { key: monthKeyOf(d), label: d.toLocaleDateString(dl(), { month: "short" }), long: d.toLocaleDateString(dl(), { month: "long" }), month: d.getMonth(), year: d.getFullYear() };
+      return { key: monthKeyOf(d), label: uiDate(d, { month: "short" }), long: uiDate(d, { month: "long" }), month: d.getMonth(), year: d.getFullYear() };
     });
     return months.map((m) => {
       const rows = allItems.filter((x) => (x.date || "").slice(0, 7) === m.key);

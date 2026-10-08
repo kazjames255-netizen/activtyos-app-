@@ -24,6 +24,7 @@ import { PARENT_COPY, overdueVerdict } from "../family/parentCopy";
 import { useH } from "./homeI18n";
 import type { PanelProps } from "../panelTypes";
 import type { FamilyKid } from "../family/FamilyContext";
+import { uiDate } from "@/lib/i18n/format";
 
 /** "amir khan" / "AMIR KHAN" → "Amir Khan" — the provider/tutor name is shown in title case everywhere a family sees it. */
 function titleCase(s: string | undefined | null): string {
@@ -61,7 +62,7 @@ function ChildRow({ kid, qs, portal, providerName, yearGroup, onOpen }: {
 
     // ── the up-to-3 action rows, in the brief's fixed priority order ──
     const rows: ActionRow[] = [];
-    const dayName = (iso: string) => new Date(iso).toLocaleDateString(undefined, { weekday: "short" });
+    const dayName = (iso: string) => uiDate(new Date(iso), { weekday: "short" });
     if (todo[0]) {
       rows.push({ key: "hw", label: t("hubshell.hm_familyRowHomework", { title: todo[0].title, day: dayName(todo[0].dueAt) }), href: `${base}/homework/${encodeURIComponent(todo[0].id)}` });
     }

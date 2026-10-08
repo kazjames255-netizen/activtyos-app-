@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate, uiTime } from "@/lib/i18n/format";
 import { useT, useI18n, tNow } from "@/lib/i18n/provider";
 import { isRTL } from "@/lib/i18n/config";
 import { richT } from "@/components/shell/richT";
@@ -87,9 +87,9 @@ const ITIN_ACTIONS = [
   "Count in and out of water", "Collect belongings", "Confirm collection / password", "Weather check", "Phone tree ready",
 ];
 
-const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmtDate = (iso?: string) => (iso ? uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
-const nowLabel = () => new Date().toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" });
+const nowLabel = () => uiTime(new Date(), { hour: "2-digit", minute: "2-digit" });
 const ini = (n?: string) => (n ?? "").split(/\s+/).map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase() || "?";
 
 // ── domain (mirrors the manual's helpers) ─────────────────────────────────

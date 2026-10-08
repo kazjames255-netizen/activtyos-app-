@@ -3,7 +3,7 @@
 // lib — a `document` reference there breaks the API's typecheck, not the web
 // app's, which is a confusing place to find the error.
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDateTime } from "@/lib/i18n/format";
 import type { Booking } from "./types";
 import { EXPORT_COLUMNS, columnsFor, money, toCsv, type Col, type ExportColumn } from "./helpers";
 import { tNow } from "@/lib/i18n/provider";
@@ -91,7 +91,7 @@ export function printRows<T>(
           : ""
       }
     </table>
-    <div class="foot">${esc(tNow("p8lst.bxGenerated", { when: new Date().toLocaleString(dl()), brand: BRAND }))}</div>
+    <div class="foot">${esc(tNow("p8lst.bxGenerated", { when: uiDateTime(new Date()), brand: BRAND }))}</div>
   </body></html>`;
 
   // An iframe rather than window.open: popup blockers eat the latter, and a

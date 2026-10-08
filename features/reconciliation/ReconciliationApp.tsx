@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate, uiDateTime } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, ApiError, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -44,7 +44,7 @@ interface Recon {
 }
 interface ListingLite { id: string; title?: string; name?: string; seasonId?: string | null }
 
-const fmt = (iso?: string | null) => (iso ? new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—");
+const fmt = (iso?: string | null) => (iso ? uiDate(new Date(`${iso.slice(0, 10)}T00:00:00Z`), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—");
 
 const PREF_ORDER = ["Card", "Childcare vouchers", "Tax-Free Childcare", "Cash", "Bank transfer", "HAF / funded", "Other"];
 type TFn = (key: string, vars?: Record<string, string | number>) => string;
@@ -230,7 +230,7 @@ export function ReconciliationApp() {
     finally { setBusy(null); }
   }
   const daysOverdue = (it: Item) => { const ts = Date.parse(it.createdAt ?? ""); return Number.isNaN(ts) ? 0 : Math.max(0, Math.floor((nowMs - ts) / 86400000)); };
-  const stamp = (iso: string) => new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const stamp = (iso: string) => uiDateTime(new Date(iso), { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -591,7 +591,7 @@ function RefundsPanel({ rows, from, to, open, onToggle }: { rows: RefundRow[]; f
   const w = useWord();
   const [all, setAll] = useState(false);
   // The UK day, like the server's "today".
-  const [today] = useState(() => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()));
+  const [today] = useState(() => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())); // raw-locale-ok: machine date key, not shown to anyone
   const ranged = !!(from || to);
   const shown = rows.filter((r) => ranged
     ? !!r.date && (!from || r.date >= from) && (!to || r.date <= to)

@@ -63,18 +63,114 @@ export function formatDay(iso: string, f: DayFormat, code: LocaleCode = current)
   return code === "en" ? s.replace(/^(\w+),\s/, "$1 ") : s;
 }
 
-const CY_REL_UNIT: Record<"day" | "week" | "month", string> = { day: "diwrnod", week: "wythnos", month: "mis" };
-/** "in 2 days" / "tomorrow" / "3 weeks ago" in the app language (Welsh written out, see above). */
-export function relativeFrom(n: number, unit: "day" | "week" | "month", code: LocaleCode = current): string {
-  if (code === "cy") {
+// ---- Date / time of day: the app-language replacements for toLocaleDateString / toLocaleTimeString / toLocaleString ------------------------------------
+// English is UK style (24-hour clock, "08/10/2026"), every other language its own locale; Welsh is built from en-GB with the Welsh names put in (above).
+type DT = Date | number | string;
+const DATE_FIELDS = ["weekday", "year", "month", "day"] as const;
+const TIME_FIELDS = ["dayPeriod", "hour", "minute", "second", "fractionalSecondDigits"] as const;
+const EN_DAY_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const EN_MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function withDefaults(kind: "date" | "time" | "both", o: Intl.DateTimeFormatOptions): Intl.DateTimeFormatOptions {
+  if (o.dateStyle || o.timeStyle) {
+    // Welsh is built from fields, so a style is spelled out as the fields it stands for.
+    const { dateStyle, timeStyle, ...rest } = o;
+    const out2: Intl.DateTimeFormatOptions = { ...rest };
+    if (dateStyle === "full") Object.assign(out2, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    else if (dateStyle === "long") Object.assign(out2, { day: "numeric", month: "long", year: "numeric" });
+    else if (dateStyle === "medium") Object.assign(out2, { day: "numeric", month: "short", year: "numeric" });
+    else if (dateStyle === "short") Object.assign(out2, { day: "2-digit", month: "2-digit", year: "2-digit" });
+    if (timeStyle) Object.assign(out2, { hour: "2-digit", minute: "2-digit" }, timeStyle === "short" ? {} : { second: "2-digit" });
+    return out2;
+  }
+  const has = (keys: readonly string[]) => keys.some((k) => (o as Record<string, unknown>)[k] !== undefined);
+  const out = { ...o };
+  if ((kind === "date" || kind === "both") && !has(DATE_FIELDS) && !(kind === "both" && has(TIME_FIELDS))) { out.year = "numeric"; out.month = "numeric"; out.day = "numeric"; }
+  if ((kind === "time" || kind === "both") && !has(TIME_FIELDS) && !(kind === "both" && has(DATE_FIELDS))) { out.hour = "numeric"; out.minute = "numeric"; out.second = "numeric"; }
+  if (kind === "both" && !has(DATE_FIELDS) && !has(TIME_FIELDS)) { out.year = "numeric"; out.month = "numeric"; out.day = "numeric"; out.hour = "numeric"; out.minute = "numeric"; out.second = "numeric"; }
+  return out;
+}
+
+function welshParts(d: Date, o: Intl.DateTimeFormatOptions): string {
+  const base = { ...o, hour12: o.hour12, hourCycle: o.hour12 === undefined ? "h23" as const : o.hourCycle };
+  const f = new Intl.DateTimeFormat("en-GB", base);
+  const tz = o.timeZone;
+  // The weekday / month INDEX in the same time zone, from English long names (en-GB never changes).
+  const wd = EN_DAY_LONG.indexOf(new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: tz }).format(d));
+  const mo = EN_MONTH_LONG.indexOf(new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: tz }).format(d));
+  return f.formatToParts(d).map((p, i, all) => {
+    if (p.type === "literal" && all[i - 1]?.type === "weekday") return p.value.replace(/^,\s*/, " "); // "Dydd Iau 8 Hydref", like formatDay
+    if (p.type === "weekday" && wd >= 0) return o.weekday === "long" ? CY_DAY_LONG[wd] : CY_DAY_SHORT[wd];
+    if (p.type === "month" && mo >= 0 && (o.month === "long" || o.month === "short")) return o.month === "long" ? CY_MONTH_LONG[mo] : CY_MONTH_SHORT[mo];
+    if (p.type === "literal") return p.value.replace(/\bat\b/, "am");
+    if (p.type === "dayPeriod") return p.value.toLowerCase() === "am" ? "yb" : "yh";
+    return p.value;
+  }).join("");
+}
+
+function fmtLocal(kind: "date" | "time" | "both", d: DT, o: Intl.DateTimeFormatOptions, code: LocaleCode | string | undefined): string {
+  const date = d instanceof Date ? d : new Date(d);
+  if (Number.isNaN(date.getTime())) return "Invalid Date";
+  // `code` is an app language code ("cy") or a ready BCP-47 tag ("cy-GB") from a screen that keeps its own language setting (the Learning Hub).
+  const tag = (code ? (TAG as Record<string, string>)[code] ?? code : TAG[current]);
+  if (/^cy(-|$)/i.test(tag)) return welshParts(date, withDefaults(kind, o));
+  return kind === "date" ? date.toLocaleDateString(tag, o) : kind === "time" ? date.toLocaleTimeString(tag, o) : date.toLocaleString(tag, o);
+}
+
+/** Replaces `d.toLocaleDateString(locale, opts)`: a date in the app language. */
+export function uiDate(d: DT, o: Intl.DateTimeFormatOptions = {}, code?: LocaleCode | string): string { return fmtLocal("date", d, o, code); }
+/** Replaces `d.toLocaleTimeString(locale, opts)`: a time of day in the app language (24-hour for English). */
+export function uiTime(d: DT, o: Intl.DateTimeFormatOptions = {}, code?: LocaleCode | string): string { return fmtLocal("time", d, o, code); }
+/** Replaces `d.toLocaleString(locale, opts)` on a Date: date and time in the app language. */
+export function uiDateTime(d: DT, o: Intl.DateTimeFormatOptions = {}, code?: LocaleCode | string): string { return fmtLocal("both", d, o, code); }
+
+// ---- Stored English day labels ("Sun 18 Oct 2026", "18 – 24 Oct 2026") shown to people in their own language ---------------------------------------
+// The server writes booking.sessions / kids[].dates / ticket text with English day names. Display code passes them through here: every day it can read
+// is re-written with formatDay (Welsh names for cy); the rest of the text (times, words) is left alone.
+const EN_MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const isoOf = (y: string, mon: string, d: string): string | null => {
+  const m = EN_MON.indexOf(mon.slice(0, 3).toLowerCase());
+  return m < 0 ? null : `${y}-${pad2(m + 1)}-${pad2(Number(d))}`;
+};
+const WD = "(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*\\.?,?\\s+";
+const MON = "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\\.?";
+export function localizeDateLabels(text: string | null | undefined, code?: LocaleCode | string): string {
+  if (!text) return "";
+  const c = (code ?? current) as LocaleCode;
+  if (c === "en") return text;
+  const withWd = new RegExp(`\\b(?:${WD})?(\\d{1,2})\\s+${MON}\\s+(\\d{4})\\b`, "g");
+  const range = new RegExp(`\\b(\\d{1,2})\\s*[–-]\\s*(\\d{1,2})\\s+${MON}\\s+(\\d{4})\\b`, "g");
+  // Ranges first ("18 – 24 Oct 2026"), then single days; a day already rewritten is not matched again (it no longer has an English month).
+  let out = text.replace(range, (all, d1, d2, mon, y) => {
+    const a = isoOf(y, mon, d1), b = isoOf(y, mon, d2);
+    return a && b ? `${formatDay(a, { day: "numeric" }, c)} – ${formatDay(b, { day: "numeric", month: "short", year: "numeric" }, c)}` : all;
+  });
+  out = out.replace(withWd, (all, d, mon, y) => {
+    const iso = isoOf(y, mon, d);
+    if (!iso) return all;
+    return formatDay(iso, { weekday: /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i.test(all) ? "short" : undefined, day: "numeric", month: "short", year: "numeric" }, c);
+  });
+  return out;
+}
+
+type RelUnit = "second" | "minute" | "hour" | "day" | "week" | "month";
+const CY_REL_UNIT: Record<RelUnit, string> = { second: "eiliad", minute: "munud", hour: "awr", day: "diwrnod", week: "wythnos", month: "mis" };
+/** "in 2 days" / "tomorrow" / "3 weeks ago" in the app language (Welsh written out, see above). `code` is an app language code or a ready BCP-47 tag
+ *  (screens with their own language setting, e.g. the Learning Hub); `style` is Intl's own (Welsh ignores it). */
+export function relativeFrom(n: number, unit: RelUnit, code?: LocaleCode | string, style: "long" | "short" | "narrow" = "long"): string {
+  const tag = code ? (TAG as Record<string, string>)[code] ?? code : TAG[current];
+  if (/^cy(-|$)/i.test(tag)) {
     if (unit === "day" && n === 0) return "heddiw";
+    if (unit === "second" && n === 0) return "nawr";
     if (unit === "day" && n === 1) return "yfory";
     if (unit === "day" && n === -1) return "ddoe";
     const k = Math.abs(n);
     const word = k === 2 && unit === "day" ? "ddiwrnod" : CY_REL_UNIT[unit]; // "dau ddiwrnod": soft mutation after two
     return n < 0 ? `${k} ${word} yn ôl` : `ymhen ${k} ${word}`;
   }
-  return new Intl.RelativeTimeFormat(TAG[code] ?? TAG[DEFAULT_LOCALE], { numeric: "auto" }).format(n, unit);
+  try { return new Intl.RelativeTimeFormat(tag, { numeric: "auto", style }).format(n, unit); } // raw-locale-ok: this IS the helper
+  catch { return new Intl.RelativeTimeFormat("en-GB", { numeric: "auto", style }).format(n, unit); } // raw-locale-ok: this IS the helper
 }
 
 const SYMBOL_AFTER = new Set<LocaleCode>(["pl", "ro", "es", "fr", "pt"]);

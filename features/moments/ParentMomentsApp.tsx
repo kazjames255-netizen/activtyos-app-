@@ -5,7 +5,7 @@ import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Card } from "@/components/ui";
 import { useI18n } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDateTime } from "@/lib/i18n/format";
 
 // The parent's view — "My child's day". Moments featuring their own children,
 // across every provider. Only consented children ever appear (enforced when the
@@ -17,7 +17,7 @@ interface Comment { by: string; byName: string; role: "parent" | "staff"; text: 
 interface Moment { id: string; photoUrl?: string; caption?: string; activity?: string; photoType?: "child" | "work"; date: string; childNames: string[]; postedByName?: string; createdAt?: string; comments?: Comment[] }
 
 const BLUE = "#1d3a8f", GREEN = "#0f7a43";
-const when = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleString(loc, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const when = (iso?: string, loc = "en-GB") => (iso ? uiDateTime(new Date(iso), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }, loc) : "");
 
 export function ParentMomentsApp() {
   const { t, locale } = useI18n();

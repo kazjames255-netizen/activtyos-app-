@@ -9,7 +9,7 @@
 // (library, files and read receipts — features/documents/docStore.ts); the
 // sample documents are only a starting point until the first save. Feeds the
 // onboarding read-and-confirm docs.
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { tNow, useI18n } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { useEffect, useState } from "react";
@@ -54,7 +54,7 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 const plusMonths = (m: number) => { const d = new Date(); d.setMonth(d.getMonth() + m); return iso(d); };
 export const docDaysUntil = (d?: string) => { if (!d) return null; const t = new Date(d + "T00:00:00").getTime(); const now = new Date(); now.setHours(0, 0, 0, 0); return Math.round((t - now.getTime()) / 86400000); };
 const daysUntil = docDaysUntil;
-export const docFmt = (d?: string) => { if (!d) return "—"; const x = new Date(d + "T00:00:00"); return isNaN(+x) ? d : x.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }); };
+export const docFmt = (d?: string) => { if (!d) return "—"; const x = new Date(d + "T00:00:00"); return isNaN(+x) ? d : uiDate(x, { day: "numeric", month: "short", year: "numeric" }); };
 const fmt = docFmt;
 const esc = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
 

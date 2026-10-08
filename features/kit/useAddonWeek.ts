@@ -10,7 +10,7 @@ import { sevenDaySummary, type KitDayTally } from "@/features/bookings/addons";
 // The Dashboard card's data: add-on items per day for TODAY and the next 6 days. Asked only once the provider is known to have live add-on orders
 // (the card is hidden otherwise), and refreshed when bookings change.
 
-const ukToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+const ukToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" }); // raw-locale-ok: machine date key, not shown to anyone
 const plus = (iso: string, n: number) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 
 export function useAddonWeek(live: boolean): ReturnType<typeof sevenDaySummary> | null {

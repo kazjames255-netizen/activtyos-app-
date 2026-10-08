@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
@@ -14,7 +14,7 @@ interface CheckoutInfo { paymentId: string; clientSecret: string; stripeAccount:
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const PK = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
-const fmtDay = (iso?: string | null) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmtDay = (iso?: string | null) => (iso ? uiDate(new Date(`${iso}T00:00:00Z`), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 
 // The page is public — no signed-in account — so it talks to the API with
 // plain fetch; the unguessable link token is the authorisation throughout.

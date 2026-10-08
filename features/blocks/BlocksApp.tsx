@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api as apiCall, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -1210,7 +1210,7 @@ function LibraryCard({
         </div>
       </div>
       <div className="mt-0.5 text-[11.5px] text-white/80">
-        {t("p8lst.blkCounts", { p: blockPeriods.length, q: blockPasses.length })}{block.createdAt ? ` · ${t("p9tx.blkCreated", { date: new Date(block.createdAt).toLocaleDateString(dateLocale(), { day: "numeric", month: "short", year: "numeric" }) })}` : ""}
+        {t("p8lst.blkCounts", { p: blockPeriods.length, q: blockPasses.length })}{block.createdAt ? ` · ${t("p9tx.blkCreated", { date: uiDate(new Date(block.createdAt), { day: "numeric", month: "short", year: "numeric" }) })}` : ""}
       </div>
       </div>
 

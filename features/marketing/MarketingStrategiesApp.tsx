@@ -7,7 +7,7 @@
 // deep-links to the tool that acts on it (usually the Email composer with the right
 // audience + a ready-made subject). Falls back to evergreen playbooks.
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -59,7 +59,7 @@ const HEALTH: Record<string, { label: string; bar: string; bg: string; fg: strin
   full: { label: "p8fin.grHealthFull", bar: "#16a34a", bg: "#E2F6EC", fg: "#0f7a43" },
 };
 const gbp = (n: number) => `£${Math.round(n).toLocaleString(dl())}`;
-const niceDate = (iso: string | null) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "");
+const niceDate = (iso: string | null) => (iso ? uiDate(new Date(`${iso}T00:00:00`), { day: "numeric", month: "short" }) : "");
 
 const PLAYBOOKS: { emoji: string; title: string; body: string; view: string; cta: string }[] = [
   { emoji: "⚡", title: "p8fin.grPb1Title", body: "p8fin.grPb1Body", view: "marketing", cta: "p8fin.grPb1Cta" },

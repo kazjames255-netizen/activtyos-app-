@@ -6,7 +6,7 @@
 // Embedded as a Team tab next to Deployment. On the server since 13 Sept
 // (/api/appraisals) — the people are the real team (useTeam); the demo cast
 // and its seeded reviews are the demo's only.
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero, CollapsibleStats } from "@/components/OperatorPage";
@@ -139,7 +139,7 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
             </div>
           </div>
           <div className="divide-y divide-[var(--line)]">{rows.map((f) => { const m = FB_META[f.kind]; const editing = fbEditId === f.id; return (
-            <div key={f.id} className="group flex items-start gap-3 px-4 py-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[14px]" style={{ background: m.tone + "1a" }}>{m.icon}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><span className="text-[12.5px] font-bold text-[var(--ink)]">{f.name}</span><span className="rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: m.tone + "1a", color: m.tone }}>{fbL(f.kind)}</span><span className="ms-auto text-[10.5px] text-[var(--ink-3)]">{new Date(f.at).toLocaleDateString(dl(), { day: "numeric", month: "short" })}</span>
+            <div key={f.id} className="group flex items-start gap-3 px-4 py-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[14px]" style={{ background: m.tone + "1a" }}>{m.icon}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><span className="text-[12.5px] font-bold text-[var(--ink)]">{f.name}</span><span className="rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: m.tone + "1a", color: m.tone }}>{fbL(f.kind)}</span><span className="ms-auto text-[10.5px] text-[var(--ink-3)]">{uiDate(new Date(f.at), { day: "numeric", month: "short" })}</span>
               {!editing && <><button type="button" onClick={() => { setFbEditId(f.id); setFbDraft(f.text); }} className="text-[11px] font-bold text-[#1d3a8f] opacity-0 hover:underline group-hover:opacity-100">{T("aprFbEdit")}</button><button type="button" onClick={() => { persistF(feedback.filter((x) => x.id !== f.id)); flash(T("aprNoteDeleted")); }} className="text-[11px] font-bold text-[var(--ink-3)] opacity-0 hover:text-[#c0392b] group-hover:opacity-100">{T("aprFbDelete")}</button></>}
             </div>
             {editing ? <div className="mt-1"><textarea value={fbDraft} onChange={(e) => setFbDraft(e.target.value)} rows={2} className="w-full rounded-lg border border-[var(--line)] p-2 text-[12px]" /><div className="mt-1 flex justify-end gap-2"><Button onClick={() => setFbEditId(null)}>{t("common.cancel")}</Button><Button variant="primary" onClick={() => { persistF(feedback.map((x) => x.id === f.id ? { ...x, text: fbDraft.trim() } : x)); setFbEditId(null); flash(T("aprNoteUpdated")); }}>{t("common.save")}</Button></div></div>

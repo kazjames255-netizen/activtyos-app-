@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -52,7 +52,7 @@ const fmtWhen = (iso: string) => {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? iso
-    : d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" });
+    : uiDate(d, { day: "numeric", month: "short", year: "numeric" });
 };
 
 export function WalletApp() {

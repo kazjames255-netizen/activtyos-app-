@@ -7,6 +7,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import { scheduleLabel } from "./schedule";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+import { uiDate } from "@/lib/i18n/format";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -19,8 +20,8 @@ interface Booking { childId?: string; childName?: string; tenantId?: string; day
 interface Med { id: string; tenantId?: string; childId?: string; childName: string; name: string; dose: string; route?: string; condition?: string; schedule?: string; asNeeded?: boolean; archived?: boolean; consentGranted?: boolean; source?: string; parentNote?: string }
 interface Dose { id: string; medicationId?: string; date?: string; time?: string; doseGiven?: string; administeredByName?: string; notes?: string }
 
-const when = (d?: string, t?: string, loc = "en-GB") => (d ? new Date(`${d}T00:00:00Z`).toLocaleDateString(loc, { day: "numeric", month: "short", timeZone: "UTC" }) + (t ? ` · ${t}` : "") : "");
-const fmtDay = (d: string, loc = "en-GB") => new Date(`${d}T00:00:00Z`).toLocaleDateString(loc, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const when = (d?: string, t?: string, loc = "en-GB") => (d ? uiDate(new Date(`${d}T00:00:00Z`), { day: "numeric", month: "short", timeZone: "UTC" }, loc) + (t ? ` · ${t}` : "") : "");
+const fmtDay = (d: string, loc = "en-GB") => uiDate(new Date(`${d}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }, loc);
 
 /** A translated sentence with {placeholders} rendered bold — the consent line
  *  names the children and the provider, and word order differs by language. */

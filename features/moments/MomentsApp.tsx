@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDateTime, uiDate } from "@/lib/i18n/format";
 import { useT, useI18n, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { richT } from "@/components/shell/richT";
@@ -47,8 +47,8 @@ const listNames = (xs: string[]) => { try { return new Intl.ListFormat(dl(), { s
 const inputCls = "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]";
 const pad = (n: number) => String(n).padStart(2, "0");
 const todayIso = () => { const t = new Date(); return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`; };
-const when = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
-const fmtNice = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }) : "");
+const when = (iso?: string) => (iso ? uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const fmtNice = (iso?: string) => (iso ? uiDate(new Date(`${iso}T00:00:00`), { day: "numeric", month: "long", year: "numeric" }) : "");
 const weekStartIso = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 
 const AICAP: Record<string, { o: string[]; m: string[] }> = {

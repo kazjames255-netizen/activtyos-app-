@@ -5,7 +5,7 @@
 // needs covering, manage each person's entitlement, and set the leave-year
 // policy. Statutory entitlement is computed to UK law (see lib/holiday.ts).
 // Demo store; backend + real notifications are Amir's (docs/holiday-planner-handoff.md).
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { isRTL } from "@/lib/i18n/config";
 import { useI18n } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
@@ -28,10 +28,10 @@ const KINDS = Object.keys(KIND_META) as AbsenceKind[];
 const mondayOf = (d: Date) => { const x = new Date(d); const k = (x.getDay() + 6) % 7; x.setDate(x.getDate() - k); return x; };
 // Same as lib/holiday's fmtRange, but in the reader's language.
 const fmtRange = (start: string, end: string) => {
-  const f = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" });
+  const f = (iso: string) => uiDate(new Date(`${iso}T00:00:00`), { weekday: "short", day: "numeric", month: "short" });
   return start === end ? f(start) : `${f(start)} – ${f(end)}`;
 };
-const dayLabel = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric" });
+const dayLabel = (iso: string) => uiDate(new Date(`${iso}T00:00:00`), { weekday: "short", day: "numeric" });
 
 // rostered staff names per date, read from the schedule (aos.rota.v5)
 function rosteredByDate(dates: string[]): Record<string, Set<string>> {
@@ -126,7 +126,7 @@ export function HolidayApp() {
               <div className="grid grid-cols-7 gap-1.5">
                 {week.map((iso) => { const n = teamOff(iso); const isToday = iso === today; const d = new Date(`${iso}T00:00:00`); return (
                   <div key={iso} className="text-center">
-                    <div className={`text-[10.5px] font-bold ${isToday ? "text-[#1d3a8f]" : "text-[var(--ink-3)]"}`}>{d.toLocaleDateString(dl(), { weekday: "short" })} {d.getDate()}</div>
+                    <div className={`text-[10.5px] font-bold ${isToday ? "text-[#1d3a8f]" : "text-[var(--ink-3)]"}`}>{uiDate(d, { weekday: "short" })} {d.getDate()}</div>
                     <div className="mx-auto mt-1 grid h-11 w-11 place-items-center rounded-full text-[15px] font-extrabold tabular-nums text-white"
                       style={isToday ? { background: "linear-gradient(135deg,#16306e,#3f78d8)", boxShadow: "0 6px 14px -6px rgba(29,58,143,.6)" }
                         : n > 0 ? { background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 6px 14px -8px rgba(124,58,237,.6)" }
@@ -224,7 +224,7 @@ export function HolidayApp() {
               <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("p8wf.hlWhosOff")}</div>
               <div className="ms-auto flex items-center gap-1.5">
                 <button type="button" onClick={() => setAnchor(new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() - 7))} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[13px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">{rtl ? "›" : "‹"}</button>
-                <span className="min-w-[150px] text-center text-[12.5px] font-bold text-[var(--ink)]">{new Date(`${dates[0]}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" })} – {new Date(`${dates[6]}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" })}</span>
+                <span className="min-w-[150px] text-center text-[12.5px] font-bold text-[var(--ink)]">{uiDate(new Date(`${dates[0]}T00:00:00`), { day: "numeric", month: "short" })} – {uiDate(new Date(`${dates[6]}T00:00:00`), { day: "numeric", month: "short" })}</span>
                 <button type="button" onClick={() => setAnchor(new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() + 7))} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[13px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">{rtl ? "‹" : "›"}</button>
                 <button type="button" onClick={() => setAnchor(new Date())} className="ms-1 text-[11px] font-bold text-[#1d3a8f] hover:underline">{t("p8wf.hlThisWeekBtn")}</button>
               </div>
@@ -302,7 +302,7 @@ export function HolidayApp() {
             <div className="grid gap-3">
               <div className="grid grid-cols-2 gap-2">
                 <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("p8wf.hlYearStarts")}</span>
-                  <div className="flex gap-1.5"><Select value={policy.leaveYearStartMonth} onChange={(e) => persistPolicy({ ...policy, leaveYearStartMonth: Number(e.target.value) })} className="w-full">{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleDateString(dl(), { month: "long" })}</option>)}</Select>
+                  <div className="flex gap-1.5"><Select value={policy.leaveYearStartMonth} onChange={(e) => persistPolicy({ ...policy, leaveYearStartMonth: Number(e.target.value) })} className="w-full">{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{uiDate(new Date(2000, m - 1, 1), { month: "long" })}</option>)}</Select>
                   <Input inputMode="numeric" value={String(policy.leaveYearStartDay)} onChange={(e) => persistPolicy({ ...policy, leaveYearStartDay: Math.min(28, Math.max(1, parseInt(e.target.value) || 1)) })} className="w-16" /></div></label>
                 <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("p8wf.hlDefaultDays")}</span><Input inputMode="decimal" value={String(policy.daysPerWeek)} onChange={(e) => persistPolicy({ ...policy, daysPerWeek: Math.min(7, Math.max(1, parseFloat(e.target.value) || 5)) })} className="w-full" /></label>
               </div>

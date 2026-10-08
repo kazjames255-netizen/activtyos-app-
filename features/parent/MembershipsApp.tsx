@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useState, type ReactNode } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -34,7 +34,7 @@ const benefit = (tr: Tr, t: { benefitType: "credit" | "percent"; benefitValue: n
     : { emoji: "🎟️", headline: tr("p7parent.benPctHead", { pct: t.benefitValue }), sub: tr("p7parent.benPctSub") };
 const benefitShort = (tr: Tr, t: { benefitType: "credit" | "percent"; benefitValue: number }) =>
   t.benefitType === "credit" ? tr("p7parent.benCreditShort", { amount: money(t.benefitValue) }) : tr("p7parent.benPctShort", { pct: t.benefitValue });
-const fmtDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "");
+const fmtDate = (iso?: string) => (iso ? uiDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" }) : "");
 // The benefit (wallet credit / % off) is already the card's hero, so a perk that
 // merely restates it — "5% off every booking", "£70 credit every month" — is
 // noise (and often stale/contradictory). Only show genuine EXTRA perks.

@@ -8,7 +8,7 @@
 // Deliberately far simpler than the per-site operator Finance hub. Shown for the
 // HO combined view via CompanyFinanceSwitch; the full ledgers stay reachable by
 // direct link for when detail is needed.
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { get as apiGet, post as apiPost } from "@/lib/api";
@@ -19,7 +19,7 @@ import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import { Button, Card, Input } from "@/components/ui";
 
 const gbp = (n: number) => "£" + Math.round(n || 0).toLocaleString(dl());
-const shortDate = (d?: string) => (d ? new Date(d).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "");
+const shortDate = (d?: string) => (d ? uiDate(new Date(d), { day: "numeric", month: "short" }) : "");
 
 interface FrRow { franchiseId: string; name: string; revenue: number; count: number; fee: number }
 interface SplitPayload { franchises: FrRow[]; totals: { franchises: number; revenue: number; fee: number } }

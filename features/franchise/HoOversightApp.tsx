@@ -5,7 +5,7 @@
 // tagged with the franchise it belongs to. The head office watches the whole
 // network here; to act on a record it drills into that p7ho.
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { Card } from "@/components/ui";
@@ -32,7 +32,7 @@ const KIND_TAG: Record<string, { label: string; bg: string; fg: string }> = {
   safeguarding: { label: "p7ho.tagSafeguarding", bg: "#fdecec", fg: "#c0392b" },
   medication: { label: "p7ho.tagMedication", bg: "#f3f0fb", fg: "#6d28d9" },
 };
-const fmtWhen = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "—");
+const fmtWhen = (iso: string | null) => (iso ? uiDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" }) : "—");
 
 export function HoOversightApp({ area }: { area: Area }) {
   const t = useT();

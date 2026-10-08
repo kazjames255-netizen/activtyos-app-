@@ -1,5 +1,6 @@
 import { groupMemberIds, type HubGroup } from "./types";
 import type { RawRows } from "./useRosterInsights";
+import { uiTime, uiDate } from "@/lib/i18n/format";
 
 // What a group's Homework / Quiz / Lesson tiles say, and which rows a group-filtered tab shows.
 //
@@ -86,9 +87,9 @@ export function shortWhen(at: number, now: number, i18n?: { t: (k: string, v?: R
   const day0 = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const diff = Math.round((day0(d) - day0(n)) / 86_400_000);
   const loc = i18n?.locale ?? "en-GB";
-  const clock = d.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit", hour12: false });
+  const clock = uiTime(d, { hour: "2-digit", minute: "2-digit", hour12: false }, loc);
   if (diff === 0) return i18n ? i18n.t("hubshell.st_todayAt", { time: clock }) : `Today ${clock}`;
   if (diff === 1) return i18n ? i18n.t("hubshell.st_tomorrowAt", { time: clock }) : `Tomorrow ${clock}`;
-  if (diff > 1 && diff < 7) return `${d.toLocaleDateString(loc, { weekday: "short" })} ${clock}`;
-  return `${d.toLocaleDateString(loc, { day: "numeric", month: "short" })} ${clock}`;
+  if (diff > 1 && diff < 7) return `${uiDate(d, { weekday: "short" }, loc)} ${clock}`;
+  return `${uiDate(d, { day: "numeric", month: "short" }, loc)} ${clock}`;
 }

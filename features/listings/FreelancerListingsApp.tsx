@@ -6,7 +6,7 @@ import { duplicateBody } from "@/lib/uiRules";
 import { StepDonePrompt } from "@/features/dashboard/StepDonePrompt";
 import { EmbedPanel, type EmbedListingRow } from "./EmbedPanel";
 import { peekMe } from "@/components/auth/PortalGuard";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate, uiTime } from "@/lib/i18n/format";
 import { useT, useI18n, tNow } from "@/lib/i18n/provider";
 import { Rich } from "@/components/i18n/Rich";
 import { pickPlural } from "@/lib/i18n/plural";
@@ -135,7 +135,7 @@ export interface LocalState {
 // Date-rail formatting for the listing card.
 // The year is shown only when it is not THIS year, so a mistyped (or old / far-future) date is obvious at a glance.
 const notThisYear = (iso: string) => !!iso && Number(iso.slice(0, 4)) !== new Date().getFullYear();
-const monthOf = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { month: "short", ...(notThisYear(iso) ? { year: "numeric" as const } : {}), timeZone: "UTC" });
+const monthOf = (iso: string) => uiDate(new Date(`${iso}T00:00:00Z`), { month: "short", ...(notThisYear(iso) ? { year: "numeric" as const } : {}), timeZone: "UTC" });
 const dayOf = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDate();
 // Scheduled-open badge. Compared as local strings, matching the datetime-local
 // input the operator typed — no timezone shifting.
@@ -143,11 +143,11 @@ const nowLocal = () => { const t = new Date(); const p = (n: number) => String(n
 const openLabel = (v: string) => {
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return v;
-  const time = d.getMinutes() ? d.toLocaleTimeString(dl(), { hour: "numeric", minute: "2-digit" }) : d.toLocaleTimeString(dl(), { hour: "numeric" });
-  return `${d.getDate()} ${d.toLocaleDateString(dl(), { month: "short", ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" as const } : {}) })}, ${time.replace(/\s/g, "").toLowerCase()}`;
+  const time = d.getMinutes() ? uiTime(d, { hour: "numeric", minute: "2-digit" }) : uiTime(d, { hour: "numeric" });
+  return `${d.getDate()} ${uiDate(d, { month: "short", ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" as const } : {}) })}, ${time.replace(/\s/g, "").toLowerCase()}`;
 };
 const shortDate = (iso: string) =>
-  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", ...(notThisYear(iso) ? { year: "numeric" as const } : {}), timeZone: "UTC" }) : tNow("p8lst.flTbc");
+  iso ? uiDate(new Date(`${iso}T00:00:00Z`), { day: "numeric", month: "short", ...(notThisYear(iso) ? { year: "numeric" as const } : {}), timeZone: "UTC" }) : tNow("p8lst.flTbc");
 
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID

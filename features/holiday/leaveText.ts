@@ -2,7 +2,7 @@
 // (PAY_TREATMENT, sickPayNote, sickNotifyRuleText, familyLeaveNote). The figures still come from lib/holiday.ts;
 // only the sentences are looked up in the p8wf catalogue so the operator planner reads in the active language.
 import { pickPlural } from "@/lib/i18n/plural";
-import { dateLocale } from "@/lib/i18n/format";
+import { uiTime } from "@/lib/i18n/format";
 import { FAMILY_LEL, SSP_WEEKLY, STATUTORY_FAMILY_RATE, type AbsenceKind, type HolidayPolicy, type PayTreatment } from "@/lib/holiday";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -24,7 +24,7 @@ export function sickPayNote(t: T, locale: string, policy: Pick<HolidayPolicy, "s
 export function sickRuleText(t: T, locale: string, p: Pick<HolidayPolicy, "sickNotifyMode" | "sickNotifyHours" | "sickNotifyTime">): string {
   if (p.sickNotifyMode === "time") {
     const [h, m] = (p.sickNotifyTime || "09:00").split(":").map(Number);
-    return t("p8wf.hlRuleTime", { time: new Date(2000, 0, 1, h || 0, m || 0).toLocaleTimeString(dateLocale(), { hour: "numeric", minute: "2-digit" }) });
+    return t("p8wf.hlRuleTime", { time: uiTime(new Date(2000, 0, 1, h || 0, m || 0), { hour: "numeric", minute: "2-digit" }) });
   }
   return pickPlural(t, locale, "p8wf.hlRuleHours", p.sickNotifyHours);
 }

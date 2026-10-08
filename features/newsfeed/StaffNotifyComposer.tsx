@@ -5,7 +5,7 @@
 // every staff member on the chosen site sees it on their Announcements board (and,
 // in production, their bell). Demo-wired to the shared announcements store; real
 // per-site delivery + push is Amir's.
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -66,7 +66,7 @@ export function StaffNotifyComposer({ listings, authorName }: { listings: { id: 
     setTimeout(() => setFlash(null), 4000);
   };
 
-  const fmtDate = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString(dl(), { day: "numeric", month: "short" });
+  const fmtDate = (iso: string) => uiDate(new Date(iso + "T00:00:00"), { day: "numeric", month: "short" });
 
   return (
     <div className="grid gap-4 md:grid-cols-[1.15fr_0.85fr]">

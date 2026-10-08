@@ -1,7 +1,7 @@
 "use client";
 
 import { deliveryLabel } from "./delivery";
-import { dateLocale as dl, joinListNow } from "@/lib/i18n/format";
+import { dateLocale as dl, joinListNow, uiDate } from "@/lib/i18n/format";
 import { addonLinesFor } from "@/features/bookings/helpers";
 import { addonSentences } from "@/features/bookings/addons";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -929,7 +929,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   if (done) {
     const venue = lib?.venue;
     const fmtDay = (iso?: string) =>
-      iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", ...(Number(iso.slice(0, 4)) !== new Date().getFullYear() ? { year: "numeric" as const } : {}) }) : null;
+      iso ? uiDate(new Date(`${iso}T00:00:00`), { weekday: "short", day: "numeric", month: "short", ...(Number(iso.slice(0, 4)) !== new Date().getFullYear() ? { year: "numeric" as const } : {}) }) : null;
     // Say exactly which days were booked: a run of consecutive days (weekends skipped) reads "Mon 19 Oct – Fri 23 Oct", but two or three
     // separate days read "Mon 19 Oct and Fri 23 Oct" (not a range that implies every day in between).
     const ds = done.dates ?? [];
@@ -2755,7 +2755,7 @@ function TicketsStep({ d, upd, blocks, tickets, onCreateBlock }: { d: WizardDraf
                 style={{ borderColor: "var(--line)" }}>
                 <div>
                   <div className="text-[13.5px] font-extrabold">▥ {b.name}</div>
-                  <div className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.wbPeriodsPasses", { p: b.periodIds.length, q: b.passIds.length })}{b.createdAt ? ` · ${tr("p9tx.blkCreated", { date: new Date(b.createdAt).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) })}` : ""}</div>
+                  <div className="text-[11.5px] text-[var(--ink-3)]">{tr("p8lst.wbPeriodsPasses", { p: b.periodIds.length, q: b.passIds.length })}{b.createdAt ? ` · ${tr("p9tx.blkCreated", { date: uiDate(new Date(b.createdAt), { day: "numeric", month: "short", year: "numeric" }) })}` : ""}</div>
                 </div>
                 <span className="flex items-center gap-2">
                   {b.priced === false && <span className="whitespace-nowrap rounded-full bg-[#fdf0e3] px-2 py-0.5 text-[10px] font-extrabold text-[#b45309]">{tr("p9jr.needsPrices")}</span>}
@@ -3857,7 +3857,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
                     : dPast ? { borderColor: LINEp, color: "#cdd2db", background: "#f3f4f7", opacity: 0.6 }
                     : dOff || full ? { borderColor: LINEp, color: "#c8ccd4", background: "#fafbfd" }
                     : on ? { borderColor: BLUE, color: "#fff", background: BLUE } : { borderColor: LINEp, color: INKp, background: "#fff" }}>
-                  <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString(dl(), { weekday: "short", timeZone: "UTC" })}</span>
+                  <span className="text-[9px] font-bold uppercase">{uiDate(dt, { weekday: "short", timeZone: "UTC" })}</span>
                   <span className="text-[14px] font-extrabold leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
                   {dClosed && <span className="mt-0.5 text-[7px] font-bold uppercase leading-none">closed</span>}
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5 rounded-full" style={{ background: dot }} />}
@@ -4063,7 +4063,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                     : dPast ? { borderColor: LINEs, color: k ? MUTs : "#454d5e", background: CELLOFF, opacity: 0.5 }
                     : dOff || full ? { borderColor: LINEs, color: k ? MUTs : "#5a6478", background: CELLOFF, opacity: k ? 0.7 : undefined }
                     : sel ? { borderColor: k?.chip ?? LIME, color: k?.chipInk ?? INK, background: k?.chip ?? LIME } : { borderColor: LINEs, color: INKT, background: CELL }}>
-                  <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString(dl(), { weekday: "short", timeZone: "UTC" })}</span>
+                  <span className="text-[9px] font-bold uppercase">{uiDate(dt, { weekday: "short", timeZone: "UTC" })}</span>
                   <span className="text-[13px] font-black leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
                   {dClosed && <span className="mt-0.5 text-[7px] font-bold uppercase leading-none">closed</span>}
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5" style={{ background: dot }} />}

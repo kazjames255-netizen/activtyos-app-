@@ -2,7 +2,7 @@
 // of truth and still refuses at Confirm). Same inputs: the listing's
 // bookingCutoffHours string, a session date and its start time, UK wall clock.
 
-const fmt = new Intl.DateTimeFormat("en-GB", {
+const fmt = new Intl.DateTimeFormat("en-GB", { // raw-locale-ok: machine date key, not shown to anyone
   timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
 });
 

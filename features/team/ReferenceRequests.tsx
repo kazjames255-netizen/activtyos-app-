@@ -16,7 +16,7 @@
 // references live server-side. What a referee says is third-party personal data
 // about the candidate, so it can't sit in a browser store; the request/response
 // pair is the API's (server/src/routes/references.ts).
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { Button, Input } from "@/components/ui";
 import { del, get, openFile, post } from "@/lib/api";
@@ -73,7 +73,7 @@ const REF_GROUPS = [
 ];
 const REF_FIELD_IDS = new Set(REF_GROUPS.flatMap((g) => g.ids));
 
-const fmt = (iso?: string | null) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString(dl(), { day: "numeric", month: "short" }); };
+const fmt = (iso?: string | null) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : uiDate(d, { day: "numeric", month: "short" }); };
 const daysSince = (iso?: string | null) => { if (!iso) return 0; const d = new Date(iso); return isNaN(+d) ? 0 : Math.floor((Date.now() - +d) / 86_400_000); };
 /** A reference only counts once any flagged concern has been dealt with. */
 const counts = (r: ReferenceRequest) => r.status === "received" && (!r.concern || !!r.concernResolved);
@@ -270,7 +270,7 @@ const PULL_IDS = ["ref1Name", "ref1Org", "ref1Rel", "ref1Phone", "ref1Email", "r
 const APPS_KEY = "aos.team.applications.v1";
 interface PulledApp { id: string; name: string; submittedAt: string; status: string; answers: Record<string, string> }
 
-const appDate = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString(dl(), { day: "numeric", month: "short" }); };
+const appDate = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : uiDate(d, { day: "numeric", month: "short" }); };
 
 /** Fill this person's referee fields from an application they submitted. The
  *  details are already sitting in the Applications tab — nobody should be

@@ -10,7 +10,7 @@ export const isOwed = (n: number) => n > 0.005;
 /** A paid invoice is standalone money-in only if it did NOT settle a booking (that money is already in the booking's amountPaid). */
 export const isStandaloneInvoiceIn = (v: { status?: string; bookingSettledAt?: string }) => v.status === "paid" && !v.bookingSettledAt;
 
-const UK_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" });
+const UK_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }); // raw-locale-ok: machine date key, not shown to anyone
 /** "YYYY-MM-DD" on the UK wall clock. A bare date passes through; an ISO instant is converted from UTC
  *  (a booking made 00:30 BST on the 1st is 23:30Z the day before, but belongs to the 1st). */
 export function ukDay(s?: string | null): string {

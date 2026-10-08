@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
@@ -32,7 +32,7 @@ const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, tr
 const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GOLD = "#f0b100", PINK = "#EE1F63";
 const money = (n: number) => (Math.abs(n) >= 1000 ? `£${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `£${Math.round(n).toLocaleString(dl())}`);
 const pct = (n: number) => `${Math.round(n * 100)}%`;
-const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" });
+const monthLabel = (k: string) => uiDate(new Date(`${k}-01T00:00:00Z`), { month: "short", timeZone: "UTC" });
 const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 const tenure = (d: number) => (d >= 365 ? hq("{n} yrs", { n: (d / 365).toFixed(1) }) : d >= 30 ? hq("{n} mo", { n: Math.round(d / 30) }) : hq("{n} days", { n: d }));
 const PLAN_C: Record<string, string> = { freelancer: "#3f78d8", company: "#1d3a8f", franchise: "#7c3aed" };
@@ -49,7 +49,7 @@ function sinceLabel(iso: string | null, nowMs: number) {
   if (days <= 0) return hq("joined today");
   if (days === 1) return hq("joined yesterday");
   if (days < 30) return hq("joined {n} days ago", { n: days });
-  return hq("since {date}", { date: new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) });
+  return hq("since {date}", { date: uiDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" }) });
 }
 
 export function PlatformAnalyticsApp() {

@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -19,7 +19,7 @@ function genderTone(sex?: string): { bg: string; fg: string; on: string } {
 const PALETTE = ["var(--brand-2)", "#0e9f6e", "#e2225f", "#7a5af8", "#e88f1f", "#0ea5a0", "#c81e77", "#16a34a"];
 
 const parseISO = (iso: string) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, (m || 1) - 1, d || 1); };
-const fmtLongDay = (iso: string) => parseISO(iso).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long" });
+const fmtLongDay = (iso: string) => uiDate(parseISO(iso), { weekday: "long", day: "numeric", month: "long" });
 const toISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 interface Sess { date: string; child: string; listing: string; listingId?: string; timing?: string; ref: string; tenantId?: string }

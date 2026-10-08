@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { post as apiPost } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDateTime } from "@/lib/i18n/format";
 
 export interface Note { by: string; role: string; text: string; at: string }
 
-const stamp = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const stamp = (iso?: string, loc = "en-GB") => (iso ? uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }, loc) : "");
 
 /**
  * A shared accident/incident notes thread. Both the provider's staff and the

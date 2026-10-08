@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
 import { useHoScope } from "@/components/franchise/HoScope";
@@ -35,7 +35,7 @@ const STATUS_META: Record<Status, { label: string; bg: string; fg: string }> = {
 const OWED = new Set<Status>(["sent"]);
 const STATUS_ACCENT: Record<Status, string> = { draft: "#b7b3c9", sent: "#3f78d8", paid: "#3f78d8", cancelled: "#d0cdda" };
 
-const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmtDay = (iso?: string) => (iso ? uiDate(new Date(`${iso}T00:00:00Z`), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const addDaysIso = (iso: string, n: number) => { const d = new Date(`${iso || todayIso()}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const DUE_PRESETS = [3, 5, 7, 10];
@@ -155,7 +155,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const collected = useMemo(() => items.filter((p) => p.status === "paid" && (p.date || "").slice(0, 4) === thisYear).reduce((s, p) => s + p.amount, 0), [items, thisYear]);
 
   const monthly = useMemo(() => {
-    const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1); return { key: monthKeyOf(d), label: d.toLocaleDateString(dl(), { month: "short" }) }; });
+    const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1); return { key: monthKeyOf(d), label: uiDate(d, { month: "short" }) }; });
     return months.map((m) => { const rows = items.filter((p) => p.status !== "cancelled" && (p.date || "").slice(0, 7) === m.key); return { ...m, total: rows.reduce((s, p) => s + p.amount, 0), count: rows.length }; });
   }, [items, now]);
   const byStatus = useMemo(() => STATUSES.map((s) => { const rows = items.filter((p) => p.status === s); return { status: s, count: rows.length, total: rows.reduce((a, p) => a + p.amount, 0) }; }), [items]);

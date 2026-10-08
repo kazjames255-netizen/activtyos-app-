@@ -1,5 +1,6 @@
 import { dateLocale as dl, formatGBP } from "../../lib/i18n/format"; // relative: the API server imports this file too (no "@/" alias there)
 import type { Booking, BookingFilter, Kid } from "./types";
+import { uiDate, uiTime } from "../../lib/i18n/format";
 import { csvCell } from "../../lib/csv"; // relative: the API server imports this file too
 
 /** How an operator records a parent paying. One list, shared by the Take
@@ -171,7 +172,7 @@ export function bookingDateSummary(b: Booking, starts: (date: string) => string 
     const d = new Date(`${iso}T00:00:00`);
     return Number.isNaN(d.getTime())
       ? iso
-      : d.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+      : uiDate(d, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
   };
   return days.length > 1 ? starts(fmt(days[0])) : fmt(days[0]);
 }
@@ -261,8 +262,7 @@ export function runsOn(b: Booking, iso: string): boolean {
   if (!iso) return true;
   const d = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return true;
-  const label = d
-    .toLocaleDateString(dl(), {
+  const label = uiDate(d, {
       weekday: "short",
       day: "2-digit",
       month: "short",
@@ -611,8 +611,8 @@ export function nowStr(): string {
   // UK wall clock, not the machine's: the server runs in UTC, so this was an hour out all summer.
   const now = new Date();
   return (
-    now.toLocaleDateString(dl(), { timeZone: "Europe/London" }) + ", " +
-    now.toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    now.toLocaleDateString(dl(), { timeZone: "Europe/London" }) + ", " + // raw-locale-ok: stored on the booking (cancel.on, refund log), unchanged
+    now.toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) // raw-locale-ok: stored on the booking
   );
 }
 
@@ -626,8 +626,7 @@ export interface BlockAvail {
 /** "2026-08-04" → "Tue 04 Aug 2026" — matches the server's session label
  * prefix, so it can be compared against legacy label-format kid dates. */
 export const sessionDayLabel = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`)
-    .toLocaleDateString(dl(), { weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })
+  uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })
     .replace(/,/g, "");
 
 /** Real alternate dates for moving a child's day: the block's OTHER sessions,

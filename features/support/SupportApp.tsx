@@ -8,7 +8,7 @@ import { BRAND } from "@/lib/i18n/config";
 import { useI18n } from "@/lib/i18n/provider";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, Input, Select } from "@/components/ui";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDateTime } from "@/lib/i18n/format";
 
 // Matches the light surface the Messages view uses (mirror of the custdash palette).
 const LIGHT_PALETTE = {
@@ -46,7 +46,7 @@ const topicLabel = (topics: [string, string][], v?: string) => topics.find(([k])
 const LOAD_FAILED = "Failed to load";
 
 interface SupportMsg { id: string; from: string; senderName?: string; topic?: string; subject?: string; body: string; createdAt?: string }
-const when = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const when = (iso?: string, loc = "en-GB") => (iso ? uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }, loc) : "");
 
 /** A separate support channel between the provider and Name TBC/HQ. */
 export function SupportApp() {

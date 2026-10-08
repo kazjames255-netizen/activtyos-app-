@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useSearchParams } from "next/navigation";
@@ -75,11 +75,11 @@ const todayIso = () => {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`;
 };
-const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmt = (iso?: string) => (iso ? uiDate(new Date(`${iso}T00:00:00Z`), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 // The parent-approved day labels live in `schedule` ("On these days: Mon 27 Jul,
 // …"). A dose on a day not in that list is flagged but still allowed — the day
 // label here must match how the parent's form formats them.
-const dayLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const dayLabel = (iso: string) => uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const BOOKED_SCHEDULE = "On every booked day"; // dynamic — approved = the child's current bookings
 // `booked` is the child's live set of booked ISO days (recomputed from bookings)
 // — only needed for the dynamic BOOKED_SCHEDULE. A fixed "On these days: …" list

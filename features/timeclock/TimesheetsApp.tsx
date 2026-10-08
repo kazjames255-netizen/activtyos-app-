@@ -4,7 +4,7 @@
 // out / off), today's timesheet (actual clocked hours vs scheduled, lateness,
 // optional auto-deduction), and settings. Actual hours feed the pay run. Demo
 // store; real payroll posting + kiosk/geofence are Amir's (docs/timeclock-handoff.md).
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDateTime } from "@/lib/i18n/format";
 import { useI18n, useT, useWord } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
@@ -236,7 +236,7 @@ export function TimesheetsApp() {
             <div key={r.id + r.day} className="flex flex-wrap items-center gap-2 py-1.5 text-[12.5px]">
               <span className="font-bold text-[var(--ink)]">{r.name}</span><span className="text-[var(--ink-3)]">{r.day}</span>
               <span className="tabular-nums text-[var(--ink-2)]">{r.clockInAt ? hhmm(r.clockInAt) : "—"} → {r.clockOutAt ? hhmm(r.clockOutAt) : "—"}</span>
-              <span className="text-[11px] text-[var(--ink-3)]">{r.staffEditedBy ? t("p8wf.tsEnteredBy", { when: r.staffEditedAt ? new Date(r.staffEditedAt).toLocaleString(dl()) : "", who: r.staffEditedBy }) : t("p8wf.tsEntered", { when: r.staffEditedAt ? new Date(r.staffEditedAt).toLocaleString(dl()) : "" })}</span>
+              <span className="text-[11px] text-[var(--ink-3)]">{r.staffEditedBy ? t("p8wf.tsEnteredBy", { when: r.staffEditedAt ? uiDateTime(new Date(r.staffEditedAt)) : "", who: r.staffEditedBy }) : t("p8wf.tsEntered", { when: r.staffEditedAt ? uiDateTime(new Date(r.staffEditedAt)) : "" })}</span>
               <button type="button" onClick={() => { markReviewed(r.id, r.day).then(refreshReview).catch((e: unknown) => flash(e instanceof Error ? e.message : t("p8wf.tsCouldntSave"))); }} className="ms-auto rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">{t("p8wf.tsMarkReviewed")}</button>
             </div>
           ))}</div>

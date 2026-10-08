@@ -9,6 +9,7 @@ import { get, put } from "@/lib/api";
 import { CATALOGUE } from "@/lib/testTracker/catalogue";
 import { AgentStatusPanel } from "./AgentStatusPanel";
 import type { AccountKind, Area, CheckResult, Status, TestCheck } from "@/lib/testTracker/types";
+import { uiDateTime } from "@/lib/i18n/format";
 
 const AREAS: { key: Area; label: string; blurb: string }[] = [
   { key: "listing-types", label: "Listing types", blurb: "Every kind of listing, and how it is set up" },
@@ -323,13 +324,13 @@ function CheckCard({ c, r, status, open, onToggle, onSave }: {
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => onSave({ note, bug, fix })} className="rounded-full px-5 py-2 text-[13.5px] font-extrabold text-white" style={{ background: "var(--brand,#1d3a8f)" }}>Save notes</button>
             <button type="button" onClick={() => onSave({ status: "fixed", note, bug, fix })} className="rounded-full border px-4 py-2 text-[13px] font-bold" style={{ borderColor: "var(--line,#ece6f1)" }}>Mark: fixed, please retest</button>
-            {r?.updatedAt && <span className="ms-auto text-[12px]" style={{ color: "var(--ink-3,#8a86a3)" }}>Last updated by {r.updatedBy ?? "someone"} on {new Date(r.updatedAt).toLocaleString("en-GB")}</span>}
+            {r?.updatedAt && <span className="ms-auto text-[12px]" style={{ color: "var(--ink-3,#8a86a3)" }}>Last updated by {r.updatedBy ?? "someone"} on {uiDateTime(new Date(r.updatedAt))}</span>}
           </div>
           {c.claudeCheck && <p className="mt-3 text-[12px]" style={{ color: "var(--ink-3,#8a86a3)" }}>What Claude checks on its side: {c.claudeCheck}</p>}
           {r?.history && r.history.length > 1 && (
             <details className="mt-2 text-[12px]" style={{ color: "var(--ink-3,#8a86a3)" }}>
               <summary className="cursor-pointer font-bold">History ({r.history.length})</summary>
-              <ul className="mt-1 space-y-0.5">{[...r.history].reverse().map((h, i) => <li key={i}>{new Date(h.at).toLocaleString("en-GB")} · {h.by} · {STATUS_META[h.status].label}{h.note ? ` · ${h.note}` : ""}</li>)}</ul>
+              <ul className="mt-1 space-y-0.5">{[...r.history].reverse().map((h, i) => <li key={i}>{uiDateTime(new Date(h.at))} · {h.by} · {STATUS_META[h.status].label}{h.note ? ` · ${h.note}` : ""}</li>)}</ul>
             </details>
           )}
         </div>

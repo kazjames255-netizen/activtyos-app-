@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate, uiTime, uiDateTime, localizeDateLabels } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { useT, useWord, useI18n } from "@/lib/i18n/provider";
 import { Rich } from "@/components/i18n/Rich";
@@ -221,7 +221,7 @@ function AttendeeCard({ booking, kid, ki, blockAvail }: { booking: Booking; kid:
                     key={dt}
                     className="flex items-center gap-2 border-b border-dashed border-[var(--line)] py-[5px] text-[12px] text-[var(--red)]"
                   >
-                    <span className="flex-1 line-through">{/^\d{4}-\d{2}-\d{2}$/.test(dt) ? sessionDayLabel(dt) : dt}</span>
+                    <span className="flex-1 line-through">{/^\d{4}-\d{2}-\d{2}$/.test(dt) ? sessionDayLabel(dt) : localizeDateLabels(dt)}</span>
                     <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>{t("p7bd.cancelledLower")}</Badge>
                   </div>
                 );
@@ -518,7 +518,7 @@ function DateChangePanel({ booking }: { booking: Booking }) {
   const [picked, setPicked] = useState<number[]>(() => (req?.moves ?? []).map((_, i) => i));
   const [reason, setReason] = useState("");
   if (req?.status !== "pending") return null;
-  const fmt = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }); };
+  const fmt = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return Number.isNaN(d.getTime()) ? iso : uiDate(d, { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }); };
   const toggle = (i: number) => setPicked((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i]));
   const multiChild = new Set(req.moves.map((m) => m.childName).filter(Boolean)).size > 1;
   const approveN = picked.length;
@@ -622,7 +622,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
       )}
       {b.status === "Offered" && (
         <>
-          <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{t("p7bd.heldUntil", { time: b.offerExpiresAt ? new Date(b.offerExpiresAt).toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" }) : "…" })}</Badge>
+          <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{t("p7bd.heldUntil", { time: b.offerExpiresAt ? uiTime(new Date(b.offerExpiresAt), { hour: "2-digit", minute: "2-digit" }) : "…" })}</Badge>
           <Button onClick={() => act(b.ref, "promote")} title={t("p7bd.confirmNowTip")}>{t("p7bd.confirmNow")}</Button>
         </>
       )}
@@ -677,7 +677,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
       )}
       {b.cancel?.refund === "approved" && b.cancel.refundVia === "offline" && b.cancel.refundTransfer === "sent" && b.cancel.refundSentAt && (
         <div className="w-full rounded-lg border border-[#bfe3cc] bg-[#e8f8ee] px-3 py-2 text-[12.5px] font-bold text-[#0f6b34]" data-ui="refund-sent">
-          ✓ {t(/bank|transfer|bacs/i.test(b.method ?? "") ? "p8lst.rfaSentChipBank" : "p8lst.rfaSentChip", { date: new Date(b.cancel.refundSentAt).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) })}
+          ✓ {t(/bank|transfer|bacs/i.test(b.method ?? "") ? "p8lst.rfaSentChipBank" : "p8lst.rfaSentChip", { date: uiDate(new Date(b.cancel.refundSentAt), { day: "numeric", month: "short", year: "numeric" }) })}
         </div>
       )}
       {/* A cancelled booking with no refund waiting has nothing left to action: say so, and don't offer to chase a payment for it. */}
@@ -778,7 +778,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">
               {b.createdAt ? (
                 <>
-                  <Rich text={t("p7bd.bookedAtLine", { when: new Date(b.createdAt).toLocaleString(dl(), {
+                  <Rich text={t("p7bd.bookedAtLine", { when: uiDateTime(new Date(b.createdAt), {
                       weekday: "short",
                       day: "numeric",
                       month: "short",
@@ -800,7 +800,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           <Badge tone={statusTone(b.status)}>{w(b.status)}</Badge>
           {/* ONE reminders log: Resend invoice, Chase and the automatic reminder all count here. */}
           {b.invoiceResends?.count ? (
-            <Badge tone={{ bg: "#e8f0ff", fg: "#1d3a8f" }}>{t("p7bd.invResent", { n: String(b.invoiceResends.count), when: new Date(b.invoiceResends.lastAt).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}</Badge>
+            <Badge tone={{ bg: "#e8f0ff", fg: "#1d3a8f" }}>{t("p7bd.invResent", { n: String(b.invoiceResends.count), when: uiDateTime(new Date(b.invoiceResends.lastAt), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}</Badge>
           ) : null}
           {/* Once cancelled/declined the payment state is moot — a cancelled
               booking isn't "awaiting" anything. */}
@@ -808,7 +808,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             <Badge tone={refundAwaitingTransfer(b) ? { bg: "#fdf3d8", fg: "#9a5a00" } : payTone(shownPay(b), b.status)}>{refundAwaitingTransfer(b) ? t("p8lst.rfaChip") : b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : w(payLabelFor(b))}</Badge>
           )}
           {b.status === "Waitlisted" && b.waitlist && b.waitlist.length > 0 && (
-            <Badge tone={{ bg: "#fff1d6", fg: "#9a5a00" }}>{b.waitlist.map((x) => `${t("p9tx.wlPlace", { n: x.position })} · ${new Date(`${x.date}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" })}`).join("  ")}</Badge>
+            <Badge tone={{ bg: "#fff1d6", fg: "#9a5a00" }}>{b.waitlist.map((x) => `${t("p9tx.wlPlace", { n: x.position })} · ${uiDate(new Date(`${x.date}T00:00:00`), { weekday: "short", day: "numeric", month: "short" })}`).join("  ")}</Badge>
           )}
           {b.cardFailed && b.status !== "Cancelled" && b.status !== "Declined" && (
             <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>{t("p7bd.cardFailedBadge")}</Badge>
@@ -821,7 +821,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         {b.status === "Approval needed" && b.cardHold && (b.cardHold.state === "held" || b.cardHold.state === "awaiting") && (
           <div className="mt-3 rounded-xl border-2 px-4 py-3 text-[14px] font-bold leading-[1.45]" style={{ borderColor: "#f0c96b", background: "#fff7e0", color: "#7a4b00" }}>
             {b.cardHold.state === "held"
-              ? t("p8lst.holdProvHeld", { amt: money(b.cardHold.amount), by: b.cardHold.expiresAt ? new Date(b.cardHold.expiresAt).toLocaleString(dl(), { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) : "—" })
+              ? t("p8lst.holdProvHeld", { amt: money(b.cardHold.amount), by: b.cardHold.expiresAt ? uiDateTime(new Date(b.cardHold.expiresAt), { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) : "—" })
               : t("p8lst.holdProvWait")}
           </div>
         )}
@@ -906,7 +906,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         <DefRow label={t("p7bd.lblPass")} value={b.pass} />
         {b.serviceAddress && (b.serviceAddress.address || b.serviceAddress.postcode) && <DefRow label={"🚗 " + t("p9tx.hvVisitAt")} value={visitAddressLabel(b.serviceAddress)} />}
         {b.serviceAddress?.notes && <DefRow label={"📝 " + t("p7ck.notesLabel").replace(/\s*\(.*\)\s*$/, "")} value={b.serviceAddress.notes} />}
-        <DefRow label={t("p7bd.lblTicket")} value={b.ticket} />
+        <DefRow label={t("p7bd.lblTicket")} value={localizeDateLabels(b.ticket)} />
         {b.addons && b.addons.length > 0 && <AddonBlock booking={b} />}
 
         {/* Contact */}

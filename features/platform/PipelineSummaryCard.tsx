@@ -24,7 +24,7 @@
 //                existed can't be dated, so they're left out rather than dumped
 //                on whichever bucket they were last edited in.
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
@@ -96,7 +96,7 @@ function buildBuckets(nowMs: number, period: PeriodId): Bucket[] {
       const to = new Date(from); to.setDate(to.getDate() + 1);
       out.push({
         from: from.getTime(), to: to.getTime(), current: back === 0,
-        label: back === 0 ? hq("Today") : back === 1 ? hq("Yest.") : `${from.toLocaleDateString(dl(), { weekday: "short" })} ${from.getDate().toLocaleString(dl())}`,
+        label: back === 0 ? hq("Today") : back === 1 ? hq("Yest.") : `${uiDate(from, { weekday: "short" })} ${from.getDate().toLocaleString(dl())}`,
       });
     }
     return out;
@@ -108,7 +108,7 @@ function buildBuckets(nowMs: number, period: PeriodId): Bucket[] {
       const to = new Date(from); to.setDate(to.getDate() + 7);
       out.push({
         from: from.getTime(), to: to.getTime(), current: back === 0,
-        label: back === 0 ? hq("This week") : back === 1 ? hq("Last week") : hq("w/c {date}", { date: from.toLocaleDateString(dl(), { day: "numeric", month: "short" }) }),
+        label: back === 0 ? hq("This week") : back === 1 ? hq("Last week") : hq("w/c {date}", { date: uiDate(from, { day: "numeric", month: "short" }) }),
       });
     }
     return out;
@@ -134,7 +134,7 @@ function buildBuckets(nowMs: number, period: PeriodId): Bucket[] {
     const crossesYear = months > 12 - now.getMonth();
     out.push({
       from: from.getTime(), to: to.getTime(), current: back === 0,
-      label: from.toLocaleDateString(dl(), { month: "short" }) + (crossesYear ? ` ${`${from.getFullYear()}`.slice(2)}` : ""),
+      label: uiDate(from, { month: "short" }) + (crossesYear ? ` ${`${from.getFullYear()}`.slice(2)}` : ""),
     });
   }
   return out;

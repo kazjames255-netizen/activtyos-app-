@@ -1,7 +1,7 @@
 "use client";
 
 import { portalOf } from "@/lib/portal-href";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDateTime, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
@@ -36,7 +36,7 @@ interface PayStatus { connected: boolean; payoutsEnabled?: boolean; chargesEnabl
 const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GREEN = "#0f7a43", GOLD = "#f0b100", PINK = "#e2225f";
 const VALUE_BANDS: [string, number, number][] = [["£0–25", 0, 25], ["£25–50", 25, 50], ["£50–100", 50, 100], ["£100–200", 100, 200], ["£200+", 200, Infinity]];
 // Weekday short names in the viewer's language (index 0 = Sunday; 7 Jan 2024 was a Sunday).
-const dowShort = (i: number) => { try { return new Intl.DateTimeFormat(dl(), { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2024, 0, 7 + i))); } catch { return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i]; } };
+const dowShort = (i: number) => { try { return uiDate(new Date(Date.UTC(2024, 0, 7 + i)), { weekday: "short", timeZone: "UTC" }); } catch { return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i]; } };
 const DOW = [0, 1, 2, 3, 4, 5, 6];
 
 export function FinanceAnalyticsApp() {
@@ -233,7 +233,7 @@ export function FinanceAnalyticsApp() {
       setChaseMsg({ ref: o.ref, ok: false, text: e instanceof Error ? e.message : String(e) });
     }
   }
-  const whenLabel = (iso: string) => new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const whenLabel = (iso: string) => uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   // Export the filtered, in-window bookings an accountant would want — one row
   // per booking with the money broken out. Honours the Season/Location filters.
@@ -255,7 +255,7 @@ export function FinanceAnalyticsApp() {
 
   const rangeLabel = useMemo(() => {
     const start = new Date(`${a.windowStart}T00:00:00Z`);
-    const fmt = (d: Date) => d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+    const fmt = (d: Date) => uiDate(d, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
     return `${fmt(start)} – ${fmt(new Date(nowMs))}`;
   }, [a.windowStart, nowMs]);
 
@@ -412,7 +412,7 @@ export function FinanceAnalyticsApp() {
                   <tbody>
                     {payouts.slice(0, 40).map((p) => (
                       <tr key={p.id} className="border-b border-[var(--line)]" data-state={p.state}>
-                        <td className="py-2 text-[var(--ink-2)]">{new Date(p.at).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}</td>
+                        <td className="py-2 text-[var(--ink-2)]">{uiDate(new Date(p.at), { day: "numeric", month: "short", year: "numeric" })}</td>
                         <td className="font-semibold text-[var(--ink)]">{payerNameOf(p.refs, p.email)}</td>
                         <td className="text-[var(--ink-2)]">{methodLabel(t, p.method || "Card")}</td>
                         <td className="text-[var(--ink-3)]">{p.refs.join(", ") || "—"}</td>
@@ -429,7 +429,7 @@ export function FinanceAnalyticsApp() {
                             : <>
                                 <span className="font-bold text-[var(--ink-3)] line-through">{money(p.gross)}</span>
                                 <span className="ms-2 font-extrabold">{money(p.net)}</span>
-                                <div className="text-[10.5px] font-semibold text-[var(--ink-3)]">{t("p8fin.faRefundedOn", { amt: money(p.refunded), date: p.refundedAt ? new Date(p.refundedAt).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "—" })}</div>
+                                <div className="text-[10.5px] font-semibold text-[var(--ink-3)]">{t("p8fin.faRefundedOn", { amt: money(p.refunded), date: p.refundedAt ? uiDate(new Date(p.refundedAt), { day: "numeric", month: "short" }) : "—" })}</div>
                               </>}
                         </td>
                       </tr>
@@ -463,7 +463,7 @@ export function FinanceAnalyticsApp() {
                     <div key={o.ref} className="py-2.5 text-[12.5px]">
                       <div className="flex items-center gap-3">
                         <span className="min-w-0 flex-1 truncate"><b>{o.name}</b>{o.listing && <span className="text-[var(--ink-3)]"> · {o.listing}</span>}</span>
-                        <span className="hidden whitespace-nowrap text-[11px] text-[var(--ink-3)] sm:inline">{o.when ? new Date(o.when.length === 10 ? `${o.when}T00:00:00` : o.when).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : ""}</span>
+                        <span className="hidden whitespace-nowrap text-[11px] text-[var(--ink-3)] sm:inline">{o.when ? uiDate(new Date(o.when.length === 10 ? `${o.when}T00:00:00` : o.when), { day: "numeric", month: "short" }) : ""}</span>
                         <span className="w-20 text-end font-extrabold tabular-nums text-[#c02636]">{money(o.owed)}</span>
                         <button type="button" disabled={waitS > 0} title={waitS > 0 ? t("p8fin.faChaseWait", { s: String(waitS) }) : t("p8fin.faChaseTip")}
                           onClick={() => (recent ? setChaseAsk(o.ref) : void chase(o))}
@@ -497,7 +497,7 @@ export function FinanceAnalyticsApp() {
                   <div key={iv.id} className="flex items-center gap-3 py-2.5 text-[12.5px]">
                     <span className="min-w-0 flex-1 truncate font-semibold">{iv.customerName}</span>
                     {iv.overdue && <span className="rounded-full bg-[#fdebec] px-2 py-0.5 text-[10.5px] font-bold text-[#c02636]">{t("p8fin.recTileOverdue")}</span>}
-                    <span className="text-[11px] text-[var(--ink-3)]">{iv.dueDate ? t("p8fin.inDueDate", { date: new Date(iv.dueDate).toLocaleDateString(dl(), { day: "numeric", month: "short" }) }) : ""}</span>
+                    <span className="text-[11px] text-[var(--ink-3)]">{iv.dueDate ? t("p8fin.inDueDate", { date: uiDate(new Date(iv.dueDate), { day: "numeric", month: "short" }) }) : ""}</span>
                     <span className="w-20 text-end font-extrabold tabular-nums">{money(iv.amount)}</span>
                   </div>
                 ))}

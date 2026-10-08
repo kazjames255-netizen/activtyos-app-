@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate, uiTime } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { apiPublic } from "@/lib/api";
@@ -100,7 +100,7 @@ const TESTIMONIALS: { quote: string; initials: string; name: string; role: strin
 
 interface Slot { iso: string; durationMins: number }
 
-const ukDateKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" });
+const ukDateKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }); // raw-locale-ok: machine date key, not shown to anyone
 
 // Site tokens (public/v2/activly.css :root) — kept as JS constants only
 // where inline styles need a plain colour (borders, box-shadow); everything
@@ -124,8 +124,8 @@ export default function DemoPage() {
   const arrow = isRTL(locale) ? "←" : "→";
   // Built per language (module-level formatters would freeze the first language seen).
   const { dayFmt, timeFmt } = useMemo(() => ({
-    dayFmt: new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }),
-    timeFmt: new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }),
+    dayFmt: { format: (d: Date) => uiDate(d, { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }) },
+    timeFmt: { format: (d: Date) => uiTime(d, { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }) },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [locale]);
   const [f, setF] = useState({ name: "", email: "", phone: "", business: "", size: "", interest: "", message: "" });

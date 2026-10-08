@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
@@ -21,7 +21,7 @@ interface Missing { listingId: string; listingName: string; date: string; child:
 interface MealReq { id: string; childName: string; date: string; listingId?: string; items?: { name: string }[]; changeRequest?: { name: string }; cancelRequest?: { at: string } }
 type View = "daily" | "weekly" | "total";
 
-const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const fmtDay = (iso: string) => uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
 export function MealReport() {
   const t = useT();

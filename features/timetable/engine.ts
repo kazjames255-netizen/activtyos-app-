@@ -3,7 +3,7 @@
 // algorithmically identical so generated timetables match the original.
 
 import type { Activity, Category, Cell, DayInfo, GenConfig, Plan, PlanRow } from "./types";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 
 const FACPAL = [
   "#2563EB", "#15803D", "#C2410C", "#7C3AED", "#0E7490", "#B45309",
@@ -33,12 +33,12 @@ function dayAsDate(d: DayInfo): Date | null {
 /** Short weekday ("Mon") in the active language. The stored `n` stays English. */
 export function dayShort(d: DayInfo): string {
   const dt = dayAsDate(d);
-  return dt ? dt.toLocaleDateString(dl(), { weekday: "short" }) : d.n;
+  return dt ? uiDate(dt, { weekday: "short" }) : d.n;
 }
 /** "28 Jul" in the active language (stored `d` stays English). */
 export function dayDateText(d: DayInfo): string {
   const dt = d.iso ? dayAsDate(d) : null;
-  return dt ? dt.toLocaleDateString(dl(), { day: "numeric", month: "short" }) : d.d;
+  return dt ? uiDate(dt, { day: "numeric", month: "short" }) : d.d;
 }
 /** The day-of-month number shown on the day chips. */
 export function dayNum(d: DayInfo): string {

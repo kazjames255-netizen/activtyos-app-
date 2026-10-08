@@ -6,7 +6,7 @@ import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/provider";
 import { useRealtime } from "@/lib/realtime";
 import { Card } from "@/components/ui";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDate, uiDateTime } from "@/lib/i18n/format";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Trips (parent side) — the trips their children are on, with the consent
@@ -29,7 +29,7 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 
 const fmtDate = (d: string, loc = "en-GB") =>
-  new Date(`${d}T00:00:00Z`).toLocaleDateString(loc, { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  uiDate(new Date(`${d}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }, loc);
 
 // Transport is stored in English; translate at display.
 const TRANSPORT_KEY: Record<string, string> = { "Minibus": "p8ops.tpTrMinibus", "Coach": "p8ops.tpTrCoach", "Walking": "p8ops.tpTrWalking", "Public bus": "p8ops.tpTrPublicBus", "Train": "p8ops.tpTrTrain", "Parents drop-off": "p8ops.tpTrParents", "Provider vehicles": "p8ops.tpTrProvider" };
@@ -118,7 +118,7 @@ export function ParentTripsApp() {
                       <div key={c.childId} className="flex flex-wrap items-center gap-2">
                         <span className="text-[13px] font-bold">{c.name}</span>
                         <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: meta.bg, color: meta.fg }}>{t(meta.labelKey)}</span>
-                        {c.consentAt && <span className="text-[10.5px] text-[var(--ink-3)]">{new Date(c.consentAt).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>}
+                        {c.consentAt && <span className="text-[10.5px] text-[var(--ink-3)]">{uiDateTime(new Date(c.consentAt), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }, loc)}</span>}
                         {trip.askConsent && upcoming && c.consent === "pending" && (
                           <span className="ms-auto flex gap-1.5">
                             <button

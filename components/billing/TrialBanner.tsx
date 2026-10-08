@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { get as apiGet } from "@/lib/api";
@@ -10,7 +10,7 @@ import { pickPlural } from "@/lib/i18n/plural";
 
 const OPERATOR = new Set(["freelancer", "company", "franchise"]);
 const days = (iso?: string | null) => (iso ? Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000)) : 0);
-const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "");
+const fmt = (iso?: string | null) => (iso ? uiDate(new Date(iso), { day: "numeric", month: "short" }) : "");
 
 /**
  * A slim bar across operator portals during a free trial (or while cancelling)

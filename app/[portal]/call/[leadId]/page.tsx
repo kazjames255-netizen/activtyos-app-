@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { get, post } from "@/lib/api";
@@ -46,7 +46,7 @@ const DAILY_THEME = {
   },
 };
 
-const fmtDay = (iso: string) => new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const fmtDay = (iso: string) => uiDate(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 const portalOpt = <V extends string>(v: V, key: string) => ({ v, get label() { return tNow(`p8hq.${key}`); } });
 const DEMO_PORTALS: { v: "freelancer" | "company" | "franchise" | "staff" | "custdash"; label: string }[] = [

@@ -14,6 +14,7 @@ import { MY_CLASSROOM } from "../names";
 import { useHubI18n } from "../family/hubT";
 import { Rich } from "./Rich";
 import { bandName } from "../family/KidMode";
+import { uiDate } from "@/lib/i18n/format";
 
 // R-12 printable progress report: one child's summary as a clean paper page (window.print + @media print, no PDF service).
 // Child-scoped: it only ever fetches the chosen child's mastery and homework, and shows nothing from the tutor's private
@@ -21,7 +22,7 @@ import { bandName } from "../family/KidMode";
 
 const TERM_DAYS = 90; // "this term" = the last 90 days of homework (there is no term calendar in the data yet)
 const day = 86_400_000;
-const fmtOn = (locale: string) => (iso: string | number) => { try { return new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" }); } catch { return new Date(iso).toDateString(); } };
+const fmtOn = (locale: string) => (iso: string | number) => { try { return uiDate(new Date(iso), { day: "numeric", month: "long", year: "numeric" }, locale); } catch { return new Date(iso).toDateString(); } };
 
 const PRINT_CSS = `
 @media print {

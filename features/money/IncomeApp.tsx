@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
 import { useHoScope } from "@/components/franchise/HoScope";
@@ -63,7 +63,7 @@ function normaliseMethod(raw?: string): string {
   return m;
 }
 
-const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmtDay = (iso: string) => (iso ? uiDate(new Date(`${iso}T00:00:00Z`), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const monthKeyOf = (d: Date) => ukDay(d.toISOString()).slice(0, 7); // UK wall-clock month of an INSTANT (e.g. now)
 // A calendar month picked by its own year/month (new Date(y, m, 1)): key it by those parts. Converting that local-midnight instant to a UK date
@@ -215,7 +215,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
         const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1 - i));
         const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
         const rows = allItems.filter((x) => (x.date || "") === key);
-        return { key, label: trendMode === "7d" ? d.toLocaleDateString(dl(), { weekday: "short" }) : String(d.getDate()), total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length, current: key === todayKey };
+        return { key, label: trendMode === "7d" ? uiDate(d, { weekday: "short" }) : String(d.getDate()), total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length, current: key === todayKey };
       });
     }
     const months = trendMode === "6m" ? 6 : trendMode === "9m" ? 9 : 12;
@@ -223,7 +223,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
       const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1);
       const key = monthKeyOfDate(d);
       const rows = allItems.filter((x) => (x.date || "").slice(0, 7) === key);
-      return { key, label: d.toLocaleDateString(dl(), { month: "short" }), total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length, current: key === thisMonthKey };
+      return { key, label: uiDate(d, { month: "short" }), total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length, current: key === thisMonthKey };
     });
   }, [allItems, trendMode, now, thisMonthKey]);
 
@@ -238,7 +238,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
       const made = bookings.filter((b) => ukDay(b.createdAt || "").slice(0, 7) === key && !["Cancelled", "Declined", "Waitlisted", "Offered"].includes((b as unknown as { status?: string }).status ?? ""));
       return {
         key, month: d.getMonth(), year: d.getFullYear(),
-        monthShort: d.toLocaleDateString(dl(), { month: "short" }), monthLong: d.toLocaleDateString(dl(), { month: "long" }),
+        monthShort: uiDate(d, { month: "short" }), monthLong: uiDate(d, { month: "long" }),
         total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length,
         booked: made.reduce((s, b) => s + (b.amount ?? 0), 0), bookedCount: made.length,
         current: key === thisMonthKey,
@@ -297,7 +297,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     const collected = rows.reduce((s, x) => s + x.amount, 0);
     return { collected, best: months[0] as [string, number] | undefined, activeMonths: months.length, avg: months.length ? collected / months.length : 0, largest: rows.reduce((m, x) => Math.max(m, x.amount), 0) };
   }, [allItems, thisYear]);
-  const monthLabel = (key: string) => key ? new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1).toLocaleDateString(dl(), { month: "short", year: "numeric" }) : "";
+  const monthLabel = (key: string) => key ? uiDate(new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1), { month: "short", year: "numeric" }) : "";
 
   const ovSeasonObj = seasons.find((s) => s.id === ovSeason);
   // A season is a set of listings, so scoping to one = keeping only booking

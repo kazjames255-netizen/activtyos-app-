@@ -8,7 +8,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Card } from "@/components/ui";
 import { NotesThread } from "./NotesThread";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDate, uiDateTime } from "@/lib/i18n/format";
 
 interface Rec {
   id: string; kind: string; childName: string; date?: string; time?: string; location?: string;
@@ -27,8 +27,8 @@ const LIGHT_PALETTE = {
 const SEV: Record<string, { labelKey: string; bg: string; fg: string }> = {
   minor: { labelKey: "care.accSevMinor", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { labelKey: "care.accSevModerate", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { labelKey: "care.accSevSerious", bg: "#fdebec", fg: "#c02636" },
 };
-const fmtDate = (d?: string, tm?: string, loc = "en-GB") => (d ? new Date(`${d}T00:00:00Z`).toLocaleDateString(loc, { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) + (tm ? ` · ${tm}` : "") : "");
-const stamp = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const fmtDate = (d?: string, tm?: string, loc = "en-GB") => (d ? uiDate(new Date(`${d}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }, loc) + (tm ? ` · ${tm}` : "") : "");
+const stamp = (iso?: string, loc = "en-GB") => (iso ? uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }, loc) : "");
 
 export function ParentAccidentsApp() {
   const { t, locale } = useI18n();

@@ -13,10 +13,10 @@ import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { DOCS_KEY, seedDocs, openDoc, docDaysUntil, statusOf, docTitleName, type DocItem } from "./DocumentsApp";
 import { useI18n } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDate } from "@/lib/i18n/format";
 
 // Same as DocumentsApp's docFmt, in the reader's language.
-const docFmt = (d?: string, locale = "en-GB") => { if (!d) return "—"; const x = new Date(d + "T00:00:00"); return isNaN(+x) ? d : x.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }); };
+const docFmt = (d?: string, locale = "en-GB") => { if (!d) return "—"; const x = new Date(d + "T00:00:00"); return isNaN(+x) ? d : uiDate(x, { day: "numeric", month: "short", year: "numeric" }, locale); };
 // Display labels for the stored document categories (stored values stay English).
 const CAT_KEY: Record<string, string> = {
   Policy: "staffp.docCatPolicy", "Risk assessment": "staffp.docCatRisk", Handbook: "staffp.docCatHandbook", Procedure: "staffp.docCatProcedure",

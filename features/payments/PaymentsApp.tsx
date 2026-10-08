@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { portalOf } from "@/lib/portal-href";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDateTime } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -41,7 +41,7 @@ interface PaymentRecord {
 }
 
 const when = (iso: string) =>
-  new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export function PaymentsApp() {
   const t = useT();

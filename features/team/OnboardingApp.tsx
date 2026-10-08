@@ -8,7 +8,7 @@
 // item can still be added to an individual. Front-end demo store; the real
 // sensitive-data storage + retention is Amir's (see handoff). Reuses the same
 // staff roster as the Staff-certificates area.
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button, Input, Select } from "@/components/ui";
@@ -56,7 +56,7 @@ I understand that providing false information may lead to withdrawal of any offe
 Signed: ______________________________   Print name: ______________________________   Date: ____________`;
 export interface OnboardValue { v?: string; fileData?: string; fileId?: string; fileName?: string; status?: "todo" | "requested" | "received" | "verified"; at?: string }
 const nowIso = () => { try { return new Date().toISOString(); } catch { return ""; } };
-const fmtStamp = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }); };
+const fmtStamp = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : uiDate(d, { day: "numeric", month: "short", year: "numeric" }); };
 // DBS certs don't legally "expire", but employers re-check on their own cycle
 // (commonly ~3 years). Show how old a certificate is from its issue date.
 const monthsSince = (iso?: string) => { if (!iso) return null; const d = new Date(iso + "T00:00:00"); if (isNaN(+d)) return null; const n = new Date(); return (n.getFullYear() - d.getFullYear()) * 12 + (n.getMonth() - d.getMonth()) - (n.getDate() < d.getDate() ? 1 : 0); };
@@ -394,7 +394,7 @@ export function OnboardingPanel() {
     const clr = cleared;
     const secs = SECTIONS.map(([sid, slabel]) => { const fs = appl.filter((f) => f.section === sid); if (!fs.length) return ""; const rows = fs.map((f) => { const v = rec.values[f.id]; const d = displayVal(f, v); const ok = satisfied(f, v); return `<tr><td class="k">${esc(obLabel(t, f))}${f.required ? " *" : ""}</td><td class="v ${d ? (ok ? "ok" : "") : "miss"}">${d ? esc(d) : "—"}</td></tr>`; }).join(""); return `<h2>${esc(obSection(t, sid, slabel))}</h2><table>${rows}</table>`; }).join("");
     const docs = appl.map((f) => { const v = rec.values[f.id]; if (!v?.fileData) return ""; const img = v.fileData.startsWith("data:image"); return `<div class="doc"><h2>${esc(obLabel(t, f))} — ${esc(v.fileName || t("p8wf.obFileFallback"))}</h2>${img ? `<img src="${v.fileData}"/>` : `<object data="${v.fileData}" type="application/pdf"><iframe src="${v.fileData}"></iframe></object>`}</div>`; }).join("");
-    printWindow(`<!doctype html><html lang="${currentLocaleCode()}" dir="${isRTL(currentLocaleCode()) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${esc(t("p8wf.obPackTitle", { name: sel }))}</title><style>${PRINT_CSS}</style></head><body><h1>${esc(t("p8wf.obPackH1", { provider }))}</h1><div class="sub">${esc(sel)} · ${esc(staff?.role ?? "")} · ${esc(staff?.op ?? "")} · <span class="badge ${clr ? "cleared" : "hold"}">${esc(t(clr ? "p8wf.obClearedToStart" : "p8wf.obStartOnHold"))}</span> · ${esc(t("p8wf.obGenerated", { date: new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }) }))}</div>${secs}${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
+    printWindow(`<!doctype html><html lang="${currentLocaleCode()}" dir="${isRTL(currentLocaleCode()) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${esc(t("p8wf.obPackTitle", { name: sel }))}</title><style>${PRINT_CSS}</style></head><body><h1>${esc(t("p8wf.obPackH1", { provider }))}</h1><div class="sub">${esc(sel)} · ${esc(staff?.role ?? "")} · ${esc(staff?.op ?? "")} · <span class="badge ${clr ? "cleared" : "hold"}">${esc(t(clr ? "p8wf.obClearedToStart" : "p8wf.obStartOnHold"))}</span> · ${esc(t("p8wf.obGenerated", { date: uiDate(new Date(), { day: "numeric", month: "long", year: "numeric" }) }))}</div>${secs}${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
   };
 
   // ——— Single Central Record: one row per staff, the Ofsted checks ———
@@ -412,7 +412,7 @@ export function OnboardingPanel() {
     const cols = scrDetail ? [...SCR_COLS, ...METHOD_COLS] : SCR_COLS;
     const head = `<tr><td class="k">${esc(t("team.staffCol"))}</td><td class="k">${esc(t("team.roleCol"))}</td><td class="k">${esc(t("p8wf.obLocation"))}</td>${cols.map(([, l]) => `<td class="k">${esc(l)}</td>`).join("")}<td class="k">${esc(t("p8wf.obDbsNo"))}</td><td class="k">${esc(t("p8wf.obCleared"))}</td></tr>`;
     const body = TEAM.map((s) => { const r = ob.recordFor(s.name); const cells = SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id, scrDetail); return `<td class="v"><span class="${c.cls}">${esc(c.txt)}</span></td>`; }).join(""); const methods = scrDetail ? METHOD_COLS.map(([id]) => `<td>${esc(r.values[id]?.v || "—")}</td>`).join("") : ""; const dbsNo = r.values.dbsCert?.v || "—"; const clr = clearedOf(s.name); return `<tr><td class="v">${esc(s.name)}</td><td>${esc(s.role)}</td><td>${esc(s.op)}</td>${cells}${methods}<td>${esc(dbsNo)}</td><td><span class="badge ${clr ? "cleared" : "hold"}">${esc(clr ? t("p8wf.obYes") : t("team.onHold"))}</span></td></tr>`; }).join("");
-    printWindow(`<!doctype html><html lang="${currentLocaleCode()}" dir="${isRTL(currentLocaleCode()) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${esc(t("p8wf.obScrTitle", { provider }))}</title><style>${PRINT_CSS} td{font-size:11px} .k{color:#6b7086;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}</style></head><body><h1>${esc(t("p8wf.obScrH1", { provider }))}</h1><div class="sub">${esc(t("p8wf.obScrSub"))}${scrDetail ? esc(t("p8wf.obScrDetail")) : ""} · ${esc(t("p8wf.obGenerated", { date: new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }) }))}</div><table>${head}${body}</table><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
+    printWindow(`<!doctype html><html lang="${currentLocaleCode()}" dir="${isRTL(currentLocaleCode()) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${esc(t("p8wf.obScrTitle", { provider }))}</title><style>${PRINT_CSS} td{font-size:11px} .k{color:#6b7086;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}</style></head><body><h1>${esc(t("p8wf.obScrH1", { provider }))}</h1><div class="sub">${esc(t("p8wf.obScrSub"))}${scrDetail ? esc(t("p8wf.obScrDetail")) : ""} · ${esc(t("p8wf.obGenerated", { date: uiDate(new Date(), { day: "numeric", month: "long", year: "numeric" }) }))}</div><table>${head}${body}</table><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
   };
 
   // ——— slideshow (one section per step) ———

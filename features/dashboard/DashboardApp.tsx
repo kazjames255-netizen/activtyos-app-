@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
@@ -52,9 +52,9 @@ const ACT_C = ["#2f5fd0", "#0f7a43", "#C81E5E", "#5a3fd0", "#F5A524", "#0ea5a0",
 // Donut segments are marks on a dark card, so they take the light tones.
 const STATUS_C: Record<string, string> = { Confirmed: "#2f5fd0", "Approval needed": "#F5A524", Waitlisted: "#0f7a43", Offered: "#0e7a75", Cancelled: "#C81E5E", Declined: "#C81E5E" };
 const PAY_C: Record<string, string> = { Paid: "#0f7a43", Funded: "#0e7a75", Unpaid: "#F5A524", "Invoice sent": "#5a3fd0", "Refund pending": "#F5A524", Refunded: "#C81E5E", "Partially refunded": "#C81E5E" };
-const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" });
+const monthLabel = (k: string) => uiDate(new Date(`${k}-01T00:00:00Z`), { month: "short", timeZone: "UTC" });
 const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const fmtDay = (iso: string) => uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 // Compact money for the narrow sparkline columns: £1.2k, £320, £0.
 // Small amounts keep their pence: £0.30 must not read as £0 (that made a real payment look like "no payments").
 const compactMoney = (n: number) => (n >= 1000 ? `£${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : n > 0 && n < 10 && n % 1 !== 0 ? `£${n.toFixed(2)}` : `£${Math.round(n)}`);
@@ -478,7 +478,7 @@ export function DashboardApp() {
 
     return {
       income, booked, weekly, weeklyIncome,
-      weeklyLabels: wkStarts.map((ms) => new Date(ms).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" })),
+      weeklyLabels: wkStarts.map((ms) => uiDate(new Date(ms), { day: "numeric", month: "short", timeZone: "UTC" })),
       kpis: { collected: totalCollected, bookings: bookingsCount, families: [...families].filter(Boolean).length, avg: paidCount ? totalCollected / paidCount : 0 },
       // Full list (venue included) — the location filter + top-6 slice happen at
       // render, so filtering by location doesn't lose activities beyond the top 6.
@@ -637,7 +637,7 @@ export function DashboardApp() {
                   // A quiet week: show only the days with orders; otherwise every day, the empty ones muted.
                   const rows = empty > 3 ? addonWeek.rows.filter((r) => r.items > 0) : addonWeek.rows;
                   return rows.map((r) => {
-                    const day = new Date(`${r.date}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", timeZone: "UTC" });
+                    const day = uiDate(new Date(`${r.date}T00:00:00Z`), { weekday: "short", day: "numeric", timeZone: "UTC" });
                     return r.items > 0 ? (
                       <button key={r.date} type="button" onClick={() => router.push(`/${portal}/kit?date=${r.date}`)} className="flex w-full flex-col items-start gap-0.5 rounded-xl border border-[#f2c98a] bg-[#fff6e8] px-3 py-2 text-start hover:opacity-90">
                         <span className="text-[13px] font-extrabold text-[#8a4b00]">{r.items === 1 ? t("p8lst.kitChipOne", { day }) : t("p8lst.kitChipMany", { day, n: r.items })}</span>

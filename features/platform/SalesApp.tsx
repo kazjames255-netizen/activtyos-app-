@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate, uiTime, uiDateTime } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { tNow, useT } from "@/lib/i18n/provider";
@@ -83,7 +83,7 @@ export interface Lead {
   videoRoom?: string;
 }
 // Built per call so it follows the active language (a module-level Intl object would freeze on the first locale).
-const slotFmt = { format: (d: Date) => new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(d) };
+const slotFmt = { format: (d: Date) => uiDateTime(d, { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) };
 
 // 5 clear steps left→right (a fresh Lead → a New customer who's signed up), plus
 // Lost held separately at the end. When a signup matches a lead's email/phone/
@@ -116,7 +116,7 @@ const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, tr
 const money = (n: number) => `£${Math.round(n).toLocaleString(dl())}`;
 const uid = () => { try { return crypto.randomUUID(); } catch { return `${Date.now()}-${Math.round(Math.random() * 1e6)}`; } };
 const nowIso = () => new Date().toISOString();
-const fmtDay = (iso: string) => new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short" });
+const fmtDay = (iso: string) => uiDate(new Date(iso), { day: "numeric", month: "short" });
 
 // A touch logged in the modal but not yet saved to the server (the server
 // stamps `at`/`by` itself when it lands).
@@ -472,9 +472,9 @@ function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen
 // picking one drives the lead through the identical stage+slotAt shape a
 // genuine demo submission would.
 interface DemoSlot { iso: string; durationMins: number }
-const slotDayFmt = { format: (d: Date) => new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }).format(d) };
-const slotTimeFmt = { format: (d: Date) => new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }).format(d) };
-const slotDayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" });
+const slotDayFmt = { format: (d: Date) => uiDate(d, { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }) };
+const slotTimeFmt = { format: (d: Date) => uiTime(d, { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }) };
+const slotDayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }); // raw-locale-ok: machine date key, not shown to anyone
 
 function BookDemoButton({ onBook }: { onBook: (iso: string) => void }) {
   const tr = useT();

@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate, uiDateTime } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api, get as apiGet } from "@/lib/api";
@@ -24,12 +24,12 @@ interface AvailRequest { id: string; window: ReqWindow; camp?: Camp | null; note
 interface DayAvail { on: boolean; from: string; to: string }
 interface Pattern { days?: Record<string, DayAvail>; grid?: Record<string, DayAvail>; note?: string; submittedAt?: string }
 
-const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" }) : "");
+const fmtDay = (iso?: string) => (iso ? uiDate(new Date(`${iso}T00:00:00`), { weekday: "short", day: "numeric", month: "short" }) : "");
 // Full date + time for "submitted / last edited" stamps.
-const fmtStamp = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const fmtStamp = (iso?: string) => (iso ? uiDateTime(new Date(iso), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 const requesterOf = (r: { createdByName?: string | null; createdBy?: string | null }) => r.createdByName || r.createdBy || tNow("p8set.scYourManager");
 const dNum = (iso: string) => new Date(`${iso}T00:00:00`).getDate();
-const dMon = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(dl(), { month: "short" });
+const dMon = (iso: string) => uiDate(new Date(`${iso}T00:00:00`), { month: "short" });
 const wdOf = (iso: string) => new Date(`${iso}T00:00:00`).getDay(); // 0 Sun … 6 Sat
 const WD_SHORT = { get: (i: number) => wdShortName(i) };
 const WD_LONG = { get: (i: number) => wdLongName(i) };

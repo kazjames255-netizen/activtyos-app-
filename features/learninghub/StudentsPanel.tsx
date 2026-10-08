@@ -16,6 +16,7 @@ import { cleanSupport, isDefaultSupport, type SupportProfile } from "./support";
 import { PlanNextWeek } from "./plan/PlanNextWeek";
 import HowItWorksButton from "./howitworks/HowItWorksButton";
 import { useI18n, useT } from "@/lib/i18n/provider";
+import { uiTime, uiDate, relativeFrom } from "@/lib/i18n/format";
 
 // Students — the tutor's roster. A family only ever sees the Learning Hub for a
 // child that has been enrolled here, so this is where access is granted, paused
@@ -320,22 +321,22 @@ function FamilyLink({ tenantId }: { tenantId: string }) {
 type Tr = (k: string, v?: Record<string, string | number>) => string;
 const DAY = 86_400_000;
 function nextWhen(t: Tr, loc: string, at: number, now: number): string {
-  const clock = new Date(at).toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" });
+  const clock = uiTime(new Date(at), { hour: "2-digit", minute: "2-digit" }, loc);
   const d0 = new Date(now); d0.setHours(0, 0, 0, 0);
   const days = Math.floor((at - d0.getTime()) / DAY);
   if (days <= 0) return t("hubshell.st_todayAt", { time: clock });
   if (days === 1) return t("hubshell.st_tomorrowAt", { time: clock });
-  if (days < 7) return `${new Date(at).toLocaleDateString(loc, { weekday: "short" })} ${clock}`;
-  return `${new Date(at).toLocaleDateString(loc, { day: "numeric", month: "short" })}, ${clock}`;
+  if (days < 7) return `${uiDate(new Date(at), { weekday: "short" }, loc)} ${clock}`;
+  return `${uiDate(new Date(at), { day: "numeric", month: "short" }, loc)}, ${clock}`;
 }
 function seenAgo(t: Tr, loc: string, at: number | null, now: number): string {
   if (!at) return t("hubshell.st_noActivity");
   const d = now - at;
-  const rtf = new Intl.RelativeTimeFormat(loc, { numeric: "auto" });
+  const rtf = { format: (n: number, u: "hour" | "day") => relativeFrom(n, u, loc) };
   if (d < 3_600_000) return t("hubshell.st_lastSeen", { when: t("hubshell.st_justNow") });
   if (d < DAY) return t("hubshell.st_lastSeen", { when: rtf.format(-Math.round(d / 3_600_000), "hour") });
   const days = Math.floor(d / DAY);
-  return t("hubshell.st_lastSeen", { when: days < 30 ? rtf.format(-days, "day") : new Date(at).toLocaleDateString(loc, { day: "numeric", month: "short" }) });
+  return t("hubshell.st_lastSeen", { when: days < 30 ? rtf.format(-days, "day") : uiDate(new Date(at), { day: "numeric", month: "short" }, loc) });
 }
 
 /** Ring colour from the tenant's mastery ladder: lowest third gold, middle brand, top green (same rule as Progress). */

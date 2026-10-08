@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate, uiTime } from "@/lib/i18n/format";
 import { useT, useI18n, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { DirGlyph } from "@/components/shell/DirGlyph";
@@ -91,11 +91,11 @@ const shiftDay = (iso: string, by: number) => {
   return d.toISOString().slice(0, 10);
 };
 const dayLabel = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 const shortDay = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 const compactDay = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
 /** Staff for one line: ceil(children / ratio), matching the manual's board. */
@@ -109,7 +109,7 @@ const fmtRatio = (n: number) => `1:${Number.isInteger(n) ? n : n.toFixed(1)}`;
 const to12h = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);
   if (Number.isNaN(h)) return hhmm;
-  if (!dl().startsWith("en")) return new Date(2000, 0, 1, h, m || 0).toLocaleTimeString(dl(), { hour: "numeric", minute: "2-digit" });
+  if (!dl().startsWith("en")) return uiTime(new Date(2000, 0, 1, h, m || 0), { hour: "numeric", minute: "2-digit" });
   const ap = h < 12 ? "am" : "pm";
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return m ? `${h12}:${String(m).padStart(2, "0")}${ap}` : `${h12}${ap}`;
