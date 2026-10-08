@@ -7,6 +7,8 @@ import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { call, db, makeParent, makeProvider, ok, operatorAction, uniq, type Parent, type Provider } from "./helpers.mts";
 
+// PARTPAID_ONLY=1 runs just the part-paid tests at the bottom.
+const raceIt = process.env.PARTPAID_ONLY ? it.skip : it;
 const ITER = Number(process.env.RACE_ITER ?? 30);
 const PAR = 15;
 const DAY = 20; // 100 / 5
@@ -43,7 +45,7 @@ before(async () => {
 
 /** A fresh booking of 5 days, paid in full (100). Returns the ref. */
 const owners = new Map<string, Parent>();
-async function paidBooking(): Promise<string> {
+async function paidBooking(paid = 100): Promise<string> {
   // A fresh family each time: wallet credit from an earlier iteration would otherwise be spent at checkout.
   const parent = await makeParent("R", P);
   const r = await call("POST", "/api/my/bookings", parent.token, { listingId, blockId, method: "Bank transfer", items: [{ pass: "Week pass", child: `Kid ${++seq}${uniq()}`, age: 8, dates }] });
@@ -52,7 +54,7 @@ async function paidBooking(): Promise<string> {
   const ref = (list[0]?.ref ?? list[0]?.booking?.ref) as string;
   assert.ok(ref);
   owners.set(ref, parent);
-  const pay = await call("POST", `/api/bookings/${encodeURIComponent(ref)}/record-payment`, P.token, { amount: 100, method: "Bank transfer" });
+  const pay = await call("POST", `/api/bookings/${encodeURIComponent(ref)}/record-payment`, P.token, { amount: paid, method: "Bank transfer" });
   assert.ok(pay.status < 300, `pay -> ${pay.status} ${JSON.stringify(pay.json).slice(0, 300)}`);
   return ref;
 }
@@ -69,7 +71,7 @@ const times = <T,>(n: number, f: (i: number) => Promise<T>) => Promise.all(Array
 const loop = async (name: string, body: (i: number) => Promise<void>) => { for (let i = 0; i < ITER; i++) { try { await body(i); } catch (e) { (e as Error).message = `[${name} iteration ${i}] ${(e as Error).message}`; throw e; } } };
 
 describe("parallel releases never pay out more than the days removed are worth", () => {
-  it(`wallet: ${PAR} parallel releases of the SAME day credit exactly one day (20), once`, async () => {
+  raceIt(`wallet: ${PAR} parallel releases of the SAME day credit exactly one day (20), once`, async () => {
     await loop("wallet-same-day", async () => {
       const ref = await paidBooking();
       const res = await times(PAR, () => release(ref, [dates[2]], "wallet"));
@@ -83,7 +85,7 @@ describe("parallel releases never pay out more than the days removed are worth",
     });
   });
 
-  it(`refund: ${PAR} parallel refund-releases of the SAME day leave one day's pending refund (<= 20), and approving sends no more`, async () => {
+  raceIt(`refund: ${PAR} parallel refund-releases of the SAME day leave one day's pending refund (<= 20), and approving sends no more`, async () => {
     await loop("refund-same-day", async () => {
       const ref = await paidBooking();
       const ctl = await paidBooking();
@@ -103,7 +105,7 @@ describe("parallel releases never pay out more than the days removed are worth",
     });
   });
 
-  it("mixed: wallet and refund releases of the same day in parallel pay out one day in total", async () => {
+  raceIt("mixed: wallet and refund releases of the same day in parallel pay out one day in total", async () => {
     await loop("mixed", async () => {
       const ref = await paidBooking();
       const res = await times(PAR, (i) => release(ref, [dates[1]], i % 2 ? "wallet" : "refund"));
@@ -115,7 +117,7 @@ describe("parallel releases never pay out more than the days removed are worth",
     });
   });
 
-  it("release (wallet) vs provider cancel-day (wallet) of the same day, in parallel: one day's credit in total", async () => {
+  raceIt("release (wallet) vs provider cancel-day (wallet) of the same day, in parallel: one day's credit in total", async () => {
     await loop("release-vs-cancel-day", async () => {
       const ref = await paidBooking();
       const reqs = [...Array.from({ length: 8 }, () => release(ref, [dates[3]], "wallet")), ...Array.from({ length: 7 }, () => operatorAction(P, ref, { type: "cancel-day", ki: 0, date: dates[3], resolution: "wallet" }))];
@@ -125,7 +127,7 @@ describe("parallel releases never pay out more than the days removed are worth",
     });
   });
 
-  it("release (refund) vs provider cancel-day (refund) of the same day, in parallel: pending refund never above one day", async () => {
+  raceIt("release (refund) vs provider cancel-day (refund) of the same day, in parallel: pending refund never above one day", async () => {
     await loop("release-vs-cancel-day-refund", async () => {
       const ref = await paidBooking();
       const res = await Promise.all([...Array.from({ length: 8 }, () => release(ref, [dates[3]], "refund")), ...Array.from({ length: 7 }, () => operatorAction(P, ref, { type: "cancel-day", ki: 0, date: dates[3], resolution: "refund" }))]);
@@ -134,7 +136,7 @@ describe("parallel releases never pay out more than the days removed are worth",
     });
   });
 
-  it("release vs provider cancel-child, in parallel: never more than the 100 paid in total", async () => {
+  raceIt("release vs provider cancel-child, in parallel: never more than the 100 paid in total", async () => {
     await loop("release-vs-cancel-child", async () => {
       const ref = await paidBooking();
       await Promise.all([...Array.from({ length: 8 }, (_, i) => release(ref, [dates[i % 4]], "wallet")), ...Array.from({ length: 7 }, () => operatorAction(P, ref, { type: "cancel-child", ki: 0, resolution: "wallet" }))]);
@@ -143,7 +145,7 @@ describe("parallel releases never pay out more than the days removed are worth",
     });
   });
 
-  it("different days in parallel: credit equals the days actually released, and the last day is never released", async () => {
+  raceIt("different days in parallel: credit equals the days actually released, and the last day is never released", async () => {
     await loop("different-days", async () => {
       const ref = await paidBooking();
       const res = await times(PAR, (i) => release(ref, [dates[i % 5]], "wallet"));
@@ -156,7 +158,7 @@ describe("parallel releases never pay out more than the days removed are worth",
     });
   });
 
-  it("release vs whole-booking cancel by the parent and by the provider, in parallel: total back never above paid", async () => {
+  raceIt("release vs whole-booking cancel by the parent and by the provider, in parallel: total back never above paid", async () => {
     await loop("release-vs-cancel", async () => {
       const ref = await paidBooking();
       const res = await Promise.all([
@@ -171,7 +173,7 @@ describe("parallel releases never pay out more than the days removed are worth",
     });
   });
 
-  it("refund approve / decline replays in parallel act once", async () => {
+  raceIt("refund approve / decline replays in parallel act once", async () => {
     await loop("approve-replay", async () => {
       const ref = await paidBooking();
       assert.equal((await release(ref, [dates[0]], "refund")).status, 200);
@@ -182,7 +184,7 @@ describe("parallel releases never pay out more than the days removed are worth",
       assert.ok(credit <= DAY + 0.005 && Number(d.refundedApproved ?? 0) <= DAY + 0.005, `credit ${credit} approved ${d.refundedApproved} (statuses ${res.map((r) => r.status)})`);
     });
   });
-  it("provider cancel-day (wallet) x15 on the same day, and cancel-child (wallet) x15: credited once", async () => {
+  raceIt("provider cancel-day (wallet) x15 on the same day, and cancel-child (wallet) x15: credited once", async () => {
     await loop("provider-only", async () => {
       const a = await paidBooking();
       await times(PAR, () => operatorAction(P, a, { type: "cancel-day", ki: 0, date: dates[2], resolution: "wallet" }));
@@ -193,7 +195,7 @@ describe("parallel releases never pay out more than the days removed are worth",
     });
   });
 
-  it("parent whole cancel racing wallet releases: the pending refund plus the wallet credit never exceed what was paid", async () => {
+  raceIt("parent whole cancel racing wallet releases: the pending refund plus the wallet credit never exceed what was paid", async () => {
     await loop("cancel-vs-wallet-release", async () => {
       const ref = await paidBooking();
       const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -207,7 +209,7 @@ describe("parallel releases never pay out more than the days removed are worth",
     });
   });
 
-  it("refund-approve racing wallet releases: no refund-log line is lost, and approved + credited never exceed paid", async () => {
+  raceIt("refund-approve racing wallet releases: no refund-log line is lost, and approved + credited never exceed paid", async () => {
     await loop("approve-vs-release", async () => {
       const ref = await paidBooking();
       assert.equal((await release(ref, [dates[0]], "refund")).status, 200);
@@ -221,5 +223,54 @@ describe("parallel releases never pay out more than the days removed are worth",
       assert.equal(round2(logged), w, `refund log shows ${logged} of wallet credit but the ledger holds ${w}`);
       assert.ok(round2(w + Number(d.refundedApproved ?? 0)) <= 100.005, `credited ${w} + approved ${d.refundedApproved} > paid 100`);
     });
+  });
+  // ── PART-PAID bookings (paid some of the price, the rest still owed) ───────────────────────────────────────────────────────────────────
+  // A part-paid release takes the removed days off the price (exactly as for an unpaid booking) and refunds only money paid BEYOND the new price:
+  // refund = max(0, paid - new price - pending). Each day is worth 20 (100 / 5).
+  it("part-paid 40 of 100: releasing 3 days (refund or wallet) drops the price to 40, refunds nothing, owes nothing", async () => {
+    for (const resolution of ["refund", "wallet"] as const) {
+      const ref = await paidBooking(40);
+      const r = await release(ref, [dates[0], dates[1], dates[2]], resolution);
+      assert.equal(r.status, 200, JSON.stringify(r.json));
+      const d = await doc(ref);
+      assert.equal(d.amount, 40, `${resolution}: price after releasing 3 of 5 days`);
+      assert.equal(round2((d.amount ?? 0) - (d.amountPaid ?? 0)), 0, `${resolution}: nothing left owed`);
+      assert.equal(pending(d), 0, `${resolution}: no refund requested`);
+      assert.equal(await walletCredit(ref), 0, `${resolution}: no wallet credit`);
+    }
+  });
+
+  it("part-paid 70 of 100, release 2 days: price 60, ONLY the 10 paid beyond it comes back - once, however many parallel requests (refund and wallet)", async () => {
+    await loop("partpaid-parallel", async () => {
+      const w = await paidBooking(70);
+      const resW = await times(PAR, () => release(w, [dates[0], dates[1]], "wallet"));
+      assert.equal(resW.filter((r) => r.status === 200).length, 1, `exactly one release succeeds: ${resW.map((r) => r.status)}`);
+      assert.equal(await walletCredit(w), 10, "wallet credit = paid - new price");
+      assert.equal((await doc(w)).amount, 60, "wallet: new price");
+      const f = await paidBooking(70);
+      const resF = await times(PAR, () => release(f, [dates[0], dates[1]], "refund"));
+      assert.equal(resF.filter((r) => r.status === 200).length, 1);
+      const d = await doc(f);
+      assert.equal(pending(d), 10, "refund: only the overpaid 10 is requested");
+      assert.equal(d.amount, 60, "refund: new price");
+    });
+  });
+
+  it("part-paid, a second release counts the first one's pending refund (never refunds the same money twice)", async () => {
+    const ref = await paidBooking(70);
+    assert.equal((await release(ref, [dates[0], dates[1]], "refund")).status, 200); // price 60, 10 pending
+    assert.equal((await release(ref, [dates[2]], "refund")).status, 200); // price 40, paid 70: 30 over, 10 already pending
+    const d = await doc(ref);
+    assert.equal(d.amount, 40);
+    assert.equal(pending(d), 30, "10 + 20 more, the total overpaid");
+    assert.equal((await release(ref, [dates[3]], "wallet")).status, 200); // price 20, paid 70: 50 over, 30 pending
+    assert.equal(await walletCredit(ref), 20, "the rest of the overpaid money goes to the wallet");
+  });
+
+  it("fully paid keeps the owner's rule: the price stays, the policy decides", async () => {
+    const ref = await paidBooking(100);
+    assert.equal((await release(ref, [dates[0]], "wallet")).status, 200);
+    assert.equal((await doc(ref)).amount, 100);
+    assert.equal(await walletCredit(ref), 20);
   });
 });
