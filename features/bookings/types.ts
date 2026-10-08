@@ -218,6 +218,9 @@ export interface Booking {
   /** Store credit taken off this booking at checkout. `amount` is already net
    *  of it — this is here so the money trail shows where the difference went. */
   walletApplied?: number;
+  /** Part of `walletApplied` no longer owed for: a removed share (cancelled day / extra) larger than the cash due came off the wallet part. The
+   *  booking's gross price is amount + walletApplied - walletRelieved. */
+  walletRelieved?: number;
   /** Running total of approved cancellation refunds (server-stamped) — so a
    *  later cancel can't refund money that already went back. */
   refundedApproved?: number;

@@ -183,8 +183,16 @@ export function settleShareRemoval(b: Booking, label: string, share: number, opt
   const settled = b.pay === "Paid" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded";
   if (settled) b.amountPaid = Math.max(b.amountPaid ?? 0, b.amount ?? 0);
   const prior = b.cancel && b.cancel.refundOnly && b.cancel.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
-  b.amount = Math.round(Math.max(0, (b.amount ?? 0) - Math.max(0, share)) * 100) / 100;
-  const overpaid = Math.round(Math.max(0, refundableSoFar(b) - prior - b.amount) * 100) / 100;
+  // WALLET: `amount` is the CASH due, net of the wallet credit spent at checkout, while "paid" adds that credit back. So compare on the GROSS price
+  // (cash due + wallet spent, less any share already taken off the wallet part): the share leaves the cash due first, then the wallet part.
+  const take = Math.max(0, share);
+  const cash = b.amount ?? 0;
+  const wallet = Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
+  const fromWallet = Math.min(wallet, Math.max(0, take - cash));
+  b.amount = Math.round(Math.max(0, cash - take) * 100) / 100;
+  if (fromWallet > 0) b.walletRelieved = Math.round(((b.walletRelieved ?? 0) + fromWallet) * 100) / 100;
+  const newGross = Math.round((b.amount + wallet - fromWallet) * 100) / 100;
+  const overpaid = Math.round(Math.max(0, refundableSoFar(b) - prior - newGross) * 100) / 100;
   // The provider's own figure replaces the default (capped, as always, at what is still refundable).
   return settleRelease(b, label, overpaid, { resolution: opts?.resolution, amount: opts?.amount });
 }
@@ -198,7 +206,7 @@ export function applyAddonRelease(b: Booking, label: string, amount: number, res
  *  over the days still standing, so the share stays steady as days are removed. Call BEFORE the day is marked cancelled. */
 export function passDayShare(b: Booking, kids: NonNullable<Booking["kids"]>, n = 1): number {
   const extras = (b.addonLines ?? []).reduce((t, l) => t + (Number(l.price) || 0), 0);
-  const pass = Math.max(0, (b.amount ?? 0) - extras);
+  const pass = Math.max(0, (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0)) - extras); // gross: cash due + wallet spent
   const standing = kids.reduce((t, k) => t + (k.cancelled ? 0 : kidActiveDaysIso(k).length), 0);
   return standing > 0 ? Math.round(((pass / standing) * Math.min(n, standing)) * 100) / 100 : 0;
 }

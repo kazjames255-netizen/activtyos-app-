@@ -4,14 +4,17 @@
 // Synthetic data only, emulator only.
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
-import { adminDb, as, bookWithAddons, bookingAsRole, day, operatorAction, seedAddons, ukDay } from "../../scripts/emu/addons-helpers.mts";
+import { adminDb, as, bookWithAddons, bookingAsRole, day, ids, operatorAction, seedAddons, ukDay } from "../../scripts/emu/addons-helpers.mts";
 
 const uniq = () => Math.random().toString(36).slice(2, 7);
 const BOTTLE = (c = "Blue") => ({ id: "AW", answers: { Colour: c } });
 const SHIRT = (s = "M") => ({ id: "AT", answers: { Size: s } });
 before(async () => { await seedAddons({ extraD1: [4, 2] }); });
+// These cases are about cash only: no wallet credit left over from other test files may be spent by the checkout.
+const noWallet = async () => { await (await adminDb()).collection("wallet").doc(`${ids().tenants.P}__parent-a@emu.test`).set({ balance: 0 }, { merge: true }); };
 
 async function mk(tag: string, addons: any[], o: { pay?: number | "full" } = {}) {
+  await noWallet();
   const child = `${tag} ${uniq()}`;
   const b = await bookWithAddons({ parent: "A", listing: "LK", children: [{ name: child, days: "all", addons }] });
   assert.equal(b.status, 201, JSON.stringify(b.json));

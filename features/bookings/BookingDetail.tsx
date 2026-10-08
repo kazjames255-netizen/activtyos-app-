@@ -27,6 +27,7 @@ import {
   refundAwaitingTransfer,
   refundTransferAmount,
   refundableSoFar,
+  paidSoFar,
   visitAddressLabel,
 } from "./helpers";
 import { Badge, Button, Card, DefRow, Input, SectionHead, Select } from "@/components/ui";
@@ -633,7 +634,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             {b.cancel?.amount != null && b.cancel.amount > 0 && (
               <div className="w-full text-[12px] font-semibold leading-[1.5] text-[var(--ink)]">
                 {t("p9tx.bdRefundReq", { amt: money(b.cancel.amount) })}
-                {b.amount > 0 && <> of {money(b.amount)} paid ({Math.round((b.cancel.amount / b.amount) * 100)}%)</>}
+                {paidSoFar(b) > 0 && <> of {money(paidSoFar(b))} paid ({Math.round((b.cancel.amount / paidSoFar(b)) * 100)}%)</>}
                 {b.cancel.msg && <span className="font-normal text-[var(--ink-2)]"> · {b.cancel.msg}</span>}
               </div>
             )}

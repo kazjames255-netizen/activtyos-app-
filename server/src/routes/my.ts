@@ -28,7 +28,7 @@ import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/me
 import { cancellationRequestNotice, shortWhen, firstWord } from "../lib/emailTemplates";
 import { money, paidSoFar as totalPaid, realPhone, refundableSoFar, sessionIsoDates, visitAddressLabel } from "../../../features/bookings/helpers";
 import type { Booking, AddonRequest } from "../../../features/bookings/types";
-import { AddonRequestError, addAddonRequest, buildAddonRequest, currentAnswers, defForLine, withdrawAddonRequest } from "../lib/addonRequests";
+import { AddonRequestError, addAddonRequest, addonCutoffDays, buildAddonRequest, currentAnswers, defForLine, withdrawAddonRequest } from "../lib/addonRequests";
 import { addonLineKey, parseAddonLabel } from "../../../features/bookings/addons";
 import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, lineDayStates, pendingForLine, requestDeadline, requestKeys, requestTargets, splittableLine, lineRequestBlock } from "../../../features/bookings/addonRequests";
 import { stampAddonRefund } from "../../../features/bookings/addonRefund";
@@ -2980,11 +2980,6 @@ const addonReqSchema = z.object({
   targets: z.array(z.object({ key: z.string().min(1).max(300), days: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).max(62).optional() })).min(1).max(30).optional(),
 }).refine((v) => !!v.key || !!v.targets?.length, { message: "Pick what you would like to ask about." });
 
-async function addonCutoffDays(b: Booking): Promise<number> {
-  if (!b.tenantId) return DEFAULT_ADDON_REQUEST_DAYS;
-  const v = Number(((await loadSettings(b.tenantId, b.franchiseId ?? null)) as Record<string, unknown>).addonRequestDays);
-  return Number.isFinite(v) && v >= 0 ? Math.min(60, Math.floor(v)) : DEFAULT_ADDON_REQUEST_DAYS;
-}
 
 // GET /api/my/bookings/:ref/addon-options — each extra on the booking, what the family may ask for, and why not (cut-off / already asked).
 my.get("/bookings/:ref/addon-options", async (req, res) => {
@@ -3010,7 +3005,7 @@ my.get("/bookings/:ref/addon-options", async (req, res) => {
     const pending = pendingForLine(b, l.key) ?? null;
     const block = changeBlock;
     lines.push({
-      key: l.key, child: line.child, label: line.label, name: l.name, meal: !!line.meal, price: line.price, block, splittable, days,
+      key: l.key, child: line.child, label: line.label, name: l.name, meal: !!line.meal, price: line.price, block, splittable, days, changeDays: days.filter((d) => d.state === "none").map((d) => d.date),
       canCancel: block === "none", canChange: changeBlock === "none" && !line.meal && questions.length > 0,
       questions, current: currentAnswers(line), pending,
       ...(block === "cutoff" && first ? { until: requestDeadline(first, cutoffDays) } : {}),

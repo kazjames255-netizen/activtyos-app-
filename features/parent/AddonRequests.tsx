@@ -17,7 +17,7 @@ interface Line {
   key: string; child: string; label: string; name: string; meal: boolean; price: number;
   block: "none" | "past" | "cutoff" | "pending" | "cancelled";
   canCancel: boolean; canChange: boolean;
-  splittable?: boolean; days?: Day[];
+  splittable?: boolean; days?: Day[]; changeDays?: string[];
   questions: { id: string; label: string; options: string[]; required: boolean }[];
   current: Record<string, string>;
   pending: AddonRequest | null;
@@ -199,6 +199,9 @@ export function AddonRequests({ booking, providerName, onChanged }: { booking: B
             return (
               <div className="mt-2.5 space-y-2" data-testid="addon-change-form">
                 <div className="text-[13px]"><b>{l.label}</b> <span className="text-[var(--ink-3)]">· {first(l.child)}</span></div>
+                {l.changeDays && l.days && l.changeDays.length > 0 && l.changeDays.length < l.days.length && (
+                  <div className="text-[12px] text-[var(--ink-3)]">{t("p8lst.arDaysList", { days: l.changeDays.map(dayText).join(", ") })}</div>
+                )}
                 {l.questions.map((q) => (
                   <label key={q.id} className="block text-[12px] font-bold text-[var(--ink-2)]">
                     {q.label}

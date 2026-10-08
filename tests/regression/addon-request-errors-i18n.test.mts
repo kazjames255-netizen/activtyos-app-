@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { apiErrorKey } from "../../lib/i18n/apiErrorKey";
-import p8api from "../../lib/i18n/messages/areas/p8api";
+import p8mod from "../../lib/i18n/messages/areas/p8api";
+const p8api: any = (p8mod as any).default ?? p8mod;
 
 // Every refusal reason the extra-request code can send to a family (or a provider) must have a translation in the API error catalogue, in all
 // 11 languages, so a Welsh or Polish parent does not read English. The messages are read from the source, so a new one cannot be forgotten.
@@ -21,7 +22,7 @@ function messages(): string[] {
   };
   for (const f of ["server/src/lib/addonRequests.ts", "server/src/lib/addonRequestsCore.ts"]) grab(f, /AddonRequestError\(\d+,\s*(?:"((?:[^"\\]|\\.)+)"|`((?:[^`\\]|\\.)+)`)/g);
   grab("features/bookings/addonRequests.ts", /return\s+(?:"((?:[^"\\]|\\.)+)"|`((?:[^`\\]|\\.)+)`)/g);
-  return [...out].filter((s) => /[A-Za-z]{4}/.test(s) && !/^(cancel|change) /.test(s));
+  return [...out].filter((s) => /[A-Za-z]{4}/.test(s) && /\s/.test(s) && !/^(cancel|change) /.test(s) && !/ asks to /.test(s));
 }
 
 test("the catalogue has the refusal reasons of the extra-request code in all 11 languages (not the English text)", () => {

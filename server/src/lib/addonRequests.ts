@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { librarySnap } from "./tenantLibrary";
+import { librarySnap, loadSettings } from "./tenantLibrary";
 import type { LibAddonDef } from "./addonPricing";
 import { parseAddonLabel } from "../../../features/bookings/addons";
 import { addonRequestBlock, changeProblem, dayBlock, labelWithAnswers, lineRequestBlock, pendingForLine, splittableLine, DEFAULT_ADDON_REQUEST_DAYS } from "../../../features/bookings/addonRequests";
@@ -47,6 +47,7 @@ export async function buildAddonRequest(b: Booking, input: NewRequestInput, toda
   if (input.kind === "cancel") return buildCancelRequest(b, input, base, today, cutoffDays);
 
   // A change: only a size/colour/choice, and only to something the provider really offers. (A meal can be cancelled but not "changed".)
+  if (input.targets?.some((t) => t.days && !t.days.length)) throw new AddonRequestError(400, "Pick at least one day, or leave the days out to cancel every day still open.");
   const key = input.key ?? input.targets?.[0]?.key;
   const line = key ? findLine(b, key) : undefined;
   if (!key || !line) throw new AddonRequestError(404, "That extra isn't on this booking.");
@@ -112,4 +113,11 @@ function buildCancelRequest(b: Booking, input: NewRequestInput, base: { id: stri
   }
   const total = round2(targets.reduce((n, t) => n + t.price, 0));
   return { ...base, key: targets[0].key, child: targets[0].child, label: targets[0].label, price: total, kind: "cancel", targets };
+}
+
+/** The provider's Setup "extras: change / cancel requests until N days before" (default 3), for this booking's tenant or franchise. */
+export async function addonCutoffDays(b: Booking): Promise<number> {
+  if (!b.tenantId) return DEFAULT_ADDON_REQUEST_DAYS;
+  const v = Number(((await loadSettings(b.tenantId, b.franchiseId ?? null)) as Record<string, unknown>).addonRequestDays);
+  return Number.isFinite(v) && v >= 0 ? Math.min(60, Math.floor(v)) : DEFAULT_ADDON_REQUEST_DAYS;
 }

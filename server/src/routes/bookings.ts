@@ -20,7 +20,7 @@ import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { creditWallet } from "../lib/wallet";
 import { captureHolds, releaseHolds } from "../lib/cardHold";
 import { RESEND_COOLDOWN_MS, remindersPatch, reminderDateLabel, resendWaitSeconds } from "../lib/invoiceResend";
-import { AddonRequestError, approveAddonRequest, declineAddonRequest } from "../lib/addonRequests";
+import { AddonRequestError, addonCutoffDays, approveAddonRequest, declineAddonRequest } from "../lib/addonRequests";
 import { requestWhat } from "../../../features/bookings/addonRequests";
 import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
@@ -810,7 +810,7 @@ bookings.post("/:ref/actions", async (req, res) => {
           if (b.status === "Cancelled" || b.status === "Declined") throw new Conflict("This booking is cancelled, so there is nothing to change.");
           try {
             if (action.type === "addon-approve") {
-              const out = approveAddonRequest(b, action.requestId, { resolution: action.resolution, amount: action.amount, by: "Provider" });
+              const out = approveAddonRequest(b, action.requestId, { resolution: action.resolution, amount: action.amount, by: "Provider", today: ukToday(), cutoffDays: await addonCutoffDays(b) });
               release = out.release as typeof release;
             } else declineAddonRequest(b, action.requestId, action.reason, "Provider");
           } catch (e) {

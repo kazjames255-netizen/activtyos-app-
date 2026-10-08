@@ -20,6 +20,7 @@ before(async () => { await seedAddons({ extraD1: [4, 2] }); });
 
 /** Book (bank transfer, so Unpaid), optionally mark it paid. Returns the ref, the child and the key of each extra from the family's own options. */
 async function mk(tag: string, addons: any[], o: { paid?: boolean; listing?: string; days?: any } = {}) {
+  await (await adminDb()).collection("wallet").doc(`${ids().tenants.P}__parent-a@emu.test`).set({ balance: 0 }, { merge: true }); // no leftover wallet credit is spent at checkout
   const child = nm(tag);
   const b = await bookWithAddons({ parent: "A", listing: o.listing ?? "LK", children: [{ name: child, days: o.days ?? "all", addons }] });
   assert.equal(b.status, 201, JSON.stringify(b.json));

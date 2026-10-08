@@ -7,7 +7,7 @@
 // A refund the provider approves goes back through the existing refund-approve path, which returns the wallet part to the wallet and the
 // cash part to the original method; "wallet credit" at approval credits the whole refund to the wallet.
 import assert from "node:assert/strict";
-import { before, describe, it } from "node:test";
+import { after, before, describe, it } from "node:test";
 import { adminDb, as, bookWithAddons, bookingAsRole, day, ids, kitDay, operatorAction, seedAddons } from "../../scripts/emu/addons-helpers.mts";
 
 const uniq = () => Math.random().toString(36).slice(2, 7);
@@ -15,6 +15,8 @@ const BOTTLE = (c = "Blue") => ({ id: "AW", answers: { Colour: c } });
 const SHIRT = (s = "M") => ({ id: "AT", answers: { Size: s } });
 const r2 = (n: number) => Math.round(n * 100) / 100;
 before(async () => { await seedAddons({ extraD1: [4, 2] }); });
+// Wallet credit must not leak into other test files (the checkout spends whatever balance the family has).
+after(async () => { await setWallet(0); });
 
 const walletDoc = async () => { const db = await adminDb(); return db.collection("wallet").doc(`${ids().tenants.P}__parent-a@emu.test`); };
 const setWallet = async (v: number) => { await (await walletDoc()).set({ balance: v }, { merge: true }); };
