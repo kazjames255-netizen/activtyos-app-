@@ -6,7 +6,7 @@ import readline from "node:readline";
 import { createRequire } from "node:module";
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { assertSandbox, SCENARIOS, runScenario, renderResults, spliceResults, extractCode, scrub, type Row } from "./hm-run-lib.mts";
+import { assertSandbox, SCENARIOS, runScenario, renderResults, spliceResults, extractCode, scrub, type Row } from "./hm-run-lib";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 

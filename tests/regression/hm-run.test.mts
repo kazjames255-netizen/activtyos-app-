@@ -1,7 +1,7 @@
 /** The HMRC sandbox runner (e2e/review/hm-run-lib.mts): sandbox-host refusal, masking, and error-code mapping via a mocked fetch. No network. */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assertSandbox, maskRef, scrub, SCENARIOS, runScenario, extractCode, spliceResults, renderResults, type Row } from "../../e2e/review/hm-run-lib.mts";
+import { assertSandbox, maskRef, scrub, SCENARIOS, runScenario, extractCode, spliceResults, renderResults, type Row } from "../../e2e/review/hm-run-lib";
 
 test("refuses anything but the sandbox host", () => {
   assertSandbox("https://test-api.service.hmrc.gov.uk");
