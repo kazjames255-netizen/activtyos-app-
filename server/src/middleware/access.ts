@@ -59,8 +59,9 @@ const AREA_LABEL: Record<string, string> = {
 export async function enforceAccess(req: Request, res: Response, next: NextFunction) {
   const auth = req.auth;
   if (!auth || !auth.tenantId || !GATED.has(auth.role)) { next(); return; }
-  // Express matches routes case-insensitively, so match on the normalised path (lib/accessMap normalizeApiPath).
-  const path = normalizeApiPath(req.originalUrl);
+  // Express matches routes case-insensitively, so match on the normalised path (lib/accessMap normalizeApiPath), built from baseUrl + path = the pathname Express itself routes on
+  // (an absolute-form request line "GET http://host/api/x" routes on /api/x).
+  const path = normalizeApiPath(req.baseUrl + req.path);
   const feature = featureForApi(path, req.method);
   const cap = auth.role === "staff" ? capForApi(path, req.method) : null;
   if (!feature && !cap) { next(); return; }

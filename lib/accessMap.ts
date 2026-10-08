@@ -198,11 +198,12 @@ const NEVER_REFUSED: { method: string | null; re: RegExp }[] = [
 /** The ONE place a request path is normalised before any role / feature / plan matching. Express routes
  *  case-insensitively and ignores a trailing slash, so /API/MEDICATIONS and /api/Medications/ reach the
  *  same handler as /api/medications: every table in this file is lower-case, so match on the lower-cased
- *  path with the query dropped and repeated or trailing slashes collapsed. Only for MATCHING — never
+ *  path with scheme://authority and the query dropped and repeated or trailing slashes collapsed. Only for MATCHING — never
  *  rewrite req.url with it (record ids in the path are case-sensitive). */
 export function normalizeApiPath(raw: string): string {
-  let p = raw.split("?")[0].split("#")[0];
-  try { p = decodeURIComponent(p); } catch { /* keep the raw text: a malformed escape never routes anyway */ }
+  // An absolute-form request target ("GET http://user@host/api/x") is routed on its pathname: drop scheme://authority first.
+  // No percent-decoding: Express matches the raw segments, so "%2f" is NOT a slash (it must not satisfy "/x/administer" allow-lists).
+  let p = raw.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/?#]*/i, "").split("?")[0].split("#")[0];
   p = p.toLowerCase().replace(/\/{2,}/g, "/").replace(/\/+$/, "");
   return p || "/";
 }
