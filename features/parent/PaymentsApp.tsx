@@ -150,7 +150,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
     const paid = all.filter((b) => b.pay === "Paid" || b.pay === "Funded" || b.pay === "Partially refunded")
       .sort((a, b) => ((a.createdAt ?? "") < (b.createdAt ?? "") ? 1 : -1));
     // An offline refund that is only approved/recorded (not yet sent by the provider) must not read as money already back.
-    const refunds = all.flatMap((b) => (b.refundLog ?? []).map((r) => ({ ...r, ref: b.ref, listing: b.listing, awaiting: refundAwaitingTransfer(b) && /^refund approved/i.test(r.label || ''), bank: /bank|transfer|bacs/i.test(b.method ?? '') })));
+    const refunds = all.flatMap((b) => (b.refundLog ?? []).map((r) => ({ ...r, ref: b.ref, listing: b.listing, awaiting: (b.refundAwaiting ?? refundAwaitingTransfer(b)) &&/^refund approved/i.test(r.label || ''), bank: /bank|transfer|bacs/i.test(b.method ?? '') })));
     return {
       owed,
       paid,

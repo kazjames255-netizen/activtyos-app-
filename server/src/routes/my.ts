@@ -26,12 +26,13 @@ import { refPrefixFor } from "../lib/bookingRef";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/mealCutoff";
 import { cancellationRequestNotice, shortWhen, firstWord } from "../lib/emailTemplates";
-import { money, paidSoFar as totalPaid, realPhone, refundableSoFar, sessionIsoDates, visitAddressLabel } from "../../../features/bookings/helpers";
+import { dayIso, kidActiveDays, money, paidSoFar as totalPaid, realPhone, refundableSoFar, releaseCap, sessionIsoDates, visitAddressLabel } from "../../../features/bookings/helpers";
 import type { Booking, AddonRequest } from "../../../features/bookings/types";
 import { AddonRequestError, addAddonRequest, addonCutoffDays, buildAddonRequest, currentAnswers, defForLine, withdrawAddonRequest } from "../lib/addonRequests";
 import { addonLineKey, parseAddonLabel } from "../../../features/bookings/addons";
 import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, lineDayStates, pendingForLine, requestDeadline, requestKeys, requestTargets, splittableLine, lineRequestBlock } from "../../../features/bookings/addonRequests";
 import { stampAddonRefund } from "../../../features/bookings/addonRefund";
+import { familyBooking } from "../lib/familyView";
 import { applyParentCancel, applyPartialCancel, archiveAwaitingRefund, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
 import { applyDiscounts, DISCOUNT_KIND_LABEL, type DiscountRule } from "../../../features/listings/discounts";
@@ -324,7 +325,7 @@ my.get("/bookings", async (req, res) => {
     list.map((b) => {
       const base = childcareRoute(b) ? { ...b, childcare: childcareOf(b as ChildcareBooking) } : b;
       const pos = b.status === "Waitlisted" && b.blockId ? positions.get(`${b.blockId}|${b.ref}`) : undefined;
-      return pos?.length ? { ...base, waitlist: pos, waitlistMode: modes.get(b.blockId!) ?? "manual" } : base;
+      return familyBooking(pos?.length ? { ...base, waitlist: pos, waitlistMode: modes.get(b.blockId!) ?? "manual" } : base);
     }),
   );
 });
@@ -2470,7 +2471,7 @@ my.post("/bookings/:ref/accept-offer", async (req, res) => {
       const bank = isBankMethod(updated.method) && (updated.amount ?? 0) > 0 && updated.tenantId ? await bankPayDetails(updated.tenantId, updated.ref, updated.amount ?? 0) : null;
       emailBookingConfirmed(updated, tenant.data()?.name ?? "Your activity provider", bank);
     }
-    res.json(updated);
+    res.json(familyBooking(updated));
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
     else throw e;
@@ -2514,7 +2515,7 @@ my.post("/bookings/:ref/decline-offer", async (req, res) => {
     // The family gave the place up: the discount code it was booked with comes back.
     if (updated.tenantId && shouldReleaseDiscountCodes(updated)) void releaseDiscountCodes(updated.tenantId, updated.ref);
     stopOpenPayments(updated);
-    res.json(updated);
+    res.json(familyBooking(updated));
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
     else throw e;
@@ -2628,9 +2629,12 @@ async function partialCancel(
       const kid = kids.find((k) => (k.childId ?? k.name) === w.childKey);
       if (!kid) throw new HttpError(400, `${w.childKey} isn't on this booking`);
       if (kid.cancelled) throw new HttpError(400, `${kid.name}'s place is already cancelled`);
-      const booked = new Set(kid.dates ?? []);
-      const gone = new Set(kid.cancelledDays ?? []);
-      for (const d of w.days) {
+      // The booking may keep a child's days as labels ("Mon 19 Oct 2026", after a provider cancel-day on a one-child booking) while the family sends ISO:
+      // compare them all as ISO.
+      const booked = new Set((kid.dates ?? []).map((d) => dayIso(d) ?? d));
+      const gone = new Set((kid.cancelledDays ?? []).map((d) => dayIso(d) ?? d));
+      for (const raw of w.days) {
+        const d = dayIso(raw) ?? raw;
         if (!booked.has(d)) throw new HttpError(400, `${kid.name} isn't booked on ${prettyDay(d)}`);
         if (gone.has(d)) throw new HttpError(400, `${kid.name}'s place on ${prettyDay(d)} is already cancelled`);
         if (d < today) throw new HttpError(400, `${prettyDay(d)} has already passed`);
@@ -2643,7 +2647,7 @@ async function partialCancel(
     if (!releasedCount) throw new HttpError(400, "No days were selected");
 
     // Releasing everything that's left is just a cancellation — say so rather than leaving a booking with no days on it.
-    const activeTotal = kids.reduce((n, k) => n + (k.cancelled ? 0 : (k.dates ?? []).filter((d) => !(k.cancelledDays ?? []).includes(d)).length), 0);
+    const activeTotal = kids.reduce((n, k) => n + (k.cancelled ? 0 : kidActiveDays(k).length), 0);
     if (releasedCount >= activeTotal)
       throw new HttpError(400, "That's every day left — cancel the whole booking instead");
 
@@ -2651,7 +2655,11 @@ async function partialCancel(
     // A joint booking that's been paid stores amountPaid 0, which valued every released day at £0 — use what was actually paid
     // (incl. wallet credit).
     const bookedChildDays = kids.reduce((n, k) => n + (k.dates ?? []).length, 0) || 1;
-    const perSlotPaid = round2(totalPaid(b) / bookedChildDays);
+    const paidSlot = round2(totalPaid(b) / bookedChildDays);
+    // …but never more than the family is still entitled to: paid ÷ days counts an extra that was already refunded (a T-shirt, a bottle) a second time
+    // inside the days. The cap is what is still held less the value of what stays (releaseCap), so the total given back can never pass it.
+    const cap = releaseCap(b, wanted.map((w) => ({ kid: kids.find((k) => (k.childId ?? k.name) === w.childKey)!, days: w.days })));
+    const perSlotPaid = round2(Math.min(paidSlot, cap / Math.max(1, releasedCount)));
     // Refund runs each released day through the policy on ITS OWN date, so a day three weeks out can refund while tomorrow's can't.
     // Wallet takes the full pro-rata value — that's the trade for keeping it in the business.
     releasedDays = wanted.flatMap((w) => w.days);
@@ -2713,7 +2721,7 @@ async function partialCancel(
     // Add-on refund state (addonRefund.ts): a child's WHOLE place released with a full-value refund takes that child's add-ons back; day-only or partial
     // releases keep them (a released day's own per-day add-on simply drops with the day).
     {
-      const allBack = value > 0.004 && value >= round2(releasedCount * perSlotPaid) - 0.004;
+      const allBack = value > 0.004 && value >= round2(releasedCount * perSlotPaid) - 0.004; // (perSlotPaid is already held to the cap)
       for (const w of wanted) {
         const kid = (b.kids ?? []).find((k) => (k.childId ?? k.name) === w.childKey);
         if (!kid) continue;
@@ -2790,10 +2798,11 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
   if (parsed.data.days !== undefined || parsed.data.kids !== undefined) {
     try {
       const out = await partialCancel(ref, existing, email, parsed.data);
-      res.json(out);
+      res.json(familyBooking(out));
       // Meals / trips on the days just released (lib/cancelCleanup.ts).
-      const left = new Set([...(out.days ?? []), ...((out.kids ?? []).flatMap((k) => (k.cancelled ? [] : (k.dates ?? []).filter((d) => !(k.cancelledDays ?? []).includes(d)))))]);
-      const released = [...new Set([...(existing.days ?? []), ...((existing.kids ?? []).flatMap((k) => k.dates ?? []))])].filter((d) => !left.has(d));
+      const iso = (d: string) => dayIso(d) ?? d;
+      const left = new Set([...(out.days ?? []), ...((out.kids ?? []).flatMap((k) => (k.cancelled ? [] : kidActiveDays(k))))].map(iso));
+      const released = [...new Set([...(existing.days ?? []), ...((existing.kids ?? []).flatMap((k) => k.dates ?? []))].map(iso))].filter((d) => !left.has(d));
       if (out.tenantId && released.length) void cleanupAfterCancel(out.tenantId, out, released);
     } catch (e) {
       if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
@@ -2897,7 +2906,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       markRefundPending(b);
       // The add-ons go back only with a FULL refund that really moves money (policy full, or a credit note); a partial / nil refund keeps them.
       // Stored on the lines now (addonRefund.ts), sticky, so no later change of the cancel record can flip it.
-      stampAddonRefund(b, { scope: "whole" }, b.cancel?.refund === "full" && (b.cancel.amount ?? 0) > 0.004);
+      const goesBack = b.cancel?.refund === "full" && (b.cancel.amount ?? 0) > 0.004;
+      stampAddonRefund(b, { scope: "whole" }, goesBack, goesBack ? b.cancel : null); // declined by the provider: the mark comes off again
       // Free the block places the booking held — total AND its days
       // (all reads before writes).
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;
@@ -2963,7 +2973,7 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     }
     // …and the family gets their own one-line bell + email saying it is cancelled and what happens to their money.
     if (shouldNotifyCancelled(statusBefore, updated.status)) void notifyFamilyCancelledFor(updated, "family");
-    res.json(updated);
+    res.json(familyBooking(updated));
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
     else throw e;

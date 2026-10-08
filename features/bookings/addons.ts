@@ -327,7 +327,7 @@ export function addonRefunded(h: { amount?: number; cancel?: { refund?: string; 
   if (typeof c.refundsAddons === "boolean") return c.refundsAddons;
   if (c.refund === "full") return true;
   const whole = !c.refundOnly && (Number(h.amount) || 0) > 0 && (Number(c.amount) || 0) >= (Number(h.amount) || 0) - 0.004;
-  return (c.refund === "pending" || c.refund === "approved") && whole;
+  return (c.refund === "pending" || c.refund === "approved" || c.refund === "partial") && whole;
 }
 
 export const SIBLING_MS = 3;

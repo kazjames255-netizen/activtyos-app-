@@ -54,6 +54,8 @@ export interface CancelInfo {
   refundOnly?: boolean;
   /** Explicit YES/NO chosen with the refund: did the add-ons go back with it? Absent = the default (whole-booking refund => yes, partial / none => no). */
   refundsAddons?: boolean;
+  /** What the add-on lines said before THIS refund marked them refunded (addonRefund.ts). Declining the refund puts it back; approving keeps the marks. */
+  addonUndo?: { key: string; refunded: boolean | null; refundedDays: string[] | null }[];
   /** Where the family asked for the money to go. "wallet" keeps it in-house as
    *  store credit with this provider; "card" (the default) refunds the payment
    *  method. Honoured when the operator approves the refund. */
@@ -231,6 +233,8 @@ export interface Booking {
   /** EVERY approved refund, one entry each (the single `cancel` record is overwritten by the next refund, so what is still owed to the family must
    *  not live only there). The money still to send is the sum of the offline entries not yet sent. Older bookings have none: see unsentRefunds(). */
   refundEntries?: RefundEntry[];
+  /** What a FAMILY is told instead of refundEntries (server/src/lib/familyView.ts): a refund the provider has recorded is still waiting for their transfer. */
+  refundAwaiting?: boolean;
   /** The last time the provider confirmed sending refund(s): the amount and when (for the "has been sent" wording). */
   lastRefundSent?: { amount: number; at: string };
   /** Marketing discount code redeemed on this booking, if any. */

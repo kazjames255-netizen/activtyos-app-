@@ -342,6 +342,9 @@ const MONEY_KEYS = [
   // The childcare block is money too: it carries the references a family's
   // payment arrives under, ours and theirs.
   "childcare", "childcarePayments",
+  // What was given back is money too, and it reveals add-on prices (a T-shirt refund is its price): the refund log, every refund entry
+  // (amount / cash split / via / approver times), the last-sent figure, the wallet relief, and the checkout id that ties payments together.
+  "refundLog", "refundEntries", "lastRefundSent", "walletRelieved", "checkoutId",
 ] as const;
 function staffView<T extends Record<string, unknown>>(b: T): T {
   const out: Record<string, unknown> = { ...b };
@@ -864,9 +867,14 @@ bookings.post("/:ref/actions", async (req, res) => {
       if (action.type === "cancel" || action.type === "cancel-child" || action.type === "cancel-day") {
         if (action.refundsAddons !== undefined && b.cancel) b.cancel.refundsAddons = action.refundsAddons;
         const moved = action.type === "cancel" ? action.refund !== "none" : !!release && release.resolution !== "none" && release.amount > 0;
-        const refunded = moved && (action.refundsAddons ?? (action.type === "cancel" ? action.refund === "full" : action.type === "cancel-child" && action.amount === undefined));
+        // A "partial" refund as big as the WHOLE booking (its cash price plus the wallet credit spent on it) is a full refund in all but name.
+        const wholeBooking = action.type === "cancel" && action.refund === "partial" && (b.cancel?.amount ?? 0) > 0.004
+          && (b.cancel?.amount ?? 0) >= (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0)) - 0.004;
+        const refunded = moved && (action.refundsAddons ?? (action.type === "cancel" ? action.refund === "full" || wholeBooking : action.type === "cancel-child" && action.amount === undefined));
         const kidName = action.type === "cancel" ? "" : (b.kids?.[action.ki]?.name ?? b.child ?? "");
-        stampAddonRefund(b, action.type === "cancel" ? { scope: "whole" } : action.type === "cancel-child" ? { scope: "child", child: kidName } : { scope: "day", child: kidName, date: action.date }, refunded);
+        // The refund this mark belongs to is still waiting for the provider (a wallet credit is final): declining it takes the mark back.
+        const waiting = refunded && b.cancel && b.cancel.refund !== "none" && b.cancel.refund !== "declined" && (action.type === "cancel" || release?.resolution === "refund") ? b.cancel : null;
+        stampAddonRefund(b, action.type === "cancel" ? { scope: "whole" } : action.type === "cancel-child" ? { scope: "child", child: kidName } : { scope: "day", child: kidName, date: action.date }, refunded, waiting);
       }
       const perChild = action.type === "cancel-child" || action.type === "cancel-day";
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;

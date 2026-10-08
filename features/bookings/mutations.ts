@@ -6,6 +6,7 @@
 import type { Booking } from "./types";
 import { bookingKids, dayIso, kidActiveDays, nowStr, paidSoFar, refundAwaitingTransfer, refundTransferAmount, unsentRefunds, refundableSoFar, refundedTotal, releaseValue, sessionDayLabel } from "./helpers";
 import { followCancelledDays } from "./addonDays";
+import { undoAddonStamps } from "./addonRefund";
 import { accumulatePendingRelease } from "../../lib/cancellation";
 
 export type RowAction =
@@ -77,6 +78,7 @@ export function applyRowAction(b: Booking, action: RowAction): void {
   } else if (action === "refund-approve") {
     // Only a refund that actually returns money makes the booking "Refunded" (a no-refund cancellation approved by mistake must not).
     if (b.cancel && b.cancel.refund !== "none" && (b.cancel.amount ?? 1) > 0.004) { b.cancel.refund = "approved"; b.pay = "Refunded"; }
+    if (b.cancel) delete b.cancel.addonUndo; // approved: the marks are final
   } else if (action === "refund-sent") {
     if (refundAwaitingTransfer(b)) {
       // Every recorded offline refund still waiting is confirmed together: the provider sent what the screen showed (the sum of them all).
@@ -87,6 +89,7 @@ export function applyRowAction(b: Booking, action: RowAction): void {
     }
   } else if (action === "refund-decline") {
     if (b.cancel) b.cancel.refund = "declined";
+    undoAddonStamps(b); // nothing went back, so no extra is "refunded" on this refund's account
     if (b.pay === "Refund pending") b.pay = "Paid";
   } else if (action === "move-approve") {
     const req = b.dateChangeRequest;
@@ -252,7 +255,7 @@ export function applyCancelDay(b: Booking, ki: number, dt: string, opts?: Releas
   const k = kids[ki];
   if (!k || k.cancelled) return null;
   k.cancelledDays = k.cancelledDays || [];
-  if (k.cancelledDays.indexOf(dt) > -1) return null;
+  if (k.cancelledDays.some((d) => (dayIso(d) ?? d) === (dayIso(dt) ?? dt))) return null;
   const share = removedShare(b, kids, k.name, [dt]);
   k.cancelledDays.push(dt);
   const res = settleShareRemoval(b, `${k.name || "Child"} — ${dt}`, share, opts);
@@ -331,10 +334,12 @@ export function applyPartialCancel(b: Booking, releases: { childKey: string; day
     const k = kids.find((x) => (x.childId ?? x.name) === r.childKey);
     if (!k) continue;
     k.cancelledDays = k.cancelledDays || [];
-    const fresh = [...new Set(r.days)].filter((d) => k.cancelledDays!.indexOf(d) < 0);
+    // Days are compared as ISO (a child's days may be stored as labels), and a released day is stored the way that child's days are.
+    const goneIso = k.cancelledDays.map((d) => dayIso(d) ?? d);
+    const fresh = [...new Set(r.days.map((d) => dayIso(d) ?? d))].filter((d) => goneIso.indexOf(d) < 0);
     if (fresh.length) removed += removedShare(b, kids, k.name, fresh);
     for (const d of fresh) {
-      k.cancelledDays.push(d);
+      k.cancelledDays.push((k.dates ?? []).find((x) => (dayIso(x) ?? x) === d) ?? d);
       released.add(d);
     }
     if (kidActiveDays(k).length === 0) k.cancelled = true;

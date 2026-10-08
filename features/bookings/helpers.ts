@@ -509,9 +509,11 @@ export const attendeeCount = (b: Booking) => {
 };
 export const sessionCount = (b: Booking) => (b.sessions ? b.sessions.length : 0);
 
+// A booked day is stored as ISO ("2026-10-19") or, on a booking whose kids[] was made up from its session labels (after a provider cancel-day on a
+// one-child booking), as a label ("Mon 19 Oct 2026"): the two never compare equal as text, so days are always compared as ISO.
 export const kidActiveDays = (k: Kid) => {
-  const cd = k.cancelledDays || [];
-  return (k.dates || []).filter((d) => cd.indexOf(d) < 0);
+  const cd = (k.cancelledDays || []).map((d) => dayIso(d) ?? d);
+  return (k.dates || []).filter((d) => cd.indexOf(dayIso(d) ?? d) < 0);
 };
 
 export const refundedTotal = (b: Booking) =>
@@ -679,14 +681,74 @@ export const refundOwedOf = (b: Pick<Booking, "cancel" | "pay" | "amount" | "amo
 /** What one child's place (or some of its days) is worth in money actually
  *  PAID: paid ÷ every booked child-day × the days given up. Paid, not the
  *  price: an unpaid booking has nothing to give back, and wallet credit spent
- *  on it counts. `days` omitted = all of that child's days still standing. */
+ *  on it counts. `days` omitted = all of that child's days still standing.
+ *  Never more than the family is still entitled to (releaseCap): an extra that was already refunded is not paid back a second time. */
 export function releaseValue(b: Booking, ki: number, days?: string[]): number {
   const kids = bookingKids(b);
   const k = kids[ki];
   if (!k) return 0;
   const booked = kids.reduce((n, x) => n + Math.max(1, (x.dates || []).length), 0) || 1;
   const n = days ? days.length : (k.dates || []).length ? kidActiveDays(k).length : 1;
-  return Math.round((paidSoFar(b) / booked) * n * 100) / 100;
+  const prorata = Math.round((paidSoFar(b) / booked) * n * 100) / 100;
+  return Math.min(prorata, releaseCap(b, [{ kid: k, days: days ?? kidActiveDays(k) }]));
+}
+
+const sameKid = (kids: Kid[], lineChild: string, k: Kid): boolean => {
+  const a = (lineChild ?? "").trim().toLowerCase(), c = (k.name ?? "").trim().toLowerCase();
+  return a === c || (!a && kids.length <= 1);
+};
+
+/**
+ * The most that can go back when `releases` (a child's days) are given up, so that the TOTAL given back never passes what the family is entitled to on
+ * what is left standing. Used on top of the pro-rata share, which on its own would hand back an extra a second time (paid ÷ days counts the T-shirt
+ * and the water bottle that were already refunded, once as the extras refund and again inside the days).
+ *
+ *   money still held (paid - everything given or promised)  -  value of what REMAINS after the release
+ *   value remaining = pass price per standing day x standing days left  +  the extras still wanted on the days left
+ *
+ * The pass price per day is what is held over the extras kept, shared over the days standing - or the price (amount over the extras) over every day
+ * booked, whichever is smaller (days a policy kept the money for do not raise the next day's price). Extras already refunded are no longer on the
+ * booking's lines, or are flagged refunded, so they count nowhere.
+ */
+export function releaseCap(b: Booking, releases: { kid: Kid; days: string[] }[]): number {
+  const kids = bookingKids(b);
+  const pendingPrior = b.cancel?.refundOnly && b.cancel.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
+  const held = Math.max(0, refundableSoFar(b) - pendingPrior);
+  const lines = (b.addonLines ?? []).filter((l) => l.refunded !== true);
+  const extrasHeld = lines.reduce((t, l) => t + (Number(l.price) || 0), 0);
+  const standingBefore = kids.reduce((t, k) => t + (k.cancelled ? 0 : kidActiveDays(k).length), 0);
+  const booked = kids.reduce((n, x) => n + Math.max(1, (x.dates || []).length), 0) || 1;
+  if (standingBefore <= 0) return held;
+  const gross = (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
+  const passPerDay = Math.min(Math.max(0, held - extrasHeld) / standingBefore, Math.max(0, gross - extrasHeld) / booked);
+
+  const gone = new Map<Kid, Set<string>>();
+  for (const r of releases) {
+    const set = gone.get(r.kid) ?? new Set<string>();
+    const active = new Set(kidActiveDays(r.kid).map((d) => dayIso(d) ?? d));
+    for (const d of r.days) if (active.has(dayIso(d) ?? d)) set.add(dayIso(d) ?? d);
+    gone.set(r.kid, set);
+  }
+  let releasedDays = 0;
+  for (const set of gone.values()) releasedDays += set.size;
+  const standingAfter = Math.max(0, standingBefore - releasedDays);
+
+  let extrasAfter = 0;
+  for (const l of lines) {
+    const owner = kids.find((k) => sameKid(kids, l.child, k));
+    const price = Number(l.price) || 0;
+    if (!owner) { extrasAfter += price; continue; }
+    if (owner.cancelled) continue; // kept by the provider with a place that was already given up: it is not worth anything to a day still to come
+    const set = gone.get(owner);
+    if (!set || !set.size) { extrasAfter += price; continue; }
+    const active = kidActiveDays(owner).map((d) => dayIso(d) ?? d);
+    if (active.every((d) => set.has(d))) continue; // the whole place goes, and its extras with it
+    if (l.perDay && !l.meal && l.days?.length) {
+      const kept = l.days.filter((d) => !set.has(dayIso(d) ?? d)).length;
+      extrasAfter += (price * kept) / l.days.length;
+    } else extrasAfter += price;
+  }
+  return Math.round(Math.max(0, held - (passPerDay * standingAfter + extrasAfter)) * 100) / 100;
 }
 
 /** A kid date (ISO, or the legacy "Mon 12 Oct 2026" label) as ISO, or undefined. */

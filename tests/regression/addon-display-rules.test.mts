@@ -133,7 +133,8 @@ test("Q13k: day-only refunds, wallet credit and a £28 partial follow the T-shir
   ] as never).has("B");
   assert.equal(follows({ refund: "pending", amount: 20, refundOnly: true }), true, "cancel-day, one-day refund £20 (the Q13k scenario)");
   assert.equal(follows({ refund: "pending", amount: 28, refundOnly: true }), true, "day-only refund of £28 is still not a whole-booking refund");
-  assert.equal(follows({ refund: "partial", amount: 28 }), true, "partial refund of £28 follows");
+  assert.equal(follows({ refund: "partial", amount: 27 }), true, "a partial refund of £27 on a £28 booking is not the whole booking: the T-shirt follows");
+  assert.equal(follows({ refund: "partial", amount: 28 }), false, "a partial refund as big as the whole £28 booking counts as refunded (integration money fix 5): the T-shirt does not follow");
   assert.equal(follows({ refund: "pending", amount: 20, refundOnly: true, refundsAddons: true }), false, "day-only refund with YES recorded drops it");
   // WALLET CREDIT: a cancel-day / cancel-child credit to the wallet leaves no cancel record (only a refundLog line), so it never hides a one-off; a wallet credit
   // for the WHOLE booking is a cancel with refund "full"/pending and follows the same rule as money.
