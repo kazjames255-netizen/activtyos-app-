@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { loadSettings } from "../lib/tenantLibrary";
-import { capForApi, capLevel, featureForApi, firstOff, resolveCaps } from "../../../lib/accessMap";
+import { capForApi, capLevel, featureForApi, firstOff, normalizeApiPath, resolveCaps } from "../../../lib/accessMap";
 import { isSafeguardingLead } from "../lib/dslAlert";
 
 // Setup → Features and Setup → Roles & permissions, ENFORCED. Both used to be
@@ -59,7 +59,8 @@ const AREA_LABEL: Record<string, string> = {
 export async function enforceAccess(req: Request, res: Response, next: NextFunction) {
   const auth = req.auth;
   if (!auth || !auth.tenantId || !GATED.has(auth.role)) { next(); return; }
-  const path = req.originalUrl.split("?")[0].replace(/\/+$/, "") || "/";
+  // Express matches routes case-insensitively, so match on the normalised path (lib/accessMap normalizeApiPath).
+  const path = normalizeApiPath(req.originalUrl);
   const feature = featureForApi(path, req.method);
   const cap = auth.role === "staff" ? capForApi(path, req.method) : null;
   if (!feature && !cap) { next(); return; }
