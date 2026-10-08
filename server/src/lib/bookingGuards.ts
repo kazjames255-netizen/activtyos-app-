@@ -41,6 +41,13 @@ export function shouldReleaseDiscountCodes(b: Pick<Booking, "status" | "amount" 
   return received - refundedGross(b as Booking) <= 0.004; // or the refunds already cover everything that was paid
 }
 
+/** A voucher / Tax-Free Childcare checkout is announced by the voucher-instructions email, which only covers bookings still awaiting the scheme's
+ *  money. A basket a 100% discount code left at GBP 0 (or a waitlisted one) has none, so the ordinary confirmation / waiting-list email must go
+ *  instead - otherwise the family gets no email at all. */
+export function voucherEmailAnnouncesBasket(isVoucher: boolean, bookings: { pay?: string }[]): boolean {
+  return isVoucher && bookings.some((b) => b.pay === "Awaiting voucher payment");
+}
+
 // ── Card HOLD (manual approval paid by card) ──────────────────────────────────────────────────────────────────────────────────────────
 type HoldLike = { cardHold?: { state?: string } | null } | undefined;
 

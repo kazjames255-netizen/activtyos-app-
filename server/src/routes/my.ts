@@ -10,7 +10,7 @@ import { redeemCodesInTx, releaseDiscountCodes, type CodeToRedeem } from "../lib
 import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../lib/wallet";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelledFor } from "../lib/familyCancelNotice";
-import { shouldNotifyCancelled, shouldReleaseDiscountCodes } from "../lib/bookingGuards";
+import { shouldNotifyCancelled, shouldReleaseDiscountCodes, voucherEmailAnnouncesBasket } from "../lib/bookingGuards";
 import { bankTransferAsk } from "../lib/bankTransferAsk";
 import { autoEmailPrefs } from "../lib/autoEmails";
 import { ensureReferralCode, rewardReferrer } from "./referral";
@@ -2058,8 +2058,8 @@ my.post("/bookings", async (req, res) => {
       const provider = listing.tenantName ?? listing.name;
       // A voucher booking gets ONE combined email (confirmation + how to pay),
       // sent below via emailVoucherInstructions — so don't ALSO send the generic
-      // confirmed/request email, or the family gets two.
-      if (voucher) { /* handled by the voucher email below */ }
+      // confirmed/request email, or the family gets two. (Not when nothing is left awaiting the scheme - a 100% code - then there is no voucher email.)
+      if (voucherEmailAnnouncesBasket(!!voucher, bookings)) { /* handled by the voucher email below */ }
       else {
         // A checkout spanning weeks made one booking per week: ONE email describes the whole thing (total, every date,
         // every ref). That includes bank transfer: it used to keep only the FIRST week's figures, so a 6-week GBP 84 term told
