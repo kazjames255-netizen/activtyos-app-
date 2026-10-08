@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "./lib/testStackGuardRun"; // directly after dotenv, before anything touches Firebase: a TEST_STACK=1 process that is not emulator-only exits here
 import { isBusyError, BUSY_MESSAGE } from "./lib/busyRetry";
 import fs from "node:fs";
 import path from "node:path";

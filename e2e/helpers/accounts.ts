@@ -18,7 +18,10 @@ function readTestPassword(): string {
 }
 export const TEST_PASSWORD = readTestPassword();
 
-const IDENTITY = "https://identitytoolkit.googleapis.com/v1";
+// Emulator switch: with FIREBASE_AUTH_EMULATOR_HOST (e.g. 127.0.0.1:9099) the sign-in calls go to the local Auth emulator
+// (http://<host>/identitytoolkit.googleapis.com/v1/...?key=any) instead of Google. Unset = unchanged behaviour.
+const EMU_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST?.trim();
+const IDENTITY = EMU_HOST ? `http://${EMU_HOST}/identitytoolkit.googleapis.com/v1` : "https://identitytoolkit.googleapis.com/v1";
 
 interface FbSession {
   idToken: string;

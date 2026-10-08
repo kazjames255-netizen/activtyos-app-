@@ -207,18 +207,20 @@ async function sendViaResend(to: string, subject: string, html: string, sender?:
 
 /** Every send leaves one row in `mailLog` (recipient, subject, outcome) so "why didn't it arrive?" is answerable
  *  without server logs. Best-effort: a logging failure never affects the send. No bodies, no attachments. */
-async function recordMail(to: string, subject: string, o: MailOutcome): Promise<void> {
+async function recordMail(to: string, subject: string, o: MailOutcome, html?: string): Promise<void> {
   try {
     await db.collection("mailLog").add({
       to: to.trim().toLowerCase(), subject: subject.slice(0, 160), status: o.status, error: o.error ?? null,
       live: MAIL_LIVE, at: new Date().toISOString(),
+      // Emulator test stack only (TEST_STACK=1): keep the body so tests can read what a family would have received.
+      ...(process.env.TEST_STACK === "1" && html ? { html: html.slice(0, 200_000) } : {}),
     });
   } catch { /* logging must never break mail */ }
 }
 
 export async function sendMailDetailed(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[]; headers?: Record<string, string> }): Promise<MailOutcome> {
   const o = await sendMailDetailedRaw(to, subject, html, sender, opts);
-  void recordMail(to, subject, o);
+  void recordMail(to, subject, o, html);
   return o;
 }
 

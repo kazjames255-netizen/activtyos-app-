@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 
+import { enforceWebTestStackGuard } from "./lib/firebase/testStackWebGuard";
+enforceWebTestStackGuard(); // no-op unless NEXT_PUBLIC_TEST_STACK=1
+
 const nextConfig: NextConfig = {
   // A second dev server (the isolated e2e stack, `npm run dev:test`) needs its own build dir: two `next dev` in one dir fight over .next/dev/lock.
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
