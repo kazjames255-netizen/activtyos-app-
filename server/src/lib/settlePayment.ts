@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
 import { bookingDocId, notifyPaymentReceived } from "../routes/bookings";
 import { notify } from "./notify";
+import { stripe } from "./stripe";
 import { providerPaidBell } from "./providerPaidBell";
 import { paidSoFar, cashReceivedOf } from "../../../features/bookings/helpers";
 import { balanceOf } from "./payGate";
@@ -64,11 +65,18 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
 
   // Claim the payment first, in a transaction, so two callers racing (browser
   // callback and webhook) can't both write the money.
+  // A duplicate whose refund did not complete (crash / Stripe error) is retried by the next webhook delivery or confirm.
+  const before = await payRef.get();
+  if (before.exists && ["duplicate", "duplicate-needs-refund"].includes((before.data() as PaymentRec).status)) {
+    await refundDuplicate(payRef);
+    return "already";
+  }
   const claimed = await db.runTransaction(async (tx) => {
     const snap = await tx.get(payRef);
     if (!snap.exists) return null;
     const rec = snap.data() as PaymentRec;
     if (rec.status === "succeeded") return null;
+    if (rec.status.startsWith("duplicate")) return null;
     // A card HOLD is captured booking-by-booking when the provider approves (lib/cardHold.ts), never settled as a whole here.
     if ((rec as PaymentRec & { hold?: boolean }).hold) return null;
     tx.update(payRef, { status: "succeeded", paidAt: at, settledAuto: by.auto });
@@ -85,6 +93,16 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
     }
     await batch.commit();
     return "settled";
+  }
+
+  // Defence in depth: if EVERY booking this payment covers is already fully paid (by another card payment, or by cash/bank), this
+  // money is a second payment for the same thing. It is never recorded; it is refunded in full automatically (idempotent, below).
+  const covered = (await Promise.all((claimed.refs ?? []).map((r) => db.collection("bookings").doc(bookingDocId(claimed.tenantId, r)).get())))
+    .filter((x) => x.exists).map((x) => fromDoc(x.data() as BookingDoc));
+  if (covered.length && covered.length === (claimed.refs ?? []).length && covered.every((b) => b.pay === "Paid" && balanceOf(b) <= 0)) {
+    await payRef.update({ status: "duplicate", paidAt: FieldValue.delete(), duplicateDetectedAt: at });
+    await refundDuplicate(payRef);
+    return "already";
   }
 
   const batch = db.batch();
@@ -148,6 +166,50 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
     });
   }
   return "settled";
+}
+
+/**
+ * Refund (in full) a card payment that turned out to be a second payment for something already paid, and record it.
+ * Idempotent: the Stripe refund carries a key derived from the PaymentIntent, and a payment already marked refunded is left
+ * alone, so webhook retries, a repeated event and the browser confirm can never refund twice. If Stripe refuses, the record
+ * says "duplicate-needs-refund" and the provider is told to refund it by hand; the next delivery tries again.
+ */
+export async function refundDuplicate(payRef: FirebaseFirestore.DocumentReference): Promise<void> {
+  const snap = await payRef.get();
+  const rec = snap.data() as (PaymentRec & { refundId?: string; amount?: number }) | undefined;
+  if (!rec || rec.status === "duplicate-refunded") return;
+  const first = rec.status === "duplicate";
+  const where = (rec.refs ?? []).join(", ");
+  let refundId: string | null = null;
+  let failure = "";
+  try {
+    if (!stripe) throw new Error("Stripe is not configured");
+    const r = await stripe.refunds.create(
+      { payment_intent: rec.paymentIntentId, reason: "duplicate", metadata: { duplicateOf: where, tenantId: rec.tenantId } },
+      { idempotencyKey: `dup-refund-${rec.paymentIntentId}`, ...(rec.stripeAccount ? { stripeAccount: rec.stripeAccount } : {}) },
+    );
+    refundId = r.id;
+  } catch (e) {
+    failure = (e as Error).message;
+    console.error(`[settle] automatic refund of duplicate payment ${snap.id} (${rec.paymentIntentId}) failed:`, failure);
+  }
+  const at = new Date().toISOString();
+  if (refundId) await payRef.update({ status: "duplicate-refunded", refundId, refundedAt: at, refundFailure: FieldValue.delete() });
+  else await payRef.update({ status: "duplicate-needs-refund", refundFailure: failure.slice(0, 300) });
+  // Tell the provider once (the first detection); a retry that succeeds says it is now sorted.
+  if (first || refundId) {
+    const money = `£${Number(rec.amount ?? 0).toFixed(2)}`;
+    const body = refundId
+      ? `A second card payment of ${money} arrived for ${where}, which was already paid. It was refunded in full automatically and not recorded.`
+      : `A second card payment of ${money} arrived for ${where}, which was already paid. It was NOT recorded and the automatic refund failed: please refund it in Stripe (payment ${rec.paymentIntentId}).`;
+    void notify({
+      tenantId: rec.tenantId, to: { kind: "tenant" }, category: "billing", key: "payment-duplicate",
+      title: refundId ? "Duplicate card payment refunded" : "Duplicate card payment needs refunding",
+      body, subject: refundId ? "Duplicate card payment refunded" : "Duplicate card payment needs refunding",
+      emailHtml: `<p>${body.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`,
+      href: `/company/bookings?ref=${encodeURIComponent((rec.refs ?? [])[0] ?? "")}`, ref: (rec.refs ?? [])[0],
+    });
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { post as apiPost } from "@/lib/api";
@@ -35,12 +35,18 @@ function PayForm({ info, onPaid, onHeld, onError }: { info: CheckoutInfo; onPaid
   const elements = useElements();
   const [busy, setBusy] = useState(false);
 
+  // A ref, not just state: a fast double-click fires twice before React re-renders the disabled button, and confirming the
+  // same PaymentIntent twice must never happen. (The server also hands back one intent per booking, so this is belt and braces.)
+  const inFlight = useRef(false);
+
   async function pay() {
-    if (!stripeJs || !elements) return;
+    if (!stripeJs || !elements || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     const { error } = await stripeJs.confirmPayment({ elements, redirect: "if_required" });
     if (error) {
       onError(`${error.message ?? t("p8lst.pmPayFailed")}${error.type === "card_error" ? ` ${t("p7ck.declineRetry")}` : ""}`);
+      inFlight.current = false;
       setBusy(false);
       return;
     }
@@ -55,6 +61,7 @@ function PayForm({ info, onPaid, onHeld, onError }: { info: CheckoutInfo; onPaid
     } catch (e) {
       onError(e instanceof Error ? e.message : t("p8lst.pmVerifyFail"));
     }
+    inFlight.current = false;
     setBusy(false);
   }
 

@@ -161,8 +161,8 @@ test("pay link (route guard): payable() alone does NOT block a cancelled invoice
   assert.equal(payable({ status: "Cancelled", pay: "Invoice sent" }), true);
   const src = readFileSync(new URL("../server/src/routes/payments.ts", import.meta.url), "utf8");
   const checkout = src.slice(src.indexOf('bookingPayPublic.post("/:token/checkout"'));
-  assert.ok(checkout.indexOf('b.status === "Cancelled"') > -1 && checkout.indexOf('b.status === "Cancelled"') < checkout.indexOf("paymentIntents.create"), "cancelled guard precedes intent creation");
-  assert.ok(checkout.indexOf('b.pay === "Paid"') < checkout.indexOf("paymentIntents.create"), "already-paid guard precedes intent creation");
+  assert.ok(checkout.indexOf('b.status === "Cancelled"') > -1 && checkout.indexOf('b.status === "Cancelled"') < checkout.indexOf("createOrReuseIntent"), "cancelled guard precedes intent creation");
+  assert.ok(checkout.indexOf('b.pay === "Paid"') < checkout.indexOf("createOrReuseIntent"), "already-paid guard precedes intent creation");
   assert.ok(/amount = balanceOf\(b\)/.test(checkout), "amount comes from the booking balance");
   assert.ok(!/req\.body\.amount/.test(checkout), "checkout never reads an amount from the request");
 });

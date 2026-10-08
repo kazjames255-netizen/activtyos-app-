@@ -1,0 +1,70 @@
+import { createHash } from "node:crypto";
+import type Stripe from "stripe";
+import { db } from "../firebase";
+
+// ─────────────────────────────────────────────────────────────────────────
+// One open PaymentIntent per booking(s) and amount.
+//
+// A double-click on Pay used to fire two checkout calls; each made its own PaymentIntent, the browser confirmed both
+// and the family was charged twice for one booking (only one payment was ever recorded). Now:
+//
+//  1. A repeat call finds the payment record we already made for the same provider + bookings + amount + card mode and,
+//     while Stripe says that intent is still open, hands back THE SAME intent and client secret.
+//  2. Two calls that arrive at the same instant both miss step 1, so the create itself is made idempotent with a
+//     deterministic Stripe idempotency key (same key => Stripe returns the one intent it already made), and the
+//     payment record is written under the intent's own id so both calls land on the same record.
+//  3. A different amount (a part-payment arrived, a basket changed) is a different key and a new intent. A finished or
+//     cancelled intent bumps the "generation" in the key, so the next attempt gets a fresh intent.
+// ─────────────────────────────────────────────────────────────────────────
+
+const OPEN = new Set(["requires_payment_method", "requires_confirmation", "requires_action", "processing"]);
+
+export interface IntentRequest {
+  tenantId: string;
+  /** Booking refs, or meal order ids: whatever this payment covers. */
+  covers: string[];
+  pence: number;
+  hold?: boolean;
+  /** Which route asks (booking checkout / pay link / meals): keeps Stripe's idempotency parameter check happy across routes. */
+  tag: string;
+  stripeAccount: string | null;
+  params: Stripe.PaymentIntentCreateParams;
+  /** The payments record to store (without paymentIntentId / idemKey, which are added here). */
+  record: Record<string, unknown>;
+}
+
+export const checkoutKey = (r: Pick<IntentRequest, "tenantId" | "covers" | "pence" | "hold" | "stripeAccount">) =>
+  createHash("sha256").update([r.tenantId, [...r.covers].sort().join(","), r.pence, r.hold ? "hold" : "pay", r.stripeAccount ?? "platform"].join("|")).digest("hex").slice(0, 40);
+
+const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+export async function createOrReuseIntent(s: Stripe, req: IntentRequest): Promise<{ intent: Stripe.PaymentIntent; paymentId: string; reused: boolean }> {
+  const key = checkoutKey(req);
+  const opts = req.stripeAccount ? { stripeAccount: req.stripeAccount } : undefined;
+  const prior = await db.collection("payments").where("idemKey", "==", key).get();
+  const tries = prior.docs.filter((d) => d.get("status") === "created");
+  for (const d of tries) {
+    const pi = await s.paymentIntents.retrieve(d.get("paymentIntentId") as string, {}, opts).catch(() => null);
+    if (pi && OPEN.has(pi.status) && pi.client_secret) return { intent: pi, paymentId: d.id, reused: true };
+  }
+  const generation = prior.size;
+  let intent: Stripe.PaymentIntent | null = null;
+  for (let attempt = 0; attempt < 8 && !intent; attempt++) {
+    try {
+      intent = await s.paymentIntents.create(req.params, { ...(opts ?? {}), idempotencyKey: `chk-${key}-${req.tag}-${generation}` });
+    } catch (e) {
+      // The other simultaneous call is still creating it: Stripe answers 409 until it finishes, then replays the same intent.
+      const code = (e as { code?: string }).code;
+      if (code !== "idempotency_key_in_use" || attempt === 7) throw e;
+      await wait(250);
+    }
+  }
+  const ref = db.collection("payments").doc(intent!.id);
+  try {
+    await ref.create({ ...req.record, paymentIntentId: intent!.id, idemKey: key });
+  } catch (e) {
+    // Already written by the call that raced us: fine, same record.
+    if ((e as { code?: number }).code !== 6 && !/already exists/i.test((e as Error).message)) throw e;
+  }
+  return { intent: intent!, paymentId: ref.id, reused: false };
+}

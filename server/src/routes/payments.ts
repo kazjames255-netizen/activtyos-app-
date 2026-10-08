@@ -10,6 +10,7 @@ import { ensurePayDomains } from "../lib/payDomains";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { bookingDocId } from "./bookings";
 import { settlePaymentRecord } from "../lib/settlePayment";
+import { createOrReuseIntent } from "../lib/checkoutIntent";
 import { markHeld } from "../lib/cardHold";
 import { bookingForToken } from "../lib/bookingPayToken";
 import { payable, balanceOf } from "../lib/payGate";
@@ -337,17 +338,20 @@ payments.post("/checkout", async (req, res) => {
     let stripeAccount: string | null = null;
     if (accountId) { const account = await retrieveConnected(s, tenantId, accountId); if (account?.charges_enabled && account.capabilities?.card_payments === "active") stripeAccount = accountId; }
     if (!stripeAccount && !platformFallback) { res.status(409).json({ error: "This provider can't take card payments yet — they haven't finished Stripe onboarding" }); return; }
-    let intent;
+    let made;
     try {
-      intent = await s.paymentIntents.create({
-        amount: toPence(amount), currency: "gbp", automatic_payment_methods: { enabled: true },
-        description: `${tenant.data()?.name ?? `${BRAND}`} — meal${orders.length > 1 ? "s" : ""}`,
-        metadata: { tenantId, mealOrders: orders.map((o) => o.id).join(","), email },
-        ...((await autoEmailOn(tenantId, "payments")) ? { receipt_email: email } : {}), // meal orders have no email of our own, so Stripe's receipt stays
-      }, stripeAccount ? { stripeAccount } : undefined);
+      made = await createOrReuseIntent(s, {
+        tenantId, covers: orders.map((o) => o.id), pence: toPence(amount), tag: "meals", stripeAccount,
+        params: {
+          amount: toPence(amount), currency: "gbp", automatic_payment_methods: { enabled: true },
+          description: `${tenant.data()?.name ?? `${BRAND}`} — meal${orders.length > 1 ? "s" : ""}`,
+          metadata: { tenantId, mealOrders: orders.map((o) => o.id).join(","), email },
+          ...((await autoEmailOn(tenantId, "payments")) ? { receipt_email: email } : {}), // meal orders have no email of our own, so Stripe's receipt stays
+        },
+        record: { tenantId, mealOrderIds: orders.map((o) => o.id), email, amount, currency: "gbp", stripeAccount, platformFallback: !stripeAccount, status: "created", createdAt: new Date().toISOString() },
+      });
     } catch (e) { stripeFail(res, e); return; }
-    const rref = await paymentsCol.add({ tenantId, mealOrderIds: orders.map((o) => o.id), email, amount, currency: "gbp", paymentIntentId: intent.id, stripeAccount, platformFallback: !stripeAccount, status: "created", createdAt: new Date().toISOString() });
-    res.status(201).json({ paymentId: rref.id, clientSecret: intent.client_secret, stripeAccount, amount });
+    res.status(201).json({ paymentId: made.paymentId, clientSecret: made.intent.client_secret, stripeAccount, amount });
     return;
   }
 
@@ -426,10 +430,12 @@ payments.post("/checkout", async (req, res) => {
     return;
   }
 
-  let intent;
+  // A repeat call (double-click, reload) gets the SAME open intent back, so one booking is never charged twice.
+  let made;
   try {
-    intent = await s.paymentIntents.create(
-      {
+    made = await createOrReuseIntent(s, {
+      tenantId, covers: bookings.map((b) => b.ref), pence: toPence(amount), hold: holdPay, tag: "parent", stripeAccount,
+      params: {
         amount: toPence(amount),
         currency: "gbp",
         // A card HOLD is a card authorisation: only methods that can be held (card, incl. Apple/Google Pay), not Revolut/Amazon Pay etc.
@@ -438,29 +444,18 @@ payments.post("/checkout", async (req, res) => {
         metadata: { tenantId, refs: bookings.map((b) => b.ref).join(","), email, ...(holdPay ? { hold: "1" } : {}) },
         // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).
       },
-      stripeAccount ? { stripeAccount } : undefined,
-    );
+      record: {
+        tenantId, refs: bookings.map((b) => b.ref), email, amount, currency: "gbp", stripeAccount, platformFallback: !stripeAccount,
+        status: "created", ...(holdPay ? { hold: true } : {}), createdAt: new Date().toISOString(),
+      },
+    });
   } catch (e) {
     stripeFail(res, e);
     return;
   }
-  const record = {
-    tenantId,
-    refs: bookings.map((b) => b.ref),
-    email,
-    amount,
-    currency: "gbp",
-    paymentIntentId: intent.id,
-    stripeAccount,
-    platformFallback: !stripeAccount,
-    status: "created",
-    ...(holdPay ? { hold: true } : {}),
-    createdAt: new Date().toISOString(),
-  };
-  const ref = await paymentsCol.add(record);
   res.status(201).json({
-    paymentId: ref.id,
-    clientSecret: intent.client_secret,
+    paymentId: made.paymentId,
+    clientSecret: made.intent.client_secret,
     stripeAccount,
     amount,
     ...(holdPay ? { hold: true } : {}),
@@ -574,10 +569,11 @@ bookingPayPublic.post("/:token/checkout", async (req, res) => {
     res.status(409).json({ error: "This provider can't take card payments yet — pay by one of the listed methods instead" });
     return;
   }
-  let intent;
+  let made;
   try {
-    intent = await s.paymentIntents.create(
-      {
+    made = await createOrReuseIntent(s, {
+      tenantId, covers: [b.ref], pence: toPence(amount), tag: "link", stripeAccount,
+      params: {
         amount: toPence(amount),
         currency: "gbp",
         automatic_payment_methods: { enabled: true },
@@ -585,14 +581,13 @@ bookingPayPublic.post("/:token/checkout", async (req, res) => {
         metadata: { tenantId, refs: b.ref, email: b.email, via: "pay-link" },
         // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).
       },
-      stripeAccount ? { stripeAccount } : undefined,
-    );
+      record: {
+        tenantId, refs: [b.ref], email: b.email, amount, currency: "gbp", stripeAccount,
+        platformFallback: !stripeAccount, status: "created", via: "pay-link", createdAt: new Date().toISOString(),
+      },
+    });
   } catch (e) { stripeFail(res, e); return; }
-  const ref = await paymentsCol.add({
-    tenantId, refs: [b.ref], email: b.email, amount, currency: "gbp", paymentIntentId: intent.id, stripeAccount,
-    platformFallback: !stripeAccount, status: "created", via: "pay-link", createdAt: new Date().toISOString(),
-  });
-  res.status(201).json({ paymentId: ref.id, clientSecret: intent.client_secret, stripeAccount, amount });
+  res.status(201).json({ paymentId: made.paymentId, clientSecret: made.intent.client_secret, stripeAccount, amount });
 });
 
 bookingPayPublic.post("/:token/confirm/:paymentId", async (req, res) => {
