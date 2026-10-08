@@ -1,6 +1,7 @@
 import { mergeGroupKey } from "../lib/bookingMergeKey";
 import { stopOpenPayments } from "../lib/checkoutIntent";
 import { ageCapGroup } from "../lib/childAge";
+import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import { eraseChildLearning } from "../lib/hubPrivacy";
 import { z } from "zod";
@@ -1718,6 +1719,9 @@ my.post("/bookings", async (req, res) => {
       // Queue positions count per block per date.
       const queuePos = new Map<string, Record<string, number>>();
       for (const [id, depth] of queueDepth) queuePos.set(id, { ...depth });
+      // ONE id for this whole checkout: every reference it creates (a weekly split makes several) carries it, so they can be told apart from another
+      // checkout of the same family made at the same moment.
+      const checkoutId = randomUUID();
       const created: Booking[] = [];
       // Credit is drawn down as the bookings are built, so it lands on the
       // earliest places taken and never on a waitlisted one. The family may cap
@@ -1810,6 +1814,7 @@ my.post("/bookings", async (req, res) => {
             ...(serviceAddress ? { serviceAddress } : {}),
             ...(familyPostcode ? { postcode: familyPostcode } : {}),
             tenantId: listing.tenantId,
+            checkoutId,
             // Attribute the booking to whichever franchise OWNS the listing, so a
             // parent booking on a franchise's listing shows in that franchise's
             // Bookings/Calendar/Reconciliation — matching split-fees' attribution.

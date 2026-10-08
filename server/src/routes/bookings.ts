@@ -1,6 +1,7 @@
 import { resolvePendingCancel } from "../lib/pendingRefund";
 import { refPrefixFor } from "../lib/bookingRef";
 import { stopOpenPayments } from "../lib/checkoutIntent";
+import { randomUUID } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
@@ -502,6 +503,7 @@ bookings.post("/", async (req, res) => {
           refPrefix,
         ),
         tenantId,
+        checkoutId: randomUUID(), // a booking the operator takes is its own checkout
         ...(listingFranchiseId ? { franchiseId: listingFranchiseId } : {}),
         ...(block
           ? {

@@ -180,6 +180,9 @@ export interface Booking {
   };
   /** When the booking was taken. Absent on anything created before this. */
   createdAt?: string;
+  /** One id per checkout REQUEST, stamped on every booking (reference) that request created: the several references of a weekly split share it.
+   *  Provider/server side only - never sent to a family (index.ts strips it from /api/my and the public pay link). Absent on bookings made before it existed. */
+  checkoutId?: string;
   booker: string;
   email: string;
   phone: string;

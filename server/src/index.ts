@@ -21,6 +21,7 @@ import { referencePublic, references } from "./routes/references";
 import { library, libraryPublic } from "./routes/library";
 import { listings } from "./routes/listings";
 import { my } from "./routes/my";
+import { stripCheckoutId } from "./lib/stripCheckoutId";
 import { onlineSessions } from "./routes/onlineSessions";
 import { rateLimit } from "./lib/rateLimit";
 import { gzipResponses } from "./lib/gzip";
@@ -245,6 +246,7 @@ app.use("/api/public/library", anonOnly(rateLimit("library-public", 300)), optio
 
 // Public invoice pay page — found by unguessable payToken, no account needed.
 app.use("/api/public/invoice", rateLimit("public-invoice", 60), invoicePublic);
+app.use("/api/public/booking-pay", stripCheckoutId);
 app.use("/api/public/booking-pay", rateLimit("public-booking-pay", 60), bookingPayPublic);
 
 // Employment-reference form — the referee is an outsider with no account, so
@@ -379,6 +381,8 @@ app.use("/api/uploads", uploads);
 // Tax-Free Childcare (parent side) — mounted before /api/my so its own
 // routes win. Parent-only; falls back to the manual reference when HMRC
 // isn't configured (routes/tfc.ts).
+// Families never see a booking's checkoutId (provider-side plumbing): strip it from everything under /api/my and the public pay link.
+app.use("/api/my", stripCheckoutId);
 app.use("/api/my/tfc", tfc);
 app.use("/api/my/feedback", feedback);
 app.use("/api/my/files", childFiles);

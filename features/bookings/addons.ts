@@ -286,22 +286,27 @@ export function addonLineOnDay(raw: AddonLineIn, bookingDays: string[] | undefin
 // reference of the same checkout, the extra must show on the first day of the earliest REMAINING part. Display only: the line (and its price) stays
 // where it was bought, so money is counted once.
 //
-// SIBLING RULE (no checkout id is stamped on bookings yet): two bookings are parts of one checkout when they have the same booker email, the same
-// listing AND were created within SIBLING_MS (3 ms) of each other (one checkout request builds all its references in one synchronous loop, so their
-// createdAt stamps are the same or a millisecond apart). The same child is then checked per line. A later build should stamp a real checkout id.
+// SIBLING RULE: references of one checkout carry the same `checkoutId` (stamped when the checkout request created them). Bookings made BEFORE the id
+// existed have none: for those only, the old guess still applies - same booker email, same listing, created within SIBLING_MS (3 ms) of each other
+// (one checkout builds all its references in one synchronous loop). A stamped booking never matches an unstamped one.
 // ─────────────────────────────────────────────────────────────────────────
 
-export interface SplitBooking extends KitBooking { createdAt?: string; listingId?: string }
+export interface SplitBooking extends KitBooking { createdAt?: string; listingId?: string; checkoutId?: string }
 
 export const SIBLING_MS = 3;
 /** Can this booking be placed in a checkout at all? */
 export const checkoutKey = (b: { email?: string; listingId?: string; createdAt?: string }): string =>
   b.createdAt && b.email && Number.isFinite(Date.parse(b.createdAt)) ? [b.email.trim().toLowerCase(), b.listingId ?? ""].join("|") : "";
-/** Group bookings into checkouts: same email + listing, createdAt within SIBLING_MS of the previous one. */
-export function groupCheckouts<B extends { email?: string; listingId?: string; createdAt?: string }>(all: B[]): B[][] {
+/** Group bookings into checkouts: by `checkoutId` when stamped; for UNSTAMPED (older) bookings only, same email + listing with createdAt within SIBLING_MS of the previous one. */
+export function groupCheckouts<B extends { email?: string; listingId?: string; createdAt?: string; checkoutId?: string }>(all: B[]): B[][] {
+  const byId = new Map<string, B[]>();
   const byFamily = new Map<string, B[]>();
-  for (const b of all) { const k = checkoutKey(b); if (k) byFamily.set(k, [...(byFamily.get(k) ?? []), b]); }
-  const out: B[][] = [];
+  for (const b of all) {
+    if (b.checkoutId) { byId.set(b.checkoutId, [...(byId.get(b.checkoutId) ?? []), b]); continue; }
+    const k = checkoutKey(b);
+    if (k) byFamily.set(k, [...(byFamily.get(k) ?? []), b]);
+  }
+  const out: B[][] = [...byId.values()];
   for (const list of byFamily.values()) {
     list.sort((a, c) => Date.parse(a.createdAt!) - Date.parse(c.createdAt!));
     let cur: B[] = [];
