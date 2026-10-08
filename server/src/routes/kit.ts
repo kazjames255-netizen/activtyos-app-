@@ -50,6 +50,10 @@ async function scopedBlocks(auth: NonNullable<import("express").Request["auth"]>
     .filter(({ block }) => block.sessions.some((s) => s.date >= from && s.date <= to));
 }
 
+/** The optional ?listingId= filter. Applied INSIDE the role scoping above: an id the caller may not see simply matches no block,
+ *  exactly like an id that does not exist, so nothing reveals that the listing is real. */
+const listingParam = (req: import("express").Request): string => (typeof req.query.listingId === "string" ? req.query.listingId.trim().slice(0, 120) : "");
+
 /** The bookings of those blocks (every booking; the pure functions keep only the Confirmed ones). */
 async function bookingsOfBlocks(blocks: { id: string }[]): Promise<KitBooking[]> {
   const snaps = await Promise.all(blocks.map(({ id }) => db.collection("bookings").where("blockId", "==", id).get()));
@@ -79,14 +83,15 @@ async function reminderOn(tenantId: string, auth: NonNullable<import("express").
   return n[KIT_REMINDER_KEY] !== false;
 }
 
-// GET /api/kit?date=YYYY-MM-DD&name=T-shirt — what to prepare that day (default today), optionally one add-on only.
+// GET /api/kit?date=YYYY-MM-DD&name=T-shirt&listingId=... — what to prepare that day (default today), optionally one add-on only and/or one listing only.
 kit.get("/", async (req, res) => {
   const tenantId = await tenantOf(req, res);
   if (!tenantId) return;
   const auth = req.auth!;
   const date = typeof req.query.date === "string" && DAY.test(req.query.date) ? req.query.date : ukToday();
   const name = typeof req.query.name === "string" ? req.query.name.slice(0, 80) : "";
-  const todays = await scopedBlocks(auth, tenantId, date, date);
+  const listingId = listingParam(req);
+  const todays = (await scopedBlocks(auth, tenantId, date, date)).filter(({ block }) => !listingId || block.listingId === listingId);
   if (!todays.length) { res.json({ date, canTick: canTick(auth.role), groups: [], ticked: 0, total: 0 }); return; }
   const bookings = await bookingsOfBlocks(todays);
   const groups = stripPrivate(kitForDay(bookings, date, { name }), canTick(auth.role));
@@ -107,7 +112,9 @@ kit.get("/", async (req, res) => {
   res.json({ date, canTick: canTick(auth.role), groups: out, ticked, total });
 });
 
-// GET /api/kit/days?from=&to=[&name=] — items per day (and per add-on) in a range of up to 93 days, plus the add-on names in it.
+// GET /api/kit/days?from=&to=[&name=][&listingId=] — items per day (and per add-on) in a range of up to 93 days, plus the add-on names in it.
+// `listings` = the listings the caller may filter by: those IN THEIR SCOPE that have add-on orders in the requested range (it does not shrink
+// when a listing or add-on is picked, so the dropdown stays whole). The tally, names, totals and per-day counts follow the listing filter.
 // Feeds the "days with orders" strip, the month tally and the Dashboard's next-7-days card.
 kit.get("/days", async (req, res) => {
   const tenantId = await tenantOf(req, res);
@@ -119,15 +126,29 @@ kit.get("/days", async (req, res) => {
   if (to < from) to = from;
   if (to > limit.toISOString().slice(0, 10)) to = limit.toISOString().slice(0, 10);
   const name = typeof req.query.name === "string" ? req.query.name.slice(0, 80) : "";
-  const out = await cached(`days|${scopeKey(req, tenantId)}|${from}|${to}|${name.toLowerCase()}`, 20_000, async () => {
+  const listingId = listingParam(req);
+  const out = await cached(`days|${scopeKey(req, tenantId)}|${from}|${to}|${name.toLowerCase()}|${listingId}`, 20_000, async () => {
     const blocks = await scopedBlocks(auth, tenantId, from, to);
-    const bookings = blocks.length ? await bookingsOfBlocks(blocks) : [];
+    // Bookings per listing (a block belongs to one listing), so the dropdown and the filter come from the same scoped data.
+    const byListing = new Map<string, KitBooking[]>();
+    await Promise.all(blocks.map(async (b) => {
+      const list = byListing.get(b.block.listingId) ?? [];
+      byListing.set(b.block.listingId, list);
+      list.push(...(await bookingsOfBlocks([b])));
+    }));
+    const withOrders = [...byListing].filter(([, bs]) => Object.keys(kitTally(bs, from, to).days).length > 0).map(([id]) => id);
+    const titles = await Promise.all(withOrders.map((id) => db.collection("listings").doc(id).get()));
+    const listings = titles
+      .filter((d) => d.exists && d.get("tenantId") === tenantId)
+      .map((d) => ({ id: d.id, name: String(d.get("title") ?? d.get("name") ?? d.id) }))
+      .sort((a, c) => a.name.localeCompare(c.name));
+    const bookings = (listingId ? byListing.get(listingId) : [...byListing.values()].flat()) ?? [];
     const t = kitTally(bookings, from, to, { name });
     const days = Object.entries(t.days).map(([date, v]) => ({ date, items: v.items, byName: v.byName })).sort((a, c) => a.date.localeCompare(c.date));
     const totals: Record<string, number> = {};
     let total = 0;
     for (const d of days) { total += d.items; for (const [n, c] of Object.entries(d.byName)) totals[n] = (totals[n] ?? 0) + c; }
-    return { from, to, days, names: t.names, total, totals };
+    return { from, to, days, names: t.names, total, totals, listings };
   });
   res.json({ ...out, canTick: canTick(auth.role), canRemind: auth.role === "company" || auth.role === "freelancer" || auth.role === "franchise", reminder: await reminderOn(tenantId, auth) });
 });
