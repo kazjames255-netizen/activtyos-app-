@@ -52,6 +52,7 @@ async function mailTo(to: string, match: (subject: string, body: string) => bool
 const D = (n: number) => day(n);
 let LW: { id: string; blockId: string; dates: string[] };
 let LE: { id: string; blockId: string; dates: string[] }; // run Sun 31 Jan - Sat 6 Feb 2027: split at the month end (Monday 1 Feb)
+let L3: { id: string; blockId: string; dates: string[] }; // three weekly blocks
 let LM: { id: string; blockId: string; dates: string[] }; // manual approval (awaiting approval / decline)
 
 async function makeListing(title: string, o: { mode: "custom" | "weekly"; approval?: boolean; start: string; days: number }) {
@@ -95,6 +96,8 @@ before(async () => {
   const d = new Date(`${ukDay(12)}T00:00:00Z`); while (d.getUTCDay() !== 0) d.setUTCDate(d.getUTCDate() + 1);
   LW = await makeListing(`LW weekly ${uniq()}`, { mode: "weekly", start: d.toISOString().slice(0, 10), days: 7 });
   LE = await makeListing(`LE month-end ${uniq()}`, { mode: "weekly", start: "2027-01-31", days: 7 });
+  { const d3 = new Date(`${ukDay(30)}T00:00:00Z`); while (d3.getUTCDay() !== 0) d3.setUTCDate(d3.getUTCDate() + 1);
+    L3 = await makeListing(`L3 three weeks ${uniq()}`, { mode: "weekly", start: d3.toISOString().slice(0, 10), days: 15 }); }
   LM = await makeListing(`LM approval ${uniq()}`, { mode: "custom", approval: true, start: ids().listings.LK.dates[0], days: 3 });
 });
 
@@ -514,5 +517,94 @@ describe("Bell: the new-booking bell counts extras across the split references",
     }
     assert.ok(body, "the bell exists");
     assert.match(body, /\b1 extra\b/, body);
+  });
+});
+
+// ══════════════════════════════ ROUND 3: a checkout id on every booking ══════════════════════════════
+// One id per checkout REQUEST, stamped on every booking that request creates. Providers see it; families never do. Siblings are found by it.
+const docOf = async (ref: string) => (await as("P", "GET", `/api/bookings/${encodeURIComponent(ref)}`)).json as any;
+async function bookMany(l: { id: string; blockId: string; dates: string[] }, child: string, o: { tshirt?: boolean } = {}) {
+  const s = await login("parent-a@emu.test");
+  const items = [{ pass: `${l.dates.length}-day pass`, child, age: 8, dates: l.dates, ...(o.tshirt ? { addons: [{ id: ADDON_DEFS.AT.id, answers: { [qid().Size]: "M" } }] } : {}) }];
+  const r = await call("POST", "/api/my/bookings", s.token, { listingId: l.id, blockId: l.blockId, method: "Bank transfer", items });
+  assert.ok(r.status < 300, `book -> ${r.status} ${JSON.stringify(r.json).slice(0, 300)}`);
+  const list: any[] = Array.isArray(r.json) ? r.json : r.json?.bookings ?? [r.json];
+  return { refs: list.map((b) => b.ref as string), raw: r };
+}
+
+describe("R3: every reference of one checkout carries the SAME checkoutId; separate checkouts differ", () => {
+  for (const [name, get, n] of [["Monday split", () => LW, 2], ["month-end split", () => LE, 2], ["three weeks", () => L3, 3]] as const) {
+    it(`${name}: ${n} references, one id`, async () => {
+      const b = await bookMany(get(), `R3 ${name} ${uniq()}`);
+      assert.equal(b.refs.length, n);
+      const ids = await Promise.all(b.refs.map(async (r) => (await docOf(r)).checkoutId));
+      assert.ok(ids[0] && typeof ids[0] === "string", `stamped: ${ids}`);
+      assert.equal(new Set(ids).size, 1, `one id on all references: ${ids}`);
+    });
+  }
+  it("two checkouts by the same family submitted back to back carry DIFFERENT ids (two references each)", async () => {
+    const [a, b] = await Promise.all([bookMany(LW, `R3 back ${uniq()}`), bookMany(LW, `R3 back ${uniq()}`)]);
+    const ida = await Promise.all(a.refs.map(async (r) => (await docOf(r)).checkoutId));
+    const idb = await Promise.all(b.refs.map(async (r) => (await docOf(r)).checkoutId));
+    assert.equal(new Set(ida).size, 1);
+    assert.equal(new Set(idb).size, 1);
+    assert.notEqual(ida[0], idb[0]);
+    assert.ok(ida[0] && idb[0]);
+  });
+  it("a booking the operator takes (POST /api/bookings) is stamped too", async () => {
+    const r = await as("P", "POST", "/api/bookings", { booker: "Op Family", email: "op-family@emu.test", child: `R3 op ${uniq()}`, age: 8, listing: "LW", pass: "1-day pass", blockId: LW.blockId, amount: 20, method: "Cash" });
+    assert.ok(r.status < 300, `operator booking -> ${r.status} ${JSON.stringify(r.json).slice(0, 300)}`);
+    const ref = r.json.ref ?? r.json.booking?.ref;
+    assert.ok((await docOf(ref)).checkoutId, "operator-taken booking has a checkoutId");
+  });
+});
+
+describe("R3: a family never sees a checkoutId", () => {
+  it("not in their own bookings list, nor in the booking response; another family sees none of it either", async () => {
+    const child = `R3 priv ${uniq()}`;
+    const b = await bookMany(LW, child);
+    assert.ok(!JSON.stringify(b.raw.json).includes("checkoutId"), "the checkout response");
+    assert.ok((await docOf(b.refs[0])).checkoutId, "setup: the provider's copy has one");
+    const mine = await as("A", "GET", "/api/my/bookings");
+    assert.equal(mine.status, 200);
+    assert.ok(JSON.stringify(mine.json).includes(b.refs[0]), "setup: it is in A's list");
+    assert.ok(!JSON.stringify(mine.json).includes("checkoutId"), "A's list");
+    const theirs = await as("B", "GET", "/api/my/bookings");
+    assert.ok(!JSON.stringify(theirs.json).includes("checkoutId") && !JSON.stringify(theirs.json).includes(b.refs[0]), "B's list");
+  });
+});
+
+describe("R3: V05 through the checkoutId", () => {
+  it("cancel-day of the first reference's only day moves the T-shirt (stamped bookings)", async () => {
+    const c = `R3v ${uniq()}`;
+    const b = await bookMany(LW, c, { tshirt: true });
+    assert.ok((await docOf(b.refs[0])).checkoutId, "setup: stamped");
+    const first = (await Promise.all(b.refs.map(async (r) => ({ r, d: (await docOf(r)).days[0] })))).sort((x, y) => x.d.localeCompare(y.d))[0].r;
+    assert.ok((await operatorAction(first, "cancel-day", { ki: 0, date: LW.dates[0], resolution: "none" })).status < 300);
+    const t = await teeDays(LW, c);
+    assert.deepEqual(t.kit, [LW.dates[1]]);
+    assert.deepEqual(t.reg, [LW.dates[1]]);
+  });
+  it("an OLD booking with no checkoutId still works through the 3 ms fallback", async () => {
+    const c = `R3old ${uniq()}`;
+    const b = await bookMany(LW, c, { tshirt: true });
+    const db = await adminDb();
+    const P = ids().tenants.P;
+    for (const r of b.refs) { const ref = db.collection("bookings").doc(`${P}_${r}`); const d = (await ref.get()).data() as Record<string, unknown>; delete d.checkoutId; await ref.set(d); }
+    for (const r of b.refs) assert.equal((await docOf(r)).checkoutId, undefined, "setup: unstamped");
+    const first = (await Promise.all(b.refs.map(async (r) => ({ r, d: (await docOf(r)).days[0] })))).sort((x, y) => x.d.localeCompare(y.d))[0].r;
+    assert.ok((await operatorAction(first, "cancel", { refund: "none" })).status < 300);
+    const t = await teeDays(LW, c);
+    assert.deepEqual(t.kit, [LW.dates[1]]);
+    assert.deepEqual(t.reg, [LW.dates[1]]);
+  });
+  it("back-to-back checkouts for the SAME child name on different runs are not mixed up: the sibling is chosen by checkoutId, not by timing", async () => {
+    // Two checkouts at the same instant by the same family for the same listing: only the id can tell which reference belongs to which.
+    const c1 = `R3x ${uniq()}`, c2 = `R3x ${uniq()}`;
+    const [a, b] = await Promise.all([bookMany(LW, c1, { tshirt: true }), bookMany(LW, c2, { tshirt: true })]);
+    const firstOf = async (refs: string[]) => (await Promise.all(refs.map(async (r) => ({ r, d: (await docOf(r)).days[0] })))).sort((x, y) => x.d.localeCompare(y.d))[0].r;
+    assert.ok((await operatorAction(await firstOf(a.refs), "cancel", { refund: "none" })).status < 300);
+    assert.deepEqual((await teeDays(LW, c1)).kit, [LW.dates[1]], "the cancelled checkout's T-shirt moved to its own Monday reference");
+    assert.deepEqual((await teeDays(LW, c2)).kit, [LW.dates[0]], "the other checkout is untouched");
   });
 });
