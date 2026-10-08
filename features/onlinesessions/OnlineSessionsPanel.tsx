@@ -89,29 +89,29 @@ export function OnlineSessionsPanel({ refs, providerName, compact, reloadKey }: 
             // Booked but not paid: the join link is locked, and the family is told exactly why and what to do.
             // No pay button here: paying lives on the booking card ("Pay by card instead").
             action = null;
-            explain = <div className="mt-1 text-[12.5px] font-semibold text-[#7a4b00]" data-testid="os-unpaid-text">{t("p9tx.osUnpaid", { provider: s.providerName || providerName || t("p7cl.theProvider").toLocaleLowerCase(dateLocale()) })}</div>;
+            explain = <div className="mt-1 text-[12.5px] font-semibold text-[var(--os-warn)]" data-testid="os-unpaid-text">{t("p9tx.osUnpaid", { provider: s.providerName || providerName || t("p7cl.theProvider").toLocaleLowerCase(dateLocale()) })}</div>;
           } else if (s.joinState === "early" || s.joinState === "early_own") {
-            explain = <div className="mt-1 text-[12.5px] font-semibold text-[#0f6b34]" data-testid="os-early-text">{t(s.joinState === "early" ? "p9tx.osEarly" : "p9tx.osEarlyOwn", { time: clock(s.opensAt), day: opensDay, mins })}</div>;
+            explain = <div className="mt-1 text-[12.5px] font-semibold text-[var(--os-ok)]" data-testid="os-early-text">{t(s.joinState === "early" ? "p9tx.osEarly" : "p9tx.osEarlyOwn", { time: clock(s.opensAt), day: opensDay, mins })}</div>;
           }
           if (s.joinState === "unpaid") {
             /* action already set above */
           } else if (s.mode === "own") {
             action = s.link
-              ? <a href={s.link} target="_blank" rel="noreferrer" onClick={() => { void apiPost("/api/online-sessions/attended", { listingId: s.listingId, date: s.date }).catch(() => undefined); }} className={`${btn} bg-[#0f9d6b] text-white`} data-testid="os-open-link">{t("p9tx.osOpenLink")}</a>
-              : <span className={`${btn} cursor-not-allowed bg-[var(--line)] text-[var(--ink-3)]`} data-testid="os-link-later">{s.noLink ? t("p9tx.osNoLink") : t("p9tx.osLinkAt", { time: clock(s.opensAt) })}</span>;
+              ? <a href={s.link} target="_blank" rel="noreferrer" onClick={() => { void apiPost("/api/online-sessions/attended", { listingId: s.listingId, date: s.date }).catch(() => undefined); }} className={`${btn} bg-[#0b7a54] text-white`} data-testid="os-open-link">{t("p9tx.osOpenLink")}</a>
+              : <span className={`${btn} cursor-not-allowed bg-[var(--line)] text-[var(--ink-2)]`} data-testid="os-link-later">{s.noLink ? t("p9tx.osNoLink") : t("p9tx.osLinkAt", { time: clock(s.opensAt) })}</span>;
           } else if (!open) {
-            action = <span className={`${btn} cursor-not-allowed bg-[var(--line)] text-[var(--ink-3)]`} data-testid="os-opens-later">{t("p9tx.osOpens", { time: clock(s.opensAt) })}</span>;
+            action = <span className={`${btn} cursor-not-allowed bg-[var(--line)] text-[var(--ink-2)]`} data-testid="os-opens-later">{t("p9tx.osOpens", { time: clock(s.opensAt) })}</span>;
           } else if (!s.hostLive) {
             action = <span className={`${btn} cursor-wait bg-[#fff3d6] text-[#7a4b00]`} data-testid="os-waiting">{t("p9tx.osWaiting")}</span>;
           } else {
-            action = <button type="button" onClick={() => router.push(`/custdash/session?l=${encodeURIComponent(s.listingId)}&d=${s.date}`)} className={`${btn} bg-[#0f9d6b] text-white`} data-testid="os-join">{t("p9tx.osJoin")}</button>;
+            action = <button type="button" onClick={() => router.push(`/custdash/session?l=${encodeURIComponent(s.listingId)}&d=${s.date}`)} className={`${btn} bg-[#0b7a54] text-white`} data-testid="os-join">{t("p9tx.osJoin")}</button>;
           }
           return (
             <div key={key} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3.5 py-3">
               <div className="min-w-0">
                 <div className="truncate text-[14.5px] font-extrabold">{s.listingName}</div>
-                <div className="text-[12.5px] text-[var(--ink-3)]">{day(s.startsAt)} · {clock(s.startsAt)} · {t("p9tx.osOnline")}{s.children.length ? ` · ${t("p9tx.osFor", { names: s.children.join(", ") })}` : ""}</div>
-                {s.mode !== "own" && open && !s.hostLive && s.joinState !== "unpaid" && <div className="mt-0.5 text-[12px] font-semibold text-[#7a4b00]">{t("p9tx.osWaitingHint")}</div>}
+                <div className="text-[12.5px] text-[var(--ink-2)]">{day(s.startsAt)} · {clock(s.startsAt)} · {t("p9tx.osOnline")}{s.children.length ? ` · ${t("p9tx.osFor", { names: s.children.join(", ") })}` : ""}</div>
+                {s.mode !== "own" && open && !s.hostLive && s.joinState !== "unpaid" && <div className="mt-0.5 text-[12px] font-semibold text-[var(--os-warn)]">{t("p9tx.osWaitingHint")}</div>}
                 {explain}
               </div>
               {action}
@@ -129,5 +129,7 @@ export function OnlineSessionsPanel({ refs, providerName, compact, reloadKey }: 
 }
 
 function Shell({ compact, children }: { compact?: boolean; children: React.ReactNode }) {
-  return compact ? <div>{children}</div> : <Card className="mb-4 p-4">{children}</Card>;
+  // The compact "you are booked" screen sits inside a fixed WHITE card on a public page that has no portal theme, so the app's dark :root
+  // variables would paint a near-black card on it. aos-light pins the light set of variables for everything inside.
+  return compact ? <div className="aos-light">{children}</div> : <Card className="mb-4 p-4">{children}</Card>;
 }
