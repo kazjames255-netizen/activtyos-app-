@@ -270,8 +270,25 @@ export async function refundExcess(payRef: FirebaseFirestore.DocumentReference, 
   } else {
     await payRef.update({ "excess.state": "failed", "excess.failure": failure.slice(0, 300), "excess.failures": failures + (definite ? 1 : 0), ...(full ? { status: "duplicate-needs-refund", refundFailure: failure.slice(0, 300) } : {}) });
   }
-  // Tell the provider once (first detection); a retry that succeeds says it is now sorted.
-  if (wasPending || refundId) {
+  // Tell people ONCE per payment. Which messages go out is decided inside a transaction on the payment record that stamps
+  // them as sent (excess.notifiedFailed / notifiedRefunded / notifiedFamily), so however many deliveries (webhook, browser
+  // confirm, replays, sweeps) reach this point together, exactly one of them wins each claim and the rest send nothing.
+  const famEmail = (rec as { email?: string }).email;
+  const familyWanted = !!refundId && full && rec.excess.reason === "not-payable" && !!famEmail?.includes("@");
+  const claim = await db.runTransaction(async (tx) => {
+    const cur = (await tx.get(payRef)).data() as { excess?: Excess & { notifiedFailed?: string; notifiedRefunded?: string; notifiedFamily?: string } } | undefined;
+    const ex: { notifiedFailed?: string; notifiedRefunded?: string; notifiedFamily?: string } = cur?.excess ?? {};
+    const upd: Record<string, string> = {};
+    let provider = false;
+    let family = false;
+    if (refundId) {
+      if (!ex.notifiedRefunded) { upd["excess.notifiedRefunded"] = at; provider = true; }
+      if (familyWanted && !ex.notifiedFamily) { upd["excess.notifiedFamily"] = at; family = true; }
+    } else if (!ex.notifiedFailed) { upd["excess.notifiedFailed"] = at; provider = true; }
+    if (Object.keys(upd).length) tx.update(payRef, upd);
+    return { provider, family };
+  });
+  if (claim.provider) {
     const m = excessMessage({ reason: rec.excess.reason, full, pence, where, refunded: !!refundId, pi: rec.paymentIntentId });
     void notify({
       tenantId: rec.tenantId, to: { kind: "tenant" }, category: "billing", key: "payment-duplicate",
@@ -279,18 +296,25 @@ export async function refundExcess(payRef: FirebaseFirestore.DocumentReference, 
       emailHtml: `<p>${m.body.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`,
       href: `/company/bookings?ref=${encodeURIComponent((rec.refs ?? [])[0] ?? "")}`, ref: (rec.refs ?? [])[0],
     });
-    // The family paid for a booking that had ended: tell them plainly that nothing was taken (once, when the refund has gone).
-    const famEmail = (rec as { email?: string }).email;
-    if (refundId && full && rec.excess.reason === "not-payable" && famEmail?.includes("@")) {
-      const money = `£${(pence / 100).toFixed(2)}`;
-      const text = `Your card payment of ${money} for booking ${where} could not be used because the booking had already been cancelled, so nothing has been taken: it has been refunded in full. It can take a few days to show on your statement.`;
-      void notify({
-        tenantId: rec.tenantId, to: { kind: "parent", email: famEmail }, category: "billing",
-        title: "Your payment was refunded", body: text, subject: "Your payment was refunded - nothing was taken",
-        emailHtml: `<p>${text}</p>`, href: `/custdash/bookings?open=${encodeURIComponent((rec.refs ?? [])[0] ?? "")}`, ref: (rec.refs ?? [])[0],
-      });
-    }
   }
+  // The family paid for a booking that had ended: tell them plainly that nothing was taken (once, when the refund has gone).
+  if (claim.family && famEmail) {
+    const money = `£${(pence / 100).toFixed(2)}`;
+    const text = `Your card payment of ${money} for booking ${where} could not be used because the booking had already been cancelled, so nothing has been taken: it has been refunded in full. It can take a few days to show on your statement.`;
+    void notify({
+      tenantId: rec.tenantId, to: { kind: "parent", email: famEmail }, category: "billing",
+      title: "Your payment was refunded", body: text, subject: "Your payment was refunded - nothing was taken",
+      emailHtml: `<p>${text}</p>`, href: `/custdash/bookings?open=${encodeURIComponent((rec.refs ?? [])[0] ?? "")}`, ref: (rec.refs ?? [])[0],
+    });
+  }
+}
+
+/** What the payer's browser is told about a payment after settlement: "refunded" (the booking could not take it and it went back),
+ *  "refunding" (same, the refund is still being completed), or "settled" (the normal case, including "already paid by something else"). */
+export async function paymentOutcome(paymentId: string): Promise<"refunded" | "refunding" | "settled"> {
+  const d = (await db.collection("payments").doc(paymentId).get()).data() as (PaymentRec & { excess?: Excess }) | undefined;
+  if (!d || !d.status.startsWith("duplicate") || d.excess?.reason !== "not-payable") return "settled";
+  return d.status === "duplicate-refunded" ? "refunded" : "refunding";
 }
 
 /**

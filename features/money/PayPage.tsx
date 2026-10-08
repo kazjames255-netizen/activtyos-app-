@@ -41,10 +41,12 @@ function CardForm({ token, base, info, onPaid, onError }: { token: string; base:
       return;
     }
     try {
-      const res = await publicPost<{ paid: boolean; status: string }>(
+      const res = await publicPost<{ paid: boolean; refunded?: boolean; refunding?: boolean; status: string }>(
         `/api/public/${base}/${encodeURIComponent(token)}/confirm/${encodeURIComponent(info.paymentId)}`,
       );
       if (res.paid) onPaid();
+      else if (res.refunded) onError(t("p8lst.pmRefunded"));
+      else if (res.refunding) onError(t("p8lst.pmRefunding"));
       else onError(t("p7pub.payStatus", { status: res.status }));
     } catch (e) {
       onError(e instanceof Error ? e.message : t("p7pub.errVerify"));

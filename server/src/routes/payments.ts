@@ -9,7 +9,7 @@ import { autoEmailOn } from "../lib/autoEmails";
 import { ensurePayDomains } from "../lib/payDomains";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { bookingDocId } from "./bookings";
-import { settlePaymentRecord } from "../lib/settlePayment";
+import { settlePaymentRecord, paymentOutcome } from "../lib/settlePayment";
 import { createOrReuseIntent } from "../lib/checkoutIntent";
 import { markHeld } from "../lib/cardHold";
 import { bookingForToken } from "../lib/bookingPayToken";
@@ -489,6 +489,12 @@ payments.post("/checkout/:id/confirm", async (req, res) => {
   // Card HOLD: the card is authorised (money held, not taken) - record it and tell the provider; the payment is taken on approval.
   if (intent.status === "requires_capture") {
     await markHeld(snap.id);
+    // The request was withdrawn (declined, cancelled, released by a sweep) while the card form was open: the authorisation has been
+    // cancelled, so say that, not "held".
+    if (((await paymentsCol.doc(snap.id).get()).data() as { status?: string } | undefined)?.status === "released") {
+      res.json({ status: "requires_capture", paid: false, held: false, refunded: true, refs: rec.refs ?? [] });
+      return;
+    }
     res.json({ status: "requires_capture", paid: false, held: true, refs: rec.refs ?? [] });
     return;
   }
@@ -500,6 +506,12 @@ payments.post("/checkout/:id/confirm", async (req, res) => {
   // browser callback and a webhook delivery for the same payment are safe
   // in either order (backlog b7).
   await settlePaymentRecord(snap.id, { auto: false, by: req.user?.name ?? email ?? "payer" });
+  // The booking could not take this payment and it was (or is being) sent back: never answer "paid".
+  const outcome = await paymentOutcome(snap.id);
+  if (outcome !== "settled") {
+    res.json({ status: "succeeded", paid: false, ...(outcome === "refunded" ? { refunded: true } : { refunding: true }), refs: rec.refs ?? [] });
+    return;
+  }
   if (rec.mealOrderIds?.length) {
     res.json({ status: "succeeded", paid: true });
     return;
@@ -605,5 +617,7 @@ bookingPayPublic.post("/:token/confirm/:paymentId", async (req, res) => {
   const intent = await s.paymentIntents.retrieve(rec.paymentIntentId, {}, rec.stripeAccount ? { stripeAccount: rec.stripeAccount } : undefined);
   if (intent.status !== "succeeded") { res.json({ status: intent.status, paid: false }); return; }
   await settlePaymentRecord(snap.id, { auto: false, by: "pay link" });
+  const outcome = await paymentOutcome(snap.id);
+  if (outcome !== "settled") { res.json({ status: "succeeded", paid: false, ...(outcome === "refunded" ? { refunded: true } : { refunding: true }) }); return; }
   res.json({ status: "succeeded", paid: true });
 });
