@@ -1,6 +1,7 @@
 "use client"; // Error boundaries must be Client Components
 
 import { useEffect, useState } from "react";
+import { reloadOnceForChunkError } from "@/lib/chunkError";
 import { reportClientError } from "@/lib/reportClientError";
 import { useT } from "@/lib/i18n/provider";
 
@@ -11,6 +12,7 @@ export default function ErrorPage({ error, unstable_retry }: { error: Error & { 
   const [sent, setSent] = useState<"idle" | "busy" | "done">("idle");
   useEffect(() => {
     console.error("[page error]", error);
+    try { reloadOnceForChunkError(error, window.sessionStorage, () => window.location.reload()); } catch { /* storage blocked: show the screen */ }
   }, [error]);
   return (
     <main className="flex min-h-[60vh] items-center justify-center p-6">
