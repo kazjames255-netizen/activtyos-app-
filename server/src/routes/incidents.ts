@@ -7,7 +7,7 @@ import { bareImageUrl, signImageUrl } from "../lib/signing";
 import { franchiseChildIds, isFranchise } from "../lib/franchiseScope";
 import { franchiseForChild, loadSettings } from "../lib/tenantLibrary";
 import { childVisibleTo } from "../lib/childAccess";
-import { siteRecordFilter } from "../lib/siteScope";
+import { bookingInSite, siteRecordFilter, staffSiteScope } from "../lib/siteScope";
 import type { Role } from "../middleware/role";
 import { notify, parentEmailForChild } from "../lib/notify";
 import { alertDsl, isSafeguardingLead, leadCovers, namesALead } from "../lib/dslAlert";
@@ -619,16 +619,24 @@ incidents.get("/:id/dossier", async (req, res) => {
   const frKids = frId ? await franchiseChildIds(scope.tenantId, frId) : null;
   const frMine = (x: { franchiseId?: unknown; childId?: unknown }) => !frId || x.franchiseId === frId || (typeof x.childId === "string" && !!frKids?.has(x.childId));
   if (!frMine(snap.data()!)) { res.status(404).json({ error: "Record not found" }); return; }
+  // A site-scoped member of staff opens dossiers only for what their incident list shows (a record naming their site, a child booked
+  // there, or one they logged) - the same rule as the list and every other by-id route (a DSL still reaches what they cover).
+  const inSite = await siteLogFilter(req);
+  if (inSite && !inSite(snap.data()!) && !(lead && leadCovers(snap.data()!))) { res.status(404).json({ error: "Record not found" }); return; }
   if (!staffMayRead(req, snap.data()!, lead)) { res.status(403).json({ error: "You don't have access to this record" }); return; }
   const rec = snap.data()!;
   const childName = String(rec.childName ?? "");
+  const site = await staffSiteScope({ ...req.auth!, tenantId: scope.tenantId });
 
   // Recent bookings for this child (also used to resolve the child by name when
   // the record wasn't linked to a childId).
   const bsnap = await db.collection("bookings").where("tenantId", "==", scope.tenantId).get();
+  // Only bookings this caller may see: a franchise its own, site staff those at their sites.
+  const visibleBooking = (b: Record<string, unknown>) => (!frId || b.franchiseId === frId) && (!site || bookingInSite(b as { listingId?: string; blockId?: string }, site));
   const nameMatch = (b: Record<string, unknown>) => b.child && String(b.child).trim().toLowerCase() === childName.trim().toLowerCase();
   let childId = (rec.childId as string | undefined) || undefined;
-  if (!childId) { const hit = bsnap.docs.map((d) => d.data() as Record<string, unknown>).find((b) => b.childId && nameMatch(b)); if (hit) childId = hit.childId as string; }
+  // A record filed without a childId is resolved by name - but only against bookings the caller can see, never the whole tenant.
+  if (!childId) { const hit = bsnap.docs.map((d) => d.data() as Record<string, unknown>).find((b) => b.childId && visibleBooking(b) && nameMatch(b)); if (hit) childId = hit.childId as string; }
 
   // The dossier hands back the family's contact details — only for a child
   // this provider has (records filed before that check existed could name anyone's).
@@ -659,8 +667,9 @@ incidents.get("/:id/dossier", async (req, res) => {
 
   const bookings = bsnap.docs
     .map((d) => d.data() as Record<string, unknown>)
-    .filter((b) => !frId || b.franchiseId === frId) // a franchise sees only ITS OWN bookings of the child
-    .filter((b) => (childId && b.childId === childId) || nameMatch(b))
+    .filter(visibleBooking) // a franchise sees only ITS OWN bookings of the child, site staff only those at their sites
+    // By child id, never by name: a same-named child of another family must not bring its booker's contact details in.
+    .filter((b) => !!childId && (b.childId === childId || (Array.isArray(b.kids) && (b.kids as { childId?: string }[]).some((k) => k?.childId === childId))))
     .map((b) => ({ listing: b.listing as string, dates: (b.dates ?? b.sessionLabel) as string, status: b.status as string, createdAt: b.createdAt as string, booker: b.booker as string, email: b.email as string, phone: b.phone as string }))
     .sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")))
     .slice(0, 12);
@@ -672,9 +681,9 @@ incidents.get("/:id/dossier", async (req, res) => {
   // The child's other records — through the same staff filter as the record
   // itself, or opening an ordinary accident showed staff the confidential
   // safeguarding concerns about that child.
-  const history = isnap.docs.filter((d) => frMine(d.data()) && staffMayRead(req, d.data(), lead))
+  const history = isnap.docs.filter((d) => frMine(d.data()) && staffMayRead(req, d.data(), lead) && (!inSite || inSite(d.data()) || (lead && leadCovers(d.data()))))
     .map((d) => { const x = d.data() as Record<string, unknown>; return { id: d.id, childId: x.childId as string | undefined, childName: x.childName as string | undefined, kind: x.kind as string, date: x.date as string, category: (x.concernCategory ?? x.incidentType ?? x.injury) as string, severity: x.severity as string, description: x.description as string }; })
-    .filter((h) => h.id !== req.params.id && ((childId && h.childId === childId) || (h.childName && h.childName.trim().toLowerCase() === childName.trim().toLowerCase())))
+    .filter((h) => h.id !== req.params.id && ((childId && h.childId === childId) || (!h.childId && h.childName && h.childName.trim().toLowerCase() === childName.trim().toLowerCase())))
     .map((h) => ({ kind: h.kind, date: h.date, category: h.category, severity: h.severity, description: h.description }))
     .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")))
     .slice(0, 30);
