@@ -661,6 +661,9 @@ function Page1() {
           { k: "Invoices", v: "Invoices the provider sends print the bank details at the foot." },
           { k: "Never on a pay link", v: "The public pay link says the details are in the booking email and under My bookings, and shows only the reference to quote. Anyone holding the link sees no account numbers." },
           { k: "Tax-Free Childcare: what a parent sees if HMRC says no", v: "Every HMRC refusal becomes a plain screen with no error code, and the booking stays 'Awaiting voucher payment' (never marked paid). No Tax-Free Childcare account yet: 'You need a Tax-Free Childcare account first'. Account blocked by HMRC: 'Please contact Tax-Free Childcare customer services'. Wrong reference or date of birth: 'Check your child's reference and date of birth'. Provider not yet usable (inactive, bank details or registration not found): 'This provider can't take Tax-Free Childcare yet', so check the childcare registration number and postcode in Setup. Provider not added in the parent's TFC account: 'Add the provider as a childcare provider'. Not enough funds: 'Not enough in your HMRC account'. The parent can always pay another way or give the HMRC payment reference by hand." },
+          { k: "Tax-Free Childcare: paying at checkout", v: "When the platform is connected to HMRC, the checkout asks HMRC to pay the provider straight after booking. The amount comes from the booking, never from the browser. A waiting-list place owes nothing, and a place already requested is never sent twice. The booking then shows HMRC's payment reference and the expected payment date, and stays 'Awaiting voucher payment' until the money arrives." },
+          { k: "Pay by card instead", v: "A booking paid by bank transfer, cash, voucher or Tax-Free Childcare shows a 'Pay by card instead' button on My bookings and on the Payments page, because it opens a card form. A card booking just says Pay." },
+          { k: "Money in and Expenses: monthly bars", v: "Both pages show month-by-month bars with a £ axis, gridlines and value labels. On Money in, the dashed bar is what was booked and the solid bar is what was collected, so the gap is money still to come." },
           { k: "Tax-Free Childcare and vouchers", v: "These do not use this panel. They show the account, Ofsted and reference details the provider enters in Setup, Childcare vouchers, in the same places (confirmation screen and email)." },
         ]}
         shots={[
@@ -844,10 +847,40 @@ function Page1() {
   );
 }
 
+/** Page 3: things to think about before launch. Not a task and not a gate. */
+function Page3() {
+  const li = "text-[14px] leading-relaxed text-[var(--ink-2)]";
+  return (
+    <>
+      <Section>
+        <H2>Food for thought at launch</H2>
+        <Lede>Not a task and not a gate. Questions to decide before the platform opens to the public. Nothing here changes how the platform works today.</Lede>
+        <Card className="p-4">
+          <h3 className="m-0 mb-2 text-[18px] font-extrabold text-[var(--ink)]" style={display}>Provider vetting: decide before launch</h3>
+          <ul className="m-0 grid gap-2 pl-5">
+            <li className={li}>Today any signed-up user can become a company or freelancer provider and appear on the marketplace without HQ approval. To go live they only need a started plan and a way to be paid.</li>
+            <li className={li}>
+              Eequ, for comparison, does not vet providers. Its safeguarding FAQ says the safety details on a listing are &quot;a declaration by education providers&quot; and &quot;not verified by us&quot;, and puts the responsibility on parents. Source:{" "}
+              <a href="https://help.eequ.org/en/articles/221010-safeguarding-faqs" target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--brand)] underline">Eequ safeguarding FAQs</a>.
+            </li>
+          </ul>
+          <h4 className="m-0 mb-1 mt-4 text-[14px] font-extrabold uppercase tracking-wider text-[var(--ink-3)]">Options to decide at launch</h4>
+          <ol className="m-0 grid gap-2 pl-5">
+            <li className={li}><b>Minimum.</b> State clearly on listings and in the terms that provider details are self-declared, and ask for DBS and insurance at sign-up.</li>
+            <li className={li}><b>Stronger.</b> HQ checks DBS (including the barred list), public liability insurance and a safeguarding lead before listings go live, and shows a &quot;Verified&quot; badge. This would set the platform apart from Eequ and fits what councils expect for HAF provision.</li>
+          </ol>
+          <p className="m-0 mt-3 text-[13.5px] font-bold text-[var(--ink-2)]">Owner decision. No code change now.</p>
+        </Card>
+      </Section>
+    </>
+  );
+}
+
 /** Add future manual pages here. */
 const MANUAL_PAGES: { id: string; label: string; render: () => ReactNode }[] = [
   { id: "provider-onboarding", label: "Page 1 · Provider onboarding", render: () => <Page1 /> },
   { id: "legal", label: "Page 2 · Legal documents", render: () => <ManualLegal /> },
+  { id: "launch-thoughts", label: "Page 3 · Food for thought at launch", render: () => <Page3 /> },
 ];
 
 export function ManualApp() {
