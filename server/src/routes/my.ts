@@ -1,4 +1,5 @@
 import { mergeGroupKey } from "../lib/bookingMergeKey";
+import { stopOpenPayments } from "../lib/checkoutIntent";
 import { ageCapGroup } from "../lib/childAge";
 import { Router } from "express";
 import { eraseChildLearning } from "../lib/hubPrivacy";
@@ -2505,6 +2506,7 @@ my.post("/bookings/:ref/decline-offer", async (req, res) => {
     if (updated.blockId) void triggerWaitlist(updated.blockId);
     // The family gave the place up: the discount code it was booked with comes back.
     if (updated.tenantId && shouldReleaseDiscountCodes(updated)) void releaseDiscountCodes(updated.tenantId, updated.ref);
+    stopOpenPayments(updated);
     res.json(updated);
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
@@ -2898,6 +2900,7 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     if (updated.blockId) void triggerWaitlist(updated.blockId);
     // …and frees the discount code it was booked with (unless money was kept: shouldReleaseDiscountCodes).
     if (updated.tenantId && shouldReleaseDiscountCodes(updated)) void releaseDiscountCodes(updated.tenantId, updated.ref);
+    stopOpenPayments(updated);
     // …and the meals / trip places that hung off it (lib/cancelCleanup.ts).
     if (updated.tenantId) void cleanupAfterCancel(updated.tenantId, updated);
     // Tell the provider a cancellation came in and a refund is waiting on their

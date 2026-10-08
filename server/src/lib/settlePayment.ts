@@ -116,7 +116,10 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
       if (!bSnap.exists) continue;
       const b = fromDoc(bSnap.data() as BookingDoc);
       const bal = balanceOf(b);
-      if (b.pay === "Paid" || bal <= 0.005) { if (b.pay !== "Paid" && (b.status === "Cancelled" || b.status === "Declined" || b.status === "Waitlisted")) notPayable = true; continue; } // already paid by something else (or no longer payable): this payment does not touch it
+      // A booking that has ended (cancelled, declined, released by the unpaid-card sweep) can never take money, whatever is still
+      // "outstanding" on it: the payment is refunded in full and the booking is left exactly as it is.
+      if (b.status === "Cancelled" || b.status === "Declined") { notPayable = true; continue; }
+      if (b.pay === "Paid" || bal <= 0.005) { if (b.pay !== "Paid" && b.status === "Waitlisted") notPayable = true; continue; } // already paid by something else (or no longer payable): this payment does not touch it
       owed += bal;
       todo.push({ ref: bSnap.ref, b });
     }
@@ -276,6 +279,17 @@ export async function refundExcess(payRef: FirebaseFirestore.DocumentReference, 
       emailHtml: `<p>${m.body.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`,
       href: `/company/bookings?ref=${encodeURIComponent((rec.refs ?? [])[0] ?? "")}`, ref: (rec.refs ?? [])[0],
     });
+    // The family paid for a booking that had ended: tell them plainly that nothing was taken (once, when the refund has gone).
+    const famEmail = (rec as { email?: string }).email;
+    if (refundId && full && rec.excess.reason === "not-payable" && famEmail?.includes("@")) {
+      const money = `£${(pence / 100).toFixed(2)}`;
+      const text = `Your card payment of ${money} for booking ${where} could not be used because the booking had already been cancelled, so nothing has been taken: it has been refunded in full. It can take a few days to show on your statement.`;
+      void notify({
+        tenantId: rec.tenantId, to: { kind: "parent", email: famEmail }, category: "billing",
+        title: "Your payment was refunded", body: text, subject: "Your payment was refunded - nothing was taken",
+        emailHtml: `<p>${text}</p>`, href: `/custdash/bookings?open=${encodeURIComponent((rec.refs ?? [])[0] ?? "")}`, ref: (rec.refs ?? [])[0],
+      });
+    }
   }
 }
 

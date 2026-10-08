@@ -119,3 +119,10 @@ export async function cancelOpenIntents(tenantId: string, refs: string[], except
     }
   }
 }
+
+/** Call after ANY route ends a booking: once it is Cancelled or Declined, the family's open card payment is cancelled so Pay stops working
+ *  instead of taking money for a place they no longer have (settlement refunds anything that still slips through). Best effort, never throws. */
+export function stopOpenPayments(b: { tenantId?: string | null; ref: string; status: string }): void {
+  if (!b.tenantId || (b.status !== "Cancelled" && b.status !== "Declined")) return;
+  void cancelOpenIntents(b.tenantId, [b.ref]).catch(() => {});
+}

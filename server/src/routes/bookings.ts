@@ -1,4 +1,5 @@
 import { refPrefixFor } from "../lib/bookingRef";
+import { stopOpenPayments } from "../lib/checkoutIntent";
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
@@ -1081,6 +1082,7 @@ bookings.post("/:ref/actions", async (req, res) => {
     // A booking that ended without the place (declined, or cancelled with no money kept) gives its discount code back
     // (single-use codes become usable again once nothing in the basket is standing). Safe to repeat: the release is idempotent.
     if (shouldReleaseDiscountCodes(updated)) void releaseDiscountCodes(scope.tenantId!, updated.ref);
+    stopOpenPayments(updated);
     // Meals ordered for the released days, and trips on them (lib/cancelCleanup).
     // Only on the action that cancelled it — a note or "paid" on a booking that
     // was cancelled weeks ago mustn't sweep meals/trips again.
@@ -1604,6 +1606,7 @@ bookings.post("/bulk", async (req, res) => {
   }
   // A bulk decline / cancel gives each booking's discount code back, exactly like the single action does.
   if (action === "decline" || action === "cancel") for (const b of updated) if (shouldReleaseDiscountCodes(b)) void releaseDiscountCodes(scope.tenantId!, b.ref);
+  if (action === "decline" || action === "cancel") for (const b of updated) stopOpenPayments(b);
   // Bulk declines/cancellations free seats — let the queues know.
   if (action === "decline" || action === "cancel" || action === "waitlist") {
     for (const blockId of new Set(updated.map((b) => b.blockId).filter(Boolean) as string[]))
