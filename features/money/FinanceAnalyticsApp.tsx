@@ -22,7 +22,7 @@ import { BRAND } from "@/lib/i18n/config";
 import { rich } from "./rich";
 import { methodLabel } from "./finI18n";
 import { RefundsToSend } from "./RefundsToSend";
-import { financeFigures, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, payoutRows, type PaymentRecord } from "./financeFigures";
+import { financeFigures, inFinance, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, payoutRows, type PaymentRecord } from "./financeFigures";
 import { addonFigures } from "./addonFigures";
 import { genderSplit,type KidSex } from "./genderSplit";
 
@@ -149,7 +149,7 @@ export function FinanceAnalyticsApp() {
   // filters/window as `a`, kept separate to keep each concern legible.
   const mix = useMemo(() => {
     const all = (bookings ?? []).filter((b) =>
-      b.status !== "Declined" && b.status !== "Waitlisted" && b.status !== "Offered"
+      inFinance(b)
       && (!season || listingSeason[b.listingId ?? ""] === season)
       && (!venue || listingVenueId[b.listingId ?? ""] === venue));
     const now = new Date(nowMs);
@@ -235,7 +235,7 @@ export function FinanceAnalyticsApp() {
   function exportCSV() {
     const cell = csvCell; // formula-safe: Family is the parent-typed booker name
     const rows = (bookings ?? []).filter((b) =>
-      b.status !== "Declined" && b.status !== "Waitlisted" && b.status !== "Offered"
+      inFinance(b)
       && (!season || listingSeason[b.listingId ?? ""] === season)
       && (!venue || listingVenueId[b.listingId ?? ""] === venue)
       && (() => { const m = monthOf(b); return m != null && a.keys.includes(m); })());

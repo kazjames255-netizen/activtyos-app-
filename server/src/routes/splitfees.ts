@@ -18,7 +18,7 @@ const settingsSchema = z.object({
 });
 const round2 = (n: number) => Math.round(n * 100) / 100;
 // Bookings that count as revenue — they hold a place and aren't written off.
-const COUNTS = (status: string) => status !== "Cancelled" && status !== "Declined" && status !== "Waitlisted";
+const COUNTS = (status: string) => status !== "Cancelled" && status !== "Declined" && status !== "Waitlisted" && status !== "Offered";
 
 function companyScope(req: Request, res: Response): string | null {
   const auth = req.auth!;

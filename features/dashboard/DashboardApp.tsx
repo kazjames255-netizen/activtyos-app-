@@ -25,6 +25,7 @@ import { GRAD, Tile } from "@/features/money/finance-kit";
 import { useAddonOrdersLive } from "@/lib/use-addon-orders";
 import { useAddonWeek } from "@/features/kit/useAddonWeek";
 import { ADDON_ICON } from "@/features/bookings/addons";
+import { countsTowardBooked } from "@/features/bookings/sold";
 
 interface Dash {
   today: { date: string; booked: number; sessions: { listing: string; start: string; end: string; booked: number; capacity: number }[] };
@@ -66,10 +67,10 @@ const availTone = (left: number, cap: number) =>
   : { bg: "#e2f5ea", fg: "#0b8446", label: `${left}` };
 const isCancelled = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
 // Counts toward booked revenue / attendee tallies: neither cancelled/declined
-// nor waitlisted (a waitlisted place has paid nothing and holds no seat). The
+// nor waitlisted / offered-but-not-accepted (features/bookings/sold.ts; a waitlisted place has paid nothing and holds no seat). The
 // collected-money math needs no such guard — collectedNet is already 0 for an
 // unpaid waitlisted place — so waitlisted still shows in the status donut.
-const countsToward = (b: Booking) => !isCancelled(b) && b.status !== "Waitlisted";
+const countsToward = (b: Booking) => countsTowardBooked(b);
 const monthOf = (b: Booking): string | null => {
   const s = b.createdAt || (b.days?.[0] ?? "");
   const m = s.slice(0, 7);
