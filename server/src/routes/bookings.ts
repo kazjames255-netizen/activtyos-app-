@@ -1,3 +1,4 @@
+import { resolvePendingCancel } from "../lib/pendingRefund";
 import { refPrefixFor } from "../lib/bookingRef";
 import { stopOpenPayments } from "../lib/checkoutIntent";
 import { Router, type Request, type Response } from "express";
@@ -750,6 +751,15 @@ bookings.post("/:ref/actions", async (req, res) => {
         refundBefore = { refund: b.cancel.refund, pay: b.pay, refundable: refundableSoFar(b), attempts: (b.cancel as { refundAttempts?: number }).refundAttempts ?? 0 };
       }
 
+      // Declining only makes sense for a refund that is still waiting and still has money to give back. After a refund in Stripe has
+      // covered it, a decline used to be accepted and emailed the family a 'Refund update'.
+      if (action.type === "refund-decline") {
+        if (!b.cancel) throw new Conflict("There's no cancellation on this booking to decline a refund for");
+        if (b.cancel.refund === "approved") throw new Conflict("This refund has already been approved or refunded");
+        if (b.cancel.refund === "declined") throw new Conflict("This refund was already declined");
+        if (refundableSoFar(b) <= 0.005) throw new Conflict("Everything paid on this booking has already been refunded (for example in Stripe), so there is nothing to decline.");
+      }
+
       // The provider confirms they SENT an offline refund that was only recorded at approval.
       if (action.type === "refund-sent") {
         if (!b.cancel || b.cancel.refund !== "approved" || b.cancel.refundVia !== "offline")
@@ -885,7 +895,17 @@ bookings.post("/:ref/actions", async (req, res) => {
         moved = { ok: false, error: e instanceof Error ? e.message : "unexpected error" };
       }
       if (!moved.ok) {
-        await ref.set({ cancel: { ...(updated.cancel ?? {}), refund: back?.refund ?? "pending", refundError: moved.error, refundAttempts: (back?.attempts ?? 0) + 1 }, pay: back?.pay ?? updated.pay }, { merge: true });
+        // Put the refund back as it was, on the booking as it is NOW (a refund made in Stripe meanwhile is on it), and if that
+        // refund has covered the pending one, resolve it in the same step instead of leaving it 'pending'.
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(ref);
+          if (!snap.exists) return;
+          const cur = fromDoc(snap.data() as BookingDoc);
+          cur.cancel = { ...(cur.cancel ?? updated.cancel ?? { on: "", by: "" }), refund: back?.refund ?? "pending", refundError: moved.error, refundAttempts: (back?.attempts ?? 0) + 1 } as typeof cur.cancel;
+          cur.pay = back?.pay ?? cur.pay;
+          resolvePendingCancel(cur, new Date().toISOString());
+          tx.set(ref, toDoc(cur));
+        });
         // Stripe's message usually ends in its own full stop ("Charge … has
         // already been refunded.") — don't print a second one.
         const why = String(moved.error ?? "").replace(/\s*\.\s*$/, "");
@@ -909,14 +929,27 @@ bookings.post("/:ref/actions", async (req, res) => {
       // but no refundLog entry, so it never showed there (only per-day
       // releases, my.ts partialCancel, did). Add one here too.
       const refundLabel = moved.partial ? "Refund approved (partial)" : "Refund approved";
-      (updated.refundLog = updated.refundLog ?? []).push({
+      const logEntry = {
         label: refundLabel,
         amount: moved.owed,
         on: ukToday(),
         by: "Provider",
         source: moved.via === "wallet" ? "Wallet" : moved.via === "offline" ? "Offline" : "Card",
+      };
+      (updated.refundLog = updated.refundLog ?? []).push(logEntry);
+      // Written ON TOP of the booking as it is now, never from the copy read before the money moved: a refund made in the Stripe
+      // dashboard while this one was in flight has added its own 'Refunded in Stripe' line, and the old whole-field write erased it.
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        const cur = snap.exists ? fromDoc(snap.data() as BookingDoc) : updated;
+        cur.cancel = { ...(cur.cancel ?? {}), ...(updated.cancel ?? {}) } as typeof cur.cancel;
+        delete (cur.cancel as { refundError?: string } | null)?.refundError;
+        cur.refundedApproved = Math.round(((cur.refundedApproved ?? 0) + moved.owed) * 100) / 100;
+        cur.walletRefunded = Math.round(((cur.walletRefunded ?? 0) + moved.walletPart) * 100) / 100;
+        cur.refundLog = [...(cur.refundLog ?? []), logEntry];
+        cur.pay = refundableSoFar(cur) <= 0.005 ? "Refunded" : moved.partial ? "Partially refunded" : updated.pay;
+        tx.set(ref, toDoc(cur));
       });
-      await ref.set({ cancel: { ...updated.cancel, refundError: FieldValue.delete() }, pay: updated.pay, refundedApproved: updated.refundedApproved, walletRefunded: updated.walletRefunded, refundLog: updated.refundLog }, { merge: true });
     }
 
     // The family's bank details (typed for a bank-transfer refund) are not kept once the provider has dealt with the request.

@@ -74,6 +74,7 @@ describe("R13b-a: decline after a Stripe refund", () => {
     await stripe.refunds.create({ payment_intent: pi.id });
     await deliver(evId(), "charge.refunded", await chargeOf(pi));
     assert.ok(await waitFor(async () => (await bookingDoc(P, ref)).pay === "Refunded"));
+    await sleep(2000); // the provider's own "refund made in Stripe" mail settles first
     const mailsBefore = (await db.collection("mailLog").get()).size;
     const d = await operatorAction(P, ref, { type: "refund-decline" });
     assert.equal(d.status, 409, JSON.stringify(d.json));

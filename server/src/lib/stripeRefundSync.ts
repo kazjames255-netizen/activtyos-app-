@@ -4,6 +4,7 @@ import { stripe } from "./stripe";
 import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
 import { notify } from "./notify";
 import { withBusyRetry } from "./busyRetry";
+import { resolvePendingCancel } from "./pendingRefund";
 import { ukToday } from "./ukDate";
 import { bookingDocId } from "../routes/bookings";
 import { cashReceivedOf, refundableSoFar } from "../../../features/bookings/helpers";
@@ -96,15 +97,26 @@ async function intentOf(refund: Stripe.Refund, account: string | null): Promise<
 /** The refund as Stripe holds it NOW. An event is a snapshot and events can arrive out of order (a stale "failed" after the
  *  refund succeeded), so the status that counts is the one Stripe reports today. If Stripe cannot show it to us (a 4xx: not found,
  *  not our account) the event's own copy is used; a 5xx / network error throws so the delivery is retried. */
-async function freshRefund(r: Stripe.Refund, account: string | null): Promise<Stripe.Refund> {
-  if (!stripe) return r;
-  try {
-    return await stripe.refunds.retrieve(r.id, {}, account ? { stripeAccount: account } : undefined);
-  } catch (e) {
+export const refundFetchStats = { retrieves: 0 };
+// A bulk dashboard refund fires charge.refunded + refund.created + refund.updated for every refund: concurrent and repeated
+// reads of the same refund within a few seconds share ONE Stripe retrieve.
+const fetchCache = new Map<string, { at: number; p: Promise<Stripe.Refund> }>();
+const FETCH_TTL_MS = 4000;
+export function freshRefund(r: Stripe.Refund, account: string | null): Promise<Stripe.Refund> {
+  if (!stripe) return Promise.resolve(r);
+  const key = `${account ?? ""}|${r.id}`;
+  const hit = fetchCache.get(key);
+  if (hit && Date.now() - hit.at < FETCH_TTL_MS) return hit.p;
+  if (fetchCache.size > 500) for (const [k, v] of fetchCache) if (Date.now() - v.at >= FETCH_TTL_MS) fetchCache.delete(k);
+  refundFetchStats.retrieves++;
+  const p = stripe.refunds.retrieve(r.id, {}, account ? { stripeAccount: account } : undefined).catch((e) => {
+    fetchCache.delete(key);
     const sc = (e as { statusCode?: number }).statusCode;
     if (typeof sc === "number" && sc >= 400 && sc < 500 && sc !== 429) return r;
     throw e;
-  }
+  });
+  fetchCache.set(key, { at: Date.now(), p });
+  return p;
 }
 
 /** Every refund for a payment / charge, following Stripe's pages (bounded). */
@@ -199,7 +211,10 @@ export async function applyStripeRefund(refundIn: Stripe.Refund, account: string
     // Meal-order and invoice payments have no booking to adjust: the refund row alone records them.
     const alloc = (rec.mealOrderIds?.length || rec.invoiceId) ? [] : allocateRefund(takePence, bookings.map(({ b }) => ({ ref: b.ref, weight: Math.round(cashReceivedOf(b) * 100), headroom: Math.round(refundableSoFar(b) * 100) })));
     // Nothing to record (no amount, or the payment has no room left): no row and no "£0.00" bell.
-    if (takePence <= 0 || (!(rec.mealOrderIds?.length || rec.invoiceId) && bookings.length > 0 && !alloc.length)) return { kind: "nothing" as const };
+    if (takePence <= 0) return { kind: "nothing" as const };
+    // Money went back in Stripe but the bookings have nothing left to give back (it was already refunded another way, e.g. as
+    // wallet credit): the payment ledger row still records it, so Payout transactions shows the charge refunded, and the provider is told.
+    const noRoom = !(rec.mealOrderIds?.length || rec.invoiceId) && bookings.length > 0 && !alloc.length;
     const onDay = ukToday(new Date(refund.created ? refund.created * 1000 : Date.now())); // when the refund happened, not when we heard
     for (const a of alloc) {
       const hit = bookings.find((x) => x.b.ref === a.ref)!;
@@ -209,13 +224,7 @@ export async function applyStripeRefund(refundIn: Stripe.Refund, account: string
       if (b.pay === "Paid" || b.pay === "Partially refunded" || b.pay === "Refunded") b.pay = left <= 0.005 ? "Refunded" : "Partially refunded";
       // A cancellation whose refund is still waiting for Approve: Stripe already paid (some of) it back, so that pending refund
       // shrinks to what is left, or is resolved when nothing is. Otherwise Approve would count the same money twice.
-      const c = b.cancel;
-      if (c && (c.refund === "full" || c.refund === "partial" || c.refund === "pending")) {
-        if (left <= 0.005) {
-          c.refund = "approved"; c.amount = 0; c.refundVia = "card"; c.refundedAt = createdAt;
-          if (b.pay === "Refund pending") b.pay = "Refunded";
-        } else if ((c.amount ?? 0) > left) c.amount = left;
-      }
+      resolvePendingCancel(b, createdAt);
       tx.set(hit.ref, toDoc(b));
     }
     const recordedPence = takePence;
@@ -228,7 +237,7 @@ export async function applyStripeRefund(refundIn: Stripe.Refund, account: string
       ...(recordedPence < refundPence ? { clampedFromPence: refundPence } : {}),
     });
     tx.update(payRef, { refundState: totalNow >= paidPence ? "full" : "partial" });
-    return { kind: "recorded" as const, pence: recordedPence, refsNamed: alloc.length ? alloc.map((a) => a.ref) : refs };
+    return { kind: "recorded" as const, pence: recordedPence, noRoom, refsNamed: alloc.length ? alloc.map((a) => a.ref) : refs };
   }), 6, 200);
 
   if (outcome.kind === "own") return "own";
@@ -237,7 +246,7 @@ export async function applyStripeRefund(refundIn: Stripe.Refund, account: string
   if (outcome.kind === "nothing") return "ignored";
   // ONE bell (and email, per the provider's settings) per refund: only the transaction that created the record gets here.
   const named = outcome.refsNamed.join(", ");
-  const text = `A refund of ${money(outcome.pence)} was made in Stripe for booking${outcome.refsNamed.length > 1 ? "s" : ""} ${named}.`;
+  const text = `A refund of ${money(outcome.pence)} was made in Stripe for booking${outcome.refsNamed.length > 1 ? "s" : ""} ${named}${outcome.noRoom ? ", but that booking had already been refunded (for example as wallet credit), so its figures are unchanged and the Stripe refund is recorded on the payment only" : ""}.`;
   void notify({
     tenantId: rec.tenantId, to: { kind: "tenant" }, category: "billing", key: "payment-refund-stripe",
     title: "Refund made in Stripe",
