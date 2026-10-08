@@ -67,6 +67,7 @@ describe("a cancel during the capture window", () => {
     const c = await call("POST", `/api/my/bookings/${encodeURIComponent(h.ref)}/cancel`, A.token, {});
     assert.ok(c.status < 300, `${c.status} ${JSON.stringify(c.json).slice(0, 300)}`);
     const mid = await bookingDoc(P, h.ref);
+    console.log(`[cancel-in-capture] parent cancel left the booking ${mid.status}/${mid.pay}`);
     assert.equal((await finishCapture(h.stale)).ok, true);
     const b = await bookingDoc(P, h.ref);
     const r = await refunds(h.piId);

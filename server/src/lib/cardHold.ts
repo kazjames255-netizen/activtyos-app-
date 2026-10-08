@@ -156,39 +156,67 @@ export async function captureHolds(rows: Booking[]): Promise<CaptureResult> {
       return { ok: false, error: /expired|canceled|cancelled|no longer|cannot be captured/i.test(msg) ? "The card hold has expired, so the payment can't be taken. Ask the family to book again." : msg };
     }
     const at = new Date().toISOString();
-    const batch = db.batch();
-    const settled: Booking[] = [];
-    for (const b of group) {
-      const doc = db.collection("bookings").doc(bookingDocId(tenantId, b.ref));
-      b.pay = "Paid";
-      b.amountPaid = b.cardHold!.amount;
-      b.cardHold = { ...b.cardHold!, state: "captured" };
-      b.reconciledBy = { at, by: "Card hold captured on approval", auto: true };
-      batch.set(doc, toDoc(b));
-      settled.push(b);
-    }
-    // Siblings of the same card that weren't approved with these lose their hold (the capture dropped the rest of the authorisation).
+    // Record the capture against each booking's CURRENT state (read inside a transaction), never against the copy read before the capture:
+    // a booking cancelled / declined while the card was being taken must not be written back as approved + paid.
     const all = await holdGroup(tenantId, intentId);
     const approvedRefs = new Set(group.map((b) => b.ref));
-    for (const { ref, b } of all) {
-      if (approvedRefs.has(b.ref) || b.cardHold?.state !== "held") continue;
-      b.cardHold = { ...b.cardHold, state: "released" };
-      batch.set(ref, toDoc(b));
-    }
-    await batch.commit();
+    const settled: Booking[] = [];
+    let endedPence = 0;
+    await db.runTransaction(async (tx) => {
+      settled.length = 0;
+      endedPence = 0;
+      const mine = await Promise.all(group.map((b) => tx.get(db.collection("bookings").doc(bookingDocId(tenantId, b.ref)))));
+      const sibs = await Promise.all(all.filter(({ b }) => !approvedRefs.has(b.ref)).map(({ ref }) => tx.get(ref)));
+      for (const snap of mine) {
+        if (!snap.exists) continue;
+        const cur = fromDoc(snap.data() as BookingDoc);
+        const paidAmount = group.find((g) => g.ref === cur.ref)?.cardHold?.amount ?? cur.cardHold?.amount ?? 0;
+        if (cur.status !== "Confirmed" || cur.pay === "Paid") {
+          if (cur.pay !== "Paid") endedPence += toPence(paidAmount); // ended while the money was being taken: it goes back below
+          continue;
+        }
+        cur.pay = "Paid";
+        cur.amountPaid = paidAmount;
+        cur.cardHold = { ...(cur.cardHold ?? { amount: paidAmount }), state: "captured" } as Booking["cardHold"];
+        cur.reconciledBy = { at, by: "Card hold captured on approval", auto: true };
+        tx.set(snap.ref, toDoc(cur));
+        settled.push(cur);
+      }
+      // Siblings of the same card that weren't approved with these lose their hold (the capture dropped the rest of the authorisation).
+      for (const snap of sibs) {
+        if (!snap.exists) continue;
+        const cur = fromDoc(snap.data() as BookingDoc);
+        if (cur.cardHold?.state !== "held") continue;
+        cur.cardHold = { ...cur.cardHold, state: "released" };
+        tx.set(snap.ref, toDoc(cur));
+      }
+    });
     // Claim the payment record: a double-click on Approve (or a retry) captures idempotently but must tell the family only ONCE.
     let first = true;
     const payId = group[0].cardHold?.paymentId;
+    let refundEnded = false;
     if (payId) {
       const payRef = db.collection("payments").doc(payId);
       first = await db.runTransaction(async (tx) => {
         const ps = await tx.get(payRef);
-        if (ps.exists && (ps.data() as { status?: string }).status === "succeeded" && (ps.data() as { capturedAmount?: number }).capturedAmount === amount) return false;
+        const cur = ps.data() as { status?: string; capturedAmount?: number } | undefined;
+        if (ps.exists && cur?.status?.startsWith("duplicate")) return false; // already handed back
+        if (ps.exists && cur?.status === "succeeded" && cur.capturedAmount === amount) return false;
+        if (endedPence > 0) {
+          // Money was taken for bookings that had ended: the existing late-payment refund hands it back (one refund, one notice each side).
+          const kept = toPence(amount) - endedPence;
+          tx.update(payRef, kept > 0
+            ? { status: "succeeded", paidAt: at, settledAuto: true, capturedAmount: round2(kept / 100), excess: { pence: endedPence, state: "pending", reason: "not-payable" } }
+            : { status: "duplicate", duplicateDetectedAt: at, excess: { pence: endedPence, state: "pending", reason: "not-payable" } });
+          refundEnded = true;
+          return kept > 0;
+        }
         tx.update(payRef, { status: "succeeded", paidAt: at, settledAuto: true, capturedAmount: amount });
         return true;
       });
+      if (refundEnded) await (await import("./settlePayment")).refundExcess(payRef).catch((e) => console.error("[cardHold] refund of money taken for an ended booking:", (e as Error).message));
     }
-    if (first) await notifyPaymentReceived(tenantId, settled[0], "card", settled, true).catch((e) => console.error("[cardHold] payment-received notice:", (e as Error).message));
+    if (first && settled.length) await notifyPaymentReceived(tenantId, settled[0], "card", settled, true).catch((e) => console.error("[cardHold] payment-received notice:", (e as Error).message));
   }
   return { ok: true };
 }
