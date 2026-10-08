@@ -8,8 +8,7 @@ import { franchiseListingIds } from "../lib/franchiseScope";
 import { staffSiteScope } from "../lib/siteScope";
 import { ukToday } from "../lib/ukDate";
 import { hasLiveAddonOrders, kitForDay, kitTally, type KitBooking } from "../../../features/bookings/addons";
-import { capsFor } from "../middleware/access";
-import { capLevel } from "../../../lib/accessMap";
+import { staffMayReadFamilies } from "../middleware/access";
 import { kitKey } from "../../../features/bookings/addons";
 import { libraryDocId } from "../lib/tenantLibrary";
 import { loadSettings } from "../lib/tenantLibrary";
@@ -38,12 +37,9 @@ async function tenantOf(req: import("express").Request, res: import("express").R
   }
   if (!tenantId) { res.status(403).json({ error: "Your account has no tenant" }); return null; }
   // Staff follow their role matrix: the Add-on orders page is open to anyone who can view Bookings OR Registers (the add-on choices are on both).
-  if (auth.role === "staff") {
-    const caps = await capsFor(req);
-    if (capLevel(caps, "bookings") === "none" && capLevel(caps, "registers") === "none") {
-      res.status(403).json({ error: "Your role doesn't have access to Bookings or Registers, so it can't see add-on orders. A manager can change this in Setup → Roles & permissions.", code: "no_access", area: "bookings" });
-      return null;
-    }
+  if (!(await staffMayReadFamilies(req))) {
+    res.status(403).json({ error: "Your role doesn't have access to Bookings or Registers, so it can't see add-on orders. A manager can change this in Setup → Roles & permissions.", code: "no_access", area: "bookings" });
+    return null;
   }
   return tenantId;
 }

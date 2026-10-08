@@ -1179,6 +1179,7 @@ bookings.post("/:ref/actions", async (req, res) => {
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
     else if (e instanceof Conflict) res.status(409).json({ error: e.message });
+    else if (e instanceof BadRequest) res.status(400).json({ error: e.message });
     else throw e;
   }
 });

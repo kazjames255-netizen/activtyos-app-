@@ -7,7 +7,7 @@ import { useT } from "@/lib/i18n/provider";
 import { dateLocale } from "@/lib/i18n/format";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card } from "@/components/ui";
-import { usePortalHref } from "@/lib/portal-href";
+import { usePortalHref, useReadOnlyPortal } from "@/lib/portal-href";
 import { ADDON_ICON, daysWithOrders, monthGrid, monthRange, nextDayWith, type KitDayTally } from "@/features/bookings/addons";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -61,6 +61,8 @@ export function KitApp() {
   const [error, setError] = useState<string | null>(null);
   const [remindBusy, setRemindBusy] = useState(false);
   const [reminder, setReminder] = useState<boolean | null>(null);
+  // Staff cannot change the "Remind me the day before" switch (owners only), so they are not shown it at all.
+  const useStaffView = useReadOnlyPortal().staff;
 
   const nameQ = `${name ? `&name=${encodeURIComponent(name)}` : ""}${listingId ? `&listingId=${encodeURIComponent(listingId)}` : ""}`;
   // The strip covers a week back to about two months ahead of the chosen day (one request, at most 93 days on the server).
@@ -149,7 +151,7 @@ export function KitApp() {
 
       <div className="kit-noprint mb-3 flex flex-wrap items-center gap-2">
         <h1 className="me-auto text-[20px] font-extrabold">{ADDON_ICON} {t("p8lst.kitTitle")}</h1>
-        {strip && (
+        {strip && !useStaffView && (
           <button type="button" onClick={() => void toggleReminder()} disabled={!strip.canRemind || remindBusy} aria-pressed={remindOn} data-testid="kit-remind"
             title={!strip.canRemind ? t("p8lst.kitRemindReadOnly") : remindOn ? t("p8lst.kitRemindOn") : t("p8lst.kitRemindOff")}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-extrabold disabled:opacity-60">

@@ -17,6 +17,13 @@ export function childExtrasForDay(lines: AddonLineLite[] | undefined, fallback: 
 /** "Water bottle × 7 (Colour: Blue) — £21.00" -> "Water bottle × 7 (Colour: Blue)". */
 export const withoutPriceText = (s: string): string => s.replace(/\s+[—-]\s+£\s?[\d.,]+\s*$/, "");
 
+/** The add-on catalogue as staff may read it: names, options and questions, no price anywhere inside an add-on. */
+export function stripAddonCatalogPrices<T extends { addons?: unknown }>(lib: T): T {
+  const clean = (v: unknown): unknown => Array.isArray(v) ? v.map(clean)
+    : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).filter(([k]) => !/price|cost|amount/i.test(k)).map(([k, x]) => [k, clean(x)])) : v;
+  return Array.isArray(lib.addons) ? { ...lib, addons: clean(lib.addons) } : lib;
+}
+
 /** What a STAFF token gets of a booking's add-ons: the choices, quantities and answers, never a price. The one place that removes add-on money
  *  for staff: the booking, the booking list and the register all use it. Owner / franchise / freelancer views do not call it. */
 export function stripAddonMoney<T extends Record<string, unknown>>(b: T): T {

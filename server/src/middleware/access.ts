@@ -45,6 +45,17 @@ export async function capsFor(req: Request): Promise<Record<string, "none" | "vi
   return auth.caps;
 }
 
+/** Staff whose role gives them neither Bookings nor Registers may not read families' data off routes that sit under another area
+ *  (add-on orders, a block's attendees, the customer list). Everyone else is unaffected. `explicitArea`: an area the role names
+ *  itself (e.g. "customers") also opens the door. */
+export async function staffMayReadFamilies(req: Request, explicitArea?: string): Promise<boolean> {
+  if (req.auth?.role !== "staff") return true;
+  const caps = await capsFor(req);
+  if (capLevel(caps, "bookings") !== "none" || capLevel(caps, "registers") !== "none") return true;
+  const named = explicitArea ? caps?.[explicitArea] : undefined;
+  return named === "view" || named === "edit";
+}
+
 const GATED = new Set(["company", "freelancer", "franchise", "staff"]);
 
 const AREA_LABEL: Record<string, string> = {

@@ -3,6 +3,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { auth, db } from "../firebase";
 import { canWrite, operatorScope } from "../middleware/role";
+import { staffMayReadFamilies } from "../middleware/access";
 import { franchiseFamilyEmails, familyFranchiseMap, isFranchise, franchiseStamp } from "../lib/franchiseScope";
 import { emailSignUpInvite } from "../lib/emails";
 import { webBase } from "../lib/emailSend";
@@ -123,6 +124,7 @@ const customerPatchSchema = customerSchema.partial();
 customers.get("/", async (req, res) => {
   const scope = operatorScope(req, res);
   if (!scope) return;
+  if (!(await staffMayReadFamilies(req, "customers"))) { res.status(403).json({ error: "Your role doesn't have access to Families. A manager can change this in Setup → Roles & permissions.", code: "no_access", area: "customers" }); return; }
 
   let q = db.collection("customers") as FirebaseFirestore.Query;
   if (scope.role === "platform") {

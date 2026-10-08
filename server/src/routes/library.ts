@@ -3,6 +3,7 @@ import { isPayrollAdmin } from "./payroll";
 import { Router } from "express";
 import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
+import { stripAddonCatalogPrices } from "../lib/rosterRules";
 import { forgetSettings } from "../middleware/access";
 import { geocodeAddress } from "./geo";
 import { normaliseChildcareSettings } from "../lib/childcare";
@@ -86,6 +87,8 @@ library.get("/", async (req, res) => {
   let data = snap.exists ? snap.data() : null;
   // Staff never need to know who administers payroll.
   if (data && auth.role === "staff" && data.settings && "payrollAdmins" in (data.settings as object)) { const { payrollAdmins: _pa, ...restS } = data.settings as Record<string, unknown>; data = { ...data, settings: restS }; }
+  // Staff never see add-on prices (the names, options and questions stay: the register and booking screens use them).
+  if (data && auth.role === "staff") data = stripAddonCatalogPrices(data);
   // Staff read the library for everything they render (venues, question sets, switches), but the business bank account printed on
   // invoices is finance's, not theirs — a role set to Finances/Money: None must not be able to read it straight off this call.
   const billing = (data?.settings as { billing?: Record<string, unknown> } | undefined)?.billing;
