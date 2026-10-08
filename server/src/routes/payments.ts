@@ -9,7 +9,8 @@ import { autoEmailOn } from "../lib/autoEmails";
 import { ensurePayDomains } from "../lib/payDomains";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { bookingDocId } from "./bookings";
-import { settlePaymentRecord } from "../lib/settlePayment";
+import { settlePaymentRecord, paymentOutcome } from "../lib/settlePayment";
+import { createOrReuseIntent } from "../lib/checkoutIntent";
 import { markHeld } from "../lib/cardHold";
 import { bookingForToken } from "../lib/bookingPayToken";
 import { payable, balanceOf } from "../lib/payGate";
@@ -337,17 +338,20 @@ payments.post("/checkout", async (req, res) => {
     let stripeAccount: string | null = null;
     if (accountId) { const account = await retrieveConnected(s, tenantId, accountId); if (account?.charges_enabled && account.capabilities?.card_payments === "active") stripeAccount = accountId; }
     if (!stripeAccount && !platformFallback) { res.status(409).json({ error: "This provider can't take card payments yet — they haven't finished Stripe onboarding" }); return; }
-    let intent;
+    let made;
     try {
-      intent = await s.paymentIntents.create({
-        amount: toPence(amount), currency: "gbp", automatic_payment_methods: { enabled: true },
-        description: `${tenant.data()?.name ?? `${BRAND}`} — meal${orders.length > 1 ? "s" : ""}`,
-        metadata: { tenantId, mealOrders: orders.map((o) => o.id).join(","), email },
-        ...((await autoEmailOn(tenantId, "payments")) ? { receipt_email: email } : {}), // meal orders have no email of our own, so Stripe's receipt stays
-      }, stripeAccount ? { stripeAccount } : undefined);
+      made = await createOrReuseIntent(s, {
+        tenantId, covers: orders.map((o) => o.id), pence: toPence(amount), tag: "meals", stripeAccount,
+        params: {
+          amount: toPence(amount), currency: "gbp", automatic_payment_methods: { enabled: true },
+          description: `${tenant.data()?.name ?? `${BRAND}`} — meal${orders.length > 1 ? "s" : ""}`,
+          metadata: { tenantId, mealOrders: orders.map((o) => o.id).join(","), email: email.toLowerCase() },
+          ...((await autoEmailOn(tenantId, "payments")) ? { receipt_email: email.toLowerCase() } : {}), // meal orders have no email of our own, so Stripe's receipt stays
+        },
+        record: { tenantId, mealOrderIds: orders.map((o) => o.id), email, amount, currency: "gbp", stripeAccount, platformFallback: !stripeAccount, status: "created", createdAt: new Date().toISOString() },
+      });
     } catch (e) { stripeFail(res, e); return; }
-    const rref = await paymentsCol.add({ tenantId, mealOrderIds: orders.map((o) => o.id), email, amount, currency: "gbp", paymentIntentId: intent.id, stripeAccount, platformFallback: !stripeAccount, status: "created", createdAt: new Date().toISOString() });
-    res.status(201).json({ paymentId: rref.id, clientSecret: intent.client_secret, stripeAccount, amount });
+    res.status(201).json({ paymentId: made.paymentId, clientSecret: made.intent.client_secret, stripeAccount, amount });
     return;
   }
 
@@ -426,41 +430,32 @@ payments.post("/checkout", async (req, res) => {
     return;
   }
 
-  let intent;
+  // A repeat call (double-click, reload) gets the SAME open intent back, so one booking is never charged twice.
+  let made;
   try {
-    intent = await s.paymentIntents.create(
-      {
+    made = await createOrReuseIntent(s, {
+      tenantId, covers: bookings.map((b) => b.ref), pence: toPence(amount), hold: holdPay, tag: "parent", stripeAccount,
+      params: {
         amount: toPence(amount),
         currency: "gbp",
         // A card HOLD is a card authorisation: only methods that can be held (card, incl. Apple/Google Pay), not Revolut/Amazon Pay etc.
         ...(holdPay ? { payment_method_types: ["card"], capture_method: "manual" as const } : { automatic_payment_methods: { enabled: true } }),
         description: `${tenant.data()?.name ?? `${BRAND}`} — booking${bookings.length > 1 ? "s" : ""} ${bookings.map((b) => b.ref).join(", ")}`,
-        metadata: { tenantId, refs: bookings.map((b) => b.ref).join(","), email, ...(holdPay ? { hold: "1" } : {}) },
+        metadata: { tenantId, refs: bookings.map((b) => b.ref).join(","), email: email.toLowerCase(), ...(holdPay ? { hold: "1" } : {}) },
         // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).
       },
-      stripeAccount ? { stripeAccount } : undefined,
-    );
+      record: {
+        tenantId, refs: bookings.map((b) => b.ref), email, amount, currency: "gbp", stripeAccount, platformFallback: !stripeAccount,
+        status: "created", ...(holdPay ? { hold: true } : {}), createdAt: new Date().toISOString(),
+      },
+    });
   } catch (e) {
     stripeFail(res, e);
     return;
   }
-  const record = {
-    tenantId,
-    refs: bookings.map((b) => b.ref),
-    email,
-    amount,
-    currency: "gbp",
-    paymentIntentId: intent.id,
-    stripeAccount,
-    platformFallback: !stripeAccount,
-    status: "created",
-    ...(holdPay ? { hold: true } : {}),
-    createdAt: new Date().toISOString(),
-  };
-  const ref = await paymentsCol.add(record);
   res.status(201).json({
-    paymentId: ref.id,
-    clientSecret: intent.client_secret,
+    paymentId: made.paymentId,
+    clientSecret: made.intent.client_secret,
     stripeAccount,
     amount,
     ...(holdPay ? { hold: true } : {}),
@@ -494,6 +489,12 @@ payments.post("/checkout/:id/confirm", async (req, res) => {
   // Card HOLD: the card is authorised (money held, not taken) - record it and tell the provider; the payment is taken on approval.
   if (intent.status === "requires_capture") {
     await markHeld(snap.id);
+    // The request was withdrawn (declined, cancelled, released by a sweep) while the card form was open: the authorisation has been
+    // cancelled, so say that, not "held".
+    if (((await paymentsCol.doc(snap.id).get()).data() as { status?: string } | undefined)?.status === "released") {
+      res.json({ status: "requires_capture", paid: false, held: false, refunded: true, refs: rec.refs ?? [] });
+      return;
+    }
     res.json({ status: "requires_capture", paid: false, held: true, refs: rec.refs ?? [] });
     return;
   }
@@ -505,6 +506,12 @@ payments.post("/checkout/:id/confirm", async (req, res) => {
   // browser callback and a webhook delivery for the same payment are safe
   // in either order (backlog b7).
   await settlePaymentRecord(snap.id, { auto: false, by: req.user?.name ?? email ?? "payer" });
+  // The booking could not take this payment and it was (or is being) sent back: never answer "paid".
+  const outcome = await paymentOutcome(snap.id);
+  if (outcome !== "settled") {
+    res.json({ status: "succeeded", paid: false, ...(outcome === "refunded" ? { refunded: true } : { refunding: true }), refs: rec.refs ?? [] });
+    return;
+  }
   if (rec.mealOrderIds?.length) {
     res.json({ status: "succeeded", paid: true });
     return;
@@ -574,25 +581,25 @@ bookingPayPublic.post("/:token/checkout", async (req, res) => {
     res.status(409).json({ error: "This provider can't take card payments yet — pay by one of the listed methods instead" });
     return;
   }
-  let intent;
+  let made;
   try {
-    intent = await s.paymentIntents.create(
-      {
+    made = await createOrReuseIntent(s, {
+      tenantId, covers: [b.ref], pence: toPence(amount), tag: "link", stripeAccount,
+      params: {
         amount: toPence(amount),
         currency: "gbp",
         automatic_payment_methods: { enabled: true },
         description: `${tenant.data()?.name ?? `${BRAND}`} — booking ${b.ref}`,
-        metadata: { tenantId, refs: b.ref, email: b.email, via: "pay-link" },
+        metadata: { tenantId, refs: b.ref, email: (b.email ?? "").toLowerCase() }, // identical to the parent route on purpose: both routes share one intent per booking (the pay-link origin lives on the payments record)
         // No Stripe receipt email: parents get our own "Payment received" email only (one receipt, in the provider's name).
       },
-      stripeAccount ? { stripeAccount } : undefined,
-    );
+      record: {
+        tenantId, refs: [b.ref], email: b.email, amount, currency: "gbp", stripeAccount,
+        platformFallback: !stripeAccount, status: "created", via: "pay-link", createdAt: new Date().toISOString(),
+      },
+    });
   } catch (e) { stripeFail(res, e); return; }
-  const ref = await paymentsCol.add({
-    tenantId, refs: [b.ref], email: b.email, amount, currency: "gbp", paymentIntentId: intent.id, stripeAccount,
-    platformFallback: !stripeAccount, status: "created", via: "pay-link", createdAt: new Date().toISOString(),
-  });
-  res.status(201).json({ paymentId: ref.id, clientSecret: intent.client_secret, stripeAccount, amount });
+  res.status(201).json({ paymentId: made.paymentId, clientSecret: made.intent.client_secret, stripeAccount, amount });
 });
 
 bookingPayPublic.post("/:token/confirm/:paymentId", async (req, res) => {
@@ -610,5 +617,7 @@ bookingPayPublic.post("/:token/confirm/:paymentId", async (req, res) => {
   const intent = await s.paymentIntents.retrieve(rec.paymentIntentId, {}, rec.stripeAccount ? { stripeAccount: rec.stripeAccount } : undefined);
   if (intent.status !== "succeeded") { res.json({ status: intent.status, paid: false }); return; }
   await settlePaymentRecord(snap.id, { auto: false, by: "pay link" });
+  const outcome = await paymentOutcome(snap.id);
+  if (outcome !== "settled") { res.json({ status: "succeeded", paid: false, ...(outcome === "refunded" ? { refunded: true } : { refunding: true }) }); return; }
   res.json({ status: "succeeded", paid: true });
 });

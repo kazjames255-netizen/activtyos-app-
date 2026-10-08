@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { post as apiPost } from "@/lib/api";
@@ -28,33 +28,41 @@ interface CheckoutInfo {
   hold?: boolean;
 }
 
-function PayForm({ info, onPaid, onHeld, onError }: { info: CheckoutInfo; onPaid: () => void; onHeld: () => void; onError: (m: string) => void }) {
+function PayForm({ info, onPaid, onHeld, onRefunded, onError }: { info: CheckoutInfo; onPaid: () => void; onHeld: () => void; onRefunded: (pending: boolean) => void; onError: (m: string) => void }) {
   const t = useT();
   const w = useWord();
   const stripeJs = useStripe();
   const elements = useElements();
   const [busy, setBusy] = useState(false);
 
+  // A ref, not just state: a fast double-click fires twice before React re-renders the disabled button, and confirming the
+  // same PaymentIntent twice must never happen. (The server also hands back one intent per booking, so this is belt and braces.)
+  const inFlight = useRef(false);
+
   async function pay() {
-    if (!stripeJs || !elements) return;
+    if (!stripeJs || !elements || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     const { error } = await stripeJs.confirmPayment({ elements, redirect: "if_required" });
     if (error) {
       onError(`${error.message ?? t("p8lst.pmPayFailed")}${error.type === "card_error" ? ` ${t("p7ck.declineRetry")}` : ""}`);
+      inFlight.current = false;
       setBusy(false);
       return;
     }
     try {
-      const res = await apiPost<{ paid: boolean; held?: boolean; status: string }>(
+      const res = await apiPost<{ paid: boolean; held?: boolean; refunded?: boolean; refunding?: boolean; status: string }>(
         `/api/payments/checkout/${info.paymentId}/confirm`,
         {},
       );
       if (res.paid) onPaid();
+      else if (res.refunded || res.refunding) onRefunded(!res.refunded); // the booking could no longer take it: say so, never "paid"
       else if (res.held) onHeld();
       else onError(t("p8lst.pmNotCompleted", { status: res.status === "succeeded" ? t("p8lst.pmSucceeded") : res.status === "failed" ? t("p8lst.pmFailed") : w(res.status) }));
     } catch (e) {
       onError(e instanceof Error ? e.message : t("p8lst.pmVerifyFail"));
     }
+    inFlight.current = false;
     setBusy(false);
   }
 
@@ -76,6 +84,8 @@ export function PayModal({ refs = [], tenantId, tenantName, mealOrderIds, onClos
   const [error, setError] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
   const [held, setHeld] = useState(false);
+  // The booking could not take the payment and it went (or is going) back: null = not the case, true = refund still in progress.
+  const [refunded, setRefunded] = useState<null | boolean>(null);
   const meals = !!mealOrderIds?.length;
   // A parent who has just paid goes back to their home page (after a moment to read "payment complete").
   const toHome = typeof window !== "undefined" && window.location.pathname.startsWith("/custdash");
@@ -117,7 +127,13 @@ export function PayModal({ refs = [], tenantId, tenantName, mealOrderIds, onClos
             ×
           </button>
         </div>
-        {paid ? (
+        {refunded !== null ? (
+          <div className="py-4 text-center">
+            <div className="text-[22px]">↩️</div>
+            <p className="mt-1 text-[13.5px]">{refunded ? t("p8lst.pmRefunding") : t("p8lst.pmRefunded")}</p>
+            <Button variant="primary" onClick={onClose} className="mt-3">{t("p8lst.pmDone")}</Button>
+          </div>
+        ) : paid ? (
           <div className="py-4 text-center">
             <div className="text-[22px]">✅</div>
             <p className="mt-1 text-[13.5px]">{held ? t("p8lst.holdDone") : pickPlural(t, locale, meals ? "p8lst.pmThanksMeal" : "p8lst.pmThanksBooking", nCount)}</p>
@@ -138,6 +154,7 @@ export function PayModal({ refs = [], tenantId, tenantName, mealOrderIds, onClos
             <PayForm
               info={info}
               onError={setError}
+              onRefunded={(pending) => setRefunded(pending)}
               onHeld={() => {
                 setHeld(true);
                 setPaid(true);
