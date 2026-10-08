@@ -109,7 +109,8 @@ export async function enforceAccess(req: Request, res: Response, next: NextFunct
       }
     }
     // Children / parent contact / medical reads: Bookings or Registers, or the area named explicitly (see FAMILY_READ_API).
-    if (familyArea && !(await staffMayReadFamilies(req, familyArea))) {
+    // (the DSL / deputy named in Setup → Safeguarding keeps safeguarding access whatever the matrix says, as above)
+    if (familyArea && !(familyArea === "incidents" && (await isSafeguardingLead(auth, req.user?.email))) && !(await staffMayReadFamilies(req, familyArea))) {
       res.status(403).json({ error: "Your role doesn't have access to Bookings or Registers, so it can't open children's or families' details. A manager can change this in Setup → Roles & permissions.", code: "no_access", area: familyArea });
       return;
     }

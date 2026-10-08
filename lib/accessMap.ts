@@ -214,14 +214,19 @@ const under = (path: string, prefix: string) => path === prefix || path.startsWi
  *  under areas that "silent = edit" leaves open (medical, moments), so a role with Bookings: none AND Registers: none could read
  *  them. A staff account may read them only if its role has Bookings or Registers (view or edit), or NAMES `area` itself
  *  (view/edit). Enforced once, in middleware/access.ts (staffMayReadFamilies). GET only; everything else is the area's own rule. */
-export const FAMILY_READ_API: { re: RegExp; area: string }[] = [
+export const FAMILY_READ_API: { re: RegExp; area: string; allMethods?: boolean }[] = [
   { re: /^\/api\/children(\/.*)?$/, area: "medical" },
+  { re: /^\/api\/moments\/?$/, area: "moments" },
   { re: /^\/api\/moments\/taggable\/?$/, area: "moments" },
+  { re: /^\/api\/incidents(\/.*)?$/, area: "incidents" }, // reads only: LOGGING a concern/accident stays open to all staff (NEVER_REFUSED)
+  { re: /^\/api\/medications(\/.*)?$/, area: "medication", allMethods: true },
+  { re: /^\/api\/trips\/?$/, area: "trips" },
+  { re: /^\/api\/ratios\/board(\/.*)?$/, area: "ratios" },
 ];
 export function familyReadAreaForApi(path: string, method: string): string | null {
   const m = method.toUpperCase();
-  if (m !== "GET" && m !== "HEAD") return null;
-  return FAMILY_READ_API.find((f) => f.re.test(path))?.area ?? null;
+  const read = m === "GET" || m === "HEAD";
+  return FAMILY_READ_API.find((f) => f.re.test(path) && (read || f.allMethods))?.area ?? null;
 }
 
 /** The feature entry an API call falls under, or null. A read of a
