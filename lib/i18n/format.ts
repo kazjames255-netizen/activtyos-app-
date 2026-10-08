@@ -5,6 +5,7 @@
 // with the picker). English stays UK-style (plain "en" would print US-style "Sep 12"). Arabic, Urdu, Bengali and Panjabi use
 // Western digits (-u-nu-latn) so dates match the money / counts the rest of the UI prints, and so mixed LTR digits inside RTL text stay legible.
 import { DEFAULT_LOCALE, type LocaleCode } from "./config";
+import { joinList, safeLocale } from "./listFormat";
 
 const TAG: Record<LocaleCode, string> = {
   en: "en-GB", pl: "pl-PL", ro: "ro-RO", ur: "ur-PK-u-nu-latn", pa: "pa-IN-u-nu-latn", bn: "bn-BD-u-nu-latn",
@@ -12,15 +13,21 @@ const TAG: Record<LocaleCode, string> = {
 };
 
 let current: LocaleCode = DEFAULT_LOCALE;
+// The tag this browser actually accepts for `current` (an unsupported tag throws RangeError in Intl / toLocale* on some Safari builds, which
+// during a render blanks the whole page). Checked once per language change, not per call.
+let tag: string = safeLocale(TAG[DEFAULT_LOCALE]);
 
 /** Called by LanguageProvider whenever the language changes. */
-export function setDateLocale(l: LocaleCode): void { current = TAG[l] ? l : DEFAULT_LOCALE; }
+export function setDateLocale(l: LocaleCode): void { current = TAG[l] ? l : DEFAULT_LOCALE; tag = safeLocale(TAG[current]); }
 
 /** The active language code ("en", "pl"…). */
 export function currentLocaleCode(): LocaleCode { return current; }
 
 /** The tag to pass to toLocaleDateString / toLocaleTimeString / toLocaleString / Intl.* for the active language. */
-export function dateLocale(): string { return TAG[current]; }
+export function dateLocale(): string { return tag; }
+
+/** "A, B and C" in the active language, never throwing (see lib/i18n/listFormat.ts). */
+export function joinListNow(items: string[]): string { return joinList(items, tag); }
 
 /** "just now" / "5m ago" / "3h ago" / "2d ago" in the active language. `t` is the caller's useT(). */
 export function agoLabel(t: (key: string, vars?: Record<string, string | number>) => string, iso: string): string {

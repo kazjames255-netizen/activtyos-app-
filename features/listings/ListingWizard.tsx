@@ -1,7 +1,7 @@
 "use client";
 
 import { deliveryLabel } from "./delivery";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, joinListNow } from "@/lib/i18n/format";
 import { addonLinesFor } from "@/features/bookings/helpers";
 import { addonSentences } from "@/features/bookings/addons";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -937,11 +937,11 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
     const runsOn = ds.length > 1 && ds.every((iso, i) => i === 0 || dayNo(iso) - dayNo(ds[i - 1]) === 1 || (new Date(`${ds[i - 1]}T00:00:00Z`).getUTCDay() === 5 && dayNo(iso) - dayNo(ds[i - 1]) === 3));
     const when =
       ds.length > 1 && !runsOn
-        ? (ds.length <= 6 ? new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(ds.map((d) => fmtDay(d) ?? d)) : `${ds.length} days, ${fmtDay(ds[0])} – ${fmtDay(ds[ds.length - 1])}`)
+        ? (ds.length <= 6 ? joinListNow(ds.map((d) => fmtDay(d) ?? d)) : `${ds.length} days, ${fmtDay(ds[0])} – ${fmtDay(ds[ds.length - 1])}`)
         : done.firstDate && done.lastDate && done.lastDate !== done.firstDate
           ? `${fmtDay(done.firstDate)} – ${fmtDay(done.lastDate)}`
           : fmtDay(done.firstDate);
-    const kids = done.children.length > 1 ? new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(done.children) : done.children.join(", ");
+    const kids = done.children.length > 1 ? joinListNow(done.children) : done.children.join(", ");
     const where = (venue as { kind?: string } | null | undefined)?.kind === "online" ? t("p8lst.dlvOnline") : venue?.name ? [venue.name, venue.address].filter(Boolean).join(", ") : null;
     // Voucher bookings are NOT paid yet — the family pays through their scheme's
     // own site. Surface that + a link, instead of a false "paid".

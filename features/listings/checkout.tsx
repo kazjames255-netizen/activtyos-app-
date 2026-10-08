@@ -15,7 +15,7 @@
 import { tfcReady } from "@/lib/tfcReady";
 import { GenderQuickAdd } from "@/features/common/GenderQuickAdd";
 import { HowItWorks } from "@/components/HowItWorks";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, joinListNow } from "@/lib/i18n/format";
 import type { DiscountKind } from "./discounts";
 import { useEffect, useRef, useState } from "react";
 import { tNow, useI18n } from "@/lib/i18n/provider";
@@ -691,7 +691,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           {tried && missing.length > 0 && !problem && (
             <div className={`mt-2.5 border px-3 py-2 text-[12px] font-bold ${tk.round}`}
               style={{ borderColor: "#f87171", background: "rgba(248,113,113,.12)", color: "#fca5a5" }}>
-              {tr("p7ck.stillNeed", { name: draft.name.trim() || tr("p7ck.thisChildLower"), list: new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(missing) }).replace(/([?!؟])\s*[.。۔।]$/, "$1")}
+              {tr("p7ck.stillNeed", { name: draft.name.trim() || tr("p7ck.thisChildLower"), list: joinListNow(missing) }).replace(/([?!؟])\s*[.。۔।]$/, "$1")}
             </div>
           )}
           <div className="mt-3 flex gap-2">
@@ -1637,8 +1637,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                         <div className="mt-1.5 border px-2.5 py-1.5 text-[11px] leading-[1.45]"
                           style={{ borderColor: "#fed7aa", background: "#fff7ed", color: "#9a3412" }}>
                           {tr([...new Set(clashesOn(x.id).map((c) => c.name))].length === 1 ? "p8lst.ck8ClashOne" : "p8lst.ck8ClashMany", {
-                            names: new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format([...new Set(clashesOn(x.id).map((c) => c.name))]),
-                            dates: new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format([...new Set(clashesOn(x.id).map((c) => fmtDate(c.iso)))]),
+                            names: joinListNow([...new Set(clashesOn(x.id).map((c) => c.name))]),
+                            dates: joinListNow([...new Set(clashesOn(x.id).map((c) => fmtDate(c.iso)))]),
                           })}
                         </div>
                       )}

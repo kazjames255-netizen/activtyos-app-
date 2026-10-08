@@ -1,7 +1,7 @@
 "use client";
 
 import { Component, type ReactNode } from "react";
-import { post } from "@/lib/api";
+import { reportClientError } from "@/lib/reportClientError";
 import { tNow } from "@/lib/i18n/provider";
 
 // A view that throws while rendering used to leave a BLANK screen (seen on an iPhone, Quick book, 9 Oct 2026). This wraps a view so a
@@ -20,8 +20,7 @@ export class ViewErrorBoundary extends Component<Props, State> {
     const e = this.state.error;
     if (!e || this.state.sent === "busy") return;
     this.setState({ sent: "busy" });
-    const steps = `${this.props.name} showed the error screen.\n${e.name}: ${e.message}\n${(e.stack ?? "").split("\n").slice(0, 6).join("\n")}`.slice(0, 4900);
-    post("/api/support/report", { page: location.pathname + location.search, steps, severity: "high", device: navigator.userAgent.slice(0, 480) })
+    reportClientError(this.props.name, e)
       .then(() => this.setState({ sent: "done" }))
       .catch(() => this.setState({ sent: "fail" }));
   };
