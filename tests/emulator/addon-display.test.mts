@@ -51,6 +51,7 @@ async function mailTo(to: string, match: (subject: string, body: string) => bool
 // ── set-up ────────────────────────────────────────────────────────────────────────────────────────
 const D = (n: number) => day(n);
 let LW: { id: string; blockId: string; dates: string[] };
+let LE: { id: string; blockId: string; dates: string[] }; // run Sun 31 Jan - Sat 6 Feb 2027: split at the month end (Monday 1 Feb)
 let LM: { id: string; blockId: string; dates: string[] }; // manual approval (awaiting approval / decline)
 
 async function makeListing(title: string, o: { mode: "custom" | "weekly"; approval?: boolean; start: string; days: number }) {
@@ -93,6 +94,7 @@ before(async () => {
   // Sunday on or after D1 + 3 so a 7-day run starting there crosses a Monday (weekly mode splits it into 1 + 6 days).
   const d = new Date(`${ukDay(12)}T00:00:00Z`); while (d.getUTCDay() !== 0) d.setUTCDate(d.getUTCDate() + 1);
   LW = await makeListing(`LW weekly ${uniq()}`, { mode: "weekly", start: d.toISOString().slice(0, 10), days: 7 });
+  LE = await makeListing(`LE month-end ${uniq()}`, { mode: "weekly", start: "2027-01-31", days: 7 });
   LM = await makeListing(`LM approval ${uniq()}`, { mode: "custom", approval: true, start: ids().listings.LK.dates[0], days: 3 });
 });
 
@@ -362,5 +364,155 @@ describe("AM01: Finance Insights counts add-ons by quantity", () => {
     assert.equal(f.addonUnits, 3);
     assert.equal(f.addonRevenue, 28);
     assert.equal(f.bookingsWithAddon, 2);
+  });
+});
+
+// ══════════════════════════════ ROUND 2 ══════════════════════════════
+// V05: a ONE-OFF add-on is stored on the FIRST reference of a split checkout. When that reference is cancelled or emptied while the child still attends the
+// other one, the paid T-shirt must show on the first day of the earliest REMAINING part. Money is not touched: the price stays on the original line.
+async function split(l: { id: string; blockId: string; dates: string[] }, kids: { name: string; tshirt?: boolean; bottle?: boolean }[]) {
+  const items = kids.map((k) => ({
+    pass: `${l.dates.length}-day pass`, child: k.name, age: 8, dates: l.dates,
+    addons: [
+      ...(k.tshirt ? [{ id: ADDON_DEFS.AT.id, answers: { [qid().Size]: "M" } }] : []),
+      ...(k.bottle ? [{ id: ADDON_DEFS.AW.id, answers: { [qid().Colour]: "Blue" } }] : []),
+    ],
+  }));
+  const s = await login("parent-a@emu.test");
+  const r = await call("POST", "/api/my/bookings", s.token, { listingId: l.id, blockId: l.blockId, method: "Bank transfer", items });
+  assert.ok(r.status < 300, `book -> ${r.status} ${JSON.stringify(r.json).slice(0, 300)}`);
+  const list: any[] = Array.isArray(r.json) ? r.json : r.json?.bookings ?? [r.json];
+  assert.equal(list.length, 2, `setup: the checkout split into two references: ${list.map((b) => b.ref)}`);
+  const sorted = [...list].sort((a, b) => String(a.days[0]).localeCompare(String(b.days[0])));
+  return { first: sorted[0].ref as string, second: sorted[1].ref as string };
+}
+/** Which days of the run show this child's T-shirt in Add-on orders / the register. */
+async function teeDays(l: { id: string; dates: string[] }, child: string, listingKey = "") {
+  const kit: string[] = [], reg: string[] = [];
+  for (const d of l.dates) {
+    if ((await kitRows(d)).some((k) => k.child === child && k.item.startsWith("T-shirt"))) kit.push(d);
+    const att = ((await registerDay(d)).json as any[]).filter((s) => s.listingId === l.id).flatMap((s) => s.attendees).filter((a: any) => a.children[0].name === child);
+    if (att.some((a: any) => a.addons.some((x: string) => /T-shirt/.test(x)))) reg.push(d);
+  }
+  void listingKey;
+  return { kit, reg };
+}
+const dayAfterFirst = (l: { dates: string[] }) => l.dates[1];
+
+
+for (const which of ["LW", "LE"] as const) {
+  const L = () => (which === "LW" ? LW : LE);
+  describe(`V05 (${which}): the one-off follows the earliest remaining part of a split checkout`, () => {
+    it("setup shows the T-shirt once, on the first day only", async () => {
+      const c = `V05s ${uniq()}`;
+      await split(L(), [{ name: c, tshirt: true }]);
+      const t = await teeDays(L(), c);
+      assert.deepEqual(t.kit, [L().dates[0]]);
+      assert.deepEqual(t.reg, [L().dates[0]]);
+    });
+    it("cancel-day of the first reference's only day: the T-shirt moves to the next attended day, once", async () => {
+      const c = `V05a ${uniq()}`;
+      const r = await split(L(), [{ name: c, tshirt: true, bottle: true }]);
+      const res = await operatorAction(r.first, "cancel-day", { ki: 0, date: L().dates[0], resolution: "none" });
+      assert.ok(res.status < 300, `cancel-day ${res.status} ${JSON.stringify(res.json).slice(0, 200)}`);
+      const t = await teeDays(L(), c);
+      assert.deepEqual(t.kit, [dayAfterFirst(L())], "Add-on orders");
+      assert.deepEqual(t.reg, [dayAfterFirst(L())], "register");
+    });
+    it("cancelling the whole first reference: same", async () => {
+      const c = `V05b ${uniq()}`;
+      const r = await split(L(), [{ name: c, tshirt: true }]);
+      const res = await operatorAction(r.first, "cancel", { refund: "none" });
+      assert.ok(res.status < 300);
+      const t = await teeDays(L(), c);
+      assert.deepEqual(t.kit, [dayAfterFirst(L())]);
+      assert.deepEqual(t.reg, [dayAfterFirst(L())]);
+    });
+    it("cancelling only the SECOND reference: the T-shirt stays on the first day", async () => {
+      const c = `V05c ${uniq()}`;
+      const r = await split(L(), [{ name: c, tshirt: true }]);
+      assert.ok((await operatorAction(r.second, "cancel", { refund: "none" })).status < 300);
+      const t = await teeDays(L(), c);
+      assert.deepEqual(t.kit, [L().dates[0]]);
+      assert.deepEqual(t.reg, [L().dates[0]]);
+    });
+    it("two children: cancelling the first reference moves BOTH T-shirts, once each; cancelling one child moves only that child's", async () => {
+      const a = `V05d1 ${uniq()}`, b = `V05d2 ${uniq()}`;
+      const r = await split(L(), [{ name: a, tshirt: true }, { name: b, tshirt: true }]);
+      assert.ok((await operatorAction(r.first, "cancel", { refund: "none" })).status < 300);
+      for (const c of [a, b]) {
+        const t = await teeDays(L(), c);
+        assert.deepEqual(t.kit, [dayAfterFirst(L())], `${c} Add-on orders`);
+        assert.deepEqual(t.reg, [dayAfterFirst(L())], `${c} register`);
+      }
+      const x = `V05e1 ${uniq()}`, y = `V05e2 ${uniq()}`;
+      const r2 = await split(L(), [{ name: x, tshirt: true }, { name: y, tshirt: true }]);
+      const bk = (await as("P", "GET", `/api/bookings/${encodeURIComponent(r2.first)}`)).json;
+      const ki = (bk.kids as any[]).findIndex((k) => k.name === x);
+      assert.ok(ki >= 0, "setup: kid index");
+      assert.ok((await operatorAction(r2.first, "cancel-child", { ki, resolution: "none" })).status < 300);
+      assert.deepEqual((await teeDays(L(), x)).kit, [dayAfterFirst(L())], "cancelled child's T-shirt moves");
+      assert.deepEqual((await teeDays(L(), y)).kit, [L().dates[0]], "the other child's stays");
+    });
+  });
+}
+
+describe("V05 money: the one-off's price is still counted once", () => {
+  it("booking amounts and Finance units are unchanged by the cancellation", async () => {
+    const c = `V05m ${uniq()}`;
+    const r = await split(LW, [{ name: c, tshirt: true }]);
+    await operatorAction(r.first, "cancel-day", { ki: 0, date: LW.dates[0], resolution: "none" });
+    const all: any[] = (await as("P", "GET", "/api/bookings")).json;
+    const mine = all.filter((x) => x.ref === r.first || x.ref === r.second);
+    const f = addonFigures(mine);
+    assert.equal(f.addonUnits, 1, "one T-shirt, counted once");
+    assert.equal(f.addonRevenue, 8);
+  });
+});
+
+// Register: a per-day add-on's line shows THAT DAY's own quantity (and day-share price), not the whole booking's.
+describe("Register: a per-day add-on shows the day's own quantity", () => {
+  it("bottle x 7 for £21.00 reads x 1 for £3.00 on each day", async () => {
+    const child = `Reg ${uniq()}`;
+    const b = await bookWithAddons({ parent: "A", listing: "LK", children: [{ name: child, days: "all", addons: [{ id: "AW", answers: { Colour: "Blue" } }] }] });
+    assert.ok(b.status < 300);
+    for (const n of [1, 4, 7]) {
+      const lines = await regLines(n, child);
+      assert.equal(lines.length, 1);
+      assert.match(lines[0], /Water bottle × 1\b/, `D${n}: ${lines[0]}`);
+      assert.ok(!/× 7/.test(lines[0]) && !/£21\.00/.test(lines[0]), `D${n} shows the whole-booking figure: ${lines[0]}`);
+      assert.match(lines[0], /£3\.00/);
+    }
+  });
+});
+
+// X07r: an Offered (waiting-list, not yet accepted) booking is not a sale.
+describe("X07r: Finance add-on figures leave out Offered, Declined, Waitlisted and Cancelled bookings", () => {
+  it("only the confirmed booking counts", () => {
+    const line = [{ child: "x", label: "T-shirt (Size: M)", price: 8, perDay: false, qty: 1 }];
+    const mk = (status: string) => ({ status, addons: ["T-shirt (Size: M) — £8.00"], addonLines: line });
+    const f = addonFigures([mk("Confirmed"), mk("Offered"), mk("Declined"), mk("Waitlisted"), mk("Cancelled")] as never);
+    assert.equal(f.addonUnits, 1);
+    assert.equal(f.addonRevenue, 8);
+    assert.equal(f.bookingsWithAddon, 1);
+  });
+});
+
+// Bell: a bottle split over two references is ONE extra, not two.
+describe("Bell: the new-booking bell counts extras across the split references", () => {
+  it("1 bottle over 2 references says 1 extra", async () => {
+    const child = `Bell ${uniq()}`;
+    const r = await split(LW, [{ name: child, bottle: true }]);
+    const db = await adminDb();
+    const until = Date.now() + 8000;
+    let body = "";
+    while (Date.now() < until && !body) {
+      const snap = await db.collection("notifications").get().catch(() => null);
+      const hit = snap?.docs.map((d) => d.data()).find((n: any) => String(n.title ?? "").includes(r.first) || String(n.ref ?? "") === r.first);
+      body = String((hit as any)?.body ?? "");
+      if (!body) await new Promise((x) => setTimeout(x, 250));
+    }
+    assert.ok(body, "the bell exists");
+    assert.match(body, /\b1 extra\b/, body);
   });
 });
