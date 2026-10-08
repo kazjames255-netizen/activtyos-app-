@@ -101,7 +101,7 @@ before(async () => {
     L3 = await makeListing(`L3 three weeks ${uniq()}`, { mode: "weekly", start: d3.toISOString().slice(0, 10), days: 15 }); }
   { const P0 = (await login("provider-p@emu.test")).token;
     const lib = (await call("GET", "/api/library", P0)).json;
-    await call("PUT", "/api/library", P0, { settings: { ...(lib.settings ?? {}), cancellationPolicies: [{ id: "half-r8", name: "Half back", bands: [{ hoursBefore: 0, refundPercent: 50 }] }] } });
+    await call("PUT", "/api/library", P0, { settings: { ...(lib.settings ?? {}), cancellationPolicies: [{ id: "standard-r8", name: "Standard", bands: [{ hoursBefore: 168, refundPercent: 100 }, { hoursBefore: 48, refundPercent: 50 }, { hoursBefore: 0, refundPercent: 0 }] }, { id: "half-r8", name: "Half back", bands: [{ hoursBefore: 0, refundPercent: 50 }] }] } });
     const dh = new Date(`${ukDay(45)}T00:00:00Z`); while (dh.getUTCDay() !== 0) dh.setUTCDate(dh.getUTCDate() + 1);
     LH = await makeListing(`LH half policy ${uniq()}`, { mode: "weekly", start: dh.toISOString().slice(0, 10), days: 7, policyId: "half-r8" }); }
   LM = await makeListing(`LM approval ${uniq()}`, { mode: "custom", approval: true, start: ids().listings.LK.dates[0], days: 3 });
@@ -806,7 +806,7 @@ describe("R8: parent-side cancels stamp the add-on refund", () => {
     const b = await r8split(LW, [c], true);
     const res = await parentCancel(b.first);
     assert.ok(res.status < 300, `cancel ${res.status} ${JSON.stringify(res.json).slice(0, 200)}`);
-    assert.equal((await lineOf(b.first, c)).refunded, true);
+    assert.equal((await lineOf(b.first, c)).refunded, true, JSON.stringify((await docOf(b.first)).cancel));
     const t = await teeDays(LW, c);
     assert.deepEqual(t.kit, []); assert.deepEqual(t.reg, []);
   });

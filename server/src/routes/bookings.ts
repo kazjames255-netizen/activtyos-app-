@@ -856,6 +856,7 @@ bookings.post("/:ref/actions", async (req, res) => {
       // Did the add-ons go back with this refund? The provider's YES/NO (kept on the cancel record when there is one) or, when not asked, the default:
       // a whole-booking "full" refund, or a child's whole place refunded in full => yes; partial / day-only / none => no. The answer is STORED on the
       // lines (addonRefund.ts) whether or not a cancel record exists (a wallet credit has none), and is never un-done by a later cancel.
+      if (action.type === "decline") stampAddonRefund(b, { scope: "whole" }, false);
       if (action.type === "cancel" || action.type === "cancel-child" || action.type === "cancel-day") {
         if (action.refundsAddons !== undefined && b.cancel) b.cancel.refundsAddons = action.refundsAddons;
         const moved = action.type === "cancel" ? action.refund !== "none" : !!release && release.resolution !== "none" && release.amount > 0;
@@ -1603,6 +1604,8 @@ bookings.post("/bulk", async (req, res) => {
       // cancel's job. Bulk used to cancel it, keep the money and tell the family "No refund".
       if (action === "cancel" && blocksBulkCancel(b)) paidRefs.push(b.ref);
       applyBulkAction(b, action);
+      // A bulk cancel / decline moves no money (paid bookings are refused above): the add-ons are KEPT as bought, same defaults as a single cancel with no refund.
+      if (action === "cancel" || action === "decline") stampAddonRefund(b, { scope: "whole" }, false);
       if (b.blockId) {
         const d = blockCountDelta(oldStatus, b.status, bookingSeats(b));
         if (d !== 0) {

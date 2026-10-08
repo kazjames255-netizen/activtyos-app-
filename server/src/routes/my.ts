@@ -31,6 +31,7 @@ import type { Booking, AddonRequest } from "../../../features/bookings/types";
 import { AddonRequestError, addAddonRequest, buildAddonRequest, currentAnswers, defForLine, withdrawAddonRequest } from "../lib/addonRequests";
 import { addonLineKey, parseAddonLabel } from "../../../features/bookings/addons";
 import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, requestDeadline } from "../../../features/bookings/addonRequests";
+import { stampAddonRefund } from "../../../features/bookings/addonRefund";
 import { applyParentCancel, applyPartialCancel, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
 import { applyDiscounts, DISCOUNT_KIND_LABEL, type DiscountRule } from "../../../features/listings/discounts";
@@ -2707,6 +2708,17 @@ async function partialCancel(
       };
       b.note = `${label} released — ${value > 0 ? `${money(value)} refund requested` : "no refund due"}.`;
     }
+    // Add-on refund state (addonRefund.ts): a child's WHOLE place released with a full-value refund takes that child's add-ons back; day-only or partial
+    // releases keep them (a released day's own per-day add-on simply drops with the day).
+    {
+      const allBack = value > 0.004 && value >= round2(releasedCount * perSlotPaid) - 0.004;
+      for (const w of wanted) {
+        const kid = (b.kids ?? []).find((k) => (k.childId ?? k.name) === w.childKey);
+        if (!kid) continue;
+        if (allBack && kid.cancelled) stampAddonRefund(b, { scope: "child", child: kid.name }, true);
+        else stampAddonRefund(b, { scope: "day", child: kid.name, date: w.days[0] ?? "" }, false);
+      }
+    }
 
     tx.set(ref, toDoc(b));
     if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
@@ -2881,6 +2893,9 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       }
       // A cancelled-but-paid booking must read "Refund pending" straight away, like an operator cancel, not "Paid" until the refund is approved.
       markRefundPending(b);
+      // The add-ons go back only with a FULL refund that really moves money (policy full, or a credit note); a partial / nil refund keeps them.
+      // Stored on the lines now (addonRefund.ts), sticky, so no later change of the cancel record can flip it.
+      stampAddonRefund(b, { scope: "whole" }, b.cancel?.refund === "full" && (b.cancel.amount ?? 0) > 0.004);
       // Free the block places the booking held — total AND its days
       // (all reads before writes).
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;
