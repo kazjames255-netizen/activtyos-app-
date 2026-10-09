@@ -2,8 +2,9 @@ import { Router } from "express";
 import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { db } from "../firebase";
-import { sendMail } from "../lib/mailer";
-import { BRAND } from "../lib/brand";
+import { FieldValue } from "firebase-admin/firestore";
+import { sendMailDetailed } from "../lib/mailer";
+import { deliverTwoFaCode, parseFallbackEmails, TWO_FA_SUBJECT, twoFaHtml } from "../lib/twoFaMail";
 
 // Mandatory email 2FA for the platform (super-admin/HQ) portal — a small,
 // manually-provisioned set of accounts. Mounted with `requireAuth` ONLY (no
@@ -73,13 +74,26 @@ twoFa.post("/send", async (req, res) => {
     return;
   }
 
-  const html = `
-    <p>Your ${BRAND} platform sign-in code is:</p>
-    <p style="font-size:28px;font-weight:800;letter-spacing:4px;">${code}</p>
-    <p>This code expires in ${Math.round(CODE_TTL_MS / 60_000)} minutes. If you didn't request this, you can ignore this email.</p>
-  `;
-  const delivered = await sendMail(TWO_FA_RECIPIENT, `Your ${BRAND} platform sign-in code`, html);
-  res.json({ sent: true, delivered, expiresInMs: CODE_TTL_MS });
+  const html = twoFaHtml(code, Math.round(CODE_TTL_MS / 60_000));
+  // Break-glass inboxes (HQ_2FA_FALLBACK_EMAILS, empty by default) are mailed ONLY when the primary send did not go out.
+  const fallbacks = parseFallbackEmails(process.env.HQ_2FA_FALLBACK_EMAILS, TWO_FA_RECIPIENT);
+  const r = await deliverTwoFaCode((to, subject, body) => sendMailDetailed(to, subject, body), TWO_FA_RECIPIENT, fallbacks, TWO_FA_SUBJECT, html);
+  if (!r.delivered) {
+    // Tell the truth: nothing left the building. Void the unsent code and release the cooldown so he can retry at once.
+    console.error(`[2fa] sign-in code NOT delivered (uid ${uid}): primary=${r.primary} reason="${r.errorKind ?? "unknown"}" fallbacksTried=${r.fallbackTried}`);
+    await db.runTransaction(async (tx) => {
+      const cur = (await tx.get(ref)).data() ?? {};
+      if (cur.twoFaCodeSalt === salt) {
+        tx.set(ref, { twoFaCodeHash: null, twoFaCodeSalt: null, twoFaCodeExpiresAt: null, twoFaLastSentAt: 0 }, { merge: true });
+      }
+      // Per-send failure counter + last reason, readable on the platform user's doc.
+      tx.set(ref, { twoFaMailFailures: FieldValue.increment(1), twoFaLastMailFailure: { at: Date.now(), kind: r.errorKind ?? "unknown" } }, { merge: true });
+    }).catch((e) => console.error("[2fa] could not record the mail failure:", e instanceof Error ? e.name : "error"));
+    res.status(502).json({ error: "We could not email the code. Try again in a minute or contact support.", code: "2fa_mail_failed" });
+    return;
+  }
+  if (r.via === "fallback") console.warn(`[2fa] primary inbox failed (${r.primary}); code sent to ${r.fallbackTried} fallback inbox(es)`);
+  res.json({ sent: true, delivered: true, expiresInMs: CODE_TTL_MS });
 });
 
 const verifySchema = z.object({ code: z.string().trim().min(4).max(10) });

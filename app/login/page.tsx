@@ -38,6 +38,7 @@ function LoginForm() {
   // Mandatory email 2FA for platform (HQ) accounts only — everyone else never
   // sees this. `stage: "2fa"` shows the code-entry step in place of the
   // sign-in form; `false` while it hasn't sent yet (see submit()/goHome()).
+  const [sendFailed, setSendFailed] = useState(false);
   const [stage, setStage] = useState<"form" | "2fa">("form");
   const [code, setCode] = useState("");
   const [codeBusy, setCodeBusy] = useState(false);
@@ -63,6 +64,7 @@ function LoginForm() {
 
   async function sendTwoFaCode(): Promise<boolean> {
     setCodeError(null);
+    setSendFailed(false);
     try {
       const r = await apiPost<{ sent: boolean; expiresInMs: number }>("/api/auth/2fa/send", {});
       void r;
@@ -84,6 +86,8 @@ function LoginForm() {
         // the person can still enter it.
         return true;
       }
+      // The server could not email the code (502 2fa_mail_failed): say so instead of "we've emailed"; Resend stays enabled.
+      setSendFailed(true);
       setCodeError(e instanceof Error ? e.message : t("p7login.sendFail"));
       return false;
     }
@@ -255,10 +259,12 @@ function LoginForm() {
       ) : stage === "2fa" ? (
         <form onSubmit={verifyTwoFaCode} className="flex flex-col gap-3.5">
           <div className="rounded-xl border border-[#cfe0f7] bg-[#f5f9ff] p-4">
-            <div className="text-[15px] font-extrabold text-[var(--ink)]">{t("p7login.checkEmail")}</div>
-            <p className="mt-1.5 text-[12.5px] leading-[1.5] text-[var(--ink-3)]">
-              {t("p7login.twoFaBody")}
-            </p>
+            <div className="text-[15px] font-extrabold text-[var(--ink)]">{sendFailed ? t("p7login.sendFail") : t("p7login.checkEmail")}</div>
+            {!sendFailed && (
+              <p className="mt-1.5 text-[12.5px] leading-[1.5] text-[var(--ink-3)]">
+                {t("p7login.twoFaBody")}
+              </p>
+            )}
           </div>
           <div>
             <FieldLabel htmlFor="login-2fa-code">{t("p7login.code6")}</FieldLabel>
