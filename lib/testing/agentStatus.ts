@@ -71,6 +71,8 @@ export const AGENT_AREAS: AgentArea[] = [
   { id: "A31", area: "Wallet part of a refund goes back to the wallet", status: "testing", rounds: "Building", next: "Owner decided: proportional split. Then verify.", date: D },
   { id: "A32", area: "Checkout asks before using wallet credit", status: "testing", rounds: "checkout-wallet-ask-9oct (1c8890ce), 594 pure + 5 emulator pass", next: "Verifier needed: release-race 21 of 24, Pay suites not run, no browser check.", date: D },
   { id: "A33", area: "Reconciliation: overpaid / Partially refunded chip", status: "verified", rounds: "qa-branch-bd 6dce27ed, independent verifier: safe, 73/73", next: "Ship. Not tested: Reconciliation give-back button, screen rendering.", date: D },
+  { id: "A34", area: "YOUR phone checks, add-ons (9 Oct)", status: "shipped", rounds: "Passed: AO-003 T-shirt per child with 2 days, AO-009 size change request approved. Seen: AO-005 on My bookings, AO-001 add-on set up, AO-010 provider cancel-day to wallet", next: "Still not done by you: AO-002, 004, 006, 007, 008, 011 to 015.", date: D },
+  { id: "A35", area: "YOUR phone checks, money and Pay (7 to 9 Oct)", status: "shipped", rounds: "Passed: Quick book, Pay steps 1 to 5 on real Stripe, provider cancel-day to wallet, parent release (£0.30 once), Stripe dashboard refund updated bell and parent view", next: "Nothing to redo.", date: D },
 ];
 
 export const PHONE_CHECKS: PhoneCheck[] = [
