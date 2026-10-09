@@ -2,7 +2,7 @@
 // i18n + browse filters (age/season/date/distance), collapsible filter card,
 // price-basis, discount ribbon + payment chips. (touch to force clean recompile)
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate, uiDateTime } from "@/lib/i18n/format";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
@@ -43,7 +43,7 @@ function liveCategories(listings: ListingSummary[] | null, t: (k: string, v?: Re
 
 // The year is added when it is not THIS year, so a wrong (or old / far-off) date stands out.
 const fmtDay = (iso?: string) =>
-  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", ...(Number(iso.slice(0, 4)) !== new Date().getFullYear() ? { year: "numeric" as const } : {}), timeZone: "UTC" }) : null;
+  iso ? uiDate(new Date(`${iso}T00:00:00Z`), { day: "numeric", month: "short", ...(Number(iso.slice(0, 4)) !== new Date().getFullYear() ? { year: "numeric" as const } : {}), timeZone: "UTC" }) : null;
 
 // The age band a listing accepts, worded for either or both ends being open.
 function agesLabel(l: ListingSummary, t: (k: string, v?: Record<string, string | number>) => string): string | null {
@@ -73,7 +73,7 @@ function runDatesByMonth(l: ListingSummary): { count: number; months: { label: s
   dates.forEach((d) => {
     const dt = new Date(`${d}T00:00:00Z`);
     if (Number.isNaN(dt.getTime())) return;
-    const key = dt.toLocaleString(dl(), { month: "long", year: "numeric", timeZone: "UTC" });
+    const key = uiDateTime(dt, { month: "long", year: "numeric", timeZone: "UTC" });
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(dt.getUTCDate());
   });
@@ -611,7 +611,7 @@ export function BrowseApp() {
                     )}
                     {opensLater && (
                       <span className="rounded-full bg-white/95 px-2.5 py-[4px] text-[11px] font-bold text-[#9a3412] shadow-sm">
-                        {t("parent.opensDate", { date: new Date(l.opensAt!).toLocaleString(dl(), { day: "numeric", month: "short" }) })}
+                        {t("parent.opensDate", { date: uiDateTime(new Date(l.opensAt!), { day: "numeric", month: "short" }) })}
                       </span>
                     )}
                   </div>

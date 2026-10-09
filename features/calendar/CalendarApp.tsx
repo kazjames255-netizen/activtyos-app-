@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useT, tNow } from "@/lib/i18n/provider";
 import { Rich } from "@/features/setup/Rich";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -36,7 +36,7 @@ const PALETTE = ["#6d28d9", "#0369a1", "#be1259", "#047857", "#b45309", "#c2410c
 const soft = (hex: string) => `color-mix(in srgb,${hex} 14%,var(--surface))`;
 
 /** Month / weekday names in the active language (0 = January; 0 = Sunday). */
-const dowName = (d: number, width: "long" | "short" = "long") => new Date(2024, 0, 7 + d).toLocaleDateString(dl(), { weekday: width });
+const dowName = (d: number, width: "long" | "short" = "long") => uiDate(new Date(2024, 0, 7 + d), { weekday: width });
 const pad = (n: number) => String(n).padStart(2, "0");
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const fromIso = (s: string) => { const [y, m, dd] = s.split("-").map(Number); return new Date(y, (m || 1) - 1, dd || 1); };
@@ -116,16 +116,16 @@ export function CalendarApp() {
     if (showEvents) for (const ev of events) s.add(ev.date);
     return [...s].sort();
   }, [listings, events, hidden, showEvents]);
-  const fmtLong = (s: string) => fromIso(s).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  const fmtLong = (s: string) => uiDate(fromIso(s), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
   const step = (dir: number) => setCursor((c) => { const x = new Date(c); if (mode === "month") x.setMonth(x.getMonth() + dir); else if (mode === "week") x.setDate(x.getDate() + 7 * dir); else x.setDate(x.getDate() + dir); return x; });
   const goToday = () => { const d = new Date(); setCursor(new Date(d.getFullYear(), d.getMonth(), d.getDate())); };
   const today = new Date();
   const toggleListing = (id: string) => setHidden((h) => { const n = new Set(h); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
-  const label = mode === "month" ? cursor.toLocaleDateString(dl(), { month: "long", year: "numeric" })
-    : mode === "week" ? (() => { const ws = startOfWeek(cursor), we = addDays(ws, 6); return `${ws.toLocaleDateString(dl(), { day: "numeric", month: "short" })} – ${we.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}`; })()
-    : cursor.toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const label = mode === "month" ? uiDate(cursor, { month: "long", year: "numeric" })
+    : mode === "week" ? (() => { const ws = startOfWeek(cursor), we = addDays(ws, 6); return `${uiDate(ws, { day: "numeric", month: "short" })} – ${uiDate(we, { day: "numeric", month: "short", year: "numeric" })}`; })()
+    : uiDate(cursor, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   async function removeEvent(id: string) { if (!confirm(t("p8set.clDeleteConfirm"))) return; try { await api(`/api/calendar-events/${encodeURIComponent(id)}`, { method: "DELETE" }); setEditing(null); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("p8set.failed")); } }
 

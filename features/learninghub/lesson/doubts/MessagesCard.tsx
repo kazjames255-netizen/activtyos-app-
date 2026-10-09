@@ -5,6 +5,7 @@ import { Avatar, Icon } from "../../kit";
 import { errMsg } from "../../types";
 import { useI18n } from "@/lib/i18n/provider";
 import { askDoubt, replyDoubt, seenDoubt, sendDoubtMessage, type Doubt } from "./api";
+import { relativeFrom } from "@/lib/i18n/format";
 
 // ONE component, two modes — the teacher's "Messages" and the student's "Ask your teacher" are the same threads
 // (hubDoubts), just read from opposite sides: this is the same data the old per-card "Asked a question" alert and
@@ -14,8 +15,7 @@ import { askDoubt, replyDoubt, seenDoubt, sendDoubtMessage, type Doubt } from ".
 const relTime = (iso: string, locale: string) => {
   const ms = Date.now() - new Date(iso).getTime();
   const m = Math.round(ms / 60_000);
-  let rtf: Intl.RelativeTimeFormat;
-  try { rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "narrow" }); } catch { rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "narrow" }); }
+  const rtf = { format: (n: number, u: "second" | "minute" | "hour" | "day") => relativeFrom(n, u, locale, "narrow") };
   if (m < 1) return rtf.format(0, "second");
   if (m < 60) return rtf.format(-m, "minute");
   const h = Math.round(m / 60);

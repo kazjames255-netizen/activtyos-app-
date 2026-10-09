@@ -4,7 +4,7 @@
 // availability (a week, or a camp assignment), see what they chose, and assign
 // them to specific days. Assigned days lock on the staffer's My availability
 // page (they can only request time off). Real store: /api/availability.
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get, post, patch, del } from "@/lib/api";
 import { useT } from "@/lib/i18n/provider";
@@ -20,7 +20,7 @@ interface Pattern { grid?: Record<string, DayAvail>; days?: Record<string, DayAv
 interface Invite { token: string; role: string; sentTo?: string | null; usedBy?: string | null }
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
-const fmt = (s?: string) => (s ? new Date(`${s}T00:00:00`).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "");
+const fmt = (s?: string) => (s ? uiDate(new Date(`${s}T00:00:00`), { day: "numeric", month: "short" }) : "");
 const addDaysISO = (i: string, n: number) => { const d = new Date(`${i}T00:00:00`); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const wdShort = (i: string) => wdShortName(new Date(`${i}T00:00:00`).getDay());
 const dNum = (i: string) => new Date(`${i}T00:00:00`).getDate();
@@ -29,7 +29,7 @@ function weekFrom(offset: number): ReqWindow {
   const dow = (d.getDay() + 6) % 7;
   const mon = new Date(d); mon.setDate(d.getDate() - dow + offset * 7); mon.setHours(0, 0, 0, 0);
   const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-  return { kind: "week", label: `week of ${mon.toLocaleDateString(dl(), { day: "numeric", month: "long" })}`, from: iso(mon), to: iso(sun) };
+  return { kind: "week", label: `week of ${uiDate(mon, { day: "numeric", month: "long" })}`, from: iso(mon), to: iso(sun) };
 }
 const WINDOWS: [string, () => ReqWindow][] = [
   ["This week", () => weekFrom(0)],

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { NARRATOR_CSS, narratorScene, settingsScene, controlPanelScene } from "@/features/common/tourNarrator";
 import { useT, useI18n } from "@/lib/i18n/provider";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { BRAND, isRTL } from "@/lib/i18n/config";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -19,7 +19,7 @@ type Step = { stage: string; label: string; line: string; body: string; type?: T
 function buildSteps(t: (k: string, v?: Record<string, string | number>) => string, tag: string): Step[] {
   const x = (k: string, v?: Record<string, string | number>) => t("p8lst." + k, v);
   // The demo dates are fixed (Mon 28 Jul – Fri 8 Aug 2025); only their formatting follows the language.
-  const fmt = (d: number, m: number, o: Intl.DateTimeFormatOptions) => new Date(Date.UTC(2025, m, d)).toLocaleDateString(tag, { ...o, timeZone: "UTC" });
+  const fmt = (d: number, m: number, o: Intl.DateTimeFormatOptions) => uiDate(new Date(Date.UTC(2025, m, d)), { ...o, timeZone: "UTC" }, tag);
   const wd = (d: number, m: number) => fmt(d, m, { weekday: "short", day: "numeric" });
   const wdm = (d: number, m: number) => fmt(d, m, { weekday: "short", day: "numeric", month: "short" });
   const dm = (d: number, m: number) => fmt(d, m, { day: "numeric", month: "short" });

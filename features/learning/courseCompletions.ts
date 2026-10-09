@@ -4,7 +4,7 @@
 // Amir's backend. Shared by the manager oversight (CredentialsApp) and could feed
 // the staff view. Certificate download reuses the same openCertificate() the
 // course player uses, so a manager-issued cert is identical to the staff's own.
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { tNow } from "@/lib/i18n/provider";
 import { SEED_LIBRARY } from "./courseContent";
 import { openCertificate, makeRef, type CertData } from "./certificates";
@@ -108,7 +108,7 @@ export function completionsFor(staffName: string): CourseDone[] {
   return [...map.values()];
 }
 
-const fmtLong = (isoDate: string) => { const d = new Date(isoDate + "T00:00:00"); return isNaN(+d) ? isoDate : d.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }); };
+const fmtLong = (isoDate: string) => { const d = new Date(isoDate + "T00:00:00"); return isNaN(+d) ? isoDate : uiDate(d, { day: "numeric", month: "long", year: "numeric" }); };
 
 // A completed course's certificate expiry = completion date + the course's
 // renewal interval (or the provider default). Null = never expires.
@@ -138,7 +138,7 @@ export function courseCertData(staffName: string, done: CourseDone, settings: Te
   const l = settings.learning;
   return {
     name: staffName || tNow("p8lrn.lcTeamMember"), course: done.title, pct: done.score,
-    date: fmtLong(done.date), expiry: exp ? exp.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }) : undefined,
+    date: fmtLong(done.date), expiry: exp ? uiDate(exp, { day: "numeric", month: "long", year: "numeric" }) : undefined,
     provider: settings.providerName || settings.billing?.businessName || tNow("p8lrn.cpYourOrganisation"),
     logo: l?.certLogo === false ? undefined : course?.logo,
     ref: makeRef(done.title + staffName + done.date),

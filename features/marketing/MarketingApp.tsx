@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -42,9 +42,9 @@ const randomCode = () => "SAVE" + rand(5);
 const surnameOf = (name: string) => (name.trim().split(/\s+/).pop() || "FAM").replace(/[^A-Za-z]/g, "").toUpperCase() || "FAMILY";
 // A friendly code from a family's surname + this year, e.g. "KHAN2026".
 const codeFromFamily = (name: string) => `${surnameOf(name)}${new Date().getFullYear()}`;
-const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmt = (iso?: string) => (iso ? uiDate(new Date(`${iso}T00:00:00Z`), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 // The UK calendar day (what the server judges expiry by), not UTC: between midnight and 1am BST they differ.
-const todayIso = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
+const todayIso = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date()); // raw-locale-ok: machine date key, not shown to anyone
 const isExpired = (c: Code) => !!c.expiry && c.expiry < todayIso();
 const isSpent = (c: Code) => c.usageLimit != null && (c.usedCount ?? 0) >= c.usageLimit;
 

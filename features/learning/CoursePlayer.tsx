@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import type { Block, CourseDoc, QuizQ } from "./courseContent";
@@ -443,7 +443,7 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
     const now = new Date();
     const rm = course.renewMonths ?? settings.learning?.renewMonths ?? 0;
     const exp = rm ? new Date(now.getFullYear(), now.getMonth() + rm, now.getDate()) : null;
-    const fmt = (dt: Date) => dt.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" });
+    const fmt = (dt: Date) => uiDate(dt, { day: "numeric", month: "long", year: "numeric" });
     openCertificate({
       name: name || tr("p8lrn.lcTeamMember"), course: course.title, pct, date: fmt(now), expiry: exp ? fmt(exp) : undefined,
       provider: settings.providerName || settings.billing?.businessName || tr("p8lrn.cpYourOrganisation"),

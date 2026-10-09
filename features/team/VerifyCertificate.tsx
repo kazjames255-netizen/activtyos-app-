@@ -6,7 +6,7 @@
 // it. Same shape as the reference/pay public pages: a thin unauthenticated
 // fetch against /api/public/*, single fixed light layout regardless of the
 // viewer's own theme (they may have no account at all).
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n/provider";
 
@@ -25,7 +25,7 @@ interface Result {
 const fmt = (iso?: string | null) => {
   if (!iso) return null;
   const d = new Date(`${iso}T00:00:00`);
-  return isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" });
+  return isNaN(d.getTime()) ? iso : uiDate(d, { day: "numeric", month: "long", year: "numeric" });
 };
 
 // `certRef` (never `ref`) — React 19 treats a prop literally named `ref` as

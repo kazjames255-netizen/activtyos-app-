@@ -12,6 +12,7 @@ import { DISPLAY, Dialog, FOCUS, Notice, StudentPicker, toLocalInput, tzLabel, u
 import { LessonPicker } from "../lesson/picker/LessonPicker";
 import { AttachDialog } from "./workspace/LessonNotesEditor";
 import type { Lesson } from "./lessonTypes";
+import { uiDate, uiTime, uiDateTime } from "@/lib/i18n/format";
 
 // Tutor: schedule or edit a lesson. Times are entered in the tutor's local
 // timezone and sent as an ISO instant, so every viewer sees their own local time.
@@ -37,7 +38,7 @@ function nowStart(): string {
   return toLocalInput(new Date(Date.now() + 60_000));
 }
 const zone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; } };
-const dayLabel = (ms: number) => new Date(ms).toLocaleDateString(uiLocale(), { weekday: "short", day: "numeric", month: "short" });
+const dayLabel = (ms: number) => uiDate(new Date(ms), { weekday: "short", day: "numeric", month: "short" }, uiLocale());
 
 /** Lessons from the library attached at creation (F14). The list of the tutor's lessons is fetched the first time the picker opens. */
 function AttachField({ qs, topics, value, onChange, testId }: { qs: string; topics: Topic[]; value: string[]; onChange: (ids: string[]) => void; testId: string }) {
@@ -161,12 +162,12 @@ export function LessonForm({ lesson, topics: topicsProp, students, qs, defaultTo
     return dayLabel(d.getTime());
   }, [repeat, startMs, weeks]);
   const repeatFor = t("hublive.aForm_repeatFor").split("{input}");
-  const endLabel = Number.isFinite(startMs) ? new Date(startMs + mins * 60_000).toLocaleTimeString(uiLocale(), { hour: "2-digit", minute: "2-digit" }) : "";
+  const endLabel = Number.isFinite(startMs) ? uiTime(new Date(startMs + mins * 60_000), { hour: "2-digit", minute: "2-digit" }, uiLocale()) : "";
 
   // The one-line recap next to the buttons: "Wed 30 Sep, 13:00–14:00 · 2 students · English lesson".
   const summary = Number.isFinite(startMs) && childIds.length > 0
     ? [
-        `${new Date(startMs).toLocaleDateString(uiLocale(), { weekday: "short", day: "numeric", month: "short" })}, ${new Date(startMs).toLocaleTimeString(uiLocale(), { hour: "2-digit", minute: "2-digit" })}–${endLabel}`,
+        `${uiDate(new Date(startMs), { weekday: "short", day: "numeric", month: "short" }, uiLocale())}, ${uiTime(new Date(startMs), { hour: "2-digit", minute: "2-digit" }, uiLocale())}–${endLabel}`,
         childIds.length === 1 ? t("hublive.aForm_sumStudents1") : t("hublive.aForm_sumStudentsN", { n: childIds.length }),
         ...(pick?.title ? [pick.title] : []),
       ].join(" · ")
@@ -238,7 +239,7 @@ export function LessonForm({ lesson, topics: topicsProp, students, qs, defaultTo
             <div>
               <FieldLabel htmlFor="hub-lesson-start">{t("hublive.aForm_starts")}</FieldLabel>
               <Input id="hub-lesson-start" type="datetime-local" className="min-h-[44px] w-full" value={start} onChange={(e) => setStart(e.target.value)} />
-              {Number.isFinite(startMs) && <p data-testid="hub-lesson-start-text" className="mt-2 inline-flex max-w-full rounded-full px-3 py-1 text-[13.5px] font-extrabold text-[var(--ink)]" style={{ background: tint("var(--gold)", 24), boxShadow: `inset 0 0 0 1px ${tint("var(--gold)", 45)}` }}>{new Date(startMs).toLocaleString(uiLocale(), { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" })}</p>}
+              {Number.isFinite(startMs) && <p data-testid="hub-lesson-start-text" className="mt-2 inline-flex max-w-full rounded-full px-3 py-1 text-[13.5px] font-extrabold text-[var(--ink)]" style={{ background: tint("var(--gold)", 24), boxShadow: `inset 0 0 0 1px ${tint("var(--gold)", 45)}` }}>{uiDateTime(new Date(startMs), { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" }, uiLocale())}</p>}
             </div>
             <div>
               <FieldLabel htmlFor="hub-lesson-mins">{t("hublive.aForm_lengthMins")}</FieldLabel>

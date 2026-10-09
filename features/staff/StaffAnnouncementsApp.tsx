@@ -13,7 +13,7 @@ import { useSettings } from "@/lib/settings";
 import { fetchAnnouncements, markAnnouncementRead, postAnnouncement, type Announcement } from "./announcements";
 import { getMe } from "@/components/auth/PortalGuard";
 import { useI18n } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDate } from "@/lib/i18n/format";
 
 // Render **bold** markers from a translated string.
 const rich = (s: string) => s.split("**").map((p, i) => (i % 2 ? <b key={i}>{p}</b> : p));
@@ -101,7 +101,7 @@ export function StaffAnnouncementsApp() {
               <span className="text-[15px] font-extrabold text-[var(--ink)]">{p.title}</span>
               {!isRead && <span className="ms-auto inline-block h-2 w-2 rounded-full bg-[#1d3a8f]" />}
             </div>
-            <div className="mb-2 text-[11.5px] font-semibold text-[var(--ink-3)]">{p.author} · {p.role}{p.audienceLabel ? ` · ${p.audienceLabel}` : ""} · {new Date(p.date + "T00:00:00").toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" })}</div>
+            <div className="mb-2 text-[11.5px] font-semibold text-[var(--ink-3)]">{p.author} · {p.role}{p.audienceLabel ? ` · ${p.audienceLabel}` : ""} · {uiDate(new Date(p.date + "T00:00:00"), { day: "numeric", month: "long", year: "numeric" }, locale)}</div>
             <p className="text-[13.5px] leading-[1.6] text-[var(--ink-2)] whitespace-pre-wrap">{p.body}</p>
             {!isRead && <div className="mt-2.5"><button type="button" onClick={() => markRead(p.id)} className="rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[#1d3a8f] hover:bg-[var(--panel)]">{t("staffp.annMarkRead")}</button></div>}
           </Card>

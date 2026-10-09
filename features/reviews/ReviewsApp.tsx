@@ -4,7 +4,7 @@
 // one score + one inbox. Reply to in-house reviews inline. Connect external
 // sources in Setup → Reviews. No review gating: the Google invite goes to every
 // customer (see the parent feedback page).
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -27,7 +27,7 @@ const SRC = {
 const Stars = ({ n, size = 14 }: { n: number; size?: number }) => (
   <span style={{ fontSize: size, letterSpacing: 1, color: "#f5b301" }}>{"★".repeat(Math.round(n))}<span style={{ color: "#d9d5e4" }}>{"★".repeat(5 - Math.round(n))}</span></span>
 );
-const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "");
+const fmt = (iso?: string) => (iso ? uiDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" }) : "");
 
 export function ReviewsApp() {
   const { t, locale } = useI18n();

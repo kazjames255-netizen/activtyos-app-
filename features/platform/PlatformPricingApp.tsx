@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet, api } from "@/lib/api";
 import { useT } from "@/lib/i18n/provider";
@@ -65,7 +65,7 @@ export function PlatformPricingApp() {
             <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>{hq("💷 Pricing")}</h2>
             <p className="mt-1 max-w-[600px] text-[12.5px] leading-snug text-white/85">
               {hq("Edit prices, staff limits, franchise % and the descriptions customers read. Changes apply to new signups; existing customers stay grandfathered.")}
-              <span className="text-white/60">{updatedAt ? ` · ${hq("last edited {date}", { date: new Date(updatedAt).toLocaleDateString(dl()) })}` : ` · ${hq("currently on defaults")}`}</span>
+              <span className="text-white/60">{updatedAt ? ` · ${hq("last edited {date}", { date: uiDate(new Date(updatedAt)) })}` : ` · ${hq("currently on defaults")}`}</span>
             </p>
           </div>
           <div className="flex shrink-0 gap-2">

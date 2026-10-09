@@ -1,6 +1,7 @@
 // HQ > Test tracker > "Agent testing" section. Reads the typed data in lib/testing/agentStatus.ts (updated by pull request).
 // Pure presentational: no API, no Firestore, no browser storage.
 
+import { uiDate } from "@/lib/i18n/format";
 import { AGENT_AREAS, AGENT_AS_OF, AGENT_STATUS_LABEL, AGENT_STATUS_ORDER, PHONE_CHECKS, type AgentArea, type AgentStatus } from "../../lib/testing/agentStatus";
 
 const TONE: Record<AgentStatus, { bg: string; fg: string }> = {
@@ -13,7 +14,7 @@ const TONE: Record<AgentStatus, { bg: string; fg: string }> = {
 
 function niceDate(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+  return uiDate(new Date(Date.UTC(y, m - 1, d)), { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 export function AgentStatusPanel({ areas = AGENT_AREAS }: { areas?: AgentArea[] }) {

@@ -2,6 +2,7 @@
 // server/src/routes/learningHub.ts (the API contract is server/openapi.yaml).
 
 import type { SupportProfile } from "./support";
+import { uiDate } from "@/lib/i18n/format";
 export interface Topic {
   id: string;
   subject: string;
@@ -234,7 +235,7 @@ export const readMins = (md: string) => Math.max(1, Math.round((md.trim().split(
 
 export const fmtDate = (iso: string) => {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return Number.isNaN(d.getTime()) ? "" : uiDate(d, { day: "numeric", month: "short", year: "numeric" });
 };
 
 /** Distinct subject names in a topic list, sorted. */

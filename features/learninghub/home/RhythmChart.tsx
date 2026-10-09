@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { startOfDay } from "./homeLib";
 import { Card, FOCUS } from "./homeKit";
 import { useH } from "./homeI18n";
+import { uiDate } from "@/lib/i18n/format";
 
 // Weekly rhythm — quizzes and tests handed in per day, last 14 days, drawn as frosted-glass
 // capsules over a soft pastel wash (the "Glass capsules" design). Each capsule fills from the
@@ -32,10 +33,10 @@ export function RhythmChart({ days, now, title: titleIn, unit: unitIn, emptyText
   const { t, locale, pl } = useH();
   const title = titleIn ?? t("hubshell.hm_weeklyRhythm");
   const unit = unitIn ?? t("hubshell.hm_unitQuizzes");
-  const fmtLong = (ms: number) => new Date(ms).toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
-  const fmtShort = (ms: number) => new Date(ms).toLocaleDateString(locale, { day: "numeric", month: "short" });
-  const wk = (ms: number) => new Date(ms).toLocaleDateString(locale, { weekday: "short" });
-  const wkNarrow = (ms: number) => new Date(ms).toLocaleDateString(locale, { weekday: "narrow" });
+  const fmtLong = (ms: number) => uiDate(new Date(ms), { weekday: "long", day: "numeric", month: "long" }, locale);
+  const fmtShort = (ms: number) => uiDate(new Date(ms), { day: "numeric", month: "short" }, locale);
+  const wk = (ms: number) => uiDate(new Date(ms), { weekday: "short" }, locale);
+  const wkNarrow = (ms: number) => uiDate(new Date(ms), { weekday: "narrow" }, locale);
   const uid = useId();
   const [hover, setHover] = useState<number | null>(null);
   const [table, setTable] = useState(false);

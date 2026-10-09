@@ -15,7 +15,7 @@
 import { tfcReady } from "@/lib/tfcReady";
 import { GenderQuickAdd } from "@/features/common/GenderQuickAdd";
 import { HowItWorks } from "@/components/HowItWorks";
-import { dateLocale as dl, joinListNow } from "@/lib/i18n/format";
+import { joinListNow, uiDate } from "@/lib/i18n/format";
 import type { DiscountKind } from "./discounts";
 import { useEffect, useRef, useState } from "react";
 import { tNow, useI18n } from "@/lib/i18n/provider";
@@ -205,7 +205,7 @@ export function ageToday(dob: string | undefined): number | null {
   if (!dob) return null;
   const d = new Date(dob);
   if (Number.isNaN(d.getTime())) return null;
-  const uk = (x: Date) => x.toLocaleDateString("en-CA", { timeZone: "Europe/London" }).split("-").map(Number);
+  const uk = (x: Date) => x.toLocaleDateString("en-CA", { timeZone: "Europe/London" }).split("-").map(Number); // raw-locale-ok: machine date key, not shown to anyone
   const [by, bm, bd] = uk(d), [ny, nm, nd] = uk(new Date());
   let a = ny - by;
   if (nm < bm || (nm === bm && nd < bd)) a--;
@@ -963,7 +963,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   }
   const mealTotal = mealSlots.reduce((sum, { kid, date }) => { const sel = b.mealFor(kid, date); const it = sel ? mealItemAt(date, sel) : undefined; return it ? sum + it.price : sum; }, 0);
   const mealKids = [...new Set(mealSlots.map((s) => s.kid))];
-  const fmtMealDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  const fmtMealDay = (iso: string) => uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
   // Copy one child's picks to every sibling (same date → same dish, since a
   // day's menu is the same for all children) — one tap for a big family.
   const copyMealsToAll = (fromKid: string) => { for (const { kid, date } of mealSlots) { if (kid === fromKid) continue; const src = b.mealFor(fromKid, date); if (src && mealItemAt(date, src)) b.pickMeal(kid, date, src); } };
@@ -1733,7 +1733,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                           if (!menu) return null;
                           const sel = b.mealFor(kid, date);
                           const wd = new Date(`${date}T00:00:00Z`).getUTCDay();
-                          const wdLabel = new Date(`${date}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "long", timeZone: "UTC" });
+                          const wdLabel = uiDate(new Date(`${date}T00:00:00Z`), { weekday: "long", timeZone: "UTC" });
                           const sameWdCount = slots.filter((s) => new Date(`${s.date}T00:00:00Z`).getUTCDay() === wd).length;
                           return (
                             <div key={date} className="rounded-lg p-2" style={{ border: `1px solid ${sel ? tk.accent : tk.line}`, background: sel ? `${tk.accent}14` : "transparent" }}>
@@ -2136,7 +2136,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                                     ? { borderColor: kc.bg, background: kc.bg, color: kc.ink, transform: "translateY(-1px)", boxShadow: `0 6px 14px -8px ${kc.bg}` }
                                     : { borderColor: tk.line, color: tk.muted }}>
                                   <span className="text-[8px] font-bold uppercase tracking-[0.06em] opacity-80">
-                                    {dt.toLocaleDateString(dl(), { weekday: "short", timeZone: "UTC" })}
+                                    {uiDate(dt, { weekday: "short", timeZone: "UTC" })}
                                   </span>
                                   <span className="text-[12px] font-extrabold leading-none">{ordinal(dt.getUTCDate())}</span>
                                 </button>
@@ -2782,7 +2782,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         // Also stale once that child has been taken off the clashing day(s) (the "Take X off <day> only" button leaves them in the roster).
         const md = /^(.+?) already has a place on (.+?) \(booking/.exec(booking.error);
         if (!md) return false;
-        const pretty = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+        const pretty = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }); // raw-locale-ok: compared with the server's English message text
         return !b.basket.some((x) => x.dates.some((iso) => pretty(iso) === md[2]) && b.childrenOn(x.id).includes(md[1]));
       })() && (
         <div className="mt-2 text-[11.5px] font-semibold" style={{ color: "#dc2626" }}>
@@ -2795,7 +2795,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             const kid = m[1];
             // Take the child off ONLY the clashing day(s), so the rest of the
             // basket can still be booked straight away.
-            const pretty = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+            const pretty = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }); // raw-locale-ok: compared with the server's English message text
             const hits = b.basket.filter((x) => x.dates.some((iso) => pretty(iso) === m[2]) && b.childrenOn(x.id).includes(kid));
             return (
               <button type="button"

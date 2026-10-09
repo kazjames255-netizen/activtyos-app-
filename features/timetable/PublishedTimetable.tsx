@@ -6,7 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { OperatorPage } from "@/components/OperatorPage";
 import type { DayInfo, PlanRow } from "./types";
 import { useI18n } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDate, uiDateTime } from "@/lib/i18n/format";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Read-only rendering of a PUBLISHED timetable (GET /api/timetables/published)
@@ -38,7 +38,7 @@ export function localDayName(d: DayInfo, loc = "en-GB"): string {
     if (i < 0) return d.n;
     dt = new Date(2024, 0, 7 + i); // 7 Jan 2024 was a Sunday
   }
-  return dt.toLocaleDateString(loc, { weekday: "short" });
+  return uiDate(dt, { weekday: "short" }, loc);
 }
 
 function Banner({ row }: { row: PlanRow }) {
@@ -181,7 +181,7 @@ export function StaffTimetableApp() {
             />
           )}
           <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">
-            {t("feed.publishedAt", { name: week.name, when: new Date(week.at).toLocaleString(dateLoc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}
+            {t("feed.publishedAt", { name: week.name, when: uiDateTime(new Date(week.at), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }, dateLoc) })}
           </div>
         </>
       )}

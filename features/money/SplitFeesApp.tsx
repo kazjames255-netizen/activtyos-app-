@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -20,8 +20,8 @@ interface Payload {
 }
 
 const PALETTE = ["#2f6bd8", "#e0483d", "#0f9d58", "#f5b81f", "#8e44ad", "#e67e22", "#16a085", "#c2185b", "#6d4c41", "#0097a7"];
-const monthLabel = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "short" });
-const monthLong = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "long", year: "numeric" });
+const monthLabel = (m: string) => uiDate(new Date(`${m}-01T00:00:00Z`), { month: "short" });
+const monthLong = (m: string) => uiDate(new Date(`${m}-01T00:00:00Z`), { month: "long", year: "numeric" });
 
 // Funky stacked royalty (or revenue) chart, split by franchise. Gradient fills,
 // rounded tops, hover for the split. Purely presentational.

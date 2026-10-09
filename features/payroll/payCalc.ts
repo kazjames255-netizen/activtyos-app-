@@ -281,7 +281,7 @@ export function leaveForPeriod(absences: LeaveAbsence[], staffKey: string, start
 export const londonMs = (date: string, hm: string): number => {
   const [y, mo, d] = date.split("-").map(Number); const [h, mi] = (hm || "0:0").split(":").map(Number);
   const guess = Date.UTC(y, (mo || 1) - 1, d || 1, h || 0, mi || 0);
-  const off = (t: number) => { const p = new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(new Date(t)); const g = (k: string) => Number(p.find((x) => x.type === k)?.value); return Date.UTC(g("year"), g("month") - 1, g("day"), g("hour"), g("minute")) - t; };
+  const off = (t: number) => { const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(new Date(t)); const g = (k: string) => Number(p.find((x) => x.type === k)?.value); return Date.UTC(g("year"), g("month") - 1, g("day"), g("hour"), g("minute")) - t; }; // raw-locale-ok: machine date key, not shown to anyone
   for (const o of [3600000, 0]) if (off(guess - o) === o) return guess - o;
   return guess - off(guess);
 };

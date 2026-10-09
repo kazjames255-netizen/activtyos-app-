@@ -11,5 +11,6 @@ export function joinList(items: string[], locale: string): string {
 
 /** A locale tag the browser accepts, else en-GB (an unsupported / invalid tag makes Intl.* and toLocale* throw RangeError on some Safari builds). */
 export function safeLocale(tag: string): string {
+  // raw-locale-ok: only probes whether the tag is valid
   try { new Intl.DateTimeFormat(tag); new Intl.NumberFormat(tag); return tag; } catch { return "en-GB"; }
 }

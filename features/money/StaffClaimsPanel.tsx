@@ -3,7 +3,7 @@
 // Manager view of staff expense claims (/api/expense-claims): approve, decline,
 // or mark paid. Approving adds the claim to Money out as an expense, so the
 // Expenses list refreshes after. Only renders when there's something to show.
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet, api } from "@/lib/api";
 import { useT } from "@/lib/i18n/provider";
@@ -52,7 +52,7 @@ export function StaffClaimsPanel({ onChanged }: { onChanged?: () => void }) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2"><b className="text-[13.5px] text-[var(--ink)]">{c.staffName ?? t("p8fin.scStaff")}</b><span className="text-[12.5px] text-[var(--ink-2)]">{catLabel(t, c.category)}</span>
                   <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: tone.bg, color: tone.ink }}>{t(tone.label)}</span></div>
-                <div className="text-[12px] text-[var(--ink-3)]">{new Date(c.date + "T00:00:00").toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}{c.note ? ` · ${c.note}` : ""}{c.receiptUrl ? <> · <a href={c.receiptUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-[#1d3a8f] hover:underline">📎 {c.receiptName || t("p8fin.exReceiptLink")}</a></> : ` · ${t("p8fin.scNoReceipt")}`}</div>
+                <div className="text-[12px] text-[var(--ink-3)]">{uiDate(new Date(c.date + "T00:00:00"), { day: "numeric", month: "short", year: "numeric" })}{c.note ? ` · ${c.note}` : ""}{c.receiptUrl ? <> · <a href={c.receiptUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-[#1d3a8f] hover:underline">📎 {c.receiptName || t("p8fin.exReceiptLink")}</a></> : ` · ${t("p8fin.scNoReceipt")}`}</div>
               </div>
               <b className="text-[14px] tabular-nums text-[var(--ink)]">{gbp(c.amount)}</b>
               <div className="flex gap-1.5">

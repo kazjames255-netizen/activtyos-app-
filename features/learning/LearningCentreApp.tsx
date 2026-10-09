@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { tNow, useT } from "@/lib/i18n/provider";
 import { isDemoMode, post as apiPost, put as apiPut } from "@/lib/api";
 import { syncLearning, useLearnRefresh, completionsFor, rolesCover, withoutDemoAssignments } from "./courseCompletions";
@@ -186,7 +186,7 @@ interface PolicyDoc { id: string; title: string; category?: string; required: bo
 interface PolicyAck { docId: string; staff: string; date: string }
 const PKEY = "aos.learn.policies.v1";
 const todayISO = () => new Date().toISOString().slice(0, 10);
-const fmtDate = (iso: string) => { const d = new Date(iso + "T00:00:00"); return isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { day: "2-digit", month: "short", year: "numeric" }); };
+const fmtDate = (iso: string) => { const d = new Date(iso + "T00:00:00"); return isNaN(d.getTime()) ? iso : uiDate(d, { day: "2-digit", month: "short", year: "numeric" }); };
 const blankPolicy = (): PolicyDoc => ({ id: "pol" + Date.now().toString(36), title: "", category: "", required: true, added: todayISO(), body: "" });
 const SEED_POLICIES: PolicyDoc[] = [
   { id: "pol1", title: "Safeguarding & Child Protection Policy", category: "Safeguarding", required: true, added: "2026-06-01", body: "Every member of staff and volunteer is responsible for keeping children safe.\n\n1. If a child discloses something that worries you, listen calmly, reassure them, and record the facts in their own words. Do not promise secrecy.\n2. Report any concern to the Designated Safeguarding Lead the same day.\n3. Never investigate a concern yourself.\n4. Follow safer-working practice at all times: stay visible, avoid being alone with a child where possible, and use appropriate language.\n\nBy confirming below you agree that you have read, understood and will follow this policy." },
@@ -573,7 +573,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {courses.filter((c) => progress[c.id]?.passed).map((c) => (
-                    <button key={c.id} type="button" onClick={() => { const now = new Date(); const rm = c.renewMonths ?? settings.learning?.renewMonths ?? 0; const exp = rm ? new Date(now.getFullYear(), now.getMonth() + rm, now.getDate()) : null; const fmt = (dt: Date) => dt.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }); openCertificate({ name: certName || tr("p8lrn.lcTeamMember"), course: c.title, pct: progress[c.id]?.pct ?? 100, date: fmt(now), expiry: exp ? fmt(exp) : undefined, provider: companyName, logo: settings.learning?.certLogo === false ? undefined : c.logo, ref: makeRef(c.title + certName + fmt(now)), signImg: settings.learning?.certSignature, signName: settings.learning?.certSignatory, signRole: settings.learning?.certSignatoryRole, accent: settings.learning?.certColor, title: settings.learning?.certTitle || undefined, showScore: settings.learning?.certShowScore, showQr: settings.learning?.certShowQr }, settings.learning?.certTemplate); }} title={tr("p8lrn.lcCertDownload")} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#0f7a43] hover:text-[#0f7a43]">🖨️ {c.title}</button>
+                    <button key={c.id} type="button" onClick={() => { const now = new Date(); const rm = c.renewMonths ?? settings.learning?.renewMonths ?? 0; const exp = rm ? new Date(now.getFullYear(), now.getMonth() + rm, now.getDate()) : null; const fmt = (dt: Date) => uiDate(dt, { day: "numeric", month: "long", year: "numeric" }); openCertificate({ name: certName || tr("p8lrn.lcTeamMember"), course: c.title, pct: progress[c.id]?.pct ?? 100, date: fmt(now), expiry: exp ? fmt(exp) : undefined, provider: companyName, logo: settings.learning?.certLogo === false ? undefined : c.logo, ref: makeRef(c.title + certName + fmt(now)), signImg: settings.learning?.certSignature, signName: settings.learning?.certSignatory, signRole: settings.learning?.certSignatoryRole, accent: settings.learning?.certColor, title: settings.learning?.certTitle || undefined, showScore: settings.learning?.certShowScore, showQr: settings.learning?.certShowQr }, settings.learning?.certTemplate); }} title={tr("p8lrn.lcCertDownload")} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#0f7a43] hover:text-[#0f7a43]">🖨️ {c.title}</button>
                   ))}
                 </div>
               </div>
@@ -688,7 +688,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                   {([["courseDue", tr("p8lrn.lcRemCourseDue")], ["overdueChase", tr("p8lrn.lcRemOverdue")], ["renewalDue", tr("p8lrn.lcRemRenewal")], ["unreadPolicy", tr("p8lrn.lcRemUnreadPolicy")], ["weeklyDigest", tr("p8lrn.lcRemWeekly")]] as const).map(([k, l]) => (
                     <label key={k} className="flex items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={reminders[k]} onChange={(e) => setRem({ [k]: e.target.checked } as Partial<ReminderPrefs>)} /> {l}</label>
                   ))}
-                  <label className="flex items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] font-semibold text-[var(--ink-2)]">{tr("p8lrn.lcDigestDay")}<Select value={reminders.digestDay} onChange={(e) => setRem({ digestDay: e.target.value })} className="ms-auto max-w-[130px]">{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((d, di) => <option key={d} value={d}>{new Date(Date.UTC(2024, 0, 1 + di)).toLocaleDateString(dl(), { weekday: "long", timeZone: "UTC" })}</option>)}</Select></label>
+                  <label className="flex items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] font-semibold text-[var(--ink-2)]">{tr("p8lrn.lcDigestDay")}<Select value={reminders.digestDay} onChange={(e) => setRem({ digestDay: e.target.value })} className="ms-auto max-w-[130px]">{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((d, di) => <option key={d} value={d}>{uiDate(new Date(Date.UTC(2024, 0, 1 + di)), { weekday: "long", timeZone: "UTC" })}</option>)}</Select></label>
                 </div>
               </div>
             )}

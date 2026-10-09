@@ -13,7 +13,7 @@ import { type Review, type Rating, type ReviewKind, type ReviewStatus, type Goal
 import { loadReviews, saveReviews, templateFor, slug, syncAppraisals, submitSelfAssessment } from "./data";
 import { isDemoMode } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDate } from "@/lib/i18n/format";
 
 // Display labels (the stored values stay English) — mirror lib/appraisals' *_LABEL maps.
 const KIND_KEY: Record<ReviewKind, string> = { probation: "staffp.aprKindProbation", "3-month": "staffp.aprKind3m", "6-month": "staffp.aprKind6m", annual: "staffp.aprKindAnnual", supervision: "staffp.aprKindSupervision" };
@@ -21,7 +21,7 @@ const STATUS_KEY: Record<ReviewStatus, string> = { scheduled: "staffp.aprStSched
 const RATING_KEY: Record<Rating, string> = { 1: "staffp.aprRate1", 2: "staffp.aprRate2", 3: "staffp.aprRate3", 4: "staffp.aprRate4", 5: "staffp.aprRate5" };
 const GOAL_KEY: Record<Goal["status"], string> = { open: "staffp.aprGoalOpen", progress: "staffp.aprGoalProgress", done: "staffp.aprGoalDone", carried: "staffp.aprGoalCarried" };
 // Same as lib/appraisals' fmtDate, in the reader's language.
-const fmtDate = (iso?: string, locale = "en-GB") => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) : "—");
+const fmtDate = (iso?: string, locale = "en-GB") => (iso ? uiDate(new Date(`${iso}T00:00:00`), { day: "numeric", month: "short", year: "numeric" }, locale) : "—");
 
 const ME = "Marcus Bell";
 

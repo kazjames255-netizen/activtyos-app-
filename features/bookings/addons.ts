@@ -242,7 +242,7 @@ export function mergeAddonLines(lines: AddonLine[]): AddonLine[] {
   return out;
 }
 
-const dayName = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const dayName = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }); // raw-locale-ok: English phrase also built on the server and stored in request labels
 const nextIso = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
 /** "Sun 18 Oct" for one day; "Sun 18 Oct – Sat 24 Oct" for an unbroken run; otherwise the days listed. */
 export function daysPhrase(days: string[]): string {

@@ -1,7 +1,7 @@
 "use client";
 
 import { fixYear } from "@/features/listings/wizardRules";
-import { dateLocale as dl, formatDay } from "@/lib/i18n/format";
+import { formatDay, uiDateTime } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n, useT, useWord, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
@@ -579,7 +579,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={awaitingTransfer ? { background: "#fdf3d8", color: "#9a5a00" } : { background: payTone(shownPay(b), b.status).bg, color: payTone(shownPay(b), b.status).fg }}>{awaitingTransfer ? t("p8lst.rfaChipAmt", { amt: money(refundTransferAmount(b)) }) : b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : b.status === "Approval needed" && b.cardHold?.state === "awaiting" ? t("p8lst.holdWaitBadge") : w(payLabelFor(b))}</span>
                     <span className="text-[11px] font-semibold text-[var(--ink-3)]">{w(payMethodLabel(b))}</span>
                     {b.invoiceResends?.count ? (
-                      <span className="whitespace-nowrap rounded-full bg-[#e8f0ff] px-2 py-[2px] text-[10.5px] font-bold text-[#1d3a8f]">{t("p7bd.invResent", { n: String(b.invoiceResends.count), when: new Date(b.invoiceResends.lastAt).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}</span>
+                      <span className="whitespace-nowrap rounded-full bg-[#e8f0ff] px-2 py-[2px] text-[10.5px] font-bold text-[#1d3a8f]">{t("p7bd.invResent", { n: String(b.invoiceResends.count), when: uiDateTime(new Date(b.invoiceResends.lastAt), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}</span>
                     ) : null}
                   </span>
                   {b.status === "Waitlisted" && b.waitlist && b.waitlist.length > 0 && (

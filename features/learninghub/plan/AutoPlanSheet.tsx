@@ -5,6 +5,7 @@ import { Button, Select } from "@/components/ui";
 import { useI18n, useT } from "@/lib/i18n/provider";
 import { Dialog, FOCUS } from "../teachKit";
 import { suggestPlan, type PlanChip, type PlanItem, type PlanReason, type PlanResponse, type PlanTarget } from "./planApi";
+import { uiDate } from "@/lib/i18n/format";
 
 // "Plan next week": a props-driven sheet that shows the server's SUGGESTED week (GET /plan/suggest) as checkable cards.
 // It never sets anything itself: "Set these" hands the ticked items to onAccept, and the parent decides what to do
@@ -64,7 +65,7 @@ export function AutoPlanSheet({ target, targetName, qs = "", onClose, onAccept, 
   }, [childId, groupId, qs, days, perDay]);
   useEffect(() => load(), [load]);
 
-  const dayFmt = useMemo(() => new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }), [locale]);
+  const dayFmt = useMemo(() => ({ format: (d: Date) => uiDate(d, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }, locale) }), [locale]);
   const fmtDay = (iso: string) => dayFmt.format(new Date(`${iso}T12:00:00Z`));
   const when = (d: number | null) => (d === null ? "" : d <= 0 ? t("hubplan.when_today") : d === 1 ? t("hubplan.when_yesterday") : d < 7 ? t("hubplan.when_days", { n: d }) : d < 14 ? t("hubplan.when_lastWeek") : t("hubplan.when_weeks", { n: Math.floor(d / 7) }));
   const reason = (r: PlanReason) => {

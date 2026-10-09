@@ -1,4 +1,4 @@
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate, uiDateTime } from "@/lib/i18n/format";
 import { tNow } from "@/lib/i18n/provider";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
@@ -63,7 +63,7 @@ export interface SavedTimetable {
 const prettyRange = (from: string, to: string) => {
   const f = (iso: string) => {
     const d = new Date(iso + "T00:00:00");
-    return isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { day: "numeric", month: "short" });
+    return isNaN(d.getTime()) ? iso : uiDate(d, { day: "numeric", month: "short" });
   };
   return from === to ? f(from) : `${f(from)} – ${f(to)}`;
 };
@@ -423,7 +423,7 @@ export const useTimetableStore = create<TimetableState>()(
         s.curListing = L;
         s.timetableId = draft?.id ?? null;
         s.pubStatus = draft?.published
-          ? tNow("p8set.ttPublishedAt", { when: new Date(draft.published.at).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })
+          ? tNow("p8set.ttPublishedAt", { when: uiDateTime(new Date(draft.published.at), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })
           : null;
         s.share = draft?.published ? { staff: draft.published.staff, parents: draft.published.parents } : {};
         s.audience = draft?.published?.audience ?? "booked";
@@ -724,7 +724,7 @@ export const useTimetableStore = create<TimetableState>()(
         s.share = t.published ? { staff: t.published.staff, parents: t.published.parents } : {};
         s.audience = t.published?.audience ?? "booked";
         s.pubStatus = t.published
-          ? tNow("p8set.ttPublishedAt", { when: new Date(t.published.at).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })
+          ? tNow("p8set.ttPublishedAt", { when: uiDateTime(new Date(t.published.at), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })
           : null;
         s.wstep = 1;
         s.tab = 1;

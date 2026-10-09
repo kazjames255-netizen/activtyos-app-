@@ -8,6 +8,7 @@ import { DISPLAY, FOCUS, fmtDay, humanSpan, uiLocale } from "../teachKit";
 import { Ico } from "../teachIcons";
 import { Stack } from "../home/homeKit";
 import { lessonStage, lessonTiming, type Lesson } from "./lessonTypes";
+import { uiTime } from "@/lib/i18n/format";
 
 // "Today" — a horizontal timeline of the day's lessons: hour ruler, one block per
 // lesson coloured by its subject, a red marker for "now", student avatar stacks,
@@ -22,7 +23,7 @@ const RULER = 34;
 
 const dayStart = (ms: number) => { const d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
 const hh = (h: number) => `${String(h % 24).padStart(2, "0")}:00`;
-const clock = (ms: number) => new Date(ms).toLocaleTimeString(uiLocale(), { hour: "2-digit", minute: "2-digit" });
+const clock = (ms: number) => uiTime(new Date(ms), { hour: "2-digit", minute: "2-digit" }, uiLocale());
 
 function MiniRing({ progress, value }: { progress: number; value: string }) {
   const size = 40, sw = 4, r = size / 2 - sw / 2, c = 2 * Math.PI * r;

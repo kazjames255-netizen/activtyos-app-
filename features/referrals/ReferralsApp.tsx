@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -37,7 +37,7 @@ type Data = {
   recent: Row[];
 };
 
-const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "");
+const fmt = (iso?: string) => (iso ? uiDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" }) : "");
 const nameOf = (email: string) => email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 const fmtAmt = (v?: number, type?: "amount" | "percent") => (type === "percent" ? `${Math.round(v ?? 0)}%` : money(v ?? 0));
 

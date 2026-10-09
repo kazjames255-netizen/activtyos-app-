@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useT, useI18n } from "@/lib/i18n/provider";
+import { localizeDateLabels } from "@/lib/i18n/format";
 import { Button } from "@/components/ui";
 import { useTenantSettings } from "@/lib/settings";
 import { refundFor, effectiveRefundDate, policyById, adviceReasonT } from "@/lib/cancellation";
@@ -176,7 +177,7 @@ function ReleaseConfirm({ booking: b, ki, dt }: { booking: Booking; ki: number; 
   const start = resolution === "wallet" ? worth : suggested;
   const amount = resolution === "none" ? 0 : Math.min(typed ?? start, worth);
 
-  const dayText = dt ? (/^\d{4}-\d{2}-\d{2}$/.test(dt) ? sessionDayLabel(dt) : dt) : "";
+  const dayText = dt ? (/^\d{4}-\d{2}-\d{2}$/.test(dt) ? sessionDayLabel(dt) : localizeDateLabels(dt)) : "";
   const opts = { resolution, amount: round2(amount) };
   const go = () => (dt ? cancelDay(b.ref, ki, dt, opts) : cancelChild(b.ref, ki, opts));
 

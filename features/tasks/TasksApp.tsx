@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate, uiTime, formatDay } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
@@ -277,7 +277,7 @@ const initials = (n: string) => (n || "?").split(/\s+/).filter((w) => /^\p{L}/u.
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const shiftIso = (iso: string, by: number) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + by); return d.toISOString().slice(0, 10); };
 const daysBetween = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
-const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const fmtDay = (iso: string) => uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 // A colour-coded relative due label.
 function dueLabel(iso: string | null | undefined, today: string): { text: string; color: string } | null {
   if (!iso) return null;
@@ -617,7 +617,7 @@ export function TasksApp() {
     if (!qa.trim()) return;
     const p = parseQuick(qa, today);
     if (!p.t) return;
-    const at = new Date().toLocaleDateString(dl(), { day: "numeric", month: "short" });
+    const at = uiDate(new Date(), { day: "numeric", month: "short" });
     // @name → a real person on the team: exact name, else a unique first-name /
     // prefix match ("@Sam" → "Sam Taylor"), carrying their email so the task
     // reaches them. Someone not on the team is flagged before it's saved (d11s7).
@@ -1023,7 +1023,7 @@ function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task
   const sc = STATUS_C[t.status ?? "todo"];
   // Left date rail — the prominent, listing-card style block.
   const railBg = done ? "linear-gradient(160deg,#0f7a3d,#16b364)" : isOverdue ? "linear-gradient(160deg,#8f1420,#c02636)" : "linear-gradient(160deg,#16307a,#3f78d8)";
-  const mon = t.due ? new Date(`${t.due}T00:00:00Z`).toLocaleDateString(dl(), { month: "short", timeZone: "UTC" }).toUpperCase() : "";
+  const mon = t.due ? uiDate(new Date(`${t.due}T00:00:00Z`), { month: "short", timeZone: "UTC" }).toUpperCase() : "";
   const rel = done ? tr("p7tk.gDone") : isOverdue ? tr("p7tk.gOverdue") : (dueLabel(t.due, today)?.text ?? "");
   return (
     // Was a fixed h-[52px] flex row. Now a column so the subtask list can drop
@@ -1187,9 +1187,9 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
   const weekStart = shiftIso(anchor, -dowMon(anchor));
   const step = view === "day" ? 1 : view === "week" ? 7 : 0;
   const stepBy = (dir: number) => { if (view === "month") { const [y, m] = anchor.split("-").map(Number); setAnchor(new Date(Date.UTC(y, m - 1 + dir, 1)).toISOString().slice(0, 10)); } else setAnchor(shiftIso(anchor, dir * step)); };
-  const title = view === "day" ? new Date(`${anchor}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+  const title = view === "day" ? uiDate(new Date(`${anchor}T00:00:00Z`), { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
     : view === "week" ? tr("p7tk.weekOf", { date: fmtDay(weekStart) })
-    : new Date(`${anchor}T00:00:00Z`).toLocaleDateString(dl(), { month: "long", year: "numeric", timeZone: "UTC" });
+    : uiDate(new Date(`${anchor}T00:00:00Z`), { month: "long", year: "numeric", timeZone: "UTC" });
   // Compact chip (month/week) — done tasks read struck-through and dimmed.
   const chip = (t: Task) => { const done = t.status === "done"; const bg = done ? "#16b364" : PRIO[t.prio ?? "med"].dot; return (
     // The chip opens the task; its 🔗 opens the task's link (Drive, a page…).
@@ -1245,7 +1245,7 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
     const cells: (string | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: dim }, (_, i) => `${anchor.slice(0, 7)}-${String(i + 1).padStart(2, "0")}`)];
     while (cells.length % 7 !== 0) cells.push(null);
     body = <>
-      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <div key={d} className="py-1">{d}</div>)}</div>
+      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{[0, 1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="py-1">{formatDay(`2024-01-0${i + 1}`, { weekday: "short" })}</div>)}</div>
       <div className="grid grid-cols-7 gap-1">{cells.map((iso, i) => (
         <div key={i} className="min-h-[78px] rounded-lg border p-1" style={{ borderColor: iso === today ? BLUE : "var(--line)", background: iso === today ? "#eef4fd" : iso ? "var(--surface)" : "transparent" }}>
           {iso && <>
@@ -1267,7 +1267,7 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
                       ran off the edge of the page. */}
                   <div className={`absolute ${i % 7 >= 4 ? "end-0" : "start-0"} top-full z-[151] mt-1 max-h-[260px] w-[min(240px,80vw)] overflow-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_44px_-16px_rgba(15,23,42,.45)]`}>
                     <div className="px-1 pb-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">
-                      {new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {on(iso).length}
+                      {uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {on(iso).length}
                     </div>
                     <div className="space-y-0.5">{on(iso).map(chip)}</div>
                   </div>
@@ -1282,7 +1282,7 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
     const days = Array.from({ length: 7 }, (_, i) => shiftIso(weekStart, i));
     body = <div className="grid grid-cols-7 gap-1">{days.map((iso) => (
       <div key={iso} className="min-h-[220px] rounded-lg border p-1.5" style={{ borderColor: iso === today ? BLUE : "var(--line)", background: iso === today ? "#eef4fd" : "var(--surface)" }}>
-        <div className="mb-1 text-[10.5px] font-extrabold text-[var(--ink-2)]">{new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", timeZone: "UTC" })}</div>
+        <div className="mb-1 text-[10.5px] font-extrabold text-[var(--ink-2)]">{uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", timeZone: "UTC" })}</div>
         <div className="space-y-1">{on(iso).map(chip)}{on(iso).length === 0 && <div className="text-[10px] text-[var(--ink-3)]">—</div>}</div>
       </div>
     ))}</div>;
@@ -1735,7 +1735,7 @@ function LinkAdder({ existing, me, onAdd }: { existing: TaskUrl[]; me: string; o
     if (n.error) { setErr(n.error); return; }
     if (!n.url) return;
     if (existing.some((x) => x.url === n.url)) { setErr(tr("p7tk.linkAlready")); return; }
-    onAdd({ url: n.url, ...(title.trim() ? { title: title.trim() } : {}), by: me, at: new Date().toLocaleDateString(dl(), { day: "numeric", month: "short" }) });
+    onAdd({ url: n.url, ...(title.trim() ? { title: title.trim() } : {}), by: me, at: uiDate(new Date(), { day: "numeric", month: "short" }) });
     setUrlIn(""); setTitle(""); setErr(null);
   };
   return (
@@ -1828,7 +1828,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
     const body = comment.trim(); if (!body) return;
     // Date AND time — "12 Sept" on its own can't tell two comments that day apart.
     const at = new Date();
-    const when = `${at.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" })} · ${at.toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" })}`;
+    const when = `${uiDate(at, { weekday: "short", day: "numeric", month: "short" })} · ${uiTime(at, { hour: "2-digit", minute: "2-digit" })}`;
     save({ comments: [...(task.comments ?? []), { who: me || "You", body, when }] });
     setComment("");
   };
@@ -1849,7 +1849,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
   const inputCls = D_INPUT;
   const status = task.status ?? "todo";
   const prio = task.prio ?? "med";
-  const todayIso = new Date().toLocaleDateString("en-CA");
+  const todayIso = new Date().toLocaleDateString("en-CA"); // raw-locale-ok: machine date key, not shown to anyone
   const due = dueLabel(task.due, todayIso);
   const isOverdue = status !== "done" && !!task.due && task.due < todayIso;
   const subs = task.subs ?? [];

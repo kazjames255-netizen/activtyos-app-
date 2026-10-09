@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useState } from "react";
 import type { TenantSettings } from "@/lib/settings";
 import { tNow, useT } from "@/lib/i18n/provider";
@@ -10,7 +10,7 @@ export type LineItem = { description: string; qty: number; unitPrice: number };
 export type Billing = NonNullable<TenantSettings["billing"]>;
 
 const gbp = (n: number) => `£${(Math.round((n || 0) * 100) / 100).toLocaleString(dl(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fmtDay = (iso?: string) => (iso ? new Date(`${String(iso).slice(0, 10)}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmtDay = (iso?: string) => (iso ? uiDate(new Date(`${String(iso).slice(0, 10)}T00:00:00Z`), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
 export const lineTotal = (items: LineItem[]) => Math.round(items.reduce((s, li) => s + (li.qty || 0) * (li.unitPrice || 0), 0) * 100) / 100;
 

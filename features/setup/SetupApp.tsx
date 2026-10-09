@@ -3,7 +3,7 @@
 import { StepDonePrompt } from "@/features/dashboard/StepDonePrompt";
 import { CancelWelcome } from "./CancelWelcome";
 import { settingsOwner } from "@/lib/franchiseTerms";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiTime, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -1441,12 +1441,12 @@ export function SetupApp() {
   }, [tab]);
   const set = <K extends keyof TenantSettings>(key: K, value: TenantSettings[K]) => {
     void save({ settings: { ...settings, [key]: value } }).then(() =>
-      setSavedAt(new Date().toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" })),
+      setSavedAt(uiTime(new Date(), { hour: "2-digit", minute: "2-digit" })),
     );
   };
   const setQuestions = (next: ChildQuestion[]) => {
     void save({ questions: next }).then(() =>
-      setSavedAt(new Date().toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" })),
+      setSavedAt(uiTime(new Date(), { hour: "2-digit", minute: "2-digit" })),
     );
   };
 
@@ -1560,7 +1560,7 @@ export function SetupApp() {
               // that name — the choice used to change only a label (d1s4).
               // (One save with both fields — two set() calls would overwrite each other.)
               const mode = e.target.value as "person" | "business";
-              const saveBoth = (name?: string) => void save({ settings: { ...settings, providerNameMode: mode, ...(name ? { providerName: name } : {}) } }).then(() => setSavedAt(new Date().toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" })));
+              const saveBoth = (name?: string) => void save({ settings: { ...settings, providerNameMode: mode, ...(name ? { providerName: name } : {}) } }).then(() => setSavedAt(uiTime(new Date(), { hour: "2-digit", minute: "2-digit" })));
               if (mode === "business") saveBoth((settings.billing as { businessName?: string } | undefined)?.businessName?.trim());
               else void apiGet<{ name?: string }>("/api/account").then((a) => saveBoth(a?.name?.trim())).catch(() => saveBoth());
             }} className="w-full"><option value="business">{t("setup.businessName")}</option><option value="person">{t("setup.myOwnName")}</option></Select></div>
@@ -1818,7 +1818,7 @@ export function SetupApp() {
       {activeTab === "roles" && (
         <Section title={t("setup.rolesPermissions")} lede={t("setup.rolesPermissionsLede")}>
           {/* Editing the matrix stamps rolesSetAt — from then on the API enforces it (lib/accessMap.ts). */}
-          <RolesPermissions roles={settings.roles ?? []} onChange={(roles) => { void save({ settings: { ...settings, roles, rolesSetAt: new Date().toISOString() } }).then(() => setSavedAt(new Date().toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" }))); }} areas={hoCombined ? HO_ROLE_AREAS : undefined} defaultRoles={hoCombined ? HO_DEFAULT_ROLES : undefined} />
+          <RolesPermissions roles={settings.roles ?? []} onChange={(roles) => { void save({ settings: { ...settings, roles, rolesSetAt: new Date().toISOString() } }).then(() => setSavedAt(uiTime(new Date(), { hour: "2-digit", minute: "2-digit" }))); }} areas={hoCombined ? HO_ROLE_AREAS : undefined} defaultRoles={hoCombined ? HO_DEFAULT_ROLES : undefined} />
         </Section>
       )}
 
@@ -2431,7 +2431,7 @@ export function SetupApp() {
             </Row>
             <Row label={t("p8set.dfDays")} hint={t("p8set.dfDaysHint")}>
               <div className="flex gap-1">
-                {Array.from({ length: 7 }, (_, i) => new Date(Date.UTC(2024, 0, 1 + i)).toLocaleDateString(dl(), { weekday: "narrow", timeZone: "UTC" })).map((d, i) => {
+                {Array.from({ length: 7 }, (_, i) => uiDate(new Date(Date.UTC(2024, 0, 1 + i)), { weekday: "narrow", timeZone: "UTC" })).map((d, i) => {
                   const on = settings.defaultRunningDays.includes(i + 1);
                   return (
                     <button

@@ -4,7 +4,7 @@
 // when available and always shows the method of payment.
 
 import { tNow } from "@/lib/i18n/provider";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { BRAND } from "@/lib/i18n/config";
 import type { Booking } from "@/features/bookings/types";
 import { addonSentences } from "@/features/bookings/addons";
@@ -24,7 +24,7 @@ export interface ReceiptCtx {
 const fmtDate = (iso?: string) => {
   if (!iso) return "";
   const d = new Date(iso);
-  return isNaN(d.getTime()) ? "" : d.toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" });
+  return isNaN(d.getTime()) ? "" : uiDate(d, { day: "numeric", month: "long", year: "numeric" });
 };
 
 const childrenOf = (b: Booking) =>

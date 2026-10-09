@@ -4,7 +4,7 @@
 //  • mode="franchise": work the roadmap — track dates & completion per action.
 //  • mode="ho": the SAME roadmap, fully editable — add/edit/reorder milestones
 //    and their actions (tasks) right on the map via popups. One surface, no form.
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useI18n, tNow } from "@/lib/i18n/provider";
 import { ml } from "./tplI18n";
 import { navLabel } from "@/lib/i18n/words";
@@ -125,7 +125,7 @@ function exportSeasonPlan(phases: MPhase[], prog: MProgress, provider: string) {
     const tasks = p.steps.map((s) => { const st = prog.steps[s.id]; const sp = stepPctEff(s, prog); return `<tr><td>${esc(ml(s.title))}</td><td>${st?.start ? fmtShort(st.start) + " – " + fmtShort(st.end) : "—"}</td><td class="r">${sp}%</td></tr>`; }).join("");
     return `<section><h2><span class="dot" style="background:${tone}"></span>${esc(ml(p.title))} <b>${pc}%</b></h2><div class="sub">${win ? fmtShort(isoDate(win.start)) + " – " + fmtShort(isoDate(win.end)) : ""}</div><table>${tasks}</table></section>`;
   }).join("");
-  const html = `<!doctype html><html lang="${currentLocaleCode()}" dir="${isRTL(currentLocaleCode()) ? "rtl" : "ltr"}"><meta charset="utf8"><title>${esc(P_("msExportTitle", { provider }))}</title><style>body{font:14px/1.5 -apple-system,system-ui,sans-serif;color:#15171e;max-width:720px;margin:32px auto;padding:0 20px}h1{font-size:26px;margin:0}.meta{color:#7a8095;font-size:12px;margin:2px 0 20px}section{break-inside:avoid;margin:18px 0;border:1px solid #e6e3dc;border-radius:12px;padding:12px 16px}h2{font-size:16px;margin:0;display:flex;align-items:center;gap:8px}h2 b{margin-left:auto;color:#4a4e59}.dot{width:10px;height:10px;border-radius:50%;display:inline-block}.sub{color:#868b97;font-size:11px;margin:2px 0 8px}table{width:100%;border-collapse:collapse;font-size:12.5px}td{padding:4px 0;border-top:1px solid #f0eee9}.r{text-align:end;font-variant-numeric:tabular-nums;color:#4a4e59}@media print{section{border-color:#ccc}}</style><h1>${esc(provider)}</h1><div class="meta">${esc(P_("msExportMeta", { season: seasonL(prog.season), pct: overallPct(phases, prog), date: new Date().toLocaleDateString(dl()) }))}</div>${rows}<script>print()</script>`;
+  const html = `<!doctype html><html lang="${currentLocaleCode()}" dir="${isRTL(currentLocaleCode()) ? "rtl" : "ltr"}"><meta charset="utf8"><title>${esc(P_("msExportTitle", { provider }))}</title><style>body{font:14px/1.5 -apple-system,system-ui,sans-serif;color:#15171e;max-width:720px;margin:32px auto;padding:0 20px}h1{font-size:26px;margin:0}.meta{color:#7a8095;font-size:12px;margin:2px 0 20px}section{break-inside:avoid;margin:18px 0;border:1px solid #e6e3dc;border-radius:12px;padding:12px 16px}h2{font-size:16px;margin:0;display:flex;align-items:center;gap:8px}h2 b{margin-left:auto;color:#4a4e59}.dot{width:10px;height:10px;border-radius:50%;display:inline-block}.sub{color:#868b97;font-size:11px;margin:2px 0 8px}table{width:100%;border-collapse:collapse;font-size:12.5px}td{padding:4px 0;border-top:1px solid #f0eee9}.r{text-align:end;font-variant-numeric:tabular-nums;color:#4a4e59}@media print{section{border-color:#ccc}}</style><h1>${esc(provider)}</h1><div class="meta">${esc(P_("msExportMeta", { season: seasonL(prog.season), pct: overallPct(phases, prog), date: uiDate(new Date()) }))}</div>${rows}<script>print()</script>`;
   const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); }
 }
 
@@ -175,7 +175,7 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
   const span = Math.max(max.getTime() - min.getTime(), day);
   const xp = (d: Date) => Math.max(0, Math.min(100, ((d.getTime() - min.getTime()) / span) * 100));
   const ticks: Date[] = []; let c = new Date(min.getFullYear(), min.getMonth() + 1, 1); while (c < max) { ticks.push(new Date(c)); c = new Date(c.getFullYear(), c.getMonth() + 1, 1); }
-  const fmtMonth = (d: Date) => d.toLocaleDateString(dl(), { month: "short" }) + (d.getMonth() === 0 ? ` ’${String(d.getFullYear()).slice(2)}` : "");
+  const fmtMonth = (d: Date) => uiDate(d, { month: "short" }) + (d.getMonth() === 0 ? ` ’${String(d.getFullYear()).slice(2)}` : "");
 
   const overall = overallPct(phases, prog);
   const totalSteps = phases.reduce((a, p) => a + p.steps.length, 0);

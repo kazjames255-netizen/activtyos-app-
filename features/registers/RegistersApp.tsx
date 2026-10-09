@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate, uiTime } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -94,14 +94,14 @@ const FLAGS = [
 
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const shiftDay = (iso: string, by: number) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + by); return d.toISOString().slice(0, 10); };
-const dow = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const dow = (iso: string) => uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const rel = (iso: string) => (iso === todayIso() ? tNow("p8ops.dbToday") : iso === shiftDay(todayIso(), 1) ? tNow("p8ops.dbTomorrow") : dow(iso));
-const dayLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
-const timeOf = (ts?: string | null) => (ts ? new Date(ts).toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" }) : "");
+const dayLabel = (iso: string) => uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+const timeOf = (ts?: string | null) => (ts ? uiTime(new Date(ts), { hour: "2-digit", minute: "2-digit" }) : "");
 // Date AND time, for note stamps — "20 Aug 2026 · 13:03".
-const stamp = (ts?: string | null) => (ts ? `${new Date(ts).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })} · ${timeOf(ts)}` : "");
+const stamp = (ts?: string | null) => (ts ? `${uiDate(new Date(ts), { day: "numeric", month: "short", year: "numeric" })} · ${timeOf(ts)}` : "");
 // "08:30" → "8:30am" for the start-time filter chips.
-const fmt12 = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); if (Number.isNaN(h)) return hhmm; if (!dl().startsWith("en")) return new Date(2000, 0, 1, h, m ?? 0).toLocaleTimeString(dl(), { hour: "numeric", minute: "2-digit" }); const ap = h >= 12 ? "pm" : "am"; return `${h % 12 || 12}:${String(m ?? 0).padStart(2, "0")}${ap}`; };
+const fmt12 = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); if (Number.isNaN(h)) return hhmm; if (!dl().startsWith("en")) return uiTime(new Date(2000, 0, 1, h, m ?? 0), { hour: "numeric", minute: "2-digit" }); const ap = h >= 12 ? "pm" : "am"; return `${h % 12 || 12}:${String(m ?? 0).padStart(2, "0")}${ap}`; };
 // UK-first number for wa.me (0… → 44…, strip non-digits).
 const waNumber = (phone?: string) => { let n = (phone || "").replace(/\D/g, ""); if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "44" + n.slice(1); return n; };
 // Age from a date of birth vs a "today" string (yyyy-mm-dd) — pure, no Date.now

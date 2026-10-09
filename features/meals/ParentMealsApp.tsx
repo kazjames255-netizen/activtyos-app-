@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { allergenHits } from "./allergens";
 import { get as apiGet, post as apiPost } from "@/lib/api";
@@ -28,7 +28,7 @@ interface Child { name: string; allergies?: string; dietary?: string }
 type Chosen = { name: string; price: number; qty: number; allergens?: string[]; description?: string; diet?: Diet; orderId?: string; canCancel?: boolean };
 type BasketLine = { tenantId: string; listingId: string; listingName: string; date: string; dishId: string; name: string; price: number; child: string };
 
-const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
+const fmtDay = (iso: string) => (iso ? uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
 const WEEK_PAL: [string, string][] = [["#2f6bd8", "#5b9bff"], ["#0ea5a5", "#3fd0c9"], ["#7a5af8", "#a88bff"], ["#e2559a", "#ff86c0"], ["#f5872b", "#ffb166"], ["#16a34a", "#4ade80"]];
 const splitKids = (s?: string) => (s ?? "").split(/,|&/).map((x) => x.trim()).filter(Boolean);
 const lineKey = (l: { date: string; listingId: string; dishId: string; child: string }) => `${l.date}|${l.listingId}|${l.dishId}|${l.child}`;

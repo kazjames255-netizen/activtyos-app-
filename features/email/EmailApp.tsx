@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDateTime, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost, isDemoMode } from "@/lib/api";
@@ -197,7 +197,7 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
 }
 interface Sent { id: string; subject: string; audience: string; recipientCount: number; sentByName?: string; createdAt?: string; status?: "sending" | "sent"; delivered?: number; openedBy?: string[] }
 interface LiveMoment { id: string; caption?: string; comments?: { role?: string; text: string; byName?: string; marketing?: boolean }[] }
-const when = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const when = (iso?: string) => (iso ? uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 const BROWN = "#9a5a00", BLUE = "#1d3a8f", GREEN = "#047857";
 const SWATCHES = ["#171534", "#1d3a8f", "#be1259", "#047857", "#b45309"];
 const RATIO_AR: Record<string, string> = { square: "1 / 1", portrait: "4 / 5", story: "9 / 16" };
@@ -314,7 +314,7 @@ const toMail = (m: ServerMail): Mail => ({
   folder: (["inbox", "archive", "snoozed", "spam", "trash"].includes(m.folder ?? "") ? m.folder : "inbox") as MailFolder,
 });
 // "Sends Fri 1 Aug, 09:00" — sendAt is a local datetime string, not ISO+tz.
-const whenSched = (sendAt: string) => new Date(sendAt).toLocaleString(dl(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const whenSched = (sendAt: string) => uiDateTime(new Date(sendAt), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const FOLDERS: [string, string][] = [
   ["inbox", "Inbox"], ["starred", "Starred"], ["snoozed", "Snoozed"], ["sent", "Sent"],
   ["drafts", "Drafts"], ["scheduled", "Scheduled"], ["archive", "Archive"], ["spam", "Spam"], ["trash", "Trash"], ["all", "All mail"],
@@ -854,7 +854,7 @@ const STATUS_PILL: Record<CampStatus, { bg: string; fg: string; label: string }>
 const parseDate = (s?: string) => { if (!s) return null; const t = Date.parse(s); return Number.isNaN(t) ? null : new Date(t); };
 const bookedDate = (b: Booking) => parseDate(b.createdAt);           // when the booking was MADE
 const sessionDate = (b: Booking) => parseDate(b.date || b.createdAt); // when the child ATTENDS
-const fmtD = (s?: string) => { const d = parseDate(s); return d ? d.toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : ""; };
+const fmtD = (s?: string) => { const d = parseDate(s); return d ? uiDate(d, { day: "numeric", month: "short", year: "numeric" }) : ""; };
 function matchBooking(b: Booking, f: AudFilter): boolean {
   if (f.location && (b.locationName || "") !== f.location) return false;
   if (f.paymentMethod && (b.method || "") !== f.paymentMethod) return false;
@@ -908,7 +908,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   const runLabel = (l: { id: string; runFrom?: string; runTo?: string }) => {
     if (l.runFrom || l.runTo) return `${fmtD(l.runFrom) || "…"} – ${fmtD(l.runTo) || "…"}`;
     const ds = bookings.filter((b) => b.listingId === l.id).map((b) => sessionDate(b)).filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime());
-    return ds.length ? `${ds[0].toLocaleDateString(dl(), { day: "numeric", month: "short" })} – ${ds[ds.length - 1].toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" })}` : t("p8em.emDatesNA");
+    return ds.length ? `${uiDate(ds[0], { day: "numeric", month: "short" })} – ${uiDate(ds[ds.length - 1], { day: "numeric", month: "short", year: "numeric" })}` : t("p8em.emDatesNA");
   };
   const AGES = Array.from({ length: 19 }, (_, i) => i); // 0..18 (18 = 18+)
   const lo = f.ageMin ?? 0, hi = f.ageMax ?? 18;
@@ -1285,7 +1285,7 @@ function CampaignsView({ onSent, seedAudienceId, seedName, seedSubject, seedList
   const restrictLabel = seedListingId ? (listings.find((l) => l.id === seedListingId)?.title || t("p8em.emThisListing")) : undefined;
   const create = async (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string }, action: CampStatus) => {
     setErr(null);
-    const schedLabel = c.scheduledAt ? new Date(c.scheduledAt).toLocaleString(dl(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : undefined;
+    const schedLabel = c.scheduledAt ? uiDateTime(new Date(c.scheduledAt), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : undefined;
     const row: Campaign = { id: `c${Date.now()}`, name: c.name, subtitle: c.template?.name ?? (c.html ? t("p8em.emDesignedEmail") : undefined), audienceName: c.audience.name, recipients: c.audience.count, status: action, statusDate: action === "scheduled" ? schedLabel : action === "sent" ? t("p8em.emJustNow") : undefined, subject: c.subject, html: c.html, body: c.body, design: c.design, scheduledAt: c.scheduledAt, recipientEmails: c.audience.emails };
     if (action !== "draft" && !c.audience.emails.length) throw new Error(t("p8em.emNobodyInAud"));
     // The send/queue is the server's; the local row keeps the design and
@@ -1450,7 +1450,7 @@ function SuppressionsPanel() {
   useRealtime(["emailSuppressions"], load);
   const ql = q.trim().toLowerCase();
   const shown = rows ? (ql ? rows.filter((r) => r.email.toLowerCase().includes(ql)) : rows) : null;
-  const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString(dl(), { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+  const fmt = (iso: string | null) => iso ? uiDateTime(new Date(iso), { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
   return (
     <div>
       <div className="mb-3 rounded-lg border-s-4 border-[#c78a00] bg-[#fff8e8] px-3 py-2 text-[11.5px] text-[#7a5600]"><RichB text={t("p8em.emSuppNote")} /></div>

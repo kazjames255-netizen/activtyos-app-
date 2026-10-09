@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -90,7 +90,7 @@ export function PlatformAtRiskApp() {
                 <span className="font-semibold" style={{ color: r.color }}>{p.detail}</span>
                 {p.contactEmail && <a href={`mailto:${p.contactEmail}?subject=${encodeURIComponent(hq("Your {brand} account"))}`} className="font-semibold text-[#1d3a8f] hover:underline">✉ {p.contactEmail}</a>}
                 {p.phone && <a href={`tel:${p.phone}`} className="font-semibold text-[#1d3a8f] hover:underline">📞 {p.phone}</a>}
-                {p.contactedAt && <span className="text-[var(--ink-3)]">· {hq("contacted {date}", { date: new Date(p.contactedAt).toLocaleDateString(dl(), { day: "numeric", month: "short" }) })}</span>}
+                {p.contactedAt && <span className="text-[var(--ink-3)]">· {hq("contacted {date}", { date: uiDate(new Date(p.contactedAt), { day: "numeric", month: "short" }) })}</span>}
                 <span className="ms-auto">
                   {tab === "todo"
                     ? <button type="button" onClick={() => mark(p.id, true)} disabled={busy === p.id} className="rounded-full bg-[#0f7a43] px-3 py-1 text-[11.5px] font-bold text-white hover:brightness-110 disabled:opacity-50">{busy === p.id ? "…" : hq("✓ Mark contacted")}</button>

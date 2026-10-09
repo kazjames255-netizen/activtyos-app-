@@ -15,10 +15,10 @@ import { SEED_LIBRARY, type CourseDoc } from "./courseContent";
 import { CoursePlayer } from "./CoursePlayer";
 import { useI18n } from "@/lib/i18n/provider";
 import { get as apiGet, isDemoMode } from "@/lib/api";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDate } from "@/lib/i18n/format";
 
 // Same as credentials' fmtDate, in the reader's language.
-const fmtDate = (s?: string, locale = "en-GB") => { if (!s) return "—"; const d = new Date(s + "T00:00:00"); return isNaN(d.getTime()) ? s : d.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" }); };
+const fmtDate = (s?: string, locale = "en-GB") => { if (!s) return "—"; const d = new Date(s + "T00:00:00"); return isNaN(d.getTime()) ? s : uiDate(d, { day: "2-digit", month: "short", year: "numeric" }, locale); };
 // Display labels (the stored values stay English).
 const CRED_KEY: Record<CredStatus, string> = { Valid: "staffp.certStValid", Expiring: "staffp.certStExpiring", Expired: "staffp.certStExpired", Pending: "staffp.certStPending", Rejected: "staffp.certStRejected", Missing: "staffp.certStMissing" };
 const CAT_KEY: Record<CatKey, string> = { saf: "staffp.certCatSaf", inclusion: "staffp.certCatInclusion", send: "staffp.certCatSend", medical: "staffp.certCatMedical", health: "staffp.certCatHealth", digital: "staffp.certCatDigital", together: "staffp.certCatTogether" };

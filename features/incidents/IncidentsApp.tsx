@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate, uiDateTime } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useSearchParams } from "next/navigation";
@@ -66,7 +66,7 @@ const COPY = {
 const SEV = { minor: { label: "p7inc.sevMinor", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { label: "p7inc.sevModerate", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "p7inc.sevSerious", bg: "#fdebec", fg: "#c02636" } } as const;
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const nowTime = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${p(t.getHours())}:${p(t.getMinutes())}`; };
-const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
+const fmtDate = (iso?: string) => (iso ? uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
 
 type Draft = Partial<Log> & { kind: Kind; date: string; childName: string; description: string };
 const emptyDraft = (kind: Kind): Draft => ({ kind, date: todayIso(), time: nowTime(), childName: "", description: "", severity: "minor", parentNotified: false });
@@ -549,8 +549,8 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
                         {l.incidentType && <div><span className="text-[var(--ink-3)]">{t("p7inc.dType")} </span><b>{l.incidentType}</b></div>}
                         {l.actionTaken && <div><span className="text-[var(--ink-3)]">{t("p7inc.dAction")} </span><b>{bankText(t, l.actionTaken)}</b></div>}
                         {l.witnesses && <div><span className="text-[var(--ink-3)]">{t("p7inc.dWitnesses")} </span><b>{l.witnesses}</b></div>}
-                        {l.parentNotifiedAt && <div><span className="text-[var(--ink-3)]">{t("p7inc.dParentInformed")} </span><b>{new Date(l.parentNotifiedAt).toLocaleString(dl())}</b></div>}
-                        {l.acknowledgedAt && <div><span className="text-[var(--ink-3)]">{t("p7inc.dParentAck")} </span><b>{new Date(l.acknowledgedAt).toLocaleString(dl())}{l.acknowledgedBy ? ` · ${l.acknowledgedBy}` : ""}</b></div>}
+                        {l.parentNotifiedAt && <div><span className="text-[var(--ink-3)]">{t("p7inc.dParentInformed")} </span><b>{uiDateTime(new Date(l.parentNotifiedAt))}</b></div>}
+                        {l.acknowledgedAt && <div><span className="text-[var(--ink-3)]">{t("p7inc.dParentAck")} </span><b>{uiDateTime(new Date(l.acknowledgedAt))}{l.acknowledgedBy ? ` · ${l.acknowledgedBy}` : ""}</b></div>}
                         {l.recordedByName && <div><span className="text-[var(--ink-3)]">{t("p7inc.dRecordedBy")} </span><b>{l.recordedByName}</b></div>}
                         {l.followUp && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">{t("p7inc.dFollowUp")} </span><b>{l.followUp}</b></div>}
                         {(l.attachments?.length ?? 0) > 0 && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">{t("p7inc.dAttachments")} </span>{l.attachments!.map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer" className="me-2 font-bold text-[#1d3a8f] underline">{t("p7inc.fileN", { n: i + 1 })}</a>)}</div>}

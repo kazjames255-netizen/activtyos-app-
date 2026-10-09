@@ -1,4 +1,5 @@
 import type { HubSettings } from "@/lib/hubConfig";
+import { uiDate } from "@/lib/i18n/format";
 
 // Home — pure helpers and the small shapes Home reads. Nothing here fetches or
 // renders. Every rule that matters (marking, mastery, bands, join window) is
@@ -74,7 +75,7 @@ export function relTime(iso: string | null | undefined, now: number): string {
   const days = Math.floor((startOfDay(now) - startOfDay(t)) / DAY);
   if (days <= 1) return "Yesterday";
   if (days < 7) return `${days} days ago`;
-  return new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return uiDate(new Date(t), { day: "numeric", month: "short" });
 }
 
 export const startOfDay = (ms: number) => { const d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
@@ -165,6 +166,6 @@ export function weekDots(activityMs: number[], now: number, locale = "en-GB"): {
   const today = startOfDay(now);
   return Array.from({ length: 7 }, (_, i) => {
     const day = today - (6 - i) * DAY;
-    return { day, letter: new Date(day).toLocaleDateString(locale, { weekday: "narrow" }), active: days.has(dayKey(day)), today: i === 6 };
+    return { day, letter: uiDate(new Date(day), { weekday: "narrow" }, locale), active: days.has(dayKey(day)), today: i === 6 };
   });
 }

@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { Card, Panel, Select, Input, SectionHead, Badge, Button } from "@/components/ui";
 import { useT } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDate } from "@/lib/i18n/format";
 import { H, hq } from "./hqText";
 
 // VENTURE CYCLE PROJECT (Phase 1) — a separate business venture Kaz and
@@ -612,7 +612,7 @@ export function VentureLakesApp() {
                                 </div>
                                 <div>
                                   <span className="font-semibold text-[var(--ink-3)]">{hq("Checked")}: </span>
-                                  {r.phase2CheckedAt ? new Date(r.phase2CheckedAt).toLocaleDateString(dateLocale()) : "—"}
+                                  {r.phase2CheckedAt ? uiDate(new Date(r.phase2CheckedAt)) : "—"}
                                 </div>
                               </div>
                             </div>

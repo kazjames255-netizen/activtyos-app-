@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate, uiTime } from "@/lib/i18n/format";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n/provider";
@@ -17,9 +17,9 @@ import { STAGES, type Lead, type Stage } from "./SalesApp";
 // the separate "Demo slots" tab — see DemoSlotsPanel.tsx.
 
 // Built per call so they follow the active language.
-const dayFmt = { format: (d: Date) => new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }).format(d) };
-const timeFmt = { format: (d: Date) => new Intl.DateTimeFormat(dl(), { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }).format(d) };
-const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" });
+const dayFmt = { format: (d: Date) => uiDate(d, { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }) };
+const timeFmt = { format: (d: Date) => uiTime(d, { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }) };
+const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }); // raw-locale-ok: machine date key, not shown to anyone
 
 export function VideoCallsPanel({ leads, onOpen, onMove }: { leads: Lead[]; onOpen: (l: Lead) => void; onMove: (id: string, s: Stage) => void }) {
   const router = useRouter();

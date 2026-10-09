@@ -1,6 +1,7 @@
 import type { HubVideo } from "../types";
 import { KID_COPY } from "../family/kidCopy";
 import { hubT, hubLocale, tp } from "../family/hubT";
+import { uiDate } from "@/lib/i18n/format";
 
 // Homework — shapes mirror server/src/routes/hub/homeworkApi.ts (contract:
 // docs/learning-hub.md → Homework). Marking is the tutor's; the server only
@@ -43,7 +44,7 @@ export interface AttemptLite { id: string; assessmentId: string; homeworkId: str
 export type DueTone = "red" | "gold" | "neutral" | "green" | "brand";
 export function dueState(dueAt: string, status: SubStatus, now: number, kid = false): { label: string; tone: DueTone; overdue: boolean; soon: boolean } {
   const loc = hubLocale() === "en" ? "en-GB" : hubLocale();
-  const dayOf = (o: Intl.DateTimeFormatOptions) => { try { return new Date(dueAt).toLocaleDateString(loc, o); } catch { return new Date(dueAt).toLocaleDateString("en-GB", o); } };
+  const dayOf = (o: Intl.DateTimeFormatOptions) => { try { return uiDate(new Date(dueAt), o, loc); } catch { return uiDate(new Date(dueAt), o); } };
   const x = { h: (k: string, v?: Record<string, string | number>) => hubT(`hubhomework.${k}`, v), hp: (k: string, n: number) => tp(hubT, hubLocale(), `hubhomework.${k}`, n), weekday: () => dayOf({ weekday: "long" }), day: () => dayOf({ weekday: "short", day: "numeric", month: "short" }) };
   if (status === "marked") return { label: x.h("stMarked"), tone: "green", overdue: false, soon: false };
   if (status === "submitted") return { label: x.h("stHandedIn"), tone: "brand", overdue: false, soon: false };

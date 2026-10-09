@@ -6,7 +6,7 @@
 // each staff member holds RECORDS against a type (file, dates, number, verify
 // state). Front-end demo store; real file storage + verification persistence are
 // Amir's (see handoff).
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { tNow, useT } from "@/lib/i18n/provider";
 import { useEffect, useRef, useState } from "react";
 import { del as apiDel, fetchBlob, get as apiGet, isDemoMode, openFile, post as apiPost, put as apiPut } from "@/lib/api";
@@ -75,7 +75,7 @@ const CRED_STATUS_KEY: Record<string, string> = { Valid: "p8lrn.lcStValid", Expi
 export const credStatusWord = (s: string): string => (CRED_STATUS_KEY[s] ? tNow(CRED_STATUS_KEY[s]) : s);
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addMonths = (base: Date, m: number) => new Date(base.getFullYear(), base.getMonth() + m, base.getDate());
-export const fmtDate = (s?: string) => { if (!s) return "—"; const d = new Date(s + "T00:00:00"); return isNaN(d.getTime()) ? s : d.toLocaleDateString(dl(), { day: "2-digit", month: "short", year: "numeric" }); };
+export const fmtDate = (s?: string) => { if (!s) return "—"; const d = new Date(s + "T00:00:00"); return isNaN(d.getTime()) ? s : uiDate(d, { day: "2-digit", month: "short", year: "numeric" }); };
 export const daysUntil = (s?: string): number | null => { if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null; return Math.round((new Date(s + "T00:00:00").getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000); };
 
 export type CredStatus = "Valid" | "Expiring" | "Expired" | "Pending" | "Rejected" | "Missing";
@@ -136,7 +136,7 @@ export function exportCredsPdf(staff: { name: string; op: string }[], types: Cre
     .st{font-weight:700}.st .d{display:block;font-weight:400;font-size:10px;color:#8b93ad}.Valid{color:#0f7a43}.Expiring{color:#b45309}.Expired{color:#c0392b}.Rejected{color:#c0392b}.Pending{color:#1d54c4}.Missing{color:#94a3b8}
     .doc{page-break-before:always;padding-top:16px}.dh{font-weight:700;font-size:14px;margin-bottom:8px;border-bottom:1px solid #e5e7f0;padding-bottom:6px}.doc img{max-width:100%;max-height:880px;border:1px solid #e5e7f0;border-radius:6px}.pdfdoc{display:block;width:100%;height:960px;border:1px solid #e5e7f0;border-radius:6px}
     @media print{body{padding:0 6mm}}
-  </style></head><body><h1>${e(tNow("p8lrn.crRegisterTitle", { provider }))}</h1><div class="sub">${e(tNow("p8lrn.crGenerated", { date: new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }) }))}${withDocs ? e(tNow("p8lrn.crWithCertDocs")) : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
+  </style></head><body><h1>${e(tNow("p8lrn.crRegisterTitle", { provider }))}</h1><div class="sub">${e(tNow("p8lrn.crGenerated", { date: uiDate(new Date(), { day: "numeric", month: "long", year: "numeric" }) }))}${withDocs ? e(tNow("p8lrn.crWithCertDocs")) : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
   w.document.open(); w.document.write(html); w.document.close();
   })();
 }
@@ -176,7 +176,7 @@ export function exportCredsPack(params: {
     .doc{page-break-before:always;padding-top:16px}.dh{font-weight:700;font-size:14px;margin-bottom:8px;border-bottom:1px solid #e5e7f0;padding-bottom:6px}.doc img{max-width:100%;max-height:880px;border:1px solid #e5e7f0;border-radius:6px}.pdfdoc{display:block;width:100%;height:960px;border:1px solid #e5e7f0;border-radius:6px}
     .certpage{page-break-before:always;transform:scale(.82);transform-origin:top center}
     @media print{body{padding:0 6mm}}
-  </style></head><body><h1>${e(tNow("p8lrn.crPackTitle", { provider }))}</h1><div class="sub">${e(tNow("p8lrn.crGenerated", { date: new Date().toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }) }))}${e(tNow("p8lrn.crPackMeta", { s: staff.length, c: types.length }))}${withDocs ? e(tNow("p8lrn.crWithDocs")) : ""}${courseCerts.length ? e(tNow("p8lrn.crPackCerts", { n: courseCerts.length })) : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}${certPages}<script>window.onload=function(){setTimeout(function(){window.print()},${courseCerts.length ? 650 : 400})}</script></body></html>`;
+  </style></head><body><h1>${e(tNow("p8lrn.crPackTitle", { provider }))}</h1><div class="sub">${e(tNow("p8lrn.crGenerated", { date: uiDate(new Date(), { day: "numeric", month: "long", year: "numeric" }) }))}${e(tNow("p8lrn.crPackMeta", { s: staff.length, c: types.length }))}${withDocs ? e(tNow("p8lrn.crWithDocs")) : ""}${courseCerts.length ? e(tNow("p8lrn.crPackCerts", { n: courseCerts.length })) : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}${certPages}<script>window.onload=function(){setTimeout(function(){window.print()},${courseCerts.length ? 650 : 400})}</script></body></html>`;
   w.document.open(); w.document.write(html); w.document.close();
   })();
 }

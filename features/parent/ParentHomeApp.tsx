@@ -8,7 +8,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useT } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiTime, uiDate, localizeDateLabels, joinRange } from "@/lib/i18n/format";
 import { useCustomerArea } from "@/lib/use-customer-area";
 import { useCouponCount, useUnreadMessages } from "@/lib/use-unread";
 import { money } from "@/features/bookings/helpers";
@@ -53,9 +53,9 @@ function OfferCard({ b, time, onAccepted }: { b: Booking; time: string | null; o
   const left = end ? Math.max(0, end - now) : 0;
   const mins = Math.floor(left / 60_000);
   const clock = left <= 0 ? t("p7shell.offerExpired") : mins >= 60 ? t("p7shell.offerLeftHM", { h: Math.floor(mins / 60), m: mins % 60 }) : t("p7shell.offerLeftM", { m: Math.max(1, mins) });
-  const until = end ? new Date(end).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) : "";
+  const until = end ? uiTime(new Date(end), { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) : "";
   const days = bookingDays(b).sort();
-  const when = days.length ? (days.length === 1 ? fmtDay(days[0]) : `${fmtDay(days[0])} to ${fmtDay(days[days.length - 1])}`) : b.dates;
+  const when = days.length ? (days.length === 1 ? fmtDay(days[0]) : joinRange(fmtDay(days[0]), fmtDay(days[days.length - 1]))) : localizeDateLabels(b.dates);
   const accept = async () => {
     setBusy(true); setErr(null);
     try {
@@ -138,7 +138,7 @@ function WeekDayTile({ d, k, here, isToday, loc, tone, detail }: {
   const inner = (
     <>
       <span>
-        <span className="block text-[11px] font-bold uppercase opacity-70 sm:text-[12.5px]">{d.toLocaleDateString(loc, { weekday: "short", timeZone: "UTC" })}</span>
+        <span className="block text-[11px] font-bold uppercase opacity-70 sm:text-[12.5px]">{uiDate(d, { weekday: "short", timeZone: "UTC" }, loc)}</span>
         <span className="block text-[22px] font-extrabold leading-none sm:text-[30px]">{d.getUTCDate()}</span>
       </span>
       <span className="flex flex-col gap-0.5">
@@ -151,7 +151,7 @@ function WeekDayTile({ d, k, here, isToday, loc, tone, detail }: {
       </span>
     </>
   );
-  const dayName = d.toLocaleDateString(loc, { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  const dayName = uiDate(d, { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }, loc);
   return (
     <div ref={wrap} onMouseEnter={() => { if (pointer.current !== "touch") show(); }} onMouseLeave={hideSoon} onFocus={(e) => { // keyboard focus opens it; a TAP also focuses the link first and must not (that made the same tap navigate away)
       if (pointer.current === "touch") return; const el = e.target as HTMLElement; if (typeof el.matches === "function" && !el.matches(":focus-visible")) return; show(); }} onBlur={(e) => { if (!pop.current?.contains(e.relatedTarget as Node)) hideSoon(); }}>
@@ -198,7 +198,7 @@ function WeekStrip({ live, today, detail }: { live: Booking[]; today: string; de
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   const loc = dateLocale();
   const tone: Record<string, string> = { Confirmed: "#16a34a", Waitlisted: "#f59e0b", Offered: "#2563eb" };
-  const range = `${days[0].toLocaleDateString(loc, { day: "numeric", month: "short", timeZone: "UTC" })} to ${days[6].toLocaleDateString(loc, { day: "numeric", month: "short", timeZone: "UTC" })}`;
+  const range = joinRange(uiDate(days[0], { day: "numeric", month: "short", timeZone: "UTC" }, loc), uiDate(days[6], { day: "numeric", month: "short", timeZone: "UTC" }, loc));
   return (
     <section aria-label={t("p7shell.weekTitle")}>
       <div className="mb-2 flex items-baseline justify-between gap-2">
@@ -232,7 +232,7 @@ function bookingDays(b: Booking): string[] {
   return (b.kids ?? []).flatMap((k) => k.dates ?? k.days ?? []);
 }
 function fmtDay(iso: string) {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  return uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 }
 const firstName = (full: string) => full.trim().split(/\s+/)[0] ?? "";
 const initial = (n: string) => (n.trim()[0] ?? "?").toUpperCase();
@@ -483,14 +483,14 @@ export function ParentHomeApp() {
                 <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl text-center leading-tight" style={{ background: "var(--brand-soft, #eaf0fc)", color: "var(--brand, #2f6bd8)" }}>
                   {next ? (
                     <>
-                      <span className="text-[12px] font-extrabold uppercase">{new Date(`${next}T00:00:00Z`).toLocaleDateString(dateLocale(), { month: "short", timeZone: "UTC" })}</span>
+                      <span className="text-[12px] font-extrabold uppercase">{uiDate(new Date(`${next}T00:00:00Z`), { month: "short", timeZone: "UTC" })}</span>
                       <span className="text-[20px] font-extrabold">{new Date(`${next}T00:00:00Z`).getUTCDate()}</span>
                     </>
                   ) : <span className="text-[20px]" aria-hidden>🎟️</span>}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block break-words text-[15px] font-extrabold leading-tight text-[var(--ink)]">{b.listing}</span>
-                  <span className="block break-words text-[14px] text-[var(--ink-2)]">{[b.child, next ? fmtDay(next) : b.dates, time].filter(Boolean).join(" · ")}</span>
+                  <span className="block break-words text-[14px] text-[var(--ink-2)]">{[b.child, next ? fmtDay(next) : localizeDateLabels(b.dates), time].filter(Boolean).join(" · ")}</span>
                   {place && <span className="block truncate text-[14px] text-[var(--ink-3)]">📍 {place}</span>}
                 </span>
                 <Link href={`/custdash/bookings?open=${encodeURIComponent(b.ref)}`} className="inline-flex min-h-[44px] shrink-0 items-center rounded-full border border-[var(--line)] px-4 text-[14px] font-bold text-[var(--ink)] no-underline">{h("Details")}</Link>

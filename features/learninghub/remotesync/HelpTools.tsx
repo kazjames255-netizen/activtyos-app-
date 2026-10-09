@@ -12,6 +12,7 @@ import PeriodicTable from "../tools/science/periodic/PeriodicTable";
 import { CALC_DEFAULT, ScientificCalculator, type CalcState } from "./ScientificCalculator";
 import NumberLineTool from "./NumberLineTool";
 import { isRtlDoc } from "../rtl";
+import { uiTime } from "@/lib/i18n/format";
 
 // A student's "help board" for remote-sync — every generic tool widget the live lesson whiteboard offers
 // (server/model.ts's StampKind), across every subject it covers, not just maths. On by default (a tutor unselects
@@ -695,7 +696,7 @@ function Clock() {
         {hand(mDeg, 40, 2)}
         {hand(sDeg, 44, 1)}
       </svg>
-      <p data-tool-chrome className="m-0 mt-1.5 text-[13px] font-bold text-[var(--ink)]">{now.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</p>
+      <p data-tool-chrome className="m-0 mt-1.5 text-[13px] font-bold text-[var(--ink)]">{uiTime(now, { hour: "2-digit", minute: "2-digit" }, locale)}</p>
     </div>
   );
 }

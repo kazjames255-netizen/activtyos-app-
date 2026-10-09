@@ -9,7 +9,7 @@
 // else's pay. Nothing published yet = an honest empty state. The demo still
 // reads the demo store, filtered to the demo person. Statutory (RTI-backed)
 // payslips are the payroll provider's — docs/payroll-integrations-handoff.md.
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui";
 import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
@@ -87,7 +87,7 @@ export function StaffPayslipsApp() {
                   <span className="min-w-0">
                     <span className="block text-[13px] font-bold text-[var(--ink)]">{run.period}</span>
                     <span className="block text-[11.5px] text-[var(--ink-3)]">
-                      {t("staffp.payPaid", { date: new Date(run.paidOn).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) })} · {line.basis === "hour" ? t("staffp.payHoursAt", { h: line.hoursM, rate: line.rate.toFixed(2) }) : t("staffp.paySalary")}
+                      {t("staffp.payPaid", { date: uiDate(new Date(run.paidOn), { day: "numeric", month: "short", year: "numeric" }, locale) })} · {line.basis === "hour" ? t("staffp.payHoursAt", { h: line.hoursM, rate: line.rate.toFixed(2) }) : t("staffp.paySalary")}
                     </span>
                   </span>
                 </button>

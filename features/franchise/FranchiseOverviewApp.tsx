@@ -6,7 +6,7 @@
 // its territory status, and a drill-in. The single place a franchisor reviews
 // "who runs what and how they're doing".
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useT, tNow } from "@/lib/i18n/provider";
@@ -26,7 +26,7 @@ const PALETTE = ["#2f6bd8", "#e0483d", "#0f9d58", "#f5b81f", "#8e44ad", "#e67e22
 const fmtSince = (iso: string | null) => {
   if (!iso) return "—";
   const days = Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  return days <= 0 ? tNow("franchise.sinceToday") : days === 1 ? tNow("franchise.sinceYesterday") : days < 30 ? tNow("franchise.sinceDaysAgo", { days }) : new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short" });
+  return days <= 0 ? tNow("franchise.sinceToday") : days === 1 ? tNow("franchise.sinceYesterday") : days < 30 ? tNow("franchise.sinceDaysAgo", { days }) : uiDate(new Date(iso), { day: "numeric", month: "short" });
 };
 const trendChip = (pct: number) => pct === 0 ? null : <span className={"text-[11px] font-extrabold " + (pct > 0 ? "text-[#0f7a43]" : "text-[#c0392b]")}>{pct > 0 ? "▲" : "▼"} {Math.abs(pct)}%</span>;
 

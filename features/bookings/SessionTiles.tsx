@@ -1,7 +1,7 @@
 "use client";
 
 import { useT } from "@/lib/i18n/provider";
-import { relativeFrom } from "@/lib/i18n/format";
+import { relativeFrom, formatDay, localizeDateLabels } from "@/lib/i18n/format";
 
 // The "Dates & times" list of a booking: one row per session, each with a coloured calendar tile (weekday, big day number, month) and the
 // time as a bold coloured pill, plus a small Today / Tomorrow / in N days / Past tag. Sessions arrive as strings like
@@ -38,7 +38,7 @@ export function SessionTiles({ sessions, place }: { sessions: string[]; place?: 
           const parts = s.split(" · ");
           return (
             <div key={i} className="flex justify-between border-b border-dashed border-[var(--line)] py-[3px] text-[12px] text-[var(--ink)]">
-              <span>{parts[0]}</span>
+              <span>{localizeDateLabels(parts[0])}</span>
               <b>{parts[1] || ""}</b>
             </div>
           );
@@ -53,12 +53,12 @@ export function SessionTiles({ sessions, place }: { sessions: string[]; place?: 
               style={{ background: past ? "#5b6478" : "linear-gradient(160deg,#1d3a8f,#2f6bd8)" }}
               aria-hidden="true"
             >
-              <span className="text-[10px] font-extrabold uppercase leading-none tracking-[0.06em] opacity-90">{p.wd}</span>
+              <span className="text-[10px] font-extrabold uppercase leading-none tracking-[0.06em] opacity-90">{formatDay(p.iso, { weekday: "short" })}</span>
               <span className="text-[22px] font-extrabold leading-[1.1]">{p.day}</span>
-              <span className="text-[10px] font-extrabold uppercase leading-none tracking-[0.06em] opacity-90">{p.mon}</span>
+              <span className="text-[10px] font-extrabold uppercase leading-none tracking-[0.06em] opacity-90">{formatDay(p.iso, { month: "short" })}</span>
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{s.split(" · ")[0]}</div>
+              <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{localizeDateLabels(s.split(" · ")[0])}</div>
               <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
                 <span className="rounded-full px-2 py-[1px]" style={{ background: past ? "#eceff6" : "#e1fbe9", color: past ? "#4a4763" : "#0b5a2f" }}>{tag}</span>
                 {place && <span className="text-[var(--ink-3)]">{place}</span>}

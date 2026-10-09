@@ -1,13 +1,13 @@
 // Locale-aware helpers for the schedule screens: weekday / time / duration labels in the active language, and a display-only
 // translation of the starter staff role names (roles the provider typed show as typed). Stored values are never changed.
-import { dateLocale as dl, currentLocaleCode } from "@/lib/i18n/format";
+import { currentLocaleCode, uiDate, uiTime } from "@/lib/i18n/format";
 import { tNow } from "@/lib/i18n/provider";
 
 const WD_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 /** 0 = Sunday … 6 = Saturday. */
-export const wdShortName = (d: number): string => new Date(2024, 0, 7 + d).toLocaleDateString(dl(), { weekday: "short" });
-export const wdLongName = (d: number): string => new Date(2024, 0, 7 + d).toLocaleDateString(dl(), { weekday: "long" });
+export const wdShortName = (d: number): string => uiDate(new Date(2024, 0, 7 + d), { weekday: "short" });
+export const wdLongName = (d: number): string => uiDate(new Date(2024, 0, 7 + d), { weekday: "long" });
 /** "mon" | "tue" … keys used by the availability editors. */
 export const wdShortKey = (k: string): string => wdShortName(Math.max(0, WD_KEYS.indexOf(k)));
 export const wdLongKey = (k: string): string => wdLongName(Math.max(0, WD_KEYS.indexOf(k)));
@@ -15,7 +15,7 @@ export const wdLongKey = (k: string): string => wdLongName(Math.max(0, WD_KEYS.i
 /** English keeps the compact "9am" style each screen already used; every other language uses the locale's own time format. */
 export function localTime(h: number, m: number): string | null {
   if (currentLocaleCode() === "en") return null;
-  return new Date(2000, 0, 1, h || 0, m || 0).toLocaleTimeString(dl(), { hour: "numeric", minute: "2-digit" });
+  return uiTime(new Date(2000, 0, 1, h || 0, m || 0), { hour: "numeric", minute: "2-digit" });
 }
 
 /** "2h", "2h 30m" (hours, no padding); 0 -> "0h". */
@@ -42,7 +42,7 @@ export function roleLabel(t: (k: string) => string, r: string | undefined | null
 export function windowLabel(w: { kind: string; label: string; from?: string }): string {
   if (w.kind === "week" && w.from) {
     const d = new Date(`${w.from}T00:00:00`);
-    if (!isNaN(d.getTime())) return tNow("p8set.scWeekOf", { date: d.toLocaleDateString(dl(), { day: "numeric", month: "long" }) });
+    if (!isNaN(d.getTime())) return tNow("p8set.scWeekOf", { date: uiDate(d, { day: "numeric", month: "long" }) });
   }
   if (w.kind === "ongoing") return tNow("p8set.scUsualPattern");
   return w.label;

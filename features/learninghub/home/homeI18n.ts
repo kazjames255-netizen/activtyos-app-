@@ -2,6 +2,7 @@
 
 import { useI18n } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
+import { uiDate } from "@/lib/i18n/format";
 
 type Vars = Record<string, string | number>;
 export type Tr = (key: string, vars?: Vars) => string;
@@ -31,7 +32,7 @@ export function relTimeT(t: Tr, locale: string, iso: string | null | undefined, 
   const days = Math.floor((sod(now) - sod(ms)) / DAY);
   if (days <= 1) return t("hubshell.hm_yesterday");
   if (days < 7) return pluralOf(t, locale, "hm_daysAgo", days);
-  return new Date(ms).toLocaleDateString(locale, { day: "numeric", month: "short" });
+  return uiDate(new Date(ms), { day: "numeric", month: "short" }, locale);
 }
 
 export function greetingT(t: Tr, now: number): string {

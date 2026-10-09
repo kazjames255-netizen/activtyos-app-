@@ -2,7 +2,7 @@
 
 import { kidInitials } from "@/lib/uiRules";
 import { OnlineSessionsPanel } from "@/features/onlinesessions/OnlineSessionsPanel";
-import { dateLocale as dl, formatDay } from "@/lib/i18n/format";
+import { dateLocale as dl, formatDay, uiDate, uiTime, localizeDateLabels, joinRange } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -79,7 +79,7 @@ function AvailabilityCalendar({ available, taken, value, onPick }: { available: 
   const step = (dir: number) => setYm((v) => { let m = v.m + dir, y = v.y; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } return { y, m }; });
   const daysIn = new Date(Date.UTC(ym.y, ym.m + 1, 0)).getUTCDate();
   const lead = (new Date(Date.UTC(ym.y, ym.m, 1)).getUTCDay() + 6) % 7; // Mon = 0
-  const label = new Date(Date.UTC(ym.y, ym.m, 1)).toLocaleDateString(dl(), { month: "long", year: "numeric", timeZone: "UTC" });
+  const label = uiDate(new Date(Date.UTC(ym.y, ym.m, 1)), { month: "long", year: "numeric", timeZone: "UTC" });
   const iso = (d: number) => `${ym.y}-${String(ym.m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   const cells: (number | null)[] = [...Array(lead).fill(null), ...Array.from({ length: daysIn }, (_, i) => i + 1)];
   return (
@@ -947,7 +947,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
     return () => { live = false; };
   }, [cancelledStatus, b.ref]);
   const attendLabel = attend?.status === "in"
-    ? (attend.collectedAt ? t("p7bk.collectedAt", { time: new Date(attend.collectedAt).toLocaleTimeString(dl(), { hour: "numeric", minute: "2-digit" }) }) : (attend.inAt ? t("p7bk.signedInAt", { time: new Date(attend.inAt).toLocaleTimeString(dl(), { hour: "numeric", minute: "2-digit" }) }) : t("p7bk.signedIn")))
+    ? (attend.collectedAt ? t("p7bk.collectedAt", { time: uiTime(new Date(attend.collectedAt), { hour: "numeric", minute: "2-digit" }) }) : (attend.inAt ? t("p7bk.signedInAt", { time: uiTime(new Date(attend.inAt), { hour: "numeric", minute: "2-digit" }) }) : t("p7bk.signedIn")))
     : attend?.status === "absent" ? t("p7bk.markedAbsent")
     : attend ? t("p7bk.notSignedIn") : null;
 
@@ -1177,7 +1177,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
       {b.status === "Offered" && (
         <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2.5 text-[12.5px] text-[#7a5200]">
           <b>{t("parent.placeOpenedUp")}</b> {t("parent.placeHeldFor")}
-          {b.offerExpiresAt ? ` ${t("parent.until", { time: new Date(b.offerExpiresAt).toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) })}` : ""} —
+          {b.offerExpiresAt ? ` ${t("parent.until", { time: uiTime(new Date(b.offerExpiresAt), { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) })}` : ""} —
           {t("parent.acceptOrPasses")}
           <div className="mt-2 flex gap-2">
             <Button sm variant="primary" disabled={offerBusy} onClick={() => answerOffer("accept-offer")}>
@@ -1216,7 +1216,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
                 )}
               </>)}
               {(b.sessions ?? []).length > 0 && (
-                <div className="py-[2px] text-[12.5px] font-semibold">📅 {(b.sessions ?? []).length === 1 ? (b.sessions ?? [])[0].split(" · ")[0] : `${(b.sessions ?? [])[0].split(" · ")[0]} to ${(b.sessions ?? [])[(b.sessions ?? []).length - 1].split(" · ")[0]}`}</div>
+                <div className="py-[2px] text-[12.5px] font-semibold">📅 {(b.sessions ?? []).length === 1 ? localizeDateLabels((b.sessions ?? [])[0].split(" · ")[0]) : joinRange(localizeDateLabels((b.sessions ?? [])[0].split(" · ")[0]), localizeDateLabels((b.sessions ?? [])[(b.sessions ?? []).length - 1].split(" · ")[0]))}</div>
               )}
               {times && <div className="py-[2px] text-[12.5px]">🕒 {times}</div>}
               {detail?.staff && detail.staff.length > 0 && (
@@ -1344,7 +1344,7 @@ function WaitlistCard({ b, refresh, focus }: { b: Booking; refresh: () => void; 
       <div className="mt-2 rounded-lg bg-white/70 px-2.5 py-1.5">
         <div className="text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[#b45309]">{t("parent.waitingFor")}</div>
         {(b.sessions && b.sessions.length ? b.sessions : [b.dates]).map((s, i) => (
-          <div key={i} className="text-[12.5px] font-semibold text-[#7c2d12]">{s}</div>
+          <div key={i} className="text-[12.5px] font-semibold text-[#7c2d12]">{localizeDateLabels(s)}</div>
         ))}
       </div>
       {b.waitlist && b.waitlist.length > 0 && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -32,7 +32,7 @@ type Coupon = {
 };
 
 const fmt = (iso?: string | null) =>
-  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "";
+  iso ? uiDate(new Date(`${iso}T00:00:00Z`), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "";
 
 const valueLabel = (c: Coupon, t: (k: string, v?: Record<string, string | number>) => string) =>
   c.type === "percent" ? t("p8par.cpPct", { v: c.value }) : c.type === "perAttendee" ? t("p8par.cpPerChild", { amt: money(c.value) }) : t("p8par.cpAmt", { amt: money(c.value) });

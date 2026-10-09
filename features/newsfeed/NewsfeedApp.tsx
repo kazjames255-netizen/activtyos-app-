@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDateTime } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
@@ -62,7 +62,7 @@ const tplHint = (t: TFn, k: Tpl) => t("p8em.nfHint_" + k);
 // Stored audience labels are English; show them translated.
 const audShown = (t: TFn, label: string) => (label === "All families" ? t("p8em.nfAudAll") : label.startsWith("Listings: ") ? t("p8em.nfAudListings", { list: label.slice(10) }) : label);
 
-const when = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const when = (iso?: string) => (iso ? uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 
 // Plain-text of a post — for the "email to parents" hand-off.
 function postToText(d: Draft): string {

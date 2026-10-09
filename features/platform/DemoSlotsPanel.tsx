@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { del, get, post, patch } from "@/lib/api";
-import { currentLocaleCode, dateLocale } from "@/lib/i18n/format";
+import { currentLocaleCode, uiDate } from "@/lib/i18n/format";
 import { isRTL } from "@/lib/i18n/config";
 import { useT } from "@/lib/i18n/provider";
 
@@ -18,9 +18,9 @@ interface Template { id: string; weekday: number; time: string; durationMins: nu
 interface Blackout { id: string; from: string; to: string; note: string }
 
 // Weekday names follow the active language (index 0 = Sunday, matching the stored `weekday` number).
-const weekdayName = (i: number) => new Date(2024, 0, 7 + i).toLocaleDateString(dateLocale(), { weekday: "long" });
+const weekdayName = (i: number) => uiDate(new Date(2024, 0, 7 + i), { weekday: "long" });
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
-const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" });
+const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }); // raw-locale-ok: machine date key, not shown to anyone
 const todayKey = () => dayKey.format(new Date());
 
 export function DemoSlotsPanel() {

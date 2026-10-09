@@ -13,7 +13,7 @@
 // disagree with the thing it summarises and nothing is fetched twice.
 
 import { DirGlyph } from "@/components/shell/DirGlyph";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiTime, uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet, isDemoMode } from "@/lib/api";
@@ -44,8 +44,8 @@ export function shortWhen(iso?: string): string {
   const now = new Date();
   const sameDay = d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   return sameDay
-    ? d.toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleDateString(dl(), { day: "numeric", month: "short" });
+    ? uiTime(d, { hour: "2-digit", minute: "2-digit" })
+    : uiDate(d, { day: "numeric", month: "short" });
 }
 
 // Plenty of real mail has no display name, so the sender reads

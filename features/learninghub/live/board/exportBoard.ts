@@ -72,7 +72,7 @@ const readAsDataUrl = (b: Blob) => new Promise<string>((resolve, reject) => {
   r.readAsDataURL(b);
 });
 
-const dayLabel = () => new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const dayLabel = () => new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); // raw-locale-ok: part of the exported file title
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "board";
 
 export interface SaveOpts {

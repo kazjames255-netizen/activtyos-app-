@@ -7,7 +7,7 @@
 // emergency contacts, read-and-agree policies, uploads); employer-verified gates
 // (DBS cleared, references satisfactory) stay read-only here. Sensitive items are
 // stored locally in this demo; in production they go to secure storage (Amir).
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button, Input, Select } from "@/components/ui";
@@ -90,7 +90,7 @@ const historyCovered = (currentMovedIn?: string, entries: Addr[] = []) => {
   const froms = entries.filter(validAddr).map((a) => a.from).sort();
   return froms.length > 0 && froms[0] <= cut;
 };
-const prettyDate = (iso: string) => { try { return new Date(iso + "T00:00:00").toLocaleDateString(dl(), { day: "numeric", month: "long", year: "numeric" }); } catch { return iso; } };
+const prettyDate = (iso: string) => { try { return uiDate(new Date(iso + "T00:00:00"), { day: "numeric", month: "long", year: "numeric" }); } catch { return iso; } };
 
 function AddressHistory({ value, onChange, currentMovedIn }: { value?: string; onChange: (json: string) => void; currentMovedIn?: string }) {
   const { t: tr } = useI18n();
@@ -541,7 +541,7 @@ export function StaffOnboardingApp() {
         </div>
       ) : rec.submittedAt ? (
         <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
-          <div className="text-[14px] font-extrabold text-[#0f7a43]">{tr("p8wf.soSubmittedOn", { date: new Date(rec.submittedAt).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) })}{rec.lastEditedAt ? tr("p8wf.soLastUpdated", { date: new Date(rec.lastEditedAt).toLocaleDateString(dl(), { day: "numeric", month: "short" }) }) : ""}</div>
+          <div className="text-[14px] font-extrabold text-[#0f7a43]">{tr("p8wf.soSubmittedOn", { date: uiDate(new Date(rec.submittedAt), { day: "numeric", month: "short", year: "numeric" }) })}{rec.lastEditedAt ? tr("p8wf.soLastUpdated", { date: uiDate(new Date(rec.lastEditedAt), { day: "numeric", month: "short" }) }) : ""}</div>
           <p className="mt-0.5 text-[12px] text-[var(--ink-3)]">{tr("p8wf.soChangeAny")}</p>
           {!saved && <div className="mt-2 flex items-start gap-2 rounded-xl bg-[#fff4e5] p-3 text-[12px] text-[#9a3d00]"><span>✏️</span><span><Rich text={tr("p8wf.soChangedSave")} /></span></div>}
           <div className="mt-3 flex justify-end"><Button variant="primary" onClick={persist}>{saved ? tr("p8wf.soSavedNotified") : tr("p8wf.soSaveChanges")}</Button></div>

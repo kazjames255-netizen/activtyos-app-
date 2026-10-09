@@ -5,11 +5,11 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { PublishedDayGrid, localDayName as dayName, type PublishedWeek } from "./PublishedTimetable";
 import { useI18n } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { dateLocale, uiDate } from "@/lib/i18n/format";
 
 const fmt = (iso: string, loc = "en-GB") => {
   const d = new Date(iso + "T00:00:00");
-  return isNaN(d.getTime()) ? iso : d.toLocaleDateString(loc, { day: "numeric", month: "short" });
+  return isNaN(d.getTime()) ? iso : uiDate(d, { day: "numeric", month: "short" }, loc);
 };
 
 /**

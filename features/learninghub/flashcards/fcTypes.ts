@@ -1,3 +1,4 @@
+import { relativeFrom } from "@/lib/i18n/format";
 // Flashcards — shapes mirror server/src/routes/hub/flashcardsApi.ts (contract:
 // docs/learning-hub.md → Flashcards). All spaced-repetition maths is server-side
 // (SM-2): the browser sends a quality and displays what comes back.
@@ -27,8 +28,7 @@ export type Rating = (typeof RATINGS)[number];
 
 /** "tomorrow", "in 6 days", "in 3 weeks" — display only, in the active language (Intl handles plural forms). */
 export function intervalText(days: number, locale: string): string {
-  let rtf: Intl.RelativeTimeFormat;
-  try { rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" }); } catch { rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" }); }
+  const rtf = { format: (n: number, u: "day" | "week" | "month") => relativeFrom(n, u, locale) };
   if (days <= 1) return rtf.format(1, "day");
   if (days < 14) return rtf.format(days, "day");
   if (days < 60) return rtf.format(Math.round(days / 7), "week");

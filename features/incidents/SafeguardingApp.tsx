@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate, uiDateTime } from "@/lib/i18n/format";
 import { useT, useI18n, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { richT } from "@/components/shell/richT";
@@ -32,7 +32,7 @@ interface SgLog {
 const RISK = { minor: { label: "p8ops.tpRiskLow", full: "p8ops.sgRiskLowFull", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { label: "p8ops.sgMedium", full: "p8ops.sgRiskMedFull", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "p8ops.tpRiskHigh", full: "p8ops.sgRiskHighFull", bg: "#fdebec", fg: "#c02636" } } as const;
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const nowTime = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${p(t.getHours())}:${p(t.getMinutes())}`; };
-const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
+const fmtDate = (iso?: string) => (iso ? uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
 const readAsDataUrl = (f: File) => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("read")); r.readAsDataURL(f); });
 
 interface DslEntry { id: string; key: string; label: string; note?: string; reviewDate?: string; at: string; by?: string; done?: boolean; doneAt?: string }
@@ -240,7 +240,7 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
 }
 
 const DTONE: Record<string, { c: string; bg: string }> = { red: { c: "#c02636", bg: "#fdebec" }, amber: { c: "#9a5a00", bg: "#fdf3d8" }, grey: { c: "#1d3a8f", bg: "#eef4fd" } };
-const stampTime = (iso?: string) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const stampTime = (iso?: string) => (iso ? uiDateTime(new Date(iso), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 
 // Build a print-friendly window of the whole concern + DSL decision → "Save as PDF".
 interface Dossier {

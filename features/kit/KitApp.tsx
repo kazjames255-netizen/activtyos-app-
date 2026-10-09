@@ -25,7 +25,7 @@ interface KitDay { date: string; canTick: boolean; groups: KitGroup[]; ticked: n
 interface DaysResp { from: string; to: string; days: { date: string; items: number; byName: Record<string, number> }[]; names: string[]; listings: { id: string; name: string }[]; total: number; totals: Record<string, number>; canTick: boolean; canRemind: boolean; reminder: boolean }
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
-const ukToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+const ukToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" }); // raw-locale-ok: machine date key, not shown to anyone
 const shift = (iso: string, n: number) => {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);

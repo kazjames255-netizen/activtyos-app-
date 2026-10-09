@@ -4,7 +4,7 @@
 // been approved and reimbursed. Claims live on the server (/api/expense-claims),
 // scoped to the signed-in person; a manager approves them into Money out. They
 // used to stay on this phone only and never reach a manager (acceptance d24s8).
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet, post as apiPost, api } from "@/lib/api";
 import { Button, Card, Input, Select } from "@/components/ui";
@@ -98,7 +98,7 @@ export function StaffExpensesApp() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2"><span className="truncate text-[14px] font-extrabold text-[var(--ink)]">{catLabel(c.category)}</span>
                     <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: st.bg, color: st.ink }}>{t(st.label)}</span></div>
-                  <div className="text-[12px] text-[var(--ink-3)]">{new Date(c.date + "T00:00:00").toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}{c.note ? ` · ${c.note}` : ""}{c.receiptUrl ? <> · <a href={c.receiptUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-[#1d3a8f] hover:underline">📎 {c.receiptName || "receipt"}</a></> : ""}</div>
+                  <div className="text-[12px] text-[var(--ink-3)]">{uiDate(new Date(c.date + "T00:00:00"), { day: "numeric", month: "short", year: "numeric" }, locale)}{c.note ? ` · ${c.note}` : ""}{c.receiptUrl ? <> · <a href={c.receiptUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-[#1d3a8f] hover:underline">📎 {c.receiptName || "receipt"}</a></> : ""}</div>
                 </div>
                 <div className="text-end"><div className="text-[15px] font-extrabold tabular-nums text-[var(--ink)]">{gbp(c.amount)}</div>
                   {c.status === "submitted" && <button type="button" onClick={() => remove(c.id)} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">{t("staffp.expWithdraw")}</button>}</div>

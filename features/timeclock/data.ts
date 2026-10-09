@@ -6,7 +6,7 @@
 // Schedule's check-in state and payroll's "actual rostered hours" pick it up.
 // Real per-user identity, device kiosk + geofence, and payroll posting are Amir's
 // (docs/timeclock-handoff.md). Matched to people by name (demo).
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiTime, machineHm } from "@/lib/i18n/format";
 import { tNow } from "@/lib/i18n/provider";
 import { DEMO_STAFF } from "@/features/learning/credentials";
 import { useEffect } from "react";
@@ -48,7 +48,7 @@ const HOLIDAY_KEY = "aos.holiday.absences.v1";
 
 export const slug = (name: string) => name.trim().toLowerCase().replace(/\s+/g, "-");
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
-export const hhmm = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" }) : "");
+export const hhmm = (iso?: string) => (iso ? uiTime(new Date(iso), { hour: "2-digit", minute: "2-digit" }) : "");
 export const fmtDur = (ms: number) => { const m = Math.max(0, Math.round(ms / 60000)); return tNow("p8wf.durHm", { h: Math.floor(m / 60), m: String(m % 60).padStart(2, "0") }); };
 // Same, but with live seconds — for the ticking "worked today" clock.
 export const fmtDurSec = (ms: number) => { const s = Math.max(0, Math.floor(ms / 1000)); return tNow("p8wf.durHms", { h: Math.floor(s / 3600), m: String(Math.floor((s % 3600) / 60)).padStart(2, "0"), s: String(s % 60).padStart(2, "0") }); };
@@ -173,7 +173,7 @@ function ensureDemoRota(recs: Record<string, ClockRecord>): void {
     // written into our OWN demo rota (guarded above), never a real schedule —
     // a real one carries the rates the operator set.
     staff.push({ id: r.id, name: r.name, rate: /lead/i.test(r.role ?? "") ? 14.25 : 12.5 });
-    const startMin = r.clockInAt ? mins(hhmm(r.clockInAt)) - demoLateFor(r) : mins("09:00");
+    const startMin = r.clockInAt ? mins(machineHm(r.clockInAt)) - demoLateFor(r) : mins("09:00");
     shifts.push({ staffId: r.id, date: day, start: hm(startMin), end: hm(startMin + 360) });
   }
   write(ROTA_KEY, { staff, shifts, demo: true });
@@ -183,7 +183,7 @@ function ensureDemoRota(recs: Record<string, ClockRecord>): void {
 export function lateMinutesToday(r: ClockRecord): number {
   if (!r.clockInAt) return 0;
   const sh = shiftToday(r.name);
-  if (sh) return Math.max(0, mins(hhmm(r.clockInAt)) - mins(sh.start));
+  if (sh) return Math.max(0, mins(machineHm(r.clockInAt)) - mins(sh.start));
   return r.lateMin || 0;
 }
 export const loadClock = (): Record<string, ClockRecord> => {
@@ -267,14 +267,14 @@ function mutate(all: Record<string, ClockRecord>, id: string, fn: (r: ClockRecor
 
 // ── Actions ─────────────────────────────────────────────────────────────────
 export function clockIn(all: Record<string, ClockRecord>, id: string, name: string, loc?: string): Record<string, ClockRecord> {
-  const now = new Date(); const iso = now.toISOString(); const hm = now.toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" });
+  const now = new Date(); const iso = now.toISOString(); const hm = machineHm(now);
   const sh = shiftToday(name); const late = sh ? Math.max(0, mins(hm) - mins(sh.start)) : 0;
   stampShift(name, "in", hm);
   sendEvent("in", name, { role: all[id]?.role, loc, lateMin: late });
   return mutate(all, id, (r) => { r.status = "in"; r.clockInAt = iso; r.clockOutAt = undefined; r.breakMs = 0; r.breakStart = undefined; r.lateMin = late; r.loc = loc; r.day = todayISO(); r.events.push({ t: iso, kind: "in", loc }); });
 }
 export function clockOut(all: Record<string, ClockRecord>, id: string, name: string): Record<string, ClockRecord> {
-  const now = new Date(); const iso = now.toISOString(); const hm = now.toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" });
+  const now = new Date(); const iso = now.toISOString(); const hm = machineHm(now);
   const cur = all[id]; const brMs = (cur?.breakMs ?? 0) + (cur?.status === "break" && cur.breakStart ? now.getTime() - new Date(cur.breakStart).getTime() : 0);
   stampShift(name, "out", hm, Math.round(brMs / 60000));
   sendEvent("out", name);
@@ -310,7 +310,7 @@ export function setApproved(all: Record<string, ClockRecord>, id: string, approv
 export function editRecord(all: Record<string, ClockRecord>, id: string, patch: Partial<ClockRecord>): Record<string, ClockRecord> {
   const next = mutate(all, id, (r) => {
     Object.assign(r, patch);
-    if (patch.clockInAt && r.clockInAt) { const sh = shiftToday(r.name); const hm = new Date(r.clockInAt).toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" }); r.lateMin = sh ? Math.max(0, mins(hm) - mins(sh.start)) : 0; }
+    if (patch.clockInAt && r.clockInAt) { const sh = shiftToday(r.name); const hm = machineHm(r.clockInAt); r.lateMin = sh ? Math.max(0, mins(hm) - mins(sh.start)) : 0; }
   });
   const r = next[id];
   const keys = ["approved", "payBasis", "payHoursOverride", "editNote", "clockInAt", "clockOutAt", "breakMs", "lateMin"] as const;

@@ -1,7 +1,7 @@
 "use client";
 
 import { usePortalHref } from "@/lib/portal-href";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { ApiError, get as apiGet, put as apiPut, isDemoMode } from "@/lib/api";
 import { useTenantSettings } from "@/lib/settings";
@@ -304,9 +304,9 @@ export function ScheduleApp() {
     else setAnchor(addDays(iso(weekStartOf(dt(anchor))), dir * (span === "week" ? 7 : span === "2w" ? 14 : 28)));
   };
   const label = useMemo(() => {
-    if (span === "day") return dt(anchor).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-    if (span === "month") return dt(anchor).toLocaleDateString(dl(), { month: "short", year: "numeric", timeZone: "UTC" });
-    const f = (s: string) => dt(s).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" });
+    if (span === "day") return uiDate(dt(anchor), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+    if (span === "month") return uiDate(dt(anchor), { month: "short", year: "numeric", timeZone: "UTC" });
+    const f = (s: string) => uiDate(dt(s), { day: "numeric", month: "short", timeZone: "UTC" });
     return `${f(dates[0])} – ${f(dates[dates.length - 1])}`;
   }, [span, anchor, dates]);
 
@@ -364,7 +364,7 @@ export function ScheduleApp() {
     });
 
   // Columns: hours for Day, dates otherwise
-  const cols = useMemo(() => isDay ? HOURS.map((h) => ({ key: `h${h}`, hour: h, label: to12(`${h}:00`), date: anchor })) : dates.map((d) => ({ key: d, date: d, hour: null as number | null, label: dt(d).toLocaleDateString(dl(), span === "week" ? { weekday: "short", day: "numeric", timeZone: "UTC" } : { day: "numeric", timeZone: "UTC" }) })), [isDay, dates, anchor, span]);
+  const cols = useMemo(() => isDay ? HOURS.map((h) => ({ key: `h${h}`, hour: h, label: to12(`${h}:00`), date: anchor })) : dates.map((d) => ({ key: d, date: d, hour: null as number | null, label: uiDate(dt(d), span === "week" ? { weekday: "short", day: "numeric", timeZone: "UTC" } : { day: "numeric", timeZone: "UTC" }) })), [isDay, dates, anchor, span]);
   const colW = isDay ? 66 : span === "week" ? 92 : span === "2w" ? 62 : span === "4w" ? 42 : 40;
   // Day view keeps fixed hour widths (scrolls if narrow); every dated span fills
   // the page width instead — columns share the space so nothing scrolls sideways.
@@ -763,11 +763,11 @@ export function ScheduleApp() {
                     // a bare number — with the full date on hover.
                     if (c.hour !== null) return <div key={c.key} className="px-2 py-2.5 text-[11.5px] font-extrabold">{c.label}</div>;
                     const d = dt(c.date);
-                    const wd = d.toLocaleDateString(dl(), { weekday: "short", timeZone: "UTC" });
-                    const dm = d.toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" });
+                    const wd = uiDate(d, { weekday: "short", timeZone: "UTC" });
+                    const dm = uiDate(d, { day: "numeric", month: "short", timeZone: "UTC" });
                     const isWknd = [0, 6].includes(d.getUTCDay());
                     return (
-                      <div key={c.key} title={d.toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })} className={"px-1.5 py-2 text-center leading-tight " + (isWknd ? "bg-white/10" : "")}>
+                      <div key={c.key} title={uiDate(d, { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })} className={"px-1.5 py-2 text-center leading-tight " + (isWknd ? "bg-white/10" : "")}>
                         <div className={"font-bold uppercase tracking-wide text-white/70 " + (colW < 50 ? "text-[8.5px]" : "text-[9.5px]")}>{wd}</div>
                         <div className={"font-extrabold " + (colW < 50 ? "text-[10px]" : "text-[12px]")}>{dm}</div>
                       </div>
@@ -845,7 +845,7 @@ export function ScheduleApp() {
                     <span className="inline-flex items-center gap-1 rounded-full bg-[#fdebec] px-2 py-0.5 text-[10px] font-extrabold text-[#c0392b]"><span className="h-1.5 w-1.5 rounded-full bg-[#c0392b]" />{t("schedule.notIn")}</span>
                     <span className="ms-auto text-[11px] font-extrabold text-[#c0392b]">⏰ {overdueLabel(s)}</span>
                   </div>
-                  <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{dt(s.date).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {to12(s.start)}–{to12(s.end)} · {s.site}</div>
+                  <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{uiDate(dt(s.date), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {to12(s.start)}–{to12(s.end)} · {s.site}</div>
                   <div className="mt-1.5 flex items-center gap-2">
                     {pokes > 0 && <span className="text-[10.5px] font-bold text-[#b45309]">🔔 {t("schedule.remindedCount", { count: pokes })}</span>}
                     <button type="button" onClick={() => pokeCheckin(s.id)} className="ms-auto rounded-full bg-[#f59e0b] px-3.5 py-1 text-[11px] font-extrabold text-white shadow-sm hover:brightness-105">{pokes > 0 ? t("schedule.remindAgain") : t("schedule.remindToCheckIn")}</button>
@@ -919,8 +919,8 @@ export function ScheduleApp() {
             <div className="px-5 py-4">
               {/* date */}
               <div className="flex items-center gap-2.5 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">📅</span>
-                {isDay ? <span className="text-[13.5px] font-bold text-[var(--ink)]">{dt(draft.date).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</span>
-                  : <Select value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} className="border border-[var(--line)] bg-[var(--panel)] px-2 py-1 text-[13.5px] font-bold text-[var(--ink)] rounded-lg">{(dates.includes(draft.date) ? dates : [draft.date, ...dates]).map((d) => <option key={d} value={d}>{dt(d).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</option>)}</Select>}</div>
+                {isDay ? <span className="text-[13.5px] font-bold text-[var(--ink)]">{uiDate(dt(draft.date), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</span>
+                  : <Select value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} className="border border-[var(--line)] bg-[var(--panel)] px-2 py-1 text-[13.5px] font-bold text-[var(--ink)] rounded-lg">{(dates.includes(draft.date) ? dates : [draft.date, ...dates]).map((d) => <option key={d} value={d}>{uiDate(dt(d), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</option>)}</Select>}</div>
               {/* time */}
               <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">🕐</span><TimeSel value={draft.start} onChange={(v) => setDraft({ ...draft, start: v })} /><span className="text-[var(--ink-3)]">—</span><TimeSel value={draft.end} onChange={(v) => setDraft({ ...draft, end: v })} /></div>
               {/* staff needed / day → opens assign */}
@@ -1047,7 +1047,7 @@ export function ScheduleApp() {
       {availEdit && (() => { const st = availEdit;
         const mondayIso = iso(mondayOf(dt(anchor)));
         const wkSun = addDays(mondayIso, 6);
-        const f = (s: string) => dt(s).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" });
+        const f = (s: string) => uiDate(dt(s), { day: "numeric", month: "short", timeZone: "UTC" });
         const target: Week = availWeekMode === "all" ? (st.week ?? {}) : (st.weeks?.[mondayIso] ?? st.week ?? {});
         const daysOn = WDAYS.filter(([k]) => target[k]).length;
         const commit = (wk: Week) => {

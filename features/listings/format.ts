@@ -5,7 +5,7 @@
 // listings feature in behind it.
 // ─────────────────────────────────────────────────────────────────────────
 
-import { dateLocale } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 
 export const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -41,7 +41,7 @@ export const ordinal = (n: number) => {
   return `${n}${suffix}`;
 };
 export const fmtDate = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString(dateLocale(), { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" });
+  uiDate(new Date(`${iso}T00:00:00Z`), { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" });
 export function mondayOf(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
   const day = d.getUTCDay();

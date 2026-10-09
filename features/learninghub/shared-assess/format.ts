@@ -1,10 +1,11 @@
 import type { HubSettings } from "@/lib/hubConfig";
 import { hubLocale, hubT } from "../family/hubT";
+import { uiDate } from "@/lib/i18n/format";
 
 export const fmtDate = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString(hubLocale(), { day: "numeric", month: "short", year: "numeric" }) : "—";
+  iso ? uiDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" }, hubLocale()) : "—";
 export const fmtDateShort = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString(hubLocale(), { day: "numeric", month: "short" }) : "—";
+  iso ? uiDate(new Date(iso), { day: "numeric", month: "short" }, hubLocale()) : "—";
 
 export function timeAgo(iso: string | null | undefined): string {
   if (!iso) return hubT("hubfam.asNever");

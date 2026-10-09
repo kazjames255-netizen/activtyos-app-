@@ -5,7 +5,7 @@
 // list, an onboarding pipeline, a network compliance strip and a franchise
 // league table with a drill-in to each. Black-themed via --hero-grad (HO flag).
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, uiDate } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { get as apiGet } from "@/lib/api";
@@ -37,7 +37,7 @@ interface Overview {
 
 const PALETTE = ["#2f6bd8", "#e0483d", "#0f9d58", "#f5b81f", "#8e44ad", "#e67e22", "#16a085", "#c2185b", "#6d4c41", "#0097a7"];
 const GOLD = "#f5b81f";
-const monthLabel = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "short" });
+const monthLabel = (m: string) => uiDate(new Date(`${m}-01T00:00:00Z`), { month: "short" });
 
 // Trend chip — green up / red down, semantic (not the data accent).
 function Trend({ pct, className = "" }: { pct: number; className?: string }) {
@@ -146,7 +146,7 @@ function BookingsByFranchise({ series, legend }: { series: Series; legend: Legen
         </div>
         {hover != null && shown[hover] && (
           <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 rounded-xl bg-[#171534] px-3 py-2 text-white shadow-lg">
-            <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-white/60">{new Date(`${shown[hover].month}-01T00:00:00Z`).toLocaleDateString(dl(), { month: "long", year: "numeric" })}</div>
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-white/60">{uiDate(new Date(`${shown[hover].month}-01T00:00:00Z`), { month: "long", year: "numeric" })}</div>
             {active.map((l) => { const v = val(shown[hover].byFranchise[l.franchiseId]); if (!v) return null; return <div key={l.franchiseId} className="flex items-center gap-1.5 text-[11px]"><span className="h-2 w-2 rounded-full" style={{ background: colorOf(l.franchiseId) }} /><span className="flex-1">{nameOf(l.franchiseId)}</span><b className="tabular-nums">{fmtVal(v)}</b></div>; })}
             <div className="mt-1 border-t border-white/15 pt-1 text-[11px] font-extrabold">{t("franchise.total")} <span className="float-end tabular-nums">{fmtVal(totalOf(shown[hover]))}</span></div>
           </div>

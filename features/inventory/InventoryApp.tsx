@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate, uiDateTime } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
@@ -34,8 +34,8 @@ const LIGHT_PALETTE = { "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#
 const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)";
 const BLUE = "#1d3a8f", GREEN = "#0f7a43", AMBER = "#9a5a00", RED = "#c02636";
 const inputCls = "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]";
-const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric" }) : "");
-const fmtStamp = (iso?: string | null) => (iso ? new Date(iso).toLocaleString(dl(), { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
+const fmtDate = (iso?: string | null) => (iso ? uiDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" }) : "");
+const fmtStamp = (iso?: string | null) => (iso ? uiDateTime(new Date(iso), { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
 const dayssince = (iso?: string | null) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86400000) : Infinity);
 const isLow = (i: Item) => i.minQty != null && i.quantity <= i.minQty;
 

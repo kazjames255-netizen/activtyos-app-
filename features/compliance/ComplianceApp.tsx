@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { uiDate } from "@/lib/i18n/format";
 import { useCallback, useEffect, useState } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -20,7 +20,7 @@ const tone: Record<Cert["status"], { bg: string; fg: string }> = {
   valid: { bg: "#eaf0fc", fg: "#1d3a8f" },
 };
 const LABEL_KEY: Record<Cert["status"], string> = { expired: "p8lrn.cmpStExpired", expiring: "p8lrn.cmpStExpiring", valid: "p8lrn.cmpStValid" };
-const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+const fmt = (iso?: string) => (iso ? uiDate(new Date(`${iso}T00:00:00Z`), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 
 export function ComplianceApp() {
   const t = useT();

@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl, currentLocaleCode } from "@/lib/i18n/format";
+import { currentLocaleCode, uiDate } from "@/lib/i18n/format";
 import { isRTL } from "@/lib/i18n/config";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -47,7 +47,7 @@ const chipFor = (p: { tier: Tier; franchiseId: string | null }) => (p.tier === "
 const initials = (s: string) => (s.trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
 const GRADS = ["linear-gradient(135deg,#2f5fd0,#2f5fd0)", "linear-gradient(135deg,#2f5fd0,#5aa0f0)", "linear-gradient(135deg,#274ba3,#2f5fd0)", "linear-gradient(135deg,#6d28d9,#5a3fd0)"];
 const grad = (s: string) => GRADS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
-const fmtWhen = (iso: string) => (iso ? new Date(iso).toLocaleDateString(dl(), { day: "numeric", month: "short" }) : "");
+const fmtWhen = (iso: string) => (iso ? uiDate(new Date(iso), { day: "numeric", month: "short" }) : "");
 const selCls = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] outline-none focus:border-[#C6D0E6]";
 
 interface Account { uid: string; email: string; role: string; portal: string; label: string }

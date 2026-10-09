@@ -27,6 +27,7 @@ import { KidHome, type KidRow, type KidStep } from "./KidHome";
 import { dayCounts } from "./KidWeek";
 import { JoinRemoteSyncBanner } from "../remotesync/JoinRemoteSyncBanner";
 import { BadgeShelf } from "../badges/BadgeShelf";
+import { uiDate } from "@/lib/i18n/format";
 
 // Student / parent Home — a warm "today" for the chosen child: what's next, what
 // is due, how the last quizzes went, where they're strong, and one clear next step.
@@ -145,7 +146,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
       : cardsReady ? { icon: "cards", text: t("hubshell.hm_kidCards"), to: "flashcards" }
       : d.step ? { icon: "quiz", text: d.step.go === "diagnostic" ? t("hubshell.hm_ctaStartingKid") : t("hubshell.hm_kidQuiz"), to: d.step.go }
       : null;
-    const dayName = (iso: string) => new Date(iso).toLocaleDateString(locale, { weekday: "long" });
+    const dayName = (iso: string) => uiDate(new Date(iso), { weekday: "long" }, locale);
     const weekEnd = now + 7 * 86_400_000;
     const hwRows: KidRow[] = d.todo.map((h) => ({ key: h.id, icon: "homework", title: h.title, note: h.st.overdue ? h.st.label : t("hubshell.hm_dueDay", { day: dayName(h.dueAt) }), to: "homework", warm: h.st.overdue }));
     const rows: KidRow[] = band === "ks2"

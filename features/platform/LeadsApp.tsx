@@ -1,6 +1,6 @@
 "use client";
 
-import { dateLocale as dl, currentLocaleCode } from "@/lib/i18n/format";
+import { dateLocale as dl, currentLocaleCode, uiDateTime, uiTime } from "@/lib/i18n/format";
 import { isRTL } from "@/lib/i18n/config";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { get as apiGet, api } from "@/lib/api";
@@ -294,7 +294,7 @@ const isRtlNow = () => isRTL(currentLocaleCode());
 
 function fmt(iso: string) {
   const d = new Date(iso);
-  return `${d.getDate()} ${d.toLocaleString(dl(), { month: "short" })} · ${d.toLocaleTimeString(dl(), { hour: "2-digit", minute: "2-digit" })}`;
+  return `${d.getDate()} ${uiDateTime(d, { month: "short" })} · ${uiTime(d, { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 // ── Filters ──────────────────────────────────────────────────────────────────
