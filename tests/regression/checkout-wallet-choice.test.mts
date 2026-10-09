@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { walletAppliedFor, walletCapToSend, walletChoiceMissing, walletChoiceRequired, walletCoversWhole, walletLeftAfter, defaultPart, clampPart } from "../../features/listings/walletChoice";
+import { walletAppliedFor, walletCapToSend, walletRemaining, walletChoiceMissing, walletChoiceRequired, walletCoversWhole, walletLeftAfter, defaultPart, clampPart } from "../../features/listings/walletChoice";
 import ckMod from "../../lib/i18n/messages/areas/p8lst-parts/ck";
 
 test("no choice yet applies nothing and blocks paying while there is credit to spend", () => {
@@ -76,4 +76,19 @@ test("server: omitted/null walletCap means do not use", () => {
   const src = readFileSync("server/src/routes/my.ts", "utf8");
   assert.match(src, /walletCap: z\.number\(\)\.nonnegative\(\)\.nullish\(\)/);
   assert.doesNotMatch(src, /: walletHeld;\s*\n\s*let walletLeft/);
+});
+
+test("multi-block basket: each POST offers the unspent part of the chosen total, so shown = charged", () => {
+  // block 1 = day pass 20, block 2 = 3-day 60, credit 50, 'Use' chosen
+  assert.equal(walletRemaining(50, 0), 50);
+  assert.equal(walletRemaining(50, 20), 30);
+  assert.equal(walletRemaining(50, 50), 0);
+  assert.equal(walletRemaining(50, 70), 0);
+  assert.equal(walletRemaining(12.34, 0.1), 12.24);
+});
+test("wizard sends the remainder on every block POST (not cap-then-0)", () => {
+  const src = readFileSync("features/listings/ListingWizard.tsx", "utf8");
+  assert.match(src, /walletRemaining\(walletCap, walletSpent\)/);
+  assert.doesNotMatch(src, /walletSent \? 0 : walletCap/);
+  assert.match(src, /walletSpent \+= /);
 });

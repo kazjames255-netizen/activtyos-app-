@@ -891,7 +891,7 @@ for (const kind of DI_KINDS) {
       needWallet();
       const L2 = await mkListing(k, `WAL spend ${kind} ${stamp}`);
       const d0 = await dash(k); const o0 = (await ok(k, "GET", "/api/wallet/summary")).outstanding as number; const w0 = (await wallet()).bal;
-      const r = await bookOk(pk, L2, [{ child: kid(), pass: "1 day" }]);
+      const r = await bookOk(pk, L2, [{ child: kid(), pass: "1 day" }], { walletCap: 50 }); // the checkout ASKS: the family chose to use their credit
       eq(r.b.walletApplied, 20, "walletApplied"); eq(r.b.amount, 0, "nothing due"); eq(r.b.pay, "Funded", "Funded");
       const d1 = await dash(k); const o1 = (await ok(k, "GET", "/api/wallet/summary")).outstanding as number; const w1 = (await wallet()).bal;
       eq(w1, w0 - 20, "wallet down 20"); eq(Math.round((o0 - o1) * 100) / 100, 20, "liability down 20"); eq(d1.money.takenThisWeek, d0.money.takenThisWeek, "no cash income"); eq(d1.money.outstanding, d0.money.outstanding, "nothing owed");

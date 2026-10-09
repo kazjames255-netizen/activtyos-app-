@@ -49,3 +49,8 @@ export function defaultPart(avail: number): number {
 export function clampPart(part: number, avail: number): number {
   return r2(clamp(part, 0, Math.max(0, avail)));
 }
+
+/** Multi-block basket (one POST per block): what to offer on the next POST = the chosen total minus what earlier POSTs actually spent. */
+export function walletRemaining(chosen: number, spentSoFar: number): number {
+  return r2(Math.max(0, chosen - spentSoFar));
+}
