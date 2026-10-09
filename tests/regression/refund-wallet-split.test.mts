@@ -2,7 +2,7 @@
 // (wallet vs card vs cash/offline). The policy decides the total; this only splits it. Pure: no database.
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { splitRefundBySource, walletShareOfRefund, walletShareFor } from "../../features/bookings/refundSplit";
+import { splitRefundBySource, walletShareOfRefund, walletShareFor, refundPoolOf } from "../../features/bookings/refundSplit";
 import { splitRefundByMethod } from "../../server/src/lib/refundSplit";
 import type { Booking } from "../../features/bookings/types";
 
@@ -74,5 +74,19 @@ describe("walletShareOfRefund / walletShareFor", () => {
   it("a no-refund policy (total 0) gives the wallet nothing: the policy decides the total", () => {
     const b = { pay: "Paid", amount: 70, amountPaid: 70, walletApplied: 30 } as Booking;
     assert.equal(walletShareFor(b, 0), 0);
+  });
+});
+
+describe("the split pool is what each source really holds, never the price", () => {
+  it("wallet 30 paid, rest unpaid, after a cancel flipped the label to Refund pending: pool 30, all of it wallet", () => {
+    const b = { pay: "Refund pending", amount: 70, amountPaid: 0, walletApplied: 30, cashHeld: 0 } as Booking;
+    assert.deepEqual(refundPoolOf(b), { pool: 30, wallet: 30, cash: 0 });
+    assert.equal(walletShareFor(b, 30), 30);
+  });
+  it("wallet 30 + cash 20 paid of 100 (label Refund pending): pool 50; refund 25 -> 15 wallet, refund 50 -> 30 wallet", () => {
+    const b = { pay: "Refund pending", amount: 70, amountPaid: 20, walletApplied: 30 } as Booking;
+    assert.equal(refundPoolOf(b).pool, 50);
+    assert.equal(walletShareFor(b, 25), 15);
+    assert.equal(walletShareFor(b, 50), 30);
   });
 });

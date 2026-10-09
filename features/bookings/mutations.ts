@@ -135,6 +135,14 @@ export function archiveAwaitingRefund(b: Booking): void {
   b.refundEntries = [{ id: `legacy-${open[0].since || "x"}`, amount: b.cancel?.amount ?? open[0].cash, cash: open[0].cash, via: "offline", status: "approved", approvedAt: open[0].since || nowIso(), note: "recorded before refunds were kept as entries" }];
 }
 
+/** Before a cancellation flips the pay label to a settled one ("Refund pending"), keep how much cash was really in hand: an unpaid or part-paid booking
+ *  would otherwise read as paid in full, and a refund would be split as if the whole price had been received. Only once, only while not yet settled. */
+export function rememberCashHeld(b: Booking): void {
+  if (b.cashHeld != null) return;
+  const settled = b.pay === "Paid" || b.pay === "Funded" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded";
+  if (!settled) b.cashHeld = Math.round(Math.max(0, b.amountPaid ?? 0) * 100) / 100;
+}
+
 export function applyCancel(b: Booking, refund: RefundType, partialAmount?: number, reason?: string): void {
   // "Full" gives back what was actually paid (incl. wallet credit), and a
   // partial refund can't exceed it — it used to refund `amount` whatever had
@@ -143,6 +151,7 @@ export function applyCancel(b: Booking, refund: RefundType, partialAmount?: numb
   let amt = refund === "full" ? paid : 0;
   if (refund === "partial") amt = Math.min(Math.max(0, partialAmount || 0), paid);
   if (b.past !== true) b.status = "Cancelled";
+  rememberCashHeld(b);
   archiveAwaitingRefund(b);
   b.cancel = {
     on: nowStr(),

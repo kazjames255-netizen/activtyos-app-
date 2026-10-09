@@ -233,6 +233,9 @@ export interface Booking {
   /** Part of `walletApplied` no longer owed for: a removed share (cancelled day / extra) larger than the cash due came off the wallet part. The
    *  booking's gross price is amount + walletApplied - walletRelieved. */
   walletRelieved?: number;
+  /** The cash (card / bank / cash) actually in hand when a cancellation flipped an UNPAID or PART-paid booking to a settled status: after that the pay label no
+   *  longer says how much was received, and a refund must split over what each source really holds (features/bookings/refundSplit.ts), never the price. */
+  cashHeld?: number;
   /** Set once a release took days off a PART-paid booking's price: later releases keep following the price (refund only what is paid beyond it), even after the status flips to Partially refunded. */
   priceFollowsRelease?: boolean;
   /** Running total of approved cancellation refunds (server-stamped) — so a

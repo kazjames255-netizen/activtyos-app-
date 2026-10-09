@@ -3,8 +3,7 @@
 // hides the wallet payment. The server calls this and sends the result as `money` on every booking it returns to the provider or the family;
 // screens only DISPLAY it. Pure: no database, no browser. Display only - no Finance figure reads this.
 import type { Booking } from "./types";
-import { refundableSoFar } from "./helpers";
-import { walletLeftOf } from "./refundSplit";
+import { refundPoolOf } from "./refundSplit";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -28,7 +27,7 @@ export interface MoneyBreakdown {
   walletBack: number;
 }
 
-type Src = Pick<Booking, "amount" | "walletApplied" | "walletRelieved" | "amountPaid" | "pay" | "method" | "status"> & Partial<Pick<Booking, "walletRefunded" | "refundLog" | "refundedApproved">>;
+type Src = Pick<Booking, "amount" | "walletApplied" | "walletRelieved" | "amountPaid" | "pay" | "method" | "status"> & Partial<Pick<Booking, "walletRefunded" | "refundLog" | "refundedApproved" | "cashHeld">>;
 
 export function moneyBreakdown(b: Src): MoneyBreakdown {
   const amount = Math.max(0, Number(b.amount) || 0);
@@ -48,7 +47,7 @@ export function moneyBreakdown(b: Src): MoneyBreakdown {
   const unpaidLabel = !b.pay || b.pay === "Unpaid" || b.pay === "Invoice sent" || b.pay === "Partially paid" || b.pay === "Funded";
   let pay: MoneyBreakdown["pay"] = null;
   if (wallet > 0 && open && unpaidLabel) pay = due <= 0.005 ? "Paid" : "Partially paid";
-  return { gross, walletApplied: wallet, cashPaid, due, paidBy, pay, paidInFullByWallet: wallet > 0 && due <= 0.005 && cashPaid <= 0.005, walletBack: walletLeftOf(b, refundableSoFar(b as Booking)) };
+  return { gross, walletApplied: wallet, cashPaid, due, paidBy, pay, paidInFullByWallet: wallet > 0 && due <= 0.005 && cashPaid <= 0.005, walletBack: refundPoolOf(b as Booking).wallet };
 }
 
 /** Attach `money` to a booking only when there is a wallet part to explain (every other booking is sent exactly as before). */

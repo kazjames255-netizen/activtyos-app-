@@ -7,7 +7,7 @@
  * WALLET credit is a third source with the same rule (features/bookings/refundSplit.ts, splitRefundBySource / walletShareFor): the wallet part of a
  * refund is taken first, proportionally, and THIS function then splits what is left between card and offline.
  */
-export { splitRefundBySource, walletShareOfRefund, walletShareFor, walletLeftOf, noteInstantWalletCredit } from "../../../features/bookings/refundSplit";
+export { splitRefundBySource, walletShareOfRefund, walletShareFor, walletLeftOf, refundPoolOf, noteInstantWalletCredit } from "../../../features/bookings/refundSplit";
 
 export function splitRefundByMethod(rest: number, cardLeft: number, offlineLeft: number): { card: number; offline: number } {
   const total = Math.max(0, cardLeft) + Math.max(0, offlineLeft);

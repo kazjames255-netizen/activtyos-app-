@@ -1,6 +1,6 @@
 import { withMoney } from "../../../features/bookings/walletBreakdown";
 import { resolvePendingCancel, alreadyRefundedWarning } from "../lib/pendingRefund";
-import { splitRefundByMethod, walletLeftOf, walletShareOfRefund, noteInstantWalletCredit } from "../lib/refundSplit";
+import { splitRefundByMethod, refundPoolOf, walletShareOfRefund, noteInstantWalletCredit } from "../lib/refundSplit";
 import { refPrefixFor } from "../lib/bookingRef";
 import { stopOpenPayments } from "../lib/checkoutIntent";
 import { randomUUID } from "node:crypto";
@@ -74,6 +74,7 @@ import {
   applyRowAction,
   buildBooking,
   markRefundRecorded,
+  rememberCashHeld,
 } from "../../../features/bookings/mutations";
 import { attachChildcareRefs, childcareOf, isChildcare, paymentRecordsOf, type ChildcareBooking, type ChildcarePayment } from "../lib/childcare";
 
@@ -1030,6 +1031,7 @@ bookings.post("/:ref/actions", async (req, res) => {
         const have = new Set((cur.refundEntries ?? []).map((e) => e.id));
         cur.refundEntries = [...(cur.refundEntries ?? []), ...(updated.refundEntries ?? []).filter((e) => !have.has(e.id))];
         if (lastSent) cur.lastRefundSent = lastSent;
+        rememberCashHeld(cur);
         cur.pay = refundableSoFar(cur) <= 0.005 ? "Refunded" : moved.partial ? "Partially refunded" : updated.pay;
         tx.set(ref, toDoc(cur));
         // The wallet credit, once, together with the record. (On the payments ledger too, like card and offline refunds, so Reconciliation matches.)
@@ -1786,7 +1788,8 @@ async function settleApprovedRefund(b: Booking, tenantId: string, refundable: nu
   // Never more than is still refundable (taken before pay flipped to Refunded).
   const owed = Math.max(0, Math.min(b.cancel?.amount ?? refundable, refundable));
   // The wallet's proportional share of it (what the wallet paid that has not already been returned, over everything still refundable).
-  const walletPart = walletShareOfRefund(owed, walletLeftOf(b, refundable), refundable);
+  const held = refundPoolOf(b);
+  const walletPart = walletShareOfRefund(owed, held.wallet, held.pool);
   const rest = Math.round((owed - walletPart) * 100) / 100;
   const s = await loadSettings(b.tenantId ?? tenantId, b.franchiseId ?? null);
   const cardAllowed = (s as { allowCardRefund?: boolean }).allowCardRefund !== false;
