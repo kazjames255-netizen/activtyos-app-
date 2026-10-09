@@ -36,6 +36,7 @@ const chip = (on: boolean) =>
 
 export function MoneyConfirm({ booking }: { booking: Booking }) {
   const confirm = useBookingsStore((s) => s.confirm);
+  const stripeWarn = useBookingsStore((s) => s.stripeWarn);
   const box = useRef<HTMLDivElement>(null);
   const live = !!confirm && confirm.ref === booking.ref;
   // The click that opened this was further down the page (a day row) or in the list — bring the question into view.
@@ -44,7 +45,8 @@ export function MoneyConfirm({ booking }: { booking: Booking }) {
   const { intent } = confirm;
   return (
     <div ref={box}>
-      {intent.kind === "paid" ? <PaidConfirm booking={booking} />
+      {intent.kind === "refund-approve" && stripeWarn?.ref === booking.ref ? <StripeAlreadyRefundedConfirm booking={booking} />
+        : intent.kind === "paid" ? <PaidConfirm booking={booking} />
         : intent.kind === "refund-approve" ? <RefundSentConfirm booking={booking} />
         : intent.kind === "refund-sent" ? <RefundTransferConfirm booking={booking} />
         : <ReleaseConfirm key={`${intent.kind}-${intent.ki}-${intent.kind === "cancel-day" ? intent.dt : ""}`} booking={booking} ki={intent.ki} dt={intent.kind === "cancel-day" ? intent.dt : undefined} />}
@@ -99,6 +101,24 @@ function RefundSentConfirm({ booking: b }: { booking: Booking }) {
       <div className="flex gap-[7px]">
         <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>{stripe ? t("p7bd.cfRefYesStripe") : t("p7bd.cfRefYes")}</Button>
         <Button onClick={clear}>{t("p7bd.cfNotYet")}</Button>
+      </div>
+    </div>
+  );
+}
+
+/** Approve was refused because this refund's money was also refunded in the Stripe dashboard: nothing changed; refunding more is the provider's deliberate choice. */
+function StripeAlreadyRefundedConfirm({ booking: b }: { booking: Booking }) {
+  const t = useT();
+  const act = useBookingsStore((s) => s.act);
+  const warn = useBookingsStore((s) => s.stripeWarn);
+  const clear = useBookingsStore((s) => s.clearConfirm);
+  if (!warn) return null;
+  return (
+    <div className={shell} data-ui="money-confirm" data-kind="refund-already-in-stripe">
+      <div className={head}>{t("p8lst.rfaStripeHead", { stripe: money(warn.stripeRefunded), pending: money(warn.pending) })}</div>
+      <div className="flex flex-wrap gap-[7px]">
+        <Button variant="primary" onClick={() => act(b.ref, "refund-approve", undefined, { alreadySent: warn.alreadySent, confirmAlreadyRefunded: true })}>{t("p8lst.rfaStripeYes")}</Button>
+        <Button onClick={clear}>{t("p8lst.rfaStripeNo")}</Button>
       </div>
     </div>
   );

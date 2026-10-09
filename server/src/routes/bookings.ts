@@ -1,4 +1,5 @@
-import { resolvePendingCancel } from "../lib/pendingRefund";
+import { resolvePendingCancel, alreadyRefundedWarning } from "../lib/pendingRefund";
+import { splitRefundByMethod } from "../lib/refundSplit";
 import { refPrefixFor } from "../lib/bookingRef";
 import { stopOpenPayments } from "../lib/checkoutIntent";
 import { randomUUID } from "node:crypto";
@@ -128,6 +129,8 @@ const actionSchema = z.discriminatedUnion("type", [
     reason: z.string().max(300).optional(),
     // refund-approve on an offline refund: the provider already sent the money, so record it as sent in one step.
     alreadySent: z.boolean().optional(),
+    // refund-approve on a pending partial refund whose money was ALSO refunded in the Stripe dashboard: the provider has confirmed they want to refund more.
+    confirmAlreadyRefunded: z.boolean().optional(),
   }),
   // Approve a parent's date-change request. approveIndexes lets the operator
   // approve only SOME swaps (omit = all); reason explains any declined ones.
@@ -749,6 +752,11 @@ bookings.post("/:ref/actions", async (req, res) => {
         // refundable is worked out from this, not from the flipped booking.
         if (refundableSoFar(b) <= 0.005)
           throw new Conflict("Everything paid on this booking has already been refunded (for example in Stripe), so there is nothing left to approve.");
+        // A pending PARTIAL refund whose money was also refunded in the Stripe dashboard is not approved by accident: ask first, change nothing.
+        if (!("confirmAlreadyRefunded" in action && action.confirmAlreadyRefunded === true)) {
+          const w = alreadyRefundedWarning(b);
+          if (w) throw new AlreadyRefundedInStripe(w);
+        }
         refundBefore = { refund: b.cancel.refund, pay: b.pay, refundable: refundableSoFar(b), attempts: (b.cancel as { refundAttempts?: number }).refundAttempts ?? 0 };
       }
 
@@ -952,7 +960,7 @@ bookings.post("/:ref/actions", async (req, res) => {
       // provider confirms they sent it (action "refund-sent"), unless they say they already did.
       const alreadySent = "alreadySent" in action && action.alreadySent === true;
       markRefundRecorded(updated, moved.via, alreadySent, req.user?.email ?? "operator");
-      if (moved.via === "offline" && alreadySent && updated.tenantId) await markOfflineRefundSent(updated.tenantId, updated.ref, req.user?.email ?? "operator").catch((e) => console.error("[refund-sent] ledger update failed:", (e as Error).message));
+      if ((moved.via === "offline" || moved.offlinePart > 0) && alreadySent && updated.tenantId) await markOfflineRefundSent(updated.tenantId, updated.ref, req.user?.email ?? "operator").catch((e) => console.error("[refund-sent] ledger update failed:", (e as Error).message));
       if (moved.partial) updated.pay = "Partially refunded";
       updated.refundedApproved = Math.round(((updated.refundedApproved ?? 0) + moved.owed) * 100) / 100;
       updated.walletRefunded = Math.round(((updated.walletRefunded ?? 0) + moved.walletPart) * 100) / 100;
@@ -966,9 +974,15 @@ bookings.post("/:ref/actions", async (req, res) => {
       const cashPart = Math.round(Math.max(0, moved.owed - moved.walletPart) * 100) / 100;
       const sentNow = moved.via !== "offline" || alreadySent;
       const nowIso = new Date().toISOString();
-      const newEntry = { id: randomUUID(), amount: moved.owed, cash: cashPart, via: moved.via, status: sentNow ? "sent" : "approved", approvedAt: nowIso, ...(sentNow ? { sentAt: nowIso } : {}) } as NonNullable<typeof updated.refundEntries>[number];
-      (updated.refundEntries = updated.refundEntries ?? []).push(newEntry);
-      const lastSent = moved.via === "offline" && alreadySent ? { amount: cashPart, at: nowIso } : null;
+      // A booking part-paid by card AND offline money: the card share (already sent through Stripe) and the OFFLINE share are separate entries, so the
+      // offline money stays "awaiting your transfer" (Finance, Refunds to send, the reminder, reconcile) until the provider marks it sent.
+      type Entry = NonNullable<typeof updated.refundEntries>[number];
+      const mkEntry = (amount: number, cash: number, via: "wallet" | "card" | "offline", sent: boolean): Entry =>
+        ({ id: randomUUID(), amount, cash, via, status: sent ? "sent" : "approved", approvedAt: nowIso, ...(sent ? { sentAt: nowIso } : {}) }) as Entry;
+      const offlineShare = moved.offlinePart;
+      (updated.refundEntries = updated.refundEntries ?? []).push(mkEntry(Math.round((moved.owed - offlineShare) * 100) / 100, Math.round((cashPart - offlineShare) * 100) / 100, moved.via, sentNow));
+      if (offlineShare > 0) updated.refundEntries.push(mkEntry(offlineShare, offlineShare, "offline", alreadySent));
+      const lastSent = (moved.via === "offline" || offlineShare > 0) && alreadySent ? { amount: offlineShare > 0 ? offlineShare : cashPart, at: nowIso } : null;
       if (lastSent) updated.lastRefundSent = lastSent;
       const logEntry = {
         label: refundLabel,
@@ -1000,7 +1014,7 @@ bookings.post("/:ref/actions", async (req, res) => {
 
     // The family's bank details (typed for a bank-transfer refund) are not kept once the provider has dealt with the request.
     // (An approved OFFLINE refund keeps them until the provider has sent it: they need the account details to make the transfer.)
-    const keepBank = action.type === "refund-approve" && updated.cancel?.refundVia === "offline" && updated.cancel?.refundTransfer === "awaiting";
+    const keepBank = action.type === "refund-approve" && ((updated.cancel?.refundVia === "offline" && updated.cancel?.refundTransfer === "awaiting") || refundAwaitingTransfer(updated));
     if ((action.type === "refund-approve" || action.type === "refund-decline" || action.type === "refund-sent") && updated.cancel?.refundBank && updated.tenantId && !keepBank) {
       delete updated.cancel.refundBank;
       await ref.update({ "cancel.refundBank": FieldValue.delete() }).catch(() => {});
@@ -1221,6 +1235,7 @@ bookings.post("/:ref/actions", async (req, res) => {
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
     else if (e instanceof Conflict) res.status(409).json({ error: e.message });
+    else if (e instanceof AlreadyRefundedInStripe) res.status(409).json({ error: e.message, code: "already_refunded_in_stripe", ...e.w });
     // A refused extra request (addon-approve with no choice about a price difference...) is the provider's to fix, not a server fault.
     else if (e instanceof BadRequest) res.status(400).json({ error: e.message });
     else throw e;
@@ -1732,7 +1747,7 @@ const ukDateLabel = (iso: string) => new Date(iso).toLocaleDateString("en-GB", {
  *    — not "to your card", which it never touched.
  */
 async function settleApprovedRefund(b: Booking, tenantId: string, refundable: number, attempt: number): Promise<
-  { ok: true; via: "wallet" | "card" | "offline"; partial: boolean; owed: number; walletPart: number } | { ok: false; error: string }
+  { ok: true; via: "wallet" | "card" | "offline"; partial: boolean; owed: number; walletPart: number; offlinePart: number } | { ok: false; error: string }
 > {
   // Never more than is still refundable (taken before pay flipped to Refunded).
   const owed = Math.max(0, Math.min(b.cancel?.amount ?? refundable, refundable));
@@ -1744,16 +1759,20 @@ async function settleApprovedRefund(b: Booking, tenantId: string, refundable: nu
   const cardAllowed = (s as { allowCardRefund?: boolean }).allowCardRefund !== false;
   const restToWallet = b.cancel?.refundTo === "wallet" || !cardAllowed;
   let via: "wallet" | "card" | "offline" = "wallet";
+  let offlineOut = 0; // the offline share of a card + offline part-paid booking (its own refund entry)
 
   if (rest > 0 && !restToWallet) {
     if (b.paymentIntentId) {
       // Stripe refuses a refund larger than what's left of the card charge, and
-      // part of `rest` may have been paid another way (a hand-paid top-up
+      // part of `rest` may have been paid another way (cash / bank, or a hand-paid top-up
       // invoice): the whole refund then failed and nothing went back (d19s8).
-      // Card gets what the card can take; the rest is owed back offline.
-      const cardLeft = await cardRefundable(b);
-      const cardPart = cardLeft == null ? rest : Math.min(rest, cardLeft);
-      const offlinePart = Math.round((rest - cardPart) * 100) / 100;
+      // Each pound goes back by the method it came in by: the refund is split PROPORTIONAL to what is still refundable by card and
+      // offline (splitRefundByMethod). The card share goes through Stripe; the offline share becomes its OWN refund entry (below).
+      const cardState = await cardRefundable(b);
+      const split = cardState ? splitRefundByMethod(rest, cardState.left, offlineRefundable(b, cardState.taken)) : { card: rest, offline: 0 };
+      const cardPart = split.card;
+      const offlinePart = split.offline;
+      offlineOut = offlinePart;
       if (cardPart > 0) {
         const r = await refundStripePayment(b, cardPart, `${Math.round((b.refundedApproved ?? 0) * 100)}-${attempt}`);
         if (!r.ok) return { ok: false, error: r.error };
@@ -1789,23 +1808,30 @@ async function settleApprovedRefund(b: Booking, tenantId: string, refundable: nu
     if (rest <= 0 || restToWallet) via = "wallet";
   }
   if (restToWallet && b.cancel) b.cancel.refundTo = "wallet";
-  return { ok: true, via, partial: owed > 0 && owed < refundable - 0.005, owed, walletPart };
+  return { ok: true, via, partial: owed > 0 && owed < refundable - 0.005, owed, walletPart, offlinePart: via === "card" ? offlineOut : 0 };
 }
 
-/** What's left to refund on the booking's card payment: what Stripe actually
- *  took, less card refunds already made. null when Stripe can't be asked. */
-async function cardRefundable(b: Booking): Promise<number | null> {
+/** What Stripe actually took on the booking's card payment, and what's left to refund of it (less card refunds already made, including ones made in
+ *  the Stripe dashboard). null when Stripe can't be asked. */
+async function cardRefundable(b: Booking): Promise<{ taken: number; left: number } | null> {
   if (!stripe || !b.paymentIntentId) return null;
   try {
     const pi = await stripe.paymentIntents.retrieve(b.paymentIntentId, {}, b.stripeAccount ? { stripeAccount: b.stripeAccount } : undefined);
     const taken = (pi.amount_received ?? pi.amount ?? 0) / 100;
     const prior = await db.collection("payments").where("paymentIntentId", "==", b.paymentIntentId).get();
     const refunded = prior.docs.reduce((n, d) => n + (d.get("type") === "refund" && d.get("status") === "succeeded" ? Number(d.get("amount")) || 0 : 0), 0);
-    return Math.max(0, Math.round((taken - refunded) * 100) / 100);
+    return { taken, left: Math.max(0, Math.round((taken - refunded) * 100) / 100) };
   } catch (e) {
     console.error(`[payments] couldn't read card payment for ${b.ref}:`, (e as Error).message);
     return null;
   }
+}
+
+/** What was paid OFFLINE on a card booking (cash received beyond what Stripe took: cash, bank, a hand-paid top-up) and has not been refunded yet. */
+function offlineRefundable(b: Booking, cardTaken: number): number {
+  const paidOffline = Math.max(0, cashReceivedOf(b) - cardTaken);
+  const backAlready = (b.refundEntries ?? []).filter((e) => e.via === "offline").reduce((t, e) => t + (e.cash || 0), 0);
+  return Math.round(Math.max(0, paidOffline - backAlready) * 100) / 100;
 }
 
 // Refund part (or all) of the Stripe payment behind a booking. Awaited by
@@ -1846,4 +1872,9 @@ type RefundSnapshot = { refund?: NonNullable<Booking["cancel"]>["refund"]; pay: 
 class NotFound extends Error {}
 class BadRequest extends Error {}
 class Conflict extends Error {}
+class AlreadyRefundedInStripe extends Error {
+  constructor(public w: { stripeRefunded: number; pending: number; paid: number }) {
+    super(`${money(w.stripeRefunded)} was already refunded to this family in Stripe. Approving this ${money(w.pending)} refund would refund them more on top. Nothing has been changed.`);
+  }
+}
 class TooSoon extends Error {}
