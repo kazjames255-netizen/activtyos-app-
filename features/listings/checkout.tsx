@@ -15,7 +15,7 @@
 import { tfcReady } from "@/lib/tfcReady";
 import { GenderQuickAdd } from "@/features/common/GenderQuickAdd";
 import { HowItWorks } from "@/components/HowItWorks";
-import { dateLocale as dl, joinListNow, uiDate } from "@/lib/i18n/format";
+import { joinListNow, uiDate } from "@/lib/i18n/format";
 import type { DiscountKind } from "./discounts";
 import { useEffect, useRef, useState } from "react";
 import { tNow, useI18n } from "@/lib/i18n/provider";
