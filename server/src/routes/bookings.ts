@@ -870,7 +870,8 @@ bookings.post("/:ref/actions", async (req, res) => {
     if (heldApproval) {
       const cap = await captureHolds([updated]);
       if (!cap.ok) {
-        await ref.set({ status: "Approval needed" }, { merge: true });
+        // Put the request back ONLY if it is still the approved, unpaid booking this attempt confirmed: a cancel / decline that landed meanwhile must not be undone.
+        await db.runTransaction(async (tx) => { const cur = fromDoc((await tx.get(ref)).data() as BookingDoc); if (cur.status === "Confirmed" && cur.pay !== "Paid" && cur.cardHold?.state === "held") tx.update(ref, { status: "Approval needed" }); });
         res.status(502).json({ error: cap.error });
         return;
       }
@@ -1631,7 +1632,7 @@ bookings.post("/bulk", async (req, res) => {
     if (toTake.length) {
       const cap = await captureHolds(toTake);
       if (!cap.ok) {
-        await Promise.all(toTake.map((b) => db.collection("bookings").doc(bookingDocId(b.tenantId!, b.ref)).set({ status: "Approval needed" }, { merge: true })));
+        await Promise.all(toTake.map((b) => db.runTransaction(async (tx) => { const r2 = db.collection("bookings").doc(bookingDocId(b.tenantId!, b.ref)); const cur = fromDoc((await tx.get(r2)).data() as BookingDoc); if (cur.status === "Confirmed" && cur.pay !== "Paid" && cur.cardHold?.state === "held") tx.update(r2, { status: "Approval needed" }); })));
         res.status(502).json({ error: cap.error });
         return;
       }
