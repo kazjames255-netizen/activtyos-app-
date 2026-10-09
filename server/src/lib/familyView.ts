@@ -15,5 +15,7 @@ export function familyBooking<T extends Partial<Booking>>(b: T): T {
     void _c; void _by; void _at;
     out.cancel = cancel;
   }
-  return withMoney(out as unknown as T);
+  // The wallet breakdown is worked out from the FULL record (walletRefunded is the provider's bookkeeping, but how much of the wallet part can still go back is the family's own figure).
+  const money = withMoney(b).money;
+  return (money ? { ...out, money } : out) as unknown as T;
 }

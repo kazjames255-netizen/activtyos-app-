@@ -271,7 +271,13 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
     const gross = isCardBooking(b) ? cashReceivedOf(b) : Math.max(0, Math.min(b.cardPaid ?? 0, cashReceivedOf(b)));
     if (gross <= 0) continue;
     const c = b.cancel;
-    const backToCard = c?.refundVia === "card" ? Math.max(0, (b.refundedApproved ?? c.amount ?? 0) - (b.walletRefunded ?? 0)) : 0;
+    // What went back to the CARD: the card entries when the refunds are kept as entries (a wallet part and an offline part are their own entries and are not card money),
+    // else the older whole-refund figure less what went back to the wallet.
+    const cardEntries = (b.refundEntries ?? []).filter((e) => e.via === "card");
+    // (an entry written before the wallet part had its own entry carries the wallet part inside the card entry: take it off)
+    const legacyWallet = (b.refundEntries ?? []).some((e) => e.via === "wallet") ? 0 : (b.walletRefunded ?? 0);
+    const backToCard = (b.refundEntries ?? []).length ? Math.max(0, cardEntries.reduce((n, e) => n + Math.max(0, e.amount || 0), 0) - legacyWallet)
+      : c?.refundVia === "card" ? Math.max(0, (b.refundedApproved ?? c.amount ?? 0) - (b.walletRefunded ?? 0)) : 0;
     const at = (payIdx.byRef.get(b.ref) ?? []).filter((r) => r.card).map((r) => r.at).sort().pop() || b.createdAt || "";
     cardEvents.push({ gross, net: Math.max(0, gross - backToCard), at });
   }

@@ -27,6 +27,7 @@ import {
   sessionDayLabel,
 } from "./helpers";
 import type { ReleaseResolution } from "./mutations";
+import { walletShareFor } from "./refundSplit";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const shell = "my-3 rounded-xl border-[1.5px] border-[#FAD4D0] bg-[#FFF7F6] px-4 py-3.5";
@@ -79,6 +80,10 @@ function RefundSentConfirm({ booking: b }: { booking: Booking }) {
   const kind = refundButtonKind(b);
   const amt = money(refundOwedOf(b) || b.cancel?.amount || 0);
   const stripe = kind === "stripe";
+  // A booking paid partly with wallet credit: that share of the refund goes back to the family's wallet at once (one rule, refundSplit.ts); the rest goes the way they paid.
+  const owedNow = Math.min(refundOwedOf(b) || b.cancel?.amount || 0, refundableSoFar(b));
+  const walletBack = kind === "wallet" ? 0 : walletShareFor(b, owedNow);
+  const splitNote = walletBack > 0.004 ? <div className="mb-3 text-[12px] font-semibold text-[var(--ink)]" data-ui="refund-split">{t("p7bd.cfSplit", { wallet: money(walletBack), rest: money(round2(owedNow - walletBack)) })}</div> : null;
   // A bank transfer / cash / voucher refund cannot be sent by the app: approving only RECORDS it ("awaiting your transfer"); the provider confirms
   // the transfer afterwards with "I've sent the refund" (or says up front that they already sent it).
   if (kind !== "stripe" && kind !== "wallet") {
@@ -86,6 +91,7 @@ function RefundSentConfirm({ booking: b }: { booking: Booking }) {
       <div className={shell} data-ui="money-confirm" data-kind="refund-record">
         <div className={head}>{t("p8lst.rfaApproveHead", { amt })}</div>
         <div className="mb-3 text-[12px] text-[var(--ink-2)]">{t("p8lst.rfaApproveBody", { amt, name: b.booker })}</div>
+        {splitNote}
         <div className="flex flex-wrap gap-[7px]">
           <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>{t("p8lst.rfaApproveYes")}</Button>
           <Button onClick={() => act(b.ref, "refund-approve", undefined, { alreadySent: true })}>{t("p8lst.rfaApproveSentYes")}</Button>
@@ -99,6 +105,7 @@ function RefundSentConfirm({ booking: b }: { booking: Booking }) {
     <div className={shell} data-ui="money-confirm" data-kind="refund-sent">
       <div className={head}>{t("p7bd.cfRefHead", { amt })}</div>
       <div className="mb-3 text-[12px] text-[var(--ink-2)]">{body}</div>
+      {splitNote}
       <div className="flex gap-[7px]">
         <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>{stripe ? t("p7bd.cfRefYesStripe") : t("p7bd.cfRefYes")}</Button>
         <Button onClick={clear}>{t("p7bd.cfNotYet")}</Button>

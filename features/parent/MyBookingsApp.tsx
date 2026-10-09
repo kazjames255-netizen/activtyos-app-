@@ -21,6 +21,7 @@ import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
 import { refundFor, effectiveRefundDate, policyById, policyWordingT, adviceReasonT, aPct, type NamedPolicy } from "@/lib/cancellation";
+import { walletShareOfRefund } from "@/features/bookings/refundSplit";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 
 // Boy → blue, Girl → pink, unknown → house grey. Same convention as the
@@ -148,7 +149,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const [resolution, setResolution] = useState<"refund" | "wallet" | "changedate" | null>(null);
   const [moveTo, setMoveTo] = useState<Record<string, string>>({}); // slot key → replacement ISO date
   // The server's own figures for releasing the ticked days (see the preview effect below).
-  type Prev = { partPaid: boolean; priceBefore: number; priceAfter: number; drop: number; paid: number; refund: number; credit: number; owedAfter: number };
+  type Prev = { partPaid: boolean; priceBefore: number; priceAfter: number; drop: number; paid: number; refund: number; credit: number; owedAfter: number; toWallet: number; toOriginal: number };
   const [prevRes, setPrevRes] = useState<{ k: string; data: Prev } | null>(null);
 
   useEffect(() => {
@@ -226,6 +227,9 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const partialMode = scope === "days";
   const effRefund = partialMode ? (res === "refund" ? prev?.refund ?? 0 : 0) : advice?.amount ?? 0;
   const refundDue = effRefund > 0;
+  // How a refund on a booking paid partly with wallet credit divides: the wallet's share goes back to the wallet, the rest the way they paid (one rule, features/bookings/refundSplit.ts;
+  // the wallet figure is the server's). A refund the family sends to the wallet is wholly wallet credit.
+  const splitWallet = !partialMode && refundDue && booking.money && booking.money.walletBack > 0.004 ? walletShareOfRefund(effRefund, booking.money.walletBack, paidNow) : 0;
   // A voucher / Tax-Free Childcare payment was made outside the app — that money
   // can NEVER be refunded to a bank card. The only place it can land is the
   // family's wallet (store credit), and only if the provider runs one.
@@ -388,7 +392,11 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                   </div>
 
                   {prevText && (res === "refund" || res === "wallet") && (
-                    <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-2)]" data-ui="release-preview"><Rich text={prevText} bClass="text-[var(--ink)]" /></div>
+                    <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-2)]" data-ui="release-preview"><Rich text={prevText} bClass="text-[var(--ink)]" />
+                      {res === "refund" && prev && prev.toWallet > 0.004 && (
+                        <div className="mt-1" data-ui="refund-split"><Rich text={prev.toOriginal > 0.004 ? t("p7bk.splitBoth", { wallet: money(prev.toWallet), rest: money(prev.toOriginal) }) : t("p7bk.splitAllWallet", { amt: money(prev.toWallet) })} bClass="text-[var(--ink)]" /></div>
+                      )}
+                    </div>
                   )}
 
                   {/* Structured calendar pick — a concrete from→to per day, so a
@@ -437,6 +445,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
             <div className="font-extrabold text-[#c0392b]">{t("p7bk.noRefundDue")}</div>
           )}
           {paidNow > 0 && <div className="mt-0.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">{adviceReasonT(t, locale, advice)}</div>}
+          {splitWallet > 0.004 && <div className="mt-1 text-[11.5px] leading-[1.5] text-[var(--ink-2)]" data-ui="refund-split"><Rich text={refundPref === "wallet" || effRefund - splitWallet <= 0.004 ? t("p7bk.splitAllWallet", { amt: money(effRefund) }) : t("p7bk.splitBoth", { wallet: money(splitWallet), rest: money(effRefund - splitWallet) })} bClass="text-[var(--ink)]" /></div>}
           {policy && (
             <div className="mt-1.5 border-t border-[var(--line)] pt-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
               <span className="font-semibold text-[var(--ink-2)]">{t("p7bk.policyName", { name: policy.name })}</span> {policyWordingT(t, locale, policy)}
