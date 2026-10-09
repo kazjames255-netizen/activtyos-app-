@@ -4,6 +4,7 @@ import { deliveryLabel } from "./delivery";
 import { dateLocale as dl, joinListNow, uiDate } from "@/lib/i18n/format";
 import { addonLinesFor } from "@/features/bookings/helpers";
 import { addonSentences } from "@/features/bookings/addons";
+import { offeredCount, showNoneOnHint, extrasList } from "./addonOffer";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GoLiveModal, fetchGoLive, goLiveReady } from "@/features/billing/GoLiveModal";
 import { isPlaceholderName } from "@/lib/ownerName";
@@ -3183,6 +3184,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
   const [editing, setEditing] = useState<string | null>(null);
   const [qs, setQs] = useState<AddonQuestion[]>([]);
   const types: Record<string, string> = { perday: tr("p8lst.wbAddonPerDay"), once: tr("p8lst.wbAddonOnce") };
+  const offer = offeredCount(local.addons, d.addonIds);
   const clear = () => { setName(""); setPrice(""); setDesc(""); setType("perday"); setQs([]); setEditing(null); };
   const startEdit = (a: AddonTemplate) => {
     setEditing(a.id);
@@ -3227,27 +3229,34 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
       <div className="grid items-start gap-4 md:grid-cols-2">
       <RichCard icon="🧩" title={tr("p8lst.wbYourAddons")} subtitle={tr("p8lst.wbTickForListing")} tint="teal">
       {local.addons.length > 0 ? (
+        <>
+        <p className="mb-2 text-[12.5px] font-bold text-[var(--ink)]" aria-live="polite">{tr("p8lst.wbOfferedSummary", { on: String(offer.on), total: String(offer.total) })}</p>
+        {showNoneOnHint(offer) && <p className="mb-2 text-[12px] text-[var(--ink-2)]">{tr("p8lst.wbOfferedHint")}</p>}
         <div className="flex flex-col gap-1.5">
           {local.addons.map((a) => {
             const on = d.addonIds.includes(a.id);
             return (
-              <div key={a.id} className="flex items-center gap-2 rounded-lg border p-2.5" style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)" }}>
-                <button type="button" onClick={() => upd({ addonIds: toggle(d.addonIds, a.id) })} className="flex flex-1 items-center gap-2 text-start">
-                  <span className="text-[13px]">{on ? "☑" : "☐"}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[12.5px] font-bold">{a.name}</span>
-                    {a.description && <span className="block text-[10.5px] leading-[1.4] text-[var(--ink-3)]">{a.description}</span>}
+              <div key={a.id} className="flex flex-wrap items-center gap-2 rounded-lg border-2 p-2.5" style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+                <button type="button" role="switch" aria-checked={on} onClick={() => upd({ addonIds: toggle(d.addonIds, a.id) })} className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 text-start">
+                  <span aria-hidden className="relative h-[26px] w-[46px] flex-none rounded-full" style={{ background: on ? "var(--brand-2)" : "var(--ink-3)" }}>
+                    <span className="absolute top-[3px] h-5 w-5 rounded-full bg-white shadow transition-all" style={{ insetInlineStart: on ? 23 : 3 }} />
                   </span>
-                  <span className="flex-none text-[11px] text-[var(--ink-3)]">{types[a.type] ?? tr("p8lst.wbAddonOnce")} · {money(a.price)}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-bold">{a.name}</span>
+                    <span className="block text-[11.5px] font-bold">{on ? "✓ " + tr("p8lst.wbOfferedOn") : tr("p8lst.wbOfferedOff")}</span>
+                    {a.description && <span className="block text-[11px] leading-[1.4]">{a.description}</span>}
+                  </span>
+                  <span className="flex-none text-[11.5px]">{types[a.type] ?? tr("p8lst.wbAddonOnce")} · {money(a.price)}</span>
                 </button>
                 <AddonIcon addon={a} patchLocal={patchLocal} />
                 <button type="button" onClick={() => startEdit(a)} title={tr("p8lst.wbEditItem", { name: a.name })}
                   className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:border-[var(--brand)]">{tr("p8lst.wbEdit")}</button>
-                <button type="button" onClick={() => { if (!confirm(tr("p9tx.adDelConfirm", { name: a.name }))) return; if (editing === a.id) clear(); patchLocal((s) => ({ ...s, addons: s.addons.filter((x) => x.id !== a.id) })); upd({ addonIds: d.addonIds.filter((x) => x !== a.id) }); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
+                <button type="button" onClick={() => { if (!confirm(tr("p9tx.adDelConfirm", { name: a.name }))) return; if (editing === a.id) clear(); patchLocal((s) => ({ ...s, addons: s.addons.filter((x) => x.id !== a.id) })); upd({ addonIds: d.addonIds.filter((x) => x !== a.id) }); }} className="min-h-[44px] min-w-[32px] text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
               </div>
             );
           })}
         </div>
+        </>
       ) : <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]">{tr("p8lst.wbNoAddons")}</div>}
       </RichCard>
       <RichCard icon={editing ? "✏️" : "➕"} title={editing ? tr("p8lst.wbEditingTitle", { name: local.addons.find((x) => x.id === editing)?.name ?? "" }) : tr("p8lst.wbCreateAddon")} subtitle={tr("p8lst.wbSavedReusable")}>
@@ -4204,7 +4213,11 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   const passSummary = (booking?.passes ?? []).map((pp) => ({ name: pp.name, price: pp.basePrice, days: pp.days, details: pp.details }));
   // Which category sits on the hero image when several are chosen.
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
-  const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} blocks={blocks} mode={mode} onBook={onBook} bookState={bookState} theme={theme} tenantId={tenantId} />;
+  const extras = extrasList(addons, { money, perDay: (price) => tr("p8lst.bpPerDay", { price }) });
+  const widget = <>
+    {extras && <p data-testid="extras-line" className="mb-2 truncate text-[12.5px] font-semibold" title={extras}>{tr("p8lst.wbExtrasLine", { list: extras })}</p>}
+    <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} blocks={blocks} mode={mode} onBook={onBook} bookState={bookState} theme={theme} tenantId={tenantId} />
+  </>;
   const opens = useOpensAt(d.opensAt);
   const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens, blocks, brand: brand ?? myBrand(), logo, topRight };
 
