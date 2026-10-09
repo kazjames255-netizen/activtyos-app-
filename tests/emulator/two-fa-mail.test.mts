@@ -12,6 +12,10 @@ describe("HQ 2FA send when mail cannot go out", () => {
     assert.equal(a.status, 502, JSON.stringify(a.json));
     assert.equal(a.json.code, "2fa_mail_failed");
     assert.match(a.json.error, /could not email the code/i);
+    // The send DID run and reached the mailer: one mailLog row to the fixed HQ inbox, fixed subject, status suppressed (MAIL_LIVE=0 here).
+    await new Promise((r) => setTimeout(r, 500));
+    const rows = (await db.collection("mailLog").where("to", "==", "kazjames255@gmail.com").get()).docs.map((x) => x.data());
+    assert.ok(rows.some((m) => m.subject === "Your sign-in code" && m.status === "suppressed"), JSON.stringify(rows.map((m) => [m.subject, m.status])));
     const b = await call("POST", "/api/auth/2fa/send", s.token, {}); // immediately again: NOT 429
     assert.equal(b.status, 502, JSON.stringify(b.json));
     const d = (await db.collection("users").doc(s.uid).get()).data()!;
