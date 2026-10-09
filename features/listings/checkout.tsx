@@ -12,6 +12,7 @@
 // right.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { addonCost } from "./addonCost";
 import { tfcReady } from "@/lib/tfcReady";
 import { GenderQuickAdd } from "@/features/common/GenderQuickAdd";
 import { HowItWorks } from "@/components/HowItWorks";
@@ -923,7 +924,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       .filter((l) => l.amount > 0.004);
   };
   const addonById = new Map(addons.map((a) => [a.id, a]));
-  const costOf = (a: AddonTemplate, days: string[]) => (a.type === "perday" ? a.price * days.length : a.price);
+  const costOf = (a: AddonTemplate, days: string[]) => addonCost(a, days);
   // Per child, because that's what an add-on is: a lunch each, a t-shirt each.
   // The server already charges them per child (it prices one line per child),
   // so showing one lunch for two children quoted a price we wouldn't honour.
