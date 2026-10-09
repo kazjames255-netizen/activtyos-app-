@@ -34,30 +34,43 @@ export const AGENT_STATUS_LABEL: Record<AgentStatus, string> = {
   held: "Held",
 };
 
-export const AGENT_AS_OF = "2026-10-08";
+export const AGENT_AS_OF = "2026-10-09";
 
+const D = "2026-10-09";
 export const AGENT_AREAS: AgentArea[] = [
-  { id: "A01", area: "Pay double-charge fix (double-click Pay)", status: "verified", rounds: "5 rounds (b7a45598)", next: "Needs your go, then one real card payment on your phone.", date: "2026-10-08" },
-  { id: "A02", area: "Child-data scope + staff home guard", status: "verified", rounds: "fix-child-names-8oct (5c4da69e)", next: "Ship with the next batch.", date: "2026-10-08" },
-  { id: "A03", area: "Add-ons: display, requests, permissions", status: "testing", rounds: "6 findings fixed", next: "Final money re-check, then ship.", date: "2026-10-08" },
-  { id: "A04", area: "Unpaid-card hold release (race fix)", status: "testing", rounds: "Verifier running", next: "Wait for the verifier result.", date: "2026-10-08" },
-  { id: "A05", area: "Incident dossier children leak", status: "shipped", rounds: "PR #158, #163", next: "Nothing. Live.", date: "2026-10-08" },
-  { id: "A06", area: "Role/feature gate bypass (path case, absolute form)", status: "shipped", rounds: "PR #161", next: "Nothing. Live.", date: "2026-10-08" },
-  { id: "A07", area: "HMRC sandbox runner + evidence (32 of 32)", status: "shipped", rounds: "PR #160", next: "Message HMRC Support when you are ready.", date: "2026-10-08" },
-  { id: "A08", area: "Privacy and terms company details", status: "shipped", rounds: "PR #159, #162, #164, #165", next: "Add the registered office once decided.", date: "2026-10-08" },
-  { id: "A09", area: "Add-on orders: listing filter", status: "shipped", rounds: "1 round", next: "Nothing. Live.", date: "2026-10-08" },
-  { id: "A10", area: "Coupons (54 cases; fixes merged #156)", status: "waiting", rounds: "Baseline + 1 fix round", next: "Your call on stacking: repeat code, two percentage codes, exclusive codes.", date: "2026-10-08" },
-  { id: "A11", area: "Name, domain, registered office", status: "waiting", rounds: "n/a", next: "Pick the name and domain; office is Suite A, 82 James Carter Road, Mildenhall IP28 7DE (service address).", date: "2026-10-08" },
-  { id: "A12", area: "HMRC message and production credentials", status: "waiting", rounds: "n/a", next: "Send the message to HMRC Support after the privacy and terms links are live.", date: "2026-10-08" },
-  { id: "A13", area: "Head-injury accident rule", status: "waiting", rounds: "n/a", next: "Decide the rule.", date: "2026-10-08" },
-  { id: "A14", area: "Repository visibility", status: "waiting", rounds: "n/a", next: "Decide public or private.", date: "2026-10-08" },
+  { id: "A01", area: "Pay double-charge fix", status: "shipped", rounds: "PR #168", next: "Nothing. Live.", date: D },
+  { id: "A02", area: "Incident dossier children leak", status: "shipped", rounds: "PR #158, #163", next: "Nothing. Live.", date: D },
+  { id: "A03", area: "Role/feature gate bypass (path case, absolute form)", status: "shipped", rounds: "PR #161", next: "Nothing. Live.", date: D },
+  { id: "A04", area: "HMRC sandbox runner + evidence (32 of 32)", status: "shipped", rounds: "PR #160", next: "Message HMRC Support once the name and office are settled.", date: D },
+  { id: "A05", area: "Privacy and terms company details", status: "shipped", rounds: "PR #159, #162, #164, #165, #169", next: "Update the office once Companies House shows it.", date: D },
+  { id: "A06", area: "HQ Test tracker merge", status: "shipped", rounds: "PR #167", next: "Nothing. Live.", date: D },
+  { id: "A07", area: "Quick book white screen on iPhone", status: "shipped", rounds: "PR #171", next: "Phone check 1.", date: D },
+  { id: "A08", area: "Wallet-minting release race hotfix", status: "shipped", rounds: "PR #172 (d86d50be)", next: "Phone check 2.", date: D },
+  { id: "A09", area: "Friendly Pay and session-expired messages", status: "shipped", rounds: "PR #173", next: "Nothing. Live.", date: D },
+  { id: "A10", area: "Stripe refund sync", status: "shipped", rounds: "PR #174", next: "Inert until you tick the four refund events on both webhooks.", date: D },
+  { id: "A11", area: "Card-hold cancel-during-capture hotfix", status: "shipped", rounds: "PR #175", next: "Nothing. Live.", date: D },
+  { id: "A12", area: "Add-ons (extras) as one build", status: "shipped", rounds: "PR #176 (7750a0f4)", next: "Phone checks 3 and 4. Rollback: revert the merge.", date: D },
+  { id: "A13", area: "Dates sweep (Welsh, Polish, Arabic)", status: "verified", rounds: "fix-dates-8oct, 506 sites", next: "Display only. Ship with the next batch.", date: D },
+  { id: "A14", area: "Awaiting payment (card bookings unconfirmed until paid)", status: "testing", rounds: "5 rounds, 121 cases, 0 fail", next: "Rebase on add-ons, one more check, then your phone check.", date: D },
+  { id: "A15", area: "Pay card-hold recovery (lost replies, stuck holds)", status: "testing", rounds: "fix-pay-y07-8oct, round 5", next: "Verifier pending.", date: D },
+  { id: "A16", area: "Pay hold-release round 5", status: "held", rounds: "Verify pending", next: "Verify before it ships.", date: D },
+  { id: "A17", area: "Double refund (pending partial also refunded in Stripe)", status: "held", rounds: "n/a", next: "Your call: shrink the pending refund by the Stripe amount (recommended).", date: D },
+  { id: "A18", area: "Offline part + card part booking", status: "held", rounds: "n/a", next: "Shows the offline part only as to-reimburse. Needs a fix.", date: D },
+  { id: "A19", area: "Awaiting payment tester D", status: "held", rounds: "Blocked", next: "Blocked by a permission denial. Needs your go.", date: D },
+  { id: "A20", area: "Coupons (54 cases; fixes merged #156)", status: "waiting", rounds: "Baseline + 1 fix round", next: "Your call on stacking: repeat, two percentage, exclusive codes.", date: D },
+  { id: "A21", area: "Name, domain, registered office", status: "waiting", rounds: "n/a", next: "Pick name and domain. Office: Suite A, 82 James Carter Road, Mildenhall IP28 7DE (pages show 12 Corris Court until Companies House updates).", date: D },
+  { id: "A22", area: "HMRC message and production credentials", status: "waiting", rounds: "n/a", next: "Send the message after the name, domain and office are settled.", date: D },
+  { id: "A23", area: "Stripe refund events", status: "waiting", rounds: "n/a", next: "Tick charge.refunded, refund.created, refund.updated, refund.failed on both endpoints.", date: D },
+  { id: "A24", area: "Head-injury accident rule", status: "waiting", rounds: "n/a", next: "Decide: always notify the parent at once?", date: D },
+  { id: "A25", area: "Repository visibility", status: "waiting", rounds: "n/a", next: "Decide public or private.", date: D },
 ];
 
 export const PHONE_CHECKS: PhoneCheck[] = [
-  { id: "P1", when: "After the Pay fix ships", task: "Make one small real card payment and confirm you are charged once." },
-  { id: "P2", when: "After the Pay fix ships", task: "Cancel that booking and confirm the refund shows." },
-  { id: "P3", when: "After add-ons ship", task: "As a parent, ask to change and to cancel an add-on." },
-  { id: "P4", when: "After add-ons ship", task: "As the owner, approve one request and see the parent told." },
+  { id: "P1", when: "Now", task: "Retry the online lesson Quick book on iPhone." },
+  { id: "P2", when: "Now", task: "As a parent, release one day on a paid booking: wallet credit is exactly one day; double-tap credits once." },
+  { id: "P3", when: "Now", task: "Add-ons: approve a T-shirt size change request; staff see no prices." },
+  { id: "P4", when: "Now", task: "Part-paid release preview says the price drops." },
+  { id: "P5", when: "After ticking the Stripe events", task: "Refund 1 pound in the Stripe dashboard: Finance shows Refunded within a minute, one bell." },
 ];
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
