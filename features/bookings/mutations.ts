@@ -231,8 +231,10 @@ export function isPartPaid(b: Booking): boolean {
  *  one paid a little less than in full refunds only the overpaid part. `opts.amount` is the provider's own (smaller) figure. The booking itself stands. */
 export function settleShareRemoval(b: Booking, label: string, share: number, opts?: ReleaseOpts): ReleaseResult {
   // Keep what was actually paid on the record before the amount moves (a joint booking stores no amountPaid, only a Paid status).
+  rememberCashHeld(b);
   const settled = b.pay === "Paid" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded";
-  if (settled) b.amountPaid = Math.max(b.amountPaid ?? 0, b.amount ?? 0);
+  // (a booking with a known cash-in-hand keeps THAT: a part-paid booking whose label a refund approval flipped must not read as paid up to its amount)
+  if (settled) b.amountPaid = Math.max(b.amountPaid ?? 0, b.cashHeld != null ? Math.min(b.amount ?? 0, b.cashHeld) : b.amount ?? 0);
   const prior = b.cancel && b.cancel.refundOnly && b.cancel.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
   // WALLET: `amount` is the CASH due, net of the wallet credit spent at checkout, while "paid" adds that credit back. So compare on the GROSS price
   // (cash due + wallet spent, less any share already taken off the wallet part): the share leaves the cash due first, then the wallet part.

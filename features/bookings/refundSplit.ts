@@ -19,14 +19,19 @@ export function walletShareOfRefund(owed: number, walletLeft: number, pool: numb
 /** What each SOURCE still really holds of this booking, never the price: the wallet credit not yet returned, and the cash received not yet refunded
  *  (`cashHeld` once a cancellation has settled the pay label, else the cash received). `pool` is the money a refund can be split over: at most refundableSoFar,
  *  at most the two sources together. A part-paid booking (wallet 30 + cash 20, 50 unpaid) has a pool of 50, not the 100 the pay label implies after a cancel. */
-export function refundPoolOf(b: Booking): { pool: number; wallet: number; cash: number } {
+export function refundPoolOf(b: Booking): { pool: number; wallet: number; cash: number; unknown: boolean } {
   const wallet = Math.max(0, (b.walletApplied ?? 0) - (b.walletRefunded ?? 0));
   const logged = (b.refundLog || []).reduce((t, x) => t + (/^refund approved/i.test(x.label || "") ? 0 : x.amount || 0), 0);
   const given = logged + Math.max(0, b.refundedApproved ?? 0);
+  // A booking cancelled BEFORE cashHeld existed, whose label is already a post-cancel one with no cash recorded, cannot say how much cash was in hand
+  // (it may have been paid in full with a joint payment, or not paid at all). Then the split is the safe, older one: the wallet credit first, the rest to the
+  // original method - never a share of cash that may never have been received.
+  const postCancel = b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded";
+  const unknown = b.cashHeld == null && postCancel && !((b.amountPaid ?? 0) > 0);
   const cashIn = b.cashHeld != null ? b.cashHeld : cashReceivedOf(b);
   const cash = Math.max(0, cashIn - Math.max(0, given - (b.walletRefunded ?? 0)));
   const pool = round2(Math.min(refundableSoFar(b), wallet + cash));
-  return { pool, wallet: round2(Math.min(wallet, pool)), cash: round2(Math.max(0, pool - Math.min(wallet, pool))) };
+  return { pool, wallet: round2(Math.min(wallet, pool)), cash: round2(Math.max(0, pool - Math.min(wallet, pool))), unknown };
 }
 
 /** Wallet credit this booking paid that has not been returned to the wallet yet (never more than what is still refundable). */
@@ -37,7 +42,7 @@ export function walletLeftOf(b: Pick<Booking, "walletApplied" | "walletRefunded"
 /** The wallet share of a refund `owed` on this booking right now (the same figure the approval will credit, and a preview shows). */
 export function walletShareFor(b: Booking, owed: number): number {
   const p = refundPoolOf(b);
-  return walletShareOfRefund(owed, p.wallet, p.pool);
+  return walletShareOfRefund(owed, p.wallet, p.unknown ? p.wallet : p.pool);
 }
 
 /** Wallet first, then card vs offline between the rest, all proportional to what each still holds. The card share is capped at what the card can still
@@ -62,3 +67,4 @@ export function noteInstantWalletCredit(b: Booking, credited: number): void {
   const share = walletShareOfRefund(credited, Math.min(Math.max(0, (b.walletApplied ?? 0) - (b.walletRefunded ?? 0)), p.pool + credited), round2(p.pool + credited));
   if (share > 0) b.walletRefunded = round2((b.walletRefunded ?? 0) + share);
 }
+

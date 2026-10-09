@@ -80,7 +80,7 @@ describe("walletShareOfRefund / walletShareFor", () => {
 describe("the split pool is what each source really holds, never the price", () => {
   it("wallet 30 paid, rest unpaid, after a cancel flipped the label to Refund pending: pool 30, all of it wallet", () => {
     const b = { pay: "Refund pending", amount: 70, amountPaid: 0, walletApplied: 30, cashHeld: 0 } as Booking;
-    assert.deepEqual(refundPoolOf(b), { pool: 30, wallet: 30, cash: 0 });
+    assert.deepEqual(refundPoolOf(b), { pool: 30, wallet: 30, cash: 0, unknown: false });
     assert.equal(walletShareFor(b, 30), 30);
   });
   it("wallet 30 + cash 20 paid of 100 (label Refund pending): pool 50; refund 25 -> 15 wallet, refund 50 -> 30 wallet", () => {
@@ -88,5 +88,23 @@ describe("the split pool is what each source really holds, never the price", () 
     assert.equal(refundPoolOf(b).pool, 50);
     assert.equal(walletShareFor(b, 25), 15);
     assert.equal(walletShareFor(b, 50), 30);
+  });
+});
+
+describe("legacy bookings (cancelled before cashHeld existed)", () => {
+  it("wallet 30, rest unpaid, label Refund pending, no cashHeld, nothing recorded: unknown cash -> wallet first (30 of 30), never a cash share", () => {
+    const b = { pay: "Refund pending", amount: 70, amountPaid: 0, walletApplied: 30 } as Booking;
+    assert.equal(refundPoolOf(b).unknown, true);
+    assert.equal(walletShareFor(b, 30), 30);
+  });
+  it("wallet 30 + cash 20 recorded, no cashHeld: cash is known from amountPaid -> pool 50, proportional", () => {
+    const b = { pay: "Refund pending", amount: 70, amountPaid: 20, walletApplied: 30 } as Booking;
+    assert.equal(refundPoolOf(b).unknown, false);
+    assert.equal(walletShareFor(b, 25), 15);
+  });
+  it("wallet 30 + card 70 paid (label Paid), no cashHeld: proportional as normal", () => {
+    const b = { pay: "Paid", amount: 70, amountPaid: 70, walletApplied: 30 } as Booking;
+    assert.equal(refundPoolOf(b).unknown, false);
+    assert.equal(walletShareFor(b, 50), 15);
   });
 });
