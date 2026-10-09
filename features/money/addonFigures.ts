@@ -1,6 +1,19 @@
 // Finance Insights > Add-ons: what was sold, from the bookings in the window. One plain function so the screen and the tests read the same maths.
 import type { Booking } from "../bookings/types"; // relative: the tests (and the API) load this file without the "@/" alias
-import { addonRefunded, addonUnits, bookingAddonLines } from "../bookings/addons";
+import { paidSoFar } from "../bookings/helpers";
+import { addonRefunded, addonUnits, bookingAddonLines, inheritSplitOneOffs } from "../bookings/addons";
+
+/**
+ * SOLD rule (Finance add-on figures): a booking's add-ons are sold when the booking is not cancelled, OR it is cancelled but money was actually
+ * kept (something was paid; the per-line refund test in addonFigures still removes any extra that went back). A cancelled booking that was never
+ * paid (cancelled with no refund, or a partial where no money moved) sold nothing. Offered / Waitlisted / Declined places are never sales.
+ * Exception (addonFigures): a one-off extra stored on a cancelled reference of a SPLIT checkout that a live sibling inherited is still sold (counted once).
+ */
+export function addonsSold(b: Pick<Booking, "status" | "pay" | "amount" | "amountPaid" | "walletApplied">): boolean {
+  if (b.status === "Offered" || b.status === "Waitlisted" || b.status === "Declined") return false;
+  if (b.status === "Cancelled") return paidSoFar(b) > 0.004;
+  return true;
+}
 
 export interface AddonAgg { count: number; rev: number }
 export interface AddonFigures { bookingsWithAddon: number; addonUnits: number; addonRevenue: number; byName: Map<string, AddonAgg> }
@@ -12,9 +25,18 @@ export interface AddonFigures { bookingsWithAddon: number; addonUnits: number; a
 export function addonFigures(bookings: Booking[]): AddonFigures {
   const byName = new Map<string, AddonAgg>();
   let bookingsWithAddon = 0, units = 0, revenue = 0;
-  for (const b of bookings) {
-    // Not sales: a place only OFFERED off the waiting list (not accepted yet), a waitlisted, declined or cancelled booking.
-    if (b.status === "Offered" || b.status === "Waitlisted" || b.status === "Declined") continue;
+  const moved = inheritSplitOneOffs(bookings as never);
+  for (const b0 of bookings) {
+    // Not sales: a place only OFFERED off the waiting list (not accepted yet), a waitlisted or declined one, or a cancelled booking nobody paid for.
+    let b = b0;
+    if (!addonsSold(b0)) {
+      // ...except a one-off extra that moved to a live sibling of the same checkout (the T-shirt's price stays on the cancelled first reference).
+      const kept = moved.get(b0.ref);
+      const src = (b0 as { addonLines?: unknown[] }).addonLines ?? [];
+      const followed = b0.status === "Cancelled" && kept ? src.filter((l) => !kept.includes(l as never)) : [];
+      if (!followed.length) continue;
+      b = { ...b0, addonLines: followed } as never;
+    }
     const lines = bookingAddonLines(b);
     let any = false;
     for (const l of lines) {

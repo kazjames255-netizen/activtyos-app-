@@ -159,3 +159,16 @@ test("R7: stampAddonRefund stores the answer once; refunded is sticky, a later n
   stampAddonRefund(b as never, { scope: "whole" }, true);
   assert.equal(b.addonLines[2].refunded, true, "a later refund upgrades kept to refunded");
 });
+
+test("X-FIGURES-UNPAID-CANCELLED: a cancelled booking that was never paid sells nothing; a cancelled one that KEPT money still counts", () => {
+  const lines = [lunch("a", WEEK, 21)];
+  const mk = (extra: Record<string, unknown>) => bk("C", lines, { status: "Cancelled", ...extra }) as never;
+  assert.equal(addonFigures([mk({ pay: "Unpaid", amount: 100, cancel: { refund: "none" } })]).addonRevenue, 0, "unpaid cancel, no refund");
+  assert.equal(addonFigures([mk({ pay: "Unpaid", amount: 100, cancel: { refund: "partial", amount: 50 } })]).addonUnits, 0, "unpaid cancel, partial where no money moved");
+  const kept = addonFigures([mk({ pay: "Paid", amount: 169, cancel: { refund: "none" } })]);
+  assert.equal(kept.addonRevenue, 21, "paid cancel, nothing refunded: kept");
+  assert.equal(kept.bookingsWithAddon, 1);
+  assert.equal(addonFigures([mk({ pay: "Paid", amount: 169, cancel: { refund: "full" } })]).addonRevenue, 0, "paid then fully refunded");
+  assert.equal(addonFigures([mk({ pay: "Partially paid", amount: 169, amountPaid: 40, cancel: { refund: "none" } })]).addonRevenue, 21, "part-paid and kept");
+  assert.equal(addonFigures([bk("L", lines, { pay: "Unpaid", amount: 100 }) as never]).addonRevenue, 21, "a live unpaid booking is still a sale");
+});

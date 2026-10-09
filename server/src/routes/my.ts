@@ -1,4 +1,5 @@
 import { mergeGroupKey } from "../lib/bookingMergeKey";
+import { isFranchise } from "../lib/franchiseScope";
 import { stopOpenPayments } from "../lib/checkoutIntent";
 import { ageCapGroup } from "../lib/childAge";
 import { randomUUID } from "node:crypto";
@@ -887,6 +888,12 @@ my.post("/bookings", async (req, res) => {
   }
   if (onBehalf && listing.tenantId !== req.auth!.tenantId) {
     res.status(404).json({ error: "Listing not found" });
+    return;
+  }
+  // A franchise (and its staff) books on behalf of families ONLY on its own listings: a head-office or sibling listing would create a
+  // booking stamped to that listing's owner, which the franchise then could not see (same ownership rule as POST /api/bookings).
+  if (onBehalf && isFranchise(req.auth!) && ((listing as { franchiseId?: string | null }).franchiseId ?? null) !== req.auth!.franchiseId) {
+    res.status(403).json({ error: "You can only book on your own listings. This listing belongs to head office or another franchise." });
     return;
   }
   if (!onBehalf && listing.opensAt && Date.now() < new Date(listing.opensAt).getTime()) {
