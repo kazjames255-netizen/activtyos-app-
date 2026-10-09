@@ -61,7 +61,7 @@ export const AGENT_AREAS: AgentArea[] = [
   { id: "A21", area: "Name, domain, registered office", status: "waiting", rounds: "n/a", next: "Pick name and domain. Office: Suite A, 82 James Carter Road, Mildenhall IP28 7DE (pages show 12 Corris Court until Companies House updates).", date: D },
   { id: "A22", area: "HMRC message and production credentials", status: "waiting", rounds: "n/a", next: "Send the message after the name, domain and office are settled.", date: D },
   { id: "A23", area: "Stripe refund events", status: "waiting", rounds: "n/a", next: "Tick charge.refunded, refund.created, refund.updated, refund.failed on both endpoints.", date: D },
-  { id: "A24", area: "Head-injury accident rule", status: "shipped", rounds: "n/a", next: "Owner decided: yes, always notify at once. Built as A30.", date: D },
+  { id: "A24", area: "Head-injury accident rule", status: "testing", rounds: "n/a", next: "Owner decided yes (9 Oct). Built as A30, verifier pending.", date: D },
   { id: "A25", area: "Repository visibility", status: "waiting", rounds: "n/a", next: "Decide public or private.", date: D },
   { id: "A26", area: "Add-ons acceptance run (build #176)", status: "held", rounds: "2 blind testers, 58 cases each: 55 pass, 0 fail, 1 not built (AP12), 1 needs browser (AM05)", next: "Both found 2 money bugs: provider cancel-child leaves 230 not 161; family release then provider cancel-day refunds about 19 pounds short. Fixer after the wallet-refund work.", date: D },
   { id: "A27", area: "Staff no-prices check", status: "testing", rounds: "Browser: 52 pass, 2 fail, 4 not done", next: "Fix staff-listings-noprice-9oct (2f00934e) built, also hides the Not paid yet chip from staff (owner decided). Awaiting independent verifier.", date: D },
