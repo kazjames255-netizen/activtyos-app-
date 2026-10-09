@@ -57,7 +57,7 @@ test("what staff need is still there: names, contacts, days, sessions, status, t
 test("both staff booking routes (list and one booking) go through the allow-list", () => {
   const src = fs.readFileSync(path.join(root, "server/src/routes/bookings.ts"), "utf8");
   assert.match(src, /function staffView[^]*?staffBookingView\(b\)/);
-  assert.ok((src.match(/staffView\(/g) ?? []).length >= 3, "list + single + definition");
+  assert.ok((src.match(/staffView\(/g) ?? []).length >= 2, "list + single");
   assert.doesNotMatch(src, /const MONEY_KEYS = \[/, "the old deny-list is gone");
 });
 

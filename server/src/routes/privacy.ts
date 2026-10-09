@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "../firebase";
 import { notify } from "../lib/notify";
+import { familyBooking } from "../lib/familyView";
 import { exportChildLearning } from "../lib/hubPrivacy";
 import { ukTodayPlus } from "../lib/ukDate";
 import { decryptSensitive } from "./onboarding";
@@ -134,7 +135,7 @@ async function gather(req: import("express").Request) {
     }
     register.sort((a, b) => String(a.date).localeCompare(String(b.date)));
     out.children = kids.docs.map(strip);
-    out.bookings = bookings.docs.map(strip);
+    out.bookings = bookings.docs.map((d) => familyBooking(strip(d) as never)); // the family's own view of its bookings (no internal refund bookkeeping)
     out.payments = payments.docs.map(strip);
     out.mealOrders = orders.docs.map(strip);
     out.medications = meds.map(strip);

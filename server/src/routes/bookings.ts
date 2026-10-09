@@ -9,7 +9,7 @@ import { mergeBookings } from "../lib/mergeBookings";
 import { db } from "../firebase";
 import { ukToday } from "../lib/ukDate";
 import { parentBell } from "../lib/parentBells";
-import { staffSafeNote, stripAddonMoney, withoutMoneyKeys } from "../lib/rosterRules";
+import { staffBookingView } from "../lib/rosterRules";
 import { canWrite, operatorScope, managerScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
@@ -335,28 +335,8 @@ const withChildcare = <T extends ChildcareBooking>(b: T): T => (isChildcare(b) ?
  *  incidents) — never the amounts, what was paid, or payment references that
  *  would let someone match a family's money. A coach's token used to return
  *  every figure in the tenant. */
-const MONEY_KEYS = [
-  "amount", "amountPaid", "cardPaid", "walletApplied", "discountCode", "paymentRef", "payRefs",
-  "paymentIntentId", "stripeAccount", "mealItems", "reconciledBy", "payments", "refund",
-  // Whether a family has paid, and how, is money too (acceptance d24s4).
-  "pay", "method", "refundedApproved", "walletRefunded", "invoicePaymentIntentIds", "tfc",
-  // The childcare block is money too: it carries the references a family's
-  // payment arrives under, ours and theirs.
-  "childcare", "childcarePayments",
-  // What was given back is money too, and it reveals add-on prices (a T-shirt refund is its price): the refund log, every refund entry
-  // (amount / cash split / via / approver times), the last-sent figure, the wallet relief, and the checkout id that ties payments together.
-  "refundLog", "refundEntries", "lastRefundSent", "walletRelieved", "checkoutId",
-] as const;
 function staffView<T extends Record<string, unknown>>(b: T): T {
-  const out: Record<string, unknown> = { ...b };
-  for (const k of MONEY_KEYS) delete out[k];
-  if (typeof out.note === "string") out.note = staffSafeNote(out.note); // system notes can carry an amount ("1 day released — £26.00 refund requested.")
-  const noAddonMoney = stripAddonMoney(out);
-  for (const k of ["addons", "addonLines", "addonRequests"]) if (k in noAddonMoney) out[k] = noAddonMoney[k];
-  if (out.cancel && typeof out.cancel === "object") {
-    out.cancel = withoutMoneyKeys(out.cancel);
-  }
-  return out as T;
+  return staffBookingView(b) as T; // an allow-list (lib/rosterRules.ts): anything not named there is never sent to staff
 }
 
 /** A booking, with its own field taking precedence over Firestore's stamp. */

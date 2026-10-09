@@ -97,6 +97,7 @@ import { geo, tiles, recogniseHandler } from "./routes/geo";
 import { ratios } from "./routes/ratios";
 import { registers } from "./routes/registers";
 import { kit } from "./routes/kit";
+import { kitCacheInvalidator } from "./lib/kitCache";
 import { children } from "./routes/children";
 import { platformNotifications } from "./routes/platformNotifications";
 import { payments, bookingPayPublic } from "./routes/payments";
@@ -171,6 +172,8 @@ app.use("/api/emails/inbound/resend", emailsResendInbound);
 // Firestore caps a document at 1MB, so anything past this can't be stored
 // anyway and gets a clear error rather than a size failure.
 app.use(express.json({ limit: "2mb" }));
+// Any successful write empties the Add-on orders summaries cache, so the month tally can never disagree with the per-day list after a cancel.
+app.use(kitCacheInvalidator);
 // Families (and anyone signed out) never receive a booking's checkoutId, on any route: decided per response, once the caller's role is known.
 app.use(stripCheckoutIdForFamilies);
 // gzip every JSON / text response ≥ 1 KB (res.send / res.json only — the SSE stream and images are left alone).

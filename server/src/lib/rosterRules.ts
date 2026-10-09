@@ -55,6 +55,40 @@ export function withoutMoneyKeys(v: unknown): unknown {
   return v;
 }
 
+/**
+ * WHAT STAFF MAY SEE OF A BOOKING: an ALLOW-LIST. A field that is not named here is never sent to a staff token, so a field added to the Booking type
+ * later is hidden from staff until someone decides it is safe (tests/regression/staff-allowlist.test.mts forces that decision: every Booking field must
+ * be listed below as shown or hidden). Names, children, contacts, days, sessions, status, the extras' names / choices / quantities and the family's notes
+ * are shown; every price, amount, payment state, discount, refund and reconciliation field is not.
+ */
+export const STAFF_BOOKING_SHOWN = [
+  "ref", "bid", "tenantId", "franchiseId", "blockId", "listingId", "seats", "days", "timing", "offeredAt", "offerExpiresAt", "requeuedAt", "waitlist", "waitlistMode",
+  "createdAt", "booker", "email", "phone", "child", "childId", "age", "dob", "kids", "listing", "pass", "ticket", "dates", "sessions", "status",
+  "addons", "addonLines", "addonRequests", "mealDates", "answers", "note", "cancel", "past", "amendMovesApproved", "origFirstDate", "dayOrigin",
+  "dateChangeRequest", "declineReason", "serviceAddress", "postcode",
+] as const;
+/** Every other Booking field, named so the allow-list test can tell "decided: hidden" from "not decided yet". */
+export const STAFF_BOOKING_HIDDEN = [
+  "voucherScheme", "voucherSendBy", "voucherReceiveBy", "paymentRef", "payRefs", "cardPaid", "tfcAmount", "tfcRemainderVia", "tfcPayment", "reconNotes", "receivedAfterCancel",
+  "nudges", "lastNudgedAt", "cardFailed", "paymentIntentId", "invoiceResends", "invoiceSentAt", "stripeAccount", "cardHold", "checkoutId", "pay", "method", "amount", "amountPaid",
+  "priceOverride", "listPrice", "discountOff", "discountNames", "earlyBirdScope", "walletApplied", "walletRelieved", "priceFollowsRelease", "refundedApproved", "walletRefunded",
+  "refundEntries", "refundAwaiting", "lastRefundSent", "discountCode", "mealItems", "recon", "reconciledBy", "evid", "refundLog", "amendFeesCharged",
+  "_cancelling", "_refundType", "_chgKi", "_chgDt",
+] as const;
+const STAFF_SHOWN = new Set<string>(STAFF_BOOKING_SHOWN);
+
+/** A booking as a STAFF token gets it: only the allow-listed fields, with the money taken out of the ones that can carry some (the extras' prices, any
+ *  price / amount / refund key inside the children, the cancellation record or the date-change request, and system-written amounts in the note). */
+export function staffBookingView<T extends Record<string, unknown>>(b: T): Partial<T> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(b)) if (STAFF_SHOWN.has(k)) out[k] = v;
+  if (typeof out.note === "string") out.note = staffSafeNote(out.note);
+  const noAddonMoney = stripAddonMoney(out);
+  for (const k of ["addons", "addonLines", "addonRequests"]) if (k in noAddonMoney) out[k] = noAddonMoney[k];
+  for (const k of ["kids", "cancel", "dateChangeRequest"]) if (out[k] && typeof out[k] === "object") out[k] = withoutMoneyKeys(out[k]);
+  return out as Partial<T>;
+}
+
 /** What a STAFF token gets of a booking's add-ons: the choices, quantities and answers, never a price. The one place that removes add-on money
  *  for staff: the booking, the booking list and the register all use it. Owner / franchise / freelancer views do not call it. */
 export function stripAddonMoney<T extends Record<string, unknown>>(b: T): T {

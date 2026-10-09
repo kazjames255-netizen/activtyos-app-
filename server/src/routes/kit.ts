@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import type { BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
+import { cached } from "../lib/kitCache";
 import { blocksInHoNet, franchiseListingIds, listingOwners } from "../lib/franchiseScope";
 import { staffSiteScope } from "../lib/siteScope";
 import { ukToday } from "../lib/ukDate";
@@ -85,15 +86,6 @@ async function bookingsOfBlocks(tenantId: string, blocks: { id: string }[]): Pro
 
 // A minute of caching for the cheap summaries (sidebar, dashboard card, strip, month): they are read on every page load, and an order shows
 // within the minute (the screens also refresh on the realtime "bookings" channel, which bypasses nothing: the day view itself is never cached).
-const memo = new Map<string, { at: number; v: unknown }>();
-async function cached<T>(key: string, ttlMs: number, make: () => Promise<T>): Promise<T> {
-  const hit = memo.get(key);
-  if (hit && Date.now() - hit.at < ttlMs) return hit.v as T;
-  const v = await make();
-  memo.set(key, { at: Date.now(), v });
-  if (memo.size > 500) for (const k of memo.keys()) { memo.delete(k); if (memo.size < 400) break; }
-  return v;
-}
 const scopeKey = (req: import("express").Request, tenantId: string) => `${tenantId}|${req.auth!.role}|${req.auth!.franchiseId ?? ""}|${req.user?.uid ?? ""}|${typeof req.query.franchiseId === "string" ? req.query.franchiseId : ""}`;
 
 /** Only roles that may message families see a booker's email (the same people who can tick). */
