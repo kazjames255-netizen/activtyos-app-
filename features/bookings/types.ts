@@ -228,6 +228,8 @@ export interface Booking {
   /** Store credit taken off this booking at checkout. `amount` is already net
    *  of it — this is here so the money trail shows where the difference went. */
   walletApplied?: number;
+  /** Sent by the server ONLY when walletApplied > 0: the price / wallet / still-to-pay split (features/bookings/walletBreakdown.ts). Screens display it, never recompute. */
+  money?: import("./walletBreakdown").MoneyBreakdown;
   /** Part of `walletApplied` no longer owed for: a removed share (cancelled day / extra) larger than the cash due came off the wallet part. The
    *  booking's gross price is amount + walletApplied - walletRelieved. */
   walletRelieved?: number;

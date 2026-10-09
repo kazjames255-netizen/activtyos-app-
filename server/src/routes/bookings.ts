@@ -1,3 +1,4 @@
+import { withMoney } from "../../../features/bookings/walletBreakdown";
 import { resolvePendingCancel, alreadyRefundedWarning } from "../lib/pendingRefund";
 import { splitRefundByMethod } from "../lib/refundSplit";
 import { refPrefixFor } from "../lib/bookingRef";
@@ -331,7 +332,8 @@ bookings.get("/", async (req, res) => {
  * pair), so every screen reads one shape whether the booking was taken before
  * minting existed or after it. Everything else is passed through untouched.
  */
-const withChildcare = <T extends ChildcareBooking>(b: T): T => (isChildcare(b) ? { ...b, childcare: childcareOf(b) } : b);
+const withChildcare = <T extends ChildcareBooking>(b: T): T => withMoney(isChildcare(b) ? { ...b, childcare: childcareOf(b) } : b);
+// withMoney: a booking paid partly with wallet credit also carries its price / wallet / still-to-pay breakdown (display only; staff never get it - staffView drops it).
 
 /** What a STAFF token gets: the booking minus its money. Staff screens use
  *  bookings for names, children, days and contacts (Families, trips,
@@ -373,7 +375,7 @@ bookings.get("/:ref", async (req, res) => {
     const wl = await queuePositions(one.blockId, [one.ref]).catch(() => []);
     if (wl.length) (one as { waitlist?: unknown }).waitlist = wl.map(({ date, position }) => ({ date, position }));
   }
-  const full = isChildcare(one) ? { ...one, childcarePayments: paymentRecordsOf(one) } : one;
+  const full = isChildcare(one) ? { ...one, childcarePayments: paymentRecordsOf(one) } : one; // `one` already went through withChildcare (+ money)
   res.json(scope.role === "staff" ? staffView(full as unknown as Record<string, unknown>) : full);
 });
 

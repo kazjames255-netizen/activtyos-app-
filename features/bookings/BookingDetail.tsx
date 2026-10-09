@@ -13,6 +13,7 @@ import {
   kidActiveDays,
   money,
   payLabelFor,
+  shownPay,
   pendingPayActionT,
   payTone,
   waitingForPlace,
@@ -43,6 +44,7 @@ import { refundFor, effectiveRefundDate, policyById, adviceReasonT } from "@/lib
 import { post as apiPost, get as apiGet } from "@/lib/api";
 import { ChildCard, type ChildInfo } from "@/features/registers/ChildCard";
 import { MoneyConfirm } from "./MoneyConfirm";
+import { WalletMoneyRows, useWalletMethodLabel } from "./WalletMoneyRows";
 import { AddonRequestsPanel } from "./AddonRequestsPanel";
 
 interface MsgTemplate { id: string; name: string; subject?: string; body: string }
@@ -132,7 +134,7 @@ function MessageBookingModal({ booking, onClose }: { booking: Booking; onClose: 
   );
 }
 
-function Tile({ big, small }: { big: string; small: string }) {
+function Tile({ big, small, note }: { big: string; small: string; note?: string }) {
   return (
     <div className="min-w-[88px] flex-1 rounded-xl bg-[var(--brand-soft)] px-3 py-2.5">
       <div className="font-[var(--ff-display)] text-[18px] font-extrabold leading-none text-[var(--brand)]">
@@ -141,6 +143,7 @@ function Tile({ big, small }: { big: string; small: string }) {
       <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.03em] text-[var(--ink-3)]">
         {small}
       </div>
+      {note && <div className="mt-0.5 text-[10px] font-semibold text-[var(--ink-3)]">{note}</div>}
     </div>
   );
 }
@@ -574,6 +577,7 @@ function DateChangePanel({ booking }: { booking: Booking }) {
 
 export function BookingDetail({ booking }: { booking: Booking }) {
   const t = useT();
+  const walletMethod = useWalletMethodLabel();
   const w = useWord();
   const close = useBookingsStore((s) => s.close);
   const act = useBookingsStore((s) => s.act);
@@ -801,7 +805,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {/* Once cancelled/declined the payment state is moot — a cancelled
               booking isn't "awaiting" anything. */}
           {b.status !== "Cancelled" && b.status !== "Declined" && (
-            <Badge tone={refundAwaitingTransfer(b) ? { bg: "#fdf3d8", fg: "#9a5a00" } : payTone(b.pay, b.status)}>{refundAwaitingTransfer(b) ? t("p8lst.rfaChip") : b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : w(payLabelFor(b))}</Badge>
+            <Badge tone={refundAwaitingTransfer(b) ? { bg: "#fdf3d8", fg: "#9a5a00" } : payTone(shownPay(b), b.status)}>{refundAwaitingTransfer(b) ? t("p8lst.rfaChip") : b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdBadge") : w(payLabelFor(b))}</Badge>
           )}
           {b.status === "Waitlisted" && b.waitlist && b.waitlist.length > 0 && (
             <Badge tone={{ bg: "#fff1d6", fg: "#9a5a00" }}>{b.waitlist.map((x) => `${t("p9tx.wlPlace", { n: x.position })} · ${new Date(`${x.date}T00:00:00`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" })}`).join("  ")}</Badge>
@@ -869,7 +873,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             small={attendeeCount(b) === 1 ? t("p7bd.attendee_one") : t("p7bd.attendee_other")}
           />
           <Tile big={String(sessionCount(b))} small={t("p7bd.sessionsTile")} />
-          <Tile big={money(b.amount)} small={waitingForPlace(b.status) ? t("p9tx.ifOffered") : t("p7bd.totalLbl")} />
+          <Tile big={money(b.money?.gross ?? b.amount)} small={waitingForPlace(b.status) ? t("p9tx.ifOffered") : t("p7bd.totalLbl")} note={b.money ? t("p7bd.wbAfterWallet", { amt: money(b.money.due) }) : undefined} />
         </div>
 
         {/* Tabs — the booking, or the same child card as the register */}
@@ -933,7 +937,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
 
         {/* Payment */}
         <SectionHead>{t("p7bd.secPayment")}</SectionHead>
-        <DefRow label={t("p7bd.lblMethod")} value={methodLabel(b.method)} />
+        <DefRow label={t("p7bd.lblMethod")} value={walletMethod(b, methodLabel(b.method))} />
         {/bank|transfer/i.test(String(b.method ?? "")) && b.pay !== "Paid" && b.status !== "Cancelled" && (
           <div className="my-1.5 rounded-lg border border-[#c9d7f5] bg-[#eef3ff] px-3 py-2 text-[12.5px] text-[#171534]">
             <Rich text={t("p9tx.bdWaitBank", { ref: b.ref })} />
@@ -948,7 +952,8 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         {b.priceOverride && (
           <DefRow label={t("p9tx.bdPriceSet")} value={`${money(b.priceOverride.originalAmount)} → ${money(b.priceOverride.amount)} · ${b.priceOverride.by}${b.priceOverride.reason ? ` · ${b.priceOverride.reason}` : ""}`} />
         )}
-        <DefRow label={waitingForPlace(b.status) ? t("p9tx.ifOffered") : t("p7bd.totalLbl")} value={money(b.amount)} />
+        {b.money ? <WalletMoneyRows b={b} priceLabel={waitingForPlace(b.status) ? t("p9tx.ifOffered") : undefined} />
+          : <DefRow label={waitingForPlace(b.status) ? t("p9tx.ifOffered") : t("p7bd.totalLbl")} value={money(b.amount)} />}
         {(/tax.?free|\btfc\b/i.test(b.method ?? "") || /tax.?free|\btfc\b/i.test(b.voucherScheme ?? "")) && (
           <DefRow
             label={t("p7bd.lblTfcRecon")}

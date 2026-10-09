@@ -131,7 +131,13 @@ function drawReceipt(doc: Doc, b: Booking, ctx: ReceiptCtx, logo: { dataUrl: str
   if (loc) rows.push(["Location", loc]);
   if (b.addons && b.addons.length) rows.push(["🎁 Extras", addonSentences(b).join("   ·   ")]);
   rows.push(["Payment status", payLabelFor(b)]);
-  rows.push(["Payment method", b.method && b.method !== "—" ? b.method : "Card"]);
+  rows.push(["Payment method", b.money ? `Wallet + ${b.method && b.method !== "—" ? b.method : "Card"}` : (b.method && b.method !== "—" ? b.method : "Card")]);
+  if (b.money) {
+    rows.push(["Price", money(b.money.gross)]);
+    rows.push(["Paid by wallet", `-${money(b.money.walletApplied)}`]);
+    rows.push(["Paid by card or cash", money(b.money.cashPaid)]);
+    if (b.money.due > 0) rows.push(["Still to pay", money(b.money.due)]);
+  }
   if (refunded > 0) rows.push(["Refunded", `-${money(refunded)}  (of ${money(b.amount)})`]);
   rows.push(["Booked by", `${b.booker || ""}${b.email ? `   ·   ${b.email}` : ""}`]);
   const issued = fmtDate(b.createdAt);

@@ -1,4 +1,5 @@
 import { refundAwaitingTransfer } from "../../../features/bookings/helpers";
+import { withMoney } from "../../../features/bookings/walletBreakdown";
 import type { Booking } from "../../../features/bookings/types";
 
 /** What a FAMILY gets of its own booking's refund bookkeeping (My bookings, Payments, and the data export). The refund amount and status (cancel, refundLog, pay) are theirs; the provider's internals
@@ -14,5 +15,5 @@ export function familyBooking<T extends Partial<Booking>>(b: T): T {
     void _c; void _by; void _at;
     out.cancel = cancel;
   }
-  return out as unknown as T;
+  return withMoney(out as unknown as T);
 }
