@@ -416,6 +416,13 @@ bookings.get("/:ref/children", async (req, res) => {
 bookings.post("/", async (req, res) => {
   const scope = operatorScope(req, res);
   if (!scope || !requireWrite(req, res)) return;
+  // This route books a hand-typed amount and has no add-ons: refuse them rather than silently dropping what the provider chose.
+  // Quick book / Take booking use POST /api/my/bookings with onBehalfOf, which prices and validates add-ons on the server.
+  const sentExtras = req.body as { addons?: unknown; extras?: unknown; meals?: unknown } | undefined;
+  if (sentExtras && (sentExtras.addons !== undefined || sentExtras.extras !== undefined || sentExtras.meals !== undefined)) {
+    res.status(400).json({ error: "Add-ons can't be set on this route. Book on the family's behalf through POST /api/my/bookings (onBehalfOf) so the extras are priced and checked on the server." });
+    return;
+  }
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues });
