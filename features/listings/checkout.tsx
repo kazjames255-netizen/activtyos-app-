@@ -28,6 +28,7 @@ import { AddressFields } from "@/features/common/AddressFields";
 import { composeAddress, isFullAddress, splitAddress, visitLineHasHouse, type AddressParts } from "@/lib/addressComplete";
 import { money, PAY_METHODS } from "@/features/bookings/helpers";
 import { fmtDate, ordinal } from "./format";
+import { slotsOf, selState, sweepTo, slotFull, fullOf, allDaysForm, missingAnswers, copyTargets, type Slot } from "./addonSelect";
 import { uploadPlan, PLAN_MAX_BYTES } from "./planUpload";
 import { dobRequired } from "@/lib/childDob";
 import { useTenantSettings, questionsFor, asksEveryBooking, limitFor, liveVouchers, detailsForListing } from "@/lib/settings";
@@ -1990,12 +1991,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         const clearAll = () => b.basket.forEach((x) => kids.forEach((k) => b.setAddonDays(x.id, k, a.id, [])));
         // A t-shirt with no size is an order the provider can't fill, so the
         // step won't close over one.
-        const unanswered = b.basket.flatMap((x) =>
-          b.childrenOn(x.id)
-            .filter((k) => b.addonDays(x.id, k, a.id).length > 0)
-            .flatMap((k) => (a.questions ?? [])
-              .filter((q) => q.required && !(b.answers(x.id, k, a.id)[q.id] ?? "").trim())
-              .map((q) => ({ kid: k, label: q.label }))));
+        const allSlots = slotsOf(b.basket, b.childrenOn);
+        const slotDays = (sl: Slot) => b.addonDays(sl.itemId, sl.child, a.id);
+        const dayText = (dates: string[]) => dates.length === 1 ? uiDate(new Date(`${dates[0]}T00:00:00Z`), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : b.datesPretty(dates);
+        const unanswered = missingAnswers(allSlots, slotDays, a.questions ?? [], (sl, qid) => b.answers(sl.itemId, sl.child, a.id)[qid] ?? "")
+          .map((m) => ({ kid: m.slot.child, label: m.label, date: dayText(m.slot.dates) }));
         // What this extra costs, per child and in total, plus where the
         // booking stands — without repeating the pass lines from two steps ago.
         const costFor = (kid: string) =>
@@ -2015,8 +2015,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         const solid = { borderColor: BAR_INK, background: BAR_INK, color: onBar };
         const ghost = { borderColor: `${BAR_INK}66`, background: "rgba(255,255,255,.15)", color: BAR_INK };
         const btn = `flex-none border-2 px-3 py-1.5 text-[12px] font-extrabold ${tk.round}`;
-        const every = b.basket.every((x) =>
-          b.childrenOn(x.id).every((k) => b.addonDays(x.id, k, a.id).length === (perDay ? x.dates.length : 1)));
+        const every = selState(allSlots, slotDays, perDay) === "all";
         // The shortcut only earns its place when there's something to shortcut:
         // a one-off for a single child is one tap either way, and "every day"
         // is meaningless on something that isn't per-day.
@@ -2027,10 +2026,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           <div className="flex flex-none flex-wrap gap-2">
             {sweep && (
               <button type="button"
-                onClick={() => b.basket.forEach((x) => b.childrenOn(x.id).forEach((k) =>
-                  b.setAddonDays(x.id, k, a.id, every ? [] : perDay ? [...x.dates] : ["*"])))}
+                onClick={() => sweepTo(allSlots, slotDays, perDay).forEach(({ slot, days }) => b.setAddonDays(slot.itemId, slot.child, a.id, days))}
                 className={btn} style={every ? solid : ghost}>
-                {every ? `✓ ${sweep}` : sweep}
+                {every ? (kids.length > 1 ? `✓ ${sweep}` : perDay ? tr("p7ck.allDaysDone") : `✓ ${sweep}`) : sweep}
               </button>
             )}
             {/* Once something's chosen the way on is Next, and it belongs here
@@ -2095,7 +2093,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     )}
                     {on.map((kid) => {
                       const days = b.addonDays(x.id, kid, a.id);
-                      const all = days.length === x.dates.length;
+                      const all = slotFull({ itemId: x.id, child: kid, dates: x.dates }, days, perDay);
                       // The child's own colour, so each block is theirs at a
                       // glance rather than three identical grey lists.
                       const rec = roster.find((r) => r.name.trim() === kid);
@@ -2111,15 +2109,15 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                               <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold"
                                 style={{ background: kc.bg, color: kc.ink }}>{kid.trim().charAt(0).toUpperCase()}</span>
                             )}
-                            <b className="min-w-0 flex-1 truncate text-[13.5px]" style={{ color: kc.bg }}>{kid}</b>
+                            <b className="min-w-0 flex-1 truncate text-[13.5px]" style={{ color: kc.bg }}>{kid}{b.basket.length > 1 && x.dates.length > 0 ? ` · ${dayText(x.dates)}` : ""}</b>
                             <button type="button"
-                              onClick={() => b.setAddonDays(x.id, kid, a.id, days.length ? [] : perDay ? [...x.dates] : ["*"])}
+                              onClick={() => b.setAddonDays(x.id, kid, a.id, perDay ? (all ? [] : fullOf({ itemId: x.id, child: kid, dates: x.dates }, true)) : (days.length ? [] : ["*"]))}
                               className={`flex-none border-2 px-3 py-1 text-[11.5px] font-extrabold ${tk.round}`}
                               style={(perDay ? all : days.length > 0)
                                 ? { borderColor: kc.bg, background: kc.bg, color: kc.ink }
                                 : { borderColor: kc.bg, background: "transparent", color: kc.bg }}>
                               {perDay
-                                ? (all ? tr("p7ck.allNDays", { n: x.dates.length }) : tr("p7ck.everyDay"))
+                                ? (all ? (allDaysForm(x.dates.length).plural ? pickPlural(tr, locale, "p7ck.allNDays", x.dates.length) : tr("p7ck." + allDaysForm(x.dates.length).key, { n: x.dates.length })) : tr("p7ck.everyDay"))
                                 : (days.length ? tr("p7ck.yesPrice", { amt: money(a.price) }) : tr("p7ck.addPrice", { amt: money(a.price) }))}
                             </button>
                           </div>
@@ -2172,6 +2170,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                                             </button>
                                           );
                                         })}
+                                        {val.trim() && copyTargets(allSlots, { itemId: x.id, child: kid, dates: x.dates }, slotDays).length > 0 && (
+                                          <button type="button"
+                                            onClick={() => copyTargets(allSlots, { itemId: x.id, child: kid, dates: x.dates }, slotDays).forEach((t) => b.setAnswer(t.itemId, t.child, a.id, q.id, val))}
+                                            className={`border-2 border-dashed px-2.5 py-1 text-[11.5px] font-bold ${tk.round}`}
+                                            style={{ borderColor: kc.bg, color: kc.bg }}>{tr("p7ck.sameForAll")}</button>
+                                        )}
                                       </div>
                                     ) : (
                                       <input value={val} onChange={(e) => b.setAnswer(x.id, kid, a.id, q.id, e.target.value)}
@@ -2192,6 +2196,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               })}
             </div>
 
+            {unanswered.length > 0 && (
+              <div role="alert" className="mt-3 text-[12px] font-bold" style={{ color: "#f87171" }}>
+                {unanswered.slice(0, 3).map((u, i) => <div key={i}>{tr("p7ck.chooseFor", { what: u.label.toLowerCase(), date: kids.length > 1 ? `${u.date} (${u.kid})` : u.date })}</div>)}
+              </div>
+            )}
             <div className={`mt-3 border-t pt-2.5`} style={{ borderColor: tk.line }}>
               {kids.filter((k) => costFor(k) > 0).map((k) => (
                 <div key={k} className="flex items-baseline justify-between text-[11.5px]">
