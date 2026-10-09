@@ -136,7 +136,7 @@ export function Bell({ portal }: { portal: PortalKey }) {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="truncate text-[12.5px] font-bold text-[var(--ink)]">{n.i18n?.tk ? shown(n.i18n.tk, n.i18n.tv) : n.title}</span>
+                    <span className="line-clamp-2 break-words text-[12.5px] font-bold text-[var(--ink)]">{n.i18n?.tk ? shown(n.i18n.tk, n.i18n.tv) : n.title}</span>
                     <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{agoLabel(t, n.at)}</span>
                   </span>
                   <span className="mt-0.5 line-clamp-4 block text-[12px] leading-snug text-[var(--ink-2)]">

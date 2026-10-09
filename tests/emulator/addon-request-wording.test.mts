@@ -133,6 +133,19 @@ describe("the family's bell for the ANSWER", () => {
     assert.match(nn.body, /was cancelled \(.+\)\. Nothing to refund\.$/);
   });
 
+  it("a bank-transfer refund is only RECORDED: bell and email never say 'on its way' before the provider sends it", async () => {
+    const { ref } = await mk("wrr", { paid: true });
+    const r = await req(ref, { kind: "cancel", targets: [{ key: await keyOf(ref) }] });
+    assert.equal((await operatorAction(ref, "addon-approve", { requestId: r.json.id, resolution: "refund", amount: 8 })).status, 200);
+    const n = await parentBell(ref, /cancellation was approved/);
+    assert.match(n.body, /Your £8\.00 refund has been recorded; .+ will send it\.$/);
+    assert.ok(!/on its way/.test(n.body));
+    const mails = await mailsFor((m) => m.to === "parent-a@emu.test" && /cancellation was approved/.test(String(m.subject)) && String(m.html ?? "").includes(ref));
+    assert.ok(mails.length, "no family email");
+    assert.match(String(mails[0].html), /refund has been recorded/);
+    assert.ok(!/on its way/.test(String(mails[0].html)));
+  });
+
   it("the family's email says the same", async () => {
     const { ref } = await mk("wfe");
     const r = await req(ref, { key: await keyOf(ref), kind: "change", answers: { Size: "L" } });

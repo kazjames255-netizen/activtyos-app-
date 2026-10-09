@@ -9,6 +9,7 @@ import { BRAND } from "./brand";
 import { addonSentences } from "../../../features/bookings/addons";
 import { decisionWording, enDay, plainTitle, renderFull } from "../../../features/bookings/addonWording";
 import { englishTitle, trFor } from "./extraWording";
+import { refundNeedsProviderTransfer } from "../../../features/bookings/helpers";
 
 /** The price lines of a booking email. With store credit: Price (the whole price), Paid from store credit, then what is still to pay (or Paid, once it is) - never the cash due labelled "Total". */
 function moneyLines(b: Booking, row: (label: string, value: string) => string): string {
@@ -205,7 +206,7 @@ export function bookingConfirmedSpec(b: Booking, providerName: string, bank?: Ba
 export function addonDecisionSpec(b: Booking, providerName: string, r: AddonRequest): CustomerEmailSpec {
   const approved = r.status === "approved";
   // The same plain sentences as the family's bell (features/bookings/addonWording.ts), in English: the email has no language setting yet.
-  const w = decisionWording(r, { ref: b.ref, listing: b.listing });
+  const w = decisionWording(r, { ref: b.ref, listing: b.listing, awaitingTransfer: refundNeedsProviderTransfer(b), provider: providerName });
   const tr = trFor("en");
   const main = escapeHtml(renderFull(tr, w.body, enDay));
   const rest = w.more.filter((x) => x.key !== "p7shell.xrReason").map((x) => escapeHtml(renderFull(tr, x, enDay))).join(" ");

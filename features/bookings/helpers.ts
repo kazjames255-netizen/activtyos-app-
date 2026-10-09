@@ -810,6 +810,11 @@ export function unsentRefunds(b: RefundCarrier): { cash: number; since: string }
   return [{ cash: Math.max(0, asked), since: c.refundRecordedAt || c.refundedAt || "" }];
 }
 
+/** Will a refund on this booking have to be SENT by the provider (bank / cash / voucher), so it is only RECORDED until they confirm? Card refunds go out at once. */
+export function refundNeedsProviderTransfer(b: RefundCarrier & Parameters<typeof refundButtonKind>[0]): boolean {
+  return refundAwaitingTransfer(b) || !["stripe", "wallet"].includes(refundButtonKind(b));
+}
+
 /** Is any recorded offline refund still waiting for the provider's transfer? Card and wallet refunds are never "awaiting" (Stripe sends the card refund at
  *  once, wallet credit is instant). An older offline refund with no `refundTransfer` counts as awaiting (its ledger row is "to-reimburse"). */
 export function refundAwaitingTransfer(b: RefundCarrier): boolean {

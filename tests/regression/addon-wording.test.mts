@@ -69,6 +69,30 @@ test("the family's answer: approved change, declined change with the reason, can
   assert.equal(englishBody(nc), "Your tshirty stays on the booking (Home visit fitness lesson for fats kids, APF-10350).");
 });
 
+test("a bank / cash / voucher refund is only RECORDED until the provider sends it: never 'on its way' before that", () => {
+  const c = cancel([target({ days: ["2026-09-01"] })]);
+  const w = decisionWording(decided(c, { status: "approved", money: { resolution: "refund", amount: 10 } }), { ref: REF, listing: LISTING, awaitingTransfer: true, provider: "Sunny Club" });
+  assert.equal(englishBody(w), "Your tshirty on Tue 1 Sep was cancelled (Home visit fitness lesson for fats kids, APF-10350). Your £10.00 refund has been recorded; Sunny Club will send it.");
+  assert.ok(!/on its way/.test(englishBody(w)));
+  for (const lang of LANGS.filter((l) => l !== "en")) assert.notEqual(bodyIn(w, lang), englishBody(w), lang);
+  // a card refund (not awaiting a transfer) still says it is on its way
+  const card = decisionWording(decided(c, { status: "approved", money: { resolution: "refund", amount: 10 } }), { ref: REF, listing: LISTING, awaitingTransfer: false });
+  assert.match(englishBody(card), /refund is on its way\.$/);
+});
+
+test("the Bell lets a title wrap to two lines instead of cutting it", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../../components/shell/Bell.tsx", import.meta.url), "utf8");
+  assert.match(src, /line-clamp-2 break-words[^"]*text-\[12\.5px\] font-bold/);
+  assert.ok(!/truncate text-\[12\.5px\] font-bold/.test(src));
+});
+
+test("setupKnowledge no longer says every bell is never a sentence", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../../server/src/lib/setupKnowledge.ts", import.meta.url), "utf8");
+  assert.match(src, /EXCEPTION: extra \(add-on\) request bells/);
+});
+
 test("withdrawn: the provider is told, with the same plain naming", () => {
   const w = withdrawnWording(sizeChange(), { ref: REF });
   assert.equal(englishTitle(w), "Request withdrawn: tshirty");

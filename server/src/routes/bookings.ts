@@ -30,7 +30,7 @@ import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
 import { registerRows } from "../lib/registerRows";
-import { bookingKids, kidActiveDays, money, realPhone, refundableSoFar, receivedOf, cashReceivedOf, refundTransferAmount, refundAwaitingTransfer } from "../../../features/bookings/helpers";
+import { bookingKids, kidActiveDays, money, realPhone, refundableSoFar, receivedOf, cashReceivedOf, refundTransferAmount, refundAwaitingTransfer, refundNeedsProviderTransfer } from "../../../features/bookings/helpers";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
 import { approveBlockedMessage, declineBlockedMessage, nudgeBlockedMessage, canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval, shouldReleaseDiscountCodes } from "../lib/bookingGuards";
@@ -1139,7 +1139,7 @@ bookings.post("/:ref/actions", async (req, res) => {
           category: "booking",
           bellOnly: true,
           // Plain sentences in the family's own language (key + data), e.g. "Your tshirty change was approved" / "...changed from size xl to size m".
-          ...(() => { const t = bellText(decisionWording(r, { ref: updated.ref, listing: updated.listing })); return { title: t.title, body: t.body, i18n: t.i18n }; })(),
+          ...(() => { const t = bellText(decisionWording(r, { ref: updated.ref, listing: updated.listing, awaitingTransfer: refundNeedsProviderTransfer(updated), provider: providerName })); return { title: t.title, body: t.body, i18n: t.i18n }; })(),
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
