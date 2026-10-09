@@ -233,17 +233,28 @@ export async function releaseHolds(rows: Booking[]): Promise<void> {
     const mine = new Set(group.map((b) => b.ref));
     const all = await holdGroup(tenantId, intentId);
     const stillWaiting = all.some(({ b }) => !mine.has(b.ref) && b.cardHold?.state === "held" && b.status === "Approval needed");
-    const batch = db.batch();
-    for (const { ref, b } of all) {
-      if (!mine.has(b.ref)) continue;
-      b.cardHold = { ...b.cardHold!, state: "released" };
-      batch.set(ref, toDoc(b));
-    }
-    await batch.commit();
+    // Mark each booking's hold released from its CURRENT state (a capture finishing at this instant must not be overwritten by an older copy).
+    await db.runTransaction(async (tx) => {
+      const snaps = await Promise.all(all.filter(({ b }) => mine.has(b.ref)).map(({ ref }) => tx.get(ref)));
+      for (const sn of snaps) {
+        if (!sn.exists) continue;
+        const cur = fromDoc(sn.data() as BookingDoc);
+        if (cur.cardHold?.state !== "held" && cur.cardHold?.state !== "awaiting") continue; // captured / already released meanwhile: leave it
+        cur.cardHold = { ...cur.cardHold, state: "released" };
+        tx.set(sn.ref, toDoc(cur));
+      }
+    });
     if (stillWaiting) continue;
     await cancelIntent(intentId, group[0].stripeAccount);
     const payId = group[0].cardHold?.paymentId;
-    if (payId) await db.collection("payments").doc(payId).update({ status: "released" }).catch(() => {});
+    if (payId) {
+      // Only an authorisation nobody took: a payment that was captured / refunded in the meantime keeps its record (succeeded, duplicate-refunded...).
+      const payRef = db.collection("payments").doc(payId);
+      await db.runTransaction(async (tx) => {
+        const d = (await tx.get(payRef)).data() as { status?: string } | undefined;
+        if (d && (d.status === "created" || d.status === "held")) tx.update(payRef, { status: "released" });
+      }).catch(() => {});
+    }
   }
 }
 

@@ -48,7 +48,7 @@ async function trial(i: number, way: Way, offset: number) {
   const h = await heldBooking();
   const cancel = async () => {
     await sleep(offset);
-    return way === "parent" ? call("POST", `/api/my/bookings/${encodeURIComponent(h.ref)}/cancel`, A.token, {}) : operatorAction(P, h.ref, { type: "cancel", refund: "none" });
+    return way === "parent" ? call("POST", `/api/my/bookings/${encodeURIComponent(h.ref)}/cancel`, A.token, {}) : operatorAction(P, h.ref, { type: "cancel", refund: "full" });
   };
   const [ap, ca] = await Promise.all([operatorAction(P, h.ref, { type: "approve" }), cancel()]);
   return { ...h, i, way, offset, ap: ap.status, ca: ca.status };
