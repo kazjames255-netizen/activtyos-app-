@@ -16,7 +16,7 @@ export type ConfirmIntent =
 // free-text dates label for unscheduled phone bookings.
 export type TakeBookingInput = Omit<CreateBookingInput, "dates"> &
   ({ blockId: string; dates?: undefined } | { dates: string; blockId?: undefined });
-import { get as apiGet, post as apiPost } from "@/lib/api";
+import { get as apiGet, post as apiPost, ApiError } from "@/lib/api";
 import { csvFilename } from "./helpers";
 import { downloadCsv, localizedCsv } from "./exportFile";
 import { tNow } from "@/lib/i18n/provider";
@@ -77,7 +77,10 @@ interface BookingsState {
   sendBulkEmail: (subject: string, body: string) => Promise<boolean>;
   open: (ref: string) => void;
   close: () => void;
-  act: (ref: string, action: UiRowAction, reason?: string, extra?: { alreadySent?: boolean }) => void;
+  act: (ref: string, action: UiRowAction, reason?: string, extra?: { alreadySent?: boolean; confirmAlreadyRefunded?: boolean }) => void;
+  /** Set when the server refused Approve (409 already_refunded_in_stripe): the money was also refunded in Stripe. The panel asks before retrying. */
+  stripeWarn: { ref: string; stripeRefunded: number; pending: number; alreadySent: boolean } | null;
+  clearStripeWarn: () => void;
 
   cancelOpen: (ref: string) => void;
   cancelAbort: (ref: string) => void;
@@ -162,6 +165,8 @@ export const useBookingsStore = create<BookingsState>()(
       selected: {},
       openRef: null,
       confirm: null,
+      stripeWarn: null,
+      clearStripeWarn: () => set((s) => void (s.stripeWarn = null)),
       notice: null,
       showCreate: false,
       createListingId: null,
@@ -320,8 +325,18 @@ export const useBookingsStore = create<BookingsState>()(
 
       act: (ref, action, reason, extra) => {
         void run(async () => {
-          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: action, ...(reason?.trim() ? { reason: reason.trim() } : {}), ...(extra?.alreadySent ? { alreadySent: true } : {}) }));
-          set((s) => void (s.confirm = null));
+          try {
+            applyServer(await apiPost<Booking>(actionsUrl(ref), { type: action, ...(reason?.trim() ? { reason: reason.trim() } : {}), ...(extra?.alreadySent ? { alreadySent: true } : {}), ...(extra?.confirmAlreadyRefunded ? { confirmAlreadyRefunded: true } : {}) }));
+          } catch (e) {
+            // Nothing was changed: ask the provider whether to refund more on top of what Stripe already returned.
+            const body = e instanceof ApiError ? (e.body as { code?: string; stripeRefunded?: number; pending?: number } | undefined) : undefined;
+            if (action === "refund-approve" && body?.code === "already_refunded_in_stripe") {
+              set((s) => void (s.stripeWarn = { ref, stripeRefunded: Number(body.stripeRefunded) || 0, pending: Number(body.pending) || 0, alreadySent: !!extra?.alreadySent }));
+              return;
+            }
+            throw e;
+          }
+          set((s) => { s.confirm = null; s.stripeWarn = null; });
           if (action === "resend") {
             const b = get().bookings.find((x) => x.ref === ref);
             if (b) {
@@ -376,7 +391,7 @@ export const useBookingsStore = create<BookingsState>()(
         get().open(ref);
         set((s) => void (s.confirm = { ref, intent }));
       },
-      clearConfirm: () => set((s) => void (s.confirm = null)),
+      clearConfirm: () => set((s) => { s.confirm = null; s.stripeWarn = null; }),
 
       cancelChild: (ref, ki, opts) =>
         void run(async () => {
