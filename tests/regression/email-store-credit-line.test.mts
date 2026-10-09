@@ -12,12 +12,20 @@ const text = (b: Booking) => layout({ name: "Prov", hasLogo: false }, "t", "", b
 test("the booking email shows the store credit used between the discount and the total", () => {
   const t = text(base);
   assert.match(t, /Price before discount £20\.00/);
-  assert.match(t, /Paid from store credit − £5\.00/);
-  assert.match(t, /Total £13\.00/);
+  // 9 Oct: the cash due is no longer labelled "Total" (it hid the credit): Price is the whole price, then the credit, then what is left to pay.
+  assert.match(t, /Price £18\.00 Paid from store credit − £5\.00 To pay £13\.00/);
+  assert.doesNotMatch(t, /Total/);
 });
 
 test("no store-credit line when none was used", () => {
-  assert.doesNotMatch(text({ ...base, walletApplied: undefined } as Booking), /store credit/);
+  const t = text({ ...base, walletApplied: undefined } as Booking);
+  assert.doesNotMatch(t, /store credit/);
+  assert.match(t, /Total £13\.00/);
+});
+
+test("a booking the credit paid in full says so instead of To pay £0", () => {
+  const t = text({ ...base, amount: 0, walletApplied: 18 } as Booking);
+  assert.match(t, /Price £18\.00 Paid from store credit − £18\.00 Paid in full by store credit £0\.00/);
 });
 
 test("a merged multi-booking email sums the store credit of every row", () => {

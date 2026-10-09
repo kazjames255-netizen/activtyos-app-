@@ -2,11 +2,20 @@
 // Firestore, no sendMail, no network: lib/emails.ts resolves branding, the
 // listing's venue and the pay URL, then hands the results to these functions
 // (which is also what lets tests/emails.test.mts check the content).
+import { moneyBreakdown } from "../../../features/bookings/walletBreakdown";
 import type { AddonRequest, Booking } from "../../../features/bookings/types";
 import { bellTitle, bellBody, paymentType } from "./bellText";
 import { BRAND } from "./brand";
 import { addonSentences } from "../../../features/bookings/addons";
 import { requestWhat } from "../../../features/bookings/addonRequests";
+
+/** The price lines of a booking email. With store credit: Price (the whole price), Paid from store credit, then what is still to pay (or Paid, once it is) - never the cash due labelled "Total". */
+function moneyLines(b: Booking, row: (label: string, value: string) => string): string {
+  if (!((b.walletApplied ?? 0) > 0)) return row("Total", `<b>${gbp(b.amount)}</b>`);
+  const m = moneyBreakdown(b);
+  const rest = m.due > 0 ? row(m.cashPaid > 0 ? "Still to pay" : "To pay", `<b>${gbp(m.due)}</b>`) : m.paidInFullByWallet ? row("Paid in full by store credit", `<b>${gbp(0)}</b>`) : row("Paid", `<b>${gbp(m.cashPaid)}</b>`);
+  return `${row("Price", gbp(m.gross))}${row("Paid from store credit", `− ${gbp(m.walletApplied)}`)}${rest}`;
+}
 
 export const gbp = (n: number) => `£${(Math.round(n * 100) / 100).toFixed(2)}`;
 
@@ -74,8 +83,7 @@ export function layout(
           ${row("Child", escapeHtml(kids || "—"))}
           ${b.listPrice != null && (b.discountOff ?? 0) > 0 ? `${row("Price before discount", gbp(b.listPrice))}${row(`Discount${b.discountNames?.length ? ` (${b.discountNames.join(", ")})` : ""}`, `− ${gbp(b.discountOff ?? 0)}`)}` : ""}
           ${(b.addons ?? []).length ? row("🎁 Extras", addonSentences(b).map((x) => escapeHtml(x)).join("<br>")) : ""}
-          ${(b.walletApplied ?? 0) > 0 ? row("Paid from store credit", `− ${gbp(b.walletApplied ?? 0)}`) : ""}
-          ${row("Total", `<b>${gbp(b.amount)}</b>`)}
+          ${moneyLines(b, row)}
         </div>
         ${label("Dates &amp; times")}
         ${datesGridHtml(b.sessions ?? [])}

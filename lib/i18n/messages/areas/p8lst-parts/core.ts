@@ -391,6 +391,8 @@ export default fromRows({
   bxCol_pay: ["Payment", "Płatność", "Plată", "ادائیگی", "ਭੁਗਤਾਨ", "পেমেন্ট", "الدفع", "Pagamento", "Pago", "Paiement", "Taliad"],
   bxCol_method: ["Method", "Metoda", "Metodă", "طریقہ", "ਤਰੀਕਾ", "পদ্ধতি", "الطريقة", "Método", "Método", "Méthode", "Dull"],
   bxCol_amount: ["Amount", "Kwota", "Sumă", "رقم", "ਰਕਮ", "পরিমাণ", "المبلغ", "Valor", "Importe", "Montant", "Swm"],
+  bxCol_price: ["Price (before wallet)", "Cena (przed portfelem)", "Preț (înainte de portofel)", "قیمت (بٹوے سے پہلے)", "ਕੀਮਤ (ਵਾਲਿਟ ਤੋਂ ਪਹਿਲਾਂ)", "মূল্য (ওয়ালেটের আগে)", "السعر (قبل المحفظة)", "Preço (antes da carteira)", "Precio (antes del monedero)", "Prix (avant portefeuille)", "Pris (cyn y waled)"],
+  bxCol_walletPaid: ["Paid by wallet", "Zapłacono z portfela", "Plătit din portofel", "بٹوے سے ادا کیا", "ਵਾਲਿਟ ਨਾਲ ਭੁਗਤਾਨ", "ওয়ালেট থেকে পরিশোধ", "مدفوع من المحفظة", "Pago com a carteira", "Pagado con el monedero", "Payé avec le portefeuille", "Talwyd o'r waled"],
   bxCol_booker: ["Parent", "Rodzic", "Părinte", "والدین", "ਮਾਪੇ", "অভিভাবক", "ولي الأمر", "Pai/mãe", "Padre/madre", "Parent", "Rhiant"],
   bxCol_email: ["Email", "E-mail", "E-mail", "ای میل", "ਈਮੇਲ", "ইমেইল", "البريد الإلكتروني", "Email", "Email", "E-mail", "E-bost"],
   bxCol_phone: ["Phone", "Telefon", "Telefon", "فون", "ਫ਼ੋਨ", "ফোন", "الهاتف", "Telefone", "Teléfono", "Téléphone", "Ffôn"],

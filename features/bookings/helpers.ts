@@ -74,10 +74,13 @@ export const EXPORT_COLUMNS: ExportColumn[] = [
   { key: "ref", label: "Ref", group: "Booking", get: (b) => b.ref },
   { key: "bid", label: "Booking ID", group: "Booking", get: (b) => b.bid },
   { key: "status", label: "Status", group: "Booking", get: (b) => b.status },
-  { key: "pay", label: "Payment", group: "Booking", get: (b) => payLabel(b.pay) },
+  { key: "pay", label: "Payment", group: "Booking", get: (b) => payLabel(shownPay(b)) },
   { key: "method", label: "Method", group: "Booking", get: (b) => b.method },
   { key: "amount", label: "Amount", group: "Booking", numeric: true,
     get: (b) => (typeof b.amount === "number" ? b.amount.toFixed(2) : "") },
+  // Store credit explains the gap between the whole price and the Amount (cash due): both come from the server's `money` split, blank when no wallet was used.
+  { key: "price", label: "Price (before wallet)", group: "Booking", numeric: true, get: (b) => (b.money ? b.money.gross.toFixed(2) : "") },
+  { key: "walletPaid", label: "Paid by wallet", group: "Booking", numeric: true, get: (b) => (b.money ? b.money.walletApplied.toFixed(2) : "") },
   { key: "booker", label: "Parent", group: "Family", get: (b) => b.booker },
   { key: "email", label: "Email", group: "Family", get: (b) => b.email },
   { key: "phone", label: "Phone", group: "Family", get: (b) => b.phone },
@@ -113,7 +116,7 @@ export const EXPORT_PRESETS: { name: string; hint: string; keys: string[] }[] = 
   { name: "Register", hint: "Who's coming, and when",
     keys: ["children", "ages", "listing", "dates", "sessions", "booker", "phone", "status"] },
   { name: "Finance", hint: "What was charged and paid",
-    keys: ["ref", "booker", "listing", "pass", "amount", "pay", "method", "refund", "dates"] },
+    keys: ["ref", "booker", "listing", "pass", "price", "walletPaid", "amount", "pay", "method", "refund", "dates"] },
   { name: "Contacts", hint: "For an email list",
     keys: ["booker", "email", "phone", "children", "listing"] },
 ];
@@ -401,6 +404,9 @@ export function statusTone(status: string): BadgeTone {
   return map[status] || GREY;
 }
 
+/** The payment status to SHOW: the server's wallet-aware one when store credit was used (Unpaid + wallet = Partially paid), else the stored one. */
+export const shownPay = (b: { pay: string; money?: { pay: string | null } | null }): string => b.money?.pay ?? b.pay;
+
 export function payTone(pay: string, status?: string): BadgeTone {
   if (status && waitingForPlace(status)) return GREY;
   const map: Record<string, BadgeTone> = {
@@ -431,7 +437,8 @@ export function payLabel(pay: string): string {
  * voucher booking reads "Voucher paid", not a bare "Paid", so an operator can
  * still tell how the money came in.
  */
-export function payLabelFor(b: { pay: string; status?: string; voucherScheme?: string; method?: string }): string {
+export function payLabelFor(input: { pay: string; status?: string; voucherScheme?: string; method?: string; money?: { pay: string | null } | null }): string {
+  const b = { ...input, pay: shownPay(input) };
   // Nothing is owed until a waitlisted place is offered and accepted.
   if (b.status && waitingForPlace(b.status)) return "Waiting list - nothing owed";
   // A cancelled / declined booking that never paid owes nothing: "Unpaid" read as money still due.

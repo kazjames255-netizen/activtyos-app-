@@ -11,9 +11,10 @@ import { useRealtime } from "@/lib/realtime";
 import { useI18n, useT, useWord, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { Rich } from "@/components/i18n/Rich";
+import { WalletMoneyRows, useWalletMethodLabel } from "@/features/bookings/WalletMoneyRows";
 import { AddonBlock } from "@/features/bookings/AddonBlock";
 import { addonCount } from "@/features/bookings/addons";
-import { isNonCardMethod, visitAddressLabel, bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, refundAwaitingTransfer, refundableSoFar } from "@/features/bookings/helpers";
+import { isNonCardMethod, visitAddressLabel, bookingDateSummary, money, owedOf, paidSoFar, payLabelFor, payTone, shownPay, refundAwaitingTransfer, refundableSoFar } from "@/features/bookings/helpers";
 import { SessionTiles } from "@/features/bookings/SessionTiles";
 import { AddonRequests } from "./AddonRequests";
 import { PayModal } from "@/features/payments/PayModal";
@@ -897,6 +898,7 @@ function BankTransferBox({ b }: { b: Booking }) {
 
 function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, clash, listingInfo, venue, mealOrders = [] }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; autoOpen?: boolean; clash?: boolean; listingInfo?: AmendListing | null; venue?: { location?: string | null; address?: string | null; city?: string | null; online?: boolean; joinInfo?: string | null }; mealOrders?: MealOrder[] }) {
   const t = useT();
+  const walletMethod = useWalletMethodLabel();
   const w = useWord();
   const { locale } = useI18n();
   const [expanded, setExpanded] = useState(!!(autoAmend || autoCancel || autoPay || autoOpen));
@@ -1051,11 +1053,12 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           </PCol>
           <PCol label={t("parent.datesCol")} w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{bookingDateSummary(b, (date) => tNow("p7parent.startsOn", { date }))}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{pickPlural(t, locale, "p7bk.sessN", sessCount)} · {pickPlural(t, locale, "p7bk.kidN", childCount)}{sessCount > 1 ? " · " + t("p7bk.tapViewAll") : ""}</span></PCol>
           <PCol label={t("parent.statusCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? t("parent.dateChangeStatus") : w(b.status)}</span></PCol>
-          {!cancelled && <PCol label={t("parent.paymentCol")} w="w-[104px]"><span className="inline-flex max-w-full whitespace-normal rounded-xl px-2.5 py-[3px] text-[11px] font-extrabold leading-tight" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdParentBadge") : b.status === "Approval needed" && b.cardHold?.state === "awaiting" ? t("p8lst.holdWaitBadge") : w(payLabelFor(b))}</span></PCol>}
+          {!cancelled && <PCol label={t("parent.paymentCol")} w="w-[104px]"><span className="inline-flex max-w-full whitespace-normal rounded-xl px-2.5 py-[3px] text-[11px] font-extrabold leading-tight" style={{ background: payTone(shownPay(b)).bg, color: payTone(shownPay(b)).fg }}>{b.status === "Approval needed" && b.cardHold?.state === "held" ? t("p8lst.holdParentBadge") : b.status === "Approval needed" && b.cardHold?.state === "awaiting" ? t("p8lst.holdWaitBadge") : w(payLabelFor(b))}</span></PCol>}
           {attendLabel && <PCol label={t("p7bk.todayCol")} w="w-[130px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={attend?.status === "in" ? { background: "#dcfce7", color: "#166534" } : attend?.status === "absent" ? { background: "#fee2e2", color: "#991b1b" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{attendLabel}</span></PCol>}
           <div className="ms-auto flex-none text-end">
             <div className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)] sm:text-[8.5px]">{t("parent.amountCol")}</div>
-            <div className="text-[18px] sm:text-[15px] font-extrabold text-[var(--ink)]">{money(b.amount)}</div>
+            <div className="text-[18px] sm:text-[15px] font-extrabold text-[var(--ink)]">{money(b.money?.gross ?? b.amount)}</div>
+            {b.money && <div className="text-[10.5px] font-semibold text-[var(--ink-3)]">{t("p7bd.wbAfterWallet", { amt: money(b.money.due) })}</div>}
             {mealRows.length > 0 && <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-[#fff3e0] px-2 py-[2px] text-[10.5px] font-extrabold text-[#96631a]">🍽 {pickPlural(t, locale, "p7bk.mealN", mealRows.length)} · {money(mealTotal)}</div>}
           </div>
           <span className={`flex-none text-[13px] text-[var(--ink-3)] transition-transform ${expanded ? "rotate-180" : ""}`} title={expanded ? t("parent.close") : t("p7bk.openWord")}>▾</span>
@@ -1243,14 +1246,14 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
             </>
           )}
           <SectionHead>{t("parent.paymentSection")}</SectionHead>
-          <DefRow label={t("parent.methodLabel")} value={b.method} />
+          <DefRow label={t("parent.methodLabel")} value={walletMethod(b, b.method)} />
           {(b.discountOff ?? 0) > 0 && b.listPrice != null && (
             <>
               <DefRow label={t("p9tx.ckPriceBefore")} value={money(b.listPrice)} />
               <DefRow label={b.discountNames?.length ? t("p9tx.ckDiscountWith", { names: b.discountNames.join(", ") }) : t("p9tx.ckDiscount")} value={`− ${money(b.discountOff ?? 0)}`} />
             </>
           )}
-          <DefRow label={t("parent.totalLabel")} value={money(b.amount)} />
+          {b.money ? <WalletMoneyRows b={b} /> : <DefRow label={t("parent.totalLabel")} value={money(b.amount)} />}
           {/* Voucher payment received — the provider reconciled the money. */}
           {!cancelled && isVoucher && b.pay === "Paid" && (
             <div className="mt-2 rounded-lg border border-[#bfe6cd] bg-[#eaf0fc] px-3 py-2.5 text-[12.5px] font-semibold text-[var(--brand)]">

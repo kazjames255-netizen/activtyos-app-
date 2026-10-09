@@ -6,7 +6,7 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useT, useWord, tNow } from "@/lib/i18n/provider";
 import { useSettings } from "@/lib/settings";
-import { bookingDateSummary, isNonCardMethod, money, owedOf, partPaidCash, payLabelFor, payTone, refundAwaitingTransfer, refundLogLabel, refundedTotal } from "@/features/bookings/helpers";
+import { bookingDateSummary, isNonCardMethod, money, owedOf, partPaidCash, payLabelFor, payTone, shownPay, refundAwaitingTransfer, refundLogLabel, refundedTotal } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { PayModal } from "@/features/payments/PayModal";
 import { downloadReceipts, type ReceiptCtx } from "./paymentReceipt";
@@ -49,8 +49,10 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
         </div>
       </div>
       <span className="hidden w-[92px] text-end text-[11.5px] text-[var(--ink-3)] sm:inline">{w(methodOf(b))}</span>
-      <Badge tone={payTone(b.pay)}>{w(payLabelFor(b))}</Badge>
-      <span className="w-[72px] text-end text-[13.5px] font-extrabold">{money(action ? owedOf(b) : b.amount)}</span>
+      <Badge tone={payTone(shownPay(b))}>{w(payLabelFor(b))}</Badge>
+      <span className="w-[72px] text-end text-[13.5px] font-extrabold">{money(action ? owedOf(b) : (b.money?.gross ?? b.amount))}
+        {b.money && !action && <span className="block text-[10px] font-semibold text-[var(--ink-3)]">{t("p7bd.wbPaidWallet")} {money(b.money.walletApplied)}</span>}
+      </span>
       {onPdf ? (
         <button
           onClick={onPdf}
