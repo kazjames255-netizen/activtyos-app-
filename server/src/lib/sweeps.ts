@@ -16,7 +16,8 @@ import { refundReminderPeriod, REFUND_REMIND_MAX_PER_RUN } from "./refundReminde
 import { bellBody, bellMoney, bellTitle, paymentType } from "./bellText";
 import { bookingRefOfKey, entryFor, registerRows } from "./registerRows";
 import type { Booking } from "../../../features/bookings/types";
-import { kitNamesSentence, kitReminderKey, kitUnticked, type KitBooking } from "../../../features/bookings/addons";
+import { kitNamesSentence, kitReminderKey, kitUnticked, type KitBooking, type SplitBooking } from "../../../features/bookings/addons";
+import { withSplitOneOffs } from "./splitSiblings";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Every time-based behaviour in the platform, as scheduler sweeps (see
@@ -449,7 +450,8 @@ async function addonOrdersDayBefore(): Promise<void> {
   for (const g of byOwner.values()) {
     try {
       const ticks = await db.collection("kitTicks").where("tenantId", "==", g.tenantId).where("date", "==", tomorrow).get();
-      const left = kitUnticked(g.bookings, tomorrow, new Set(ticks.docs.map((d) => String(d.get("key")))));
+      const shown = await withSplitOneOffs(g.tenantId, g.bookings as never as SplitBooking[]);
+      const left = kitUnticked(shown, tomorrow, new Set(ticks.docs.map((d) => String(d.get("key")))));
       if (left.items <= 0) continue;
       const sentence = kitNamesSentence(left.byName);
       const when = niceDate(tomorrow);
@@ -1058,30 +1060,39 @@ export async function refundTransferReminders(): Promise<void> {
   const snap = await db.collection("payments").where("status", "==", "to-reimburse").limit(300).get();
   const now = Date.now();
   let sent = 0;
+  // ONE reminder per booking (not per refund): a booking with two unsent refunds gets one bell naming the total, counted from the oldest one.
+  const byBooking = new Map<string, { tenantId: string; ref: string; amount: number; createdAt: string; method?: string; id: string }>();
   for (const d of snap.docs) {
-    if (sent >= REFUND_REMIND_MAX_PER_RUN) break;
-    const p = d.data() as { tenantId?: string; type?: string; refs?: string[]; amount?: number; createdAt?: string };
+    const p = d.data() as { tenantId?: string; type?: string; refs?: string[]; amount?: number; createdAt?: string; method?: string };
     if (p.type !== "refund" || !p.tenantId || !p.createdAt) continue;
+    const ref = (p.refs ?? [])[0] ?? "";
+    const k = `${p.tenantId}|${ref}`;
+    const hit = byBooking.get(k);
+    if (!hit) byBooking.set(k, { tenantId: p.tenantId, ref, amount: p.amount ?? 0, createdAt: p.createdAt, method: p.method, id: d.id });
+    else { hit.amount = Math.round((hit.amount + (p.amount ?? 0)) * 100) / 100; if (p.createdAt < hit.createdAt) { hit.createdAt = p.createdAt; hit.id = d.id; } }
+  }
+  for (const p of byBooking.values()) {
+    if (sent >= REFUND_REMIND_MAX_PER_RUN) break;
     const period = refundReminderPeriod(p.createdAt, now);
     if (period == null) continue;
-    const ref = (p.refs ?? [])[0] ?? "";
+    const ref = p.ref;
     const days = Math.floor((now - Date.parse(p.createdAt)) / 86_400_000);
-    // One reminder per refund per 3-day period (fireOnce keys on the period).
-    const fired = await fireOnce(`refundsend_${d.id}_${period}`, { tenantId: p.tenantId }, () =>
+    // One reminder per booking per 3-day period (fireOnce keys on the period).
+    const fired = await fireOnce(`refundsend_${p.tenantId}_${ref}_${period}`, { tenantId: p.tenantId }, () =>
       notify({
-        tenantId: p.tenantId!,
+        tenantId: p.tenantId,
         to: { kind: "tenant" },
         category: "billing",
         key: "refund-to-send",
         // The bell is short and fixed (lib/bellText.ts); the long wording lives in the email.
         title: bellTitle("refundToSend", ref),
-        body: bellBody([paymentType({ method: (p as { method?: string }).method, amount: p.amount ?? 0 }), bellMoney(p.amount ?? 0), `${days} days`]),
-        subject: `Refund to send: ${ref} (£${(p.amount ?? 0).toFixed(2)}, ${days} days)`,
-        emailHtml: `<p>You approved a refund of <b>£${(p.amount ?? 0).toFixed(2)}</b> for booking <b>${esc(ref)}</b> ${days} days ago, but you haven't confirmed you've sent it. Open the booking, send the money (Reveal bank details shows the account for 30 seconds), then press <b>"I've sent the refund"</b>. The family is waiting for it.</p>`,
+        body: bellBody([paymentType({ method: p.method, amount: p.amount }), bellMoney(p.amount), `${days} days`]),
+        subject: `Refund to send: ${ref} (£${p.amount.toFixed(2)}, ${days} days)`,
+        emailHtml: `<p>You approved refunds totalling <b>£${p.amount.toFixed(2)}</b> for booking <b>${esc(ref)}</b> (the oldest ${days} days ago), but you haven't confirmed you've sent the money. Open the booking, send it (Reveal bank details shows the account for 30 seconds), then press <b>"I've sent the refund"</b>. The family is waiting for it.</p>`,
         href: `/company/bookings?ref=${encodeURIComponent(ref)}`,
         ref,
       }),
-    ).catch((e) => { console.error(`[sweeps] refund-transfer reminder ${d.id}:`, (e as Error).message); return false; });
+    ).catch((e) => { console.error(`[sweeps] refund-transfer reminder ${p.id}:`, (e as Error).message); return false; });
     if (fired) sent++;
   }
 }

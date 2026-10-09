@@ -72,7 +72,7 @@ const jh = join(homedir(), "ActivityOS-QA/tools/jdk/Contents/Home");
 if (spawnSync("java", ["-version"], { stdio: "ignore" }).status !== 0 && existsSync(join(jh, "bin/java"))) { env.JAVA_HOME = jh; env.PATH = `${jh}/bin:${env.PATH}`; }
 const dir = join(root, ".emu"); mkdirSync(dir, { recursive: true });
 const cfg = join(dir, `firebase.test.${off}.json`);
-writeFileSync(cfg, JSON.stringify({ emulators: { auth: { port: P.auth, host: "127.0.0.1" }, firestore: { port: P.fs, host: "127.0.0.1" }, ui: { enabled: false }, hub: { port: 14400 + off }, logging: { port: 14500 + off }, singleProjectMode: true } }, null, 2));
+writeFileSync(cfg, JSON.stringify({ emulators: { auth: { port: P.auth, host: "127.0.0.1" }, firestore: { port: P.fs, host: "127.0.0.1" }, ui: { enabled: false }, hub: { port: 24400 + off }, logging: { port: 34500 + off }, singleProjectMode: true } }, null, 2));
 const inner = `${JSON.stringify(process.execPath)} ${JSON.stringify(self)} --inner ${rest.map((a) => JSON.stringify(a)).join(" ")}`;
 const r = spawnSync("npx", ["--yes", "firebase-tools@latest", "emulators:exec", "--only", "auth,firestore", "--project", project, "--config", cfg, inner], { cwd: root, env, stdio: "inherit" });
 process.exit(r.status ?? 1);

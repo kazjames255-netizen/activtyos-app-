@@ -4,10 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, api } from "@/lib/api";
 import { useT } from "@/lib/i18n/provider";
-import { dateLocale } from "@/lib/i18n/format";
+import { formatDay, type DayFormat } from "@/lib/i18n/format";
+import { withHoNet } from "@/lib/ho-net";
+import { useHoScope } from "@/components/franchise/HoScope";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card } from "@/components/ui";
-import { usePortalHref } from "@/lib/portal-href";
+import { usePortalHref, useReadOnlyPortal } from "@/lib/portal-href";
 import { ADDON_ICON, daysWithOrders, monthGrid, monthRange, nextDayWith, type KitDayTally } from "@/features/bookings/addons";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -17,7 +19,7 @@ import { ADDON_ICON, daysWithOrders, monthGrid, monthRange, nextDayWith, type Ki
 // The server (routes/kit.ts) decides what is due; this screen draws it and records the ticks.
 // ─────────────────────────────────────────────────────────────────────────
 
-interface KitChild { key: string; ref: string; child: string; qty: number; done: boolean; by?: string; pending?: "change" | "cancel"; booker?: string; email?: string }
+interface KitChild { key: string; ref: string; child: string; qty: number; done: boolean; by?: string; pending?: "change" | "cancel"; flag?: "not-paid" | "awaiting-approval"; booker?: string; email?: string }
 interface KitGroup { id: string; name: string; choiceValue: string; choice: string; meal: boolean; total: number; children: KitChild[] }
 interface KitDay { date: string; canTick: boolean; groups: KitGroup[]; ticked: number; total: number }
 interface DaysResp { from: string; to: string; days: { date: string; items: number; byName: Record<string, number> }[]; names: string[]; listings: { id: string; name: string }[]; total: number; totals: Record<string, number>; canTick: boolean; canRemind: boolean; reminder: boolean }
@@ -29,7 +31,7 @@ const shift = (iso: string, n: number) => {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 };
-const fmt = (iso: string, o: Intl.DateTimeFormatOptions) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dateLocale(), { ...o, timeZone: "UTC" });
+const fmt = (iso: string, o: DayFormat) => formatDay(iso, o);
 const longDay = (iso: string) => fmt(iso, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 const shortDay = (iso: string) => fmt(iso, { weekday: "short", day: "numeric", month: "short" });
 
@@ -61,8 +63,11 @@ export function KitApp() {
   const [error, setError] = useState<string | null>(null);
   const [remindBusy, setRemindBusy] = useState(false);
   const [reminder, setReminder] = useState<boolean | null>(null);
+  // Staff cannot change the "Remind me the day before" switch (owners only), so they are not shown it at all.
+  const useStaffView = useReadOnlyPortal().staff;
 
-  const nameQ = `${name ? `&name=${encodeURIComponent(name)}` : ""}${listingId ? `&listingId=${encodeURIComponent(listingId)}` : ""}`;
+  const hoScope = useHoScope(); // head office: Add-on orders follow the network scope selector (own / a franchise / all)
+  const nameQ =`${name ? `&name=${encodeURIComponent(name)}` : ""}${listingId ? `&listingId=${encodeURIComponent(listingId)}` : ""}`;
   // The strip covers a week back to about two months ahead of the chosen day (one request, at most 93 days on the server).
   const range = useMemo(() => ({ from: shift(date, -7), to: shift(date, 60) }), [date]);
   const [loaded, setLoaded] = useState<{ from: string; to: string } | null>(null);
@@ -72,18 +77,18 @@ export function KitApp() {
   };
 
   const loadDay = useCallback(() => {
-    apiGet<KitDay>(`/api/kit?date=${date}${nameQ}`).then((d) => { setData(d); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Couldn't load"));
-  }, [date, nameQ]);
+    apiGet<KitDay>(withHoNet(`/api/kit?date=${date}${nameQ}`)).then((d) => { setData(d); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Couldn't load"));
+  }, [date, nameQ, hoScope]);
   const loadStrip = useCallback(() => {
     // Re-use the loaded range while the chosen day is still inside it (the arrows and chips move within it without a new request).
     const r = loaded && date >= loaded.from && date <= shift(loaded.to, -7) ? loaded : range;
-    apiGet<DaysResp>(`/api/kit/days?from=${r.from}&to=${r.to}${nameQ}`).then((d) => { setStrip(d); rememberListings(d.listings); setLoaded({ from: d.from, to: d.to }); setReminder((x) => (x === null ? d.reminder : x)); }).catch(() => {});
+    apiGet<DaysResp>(withHoNet(`/api/kit/days?from=${r.from}&to=${r.to}${nameQ}`)).then((d) => { setStrip(d); rememberListings(d.listings); setLoaded({ from: d.from, to: d.to }); setReminder((x) => (x === null ? d.reminder : x)); }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, range, nameQ]);
+  }, [date, range, nameQ, hoScope]);
   const loadMonth = useCallback(() => {
     const r = monthRange(month.y, month.m);
-    apiGet<DaysResp>(`/api/kit/days?from=${r.from}&to=${r.to}${nameQ}`).then((d) => { setMonthData(d); rememberListings(d.listings); }).catch(() => {});
-  }, [month, nameQ]);
+    apiGet<DaysResp>(withHoNet(`/api/kit/days?from=${r.from}&to=${r.to}${nameQ}`)).then((d) => { setMonthData(d); rememberListings(d.listings); }).catch(() => {});
+  }, [month, nameQ, hoScope]);
 
   useEffect(() => { setData(null); loadDay(); }, [loadDay]);
   useEffect(() => { loadStrip(); }, [loadStrip]);
@@ -149,7 +154,7 @@ export function KitApp() {
 
       <div className="kit-noprint mb-3 flex flex-wrap items-center gap-2">
         <h1 className="me-auto text-[20px] font-extrabold">{ADDON_ICON} {t("p8lst.kitTitle")}</h1>
-        {strip && (
+        {strip && !useStaffView && (
           <button type="button" onClick={() => void toggleReminder()} disabled={!strip.canRemind || remindBusy} aria-pressed={remindOn} data-testid="kit-remind"
             title={!strip.canRemind ? t("p8lst.kitRemindReadOnly") : remindOn ? t("p8lst.kitRemindOn") : t("p8lst.kitRemindOff")}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-extrabold disabled:opacity-60">
@@ -245,6 +250,7 @@ export function KitApp() {
                             <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
                               <input type="checkbox" checked={c.done} disabled={!data?.canTick} onChange={() => void tick(g, c)} className="h-5 w-5 flex-none accent-[#15b364]" data-testid="kit-tick" />
                               <span className="font-bold" style={c.done ? { textDecoration: "line-through", opacity: 0.6 } : undefined}>{c.child}</span>
+                              {c.flag && <span className="rounded-full bg-[var(--amber-soft)] px-2 py-[1px] text-[11px] font-extrabold text-[var(--ink)] ring-1 ring-[var(--amber-line)]" data-testid="kit-flag" data-flag={c.flag}>{c.flag === "not-paid" ? t("p8lst.kitFlagNotPaid") : t("p8lst.kitFlagAwaiting")}</span>}
                               {c.pending && <span className="rounded-full bg-[#faf6ff] px-2 py-[1px] text-[11px] font-extrabold text-[#6b3fb3] ring-1 ring-[#d9c7f2]" data-testid="kit-pending">{c.pending === "cancel" ? t("p8lst.kitPendingCancel") : t("p8lst.kitPendingChange")}</span>}
                             </label>
                             {c.email && <a href={msgHref(g, c)} className="kit-noprint flex-none rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11.5px] font-extrabold text-[var(--brand-ink,#1d3a8f)] no-underline" data-testid="kit-msg">✉ {t("p8lst.kitMessage")}</a>}

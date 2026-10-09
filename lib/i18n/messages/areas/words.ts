@@ -35,4 +35,9 @@ export default fromRows({
   bank_transfer: ["Bank transfer", "Przelew bankowy", "Transfer bancar", "بینک ٹرانسفر", "ਬੈਂਕ ਟ੍ਰਾਂਸਫਰ", "ব্যাংক ট্রান্সফার", "تحويل مصرفي", "Transferência bancária", "Transferencia bancaria", "Virement bancaire", "Trosglwyddiad banc"],
   haf_funded: ["HAF / funded", "HAF / dofinansowane", "HAF / finanțat", "HAF / فنڈ شدہ", "HAF / ਫੰਡ ਪ੍ਰਾਪਤ", "HAF / অর্থায়িত", "HAF / ممول", "HAF / financiado", "HAF / financiado", "HAF / financé", "HAF / wedi'i ariannu"],
   card: ["Card", "Karta", "Card", "کارڈ", "ਕਾਰਡ", "কার্ড", "بطاقة", "Cartão", "Tarjeta", "Carte", "Cerdyn"],
+  offline: ["Offline", "Poza aplikacją", "În afara aplicației", "آف لائن", "ਆਫ਼ਲਾਈਨ", "অফলাইন", "خارج التطبيق", "Fora da aplicação", "Fuera de la aplicación", "Hors application", "All-lein"],
+  wallet: ["Wallet", "Portfel", "Portofel", "والٹ", "ਵਾਲਿਟ", "ওয়ালেট", "المحفظة", "Carteira", "Monedero", "Portefeuille", "Waled"],
+  booker: ["Parent", "Rodzic", "Părinte", "والدین", "ਮਾਪੇ", "অভিভাবক", "الوالد", "Pai/mãe", "Padre/madre", "Parent", "Rhiant"],
+  provider: ["Provider", "Organizator", "Furnizor", "فراہم کنندہ", "ਪ੍ਰਦਾਤਾ", "প্রদানকারী", "المزوّد", "Fornecedor", "Proveedor", "Prestataire", "Darparwr"],
+  booking: ["Booking", "Rezerwacja", "Rezervare", "بکنگ", "ਬੁਕਿੰਗ", "বুকিং", "الحجز", "Reserva", "Reserva", "Réservation", "Archeb"],
 });

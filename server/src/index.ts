@@ -21,6 +21,7 @@ import { referencePublic, references } from "./routes/references";
 import { library, libraryPublic } from "./routes/library";
 import { listings } from "./routes/listings";
 import { my } from "./routes/my";
+import { stripCheckoutId, stripCheckoutIdForFamilies } from "./lib/stripCheckoutId";
 import { onlineSessions } from "./routes/onlineSessions";
 import { rateLimit } from "./lib/rateLimit";
 import { gzipResponses } from "./lib/gzip";
@@ -96,6 +97,7 @@ import { geo, tiles, recogniseHandler } from "./routes/geo";
 import { ratios } from "./routes/ratios";
 import { registers } from "./routes/registers";
 import { kit } from "./routes/kit";
+import { kitCacheInvalidator } from "./lib/kitCache";
 import { children } from "./routes/children";
 import { platformNotifications } from "./routes/platformNotifications";
 import { payments, bookingPayPublic } from "./routes/payments";
@@ -170,6 +172,10 @@ app.use("/api/emails/inbound/resend", emailsResendInbound);
 // Firestore caps a document at 1MB, so anything past this can't be stored
 // anyway and gets a clear error rather than a size failure.
 app.use(express.json({ limit: "2mb" }));
+// Any successful write empties the Add-on orders summaries cache, so the month tally can never disagree with the per-day list after a cancel.
+app.use(kitCacheInvalidator);
+// Families (and anyone signed out) never receive a booking's checkoutId, on any route: decided per response, once the caller's role is known.
+app.use(stripCheckoutIdForFamilies);
 // gzip every JSON / text response ≥ 1 KB (res.send / res.json only — the SSE stream and images are left alone).
 app.use(gzipResponses);
 
@@ -245,6 +251,7 @@ app.use("/api/public/library", anonOnly(rateLimit("library-public", 300)), optio
 
 // Public invoice pay page — found by unguessable payToken, no account needed.
 app.use("/api/public/invoice", rateLimit("public-invoice", 60), invoicePublic);
+app.use("/api/public/booking-pay", stripCheckoutId);
 app.use("/api/public/booking-pay", rateLimit("public-booking-pay", 60), bookingPayPublic);
 
 // Employment-reference form — the referee is an outsider with no account, so
@@ -379,6 +386,8 @@ app.use("/api/uploads", uploads);
 // Tax-Free Childcare (parent side) — mounted before /api/my so its own
 // routes win. Parent-only; falls back to the manual reference when HMRC
 // isn't configured (routes/tfc.ts).
+// Families never see a booking's checkoutId (provider-side plumbing): strip it from everything under /api/my and the public pay link.
+app.use("/api/my", stripCheckoutId);
 app.use("/api/my/tfc", tfc);
 app.use("/api/my/feedback", feedback);
 app.use("/api/my/files", childFiles);

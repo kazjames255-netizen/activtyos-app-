@@ -1,7 +1,7 @@
 "use client";
 
 import { useT } from "@/lib/i18n/provider";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { relativeFrom } from "@/lib/i18n/format";
 
 // The "Dates & times" list of a booking: one row per session, each with a coloured calendar tile (weekday, big day number, month) and the
 // time as a bold coloured pill, plus a small Today / Tomorrow / in N days / Past tag. Sessions arrive as strings like
@@ -30,7 +30,6 @@ export function daysFromToday(iso: string, todayIso = new Date().toISOString().s
 
 export function SessionTiles({ sessions, place }: { sessions: string[]; place?: string | null }) {
   const t = useT();
-  const rtf = new Intl.RelativeTimeFormat(dl(), { numeric: "auto" });
   return (
     <div className="flex flex-col gap-1.5">
       {sessions.map((s, i) => {
@@ -46,7 +45,7 @@ export function SessionTiles({ sessions, place }: { sessions: string[]; place?: 
         }
         const diff = daysFromToday(p.iso);
         const past = diff < 0;
-        const tag = past ? t("p8lst.sessPast") : rtf.format(diff, "day");
+        const tag = past ? t("p8lst.sessPast") : relativeFrom(diff, "day");
         return (
           <div key={i} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2" data-ui="session-row">
             <div

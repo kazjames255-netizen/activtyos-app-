@@ -5,6 +5,8 @@ import { isRealDay, isRealTime } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
+import { staffMayReadFamilies } from "../middleware/access";
+import { staffSiteScope } from "../lib/siteScope";
 import { franchiseListingIds, isFranchise } from "../lib/franchiseScope";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import {
@@ -214,6 +216,13 @@ blocks.get("/:id/attendees", async (req, res) => {
     res.status(404).json({ error: "Block not found" });
     return;
   }
+
+  // The same scope as the register: a franchise (and its staff) only its own listings, a site-assigned member of staff only their sites,
+  // and staff whose role has neither Bookings nor Registers nobody's family data.
+  if (!(await staffMayReadFamilies(req))) { res.status(403).json({ error: "Your role doesn't have access to Bookings or Registers. A manager can change this in Setup → Roles & permissions.", code: "no_access" }); return; }
+  if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId && !(await franchiseListingIds(block.tenantId, auth.franchiseId)).has(block.listingId)) { res.status(404).json({ error: "Block not found" }); return; }
+  const site = await staffSiteScope(auth);
+  if (site && !site.listings.has(block.listingId)) { res.status(404).json({ error: "Block not found" }); return; }
 
   const bookingsSnap = await db.collection("bookings").where("blockId", "==", snap.id).get();
   const attendees = bookingsSnap.docs

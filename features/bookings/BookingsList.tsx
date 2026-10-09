@@ -1,7 +1,7 @@
 "use client";
 
 import { fixYear } from "@/features/listings/wizardRules";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, formatDay } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n, useT, useWord, tNow } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
@@ -73,8 +73,7 @@ const heroTone = (s: string) => HERO_TONE[s] || { bg: "#e4e9fa", fg: "#2140a0" }
 /** "today", "yesterday", or "12 Jul" — the shape you'd say out loud. */
 // Short "Mon 27 Jul" for a date-change swap shown on the row.
 const fmtRowDate = (iso: string) => {
-  const d = new Date(`${iso}T00:00:00Z`);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  return formatDay(iso, { weekday: "short", day: "numeric", month: "short" });
 };
 
 function prettyBookedOn(b: { createdAt?: string }, t: (k: string) => string): string {
@@ -85,11 +84,7 @@ function prettyBookedOn(b: { createdAt?: string }, t: (k: string) => string): st
   y.setUTCDate(y.getUTCDate() - 1);
   if (d === today) return t("p7bkl.whenToday");
   if (d === y.toISOString().slice(0, 10)) return t("p7bkl.whenYesterday");
-  return new Date(`${d}T00:00:00Z`).toLocaleDateString(dl(), {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
+  return formatDay(d, { day: "numeric", month: "short" });
 }
 
 /** One accent per Bookings tab, so the row isn't a wall of identical pills. */

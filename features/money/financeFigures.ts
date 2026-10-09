@@ -3,8 +3,9 @@
 // component (FinanceAnalyticsApp.tsx) so the maths the page shows can be run
 // and checked against the Dashboard on its own (acceptance d19s1/s2/s7).
 // ─────────────────────────────────────────────────────────────────────────
+import { isNotYetSold } from "../bookings/sold";
 import { isOwed, round2, ukMonth } from "./bookingIncome";
-import { cashReceivedOf, collectedNet, isMoneyIn, owedNow, receivedOf, refundAwaitingTransfer, refundTransferAmount } from "../bookings/helpers";
+import { cashReceivedOf, collectedNet, isMoneyIn, owedNow, receivedOf, refundAwaitingTransfer, refundTransferAmount, unsentRefunds } from "../bookings/helpers";
 import type { Booking } from "../bookings/types";
 import { ACT_C, money, colorFor } from "./finance-kit";
 
@@ -121,12 +122,15 @@ export interface FinanceInput {
   listingVenueId: Record<string, string>;
 }
 
+/** Finance (figures, charts, CSV export) leaves out Declined and the not-yet-sold (Waitlisted, Offered). Cancelled stays in so its refunded money nets out. */
+export const inFinance = (b: { status: string }): boolean => b.status !== "Declined" && !isNotYetSold(b.status);
+
 export function financeFigures({ bookings, payIdx, months, nowMs, season, venue, listingSeason, listingVenue, listingVenueId }: FinanceInput) {
   // Waitlisted places have paid nothing and hold no seat, so they're neither
   // revenue nor an attendee — exclude them (alongside Declined). Cancelled
   // stays IN so its retained/refunded money still nets out below.
   const all = bookings.filter((b) =>
-    b.status !== "Declined" && b.status !== "Waitlisted"
+    inFinance(b)
     && (!season || listingSeason[b.listingId ?? ""] === season)
     && (!venue || listingVenueId[b.listingId ?? ""] === venue));
   const now = new Date(nowMs);
@@ -219,7 +223,7 @@ export function financeFigures({ bookings, payIdx, months, nowMs, season, venue,
       const owedBack = round2(refundTransferAmount(b));
       if (owedBack > 0.004) {
         refundsAwaiting += Math.min(owedBack, refundInWin);
-        refundsToSend.push({ ref: b.ref, name: b.booker || b.email || "—", listing: b.listing || "", amount: owedBack, since: b.cancel?.refundRecordedAt || b.cancel?.refundedAt || b.cancel?.on || "", method: b.voucherScheme || b.method || "" });
+        refundsToSend.push({ ref: b.ref, name: b.booker || b.email || "—", listing: b.listing || "", amount: owedBack, since: unsentRefunds(b).map((e) => e.since).filter(Boolean).sort()[0] || b.cancel?.refundRecordedAt || b.cancel?.refundedAt || b.cancel?.on || "", method: b.voucherScheme || b.method || "" });
       }
     }
     // Owed NOW — the one rule the Dashboard uses too (owedNow, d19s7).

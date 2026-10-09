@@ -39,6 +39,44 @@ export function agoLabel(t: (key: string, vars?: Record<string, string | number>
   return t("p7shell.agoDay", { n: Math.floor(hours / 24) });
 }
 
+// ---- Dates and "in N days" that follow the app language -------------------------------------------------------------------------------
+// Chrome ships no Welsh date or relative-time data (cy-GB silently prints English: "Sun, Oct 18", "in 2 days"), so Welsh uses its own names here.
+// Every other language goes through Intl with its own tag. `code` defaults to the active language; tests pass one explicitly.
+const CY_DAY_LONG = ["Dydd Sul", "Dydd Llun", "Dydd Mawrth", "Dydd Mercher", "Dydd Iau", "Dydd Gwener", "Dydd Sadwrn"];
+const CY_DAY_SHORT = ["Sul", "Llun", "Maw", "Mer", "Iau", "Gwe", "Sad"];
+const CY_MONTH_LONG = ["Ionawr", "Chwefror", "Mawrth", "Ebrill", "Mai", "Mehefin", "Gorffennaf", "Awst", "Medi", "Hydref", "Tachwedd", "Rhagfyr"];
+const CY_MONTH_SHORT = ["Ion", "Chwef", "Maw", "Ebr", "Mai", "Meh", "Gorff", "Awst", "Medi", "Hyd", "Tach", "Rhag"];
+
+export interface DayFormat { weekday?: "short" | "long"; day?: "numeric"; month?: "short" | "long"; year?: "numeric" }
+
+/** A calendar day ("YYYY-MM-DD", no time zone shifts) as text in the app language, e.g. "Sun 18 Oct" / "Sul 18 Hyd". */
+export function formatDay(iso: string, f: DayFormat, code: LocaleCode = current): string {
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  if (code === "cy") {
+    const w = f.weekday ? (f.weekday === "long" ? CY_DAY_LONG : CY_DAY_SHORT)[d.getUTCDay()] : "";
+    const m = f.month ? (f.month === "long" ? CY_MONTH_LONG : CY_MONTH_SHORT)[d.getUTCMonth()] : "";
+    return [w, f.day ? String(d.getUTCDate()) : "", m, f.year ? String(d.getUTCFullYear()) : ""].filter(Boolean).join(" ");
+  }
+  const s = d.toLocaleDateString(TAG[code] ?? TAG[DEFAULT_LOCALE], { ...f, timeZone: "UTC" });
+  // en-GB prints "Sun, 18 Oct" for weekday + day + month; the app writes it without the comma.
+  return code === "en" ? s.replace(/^(\w+),\s/, "$1 ") : s;
+}
+
+const CY_REL_UNIT: Record<"day" | "week" | "month", string> = { day: "diwrnod", week: "wythnos", month: "mis" };
+/** "in 2 days" / "tomorrow" / "3 weeks ago" in the app language (Welsh written out, see above). */
+export function relativeFrom(n: number, unit: "day" | "week" | "month", code: LocaleCode = current): string {
+  if (code === "cy") {
+    if (unit === "day" && n === 0) return "heddiw";
+    if (unit === "day" && n === 1) return "yfory";
+    if (unit === "day" && n === -1) return "ddoe";
+    const k = Math.abs(n);
+    const word = k === 2 && unit === "day" ? "ddiwrnod" : CY_REL_UNIT[unit]; // "dau ddiwrnod": soft mutation after two
+    return n < 0 ? `${k} ${word} yn ôl` : `ymhen ${k} ${word}`;
+  }
+  return new Intl.RelativeTimeFormat(TAG[code] ?? TAG[DEFAULT_LOCALE], { numeric: "auto" }).format(n, unit);
+}
+
 const SYMBOL_AFTER = new Set<LocaleCode>(["pl", "ro", "es", "fr", "pt"]);
 /**
  * GBP amount in the active language's number conventions ("£1,234.50" in English, "1 234,50 £" in French / Polish / Spanish...), always

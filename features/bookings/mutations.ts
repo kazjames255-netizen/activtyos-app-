@@ -4,7 +4,9 @@
 // drift. No React/zustand/Firebase imports allowed here.
 
 import type { Booking } from "./types";
-import { bookingKids, kidActiveDays, nowStr, refundAwaitingTransfer, refundableSoFar, refundedTotal, releaseValue, sessionDayLabel } from "./helpers";
+import { bookingKids, dayIso, kidActiveDays, nowStr, paidSoFar, refundAwaitingTransfer, refundTransferAmount, unsentRefunds, refundableSoFar, refundedTotal, releaseValue, sessionDayLabel } from "./helpers";
+import { followCancelledDays } from "./addonDays";
+import { undoAddonStamps } from "./addonRefund";
 import { accumulatePendingRelease } from "../../lib/cancellation";
 
 export type RowAction =
@@ -51,7 +53,7 @@ function applyCancelState(b: Booking) {
   const allCancelled = kids.length > 0 && kids.every((k) => k.cancelled);
   if (allCancelled) b.status = "Cancelled";
   const r = refundedTotal(b);
-  if (r >= b.amount - 0.001) b.pay = "Refunded";
+  if (r > 0 && r >= b.amount - 0.001) b.pay = "Refunded";
   else if (r > 0) b.pay = "Partially refunded";
 }
 
@@ -76,10 +78,18 @@ export function applyRowAction(b: Booking, action: RowAction): void {
   } else if (action === "refund-approve") {
     // Only a refund that actually returns money makes the booking "Refunded" (a no-refund cancellation approved by mistake must not).
     if (b.cancel && b.cancel.refund !== "none" && (b.cancel.amount ?? 1) > 0.004) { b.cancel.refund = "approved"; b.pay = "Refunded"; }
+    if (b.cancel) delete b.cancel.addonUndo; // approved: the marks are final
   } else if (action === "refund-sent") {
-    if (refundAwaitingTransfer(b) && b.cancel) { b.cancel.refundTransfer = "sent"; b.cancel.refundSentAt = nowIso(); }
+    if (refundAwaitingTransfer(b)) {
+      // Every recorded offline refund still waiting is confirmed together: the provider sent what the screen showed (the sum of them all).
+      const amount = refundTransferAmount(b), at = nowIso();
+      for (const e of b.refundEntries ?? []) if (e.via === "offline" && e.status === "approved") { e.status = "sent"; e.sentAt = at; }
+      if (b.cancel && b.cancel.refund === "approved" && b.cancel.refundVia === "offline") { b.cancel.refundTransfer = "sent"; b.cancel.refundSentAt = at; }
+      b.lastRefundSent = { amount, at };
+    }
   } else if (action === "refund-decline") {
     if (b.cancel) b.cancel.refund = "declined";
+    undoAddonStamps(b); // nothing went back, so no extra is "refunded" on this refund's account
     if (b.pay === "Refund pending") b.pay = "Paid";
   } else if (action === "move-approve") {
     const req = b.dateChangeRequest;
@@ -116,6 +126,15 @@ export function applyBulkAction(b: Booking, action: BulkAction): void {
   else if (action === "cancel") b.status = "Cancelled";
 }
 
+/** The single `cancel` record is overwritten by the next refund. An older booking whose approved bank / cash / voucher refund is still unsent has no
+ *  entry for it yet: keep it as one BEFORE the record is replaced, so the money still owed to the family is never forgotten. */
+export function archiveAwaitingRefund(b: Booking): void {
+  if ((b.refundEntries ?? []).length) return;
+  const open = unsentRefunds(b);
+  if (!open.length) return;
+  b.refundEntries = [{ id: `legacy-${open[0].since || "x"}`, amount: b.cancel?.amount ?? open[0].cash, cash: open[0].cash, via: "offline", status: "approved", approvedAt: open[0].since || nowIso(), note: "recorded before refunds were kept as entries" }];
+}
+
 export function applyCancel(b: Booking, refund: RefundType, partialAmount?: number, reason?: string): void {
   // "Full" gives back what was actually paid (incl. wallet credit), and a
   // partial refund can't exceed it — it used to refund `amount` whatever had
@@ -124,6 +143,7 @@ export function applyCancel(b: Booking, refund: RefundType, partialAmount?: numb
   let amt = refund === "full" ? paid : 0;
   if (refund === "partial") amt = Math.min(Math.max(0, partialAmount || 0), paid);
   if (b.past !== true) b.status = "Cancelled";
+  archiveAwaitingRefund(b);
   b.cancel = {
     on: nowStr(),
     by: "Provider",
@@ -159,8 +179,9 @@ function settleRelease(b: Booking, label: string, value: number, opts?: ReleaseO
   const asked = opts?.amount != null && Number.isFinite(opts.amount) ? Math.max(0, opts.amount) : value;
   const amt = resolution === "none" ? 0 : Math.round(Math.min(asked, room) * 100) / 100;
   if (amt > 0 && resolution === "wallet") {
-    (b.refundLog = b.refundLog || []).push({ label: `${label} — wallet credit`, amount: amt, on: nowStr(), by: "Provider", source: "Wallet" });
+    (b.refundLog = b.refundLog || []).push({ label: `${label} — wallet credit`, kind: "namedWallet", vars: { what: label }, amount: amt, on: nowStr(), by: "Provider", source: "Wallet" });
   } else if (amt > 0) {
+    archiveAwaitingRefund(b);
     b.cancel = {
       on: nowStr(),
       by: "Provider",
@@ -173,11 +194,62 @@ function settleRelease(b: Booking, label: string, value: number, opts?: ReleaseO
   return { resolution, amount: amt };
 }
 
-/** An approved request to cancel ONE extra: the money for it, by the same rules as releasing a child's day (a pending refund the provider sends,
- *  instant wallet credit, or nothing). The booking itself stands. */
+/** Take a removed share off what the booking costs: it leaves the cash due first, then the wallet part (walletRelieved). Returns the new GROSS price
+ *  (cash due + wallet still counted). `amount` is the CASH due, net of the wallet credit spent at checkout, while "paid" adds that credit back. */
+function takeShareOffAmount(b: Booking, share: number): number {
+  const take = Math.max(0, share);
+  const cash = b.amount ?? 0;
+  const wallet = Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
+  const fromWallet = Math.min(wallet, Math.max(0, take - cash));
+  b.amount = Math.round(Math.max(0, cash - take) * 100) / 100;
+  if (fromWallet > 0) b.walletRelieved = Math.round(((b.walletRelieved ?? 0) + fromWallet) * 100) / 100;
+  return Math.round((b.amount + wallet - fromWallet) * 100) / 100;
+}
+
+/** A booking with money on it that is NOT paid in full: some paid (wallet credit, recorded cash / bank / voucher / TFC, a part card payment), the rest owed. */
+export function isPartPaid(b: Booking): boolean {
+  const paid = paidSoFar(b);
+  if (b.priceFollowsRelease === true && b.pay !== "Refunded") return paid > 0.004;
+  const settled = b.pay === "Paid" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded";
+  if (settled) return false;
+  const gross = (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
+  return paid > 0.004 && paid + 0.004 < gross;
+}
+
+/** ONE money rule for anything that removes a share from a booking (a cancelled day, an approved request to cancel extras):
+ *    new amount = old amount - removed share;  refund = max(0, paid - new amount)  (never more than is still refundable).
+ *  A part-paid booking whose new amount is still above what was paid refunds nothing (it simply owes less); a booking paid in full refunds the share;
+ *  one paid a little less than in full refunds only the overpaid part. `opts.amount` is the provider's own (smaller) figure. The booking itself stands. */
+export function settleShareRemoval(b: Booking, label: string, share: number, opts?: ReleaseOpts): ReleaseResult {
+  // Keep what was actually paid on the record before the amount moves (a joint booking stores no amountPaid, only a Paid status).
+  const settled = b.pay === "Paid" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded";
+  if (settled) b.amountPaid = Math.max(b.amountPaid ?? 0, b.amount ?? 0);
+  const prior = b.cancel && b.cancel.refundOnly && b.cancel.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
+  // WALLET: `amount` is the CASH due, net of the wallet credit spent at checkout, while "paid" adds that credit back. So compare on the GROSS price
+  // (cash due + wallet spent, less any share already taken off the wallet part): the share leaves the cash due first, then the wallet part.
+  const newGross = takeShareOffAmount(b, share);
+  const overpaid = Math.round(Math.max(0, refundableSoFar(b) - prior - newGross) * 100) / 100;
+  // The provider's own figure replaces the default (capped, as always, at what is still refundable).
+  return settleRelease(b, label, overpaid, { resolution: opts?.resolution, amount: opts?.amount });
+}
+
+/** A refund of a price difference on an old stored change request (new requests carry none): a plain release of that amount. */
 export function applyAddonRelease(b: Booking, label: string, amount: number, resolution: ReleaseResolution): ReleaseResult {
   return settleRelease(b, `${label} (extra)`, amount, { resolution, amount });
 }
+
+/** What ONE cancelled day (or `n` days) of a child is worth in the PASS price: the pass part of the amount (the amount less the extras) shared
+ *  over the days still standing, so the share stays steady as days are removed. Call BEFORE the day is marked cancelled. */
+export function passDayShare(b: Booking, kids: NonNullable<Booking["kids"]>, n = 1): number {
+  const extras = (b.addonLines ?? []).reduce((t, l) => t + (Number(l.price) || 0), 0);
+  const pass = Math.max(0, (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0)) - extras); // gross: cash due + wallet spent
+  const standing = kids.reduce((t, k) => t + (k.cancelled ? 0 : kidActiveDaysIso(k).length), 0);
+  return standing > 0 ? Math.round(((pass / standing) * Math.min(n, standing)) * 100) / 100 : 0;
+}
+const kidActiveDaysIso = (k: { dates?: string[]; cancelledDays?: string[] }) => {
+  const gone = (k.cancelledDays ?? []).map((d) => dayIso(d) ?? d);
+  return (k.dates ?? []).filter((d) => gone.indexOf(dayIso(d) ?? d) < 0);
+};
 
 export function applyCancelChild(b: Booking, ki: number, opts?: ReleaseOpts): ReleaseResult | null {
   const kids = bookingKids(b);
@@ -199,13 +271,22 @@ export function applyCancelDay(b: Booking, ki: number, dt: string, opts?: Releas
   const k = kids[ki];
   if (!k || k.cancelled) return null;
   k.cancelledDays = k.cancelledDays || [];
-  if (k.cancelledDays.indexOf(dt) > -1) return null;
+  if (k.cancelledDays.some((d) => (dayIso(d) ?? d) === (dayIso(dt) ?? dt))) return null;
+  const share = removedShare(b, kids, k.name, [dt]);
   k.cancelledDays.push(dt);
-  const res = settleRelease(b, `${k.name || "Child"} — ${dt}`, releaseValue(b, ki, [dt]), opts);
+  const res = settleShareRemoval(b, `${k.name || "Child"} — ${dt}`, share, opts);
+  k.amountDaysRemoved = [...(k.amountDaysRemoved ?? []), dayIso(dt) ?? dt]; // the amount no longer includes this day
   if (kidActiveDays(k).length === 0) k.cancelled = true;
   if (!b.kids) b.kids = kids;
   applyCancelState(b);
   return res;
+}
+
+/** The share a child's cancelled days take off the booking: the pass price of those days, plus the child's DAILY extras for them (those lines lose
+ *  the days and read x6, x5...). A one-off extra and a meal are not tied to a day and are never part of it. Edits the extra lines. */
+function removedShare(b: Booking, kids: NonNullable<Booking["kids"]>, child: string, days: string[]): number {
+  const pass = passDayShare(b, kids, days.length);
+  return Math.round((pass + followCancelledDays(b, child, days.map((d) => dayIso(d) ?? d))) * 100) / 100;
 }
 
 export function applyChangeDayMutation(b: Booking, ki: number, oldDt: string, newDt: string): void {
@@ -227,6 +308,7 @@ export function applyNote(b: Booking, text: string): void {
 // (applyRowAction above) — matching the legacy "cancelled by Booker" records.
 export function applyParentCancel(b: Booking, msg?: string, reason?: string): void {
   b.status = "Cancelled";
+  archiveAwaitingRefund(b);
   b.cancel = {
     on: nowStr(),
     by: "Booker",
@@ -261,21 +343,38 @@ export function markRefundPending(b: Booking): void {
  *  `amount` is left alone for the same reason: it is the price of what was
  *  booked, and any money going back is tracked separately.
  */
-export function applyPartialCancel(b: Booking, releases: { childKey: string; days: string[] }[]): void {
+export function applyPartialCancel(b: Booking, releases: { childKey: string; days: string[] }[]): { partPaid: boolean; overpaid: number } {
   const kids = bookingKids(b);
+  const partPaid = isPartPaid(b); // (decided BEFORE the amount moves)
+  const pendingPrior = b.cancel && b.cancel.refundOnly && b.cancel.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
   const released = new Set<string>();
+  let removed = 0;
   for (const r of releases) {
     const k = kids.find((x) => (x.childId ?? x.name) === r.childKey);
     if (!k) continue;
     k.cancelledDays = k.cancelledDays || [];
-    for (const d of r.days) {
-      if (k.cancelledDays.indexOf(d) > -1) continue;
-      k.cancelledDays.push(d);
+    // Days are compared as ISO (a child's days may be stored as labels), and a released day is stored the way that child's days are.
+    const goneIso = k.cancelledDays.map((d) => dayIso(d) ?? d);
+    const fresh = [...new Set(r.days.map((d) => dayIso(d) ?? d))].filter((d) => goneIso.indexOf(d) < 0);
+    if (fresh.length) removed += removedShare(b, kids, k.name, fresh);
+    for (const d of fresh) {
+      k.cancelledDays.push((k.dates ?? []).find((x) => (dayIso(x) ?? x) === d) ?? d);
       released.add(d);
     }
     if (kidActiveDays(k).length === 0) k.cancelled = true;
   }
   b.kids = kids;
+  // Nothing paid yet: the released days (their pass share and their daily extras) leave what is owed. A booking with money on it keeps its amount
+  // here: the family's refund for released days is worked out by the cancellation policy (and the parent's preview divides this amount).
+  if (removed > 0 && paidSoFar(b) <= 0.004) b.amount = Math.round(Math.max(0, (b.amount ?? 0) - removed) * 100) / 100;
+  // Part-paid: the same, exactly as for an unpaid booking - the removed days (pass share + daily extras) leave what is owed - and only money paid
+  // BEYOND the new price comes back: refund = max(0, paid - new price - pending). A booking that is paid in full keeps its amount (the policy decides).
+  let overpaid = 0;
+  if (partPaid && removed > 0) {
+    b.priceFollowsRelease = true;
+    const newGross = takeShareOffAmount(b, removed);
+    overpaid = Math.round(Math.max(0, refundableSoFar(b) - pendingPrior - newGross) * 100) / 100;
+  }
   // A day only leaves the booking once NO child is still on it.
   const stillOn = new Set(kids.flatMap((k) => (k.cancelled ? [] : kidActiveDays(k))));
   const gone = [...released].filter((d) => !stillOn.has(d));
@@ -286,6 +385,7 @@ export function applyPartialCancel(b: Booking, releases: { childKey: string; day
     if (b.sessions) b.sessions = b.sessions.filter((s) => !goneLabels.has(s.split(" · ")[0]));
   }
   if (kids.length > 0 && kids.every((k) => k.cancelled)) b.status = "Cancelled";
+  return { partPaid, overpaid };
 }
 
 export function buildBooking(input: CreateBookingInput, bid: number, refPrefix = "APF"): Booking {

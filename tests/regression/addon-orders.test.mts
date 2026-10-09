@@ -53,12 +53,18 @@ test("an approved extra CANCEL (the line is gone) disappears; a pending request 
   assert.equal(Object.keys(kitTally([approved], "2026-10-01", "2026-10-31").days).length, 0);
 });
 
-test("only CONFIRMED bookings count (waiting for approval, waitlisted, cancelled and declined do not)", () => {
-  for (const status of ["Approval needed", "Waitlisted", "Cancelled", "Declined", "Offered"]) {
+test("Confirmed and awaiting-approval bookings show (labelled when unpaid / awaiting); waitlisted, cancelled, declined and offered never do", () => {
+  for (const status of ["Waitlisted", "Cancelled", "Declined", "Offered"]) {
     const b = bk("APF-6", [tshirt("sally")], { status });
     assert.equal(kitForDay([b], WEEK[0]).length, 0, status);
     assert.equal(hasLiveAddonOrders([b], "2026-10-01"), false, status);
   }
+  const waiting = bk("APF-6a", [tshirt("sally")], { status: "Approval needed" });
+  assert.equal(kitForDay([waiting], WEEK[0])[0].children[0].flag, "awaiting-approval");
+  const unpaid = bk("APF-6b", [tshirt("sally")], { pay: "Unpaid" });
+  assert.equal(kitForDay([unpaid], WEEK[0])[0].children[0].flag, "not-paid");
+  assert.equal(kitForDay([bk("APF-6c", [tshirt("sally")], { pay: "Paid" })], WEEK[0])[0].children[0].flag, undefined);
+  assert.equal(hasLiveAddonOrders([waiting], "2026-10-01"), true);
 });
 
 test("days with orders (the strip) are sorted, and the arrows jump to the previous / next day WITH orders", () => {

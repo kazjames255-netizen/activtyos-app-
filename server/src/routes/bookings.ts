@@ -1,12 +1,15 @@
 import { resolvePendingCancel } from "../lib/pendingRefund";
 import { refPrefixFor } from "../lib/bookingRef";
 import { stopOpenPayments } from "../lib/checkoutIntent";
+import { randomUUID } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { mergeBookings } from "../lib/mergeBookings";
 import { db } from "../firebase";
 import { ukToday } from "../lib/ukDate";
+import { parentBell } from "../lib/parentBells";
+import { staffBookingView } from "../lib/rosterRules";
 import { canWrite, operatorScope, managerScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
@@ -15,15 +18,16 @@ import { capsProblem, queuePositions, triggerWaitlist, waitingCount } from "../l
 import { positionsFrom, sortQueue } from "../lib/waitlistQueue";
 import { releaseDiscountCodes } from "../lib/discountRedemptions";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
-import { creditWallet } from "../lib/wallet";
+import { creditWallet, creditWalletOnceInTx, walletEntryRef, walletRef } from "../lib/wallet";
 import { captureHolds, releaseHolds } from "../lib/cardHold";
 import { RESEND_COOLDOWN_MS, remindersPatch, reminderDateLabel, resendWaitSeconds } from "../lib/invoiceResend";
-import { AddonRequestError, approveAddonRequest, declineAddonRequest } from "../lib/addonRequests";
+import { AddonRequestError, addonCutoffDays, approveAddonRequest, declineAddonRequest } from "../lib/addonRequests";
+import { requestWhat } from "../../../features/bookings/addonRequests";
 import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
 import { registerRows } from "../lib/registerRows";
-import { money, realPhone, refundableSoFar, receivedOf, cashReceivedOf, refundTransferAmount } from "../../../features/bookings/helpers";
+import { bookingKids, kidActiveDays, money, realPhone, refundableSoFar, receivedOf, cashReceivedOf, refundTransferAmount, refundAwaitingTransfer } from "../../../features/bookings/helpers";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
 import { approveBlockedMessage, declineBlockedMessage, nudgeBlockedMessage, canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval, shouldReleaseDiscountCodes } from "../lib/bookingGuards";
@@ -57,6 +61,8 @@ import {
 import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Booking } from "../../../features/bookings/types";
 import { applyMoveApprove } from "../lib/dateChange";
+import { moveAddonDays } from "../../../features/bookings/addons";
+import { addonsGoBack, stampAddonRefund } from "../../../features/bookings/addonRefund";
 import {
   applyBulkAction,
   applyCancel,
@@ -139,6 +145,8 @@ const actionSchema = z.discriminatedUnion("type", [
     refund: z.enum(["full", "partial", "none"]),
     amount: z.number().nonnegative().max(1_000_000).optional(),
     reason: z.string().max(120).optional(),
+    // Did the add-ons go back with the refund? Recorded on the cancel record; absent = the default (see addonRefunded).
+    refundsAddons: z.boolean().optional(),
   }),
   // What happens to the money when ONE child / day is cancelled. Default
   // "refund" = a PENDING refund (the provider sends it and presses "Mark refund
@@ -148,6 +156,7 @@ const actionSchema = z.discriminatedUnion("type", [
     ki: z.number().int().nonnegative(),
     resolution: z.enum(["refund", "wallet", "none"]).optional(),
     amount: z.number().nonnegative().max(1_000_000).optional(),
+    refundsAddons: z.boolean().optional(),
   }),
   z.object({
     type: z.literal("cancel-day"),
@@ -155,6 +164,7 @@ const actionSchema = z.discriminatedUnion("type", [
     date: z.string().min(1),
     resolution: z.enum(["refund", "wallet", "none"]).optional(),
     amount: z.number().nonnegative().max(1_000_000).optional(),
+    refundsAddons: z.boolean().optional(),
   }),
   z.object({
     type: z.literal("change-day"),
@@ -233,7 +243,7 @@ export async function notifyPaymentReceived(tenantId: string, b: Booking, label:
     tenantId,
     to: { kind: "parent", email },
     category: "billing",
-    title: approved ? `Booking approved and payment received · ${refs.join(", ")}` : confirmedNow ? `You're booked in and paid · ${refs.join(", ")}` : `Payment received · ${refs.join(", ")}`,
+    ...(({ title, i18n }) => ({ title, i18n }))(parentBell(approved ? "approved-paid" : confirmedNow ? "booked-paid" : "payment-received", { ref: refs.join(", ") })),
     body: confirmedNow
       ? `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — your booking is confirmed and £${(merged.amount ?? 0).toFixed(2)} has been received${dateLabel ? ` · ${dateLabel}` : ""}. ${seeYou}`
       : approved
@@ -325,23 +335,8 @@ const withChildcare = <T extends ChildcareBooking>(b: T): T => (isChildcare(b) ?
  *  incidents) — never the amounts, what was paid, or payment references that
  *  would let someone match a family's money. A coach's token used to return
  *  every figure in the tenant. */
-const MONEY_KEYS = [
-  "amount", "amountPaid", "cardPaid", "walletApplied", "discountCode", "paymentRef", "payRefs",
-  "paymentIntentId", "stripeAccount", "mealItems", "reconciledBy", "payments", "refund",
-  // Whether a family has paid, and how, is money too (acceptance d24s4).
-  "pay", "method", "refundedApproved", "walletRefunded", "invoicePaymentIntentIds", "tfc",
-  // The childcare block is money too: it carries the references a family's
-  // payment arrives under, ours and theirs.
-  "childcare", "childcarePayments",
-] as const;
 function staffView<T extends Record<string, unknown>>(b: T): T {
-  const out: Record<string, unknown> = { ...b };
-  for (const k of MONEY_KEYS) delete out[k];
-  if (out.cancel && typeof out.cancel === "object") {
-    const { amount: _a, refund: _r, refundTo: _t, ...rest } = out.cancel as Record<string, unknown>;
-    out.cancel = rest;
-  }
-  return out as T;
+  return staffBookingView(b) as T; // an allow-list (lib/rosterRules.ts): anything not named there is never sent to staff
 }
 
 /** A booking, with its own field taking precedence over Firestore's stamp. */
@@ -498,6 +493,7 @@ bookings.post("/", async (req, res) => {
           refPrefix,
         ),
         tenantId,
+        checkoutId: randomUUID(), // a booking the operator takes is its own checkout
         ...(listingFranchiseId ? { franchiseId: listingFranchiseId } : {}),
         ...(block
           ? {
@@ -631,7 +627,10 @@ bookings.post("/:ref/actions", async (req, res) => {
     // Set by cancel-child / cancel-day: wallet credit is the one resolution that
     // moves money straight away (after the transaction commits).
     let release: ReturnType<typeof applyCancelDay> = null;
+    let creditedInTx = false;
     const updated = await db.runTransaction(async (tx) => {
+      creditedInTx = false;
+      release = null; // (a retried transaction starts clean)
       const snap = await tx.get(ref);
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
@@ -713,6 +712,8 @@ bookings.post("/:ref/actions", async (req, res) => {
           const ix = k?.dates ? k.dates.findIndex((d) => d === action.oldDate || toIso(d) === oldIso) : -1;
           if (k?.dates && ix > -1) k.dates[ix] = isIso(k.dates[ix]) ? newSess.date : labelOf(newSess);
         }
+        // The child's extras move with the day (a daily one follows its day, a one-off follows the new first day): the same rule as an approved date change.
+        moveAddonDays(b.addonLines, b.kids?.length ? b.kids[action.ki]?.name : undefined, oldIso, newSess.date);
       }
 
       // Approving a date change moves seats between days: keep the block's per-day counts in step (the old day frees a
@@ -758,13 +759,17 @@ bookings.post("/:ref/actions", async (req, res) => {
         if (b.cancel.refund === "approved") throw new Conflict("This refund has already been approved or refunded");
         if (b.cancel.refund === "declined") throw new Conflict("This refund was already declined");
         if (refundableSoFar(b) <= 0.005) throw new Conflict("Everything paid on this booking has already been refunded (for example in Stripe), so there is nothing to decline.");
+        // And only while it is still waiting (pending / full / partial): once recorded, sent, credited or card-refunded it is final.
+        { const st = b.cancel.refund; if (!(st === "pending" || st === "full" || st === "partial")) throw new Conflict(st === "none" ? "There is no refund waiting on this booking to decline" : "This refund has already been approved, so it can't be declined"); }
       }
 
       // The provider confirms they SENT an offline refund that was only recorded at approval.
       if (action.type === "refund-sent") {
-        if (!b.cancel || b.cancel.refund !== "approved" || b.cancel.refundVia !== "offline")
+        // Any recorded offline refund still waiting counts, even if a newer refund has since replaced the booking's single cancel record.
+        if (!refundAwaitingTransfer(b)) {
+          if (b.cancel?.refund === "approved" && b.cancel.refundVia === "offline" && b.cancel.refundTransfer === "sent") throw new Conflict("This refund is already marked as sent");
           throw new Conflict("There is no recorded bank / cash / voucher refund waiting to be sent on this booking");
-        if (b.cancel.refundTransfer === "sent") throw new Conflict("This refund is already marked as sent");
+        }
       }
 
       // Marking a booking paid only makes sense for one that is live: on a cancelled / declined / waiting-list booking it used to
@@ -772,6 +777,8 @@ bookings.post("/:ref/actions", async (req, res) => {
       if (action.type === "paid" && !canMarkPaid(b.status))
         throw new Conflict(paidBlockedMessage(b.status));
 
+      // The booking's whole price (cash + wallet spent) before this action takes its share off: the whole-amount rule for add-on refunds compares with it.
+      const grossBefore = (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
       switch (action.type) {
         case "cancel":
           // Cancelling an already-cancelled booking used to be accepted
@@ -796,7 +803,7 @@ bookings.post("/:ref/actions", async (req, res) => {
           if (b.status === "Cancelled" || b.status === "Declined") throw new Conflict("This booking is cancelled, so there is nothing to change.");
           try {
             if (action.type === "addon-approve") {
-              const out = approveAddonRequest(b, action.requestId, { resolution: action.resolution, amount: action.amount, by: "Provider" });
+              const out = approveAddonRequest(b, action.requestId, { resolution: action.resolution, amount: action.amount, by: "Provider", today: ukToday(), cutoffDays: await addonCutoffDays(b) });
               release = out.release as typeof release;
             } else declineAddonRequest(b, action.requestId, action.reason, "Provider");
           } catch (e) {
@@ -840,6 +847,24 @@ bookings.post("/:ref/actions", async (req, res) => {
       // Keep the block's place counts — total AND per day — in step with
       // the status transition (promote may intentionally exceed capacity —
       // operator's overbook). Firestore requires all reads before writes.
+      // Did the add-ons go back with this refund? The provider's YES/NO (kept on the cancel record when there is one) or, when not asked, the default:
+      // a whole-booking "full" refund, or a child's whole place refunded in full => yes; partial / day-only / none => no. The answer is STORED on the
+      // lines (addonRefund.ts) whether or not a cancel record exists (a wallet credit has none), and is never un-done by a later cancel.
+      if (action.type === "decline") stampAddonRefund(b, { scope: "whole" }, false);
+      if (action.type === "cancel" || action.type === "cancel-child" || action.type === "cancel-day") {
+        if (action.refundsAddons !== undefined && b.cancel) b.cancel.refundsAddons = action.refundsAddons;
+        const moved = action.type === "cancel" ? action.refund !== "none" : !!release && release.resolution !== "none" && release.amount > 0;
+        // ONE rule (addonRefund.ts addonsGoBack): the provider's YES/NO, else a full refund, or any refund as big as the WHOLE booking (a "partial" of that size,
+        // a cancel-child with an explicit amount that covers the whole booking, a cancel-day that removes the last remaining day).
+        const refundedAmount = action.type === "cancel" ? (b.cancel?.amount ?? 0) : release?.amount ?? 0;
+        const lastDay = bookingKids(b).every((k) => k.cancelled || kidActiveDays(k).length === 0);
+        const refunded = addonsGoBack({ kind: action.type, moved, grossBefore, refundedAmount, refund: action.type === "cancel" ? action.refund : undefined,
+          explicitAmount: action.type === "cancel-child" ? action.amount : undefined, refundsAddons: action.refundsAddons, lastDay });
+        const kidName = action.type === "cancel" ? "" : (b.kids?.[action.ki]?.name ?? b.child ?? "");
+        // The refund this mark belongs to is still waiting for the provider (a wallet credit is final): declining it takes the mark back.
+        const waiting = refunded && b.cancel && b.cancel.refund !== "none" && b.cancel.refund !== "declined" && (action.type === "cancel" || release?.resolution === "refund") ? b.cancel : null;
+        stampAddonRefund(b, action.type === "cancel" ? { scope: "whole" } : action.type === "cancel-child" ? { scope: "child", child: kidName } : { scope: "day", child: kidName, date: action.date }, refunded, waiting);
+      }
       const perChild = action.type === "cancel-child" || action.type === "cancel-day";
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;
       let blockUpdate: {
@@ -858,9 +883,16 @@ bookings.post("/:ref/actions", async (req, res) => {
         }
       }
 
+      // A cancelled child/day/extra given back as WALLET CREDIT is instant: it is credited in THIS transaction (all reads before the writes),
+      // once per (booking, action, child, day), so the booking and the money cannot disagree and a replay cannot credit twice.
+      const rel0 = release as ReturnType<typeof applyCancelDay>;
+      const creditKey = `rel_${ref.id}_prov_${action.type}_${"ki" in action ? action.ki : ""}_${"date" in action ? action.date : ""}_${"requestId" in action ? action.requestId : ""}`.replace(/\//g, "_").slice(0, 1400);
+      const credit = !!rel0 && rel0.resolution === "wallet" && rel0.amount > 0 && !!b.tenantId;
+      const [walletSnap, entrySnap] = credit ? await Promise.all([tx.get(walletRef(b.tenantId!, b.email)), tx.get(walletEntryRef(creditKey))]) : [null, null];
       tx.set(ref, toDoc(b));
       if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
       if (moveUpdate) tx.update(moveUpdate.ref, { ...moveUpdate.counts });
+      creditedInTx = credit && creditWalletOnceInTx(tx, b.tenantId!, b.email, walletSnap!.exists ? Number(walletSnap!.get("balance") ?? 0) : 0, entrySnap!.exists, creditKey, rel0!.amount, `Credit from ${b.listing}`, b.ref);
       return b;
     });
 
@@ -915,7 +947,7 @@ bookings.post("/:ref/actions", async (req, res) => {
       }
       // refundedAt: when the money actually moved (cancel.on is when it was
       // asked for) — Reconciliation's "refunded today" keys off this (d9s7).
-      updated.cancel = { ...(updated.cancel ?? { on: "", by: "" }), refundVia: moved.via, refundedAt: new Date().toISOString(), refundError: undefined };
+      updated.cancel = { ...(updated.cancel ?? { on: "", by: "" }), refundVia: moved.via, refundedAt: new Date().toISOString(), refundError: undefined, refundCash: Math.round(Math.max(0, moved.owed - moved.walletPart) * 100) / 100 };
       // An OFFLINE refund (bank transfer / cash / voucher) is only RECORDED: the app cannot send it. It stays "awaiting your transfer" until the
       // provider confirms they sent it (action "refund-sent"), unless they say they already did.
       const alreadySent = "alreadySent" in action && action.alreadySent === true;
@@ -930,8 +962,17 @@ bookings.post("/:ref/actions", async (req, res) => {
       // but no refundLog entry, so it never showed there (only per-day
       // releases, my.ts partialCancel, did). Add one here too.
       const refundLabel = moved.partial ? "Refund approved (partial)" : "Refund approved";
+      // One entry per approved refund: what the provider still has to send is the sum of the offline ones not yet sent (see unsentRefunds()).
+      const cashPart = Math.round(Math.max(0, moved.owed - moved.walletPart) * 100) / 100;
+      const sentNow = moved.via !== "offline" || alreadySent;
+      const nowIso = new Date().toISOString();
+      const newEntry = { id: randomUUID(), amount: moved.owed, cash: cashPart, via: moved.via, status: sentNow ? "sent" : "approved", approvedAt: nowIso, ...(sentNow ? { sentAt: nowIso } : {}) } as NonNullable<typeof updated.refundEntries>[number];
+      (updated.refundEntries = updated.refundEntries ?? []).push(newEntry);
+      const lastSent = moved.via === "offline" && alreadySent ? { amount: cashPart, at: nowIso } : null;
+      if (lastSent) updated.lastRefundSent = lastSent;
       const logEntry = {
         label: refundLabel,
+        kind: moved.partial ? "approvedPartial" : "approved",
         amount: moved.owed,
         on: ukToday(),
         by: "Provider",
@@ -948,6 +989,10 @@ bookings.post("/:ref/actions", async (req, res) => {
         cur.refundedApproved = Math.round(((cur.refundedApproved ?? 0) + moved.owed) * 100) / 100;
         cur.walletRefunded = Math.round(((cur.walletRefunded ?? 0) + moved.walletPart) * 100) / 100;
         cur.refundLog = [...(cur.refundLog ?? []), logEntry];
+        // Entries: the stored ones win (a concurrent 'sent' mark stays), plus any this request archived or created.
+        const have = new Set((cur.refundEntries ?? []).map((e) => e.id));
+        cur.refundEntries = [...(cur.refundEntries ?? []), ...(updated.refundEntries ?? []).filter((e) => !have.has(e.id))];
+        if (lastSent) cur.lastRefundSent = lastSent;
         cur.pay = refundableSoFar(cur) <= 0.005 ? "Refunded" : moved.partial ? "Partially refunded" : updated.pay;
         tx.set(ref, toDoc(cur));
       });
@@ -965,8 +1010,7 @@ bookings.post("/:ref/actions", async (req, res) => {
     // A cancelled child/day given back as WALLET CREDIT is instant by design: credit the wallet and put it
     // on the payments ledger (like a wallet refund-approve) so reconciliation matches the booking.
     const rel = release as ReturnType<typeof applyCancelDay>; // (assigned inside the transaction callback — TS can't see that)
-    if (rel && rel.resolution === "wallet" && rel.amount > 0 && updated.tenantId) {
-      await creditWallet(updated.tenantId, updated.email, rel.amount, `Credit from ${updated.listing}`, updated.ref);
+    if (rel && rel.resolution === "wallet" && rel.amount > 0 && updated.tenantId && creditedInTx) {
       await db.collection("payments").add({
         tenantId: updated.tenantId, refs: [updated.ref], email: updated.email, type: "refund", amount: rel.amount, currency: "gbp",
         method: "wallet", via: "wallet", status: "credited", createdAt: new Date().toISOString(),
@@ -1020,8 +1064,7 @@ bookings.post("/:ref/actions", async (req, res) => {
           to: { kind: "parent", email: updated.email },
           category: "billing",
           bellOnly: true,
-          title: `Refund declined · ${updated.ref}`,
-          body: `Your provider couldn't approve the${amt > 0 ? ` £${amt.toFixed(2)}` : ""} refund for ${updated.listing}. Your cancellation still stands — message them if you'd like to talk it through.`,
+          ...(() => { const b = parentBell("refund-declined", { ref: updated.ref, listing: updated.listing, ...(amt > 0 ? { amt: `£${amt.toFixed(2)}` } : {}) }); return { title: b.title, body: b.body!, i18n: b.i18n }; })(),
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
@@ -1036,7 +1079,7 @@ bookings.post("/:ref/actions", async (req, res) => {
           to: { kind: "parent", email: updated.email },
           category: "billing",
           bellOnly: true,
-          title: `Refund sent · ${updated.ref}`,
+          title: parentBell("refund-sent", { ref: updated.ref }).title, i18n: { tk: parentBell("refund-sent", { ref: updated.ref }).i18n.tk, tv: { ref: updated.ref } },
           body: `£${sentAmt.toFixed(2)} for ${updated.listing} has been sent${updated.voucherScheme ? ` through ${updated.voucherScheme}` : " by bank transfer"}${updated.cancel?.refundSentAt ? ` on ${ukDateLabel(updated.cancel.refundSentAt)}` : ""}.`,
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
@@ -1053,12 +1096,14 @@ bookings.post("/:ref/actions", async (req, res) => {
           to: { kind: "parent", email: updated.email },
           category: "billing",
           bellOnly: true,
-          title: toWallet ? `Wallet credit added · ${updated.ref}` : `Refund approved · ${updated.ref}`,
-          body: toWallet
-            ? `£${amt.toFixed(2)} added to your wallet for ${updated.listing} — it's there now, ready to spend on your next booking.`
-            : updated.cancel?.refundVia === "offline"
-              ? `£${amt.toFixed(2)} refund approved for ${updated.listing} — ${updated.voucherScheme ? `returned through ${updated.voucherScheme}` : /bank|transfer|bacs/i.test(updated.method ?? "") ? "your provider will send it by bank transfer (we'll tell you when it's sent)" : "your provider will return it the way you paid"}.`
-              : `£${amt.toFixed(2)} refund approved for ${updated.listing} — on its way back to your card.`,
+          ...(() => {
+            const kind = toWallet ? "wallet-added" as const
+              : updated.cancel?.refundVia === "offline"
+                ? (updated.voucherScheme ? "refund-approved-scheme" as const : /bank|transfer|bacs/i.test(updated.method ?? "") ? "refund-approved-bank" as const : "refund-approved-plain" as const)
+                : "refund-approved-card" as const;
+            const b = parentBell(kind, { ref: updated.ref, amt: `£${amt.toFixed(2)}`, listing: updated.listing, scheme: updated.voucherScheme ?? "" });
+            return { title: b.title, body: b.body!, i18n: b.i18n };
+          })(),
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
@@ -1076,8 +1121,8 @@ bookings.post("/:ref/actions", async (req, res) => {
           to: { kind: "parent", email: updated.email },
           category: "booking",
           bellOnly: true,
-          title: `${r.status === "approved" ? "Extra request approved" : "Extra request declined"} · ${updated.ref}`,
-          body: `${updated.listing} — ${r.kind === "cancel" ? `cancel ${r.label}` : `change ${r.label} to ${r.toLabel ?? ""}`}.${r.status === "approved" && r.money && r.money.amount > 0 ? ` £${r.money.amount.toFixed(2)} ${r.money.resolution === "charge" ? "to pay" : r.money.resolution === "wallet" ? "added to your wallet" : "to be refunded"}.` : ""}${r.status === "declined" && r.declineReason ? ` ${r.declineReason}` : ""}`,
+          ...(() => { const b = parentBell(r.status === "approved" ? "extra-approved" : "extra-declined", { ref: updated.ref }); return { title: b.title, i18n: b.i18n }; })(),
+          body: `${updated.listing} — ${requestWhat(r)}.${r.status === "approved" && r.money && r.money.amount > 0 ? ` £${r.money.amount.toFixed(2)} ${r.money.resolution === "charge" ? "to pay" : r.money.resolution === "wallet" ? "added to your wallet" : "to be refunded"}.` : ""}${r.status === "declined" && r.declineReason ? ` ${r.declineReason}` : ""}`,
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
@@ -1176,6 +1221,8 @@ bookings.post("/:ref/actions", async (req, res) => {
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
     else if (e instanceof Conflict) res.status(409).json({ error: e.message });
+    // A refused extra request (addon-approve with no choice about a price difference...) is the provider's to fix, not a server fault.
+    else if (e instanceof BadRequest) res.status(400).json({ error: e.message });
     else throw e;
   }
 });
@@ -1579,6 +1626,8 @@ bookings.post("/bulk", async (req, res) => {
       // cancel's job. Bulk used to cancel it, keep the money and tell the family "No refund".
       if (action === "cancel" && blocksBulkCancel(b)) paidRefs.push(b.ref);
       applyBulkAction(b, action);
+      // A bulk cancel / decline moves no money (paid bookings are refused above): the add-ons are KEPT as bought, same defaults as a single cancel with no refund.
+      if (action === "cancel" || action === "decline") stampAddonRefund(b, { scope: "whole" }, false);
       if (b.blockId) {
         const d = blockCountDelta(oldStatus, b.status, bookingSeats(b));
         if (d !== 0) {

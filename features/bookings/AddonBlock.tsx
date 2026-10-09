@@ -1,13 +1,17 @@
 "use client";
 
 import { useT } from "@/lib/i18n/provider";
+import { formatDay } from "@/lib/i18n/format";
+import { useReadOnlyPortal } from "@/lib/portal-href";
 import { addonsByChild, ADDON_ICON, type BookingAddonSource } from "./addons";
 import { money } from "./helpers";
 
 /** The extras on a booking, PER CHILD: "sally james — T-shirt · size: M · £10.00". Replaces the old single grey line, so a two-child booking with
  *  different sizes reads as who gets what. Meals (🍽) sit in the same list. Used on the provider's booking page and the family's own booking. */
-export function AddonBlock({ booking, prices = true, meals = true }: { booking: BookingAddonSource; prices?: boolean; meals?: boolean }) {
+export function AddonBlock({ booking, prices: showPrices = true, meals = true }: { booking: BookingAddonSource; prices?: boolean; meals?: boolean }) {
   const t = useT();
+  // Staff never see prices (the server no longer sends them either).
+  const prices = showPrices && !useReadOnlyPortal().staff;
   const groups = addonsByChild(booking).map((g) => ({ ...g, lines: g.lines.filter((l) => meals || !l.meal) })).filter((g) => g.lines.length);
   if (!groups.length) return null;
   return (
@@ -21,7 +25,7 @@ export function AddonBlock({ booking, prices = true, meals = true }: { booking: 
               <tr key={i} className="align-top">
                 <td className="py-0.5 pe-3 font-semibold">{l.meal ? "🍽 " : ""}{l.name}</td>
                 <td className="py-0.5 pe-3 text-[var(--ink-2)]">{l.choice}</td>
-                <td className="py-0.5 pe-3 text-[var(--ink-3)]">{l.perDay || l.meal ? (l.days.length ? l.days.map((d) => new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, { day: "numeric", month: "short", timeZone: "UTC" })).join(", ") : "") : (l.qty > 1 ? `× ${l.qty}` : "")}</td>
+                <td className="py-0.5 pe-3 text-[var(--ink-3)]">{l.perDay || l.meal ? (l.days.length ? l.days.map((d) => formatDay(d, { day: "numeric", month: "short" })).join(", ") : "") : (l.qty > 1 ? `× ${l.qty}` : "")}</td>
                 {prices && <td className="py-0.5 text-end font-bold">{money(l.price)}</td>}
               </tr>
             ))}

@@ -121,6 +121,8 @@ export interface ChildInfo {
   collectionPassword?: string; emergencyName?: string; emergencyPhone?: string; school?: string;
   contactName?: string; contactPhone?: string; contactEmail?: string; contactAddress?: string;
   bookingRef?: string; bookingNotes?: string; collected?: string;
+  /** This child's extras for the day (the server decides which: a daily one every day, a one-off once), and the label when the booking is not paid yet / awaiting approval. */
+  bookingAddons?: string[]; addonFlag?: "not-paid" | "awaiting-approval";
   siblings?: string[];
   statusChip?: { text: string; bg?: string } | null;
   attending?: { label: string; start: string; end: string; listing: string }[];
@@ -379,6 +381,7 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
                 {on("emergency") && flds.emergency && <Fact label={t("registers.emergencyContact")} tint={T.emergency} full value={(info.emergencyName || info.emergencyPhone) && `${info.emergencyName ?? ""}${info.emergencyPhone ? ` · ${info.emergencyPhone}` : ""}`} />}
                 {on("password") && flds.password && <Fact label={t("registers.collectionPassword")} tint={T.password} value={info.collectionPassword && <span>🔑 {info.collectionPassword}</span>} />}
                 {info.bookingRef && <Fact label={t("registers.bookingRef")} tint={T.neutral} value={`#${info.bookingRef}`} />}
+                {info.bookingAddons?.length ? <Fact label={t("p8lst.kitTitle")} tint={T.neutral} full value={<span>{info.bookingAddons.join(" · ")}{info.addonFlag ? <b className="ms-2 rounded-full bg-[var(--amber-soft)] px-2 py-[1px] text-[11px] ring-1 ring-[var(--amber-line)]" data-testid="register-addon-flag">{info.addonFlag === "not-paid" ? t("p8lst.kitFlagNotPaid") : t("p8lst.kitFlagAwaiting")}</b> : null}</span>} /> : null}
                 {on("bookingNotes") && <Fact label={t("registers.bookingNotes")} tint={T.neutral} full value={info.bookingNotes} />}
                 {info.collected && <Fact label={t("registers.collected")} tint={T.dietary} full value={info.collected} />}
               </div>

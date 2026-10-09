@@ -10,7 +10,7 @@ import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 export const hoOverview = Router();
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
-const COUNTS = (status: string) => status !== "Cancelled" && status !== "Declined" && status !== "Waitlisted";
+const COUNTS = (status: string) => status !== "Cancelled" && status !== "Declined" && status !== "Waitlisted" && status !== "Offered";
 const DAY = 86_400_000;
 
 function companyScope(req: Request, res: Response): string | null {

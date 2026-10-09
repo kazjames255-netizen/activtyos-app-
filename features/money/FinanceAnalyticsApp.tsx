@@ -5,6 +5,8 @@ import { dateLocale as dl } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
+import { withHoNet } from "@/lib/ho-net";
+import { useHoScope } from "@/components/franchise/HoScope";
 import { useRealtime } from "@/lib/realtime";
 import { WalletOwedCard } from "@/features/money/WalletOwedCard";
 import { collectedNet, owedNow } from "@/features/bookings/helpers";
@@ -22,8 +24,9 @@ import { BRAND } from "@/lib/i18n/config";
 import { rich } from "./rich";
 import { methodLabel } from "./finI18n";
 import { RefundsToSend } from "./RefundsToSend";
-import { financeFigures, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, payoutRows, type PaymentRecord } from "./financeFigures";
-import { genderSplit, type KidSex } from "./genderSplit";
+import { financeFigures, inFinance, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, payoutRows, type PaymentRecord } from "./financeFigures";
+import { addonFigures } from "./addonFigures";
+import { genderSplit,type KidSex } from "./genderSplit";
 
 // ── Types for the extra ledgers we fold in (subset of each route's shape) ──
 interface Invoice { id: string; customerName: string; amount: number; date: string; dueDate?: string; status: string; overdue?: boolean }
@@ -44,6 +47,7 @@ export function FinanceAnalyticsApp() {
   // A franchise shares head office's payout (Stripe) account: it can't connect or open it (the API says so), so its
   // Payouts tab explains that instead of offering buttons that only ever fail.
   const isFranchisePortal = portalOf(usePathname()) === "franchise";
+  const hoScope = useHoScope(); // head office: Finance follows the network scope selector (own / a franchise / all)
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [invoices, setInvoices] = useState<InvPayload | null>(null);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -82,7 +86,7 @@ export function FinanceAnalyticsApp() {
   }, [status, tabTouched]);
 
   const load = useCallback(() => {
-    apiGet<Booking[]>("/api/bookings").then((b) => {
+    apiGet<Booking[]>(withHoNet("/api/bookings")).then((b) => {
       const next = Array.isArray(b) ? b : [];
       // useRealtime refetches on every bookings/payments/invoices change, which can fire
       // often — bail out of the state update (keep the old array reference) when the payload
@@ -94,7 +98,7 @@ export function FinanceAnalyticsApp() {
       });
       setError(null);
     }).catch((e) => setError(e instanceof Error ? e.message : t("p8fin.gLoadFailed")));
-    apiGet<InvPayload>("/api/invoices").then((p) => setInvoices(p)).catch(() => setInvoices({ items: [], summary: { count: 0, outstanding: 0, collected: 0, overdue: 0 } }));
+    apiGet<InvPayload>(withHoNet("/api/invoices")).then((p) => setInvoices(p)).catch(() => setInvoices({ items: [], summary: { count: 0, outstanding: 0, collected: 0, overdue: 0 } }));
     apiGet<PaymentRecord[]>("/api/payments").then((p) => setPayments(Array.isArray(p) ? p : [])).catch(() => {});
     apiGet<PayStatus>("/api/payments/status").then(setStatus).catch(() => {});
     // Each listing's season + venue, for the Season/Location filters and the
@@ -117,7 +121,7 @@ export function FinanceAnalyticsApp() {
     apiGet<{ children?: KidSex[] }[]>("/api/customers")
       .then((cs) => setChildKids((cs ?? []).flatMap((c) => c.children ?? [])))
       .catch(() => {});
-  }, [t]);
+  }, [t, hoScope]);
   useEffect(load, [load]);
   useRealtime(["bookings", "payments", "invoices"], load);
 
@@ -148,42 +152,33 @@ export function FinanceAnalyticsApp() {
   // filters/window as `a`, kept separate to keep each concern legible.
   const mix = useMemo(() => {
     const all = (bookings ?? []).filter((b) =>
-      b.status !== "Declined" && b.status !== "Waitlisted"
+      inFinance(b)
       && (!season || listingSeason[b.listingId ?? ""] === season)
       && (!venue || listingVenueId[b.listingId ?? ""] === venue));
     const now = new Date(nowMs);
     const inWindow = new Set<string>();
     for (let i = months - 1; i >= 0; i--) inWindow.add(mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))));
 
-    const addonAgg = new Map<string, { count: number; rev: number }>();
     const byPass = new Map<string, { count: number; revenue: number }>();
     const winBks: Booking[] = [];
+    const addonBks: Booking[] = [];
     const dow = [0, 0, 0, 0, 0, 0, 0];
     const amounts: number[] = [];
     const seenLearner = new Set<string>();
-    let winBookings = 0, bookingsWithAddon = 0, addonUnits = 0, addonRevenue = 0;
+    let winBookings = 0;
 
     for (const b of all) {
       const m = monthOf(b);
+      if (m && inWindow.has(m)) addonBks.push(b); // cancelled ones too: an add-on KEPT on a cancelled booking is still sold (addonFigures decides)
       if (!m || !inWindow.has(m) || isCancelled(b)) continue;
       winBookings++;
       winBks.push(b);
       amounts.push(b.amount);
       if (b.pass) { const p = byPass.get(b.pass) ?? { count: 0, revenue: 0 }; p.count++; p.revenue += collectedNet(b); byPass.set(b.pass, p); }
-      const ad = b.addons ?? [];
-      if (ad.length) bookingsWithAddon++;
-      // Each booking carries its extras as text ("Hot lunch × 5 — £25.00"): read the name and the amount actually charged from it.
-      for (const line of ad) {
-        const m = /^(.*?)\s+—\s+£([\d,]+(?:\.\d+)?)$/.exec(line.trim());
-        const nm = (m ? m[1] : line).replace(/\s+×\s+\d+.*$/, "").replace(/\s+\(.*\)$/, "").replace(/^🍽\s*/, "").trim() || line;
-        const amt = m ? parseFloat(m[2].replace(/,/g, "")) : 0;
-        const cur = addonAgg.get(nm) ?? { count: 0, rev: 0 };
-        cur.count++; cur.rev += amt; addonAgg.set(nm, cur);
-        addonUnits++; addonRevenue += amt;
-      }
       for (const d of b.days ?? []) { const wd = new Date(`${d}T00:00:00Z`).getUTCDay(); if (wd >= 0 && wd <= 6) dow[wd]++; }
     }
 
+    const { bookingsWithAddon, addonUnits, addonRevenue, byName: addonAgg } = addonFigures(addonBks);
     const valueBands = VALUE_BANDS.map(([label, lo, hi], i) => { const n = amounts.filter((v) => v >= lo && v < hi).length; return { label, value: n, sub: String(n), color: ACT_C[i % ACT_C.length] }; });
     const topAddons = [...addonAgg.entries()].map(([label, v]) => ({ label, count: v.count, rev: Math.round(v.rev * 100) / 100 })).sort((x, y) => y.rev - x.rev || y.count - x.count).slice(0, 8)
       .map((r, i) => ({ label: r.label, value: r.rev, sub: t("p8fin.faAddonSold", { amount: money(r.rev), n: r.count }), color: ACT_C[i % ACT_C.length] }));
@@ -245,7 +240,7 @@ export function FinanceAnalyticsApp() {
   function exportCSV() {
     const cell = csvCell; // formula-safe: Family is the parent-typed booker name
     const rows = (bookings ?? []).filter((b) =>
-      b.status !== "Declined" && b.status !== "Waitlisted"
+      inFinance(b)
       && (!season || listingSeason[b.listingId ?? ""] === season)
       && (!venue || listingVenueId[b.listingId ?? ""] === venue)
       && (() => { const m = monthOf(b); return m != null && a.keys.includes(m); })());

@@ -4,10 +4,14 @@ import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import type { BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
-import { franchiseListingIds } from "../lib/franchiseScope";
+import { cached } from "../lib/kitCache";
+import { blocksInHoNet, franchiseListingIds, listingOwners } from "../lib/franchiseScope";
 import { staffSiteScope } from "../lib/siteScope";
 import { ukToday } from "../lib/ukDate";
 import { hasLiveAddonOrders, kitForDay, kitTally, type KitBooking } from "../../../features/bookings/addons";
+import { staffMayReadFamilies } from "../middleware/access";
+import { kitKey } from "../../../features/bookings/addons";
+import { withSplitOneOffs } from "../lib/splitSiblings";
 import { libraryDocId } from "../lib/tenantLibrary";
 import { loadSettings } from "../lib/tenantLibrary";
 
@@ -34,20 +38,29 @@ async function tenantOf(req: import("express").Request, res: import("express").R
     if (!tenantId) { res.status(400).json({ error: "Platform accounts must pass ?tenantId=" }); return null; }
   }
   if (!tenantId) { res.status(403).json({ error: "Your account has no tenant" }); return null; }
+  // Staff follow their role matrix: the Add-on orders page is open to anyone who can view Bookings OR Registers (the add-on choices are on both).
+  if (!(await staffMayReadFamilies(req))) {
+    res.status(403).json({ error: "Your role doesn't have access to Bookings or Registers, so it can't see add-on orders. A manager can change this in Setup → Roles & permissions.", code: "no_access", area: "bookings" });
+    return null;
+  }
   return tenantId;
 }
 
 /** The blocks this account may see that have a session in [from, to] (franchise and site scoped, like the registers). */
-async function scopedBlocks(auth: NonNullable<import("express").Request["auth"]>, tenantId: string, from: string, to: string) {
+async function scopedBlocks(auth: NonNullable<import("express").Request["auth"]>, tenantId: string, from: string, to: string, hoNet?: unknown) {
   let franchiseListings: Set<string> | null = null;
   if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) franchiseListings = await franchiseListingIds(tenantId, auth.franchiseId);
   const site = await staffSiteScope(auth);
   const blocksSnap = await db.collection("blocks").where("tenantId", "==", tenantId).get();
-  return blocksSnap.docs
+  const inRange = blocksSnap.docs
     .map((d) => ({ id: d.id, block: d.data() as BlockDoc }))
     .filter(({ block }) => !franchiseListings || franchiseListings.has(block.listingId))
     .filter(({ block }) => !site || site.listings.has(block.listingId))
     .filter(({ block }) => block.sessions.some((s) => s.date >= from && s.date <= to));
+  // Head office's network scope selector (?franchiseId=): "__ho__" = own locations, an id = that franchise, none = everything.
+  if (auth.role !== "company" || typeof hoNet !== "string" || !hoNet.trim()) return inRange;
+  const scoped = blocksInHoNet(inRange.map((x) => ({ ...x, listingId: x.block.listingId })), await listingOwners(tenantId), auth.role, hoNet);
+  return scoped.map(({ id, block }) => ({ id, block }));
 }
 
 /** The optional ?listingId= filter. Applied INSIDE the role scoping above: an id the caller may not see simply matches no block,
@@ -64,23 +77,16 @@ const listingParam = (req: import("express").Request): string => {
 };
 
 /** The bookings of those blocks (every booking; the pure functions keep only the Confirmed ones). */
-async function bookingsOfBlocks(blocks: { id: string }[]): Promise<KitBooking[]> {
+async function bookingsOfBlocks(tenantId: string, blocks: { id: string }[]): Promise<KitBooking[]> {
   const snaps = await Promise.all(blocks.map(({ id }) => db.collection("bookings").where("blockId", "==", id).get()));
-  return snaps.flatMap((s) => s.docs.map((d) => fromDoc(d.data() as BookingDoc) as KitBooking));
+  const list = snaps.flatMap((s) => s.docs.map((d) => fromDoc(d.data() as BookingDoc) as KitBooking));
+  // A one-off extra bought on the first reference of a split checkout follows the earliest remaining reference if that one is cancelled / emptied.
+  return withSplitOneOffs(tenantId, list);
 }
 
 // A minute of caching for the cheap summaries (sidebar, dashboard card, strip, month): they are read on every page load, and an order shows
 // within the minute (the screens also refresh on the realtime "bookings" channel, which bypasses nothing: the day view itself is never cached).
-const memo = new Map<string, { at: number; v: unknown }>();
-async function cached<T>(key: string, ttlMs: number, make: () => Promise<T>): Promise<T> {
-  const hit = memo.get(key);
-  if (hit && Date.now() - hit.at < ttlMs) return hit.v as T;
-  const v = await make();
-  memo.set(key, { at: Date.now(), v });
-  if (memo.size > 500) for (const k of memo.keys()) { memo.delete(k); if (memo.size < 400) break; }
-  return v;
-}
-const scopeKey = (req: import("express").Request, tenantId: string) => `${tenantId}|${req.auth!.role}|${req.auth!.franchiseId ?? ""}|${req.user?.uid ?? ""}`;
+const scopeKey = (req: import("express").Request, tenantId: string) => `${tenantId}|${req.auth!.role}|${req.auth!.franchiseId ?? ""}|${req.user?.uid ?? ""}|${typeof req.query.franchiseId === "string" ? req.query.franchiseId : ""}`;
 
 /** Only roles that may message families see a booker's email (the same people who can tick). */
 const stripPrivate = (groups: ReturnType<typeof kitForDay>, allowed: boolean) =>
@@ -100,9 +106,9 @@ kit.get("/", async (req, res) => {
   const date = typeof req.query.date === "string" && DAY.test(req.query.date) ? req.query.date : ukToday();
   const name = typeof req.query.name === "string" ? req.query.name.slice(0, 80) : "";
   const listingId = listingParam(req);
-  const todays = (await scopedBlocks(auth, tenantId, date, date)).filter(({ block }) => !listingId || block.listingId === listingId);
+  const todays = (await scopedBlocks(auth, tenantId, date, date, req.query.franchiseId)).filter(({ block }) => !listingId || block.listingId === listingId);
   if (!todays.length) { res.json({ date, canTick: canTick(auth.role), groups: [], ticked: 0, total: 0 }); return; }
-  const bookings = await bookingsOfBlocks(todays);
+  const bookings = await bookingsOfBlocks(tenantId, todays);
   const groups = stripPrivate(kitForDay(bookings, date, { name }), canTick(auth.role));
   const tickSnap = groups.length ? await ticksCol.where("tenantId", "==", tenantId).where("date", "==", date).get() : null;
   const ticks = new Map<string, { by?: string; at?: string }>();
@@ -137,13 +143,13 @@ kit.get("/days", async (req, res) => {
   const name = typeof req.query.name === "string" ? req.query.name.slice(0, 80) : "";
   const listingId = listingParam(req);
   const out = await cached(`days|${scopeKey(req, tenantId)}|${from}|${to}|${name.toLowerCase()}|${listingId}`, 20_000, async () => {
-    const blocks = await scopedBlocks(auth, tenantId, from, to);
+    const blocks = await scopedBlocks(auth, tenantId, from, to, req.query.franchiseId);
     // Bookings per listing (a block belongs to one listing), so the dropdown and the filter come from the same scoped data.
     const byListing = new Map<string, KitBooking[]>();
     await Promise.all(blocks.map(async (b) => {
       const list = byListing.get(b.block.listingId) ?? [];
       byListing.set(b.block.listingId, list);
-      list.push(...(await bookingsOfBlocks([b])));
+      list.push(...(await bookingsOfBlocks(tenantId, [b])));
     }));
     const withOrders = [...byListing].filter(([, bs]) => Object.keys(kitTally(bs, from, to).days).length > 0).map(([id]) => id);
     const titles = await Promise.all(withOrders.map((id) => db.collection("listings").doc(id).get()));
@@ -170,9 +176,9 @@ kit.get("/live", async (req, res) => {
   const auth = req.auth!;
   const today = ukToday();
   const live = await cached(`live|${scopeKey(req, tenantId)}|${today}`, 60_000, async () => {
-    const blocks = await scopedBlocks(auth, tenantId, today, "9999-12-31");
+    const blocks = await scopedBlocks(auth, tenantId, today, "9999-12-31", req.query.franchiseId);
     if (!blocks.length) return false;
-    return hasLiveAddonOrders(await bookingsOfBlocks(blocks), today);
+    return hasLiveAddonOrders(await bookingsOfBlocks(tenantId, blocks), today);
   });
   res.json({ live });
 });
@@ -207,9 +213,17 @@ kit.post("/tick", async (req, res) => {
   const parsed = tickSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const { key, ref, date, done } = parsed.data;
-  // The key must belong to a booking of THIS tenant (never trust a ref from the client).
+  // The booking must be in THIS tenant and inside the caller's franchise / site (the same scope the page shows), never a bare ref from the client.
   const owned = await db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "==", ref).limit(1).get();
   if (owned.empty) { res.status(404).json({ error: "Booking not found" }); return; }
+  const booking = fromDoc(owned.docs[0].data() as BookingDoc) as KitBooking & { blockId?: string };
+  const mine = await scopedBlocks(req.auth!, tenantId, date, date);
+  if (!booking.blockId || !mine.some((b) => b.id === booking.blockId)) { res.status(403).json({ error: "That order isn't at one of your sites" }); return; }
+  // The key must be this booking's, for this date. Ticking ON needs a real item (a Confirmed booking's add-on that day); unticking only needs the key to belong to the booking and date.
+  const slug = kitKey(ref, "", "", "", "").split("__")[0];
+  const belongs = key.startsWith(`${slug}__`) && key.endsWith(`__${date}`);
+  const real = kitForDay([booking], date).some((g) => g.children.some((c) => c.key === key && c.ref === ref));
+  if (!belongs || (done && !real)) { res.status(400).json({ error: "That tick doesn't match this booking and day" }); return; }
   const id = `${tenantId}_${key}`.slice(0, 480);
   if (done) {
     const by = req.user?.name || req.user?.email || "staff";

@@ -6,6 +6,7 @@ import type { AddonRequest, Booking } from "../../../features/bookings/types";
 import { bellTitle, bellBody, paymentType } from "./bellText";
 import { BRAND } from "./brand";
 import { addonSentences } from "../../../features/bookings/addons";
+import { requestWhat } from "../../../features/bookings/addonRequests";
 
 export const gbp = (n: number) => `£${(Math.round(n * 100) / 100).toFixed(2)}`;
 
@@ -195,7 +196,7 @@ export function bookingConfirmedSpec(b: Booking, providerName: string, bank?: Ba
 export function addonDecisionSpec(b: Booking, providerName: string, r: AddonRequest): CustomerEmailSpec {
   const who = escapeHtml((r.child ?? "").trim().split(/\s+/)[0] || "your child");
   const approved = r.status === "approved";
-  const what = r.kind === "cancel" ? `cancel ${escapeHtml(r.label)}` : `change ${escapeHtml(r.label)} to ${escapeHtml(r.toLabel ?? "")}`;
+  const what = escapeHtml(requestWhat(r));
   const money = approved && r.money && r.money.amount > 0
     ? r.money.resolution === "charge" ? ` The difference of <b>${gbp(r.money.amount)}</b> is to pay.`
       : r.money.resolution === "wallet" ? ` <b>${gbp(r.money.amount)}</b> has been added to your wallet.`

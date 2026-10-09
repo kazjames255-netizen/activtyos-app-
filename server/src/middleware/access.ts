@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { loadSettings } from "../lib/tenantLibrary";
-import { capForApi, capLevel, featureForApi, firstOff, normalizeApiPath, resolveCaps } from "../../../lib/accessMap";
+import { capForApi, capLevel, familyReadAreaForApi, featureForApi, firstOff, mayReadFamilyData, normalizeApiPath, resolveCaps } from "../../../lib/accessMap";
 import { isSafeguardingLead } from "../lib/dslAlert";
 
 // Setup → Features and Setup → Roles & permissions, ENFORCED. Both used to be
@@ -45,6 +45,14 @@ export async function capsFor(req: Request): Promise<Record<string, "none" | "vi
   return auth.caps;
 }
 
+/** Staff whose role gives them neither Bookings nor Registers may not read families' data off routes that sit under another area
+ *  (add-on orders, a block's attendees, the customer list). Everyone else is unaffected. `explicitArea`: an area the role names
+ *  itself (e.g. "customers") also opens the door. */
+export async function staffMayReadFamilies(req: Request, explicitArea?: string): Promise<boolean> {
+  if (req.auth?.role !== "staff") return true;
+  return mayReadFamilyData(await capsFor(req), explicitArea);
+}
+
 const GATED = new Set(["company", "freelancer", "franchise", "staff"]);
 
 const AREA_LABEL: Record<string, string> = {
@@ -64,7 +72,8 @@ export async function enforceAccess(req: Request, res: Response, next: NextFunct
   const path = normalizeApiPath(req.baseUrl + req.path);
   const feature = featureForApi(path, req.method);
   const cap = auth.role === "staff" ? capForApi(path, req.method) : null;
-  if (!feature && !cap) { next(); return; }
+  const familyArea = auth.role === "staff" ? familyReadAreaForApi(path, req.method) : null;
+  if (!feature && !cap && !familyArea) { next(); return; }
   try {
     if (feature) {
       const features = (await effectiveSettings(auth.tenantId, auth.franchiseId)).features as Record<string, unknown> | undefined;
@@ -95,6 +104,12 @@ export async function enforceAccess(req: Request, res: Response, next: NextFunct
         res.status(403).json({ error: `Your role can view ${what} but not change it. A manager can change this in Setup → Roles & permissions.`, code: "view_only", area: cap.area });
         return;
       }
+    }
+    // Children / parent contact / medical reads: Bookings or Registers, or the area named explicitly (see FAMILY_READ_API).
+    // (the DSL / deputy named in Setup → Safeguarding keeps safeguarding access whatever the matrix says, as above)
+    if (familyArea && !(familyArea === "incidents" && (await isSafeguardingLead(auth, req.user?.email))) && !(await staffMayReadFamilies(req, familyArea))) {
+      res.status(403).json({ error: "Your role doesn't have access to Bookings or Registers, so it can't open children's or families' details. A manager can change this in Setup → Roles & permissions.", code: "no_access", area: familyArea });
+      return;
     }
   } catch (e) {
     // Settings unreadable: don't lock the whole team out over it — every

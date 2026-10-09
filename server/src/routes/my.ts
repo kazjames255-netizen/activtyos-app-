@@ -1,6 +1,7 @@
 import { mergeGroupKey } from "../lib/bookingMergeKey";
 import { stopOpenPayments } from "../lib/checkoutIntent";
 import { ageCapGroup } from "../lib/childAge";
+import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import { eraseChildLearning } from "../lib/hubPrivacy";
 import { z } from "zod";
@@ -25,12 +26,15 @@ import { refPrefixFor } from "../lib/bookingRef";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/mealCutoff";
 import { cancellationRequestNotice, shortWhen, firstWord } from "../lib/emailTemplates";
-import { money, paidSoFar as totalPaid, realPhone, refundableSoFar, sessionIsoDates, visitAddressLabel } from "../../../features/bookings/helpers";
+import { computeRelease, materialiseKids, releaseRecord, ReleaseError } from "../lib/releaseMoney";
+import { dayIso, kidActiveDays, money, paidSoFar as totalPaid, realPhone, refundableSoFar, releaseCap, sessionIsoDates, visitAddressLabel } from "../../../features/bookings/helpers";
 import type { Booking, AddonRequest } from "../../../features/bookings/types";
-import { AddonRequestError, addAddonRequest, buildAddonRequest, currentAnswers, defForLine, withdrawAddonRequest } from "../lib/addonRequests";
+import { AddonRequestError, addAddonRequest, addonCutoffDays, buildAddonRequest, currentAnswers, defForLine, withdrawAddonRequest } from "../lib/addonRequests";
 import { addonLineKey, parseAddonLabel } from "../../../features/bookings/addons";
-import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, requestDeadline } from "../../../features/bookings/addonRequests";
-import { applyParentCancel, applyPartialCancel, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
+import { DEFAULT_ADDON_REQUEST_DAYS, addonRequestBlock, describeRequest, firstDayOf, lineDayStates, pendingForLine, requestDeadline, requestKeys, requestTargets, splittableLine, lineRequestBlock } from "../../../features/bookings/addonRequests";
+import { stampAddonRefund, addonsGoBack, refundCoversWhole } from "../../../features/bookings/addonRefund";
+import { familyBooking } from "../lib/familyView";
+import { applyParentCancel, applyPartialCancel, archiveAwaitingRefund, buildBooking, markRefundPending } from "../../../features/bookings/mutations";
 import { missingRequiredQuestions, type ChildQ } from "../lib/requiredChildQuestions";
 import { applyDiscounts, DISCOUNT_KIND_LABEL, type DiscountRule } from "../../../features/listings/discounts";
 import { earlyBirdScopeOf, earlyFixedUsed, claimEarlyBird } from "../lib/earlyBird";
@@ -38,7 +42,7 @@ import { mergeBookings } from "../lib/mergeBookings";
 import { ageRangeFor, isOutOfRange, passHidden, addonRefusal, isQueuedOn, cardUnpaid } from "../lib/bookingRules";
 import { wantsCardHold, releaseHolds, deadlineLabel, deadlineWarningHtml } from "../lib/cardHold";
 import { bellTitle, bellBody, bellMoney, bellDay, paymentType, plainParagraph } from "../lib/bellText";
-import { addonCount, addonShort, bookingAddonLines } from "../../../features/bookings/addons";
+import { addonCount, addonWithDays, bookingAddonLines, mergeAddonLines } from "../../../features/bookings/addons";
 import {
   resolveBundlePricing,
   type BundleDoc,
@@ -322,7 +326,7 @@ my.get("/bookings", async (req, res) => {
     list.map((b) => {
       const base = childcareRoute(b) ? { ...b, childcare: childcareOf(b as ChildcareBooking) } : b;
       const pos = b.status === "Waitlisted" && b.blockId ? positions.get(`${b.blockId}|${b.ref}`) : undefined;
-      return pos?.length ? { ...base, waitlist: pos, waitlistMode: modes.get(b.blockId!) ?? "manual" } : base;
+      return familyBooking(pos?.length ? { ...base, waitlist: pos, waitlistMode: modes.get(b.blockId!) ?? "manual" } : base);
     }),
   );
 });
@@ -1718,6 +1722,9 @@ my.post("/bookings", async (req, res) => {
       // Queue positions count per block per date.
       const queuePos = new Map<string, Record<string, number>>();
       for (const [id, depth] of queueDepth) queuePos.set(id, { ...depth });
+      // ONE id for this whole checkout: every reference it creates (a weekly split makes several) carries it, so they can be told apart from another
+      // checkout of the same family made at the same moment.
+      const checkoutId = randomUUID();
       const created: Booking[] = [];
       // Credit is drawn down as the bookings are built, so it lands on the
       // earliest places taken and never on a waitlisted one. The family may cap
@@ -1745,7 +1752,8 @@ my.post("/bookings", async (req, res) => {
               // A meal keeps its own date-stamped label; a normal per-day
               // add-on shows the "× n days" count.
               const label = a.meal ? `🍽 ${a.name} · ${on.map((d) => prettyDay(d)).join(", ")}` : `${a.name} × ${on.length}${a.suffix}`;
-              return [{ ...a, price: round2(a.unit * on.length), label }];
+              // onDays: only the days THIS reference holds, so its line (days, quantity) never claims the other reference's days.
+              return [{ ...a, price: round2(a.unit * on.length), label, onDays: on }];
             }
             const home = p.segments.find((s2) => s2.days.includes(a.onDays[0]))?.blockId ?? p.segments[0].blockId;
             return home === seg.blockId ? [a] : [];
@@ -1809,6 +1817,7 @@ my.post("/bookings", async (req, res) => {
             ...(serviceAddress ? { serviceAddress } : {}),
             ...(familyPostcode ? { postcode: familyPostcode } : {}),
             tenantId: listing.tenantId,
+            checkoutId,
             // Attribute the booking to whichever franchise OWNS the listing, so a
             // parent booking on a franchise's listing shows in that franchise's
             // Bookings/Calendar/Reconciliation — matching split-fees' attribution.
@@ -2463,7 +2472,7 @@ my.post("/bookings/:ref/accept-offer", async (req, res) => {
       const bank = isBankMethod(updated.method) && (updated.amount ?? 0) > 0 && updated.tenantId ? await bankPayDetails(updated.tenantId, updated.ref, updated.amount ?? 0) : null;
       emailBookingConfirmed(updated, tenant.data()?.name ?? "Your activity provider", bank);
     }
-    res.json(updated);
+    res.json(familyBooking(updated));
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
     else throw e;
@@ -2507,7 +2516,7 @@ my.post("/bookings/:ref/decline-offer", async (req, res) => {
     // The family gave the place up: the discount code it was booked with comes back.
     if (updated.tenantId && shouldReleaseDiscountCodes(updated)) void releaseDiscountCodes(updated.tenantId, updated.ref);
     stopOpenPayments(updated);
-    res.json(updated);
+    res.json(familyBooking(updated));
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
     else throw e;
@@ -2552,22 +2561,6 @@ async function bookingContext(b: Booking): Promise<{
 const enabled = (settings: Record<string, unknown>, key: string, dflt = true) =>
   settings[key] === undefined ? dflt : settings[key] !== false;
 
-/** A single-child booking has no `kids[]`, and the array `bookingKids` makes up
- *  on the fly dates itself from the SESSION LABELS ("Mon 27 Jul 2026"). Partial
- *  cancellation works in ISO throughout, so materialise the child properly —
- *  from `days` — before touching anything. */
-function materialiseKids(b: Booking): NonNullable<Booking["kids"]> {
-  if (b.kids?.length) return b.kids;
-  b.kids = [
-    {
-      name: b.child,
-      ...(b.childId ? { childId: b.childId } : {}),
-      ...(b.age != null ? { age: b.age } : {}),
-      dates: [...(b.days ?? [])].sort(),
-    },
-  ];
-  return b.kids;
-}
 
 /** Release individual days of a multi-day pass. The booking stays Confirmed for
  *  whatever remains; the released days' pro-rata value is either refunded (cash,
@@ -2612,52 +2605,17 @@ async function partialCancel(
     const b = fromDoc(snap.data() as BookingDoc);
     if (b.email !== email) throw new HttpError(403, "Not your booking");
     if (b.status === "Cancelled") throw new HttpError(400, "This booking is already cancelled");
-    const kids = materialiseKids(b);
-
-    // Validate every released day BEFORE anything moves: on that child, still standing, and not already gone or in the past.
-    const today = ukToday();
-    const seen = new Set<string>();
-    for (const w of wanted) {
-      const kid = kids.find((k) => (k.childId ?? k.name) === w.childKey);
-      if (!kid) throw new HttpError(400, `${w.childKey} isn't on this booking`);
-      if (kid.cancelled) throw new HttpError(400, `${kid.name}'s place is already cancelled`);
-      const booked = new Set(kid.dates ?? []);
-      const gone = new Set(kid.cancelledDays ?? []);
-      for (const d of w.days) {
-        if (!booked.has(d)) throw new HttpError(400, `${kid.name} isn't booked on ${prettyDay(d)}`);
-        if (gone.has(d)) throw new HttpError(400, `${kid.name}'s place on ${prettyDay(d)} is already cancelled`);
-        if (d < today) throw new HttpError(400, `${prettyDay(d)} has already passed`);
-        const once = `${w.childKey}|${d}`;
-        if (seen.has(once)) throw new HttpError(400, `${prettyDay(d)} is listed twice`);
-        seen.add(once);
-        releasedCount += 1;
-      }
-    }
-    if (!releasedCount) throw new HttpError(400, "No days were selected");
-
-    // Releasing everything that's left is just a cancellation — say so rather than leaving a booking with no days on it.
-    const activeTotal = kids.reduce((n, k) => n + (k.cancelled ? 0 : (k.dates ?? []).filter((d) => !(k.cancelledDays ?? []).includes(d)).length), 0);
-    if (releasedCount >= activeTotal)
-      throw new HttpError(400, "That's every day left — cancel the whole booking instead");
-
-    // Pro-rata over every child-day BOOKED (the same denominator the parent's preview uses), against money actually received.
-    // A joint booking that's been paid stores amountPaid 0, which valued every released day at £0 — use what was actually paid
-    // (incl. wallet credit).
-    const bookedChildDays = kids.reduce((n, k) => n + (k.dates ?? []).length, 0) || 1;
-    const perSlotPaid = round2(totalPaid(b) / bookedChildDays);
-    // Refund runs each released day through the policy on ITS OWN date, so a day three weeks out can refund while tomorrow's can't.
-    // Wallet takes the full pro-rata value — that's the trade for keeping it in the business.
-    releasedDays = wanted.flatMap((w) => w.days);
-    // Never more than is still refundable (earlier releases/refunds taken off).
-    value = Math.min(refundableSoFar(b),
-      resolution === "wallet"
-        ? round2(releasedCount * perSlotPaid)
-        : round2(releasedDays.reduce((sum, d) => sum + (refundFor(policy, effectiveRefundDate(b.dayOrigin?.[d], d), perSlotPaid, now, "parent")?.amount ?? 0), 0)));
-
-    const heldBefore = structuredClone({ status: b.status, seats: b.seats, days: b.days, kids: b.kids });
-    applyPartialCancel(b, wanted);
-    // One place per child: a cancelled child frees their seat, and each day a child gives up frees that child's place on that day
-    // (CN-019). Derived from before/after state, so repeating a release can't free twice.
+    // ONE calculation (lib/releaseMoney.ts) - the very same one the family's preview runs - validates the days, values them and applies the release.
+    let calc;
+    try { calc = computeRelease(b, wanted, resolution, policy, now, ukToday()); }
+    catch (e) { if (e instanceof ReleaseError) throw new HttpError(e.status, e.message); throw e; }
+    value = calc.value;
+    releasedCount = calc.releasedCount;
+    releasedDays = calc.releasedDays;
+    const fullValue = calc.fullValue;
+    const heldBefore = calc.heldBefore as { status: Booking["status"]; seats: Booking["seats"]; days: Booking["days"]; kids: Booking["kids"] };
+    // One place per child: a cancelled child frees their seat, and each day a child gives up frees that child's place on that day (CN-019).
+    // Derived from before/after state, so repeating a release can't free twice.
     let blockUpdate: { ref: FirebaseFirestore.DocumentReference; counts: ReturnType<typeof countsUpdate> } | null = null;
     if (b.blockId) {
       const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId));
@@ -2674,21 +2632,16 @@ async function partialCancel(
     const [walletSnap, entrySnap] = creditNow ? await Promise.all([tx.get(walletRef(tenantId, email)), tx.get(walletEntryRef(walletKey))]) : [null, null];
 
     const label = releasedCount === 1 ? "1 day" : `${releasedCount} days`;
+    const record = releaseRecord({ resolution, value, releasedCount, partPaid: calc.settled.partPaid, drop: calc.preview.drop, on: ukToday() });
+    if (record.log) (b.refundLog = b.refundLog ?? []).push(record.log);
     if (resolution === "wallet") {
-      // Instant and final — nothing for the provider to approve.
-      (b.refundLog = b.refundLog ?? []).push({
-        label: `${label} released — wallet credit`,
-        amount: value,
-        on: ukToday(),
-        by: "Booker",
-        source: "Wallet",
-      });
+      // Instant and final - nothing for the provider to approve.
       if (value > 0) b.pay = "Partially refunded";
-      b.note = `${label} released to wallet credit.`;
     } else {
       // A request: the money only moves when the provider approves it, exactly like a whole-booking cancel.
-      // A second release while the first is still awaiting approval ADDS to it (CN-022) — overwriting lost the earlier day's pending refund.
+      // A second release while the first is still awaiting approval ADDS to it (CN-022) - overwriting lost the earlier day's pending refund.
       const total = accumulatePendingRelease(b.cancel, value, refundableSoFar(b));
+      archiveAwaitingRefund(b);
       b.cancel = {
         on: ukToday(),
         by: "Booker",
@@ -2699,7 +2652,18 @@ async function partialCancel(
         ...(input.reason ? { reason: input.reason } : {}),
         ...(input.refundPref ? { refundTo: input.refundPref } : {}),
       };
-      b.note = `${label} released — ${value > 0 ? `${money(value)} refund requested` : "no refund due"}.`;
+    }
+    b.note = record.note;
+    // Add-on refund state (addonRefund.ts): a child's WHOLE place released with a full-value refund takes that child's add-ons back; day-only or partial
+    // releases keep them (a released day's own per-day add-on simply drops with the day).
+    {
+      const allBack = value > 0.004 && (value >= fullValue - 0.004 || refundCoversWhole(value, existing)); // (perSlotPaid is already held to the cap)
+      for (const w of wanted) {
+        const kid = (b.kids ?? []).find((k) => (k.childId ?? k.name) === w.childKey);
+        if (!kid) continue;
+        if (allBack && kid.cancelled) stampAddonRefund(b, { scope: "child", child: kid.name }, true);
+        else stampAddonRefund(b, { scope: "day", child: kid.name, date: w.days[0] ?? "" }, false);
+      }
     }
 
     tx.set(ref, toDoc(b));
@@ -2737,6 +2701,35 @@ async function partialCancel(
   return updated;
 }
 
+// POST /api/my/bookings/:ref/release-preview {days | kids, resolution} - what releasing these days would do to THIS booking's money, worked out by the
+// very function the release itself runs (lib/releaseMoney.ts computeRelease) on a throw-away copy. Nothing is written. The screen shows these numbers;
+// it does no money maths of its own.
+my.post("/bookings/:ref/release-preview", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  const parsed = cancelSchema.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const found = await myBookingByRef(req, email, String(req.params.ref));
+  if ("error" in found) { res.status(found.status).json({ error: found.error }); return; }
+  const existing = fromDoc(found.snap.data() as BookingDoc);
+  if (existing.status === "Cancelled") { res.status(400).json({ error: "This booking is already cancelled" }); return; }
+  try {
+    const { settings, policy } = await bookingContext(existing);
+    if (!enabled(settings, "allowPartialCancel")) throw new HttpError(400, "This provider doesn't offer cancelling individual days");
+    const resolution = parsed.data.resolution ?? "refund";
+    const copy = structuredClone(existing);
+    const kids = materialiseKids(copy);
+    const wanted: { childKey: string; days: string[] }[] = parsed.data.kids?.length
+      ? parsed.data.kids.map((k) => ({ childKey: k.childId ?? k.name, days: k.days }))
+      : [{ childKey: kids[0].childId ?? kids[0].name, days: parsed.data.days ?? [] }];
+    res.json(computeRelease(copy, wanted, resolution, policy, new Date().toISOString(), ukToday()).preview);
+  } catch (e) {
+    if (e instanceof ReleaseError) res.status(e.status).json({ error: e.message });
+    else if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
+    else throw e;
+  }
+});
+
 // POST /api/my/bookings/:ref/cancel — cancellation request (refund pending,
 // for the provider to approve/decline). Only the booking's own family can.
 my.post("/bookings/:ref/cancel", async (req, res) => {
@@ -2770,10 +2763,11 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
   if (parsed.data.days !== undefined || parsed.data.kids !== undefined) {
     try {
       const out = await partialCancel(ref, existing, email, parsed.data);
-      res.json(out);
+      res.json(familyBooking(out));
       // Meals / trips on the days just released (lib/cancelCleanup.ts).
-      const left = new Set([...(out.days ?? []), ...((out.kids ?? []).flatMap((k) => (k.cancelled ? [] : (k.dates ?? []).filter((d) => !(k.cancelledDays ?? []).includes(d)))))]);
-      const released = [...new Set([...(existing.days ?? []), ...((existing.kids ?? []).flatMap((k) => k.dates ?? []))])].filter((d) => !left.has(d));
+      const iso = (d: string) => dayIso(d) ?? d;
+      const left = new Set([...(out.days ?? []), ...((out.kids ?? []).flatMap((k) => (k.cancelled ? [] : kidActiveDays(k))))].map(iso));
+      const released = [...new Set([...(existing.days ?? []), ...((existing.kids ?? []).flatMap((k) => k.dates ?? []))].map(iso))].filter((d) => !left.has(d));
       if (out.tenantId && released.length) void cleanupAfterCancel(out.tenantId, out, released);
     } catch (e) {
       if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
@@ -2875,6 +2869,11 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       }
       // A cancelled-but-paid booking must read "Refund pending" straight away, like an operator cancel, not "Paid" until the refund is approved.
       markRefundPending(b);
+      // The add-ons go back only with a FULL refund that really moves money (policy full, or a credit note); a partial / nil refund keeps them.
+      // Stored on the lines now (addonRefund.ts), sticky, so no later change of the cancel record can flip it.
+      const goesBack = addonsGoBack({ kind: "parent-cancel", moved: !!b.cancel && b.cancel.refund !== "none" && (b.cancel.amount ?? 0) > 0.004, refund: b.cancel?.refund as "full" | "partial" | "none" | undefined,
+        grossBefore: (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0)), refundedAmount: b.cancel?.amount ?? 0 });
+      stampAddonRefund(b, { scope: "whole" }, goesBack, goesBack ? b.cancel : null); // declined by the provider: the mark comes off again
       // Free the block places the booking held — total AND its days
       // (all reads before writes).
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;
@@ -2940,7 +2939,7 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     }
     // …and the family gets their own one-line bell + email saying it is cancelled and what happens to their money.
     if (shouldNotifyCancelled(statusBefore, updated.status)) void notifyFamilyCancelledFor(updated, "family");
-    res.json(updated);
+    res.json(familyBooking(updated));
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
     else throw e;
@@ -2950,17 +2949,15 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
 // ——— Add-on requests: a family asks to CHANGE (size, colour...) or CANCEL one extra. Never automatic, never the same as cancelling the booking:
 // it waits for the provider to approve or decline (routes/bookings.ts addon-approve / addon-decline).
 const addonReqSchema = z.object({
-  key: z.string().min(1).max(300),
+  // One extra (a change always; a cancel may use it instead of targets) ...
+  key: z.string().min(1).max(300).optional(),
   kind: z.enum(["change", "cancel"]),
   answers: z.record(z.string().max(200)).optional(),
   note: z.string().max(300).optional(),
-});
+  // ... or, for a cancel, several extras and the specific days of a daily extra in ONE request.
+  targets: z.array(z.object({ key: z.string().min(1).max(300), days: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).max(62).optional() })).min(1).max(30).optional(),
+}).refine((v) => !!v.key || !!v.targets?.length, { message: "Pick what you would like to ask about." });
 
-async function addonCutoffDays(b: Booking): Promise<number> {
-  if (!b.tenantId) return DEFAULT_ADDON_REQUEST_DAYS;
-  const v = Number(((await loadSettings(b.tenantId, b.franchiseId ?? null)) as Record<string, unknown>).addonRequestDays);
-  return Number.isFinite(v) && v >= 0 ? Math.min(60, Math.floor(v)) : DEFAULT_ADDON_REQUEST_DAYS;
-}
 
 // GET /api/my/bookings/:ref/addon-options — each extra on the booking, what the family may ask for, and why not (cut-off / already asked).
 my.get("/bookings/:ref/addon-options", async (req, res) => {
@@ -2975,15 +2972,20 @@ my.get("/bookings/:ref/addon-options", async (req, res) => {
   for (const line of b.addonLines ?? []) {
     // (an older booking that only has the text lines has no addonLines: the family messages the provider instead)
     const l = { key: addonLineKey(line.child, line.label), name: line.name ?? parseAddonLabel(line.label).name };
-    const block = addonRequestBlock(b, { key: l.key, days: line.days }, today, cutoffDays);
+    const changeBlock = lineRequestBlock(b, { key: l.key, days: line.days, perDay: line.perDay, meal: line.meal }, today, cutoffDays);
     const def = line.meal ? null : await defForLine(b, line);
     const questions = (def?.questions ?? []).filter((q) => q.type === "choice" && (q.options ?? []).length).map((q) => ({ id: q.id, label: q.label, options: q.options ?? [], required: !!q.required }));
     const first = firstDayOf({ days: line.days }, b.days);
+    // A daily extra can be cancelled a day at a time: each day carries its own cut-off state. Otherwise the whole extra is judged on its first day.
+    const splittable = splittableLine(line);
+    const days = splittable ? lineDayStates(line.days, today, cutoffDays) : [];
+    const open = days.filter((d) => d.state === "none").length;
+    const pending = pendingForLine(b, l.key) ?? null;
+    const block = changeBlock;
     lines.push({
-      key: l.key, child: line.child, label: line.label, name: l.name, meal: !!line.meal, price: line.price, block,
-      canCancel: block === "none", canChange: block === "none" && !line.meal && questions.length > 0,
-      questions, current: currentAnswers(line),
-      pending: (b.addonRequests ?? []).find((r) => r.status === "pending" && r.key === l.key) ?? null,
+      key: l.key, child: line.child, label: line.label, name: l.name, meal: !!line.meal, price: line.price, block, splittable, days, changeDays: days.filter((d) => d.state === "none").map((d) => d.date),
+      canCancel: block === "none", canChange: changeBlock === "none" && !line.meal && questions.length > 0,
+      questions, current: currentAnswers(line), pending,
       ...(block === "cutoff" && first ? { until: requestDeadline(first, cutoffDays) } : {}),
     });
   }
@@ -3020,11 +3022,11 @@ my.post("/bookings/:ref/addon-requests", async (req, res) => {
         category: "booking",
         key: "addon-request",
         title: bellTitle("addon-request", b.ref),
-        body: bellBody([r.kind === "cancel" ? "Cancel extra" : "Change extra", bellMoney(r.price ?? 0)]),
+        body: bellBody([r.kind === "cancel" ? (requestKeys(r).length > 1 ? "Cancel extras" : "Cancel extra") : "Change extra", bellMoney(r.price ?? 0)]),
         subject: `${what} (${b.ref})`,
         href: `/company/bookings?ref=${encodeURIComponent(b.ref)}`,
         ref: b.ref,
-        emailHtml: `<p>${what.replace(/&/g, "&amp;").replace(/</g, "&lt;")}.</p><p>${(b.listing ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")} · booking ${b.ref}${r.note ? ` · note: ${r.note.replace(/&/g, "&amp;").replace(/</g, "&lt;")}` : ""}</p><p>Nothing changes until you approve or decline it. It is separate from cancelling the booking.</p>`,
+        emailHtml: `<p>${what.replace(/&/g, "&amp;").replace(/</g, "&lt;")}.</p>${requestTargets(r).length > 1 || requestTargets(r)[0].days?.length ? `<ul>${requestTargets(r).map((t) => `<li>${t.label.replace(/&/g, "&amp;").replace(/</g, "&lt;")}${t.days?.length ? ` · ${t.days.length} day${t.days.length === 1 ? "" : "s"} (${t.days.join(", ")})` : ""} · ${money(t.price)}</li>`).join("")}</ul>` : ""}<p>${(b.listing ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")} · booking ${b.ref}${r.note ? ` · note: ${r.note.replace(/&/g, "&amp;").replace(/</g, "&lt;")}` : ""}</p><p>Nothing changes until you approve or decline it. It is separate from cancelling the booking.</p>`,
       });
     }
     res.status(201).json(r);
@@ -3422,9 +3424,10 @@ export function notifyProviderNewBooking(ctx: ProviderNoticeCtx): void {
           // An EHCP is special-category data — never attached. The email links
           // straight to the secure /plan viewer, which re-checks access.
           ehcpFileId: str("sendPlanId"),
-          extras: bookingAddonLines({ addonLines: bookings.flatMap((b) => b.addonLines ?? []), addons: bookings.flatMap((b) => b.addons ?? []), child: bookings[0]?.child, kids: bookings.length === 1 ? bookings[0]?.kids : undefined })
+          // Each extra WITH its days (the provider has to know which days to prepare it for); one entry per extra even when the checkout made several references.
+          extras: mergeAddonLines(bookingAddonLines({ addonLines: bookings.flatMap((b) => b.addonLines ?? []), addons: bookings.flatMap((b) => b.addons ?? []), child: bookings[0]?.child, kids: bookings.length === 1 ? bookings[0]?.kids : undefined }))
             .filter((l) => !l.child || l.child.trim().toLowerCase() === (s.name ?? "").trim().toLowerCase() || seeds.length === 1)
-            .map((l) => addonShort(l)),
+            .map((l) => addonWithDays(l, [...new Set(bookings.flatMap((b) => b.days ?? []))].sort())),
         });
       }
       // Card vs childcare split — by the method chosen at checkout.
@@ -3519,7 +3522,7 @@ export function notifyProviderNewBooking(ctx: ProviderNoticeCtx): void {
           bellMoney(total),
           ctx.heldUntil
             ? `by ${bellDay(ctx.heldUntil)}`
-            : (() => { const n = bookings.reduce((acc, x) => acc + addonCount(x), 0); return n ? `${n} extra${n === 1 ? "" : "s"}` : /^Online/i.test(location ?? "") ? "Online" : /^Home visit/i.test(location ?? "") ? "Home visit" : ""; })(),
+            : (() => { const n = mergeAddonLines(bookingAddonLines({ addonLines: bookings.flatMap((x) => x.addonLines ?? []), addons: bookings.flatMap((x) => x.addons ?? []), child: bookings[0]?.child, kids: bookings.length === 1 ? bookings[0]?.kids : undefined })).length; return n ? `${n} extra${n === 1 ? "" : "s"}` : /^Online/i.test(location ?? "") ? "Online" : /^Home visit/i.test(location ?? "") ? "Home visit" : ""; })(),
         ]),
         subject: ctx.heldUntil ? `${BRAND}: approve or decline by ${deadlineLabel(ctx.heldUntil)} — ${listing.name} from ${bookerName} (${primary.ref})` : `${BRAND}: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
         href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,

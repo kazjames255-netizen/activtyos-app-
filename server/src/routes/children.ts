@@ -256,6 +256,8 @@ children.put("/:id", async (req, res) => {
   const parsed = careSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const id = req.params.id;
+  // Lead staff assigned to certain sites change care details only for children booked at those sites.
+  const site = await staffSiteScope(auth);
   const bookings = await db.collection("bookings").where("tenantId", "==", auth.tenantId).where("childId", "==", id).get();
   const allTenant = bookings.empty ? await db.collection("bookings").where("tenantId", "==", auth.tenantId).get() : null;
   const mine = [...bookings.docs, ...(allTenant?.docs ?? [])].filter((d) => {
@@ -263,7 +265,7 @@ children.put("/:id", async (req, res) => {
     const has = b.childId === id || !!b.kids?.some((k) => k.childId === id);
     // A franchise's lead staff carry its franchiseId too: they may change care details only for THEIR franchise's children.
     const inFranchise = !((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) || (b.franchiseId ?? null) === auth.franchiseId;
-    return has && inFranchise;
+    return has && inFranchise && (!site || bookingInSite(d.data(), site));
   });
   if (!mine.length) { res.status(404).json({ error: "Child not found for this account" }); return; }
   const ref = db.collection("children").doc(id);

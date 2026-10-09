@@ -2,7 +2,7 @@
 
 import { kidInitials } from "@/lib/uiRules";
 import { OnlineSessionsPanel } from "@/features/onlinesessions/OnlineSessionsPanel";
-import { dateLocale as dl } from "@/lib/i18n/format";
+import { dateLocale as dl, formatDay } from "@/lib/i18n/format";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -146,6 +146,9 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const [pickedDays, setPickedDays] = useState<string[]>([]);
   const [resolution, setResolution] = useState<"refund" | "wallet" | "changedate" | null>(null);
   const [moveTo, setMoveTo] = useState<Record<string, string>>({}); // slot key → replacement ISO date
+  // The server's own figures for releasing the ticked days (see the preview effect below).
+  type Prev = { partPaid: boolean; priceBefore: number; priceAfter: number; drop: number; paid: number; refund: number; credit: number; owedAfter: number };
+  const [prevRes, setPrevRes] = useState<{ k: string; data: Prev } | null>(null);
 
   useEffect(() => {
     if (!booking.tenantId) return;
@@ -190,7 +193,6 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const daysForKid = (k: { dates?: string[] }) => (k.dates && k.dates.length ? k.dates : booking.days ?? []);
   // Total booked child-days (the denominator for a fair per-slot share).
   const totalPaidSlots = kidsList ? kidsList.reduce((n, k) => n + daysForKid(k).length, 0) : allDays.length;
-  const perSlotPaid = totalPaidSlots ? paidSoFar(booking) / totalPaidSlots : 0;
   // The cancellable (future, not-already-cancelled) slots.
   const slots: { key: string; childName: string; childId?: string; date: string }[] = [];
   const addSlots = (name: string, childId: string | undefined, dates: string[], cancelled: string[]) => {
@@ -205,15 +207,14 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
     cfg?.partRefund ? "refund" : null,
   ].filter(Boolean)) as ("refund" | "wallet" | "changedate")[];
   const canPartial = !!cfg?.allowPartial && totalPaidSlots > 1 && slots.length > 0 && resOptions.length > 0;
-  const slotRefund = (d: string) => (policy ? refundFor(policy, effectiveRefundDate(booking.dayOrigin?.[d], d), perSlotPaid, new Date().toISOString(), "parent")?.amount ?? 0 : 0);
   const togglePick = (key: string) => setPickedDays((p) => (p.includes(key) ? p.filter((x) => x !== key) : [...p, key]));
   const pickedSlots = slots.filter((s) => pickedDays.includes(s.key));
   // Refund = pro-rata, per policy, per day. Wallet = full pro-rata value (stays
   // in-house, no policy cut). Change date = no money moves.
-  const pickedRefund = pickedSlots.reduce((sum, s) => sum + slotRefund(s.date), 0);
-  const pickedWallet = pickedSlots.length * perSlotPaid;
   const res = resolution && resOptions.includes(resolution) ? resolution : resOptions[0] ?? null;
   const multiKid = !!kidsList && kidsList.length > 1;
+  const prevKey = scope === "days" && pickedSlots.length && (res === "refund" || res === "wallet") ? `${booking.ref}|${pickedSlots.map((x) => x.key).join(",")}|${res}` : "";
+  const prev = prevKey && prevRes?.k === prevKey ? prevRes.data : null;
   // Dates a released day could move TO — the listing's future sessions with
   // space that the child isn't already booked on.
   const bookedSet = new Set(allDays);
@@ -222,7 +223,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const moveTargets = pickedSlots.map((s) => moveTo[s.key]);
   const movesReady = res !== "changedate" || (pickedSlots.every((s) => moveTo[s.key] && moveDates.includes(moveTo[s.key])) && new Set(moveTargets).size === moveTargets.length);
   const partialMode = scope === "days";
-  const effRefund = partialMode ? (res === "refund" ? pickedRefund : 0) : advice?.amount ?? 0;
+  const effRefund = partialMode ? (res === "refund" ? prev?.refund ?? 0 : 0) : advice?.amount ?? 0;
   const refundDue = effRefund > 0;
   // A voucher / Tax-Free Childcare payment was made outside the app — that money
   // can NEVER be refunded to a bank card. The only place it can land is the
@@ -244,6 +245,42 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
     if (noBankRefund) setRefundPref(walletOn ? "wallet" : "card");
   }, [noBankRefund, walletOn]);
 
+  const partialPayload = (): { days?: string[]; kids?: { name: string; childId?: string; days: string[] }[] } => {
+    if (kidsList) {
+      const byChild = new Map<string, { name: string; childId?: string; days: string[] }>();
+      for (const s of pickedSlots) {
+        const k = s.childId ?? s.childName;
+        const g = byChild.get(k) ?? { name: s.childName, childId: s.childId, days: [] };
+        g.days.push(s.date);
+        byChild.set(k, g);
+      }
+      return { kids: [...byChild.values()] };
+    }
+    return { days: pickedSlots.map((s) => s.date) };
+  };
+
+  // What releasing the ticked days does to the money - worked out by the SERVER with the very calculation the release runs (no money maths here).
+  useEffect(() => {
+    if (!prevKey) return;
+    let live = true;
+    apiPost<Prev>(`/api/my/bookings/${encodeURIComponent(booking.ref)}/release-preview${booking.tenantId ? `?tenantId=${encodeURIComponent(booking.tenantId)}` : ""}`, { ...partialPayload(), resolution: res })
+      .then((d) => { if (live) setPrevRes({ k: prevKey, data: d }); })
+      .catch(() => {});
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prevKey]);
+  const prevText = (() => {
+    if (!prev) return null;
+    const back = prev.refund + prev.credit;
+    if (prev.drop > 0.004 && back < 0.005) return prev.paid > 0.004
+      ? t("p7bk.relPartPaid", { drop: money(prev.drop), price: money(prev.priceAfter), paid: money(prev.paid), owed: money(prev.owedAfter) })
+      : t("p7bk.relUnpaid", { drop: money(prev.drop), price: money(prev.priceAfter) });
+    if (prev.credit > 0.004 && prev.drop <= 0.004) return t("p7bk.relPaidWallet", { credit: money(prev.credit), price: money(prev.priceAfter) });
+    if (prev.refund > 0.004 && prev.drop <= 0.004) return t("p7bk.relPaidRefund", { refund: money(prev.refund), price: money(prev.priceAfter) });
+    if (back > 0.004) return `${prev.credit > 0.004 ? t("parent.walletCreditOption") : t("parent.refundOption")}: ${money(back)}`;
+    return t("p7bk.detailNoCash");
+  })();
+
   async function submit() {
     if (needBank && !bankOk) { setError(t("p7bk.bankRefundNeed")); return; }
     setBusy(true);
@@ -253,21 +290,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
       // Partial cancel: the specific days to drop. For a multi-child booking we
       // send them grouped per child; for one child, a flat days[]. Omitted =
       // whole booking.
-      let partial: { days?: string[]; kids?: { name: string; childId?: string; days: string[] }[] } = {};
-      if (partialMode) {
-        if (kidsList) {
-          const byChild = new Map<string, { name: string; childId?: string; days: string[] }>();
-          for (const s of pickedSlots) {
-            const k = s.childId ?? s.childName;
-            const g = byChild.get(k) ?? { name: s.childName, childId: s.childId, days: [] };
-            g.days.push(s.date);
-            byChild.set(k, g);
-          }
-          partial = { kids: [...byChild.values()] };
-        } else {
-          partial = { days: pickedSlots.map((s) => s.date) };
-        }
-      }
+      const partial = partialMode ? partialPayload() : {};
       // Change-date is a MOVE, not a cancellation — it goes to the amend
       // endpoint and leaves the booking Confirmed. The booking then shows
       // "change of date requested · pending" until the provider approves (at
@@ -323,9 +346,6 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
           {partialMode && (
             <div className="mt-2">
               <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">{multiKid ? t("p7bk.tickDaysKid") : t("p7bk.tickDays")}</div>
-              <div className="mb-1.5 rounded-md bg-[var(--panel)] px-2.5 py-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-                <Rich text={t("p7bk.dayWorth", { each: money(perSlotPaid), n: totalPaidSlots, total: money(paidSoFar(booking)) })} bClass="text-[var(--ink-2)]" />
-              </div>
               {(multiKid ? kidsList!.map((k) => k.name) : [null]).map((childName) => {
                 const rows = slots.filter((s) => (childName === null ? true : s.childName === childName));
                 if (rows.length === 0) return null;
@@ -335,12 +355,10 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                     <div className="flex flex-col gap-1">
                       {rows.map((s) => {
                         const on = pickedDays.includes(s.key);
-                        const r = slotRefund(s.date);
                         return (
                           <label key={s.key} className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[12.5px]"
                             style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
                             <span className="flex items-center gap-2"><input type="checkbox" checked={on} onChange={() => togglePick(s.key)} /><b>{fmtIso(s.date)}</b></span>
-                            <span className="text-[11px] font-semibold" style={{ color: r > 0 ? "var(--brand)" : "var(--ink-3)" }}>{money(perSlotPaid)}{r === 0 ? " · " + t("p7bk.noCashClose") : perSlotPaid - r > 0.005 ? " · " + t("p7bk.ifRefunded", { amt: money(r) }) : ""}</span>
                           </label>
                         );
                       })}
@@ -357,10 +375,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                     {resOptions.map((o) => {
                       const on = res === o;
                       const label = o === "refund" ? t("parent.refundOption") : o === "wallet" ? t("parent.walletCreditOption") : t("parent.moveToAnotherDate");
-                      const detail = o === "refund"
-                        ? (pickedRefund > 0 ? t("p7bk.detailRefund", { amt: money(pickedRefund), each: money(perSlotPaid) }) : t("p7bk.detailNoCash"))
-                        : o === "wallet" ? t("p7bk.detailWallet", { amt: money(pickedWallet), each: money(perSlotPaid) })
-                        : moveDates.length ? t("p7bk.detailMovePick") : t("p7bk.detailMoveNone");
+                      const detail = o === "changedate" ? (moveDates.length ? t("p7bk.detailMovePick") : t("p7bk.detailMoveNone")) : "";
                       return (
                         <button key={o} type="button" onClick={() => setResolution(o)} disabled={o === "changedate" && moveDates.length === 0} className="rounded-lg border p-2 text-start disabled:opacity-50"
                           style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
@@ -370,6 +385,10 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                       );
                     })}
                   </div>
+
+                  {prevText && (res === "refund" || res === "wallet") && (
+                    <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-2)]" data-ui="release-preview"><Rich text={prevText} bClass="text-[var(--ink)]" /></div>
+                  )}
 
                   {/* Structured calendar pick — a concrete from→to per day, so a
                       provider approval applies the move automatically (no free
@@ -530,10 +549,7 @@ const AMEND_FALLBACK: AmendPolicy = { allowDateChanges: true, amendSelfService: 
 // booking so the operator sees it and can approve (applies the swap) or deny.
 const DATE_CHANGES_LIVE = true;
 
-const fmtIso = (iso: string) => {
-  const d = new Date(`${iso}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short" });
-};
+const fmtIso = (iso: string) => formatDay(iso, { weekday: "short", day: "numeric", month: "short" });
 // Recover an ISO date from a session display string like
 // "Mon 27 Jul 2026 · 09:00 – 15:30" → "2026-07-27". Some bookings only carry
 // these strings (no ISO `days`), so the amend flow parses them as a fallback.
@@ -1218,7 +1234,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
                 <div key={i} className="flex items-baseline justify-between gap-2 border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">
                   <span>
                     <span className="me-1">🍽</span><b>{m.name}</b>
-                    <span className="text-[var(--ink-3)]"> · {new Date(`${m.date}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}{m.child ? ` · ${m.child}` : ""}</span>
+                    <span className="text-[var(--ink-3)]"> · {formatDay(m.date, { weekday: "short", day: "numeric", month: "short" })}{m.child ? ` · ${m.child}` : ""}</span>
                     {m.later && <span className="ms-1 rounded bg-[#eef4fd] px-1 py-[0.5px] text-[9.5px] font-bold uppercase tracking-[0.03em] text-[var(--brand-2)]">{t("parent.addedLater")}</span>}
                   </span>
                   {m.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(m.price)}</span>}

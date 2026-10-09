@@ -235,7 +235,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
       const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1);
       const key = monthKeyOfDate(d);
       const rows = allItems.filter((x) => (x.date || "").slice(0, 7) === key);
-      const made = bookings.filter((b) => ukDay(b.createdAt || "").slice(0, 7) === key && !["Cancelled", "Declined", "Waitlisted"].includes((b as unknown as { status?: string }).status ?? ""));
+      const made = bookings.filter((b) => ukDay(b.createdAt || "").slice(0, 7) === key && !["Cancelled", "Declined", "Waitlisted", "Offered"].includes((b as unknown as { status?: string }).status ?? ""));
       return {
         key, month: d.getMonth(), year: d.getFullYear(),
         monthShort: d.toLocaleDateString(dl(), { month: "short" }), monthLong: d.toLocaleDateString(dl(), { month: "long" }),

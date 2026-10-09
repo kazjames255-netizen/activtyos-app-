@@ -70,7 +70,7 @@ test("approve a CANCEL on a paid booking: the extra comes off, the booking stand
   assert.equal(b.addonLines.length, 1); assert.equal(b.addons.length, 1);
   assert.equal(b.cancel?.refund, "pending"); assert.equal(b.cancel?.amount, 10); assert.equal(b.cancel?.refundOnly, true);
   assert.equal(out.release?.resolution, "refund"); assert.equal(out.release?.amount, 10);
-  assert.equal(b.amount, 15);                                // paid amount is not rewritten: the refund tracks the money
+  assert.equal(b.amount, 5);                             // the removed share leaves the amount; the refund is only what is then overpaid (15 paid - 5 = 10)
 });
 
 test("approve a CANCEL with wallet credit / no refund", () => {

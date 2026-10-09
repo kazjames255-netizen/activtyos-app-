@@ -7,6 +7,7 @@ import { z } from "zod";
 import { capsFor } from "../middleware/access";
 import { capLevel } from "../../../lib/accessMap";
 import { staffSiteScope } from "../lib/siteScope";
+import { bellsForStaff } from "../lib/rosterRules";
 import {
   getPrefs,
   markRead,
@@ -57,8 +58,8 @@ notifications.get("/", async (req, res) => {
     // sites either — they name the child and the parent's email, and the records themselves are site-scoped everywhere else.
     const siteScoped = !!(await staffSiteScope(req.auth!).catch(() => null));
     const CHILD_ALERT = new Set(["accident", "incident", "medication", "trip", "moment"]);
-    shown = items.filter((n) => (n as { toEmail?: string }).toEmail
-      || ((!AREA[n.category] || capLevel(caps, AREA[n.category]) !== "none") && !(siteScoped && CHILD_ALERT.has(n.category))));
+    shown = bellsForStaff(items.filter((n) => (n as { toEmail?: string }).toEmail
+      || ((!AREA[n.category] || capLevel(caps, AREA[n.category]) !== "none") && !(siteScoped && CHILD_ALERT.has(n.category)))) as (typeof items[number] & { toEmail?: string })[]);
   }
   res.json({ notifications: shown, unread: shown.filter((n) => !n.readAt).length });
 });

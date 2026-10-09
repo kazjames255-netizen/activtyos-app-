@@ -40,6 +40,9 @@ export interface Kid {
    *  days. Kept in sync with `dates` wherever both are written. */
   days?: string[];
   cancelledDays?: string[];
+  /** Days (ISO) whose price a provider cancel-day already took OFF `amount`. A day released by the family leaves `amount` alone, so only these
+   *  days stop counting in the price of each standing day (releaseCap). */
+  amountDaysRemoved?: string[];
   cancelled?: boolean;
 }
 
@@ -52,6 +55,10 @@ export interface CancelInfo {
   refund?: RefundKind;
   amount?: number;
   refundOnly?: boolean;
+  /** Explicit YES/NO chosen with the refund: did the add-ons go back with it? Absent = the default (whole-booking refund => yes, partial / none => no). */
+  refundsAddons?: boolean;
+  /** What the add-on lines said before THIS refund marked them refunded (addonRefund.ts). Declining the refund puts it back; approving keeps the marks. */
+  addonUndo?: { key: string; refunded: boolean | null; refundedDays: string[] | null }[];
   /** Where the family asked for the money to go. "wallet" keeps it in-house as
    *  store credit with this provider; "card" (the default) refunds the payment
    *  method. Honoured when the operator approves the refund. */
@@ -71,6 +78,8 @@ export interface CancelInfo {
    *  "awaiting" = recorded, the provider still has to send it ("Refund recorded - awaiting your transfer"); "sent" = the provider confirmed
    *  they sent it. Absent on an older offline refund = awaiting (the ledger row is still "to-reimburse"). Card and wallet refunds never set it. */
   refundTransfer?: "awaiting" | "sent";
+  /** The cash (not wallet) part of THIS approved refund: what the provider has to send. Each refund carries its own, so an earlier one already sent is not counted again. */
+  refundCash?: number;
   /** When the offline refund was recorded / confirmed sent (ISO), and who confirmed it. */
   refundRecordedAt?: string;
   refundSentAt?: string;
@@ -88,6 +97,9 @@ export interface RefundLogEntry {
   source?: string;
   /** Stripe refund id, on a line written for a refund made OUTSIDE the app (Stripe dashboard): what keeps it from being recorded twice. */
   refundId?: string;
+  /** What the line is, with its data, so it shows in the viewer's language (refundLogLabel). Older lines have only the English `label`. */
+  kind?: string;
+  vars?: Record<string, string | number>;
 }
 
 export interface Booking {
@@ -180,6 +192,9 @@ export interface Booking {
   };
   /** When the booking was taken. Absent on anything created before this. */
   createdAt?: string;
+  /** One id per checkout REQUEST, stamped on every booking (reference) that request created: the several references of a weekly split share it.
+   *  Provider/server side only - never sent to a family (index.ts strips it from /api/my and the public pay link). Absent on bookings made before it existed. */
+  checkoutId?: string;
   booker: string;
   email: string;
   phone: string;
@@ -213,16 +228,28 @@ export interface Booking {
   /** Store credit taken off this booking at checkout. `amount` is already net
    *  of it — this is here so the money trail shows where the difference went. */
   walletApplied?: number;
+  /** Part of `walletApplied` no longer owed for: a removed share (cancelled day / extra) larger than the cash due came off the wallet part. The
+   *  booking's gross price is amount + walletApplied - walletRelieved. */
+  walletRelieved?: number;
+  /** Set once a release took days off a PART-paid booking's price: later releases keep following the price (refund only what is paid beyond it), even after the status flips to Partially refunded. */
+  priceFollowsRelease?: boolean;
   /** Running total of approved cancellation refunds (server-stamped) — so a
    *  later cancel can't refund money that already went back. */
   refundedApproved?: number;
   /** How much of `walletApplied` has already been returned to the wallet. */
   walletRefunded?: number;
+  /** EVERY approved refund, one entry each (the single `cancel` record is overwritten by the next refund, so what is still owed to the family must
+   *  not live only there). The money still to send is the sum of the offline entries not yet sent. Older bookings have none: see unsentRefunds(). */
+  refundEntries?: RefundEntry[];
+  /** What a FAMILY is told instead of refundEntries (server/src/lib/familyView.ts): a refund the provider has recorded is still waiting for their transfer. */
+  refundAwaiting?: boolean;
+  /** The last time the provider confirmed sending refund(s): the amount and when (for the "has been sent" wording). */
+  lastRefundSent?: { amount: number; at: string };
   /** Marketing discount code redeemed on this booking, if any. */
   discountCode?: string;
   addons: string[];
   /** The same extras, structured: who each is for and on which days. Older bookings only have `addons` strings. */
-  addonLines?: { child: string; label: string; price: number; days: string[]; perDay: boolean; meal?: boolean; name?: string; answers?: { label: string; value: string }[]; qty?: number; addonId?: string }[];
+  addonLines?: { child: string; label: string; price: number; days: string[]; perDay: boolean; meal?: boolean; /** Stored at cancel time (see addonRefund.ts): true = went back with a refund, false = kept. */ refunded?: boolean; refundedDays?: string[]; name?: string; answers?: { label: string; value: string }[]; qty?: number; addonId?: string }[];
   /** A family's REQUESTS to change or cancel one extra. Never automatic: the provider approves or declines each one, and it is separate from
    *  cancelling the booking itself. See features/bookings/addonRequests.ts. */
   addonRequests?: AddonRequest[];
@@ -307,8 +334,30 @@ export type BookingFilter =
   | "requests"
   | "refunds";
 
+export interface RefundEntry {
+  id: string;
+  /** What was approved (cash + wallet part), and the cash part the provider must send. */
+  amount: number;
+  cash: number;
+  via: "wallet" | "card" | "offline";
+  /** approved = recorded, still to send (offline only); sent = money has moved / the provider confirmed. */
+  status: "approved" | "sent";
+  approvedAt: string;
+  sentAt?: string;
+  note?: string;
+}
 export type AddonRequestKind = "change" | "cancel";
 export type AddonRequestStatus = "pending" | "approved" | "declined" | "withdrawn";
+/** One extra a request covers: the line (see addonLineKey) and, for a daily extra, the specific days (always listed on a new request; absent on
+ *  a request made before bulk requests existed, which means the whole extra). `price` is the money for exactly these days at the time of asking. */
+export interface AddonRequestTarget {
+  key: string;
+  child: string;
+  label: string;
+  name?: string;
+  days?: string[];
+  price: number;
+}
 export interface AddonRequest {
   id: string;
   /** Which extra line (see addonLineKey): child + label at the time of the request. */
@@ -321,7 +370,11 @@ export interface AddonRequest {
   to?: Record<string, string>;
   toLabel?: string;
   note?: string;
-  /** What the extra costs now, and the price difference a change would make (0 for a plain size/colour change). */
+  /** CANCEL only: every extra (and the days of it) this ONE request covers. Absent on requests made before bulk requests: then `key` is the
+   *  one whole extra. See requestTargets() in features/bookings/addonRequests.ts. */
+  targets?: AddonRequestTarget[];
+  /** What the extra costs now (for a bulk request: the total of all targets), and the price difference a change would make (always 0 for a
+   *  size/colour change: the price stays as booked; older requests may still carry one). */
   price: number;
   priceDiff?: number;
   status: AddonRequestStatus;
