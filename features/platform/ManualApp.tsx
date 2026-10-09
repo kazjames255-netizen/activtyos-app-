@@ -767,6 +767,7 @@ function Page1() {
         visual={<RefundRoutes />}
         facts={[
           { k: "Parent's cancel screen", v: "It shows what they get back under the provider's policy: full, 50% or nothing, worked out by the server. They pick a reason, may add a note, and choose where a refund goes." },
+          { k: "Wallet credit at checkout", v: "If a family has credit with a provider, checkout ASKS before using it: 'Use my credit', 'Don't use it, keep it for later' or 'Use part of it'. Nothing is applied until they choose and the Pay button stays off until then. A provider booking on behalf of a family never spends the family's credit." },
           { k: "Refund choice", v: "Wallet credit, or back to how they paid. Paid by card: Back to my card. Paid by bank transfer: Back to my bank account. Paid by cash: Refunded by the provider. The send button is full width on phones." },
           { k: "Bank-paid bookings", v: "If a refund is due and they chose the bank, they must type account name, sort code and account number. It is required." },
           { k: "Provider is told", v: "A bell and email: the parent, the booking, the refund asked for and where it goes. It shows only the parent's own reason, not the platform's wording." },
