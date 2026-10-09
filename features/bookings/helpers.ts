@@ -675,6 +675,19 @@ export function refundableSoFar(b: Booking): number {
   return Math.round(Math.max(0, paidSoFar(b) - given) * 100) / 100;
 }
 
+/**
+ * THE one overpaid rule (Reconciliation, the booking chip, the add-payment reply): money held that the booking no longer costs AND that has not
+ * already been handed back or promised back.
+ *   overpaid = max(0, paid (every method + wallet applied) - price (amount + wallet still counted) - refunds already given or promised)
+ * "Given" = refundLog (wallet credit, released days, "Refunded in Stripe"), refundedApproved (approved bank/cash/card refunds, even while the transfer is
+ * still awaited) and a refund request still pending (cancel.refund "pending"). A refund bigger than the surplus clamps at 0, never negative.
+ */
+export function overpaidOf(b: Booking): number {
+  const gross = (b.amount ?? 0) + Math.max(0, (b.walletApplied ?? 0) - (b.walletRelieved ?? 0));
+  const pending = b.cancel?.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
+  return Math.round(Math.max(0, refundableSoFar(b) - pending - gross) * 100) / 100;
+}
+
 /** A refund the provider has agreed to give but not yet sent: a cancellation
  *  whose refund is still waiting on "Mark refund sent" (cancel.refund full /
  *  partial / pending). The money has NOT moved, so it is not in refundedGross —

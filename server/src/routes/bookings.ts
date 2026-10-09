@@ -29,7 +29,7 @@ import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
 import { registerRows } from "../lib/registerRows";
-import { bookingKids, kidActiveDays, money, realPhone, refundableSoFar, receivedOf, cashReceivedOf, refundTransferAmount, refundAwaitingTransfer } from "../../../features/bookings/helpers";
+import { bookingKids, kidActiveDays, money, realPhone, refundableSoFar, overpaidOf, receivedOf, cashReceivedOf, refundTransferAmount, refundAwaitingTransfer } from "../../../features/bookings/helpers";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelled } from "../lib/familyCancelNotice";
 import { approveBlockedMessage, declineBlockedMessage, nudgeBlockedMessage, canMarkPaid, paidBlockedMessage, shouldEmailConfirmed, shouldNotifyCancelled, cardHeldBlocksPayment, CARD_HELD_MESSAGE, isFirstHeldApproval, shouldAskToPayAfterApproval, shouldReleaseDiscountCodes } from "../lib/bookingGuards";
@@ -1344,7 +1344,7 @@ bookings.post("/:ref/record-payment", async (req, res) => {
     });
     // Money has arrived another way: any card payment still open for this booking was sized for a balance that no longer exists.
     await (await import("../lib/checkoutIntent")).cancelOpenIntents(tenantId, [updated.ref]).catch(() => {});
-    const overpaid = Math.round(Math.max(0, (updated.amountPaid ?? 0) - (updated.amount ?? 0)) * 100) / 100;
+    const overpaid = overpaidOf(updated);
     res.json({ ...updated, ...(overpaid > 0 ? { overpaid } : {}) });
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });

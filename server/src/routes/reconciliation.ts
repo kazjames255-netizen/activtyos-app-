@@ -5,7 +5,7 @@ import { managerScope, canWrite, type Role } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
 import { ukToday } from "../lib/ukDate";
-import { realPhone, refundableSoFar } from "../../../features/bookings/helpers";
+import { realPhone, refundableSoFar, overpaidOf } from "../../../features/bookings/helpers";
 import { bookingDocId } from "./bookings";
 import { refundsOf, refundSummaryOf } from "../lib/refundRows";
 import {
@@ -48,7 +48,6 @@ const relevant = (b: Booking) => b.status !== "Cancelled" && b.status !== "Decli
 //  • needsRefund — logged AFTER the booking was cancelled/declined, not yet
 //    refunded. It used to vanish: cancelled bookings drop off the ledger.
 // Both stay on the ledger (unreconciled) until someone deals with them.
-const overpaidOf = (b: Booking) => round2(Math.max(0, (b.amountPaid ?? 0) - (b.amount ?? 0)));
 const cancelledish = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
 const needsRefundOf = (b: Booking) => (cancelledish(b) && (b.receivedAfterCancel ?? 0) > 0 ? round2(Math.min(b.receivedAfterCancel ?? 0, refundableSoFar(b))) : 0);
 // The booking's date for the date-range filter — first session day, else booked date.
