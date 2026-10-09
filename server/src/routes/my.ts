@@ -2788,14 +2788,13 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
   // What they handed over — card/cash, a part payment, wallet credit — minus
   // anything already refunded (features/bookings/helpers refundableSoFar).
   // Was: `amount` only when "Paid", with earlier refunds never taken off.
-  const paid = refundableSoFar(existing);
+  // (The amount handed over is read again INSIDE the transaction below, from the booking as it is at that instant: an approval's card capture can
+  // land between this read and the commit, and a refund decided on a stale "nothing paid" would cancel a paid booking with no refund.)
   // A booking the provider made by phone has no `days`/`kids` dates, only its session labels: use those, or the policy is never worked out
   // and approving the pending request refunds EVERYTHING whatever the notice (found testing cancellation policies).
   const dayList = existing.days?.length ? existing.days : (existing.kids ?? []).flatMap((k) => k.dates ?? []);
   const firstSession = (dayList.length ? dayList : sessionIsoDates(existing)).slice().sort()[0];
-  let policyAmount: number | null = null;
-  let policyReason: string | undefined;
-  let creditNote = 0; // CN-004: noRefundCredit → wallet credit in lieu of a £0 refund
+  let decideRefund: (paid: number) => { policyAmount: number | null; policyReason: string | undefined; creditNote: number } = () => ({ policyAmount: null, policyReason: undefined, creditNote: 0 });
   try {
     let policyId: string | undefined;
     let tenantId: string | undefined = existing.tenantId;
@@ -2815,17 +2814,14 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     const policies = (settings?.cancellationPolicies ?? []) as NamedPolicy[];
     const policy = policyById(policies, policyId) ?? DEFAULT_POLICY;
     // Notice runs from the EARLIER of the original first date and today's first date (moving a date later can't improve the refund).
-    const advice = refundFor(policy, effectiveRefundDate(existing.origFirstDate, firstSession), paid, new Date().toISOString(), "parent");
-    if (advice) {
-      policyAmount = advice.amount;
-      policyReason = advice.reason;
-      creditNote = noRefundCreditAmount({
-        noRefundCredit: (settings as { noRefundCredit?: boolean } | undefined)?.noRefundCredit === true,
-        walletOn: tenantId ? await customerAreaOn(tenantId, "wallet", franchiseId) : false,
-        policyAmount: advice.amount,
-        paid,
-      });
-    }
+    const refundDate = effectiveRefundDate(existing.origFirstDate, firstSession);
+    const noRefundCredit = (settings as { noRefundCredit?: boolean } | undefined)?.noRefundCredit === true;
+    const walletOn = tenantId ? await customerAreaOn(tenantId, "wallet", franchiseId) : false;
+    decideRefund = (paid: number) => {
+      const advice = refundFor(policy, refundDate, paid, new Date().toISOString(), "parent");
+      if (!advice) return { policyAmount: null, policyReason: undefined, creditNote: 0 };
+      return { policyAmount: advice.amount, policyReason: advice.reason, creditNote: noRefundCreditAmount({ noRefundCredit, walletOn, policyAmount: advice.amount, paid }) };
+    };
   } catch (e) {
     console.error("[cancel] policy refund calc failed:", (e as Error).message);
   }
@@ -2846,6 +2842,9 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       // Days already released and awaiting approval: that refund is owed whatever the policy says about the rest, so
       // cancelling the remainder must ADD to it, never replace it.
       const pendingBefore = b.cancel?.refundOnly && b.cancel.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
+      // What they handed over, as the booking is RIGHT NOW (retried with the transaction), and the refund the policy gives for it.
+      const paid = refundableSoFar(b);
+      const { policyAmount, policyReason, creditNote } = decideRefund(paid);
       applyParentCancel(b, parsed.data.msg, parsed.data.reason);
       // The policy's recommended refund rides on the request (pending the
       // provider's approval; refund-approve refunds this figure via Stripe).

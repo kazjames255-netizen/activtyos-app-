@@ -20,7 +20,7 @@ test("4: £36 card payment landing when only £26 is owed: Money in, reconciliat
   });
   await fs.collection("payments").add({ tenantId: f.tenantId, refs: [ref], email: "parent-a@emu.test", amount: 36, currency: "gbp", paymentIntentId: pi.id, stripeAccount: null, platformFallback: true, status: "created", createdAt: new Date().toISOString() });
   assert.equal((await deliver(`evt_r3_${Date.now()}`, "payment_intent.succeeded", pi)).status, 200);
-  const rows = (await fs.collection("payments").where("refs", "array-contains", ref).get()).docs.map((d: any) => d.data());
+  const rows = (await fs.collection("payments").where("refs", "array-contains", ref).get()).docs.map((d: any) => d.data()).filter((x: any) => x.tenantId === f.tenantId); // (booking numbers repeat across providers)
   const bk = await booking(f, ref);
   assert.equal(bk.amountPaid, 36);
   // reconciliation: money in minus refunds equals what the booking says was collected
