@@ -7,7 +7,8 @@ import type { AddonRequest, Booking } from "../../../features/bookings/types";
 import { bellTitle, bellBody, paymentType } from "./bellText";
 import { BRAND } from "./brand";
 import { addonSentences } from "../../../features/bookings/addons";
-import { requestWhat } from "../../../features/bookings/addonRequests";
+import { decisionWording, enDay, plainTitle, renderFull } from "../../../features/bookings/addonWording";
+import { englishTitle, trFor } from "./extraWording";
 
 /** The price lines of a booking email. With store credit: Price (the whole price), Paid from store credit, then what is still to pay (or Paid, once it is) - never the cash due labelled "Total". */
 function moneyLines(b: Booking, row: (label: string, value: string) => string): string {
@@ -202,19 +203,17 @@ export function bookingConfirmedSpec(b: Booking, providerName: string, bank?: Ba
 
 /** The provider's answer to a family's request to change or cancel an extra. Separate from the booking: it stands either way. */
 export function addonDecisionSpec(b: Booking, providerName: string, r: AddonRequest): CustomerEmailSpec {
-  const who = escapeHtml((r.child ?? "").trim().split(/\s+/)[0] || "your child");
   const approved = r.status === "approved";
-  const what = escapeHtml(requestWhat(r));
-  const money = approved && r.money && r.money.amount > 0
-    ? r.money.resolution === "charge" ? ` The difference of <b>${gbp(r.money.amount)}</b> is to pay.`
-      : r.money.resolution === "wallet" ? ` <b>${gbp(r.money.amount)}</b> has been added to your wallet.`
-      : r.money.resolution === "refund" ? ` <b>${gbp(r.money.amount)}</b> will be refunded.` : ""
-    : approved && r.kind === "cancel" && r.money && r.money.resolution === "none" ? " No refund is due for this extra." : "";
+  // The same plain sentences as the family's bell (features/bookings/addonWording.ts), in English: the email has no language setting yet.
+  const w = decisionWording(r, { ref: b.ref, listing: b.listing });
+  const tr = trFor("en");
+  const main = escapeHtml(renderFull(tr, w.body, enDay));
+  const rest = w.more.filter((x) => x.key !== "p7shell.xrReason").map((x) => escapeHtml(renderFull(tr, x, enDay))).join(" ");
   const why = !approved && r.declineReason ? `<p style="margin:12px 0;padding:10px 12px;border-left:3px solid #d9736b;background:#fbf1f1;border-radius:6px;font-size:14px">${escapeHtml(r.declineReason)}</p>` : "";
   return {
-    subject: `${approved ? "Extra request approved" : "Extra request declined"} — ${b.listing}`,
+    subject: `${englishTitle(w)} — ${plainTitle(b.listing)}`,
     title: approved ? "Your request was approved" : "Your request was declined",
-    body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} ${approved ? "approved" : "couldn't approve"} your request for ${who} to ${what}.${money}</p>${why}<p style="font-size:13px;color:#6a6785">Your booking itself is unchanged.</p>`,
+    body: `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} ${approved ? "approved" : "couldn't approve"} your request. ${main}${rest ? ` ${rest}` : ""}</p>${why}<p style="font-size:13px;color:#6a6785">Your booking itself is unchanged.</p>`,
   };
 }
 

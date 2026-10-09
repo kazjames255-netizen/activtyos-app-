@@ -24,7 +24,8 @@ import { creditWallet, creditWalletOnceInTx, walletEntryRef, walletRef } from ".
 import { captureHolds, releaseHolds } from "../lib/cardHold";
 import { RESEND_COOLDOWN_MS, remindersPatch, reminderDateLabel, resendWaitSeconds } from "../lib/invoiceResend";
 import { AddonRequestError, addonCutoffDays, approveAddonRequest, declineAddonRequest } from "../lib/addonRequests";
-import { requestWhat } from "../../../features/bookings/addonRequests";
+import { decisionWording } from "../../../features/bookings/addonWording";
+import { bellText } from "../lib/extraWording";
 import { blocksBulkCancel } from "../lib/bulkCancelRules";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, staffSiteScope } from "../lib/siteScope";
@@ -1137,8 +1138,8 @@ bookings.post("/:ref/actions", async (req, res) => {
           to: { kind: "parent", email: updated.email },
           category: "booking",
           bellOnly: true,
-          ...(() => { const b = parentBell(r.status === "approved" ? "extra-approved" : "extra-declined", { ref: updated.ref }); return { title: b.title, i18n: b.i18n }; })(),
-          body: `${updated.listing} — ${requestWhat(r)}.${r.status === "approved" && r.money && r.money.amount > 0 ? ` £${r.money.amount.toFixed(2)} ${r.money.resolution === "charge" ? "to pay" : r.money.resolution === "wallet" ? "added to your wallet" : "to be refunded"}.` : ""}${r.status === "declined" && r.declineReason ? ` ${r.declineReason}` : ""}`,
+          // Plain sentences in the family's own language (key + data), e.g. "Your tshirty change was approved" / "...changed from size xl to size m".
+          ...(() => { const t = bellText(decisionWording(r, { ref: updated.ref, listing: updated.listing })); return { title: t.title, body: t.body, i18n: t.i18n }; })(),
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
