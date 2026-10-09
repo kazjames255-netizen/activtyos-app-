@@ -321,7 +321,7 @@ export function isUnreconciled(b: Booking): boolean {
   const isCard = /card/i.test(b.method ?? "") && !b.voucherScheme;
   if (isCard) return false;                                   // settles via Stripe
   const outstanding = Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
-  const settled = (b.pay === "Paid" || b.pay === "Funded") && outstanding <= 0;
+  const settled = (b.pay === "Paid" || b.pay === "Funded" || b.pay === "Partially refunded") && outstanding <= 0 && !(b.pay === "Partially refunded" && refundAwaitingTransfer(b)); // part-refunded = a day gone, the rest paid
   return !settled && ((b.amount ?? 0) > 0 || !!b.voucherScheme);
 }
 

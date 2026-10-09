@@ -63,7 +63,8 @@ describe("Reconciliation overpaid ignores money already handed back", () => {
     assert.equal(after.item.amount, 1, "the booking now costs 1");
     assert.equal(after.item.refundedAmount, 1, "the refund is on the booking");
     assert.equal(after.item.overpaid, 0, "already handed back as wallet credit -> not overpaid");
-    assert.equal(after.item.outstanding, 0);
+    assert.equal(after.item.pay, "Partially refunded", "one day is still booked and paid: not Refunded");
+    assert.equal(after.item.reconciled, true);
     assert.equal(overpaidTotal(after.summary) >= 1 && after.item.overpaid > 0, false);
   });
   it("cash 2, cancel one day with a refund still pending: not overpaid either", async () => {

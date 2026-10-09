@@ -5,7 +5,7 @@ import { managerScope, canWrite, type Role } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
 import { ukToday } from "../lib/ukDate";
-import { realPhone, refundableSoFar, overpaidOf } from "../../../features/bookings/helpers";
+import { realPhone, refundableSoFar, overpaidOf, refundAwaitingTransfer } from "../../../features/bookings/helpers";
 import { bookingDocId } from "./bookings";
 import { refundsOf, refundSummaryOf } from "../lib/refundRows";
 import {
@@ -32,7 +32,7 @@ export const reconciliation = Router();
 const OWES = new Set(["Unpaid", "Invoice sent", "Awaiting voucher payment", "Partially paid"]);
 const outstandingOf = (b: Booking) => Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
 // Reconciled = the money is in and fully accounted for.
-const isReconciled = (b: Booking) => (b.pay === "Paid" || b.pay === "Funded") && outstandingOf(b) <= 0;
+const isReconciled = (b: Booking) => (b.pay === "Paid" || b.pay === "Funded" || b.pay === "Partially refunded") && outstandingOf(b) <= 0 && !(b.pay === "Partially refunded" && refundAwaitingTransfer(b));
 // Card settles automatically through Stripe — it isn't reconciled here (a failed
 // card is handled in the booking area instead), so it's kept off this ledger.
 const isCardMethod = (b: Booking) => /card/i.test(b.method || "") && !b.voucherScheme;
