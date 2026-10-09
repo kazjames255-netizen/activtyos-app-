@@ -87,6 +87,7 @@ export function ReconciliationApp() {
   const [editRef, setEditRef] = useState<string | null>(null); // booking whose payment reference is being edited
   const [refDraft, setRefDraft] = useState("");
   const [notesDraft, setNotesDraft] = useState("");
+  const [stripeSync, setStripeSync] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
 
   const refresh = useCallback(() => {
     apiGet<Recon>("/api/reconciliation").then((r) => { setData(r); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : t("p8fin.gLoadFailed")));
@@ -186,6 +187,16 @@ export function ReconciliationApp() {
 
   const shownOutstanding = filtered.filter((i) => !i.reconciled).reduce((s, i) => s + i.outstanding, 0);
   const anyFilter = cat !== "All" || status !== "awaiting" || hideRefunded || listingId || seasonId || from || to;
+
+  // Pulls refunds made outside the app (e.g. in the Stripe dashboard) into the books. Read-only on Stripe, safe to run repeatedly.
+  async function checkStripeRefunds() {
+    setStripeSync({ busy: true, msg: null });
+    try {
+      const r = await api<{ recorded: number }>("/api/payments/sync-refunds", { method: "POST", body: JSON.stringify({ ...(from ? { from } : {}), ...(to ? { to } : {}) }) });
+      setStripeSync({ busy: false, msg: r.recorded > 0 ? `${t("p8fin.recStripeSyncFound")} ${r.recorded}` : t("p8fin.recStripeSyncNone") });
+      refresh();
+    } catch (e) { setStripeSync({ busy: false, msg: e instanceof Error ? e.message : t("p8fin.recErrUpdate") }); }
+  }
 
   async function reconcile(it: Item, undo = false) {
     setBusy(it.ref);
@@ -334,6 +345,11 @@ export function ReconciliationApp() {
       ) : (
         <RefundsPanel rows={panelRows} from={from} to={to} open={refundsOpen} onToggle={toggleRefundsOpen} />
       ))}
+
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px] text-[var(--ink-3)]">
+        <button type="button" disabled={stripeSync.busy} onClick={checkStripeRefunds} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink)] disabled:opacity-50">{stripeSync.busy ? t("p8fin.gSaving") : t("p8fin.recStripeSyncBtn")}</button>
+        {stripeSync.msg && <span role="status">{stripeSync.msg}</span>}
+      </div>
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3">

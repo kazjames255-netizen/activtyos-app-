@@ -17,6 +17,7 @@ import { payable, balanceOf } from "../lib/payGate";
 import { payStateOf } from "../lib/payState";
 import { buildPayOptions } from "../lib/publicPayOptions";
 import { BRAND } from "../lib/brand";
+import { syncRefundsForTenant } from "../lib/stripeRefundSync";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Payments — Stripe Connect (build item 7).
@@ -303,6 +304,33 @@ payments.get("/", async (req, res) => {
   }
   list.sort((a, b) => (((a as { createdAt?: string }).createdAt ?? "") < ((b as { createdAt?: string }).createdAt ?? "") ? 1 : -1));
   res.json(list);
+});
+
+// POST /api/payments/sync-refunds — "Check Stripe for refunds": pulls refunds made outside the app (e.g. in the Stripe dashboard)
+// for this provider's card payments in the period, read-only on Stripe, safe to run repeatedly. Body: { from?, to? } ISO days.
+payments.post("/sync-refunds", async (req, res) => {
+  const scope = managerScope(req, res);
+  if (!scope) return;
+  if (scope.role === "franchise") { res.status(403).json({ error: "Ask the head office to check Stripe for refunds" }); return; }
+  const tenantId = scope.role === "platform" ? (typeof req.body?.tenantId === "string" ? req.body.tenantId : null) : scope.tenantId;
+  if (!tenantId) { res.status(400).json({ error: "tenantId required" }); return; }
+  const iso = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined);
+  if (!needStripe(res)) return;
+  // One run per tenant per minute: each run asks Stripe once per card payment. (SYNC_REFUNDS_COOLDOWN_MS shortens it in the test stack.)
+  const cooldown = Number(process.env.SYNC_REFUNDS_COOLDOWN_MS) || 60_000;
+  const lock = db.collection("syncLocks").doc(`refunds-${tenantId}`);
+  const wait = await db.runTransaction(async (tx) => {
+    const last = Number((await tx.get(lock)).get("at") ?? 0);
+    if (Date.now() - last < cooldown) return Math.ceil((cooldown - (Date.now() - last)) / 1000);
+    tx.set(lock, { at: Date.now() });
+    return 0;
+  });
+  if (wait > 0) { res.status(429).json({ error: `Stripe was checked a moment ago: please try again in ${wait} second${wait === 1 ? "" : "s"}.`, retryAfterSeconds: wait }); return; }
+  try {
+    res.json(await syncRefundsForTenant(tenantId, { from: iso(req.body?.from), to: iso(req.body?.to) }));
+  } catch (e) {
+    stripeFail(res, e);
+  }
 });
 
 const checkoutSchema = z.object({ refs: z.array(z.string().min(1)).min(1).max(20), tenantId: z.string().max(80).optional() });

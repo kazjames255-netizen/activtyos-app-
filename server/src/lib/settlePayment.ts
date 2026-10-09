@@ -247,7 +247,7 @@ export async function refundExcess(payRef: FirebaseFirestore.DocumentReference, 
     if (made) refundId = made.id;
     else {
       const r = await client.refunds.create(
-        { payment_intent: rec.paymentIntentId, amount: pence, reason: "duplicate", metadata: { duplicateOf: where, tenantId: rec.tenantId, excessFor: snap.id } },
+        { payment_intent: rec.paymentIntentId, amount: pence, reason: "duplicate", metadata: { duplicateOf: where, tenantId: rec.tenantId, excessFor: snap.id, activityosOrigin: "app" } },
         { idempotencyKey: `excess-refund-${rec.paymentIntentId}-${pence}-f${failures}`, ...(opts ?? {}) },
       );
       refundId = r.id;

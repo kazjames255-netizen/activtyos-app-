@@ -563,7 +563,10 @@ export const refundedGross = (b: Booking) => {
   // log, so the log ALREADY holds that money. Adding the cancellation amount
   // as well took it off twice and showed a booking that kept £10 as £0.
   const approvalLogged = (b.refundLog || []).some((x) => /^refund approved/i.test(x.label || "") && (x.amount || 0) > 0);
-  return log + (wholeRefunded && !approvalLogged ? (c!.amount || 0) : 0);
+  // Never more than came in: a refund counted twice (or paid back in two places) must not show as more than was paid.
+  const total = log + (wholeRefunded && !approvalLogged ? (c!.amount || 0) : 0);
+  const cap = receivedOf(b);
+  return cap > 0 ? Math.min(total, cap) : total;
 };
 
 /** Net revenue retained on this booking = money received − money refunded. */
