@@ -505,7 +505,7 @@
 @media(max-width:1040px){.navmega-menu{grid-template-columns:1fr}.navmega-intro{border-right:0;border-bottom:1px solid var(--line);padding-right:0;padding-bottom:12px}}
 
 
-/* ================= Name TBC interactive FX layer ================= */
+/* ================= ActivityLane interactive FX layer ================= */
 @media (prefers-reduced-motion:no-preference){
  [data-reveal]{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
  [data-reveal].in{opacity:1;transform:none}
@@ -556,7 +556,7 @@
 #how .step-c p{color:var(--ink-3);font-size:14.5px;line-height:1.55;margin:0}
 
 
-/* ================= Name TBC FX2 — bold 3D movement ================= */
+/* ================= ActivityLane FX2 — bold 3D movement ================= */
 .hero{overflow:hidden}
 .scene3d{position:absolute;inset:0;z-index:2;pointer-events:none;perspective:1100px;transform-style:preserve-3d}
 .float3d{position:absolute;will-change:transform;transform-style:preserve-3d}
@@ -594,7 +594,7 @@
 @keyframes mqscroll{to{transform:translateX(-50%)}}
 @media(prefers-reduced-motion:reduce){.mq-track{animation:none;transform:none}}
 
-/* ===== Owner override: Name TBC brand motion always on (site owner's explicit choice) ===== */
+/* ===== Owner override: ActivityLane brand motion always on (site owner's explicit choice) ===== */
 .scene3d{display:block !important}
 @media(max-width:760px){.scene3d{display:none !important}}
 [data-reveal]{opacity:0;transform:perspective(1200px) translateY(48px) translateZ(-300px) rotateX(20deg);transform-origin:50% 100%;transition:opacity .85s ease,transform .95s cubic-bezier(.16,.85,.3,1)}
@@ -607,7 +607,7 @@
 .mq-track{animation:mqscroll 34s linear infinite !important}
 
 
-/* ================= Name TBC feature orbit ================= */
+/* ================= ActivityLane feature orbit ================= */
 #orbit{position:relative;overflow:hidden}
 .orbit-stage{position:relative;height:460px;max-width:840px;margin:26px auto 0}
 @media(max-width:760px){.orbit-stage{height:560px;max-width:360px}}
@@ -1378,7 +1378,7 @@
 /* [18] mock: Relights the orbit laptop so it shows the light portal instead of a half-dark screen wit */
 /* ── v2 pass 7: the orbit laptop was half dark, half light ──────────────────
    Its three stat tiles are already #f5f8fd/#171534 while the screen behind
-   them is #0a0f2b — which also made the "Name TBC" wordmark (fill #171534)
+   them is #0a0f2b — which also made the "ActivityLane" wordmark (fill #171534)
    invisible. The secondary sparkline still used the #lpink gradient (#FF5C8A).
    CSS beats the SVG presentation attributes, so no markup change is needed.
    The outer bezel (url(#lscr)) stays dark — that's the laptop chassis. */
@@ -1506,7 +1506,7 @@
   letter-spacing:1.5px;
 }
 
-/* [26] contrast: Clears the last four dark-build leftovers: the invisible 'Name TBC' label under the orb */
+/* [26] contrast: Clears the last four dark-build leftovers: the invisible 'ActivityLane' label under the orb */
 /* ── dark-build stragglers ─────────────────────────────────────────────────
    css:617 .orbit-hub b{color:#fff} — white on the LIGHT #orbit band, 1.06:1. */
 .wrap .orbit-hub b{color:var(--ink)}
@@ -4077,3 +4077,9 @@ footer .ft-store{padding:9px 15px}
 .demo-banner-txt b{font-weight:800}
 .demo-banner-btn{flex:none;white-space:nowrap;font-size:14px;padding:10px 22px}
 @media(max-width:640px){.demo-banner{padding:12px 0}.demo-banner-txt{font-size:13px}.demo-banner-btn{font-size:13px;padding:9px 18px}}
+
+/* ActivityLane mark: the logo square is the SVG itself (public/brand/mark.svg) */
+.logo{background:none!important;box-shadow:none!important;border-radius:0}
+.logo img{width:36px;height:36px;display:block}
+.wrap .pf-bar .mk,.pf-bar .mk{background:none!important;border-radius:0}
+.pf-bar .mk img{width:26px;height:26px;display:block}
