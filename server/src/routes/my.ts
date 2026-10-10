@@ -10,6 +10,7 @@ import { librarySnap, loadSettings } from "../lib/tenantLibrary";
 import { checkCode, normaliseCode, reservedEmails, type DiscountCodeDoc } from "../lib/discountCodes";
 import { redeemCodesInTx, releaseDiscountCodes, type CodeToRedeem } from "../lib/discountRedemptions";
 import { creditWallet, creditWalletOnceInTx, spendWalletInTx, walletEntryRef, walletRef, walletsForFamily } from "../lib/wallet";
+import { noteInstantWalletCredit } from "../lib/refundSplit";
 import { notify } from "../lib/notify";
 import { notifyFamilyCancelledFor } from "../lib/familyCancelNotice";
 import { shouldNotifyCancelled, shouldReleaseDiscountCodes, voucherEmailAnnouncesBasket } from "../lib/bookingGuards";
@@ -2636,7 +2637,7 @@ async function partialCancel(
     if (record.log) (b.refundLog = b.refundLog ?? []).push(record.log);
     if (resolution === "wallet") {
       // Instant and final - nothing for the provider to approve.
-      if (value > 0) b.pay = "Partially refunded";
+      if (value > 0) { b.pay = "Partially refunded"; noteInstantWalletCredit(b, value); }
     } else {
       // A request: the money only moves when the provider approves it, exactly like a whole-booking cancel.
       // A second release while the first is still awaiting approval ADDS to it (CN-022) - overwriting lost the earlier day's pending refund.

@@ -3,6 +3,7 @@
 import { refundFor, effectiveRefundDate, type CancellationPolicy } from "../../../lib/cancellation";
 import { dayIso, kidActiveDays, money, paidSoFar as totalPaid, refundableSoFar, releaseCap } from "../../../features/bookings/helpers";
 import { applyPartialCancel } from "../../../features/bookings/mutations";
+import { walletShareFor } from "../../../features/bookings/refundSplit";
 import type { Booking } from "../../../features/bookings/types";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -23,6 +24,9 @@ export interface ReleasePreview {
   /** The booking's whole price (cash due + wallet spent on it) before and after the released days leave it. */
   priceBefore: number; priceAfter: number; drop: number;
   paid: number; refund: number; credit: number; owedAfter: number;
+  /** Where the money goes: the part that goes back to the family's WALLET and the part that goes back the way they paid (card / bank / cash). A refund
+   *  on a booking part-paid with wallet credit splits PROPORTIONALLY to what each source paid; wallet credit is wholly wallet. toWallet + toOriginal = refund + credit. */
+  toWallet: number; toOriginal: number;
 }
 export interface ReleaseResult {
   value: number; fullValue: number; releasedCount: number; releasedDays: string[];
@@ -90,7 +94,11 @@ export function computeRelease(b: Booking, wanted: { childKey: string; days: str
   const preview: ReleasePreview = {
     partPaid: settled.partPaid, resolution, releasedCount, priceBefore, priceAfter, drop: round2(Math.max(0, priceBefore - priceAfter)),
     paid, refund: resolution === "refund" ? value : 0, credit: resolution === "wallet" ? value : 0, owedAfter: round2(Math.max(0, priceAfter - paid)),
+    toWallet: 0, toOriginal: 0,
   };
+  // The very split the provider's approval will make (settleApprovedRefund): the wallet's proportional share of the refund, read off the booking as it is after the release.
+  preview.toWallet = resolution === "wallet" ? value : walletShareFor(b, value);
+  preview.toOriginal = round2(value - preview.toWallet);
   return { value, fullValue, releasedCount, releasedDays, settled, heldBefore, preview };
 }
 

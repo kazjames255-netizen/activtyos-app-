@@ -648,11 +648,13 @@ export function altDates(k: Kid, block?: BlockAvail | null): { iso: string; labe
  * "Paid" takes the larger of amount/amountPaid: a joint sibling booking stores
  * amountPaid 0 even once it's been paid in full.
  */
-export function paidSoFar(b: Pick<Booking, "pay" | "amount" | "amountPaid" | "walletApplied">): number {
+export function paidSoFar(b: Pick<Booking, "pay" | "amount" | "amountPaid" | "walletApplied" | "cashHeld">): number {
   // "Refunded" / "Partially refunded" were paid before they were refunded —
   // the refund is taken off separately (refundableSoFar), not by the status.
   const settled = b.pay === "Paid" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded";
-  const cash = settled ? Math.max(b.amount ?? 0, b.amountPaid ?? 0) : Math.max(0, b.amountPaid ?? 0);
+  // A settled label on a booking whose cash in hand is KNOWN (cashHeld, kept when a cancel or refund settled a part-paid booking) says nothing about the price:
+  // the cash is what was really received, not `amount` (which a cancelled day lowers but a part-paid family never paid).
+  const cash = settled ? Math.max(b.cashHeld != null ? 0 : b.amount ?? 0, b.amountPaid ?? 0, b.cashHeld ?? 0) : Math.max(0, b.amountPaid ?? 0);
   return Math.round((cash + Math.max(0, b.walletApplied ?? 0)) * 100) / 100;
 }
 

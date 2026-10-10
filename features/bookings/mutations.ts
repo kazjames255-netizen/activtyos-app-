@@ -139,6 +139,14 @@ export function archiveAwaitingRefund(b: Booking): void {
   b.refundEntries = [{ id: `legacy-${open[0].since || "x"}`, amount: b.cancel?.amount ?? open[0].cash, cash: open[0].cash, via: "offline", status: "approved", approvedAt: open[0].since || nowIso(), note: "recorded before refunds were kept as entries" }];
 }
 
+/** Before a cancellation flips the pay label to a settled one ("Refund pending"), keep how much cash was really in hand: an unpaid or part-paid booking
+ *  would otherwise read as paid in full, and a refund would be split as if the whole price had been received. Only once, only while not yet settled. */
+export function rememberCashHeld(b: Booking): void {
+  if (b.cashHeld != null) return;
+  const settled = b.pay === "Paid" || b.pay === "Funded" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded";
+  if (!settled) b.cashHeld = Math.round(Math.max(0, b.amountPaid ?? 0) * 100) / 100;
+}
+
 export function applyCancel(b: Booking, refund: RefundType, partialAmount?: number, reason?: string): void {
   // "Full" gives back what was actually paid (incl. wallet credit), and a
   // partial refund can't exceed it — it used to refund `amount` whatever had
@@ -147,6 +155,7 @@ export function applyCancel(b: Booking, refund: RefundType, partialAmount?: numb
   let amt = refund === "full" ? paid : 0;
   if (refund === "partial") amt = Math.min(Math.max(0, partialAmount || 0), paid);
   if (b.past !== true) b.status = "Cancelled";
+  rememberCashHeld(b);
   archiveAwaitingRefund(b);
   b.cancel = {
     on: nowStr(),
@@ -226,8 +235,10 @@ export function isPartPaid(b: Booking): boolean {
  *  one paid a little less than in full refunds only the overpaid part. `opts.amount` is the provider's own (smaller) figure. The booking itself stands. */
 export function settleShareRemoval(b: Booking, label: string, share: number, opts?: ReleaseOpts): ReleaseResult {
   // Keep what was actually paid on the record before the amount moves (a joint booking stores no amountPaid, only a Paid status).
+  rememberCashHeld(b);
   const settled = b.pay === "Paid" || b.pay === "Refund pending" || b.pay === "Refunded" || b.pay === "Partially refunded";
-  if (settled) b.amountPaid = Math.max(b.amountPaid ?? 0, b.amount ?? 0);
+  // (a booking with a known cash-in-hand keeps THAT: a part-paid booking whose label a refund approval flipped must not read as paid up to its amount)
+  if (settled) b.amountPaid = Math.max(b.amountPaid ?? 0, b.cashHeld != null ? Math.min(b.amount ?? 0, b.cashHeld) : b.amount ?? 0);
   const prior = b.cancel && b.cancel.refundOnly && b.cancel.refund === "pending" ? Math.max(0, b.cancel.amount ?? 0) : 0;
   // WALLET: `amount` is the CASH due, net of the wallet credit spent at checkout, while "paid" adds that credit back. So compare on the GROSS price
   // (cash due + wallet spent, less any share already taken off the wallet part): the share leaves the cash due first, then the wallet part.
