@@ -1,10 +1,13 @@
 // Pure add-on pricing + answer validation for a basket item. Extracted
 // unchanged from routes/my.ts (checkout) so it can be unit-tested without
 // Firestore. Behaviour-preserving: `fail` is the route's HttpError(400, msg).
+import { cutoffValue } from "../../../features/bookings/addonRequests";
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export type LibAddonDef = {
   id: string; name: string; type: string; price: number;
+  /** Optional per-add-on "allow changes until N days before" (0-60). Absent = follow the provider's Setup default. */
+  requestCutoffDays?: number;
   questions?: { id: string; label: string; type: "text" | "choice"; options?: string[]; required?: boolean }[];
 };
 
@@ -48,6 +51,8 @@ export function priceAddon(
     onDays,
     suffix,
     meal: false,
+    // Snapshot of the per-add-on cut-off at booking time (editing the add-on later never moves it for an existing booking).
+    ...(cutoffValue(def.requestCutoffDays) !== null ? { requestCutoffDays: cutoffValue(def.requestCutoffDays) as number } : {}),
     ...(answers.length ? { answers } : {}),
   };
 }

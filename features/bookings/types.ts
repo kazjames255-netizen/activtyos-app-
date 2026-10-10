@@ -259,7 +259,7 @@ export interface Booking {
   discountCode?: string;
   addons: string[];
   /** The same extras, structured: who each is for and on which days. Older bookings only have `addons` strings. */
-  addonLines?: { child: string; label: string; price: number; days: string[]; perDay: boolean; meal?: boolean; /** Stored at cancel time (see addonRefund.ts): true = went back with a refund, false = kept. */ refunded?: boolean; refundedDays?: string[]; name?: string; answers?: { label: string; value: string }[]; qty?: number; addonId?: string }[];
+  addonLines?: { child: string; label: string; price: number; days: string[]; perDay: boolean; meal?: boolean; /** Stored at cancel time (see addonRefund.ts): true = went back with a refund, false = kept. */ refunded?: boolean; refundedDays?: string[]; name?: string; answers?: { label: string; value: string }[]; qty?: number; addonId?: string; /** Snapshot of the add-on's own "changes allowed until N days before" at booking time; absent = the provider's Setup default. */ requestCutoffDays?: number }[];
   /** A family's REQUESTS to change or cancel one extra. Never automatic: the provider approves or declines each one, and it is separate from
    *  cancelling the booking itself. See features/bookings/addonRequests.ts. */
   addonRequests?: AddonRequest[];

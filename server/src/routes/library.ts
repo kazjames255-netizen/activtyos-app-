@@ -11,6 +11,7 @@ import { publicLibrarySettings } from "../lib/publicLibrary";
 import { cardReady } from "../lib/cardReady";
 import { brandSettingsError } from "../lib/listingRules";
 import { librarySnap } from "../lib/tenantLibrary";
+import { cutoffValue } from "../../../features/bookings/addonRequests";
 import { isCapLevel } from "../../../lib/accessMap";
 
 type Venue = { id: string; name?: string; address?: string; city?: string; kind?: string; lat?: number; lng?: number };
@@ -182,6 +183,13 @@ library.put("/", async (req, res) => {
         res.status(400).json({ error: (e as Error).message });
         return;
       }
+    }
+  }
+  // A per-add-on request cut-off is a whole number of days, 0 to 60 (absent / null = follow the Setup default). Anything else is refused.
+  if ("addons" in body && Array.isArray(doc.addons)) {
+    for (const a of doc.addons as { name?: string; requestCutoffDays?: unknown }[]) {
+      const v = a?.requestCutoffDays;
+      if (v !== undefined && v !== null && cutoffValue(v) === null) { res.status(400).json({ error: `"${String(a?.name ?? "Add-on")}": the change cut-off must be a whole number of days from 0 to 60.` }); return; }
     }
   }
   const size = JSON.stringify(doc).length;

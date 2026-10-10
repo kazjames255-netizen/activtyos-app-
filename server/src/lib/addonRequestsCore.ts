@@ -2,7 +2,7 @@ import { addAmendFee } from "./dateChange";
 import { applyAddonRelease, settleShareRemoval } from "../../../features/bookings/mutations";
 import { cashReceivedOf, refundableSoFar } from "../../../features/bookings/helpers";
 import { addonLineKey, parseAddonLabel } from "../../../features/bookings/addons";
-import { DEFAULT_ADDON_REQUEST_DAYS, labelWithAnswers, lineDayStates, pendingForLine, requestKeys, requestTargets, splittableLine } from "../../../features/bookings/addonRequests";
+import { DEFAULT_ADDON_REQUEST_DAYS, lineCutoffDays, labelWithAnswers, lineDayStates, pendingForLine, requestKeys, requestTargets, splittableLine } from "../../../features/bookings/addonRequests";
 import { addonString, addonStringIndex, dayShare, removeLineDays } from "../../../features/bookings/addonDays";
 import type { AddonRequest, AddonRequestTarget, Booking } from "../../../features/bookings/types";
 
@@ -85,7 +85,7 @@ export function approveAddonRequest(b: Booking, id: string, opts: { resolution?:
     // their own line (x1 Blue), and the rest become the new choice (x6 Red). Nothing open left: refused.
     let locked: BookingLine | null = null;
     if (opts.today && splittableLine(line)) {
-      const states = lineDayStates(line.days, opts.today, opts.cutoffDays ?? DEFAULT_ADDON_REQUEST_DAYS);
+      const states = lineDayStates(line.days, opts.today, lineCutoffDays(line, opts.cutoffDays ?? DEFAULT_ADDON_REQUEST_DAYS));
       const open = states.filter((d) => d.state === "none").map((d) => d.date);
       const shut = (line.days ?? []).filter((d) => !open.includes(d));
       if (!open.length) throw new AddonRequestError(409, "Every day of that extra has passed or is too close to change.");

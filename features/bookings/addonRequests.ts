@@ -5,6 +5,16 @@ import type { AddonRequest, AddonRequestTarget, Booking } from "./types";
 
 export const DEFAULT_ADDON_REQUEST_DAYS = 3;
 
+/** A per-add-on cut-off is a whole number of days, 0 to 60. Anything else (absent, null, junk) means "no override". */
+export function cutoffValue(v: unknown): number | null {
+  return typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 60 ? v : null;
+}
+
+/** The cut-off for ONE add-on line: the rule snapshotted on the line when it was booked, else the provider-wide Setup value. */
+export function lineCutoffDays(line: { requestCutoffDays?: unknown } | null | undefined, setupDays: number): number {
+  return cutoffValue(line?.requestCutoffDays) ?? setupDays;
+}
+
 const ymd = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 
 /** Requests still waiting for the provider. */
