@@ -12,7 +12,7 @@ after(async () => { await setWallet(0); });
 
 async function mk(wallet: number) {
   await setWallet(wallet);
-  const b = await bookWithAddons({ parent: "A", listing: "LK", children: [{ name: `wd ${uniq()}`, days: "all", addons: [] }] });
+  const b = await bookWithAddons({ parent: "A", listing: "LK", children: [{ name: `wd ${uniq()}`, days: "all", addons: [] }], walletCap: wallet }); // the family chose to spend it all
   assert.equal(b.status, 201, JSON.stringify(b.json));
   return b.refs[0] as string;
 }
