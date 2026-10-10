@@ -82,13 +82,9 @@ function actionsFor(text: string, kind: Kind, portal: string) {
 }
 
 // ── Actions the co-pilot can DO ─────────────────────────────────────────────
-// Two paths: (1) client-detected, self-contained actions (task/calendar) it
-// executes against existing endpoints on your confirm; (2) once the backend
-// tool-use lands (docs/ai-assistant-tooluse-handoff.md), /api/ai/chat may return
-// a `action:{id,tool,summary,args}` the model proposed — we show the same
-// "are you sure?" card and the SERVER executes it (re-checking permissions) via
-// POST /api/ai/act. Anything needing "which record" resolution goes this route.
-type ProposedAction = { id?: string; tool: string; summary: string; args?: Record<string, unknown> };
+// Client-detected, self-contained actions (task/calendar) it executes against
+// existing endpoints on your confirm. The assistant itself is read-only: there
+// is no server-side action endpoint (the old /api/ai/act call was removed).
 type ActionDraft = { kind: "task" | "calendar"; title: string; due?: string; date?: string; time?: string };
 function cleanActionTitle(t: string): string {
   return t
@@ -128,11 +124,9 @@ function inlineHtml(s: string): string {
   return esc
     .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
     .replace(/`([^`]+)`/g, '<code class="rounded bg-black/5 px-1 py-0.5 text-[12px]">$1</code>')
-    // Links: internal /portal/view paths navigate in-app; external open a new tab.
-    .replace(/\[([^\]]+)\]\((\/[^)\s]+|https?:[^)\s]+)\)/g, (_m, label: string, href: string) => {
-      const external = /^https?:/.test(href);
-      return `<a class="font-semibold text-[var(--brand,#2f6bd8)] underline" href="${href}"${external ? ' target="_blank" rel="noreferrer"' : ""}>${label}</a>`;
-    });
+    // Links: ONLY internal /portal/view paths become links. A web address in an answer (the server strips them too) is never clickable,
+    // so a name typed by a parent or provider cannot plant a link. "//host" is not an internal path.
+    .replace(/\[([^\]]+)\]\((\/(?!\/)[^)\s]*)\)/g, (_m, label: string, href: string) => `<a class="font-semibold text-[var(--brand,#2f6bd8)] underline" href="${href}">${label}</a>`);
 }
 function RichText({ text }: { text: string }) {
   const lines = text.replace(/\r/g, "").split("\n");
@@ -176,7 +170,6 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<ActionDraft | null>(null);
-  const [proposed, setProposed] = useState<ProposedAction | null>(null);
   const [actBusy, setActBusy] = useState(false);
   const [actError, setActError] = useState<string | null>(null);
   const [speakOn, setSpeakOn] = useState(false);
@@ -231,12 +224,11 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
     const history = [...msgs, { role: "user" as const, content: q }].slice(-20);
     setMsgs(history); persist(history); setBusy(true);
     try {
-      const res = await post<{ reply?: string; action?: ProposedAction }>("/api/ai/chat", { messages: history, portal, ...(hoScope ? { franchiseId: hoScope } : {}) });
-      const reply = res.reply ?? res.action?.summary ?? "";
+      const res = await post<{ reply?: string }>("/api/ai/chat", { messages: history, portal, ...(hoScope ? { franchiseId: hoScope } : {}) });
+      const reply = res.reply ?? "";
       const spoken = splitVisuals(reply).text;
       const full = [...history, { role: "assistant" as const, content: reply }];
       setMsgs(full); persist(full);
-      if (res.action) setProposed(res.action);   // backend tool-use → confirm card
       if (spoken) speakReply(spoken);
     } catch (e) {
       setError((e as Error).message); setDraft(q);
@@ -265,19 +257,6 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
     finally { setActBusy(false); }
   }, [pendingAction, actBusy, appendAssistant, t]);
 
-  // Confirm a server-proposed action (backend tool-use) — the server executes
-  // it and re-checks permissions; we just relay the receipt.
-  const confirmProposed = useCallback(async () => {
-    if (!proposed || actBusy) return;
-    setActBusy(true); setActError(null);
-    try {
-      const r = await post<{ reply?: string }>("/api/ai/act", { id: proposed.id, tool: proposed.tool, args: proposed.args });
-      appendAssistant(r.reply ?? t("p8lrn.aiDone"));
-      setProposed(null);
-    } catch (e) { setActError((e as Error).message); }
-    finally { setActBusy(false); }
-  }, [proposed, actBusy, appendAssistant, t]);
-
   const mic = useMic((t) => { if (handsFreeRef.current) void send(t); else setDraft((d) => (d ? d + " " : "") + t); });
   const micRef = useRef(mic);
   useEffect(() => { micRef.current = mic; });
@@ -287,8 +266,8 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
   const starters = startersFor(kind, t);
 
   const [ideasOpen, setIdeasOpen] = useState(false);
-  const newChat = () => { tts.cancel(); setMsgs([]); setDraft(""); setError(null); setPendingAction(null); setProposed(null); setActError(null); setChatId(uid()); setIdeasOpen(false); };
-  const loadChat = (c: Chat) => { tts.cancel(); setMsgs(c.msgs); setChatId(c.id); setError(null); setPendingAction(null); setProposed(null); };
+  const newChat = () => { tts.cancel(); setMsgs([]); setDraft(""); setError(null); setPendingAction(null); setActError(null); setChatId(uid()); setIdeasOpen(false); };
+  const loadChat = (c: Chat) => { tts.cancel(); setMsgs(c.msgs); setChatId(c.id); setError(null); setPendingAction(null); };
   const delChat = (id: string) => setChats((cur) => { const next = cur.filter((c) => c.id !== id); try { localStorage.setItem(storeKey, JSON.stringify(next)); } catch { /* ignore */ } return next; });
   const pinChat = (id: string) => setChats((cur) => { const next = cur.map((c) => c.id === id ? { ...c, pinned: !c.pinned } : c); try { localStorage.setItem(storeKey, JSON.stringify(next)); } catch { /* ignore */ } return next; });
 
@@ -427,21 +406,6 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
                         <button type="button" onClick={() => { setPendingAction(null); setActError(null); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{t("p8lrn.gCancel")}</button>
                       </div>
                       <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">{t("p8lrn.aiOnlyOnClick")}</div>
-                    </div>
-                  </div>
-                )}
-                {proposed && (
-                  <div className="flex items-start gap-2.5">
-                    <RobotAvatar state="idle" size={34} className="mt-0.5 flex-none" />
-                    <div className="max-w-[85%] rounded-2xl rounded-es-md border border-[#cdddf7] bg-[#f6faff] p-3">
-                      <div className="text-[12.5px] font-extrabold text-[#1d3a8f]">{t("p8lrn.aiConfirmQ")}</div>
-                      <div className="mt-1 text-[12.5px] leading-relaxed text-[var(--ink)]">{proposed.summary}</div>
-                      {actError && <div className="mt-2 rounded-md border border-[#f6c9cc] bg-[#fdebec] px-2 py-1 text-[11.5px] text-[#c02636]">{actError}</div>}
-                      <div className="mt-2.5 flex items-center gap-2">
-                        <button type="button" onClick={() => void confirmProposed()} disabled={actBusy} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>{actBusy ? t("p8lrn.aiWorking") : t("p8lrn.aiYesDoIt")}</button>
-                        <button type="button" onClick={() => { setProposed(null); setActError(null); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{t("p8lrn.gCancel")}</button>
-                      </div>
-                      <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">{t("p8lrn.aiNothingUntil")}</div>
                     </div>
                   </div>
                 )}

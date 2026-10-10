@@ -789,6 +789,13 @@ function Page1() {
           { k: "Replies", v: "A parent's reply to any email goes to the provider's contact email (Reply-To). The sender parents see is the platform's own address until the rename." },
         ]} />
 
+      <Stage n="7g" color={C.billing} title="AI assistant: limits and safety" tag="Rate limit · links · who can ask what"
+        facts={[
+          { k: "Limit", v: "Each person can ask 20 questions a minute and 150 a day (owners, staff and parents alike). Past that they see a friendly wait message." },
+          { k: "Answers", v: "Answers only link to screens inside the app, never to web addresses. Names and notes typed by families are treated as plain data, not instructions. Figures can be up to a minute old." },
+          { k: "Staff", v: "Staff get no money answers and cannot use the AI writer for posts or newsletters; only the account owner can." },
+        ]} />
+
       <Stage n="9" color={C.open} title="Set up done: parents can book" tag="Checklist 5 of 5"
         facts={[
           { k: "What they see", v: "All five jobs ticked. The checklist and the top banner disappear after the first booking." },
