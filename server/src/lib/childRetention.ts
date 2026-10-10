@@ -86,17 +86,21 @@ async function anonymiseCrmEntries(childId: string, parentUid: string | undefine
   }
 }
 
-export interface ErasureResult { momentsDeleted: number; momentsUntagged: number; photosDeleted: number }
+export interface ErasureResult { momentsDeleted: number; momentsUntagged: number; photosDeleted: number; failures: number }
+
+/** A failure is logged with ids and the error class only (never a child's text) so one bad record cannot block the rest. */
+const fail = (what: string, ids: string, e: unknown) => console.error(`[retention] ${what} failed ${ids}: ${(e as Error)?.name ?? "Error"}`);
 
 /** Remove / anonymise one child's photos and moments. Safe to run twice. */
 export async function erasePhotosAndMoments(childId: string): Promise<ErasureResult> {
-  const res: ErasureResult = { momentsDeleted: 0, momentsUntagged: 0, photosDeleted: 0 };
+  const res: ErasureResult = { momentsDeleted: 0, momentsUntagged: 0, photosDeleted: 0, failures: 0 };
   const childRef = db.collection("children").doc(childId);
   const child = await childRef.get();
   const parentUid = child.exists ? (child.get("parentUid") as string | undefined) : undefined;
 
   const moments = await db.collection("moments").where("childIds", "array-contains", childId).get();
   for (const m of moments.docs) {
+   try {
     if (await skipTenant(m.get("tenantId") as string | undefined)) continue; // a test tenant's data is left to its own cleanup (SWEEPS_SKIP_TEST_TENANTS)
     const d = m.data() as { childIds?: string[]; childNames?: string[]; photoUrl?: string; photoType?: string; comments?: { role?: string; by?: string }[] };
     const ids = d.childIds ?? [];
@@ -124,7 +128,10 @@ export async function erasePhotosAndMoments(childId: string): Promise<ErasureRes
     await dropBells();
     await m.ref.update(patch).catch(() => undefined); // update, not set: a moment the provider deleted meanwhile must not be recreated
     res.momentsUntagged++;
+   } catch (e) { res.failures++; fail("moment", `child=${childId} moment=${m.id}`, e); }
   }
+  // A moment that could not be cleaned means the child is NOT anonymised yet: its due date stays, so the next run retries it.
+  if (res.failures) return res;
 
   // The child's own profile photo goes, then the profile itself is ANONYMISED and the plan file deleted (owner decisions 10 Oct).
   if (child.exists) {
@@ -159,14 +166,19 @@ export async function backfillErasureDates(apply: boolean): Promise<{ candidates
 
 /** Daily sweep: every deleted child whose 30 days are up loses its photos and moments. Idempotent. */
 export async function childPhotoErasure(nowIso: string = new Date().toISOString()): Promise<ErasureResult & { children: number }> {
-  const total = { momentsDeleted: 0, momentsUntagged: 0, photosDeleted: 0, children: 0 };
+  const total = { momentsDeleted: 0, momentsUntagged: 0, photosDeleted: 0, children: 0, failures: 0 };
   const due = await db.collection("children").where("erasureDueAt", "<=", nowIso).limit(200).get();
   for (const c of due.docs) {
-    if (c.get("archived") !== true) { await c.ref.set({ erasureDueAt: FieldValue.delete() }, { merge: true }); continue; } // never erase a live child
-    const r = await erasePhotosAndMoments(c.id);
-    total.momentsDeleted += r.momentsDeleted; total.momentsUntagged += r.momentsUntagged; total.photosDeleted += r.photosDeleted; total.children++;
+    try {
+      if (c.get("archived") !== true) { await c.ref.set({ erasureDueAt: FieldValue.delete() }, { merge: true }); continue; } // never erase a live child
+      const r = await erasePhotosAndMoments(c.id);
+      total.momentsDeleted += r.momentsDeleted; total.momentsUntagged += r.momentsUntagged; total.photosDeleted += r.photosDeleted; total.failures += r.failures;
+      if (r.failures) continue;
+      total.children++;
+    } catch (e) { total.failures++; fail("child", `child=${c.id}`, e); }
   }
   if (total.children) console.log(`[sweeps] child-photo-erasure: ${total.children} child(ren), ${total.momentsDeleted} moment(s) deleted, ${total.momentsUntagged} untagged, ${total.photosDeleted} photo file(s) removed`);
+  if (total.failures) console.error(`[retention] child-photo-erasure: ${total.failures} failure(s), retried next run`);
   return total;
 }
 
@@ -232,11 +244,12 @@ async function lastBookingDays(ownerEmails: string[], childIds: Set<string>): Pr
 }
 
 /** Daily sweep: a provider's access to a child's plan ends 90 days after the family's last booking with them. Idempotent. */
-export async function planAccessExpiry(today: string = ukToday()): Promise<{ checked: number; revoked: number }> {
-  let checked = 0, revoked = 0;
+export async function planAccessExpiry(today: string = ukToday()): Promise<{ checked: number; revoked: number; failures: number }> {
+  let checked = 0, revoked = 0, failures = 0;
   const due = await db.collection("childFiles").where("accessReviewDue", "<=", today).limit(300).get();
   for (const f of due.docs) {
-    checked++;
+   checked++;
+   try {
     const tenants = ((f.get("tenantIds") as string[] | undefined) ?? []);
     if (!tenants.length) { await f.ref.set({ accessReviewDue: FieldValue.delete() }, { merge: true }); continue; }
     const kids = await db.collection("children").where("sendPlanId", "==", f.id).get();
@@ -260,7 +273,9 @@ export async function planAccessExpiry(today: string = ukToday()): Promise<{ che
       for (const t of tenants.filter((x) => !keep.includes(x))) patch[`tenantGrants.${t}`] = FieldValue.delete();
     }
     await f.ref.update(patch);
+   } catch (e) { failures++; fail("plan file", `file=${f.id}`, e); }
   }
   if (revoked) console.log(`[sweeps] plan-access-expiry: ended ${revoked} provider grant(s) older than ${PLAN_ACCESS_DAYS} days after the last booking`);
-  return { checked, revoked };
+  if (failures) console.error(`[retention] plan-access-expiry: ${failures} failure(s), retried next run`);
+  return { checked, revoked, failures };
 }
