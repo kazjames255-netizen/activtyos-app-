@@ -226,8 +226,8 @@ async function convertMatchingLead(tenantId: string, tenantName: string, email: 
   ]);
   const docs = new Map([...pipe.docs, ...(byEmail?.docs ?? [])].map((d) => [d.id, d]));
   for (const d of docs.values()) {
-    const l = d.data() as { stage?: string; email?: string; phone?: string; business?: string; activities?: unknown[] };
-    if (l.stage === "won" || l.stage === "lost") continue;
+    const l = d.data() as { stage?: string; email?: string; phone?: string; business?: string; activities?: unknown[]; deletedAt?: string };
+    if (l.stage === "won" || l.stage === "lost" || l.deletedAt) continue;
     const leadPhone = phoneDigits(l.phone);
     const hit =
       (!!wantEmail && (l.email ?? "").trim().toLowerCase() === wantEmail) ||

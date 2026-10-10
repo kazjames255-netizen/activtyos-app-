@@ -14,7 +14,9 @@ import { Router } from "express";
 import { cachedCollection } from "../lib/platformReads";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
+import { makesDuplicateCycle, redactPersonal } from "../lib/hqSafety";
 import { notify, isMuted } from "../lib/notify";
 import { sendMailDetailed } from "../lib/mailer";
 import { webUrl } from "../lib/stripe";
@@ -31,6 +33,9 @@ export interface Msg {
   // picks one each time); HQ replies leave them blank.
   topic?: string;
   subject?: string;
+  // Who at HQ wrote it (verified token, set by the server). HQ-internal: never sent to the provider or customer (toChatMsg picks its fields).
+  byUid?: string;
+  byEmail?: string | null;
 }
 
 export interface ThreadDoc {
@@ -82,7 +87,10 @@ export const DEFAULT_SUPPORT_CATEGORIES = [
 ];
 
 const nowIso = () => new Date().toISOString();
-const msg = (from: Msg["from"], body: string): Msg => ({ id: randomUUID(), from, body, at: nowIso() });
+const msg = (from: Msg["from"], body: string, by?: { byUid: string; byEmail: string | null }): Msg => ({ id: randomUUID(), from, body, at: nowIso(), ...(by ? { byUid: by.byUid, byEmail: by.byEmail } : {}) });
+const authorOf = (req: import("express").Request) => ({ byUid: req.user!.uid, byEmail: req.user?.email ?? null });
+/** The same HQ person sending the same words to the same thread inside this window is one message (a double click), not two. */
+export const REPLY_IDEMPOTENCY_MS = 60_000;
 
 // Sequential, human-friendly ticket refs (BUG-0001, MSG-0001) from an atomic
 // counter — so every thread has a stable code to search and quote.
@@ -228,7 +236,7 @@ platformSupport.post("/", async (req, res) => {
     status: "open",
     unreadByHq: false,
     unreadByUser: true,   // the provider/customer has an unread message from HQ
-    messages: [msg("hq", body)],
+    messages: [msg("hq", body, authorOf(req))],
     createdAt: at,
     updatedAt: at,
   };
@@ -247,21 +255,29 @@ platformSupport.post("/:id/messages", async (req, res) => {
     return;
   }
   const ref = db.collection("supportThreads").doc(req.params.id);
-  const snap = await ref.get();
-  if (!snap.exists) {
-    res.status(404).json({ error: "No such thread" });
-    return;
-  }
-  const t = snap.data() as ThreadDoc;
-  const m = msg("hq", parsed.data.body);
-  await ref.update({
-    messages: [...(t.messages ?? []), m],
-    status: "open",
-    unreadByHq: false,
-    unreadByUser: true,   // the provider/customer now has an unread reply
-    updatedAt: m.at,
+  const by = authorOf(req);
+  const m = msg("hq", parsed.data.body, by);
+  // ONE transaction: read the thread, drop a repeat of the same words from the same person inside 60 s, otherwise APPEND the message
+  // (arrayUnion, never "read the array, write it back"), so two replies at the same instant both survive and a double click sends one bell and one email.
+  type Out = { missing: true } | { duplicate: Msg } | { sent: ThreadDoc };
+  const out: Out = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return { missing: true } as const;
+    const t = snap.data() as ThreadDoc;
+    const repeat = [...(t.messages ?? [])].reverse().find((x) => x.from === "hq" && x.byUid === by.byUid && x.body === parsed.data.body && Date.now() - Date.parse(x.at) < REPLY_IDEMPOTENCY_MS);
+    if (repeat) return { duplicate: repeat } as const;
+    tx.update(ref, {
+      messages: FieldValue.arrayUnion(m),
+      status: "open",
+      unreadByHq: false,
+      unreadByUser: true,   // the provider/customer now has an unread reply
+      updatedAt: m.at,
+    });
+    return { sent: t } as const;
   });
-  await notifyRecipient(t, parsed.data.body);
+  if ("missing" in out) { res.status(404).json({ error: "No such thread" }); return; }
+  if ("duplicate" in out) { res.json({ ok: true, duplicate: true, message: out.duplicate }); return; }
+  await notifyRecipient(out.sent, parsed.data.body);
   res.json({ ok: true, message: m });
 });
 
@@ -306,6 +322,7 @@ platformSupport.put("/:id", async (req, res) => {
     if (parsed.data.duplicateOf === req.params.id) { res.status(400).json({ error: "A thread can't be a duplicate of itself" }); return; }
     const target = await db.collection("supportThreads").doc(parsed.data.duplicateOf).get();
     if (!target.exists) { res.status(404).json({ error: "The thread you marked this a duplicate of doesn't exist" }); return; }
+    // The ring check itself runs INSIDE the write transaction below, so two people linking A->B and B->A at the same moment cannot both pass it.
   }
   // Only a category HQ actually has configured (or "" to clear) — a typo'd id would otherwise show up as its own raw-id bucket in Support review.
   if (parsed.data.category) {
@@ -327,7 +344,26 @@ platformSupport.put("/:id", async (req, res) => {
     res.status(400).json({ error: "Nothing to update" });
     return;
   }
-  await ref.update(patch);
+  if (parsed.data.duplicateOf) {
+    // No rings: if the thread you point at is (directly or through others) already a duplicate of THIS one, both would drop out of the counts.
+    // Read the chain and write the link in ONE transaction: a competing link that touches the same threads makes one of the two retry and see the ring.
+    const dupTarget = parsed.data.duplicateOf;
+    const ring = await db.runTransaction(async (tx) => {
+      const dupOf: Record<string, string | null> = {};
+      let cur: string | null | undefined = dupTarget;
+      for (let hops = 0; cur && hops < 50 && !(cur in dupOf); hops++) {
+        const d: FirebaseFirestore.DocumentSnapshot = await tx.get(db.collection("supportThreads").doc(cur));
+        dupOf[cur] = (d.get("duplicateOf") as string | null | undefined) ?? null;
+        cur = dupOf[cur];
+      }
+      if (makesDuplicateCycle(dupOf, req.params.id, dupTarget)) return true;
+      tx.update(ref, patch);
+      return false;
+    });
+    if (ring) { res.status(400).json({ error: "That would make two threads duplicates of each other", code: "duplicate_cycle" }); return; }
+  } else {
+    await ref.update(patch);
+  }
   res.json({ ok: true });
 });
 
@@ -340,7 +376,7 @@ platformSupport.post("/:id/note", async (req, res) => {
   const snap = await ref.get();
   if (!snap.exists) { res.status(404).json({ error: "No such thread" }); return; }
   const note = { id: randomUUID(), at: nowIso(), byUid: req.user!.uid, byEmail: req.user?.email ?? null, text: parsed.data.text };
-  await ref.update({ notes: [...((snap.data() as ThreadDoc).notes ?? []), note] });
+  await ref.update({ notes: FieldValue.arrayUnion(note) }); // appended, so two notes at once both stay
   res.status(201).json({ note });
 });
 
@@ -444,10 +480,13 @@ platformSupport.get("/review", async (_req, res) => {
     return { categoryId: catId, label: labelOf(catId), emoji: emojiOf(catId), count: threads.length, open: threads.filter((r) => r.status !== "resolved").length, threads };
   }).sort((a, b) => b.count - a.count);
 
-  // Build a compact digest for the model — subjects + a snippet per category.
+  // Build a compact digest for the model — subjects + a snippet per category. NO personal data leaves for the third party: no parent / provider
+  // name, no email, no phone, no child name. Each row is labelled only "parent" or "provider", and its free text is redacted (hqSafety.redactPersonal)
+  // using the thread's own names as known words.
+  const known = new Map(primary.map((t) => [t.id, [t.name, t.email, t.providerName]]));
   const digest = categoryGroups.map((g) => ({
     categoryId: g.categoryId, label: g.label, count: g.count,
-    examples: g.threads.map((r) => `${r.providerName}: ${r.subject} — ${r.snippet}`).slice(0, 12),
+    examples: g.threads.map((r) => `${r.party === "customer" ? "parent" : "provider"}: ${redactPersonal(r.subject, known.get(r.id))} — ${redactPersonal(r.snippet, known.get(r.id)).slice(0, 160)}`).slice(0, 12),
   }));
   const ai = primary.length ? await groqSummarise(JSON.stringify(digest)) : null;
 

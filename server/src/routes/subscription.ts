@@ -10,6 +10,7 @@ import {
 } from "../lib/billing";
 import { accessFor, clearSubscriptionCache, subscriptionState } from "../middleware/subscription";
 import { recordSubscriptionEvent } from "../lib/subscriptionEvents";
+import { diffPlans, validPrice } from "../lib/hqSafety";
 
 // Subscription (Money) — which plan the provider is on. There is no billing
 // integration yet (no Stripe Billing), so this records the chosen plan on the
@@ -72,21 +73,24 @@ const putSchema = z.object({
 });
 
 // The editable pricing catalogue (platform HQ). Shape mirrors DEFAULT_PLANS.
+// Prices are pounds, more than 0 and at most 10 000, at most two decimals (hqSafety.validPrice): HQ typing 0, -5 or 1000000000 is a slip, not a price.
+const money = z.number().refine(validPrice, { message: "A price must be more than £0, at most £10,000, with at most two decimals" });
 const bandSchema = z.object({
-  id: z.string().max(40), label: z.string().max(80), price: z.number().nonnegative(),
+  id: z.string().max(40), label: z.string().max(80), price: money,
   staffMax: z.number().int().nonnegative().nullable().optional(),
-  perStaffOver: z.number().nonnegative().optional(),
+  perStaffOver: z.number().nonnegative().max(1000).optional(),
 });
+const PLAN_IDS = ["freelancer", "company", "franchise"] as const;
 const planSchema = z.object({
-  id: z.string().max(40), name: z.string().max(60), price: z.number().nonnegative(),
+  id: z.enum(PLAN_IDS), name: z.string().max(60), price: money,
   cadence: z.string().max(10), blurb: z.string().max(400),
   features: z.array(z.string().max(160)).max(24),
   bands: z.array(bandSchema).max(8).optional(),
-  perLocationPct: z.number().nonnegative().optional(),
+  perLocationPct: z.number().nonnegative().max(100).optional(),
   // Franchise plan: flat per-franchise fee + graduated volume tiers.
-  perFranchise: z.number().nonnegative().optional(),
-  franchiseTiers: z.array(z.object({ upTo: z.number().int().positive().nullable(), price: z.number().nonnegative() })).max(8).optional(),
-});
+  perFranchise: money.optional(),
+  franchiseTiers: z.array(z.object({ upTo: z.number().int().positive().nullable(), price: money })).max(8).optional(),
+}).refine((p) => !p.bands || new Set(p.bands.map((b) => b.id)).size === p.bands.length, { path: ["bands"], message: "Each band id must be unique" });
 // The three tiers are what signup/upgrade/limits resolve against — a catalogue that drops one (or repeats an id) would leave new signups with no plan to price.
 const pricingSchema = z.object({ plans: z.array(planSchema).min(1).max(12) }).refine(
   (v) => new Set(v.plans.map((p) => p.id)).size === v.plans.length && ["freelancer", "company", "franchise"].every((id) => v.plans.some((p) => p.id === id)),
@@ -629,10 +633,36 @@ subscription.get("/pricing", async (req, res) => {
   });
 });
 
+// Every save and every reset keeps a history row: who, when, and what changed (old -> new per field). The live doc only ever shows the last editor.
+const pricingRef = () => db.collection("platform").doc("pricing");
+async function savePricing(req: import("express").Request, plans: PlanRec[] | null, action: "edit" | "reset") {
+  const now = new Date().toISOString();
+  const cur = await pricingRef().get();
+  const before = (cur.exists && Array.isArray(cur.data()?.plans) ? cur.data()!.plans : DEFAULT_PLANS) as unknown as PlanRec[];
+  const after = plans ?? (DEFAULT_PLANS as unknown as PlanRec[]);
+  const batch = db.batch();
+  if (plans) batch.set(pricingRef(), { plans, updatedAt: now, updatedBy: req.user?.email ?? "platform", updatedByUid: req.user?.uid ?? null });
+  else batch.delete(pricingRef()); // reset: no stored catalogue means the seed applies (isDefault true)
+  batch.set(pricingRef().collection("history").doc(), { at: now, action, byUid: req.user?.uid ?? null, byEmail: req.user?.email ?? null, changes: diffPlans(before, after), before, after });
+  await batch.commit();
+  return after;
+}
 subscription.put("/pricing", async (req, res) => {
   if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
   const parsed = pricingSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  await db.collection("platform").doc("pricing").set({ plans: parsed.data.plans, updatedAt: new Date().toISOString(), updatedBy: req.user?.email ?? "platform" });
+  await savePricing(req, parsed.data.plans as unknown as PlanRec[], "edit");
   res.json({ ok: true, plans: parsed.data.plans });
+});
+// POST /pricing/reset - back to the seed prices for NEW signups (subscribers keep their snapshot, as with any edit). Recorded in the history.
+subscription.post("/pricing/reset", async (req, res) => {
+  if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
+  const plans = await savePricing(req, null, "reset");
+  res.json({ ok: true, plans, isDefault: true });
+});
+// GET /pricing/history - newest first: who, when, what changed (old -> new).
+subscription.get("/pricing/history", async (req, res) => {
+  if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
+  const snap = await pricingRef().collection("history").orderBy("at", "desc").limit(50).get();
+  res.json({ history: snap.docs.map((d) => { const { before: _b, after: _a, ...row } = d.data(); return { id: d.id, ...row }; }) });
 });

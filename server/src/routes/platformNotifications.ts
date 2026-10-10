@@ -3,6 +3,7 @@ import { cachedCollection } from "../lib/platformReads";
 import { z } from "zod";
 import { db } from "../firebase";
 import { ukToday } from "../lib/ukDate";
+import { platformAuditBestEffort } from "../lib/platformAudit";
 
 // Platform (HQ) notifications — the bell for the ActivityLane operators of the
 // platform itself. There's no per-tenant `notifications` doc feeding this (HQ
@@ -98,7 +99,7 @@ async function buildItems(muted: string[]): Promise<Item[]> {
       const l = d.data() as { name?: string; contactName?: string; business?: string; createdAt?: string; imported?: boolean; source?: string; lastReplyAt?: string };
       // Researched prospects bulk-imported into Leads (e.g. from a directory)
       // aren't demo requests — a hundred of them mustn't ring the bell.
-      if (l.imported) continue;
+      if (l.imported || (l as { deletedAt?: string }).deletedAt) continue;
       if (l.createdAt && l.createdAt > cutoff) {
         items.push({
           id: `lead_${d.id}`, type: "lead",
@@ -202,6 +203,19 @@ platformNotifications.post("/dismiss", async (req, res) => {
     readIds: [...new Set([...live(readIds ?? []), parsed.data.id])],
   }, { merge: true });
   res.json({ ok: true });
+});
+
+// POST /privacy/:id/handled - HQ has dealt with a data deletion request (answered it, or erased the data). It CLOSES the request: who and when are
+// stored on it, it leaves the bell for everyone and the parent's "already requested" check no longer blocks a new one. "Dismiss" only hides it.
+platformNotifications.post("/privacy/:id/handled", async (req, res) => {
+  const ref = db.collection("deletionRequests").doc(req.params.id);
+  const snap = await ref.get();
+  if (!snap.exists) { res.status(404).json({ error: "No such request" }); return; }
+  if (snap.get("status") !== "pending") { res.json({ ok: true, alreadyHandled: true, handledAt: snap.get("handledAt") ?? null, handledByEmail: snap.get("handledByEmail") ?? null }); return; }
+  const handledAt = new Date().toISOString();
+  await ref.update({ status: "handled", handledAt, handledByUid: req.user?.uid ?? null, handledByEmail: req.user?.email ?? null });
+  await platformAuditBestEffort(req, "deletion_request_handled", { requestId: req.params.id });
+  res.json({ ok: true, handledAt, handledByEmail: req.user?.email ?? null });
 });
 
 platformNotifications.put("/prefs", async (req, res) => {

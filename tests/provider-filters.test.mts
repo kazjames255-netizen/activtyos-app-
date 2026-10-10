@@ -39,7 +39,15 @@ test("active, past due, cancelled, cancelling", () => {
 test("test-account matcher", () => {
   assert.ok(isTestAccount({ name: "X", ownerEmail: "a@ActivityOS-Test.com" }));
   assert.ok(isTestAccount({ name: "X", ownerEmail: null, contactEmail: "b@activityos-test.com" }));
-  assert.ok(isTestAccount({ name: "QA Coupon B Co", ownerEmail: "real@x.com" }));
+  // A "QA " name prefix alone is NOT proof: a real "QA Gymnastics Ltd" exists. A test email domain is.
+  assert.ok(!isTestAccount({ name: "QA Coupon B Co", ownerEmail: "real@x.com" }));
+  assert.ok(!isTestAccount({ name: "QA Gymnastics Ltd", ownerEmail: "coach@qagym.co.uk", contactEmail: "info@qagym.co.uk" }));
+  assert.ok(!isTestAccount({ name: "QA Gymnastics Ltd", ownerEmail: null, contactEmail: null }));
+  assert.ok(isTestAccount({ name: "QA Coupon B Co", ownerEmail: "x@emu.test" }));
+  assert.ok(isTestAccount({ name: "Anything", ownerEmail: "x@example.com" }));
+  assert.ok(isTestAccount({ name: "Anything", ownerEmail: "x@mail.example.org" }));
+  assert.ok(!isTestAccount({ name: "Anything", ownerEmail: "x@notexample.com" }));
+  assert.ok(!isTestAccount({ name: "Anything", ownerEmail: "x@contest.co.uk" }));
   assert.ok(!isTestAccount({ name: "QAtar Sports", ownerEmail: "real@x.com" }));
   assert.ok(!isTestAccount({ name: "Acme", ownerEmail: "a@activityos-test.com.au" }));
 });
@@ -50,11 +58,22 @@ test("search by name, email, tenant id", () => {
 });
 test("tile maths: only billable statuses add to MRR; counts recalc from the set", () => {
   const rows = [
-    { status: "active", price: 20 }, { status: "trialing", price: 15 }, { status: "canceling", price: 10 },
+    { status: "active", price: 20 }, { status: "trialing", price: 15, trialEndsAt: "2026-10-20T10:00:00Z" }, { status: "canceling", price: 10 },
     { status: "canceled", price: 99 }, { status: "past_due", price: 5 }, { status: "none", price: null },
   ];
-  assert.deepEqual(tiles(rows), { total: 6, mrr: 45, trialing: 1, active: 1 });
-  assert.deepEqual(tiles([]), { total: 0, mrr: 0, trialing: 0, active: 0 });
+  assert.deepEqual(tiles(rows, NOW), { total: 6, mrr: 45, trialing: 1, active: 1 });
+  assert.deepEqual(tiles([], NOW), { total: 0, mrr: 0, trialing: 0, active: 0 });
+});
+test("X12: the On trial tile equals the Trial tab (an ENDED trial is not on trial)", () => {
+  const rows = [
+    base({ id: "a", status: "trialing", trialEndsAt: "2026-10-12T10:00:00Z" }),
+    base({ id: "b", status: "trialing", trialEndsAt: "2026-10-30T10:00:00Z" }),
+    base({ id: "c", status: "trialing", trialEndsAt: "2026-10-08T10:00:00Z" }), // ended 2 days ago
+    base({ id: "d", status: "trialing", trialEndsAt: null }),                      // no end date counts as running
+  ];
+  const tab = rows.filter((r) => classify(r, NOW).has("trial")).length;
+  assert.equal(tiles(rows, NOW).trialing, tab);
+  assert.equal(tab, 3);
 });
 test("sorting", () => {
   const rows = [

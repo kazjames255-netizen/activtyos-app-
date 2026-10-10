@@ -59,7 +59,6 @@ export function SupportReviewApp() {
   const [categories, setCategories] = useState<Category[]>([]);
   // The manager copies `categories` when it opens — opening it before they arrive showed an empty list, and Save would then wipe every category.
   const [catsLoaded, setCatsLoaded] = useState(false);
-  const [accounts, setAccounts] = useState<Account[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [managing, setManaging] = useState(false);
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -75,16 +74,19 @@ export function SupportReviewApp() {
     apiGet<{ categories: Category[] }>("/api/platform/support/categories").then((d) => { setCategories(d.categories ?? []); setCatsLoaded(true); }).catch(() => {});
   }, []);
   useEffect(() => { load(); loadCats(); }, [load, loadCats]);
-  useEffect(() => { apiGet<{ accounts: Account[] }>("/api/platform/accounts").then((d) => setAccounts(d.accounts ?? [])).catch(() => {}); }, []);
   useRealtime(["supportThreads"], load);
 
   // Drop straight into the reporter's own account (impersonation) — matched by
   // the thread's email against the impersonatable accounts list.
   const openAccount = async (email: string) => {
-    const acc = accounts.find((a) => a.email.toLowerCase() === email.toLowerCase());
+    // Look the account up by its exact email (one logged lookup), and ask for the reason it is being opened (kept in the audit log).
+    let acc: Account | undefined;
+    try { acc = (await apiGet<{ accounts: Account[] }>(`/api/platform/accounts?limit=5&q=${encodeURIComponent(email)}`)).accounts.find((a) => a.email.toLowerCase() === email.toLowerCase()); } catch { /* handled below */ }
     if (!acc) { setErr(hq("No account found to open for {who}.", { who: email || hq("this thread") })); return; }
+    const reason = (typeof window !== "undefined" ? window.prompt(hq("Why are you opening this account? (kept in the audit log)"), "") : "")?.trim() ?? "";
+    if (reason.length < 5) { setErr(hq("Say why you are opening this account (at least 5 characters). It is kept in the audit log.")); return; }
     try {
-      const r = await apiPost<{ uid: string; role: string; portal: string }>("/api/platform/impersonate", { uid: acc.uid });
+      const r = await apiPost<{ uid: string; role: string; portal: string }>("/api/platform/impersonate", { uid: acc.uid, reason });
       setActAs({ uid: acc.uid, label: acc.label, portal: r.portal, role: r.role });
       router.push(`/${r.portal}/${getDefaultView(r.portal as PortalKey)}`);
     } catch (e) { setErr(e instanceof Error ? e.message : hq("Couldn’t open that account")); }

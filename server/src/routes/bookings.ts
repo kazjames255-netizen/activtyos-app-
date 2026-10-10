@@ -302,7 +302,9 @@ bookings.get("/", async (req, res) => {
   let q = col as FirebaseFirestore.Query;
   if (scope.role === "platform") {
     const tenantFilter = typeof req.query.tenantId === "string" ? req.query.tenantId : null;
-    if (tenantFilter) q = q.where("tenantId", "==", tenantFilter);
+    // HQ reads ONE provider's bookings at a time (children's names, contacts): never the whole platform's in one call.
+    if (!tenantFilter) { res.status(400).json({ error: "Platform: pass ?tenantId=", code: "tenant_required" }); return; }
+    q = q.where("tenantId", "==", tenantFilter);
   } else {
     q = q.where("tenantId", "==", scope.tenantId);
     if ((scope.role === "franchise" || scope.role === "staff") && scope.franchiseId) q = q.where("franchiseId", "==", scope.franchiseId);

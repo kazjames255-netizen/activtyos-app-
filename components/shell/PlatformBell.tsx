@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n/provider";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { agoLabel } from "@/lib/i18n/format";
+import { hq } from "@/features/platform/hqText";
 
 // The HQ notification bell — new provider signups, cancellations, support
 // messages and bug reports, aggregated server-side. Clicking an entry deep-links
@@ -49,6 +50,13 @@ export function PlatformBell() {
     apiPost("/api/platform/notifications/dismiss", { id: it.id }).catch(() => {});
     router.push(it.href);
   }
+  // A data deletion request is a legal clock: "Mark handled" CLOSES it on the server (who + when stored). Clicking the entry only hides it.
+  function handled(it: Item) {
+    const id = it.id.replace(/^privacy_/, "");
+    setItems((cur) => cur.filter((i) => i.id !== it.id));
+    setUnread((u) => Math.max(0, u - 1));
+    apiPost(`/api/platform/notifications/privacy/${encodeURIComponent(id)}/handled`, {}).catch(() => {}).finally(load);
+  }
   function toggleMute(t: NType) {
     const next = muted.includes(t) ? muted.filter((m) => m !== t) : [...muted, t];
     setMuted(next);
@@ -84,7 +92,8 @@ export function PlatformBell() {
           <div className="max-h-[60vh] overflow-y-auto">
             {items.length === 0 ? <div className="px-4 py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("p8ops.pbCaughtUp")}</div>
               : items.map((it) => (
-                <button key={it.id} type="button" onClick={() => go(it)} className="flex w-full items-start gap-2.5 border-b border-[var(--line)] px-3.5 py-2.5 text-start last:border-b-0 hover:bg-[#f7faff]">
+                <div key={it.id} className="border-b border-[var(--line)] last:border-b-0">
+                <button type="button" onClick={() => go(it)} className="flex w-full items-start gap-2.5 px-3.5 py-2.5 text-start hover:bg-[#f7faff]">
                   <span className="mt-0.5 text-[15px]">{GLYPH[it.type]}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12.5px] font-bold text-[var(--ink)]">{it.title}</span>
@@ -93,6 +102,8 @@ export function PlatformBell() {
                   </span>
                   <span className="mt-1 text-[11px] text-[var(--ink-3)]"><DirGlyph>›</DirGlyph></span>
                 </button>
+                {it.type === "privacy" && <button type="button" onClick={() => handled(it)} className="mx-3.5 mb-2 rounded-full border border-[#1d3a8f] px-2.5 py-0.5 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#eaf0fc]">{hq("Mark handled")}</button>}
+                </div>
               ))}
           </div>
         </div>
