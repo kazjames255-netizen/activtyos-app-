@@ -56,8 +56,19 @@ describe("scrubbing a seeded copy", () => {
     assert.equal(s.payrollAdmins, undefined);
     assert.equal(s.billing.accountNumber, undefined);
     assert.equal(s.billing.bankName, undefined);
-    assert.equal(s.billing.sortCode, "99-99-99", "its own differing value stays");
+    assert.equal(s.billing.sortCode, undefined, "a legacy copy is stripped whatever its value (it may be an OLD head-office value)");
     assert.equal(s.billing.businessName, "Own Ltd");
+  });
+  it("once stamped (seedVersion 2) the franchise's own bank details are kept", () => {
+    const own = { seedVersion: 2, settings: { billing: { sortCode: "99-99-99" }, payrollAdmins: ["me@fr.test"] } };
+    const s = resolveFranchiseLibrary(own, HO).settings as any;
+    assert.equal(s.billing.sortCode, "99-99-99");
+    assert.deepEqual(s.payrollAdmins, ["me@fr.test"]);
+  });
+  it("copied venues and staff are dropped from a legacy doc, its own stay", () => {
+    const r = resolveFranchiseLibrary({ venues: [{ id: "v" }, { id: "mine" }], staff: [{ name: "HO person" }, { name: "Mine" }], settings: {} }, HO) as any;
+    assert.deepEqual(r.venues, [{ id: "mine" }]);
+    assert.deepEqual(r.staff, [{ name: "Mine" }]);
   });
 });
 

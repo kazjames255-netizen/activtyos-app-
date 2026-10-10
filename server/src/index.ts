@@ -245,7 +245,7 @@ app.use("/api/emails/inbound", rateLimit("email-inbound", 300), emailsInbound);
 // Signed-out callers are rate-limited (scraping the storefront); a signed-in
 // operator saving a listing isn't — a bad token is a 401 anyway.
 const anonOnly = (limit: express.RequestHandler): express.RequestHandler => (req, res, next) => (req.headers.authorization ? next() : limit(req, res, next));
-app.use("/api/listings", anonOnly(rateLimit("listings-public", 300)), optionalAuth, attachRoleOptional, enforceAccess, listings);
+app.use("/api/listings", anonOnly(rateLimit("listings-public", 300)), optionalAuth, attachRoleOptional, refuseOrphanFranchise, enforceAccess, listings);
 
 // Parent-facing settings for the signed-out booking page (see library.ts).
 app.use("/api/public/library", anonOnly(rateLimit("library-public", 300)), optionalAuth, libraryPublic);

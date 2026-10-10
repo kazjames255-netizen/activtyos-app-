@@ -87,11 +87,17 @@ export async function reassignBlockedBySettlement(tenantId: string, listingId: s
   // (A booking made in an open month but paid in a settled one, or the reverse, was judged on its creation day before.)
   const refs = new Set([...docs.values()].map((d) => String(d.get("ref") ?? "")).filter(Boolean));
   const paysByRef = new Map<string, PayEvent[]>();
-  for (const d of (await db.collection("payments").where("tenantId", "==", tenantId).get()).docs) {
-    const p = d.data() as { refs?: string[]; amount?: number; type?: string; status?: string; paidAt?: string; createdAt?: string };
-    if (!isMoneyIn(p) || !p.refs?.length || !(Number(p.amount) > 0)) continue;
-    const day = ukDay(p.paidAt ?? p.createdAt);
-    for (const r of p.refs) if (refs.has(r)) (paysByRef.get(r) ?? paysByRef.set(r, []).get(r)!).push({ day, amount: Number(p.amount) / p.refs.length });
+  // Only THIS listing's payments are read (refs array-contains-any, 30 at a time; the single-field index, tenant checked in memory), never the tenant's whole ledger.
+  const refList = [...refs], seen = new Set<string>();
+  for (let i = 0; i < refList.length; i += 30) {
+    for (const d of (await db.collection("payments").where("refs", "array-contains-any", refList.slice(i, i + 30)).get()).docs) {
+      if (seen.has(d.id)) continue;
+      seen.add(d.id);
+      const p = d.data() as { tenantId?: string; refs?: string[]; amount?: number; type?: string; status?: string; paidAt?: string; createdAt?: string };
+      if (p.tenantId !== tenantId || !isMoneyIn(p) || !p.refs?.length || !(Number(p.amount) > 0)) continue;
+      const day = ukDay(p.paidAt ?? p.createdAt);
+      for (const r of p.refs) if (refs.has(r)) (paysByRef.get(r) ?? paysByRef.set(r, []).get(r)!).push({ day, amount: Number(p.amount) / p.refs.length });
+    }
   }
   const hit = [...docs.values()].some((d) => {
     const b = fromDoc(d.data() as BookingDoc);

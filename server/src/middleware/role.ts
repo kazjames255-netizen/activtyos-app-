@@ -156,7 +156,9 @@ const ORPHAN_OK = ["/api/me", "/api/account", "/api/auth", "/api/invites", "/api
 export function refuseOrphanFranchise(req: Request, res: Response, next: NextFunction) {
   if (req.auth?.role === "franchise" && req.auth.franchiseId === NO_FRANCHISE) {
     const path = normalizeApiPath(req.baseUrl + req.path);
-    if (!ORPHAN_OK.some((p) => path === p || path.startsWith(p + "/"))) {
+    // An orphan may open / accept an invite but not create one (staff invites would carry the sentinel and be scoped to nothing).
+    const creatingInvite = path === "/api/invites" && req.method !== "GET" && req.method !== "HEAD";
+    if (creatingInvite || !ORPHAN_OK.some((p) => path === p || path.startsWith(p + "/"))) {
       res.status(403).json({ error: "Your account has no franchise - ask head office to re-send your invite", code: "no_franchise" });
       return;
     }

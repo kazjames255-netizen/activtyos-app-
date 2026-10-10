@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { FEATURE_API, FEATURE_WRITE_API, CA_FEATURES, OPT_IN_FEATURES } from "../../../lib/accessMap";
 import { NAV_CONFIG } from "../../../lib/nav/config";
-import { isKnownFeatureKey, SAFETY_FEATURES, seedFromHeadOffice } from "../lib/franchiseLibrary";
+import { isKnownFeatureKey, SAFETY_FEATURES, scrubLegacyDoc, seedFromHeadOffice } from "../lib/franchiseLibrary";
 import { loadLibrary } from "../lib/tenantLibrary";
 import { forgetSettings } from "../middleware/access";
 import { franchiseExists } from "../lib/franchiseScope";
@@ -94,7 +94,7 @@ async function franchiseList(tenantId: string): Promise<{ franchiseId: string; n
 async function setFranchiseFeature(tenantId: string, franchiseId: string, view: string, on: boolean): Promise<void> {
   const frRef = db.collection("libraries").doc(`${tenantId}__fr__${franchiseId}`);
   const [frSnap, hoSnap] = await Promise.all([frRef.get(), db.collection("libraries").doc(tenantId).get()]);
-  const base = (frSnap.exists ? frSnap.data() : seedFromHeadOffice(hoSnap.data())) as Record<string, unknown>;
+  const base = (frSnap.exists ? scrubLegacyDoc(frSnap.data() as Record<string, unknown>, hoSnap.data()) : seedFromHeadOffice(hoSnap.data())) as Record<string, unknown>;
   const settings = { ...((base.settings as Record<string, unknown>) ?? {}) };
   settings.features = { ...((settings.features as Record<string, unknown>) ?? {}), [view]: on };
   const hoLocks = { ...((base.hoLocks as Record<string, unknown>) ?? {}) };

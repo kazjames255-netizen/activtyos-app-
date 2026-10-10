@@ -49,9 +49,30 @@ export function seedFromHeadOffice(ho: Rec | undefined | null): Rec {
   if (Object.keys(defaults).length) settings.features = { ...obj(settings.features), ...defaults };
   const hoLocks: Rec = {};
   for (const [k, v] of Object.entries(defaults)) if (v === false) hoLocks[k] = false;
-  const doc: Rec = { settings, overrides: {}, inherited: [...INHERITED_POLICY_KEYS], ...(Object.keys(hoLocks).length ? { hoLocks } : {}) };
+  const doc: Rec = { settings, overrides: {}, seedVersion: SEED_VERSION, inherited: [...INHERITED_POLICY_KEYS], ...(Object.keys(hoLocks).length ? { hoLocks } : {}) };
   for (const k of SEED_TOP_KEYS) if (ho && k in ho) doc[k] = ho[k];
   return doc;
+}
+
+/** Docs written by the allow-list seed carry this. A doc without it is a LEGACY full copy of head office's library (before 10 Oct 2026). */
+export const SEED_VERSION = 2;
+
+/** Make a legacy doc safe: bank details, payroll administrators removed WHATEVER their value (head office may have changed them since the copy was
+ *  taken, so equality proves nothing), copies of head office's venues and staff removed (matched by id / name), then stamped so a franchise's own values
+ *  entered afterwards are kept. A doc already stamped is returned as is. Pure. */
+export function scrubLegacyDoc(fr: Rec, ho: Rec | undefined | null): Rec {
+  if (fr.seedVersion === SEED_VERSION) return fr;
+  const hs = obj(ho?.settings);
+  const settings: Rec = { ...obj(fr.settings) };
+  delete settings.payrollAdmins;
+  if (settings.billing !== undefined) { const nb: Rec = { ...obj(settings.billing) }; for (const k of BILLING_BANK_KEYS) delete nb[k]; settings.billing = nb; }
+  const out: Rec = { ...fr, settings, overrides: overridesOf(fr, hs), seedVersion: SEED_VERSION };
+  const hoIds = new Set((Array.isArray(ho?.venues) ? (ho!.venues as Rec[]) : []).map((v) => String(v?.id ?? "")));
+  if (Array.isArray(fr.venues)) out.venues = (fr.venues as Rec[]).filter((v) => !hoIds.has(String(v?.id ?? "")));
+  const hoStaff = new Set((Array.isArray(ho?.staff) ? (ho!.staff as Rec[]) : []).map((x) => JSON.stringify(x)));
+  const hoNames = new Set((Array.isArray(ho?.staff) ? (ho!.staff as Rec[]) : []).map((x) => String(x?.name ?? "").toLowerCase()).filter(Boolean));
+  if (Array.isArray(fr.staff)) out.staff = (fr.staff as Rec[]).filter((x) => !hoStaff.has(JSON.stringify(x)) && !hoNames.has(String(x?.name ?? "").toLowerCase()));
+  return out;
 }
 
 /** Strip anything in a franchise settings bag that is a copy of head office's private data (bank details, payroll administrators). A franchise's OWN differing values stay. */
@@ -79,7 +100,8 @@ export function overridesOf(fr: Rec, hoSettings: Rec): Rec {
 
 /** The franchise's settings as every reader should see them: head office's allow-listed base, under the franchise's own values, with un-overridden
  *  policies re-read from head office NOW, head-office feature locks forced, and any seeded copy of head-office secrets removed. */
-export function resolveFranchiseLibrary(fr: Rec, ho: Rec | undefined | null): Rec {
+export function resolveFranchiseLibrary(frRaw: Rec, ho: Rec | undefined | null): Rec {
+  const fr = scrubLegacyDoc(frRaw, ho);
   const hs = obj(ho?.settings);
   const base = seedFromHeadOffice(ho);
   const own = scrubSeededSettings(obj(fr.settings), hs);

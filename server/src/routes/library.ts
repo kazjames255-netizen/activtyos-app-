@@ -13,7 +13,7 @@ import { brandSettingsError } from "../lib/listingRules";
 import { librarySnap } from "../lib/tenantLibrary";
 import { cutoffValue } from "../../../features/bookings/addonRequests";
 import { isCapLevel } from "../../../lib/accessMap";
-import { franchiseSettingsToStore, lockedFeatureViolation, resolveFranchiseLibrary, seedFromHeadOffice } from "../lib/franchiseLibrary";
+import { scrubLegacyDoc, franchiseSettingsToStore, lockedFeatureViolation, resolveFranchiseLibrary, seedFromHeadOffice } from "../lib/franchiseLibrary";
 
 type Venue = { id: string; name?: string; address?: string; city?: string; kind?: string; lat?: number; lng?: number };
 
@@ -154,6 +154,11 @@ library.put("/", async (req, res) => {
   const isFr = auth.role === "franchise" && !!auth.franchiseId;
   if (isFr) {
     hoForFranchise = (await db.collection("libraries").doc(auth.tenantId).get()).data();
+    // A legacy full copy of head office's library is cleaned (bank, payroll, copied venues / staff) before this save builds on it.
+    const clean = scrubLegacyDoc(existing, hoForFranchise);
+    for (const k of ["venues", "staff", "seedVersion"]) { if (clean[k] === undefined) delete doc[k]; else if (!(k in body)) doc[k] = clean[k]; }
+    existing.settings = clean.settings; existing.overrides = clean.overrides;
+    if (!("settings" in body)) doc.settings = clean.settings;
     if ("settings" in body) {
       const bad = lockedFeatureViolation(existing.hoLocks, (doc.settings as { features?: unknown } | undefined)?.features);
       if (bad) { res.status(403).json({ error: "Head office has turned this off for your franchise, so you can't turn it back on.", code: "feature_locked_by_head_office", feature: bad }); return; }
