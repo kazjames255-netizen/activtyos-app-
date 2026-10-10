@@ -54,10 +54,16 @@ export function classify(p: ProviderLike, now: Date): Set<StatusTab> {
 }
 
 const TEST_EMAIL_SUFFIX = "@activityos-test.com";
-/** Throwaway accounts: login/contact email on the test domain, or a business name starting "QA ". */
+/** Reserved / fake mail domains nobody can really own (RFC 2606 / 6761): a provider on one of these is a throwaway. */
+const FAKE_DOMAIN = /@(?:[^@\s]+\.)?(?:example\.(?:com|org|net)|[^@\s.]+\.(?:test|example|invalid|localhost)|test|example|invalid|localhost)$/i;
+const isTestMail = (e: string) => e.endsWith(TEST_EMAIL_SUFFIX) || FAKE_DOMAIN.test(e);
+/**
+ * Throwaway accounts: a login/contact email on the test domain (activityos-test.com) or a reserved fake domain (example.com, *.test ...).
+ * A business name starting "QA " is NOT proof on its own (a real "QA Gymnastics Ltd" exists); it only ever counts together with a test email.
+ */
 export function isTestAccount(p: Pick<ProviderLike, "name" | "ownerEmail" | "contactEmail">): boolean {
-  const mails = [p.ownerEmail, p.contactEmail].map((e) => (e ?? "").trim().toLowerCase());
-  return mails.some((e) => e.endsWith(TEST_EMAIL_SUFFIX)) || (p.name ?? "").startsWith("QA ");
+  const mails = [p.ownerEmail, p.contactEmail].map((e) => (e ?? "").trim().toLowerCase()).filter(Boolean);
+  return mails.some(isTestMail);
 }
 
 export function matchesSearch(p: Pick<ProviderLike, "id" | "name" | "ownerEmail" | "contactEmail">, q: string): boolean {
@@ -67,12 +73,15 @@ export function matchesSearch(p: Pick<ProviderLike, "id" | "name" | "ownerEmail"
 }
 
 export interface Tiles { total: number; mrr: number; trialing: number; active: number }
-/** The four top tiles over a set of providers. Same rule as the server summary: MRR adds the price of active, trialing and cancelling accounts. */
-export function tiles(rows: Pick<ProviderLike, "status" | "price">[]): Tiles {
+/**
+ * The four top tiles over a set of providers. Same rule as the server summary: MRR adds the price of active, trialing and cancelling accounts.
+ * "On trial" uses the SAME classifier as the Trial tab (isOnTrial): a trial whose end has passed is "Trial ended", not "On trial".
+ */
+export function tiles(rows: Pick<ProviderLike, "status" | "price" | "trialEndsAt">[], now: Date = new Date()): Tiles {
   return {
     total: rows.length,
     mrr: rows.filter((r) => ["active", "trialing", "canceling"].includes(r.status)).reduce((s, r) => s + (r.price ?? 0), 0),
-    trialing: rows.filter((r) => r.status === "trialing").length,
+    trialing: rows.filter((r) => isOnTrial(r, now)).length,
     active: rows.filter((r) => r.status === "active").length,
   };
 }

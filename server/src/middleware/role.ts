@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { db } from "../firebase";
 import { normalizeApiPath } from "../../../lib/accessMap";
+import { bodyHash, isReadMethod } from "../lib/hqSafety";
 
 // The six account types from the product spec, enforced server-side, now
 // with real tenancy:
@@ -138,7 +139,7 @@ export async function attachRole(req: Request, _res: Response, next: NextFunctio
     await ref.set({ email: user.email ?? null, role: "parent" });
     req.auth = { role: "parent", tenantId: null, franchiseId: null };
   }
-  await applyImpersonation(req, user);
+  if (!(await applyImpersonation(req, _res, user))) return; // refused (audit unavailable / frozen target): the response is already sent
   next();
 }
 
@@ -148,26 +149,52 @@ export async function attachRole(req: Request, _res: Response, next: NextFunctio
 // route behaves exactly as that account would (their tenant, their email scope).
 // Guarded strictly on the REAL account's role; header-driven so it's per-request
 // and never persisted server-side. (Flagged for Amir's security review.)
-async function applyImpersonation(req: Request, realUser: NonNullable<Request["user"]>) {
-  if (req.auth?.role !== "platform") return;
+/** Polling / chrome requests that carry no personal data and would bury the audit trail. Everything else HQ does as someone is logged. */
+const NOT_AUDITED = /^\/api\/(me|notifications|realtime|health)(\/|$)/i;
+
+/**
+ * Returns false when the request was refused (the response is already sent):
+ *   - the audit row could not be written (503 audit_unavailable): no audit row, no request;
+ *   - the target account is switched off or closed and this request would change something (403 impersonation_target_frozen).
+ */
+async function applyImpersonation(req: Request, res: Response, realUser: NonNullable<Request["user"]>): Promise<boolean> {
+  if (req.auth?.role !== "platform") return true;
   const actAs = (req.header("x-act-as") || "").trim();
-  if (!actAs || actAs === realUser.uid) return;
+  if (!actAs || actAs === realUser.uid) return true;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(actAs)) return true; // not an account id (a "/" would be a bad Firestore path): ignored, HQ stays HQ
   const tSnap = await db.collection("users").doc(actAs).get();
-  if (!tSnap.exists) return;
+  if (!tSnap.exists) return true;
   const t = tSnap.data()!;
-  req.auth = { role: normalizeRole(t.role), tenantId: t.tenantId ?? null, franchiseId: t.franchiseId ?? null, ...staffFields(t) };
+  if (normalizeRole(t.role) === "platform") return true; // HQ cannot act as another HQ account: the header is ignored, HQ stays HQ
+  // A switched-off or closed account can be LOOKED at (that is often why support opens it) but nothing can be changed while acting as it.
+  if ((t.disabled === true || !!t.deactivatedAt) && !isReadMethod(req.method)) {
+    res.status(403).json({ error: "This account is switched off or closed, so HQ can look at it but not change anything.", code: "impersonation_target_frozen" });
+    return false;
+  }
+  req.auth ={ role: normalizeRole(t.role), tenantId: t.tenantId ?? null, franchiseId: t.franchiseId ?? null, ...staffFields(t) };
   // Email/uid scoping (parents, message senderName, etc.) must be the target too.
   req.user = { ...realUser, uid: actAs, email: (t.email as string) ?? realUser.email, name: (t.name as string) ?? realUser.name } as typeof realUser;
   req.impersonating = { byUid: realUser.uid, byEmail: realUser.email ?? null, uid: actAs };
   console.warn(`[impersonate] platform ${realUser.email ?? realUser.uid} acting as ${(t.email as string) ?? actAs} (${t.role ?? "parent"})`);
-  // "Open an account" is logged once when HQ picks it, but everything HQ then DOES as that account went nowhere but the console.
-  // Record every change (not reads — that would be a write per page view) so the audit trail covers what was done, not just who was opened.
-  if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") {
-    void db.collection("impersonationLog").add({
-      byUid: realUser.uid, byEmail: realUser.email ?? null, targetUid: actAs, targetEmail: (t.email as string) ?? null, targetRole: t.role ?? "parent",
-      action: `${req.method} ${req.originalUrl.split("?")[0].slice(0, 200)}`, at: new Date().toISOString(),
-    }).catch(() => {});
+  // "Open an account" is logged once when HQ picks it; this records what HQ then DOES as that account: every request, reads included
+  // (a GET of a family's children or messages discloses personal data just as a write changes it). Who, as whom, which tenant, which
+  // path (path only, never the query string), a short hash of the body (never its content), and the status once the response is sent.
+  // The write is AWAITED and fails closed: no audit row, no request.
+  const path = req.originalUrl.split("?")[0].slice(0, 200);
+  if (!NOT_AUDITED.test(path)) {
+    try {
+      const row = await db.collection("impersonationLog").add({
+        kind: "request", byUid: realUser.uid, byEmail: realUser.email ?? null, targetUid: actAs, targetEmail: (t.email as string) ?? null, targetRole: t.role ?? "parent",
+        targetTenantId: (t.tenantId as string) ?? null, action: `${req.method} ${path}`, method: req.method, path, bodyHash: bodyHash(req.body), at: new Date().toISOString(),
+      });
+      res.on("finish", () => { void row.update({ status: res.statusCode }).catch(() => {}); });
+    } catch (e) {
+      console.error("[impersonate] audit write failed, request refused:", (e as Error).message);
+      res.status(503).json({ error: "Couldn't record this support session in the audit log, so the request was refused. Try again.", code: "audit_unavailable" });
+      return false;
+    }
   }
+  return true;
 }
 
 // After optionalAuth: signed-in users get their real role, anonymous

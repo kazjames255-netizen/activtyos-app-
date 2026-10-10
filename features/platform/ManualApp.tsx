@@ -861,7 +861,12 @@ function Page1() {
 
       <Section>
         <H2>Providers and billing page</H2>
-        <Lede>Tabs with counts: All, Trial, Ending soon (7 days), Trial ended, Active, Payment failed, Cancelled, No card. Search by name, email or id; sort by newest, trial end, name or value. Test accounts (a test email address, or a name starting QA) are hidden by default: use the switch. Tabs stay in the page address.</Lede>
+        <Lede>Tabs with counts: All, Trial, Ending soon (7 days), Trial ended, Active, Payment failed, Cancelled, No card. On trial counts running trials only. Search by name, email or id. Test accounts (a test email domain, never just a name) are hidden by default: use the switch. Bank details show the last digits; Reveal shows them for 30 seconds and is logged.</Lede>
+      </Section>
+
+      <Section>
+        <H2>HQ: opening accounts safely</H2>
+        <Lede>Opening an account asks for a reason (5+ characters). Everything done as that account is logged, reads too: provider, path, status and a short code for the body, never the content. A switched-off or closed account opens to look only. Ten opens a minute. Reveals, lookups, deleted leads and handled deletion requests are logged. Support review sends the AI no names, emails, phones or child names.</Lede>
       </Section>
 
       <Section>

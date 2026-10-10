@@ -32,8 +32,8 @@ export async function login(email: string) {
   return { token: j.idToken!, uid: j.localId! };
 }
 
-export async function call<T = any>(method: string, path: string, token: string | null, body?: unknown): Promise<{ status: number; json: T }> {
-  const r = await fetch(`${API}${path}`, { method, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+export async function call<T = any>(method: string, path: string, token: string | null, body?: unknown, headers: Record<string, string> = {}): Promise<{ status: number; json: T }> {
+  const r = await fetch(`${API}${path}`, { method, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   const text = await r.text();
   let json: any = null;
   try { json = text ? JSON.parse(text) : null; } catch { json = text; }

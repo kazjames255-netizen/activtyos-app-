@@ -950,7 +950,7 @@ messages.post("/support", async (req, res) => {
   const m: Msg = { id: randomUUID(), from: "them", body: parsed.data.body, at, topic: parsed.data.topic ?? "general", subject: parsed.data.subject ?? "" };
   const isFirst = !(t.data.messages?.length);
   await t.ref.update({
-    messages: [...(t.data.messages ?? []), m],
+    messages: FieldValue.arrayUnion(m), // appended, so a reply HQ writes at the same moment is not overwritten
     status: "open",
     unreadByHq: true, // surfaces in the HQ inbox + notification bell
     updatedAt: at,
