@@ -5,19 +5,19 @@ import { CATALOGS } from "../../../lib/i18n/messages/index";
 
 export type Vars = Record<string, string>;
 export const PARENT_BELL_KINDS = [
-  "payment-received", "booked-paid", "approved-paid", "refund-approved-card", "refund-approved-scheme", "refund-approved-bank", "refund-approved-plain",
+  "payment-received", "booked-paid", "approved-paid", "refund-approved-card", "refund-approved-scheme", "refund-approved-bank", "refund-approved-plain", "refund-approved-offline",
   "wallet-added", "refund-declined", "refund-sent", "extra-approved", "extra-declined", "trip-cancelled",
 ] as const;
 export type ParentBellKind = (typeof PARENT_BELL_KINDS)[number];
 
 const TITLE: Record<ParentBellKind, string> = {
   "payment-received": "p7shell.bellPayRecv", "booked-paid": "p7shell.bellBookedPaid", "approved-paid": "p7shell.bellApprovedPaid",
-  "refund-approved-card": "p7shell.bellRefApproved", "refund-approved-scheme": "p7shell.bellRefApproved", "refund-approved-bank": "p7shell.bellRefApproved", "refund-approved-plain": "p7shell.bellRefApproved",
+  "refund-approved-card": "p7shell.bellRefApproved", "refund-approved-scheme": "p7shell.bellRefApproved", "refund-approved-bank": "p7shell.bellRefApproved", "refund-approved-plain": "p7shell.bellRefApproved", "refund-approved-offline": "p7shell.bellRefApproved",
   "wallet-added": "p7shell.bellWalletAdded", "refund-declined": "p7shell.bellRefDeclined", "refund-sent": "p7shell.bellRefSent",
   "extra-approved": "p7shell.bellExtraApproved", "extra-declined": "p7shell.bellExtraDeclined", "trip-cancelled": "p7shell.bellTripCancelled",
 };
 const BODY: Partial<Record<ParentBellKind, string>> = {
-  "refund-approved-card": "p7shell.bellBRefCard", "refund-approved-scheme": "p7shell.bellBRefScheme", "refund-approved-bank": "p7shell.bellBRefBank", "refund-approved-plain": "p7shell.bellBRefPlain",
+  "refund-approved-card": "p7shell.bellBRefCard", "refund-approved-scheme": "p7shell.bellBRefScheme", "refund-approved-bank": "p7shell.bellBRefBank", "refund-approved-plain": "p7shell.bellBRefPlain", "refund-approved-offline": "rfm.bellRec",
   "wallet-added": "p7shell.bellBWallet", "refund-declined": "p7shell.bellBRefDeclined", "trip-cancelled": "p7shell.bellBTripCancelled",
 };
 

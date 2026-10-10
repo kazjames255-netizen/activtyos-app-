@@ -291,7 +291,7 @@ test("MNY money audit", async () => {
     walletBal = (w.balances ?? [])[0]?.balance ?? 0;
     eq(walletBal, 36, "wallet after releasing 2/5 days of £90");
     // Term (10 days, 2 blocks) + PCT10 + lunch x10 + tee, wallet 36 all
-    const bs = await basketOk("p4", L.C, [{ pass: "Term", dates: [...week(0), ...week(1)], addons: [{ id: "mny-lunch" }, { id: "mny-tee" }] }], { discountCodes: ["PCT10"] });
+    const bs = await basketOk("p4", L.C, [{ pass: "Term", dates: [...week(0), ...week(1)], addons: [{ id: "mny-lunch" }, { id: "mny-tee" }] }], { discountCodes: ["PCT10"], walletCap: 36 }); // the checkout ASKS: the family chose to use all £36
     const gross = 150 - 15 + 50 + 7.5;
     const amt = sum(bs.map((b) => b.amount)), wal = sum(bs.map((b) => b.walletApplied ?? 0));
     eq(r2(amt + wal), gross, "amount due + wallet = total");

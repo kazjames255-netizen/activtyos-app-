@@ -159,3 +159,33 @@ test("R7: stampAddonRefund stores the answer once; refunded is sticky, a later n
   stampAddonRefund(b as never, { scope: "whole" }, true);
   assert.equal(b.addonLines[2].refunded, true, "a later refund upgrades kept to refunded");
 });
+
+test("X-FIGURES-UNPAID-CANCELLED: a cancelled booking that was never paid sells nothing; a cancelled one that KEPT money still counts", () => {
+  const lines = [lunch("a", WEEK, 21)];
+  const mk = (extra: Record<string, unknown>) => bk("C", lines, { status: "Cancelled", ...extra }) as never;
+  assert.equal(addonFigures([mk({ pay: "Unpaid", amount: 100, cancel: { refund: "none" } })]).addonRevenue, 0, "unpaid cancel, no refund");
+  assert.equal(addonFigures([mk({ pay: "Unpaid", amount: 100, cancel: { refund: "partial", amount: 50 } })]).addonUnits, 0, "unpaid cancel, partial where no money moved");
+  const kept = addonFigures([mk({ pay: "Paid", amount: 169, cancel: { refund: "none" } })]);
+  assert.equal(kept.addonRevenue, 21, "paid cancel, nothing refunded: kept");
+  assert.equal(kept.bookingsWithAddon, 1);
+  assert.equal(addonFigures([mk({ pay: "Paid", amount: 169, cancel: { refund: "full" } })]).addonRevenue, 0, "paid then fully refunded");
+  assert.equal(addonFigures([mk({ pay: "Partially paid", amount: 169, amountPaid: 40, cancel: { refund: "none" } })]).addonRevenue, 21, "part-paid and kept");
+  assert.equal(addonFigures([bk("L", lines, { pay: "Unpaid", amount: 100 }) as never]).addonRevenue, 21, "a live unpaid booking is still a sale");
+});
+
+test("Finance attach rate: numerator and denominator are the same population (addonsSold), and a split checkout counts once", () => {
+  const lines = [lunch("a", WEEK, 21)];
+  const live = bk("L1", [], { pay: "Paid", amount: 50, checkoutId: "c-live", email: "e1", listingId: "l", createdAt: "x" });
+  const keptCancelled = bk("K1", lines, { status: "Cancelled", pay: "Paid", amount: 100, cancel: { refund: "none" }, checkoutId: "c-kept", email: "e2", listingId: "l", createdAt: "x" });
+  const f = addonFigures([live as never, keptCancelled as never]);
+  assert.equal(f.soldBookings, 2, "the live one and the cancelled-but-paid one are both sold");
+  assert.equal(f.bookingsWithAddon, 1);
+  assert.equal(Math.round((f.bookingsWithAddon / f.soldBookings) * 100), 50, "not 100%");
+  // one split checkout: the first reference is cancelled and unpaid but its T-shirt moved to the live second reference, which also has a per-day extra
+  const d1 = [WEEK[0]], rest = WEEK.slice(1);
+  const first = bk("S1", [tshirt("sally", d1)], { status: "Cancelled", pay: "Unpaid", amount: 20, days: d1, kids: [{ name: "sally", cancelled: true }], checkoutId: "c-split", email: "e3", listingId: "l", createdAt: "x" });
+  const second = bk("S2", [lunch("sally", rest, 12)], { pay: "Unpaid", amount: 40, days: rest, checkoutId: "c-split", email: "e3", listingId: "l", createdAt: "x" });
+  const g = addonFigures([first as never, second as never]);
+  assert.equal(g.bookingsWithAddon, 1, "one checkout, counted once");
+  assert.equal(g.soldBookings, 1);
+});

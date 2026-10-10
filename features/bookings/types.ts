@@ -233,8 +233,16 @@ export interface Booking {
   /** Part of `walletApplied` no longer owed for: a removed share (cancelled day / extra) larger than the cash due came off the wallet part. The
    *  booking's gross price is amount + walletApplied - walletRelieved. */
   walletRelieved?: number;
+  /** The cash (card / bank / cash) actually in hand when a cancellation flipped an UNPAID or PART-paid booking to a settled status: after that the pay label no
+   *  longer says how much was received, and a refund must split over what each source really holds (features/bookings/refundSplit.ts), never the price. */
+  cashHeld?: number;
   /** Set once a release took days off a PART-paid booking's price: later releases keep following the price (refund only what is paid beyond it), even after the status flips to Partially refunded. */
   priceFollowsRelease?: boolean;
+  /** Money the provider RECORDED by hand (Record payment), by how it came in. Used with the booking's own method to name the offline refund method
+   *  (features/bookings/refundMethod.ts). Absent on older bookings: then the booking's method names it. */
+  paidVia?: Partial<Record<"bank" | "cash" | "voucher", number>>;
+  /** Sent to a FAMILY only (server/src/lib/familyView.ts): how the money they paid offline will come back, so the cancel panel names it. */
+  refundMethod?: import("./refundMethod").RefundMethodInfo;
   /** Running total of approved cancellation refunds (server-stamped) — so a
    *  later cancel can't refund money that already went back. */
   refundedApproved?: number;
@@ -344,6 +352,8 @@ export interface RefundEntry {
   via: "wallet" | "card" | "offline";
   /** approved = recorded, still to send (offline only); sent = money has moved / the provider confirmed. */
   status: "approved" | "sent";
+  /** An offline entry: what each way of paying gets back (bank transfer / cash / voucher), stamped when it was approved. */
+  parts?: { kind: "bank" | "cash" | "voucher"; amount: number }[];
   approvedAt: string;
   sentAt?: string;
   note?: string;
@@ -358,6 +368,8 @@ export interface AddonRequestTarget {
   label: string;
   name?: string;
   days?: string[];
+  /** A whole one-off extra: the one date it is for (when the booking has one), so a sentence can say "on Wed 1 Sep". Display only. */
+  when?: string[];
   price: number;
 }
 export interface AddonRequest {
@@ -371,6 +383,8 @@ export interface AddonRequest {
   /** Change only: the answers wanted, by question label ("size" -> "L"), and the readable new label. */
   to?: Record<string, string>;
   toLabel?: string;
+  /** Change only: the choices the extra had when asked (size: "xl"), so a sentence can say "from xl to m". Older requests: read from `label`. */
+  from?: Record<string, string>;
   note?: string;
   /** CANCEL only: every extra (and the days of it) this ONE request covers. Absent on requests made before bulk requests: then `key` is the
    *  one whole extra. See requestTargets() in features/bookings/addonRequests.ts. */

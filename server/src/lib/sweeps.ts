@@ -13,7 +13,9 @@ import { performEmailSend } from "./emailSend";
 import { notifyPostPublished } from "./postNotify";
 import { isFirstBookedSession } from "./bookingRules";
 import { refundReminderPeriod, REFUND_REMIND_MAX_PER_RUN } from "./refundReminder";
-import { bellBody, bellMoney, bellTitle, paymentType } from "./bellText";
+import { BELL_BODY_MAX, bellBody, bellMoney, bellTitle, paymentType } from "./bellText";
+import { sendLine, unsentKinds, type OfflineKind } from "../../../features/bookings/refundMethod";
+import { enJoin, enTr } from "./refundWords";
 import { bookingRefOfKey, entryFor, registerRows } from "./registerRows";
 import type { Booking } from "../../../features/bookings/types";
 import { kitNamesSentence, kitReminderKey, kitUnticked, type KitBooking, type SplitBooking } from "../../../features/bookings/addons";
@@ -1078,21 +1080,29 @@ export async function refundTransferReminders(): Promise<void> {
     const ref = p.ref;
     const days = Math.floor((now - Date.parse(p.createdAt)) / 86_400_000);
     // One reminder per booking per 3-day period (fireOnce keys on the period).
-    const fired = await fireOnce(`refundsend_${p.tenantId}_${ref}_${period}`, { tenantId: p.tenantId }, () =>
-      notify({
+    const fired = await fireOnce(`refundsend_${p.tenantId}_${ref}_${period}`, { tenantId: p.tenantId }, async () => {
+      // The bell names HOW to send it (the method(s) the family paid by): "Send £0.50 by bank transfer", "Hand back £0.50 in cash". Read off the booking.
+      let kinds: OfflineKind[] = [];
+      try {
+        const q = await db.collection("bookings").where("tenantId", "==", p.tenantId).where("ref", "==", ref).limit(1).get();
+        if (!q.empty) kinds = unsentKinds(q.docs[0].data() as Booking);
+      } catch (e) { console.error(`[sweeps] refund-transfer reminder ${p.id}: booking read failed:`, (e as Error).message); }
+      const send = kinds.length ? sendLine(kinds, bellMoney(p.amount), enTr, enJoin) : "";
+      const short = send ? bellBody([send, `${days} days`]) : "";
+      return notify({
         tenantId: p.tenantId,
         to: { kind: "tenant" },
         category: "billing",
         key: "refund-to-send",
         // The bell is short and fixed (lib/bellText.ts); the long wording lives in the email.
         title: bellTitle("refundToSend", ref),
-        body: bellBody([paymentType({ method: p.method, amount: p.amount }), bellMoney(p.amount), `${days} days`]),
-        subject: `Refund to send: ${ref} (£${p.amount.toFixed(2)}, ${days} days)`,
-        emailHtml: `<p>You approved refunds totalling <b>£${p.amount.toFixed(2)}</b> for booking <b>${esc(ref)}</b> (the oldest ${days} days ago), but you haven't confirmed you've sent the money. Open the booking, send it (Reveal bank details shows the account for 30 seconds), then press <b>"I've sent the refund"</b>. The family is waiting for it.</p>`,
+        body: send ? (short.length <= BELL_BODY_MAX ? short : send) : bellBody([paymentType({ method: p.method, amount: p.amount }), bellMoney(p.amount), `${days} days`]),
+        subject: `Refund to send: ${ref} (${send || `£${p.amount.toFixed(2)}`}, ${days} days)`,
+        emailHtml: `<p>You approved refunds totalling <b>£${p.amount.toFixed(2)}</b> for booking <b>${esc(ref)}</b> (the oldest ${days} days ago), but you haven't confirmed you've sent the money.${send ? ` <b>${esc(send)}</b>.` : ""} Open the booking, send it${kinds.includes("bank") || !kinds.length ? " (Reveal bank details shows the account for 30 seconds)" : ""}, then press <b>"I've sent the refund"</b>. The family is waiting for it.</p>`,
         href: `/company/bookings?ref=${encodeURIComponent(ref)}`,
         ref,
-      }),
-    ).catch((e) => { console.error(`[sweeps] refund-transfer reminder ${p.id}:`, (e as Error).message); return false; });
+      });
+    }).catch((e) => { console.error(`[sweeps] refund-transfer reminder ${p.id}:`, (e as Error).message); return false; });
     if (fired) sent++;
   }
 }
