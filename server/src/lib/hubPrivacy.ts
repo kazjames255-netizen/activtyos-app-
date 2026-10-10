@@ -39,6 +39,17 @@ export const HUB_COLLECTION_PRIVACY: Record<string, { how: "delete" | "scrub" | 
   hubGameSessions: { how: "delete", note: "childId; a run: seed + plan + the re-simulated result" },
   hubFactState: { how: "delete", note: "childId; per-fact ease / interval / speed / wrong answers (times tables)" },
   hubGameProfile: { how: "delete", note: "childId; pinned tables, personal bests, plays today" },
+  hubAppliedSessions: { how: "delete", note: "childId; a run of an applied game (items + answer key stay server-side, export is an allow-list)" },
+  hubAppliedState: { how: "delete", note: "childId; per-game level, tag tallies, bests" },
+  hubBotPuzzleState: { how: "delete", note: "childId; per-puzzle mastery (Bot Foundry)" },
+  hubMiniGameProfile: { how: "delete", note: "childId; per-game profile (points, bests, days)" },
+  hubSortRoundState: { how: "delete", note: "childId; per-round mastery (Sort Yard)" },
+  hubTrainingItemState: { how: "delete", note: "childId; per-item mastery (Training Ground)" },
+  hubQuizItemState: { how: "delete", note: "childId; per-item Leitner state" },
+  hubQuizProfile: { how: "delete", note: "childId; points, best score, runs, days" },
+  hubQuizArcadeMastery: { how: "delete", note: "childId; per-topic attempts, streak, recent wrong answers" },
+  hubQuizArcadeProfile: { how: "delete", note: "childId; best score/streak, coins, days" },
+  hubLessonViews: { how: "delete", note: "childId; which lessons the child has been through" },
   hubAssessments: { how: "none", note: "tutor content" },
   hubBoardTemplates: { how: "none", note: "never carries a student's work" },
   hubFlashcards: { how: "none", note: "tutor content" },
@@ -58,6 +69,8 @@ const chunks = <T,>(xs: T[], n = 10) => Array.from({ length: Math.ceil(xs.length
 type Doc = FirebaseFirestore.QueryDocumentSnapshot;
 const byChildren = async (col: string, childIds: string[]): Promise<Doc[]> =>
   (await Promise.all(chunks(childIds).map((c) => db.collection(col).where("childId", "in", c).get()))).flatMap((q) => q.docs);
+/** The child-keyed (childId field) game / quiz / lesson-view collections added after the first registry. */
+export const HUB_EXTRA_CHILD_COLLECTIONS = ["hubAppliedSessions", "hubAppliedState", "hubBotPuzzleState", "hubMiniGameProfile", "hubSortRoundState", "hubTrainingItemState", "hubQuizItemState", "hubQuizProfile", "hubQuizArcadeMastery", "hubQuizArcadeProfile", "hubLessonViews"] as const;
 const plain = (d: Doc) => ({ id: d.id, ...d.data() });
 
 /** Everything the Learning Hub holds about these children (a parent's own). */
@@ -81,6 +94,8 @@ export async function exportChildLearning(uid: string, childIds: string[]): Prom
     Promise.all(chunks(childIds).map((c) => db.collection("hubToolStates").where("ownerKey", "in", c).get())).then((qs) => qs.flatMap((q) => q.docs)),
   ]);
   const [gameSessions, gameFacts, gameProfiles] = await Promise.all([byChildren("hubGameSessions", childIds), byChildren("hubFactState", childIds), byChildren("hubGameProfile", childIds)]);
+  const extraDocs = await Promise.all((["hubAppliedSessions", "hubAppliedState", "hubBotPuzzleState", "hubMiniGameProfile", "hubSortRoundState", "hubTrainingItemState", "hubQuizItemState", "hubQuizProfile", "hubQuizArcadeMastery", "hubQuizArcadeProfile", "hubLessonViews"] as const).map((c) => byChildren(c, childIds)));
+  const ex = (i: number) => extraDocs[i]!;
   const emails = [...new Set(enrol.docs.map((d) => String(d.get("parentEmail") ?? "").trim().toLowerCase()).filter(Boolean))];
   const prefDocs = (await Promise.all(emails.map((e) => db.collection("hubDigestPrefs").where("email", "==", e).get()))).flatMap((q) => q.docs); // "hubDigestPrefs"
   const bell = (await Promise.all(emails.map((e) => db.collection("notifications").where("email", "==", e).where("category", "==", "learning").get()))).flatMap((q) => q.docs);
@@ -147,6 +162,13 @@ export async function exportChildLearning(uid: string, childIds: string[]): Prom
     learningHomeworkAssignments: uniq(homework).map((d) => { const x = d.data(); return { id: d.id, tenantId: x.tenantId, title: x.title, instructions: x.instructions ?? "", dueAt: x.dueAt, setBy: x.createdByName ?? null, createdAt: x.createdAt }; }),
     learningToolStates: toolStates.filter((d) => d.get("ownerType") === "child").map((d) => ({ id: d.id, tenantId: d.get("tenantId"), toolId: d.get("toolId"), contextType: d.get("contextType"), contextId: d.get("contextId"), state: d.get("state") ?? null, updatedAt: d.get("updatedAt") ?? null })),
     learningGames: [{ runs: gameSessions.map((d) => { const x = d.data(); return { id: d.id, tenantId: x.tenantId, childId: x.childId, gameId: x.gameId, startedAt: x.startedAt, finishedAt: x.finishedAt ?? null, mode: x.cfg?.mode, answered: x.summary?.answered ?? null, correct: x.summary?.correct ?? null, fish: x.summary?.fish ?? null }; }), facts: gameFacts.map(plain), profiles: gameProfiles.map(plain) }],
+    // More game / quiz progress and lesson views. Applied-game runs are an allow-list (the stored items carry the answer key).
+    learningMoreGames: [{
+      appliedRuns: ex(0).map((d) => { const x = d.data(); return { id: d.id, tenantId: x.tenantId, childId: x.childId, gameId: x.gameId, level: x.level ?? null, status: x.status, startedAt: x.startedAt ?? null, finishedAt: x.finishedAt ?? null }; }),
+      appliedState: ex(1).map(plain), botPuzzles: ex(2).map(plain), miniProfiles: ex(3).map(plain), sortRounds: ex(4).map(plain), trainingItems: ex(5).map(plain),
+      quizItems: ex(6).map(plain), quizProfiles: ex(7).map(plain), arcadeMastery: ex(8).map(plain), arcadeProfiles: ex(9).map(plain),
+    }],
+    learningLessonViews: ex(10).map(plain),
     learningEmailPrefs: prefDocs.map((d) => ({ id: d.id, tenantId: d.get("tenantId"), digest: d.get("digest") ?? null, nudge: d.get("nudge") ?? null, updatedAt: d.get("updatedAt") ?? null })),
     learningNotifications: uniq(bell).map((d) => { const n = d.data(); return { id: d.id, tenantId: n.tenantId, title: n.title, body: n.body, at: n.at }; }),
   };
@@ -172,7 +194,8 @@ export async function eraseChildLearning(childId: string): Promise<void> {
   // Learn who to look for in the bell BEFORE the enrolments (which carry the parent's email) and doubts go.
   const parentEmails = [...new Set((await db.collection("hubEnrolments").where("childId", "==", childId).get()).docs.map((d) => String(d.get("parentEmail") ?? "").trim().toLowerCase()).filter(Boolean))];
   const doubtIds = (await db.collection("hubDoubts").where("childId", "==", childId).get()).docs.map((d) => d.id);
-  for (const col of ["hubEnrolments", "hubSubmissions", "hubFlashcardReviews", "hubAttempts", "hubMastery", "hubDoubts", "hubFlashcardAssignments", "hubDigestLog", "hubGameSessions", "hubFactState", "hubGameProfile"]) await del(col);
+  for (const col of ["hubEnrolments", "hubSubmissions", "hubFlashcardReviews", "hubAttempts", "hubMastery", "hubDoubts", "hubFlashcardAssignments", "hubDigestLog", "hubGameSessions", "hubFactState", "hubGameProfile",
+    "hubAppliedSessions", "hubAppliedState", "hubBotPuzzleState", "hubMiniGameProfile", "hubSortRoundState", "hubTrainingItemState", "hubQuizItemState", "hubQuizProfile", "hubQuizArcadeMastery", "hubQuizArcadeProfile", "hubLessonViews"]) await del(col);
   // Bell entries about this child: a tutor alert about one of their questions (ref = the doubt id), and the family's
   // own learning alerts whose deep link is for this child alone (`child=<id>`; multi-child alerts name several kids
   // and are left - see 11-open-questions.md).

@@ -301,10 +301,15 @@ interface RoleLike { id: string; owner?: boolean; caps?: Record<string, CapLevel
  *  else the role picked on their invite, users.staffRole), and that role exists
  *  in the matrix and isn't the owner role. */
 export function resolveCaps(settings: Record<string, unknown> | null | undefined, permRole: string | null | undefined): Record<string, CapLevel> | null {
-  if (!settings?.rolesSetAt || !permRole) return null;
+  if (!settings?.rolesSetAt) return null;
+  // A matrix is in force but this staff member has no role, or one that is not in it (deleted / mistyped): they stay
+  // unrestricted everywhere EXCEPT the Teaching Hub, which holds children's learning records and fails closed.
+  const closed = (): Record<string, CapLevel> => ({ learninghub: "none" });
+  if (!permRole) return closed();
   const roles = Array.isArray(settings.roles) ? (settings.roles as RoleLike[]) : [];
   const role = roles.find((r) => r && r.id === permRole);
-  if (!role || role.owner) return null;
+  if (!role) return closed();
+  if (role.owner) return null;
   return { ...(role.caps ?? {}) };
 }
 
@@ -314,5 +319,11 @@ export function resolveCaps(settings: Record<string, unknown> | null | undefined
  *  owner grants it in Setup → Roles & permissions) — every other area keeps the
  *  legacy "silent = edit". With no matrix in force (caps null) nothing is restricted. */
 const DEFAULT_NONE_AREAS = new Set(["learninghub"]);
-export const capLevel = (caps: Record<string, CapLevel> | null | undefined, area: string): CapLevel =>
-  !caps ? "edit" : ((caps[area] as CapLevel | undefined) ?? (DEFAULT_NONE_AREAS.has(area) ? "none" : "edit"));
+export const isCapLevel = (v: unknown): v is CapLevel => v === "none" || v === "view" || v === "edit";
+/** A level that is present but not exactly none / view / edit ("NONE", "bogus", 0) grants NOTHING (fail closed). */
+export const capLevel = (caps: Record<string, CapLevel> | null | undefined, area: string): CapLevel => {
+  if (!caps) return "edit";
+  const v = (caps as Record<string, unknown>)[area];
+  if (v === undefined || v === null) return DEFAULT_NONE_AREAS.has(area) ? "none" : "edit";
+  return isCapLevel(v) ? v : "none";
+};
