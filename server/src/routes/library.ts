@@ -156,7 +156,9 @@ library.put("/", async (req, res) => {
     hoForFranchise = (await db.collection("libraries").doc(auth.tenantId).get()).data();
     // A legacy full copy of head office's library is cleaned (bank, payroll, copied venues / staff) before this save builds on it.
     const clean = scrubLegacyDoc(existing, hoForFranchise);
-    for (const k of ["venues", "staff", "seedVersion"]) { if (clean[k] === undefined) delete doc[k]; else if (!(k in body)) doc[k] = clean[k]; }
+    // Venues / staff the franchise SENT are its own and stored as sent; only the ones it did not send are taken from the cleaned stored doc.
+    for (const k of ["venues", "staff"]) if (!(k in body)) { if (clean[k] === undefined) delete doc[k]; else doc[k] = clean[k]; }
+    doc.seedVersion = clean.seedVersion;
     existing.settings = clean.settings; existing.overrides = clean.overrides;
     if (!("settings" in body)) doc.settings = clean.settings;
     if ("settings" in body) {

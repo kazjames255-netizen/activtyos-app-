@@ -122,3 +122,41 @@ describe("6: the settled-period guard reads only this listing's payments", () =>
     void sleep;
   });
 });
+
+describe("R2 blocker: saving venues and staff from a franchise (and head office) is stored", () => {
+  const venues = [{ id: "v-new", name: "New Hall" }], staff = [{ name: "New Coach" }];
+  const stored = async (path: string) => (await db.collection("libraries").doc(path).get()).data() ?? {};
+  it("a franchise with NO doc yet, a freshly seeded doc, and a legacy doc all keep what they save", async () => {
+    const A = `frS-a-${uniq()}`;
+    const ta = (await mk("sva", { role: "franchise", franchiseId: A, franchiseName: "A", name: "A" })).token;
+    assert.equal((await call("PUT", "/api/library", ta, { venues, staff })).status, 200);
+    let d = await stored(`${P.tenantId}__fr__${A}`);
+    assert.deepEqual([d.venues, d.staff, d.seedVersion], [venues, staff, 2]);
+    const B = `frS-b-${uniq()}`;
+    const tb = (await mk("svb", { role: "franchise", franchiseId: B, franchiseName: "B", name: "B" })).token;
+    assert.equal((await call("GET", "/api/library", tb)).status, 200);
+    assert.equal((await lib(B).get()).get("seedVersion"), 2);
+    assert.equal((await call("PUT", "/api/library", tb, { venues, staff })).status, 200);
+    d = await stored(`${P.tenantId}__fr__${B}`);
+    assert.deepEqual([d.venues, d.staff], [venues, staff]);
+    assert.deepEqual((await call("GET", "/api/library", tb)).json.venues, venues);
+    const C = `frS-c-${uniq()}`;
+    const tc = (await mk("svc", { role: "franchise", franchiseId: C, franchiseName: "C", name: "C" })).token;
+    await lib(C).set({ tenantId: P.tenantId, franchiseId: C, venues: [{ id: "v-ho", name: "HQ Hall" }], staff: [{ name: "HQ Person" }], settings: {} });
+    assert.equal((await call("PUT", "/api/library", tc, { venues, staff })).status, 200);
+    d = await stored(`${P.tenantId}__fr__${C}`);
+    assert.deepEqual([d.venues, d.staff, d.seedVersion], [venues, staff, 2]);
+    const E = `frS-e-${uniq()}`;
+    const te = (await mk("sve", { role: "franchise", franchiseId: E, franchiseName: "E", name: "E" })).token;
+    await lib(E).set({ tenantId: P.tenantId, franchiseId: E, venues: [{ id: "v-ho", name: "HQ Hall" }], staff: [{ name: "HQ Person" }], settings: {} });
+    assert.equal((await call("PUT", "/api/library", te, { settings: { brandColor: "#999999" } })).status, 200);
+    d = await stored(`${P.tenantId}__fr__${E}`);
+    assert.deepEqual([d.venues, d.staff], [[], []], "legacy head-office copies removed when nothing is sent");
+  });
+  it("head office saving venues and staff is unchanged", async () => {
+    const Q = await makeProvider("frhosave");
+    assert.equal((await call("PUT", "/api/library", Q.token, { venues, staff })).status, 200);
+    const d = await stored(Q.tenantId);
+    assert.deepEqual([d.venues, d.staff], [venues, staff]);
+  });
+});
