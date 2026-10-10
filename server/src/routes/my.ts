@@ -91,6 +91,7 @@ import { DEFAULT_POLICY, accumulatePendingRelease, effectiveRefundDate, noRefund
 import { bookingDocId } from "./bookings";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { grantPlanAccess } from "./childFiles";
+import { erasureDueFor } from "../lib/childRetention";
 import { passCap, passClosedBy, passDaysProblem, passFullDay, bookingHasPass } from "../lib/passBooking";
 import { ukToday, ukTodayPlus, isRealDay, isBlankOrRealDay } from "../lib/ukDate";
 import { childSchema } from "../lib/childSchema";
@@ -3382,7 +3383,9 @@ my.delete("/children/:id", async (req, res) => {
   }
   // Learning Hub: enrolments, homework, flashcard progress, quiz attempts, mastery and lesson attendance go with the child (lib/hubPrivacy.ts).
   await eraseChildLearning(snap.id);
-  await snap.ref.set({ archived: true, archivedAt: new Date().toISOString() }, { merge: true });
+  // Photos and moments of a deleted child go within 30 days (lib/childRetention.ts, daily sweep); safeguarding, accident and register records stay.
+  const archivedAt = new Date().toISOString();
+  await snap.ref.set({ archived: true, archivedAt, erasureDueAt: erasureDueFor(archivedAt) }, { merge: true });
   res.json({ ok: true, archived: true });
 });
 

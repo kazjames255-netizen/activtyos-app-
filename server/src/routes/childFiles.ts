@@ -1,3 +1,4 @@
+import { planGrantFields } from "../lib/childRetention";
 import { Router, json } from "express";
 import { FieldValue } from "firebase-admin/firestore";
 import { z } from "zod";
@@ -239,7 +240,7 @@ export async function grantPlanAccess(fileIds: string[], tenantId: string) {
     [...new Set(fileIds.filter(Boolean))].map((id) =>
       filesCol
         .doc(id)
-        .update({ tenantIds: FieldValue.arrayUnion(tenantId) })
+        .update({ tenantIds: FieldValue.arrayUnion(tenantId), ...planGrantFields(tenantId) })
         .catch(() => {}),
     ),
   );

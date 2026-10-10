@@ -1144,6 +1144,9 @@ export function startSweeps(): void {
   // Once a day is plenty for a retention purge — see the policy comment above.
   sweep("onboarding-retention", 24 * 60 * 60_000, onboardingRetentionPurge);
   sweep("refund-bank-purge", 24 * 60 * 60_000, refundBankPurge);
+  // Owner decisions 10 Oct: a deleted child's photos/moments go within 30 days; a provider's plan access ends 90 days after the last booking.
+  sweep("child-photo-erasure", 24 * 60 * 60_000, async () => { await (await import("./childRetention")).childPhotoErasure(); });
+  sweep("plan-access-expiry", 24 * 60 * 60_000, async () => { await (await import("./childRetention")).planAccessExpiry(); });
   // New-provider emails (day 1 / 3 / 5): decided from live facts at send time, so nobody is reminded of something already done.
   sweep("onboarding-nudges", 60 * 60_000, async () => { const m = await import("./onboardingNudges"); await m.onboardingNudges(); });
 }
