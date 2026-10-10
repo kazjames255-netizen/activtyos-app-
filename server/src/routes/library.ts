@@ -13,6 +13,7 @@ import { brandSettingsError } from "../lib/listingRules";
 import { librarySnap } from "../lib/tenantLibrary";
 import { cutoffValue } from "../../../features/bookings/addonRequests";
 import { isCapLevel } from "../../../lib/accessMap";
+import { franchiseSettingsToStore, lockedFeatureViolation, resolveFranchiseLibrary, seedFromHeadOffice } from "../lib/franchiseLibrary";
 
 type Venue = { id: string; name?: string; address?: string; city?: string; kind?: string; lat?: number; lng?: number };
 
@@ -77,16 +78,17 @@ library.get("/", async (req, res) => {
   }
   const docId = libDocId(auth);
   let snap = await db.collection("libraries").doc(docId).get();
-  // Seed a franchise's library from the head office's the first time it's read,
-  // so a new franchise starts fully configured and then diverges on its own.
-  if (!snap.exists && (auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) {
-    const ho = await db.collection("libraries").doc(auth.tenantId).get();
-    if (ho.exists) {
-      await db.collection("libraries").doc(docId).set({ ...ho.data(), tenantId: auth.tenantId, franchiseId: auth.franchiseId });
-      snap = await db.collection("libraries").doc(docId).get();
-    }
+  const inFranchise = (auth.role === "franchise" || auth.role === "staff") && !!auth.franchiseId;
+  const hoSnap = inFranchise ? await db.collection("libraries").doc(auth.tenantId).get() : null;
+  // Seed a franchise's library from the head office's the first time it's read, so a new franchise starts configured and then diverges on its
+  // own. Only the franchise-safe fields are copied (never bank details, payroll administrators or billing); policies keep following head office.
+  if (!snap.exists && inFranchise && hoSnap?.exists) {
+    await db.collection("libraries").doc(docId).set({ ...seedFromHeadOffice(hoSnap.data()), tenantId: auth.tenantId, franchiseId: auth.franchiseId });
+    snap = await db.collection("libraries").doc(docId).get();
   }
   let data = snap.exists ? snap.data() : null;
+  // What a franchise sees is its own doc with head office's policies followed live, head office's switches forced, and no seeded copy of head office's private data.
+  if (data && inFranchise) data = resolveFranchiseLibrary(data, hoSnap?.data());
   // Staff never need to know who administers payroll.
   if (data && auth.role === "staff" && data.settings && "payrollAdmins" in (data.settings as object)) { const { payrollAdmins: _pa, ...restS } = data.settings as Record<string, unknown>; data = { ...data, settings: restS }; }
   // Staff never see add-on prices (the names, options and questions stay: the register and booking screens use them).
@@ -146,6 +148,20 @@ library.put("/", async (req, res) => {
   const existing = (await ref.get()).data() ?? {};
   const doc: Record<string, unknown> = { ...existing, tenantId: auth.tenantId, ...(auth.role === "franchise" && auth.franchiseId ? { franchiseId: auth.franchiseId } : {}) };
   for (const k of KEYS) if (k in body) doc[k] = body[k];
+  // A franchise saving its Setup: switches head office turned off stay off (403 if it tries to turn one back on); policies it did not edit keep
+  // following head office; nothing of head office's private data is stored on its doc (lib/franchiseLibrary).
+  let hoForFranchise: Record<string, unknown> | undefined;
+  const isFr = auth.role === "franchise" && !!auth.franchiseId;
+  if (isFr) {
+    hoForFranchise = (await db.collection("libraries").doc(auth.tenantId).get()).data();
+    if ("settings" in body) {
+      const bad = lockedFeatureViolation(existing.hoLocks, (doc.settings as { features?: unknown } | undefined)?.features);
+      if (bad) { res.status(403).json({ error: "Head office has turned this off for your franchise, so you can't turn it back on.", code: "feature_locked_by_head_office", feature: bad }); return; }
+    }
+    const kept = franchiseSettingsToStore((doc.settings ?? {}) as Record<string, unknown>, { settings: existing.settings, overrides: existing.overrides }, hoForFranchise);
+    doc.settings = kept.settings;
+    doc.overrides = kept.overrides;
+  }
   // "Show your name as" (business ↔ own name) switched without the display
   // name being edited in the same save: fill it in, so families actually see
   // the chosen name — the switch used to change only a label (acceptance d1s4).
@@ -201,7 +217,7 @@ library.put("/", async (req, res) => {
   }
   await ref.set(doc);
   forgetSettings(auth.tenantId); // a Features / Roles switch applies on the next request
-  res.json(doc);
+  res.json(isFr ? resolveFranchiseLibrary(doc, hoForFranchise) : doc);
 
   // Geocode venues ONCE at save time and store lat/lng, so the browse page
   // reads stored coordinates instead of geocoding on the fly (which hammered

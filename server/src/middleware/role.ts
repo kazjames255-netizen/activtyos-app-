@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { db } from "../firebase";
 import { normalizeApiPath } from "../../../lib/accessMap";
+import { NO_FRANCHISE } from "../lib/franchiseScope";
 
 // The six account types from the product spec, enforced server-side, now
 // with real tenancy:
@@ -139,6 +140,27 @@ export async function attachRole(req: Request, _res: Response, next: NextFunctio
     req.auth = { role: "parent", tenantId: null, franchiseId: null };
   }
   await applyImpersonation(req, user);
+  orphanFranchise(req.auth!);
+  next();
+}
+
+/** F34: a franchise-role account with NO franchiseId used to be treated as head office by every route (isFranchise() needs an id) and saw the
+ *  whole network. Give it the id that matches nothing, once, here - every franchise-scoped read then comes back empty. */
+export function orphanFranchise(a: AuthContext): void {
+  if (a.role === "franchise" && !a.franchiseId) a.franchiseId = NO_FRANCHISE;
+}
+
+/** Paths an orphan franchise account may still call: enough for the app to load and say what is wrong. */
+const ORPHAN_OK = ["/api/me", "/api/account", "/api/auth", "/api/invites", "/api/register-role", "/api/support"];
+/** After attachRole: a franchise-role account with no franchise gets 403 on everything but the paths above (reads that slip past still come back empty). */
+export function refuseOrphanFranchise(req: Request, res: Response, next: NextFunction) {
+  if (req.auth?.role === "franchise" && req.auth.franchiseId === NO_FRANCHISE) {
+    const path = normalizeApiPath(req.baseUrl + req.path);
+    if (!ORPHAN_OK.some((p) => path === p || path.startsWith(p + "/"))) {
+      res.status(403).json({ error: "Your account has no franchise - ask head office to re-send your invite", code: "no_franchise" });
+      return;
+    }
+  }
   next();
 }
 

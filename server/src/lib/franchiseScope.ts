@@ -17,6 +17,18 @@ export async function franchiseListingIds(tenantId: string, franchiseId: string)
   return new Set(snap.docs.filter((d) => (d.data() as { franchiseId?: string | null }).franchiseId === franchiseId).map((d) => d.id));
 }
 
+/** The franchiseId given to a franchise-role account that carries NONE (an invite that was never completed, a hand-edited user). It matches no
+ *  record, so every franchise-scoped read through isFranchise() / ownedByFranchise() / franchiseListingIds() comes back EMPTY instead of falling
+ *  through to the whole network (F34, 10 Oct 2026). middleware/role.ts sets it once, in attachRole, so every route inherits it. */
+export const NO_FRANCHISE = "__no_franchise__";
+
+/** Does this franchise exist under this head office (some franchise login carries its id)? Used before a listing is handed to it or a switch is set for it. */
+export async function franchiseExists(tenantId: string, franchiseId: string): Promise<boolean> {
+  if (!franchiseId || franchiseId === NO_FRANCHISE) return false;
+  const snap = await db.collection("users").where("tenantId", "==", tenantId).where("role", "==", "franchise").where("franchiseId", "==", franchiseId).limit(1).get();
+  return !snap.empty;
+}
+
 /** True when the caller is a franchise (so the caller should narrow its reads). */
 export function isFranchise(auth: AuthContext): auth is AuthContext & { franchiseId: string } {
   // A franchise's own STAFF are scoped to it too — they carry its franchiseId

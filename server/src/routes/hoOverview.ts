@@ -42,23 +42,24 @@ interface FrAgg {
   perSeason: Map<string, { name: string; bookings: number; revenue: number }>;
 }
 
-// child id / lowercased name → owning franchiseId (null = head office), so a
-// child-scoped record (incident / medication) can be attributed to a franchise.
-async function childFranchiseMap(tenantId: string): Promise<Map<string, string | null>> {
+// child id / lowercased name → the franchiseIds (null = head office) that look after them, so a
+// child-scoped record (incident / medication) can be attributed. A child booked with TWO franchises maps to both (F31).
+async function childFranchiseMap(tenantId: string): Promise<Map<string, Set<string | null>>> {
   const [bookingsSnap, listingsSnap] = await Promise.all([
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
     db.collection("listings").where("tenantId", "==", tenantId).get(),
   ]);
   const listingFr = new Map<string, string | null>();
   for (const d of listingsSnap.docs) listingFr.set(d.id, (d.data() as { franchiseId?: string }).franchiseId ?? null);
-  const m = new Map<string, string | null>();
+  const m = new Map<string, Set<string | null>>();
+  const add = (k: string, fid: string | null) => { (m.get(k) ?? m.set(k, new Set()).get(k)!).add(fid); };
   for (const d of bookingsSnap.docs) {
     const b = d.data() as { franchiseId?: string; listingId?: string; child?: string; childId?: string; kids?: { name?: string; childId?: string }[] };
     const fid = b.franchiseId ?? (b.listingId ? (listingFr.get(b.listingId) ?? null) : null);
-    const put = (k?: string) => { if (k) m.set(k.trim().toLowerCase(), fid); };
-    if (b.childId) m.set(b.childId, fid);
+    const put = (k?: string) => { if (k) add(k.trim().toLowerCase(), fid); };
+    if (b.childId) add(b.childId, fid);
     put(b.child);
-    for (const k of b.kids ?? []) { if (k.childId) m.set(k.childId, fid); put(k.name); }
+    for (const k of b.kids ?? []) { if (k.childId) add(k.childId, fid); put(k.name); }
   }
   return m;
 }
@@ -82,23 +83,26 @@ hoOverview.get("/oversight/:area", async (req, res) => {
 
   const snap = await db.collection(area === "medication" ? "medications" : "incidents").where("tenantId", "==", tenantId).get();
   const now = Date.now();
-  const attrib = (childId?: string, childName?: string, stamped?: string | null): string | null => {
+  const attrib = (childId?: string, childName?: string, stamped?: string | null): (string | null)[] => {
     // The franchise that logged the record (stamped on it) wins — it also covers walk-ins with no matching child.
-    if (stamped) return stamped;
-    if (childId && childFr.has(childId)) return childFr.get(childId)!;
-    if (childName && childFr.has(childName.trim().toLowerCase())) return childFr.get(childName.trim().toLowerCase())!;
-    return null;
+    if (stamped) return [stamped];
+    const hit = (childId && childFr.get(childId)) || (childName ? childFr.get(childName.trim().toLowerCase()) : undefined);
+    return hit?.size ? [...hit] : [null];
   };
 
   let records = snap.docs.map((d) => {
     const r = d.data() as Record<string, unknown> & { kind?: string; childId?: string; childName?: string; date?: string; time?: string; bodyPart?: string; injury?: string; name?: string; dose?: string; status?: string; createdAt?: string; resolvedAt?: string };
-    const fid = attrib(r.childId, r.childName, (r as { franchiseId?: string | null }).franchiseId);
+    // A child booked with more than one franchise is shown under ALL of them and flagged, never silently under one.
+    const fids = attrib(r.childId, r.childName, (r as { franchiseId?: string | null }).franchiseId);
+    const fid = fids.find((x) => x) ?? fids[0] ?? null;
+    const nameOf = (x: string | null) => (x ? (frName.get(x) ?? "Franchise") : "Head office");
     const when = r.createdAt || (r.date ? `${r.date}${r.time ? `T${r.time}` : ""}` : null);
     const open = !(r.status === "closed" || r.status === "resolved" || r.resolvedAt);
     return {
       id: d.id, kind: r.kind ?? (area === "medication" ? "medication" : "incident"),
       childName: r.childName ?? "A child",
-      franchiseId: fid, franchiseName: fid ? (frName.get(fid) ?? "Franchise") : "Head office",
+      franchiseId: fid, franchiseName: fids.length > 1 ? fids.map(nameOf).join(" + ") : nameOf(fid),
+      ...(fids.length > 1 ? { multiFranchise: true, franchiseIds: fids, franchiseNames: fids.map(nameOf) } : {}),
       when, open,
       // area-specific read-only summary
       ...(area === "medication"
@@ -116,11 +120,13 @@ hoOverview.get("/oversight/:area", async (req, res) => {
   const legend = [...frName.entries()].map(([franchiseId, name]) => ({ franchiseId, name }));
   const bucket = new Map<string, { total: number; open: number; last30: number }>();
   for (const r of records) {
-    const key = r.franchiseId ?? "__ho__";
-    const b = bucket.get(key) ?? { total: 0, open: 0, last30: 0 };
-    b.total += 1; if (r.open) b.open += 1;
-    if (r.when && now - Date.parse(String(r.when)) <= 30 * DAY) b.last30 += 1;
-    bucket.set(key, b);
+    for (const f of ("franchiseIds" in r ? r.franchiseIds : [r.franchiseId]) as (string | null)[]) {
+      const key = f ?? "__ho__";
+      const b = bucket.get(key) ?? { total: 0, open: 0, last30: 0 };
+      b.total += 1; if (r.open) b.open += 1;
+      if (r.when && now - Date.parse(String(r.when)) <= 30 * DAY) b.last30 += 1;
+      bucket.set(key, b);
+    }
   }
   const byFranchise = [
     { franchiseId: null as string | null, name: "Head office (direct)", ...(bucket.get("__ho__") ?? { total: 0, open: 0, last30: 0 }) },

@@ -1,4 +1,5 @@
 import { db } from "../firebase";
+import { resolveFranchiseLibrary, seedFromHeadOffice } from "./franchiseLibrary";
 
 // A franchise edits its OWN Setup, stored at libraries/{tenantId}__fr__{franchiseId}
 // (see routes/library.ts). Anything that ENFORCES a setting has to read that
@@ -17,8 +18,12 @@ export function libraryDocId(tenantId: string, franchiseId?: string | null): str
  *  inside it. Never throws on a missing doc; returns {} instead. */
 export async function loadLibrary(tenantId: string, franchiseId?: string | null): Promise<Record<string, unknown>> {
   if (franchiseId) {
-    const fr = await db.collection("libraries").doc(libraryDocId(tenantId, franchiseId)).get();
-    if (fr.exists) return fr.data() ?? {};
+    const [fr, ho] = await Promise.all([db.collection("libraries").doc(libraryDocId(tenantId, franchiseId)).get(), db.collection("libraries").doc(tenantId).get()]);
+    // The franchise's own doc, with head-office policies followed live and head-office switches forced (lib/franchiseLibrary).
+    if (fr.exists) return resolveFranchiseLibrary(fr.data() ?? {}, ho.data());
+    // A franchise that has never opened Setup still starts from head office's "all franchises" defaults (F10).
+    if (hasFranchiseDefaults(ho.data())) return resolveFranchiseLibrary(seedFromHeadOffice(ho.data()), ho.data());
+    return ho.data() ?? {};
   }
   const snap = await db.collection("libraries").doc(tenantId).get();
   return snap.data() ?? {};
@@ -55,10 +60,20 @@ export async function franchiseForChild(tenantId: string, childId: string | null
  *  franchise's own when it has one, else head office's. */
 export async function librarySnap(tenantId: string, franchiseId?: string | null): Promise<FirebaseFirestore.DocumentSnapshot> {
   if (franchiseId) {
-    const fr = await db.collection("libraries").doc(libraryDocId(tenantId, franchiseId)).get();
-    if (fr.exists) return fr;
+    const [fr, ho] = await Promise.all([db.collection("libraries").doc(libraryDocId(tenantId, franchiseId)).get(), db.collection("libraries").doc(tenantId).get()]);
+    if (fr.exists) return resolvedSnap(fr, resolveFranchiseLibrary(fr.data() ?? {}, ho.data()));
+    if (hasFranchiseDefaults(ho.data())) return resolvedSnap(fr, resolveFranchiseLibrary(seedFromHeadOffice(ho.data()), ho.data()));
+    return ho;
   }
   return db.collection("libraries").doc(tenantId).get();
+}
+
+const hasFranchiseDefaults = (ho: Record<string, unknown> | undefined) => !!ho?.franchiseFeatureDefaults && Object.keys(ho.franchiseFeatureDefaults as object).length > 0;
+
+/** A read-only stand-in for a snapshot whose data() is the RESOLVED franchise library (callers only use exists / id / ref / data() / get()). */
+function resolvedSnap(fr: FirebaseFirestore.DocumentSnapshot, data: Record<string, unknown>): FirebaseFirestore.DocumentSnapshot {
+  const get = (path: string) => path.split(".").reduce<unknown>((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), data);
+  return { exists: true, id: fr.id, ref: fr.ref, data: () => data, get } as unknown as FirebaseFirestore.DocumentSnapshot;
 }
 
 /** The franchise (if any) a FAMILY deals with: the franchiseId on their most

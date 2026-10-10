@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { loadSettings } from "../lib/tenantLibrary";
+import { loadLibrary } from "../lib/tenantLibrary";
 import { capForApi, capLevel, familyReadAreaForApi, featureForApi, firstOff, mayReadFamilyData, normalizeApiPath, resolveCaps } from "../../../lib/accessMap";
 import { isSafeguardingLead } from "../lib/dslAlert";
 
@@ -16,18 +16,28 @@ import { isSafeguardingLead } from "../lib/dslAlert";
 // through the customer area (lib/use-customer-area.ts).
 
 const TTL_MS = 10_000;
-const cache = new Map<string, { at: number; settings: Record<string, unknown> }>();
+const cache = new Map<string, { at: number; settings: Record<string, unknown>; locks: Record<string, unknown> }>();
 
 /** The Setup & features bag that applies to this account — the franchise's own
  *  when it has one (lib/tenantLibrary). Cached briefly: this runs on every
  *  gated request. */
 export async function effectiveSettings(tenantId: string, franchiseId?: string | null): Promise<Record<string, unknown>> {
+  return (await effectiveBag(tenantId, franchiseId)).settings;
+}
+
+/** The switches head office has locked OFF for this franchise ({view: false}); empty for everyone else. */
+export async function effectiveLocks(tenantId: string, franchiseId?: string | null): Promise<Record<string, unknown>> {
+  return (await effectiveBag(tenantId, franchiseId)).locks;
+}
+
+async function effectiveBag(tenantId: string, franchiseId?: string | null) {
   const key = franchiseId ? `${tenantId}__fr__${franchiseId}` : tenantId;
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.settings;
-  const settings = await loadSettings(tenantId, franchiseId);
-  cache.set(key, { at: Date.now(), settings });
-  return settings;
+  if (hit && Date.now() - hit.at < TTL_MS) return hit;
+  const lib = await loadLibrary(tenantId, franchiseId);
+  const entry = { at: Date.now(), settings: (lib.settings as Record<string, unknown> | undefined) ?? {}, locks: (lib.hoLocks as Record<string, unknown> | undefined) ?? {} };
+  cache.set(key, entry);
+  return entry;
 }
 
 /** Drop the cached settings for a tenant (and its franchises) — called when
@@ -79,12 +89,17 @@ export async function enforceAccess(req: Request, res: Response, next: NextFunct
       const features = (await effectiveSettings(auth.tenantId, auth.franchiseId)).features as Record<string, unknown> | undefined;
       const off = firstOff(features, feature.keys);
       if (off) {
+        // Head office turned it off for this franchise: Setup can't turn it back on, so don't say it can.
+        const byHeadOffice = !!auth.franchiseId && (await effectiveLocks(auth.tenantId, auth.franchiseId))[off] === false;
         res.status(403).json({
           // "turned off", not "switched off": PortalGuard reads "switched off"
           // as the ACCOUNT being deactivated.
-          error: `${feature.label} is turned off for this account. ${auth.role === "staff" ? "Ask a manager to" : "You can"} turn it back on in Setup → Features.`,
+          error: byHeadOffice
+            ? `${feature.label} is turned off by head office for your franchise. Ask head office if you need it.`
+            : `${feature.label} is turned off for this account. ${auth.role === "staff" ? "Ask a manager to" : "You can"} turn it back on in Setup → Features.`,
           code: "feature_off",
           feature: off,
+          ...(byHeadOffice ? { lockedByHeadOffice: true } : {}),
         });
         return;
       }
