@@ -6,6 +6,7 @@ import { db } from "../firebase";
 import { esc } from "../lib/html";
 import { franchiseChildIds, isFranchise } from "../lib/franchiseScope";
 import { notify, parentEmailForChild } from "../lib/notify";
+import { parentMedicationView, parentDoseView } from "../lib/parentViews";
 import { franchiseForChild, loadSettings } from "../lib/tenantLibrary";
 import { childVisibleTo } from "../lib/childAccess";
 import { siteRecordFilter } from "../lib/siteScope";
@@ -142,7 +143,7 @@ medications.get("/", async (req, res) => {
     let list = docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; archived?: boolean; childName?: string })[];
     if (req.query.includeArchived !== "1") list = list.filter((m) => !m.archived);
     list.sort((a, b) => (`${a.childName ?? ""}` < `${b.childName ?? ""}` ? -1 : 1));
-    res.json(list);
+    res.json(list.map(parentMedicationView));
     return;
   }
   const tenantId = tenantOf(req);
@@ -525,7 +526,7 @@ medications.get("/administrations", async (req, res) => {
     let list = docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; date?: string; time?: string; medicationId?: string })[];
     if (typeof req.query.medicationId === "string") list = list.filter((x) => x.medicationId === req.query.medicationId);
     list.sort((a, b) => (`${b.date} ${b.time ?? ""}` < `${a.date} ${a.time ?? ""}` ? -1 : 1));
-    res.json(list);
+    res.json(list.map(parentDoseView));
     return;
   }
   const tenantId = tenantOf(req);

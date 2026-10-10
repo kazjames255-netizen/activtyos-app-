@@ -225,25 +225,32 @@ describe("S10 duplicate posts are one record and one email", () => {
   });
 });
 
-describe("S47 a dossier reads about 50 documents, not the whole tenant", () => {
-  it("with hundreds of bookings and incidents in the tenant", async () => {
+describe("S47 a dossier's read cost does not grow with the tenant", () => {
+  // Compared as a delta on the SAME family, not an absolute: every emulator test shares parent A, so by now that family may hold
+  // hundreds of bookings (the dossier reads the family's own rows, by design) and an absolute limit measures test pollution.
+  it("adding hundreds of other families' bookings and incidents changes it by almost nothing", async () => {
     const db = await adminDb();
     const t = ids().tenants.P;
+    const nm = `Cost ${u()}`;
+    const kid = await child("A", nm);
+    const rec = await as("P", "POST", "/api/incidents", base(kid, nm));
+    const label = "http:GET /api/incidents/:id/dossier";
+    const read = async () => {
+      const b = await readsFor(label);
+      const d = await as("P", "GET", `/api/incidents/${rec.json.id}/dossier`);
+      assert.equal(d.status, 200);
+      assert.equal(d.json.parent?.email, EMAILS.A);
+      return (await readsFor(label)) - b;
+    };
+    const baseline = await read();
     const batch = db.batch();
     for (let i = 0; i < 250; i++) {
       batch.set(db.collection("bookings").doc(`${t}_bulk${i}_${u()}`), { tenantId: t, child: `Bulk ${i}`, childId: `bulkchild${i}`, email: `bulk${i}@emu.test`, status: "confirmed", createdAt: new Date().toISOString(), listingId: ids().listings.LK.id });
       if (i < 240) batch.set(db.collection("incidents").doc(`bulk${i}_${u()}`), { tenantId: t, kind: "accident", childName: `Bulk ${i}`, childId: `bulkchild${i}`, date: ids().generatedOn, description: "bulk" });
     }
     await batch.commit();
-    const nm = `Cost ${u()}`;
-    const kid = await child("A", nm);
-    const rec = await as("P", "POST", "/api/incidents", base(kid, nm));
-    const label = "http:GET /api/incidents/:id/dossier";
-    const before = await readsFor(label);
-    const d = await as("P", "GET", `/api/incidents/${rec.json.id}/dossier`);
-    assert.equal(d.status, 200);
-    const used = (await readsFor(label)) - before;
-    assert.ok(used > 0 && used <= 60, `dossier read ${used} documents`);
-    assert.equal(d.json.parent?.email, EMAILS.A);
+    const after = await read();
+    assert.ok(baseline > 0, "the dossier read nothing?");
+    assert.ok(after <= baseline + 10, `dossier reads went from ${baseline} to ${after} when OTHER families' rows were added`);
   });
 });

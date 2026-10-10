@@ -12,6 +12,7 @@ import { childVisibleTo, familyChildAccess } from "../lib/childAccess";
 import { siteRecordFilter } from "../lib/siteScope";
 import type { Role } from "../middleware/role";
 import { notify, parentEmailForChild } from "../lib/notify";
+import { parentIncidentView as parentView } from "../lib/parentViews";
 import { alertDsl, isSafeguardingLead, leadCovers, namesALead } from "../lib/dslAlert";
 import { whereInChunks } from "../lib/firestoreIn";
 import { auditIncidentDeletion } from "../lib/incidentDeletionAudit";
@@ -302,21 +303,6 @@ async function withSafePhotos<T extends Record<string, unknown>>(list: T[]): Pro
     if (Array.isArray(x.attachments)) out.attachments = x.attachments.filter((u) => good(x, u));
     return out as T;
   });
-}
-
-/** What a PARENT gets of a record (S19): an allow-list, never the stored record. Accidents and shared behaviour notes carry the
- *  injury / treatment lines the family screen shows. A shared safeguarding concern or concern about staff carries only the text
- *  the provider chose to share (description, follow-up) - never who recorded it, the DSL log or outcome, the child's own words,
- *  who it was reported to, external references, the local authority, categories or attachments. */
-const PARENT_COMMON = ["id", "kind", "tenantId", "childId", "childName", "date", "time", "description", "followUp", "createdAt", "updatedAt", "acknowledgedAt", "acknowledgedBy"] as const;
-const PARENT_CARE = ["location", "injury", "treatment", "firstAider", "severity", "incidentType", "actionTaken", "parentNotified", "parentNotifiedAt", "photoUrl", "attachments"] as const;
-function parentView(x: Record<string, unknown>): Record<string, unknown> {
-  const restricted = x.kind === "safeguarding" || x.subject === "staff";
-  const out: Record<string, unknown> = {};
-  for (const k of restricted ? PARENT_COMMON : [...PARENT_COMMON, ...PARENT_CARE]) if (x[k] !== undefined) out[k] = x[k];
-  if (Array.isArray(x.notes)) out.notes = x.notes.map((n: Record<string, unknown>) => ({ id: n.id, by: n.by, role: n.role, text: n.text, at: n.at }));
-  if (x.requireAck !== undefined) out.requireAck = x.requireAck;
-  return out;
 }
 
 /** How much of this record may this account see? Staff run the day, so

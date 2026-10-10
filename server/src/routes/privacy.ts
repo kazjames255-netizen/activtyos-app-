@@ -5,6 +5,8 @@ import { familyBooking } from "../lib/familyView";
 import { exportChildLearning } from "../lib/hubPrivacy";
 import { ukTodayPlus } from "../lib/ukDate";
 import { decryptSensitive, ownName } from "./onboarding";
+import { parentIncidentView, parentMedicationView, parentDoseView, parentMomentView, parentCustomerView } from "../lib/parentViews";
+import { forViewing } from "./moments";
 import { whereEmail } from "../lib/emailCase";
 
 // Data & privacy (shared, every portal) — the user's GDPR surface: see what's
@@ -142,10 +144,11 @@ async function gather(req: import("express").Request) {
     out.bookings = bookings.docs.map((d) => familyBooking(strip(d) as never)); // the family's own view of its bookings (no internal refund bookkeeping)
     out.payments = payments.docs.map(strip);
     out.mealOrders = orders.docs.map(strip);
-    out.medications = meds.map(strip);
-    out.medicationDoses = doses.map(strip);
+    out.medications = meds.map((d) => parentMedicationView(strip(d)));
+    out.medicationDoses = doses.map((d) => parentDoseView(strip(d)));
     out.register = register;
-    out.moments = moments.map(strip);
+    // As the Moments feed shows them (a photo whose consent has since been withdrawn is hidden; only this family's own child is named).
+    out.moments = (await forViewing(moments.map(strip) as (Record<string, unknown> & { childIds?: string[] })[], "parent")).map((m) => parentMomentView(m, childIds, uid));
     // Accidents and incidents about their child. A confidential safeguarding
     // concern is withheld from a self-serve export (disclosure can put a child
     // at risk — it's a decision for the provider's DSL, not an automatic
@@ -159,7 +162,7 @@ async function gather(req: import("express").Request) {
       if (x.confidential === true) return false; // confidential ALWAYS wins over sharing (health run H50)
       if (x.shareWithParent === true) return true;
       return x.kind === "accident" && !x.confidential && x.subject !== "staff";
-    });
+    }).map((r) => parentIncidentView(r as Record<string, unknown>)); // the same allow-list the parent's list uses: a shared concern's DSL internals stay with the provider
     // An alert that was sent about a confidential record carries no text in the export either (older ones were sent with the record's wording).
     const confidentialIds = new Set(incidents.filter((d) => d.get("confidential") === true).map((d) => d.id));
     if (confidentialIds.size && Array.isArray(out.notifications)) {
@@ -175,7 +178,7 @@ async function gather(req: import("express").Request) {
     out.memberships = memberships.docs.map(strip);
     out.wallet = wallets.docs.map(strip);
     out.walletEntries = walletEntries.docs.map(strip);
-    out.providerFamilyRecords = customers.docs.map(strip);
+    out.providerFamilyRecords = customers.docs.map((d) => parentCustomerView(strip(d))); // not the provider's private notes
     out.feedback = feedback.docs.map(strip);
     // Referrals they made or came in through — the other family's email is theirs, not this one's.
     out.referrals = [
