@@ -4,6 +4,7 @@ import { navLabel } from "@/lib/i18n/words";
 import { useLbl } from "@/features/learninghub/hubLabel";
 import { useT, tNow } from "@/lib/i18n/provider";
 import { BRAND } from "@/lib/i18n/config";
+import { BrandMark } from "@/components/ui/Logo";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -349,7 +350,7 @@ export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?:
   // « toggle if they want more room.
   const [collapsed, setCollapsed] = useState(false);
 
-  // The workspace is branded with the provider's own name, not "Name TBC" —
+  // The workspace is branded with the provider's own name, not "ActivityLane" —
   // that moves to the footer. For an operator that's their tenant (business)
   // name; for a parent (no tenant) it's the provider they're linked to.
   const [brand, setBrand] = useState<string | null>(null);
@@ -391,7 +392,7 @@ export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?:
       })
       .catch(() => {});
   }, []);
-  // Never flash "Name TBC" while the name loads: show the last known provider name (remembered per portal, PER SIGNED-IN ACCOUNT, on this
+  // Never flash "ActivityLane" while the name loads: show the last known provider name (remembered per portal, PER SIGNED-IN ACCOUNT, on this
   // browser) and, until there is one, a blank line — the real name replaces it a moment later. Keyed by uid too: without that, switching
   // accounts on the same browser (a tutor testing as themselves, then as a parent, then as another test account) briefly — or, if the
   // fresh /api/my/providers call ever fails silently, permanently — shows the PREVIOUS account's provider name instead of this one's.
@@ -691,7 +692,7 @@ export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?:
         );
       })}
 
-      {/* The Name TBC wordmark lives at the foot now the provider's name owns
+      {/* The ActivityLane wordmark lives at the foot now the provider's name owns
           the top — "powered by". mt-auto pins it to the bottom whether or not a
           portal has a footer nav group above it. */}
       <div className="mt-auto px-4 pb-2 pt-3">
@@ -700,17 +701,7 @@ export function Sidebar({ portal, drawer, sheet }: { portal: PortalKey; drawer?:
             {t("chrome.poweredBy")}
           </div>
           <div className="mt-1.5 flex items-center gap-2">
-            <svg viewBox="0 0 32 32" width="22" height="22" fill="none" aria-hidden="true">
-              <rect width="32" height="32" rx="9" fill="url(#aosPlane)" />
-              <path d="M26.5 6 L5.5 13.7 L13 16.2 L15.6 24 L18.7 17 Z" fill="#fff" />
-              <path d="M13 16.2 L26.5 6 L18.7 17 Z" fill="#fff" opacity=".5" />
-              <defs>
-                <linearGradient id="aosPlane" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#2f6bd8" />
-                  <stop offset="1" stopColor="#1d3a8f" />
-                </linearGradient>
-              </defs>
-            </svg>
+            <BrandMark size={24} />
             <span className="text-[15px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>
               <span style={{ color: "var(--side-ink)" }}>{BRAND}</span>
             </span>

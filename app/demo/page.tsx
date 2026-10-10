@@ -184,8 +184,8 @@ export default function DemoPage() {
         <header className="nav">
           <div className="shell nav-in">
             <Link className="brand" href="/v2/activly.html">
-              <span className="logo" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff" /></svg>
+              <span className="logo" aria-hidden="true" style={{ background: "none", boxShadow: "none" }}>
+                <img src="/brand/mark.svg" alt="" width={36} height={36} style={{ display: "block" }} />
               </span>
               <span>{BRAND_NAME}</span>
             </Link>

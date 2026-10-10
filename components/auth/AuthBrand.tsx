@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { BRAND } from "@/lib/i18n/config";
+import { BrandMark, BrandWordmark } from "@/components/ui/Logo";
 
 // Auth screens run the marketing-site palette so the hand-off from the website
 // into sign-up feels like one product. That palette is the blue + gold one —
@@ -20,28 +20,12 @@ export const AUTH_LIGHT: CSSProperties = {
   "--gold": "#f5b81f",
 } as CSSProperties;
 
-// The mark — blue rounded square + white paper-plane (matches the site logo).
+// The logo (person + three lane lines): one artwork in components/ui/Logo.tsx. These names are kept so the auth screens keep their imports.
 export function AosMark({ size = 30 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 32 32" width={size} height={size} fill="none" aria-hidden="true">
-      <rect width="32" height="32" rx="9" fill="url(#aosAuth)" />
-      <path d="M26.5 6 L5.5 13.7 L13 16.2 L15.6 24 L18.7 17 Z" fill="#fff" />
-      <path d="M13 16.2 L26.5 6 L18.7 17 Z" fill="#fff" opacity=".5" />
-      <defs>
-        <linearGradient id="aosAuth" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#2f6bd8" />
-          <stop offset="1" stopColor="#1d3a8f" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
+  return <BrandMark size={size} />;
 }
 
-// Wordmark — Name TBC.
+// Wordmark in the display font, themed ink.
 export function AosWordmark({ className = "" }: { className?: string }) {
-  return (
-    <span className={className} style={{ fontFamily: "var(--ff-display)" }}>
-      <span style={{ color: "var(--ink, #171534)" }}>{BRAND}</span>
-    </span>
-  );
+  return <BrandWordmark className={className} tone="auto" />;
 }
