@@ -44,8 +44,24 @@ export interface Fault {
   context?: Record<string, unknown>;
 }
 
+// The fault store is read by ops and e-mailed out, and a request URL can carry a family's email, a child's name and date of birth in its
+// query string. So: a path/url context value keeps its PATH ONLY (no query, no fragment), and any string we store or send (message,
+// stack, every context value) has email addresses and long token-like runs redacted. Applied centrally, so every writer is covered.
+const EMAIL_RE = /[A-Za-z0-9._%+'-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+const TOKEN_RE = /\b[A-Za-z0-9_-]{32,}\b/g;
+export const redactText = (s: string): string => s.replace(EMAIL_RE, "[email]").replace(TOKEN_RE, "[token]");
+export const pathOnly = (u: string): string => u.split(/[?#]/, 1)[0].slice(0, 300);
+export function scrubFault(f: Fault): Fault {
+  const context: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(f.context ?? {})) {
+    context[k] = typeof v === "string" ? redactText(/path|url|href|route/i.test(k) ? pathOnly(v) : v) : v;
+  }
+  return { ...f, message: redactText(f.message), stack: f.stack === undefined ? undefined : redactText(f.stack), context };
+}
+
 /** Record a fault and, the first time it appears, tell someone. */
-export async function record(f: Fault): Promise<void> {
+export async function record(f0: Fault): Promise<void> {
+  const f = scrubFault(f0);
   const at = new Date().toISOString();
   try {
     await db.collection("incidentsOps").add({

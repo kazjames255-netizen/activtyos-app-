@@ -103,7 +103,7 @@ export function decryptSensitive<T extends { values?: Record<string, Record<stri
 
 /** The signed-in person's name, which links them to their own record. Returns "" (so nothing matches) when another account in the same pay scope
  *  carries the same name: records are matched by name, so a duplicate would otherwise read the other person's bank details + NI number. */
-async function ownName(uid: string | undefined): Promise<string> {
+export async function ownName(uid: string | undefined): Promise<string> {
   if (!uid) return "";
   const u = await db.collection("users").doc(uid).get();
   const name = String(u.get("name") ?? "").trim();

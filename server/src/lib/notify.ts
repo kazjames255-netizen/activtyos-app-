@@ -35,6 +35,8 @@ const EMAIL_DELIVERY_KEY = "email-delivery";
 const DEFAULT_OFF = new Set(["med-due", "register-missing", "register-collect"]);
 
 /** What a notification is about. Doubles as the mute key a parent can set. */
+const ESSENTIAL_CATEGORIES: ReadonlySet<string> = new Set(["accident", "incident", "medication", "billing"]);
+
 export type NotifyCategory =
   | "accident"
   | "incident"
@@ -400,7 +402,8 @@ export async function notify(input0: NotifyInput): Promise<void> {
       // family mail — pointing the team's own notification back at itself
       // would just loop.
       { name: provider.name, ...(parentEmail && provider.email ? { replyTo: provider.email } : {}) },
-      attachments.length ? { attachments } : undefined,
+      // A parent who closed their account still gets safety (accident / incident / medication) and money (billing) notices; the rest is suppressed.
+      attachments.length || ESSENTIAL_CATEGORIES.has(input.category) ? { ...(attachments.length ? { attachments } : {}), ...(ESSENTIAL_CATEGORIES.has(input.category) ? { essential: true } : {}) } : undefined,
     );
     await bell.set({ emailStatus: outcome.status }, { merge: true });
   } catch (e) {

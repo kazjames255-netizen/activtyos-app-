@@ -26,7 +26,7 @@ import { methodLabel } from "./finI18n";
 import { RefundsToSend } from "./RefundsToSend";
 import { financeFigures, inFinance, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, payoutRows, type PaymentRecord } from "./financeFigures";
 import { addonFigures } from "./addonFigures";
-import { genderSplit,type KidSex } from "./genderSplit";
+import { genderSplit, suppressSplit, type KidSex } from "./genderSplit";
 
 // ── Types for the extra ledgers we fold in (subset of each route's shape) ──
 interface Invoice { id: string; customerName: string; amount: number; date: string; dueDate?: string; status: string; overdue?: boolean }
@@ -193,7 +193,7 @@ export function FinanceAnalyticsApp() {
       avgBookingValue: amounts.length ? amounts.reduce((s, v) => s + v, 0) / amounts.length : 0,
       medianValue: amounts.length ? [...amounts].sort((x, y) => x - y)[Math.floor(amounts.length / 2)] : 0,
       valueBands, passRows,
-      gender: split, genderKnown: split.known,
+      gender: split, genderKnown: split.known, genderShown: suppressSplit(split),
       dowRows,
     };
   }, [bookings, months, nowMs, season, venue, listingSeason, listingVenueId, addonMeta, childKids, t]);
@@ -557,7 +557,7 @@ export function FinanceAnalyticsApp() {
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label={t("p8fin.faAvgBooking")} icon="🧮" grad={GRAD.blue} value={money(mix.avgBookingValue)} sub={t("p8fin.faAcrossN", { n: mix.winBookings })} />
             <Tile label={t("p8fin.faMedian")} icon="📊" grad={GRAD.teal} value={money(mix.medianValue)} sub={t("p8fin.faTypicalBasket")} />
-            <Tile label={t("p8fin.faBoysGirls")} icon="🚻" grad={GRAD.violet} value={mix.gender.boy + mix.gender.girl ? `${Math.round((mix.gender.boy / (mix.gender.boy + mix.gender.girl)) * 100)}:${Math.round((mix.gender.girl / (mix.gender.boy + mix.gender.girl)) * 100)}` : "—"} sub={mix.genderKnown ? t("p8fin.faNWithGender", { n: mix.genderKnown }) : t("p8fin.faNoGenderShort")} />
+            <Tile label={t("p8fin.faBoysGirls")} icon="🚻" grad={GRAD.violet} value={mix.genderShown.ratio ?? (mix.genderShown.suppressed.length ? "<5" : "—")} sub={mix.genderKnown ? t("p8fin.faNWithGender", { n: mix.genderShown.known ?? "<5" }) : t("p8fin.faNoGenderShort")} />
             <Tile label={t("p8fin.faBusiestDay")} icon="📅" grad={GRAD.amber} value={mix.dowRows.reduce((m, r) => (r.value > m.value ? r : m), mix.dowRows[0]).value ? mix.dowRows.reduce((m, r) => (r.value > m.value ? r : m), mix.dowRows[0]).label : "—"} sub={t("p8fin.faMostSessions")} />
           </div>
           </CollapsibleStats>
@@ -573,15 +573,21 @@ export function FinanceAnalyticsApp() {
                 <>
                   <Donut
                     segments={[
-                      { label: t("p8lst.genBoy"), value: mix.gender.boy, color: LIGHTB },
-                      { label: t("p8lst.genGirl"), value: mix.gender.girl, color: PINK },
-                      { label: t("p8lst.genOther"), value: mix.gender.other, color: GOLD },
-                      { label: t("p8lst.genNa"), value: mix.gender.na, color: "#8a86a3" },
+                      { label: t("p8lst.genBoy"), value: mix.genderShown.cells.boy ?? 0, color: LIGHTB },
+                      { label: t("p8lst.genGirl"), value: mix.genderShown.cells.girl ?? 0, color: PINK },
+                      { label: t("p8lst.genOther"), value: mix.genderShown.cells.other ?? 0, color: GOLD },
+                      { label: t("p8lst.genNa"), value: mix.genderShown.cells.na ?? 0, color: "#8a86a3" },
                     ].filter((x) => x.value > 0)}
-                    center={String(mix.genderKnown)}
+                    center={mix.genderShown.known === null ? "<5" : String(mix.genderShown.known)}
                     sub={t("p8lst.genChildren")}
                   />
-                  <div className="mt-3 text-[12px] font-semibold text-[var(--ink-3)]">{t("p8lst.genKnown", { known: mix.genderKnown, total: mix.gender.total })}</div>
+                  {mix.genderShown.suppressed.length > 0 && (
+                    // Small numbers are not shown (a count under 5 could identify a child); see genderSplit.suppressSplit.
+                    <div className="mt-3 text-[12px] font-semibold text-[var(--ink-3)]">
+                      {mix.genderShown.suppressed.map((k) => `${t(k === "boy" ? "p8lst.genBoy" : k === "girl" ? "p8lst.genGirl" : k === "other" ? "p8lst.genOther" : "p8lst.genNa")}: <5`).join(" · ")}
+                    </div>
+                  )}
+                  {mix.genderShown.known !== null && <div className="mt-3 text-[12px] font-semibold text-[var(--ink-3)]">{t("p8lst.genKnown", { known: mix.genderShown.known, total: mix.genderShown.total ?? 0 })}</div>}
                 </>
               ) : <Empty>{t("p8lst.genCta")}</Empty>}
             </Panel>

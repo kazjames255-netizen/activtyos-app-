@@ -9,6 +9,7 @@ import { inboundAddress, inboundConfigured, inboundDomain, tenantSender } from "
 import type { Role } from "../middleware/role";
 import { ukToday } from "../lib/ukDate";
 import { franchiseFamilyEmails, franchiseTeam } from "../lib/franchiseScope";
+import { closedEmails } from "../lib/closedAccounts";
 
 // Email (Communication) — the out-of-app channel. An operator emails their
 // families: everyone who's booked, or one address. Reuses the transactional
@@ -31,10 +32,11 @@ const MAX_RECIPIENTS = 2000;
 // Transactional mail (audience "one" — confirmations, payment links) ignores
 // all of this. Returns a predicate; email is lowercased by the caller/inside.
 async function marketBlock(tenantId: string, scope?: string | null): Promise<(email: string) => boolean> {
-  const [sup, cust, bk] = await Promise.all([
+  const [sup, cust, bk, closed] = await Promise.all([
     suppressCol.where("tenantId", "==", tenantId).get(),
     db.collection("customers").where("tenantId", "==", tenantId).get(),
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
+    closedEmails(), // a parent who closed their account is on NO marketing list (lib/closedAccounts.ts)
   ]);
   const suppressed = new Set<string>();
   for (const d of sup.docs) { const e = (d.data() as { email?: string }).email; if (e) suppressed.add(e.toLowerCase()); }
@@ -53,6 +55,7 @@ async function marketBlock(tenantId: string, scope?: string | null): Promise<(em
   }
   return (email: string): boolean => {
     const e = email.toLowerCase();
+    if (closed.has(e)) return true;          // account closed — always blocked
     if (suppressed.has(e)) return true;      // unsubscribed — always blocked
     if (optIn.get(e) === false) return true; // explicit opt-out — always blocked
     if (booked.has(e)) return false;         // soft opt-in — on unless opted out
@@ -230,7 +233,9 @@ emails.get("/audiences", async (req, res) => {
   const sup = await suppressCol.where("tenantId", "==", tenantId).get();
   const suppressed = new Set<string>();
   for (const d of sup.docs) { const e = (d.data() as { email?: string }).email; if (e) suppressed.add(e.toLowerCase()); }
+  const closed = await closedEmails();
   const blockedFor = (e: string): boolean => {
+    if (closed.has(e)) return true;
     if (suppressed.has(e)) return true;
     if (optIn.get(e) === false) return true;
     const f = families.get(e);

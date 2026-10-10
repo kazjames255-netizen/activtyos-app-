@@ -114,6 +114,7 @@ import { noOakResponse } from "./oak/noOakResponse";
 import { platformLeads } from "./routes/platformLeads";
 import { platformSupport, supportReport } from "./routes/platformSupport";
 import { readStats, resetReadStats, withReadLabel } from "./lib/readMeter";
+import { pathIdGuard } from "./lib/idGuard";
 import { timingSafeEqual } from "node:crypto";
 import { tfc, tfcCallback } from "./routes/tfc";
 
@@ -144,6 +145,8 @@ app.use((req, _res, next) => {
   const label = `http:${req.method} ${req.path.split("/").map((s) => (/^[A-Za-z0-9_-]{16,}$/.test(s) || /^\d+$/.test(s) ? ":id" : s)).join("/").slice(0, 80)}`;
   withReadLabel(label, next);
 });
+// An id that cannot be a real id (2000 characters, a NUL, a backslash, a broken %-escape) is "no such record" everywhere: 404, never a 500.
+app.use(pathIdGuard);
 app.get("/internal/read-stats", (req, res) => {
   // With READ_STATS_KEY set (required in production): the key must match, compared in constant time. Without a key (dev only): loopback
   // callers only, and never a request that came through a proxy (x-forwarded-for present) — behind a same-host reverse proxy every
