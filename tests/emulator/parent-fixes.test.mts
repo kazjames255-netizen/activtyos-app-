@@ -100,7 +100,7 @@ describe("P08/P09: incident bells never carry the staff free text; the other chi
   });
   it("two simultaneous acknowledgements make one staff bell; another family's record is not found", async () => {
     const avaName = (await db.collection("children").doc(avaId).get()).get("name") as string;
-    const inc = await call("POST", "/api/incidents", P.token, { kind: "accident", date: today(), childId: avaId, childName: avaName, description: "Grazed a knee", severity: "minor" });
+    const inc = await call("POST", "/api/incidents", P.token, { kind: "accident", date: today(), childId: avaId, childName: avaName, description: `Grazed a knee ${uniq()}`, severity: "minor" });
     assert.equal(inc.status, 201, JSON.stringify(inc.json));
     const id = inc.json.id as string;
     await sleep(800);
