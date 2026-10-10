@@ -30,9 +30,9 @@ type Consent = "granted" | "pending" | "declined";
 interface Hazard { h: string; who?: string; controls?: string; initial?: RiskLevel; residual?: RiskLevel; done?: boolean; amendedOn?: string; amendedBy?: string }
 interface ItinItem { t?: string; a?: string; k?: string }
 interface RosterMember { n: string; r?: string; fa?: boolean }
-interface Attendee { n: string; age?: number; consent?: Consent; paid?: boolean; em?: boolean; med?: string; sent?: boolean }
+interface Attendee { n: string; age?: number; childId?: string; consent?: Consent; paid?: boolean; em?: boolean; med?: string; medFlag?: boolean; sent?: boolean }
 interface Checkpoint { n: string; counted?: number | null; time?: string }
-interface Signoff { approvedBy?: string; approvedAt?: string; submitted?: boolean }
+interface Signoff { approvedBy?: string; approvedAt?: string; submitted?: boolean; reopenedAt?: string }
 interface Trip {
   id: string; destination: string; address?: string; date: string; departTime?: string; returnTime?: string;
   listingId?: string; transport?: string; lead?: string; leadPhone?: string; evc?: string; cost?: string; offsiteRatio?: number;
@@ -41,6 +41,8 @@ interface Trip {
   roster?: RosterMember[]; attendees?: Attendee[]; checkpoints?: Checkpoint[]; signoff?: Signoff; returned?: boolean;
   parentMsg?: string; payBy?: string; parentMsgSentAt?: string; askPay?: boolean; askConsent?: boolean;
   childNames: string[]; staff: string[]; headcount?: number; consentObtained: boolean; notes?: string; status: Status; createdByName?: string;
+  /** Children nobody can be asked about (no booking, or a name shared by two children) - worked out by the server. */
+  unlinked?: string[];
 }
 
 const LIGHT_PALETTE = {
@@ -229,7 +231,7 @@ const resolveMsg = (msg: string, t: Trip, provider: string) => msg
   .replace(/{Provider}/g, provider);
 const MERGE_FIELDS = ["{Destination}", "{Date}", "{Depart}", "{Return}", "{Transport}", "{Cost}", "{PayBy}", "{Lead}", "{LeadPhone}", "{Provider}"];
 
-function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: { existing?: Trip; ratioTarget: number; providerName: string; onSaved: () => void; onClose: () => void }) {
+function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: { existing?: Trip; ratioTarget: number; providerName: string; onSaved: (warning?: string) => void; onClose: () => void }) {
   const tr = useT();
   const { locale } = useI18n();
   const arrow = isRTL(locale) ? "←" : "→";
@@ -300,11 +302,13 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
       kit: t.kit || undefined, hazards: (t.hazards ?? []).filter((h) => h.h.trim()), raSigned: !!t.raSigned, raAssessor: t.raAssessor || undefined, raDate: t.raDate || undefined, raRef: t.raRef || undefined, raReview: t.raReview || undefined,
       roster: t.roster ?? [], attendees: t.attendees ?? [], checkpoints: t.checkpoints ?? [], signoff: t.signoff ?? {}, returned: !!t.returned,
       parentMsg: t.parentMsg || undefined, payBy: t.payBy || undefined, parentMsgSentAt: t.parentMsgSentAt || undefined, askPay: t.askPay !== false, askConsent: t.askConsent !== false,
-      childNames, staff: (t.roster ?? []).map((s) => s.n), consentObtained: permsOk(t), notes: t.notes || undefined, status: t.returned ? "completed" : (t.status ?? "planned"),
+      childNames, staff: (t.roster ?? []).map((s) => s.n), notes: t.notes || undefined, status: t.returned ? "completed" : (t.status ?? "planned"),
     };
     try {
-      if (isEdit) await apiPut(`/api/trips/${encodeURIComponent(existing!.id)}`, body); else await apiPost("/api/trips", body);
-      if (close) { onClose(); onSaved(); } else { onSaved(); setBusy(false); }
+      const saved = isEdit ? await apiPut<Trip>(`/api/trips/${encodeURIComponent(existing!.id)}`, body) : await apiPost<Trip>("/api/trips", body);
+      // A child nobody can be asked about (no booking, or a clashing name): say so now and keep the planner open, with the fix.
+      const warn = saved?.unlinked?.length ? tr("p8ops.tpUnlinkedWarn", { names: saved.unlinked.join(", ") }) : undefined;
+      if (close) { onClose(); onSaved(warn); } else { onSaved(warn); setBusy(false); if (warn) setError(warn); }
     } catch (e) { setError(e instanceof Error ? e.message : tr("p8ops.tpCouldntSave")); setBusy(false); }
   }
 
@@ -595,7 +599,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                       return (
                         <div key={i} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2">
                           <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[11px] font-extrabold" style={{ color: BLUE }}>{ini(c.n)}</span>
-                          <div className="min-w-[130px] flex-1"><div className="text-[12.5px] font-extrabold">{c.n}</div><div className="text-[11px] text-[var(--ink-3)]">{c.age ? `${tr("p8ops.tpAgeN", { n: c.age }).replace(/^./, (ch) => ch.toUpperCase())} · ` : ""}{c.em ? tr("p8ops.tpEmContactOk") : tr("p8ops.tpNoContact")}{c.med ? ` · ⚠ ${c.med}` : ""}</div></div>
+                          <div className="min-w-[130px] flex-1"><div className="text-[12.5px] font-extrabold">{c.n}</div><div className="text-[11px] text-[var(--ink-3)]">{c.age ? `${tr("p8ops.tpAgeN", { n: c.age }).replace(/^./, (ch) => ch.toUpperCase())} · ` : ""}{c.em ? tr("p8ops.tpEmContactOk") : tr("p8ops.tpNoContact")}{c.med ? ` · ⚠ ${c.med}` : c.medFlag ? ` · ⚠ ${tr("p8ops.tpMedFlag")}` : ""}</div></div>
                           <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={c.paid ? { background: "#e7f6ee", color: GREEN } : { background: "var(--panel)", color: "var(--ink-3)" }}>{c.paid ? tr("p8ops.tpPaidAmt", { cost: t.cost ?? "" }) : tr("p8ops.tpUnpaid")}</span>
                           <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={{ background: tone.bg, color: tone.fg }}>{tone.l}</span>
                           {cs === "pending" && (c.paid ? <button type="button" onClick={() => mut((d) => { d.attendees![i].consent = "granted"; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>{tr("p8ops.tpRecordConsent")}</button> : <button type="button" onClick={() => mut((d) => { d.attendees![i].paid = true; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>{tr("p8ops.tpTakePayment")}</button>)}
@@ -614,6 +618,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                     <div className="rounded-xl border border-[var(--line)] px-3 py-2">{fl(tr("p8ops.tpChecks"))}<div className="text-[13px] font-extrabold">{tr("p8ops.tpChecksVal")}</div><div className="text-[11px] text-[var(--ink-3)]">{raDone(t) && staffOk(t) && permsOk(t) ? tr("p8ops.tpAllClear") : tr("p8ops.tpInProgress")}</div></div>
                     <div className="rounded-xl border border-[var(--line)] px-3 py-2">{fl(tr("p8ops.tpApprovedBy"))}<div className="text-[13px] font-extrabold">{s5Ok(t) ? t.signoff?.approvedBy : tr("p8ops.tpAwaitingMgr")}</div><div className="text-[11px] text-[var(--ink-3)]">{s5Ok(t) ? t.signoff?.approvedAt : tr("p8ops.tpLineManager")}</div></div>
                   </div>
+                  {!s5Ok(t) && t.signoff?.reopenedAt && <div className="rounded-lg bg-[#fdf3d8] px-3 py-2 text-[12px] font-semibold" style={{ color: AMBER }}>{tr("p8ops.tpReopened")}</div>}
                   {s5Ok(t) ? <div className="rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>{tr("p8ops.tpApprovedMsg", { name: t.signoff?.approvedBy ?? "", when: t.signoff?.approvedAt ?? "" })}</div>
                     : <><Button variant="solid" disabled={!canSubmit(t)} onClick={() => mut((d) => { d.signoff = { approvedBy: `${me} (Manager)`, approvedAt: `${fmtDate(todayIso())}, ${nowLabel()}`, submitted: true }; })}>{tr("p8ops.tpApproveBtn")}</Button>{!canSubmit(t) && <div className="rounded-lg bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold" style={{ color: AMBER }}>{tr("p8ops.tpCannotApprove", { list: [!s1Ok(t) && tr("p8ops.tpOutDetails"), !raDone(t) && tr("p8ops.tpOutRa"), !staffOk(t) && tr("p8ops.tpOutStaffing"), !permsOk(t) && tr("p8ops.tpOutConsents", { n: pendingOf(t).length })].filter(Boolean).join(", ") })}</div>}</>}
                 </div>}
@@ -747,6 +752,7 @@ export function TripsApp() {
   const notifies = settings.trips?.notifyParent ?? true;
   const [trips, setTrips] = useState<Trip[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [planning, setPlanning] = useState<{ trip?: Trip } | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [q, setQ] = useState("");
@@ -800,7 +806,8 @@ export function TripsApp() {
       </div>
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
-      {planning && <TripPlanner key={planning.trip?.id ?? "new"} existing={planning.trip} ratioTarget={ratioTarget} providerName={settings.providerName || tr("p8ops.tpYourProvider")} onSaved={refresh} onClose={() => setPlanning(null)} />}
+      {warning && <div role="alert" className="mb-3 flex items-start gap-2 rounded-lg border border-[#f0b100] bg-[#fff8e6] px-3 py-2 text-[12.5px] font-semibold text-[#7a5800]"><span className="flex-1">{warning}</span><button type="button" onClick={() => setWarning(null)} className="cursor-pointer px-1" aria-label="×">×</button></div>}
+      {planning && <TripPlanner key={planning.trip?.id ?? "new"} existing={planning.trip} ratioTarget={ratioTarget} providerName={settings.providerName || tr("p8ops.tpYourProvider")} onSaved={(w) => { refresh(); if (w) setWarning(w); }} onClose={() => setPlanning(null)} />}
 
       {!planning && trips && all.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -840,6 +847,7 @@ export function TripsApp() {
                       </>; })()}
                       <Badge tone={s5Ok(t) ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdf3d8", fg: AMBER }}>{s5Ok(t) ? tr("p8ops.tpSignedOff") : tr("p8ops.tpSignoffPending")}</Badge>
                       {under && <Badge tone={{ bg: "#fdebec", fg: RED }}>{tr("p8ops.tpOverRatio", { r: ratioOf(t) })}</Badge>}
+                      {t.status === "planned" && !!t.unlinked?.length && <span title={tr("p8ops.tpUnlinkedWarn", { names: t.unlinked.join(", ") })}><Badge tone={{ bg: "#fdf3d8", fg: AMBER }}>⚠ {t.unlinked.join(", ")}</Badge></span>}
                     </div>
                   </div>
                   <div className="flex flex-none flex-col gap-2 sm:items-end">

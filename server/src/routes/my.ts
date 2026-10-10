@@ -105,6 +105,8 @@ import { TFC_SCHEME, canonicalMethod, isTfcMethod, methodAllowed, methodKey, spl
 import { attachChildcareRefs, childcareOf, childcareRoute, type ChildcareBooking } from "../lib/childcare";
 import { autoEnrolFromBooking } from "../lib/hubAutoEnrol";
 import { BRAND } from "../lib/brand";
+import { consentObtained as tripConsentObtained, reopenedSignoff } from "../lib/tripRules";
+import { notifySignoffReopened } from "./trips";
 
 // Parent ("my") endpoints. Identity comes exclusively from the verified
 // Firebase token — the booker email is stamped server-side and every read
@@ -3184,6 +3186,11 @@ my.post("/trips/:id/consent", async (req, res) => {
     res.status(404).json({ error: "Child not found" });
     return;
   }
+  // A child removed from the family's account can't be given consent for (they may be on an old trip list).
+  if (child.data()!.archived === true) {
+    res.status(409).json({ error: "This child has been removed from your account, so consent can't be given for them." });
+    return;
+  }
   const by = req.user?.email ?? "parent";
   const ref = tripsCol.doc(req.params.id);
   // Not once the provider has switched Trips off (their planner is off too).
@@ -3199,22 +3206,29 @@ my.post("/trips/:id/consent", async (req, res) => {
     // The parent screen only offers Give/Decline on an upcoming planned trip; enforce it here too, or a stale
     // tab / direct call flips consent (and pings the provider "consent given") on a cancelled or finished trip.
     if (t.status === "cancelled" || t.status === "completed" || String(t.date ?? "") < ukToday()) return "closed" as const;
-    const attendees = (t.attendees as { childId?: string; consent?: string; consentAt?: string; consentBy?: string; n: string }[] | undefined) ?? [];
+    const attendees = (t.attendees as { childId?: string; consent?: "granted" | "pending" | "declined"; consentAt?: string; consentBy?: string; consentSource?: string; n: string }[] | undefined) ?? [];
     const mine = attendees.find((a) => a.childId === parsed.data.childId);
     if (!mine) return null;
+    // The same answer again (a double tap, a stale tab): nothing changes, nobody is pinged twice, a sign-off is not reopened.
+    if (mine.consent === parsed.data.decision && mine.consentSource === "parent") return "same" as const;
     mine.consent = parsed.data.decision;
     mine.consentAt = new Date().toISOString();
     mine.consentBy = by;
     // Marks the decision as the parent's own, so the provider can't overwrite
     // it from the trip planner (routes/trips.ts).
-    (mine as { consentSource?: string }).consentSource = "parent";
+    mine.consentSource = "parent";
     const allAnswered = attendees.every((a) => (a.consent ?? "pending") !== "pending");
-    const allGranted = attendees.every((a) => a.consent === "granted");
-    tx.set(ref, { attendees, consentObtained: allGranted, updatedAt: mine.consentAt }, { merge: true });
-    return { tenantId: String(t.tenantId), destination: String(t.destination ?? "the trip"), childName: mine.n, allAnswered };
+    // Owned by the server, same rule as the planner: everyone still going has said yes (a decline is simply not going).
+    const patch: Record<string, unknown> = { attendees, consentObtained: tripConsentObtained(attendees), updatedAt: mine.consentAt };
+    // The provider already signed this trip off on the old answers. A changed answer reopens the sign-off.
+    const signed = (t.signoff as { submitted?: boolean } | undefined)?.submitted === true;
+    if (signed) patch.signoff = reopenedSignoff(t.signoff, "a family changed its answer", mine.consentAt);
+    tx.set(ref, patch, { merge: true });
+    return { tenantId: String(t.tenantId), destination: String(t.destination ?? "the trip"), childName: mine.n, allAnswered, reopened: signed, date: String(t.date ?? "") };
   });
   if (result === "closed") { res.status(409).json({ error: "This trip is no longer open for consent — it has been cancelled or has already taken place." }); return; }
   if (!result) { res.status(404).json({ error: "That child isn't on this trip" }); return; }
+  if (result === "same") { res.json({ ok: true, decision: parsed.data.decision, unchanged: true }); return; }
 
   // Tell the team — and shout when the last answer lands.
   void notify({
@@ -3227,6 +3241,9 @@ my.post("/trips/:id/consent", async (req, res) => {
     href: "/company/trips",
     ref: req.params.id,
   }).catch(() => {});
+  if (result.reopened) {
+    void notifySignoffReopened(req.params.id, { tenantId: result.tenantId, destination: result.destination, date: result.date }, "a family changed its answer").catch(() => {});
+  }
   res.json({ ok: true, decision: parsed.data.decision });
 });
 
