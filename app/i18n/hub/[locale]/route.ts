@@ -1,5 +1,6 @@
 import { hubCatalog } from "@/lib/i18n/messages/hub";
 import { LOCALES, type LocaleCode } from "@/lib/i18n/config";
+import { scrubPayload } from "../../../../server/src/oak/noOak";
 
 // GET /i18n/hub/<locale> — that locale's Teaching Hub messages as JSON (see lib/i18n/hubMessages.ts). Built from the same source files as
 // everything else (never stale); prerendered at build time, generated on request in dev. The browser keeps it for a few minutes and
@@ -11,5 +12,6 @@ export const generateStaticParams = () => LOCALES.map((l) => ({ locale: l.code }
 export async function GET(_req: Request, ctx: { params: Promise<{ locale: string }> }) {
   const { locale } = await ctx.params;
   if (!LOCALES.some((l) => l.code === locale)) return new Response("Unknown locale", { status: 404 });
-  return Response.json(hubCatalog(locale as LocaleCode), { headers: { "Cache-Control": "public, max-age=300, stale-while-revalidate=86400" } });
+  // The publisher's name never reaches a user, whatever a catalogue says (same guard as the API: server/src/oak/noOak.ts).
+  return Response.json(scrubPayload(hubCatalog(locale as LocaleCode)), { headers: { "Cache-Control": "public, max-age=300, stale-while-revalidate=86400" } });
 }

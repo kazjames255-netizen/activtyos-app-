@@ -226,6 +226,9 @@ export async function childRefFor(ctx: HubCtx, childId: unknown, opts: { needAct
   if (ctx.role === "parent" && (e.parentUid !== ctx.uid || !ctx.children.some((c) => c.childId === childId))) return null;
   const active = e.active !== false;
   if (opts.needActive && !active) return null;
+  // A family never reaches a withdrawn child, whatever its cached enrolment list says (the cache is per process: another server instance,
+  // or a withdrawal made straight in the database, can leave it a few seconds behind). This read is fresh.
+  if (ctx.role === "parent" && !active) return null;
   return {
     childId, childName: e.childName ?? "", franchiseId: e.franchiseId ?? null, subjects: e.subjects ?? [],
     parentUid: e.parentUid, waived: (e.diagnosticWaived ?? []).map((s) => s.toLowerCase()), active,

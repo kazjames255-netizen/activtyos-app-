@@ -58,13 +58,17 @@ export const okId = (id: unknown): id is string => typeof id === "string" && id.
  *  roster routes and the privacy erase) drops it, so pausing / un-enrolling a child takes effect immediately. */
 const parentEnrolCache = new Map<string, { at: number; p: Promise<(EnrolmentDoc & { id: string })[]> }>();
 const PARENT_ENROL_TTL_MS = 8_000;
-export const forgetEnrolments = () => { parentEnrolCache.clear(); };
+let enrolGen = 0; // bumped on every forget: a lookup that started before a withdrawal can never be cached afterwards
+export const forgetEnrolments = () => { enrolGen++; parentEnrolCache.clear(); };
 export function enrolmentsForParent(uid: string): Promise<(EnrolmentDoc & { id: string })[]> {
   const hit = parentEnrolCache.get(uid);
   if (hit && Date.now() - hit.at < PARENT_ENROL_TTL_MS) return hit.p;
+  const gen = enrolGen;
   const p = hubEnrolments.where("parentUid", "==", uid).get()
     .then((snap) => snap.docs.map((d) => ({ id: d.id, ...(d.data() as EnrolmentDoc) })).filter((e) => e.active !== false));
   p.catch(() => { if (parentEnrolCache.get(uid)?.p === p) parentEnrolCache.delete(uid); });
+  // A withdrawal that lands while this read is in flight must not leave its (possibly stale) answer in the cache.
+  void p.then(() => { if (gen !== enrolGen && parentEnrolCache.get(uid)?.p === p) parentEnrolCache.delete(uid); }, () => undefined);
   if (parentEnrolCache.size > 2000) parentEnrolCache.clear();
   parentEnrolCache.set(uid, { at: Date.now(), p });
   return p;
@@ -137,7 +141,7 @@ export async function resolveCtx(req: Request, res: Response): Promise<HubCtx | 
     if (auth.role === "franchise" && !auth.franchiseId) { res.status(403).json({ error: "This franchise account isn't linked to a franchise" }); return null; }
     const franchiseId = inFranchise ? auth.franchiseId! : null;
     // The middleware already refuses a switched-off module; re-check here so a
-    // settings-lookup hiccup there (it fails open) can't serve an opt-in module.
+    // settings-lookup hiccup can't serve an opt-in module (the middleware now fails closed too; a read error here rejects the request).
     const features = (await effectiveSettings(auth.tenantId, franchiseId)).features as Record<string, unknown> | undefined;
     if (firstOff(features, ["learninghub"])) {
       res.status(403).json({ error: "Teaching Hub is turned off for this account. You can turn it on in Setup → Features.", code: "feature_off", feature: "learninghub" });
@@ -199,16 +203,29 @@ export function parentSubjects(ctx: HubCtx): Set<string> | null {
  *  be edited or deleted through the API. */
 export const SHARED_LIBRARY_TENANT_ID = "shared-library";
 
-/** The two owner accounts whose own Oak imports were promoted INTO the shared library (see
- *  `server/src/oak/import.ts`'s own `REAL_TENANTS`) — they already own this content directly under
- *  their own `tenantId`, so `hubIndex.ts`'s `withShared` must skip merging the shared-library copy
- *  back in for them specifically. Without this, each of these two tenants reads its own ~7,900
- *  notes (and matching questions/assessments/flashcards) PLUS the shared library's promoted copy of
- *  that exact same content under different (prefixed) ids — doubling every count the hub shows
- *  (lessons, questions…) and roughly doubling the cold-build time of every index, since neither
- *  copy dedupes against the other by id. Confirmed live: a cold `noteIndex()` build for one of
- *  these tenants returned 15,788 rows (7,894 own + 7,894 shared, an exact duplicate) in ~65-90s. */
-export const OWNER_SOURCE_TENANT_IDS = new Set(["7jG2XO3cOD3VtoL8YfFY", "jYp5XNZGT7bgSUMuEgHN"]);
+/** Owner accounts whose own imports were promoted INTO the shared library (see `server/src/oak/import.ts`) already own that content
+ *  directly under their own `tenantId`, so `hubIndex.ts`'s `withShared` must NOT merge the shared-library copy back in for them.
+ *  Without that, such a tenant reads its own ~7,900 notes (and matching questions/assessments/flashcards) PLUS the shared copy under
+ *  different (prefixed) ids, doubling every count (confirmed live: 15,788 rows instead of 7,894, cold build ~65-90s).
+ *
+ *  This used to be two hardcoded tenant ids. It is now a flag on the tenant document: `tenants/{id}.ownsSharedSource === true`.
+ *  Set it with `server/src/setOwnsSharedSource.ts` (dry run by default, idempotent). Read through a short cache: one read per tenant
+ *  per ten minutes, not one per content read. An unreadable tenant doc THROWS (the index build fails and is retried) rather than
+ *  guessing, because a wrong guess either doubles or hides a tenant's content. */
+export const ownsSharedSourceFlag = (tenantDoc: { ownsSharedSource?: unknown } | null | undefined): boolean => tenantDoc?.ownsSharedSource === true;
+const ownsCache = new Map<string, { at: number; v: boolean }>();
+const OWNS_TTL_MS = 10 * 60_000;
+export const forgetOwnsSharedSource = () => { ownsCache.clear(); };
+export async function ownsSharedSource(tenantId: string): Promise<boolean> {
+  if (tenantId === SHARED_LIBRARY_TENANT_ID) return false;
+  const hit = ownsCache.get(tenantId);
+  if (hit && Date.now() - hit.at < OWNS_TTL_MS) return hit.v;
+  const snap = await db.collection("tenants").doc(tenantId).get();
+  const v = ownsSharedSourceFlag(snap.exists ? (snap.data() as { ownsSharedSource?: unknown }) : null);
+  if (ownsCache.size > 500) ownsCache.clear();
+  ownsCache.set(tenantId, { at: Date.now(), v });
+  return v;
+}
 
 /** May this caller read a CONTENT row (topic / note / question / assessment / flashcard) whose
  *  own `tenantId` is `docTenantId`? True for the caller's own tenant, and for the shared

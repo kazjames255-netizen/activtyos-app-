@@ -11,6 +11,7 @@
 
 import { isRTL, LOCALES, type LocaleCode } from "../../../lib/i18n/config";
 import { scrubHtml } from "../oak/noOakResponse";
+import { scrubText } from "../oak/noOak";
 import { pluralChain } from "../../../lib/i18n/plural";
 
 export type MailKind = "digest" | "nudge_before" | "nudge_after";
@@ -504,7 +505,7 @@ export function renderDigest(d: DigestData, loc: LocaleCode, links: Links): Rend
   }
   body += button(links.hub, s.cta) + watchBlock(links, s, v) + p(f(s.sign, v), `color:${MUTED};font-size:14px`);
   const foot = `<div>${f(s.why, v)}</div>`;
-  return { subject, locale: loc, html: scrubHtml(shell(loc, { title: subject, provider: d.provider, body, foot, stopHref: links.stop, stopLabel: s.stop_digest })) };
+  return { subject: scrubText(subject) || "Your Learning Hub update", locale: loc, html: scrubHtml(shell(loc, { title: scrubText(subject) || "Your Learning Hub update", provider: d.provider, body, foot, stopHref: links.stop, stopLabel: s.stop_digest })) };
 }
 
 export function renderNudge(kind: "nudge_before" | "nudge_after", n: NudgeData, loc: LocaleCode, links: Links): Rendered {
@@ -513,7 +514,7 @@ export function renderNudge(kind: "nudge_before" | "nudge_after", n: NudgeData, 
   const subject = fill(kind === "nudge_before" ? s.n_subject_before : s.n_subject_after, v);
   const body = p(esc(s.hello)) + p(f(kind === "nudge_before" ? s.n_before : s.n_after, v)) + button(links.hub, s.n_cta) + watchBlock(links, s, v)
     + p(f(s.n_ignore, v), `color:${MUTED};font-size:14px`) + p(f(s.sign, v), `color:${MUTED};font-size:14px`);
-  return { subject, locale: loc, html: scrubHtml(shell(loc, { title: subject, provider: n.provider, body, foot: `<div>${f(s.why, v)}</div>`, stopHref: links.stop, stopLabel: s.stop_nudge })) };
+  return { subject: scrubText(subject) || "Your Learning Hub update", locale: loc, html: scrubHtml(shell(loc, { title: scrubText(subject) || "Your Learning Hub update", provider: n.provider, body, foot: `<div>${f(s.why, v)}</div>`, stopHref: links.stop, stopLabel: s.stop_nudge })) };
 }
 
 /** The public opt-out pages. `step` "confirm" = a button (a mail scanner opening the link changes nothing); "done"; "bad". */

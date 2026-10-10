@@ -112,9 +112,12 @@ export async function enforceAccess(req: Request, res: Response, next: NextFunct
       return;
     }
   } catch (e) {
-    // Settings unreadable: don't lock the whole team out over it — every
-    // route's own tenant/role checks still run.
-    console.error("[access] settings lookup failed:", (e as Error).message);
+    // Settings unreadable: FAIL CLOSED. This gate decides whether a switched-off module, a "None" role or a children's-data area
+    // may be reached, so when it cannot read the settings it cannot say yes (owner decision, 10 Oct 2026; it used to let the request
+    // through). A short outage costs a retry; the other way round could show a child's learning record to a role that must not see it.
+    console.error("[access] settings lookup failed - refusing:", (e as Error).message);
+    res.status(503).json({ error: "We couldn't check your permissions just now. Please try again in a moment.", code: "settings_unavailable" });
+    return;
   }
   next();
 }

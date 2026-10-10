@@ -163,6 +163,7 @@ export function mergeHub(stored: Partial<HubSettings> | null | undefined): HubSe
     autoEnrolOnBooking: s.autoEnrolOnBooking === true,
     yearAutoAdvance: s.yearAutoAdvance !== false,
     nudgeLeadHours: typeof s.nudgeLeadHours === "number" && Number.isInteger(s.nudgeLeadHours) && s.nudgeLeadHours >= 1 && s.nudgeLeadHours <= 72 ? s.nudgeLeadHours : 24,
+    revealAnswers: s.revealAnswers === "after_submit" || s.revealAnswers === "after_marked" || s.revealAnswers === "never" ? s.revealAnswers : "after_pass", // owner default: the key waits for a pass; anything unrecognised falls back to it
     lessonAccess: s.lessonAccess === "year" || s.lessonAccess === "all" ? s.lessonAccess : "assigned",
   };
 }

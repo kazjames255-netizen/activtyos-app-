@@ -3,7 +3,8 @@ import { effectiveLimitMins } from "../../../../features/learninghub/support";
 import { cleanToolAnswer, isBlankToolAnswer, isGenerator, publicProblem, PROBLEM_GENERATORS } from "../../../../features/learninghub/tools/problems";
 import { z } from "zod";
 import { db } from "../../firebase";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldPath, FieldValue } from "firebase-admin/firestore";
+import { DRAFT_MAX_BYTES, DRAFT_SAVES_PER_HOUR, HOUR_MS, START_PER_HOUR, takeToken } from "../../lib/hubLimits";
 import { canReadContent, canSee, canSeeStudent, canWriteRow, hubConfig, hubEnrolments, okId, requireEdit, resolveCtx, type HubCtx } from "../../lib/hubCore";
 import { applyManualMark, autoSplit, inferRule, markResponse, revealAllowed, scoreAttempt, type ScoredAnswer } from "../../lib/hubScoring";
 import { audienceFit, effectiveRetake, failStreak, normAudience, retakeDecision } from "../../lib/hubRules";
@@ -31,7 +32,8 @@ import {
 
 export const hubAttemptsApi = Router();
 
-const GRACE_MS = 2 * 60_000; // a slow connection isn't punished for the time limit
+const GRACE_MS = 2 * 60_000;
+const START_LOCK_MS = 20_000; // two starts closer together than this are the same start // a slow connection isn't punished for the time limit
 
 class Refusal extends Error {
   constructor(public status: number, public body: Record<string, unknown>) { super(String(body.error ?? "refused")); }
@@ -169,6 +171,10 @@ hubAttemptsApi.post("/assessments/:id/attempts", async (req, res) => {
   if (!wantedChild) { res.status(400).json({ error: ctx.role === "parent" ? "Which student? Pass ?childId=" : "Which student? Send childId" }); return; }
   const child = await childFor(ctx, wantedChild, res, { needActive: true });
   if (!child) return;
+  // Starting writes an attempt document: 30 an hour per child (owner default, 10 Oct 2026). Counted only once the child is proven to be this caller's,
+  // so nobody can burn another family's allowance by guessing a child id.
+  const lim = takeToken(`hub-start:${ctx.tenantId}:${child.childId}`, START_PER_HOUR, HOUR_MS);
+  if (!lim.ok) { res.setHeader("Retry-After", String(lim.retryAfterSec)); res.status(429).json({ error: "That's a lot of quiz starts in an hour. Please wait a little and try again.", code: "too_many_starts" }); return; }
 
   const notFound = () => { res.status(404).json({ error: "Assessment not found" }); return null; };
   if (!okId(req.params.id)) { notFound(); return; }
@@ -291,7 +297,27 @@ hubAttemptsApi.post("/assessments/:id/attempts", async (req, res) => {
     autoMarks: 0, autoMax: questions.filter((q) => q.mark !== "manual").reduce((n, q) => n + q.marks, 0), writtenPending: 0,
     createdBy: ctx.uid, createdAt: now, updatedAt: now,
   };
-  const ref = await attemptsCol.add(doc);
+  // Two starts in the same instant (a double tap, two tabs, a script) must make ONE attempt: the second resumes the first. The guard is a small
+  // lock on the child's enrolment document, taken in a transaction together with the attempt itself; it only matters for a few seconds.
+  const ref = attemptsCol.doc();
+  const lockRef = hubEnrolments.doc(enrolmentId(ctx.tenantId, child.childId));
+  const lockKey = `${aSnap.id}__${homeworkId ?? "-"}`;
+  const resumeId = await db.runTransaction(async (tx) => {
+    const en = await tx.get(lockRef);
+    const lock = (en.get(new FieldPath("startLocks", lockKey)) ?? null) as { attemptId?: string; at?: number } | null;
+    if (lock?.attemptId && typeof lock.at === "number" && Date.now() - lock.at < START_LOCK_MS) {
+      const other = await tx.get(attemptsCol.doc(lock.attemptId));
+      if (other.exists && other.get("status") === "in_progress") return other.id;
+    }
+    tx.set(ref, doc);
+    tx.update(lockRef, new FieldPath("startLocks", lockKey), { attemptId: ref.id, at: Date.now() });
+    return null;
+  });
+  if (resumeId) {
+    const other = (await attemptsCol.doc(resumeId).get()).data() as AttemptDoc;
+    res.json({ attemptId: resumeId, resumed: true, assessmentTitle: other.assessmentTitle, assessmentType: other.assessmentType, timeLimitMins: other.timeLimitMins, startedAt: other.startedAt, questions: other.questions.map((q) => questionOut(q, imgBase, resumeId)), ...(other.draft ? { draft: { answers: other.draft.answers, idx: other.draft.idx, savedAt: other.draft.savedAt } } : {}) });
+    return;
+  }
   pingHub(ctx.tenantId, "hubAttempts");
   // The tutor's one-more-go is spent by starting it; the snapshot now owns its pictures (they outlive an edit of the question).
   if (granted && finished.length) await hubEnrolments.doc(enrolmentId(ctx.tenantId, child.childId)).update({ retakeGrants: FieldValue.arrayRemove(aSnap.id) }).catch(() => {});
@@ -364,7 +390,7 @@ hubAttemptsApi.post("/attempts/:id/submit", async (req, res) => {
 
 // ── draft (answers so far) ───────────────────────────────────────────────────
 
-const DRAFT_MAX_BYTES = 200_000; // a 300-question paper of long written answers is still far under this; anything bigger is refused
+// DRAFT_MAX_BYTES (lib/hubLimits.ts): 60 KB, down from 200 KB; a 300-question paper of normal answers is far under it, anything bigger is refused
 const draftBody = z.object({
   answers: z.array(z.object({ questionId: z.string().min(1).max(100), response: z.unknown() })).max(300),
   idx: z.number().int().min(0).max(299).optional(),
@@ -383,6 +409,8 @@ hubAttemptsApi.put("/attempts/:id/draft", async (req, res) => {
   const owner = ctx.role === "parent" ? found.a.parentUid === ctx.uid : found.a.startedBy === ctx.uid;
   if (!owner) { res.status(404).json({ error: "Attempt not found" }); return; }
   if (found.a.status !== "in_progress") { res.status(409).json({ error: "This has already been submitted", code: "already_submitted" }); return; }
+  const lim = takeToken(`hub-draft:${found.id}`, DRAFT_SAVES_PER_HOUR, HOUR_MS); // each save rewrites the attempt document
+  if (!lim.ok) { res.setHeader("Retry-After", String(lim.retryAfterSec)); res.status(429).json({ error: "Saving too often. Your answers are kept; please wait a little.", code: "too_many_draft_saves" }); return; }
   const known = new Set(found.a.questions.map((q) => q.id));
   const answers: Record<string, unknown> = {};
   for (const x of parsed.data.answers) {

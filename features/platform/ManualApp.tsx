@@ -793,6 +793,14 @@ function Page1() {
           { k: "Replies", v: "A parent's reply to any email goes to the provider's contact email (Reply-To). The sender parents see is the platform's own address until the rename." },
         ]} />
 
+      <Stage n="8d" color={C.listing} title="Teaching Hub: who sees a child's learning" tag="Children's data"
+        facts={[
+          { k: "Staff see the whole business for now", v: "Any staff role set to View or Edit on the Teaching Hub sees every child's scores, doubts and homework in that business (a franchise's staff, only that franchise). There is no 'only my students' option yet. Set a role to None to hide it. If the platform cannot check a role's permissions, the screen is refused until it can." },
+          { k: "Families see their own child only", v: "A parent sees only their own child's results. On a shared lesson whiteboard they see the tutor's work and their own child's drawings, never another child's. A tutor saving a board that someone else saved first is told to reload; nothing is overwritten." },
+          { k: "How long learning data is kept", v: "While the child is enrolled, and for 12 months after the enrolment ends. It is erased at once if the parent deletes the child. There is no automatic clean-up yet: that is a follow-up job, so today the 12 months is a rule we apply by hand." },
+          { k: "Limits and live lessons", v: "A child can start a quiz 30 times an hour, and draft saves are capped. Until a video key is added on the server, live lessons show 'Live lessons are not switched on yet' and the tutor shares another way to join." },
+        ]} />
+
       <Stage n="7g" color={C.billing} title="AI assistant: limits and safety" tag="Rate limit · links · who can ask what"
         facts={[
           { k: "Limit", v: "Each person can ask 20 questions a minute and 150 a day (owners, staff and parents alike). Past that they see a friendly wait message." },
