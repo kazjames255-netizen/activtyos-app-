@@ -92,6 +92,12 @@ export function staffBookingView<T extends Record<string, unknown>>(b: T): Parti
 /** The Add-on orders / register label a STAFF token gets: "Awaiting approval" stays, "Not paid yet" is payment state and is never sent to staff. */
 export const staffAddonFlag = <F extends string>(flag: F | undefined): Exclude<F, "not-paid"> | undefined => (flag === "not-paid" ? undefined : (flag as Exclude<F, "not-paid"> | undefined));
 
+/** Express middleware for routers whose rows are priced configuration (block bundles, passes, periods): a STAFF token's JSON loses every money-named key. */
+export function staffNoMoney(req: { auth?: { role?: string } }, res: { json: (b: unknown) => unknown }, next: () => void): void {
+  if (req.auth?.role === "staff") { const json = res.json.bind(res); res.json = (body: unknown) => json(withoutMoneyKeys(body)); }
+  next();
+}
+
 /** WHAT STAFF MAY SEE OF A LISTING: an allow-list (same idea as staffBookingView). Anything not named is never sent to a staff token, so a price,
  *  discount, deposit, pass price or payment-method field added to a listing later stays hidden until someone decides it is safe. Nested objects
  *  that are kept (blocks, venue) also lose any money-named key; passes keep only their id / name / label. */

@@ -92,3 +92,23 @@ describe("staff do not see the 'Not paid yet' flag; owners still do", () => {
     assert.ok(!/not-paid|addonFlag/.test(rj), "no addonFlag for staff");
   });
 });
+
+describe("staff GET of bundles / passes / periods carry no money; owners still do", () => {
+  const KEY = /price|amount|paid|fee|cost|discount|deposit|wallet|refund|royalt|balance/i;
+  const hits = (v: unknown, p = "$"): string[] => Array.isArray(v) ? v.flatMap((x, i) => hits(x, `${p}[${i}]`)) : v && typeof v === "object" ? Object.entries(v).flatMap(([k, x]) => (KEY.test(k) ? [`${p}.${k}`] : []).concat(hits(x, `${p}.${k}`))) : [];
+  for (const path of ["/api/block-bundles", "/api/passes", "/api/periods"]) {
+    it(`${path}: owner control has money keys (bundles/passes), staff has none but keeps ids and names`, async () => {
+      const own = await ok("GET", path, P.token);
+      const st = await call("GET", path, staff.token);
+      assert.equal(st.status, 200);
+      if (path === "/api/block-bundles") assert.ok(hits(own).length > 0, "owner sees prices");
+      assert.deepEqual(hits(st.json), []);
+      assert.equal(st.json.length, own.length);
+      assert.ok(st.json.every((r: any) => r.id));
+    });
+  }
+  it("/api/my/wallet for staff is an empty list (the staff member's own family wallet, not the provider's)", async () => {
+    const r = await call("GET", "/api/my/wallet", staff.token);
+    assert.deepEqual(r.json.balances, []);
+  });
+});
