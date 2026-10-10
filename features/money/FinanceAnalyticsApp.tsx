@@ -178,7 +178,7 @@ export function FinanceAnalyticsApp() {
       for (const d of b.days ?? []) { const wd = new Date(`${d}T00:00:00Z`).getUTCDay(); if (wd >= 0 && wd <= 6) dow[wd]++; }
     }
 
-    const { bookingsWithAddon, addonUnits, addonRevenue, byName: addonAgg } = addonFigures(addonBks);
+    const { bookingsWithAddon, soldBookings, addonUnits, addonRevenue, byName: addonAgg } = addonFigures(addonBks);
     const valueBands = VALUE_BANDS.map(([label, lo, hi], i) => { const n = amounts.filter((v) => v >= lo && v < hi).length; return { label, value: n, sub: String(n), color: ACT_C[i % ACT_C.length] }; });
     const topAddons = [...addonAgg.entries()].map(([label, v]) => ({ label, count: v.count, rev: Math.round(v.rev * 100) / 100 })).sort((x, y) => y.rev - x.rev || y.count - x.count).slice(0, 8)
       .map((r, i) => ({ label: r.label, value: r.rev, sub: t("p8fin.faAddonSold", { amount: money(r.rev), n: r.count }), color: ACT_C[i % ACT_C.length] }));
@@ -188,7 +188,7 @@ export function FinanceAnalyticsApp() {
     const split = genderSplit(winBks, childKids);
     return {
       winBookings,
-      attachRate: winBookings ? Math.round((bookingsWithAddon / winBookings) * 100) : 0,
+      attachRate: soldBookings ? Math.round((bookingsWithAddon / soldBookings) * 100) : 0, soldBookings,
       bookingsWithAddon, addonUnits, addonRevenue, topAddons,
       avgBookingValue: amounts.length ? amounts.reduce((s, v) => s + v, 0) / amounts.length : 0,
       medianValue: amounts.length ? [...amounts].sort((x, y) => x - y)[Math.floor(amounts.length / 2)] : 0,
@@ -543,7 +543,7 @@ export function FinanceAnalyticsApp() {
             <Tile label={t("p8fin.faAddonRev")} icon="🧩" grad={GRAD.violet} value={money(mix.addonRevenue)} sub={t("p8fin.faFromPaidAddons")} />
             <Tile label={t("p8fin.faAttachRate")} icon="📈" grad={GRAD.blue} value={`${mix.attachRate}%`} sub={t("p8fin.faOfBookingsAdd")} aside={<Ring pct={mix.attachRate} label={`${mix.attachRate}%`} />} />
             <Tile label={t("p8fin.faAddonsSold")} icon="🛒" grad={GRAD.teal} value={String(mix.addonUnits)} sub={t("p8fin.faUnitsInPeriod")} />
-            <Tile label={t("p8fin.faBookingsWithAddons")} icon="✅" grad={GRAD.green} value={String(mix.bookingsWithAddon)} sub={t("p8fin.faOfNBookings", { n: mix.winBookings })} />
+            <Tile label={t("p8fin.faBookingsWithAddons")} icon="✅" grad={GRAD.green} value={String(mix.bookingsWithAddon)} sub={t("p8fin.faOfNBookings", { n: mix.soldBookings })} />
           </div>
           </CollapsibleStats>
           <Panel title={t("p8fin.faTopAddons")} right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{t("p8fin.faEstPriceUnits")}</span>}>

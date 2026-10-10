@@ -796,6 +796,17 @@ my.post("/bookings", async (req, res) => {
       res.status(403).json({ error: "Booking for a family requires an operator account" });
       return;
     }
+    // Scope guard FIRST, before any customer lookup or account creation: a refusal must create nothing (no Auth user, no users doc).
+    // A franchise books on behalf of families ONLY on its own listings: a head-office or sibling listing would create a booking stamped to that
+    // listing's owner, which the franchise then could not see (same ownership rule as POST /api/bookings). Franchise STAFF are read-only
+    // (canWrite above refuses them), so in practice this is hit by role "franchise"; isFranchise also covers staff for safety.
+    if (isFranchise(authCtx)) {
+      const scopeListing = await db.collection("listings").doc(input.listingId).get();
+      if (scopeListing.exists && ((scopeListing.data() as { franchiseId?: string | null }).franchiseId ?? null) !== authCtx.franchiseId) {
+        res.status(403).json({ error: "You can only book on your own listings. This listing belongs to head office or another franchise." });
+        return;
+      }
+    }
     let target = { name: onBehalf.name ?? "", email: onBehalf.email ?? "", phone: onBehalf.phone ?? "" };
     if (onBehalf.customerId) {
       const cust = await db.collection("customers").doc(onBehalf.customerId).get();
@@ -888,12 +899,6 @@ my.post("/bookings", async (req, res) => {
   }
   if (onBehalf && listing.tenantId !== req.auth!.tenantId) {
     res.status(404).json({ error: "Listing not found" });
-    return;
-  }
-  // A franchise (and its staff) books on behalf of families ONLY on its own listings: a head-office or sibling listing would create a
-  // booking stamped to that listing's owner, which the franchise then could not see (same ownership rule as POST /api/bookings).
-  if (onBehalf && isFranchise(req.auth!) && ((listing as { franchiseId?: string | null }).franchiseId ?? null) !== req.auth!.franchiseId) {
-    res.status(403).json({ error: "You can only book on your own listings. This listing belongs to head office or another franchise." });
     return;
   }
   if (!onBehalf && listing.opensAt && Date.now() < new Date(listing.opensAt).getTime()) {

@@ -1,7 +1,7 @@
 // Finance Insights > Add-ons: what was sold, from the bookings in the window. One plain function so the screen and the tests read the same maths.
 import type { Booking } from "../bookings/types"; // relative: the tests (and the API) load this file without the "@/" alias
 import { paidSoFar } from "../bookings/helpers";
-import { addonRefunded, addonUnits, bookingAddonLines, inheritSplitOneOffs } from "../bookings/addons";
+import { addonRefunded, addonUnits, bookingAddonLines, groupCheckouts, inheritSplitOneOffs } from "../bookings/addons";
 
 /**
  * SOLD rule (Finance add-on figures): a booking's add-ons are sold when the booking is not cancelled, OR it is cancelled but money was actually
@@ -16,7 +16,7 @@ export function addonsSold(b: Pick<Booking, "status" | "pay" | "amount" | "amoun
 }
 
 export interface AddonAgg { count: number; rev: number }
-export interface AddonFigures { bookingsWithAddon: number; addonUnits: number; addonRevenue: number; byName: Map<string, AddonAgg> }
+export interface AddonFigures { /** checkouts with a sold add-on (a split checkout counts once) */ bookingsWithAddon: number; /** checkouts that count as sold (addonsSold), the attach-rate denominator: same population as bookingsWithAddon */ soldBookings: number; addonUnits: number; addonRevenue: number; byName: Map<string, AddonAgg> }
 
 /**
  * Counted by UNITS, not by lines: a daily add-on counts each of its days (a water bottle for 7 days is 7 units), a one-off counts its quantity.
@@ -26,10 +26,17 @@ export function addonFigures(bookings: Booking[]): AddonFigures {
   const byName = new Map<string, AddonAgg>();
   let bookingsWithAddon = 0, units = 0, revenue = 0;
   const moved = inheritSplitOneOffs(bookings as never);
+  // One checkout = one booking for the attach rate: its references (a week over a Monday) share one key; an unstamped single is its own.
+  const keyOf = new Map<string, string>();
+  groupCheckouts(bookings as never[]).forEach((g, i) => { if (g.length > 1) for (const x of g) keyOf.set((x as { ref: string }).ref, `g${i}`); });
+  const idx = new Map<Booking, number>(bookings.map((b, i) => [b, i]));
+  const key = (b: Booking) => keyOf.get(b.ref) ?? `r:${b.ref ?? ""}#${idx.get(b)}`;
+  const sold = new Set<string>(), withAddon = new Set<string>();
   for (const b0 of bookings) {
     // Not sales: a place only OFFERED off the waiting list (not accepted yet), a waitlisted or declined one, or a cancelled booking nobody paid for.
     let b = b0;
-    if (!addonsSold(b0)) {
+    if (addonsSold(b0)) sold.add(key(b0));
+    else {
       // ...except a one-off extra that moved to a live sibling of the same checkout (the T-shirt's price stays on the cancelled first reference).
       const kept = moved.get(b0.ref);
       const src = (b0 as { addonLines?: unknown[] }).addonLines ?? [];
@@ -50,7 +57,8 @@ export function addonFigures(bookings: Booking[]): AddonFigures {
       const full = l.perDay && !l.meal && l.refundedDays?.length ? l.days.length : 0;
       units += n; revenue += full ? (l.price * n) / full : l.price;
     }
-    if (any) bookingsWithAddon++;
+    if (any) withAddon.add(key(b0));
   }
-  return { bookingsWithAddon, addonUnits: units, addonRevenue: Math.round(revenue * 100) / 100, byName };
+  bookingsWithAddon = withAddon.size;
+  return { bookingsWithAddon, soldBookings: sold.size, addonUnits: units, addonRevenue: Math.round(revenue * 100) / 100, byName };
 }
