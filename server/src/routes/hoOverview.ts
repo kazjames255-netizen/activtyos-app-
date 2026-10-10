@@ -1,7 +1,11 @@
 import { Router, type Request, type Response } from "express";
 import { db } from "../firebase";
-import { refundedGross } from "../../../features/bookings/helpers";
+import { owedNow } from "../../../features/bookings/helpers";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
+// Money (revenue, collected, royalty) comes from the SAME helper as Split fees and the Franchise payouts screen, so they cannot disagree.
+import { bookingMoney, computeFromLite, franchiseOf, liteOf, royaltyFee, ukDay, type LiteMoney } from "../lib/franchisePayouts";
+import { settingsOf } from "../lib/franchisePayoutsData";
+import { ukMonth } from "../lib/ukDate";
 
 // Head-office network overview — the franchisor's command centre. Aggregates the
 // WHOLE tenant (every franchise + the HO's own direct operation) into network
@@ -10,6 +14,7 @@ import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 export const hoOverview = Router();
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
+// Bookings that hold a place (families, children, "live"). Money is NOT decided by this: see bookingMoney.
 const COUNTS = (status: string) => status !== "Cancelled" && status !== "Declined" && status !== "Waitlisted" && status !== "Offered";
 const DAY = 86_400_000;
 
@@ -26,7 +31,7 @@ function companyScope(req: Request, res: Response): string | null {
 
 interface FrAgg {
   franchiseId: string; name: string; area: string | null;
-  revenue: number; bookings: number; collected: number;
+  revenue: number; bookings: number; collected: number; owed: number;
   families: Set<string>; children: Set<string>;
   rev30: number; revPrev30: number;              // trend windows
   lastBookingAt: string | null;
@@ -145,8 +150,8 @@ hoOverview.get("/overview", async (req, res) => {
     db.collection("invites").where("tenantId", "==", tenantId).get(),
   ]);
 
-  const settings = ((tenant.exists && (tenant.data()!.splitFees as { basis: "revenue" | "perBooking"; rate?: number; perBookingFee?: number })) || null)
-    ?? { basis: "revenue" as const, rate: 10, perBookingFee: 0 };
+  const splitSettings = settingsOf(tenant.exists ? (tenant.data() as Record<string, unknown>) : undefined);
+  const settings = { basis: splitSettings.basis, rate: splitSettings.rate, perBookingFee: splitSettings.perBookingFee };
 
   // Season names (id → name), so a booking's season (= its listing's season) reads as a name.
   const seasonNames = new Map<string, string>();
@@ -175,7 +180,7 @@ hoOverview.get("/overview", async (req, res) => {
     const territory = terr?.status === "agreed" ? "agreed" : (terr?.areas?.length ? "proposed" : "none");
     franchises.set(fid, {
       franchiseId: fid, name: u.franchiseName || u.name || "Franchise", area: u.franchiseArea ?? null,
-      revenue: 0, bookings: 0, collected: 0, families: new Set(), children: new Set(),
+      revenue: 0, bookings: 0, collected: 0, owed: 0, families: new Set(), children: new Set(),
       rev30: 0, revPrev30: 0, lastBookingAt: null, openIncidents: 0, territory, live: false,
       perListing: new Map(), perSeason: new Map(),
     });
@@ -186,36 +191,47 @@ hoOverview.get("/overview", async (req, res) => {
   // each month carries a per-franchise bookings + revenue split (fid → figures;
   // "__ho__" = head-office direct).
   const monthKeys: string[] = [];
-  for (let i = 11; i >= 0; i--) { const d = new Date(now); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - i); monthKeys.push(d.toISOString().slice(0, 7)); }
+  { const [uy, um] = ukMonth().split("-").map(Number); for (let i = 11; i >= 0; i--) monthKeys.push(new Date(Date.UTC(uy, um - 1 - i, 1)).toISOString().slice(0, 7)); }
   const seriesMap = new Map<string, { revenue: number; bookings: number; byFranchise: Map<string, { bookings: number; revenue: number }> }>(
     monthKeys.map((m) => [m, { revenue: 0, bookings: 0, byFranchise: new Map() }]),
   );
 
-  const direct: FrAgg = { franchiseId: "__ho__", name: "Head office", area: "direct", revenue: 0, bookings: 0, collected: 0, families: new Set(), children: new Set(), rev30: 0, revPrev30: 0, lastBookingAt: null, openIncidents: 0, territory: "n/a", live: false, perListing: new Map(), perSeason: new Map() };
+  const direct: FrAgg = { franchiseId: "__ho__", name: "Head office", area: "direct", revenue: 0, bookings: 0, collected: 0, owed: 0, families: new Set(), children: new Set(), rev30: 0, revPrev30: 0, lastBookingAt: null, openIncidents: 0, territory: "n/a", live: false, perListing: new Map(), perSeason: new Map() };
 
   // child id/name → franchiseId, so incidents (child-scoped) attribute to a franchise.
   const childFr = new Map<string, string | null>();
+  const lite: LiteMoney[] = [];
 
   for (const doc of bookingsSnap.docs) {
     const raw = doc.data() as BookingDoc & { franchiseId?: string; listingId?: string; childId?: string; kids?: { name?: string; childId?: string }[] };
     const b = fromDoc(raw);
-    if (!COUNTS(b.status)) continue;
-    const refunded = refundedGross(b);
-    const amount = Math.max(0, round2((b.amount ?? 0) - refunded));
-    const paid = Math.max(0, round2((b.amountPaid ?? (b.pay === "Paid" ? (b.amount ?? 0) : 0)) - refunded));
-    const fid = raw.franchiseId ?? (raw.listingId ? (listingFr.get(raw.listingId) ?? null) : null);
-    const bucket = fid && franchises.has(fid) ? franchises.get(fid)! : direct;
-    bucket.revenue = round2(bucket.revenue + amount);
-    bucket.collected = round2(bucket.collected + paid);
-    bucket.bookings += 1;
+    const mon = bookingMoney(b);
+    const holds = COUNTS(b.status);
+    if (!holds && !mon.counts) continue;
+    // The franchise it belongs to: ONE rule (booking stamp, else its listing's owner). A franchise whose login was removed still gets its own row.
+    const fid = franchiseOf(raw, listingFr);
+    if (fid && !franchises.has(fid)) {
+      franchises.set(fid, { franchiseId: fid, name: "Franchise", area: null, revenue: 0, bookings: 0, collected: 0, owed: 0, families: new Set(), children: new Set(), rev30: 0, revPrev30: 0, lastBookingAt: null, openIncidents: 0, territory: "n/a", live: false, perListing: new Map(), perSeason: new Map() });
+    }
+    const bucket = fid ? franchises.get(fid)! : direct;
+    // Money received and kept (net of refunds): the same figure Split fees and Franchise payouts use.
+    const amount = mon.total;
+    if (mon.counts) {
+      const l = liteOf({ b, fid }); if (l) lite.push(l);
+      bucket.revenue = round2(bucket.revenue + amount);
+      bucket.collected = round2(bucket.collected + amount);
+      bucket.bookings += 1;
+    }
+    bucket.owed = round2(bucket.owed + owedNow(b));
+    if (!holds) continue; // a cancelled booking that kept a fee is money only: it holds no place, family or child
     bucket.live = true;
     if (b.email) bucket.families.add(b.email.toLowerCase());
     // children on this booking (ids preferred, else names)
     const kidKeys = (raw.kids?.length ? raw.kids.map((k) => k.childId || k.name || "") : [raw.childId || b.child || ""]).filter(Boolean);
-    for (const k of kidKeys) { bucket.children.add(k); childFr.set(k, fid && franchises.has(fid) ? fid : null); }
+    for (const k of kidKeys) { bucket.children.add(k); childFr.set(k, fid); }
     // An incident may name the child by NAME only (no childId) — index the names too so it still finds its franchise.
     const nameKeys = (raw.kids?.length ? raw.kids.map((k) => k.name || "") : [b.child || ""]).map((n) => n.trim().toLowerCase()).filter(Boolean);
-    for (const k of nameKeys) if (!childFr.has(k) || (fid && franchises.has(fid))) childFr.set(k, fid && franchises.has(fid) ? fid : null);
+    for (const k of nameKeys) if (!childFr.has(k) || fid) childFr.set(k, fid);
     // Per-listing + per-season tallies (top listing / top season insights).
     if (raw.listingId) {
       const meta = listingMeta.get(raw.listingId);
@@ -230,11 +246,11 @@ hoOverview.get("/overview", async (req, res) => {
       const age = now - created;
       if (age <= 30 * DAY) bucket.rev30 = round2(bucket.rev30 + amount);
       else if (age <= 60 * DAY) bucket.revPrev30 = round2(bucket.revPrev30 + amount);
-      const mk = b.createdAt!.slice(0, 7);
-      const s = seriesMap.get(mk);
+      const mk = (ukDay(b.createdAt) ?? b.createdAt!).slice(0, 7); // UK month, as Split fees and Franchise payouts
+      const s = mon.counts ? seriesMap.get(mk) : undefined;
       if (s) {
         s.revenue = round2(s.revenue + amount); s.bookings += 1;
-        const serFid = fid && franchises.has(fid) ? fid : "__ho__";
+        const serFid = fid ?? "__ho__";
         const bf = s.byFranchise.get(serFid) ?? { bookings: 0, revenue: 0 };
         bf.bookings += 1; bf.revenue = round2(bf.revenue + amount); s.byFranchise.set(serFid, bf);
       }
@@ -257,8 +273,8 @@ hoOverview.get("/overview", async (req, res) => {
     if (fid && franchises.has(fid)) franchises.get(fid)!.openIncidents += 1;
   }
 
-  const feeOf = (revenue: number, bookings: number) =>
-    settings.basis === "perBooking" ? round2(bookings * (settings.perBookingFee ?? 0)) : round2(revenue * ((settings.rate ?? 0) / 100));
+  const payouts = computeFromLite(lite, { history: splitSettings.history, fallbackRate: splitSettings.rate }, franchises.keys());
+  const royaltyOf = (fid: string) => { const r = payouts.franchises.get(fid); return r ? royaltyFee(r, splitSettings.basis, splitSettings.perBookingFee) : 0; };
 
   const pct = (cur: number, prev: number) => (prev > 0 ? Math.round(((cur - prev) / prev) * 100) : cur > 0 ? 100 : 0);
   // Top listing (by bookings) + top season (by revenue) + avg booking value.
@@ -268,8 +284,8 @@ hoOverview.get("/overview", async (req, res) => {
 
   const frList = [...franchises.values()].map((f) => ({
     franchiseId: f.franchiseId, name: f.name, area: f.area,
-    revenue: f.revenue, bookings: f.bookings, collected: f.collected, outstanding: round2(f.revenue - f.collected),
-    royalty: feeOf(f.revenue, f.bookings),
+    revenue: f.revenue, bookings: f.bookings, collected: f.collected, outstanding: f.owed,
+    royalty: royaltyOf(f.franchiseId),
     families: f.families.size, children: f.children.size,
     trendPct: pct(f.rev30, f.revPrev30), rev30: f.rev30,
     lastBookingAt: f.lastBookingAt, openIncidents: f.openIncidents,
@@ -280,6 +296,7 @@ hoOverview.get("/overview", async (req, res) => {
 
   const netRevenue = round2(frList.reduce((s, r) => s + r.revenue, 0) + direct.revenue);
   const netCollected = round2(frList.reduce((s, r) => s + r.collected, 0) + direct.collected);
+  const netOwed = round2(frList.reduce((s, r) => s + r.outstanding, 0) + direct.owed);
   const netBookings = frList.reduce((s, r) => s + r.bookings, 0) + direct.bookings;
   const netRoyalty = round2(frList.reduce((s, r) => s + r.royalty, 0));
   const netFamilies = new Set<string>(); const netChildren = new Set<string>();
@@ -311,7 +328,7 @@ hoOverview.get("/overview", async (req, res) => {
   res.json({
     settings,
     network: {
-      revenue: netRevenue, collected: netCollected, outstanding: round2(netRevenue - netCollected),
+      revenue: netRevenue, collected: netCollected, outstanding: netOwed,
       bookings: netBookings, royalty: netRoyalty,
       families: netFamilies.size, children: netChildren.size,
       franchises: frList.length, liveFranchises: frList.filter((f) => f.live).length,
@@ -333,7 +350,7 @@ hoOverview.get("/overview", async (req, res) => {
     // league order the client colours by.
     seriesLegend: [...frList.map((f) => ({ franchiseId: f.franchiseId, name: f.name })), { franchiseId: "__ho__", name: "Head office (direct)" }],
     franchises: frList,
-    direct: { revenue: direct.revenue, bookings: direct.bookings, collected: direct.collected, families: direct.families.size, children: direct.children.size, live: direct.live, listingCount: assignedCount.get(null) ?? 0, topListing: topListing(direct), topSeason: topSeason(direct), avgBooking: avgBooking(direct) },
+    direct: { revenue: direct.revenue, bookings: direct.bookings, collected: direct.collected, outstanding: direct.owed, families: direct.families.size, children: direct.children.size, live: direct.live, listingCount: assignedCount.get(null) ?? 0, topListing: topListing(direct), topSeason: topSeason(direct), avgBooking: avgBooking(direct) },
     onboarding: { pendingInvites, notLive },
     attention,
   });

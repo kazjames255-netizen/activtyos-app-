@@ -30,7 +30,7 @@ export default fromRows({
   invoices: ["Invoices", "Faktury", "Facturi", "انوائسز", "ਇਨਵੌਇਸ", "ইনভয়েস", "الفواتير", "Faturas", "Facturas", "Factures", "Anfonebau"],
   reconciliation: ["Reconciliation", "Uzgodnienia", "Reconciliere", "حسابات کی مطابقت", "ਮਿਲਾਨ", "মিলন", "التسوية", "Reconciliação", "Conciliación", "Rapprochement", "Cysoni"],
   inventory: ["Inventory", "Zapasy", "Inventar", "انوینٹری", "ਵਸਤੂ-ਸੂਚੀ", "ইনভেন্টরি", "المخزون", "Inventário", "Inventario", "Inventaire", "Rhestr eiddo"],
-  split_fees: ["Split fees", "Podział opłat", "Împărțirea taxelor", "فیس کی تقسیم", "ਫੀਸ ਵੰਡ", "ফি ভাগাভাগি", "تقسيم الرسوم", "Divisão de taxas", "División de tarifas", "Répartition des frais", "Rhannu ffioedd"],
+  split_fees: ["Franchise payouts", "Rozliczenia z franczyzami", "Plăți către francize", "فرنچائز ادائیگیاں", "ਫਰੈਂਚਾਈਜ਼ ਭੁਗਤਾਨ", "ফ্র্যাঞ্চাইজি পেমেন্ট", "مدفوعات الامتيازات", "Pagamentos às franquias", "Pagos a franquicias", "Paiements aux franchises", "Taliadau i fasnachfreintiau"],
   staff: ["Staff", "Personel", "Personal", "عملہ", "ਸਟਾਫ਼", "কর্মী", "الموظفون", "Equipa", "Personal", "Personnel", "Staff"],
   staff_schedule: ["Staff schedule", "Grafik pracowników", "Programul personalului", "عملے کا شیڈول", "ਸਟਾਫ਼ ਸ਼ਡਿਊਲ", "কর্মীদের সময়সূচি", "جدول الموظفين", "Escala da equipa", "Horario del personal", "Planning du personnel", "Amserlen staff"],
   leave_absence: ["Leave & absence", "Urlopy i nieobecności", "Concedii și absențe", "چھٹی اور غیر حاضری", "ਛੁੱਟੀ ਅਤੇ ਗੈਰਹਾਜ਼ਰੀ", "ছুটি ও অনুপস্থিতি", "الإجازات والغياب", "Férias e ausências", "Vacaciones y ausencias", "Congés et absences", "Gwyliau ac absenoldeb"],
