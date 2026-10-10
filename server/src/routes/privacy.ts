@@ -8,6 +8,7 @@ import { decryptSensitive, ownName } from "./onboarding";
 import { parentIncidentView, parentMedicationView, parentDoseView, parentMomentView, parentCustomerView, parentPaymentView } from "../lib/parentViews";
 import { forViewing } from "./moments";
 import { whereEmail } from "../lib/emailCase";
+import { exportMessage, exportThread, scrubFamilyExport } from "../lib/familyExport";
 
 // Data & privacy (shared, every portal) — the user's GDPR surface: see what's
 // held, download it, and request deletion. Deletion is a RECORDED REQUEST, not
@@ -173,8 +174,8 @@ async function gather(req: import("express").Request) {
       return { tripId: d.id, tenantId: t.tenantId, destination: t.destination, date: t.date, children: (t.attendees ?? []).filter((a) => a.childId && kidSet.has(a.childId)) };
     });
     out.uploadedFiles = files.docs.map((d) => { const f = d.data() as { name?: string; contentType?: string; bytes?: number; createdAt?: string }; return { id: d.id, name: f.name, contentType: f.contentType, bytes: f.bytes, createdAt: f.createdAt }; });
-    out.messageThreads = threads.docs.map(strip);
-    out.messages = messages.map(strip);
+    out.messageThreads = threads.docs.map((d) => exportThread(strip(d) as never));
+    out.messages = messages.map((d) => exportMessage(strip(d) as never));
     out.memberships = memberships.docs.map(strip);
     out.wallet = wallets.docs.map(strip);
     out.walletEntries = walletEntries.docs.map(strip);
@@ -188,6 +189,8 @@ async function gather(req: import("express").Request) {
     out.emailPreferences = prefs?.exists ? prefs.data() : null;
     // Learning Hub: enrolments, homework hand-ins + marks, flashcard progress, quiz attempts, mastery, lesson attendance.
     Object.assign(out, await exportChildLearning(uid, childIds));
+    // Backstop over EVERYTHING above: provider-internal keys and staff sign-in emails never leave in a family's download.
+    return scrubFamilyExport(out, email);
   }
   return out;
 }

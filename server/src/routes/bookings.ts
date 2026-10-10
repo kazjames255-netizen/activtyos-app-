@@ -1,4 +1,5 @@
 import { withMoney } from "../../../features/bookings/walletBreakdown";
+import { refKeys } from "../lib/bookingRef";
 import { resolvePendingCancel, alreadyRefundedWarning } from "../lib/pendingRefund";
 import { splitRefundByMethod, walletShareFor, noteInstantWalletCredit } from "../lib/refundSplit";
 import { refPrefixFor } from "../lib/bookingRef";
@@ -271,7 +272,7 @@ export async function notifyPaymentReceived(tenantId: string, b: Booking, label:
 async function resolveBookingRef(tenantId: string, ref: string): Promise<FirebaseFirestore.DocumentReference> {
   const byId = col.doc(bookingDocId(tenantId, ref));
   if ((await byId.get()).exists) return byId;
-  const q = await col.where("tenantId", "==", tenantId).where("ref", "==", ref).limit(1).get();
+  const q = await col.where("tenantId", "==", tenantId).where("ref", "in", refKeys(ref)).limit(1).get();
   return q.empty ? byId : q.docs[0].ref;
 }
 

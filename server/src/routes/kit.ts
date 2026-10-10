@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { refKeys } from "../lib/bookingRef";
 import { z } from "zod";
 import { db } from "../firebase";
 import { staffAddonFlag } from "../lib/rosterRules";
@@ -219,7 +220,7 @@ kit.post("/tick", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const { key, ref, date, done } = parsed.data;
   // The booking must be in THIS tenant and inside the caller's franchise / site (the same scope the page shows), never a bare ref from the client.
-  const owned = await db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "==", ref).limit(1).get();
+  const owned = await db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "in", refKeys(ref)).limit(1).get();
   if (owned.empty) { res.status(404).json({ error: "Booking not found" }); return; }
   const booking = fromDoc(owned.docs[0].data() as BookingDoc) as KitBooking & { blockId?: string };
   const mine = await scopedBlocks(req.auth!, tenantId, date, date);

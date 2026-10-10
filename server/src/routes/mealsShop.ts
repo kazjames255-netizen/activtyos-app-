@@ -11,6 +11,7 @@ import { resolveCutoff, canOrderMeal, cutoffLabel } from "../lib/mealCutoff";
 import { customerAreaOn } from "../lib/customerArea";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { registerRows } from "../lib/registerRows";
+import { allergenHits } from "../../../features/meals/allergens";
 
 // Meal ordering (parent-facing meals shop). Operators publish a menu of
 // orderable meals (name + price); a parent who's booked with that provider
@@ -336,6 +337,7 @@ mealOrders.post("/", async (req, res) => {
   type OrderLine = { name: string; price: number; qty: number; lineTotal: number; optionId?: string; menuItemId?: string; allergens?: string[] };
   const items: OrderLine[] = [];
   const dishCap = new Map<string, number>(); // menuItemId → daily portion cap, if set
+  const unlisted = new Set<string>(); // option meals whose allergens the provider never filled in
   const usesMenu = input.items.some((i) => "menuItemId" in i);
   if (usesMenu) {
     // Ordering from a listing's scheduled day-menu (the planner). The listing
@@ -394,7 +396,9 @@ mealOrders.post("/", async (req, res) => {
         return;
       }
       const price = round2(optDoc.data()!.price as number);
-      items.push({ optionId: i.optionId, name: optDoc.data()!.name as string, price, qty: i.qty, lineTotal: round2(price * i.qty) });
+      const listed = optDoc.data()!.allergens;
+      items.push({ optionId: i.optionId, name: optDoc.data()!.name as string, price, qty: i.qty, lineTotal: round2(price * i.qty), ...(Array.isArray(listed) && listed.length ? { allergens: listed as string[] } : {}) });
+      if (!Array.isArray(listed)) unlisted.add(optDoc.data()!.name as string);
     }
   }
   const total = round2(items.reduce((s, x) => s + x.lineTotal, 0));
@@ -471,9 +475,13 @@ mealOrders.post("/", async (req, res) => {
   if (input.childId) {
     const allergies = String((await db.collection("children").doc(input.childId).get()).get("allergies") ?? "").toLowerCase();
     if (allergies && !/^(none|no|n\/a|nil)$/.test(allergies.trim())) {
+      // ONE rule for both order paths (features/meals/allergens.ts, the same matcher the kitchen board uses): "nut allergy" meets
+      // peanuts, "dairy" meets milk. A dish with no allergen information at all is never silent for an allergic child.
+      const provider = ((await db.collection("tenants").doc(input.tenantId).get()).get("name") as string | undefined) || "the provider";
       for (const it of items as { name: string; allergens?: string[] }[]) {
-        const hit = (it.allergens ?? []).filter((a) => allergies.includes(a.toLowerCase()));
+        const hit = allergenHits(allergies, it.allergens);
         if (hit.length) warnings.push(`${it.name} contains ${hit.join(", ")} — ${input.childName} is listed as allergic to ${allergies}.`);
+        else if (unlisted.has(it.name)) warnings.push(`${it.name}: allergens not listed — ask ${provider} before ${input.childName} eats it (${input.childName} is listed as allergic to ${allergies}).`);
       }
     }
   }
@@ -481,7 +489,7 @@ mealOrders.post("/", async (req, res) => {
   res.status(201).json({ id: ref.id, ...doc, ...(warnings.length ? { warnings } : {}) });
   // The kitchen has to hear about it. Orders reached the server and nobody was
   // told — the provider found out only by opening the report.
-  void mealAlert(doc.tenantId, `${doc.parentName} ordered a meal for ${doc.childName}`, `${doc.items.map((i: { name: string; qty?: number }) => `${i.qty && i.qty > 1 ? `${i.qty} × ` : ""}${i.name}`).join(", ")} · ${doc.date}`, input.listingId);
+  void mealAlert(doc.tenantId, `${doc.parentName} ordered a meal for ${doc.childName}`, `${doc.items.map((i: { name: string; qty?: number }) => `${i.qty && i.qty > 1 ? `${i.qty} × ` : ""}${i.name}`).join(", ")} · ${doc.date}${warnings.length ? ` · ALLERGY CHECK: ${warnings.join(" ")}` : ""}`, input.listingId);
 });
 
 /** Bell (+ email, per Setup → Notifications "meal-order") to the provider —
