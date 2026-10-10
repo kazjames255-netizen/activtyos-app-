@@ -80,6 +80,20 @@ test("a bank / cash / voucher refund is only RECORDED until the provider sends i
   assert.match(englishBody(card), /refund is on its way\.$/);
 });
 
+test("a CARD refund is also only 'recorded' until the provider has actually issued it", async () => {
+  const { refundNeedsProviderTransfer, refundIssued } = await import("../../features/bookings/helpers");
+  const card = (cancel: any) => ({ method: "Card", paymentIntentId: "pi_x", cancel }) as any;
+  assert.equal(refundNeedsProviderTransfer(card({ refund: "pending", refundVia: "card" })), true, "pending card refund is not on its way yet");
+  assert.equal(refundNeedsProviderTransfer(card(null)), true);
+  assert.equal(refundIssued(card({ refund: "approved", refundVia: "card" })), true, "approved card refund has been issued");
+  assert.equal(refundNeedsProviderTransfer(card({ refund: "approved", refundVia: "card" })), false);
+  assert.equal(refundNeedsProviderTransfer({ cancel: { refund: "approved", refundVia: "offline", refundTransfer: "sent" } } as any), false, "an offline refund the provider confirmed sending");
+  assert.equal(refundNeedsProviderTransfer({ cancel: { refund: "approved", refundVia: "offline", refundTransfer: "awaiting" } } as any), true);
+  // the card wording while pending is the 'recorded' sentence
+  const w = decisionWording(decided(cancel([target()]), { status: "approved", money: { resolution: "refund", amount: 8 } }), { ref: REF, listing: LISTING, awaitingTransfer: refundNeedsProviderTransfer(card({ refund: "pending" })), provider: "Sunny Club" });
+  assert.match(englishBody(w), /refund has been recorded; Sunny Club will send it\.$/);
+});
+
 test("the Bell lets a title wrap to two lines instead of cutting it", async () => {
   const { readFileSync } = await import("node:fs");
   const src = readFileSync(new URL("../../components/shell/Bell.tsx", import.meta.url), "utf8");

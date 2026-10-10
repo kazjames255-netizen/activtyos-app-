@@ -810,9 +810,16 @@ export function unsentRefunds(b: RefundCarrier): { cash: number; since: string }
   return [{ cash: Math.max(0, asked), since: c.refundRecordedAt || c.refundedAt || "" }];
 }
 
-/** Will a refund on this booking have to be SENT by the provider (bank / cash / voucher), so it is only RECORDED until they confirm? Card refunds go out at once. */
-export function refundNeedsProviderTransfer(b: RefundCarrier & Parameters<typeof refundButtonKind>[0]): boolean {
-  return refundAwaitingTransfer(b) || !["stripe", "wallet"].includes(refundButtonKind(b));
+/** Has a refund on this booking actually been ISSUED (the provider confirmed sending it, or approving it already sent the card refund)? Until then it is only
+ *  RECORDED: a card refund waits for the provider's refund-approve too (cancel.refund is still "pending"), so no refund is "on its way" before that click. */
+export function refundIssued(b: RefundCarrier): boolean {
+  const c = b.cancel;
+  if (!c || refundAwaitingTransfer(b)) return false;
+  return c.refundTransfer === "sent" || (c.refund === "approved" && !!c.refundVia && c.refundVia !== "offline");
+}
+/** The family is told "recorded; <provider> will send it" (never "on its way") while this is true: for bank, cash, voucher AND card refunds alike. */
+export function refundNeedsProviderTransfer(b: RefundCarrier): boolean {
+  return !refundIssued(b);
 }
 
 /** Is any recorded offline refund still waiting for the provider's transfer? Card and wallet refunds are never "awaiting" (Stripe sends the card refund at
