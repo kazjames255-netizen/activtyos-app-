@@ -7,6 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { MoneyMovesNote } from "@/features/franchise/FranchiseRoyaltiesApp";
+import { FranchisePayoutsPanel } from "@/features/franchise/FranchisePayouts";
 import { useI18n, useT } from "@/lib/i18n/provider";
 import { isRTL } from "@/lib/i18n/config";
 import { pickPlural } from "@/lib/i18n/plural";
@@ -136,6 +137,7 @@ export function SplitFeesApp() {
 
   return (
     <div className="text-[var(--ink)]">
+      <FranchisePayoutsPanel />
       <div className="mb-1 flex items-center justify-between">
         <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("money.splitTitle")}</h2>
         {!edit && <Button onClick={() => setEdit(true)}>{t("money.splitRoyaltySettings")}</Button>}
