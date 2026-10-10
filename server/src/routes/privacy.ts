@@ -4,7 +4,8 @@ import { notify } from "../lib/notify";
 import { familyBooking } from "../lib/familyView";
 import { exportChildLearning } from "../lib/hubPrivacy";
 import { ukTodayPlus } from "../lib/ukDate";
-import { decryptSensitive } from "./onboarding";
+import { decryptSensitive, ownName } from "./onboarding";
+import { whereEmail } from "../lib/emailCase";
 
 // Data & privacy (shared, every portal) — the user's GDPR surface: see what's
 // held, download it, and request deletion. Deletion is a RECORDED REQUEST, not
@@ -24,7 +25,8 @@ async function gather(req: import("express").Request) {
   type Snap = FirebaseFirestore.QueryDocumentSnapshot;
   const none = { docs: [] as Snap[] };
   const strip = (d: Snap) => ({ id: d.id, ...d.data() });
-  const byEmail = (col: string, field = "email") => (email ? db.collection(col).where(field, "==", email).get() : Promise.resolve(none));
+  // Case-insensitive (one `in` query over the usual spellings): rows stored as "Pa@Example.com" belong to pa@example.com too.
+  const byEmail = (col: string, field = "email") => (email ? whereEmail(db, col, field, email) : Promise.resolve(none));
   const out: Record<string, unknown> = {
     account: {
       email: req.user?.email ?? null,
@@ -41,7 +43,7 @@ async function gather(req: import("express").Request) {
   };
   // Every portal: the alerts sent to them and any deletion request they made.
   const [bell, delReqs] = await Promise.all([
-    email ? db.collection("notifications").where(auth.role === "parent" ? "email" : "toEmail", "==", email).get() : Promise.resolve(none),
+    byEmail("notifications", auth.role === "parent" ? "email" : "toEmail"),
     db.collection("deletionRequests").where("uid", "==", uid).get(),
   ]);
   out.notifications = bell.docs.map((d) => { const n = d.data(); return { id: d.id, tenantId: n.tenantId, category: n.category, title: n.title, body: n.body, ref: n.ref ?? null, at: n.at, readAt: n.readAt ?? null }; });
@@ -51,7 +53,9 @@ async function gather(req: import("express").Request) {
     // screens already show them (My shifts/timesheet, leave, expenses,
     // availability, learning, documents read, appraisals, onboarding).
     const key = auth.franchiseId ? `${auth.tenantId}__fr__${auth.franchiseId}` : auth.tenantId;
-    const myName = String(userDoc.get("name") ?? req.user?.name ?? "").trim().toLowerCase();
+    // Matched the way the onboarding API matches: by name, but ONLY when no other account in the same pay scope carries it
+    // (ownName returns "" then). Two staff called the same must never read each other's bank details / NI number.
+    const myName = (await ownName(uid)).trim().toLowerCase();
     const same = (v: unknown) => !!myName && String(v ?? "").trim().toLowerCase() === myName;
     const [clock, absences, claims, avail, reads, learning, appraisals, onboard] = await Promise.all([
       db.collection("clockRecords").where("uid", "==", uid).get(),
@@ -191,6 +195,14 @@ const counts = (data: Record<string, unknown>) => {
   return c;
 };
 
+// HQ "acting as" a family must not download that family's full personal data or file a deletion request in their name: both are the
+// account holder's own act (UK GDPR rights). Refused with a plain message; the attempt is still in the impersonation audit log.
+function refuseWhileImpersonating(req: import("express").Request, res: import("express").Response): boolean {
+  if (!req.impersonating) return false;
+  res.status(403).json({ error: "You're viewing this account as support. Only the account holder can download their data or ask for it to be deleted.", code: "impersonating" });
+  return true;
+}
+
 // GET /api/privacy — what we hold (a summary of counts).
 privacy.get("/", async (req, res) => {
   const data = await gather(req);
@@ -199,12 +211,14 @@ privacy.get("/", async (req, res) => {
 
 // GET /api/privacy/export — the full download of the caller's data.
 privacy.get("/export", async (req, res) => {
+  if (refuseWhileImpersonating(req, res)) return;
   const data = await gather(req);
   res.json({ generatedAt: new Date().toISOString(), ...data });
 });
 
 // POST /api/privacy/delete-request — log a deletion request (does not wipe).
 privacy.post("/delete-request", async (req, res) => {
+  if (refuseWhileImpersonating(req, res)) return;
   const uid = req.user?.uid;
   if (!uid) { res.status(400).json({ error: "No account" }); return; }
   const existing = await db.collection("deletionRequests").where("uid", "==", uid).where("status", "==", "pending").limit(1).get();
@@ -232,7 +246,7 @@ privacy.post("/delete-request", async (req, res) => {
   void (async () => {
     const email = (req.user?.email ?? "").toLowerCase();
     if (!email) return;
-    const bs = await db.collection("bookings").where("email", "==", email).get();
+    const bs = await whereEmail(db, "bookings", "email", email);
     // Each provider the family booked with — and, inside a company, each
     // franchise that took the booking (its own bell and inbox).
     const pairs = [...new Set(bs.docs.map((d) => `${d.get("tenantId") ?? ""}|${d.get("franchiseId") ?? ""}`))].filter((p) => !p.startsWith("|"));

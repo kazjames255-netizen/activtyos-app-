@@ -125,7 +125,9 @@ function sendGated(
   void autoEmailOn(tenantId, key)
     .then(async (on) => {
       if (!on) { console.log(`[mail] "${subject}" → ${to} skipped (autoEmails.${key} off)`); return; }
-      return sendMail(to, subject, html, await tenantSender(tenantId, providerName), attachments?.length ? { attachments } : undefined);
+      // Refund / payment receipts and cancellations are required notices: they still reach a parent who closed their account (lib/closedAccounts.ts).
+      const essential = key === "payments" || key === "cancellation";
+      return sendMail(to, subject, html, await tenantSender(tenantId, providerName), attachments?.length || essential ? { ...(attachments?.length ? { attachments } : {}), ...(essential ? { essential } : {}) } : undefined);
     })
     .catch((e) => console.error(`[mail] gate check failed for "${subject}":`, (e as Error).message));
 }

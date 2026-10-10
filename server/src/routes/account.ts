@@ -7,6 +7,7 @@ import { forgetRevocation } from "../middleware/auth";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { syncAccountEmail } from "../lib/emailSync";
 import { forgetActorName } from "../lib/actorName";
+import { noteClosure } from "../lib/closedAccounts";
 
 // Account (shared, every portal) — the signed-in user's own profile. Email and
 // the base identity come from the verified Firebase token; the editable extras
@@ -253,6 +254,7 @@ account.post("/reactivate", async (req, res) => {
     return;
   }
   await u.ref.set({ deactivatedAt: null, reactivatedAt: new Date().toISOString() }, { merge: true });
+  noteClosure(String(u.get("email") ?? req.user?.email ?? ""), false);
   res.json({ ok: true, reopened: true });
 });
 
@@ -286,5 +288,7 @@ account.post("/deactivate", async (req, res) => {
     deactivationReason: reason || null,
     marketingConsent: false, // stop all marketing immediately
   }, { merge: true });
+  // From now on the mailer drops every non-essential email to this address and the marketing recipient lists leave it out (lib/closedAccounts.ts).
+  noteClosure(email, true);
   res.json({ ok: true });
 });

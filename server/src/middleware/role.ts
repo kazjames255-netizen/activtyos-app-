@@ -138,7 +138,10 @@ export async function attachRole(req: Request, _res: Response, next: NextFunctio
     await ref.set({ email: user.email ?? null, role: "parent" });
     req.auth = { role: "parent", tenantId: null, franchiseId: null };
   }
-  await applyImpersonation(req, user);
+  if (!(await applyImpersonation(req, user))) {
+    _res.status(503).json({ error: "Couldn't record this support session in the audit log, so the request was refused. Try again.", code: "audit_unavailable" });
+    return;
+  }
   next();
 }
 
@@ -148,26 +151,38 @@ export async function attachRole(req: Request, _res: Response, next: NextFunctio
 // route behaves exactly as that account would (their tenant, their email scope).
 // Guarded strictly on the REAL account's role; header-driven so it's per-request
 // and never persisted server-side. (Flagged for Amir's security review.)
-async function applyImpersonation(req: Request, realUser: NonNullable<Request["user"]>) {
-  if (req.auth?.role !== "platform") return;
+/** Polling / chrome requests that carry no personal data and would bury the audit trail. Everything else HQ does as someone is logged. */
+const NOT_AUDITED = /^\/api\/(me|notifications|realtime|health)(\/|$)/i;
+
+/** Returns false when the request must be refused: an impersonated request that could not be written to the audit log. */
+async function applyImpersonation(req: Request, realUser: NonNullable<Request["user"]>): Promise<boolean> {
+  if (req.auth?.role !== "platform") return true;
   const actAs = (req.header("x-act-as") || "").trim();
-  if (!actAs || actAs === realUser.uid) return;
+  if (!actAs || actAs === realUser.uid) return true;
   const tSnap = await db.collection("users").doc(actAs).get();
-  if (!tSnap.exists) return;
+  if (!tSnap.exists) return true;
   const t = tSnap.data()!;
   req.auth = { role: normalizeRole(t.role), tenantId: t.tenantId ?? null, franchiseId: t.franchiseId ?? null, ...staffFields(t) };
   // Email/uid scoping (parents, message senderName, etc.) must be the target too.
   req.user = { ...realUser, uid: actAs, email: (t.email as string) ?? realUser.email, name: (t.name as string) ?? realUser.name } as typeof realUser;
   req.impersonating = { byUid: realUser.uid, byEmail: realUser.email ?? null, uid: actAs };
   console.warn(`[impersonate] platform ${realUser.email ?? realUser.uid} acting as ${(t.email as string) ?? actAs} (${t.role ?? "parent"})`);
-  // "Open an account" is logged once when HQ picks it, but everything HQ then DOES as that account went nowhere but the console.
-  // Record every change (not reads — that would be a write per page view) so the audit trail covers what was done, not just who was opened.
-  if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") {
-    void db.collection("impersonationLog").add({
-      byUid: realUser.uid, byEmail: realUser.email ?? null, targetUid: actAs, targetEmail: (t.email as string) ?? null, targetRole: t.role ?? "parent",
-      action: `${req.method} ${req.originalUrl.split("?")[0].slice(0, 200)}`, at: new Date().toISOString(),
-    }).catch(() => {});
+  // "Open an account" is logged once when HQ picks it; this records what HQ then DOES as that account: every request, reads included
+  // (a GET of a family's children or messages discloses personal data just as a write changes it). Who, as whom, which path
+  // (path only, never the query string), when. The write is AWAITED and fails closed: no audit row, no request.
+  const path = req.originalUrl.split("?")[0].slice(0, 200);
+  if (!NOT_AUDITED.test(path)) {
+    try {
+      await db.collection("impersonationLog").add({
+        byUid: realUser.uid, byEmail: realUser.email ?? null, targetUid: actAs, targetEmail: (t.email as string) ?? null, targetRole: t.role ?? "parent",
+        action: `${req.method} ${path}`, method: req.method, path, at: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.error("[impersonate] audit write failed, request refused:", (e as Error).message);
+      return false;
+    }
   }
+  return true;
 }
 
 // After optionalAuth: signed-in users get their real role, anonymous
