@@ -30,3 +30,18 @@
 .pf-bar .mk img{width:auto!important;height:26px!important}
 @media(max-width:560px){.brand .brand-mark{height:40px}.brand .brand-name{font-size:19px}}
 @media(max-width:420px){.brand .brand-name{font-size:17px}.brand .brand-mark{height:36px}}
+
+/* Phone bar spacing (10 Oct): [menu] [lockup centred in the free space, >=16px clear of both neighbours] [Book a demo]. */
+@media (max-width:520px){
+  .wrap header.nav .nav-in:has(> .nav-cta){grid-template-columns:auto minmax(0,1fr) auto;column-gap:0}
+  .wrap header.nav .nav-in:has(> .nav-cta) > .brand{justify-self:center;margin:0 16px;min-width:0;gap:7px}
+  .wrap header.nav .nav-in:has(> .nav-cta) > .brand .brand-mark{height:38px}
+  .wrap header.nav .nav-in:has(> .nav-cta) > .brand .brand-name{font-size:18px}
+  .wrap header.nav .nav-in:has(> .nav-cta) > .rsp-demo{padding:0 12px;font-size:12.5px}
+}
+@media (max-width:389px){
+  .wrap header.nav .nav-in:has(> .nav-cta) > .brand{margin:0 16px 0 12px;gap:5px}
+  .wrap header.nav .nav-in:has(> .nav-cta) > .brand .brand-mark{height:34px}
+  .wrap header.nav .nav-in:has(> .nav-cta) > .brand .brand-name{font-size:16px}
+  .wrap header.nav .nav-in:has(> .nav-cta) > .rsp-demo{padding:0 10px;font-size:12px}
+}
